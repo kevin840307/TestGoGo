@@ -1,28 +1,34 @@
 # Server Architecture
 
-The server is intentionally layered so gameplay and protocol code do not depend on SQLite.
+The server is layered so gameplay and protocol code do not depend on SQLite.
 
 ```text
 server/
-├─ Program.cs
+├─ Program.cs                         # composition root only
 ├─ appsettings.json
 ├─ Application/
-│  ├─ PacketRouter.cs
+│  ├─ PacketRouter.cs                 # request/game flow
 │  └─ Abstractions/
-│     └─ IGameStore.cs
+│     └─ IGameStore.cs                # database-neutral contract
 ├─ Domain/
 │  └─ Sessions/
 │     └─ ClientSession.cs
 ├─ Protocol/
-│  └─ ClientProtocol.cs
+│  └─ ClientProtocol.cs               # AES/Base64/JSON client wire format
+├─ Transport/
+│  └─ WebSockets/
+│     └─ WebSocketEndpoint.cs
 └─ Infrastructure/
    ├─ Legacy/
-   │  ├─ LegacyDialogFormatter.cs
-   │  ├─ LegacyEnemyCatalog.cs
-   │  ├─ LegacyEnemyDatReader.cs
-   │  ├─ LegacyNpcDatReader.cs
-   │  ├─ LegacyQuestRuntime.cs
-   │  └─ LegacyWorldService.cs
+   │  ├─ Data/
+   │  │  ├─ LegacyEnemyCatalog.cs
+   │  │  ├─ LegacyEnemyDatReader.cs
+   │  │  └─ LegacyNpcDatReader.cs
+   │  ├─ Quest/
+   │  │  ├─ LegacyDialogFormatter.cs
+   │  │  └─ LegacyQuestRuntime.cs
+   │  └─ World/
+   │     └─ LegacyWorldService.cs
    └─ Persistence/
       ├─ PersistenceServiceCollectionExtensions.cs
       └─ Sqlite/
@@ -31,17 +37,18 @@ server/
 
 ## Dependency direction
 
-- **Application** contains game request flow and depends on abstractions only.
-- **Domain** contains in-memory game/session state.
-- **Protocol** contains recovered-client wire compatibility (AES/Base64/JSON helpers).
-- **Infrastructure.Legacy** adapts the original map/quest data into the new server.
-- **Infrastructure.Persistence** contains database-specific implementations.
+- **Transport** handles WebSocket framing only.
+- **Protocol** handles recovered-client encryption and JSON helpers.
+- **Application** contains request/game flow and depends on abstractions.
+- **Domain** contains in-memory session/domain state.
+- **Infrastructure.Legacy** adapts original map, enemy and Lua quest data.
+- **Infrastructure.Persistence** owns provider-specific SQL.
 
-`PacketRouter` depends on `IGameStore`, not on SQLite.
+Application code must not reference `Microsoft.Data.Sqlite` or provider SQL.
 
 ## Database provider
 
-Default configuration:
+Default:
 
 ```json
 {
@@ -56,17 +63,27 @@ Default configuration:
 
 An empty SQLite path means `Data/game.db` next to the server executable.
 
-To add MySQL later:
+### Adding MySQL
 
-1. Add a MySQL driver package.
+1. Add the chosen MySQL .NET driver.
 2. Create `Infrastructure/Persistence/MySql/MySqlGameStore.cs`.
-3. Implement `IGameStore`.
-4. Register it in `PersistenceServiceCollectionExtensions` under `case "mysql"`.
-5. Add `Database:MySql:ConnectionString` configuration.
-6. Run the same application/smoke test contract against the MySQL implementation.
+3. Implement `Application/Abstractions/IGameStore.cs`.
+4. Add the provider registration in `PersistenceServiceCollectionExtensions`.
+5. Add `Database:MySql:ConnectionString`.
+6. Run the same persistence/application smoke tests against MySQL.
 
-No WebSocket, packet routing, Legacy Lua, NPC, monster, or gameplay code should need to change.
+The following should remain unchanged when changing DB providers:
 
-## Rule for new code
+- WebSocket endpoint
+- packet encryption/protocol
+- PacketRouter/game flow
+- NPC/monster loaders
+- Lua runtime
+- map transitions
 
-Do not put SQL inside Application/PacketRouter or Legacy code. Database-specific SQL belongs only under `Infrastructure/Persistence/<Provider>/`.
+## Rules for new code
+
+- SQL belongs only under `Infrastructure/Persistence/<Provider>/`.
+- Client packet details belong under `Protocol/` or Transport, not persistence.
+- Old server binary/data compatibility belongs under `Infrastructure/Legacy/`.
+- New gameplay systems should be added under Application/Domain rather than growing Program.cs.
