@@ -3,7 +3,7 @@
 -- ALTER TABLE when the target column is missing.
 --
 -- Format:
--- @ensure-column <table> <column> <SQLite column definition>
+-- Syntax: @ensure-column TABLE COLUMN SQLITE_COLUMN_DEFINITION
 
 -- @ensure-column characters hp INTEGER NOT NULL DEFAULT 100
 -- @ensure-column characters max_hp INTEGER NOT NULL DEFAULT 100
