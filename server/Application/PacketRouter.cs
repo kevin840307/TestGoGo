@@ -19,7 +19,8 @@ public sealed class PacketRouter
     private readonly WorldDataService _world;
     private readonly QuestRuntime _quests;
     private readonly CombatService _combat;
-    private readonly NpcShopCatalog _shops;
+    private readonly ShopService _shopService;
+    private readonly HorseBatteryCatalog _horseBatteries;
     private readonly ILogger<PacketRouter> _log;
 
     public PacketRouter(
@@ -27,14 +28,16 @@ public sealed class PacketRouter
         WorldDataService world,
         QuestRuntime quests,
         CombatService combat,
-        NpcShopCatalog shops,
+        ShopService shopService,
+        HorseBatteryCatalog horseBatteries,
         ILogger<PacketRouter> log)
     {
         _store = store;
         _world = world;
         _quests = quests;
         _combat = combat;
-        _shops = shops;
+        _shopService = shopService;
+        _horseBatteries = horseBatteries;
         _log = log;
     }
 
@@ -510,67 +513,87 @@ public sealed class PacketRouter
                 if (!state.CharacterId.HasValue) return [];
 
                 var action = req.Str("Action");
-                var character = _store.GetCharacter(
+                return action switch
+                {
+                    "BuyNpcItem" => _shopService.Buy(
+                        accountId,
+                        state.CharacterId.Value,
+                        req.Int("ShopID"),
+                        req.Int("ItemIndex"),
+                        req.Int("Count", 1)),
+
+                    "SellNpcItem" => _shopService.Sell(
+                        accountId,
+                        state.CharacterId.Value,
+                        req.Int("UID"),
+                        req.Int("TabType"),
+                        req.Int("Count", 1)),
+
+                    _ => []
+                };
+            }
+
+            case "HorseChargeRequest":
+            {
+                if (!state.CharacterId.HasValue) return [];
+
+                var horseUid = req.Int("HorseUID");
+                var itemUid = req.Int("ItemUID");
+                var assetsBefore = _store.GetCharacterAssets(
                     accountId,
                     state.CharacterId.Value);
-                if (character is null) return [];
 
-                if (action == "BuyNpcItem")
-                {
-                    var shopId = req.Int("ShopID");
-                    var itemIndex = req.Int("ItemIndex");
-                    var count = Math.Clamp(req.Int("Count", 1), 1, 9999);
-                    var item = _shops.Find(shopId, itemIndex);
-                    if (item is null)
-                        return [new { Type = "SystemMessageFlash", Message = "此商店沒有這個商品" }];
+                var battery = assetsBefore.Inventory.FirstOrDefault(x =>
+                    Convert.ToInt64(x["ItemUID"]) == itemUid);
 
-                    var priceRate = Convert.ToInt32(character["Career"]) == 9 ? 80 : 100;
-                    var unitPrice = Math.Max(1, item.Price * priceRate / 100);
-                    var result = _store.BuyAsset(
-                        accountId,
-                        state.CharacterId.Value,
-                        (SGO.Server.Domain.Assets.AssetPurchaseKind)(int)item.Kind,
-                        item.ItemIndex,
-                        count,
-                        unitPrice);
+                if (battery is null)
+                    return [new { Type = "SystemMessageFlash", Message = "找不到機甲電池" }];
 
-                    var assets = _store.GetCharacterAssets(
-                        accountId,
-                        state.CharacterId.Value);
+                var itemIndex = Convert.ToInt32(battery["ItemIndex"]);
+                var energy = _horseBatteries.GetEnergy(itemIndex);
+                if (energy <= 0)
+                    return [new { Type = "SystemMessageFlash", Message = "此物品不是可用的機甲電池" }];
 
-                    return BuildAssetSyncPackets(
-                        result.Success,
-                        result.Message,
-                        result.Money,
-                        assets);
-                }
+                var horse = _store.ChargeHorse(
+                    accountId,
+                    state.CharacterId.Value,
+                    horseUid,
+                    itemUid,
+                    energy);
 
-                if (action == "SellNpcItem")
-                {
-                    var uid = req.Int("UID");
-                    var tabType = req.Int("TabType");
-                    var count = Math.Clamp(req.Int("Count", 1), 1, 9999);
-                    var success = _store.SellAsset(
-                        accountId,
-                        state.CharacterId.Value,
-                        uid,
-                        tabType,
-                        count,
-                        25,
-                        out var money);
+                if (horse is null)
+                    return [new { Type = "SystemMessageFlash", Message = "機甲充能失敗" }];
 
-                    var assets = _store.GetCharacterAssets(
-                        accountId,
-                        state.CharacterId.Value);
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
 
-                    return BuildAssetSyncPackets(
-                        success,
-                        success ? "出售成功" : "出售失敗",
-                        money,
-                        assets);
-                }
-
-                return [];
+                return
+                [
+                    new
+                    {
+                        Type = "SyncMechaEnergy",
+                        HorseUID = horseUid,
+                        EnergyLeft = horse["EnergyLeft"],
+                        Exp = horse["Exp"],
+                        MaxExp = horse["MaxExp"],
+                        Level = horse["Level"]
+                    },
+                    new
+                    {
+                        Type = "InventorySync",
+                        Items = assets.Inventory,
+                        MaxSize = assets.InventoryMaxSize
+                    },
+                    new
+                    {
+                        Type = "HorseSync",
+                        Horses = assets.Horses,
+                        HorseEquips = assets.HorseEquips,
+                        MaxHorseEquipSize = assets.HorseEquipMaxSize
+                    },
+                    new { Type = "SystemMessageFlash", Message = "機甲充能完成" }
+                ];
             }
 
             case "AttackEntity":
