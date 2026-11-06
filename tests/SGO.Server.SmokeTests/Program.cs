@@ -201,8 +201,11 @@ try
             "router login establishes authenticated session");
     }
 
-    using (var select = Json(
-        $"""{"Type":"SelectCharacterRequest","DBID":{{id}}}"""))
+    using (var select = Json(JsonSerializer.Serialize(new
+    {
+        Type = "SelectCharacterRequest",
+        DBID = id
+    })))
     {
         var responses = router.Handle(select.RootElement, session);
         Check(session.CharacterId == id,
@@ -366,8 +369,11 @@ try
 
     var portal = map15Npcs[0];
 
-    using (var interact = Json(
-        $"""{"Type":"InteractRequest","EntityID":{{portal.EntityId}}}"""))
+    using (var interact = Json(JsonSerializer.Serialize(new
+    {
+        Type = "InteractRequest",
+        EntityID = portal.EntityId
+    })))
     {
         var responses = router.Handle(interact.RootElement, session);
         Check(responses.Count >= 1 &&
@@ -378,8 +384,13 @@ try
             "Ask options encode GetChoice target");
     }
 
-    using (var option = Json(
-        $"""{"Type":"NpcOptionRequest","EntityID":{{portal.EntityId}},"ScriptName":"{{portal.Script}}","TargetNode":"Check#0"}"""))
+    using (var option = Json(JsonSerializer.Serialize(new
+    {
+        Type = "NpcOptionRequest",
+        EntityID = portal.EntityId,
+        ScriptName = portal.Script,
+        TargetNode = "Check#0"
+    })))
     {
         var responses = router.Handle(option.RootElement, session);
         Check(responses.Any(x =>
