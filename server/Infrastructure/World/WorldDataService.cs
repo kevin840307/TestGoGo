@@ -46,7 +46,7 @@ public sealed class WorldDataService
             Y = npc.Y,
             Script = npc.Script,
             Name = DecodeName(big5, npc.NameBytes),
-            Sprite = $"NPC{npc.NpcTypeId:D3}.png",
+            Sprite = $"NPC{GetNpcSpriteId(npc.NpcTypeId):D3}.png",
             IsPortal = IsPortalScript(npc.Script),
             IsMerchant = IsMerchantScript(npc.Script)
         }).ToArray();
@@ -181,6 +181,13 @@ public sealed class WorldDataService
         {
             return "NPC";
         }
+    }
+
+    private static int GetNpcSpriteId(int npcTypeId)
+    {
+        // NPC.dat stores additional type bits above the low byte.
+        // The client asset index is the low 8-bit sprite id.
+        return npcTypeId & 0xFF;
     }
 
     private static bool IsMerchantScript(string script)
