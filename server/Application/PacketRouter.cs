@@ -131,18 +131,35 @@ public sealed class PacketRouter
                 state.PendingMapSpawn = true;
                 character["Type"] = "EnterWorldSuccess";
 
+                var assets = _store.GetCharacterAssets(accountId, dbid);
+
                 return
                 [
                     character,
-                    new { Type = "InventorySync", Items = Array.Empty<object>(), MaxSize = 200 },
-                    new { Type = "EquipSync", Equips = Array.Empty<object>(), MaxSize = 200 },
-                    new { Type = "PetSync", Pets = Array.Empty<object>(), MaxSize = 50 },
+                    new
+                    {
+                        Type = "InventorySync",
+                        Items = assets.Inventory,
+                        MaxSize = assets.InventoryMaxSize
+                    },
+                    new
+                    {
+                        Type = "EquipSync",
+                        Equips = assets.Equips,
+                        MaxSize = assets.EquipMaxSize
+                    },
+                    new
+                    {
+                        Type = "PetSync",
+                        Pets = assets.Pets,
+                        MaxSize = assets.PetMaxSize
+                    },
                     new
                     {
                         Type = "HorseSync",
-                        Horses = Array.Empty<object>(),
-                        HorseEquips = Array.Empty<object>(),
-                        MaxHorseEquipSize = 20
+                        Horses = assets.Horses,
+                        HorseEquips = assets.HorseEquips,
+                        MaxHorseEquipSize = assets.HorseEquipMaxSize
                     },
                     new { Type = "SkillSync", Skills = Array.Empty<object>() },
                     new { Type = "SyncBuffs", Buffs = Array.Empty<object>() },
@@ -186,6 +203,203 @@ public sealed class PacketRouter
                 }
 
                 return packets;
+            }
+
+            case "EquipRequest":
+            {
+                if (!state.CharacterId.HasValue) return [];
+                var success = _store.EquipItem(
+                    accountId,
+                    state.CharacterId.Value,
+                    req.Int("ItemUID"),
+                    req.Int("TargetSlot", 255));
+
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                return
+                [
+                    new
+                    {
+                        Type = "EquipResponse",
+                        Success = success,
+                        Message = success ? "裝備成功" : "無法裝備"
+                    },
+                    new
+                    {
+                        Type = "EquipSync",
+                        Equips = assets.Equips,
+                        MaxSize = assets.EquipMaxSize
+                    }
+                ];
+            }
+
+            case "UnequipRequest":
+            {
+                if (!state.CharacterId.HasValue) return [];
+                var success = _store.UnequipItem(
+                    accountId,
+                    state.CharacterId.Value,
+                    req.Int("TargetSlot", 255));
+
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                return
+                [
+                    new
+                    {
+                        Type = "EquipResponse",
+                        Success = success,
+                        Message = success ? "卸下成功" : "無法卸下"
+                    },
+                    new
+                    {
+                        Type = "EquipSync",
+                        Equips = assets.Equips,
+                        MaxSize = assets.EquipMaxSize
+                    }
+                ];
+            }
+
+            case "DriveMechaRequest":
+            {
+                if (!state.CharacterId.HasValue) return [];
+                var horseUid = req.Int("HorseUID", -1);
+                var success = _store.SetSummonedHorse(
+                    accountId,
+                    state.CharacterId.Value,
+                    horseUid);
+
+                return
+                [
+                    new
+                    {
+                        Type = "DriveMechaResponse",
+                        Success = success,
+                        HorseUID = success ? horseUid : -1,
+                        Message = success
+                            ? (horseUid == -1 ? "已解除駕駛" : "開始駕駛")
+                            : "無法駕駛此機甲"
+                    }
+                ];
+            }
+
+            case "HorseEquipRequest":
+            {
+                if (!state.CharacterId.HasValue) return [];
+                var success = _store.EquipHorseItem(
+                    accountId,
+                    state.CharacterId.Value,
+                    req.Int("EquipUID"),
+                    req.Int("HorseUID"));
+
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                return
+                [
+                    new
+                    {
+                        Type = "HorseSync",
+                        Horses = assets.Horses,
+                        HorseEquips = assets.HorseEquips,
+                        MaxHorseEquipSize = assets.HorseEquipMaxSize
+                    },
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = success ? "機甲裝備成功" : "機甲裝備失敗"
+                    }
+                ];
+            }
+
+            case "HorseUnequipRequest":
+            {
+                if (!state.CharacterId.HasValue) return [];
+                var success = _store.UnequipHorseItem(
+                    accountId,
+                    state.CharacterId.Value,
+                    req.Int("EquipUID"),
+                    req.Int("HorseUID"));
+
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                return
+                [
+                    new
+                    {
+                        Type = "HorseSync",
+                        Horses = assets.Horses,
+                        HorseEquips = assets.HorseEquips,
+                        MaxHorseEquipSize = assets.HorseEquipMaxSize
+                    },
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = success ? "已卸下機甲裝備" : "無法卸下機甲裝備"
+                    }
+                ];
+            }
+
+            case "PetAction":
+            {
+                if (!state.CharacterId.HasValue) return [];
+
+                var action = req.Str("Action");
+                var petUid = req.Int("PetUID");
+                bool success;
+
+                switch (action)
+                {
+                    case "Summon":
+                        success = _store.SetPetState(
+                            accountId,
+                            state.CharacterId.Value,
+                            petUid,
+                            1);
+                        break;
+
+                    case "Recall":
+                        success = _store.SetPetState(
+                            accountId,
+                            state.CharacterId.Value,
+                            petUid,
+                            0);
+                        break;
+
+                    default:
+                        _log.LogDebug(
+                            "Unimplemented PetAction: {Action}",
+                            action);
+                        return [];
+                }
+
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                return
+                [
+                    new
+                    {
+                        Type = "PetSync",
+                        Pets = assets.Pets,
+                        MaxSize = assets.PetMaxSize
+                    },
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = success
+                            ? (action == "Summon" ? "寵物已召喚" : "寵物已收回")
+                            : "寵物操作失敗"
+                    }
+                ];
             }
 
             case "AttackEntity":
