@@ -201,10 +201,15 @@ public sealed class SqliteGameStore
         using var r = cmd.ExecuteReader();
         while (r.Read()) list.Add(ReadCharacter(r));
 
-        // Recovered entry_manager reads character_list[0].ACCID when creating
-        // the first character. DBID=0 keeps CharacterSelect treating it as empty.
-        if (list.Count == 0)
-            list.Add(new Dictionary<string, object> { ["ACCID"] = accountId, ["DBID"] = 0 });
+        // The recovered client renders exactly three character slots and also
+        // reads character_list[0].ACCID when creating a character. Keep the
+        // server response shape stable by always returning three slots.
+        while (list.Count < 3)
+            list.Add(new Dictionary<string, object>
+            {
+                ["ACCID"] = accountId,
+                ["DBID"] = 0
+            });
         return list;
     }
 
