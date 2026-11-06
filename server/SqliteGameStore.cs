@@ -68,6 +68,9 @@ public sealed class SqliteGameStore
                 crit_rate INTEGER NOT NULL DEFAULT 0,
                 crit_damage INTEGER NOT NULL DEFAULT 125,
                 state TEXT NOT NULL DEFAULT 'idle',
+                reborn_map_id INTEGER NOT NULL DEFAULT 15,
+                reborn_x REAL NOT NULL DEFAULT 9408,
+                reborn_y REAL NOT NULL DEFAULT 10336,
                 FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
             );
 
@@ -106,7 +109,10 @@ public sealed class SqliteGameStore
             ["attack_range"] = "INTEGER NOT NULL DEFAULT 80",
             ["crit_rate"] = "INTEGER NOT NULL DEFAULT 0",
             ["crit_damage"] = "INTEGER NOT NULL DEFAULT 125",
-            ["state"] = "TEXT NOT NULL DEFAULT 'idle'"
+            ["state"] = "TEXT NOT NULL DEFAULT 'idle'",
+            ["reborn_map_id"] = "INTEGER NOT NULL DEFAULT 15",
+            ["reborn_x"] = "REAL NOT NULL DEFAULT 9408",
+            ["reborn_y"] = "REAL NOT NULL DEFAULT 10336"
         };
 
         var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -232,7 +238,8 @@ public sealed class SqliteGameStore
                    level,map_id,x,y,hp,max_hp,mp,max_mp,sp,max_sp,money,
                    exp_use,exp_acc,exp_death,max_exp,career,job,attack,defense,
                    magic_attack,magic_defense,hit,dodge,lucky,move_speed,
-                   attack_speed,attack_range,crit_rate,crit_damage,state
+                   attack_speed,attack_range,crit_rate,crit_damage,state,
+                   reborn_map_id,reborn_x,reborn_y
             FROM characters
             """;
         return cmd;
@@ -286,6 +293,9 @@ public sealed class SqliteGameStore
             ["CritRate"] = r.GetInt32(38),
             ["CritDamage"] = r.GetInt32(39),
             ["State"] = r.GetString(40),
+            ["RebornMapID"] = r.GetInt32(41),
+            ["RebornX"] = r.GetDouble(42),
+            ["RebornY"] = r.GetDouble(43),
 
             // Safe defaults expected by PlayerData.load_from_json().
             ["Title"] = 0,
@@ -418,6 +428,23 @@ public sealed class SqliteGameStore
         using var cmd = db.CreateCommand();
         cmd.CommandText =
             "UPDATE characters SET map_id=$m,x=$x,y=$y WHERE id=$id AND account_id=$a";
+        Arg(cmd, "$m", mapId);
+        Arg(cmd, "$x", x);
+        Arg(cmd, "$y", y);
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+        return cmd.ExecuteNonQuery() == 1;
+    }
+
+    public bool SetRebornLocation(long accountId, long dbid, int mapId, int x, int y)
+    {
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET reborn_map_id=$m, reborn_x=$x, reborn_y=$y
+             WHERE id=$id AND account_id=$a
+            """;
         Arg(cmd, "$m", mapId);
         Arg(cmd, "$x", x);
         Arg(cmd, "$y", y);
