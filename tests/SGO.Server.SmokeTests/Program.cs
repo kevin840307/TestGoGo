@@ -27,6 +27,14 @@ Check(map15Npcs[0].Script == "KingCity(P06)_to_KingCity(P08).txt",
 Check(map15Npcs[0].X == 4932 && map15Npcs[0].Y == 7783,
     "Map15 first portal coordinates parsed");
 
+var map15Enemies = world.GetEnemies(15);
+Check(map15Enemies.Count == 4,
+    "Map15 Enemy.dat binary parser reads four legacy records");
+Check(map15Enemies.All(x => x.EnemyId == 245),
+    "Map15 legacy enemy records resolve EnemyID 245");
+Check(world.BuildMapSpawnPackets(15).Count == 52,
+    "Map15 city suppresses combat enemy spawns");
+
 var payload = new { Type = "LoginRequest", User = "offline", Pass = "test" };
 var ciphertext = Protocol.Encode(payload);
 using (var packet = Protocol.Decode(ciphertext))
