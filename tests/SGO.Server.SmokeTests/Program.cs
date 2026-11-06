@@ -331,6 +331,56 @@ try
                   "\"Type\":\"SpawnEntity\"")),
         "dead monster respawns with full HP");
 
+    // Monster -> player damage/death.
+    var playerDeathSeen = false;
+    var aiNow = session.LastMonsterAiTick.AddSeconds(2);
+
+    for (var i = 0; i < 100 && !playerDeathSeen; i++)
+    {
+        aiNow = aiNow.AddSeconds(2);
+        var monsterAttackPackets = combat.TickAi(
+            session,
+            account.Value,
+            monster.X + 20,
+            monster.Y,
+            aiNow);
+
+        playerDeathSeen = monsterAttackPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EntityDeath\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"EntityType\":0"));
+    }
+
+    selected = store.GetCharacter(account.Value, id);
+    Check(playerDeathSeen &&
+          Convert.ToInt32(selected!["HP"]) == 0 &&
+          selected["State"].ToString() == "death",
+        "monster attacks can kill player and persist death state");
+
+    using (var revive = Json(
+        """{"Type":"ReviveRequest"}"""))
+    {
+        var responses = router.Handle(revive.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PlayerStatusSync\"")) &&
+              responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"ChangeMap\"")),
+            "ReviveRequest restores status and changes to reborn map");
+        Check(session.CurrentMapId == 15 &&
+              session.PendingMapSpawn,
+            "revive returns session to persisted Map15 reborn point");
+    }
+
+    selected = store.GetCharacter(account.Value, id);
+    Check(Convert.ToInt32(selected!["HP"]) ==
+              Convert.ToInt32(selected["MaxHP"]) &&
+          Convert.ToInt32(selected["MapID"]) == 15 &&
+          selected["State"].ToString() == "idle",
+        "revive persists full HP idle state and reborn map");
+
     using (var chat = Json(
         """{"Type":"ChatMessage","Channel":0,"Message":"hello","BubbleType":0}"""))
     {
