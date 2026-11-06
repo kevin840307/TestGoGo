@@ -202,7 +202,7 @@ try
     }
 
     using (var select = Json(
-        $$"""{"Type":"SelectCharacterRequest","DBID":{{id}}}"""))
+        $$$"""{"Type":"SelectCharacterRequest","DBID":{{id}}}"""))
     {
         var responses = router.Handle(select.RootElement, session);
         Check(session.CharacterId == id,
@@ -230,7 +230,7 @@ try
     }
 
     using (var equip = Json(
-        $"""{"Type":"EquipRequest","ItemUID":{{equipUid}},"TargetSlot":5}"""))
+        $$"""{"Type":"EquipRequest","ItemUID":{{equipUid}},"TargetSlot":5}"""))
     {
         var responses = router.Handle(equip.RootElement, session);
         Check(responses.Any(x =>
@@ -262,7 +262,7 @@ try
     }
 
     using (var drive = Json(
-        $"""{"Type":"DriveMechaRequest","HorseUID":{{horseUid}}}"""))
+        $$"""{"Type":"DriveMechaRequest","HorseUID":{{horseUid}}}"""))
     {
         var responses = router.Handle(drive.RootElement, session);
         Check(responses.Any(x =>
@@ -277,7 +277,7 @@ try
     }
 
     using (var horseEquip = Json(
-        $"""{"Type":"HorseEquipRequest","EquipUID":{{horseEquipUid}},"HorseUID":{{horseUid}}}"""))
+        $$"""{"Type":"HorseEquipRequest","EquipUID":{{horseEquipUid}},"HorseUID":{{horseUid}}}"""))
     {
         var responses = router.Handle(horseEquip.RootElement, session);
         Check(responses.Any(x =>
@@ -291,7 +291,7 @@ try
     }
 
     using (var petSummon = Json(
-        $"""{"Type":"PetAction","Action":"Summon","PetUID":{{petUid}}}"""))
+        $$"""{"Type":"PetAction","Action":"Summon","PetUID":{{petUid}}}"""))
     {
         var responses = router.Handle(petSummon.RootElement, session);
         Check(responses.Any(x =>
@@ -305,7 +305,7 @@ try
     }
 
     using (var petRename = Json(
-        $"""{"Type":"PetAction","Action":"Rename","PetUID":{{petUid}},"NewName":"Momo"}"""))
+        $$"""{"Type":"PetAction","Action":"Rename","PetUID":{{petUid}},"NewName":"Momo"}"""))
     {
         router.Handle(petRename.RootElement, session);
         Check(store.GetCharacterAssets(account.Value, id).Pets
@@ -315,7 +315,7 @@ try
     }
 
     using (var petEquip = Json(
-        $"""{"Type":"PetAction","Action":"Equip","PetUID":{{petUid}},"ItemUID":{{equipUid}},"TargetSlot":0}"""))
+        $$"""{"Type":"PetAction","Action":"Equip","PetUID":{{petUid}},"ItemUID":{{equipUid}},"TargetSlot":0}"""))
     {
         router.Handle(petEquip.RootElement, session);
         Check(store.GetCharacterAssets(account.Value, id).Pets
@@ -325,7 +325,7 @@ try
     }
 
     using (var petUnequip = Json(
-        $"""{"Type":"PetAction","Action":"Unequip","PetUID":{{petUid}},"TargetSlot":0}"""))
+        $$"""{"Type":"PetAction","Action":"Unequip","PetUID":{{petUid}},"TargetSlot":0}"""))
     {
         router.Handle(petUnequip.RootElement, session);
         Check(store.GetCharacterAssets(account.Value, id).Pets
@@ -335,7 +335,7 @@ try
     }
 
     using (var petRecall = Json(
-        $"""{"Type":"PetAction","Action":"Recall","PetUID":{{petUid}}}"""))
+        $$"""{"Type":"PetAction","Action":"Recall","PetUID":{{petUid}}}"""))
     {
         router.Handle(petRecall.RootElement, session);
         Check(store.GetCharacterAssets(account.Value, id).Pets
@@ -367,7 +367,7 @@ try
     var portal = map15Npcs[0];
 
     using (var interact = Json(
-        $$"""{"Type":"InteractRequest","EntityID":{{portal.EntityId}}}"""))
+        $$$"""{"Type":"InteractRequest","EntityID":{{portal.EntityId}}}"""))
     {
         var responses = router.Handle(interact.RootElement, session);
         Check(responses.Count >= 1 &&
@@ -379,7 +379,7 @@ try
     }
 
     using (var option = Json(
-        $$"""{"Type":"NpcOptionRequest","EntityID":{{portal.EntityId}},"ScriptName":"{{portal.Script}}","TargetNode":"Check#0"}"""))
+        $$$"""{"Type":"NpcOptionRequest","EntityID":{{portal.EntityId}},"ScriptName":"{{portal.Script}}","TargetNode":"Check#0"}"""))
     {
         var responses = router.Handle(option.RootElement, session);
         Check(responses.Any(x =>
