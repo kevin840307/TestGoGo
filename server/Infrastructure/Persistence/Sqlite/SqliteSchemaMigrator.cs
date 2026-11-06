@@ -59,6 +59,11 @@ internal static class SqliteSchemaMigrator
             var column = rest[..secondSpace].Trim();
             var definition = rest[(secondSpace + 1)..].Trim();
 
+            // Ignore documentation/examples accidentally matching the directive
+            // prefix. Only simple SQLite identifiers are accepted here.
+            if (!IsSafeIdentifier(table) || !IsSafeIdentifier(column))
+                continue;
+
             if (ColumnExists(db, table, column))
                 continue;
 
@@ -67,6 +72,20 @@ internal static class SqliteSchemaMigrator
                 $"ALTER TABLE [{table}] ADD COLUMN [{column}] {definition};";
             alter.ExecuteNonQuery();
         }
+    }
+
+    private static bool IsSafeIdentifier(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        foreach (var ch in value)
+        {
+            if (!(char.IsLetterOrDigit(ch) || ch == '_'))
+                return false;
+        }
+
+        return true;
     }
 
     private static bool ColumnExists(
