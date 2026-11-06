@@ -203,7 +203,7 @@ try
     var horseUid = store.AddHorse(
         account.Value, id, 6001, "TestMecha", "MS", 3600);
     var horseEquipUid = store.AddHorseEquipment(
-        account.Value, id, 6201, -1, 3, 0, 1);
+        account.Value, id, 6201, -1, 255, 0, 1);
     var batteryUid = store.AddInventoryItem(
         account.Value, id, 6905, 1);
 
