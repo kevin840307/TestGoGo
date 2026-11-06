@@ -37,18 +37,32 @@ public sealed class WorldDataService
         var raw = NpcDatReader.Read(path);
         var big5 = Encoding.GetEncoding(950);
 
-        var list = raw.Select((npc, index) => new WorldNpc
+        var list = raw.Select((npc, index) =>
         {
-            EntityId = 2_000_000 + mapId * 10_000 + index,
-            MapId = mapId,
-            NpcTypeId = npc.NpcTypeId,
-            X = npc.X,
-            Y = npc.Y,
-            Script = npc.Script,
-            Name = DecodeName(big5, npc.NameBytes),
-            Sprite = $"NPC{GetNpcSpriteId(npc.NpcTypeId):D3}.png",
-            IsPortal = IsPortalScript(npc.Script),
-            IsMerchant = IsMerchantScript(npc.Script)
+            var isMerchant = IsMerchantScript(npc.Script);
+            return new WorldNpc
+            {
+                EntityId = 2_000_000 + mapId * 10_000 + index,
+                MapId = mapId,
+                NpcTypeId = npc.NpcTypeId,
+                X = npc.X,
+                Y = npc.Y,
+                Script = npc.Script,
+                Name = DecodeName(big5, npc.NameBytes),
+
+                // npc_entity.gd only creates its click CollisionShape when the
+                // supplied texture exists. Some packed legacy merchant IDs do
+                // not map to a recovered NPCxxx.png, making the NPC both
+                // invisible and unclickable. Use a known recovered sprite for
+                // merchants until the full legacy id -> client sprite table is
+                // reconstructed.
+                Sprite = isMerchant
+                    ? "NPC002.png"
+                    : $"NPC{GetNpcSpriteId(npc.NpcTypeId):D3}.png",
+
+                IsPortal = IsPortalScript(npc.Script),
+                IsMerchant = isMerchant
+            };
         }).ToArray();
 
         return _npcCache[mapId] = list;
