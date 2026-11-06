@@ -1,7 +1,7 @@
 using SGO.Server.Application;
 using SGO.Server.Application.Combat;
-using SGO.Server.Infrastructure.Legacy.Quest;
-using SGO.Server.Infrastructure.Legacy.World;
+using SGO.Server.Infrastructure.Quest;
+using SGO.Server.Infrastructure.World;
 using SGO.Server.Infrastructure.Persistence;
 using SGO.Server.Transport.WebSockets;
 
@@ -13,16 +13,16 @@ builder.WebHost.UseUrls(
 
 builder.Services.AddGamePersistence(builder.Configuration);
 
-var legacyDataRoot = Path.Combine(
+var gameDataRoot = Path.Combine(
     AppContext.BaseDirectory,
-    "LegacyData");
+    "GameData");
 
 builder.Services.AddSingleton(
-    new LegacyWorldService(legacyDataRoot));
+    new WorldDataService(gameDataRoot));
 
 builder.Services.AddSingleton(
-    new LegacyQuestRuntime(
-        Path.Combine(legacyDataRoot, "Quest")));
+    new QuestRuntime(
+        Path.Combine(gameDataRoot, "Quest")));
 
 builder.Services.AddSingleton<CombatService>();
 builder.Services.AddSingleton<PacketRouter>();
