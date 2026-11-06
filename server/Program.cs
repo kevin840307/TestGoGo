@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using SGO.Server;
+using SGO.Server.Legacy;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://127.0.0.1:5678");
@@ -11,6 +12,11 @@ var dbPath = builder.Configuration["Game:Database"]
              ?? Path.Combine(AppContext.BaseDirectory, "Data", "game.db");
 
 builder.Services.AddSingleton(new SqliteGameStore(dbPath));
+
+var legacyDataRoot = Path.Combine(AppContext.BaseDirectory, "LegacyData");
+builder.Services.AddSingleton(new LegacyWorldService(legacyDataRoot));
+builder.Services.AddSingleton(new LegacyQuestRuntime(
+    Path.Combine(legacyDataRoot, "Quest")));
 builder.Services.AddSingleton<PacketRouter>();
 
 var app = builder.Build();
