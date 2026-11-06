@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Protocol;
+using SGO.Server.Domain.Assets;
 
 namespace SGO.Server.Infrastructure.Persistence.Sqlite;
 
@@ -73,10 +74,117 @@ public sealed class SqliteGameStore : IGameStore
                 reborn_map_id INTEGER NOT NULL DEFAULT 15,
                 reborn_x REAL NOT NULL DEFAULT 9408,
                 reborn_y REAL NOT NULL DEFAULT 10336,
+                summoned_horse_uid INTEGER NOT NULL DEFAULT -1,
                 FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
             );
 
             CREATE INDEX IF NOT EXISTS ix_characters_account ON characters(account_id);
+
+            CREATE TABLE IF NOT EXISTS inventory_items (
+                uid INTEGER PRIMARY KEY AUTOINCREMENT,
+                character_id INTEGER NOT NULL,
+                item_index INTEGER NOT NULL,
+                count INTEGER NOT NULL DEFAULT 1,
+                in_bank INTEGER NOT NULL DEFAULT 0,
+                in_shop INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_inventory_character ON inventory_items(character_id);
+
+            CREATE TABLE IF NOT EXISTS equipment_items (
+                uid INTEGER PRIMARY KEY AUTOINCREMENT,
+                character_id INTEGER NOT NULL,
+                item_index INTEGER NOT NULL,
+                damage INTEGER NOT NULL DEFAULT 0,
+                color INTEGER NOT NULL DEFAULT 0,
+                part INTEGER NOT NULL DEFAULT 255,
+                in_bank INTEGER NOT NULL DEFAULT 0,
+                in_shop INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_equipment_character ON equipment_items(character_id);
+
+            CREATE TABLE IF NOT EXISTS pets (
+                uid INTEGER PRIMARY KEY AUTOINCREMENT,
+                character_id INTEGER NOT NULL,
+                pet_id INTEGER NOT NULL,
+                name TEXT NOT NULL DEFAULT '',
+                hp INTEGER NOT NULL DEFAULT 100,
+                max_hp INTEGER NOT NULL DEFAULT 100,
+                mp INTEGER NOT NULL DEFAULT 50,
+                max_mp INTEGER NOT NULL DEFAULT 50,
+                attack INTEGER NOT NULL DEFAULT 10,
+                defense INTEGER NOT NULL DEFAULT 5,
+                magic_attack INTEGER NOT NULL DEFAULT 5,
+                magic_defense INTEGER NOT NULL DEFAULT 5,
+                hit INTEGER NOT NULL DEFAULT 100,
+                dodge INTEGER NOT NULL DEFAULT 0,
+                con INTEGER NOT NULL DEFAULT 0,
+                str INTEGER NOT NULL DEFAULT 0,
+                wis INTEGER NOT NULL DEFAULT 0,
+                dex INTEGER NOT NULL DEFAULT 0,
+                extra_str INTEGER NOT NULL DEFAULT 0,
+                extra_dex INTEGER NOT NULL DEFAULT 0,
+                extra_con INTEGER NOT NULL DEFAULT 0,
+                extra_wis INTEGER NOT NULL DEFAULT 0,
+                life_count INTEGER NOT NULL DEFAULT 0,
+                recovery_count INTEGER NOT NULL DEFAULT 0,
+                summon_wait_count INTEGER NOT NULL DEFAULT 0,
+                exp INTEGER NOT NULL DEFAULT 0,
+                max_exp INTEGER NOT NULL DEFAULT 100,
+                level INTEGER NOT NULL DEFAULT 1,
+                use_exp INTEGER NOT NULL DEFAULT 0,
+                feed_exp_limit INTEGER NOT NULL DEFAULT 0,
+                evol_id INTEGER NOT NULL DEFAULT 0,
+                equip0 INTEGER NOT NULL DEFAULT 0,
+                equip1 INTEGER NOT NULL DEFAULT 0,
+                equip2 INTEGER NOT NULL DEFAULT 0,
+                feed_value INTEGER NOT NULL DEFAULT 0,
+                state INTEGER NOT NULL DEFAULT 0,
+                main_skill_id INTEGER NOT NULL DEFAULT 0,
+                in_shop INTEGER NOT NULL DEFAULT 0,
+                shop_price INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_pets_character ON pets(character_id);
+
+            CREATE TABLE IF NOT EXISTS horses (
+                uid INTEGER PRIMARY KEY AUTOINCREMENT,
+                character_id INTEGER NOT NULL,
+                horse_index INTEGER NOT NULL,
+                name TEXT NOT NULL DEFAULT '',
+                horse_type TEXT NOT NULL DEFAULT 'MS',
+                exp INTEGER NOT NULL DEFAULT 0,
+                max_exp INTEGER NOT NULL DEFAULT 1000,
+                energy_left INTEGER NOT NULL DEFAULT 0,
+                level INTEGER NOT NULL DEFAULT 1,
+                equip_color0 INTEGER NOT NULL DEFAULT 0,
+                equip_color1 INTEGER NOT NULL DEFAULT 0,
+                equip_color2 INTEGER NOT NULL DEFAULT 0,
+                equip_color3 INTEGER NOT NULL DEFAULT 0,
+                angry INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_horses_character ON horses(character_id);
+
+            CREATE TABLE IF NOT EXISTS horse_equipment (
+                uid INTEGER PRIMARY KEY AUTOINCREMENT,
+                character_id INTEGER NOT NULL,
+                equip_index INTEGER NOT NULL,
+                horse_uid INTEGER NOT NULL DEFAULT -1,
+                damage INTEGER NOT NULL DEFAULT 0,
+                color INTEGER NOT NULL DEFAULT 0,
+                part INTEGER NOT NULL DEFAULT 255,
+                in_bank INTEGER NOT NULL DEFAULT 0,
+                in_shop INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_horse_equipment_character ON horse_equipment(character_id);
             """;
         cmd.ExecuteNonQuery();
         EnsureCharacterSchema(db);
@@ -114,7 +222,8 @@ public sealed class SqliteGameStore : IGameStore
             ["state"] = "TEXT NOT NULL DEFAULT 'idle'",
             ["reborn_map_id"] = "INTEGER NOT NULL DEFAULT 15",
             ["reborn_x"] = "REAL NOT NULL DEFAULT 9408",
-            ["reborn_y"] = "REAL NOT NULL DEFAULT 10336"
+            ["reborn_y"] = "REAL NOT NULL DEFAULT 10336",
+            ["summoned_horse_uid"] = "INTEGER NOT NULL DEFAULT -1"
         };
 
         var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -241,7 +350,7 @@ public sealed class SqliteGameStore : IGameStore
                    exp_use,exp_acc,exp_death,max_exp,career,job,attack,defense,
                    magic_attack,magic_defense,hit,dodge,lucky,move_speed,
                    attack_speed,attack_range,crit_rate,crit_damage,state,
-                   reborn_map_id,reborn_x,reborn_y
+                   reborn_map_id,reborn_x,reborn_y,summoned_horse_uid
             FROM characters
             """;
         return cmd;
@@ -298,6 +407,7 @@ public sealed class SqliteGameStore : IGameStore
             ["RebornMapID"] = r.GetInt32(41),
             ["RebornX"] = r.GetDouble(42),
             ["RebornY"] = r.GetDouble(43),
+            ["SummonedHorseUID"] = r.GetInt64(44),
 
             // Safe defaults expected by PlayerData.load_from_json().
             ["Title"] = 0,
@@ -323,7 +433,7 @@ public sealed class SqliteGameStore : IGameStore
             ["PartyLeaderDBID"] = 0,
             ["PartyMembers"] = Array.Empty<object>(),
             ["MechaType"] = "MS",
-            ["SummonedHorseUID"] = -1,
+
             ["TransformType"] = 0,
             ["TransformID"] = "",
             ["TransformColorIndex"] = 0,
