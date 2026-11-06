@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using SGO.Server.Application;
 using SGO.Server.Application.Combat;
+using SGO.Server.Application.Shops;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Infrastructure.Quest;
@@ -24,7 +25,7 @@ var questRoot = Path.Combine(gameDataRoot, "Quest");
 Check(Directory.Exists(gameDataRoot), "server data directory exists");
 
 var world = new WorldDataService(gameDataRoot);
-var shopCatalog = new NpcShopCatalog();
+var shopCatalog = new ShopCatalog(gameDataRoot);
 var quests = new QuestRuntime(questRoot, shopCatalog);
 var map15Npcs = world.GetNpcs(15);
 
@@ -101,11 +102,12 @@ Check(world.BuildMapSpawnPackets(15).Count == 52,
     "Map15 city suppresses combat enemy spawns");
 
 var map15Merchant = map15Npcs.First(x => x.IsMerchant);
-Check(map15Merchant.Sprite == "NPC002.png",
-    "Map15 merchant uses visible fallback sprite");
-Check(shopCatalog.GetItems(7).Count > 0 &&
-      shopCatalog.GetItems(10).Count > 0,
-    "NPC shop catalog exposes normal and mecha goods");
+Check(map15Merchant.NpcTypeId == 393 &&
+      map15Merchant.Sprite == "NPC137.png",
+    "Map15 merchant packed NPC type maps to sprite 137");
+Check(shopCatalog.GetShopItems(7).Any(x => x.ItemIndex == 272) &&
+      shopCatalog.GetShopItems(10).Count > 0,
+    "NPC shop catalog loads bullet and weapon goods from item data");
 
 var payload = new { Type = "LoginRequest", User = "offline", Pass = "test" };
 var ciphertext = ClientProtocol.Encode(payload);
@@ -126,12 +128,13 @@ try
 {
     var store = new SqliteGameStore(Path.Combine(temp, "game.db"));
     var combat = new CombatService(store, world);
+    var shops = new ShopService(store, shopCatalog);
     var router = new PacketRouter(
         store,
         world,
         quests,
         combat,
-        shopCatalog,
+        shops,
         NullLogger<PacketRouter>.Instance);
     var session = new ClientSession();
 
@@ -175,6 +178,10 @@ try
         slots.First(x =>
             x.TryGetValue("NAME", out var n) &&
             n?.ToString() == "TestCharacter")["DBID"]);
+
+    var funded = store.AddRewards(account.Value, id, 0, 10_000);
+    Check(funded is not null && Convert.ToInt32(funded["Money"]) == 10_000,
+        "fund character for NPC shop transaction tests");
 
     var itemUid = store.AddInventoryItem(
         account.Value, id, 10046, 5);
@@ -267,6 +274,62 @@ try
 
     var baseAttackBeforeEquip = Convert.ToInt32(
         store.GetCharacter(account.Value, id)!["Attack"]);
+
+    var bullet = shopCatalog.FindInShop(7, 272);
+    Check(bullet is not null && bullet.Price > 0,
+        "bullet shop contains real item 272");
+
+    using (var buy = Json(JsonSerializer.Serialize(new
+    {
+        Type = "ShopAction",
+        Action = "BuyNpcItem",
+        ShopID = 7,
+        ItemIndex = 272,
+        Count = 2
+    })))
+    {
+        var responses = router.Handle(buy.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("\"Type\":\"SyncMoney\"")),
+            "NPC shop buy returns money sync");
+
+        var afterBuy = store.GetCharacterAssets(account.Value, id);
+        Check(afterBuy.Inventory.Any(x =>
+                Convert.ToInt32(x["ItemIndex"]) == 272 &&
+                Convert.ToInt32(x["Count"]) == 2),
+            "NPC shop buy persists purchased bullets");
+    }
+
+    var purchasedBullet = store.GetCharacterAssets(account.Value, id)
+        .Inventory.First(x => Convert.ToInt32(x["ItemIndex"]) == 272);
+    var bulletUid = Convert.ToInt64(purchasedBullet["ItemUID"]);
+    var moneyBeforeSell = Convert.ToInt32(
+        store.GetCharacter(account.Value, id)!["Money"]);
+
+    using (var sell = Json(JsonSerializer.Serialize(new
+    {
+        Type = "ShopAction",
+        Action = "SellNpcItem",
+        UID = bulletUid,
+        TabType = 0,
+        Count = 1
+    })))
+    {
+        var responses = router.Handle(sell.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("\"Type\":\"SyncMoney\"")),
+            "NPC shop sell returns money sync");
+    }
+
+    var afterSellAssets = store.GetCharacterAssets(account.Value, id);
+    var afterSellBullet = afterSellAssets.Inventory
+        .First(x => Convert.ToInt32(x["ItemIndex"]) == 272);
+    var moneyAfterSell = Convert.ToInt32(
+        store.GetCharacter(account.Value, id)!["Money"]);
+
+    Check(Convert.ToInt32(afterSellBullet["Count"]) == 1 &&
+          moneyAfterSell > moneyBeforeSell,
+        "NPC shop sell decrements item count and adds money");
 
     using (var equip = Json(JsonSerializer.Serialize(new { Type = "EquipRequest", ItemUID = equipUid, TargetSlot = 5 })))
     {
