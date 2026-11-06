@@ -87,3 +87,24 @@ The following should remain unchanged when changing DB providers:
 - Client packet details belong under `Protocol/` or Transport, not persistence.
 - Old server binary/data compatibility belongs under `Infrastructure/Legacy/`.
 - New gameplay systems should be added under Application/Domain rather than growing Program.cs.
+
+
+## SQL file policy
+
+Database schema and initialization SQL must live under `Database/<Provider>/`.
+
+Examples:
+
+```text
+Database/
+├─ Sqlite/
+│  ├─ 001_schema.sql
+│  ├─ 002_indexes.sql
+│  └─ 003_legacy_character_columns.sql
+└─ MySql/
+   └─ 001_schema.sql
+```
+
+Provider startup code reads these files and executes them. Do not embed `CREATE TABLE`, `ALTER TABLE`, `CREATE INDEX`, or seed DDL in C#.
+
+Parameterized runtime DML such as account login, item purchase, movement persistence, and inventory updates remains in the provider implementation because it is application data access rather than database initialization.
