@@ -8,9 +8,13 @@ public sealed class ShopCatalog
 {
     private readonly Dictionary<int, List<ShopItemDefinition>> _shops = new();
     private readonly Dictionary<int, ShopItemDefinition> _items = new();
+    private readonly CurrentClientDataCatalog _current;
 
-    public ShopCatalog(string dataRoot)
+    public ShopCatalog(
+        string dataRoot,
+        CurrentClientDataCatalog current)
     {
+        _current = current;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
         LoadRecovery(Path.Combine(dataRoot, "Item", "Recovery.itd"));
@@ -215,27 +219,67 @@ public sealed class ShopCatalog
                 .Where(x => x > 0)
                 .Take(Math.Max(0, declaredCount));
 
-            foreach (var itemIndex in itemIds)
+            foreach (var legacyItemIndex in itemIds)
             {
-                if (_items.TryGetValue(itemIndex, out var def))
+                if (!_items.TryGetValue(legacyItemIndex, out var legacy))
+                    continue;
+
+                var current = _current.FindItem(legacyItemIndex);
+
+                if (current is null &&
+                    !string.IsNullOrWhiteSpace(legacy.Name) &&
+                    !legacy.Name.StartsWith(
+                        "Item ",
+                        StringComparison.OrdinalIgnoreCase))
                 {
-                    Add(def with { ShopId = shopId });
+                    current = _current.FindItemByName(
+                        legacy.Name,
+                        PreferredCurrentCategory(legacy));
+                }
+
+                if (current is null)
+                {
+                    // Old server/client IDs are reference-only. Do not expose
+                    // a legacy ID to the current recovered client when no
+                    // current match was found.
                     continue;
                 }
 
-                // Keep the source shop entry even when a legacy item parser has
-                // not been reconstructed yet. The recovered client resolves
-                // item name/icon from its own ItemLoader using ItemIndex.
                 Add(new ShopItemDefinition(
                     ShopId: shopId,
-                    ItemIndex: itemIndex,
-                    TabType: 0,
-                    Price: 10,
-                    CanSell: true,
-                    Name: string.Empty));
+                    ItemIndex: current.ItemId,
+                    TabType: CurrentTabType(current.Category),
+                    Price: current.Price > 0
+                        ? current.Price
+                        : legacy.Price,
+                    CanSell: current.CanSell != 0,
+                    Name: current.Name));
             }
         }
     }
+
+    private static string? PreferredCurrentCategory(
+        ShopItemDefinition legacy)
+        => legacy.TabType switch
+        {
+            0 => null,
+            1 => null,
+            3 => "horse",
+            4 => "horseequip",
+            5 => "horsebattery",
+            _ => null
+        };
+
+    private static int CurrentTabType(string category)
+        => category.ToLowerInvariant() switch
+        {
+            "booster" or "general" or "recovery" => 0,
+            "equip" or "weapon" => 1,
+            "horse" => 3,
+            "horseequip" => 4,
+            "horsebattery" => 5,
+            _ => 0
+        };
 
     private void Add(ShopItemDefinition item)
     {
