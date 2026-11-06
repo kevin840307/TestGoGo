@@ -1,7 +1,8 @@
 using System.Text.Json;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Domain.Sessions;
-using SGO.Server.Infrastructure.Legacy;
+using SGO.Server.Infrastructure.Legacy.Quest;
+using SGO.Server.Infrastructure.Legacy.World;
 using SGO.Server.Protocol;
 
 namespace SGO.Server.Application;
