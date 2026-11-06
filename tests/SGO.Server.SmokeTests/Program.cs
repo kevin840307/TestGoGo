@@ -219,7 +219,11 @@ try
         "seed persistent inventory equipment pet and mecha assets");
 
     var seededAssets = store.GetCharacterAssets(account.Value, id);
-    Check(seededAssets.Inventory.Count == 1 &&
+    Check(seededAssets.Inventory.Count == 2 &&
+          seededAssets.Inventory.Any(x =>
+              Convert.ToInt64(x["ItemUID"]) == itemUid) &&
+          seededAssets.Inventory.Any(x =>
+              Convert.ToInt64(x["ItemUID"]) == batteryUid) &&
           seededAssets.Equips.Count == 1 &&
           seededAssets.Pets.Count == 1 &&
           seededAssets.Horses.Count == 1 &&
