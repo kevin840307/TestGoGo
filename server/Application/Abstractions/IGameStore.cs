@@ -21,6 +21,12 @@ public interface IGameStore
     bool EquipItem(long accountId, long dbid, long itemUid, int targetSlot);
     bool UnequipItem(long accountId, long dbid, int targetSlot);
     bool SetSummonedHorse(long accountId, long dbid, long horseUid);
+    Dictionary<string, object>? ChargeHorse(
+        long accountId,
+        long dbid,
+        long horseUid,
+        long itemUid,
+        int energyAmount);
     bool EquipHorseItem(long accountId, long dbid, long equipUid, long horseUid);
     bool UnequipHorseItem(long accountId, long dbid, long equipUid, long horseUid);
     bool SetPetState(long accountId, long dbid, long petUid, int state);
