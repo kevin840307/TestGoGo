@@ -9,6 +9,9 @@ public sealed class LegacyQuestResult
     public int? NewMapId { get; set; }
     public int? NewX { get; set; }
     public int? NewY { get; set; }
+    public int? RebornMapId { get; set; }
+    public int? RebornX { get; set; }
+    public int? RebornY { get; set; }
 }
 
 public sealed class LegacyQuestRuntime
@@ -54,11 +57,28 @@ public sealed class LegacyQuestRuntime
             return result;
         }
 
-        var source = ReadScriptText(path);
+        var source = LoadAndPreprocessScript(path, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
         var script = new Script(CoreModules.Preset_Complete);
 
         script.Globals["GetChoice"] = (Func<int>)(() => choiceIndex ?? 0);
         script.Globals["GetData"] = (Func<string, object?>)(name => getData(name));
+
+        script.Globals["RankQuery"] = (Action<int>)(rankType =>
+        {
+            // Legacy 0=level, 1=money. Recovered client uses 1=level, 2=money.
+            result.Packets.Add(new
+            {
+                Type = "OpenRankWindow",
+                RankType = rankType + 1
+            });
+        });
+
+        script.Globals["SetRebornLocation"] = (Action<int,int,int>)((x,y,mapId) =>
+        {
+            result.RebornMapId = mapId;
+            result.RebornX = x;
+            result.RebornY = y;
+        });
 
         script.Globals["QuestEnd"] = (Action)(() =>
         {
@@ -180,6 +200,48 @@ public sealed class LegacyQuestRuntime
             });
 
         return result;
+    }
+
+    private string LoadAndPreprocessScript(
+        string path,
+        HashSet<string> includeStack)
+    {
+        var fullPath = Path.GetFullPath(path);
+        if (!includeStack.Add(fullPath))
+            throw new InvalidDataException($"Circular legacy quest include: {fullPath}");
+
+        var source = ReadScriptText(fullPath);
+        var output = new StringBuilder();
+
+        foreach (var rawLine in source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (line.StartsWith("#include", StringComparison.OrdinalIgnoreCase))
+            {
+                var first = line.IndexOf('"');
+                var last = line.LastIndexOf('"');
+                if (first >= 0 && last > first)
+                {
+                    var includeName = line[(first + 1)..last];
+                    var includePath = Path.Combine(_questRoot, includeName);
+                    output.AppendLine(
+                        LoadAndPreprocessScript(includePath, includeStack));
+                    continue;
+                }
+            }
+
+            // Some legacy scripts contain backslashes before Chinese smart quotes,
+            // e.g. \“...\”. Old CDELua tolerated these; standard Lua/MoonSharp does not.
+            output.AppendLine(
+                rawLine
+                    .Replace("\\“", "“")
+                    .Replace("\\”", "”")
+                    .Replace("\\‘", "‘")
+                    .Replace("\\’", "’"));
+        }
+
+        includeStack.Remove(fullPath);
+        return output.ToString();
     }
 
     private static string ReadScriptText(string path)
