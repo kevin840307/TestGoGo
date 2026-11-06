@@ -21,6 +21,11 @@ public interface IGameStore
 
     Dictionary<string, object>? Revive(long accountId, long dbid);
 
+    Dictionary<string, object>? ApplyDamage(
+        long accountId,
+        long dbid,
+        int damage);
+
     Dictionary<string, object>? AddRewards(
         long accountId,
         long dbid,
