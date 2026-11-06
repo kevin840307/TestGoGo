@@ -7,19 +7,6 @@ public sealed class ClientSession
     public long? AccountId { get; set; }
     public long? CharacterId { get; set; }
     public bool CloseRequested { get; set; }
-    public LocalMonster? TestMonster { get; set; }
-}
-
-public sealed class LocalMonster
-{
-    public int EntityId { get; init; } = 900001;
-    public string Name { get; init; } = "測試怪物";
-    public string Sprite { get; init; } = "EN005B";
-    public int Level { get; init; } = 1;
-    public int MaxHp { get; init; } = 50;
-    public int CurrentHp { get; set; } = 50;
-    public double X { get; init; }
-    public double Y { get; init; }
 }
 
 public sealed class PacketRouter
@@ -120,15 +107,6 @@ public sealed class PacketRouter
                 state.CharacterId = dbid;
                 character["Type"] = "EnterWorldSuccess";
 
-                var mapId = Convert.ToInt32(character["MapID"]);
-                state.TestMonster = mapId == 15
-                    ? new LocalMonster
-                    {
-                        X = Convert.ToDouble(character["LocX"]) + 180,
-                        Y = Convert.ToDouble(character["LocY"]) + 40
-                    }
-                    : null;
-
                 var packets = new List<object>
                 {
                     character,
@@ -148,85 +126,7 @@ public sealed class PacketRouter
                     new { Type = "FestivalThemeSync", Theme = "normal", Festival = "" }
                 };
 
-                if (state.TestMonster is not null)
-                {
-                    packets.Add(new
-                    {
-                        Type = "SpawnEntity",
-                        EntityID = state.TestMonster.EntityId,
-                        EntityType = 1,
-                        Name = state.TestMonster.Name,
-                        LocX = state.TestMonster.X,
-                        LocY = state.TestMonster.Y,
-                        ExtraData = new
-                        {
-                            Sprite = state.TestMonster.Sprite,
-                            Level = state.TestMonster.Level,
-                            MaxHP = state.TestMonster.MaxHp,
-                            CurrentHP = state.TestMonster.CurrentHp,
-                            Scale = 1.0,
-                            RequireCtrlToAttack = false,
-                            IsWorldBoss = false
-                        }
-                    });
-                }
-
                 return packets;
-            }
-
-            case "AttackEntity":
-            {
-                if (!state.CharacterId.HasValue || state.TestMonster is null)
-                    return [];
-
-                var targetId = req.Int("TargetEntityID");
-                var targetType = req.Int("TargetType", 1);
-                if (targetType != 1 ||
-                    targetId != state.TestMonster.EntityId ||
-                    state.TestMonster.CurrentHp <= 0)
-                    return [];
-
-                var player = _store.GetCharacter(accountId, state.CharacterId.Value);
-                if (player is null) return [];
-
-                var damage = Math.Max(1, Convert.ToInt32(player["Attack"]));
-                state.TestMonster.CurrentHp = Math.Max(
-                    0, state.TestMonster.CurrentHp - damage);
-
-                var result = new List<object>
-                {
-                    new
-                    {
-                        Type = "EntityDamage",
-                        TargetID = state.TestMonster.EntityId,
-                        TargetType = 1,
-                        Damage = damage,
-                        CurrentHP = state.TestMonster.CurrentHp,
-                        MaxHP = state.TestMonster.MaxHp,
-                        IsCrit = false,
-                        SkillID = 0,
-                        SkillLevel = 1,
-                        AttackerID = state.CharacterId.Value
-                    }
-                };
-
-                if (state.TestMonster.CurrentHp == 0)
-                {
-                    result.Add(new
-                    {
-                        Type = "EntityDeath",
-                        EntityID = state.TestMonster.EntityId,
-                        EntityType = 1,
-                        KillerID = state.CharacterId.Value
-                    });
-                    result.Add(new
-                    {
-                        Type = "SystemMessageChat",
-                        Message = $"擊敗 {state.TestMonster.Name}"
-                    });
-                }
-
-                return result;
             }
 
             case "SyncPosition":
@@ -293,7 +193,6 @@ public sealed class PacketRouter
             case "LogoutRequest":
                 state.AccountId = null;
                 state.CharacterId = null;
-                state.TestMonster = null;
                 state.CloseRequested = true;
                 return [new
                 {
