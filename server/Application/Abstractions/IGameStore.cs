@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SGO.Server.Domain.Assets;
 
 namespace SGO.Server.Application.Abstractions;
 
@@ -9,6 +10,20 @@ public interface IGameStore
 
     List<Dictionary<string, object>> Characters(long accountId);
     Dictionary<string, object>? GetCharacter(long accountId, long dbid);
+    CharacterAssets GetCharacterAssets(long accountId, long dbid);
+
+    long AddInventoryItem(long accountId, long dbid, int itemIndex, int count);
+    long AddEquipment(long accountId, long dbid, int itemIndex, int part = 255, int damage = 0, int color = 0);
+    long AddPet(long accountId, long dbid, int petId, string name);
+    long AddHorse(long accountId, long dbid, int horseIndex, string name, string horseType = "MS", int energyLeft = 0);
+    long AddHorseEquipment(long accountId, long dbid, int equipIndex, long horseUid = -1, int part = 255, int damage = 0, int color = 0);
+
+    bool EquipItem(long accountId, long dbid, long itemUid, int targetSlot);
+    bool UnequipItem(long accountId, long dbid, int targetSlot);
+    bool SetSummonedHorse(long accountId, long dbid, long horseUid);
+    bool EquipHorseItem(long accountId, long dbid, long equipUid, long horseUid);
+    bool UnequipHorseItem(long accountId, long dbid, long equipUid, long horseUid);
+    bool SetPetState(long accountId, long dbid, long petUid, int state);
 
     (bool Success, string Message) Create(long accountId, JsonElement data);
     bool Delete(long accountId, long dbid, string password);
