@@ -96,6 +96,8 @@ public sealed class LegacyWorldService
         return _enemyCache[mapId] = list;
     }
 
+    public bool IsCityMap(int mapId) => CityMaps.Contains(mapId);
+
     public LegacyWorldNpc? FindNpc(int mapId, int entityId)
         => GetNpcs(mapId).FirstOrDefault(x => x.EntityId == entityId);
 
