@@ -1,5 +1,6 @@
 using System.Text;
 using MoonSharp.Interpreter;
+using SGO.Server.Infrastructure.GameData;
 
 namespace SGO.Server.Infrastructure.Quest;
 
@@ -17,10 +18,14 @@ public sealed class QuestExecutionResult
 public sealed class QuestRuntime
 {
     private readonly string _questRoot;
+    private readonly NpcShopCatalog _shops;
 
-    public QuestRuntime(string questRoot)
+    public QuestRuntime(
+        string questRoot,
+        NpcShopCatalog shops)
     {
         _questRoot = questRoot;
+        _shops = shops;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     }
 
@@ -199,7 +204,7 @@ public sealed class QuestRuntime
                 ShopID = shopId,
                 ShopName = speaker,
                 PriceRate = priceRate,
-                Items = Array.Empty<object>()
+                Items = _shops.BuildClientItems(shopId, priceRate)
             });
             return DynValue.Nil;
         });
