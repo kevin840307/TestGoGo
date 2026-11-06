@@ -1,4 +1,5 @@
 using SGO.Server.Application;
+using SGO.Server.Application.Combat;
 using SGO.Server.Infrastructure.Legacy.Quest;
 using SGO.Server.Infrastructure.Legacy.World;
 using SGO.Server.Infrastructure.Persistence;
@@ -23,6 +24,7 @@ builder.Services.AddSingleton(
     new LegacyQuestRuntime(
         Path.Combine(legacyDataRoot, "Quest")));
 
+builder.Services.AddSingleton<CombatService>();
 builder.Services.AddSingleton<PacketRouter>();
 
 var app = builder.Build();
