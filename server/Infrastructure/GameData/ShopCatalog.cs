@@ -47,13 +47,16 @@ public sealed class ShopCatalog
             var price = NormalizePrice(ReadI32(bytes, offset + 43), 30);
             if (itemIndex <= 0) continue;
 
-            Add(new ShopItemDefinition(
+            var item = new ShopItemDefinition(
                 ShopId: 1,
                 ItemIndex: itemIndex,
                 TabType: 0,
                 Price: price,
                 CanSell: bytes[offset + 2] != 0,
-                Name: $"Item {itemIndex}"));
+                Name: $"Item {itemIndex}");
+
+            Add(item);
+            Add(item with { ShopId = 24 });
         }
     }
 
@@ -168,13 +171,16 @@ public sealed class ShopCatalog
             if (itemIndex <= 0) continue;
 
             var name = ReadFixedString(big5, bytes, offset + nameOffset, nameLength);
-            Add(new ShopItemDefinition(
+            var item = new ShopItemDefinition(
                 ShopId: 2,
                 ItemIndex: itemIndex,
                 TabType: 1,
                 Price: price,
                 CanSell: bytes[offset + 2] != 0,
-                Name: name));
+                Name: name);
+
+            Add(item);
+            Add(item with { ShopId = 29 });
         }
     }
 
