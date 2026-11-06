@@ -2,8 +2,12 @@ using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using SGO.Server;
-using SGO.Server.Legacy;
+using SGO.Server.Application;
+using SGO.Server.Application.Abstractions;
+using SGO.Server.Domain.Sessions;
+using SGO.Server.Infrastructure.Legacy;
+using SGO.Server.Infrastructure.Persistence.Sqlite;
+using SGO.Server.Protocol;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://127.0.0.1:5678");
@@ -11,7 +15,7 @@ builder.WebHost.UseUrls("http://127.0.0.1:5678");
 var dbPath = builder.Configuration["Game:Database"]
              ?? Path.Combine(AppContext.BaseDirectory, "Data", "game.db");
 
-builder.Services.AddSingleton(new SqliteGameStore(dbPath));
+builder.Services.AddSingleton<IGameStore>(new SqliteGameStore(dbPath));
 
 var legacyDataRoot = Path.Combine(AppContext.BaseDirectory, "LegacyData");
 builder.Services.AddSingleton(new LegacyWorldService(legacyDataRoot));
@@ -88,13 +92,13 @@ app.Map("/", async (
 
             try
             {
-                using var packet = Protocol.Decode(encoded);
+                using var packet = ClientProtocol.Decode(encoded);
                 var responses = router.Handle(packet.RootElement, state);
 
                 foreach (var response in responses)
                 {
                     var output = Encoding.UTF8.GetBytes(
-                        Protocol.Encode(response));
+                        ClientProtocol.Encode(response));
 
                     await socket.SendAsync(
                         output.AsMemory(),
