@@ -856,7 +856,10 @@ public sealed class PacketRouter
                 return [];
 
             default:
-                _log.LogDebug("Unimplemented client packet: {Type}", type);
+                _log.LogWarning(
+                    "[UNHANDLED_PACKET] Type={Type} Payload={Payload}",
+                    type,
+                    TruncatePayload(req.GetRawText()));
                 return [];
         }
     }
@@ -912,6 +915,13 @@ public sealed class PacketRouter
 
         return packets;
     }
+
+    private static string TruncatePayload(
+        string payload,
+        int maxLength = 1200)
+        => payload.Length <= maxLength
+            ? payload
+            : payload[..maxLength] + "...<truncated>";
 
     private IReadOnlyList<object> HandleInteract(
         JsonElement req,
