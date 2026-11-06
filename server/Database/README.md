@@ -8,7 +8,7 @@ Database structure is stored as versioned SQL files. C# code does not embed `CRE
 Database/Sqlite/
 ├─ 001_schema.sql
 ├─ 002_indexes.sql
-└─ 003_legacy_character_columns.sql
+└─ 003_character_columns.sql
 ```
 
 At server startup:
@@ -18,7 +18,7 @@ SqliteGameStore
   -> SqliteSchemaMigrator.Apply()
      -> read Database/Sqlite/001_schema.sql
      -> read Database/Sqlite/002_indexes.sql
-     -> process legacy @ensure-column directives
+     -> process compatibility @ensure-column directives
 ```
 
 The SQL files are copied into build and publish output by `SGO.Server.csproj`.
@@ -43,4 +43,4 @@ Database/Sqlite/010_seed_reference_data.sql
 Database/MySql/010_seed_reference_data.sql
 ```
 
-Game content that already comes from legacy files such as `Dat/Item/*.itd`, `Dat/Enemy/*.csv`, and `Dat/Map/*` should normally stay in those legacy data files rather than being duplicated into SQL.
+Game content that already comes from game data files such as `Dat/Item/*.itd`, `Dat/Enemy/*.csv`, and `Dat/Map/*` should normally stay in those game data files rather than being duplicated into SQL.
