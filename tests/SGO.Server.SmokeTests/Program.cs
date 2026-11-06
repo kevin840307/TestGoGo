@@ -45,9 +45,20 @@ try
 
     slots = store.Characters(account.Value);
     Check(slots.Count == 1 && slots[0]["NAME"].ToString() == "TestCharacter",
-        "list character");
+        "list first character");
 
-    var id = Convert.ToInt64(slots[0]["DBID"]);
+    using var character2 = Json("""
+        {"Name":"SecondCharacter","Password":"5678","Race":0,"Hair":1,"HairColor":2,"Str":7,"Dex":6,"Con":5,"Wis":4}
+        """);
+    Check(store.Create(account.Value, character2.RootElement).Success,
+        "create second character");
+    slots = store.Characters(account.Value);
+    Check(slots.Count == 2, "two characters remain in same account");
+    Check(slots.Any(x => x["NAME"].ToString() == "TestCharacter") &&
+          slots.Any(x => x["NAME"].ToString() == "SecondCharacter"),
+        "creating second character does not replace first");
+
+    var id = Convert.ToInt64(slots.First(x => x["NAME"].ToString() == "TestCharacter")["DBID"]);
     var selected = store.GetCharacter(account.Value, id);
     Check(selected is not null, "select owned character");
     Check(Convert.ToInt32(selected!["HP"]) == 100 &&
