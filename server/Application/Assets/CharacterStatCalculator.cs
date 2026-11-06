@@ -1,4 +1,5 @@
 using SGO.Server.Domain.Assets;
+using SGO.Server.Infrastructure.GameData;
 
 namespace SGO.Server.Application.Assets;
 
@@ -20,7 +21,8 @@ public static class CharacterStatCalculator
 {
     public static EffectiveCharacterStats Calculate(
         Dictionary<string, object> character,
-        CharacterAssets assets)
+        CharacterAssets assets,
+        CurrentClientDataCatalog current)
     {
         var attack = Convert.ToInt32(character["Attack"]);
         var defense = Convert.ToInt32(character["Defense"]);
@@ -38,40 +40,28 @@ public static class CharacterStatCalculator
         foreach (var eq in assets.Equips)
         {
             if (Convert.ToInt32(eq["InBank"]) != 0 ||
-                Convert.ToInt32(eq["InShop"]) != 0)
+                Convert.ToInt32(eq["InShop"]) != 0 ||
+                Convert.ToInt32(eq["Part"]) == 255)
                 continue;
 
-            var part = Convert.ToInt32(eq["Part"]);
-            if (part == 255) continue;
+            var item = current.FindItem(
+                Convert.ToInt32(eq["ItemIdx"]));
 
-            switch (part)
-            {
-                case 1:
-                case 2:
-                    attack += 5;
-                    hit += 2;
-                    break;
-                case 3:
-                case 4:
-                    defense += 8;
-                    magicDefense += 4;
-                    break;
-                case 5:
-                    attack += 20;
-                    attackRange += 10;
-                    break;
-                case 6:
-                    defense += 12;
-                    break;
-                case 0:
-                case 7:
-                    defense += 4;
-                    break;
-                case 8:
-                    magicAttack += 8;
-                    magicDefense += 4;
-                    break;
-            }
+            if (item is null)
+                continue;
+
+            attack += item.Atk;
+            defense += item.Def;
+            magicAttack += item.MAtk;
+            magicDefense += item.MDef;
+            hit += item.Hit;
+            dodge += item.Flee;
+            lucky += item.Luk;
+            attackSpeed += item.Aspd;
+            moveSpeed += item.MoveSpeed;
+            critRate += item.CritRate;
+            critDamage += item.CritDamage;
+            attackRange += item.AttackRange;
         }
 
         var summonedHorseUid = Convert.ToInt64(character["SummonedHorseUID"]);
@@ -79,17 +69,29 @@ public static class CharacterStatCalculator
             assets.Horses.Any(h =>
                 Convert.ToInt64(h["HorseUID"]) == summonedHorseUid))
         {
-            attack += 20;
-            defense += 20;
-            moveSpeed += 15;
-
             foreach (var eq in assets.HorseEquips)
             {
                 if (Convert.ToInt64(eq["HorseUID"]) != summonedHorseUid)
                     continue;
 
-                attack += 8;
-                defense += 6;
+                var item = current.FindItem(
+                    Convert.ToInt32(eq["EquipIdx"]));
+
+                if (item is null)
+                    continue;
+
+                attack += item.Atk;
+                defense += item.Def;
+                magicAttack += item.MAtk;
+                magicDefense += item.MDef;
+                hit += item.Hit;
+                dodge += item.Flee;
+                lucky += item.Luk;
+                attackSpeed += item.Aspd;
+                moveSpeed += item.MoveSpeed;
+                critRate += item.CritRate;
+                critDamage += item.CritDamage;
+                attackRange += item.AttackRange;
             }
         }
 
@@ -110,9 +112,10 @@ public static class CharacterStatCalculator
 
     public static object ToPlayerStatusPacket(
         Dictionary<string, object> character,
-        CharacterAssets assets)
+        CharacterAssets assets,
+        CurrentClientDataCatalog current)
     {
-        var s = Calculate(character, assets);
+        var s = Calculate(character, assets, current);
         return new
         {
             Type = "PlayerStatusSync",
