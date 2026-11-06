@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using SGO.Server.Application;
 using SGO.Server.Application.Combat;
+using SGO.Server.Application.Gm;
 using SGO.Server.Application.Shops;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Infrastructure.GameData;
@@ -32,6 +33,8 @@ var recoveryCatalog = new RecoveryItemCatalog(
     Path.Combine(gameDataRoot, "Item", "Recovery.itd"));
 var horseCardCatalog = new HorseCardCatalog(
     Path.Combine(gameDataRoot, "Horse", "HorseMA.csv"));
+var skillCatalog = new SkillCatalog(
+    Path.Combine(repoRoot, "Old", "ClientData", "Interface", "skill_cht.dat"));
 var quests = new QuestRuntime(questRoot, shopCatalog);
 var map15Npcs = world.GetNpcs(15);
 
@@ -144,12 +147,20 @@ try
     var store = new SqliteGameStore(Path.Combine(temp, "game.db"));
     var combat = new CombatService(store, world);
     var shops = new ShopService(store, shopCatalog);
+    var config = new ConfigurationManager();
+    config["Game:GmCommandsEnabled"] = "true";
+    var gm = new GmCommandService(
+        store,
+        skillCatalog,
+        horseCardCatalog,
+        config);
     var router = new PacketRouter(
         store,
         world,
         quests,
         combat,
         shops,
+        gm,
         batteryCatalog,
         recoveryCatalog,
         horseCardCatalog,
@@ -268,7 +279,7 @@ try
         Check(session.CharacterId == id,
             "router selects character");
         Check(session.CurrentMapId == 15 && session.PendingMapSpawn,
-            "selected character waits for Map15 first-position spawn");
+            "selected character waits for server world tick spawn");
         Check(responses.Count == 9,
             "enter world emits bootstrap sync packets only");
 
@@ -548,19 +559,27 @@ try
             "pet recall state persists");
     }
 
-    // The first position packet arrives after the client map scene is ready.
+    // World entities are now server-driven. No player movement is needed
+    // for the first NPC spawn.
+    var initialWorldPackets = router.Tick(
+        session,
+        DateTimeOffset.UtcNow);
+
+    Check(initialWorldPackets.Count == 52,
+        "server world tick spawns Map15 NPCs without player movement");
+    Check(initialWorldPackets.All(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"SpawnEntity\"")),
+        "Map15 NPCs use SpawnEntity packets");
+    Check(!session.PendingMapSpawn,
+        "Map15 spawn gate clears after server world tick");
+
     using (var move = Json(
         """{"Type":"SyncPosition","X":4932,"Y":7783}"""))
     {
         var responses = router.Handle(move.RootElement, session);
-        Check(responses.Count == 52,
-            "first Map15 position sync spawns all NPCs");
-        Check(responses.All(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "\"Type\":\"SpawnEntity\"")),
-            "Map15 NPCs use SpawnEntity packets");
-        Check(!session.PendingMapSpawn,
-            "Map15 spawn gate clears after first position sync");
+        Check(responses.Count == 0,
+            "SyncPosition only updates position after server-driven world tick");
     }
 
     using (var summonForFollow = Json(JsonSerializer.Serialize(new
@@ -582,12 +601,19 @@ try
     })))
     {
         var responses = router.Handle(followMove.RootElement, session);
-        Check(responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains("\"Type\":\"MoveEntity\"") &&
-                JsonSerializer.Serialize(x).Contains(
-                    $"\"EntityID\":{4_000_000L + petUid}")),
-            "summoned pet follows player movement");
+        Check(responses.Count == 0,
+            "player movement no longer directly drives pet AI");
     }
+
+    var followPackets = router.Tick(
+        session,
+        DateTimeOffset.UtcNow.AddSeconds(1));
+
+    Check(followPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains("\"Type\":\"MoveEntity\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                $"\"EntityID\":{4_000_000L + petUid}")),
+        "summoned pet follows player from server world tick");
 
     var selected = store.GetCharacter(account.Value, id);
     Check(Convert.ToInt32(Convert.ToDouble(selected!["LocX"])) == 5000 &&
@@ -691,18 +717,25 @@ try
         """{"Type":"SyncPosition","X":10816,"Y":3104}"""))
     {
         var responses = router.Handle(map16Ready.RootElement, session);
-        Check(!session.PendingMapSpawn,
-            "Map16 spawn gate clears after new map is ready");
-        Check(responses.Count >= world.GetNpcs(16).Count &&
-              responses.Count(x =>
-                  JsonSerializer.Serialize(x).Contains(
-                      "\"EntityType\":2")) == world.GetNpcs(16).Count,
-            "Map16 NPCs spawn after map load");
-        Check(responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "\"EntityType\":4")),
-            "summoned pet respawns after map transition");
+        Check(responses.Count == 0,
+            "Map16 position update does not drive world spawn");
     }
+
+    var map16Packets = router.Tick(
+        session,
+        DateTimeOffset.UtcNow.AddSeconds(2));
+
+    Check(!session.PendingMapSpawn,
+        "Map16 spawn gate clears after server world tick");
+    Check(map16Packets.Count >= world.GetNpcs(16).Count &&
+          map16Packets.Count(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"EntityType\":2")) == world.GetNpcs(16).Count,
+        "Map16 NPCs spawn from server world tick");
+    Check(map16Packets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"EntityType\":4")),
+        "summoned pet respawns after map transition");
 
     // Combat runtime: use a monster map directly so this test is independent
     // from the exact portal route used by the recovered client.
@@ -846,6 +879,49 @@ try
           Convert.ToInt32(selected["MapID"]) == 15 &&
           selected["State"].ToString() == "idle",
         "revive persists full HP idle state and reborn map");
+
+    using (var gmSkill = Json(
+        """{"Type":"ChatMessage","Channel":0,"Message":"/gm skill 20101 5","BubbleType":0}"""))
+    {
+        var responses = router.Handle(gmSkill.RootElement, session);
+        Check(store.GetSkills(account.Value, id).Any(x =>
+                Convert.ToInt32(x["skill_id"]) == 20101 &&
+                Convert.ToInt32(x["level"]) == 5),
+            "GM skill command persists learned skill");
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SkillSync\"")),
+            "GM skill command refreshes SkillSync");
+    }
+
+    using (var gmItem = Json(
+        """{"Type":"ChatMessage","Channel":0,"Message":"/gm item 31201 3","BubbleType":0}"""))
+    {
+        var before = store.GetCharacterAssets(account.Value, id).Inventory.Count;
+        var responses = router.Handle(gmItem.RootElement, session);
+        var after = store.GetCharacterAssets(account.Value, id).Inventory;
+        Check(after.Count >= before + 1 &&
+              after.Any(x =>
+                  Convert.ToInt32(x["ItemIndex"]) == 31201 &&
+                  Convert.ToInt32(x["Count"]) == 3),
+            "GM item command creates inventory item");
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"InventorySync\"")),
+            "GM item command refreshes inventory");
+    }
+
+    using (var gmMap = Json(
+        """{"Type":"ChatMessage","Channel":0,"Message":"/gm map 15 9408 10336","BubbleType":0}"""))
+    {
+        var responses = router.Handle(gmMap.RootElement, session);
+        Check(session.CurrentMapId == 15 &&
+              session.PendingMapSpawn &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"Type\":\"ChangeMap\"")),
+            "GM map command teleports and schedules world respawn");
+    }
 
     using (var chat = Json(
         """{"Type":"ChatMessage","Channel":0,"Message":"hello","BubbleType":0}"""))
