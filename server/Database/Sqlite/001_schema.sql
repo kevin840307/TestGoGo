@@ -152,3 +152,13 @@ CREATE TABLE IF NOT EXISTS horse_equipment (
     in_shop INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
 );
+
+
+CREATE TABLE IF NOT EXISTS character_skills (
+    character_id INTEGER NOT NULL,
+    skill_id INTEGER NOT NULL,
+    level INTEGER NOT NULL DEFAULT 1,
+    exp INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(character_id, skill_id),
+    FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
+);
