@@ -80,6 +80,10 @@ public interface IGameStore
     bool UpdateLocation(long accountId, long dbid, int mapId, int x, int y);
     bool SetRebornLocation(long accountId, long dbid, int mapId, int x, int y);
     bool UpdateState(long accountId, long dbid, string state);
+    Dictionary<string, object>? SetLevel(
+        long accountId,
+        long dbid,
+        int level);
 
     Dictionary<string, object>? Revive(long accountId, long dbid);
 
