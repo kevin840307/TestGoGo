@@ -282,6 +282,7 @@ try
 
     var aiPackets = combat.TickAi(
         session,
+        account.Value,
         monster.X + 200,
         monster.Y,
         DateTimeOffset.UtcNow.AddSeconds(1));
