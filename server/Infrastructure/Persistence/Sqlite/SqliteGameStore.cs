@@ -469,6 +469,35 @@ public sealed class SqliteGameStore : IGameStore
         return cmd.ExecuteNonQuery() == 1;
     }
 
+    public Dictionary<string, object>? AddRewards(
+        long accountId,
+        long dbid,
+        int exp,
+        int money)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            UPDATE characters
+               SET exp_acc = exp_acc + $exp,
+                   money = money + $money
+             WHERE id=$id AND account_id=$a
+            """;
+        Arg(cmd, "$exp", Math.Max(0, exp));
+        Arg(cmd, "$money", Math.Max(0, money));
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return null;
+
+        tx.Commit();
+        return GetCharacter(accountId, dbid);
+    }
+
     public Dictionary<string, object>? Revive(long accountId, long dbid)
     {
         using var db = Open();
