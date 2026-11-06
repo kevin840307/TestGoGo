@@ -1,0 +1,119 @@
+--騎士普頓(MS005_A)
+
+--MS005_Task
+--0: title shown
+--1:quest started
+--2:talked with the girl
+
+--MS005_Done
+--1:quest completed
+
+function start()
+	if GetFlag("MS005_Done")==1 then
+		dialogue_05()
+	elseif GetCountItemCount(10298)>=1 then
+		dialogue_04()
+	elseif GetFlag("MS005_Task")>=1 then
+		dialogue_03()
+	elseif GetFlag("MS004_Done")==1 then
+		if GetFlag("MS005_Task")<0 then
+			SetFlag("MS005_Task",0)
+			show_title()
+		else
+			dialogue_02()
+		end
+	else
+		dialogue_01()
+	end
+end
+
+function show_title()
+	Say("m#STORY_NAME_04A.spr#STORY_NAME_04B.spr#030.mp3#", "dialogue_02")
+end
+
+function dialogue_01()
+	Say("n1你有想過生存的意義嗎？我只想打倒亞斯人，解救在加米蘭特星的同胞。","End")
+end
+
+--玩家已完成MS004
+function dialogue_02()
+	Say("n1歡迎來到騎士之城，這兒亦是白鷹騎士訓練學校的所在，學校的宗旨是為了將亞斯人趕出故鄉奪回加米蘭特星。")
+	Ask("n看來你是皇國軍的新成員，你也是為了加強戰鬥力打倒亞斯人而來的嗎？","對啊，當然想提升戰鬥力。","這點我可沒有想過。","reply_02")
+end
+
+function reply_02()
+	choice = GetChoice()
+	if choice == 0 then
+		dialogue_02a()
+	end
+	QuestEnd();
+end
+
+--玩家完成MS005_A－Step02_Choice1
+function dialogue_02a()
+	Ask("n我也是為打倒亞斯人而來的，來了己差不多三年，雖然每天和怪物戰鬥的訓練非常辛苦，但能提升力量還是值得的。","你真是十分努力。","我也想如你般利害。","dialogue_02b")
+end
+
+--玩家完成MS005_A－Step03_Choice1 or 2
+function dialogue_02b()
+	Ask("n這也不是沒有代價的，我離開了妹妹三年，已很久沒有再見她了，我買了一個布娃娃不知何時才能給她。","這樣吧！請交給我，我替你送給她。","對不起，我也無能為力。","reply_02b")
+end
+
+function reply_02b()
+	choice = GetChoice()
+	if choice == 0 then
+		dialogue_02c()
+	end
+	QuestEnd();
+end
+
+--玩家完成MS005_A－Step04_Choice1
+function dialogue_02c()
+	Say("n1真是多謝你，我妹妹便往在機械之城，這布娃娃便拜託你了。","dialogue_02d")
+end
+
+function dialogue_02d()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		AddItem(10297)
+		SetFlag("MS005_Task",1)
+		Say("p7得到「騎士布娃娃」","End")
+	end
+end
+
+--玩家完成MS005_A－Step05
+function dialogue_03()
+	Say("n1謝謝你，不知何時我可見機械之城的妹妹了。","End")
+end
+
+--玩家完成MS005_B－Step02手持星之石
+function dialogue_04()
+	Say("n1你回來了嗎？我妹妹如何了？")
+	Say("p1我碰見了尼可，她說了你們的故事。")
+	Say("n1這樣．．．她好嗎？她和普普生活如何？")
+	Say("p1普普還是不說話．．．尼可好像對你很生氣。")
+	Say("n1她還是反對我當騎士嗎？我也不想離開她們的，但為了死去的父母，為了加米蘭特的同胞，我是必須要去戰的。")
+	Say("p1難度戰鬥便可帶來和平嗎？")
+	Say("n1我們不是為了戰爭而重建星之門，而是為了保護我們的同胞、尼露亞星的人民、普普和尼可。我們不去戰鬥亞斯人總會再攻擊我們的。難度你想看見你心愛的人被殺嗎？")
+	Say("p1．．．．．．")
+	Say("n1現在我只是想盡快打倒亞斯人，回去見她們吧了．．．")
+	Say("p1這顆星之石是尼可叫我交給你的。","dialogue_04a")
+end
+
+function dialogue_04a()
+	RemoveItem(10298)
+	Say("p7失去「星之石」")
+	Say("n1這不就是我送給她的禮物．．．尼可．．．")
+	Say("n1真是勞煩你，這裡是給你的一點心意。","dialogue_04b")
+end
+
+function dialogue_04b()
+	AddItem(10262,2)
+	Say("p7得到兩枚「星之徽章」","End")
+	SetFlag("MS005_Done", 1)
+end
+
+function dialogue_05()
+	Say("n1我們不是為了侵略而戰，而是為了保護我們所愛的人。","End")
+end

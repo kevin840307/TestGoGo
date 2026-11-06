@@ -1,0 +1,6 @@
+--People01 修格
+
+function start()
+	Say("n1我覺得，和家人相處時一定要忍讓。")
+	Say("n1不然會發生家庭暴力……","End")
+end

@@ -1,0 +1,5 @@
+--People01 出
+
+function start()
+	Say("n1㊣иぐ或谋眔程ㄓェェㄈ钩ê或","End")
+end

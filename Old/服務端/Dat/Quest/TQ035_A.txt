@@ -1,0 +1,159 @@
+--太陽聖戰軍團‧徵兵處
+--(TQ035_A)
+
+--world flag
+--TQ035_A_Member:total member
+--TQ035_KillCount:count of enemy killed
+--TQ035_PrevKillCount:count of enemy killed
+
+--flag
+--TQ035_GetGift:0->not yet get gift
+
+function start()
+	state = GetFlag("TQ035_Task")
+	if state >0 then
+		member = GetWorldFlag("TQ035_A_Member")
+		if member > 99 then
+			dia_05()
+		else
+			dia_04()
+		end
+	else
+		if GetFlag("TQ031_Done")<1 or GetFlag("TQ032_Done")<1 or GetFlag("TQ033_Done")<1 or GetFlag("TQ034_Done")<1 then
+			dia_01()
+		else
+			dia_02()
+		end
+	end
+end
+
+--＜玩家未完成TQ031至TQ034＞
+function dia_01()
+	Say("n1因最近各地發生大量國民情緒異常事故，引起了大皇子的關注，故現在開始召集由五大軍團中的精英構成的-太陽聖戰軍團。")
+	Say("n1太陽聖戰軍團需要的是精英中的精英，所以我們只接受有豐富駕駛魔裝機甲的人加入！我看你仍未有這個本事！走吧！！","End")
+end
+
+--＜玩家已完成TQ031至TQ034＞
+function dia_02()
+	Say("n1因最近各地發生大量國民情緒異常事故，引起了大皇子的關注，故現在開始召集由五大軍團中的精英構成的-太陽聖戰軍團。")
+	Ask("n太陽聖戰軍團需要的是精英中的精英，所以我們只接受有豐富駕駛魔裝機甲的人加入！你會加入我們為國家出一分力嗎？","是的，我願意為國家效力，請讓我加入太陽聖戰軍團。","對不起，我想再考慮一下。","reply_02")
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		dia_03()
+	end
+	QuestEnd()
+end
+
+function dia_03()
+	SetFlag("TQ035_Task", 1)
+	member = GetWorldFlag("TQ035_A_Member") + 1
+	if member==0 then
+		member=1
+		SetWorldFlag("TQ035_KillCount",0)
+	end
+	SetWorldFlag("TQ035_A_Member", member)
+	
+	Say("n1以大皇子所賜的權力，我正式宣佈"..GetName().."加入太陽聖戰軍團。")
+	Say("n3"..GetName().."聽命！")
+	Say("n1因最近各地發生大量國民情緒異常事故，故開始召集你成為太陽聖戰軍團的一份子。")
+	Say("n1我們已經查出近日的異常事件是由居於地下的亞斯人所為，他們是在星之戰鬥時來到尼尼亞星的少部份亞斯人的其中一少部份。")
+	Say("n1由於他們本性太凶殘，始終不能適應和平的日子。於是被驅逐至地下世界，以魔力封印著。")
+	Say("n1而因幻之日即將來臨，封印的魔力減弱了，這些亞斯人就利用這次機會，將各種不安的情緒散佈，要使到尼尼亞皇國變成一個死氣沉沉的國家，伺機將我國消滅。")
+	Say("n1我們的任務是攻入地下亞斯人的地城要塞，將大量人造魔獸打倒，以削弱他們的兵力。")
+	Say("n1為確保此戰可一舉成功，軍團要召集共100個團員！")
+	Say("n1現在軍團已召集了"..member.."個團員。")
+	
+	if member>99 then
+		Say("n1我軍出征的時間為現實世界星期二中午12時至星期日晚上12時。其餘的時間是我軍的休息時間。","End")
+	else
+		Say("n1由於現在團員人數不足，希望你可以多去幫助別人，讓更多人可以加入太陽聖戰軍團。","End")
+	end
+end
+
+function dia_04()
+	member = GetWorldFlag("TQ035_A_Member")
+	Say("n1我們已經查出近日的異常事件是由居於地下的亞斯人所為，他們是在星之戰鬥時來到尼尼亞星的少部份亞斯人的其中一少部份。")
+	Say("n1由於他們本性太凶殘，始終不能適應和平的日子。於是被驅逐至地下世界，以魔力封印著。")
+	Say("n1而因幻之日即將來臨，封印的魔力減弱了，這些亞斯人就利用這次機會，將各種不安的情緒散佈，要使到尼尼亞皇國變成一個死氣沉沉的國家，伺機將我國消滅。")
+	Say("n1我們的任務是攻入地下亞斯人的地城要塞，將大量人造魔獸打倒，以削弱他們的兵力。")
+	Say("n1為確保此戰可一舉成功，軍團要召集共100個團員！")
+	Say("n1現在軍團已召集了"..member.."個團員。")
+	Say("n1由於現在團員人數不足，希望你可以多去幫助別人，讓更多人可以加入太陽聖戰軍團。","End")
+end
+
+function dia_05()
+	Say("n1我軍出征的時間為現實世界星期二中午12時至星期日晚上12時。其餘的時間是我軍的休息時間。")
+	if lIsResting()==1 then
+		dia_06()
+	else
+		Say("n1現在就是我們出戰地城要塞的時候！！！戰士們！！憤勇殺敵吧！！")
+		Say("n1注意一定要以魔裝機甲出戰，否則會被人造魔獸的力量傳送離開地城要塞。")
+		Ask("n現在就要進入戰場了嗎？","是的！就讓可惡的亞斯人見職一下我們太陽聖戰軍團的厲害！！","我還需要一些時間作準備！","reply_05")
+	end
+end
+
+function reply_05()
+	if GetChoice()==0 then
+		Say("n3為守護尼尼亞皇國而戰！！！","MoveIn")
+	end
+	QuestEnd()
+end
+
+function MoveIn()
+	if GetData("ComplexType")==0 then
+		SetFlag("TQ035_GetGift",0)
+	else
+		SetTeamFlag("TQ035_GetGift",0)
+	end
+	
+	MovePlayer(6784,4992,64)
+	QuestEnd()
+end
+
+function dia_06()
+	Say("n1辛苦大家了！現在是我軍的休息時間。")
+	
+	lUpdateTotal()
+	total = GetWorldFlag("TQ035_PrevKillCount")
+	
+	if total < 1000000 then
+		dia_07()
+	elseif total < 2000000 then
+		dia_08(10663, "一定的傷害！", "一般軍餉券")
+	elseif total < 3000000 then
+		dia_08(10664,"相當的傷害！", "特級軍餉券")
+	else
+		dia_08(10665,"非常嚴重的傷害！", "極級軍餉券")
+	end
+end
+
+function dia_07()
+	Say("n1雖然經我軍的憤勇殺敵，可惜仍未對敵軍的兵力造成什麼損傷！請大家在下次的戰事再加努力啊！！","End")
+end
+
+function dia_08(itemid, damage, itemname)
+	if GetFlag("TQ035_GetGift")~=0 then
+		dia_11(damage)
+	elseif ItemListCountLeft(0) < 1 then
+		dia_12()
+	else
+		Say("n1經我軍的憤勇殺敵，已對敵軍的兵力造成了"..damage)
+		Say("n1這是軍方所發出的"..itemname.."，請大家在下次的戰事多加努力啊！！","End")
+		AddItem(itemid)
+		SetFlag("TQ035_GetGift", 1)
+	end
+end
+	
+function dia_11()
+	Say("n1經我軍的憤勇殺敵，已對敵軍的兵力造成了"..damage)
+	Say("n1請大家在下次的戰事多加努力啊！！","End")
+end
+
+function dia_12()
+	Say("p7身上的物品太多了，還是先整理一下吧！","End")
+end
+
+#include "TQ035_Comm.txt"
+#include "CommTeam.txt"

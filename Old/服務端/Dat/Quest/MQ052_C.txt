@@ -1,0 +1,39 @@
+--MQ052_C 黃金鳥
+
+--MQ052_Task
+-- 1: quest started
+-- 2: go to find 巴基木
+-- 3: got the 魔法火藥
+
+--MQ052_GetDiamond
+-- 1: Get the 暴風之眼 already
+
+--MQ053_Task
+-- 1: quest started
+-- 2: go to find 巴基木
+-- 3: got the 魔法火藥
+
+
+function start()
+	if GetData("Career")==3 then
+		Status=GetFlag("MQ052_Task")
+	else
+		Status=GetFlag("MQ053_Task")
+	end
+	if Status>=1 and GetFlag("MQ052_GetDiamond")~=1 then
+		dialogue_01()
+	else
+		QuestEnd()
+	end
+end
+
+function dialogue_01()
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到“暴風之眼”")
+		AddItem(10232)
+		Say("p1這個寶石……好像眼睛一樣！","End")
+		SetFlag("MQ052_GetDiamond", 1)
+	end
+end

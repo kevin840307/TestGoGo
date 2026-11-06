@@ -1,0 +1,11 @@
+--給古魯哥的聖誕卡(TQ016L)
+
+function start()
+	Say("p7聖誕快樂！")
+	Say("p7這是被祝福的人才得到的聖誕卡。","showcard")
+	AddItem(10421)
+end
+
+function showcard()
+	Say("m#X_mas_card\\X_MAS_CARD04.spr#na##","End")
+end

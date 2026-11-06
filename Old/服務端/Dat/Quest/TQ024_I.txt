@@ -1,0 +1,19 @@
+--PUMA套裝卡
+
+function start()
+	Ask("p你要換取PUMA套裝嗎？","是的。","不是。","reply01")
+end
+
+function reply01()
+	if GetChoice()==1 then
+		AddItem(10527)
+		QuestEnd()
+	elseif ItemListCountLeft(1)<2 then
+		Say("p7對不起，你身上的裝備太多了，請清除一些物品後再試。","End")
+		AddItem(10527)
+		QuestEnd()
+	else
+		AddItem(10528)
+		AddItem(10529)
+	end
+end

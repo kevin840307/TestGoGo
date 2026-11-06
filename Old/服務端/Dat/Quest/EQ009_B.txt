@@ -1,0 +1,66 @@
+function start()
+	if GetData("Level") <= 50 then 
+		Step06()
+	else
+		if GetWorldFlag("EQ009")==1 then
+			Step02()	
+		else
+			Step01()
+		end
+	end
+end
+
+function Step01()
+--//＜如WorldFlag (EQ009= 1)＞→Step02
+--//(N1)現在不是報名時間，請留意GM公告的報名時間！
+--//(N1)活動詳情，請參考官方網頁^_^
+	Say("n1現在不是報名時間，請留意GM公告的報名時間！")
+	Say("n1活動詳情，請參考官方網頁^_^")
+end
+
+function Step02()
+--//＜玩家身上空間少於１＞→Step05
+--//＜玩家手持高級武道大會‧參加表格(10716)＞→Step03
+--//(N)你要參加星空高級武道大會嗎？
+--//＜選擇＞
+--//．是的，我要參加！→Step04
+--//．我只是路過的。
+	if ItemListCountLeft(0) < 1 then
+		Step05()
+	else
+		if CheckItem("10716") == 1 then
+			Step03()
+		else
+			Ask("n你要參加星空高級武道大會嗎？","是的，我要參加！","我只是路過的。","Step02_Handler")
+		end
+	end
+end
+
+function Step02_Handler()
+	if GetChoice() == 0 then
+		Step04()
+	else
+		QuestEnd()
+	end
+end
+
+function Step03()
+--//(N1)你已經取得了參加表格啊，請留意GM公告的比賽時間。
+	Say("n1你已經取得了參加表格啊，請留意GM公告的比賽時間。")
+end
+
+function Step04()
+--//(N1)這是你的參加表格，請留意GM公告的比賽時間。
+--//AddItem(10716)
+	Say("n1這是你的參加表格，請留意GM公告的比賽時間。")
+	AddItem(10716)
+end
+
+function Step05()
+--//(P1)身上的物品太多了，還是先整理一下吧。
+	Say("p1身上的物品太多了，還是先整理一下吧。")
+end
+
+function Step06()
+	Say("n1對不起，高級武道大會只接受等級50以上的玩家參與。")
+end

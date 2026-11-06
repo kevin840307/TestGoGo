@@ -1,0 +1,3 @@
+function TXT_SkillName()
+	skillname 	= "武器製造‧一級"
+end

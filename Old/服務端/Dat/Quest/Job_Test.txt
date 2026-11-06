@@ -1,0 +1,131 @@
+--Test job 職業管理人
+
+function start()
+	Race = GetData("Race")
+	Lv = GetData("Level")
+	if GetFlag("職業測試完成")==1 then
+		Say("n1你已經就職了。","End")
+	elseif Lv < 10 then
+		Say("n1就職的等級限制是10或以上，你仍未有足夠的等級。","End")
+	elseif Race < 2 then
+		Say("n1現在的就職系統是暫時性的，在職業任務推出時，本任務會被移除。")
+		Ask("n你要選擇戰士系、魔法系還是其他職業呢？","戰士系","魔法系","其他","不用了","HumanJob")
+	elseif Race == 2 then
+		Say("n1現在的就職系統是暫時性的，在職業任務推出時，本任務會被移除。")
+		Ask("n你要選擇戰士系、魔法系還是其他職業呢？","戰士系","魔法系","其他","不用了","MikuJob")
+	else
+		Say("n1現在的就職系統是暫時性的，在職業任務推出時，本任務會被移除。")
+		Ask("n你要選擇戰士系、魔法系還是其他職業呢？","戰士系","魔法系","其他","不用了","RobotJob")
+	end
+end
+
+function HumanJob()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("n1現在的就職系統是暫時性的，在職業任務推出時，本任務會被移除。")
+		Ask("n請選擇一個職業。","石劍使","初級銃使","不用了","KnightJob")
+	elseif choice == 1 then
+		Say("n1現在的就職系統是暫時性的，在職業任務推出時，本任務會被移除。")
+		Ask("n請選擇一個職業。","微光術士","銃術士","不用了","MagicJob")
+	elseif choice == 2 then
+		Say("n1現在的就職系統是暫時性的，在職業任務推出時，本任務會被移除。")
+		Ask("n請選擇一個職業。","小使物者","精靈管理員","不用了","OtherJob")
+	else
+		QuestEnd()
+	end
+end
+
+function MikuJob()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("n1現在的就職系統是暫時性的，在職業任務推出時，本任務會被移除。")
+		Ask("n請選擇一個職業。","風劍使","初級銃使","不用了","KnightJob")
+	elseif choice == 1 then
+		Say("n1現在的就職系統是暫時性的，在職業任務推出時，本任務會被移除。")
+		Ask("n請選擇一個職業。","靈術學者","銃術士","不用了","MagicJob")
+	elseif choice == 2 then
+		Say("n1現在的就職系統是暫時性的，在職業任務推出時，本任務會被移除。")
+		Ask("n請選擇一個職業。","小使物者","精靈管理員","不用了","OtherJob")
+	else
+		QuestEnd()
+	end
+end
+
+function RobotJob()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("n1現在的就職系統是暫時性的，在職業任務推出時，本任務會被移除。")
+		Ask("n請選擇一個職業。","火劍使","初級銃使","不用了","KnightJob")
+	elseif choice == 1 then
+		Say("n1現在的就職系統是暫時性的，在職業任務推出時，本任務會被移除。")
+		Ask("n請選擇一個職業。","魔雲術士","銃術士","不用了","MagicJob")
+	elseif choice == 2 then
+		Say("n1現在的就職系統是暫時性的，在職業任務推出時，本任務會被移除。")
+		Ask("n請選擇一個職業。","小使物者","精靈管理員","不用了","OtherJob")
+	else
+		QuestEnd()
+	end
+end
+
+function KnightJob()
+	choice = GetChoice()
+	Race = GetData("Race")
+	if choice == 0 and Race <2 then
+		Say("n1成為石劍使","End")
+		SetCareer(2,1)
+		SetFlag("職業測試完成", 1)
+	elseif choice == 0 and Race == 2 then
+		Say("n1成為風劍使","End")
+		SetCareer(3,1)
+		SetFlag("職業測試完成", 1)
+	elseif choice == 0 and Race == 3 then
+		Say("n1成為火劍使","End")
+		SetCareer(1,1)
+		SetFlag("職業測試完成", 1)
+	elseif choice == 2 then
+		QuestEnd()
+	else
+		Say("n1成為初級銃使","End")
+		SetCareer(4,1)
+		SetFlag("職業測試完成", 1)
+	end
+end
+
+function MagicJob()
+	choice = GetChoice()
+	Race = GetData("Race")
+	if choice == 0 and Race ==3 then
+		Say("n1成為魔雲術士","End")
+		SetCareer(5,1)
+		SetFlag("職業測試完成", 1)
+	elseif choice == 0 and Race < 2 then
+		Say("n1成為微光術士","End")
+		SetCareer(6,1)
+		SetFlag("職業測試完成", 1)
+	elseif choice == 0 and Race == 2 then
+		Say("n1成為靈術學者","End")
+		SetCareer(7,1)
+		SetFlag("職業測試完成", 1)
+	elseif choice == 2 then
+		QuestEnd()
+	else
+		Say("n1成為銃術士","End")
+		SetCareer(8,1)
+		SetFlag("職業測試完成", 1)
+	end
+end
+
+function OtherJob()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("n1成為小使物者","End")
+		SetCareer(9,1)
+		SetFlag("職業測試完成", 1)
+	elseif choice == 1 then
+		Say("n1成為精靈管理員","End")
+		SetCareer(10,1)
+		SetFlag("職業測試完成", 1)
+	else
+		QuestEnd()
+	end
+end

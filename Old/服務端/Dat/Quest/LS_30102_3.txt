@@ -1,0 +1,19 @@
+--LS_30102_3 "閃影咒‧三級"
+
+function GetSkillData()
+	return 30102,3,55,31632,"閃影咒‧三級","閃影咒‧二級","魔銃使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 8 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

@@ -1,0 +1,19 @@
+--LS_29102_1 "幻靈咒‧一級"
+
+function GetSkillData()
+	return 29102,1,10,31587,"幻靈咒‧一級","","見習銃戰士或見習魔銃使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 4 or career == 8 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

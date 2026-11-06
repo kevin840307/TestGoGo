@@ -1,0 +1,42 @@
+--SKC23J106
+
+function start()
+	MinHit=2
+	MinHitDelta=3
+	BlockByShield = 1
+	consume = "Will"
+--	conTotal = 20
+	APcount = "AP"
+	DPcount = "DP"
+	varyDelta = 20
+
+	defender=GetTargetPtr()
+	attackType=GetType()
+	defenderType=GetTargetType(defender)
+	skillinfo = GetSkillInfo()
+	skillLv = GetTargetData(skillinfo, "Lv")
+	effect = GetPara(skillLv)
+	
+	conTotal = GetConTotal(skillLv)
+		
+	Attack()
+end
+
+function GetConTotal(lv)
+	if lv == 1 then
+		return 26
+	elseif lv == 2 then
+		return 35
+	elseif lv == 3 then
+		return 48
+	elseif lv == 4 then
+		return 59
+	else
+		return 74
+	end
+end
+
+#include "skillcommon.txt"
+
+
+

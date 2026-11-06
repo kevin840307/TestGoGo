@@ -1,0 +1,6 @@
+--People01 格里菲斯
+
+function start()
+	Say("n1我是這兒的守衛，別在這城內犯事喔。")
+	Say("n1幸好城內都沒什麼小偷……","End")
+end

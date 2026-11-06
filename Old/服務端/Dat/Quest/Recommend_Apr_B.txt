@@ -1,0 +1,55 @@
+--Recommend_Apr_B 
+
+function start()
+    if GetCountItemCount(10591) < 300 then
+        AddItem(10591)
+        Say("p7使用初心者天馬裝備換領券。")        
+        if ItemListCountLeft(1) < 4 then
+            Say("p7對不起，你身上的裝備太多了，請整理一下吧！")
+        else        
+            page1()
+        end        
+    else
+        Say("p7使用初心者天馬裝備換領券。","start300")
+    end
+end
+function start300()
+    AddItem(10591)
+    if ItemListCountLeft(1) < 4 then
+        Say("p7對不起，你身上的裝備太多了，請整理一下吧！")
+    else        
+        page1()
+    end
+end
+
+function page1()
+    Ask("p請問你要什麼等級的天馬裝備呢？","等級25的天馬裝備。","等級35的退邪天馬裝備。","請讓我再考慮一下。","page1Handler")
+end
+
+function page1Handler()
+    if GetChoice() == 2 then
+        QuestEnd()
+    elseif GetChoice() == 1 then
+        Say("p7得到退邪天馬裝備一套","GiveItem2")
+    elseif GetChoice() == 0 then
+        Say("p7得到天馬裝備一套","GiveItem1")        
+    end
+end
+
+function GiveItem1()
+    RemoveItem(10591)
+    AddItem(21041)
+    AddItem(22041)
+    AddItem(23041)
+    AddItem(24041)
+    QuestEnd()
+end
+
+function GiveItem2()
+    RemoveItem(10591)
+    AddItem(21042)
+    AddItem(22042)
+    AddItem(23042)
+    AddItem(24042)
+    QuestEnd()
+end

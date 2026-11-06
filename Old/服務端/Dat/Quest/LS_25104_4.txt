@@ -1,0 +1,19 @@
+--LS_25104_4 "生命吸收‧四級"
+
+function GetSkillData()
+	return 25104,4,45,31447,"生命吸收‧四級","生命吸收‧三級","聖劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 3 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

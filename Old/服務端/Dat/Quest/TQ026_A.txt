@@ -1,0 +1,15 @@
+--TQ026_A 古代機甲之墓
+
+function start()
+	AddItem(10522)
+	Say("p7傳說在古代機甲之墓中，封印著一套在第一次星之戰爭時由英雄狄更斯所駕駛的坐騎機甲，現在由機甲守墓者守護著，傳說能夠打倒它的勇者就可繼承這架坐騎機甲。")
+	Ask("p你現在就要前往古代機甲之墓嗎？","我要前往古代機甲之墓。","不需要了。","step01_reply")
+end
+
+function step01_reply()
+	if GetChoice() == 0 then
+		MovePlayer(3968, 5376, 8)
+	else
+		QuestEnd()
+	end
+end

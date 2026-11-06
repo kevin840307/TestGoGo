@@ -1,0 +1,5 @@
+--People01 尤兒
+
+function start()
+	Say("n1來到機械之城的話，一定要仔細看這兒的建築喔！","End")
+end

@@ -1,0 +1,17 @@
+--StarlLake(P02) to StarlLake(P03)
+
+function start()
+Say("n1封印之地嚴禁進入","End")
+end
+
+function notuse()
+	Ask("n要進入迷宮第二層嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(4224,9280,32)
+	end
+	QuestEnd()
+end

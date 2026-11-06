@@ -1,0 +1,6 @@
+--People01 菲利
+
+function start()
+	Say("n1這兒就是機械之城，是全尼路亞大陸科技最高的地方！")
+	Say("n1歡迎你的光臨喔。","End")
+end

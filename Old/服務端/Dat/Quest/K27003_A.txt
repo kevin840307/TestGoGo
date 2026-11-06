@@ -1,0 +1,104 @@
+--K27003_A  鐵匠鐵諾
+
+function start()
+	statue=GetFlag("K27003_Task")
+	
+	if GetFlag("K27003_Completed")==1 then
+		Say("n1真是感激你，沒有你的幫忙，我也不知怎樣面對我的亡妻了。")
+		Say("n1手持武器的人，便要持有一份責任感，保謢身旁的人。","End")
+	
+	elseif GetFlag("K27003_GetRing")==1 and CheckItem(10164)>0 then
+		Ask("n....我的戒指.....","我已尋回戒子了。","還是把戒指據為己有。","response3")
+		
+	elseif statue>=1 then
+		Say("n1那山洞就在西面森林的西北方，你要加倍小心啊。")
+
+	
+	else
+		Ask("n.....(有心事似的)","先生，有什麼心事呢？","（還是不要理會此人。）","response1")
+	
+	end
+
+
+
+end
+
+
+
+function response1()
+	if GetChoice()==0 then
+		Say("n1月初我從\“神團聖殿\”回來時遇上風雨，只好躲進附近的山洞避雨，誰不知這正是一群古可的巢穴，幾經辛苦下我才能逃回尼尼亞王城。")
+		Ask("n而且在逃走時我亡妻的戒指也給它們搶了．．．","先生你放心吧，我一定會幫你奪回戒指的。","很抱歉，我不能幫上什麼。","response2")
+	
+	else
+		QuestEnd()
+	end
+
+end
+
+
+function response2()
+	
+	if GetChoice()==0 then
+		
+		Say("n1真是感謝你，那山洞就在西面森林的西北方，我想那群古可仍在那裡，你要小心啊。")
+		Say("n1還有，獵人卡夫特已去了那兒，說不定他能幫上你的忙。","End")
+		SetFlag("K27003_Task",1)
+		
+	else
+		Say("n1求你幫我呀.....","End")
+
+
+	end
+
+end
+
+function response3()
+	if GetChoice()==0 then
+		Say("n1真是感謝你，我真不知如何報答你才好。")
+		Say("n1這樣吧，我這兒有數件武器，我便送一件給你吧。")
+		if ItemListCountLeft(1)<1 then
+			Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+		else
+			Say("p1失去盟誓戒指")
+			RemoveItem(10164)
+			num,WeaponName=GetWeapon(100)
+			Say("p7得到 "..WeaponName.." ","End")
+			AddItem(num)
+			SetFlag("K27003_Completed",1)
+		end	
+	else
+		QuestEnd()
+	end
+end
+
+function GetWeapon(randomnumber)
+	num=random(1000)
+
+	if num>=1 and num<=125  then
+		return 10156,"星火劍"
+	
+	elseif num>=126 and  num<=250  then
+		return 10157,"熔岩斧"
+
+	elseif num>=251 and num<=375 then
+		return 10158,"熾炎杖"
+
+	elseif num>=376 and num<=500  then
+		return 10159,"赤焰矛"
+
+	elseif  num>=501 and num<=625 then
+		return 10160,"烈焰銃"
+
+	elseif  num>=626 and num<=750 then
+		return 10161,"雷火銃"
+
+	elseif  num>=751 and num<=875 then
+		return 10162,"火苗刀"
+
+	else
+		return 10163,"火山盾"
+	end
+	
+	
+end

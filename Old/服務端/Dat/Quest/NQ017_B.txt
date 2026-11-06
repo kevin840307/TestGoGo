@@ -1,0 +1,56 @@
+--NQ017_B 拉達(男)
+
+--NQ017_TaskType
+-- 1: 簽名版工作
+-- 2: 送信工作
+
+--NQ017_Task
+-- 1: quest start, do NQ017_TaskType
+-- 2: task finished, go back to get battery
+-- 3: quest completed
+
+--NQ017_SignB
+-- 1: 拉達已簽名
+
+--NQ017_SignC
+-- 1: 沙菈已簽名
+
+--NQ017_SignD
+-- 1: 史堤芬妮已簽名
+
+function start()
+	status = GetFlag("NQ017_Task")
+	taskType = GetFlag("NQ017_TaskType")
+	if taskType==1 then
+		if GetFlag("NQ017_SignB")~=1 and CheckItem(10217)>0 then
+			dialogue_02()
+		else
+			dialogue_01()
+		end
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1議會似乎想要研究一下經營的數據。","End")
+end
+
+function dialogue_02()
+	Say("n1嗯？又要簽名了？真是的，天天都來叫我簽名，煩不煩啊？")
+	Say("p7拉達在簽名檔上面畫了個鬼畫符似的東西")
+	SetFlag("NQ017_SignB", 1)
+	if GetFlag("NQ017_SignC")==1 and GetFlag("NQ017_SignD")==1 then
+		Say("n1好～簽好了，辛苦你了啦。")
+		dialogue_03()
+	else
+		Say("n1好～簽好了，辛苦你了啦。","End")
+	end
+end
+
+function dialogue_03()
+	Say("p1謝謝你，我的工作完了囉。","End")
+	RemoveItem(10217)
+	AddItem(10218)
+	SetFlag("NQ017_Task", 2)
+end

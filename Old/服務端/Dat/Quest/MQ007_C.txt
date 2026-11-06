@@ -1,0 +1,199 @@
+--芬娜(MQ007_C)
+
+--MQ007_Task
+--1 quest start
+--2 already talk with 盧杜
+--3 talked with 芬娜
+--4 given the 灰紅之石
+--5 asked to find  小紅晶石
+--6 given the 小紅晶石
+--7 asked to find  小黃晶石
+--8 got the 聖水
+--9 quest completed
+
+--MQ007_Timer
+--counter of GetGameHours() (1=5min)
+
+function start()
+	status = GetFlag("MQ007_Task")
+	status8 = GetFlag("MQ008_Task")
+	if status8 >=2 then
+		if status8 >=9 then
+			dia_08()
+		elseif status8 >=8 then
+			dia_07()
+		elseif status8 >=7 then
+			if GetCountItemCount(6)>0 then
+				dia_05b()
+			else
+				dia_05()
+			end
+		elseif status8 >=6 then
+			if GetGameHours()-GetFlag("MQ007_Timer")>=1 then
+				dia_05()
+			else
+				dia_03c()
+			end
+		elseif status8 >=5 then
+			if GetCountItemCount(1)>0 then
+				dia_04b()
+			else
+				dia_04()
+			end
+		elseif status8 >=4 then
+			if GetGameHours()-GetFlag("MQ007_Timer")>=1 then
+				dia_04()
+			else
+				dia_03c()
+			end
+		elseif status8 >=3 then
+			if GetCountItemCount(10029)>0 then
+				dia_03()
+			else
+				dia_02()
+			end
+		elseif status8 >=2 then
+			dia_02()
+		end
+	elseif status >=2 then
+		if status >=9 then
+			dia_08()
+		elseif status >=8 then
+			dia_07()
+		elseif status >=7 then
+			if GetCountItemCount(6)>0 then
+				dia_05b()
+			else
+				dia_05()
+			end
+		elseif status >=6 then
+			if GetGameHours()-GetFlag("MQ007_Timer")>=1 then
+				dia_05()
+			else
+				dia_03c()
+			end
+		elseif status >=5 then
+			if GetCountItemCount(1)>0 then
+				dia_04b()
+			else
+				dia_04()
+			end
+		elseif status >=4 then
+			if GetGameHours()-GetFlag("MQ007_Timer")>=1 then
+				dia_04()
+			else
+				dia_03c()
+			end
+		elseif status >=3 then
+			if GetCountItemCount(10029)>0 then
+				dia_03()
+			else
+				dia_02()
+			end
+		elseif status >=2 then
+			dia_02()
+		end
+	else
+		dia_01()
+	end
+end
+
+--<任務未開始>
+function dia_01()
+	Say("n1我會幫人調配藥物的，有什麼需要來找我。","End")
+end
+
+--<任務開始時>
+function dia_02()
+	Say("p1可以幫我一下嗎？")
+	Say("n1嗯？")
+	Say("p1我是盧杜學長介紹來的，我知道學姐你應該會調配灰紅色聖水吧？")
+	Say("n1是的，把灰紅之石拿給我，我就可以幫你。","End")
+	if GetFlag("MQ007_Task")>0 then
+		SetFlag("MQ007_Task", 3)
+	else
+		SetFlag("MQ008_Task", 3)
+	end
+end
+
+--<完成條件後>
+function dia_03()
+	Say("n1好的，你等一下。","dia_03b")
+end
+function dia_03b()
+	Say("p7交出「灰紅之石」","dia_03c")
+	RemoveItem(10029)
+	if GetFlag("MQ007_Task")>0 then
+		SetFlag("MQ007_Task", 4)
+	else
+		SetFlag("MQ008_Task", 4)
+	end
+	SetFlag("MQ007_Timer", GetGameHours())
+end
+function dia_03c()
+	Say("n1請等一下。","End")
+end
+
+--<５分鐘後>
+function dia_04()
+	Say("n1可以再拿一個小紅晶石給我嗎？這是淨化聖水用的。","End")
+	if GetFlag("MQ007_Task")>0 then
+		SetFlag("MQ007_Task", 5)
+	else
+		SetFlag("MQ008_Task", 5)
+	end
+end
+--<完成條件後>
+function dia_04b()
+	Say("n1好的，你等一下。","dia_04c")
+end
+function dia_04c()
+	Say("p7交出「小紅晶石」","End")
+	RemoveItem(1)
+	if GetFlag("MQ007_Task")>0 then
+		SetFlag("MQ007_Task", 6)
+	else
+		SetFlag("MQ008_Task", 6)
+	end
+	SetFlag("MQ007_Timer", GetGameHours())
+end
+
+--<５分鐘後>
+function dia_05()
+	Say("n1可以再拿一個小黃晶石給我嗎？這是淨化聖水用的。","End")
+	if GetFlag("MQ007_Task")>0 then
+		SetFlag("MQ007_Task", 7)
+	else
+		SetFlag("MQ008_Task", 7)
+	end
+end
+--<完成條件後>
+function dia_05b()
+	Say("n1好的，你等一下。")
+	Say("p7交出「小黃晶石」")
+	Say("n1好了，你的灰紅色聖水，快去交給老師吧。","dia_05d")
+end
+function dia_05d()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到「灰紅色聖水」","End")
+		RemoveItem(6)
+		if GetFlag("MQ007_Task")>0 then
+			SetFlag("MQ007_Task", 8)
+		else
+			SetFlag("MQ008_Task", 8)
+		end
+		AddItem(10028)
+	end
+end
+
+--<完成條件後>
+function dia_07()
+	Say("n1你還在等什麼？","End")
+end
+
+--<任務完成後>
+function dia_08()
+	Say("n1恭喜你轉職了。","End")
+end

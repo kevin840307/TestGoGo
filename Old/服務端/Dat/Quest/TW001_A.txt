@@ -1,0 +1,119 @@
+--元宵燈會主持人TW001_A
+
+--TW001_Done
+--1: completed
+
+function start()
+	if GetFlag("TW001_Done") < 0 then
+		Say("n1新春如意好運到，家家戶戶慶元宵來呦，來呦，元宵猜燈謎活動開始囉！")
+		Say("n1只要能夠回答出我的問題，就可以獲得元宵獎品哦！")
+		Ask("n你想參與元宵活動嗎？","不想也，下次再說好了。","是的，我想要參加猜燈謎活動。","reply_01")
+	else
+		done()
+	end
+end
+
+function reply_01()
+	if GetChoice()==0 then
+		dia_02()
+	else
+		dia_03()
+	end
+	QuestEnd()
+end
+
+function dia_02()
+	Say("n1要玩就快哦，要猜謎之前記得先去"..Color(0,45,198).."孤寂山區"..Color(0,0,0).."找"..Color(0,45,198).."油燈精靈"..Color(0,0,0).."寒喧一下，取得"..Color(0,45,198).."10個元宵燈籠"..Color(0,0,0).."才能參加哦。","End")
+end
+
+function dia_03()
+	Say("n1要參加元宵燈會活動，得先交出10個元宵燈籠才能參與猜謎，讓我看看你身上燈籠夠不夠？")
+	
+	if GetCountItemCount(10504) >= 10 then
+		if ItemListCountLeft(1)<1 then
+			Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+		elseif GetHorseEquipCountLeft()<1 then
+			Say("n1對不起，你身上的機甲裝備太多了，請清除一些機甲裝備後再來。","End")
+		else
+			dia_05()
+		end
+	else
+		dia_04()
+	end
+end
+
+function dia_04()
+	Say("p1呃..我身上沒有10個元宵燈籠，可不可以通融一下。")
+	Say("n1不行不行，要參加元宵燈會活動，一定要有"..Color(0,45,198).."10個元宵燈籠"..Color(0,0,0).."，趕快去"..Color(0,45,198).."孤寂山區"..Color(0,0,0).."找"..Color(0,45,198).."油燈精靈"..Color(0,0,0).."要。","End")
+end
+
+function dia_05()
+	ans = random(5)
+	if ans==1 then
+		dia_05a()
+	elseif ans==2 then
+		dia_05b()
+	elseif ans==3 then
+		dia_05c()
+	elseif ans==4 then
+		dia_05d()
+	else
+		dia_05e()
+	end
+end
+
+function dia_05a()
+	Ask("n注意聽題目囉，說它是條牛，無法拉車走，說它氣力小，卻能背屋走，猜一動物","螃蟹","鍋牛","reply_05a")
+end
+
+function dia_05b()
+	Ask("n注意聽題目囉，此物十而輕，肚內火燒心，猜過年應景物品","燈籠","湯圓","reply_05b")
+end
+
+function dia_05c()
+	Ask("n注意聽題目囉，什麼布剪不斷？","瀑布","破布","reply_05b")
+end
+
+function dia_05d()
+	Ask("n考一題腦筋急轉彎，用榴槤和西瓜打頭哪一個比較痛？","榴槤","頭比較痛","reply_05a")
+end
+
+function dia_05e()
+	Ask("n考你腦筋急轉彎，家有家規，國有國規，那動物園裏有啥規？","圓規","烏龜","reply_05a")
+end
+
+function reply_05a()
+	if GetChoice()==0 then
+		wrong()
+	else
+		right()
+	end
+end
+
+function reply_05b()
+	if GetChoice()==1 then
+		wrong()
+	else
+		right()
+	end
+end
+
+function wrong()
+	Say("n1呃，猜錯了，算了大過年滴，還是送你一個元宵機甲電池，使用期間1小時，算是送你的參加獎。")
+	Say("p7得到“元宵機甲電池”","End")
+	RemoveItem(10504, 10)
+	AddItem(6908)
+	SetFlag("TW001_Done",1)
+end
+
+function right()
+	Say("n1猜對啦，恭喜恭喜，送你一個桔利元宵帽，祝你大吉大利好運到。")
+	Say("p7得到“桔利元宵帽”","End")
+	RemoveItem(10504, 10)
+	AddItem(10503)
+	SetFlag("TW001_Done",1)
+end
+
+function done()
+	Say("n1恭喜新年好，你已經參加過，不能再參加囉。","End")
+end

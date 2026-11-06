@@ -1,0 +1,59 @@
+--MS007_D 奧拉公主 
+
+--MS007_Task
+-- 1: quest started
+-- 2: go to find lolosie
+-- 3: get the flower, go to find prince
+-- 4: found prince, got the water
+-- 5: get the report
+-- 6: give the report to prince
+
+function start()
+	status=GetFlag("MS002_Task")
+	status7=GetFlag("MS007_Task")
+
+	if status>=8 then
+		if status7>=5 then
+			dialogue_ms7_03()
+		elseif status7>=4 then
+			dialogue_ms7_02()
+		elseif status7>=3 then
+			dialogue_ms7_01()
+		else
+			dialogue_AllTimes()
+		end
+	else
+		dialogue_AllTimes()
+	end
+end
+
+function dialogue_AllTimes()
+	Say("n1家，這裡就是我的家。","End")
+end
+
+
+function dialogue_ms7_01()
+	Say("n1你是？")
+	Say("p1你忘了我嗎？我是那名來找你的皇國軍，我現在有個請求，請你把天空之露水交給我可以嗎？．．．(把詳細情況道出。)")
+	Say("n1當然沒有問題，可是我要找找看，因為我已不知把它放在那裡了。")
+	Say("n7公主正在不斷四處找尋東西")
+	Say("n1有了，就是這個瓶子裡的東西嗎？")
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到“天空之露水”。","End")
+		AddItem(10330)
+		SetFlag("MS007_Task",4)
+	end
+end
+
+function dialogue_ms7_02()
+	Say("n1你還不快些把星晨花和天空之露水帶給娜姬？","End")
+end
+
+function dialogue_ms7_03()
+	Say("n1國家的事就等皇兄他們想好了，反正他們只腦中只想這些。","End")
+end
+
+
+

@@ -1,0 +1,5 @@
+--People01 莉莉莎
+
+function start()
+	Say("n1在法院內要保持安靜！不可以高聲談笑！","End")
+end

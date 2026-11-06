@@ -1,0 +1,48 @@
+--NQ006_B  海倫醫生
+
+
+function start()
+	statue=GetFlag("NQ006_Task")
+	if CheckItem(10168)>0 then
+		Say("n1你的朋友吃藥了嗎？","End")
+
+	elseif statue>=1  then
+		Say("n1要是生了病而要某種藥的話，都可以找我商量唷。")
+		Say("p1對不起！請問你有沒有止肚痛的藥呢？")
+		Say("n1有！是你要用嗎？")
+		Say("p1不是，只是給一個……有需要的人用。")
+		Ask("n200元一粒喔！","這是200元。","未夠錢……","response1")
+		
+	else
+		Say("n1要是生了病而要某種藥的話，都可以找我商量。","End")
+		
+	end
+
+end
+
+
+
+function response1()
+	if GetChoice()==0 then
+		
+		if GetData("Money")>=200 then
+			if ItemListCountLeft(0)<1 then
+				Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				ModifyData("Money",-200)
+				Say("n1拿著，是你的肚痛藥！")
+				Say("n7得到肚痛藥","End")
+				AddItem(10168)
+			end		
+		else
+			Say("n1嗯？你好像還未夠錢喔。","End")
+		end
+	
+	else 
+
+		Say("n1那你先存錢再來買喔！我在這等你！","End")
+	end
+		
+
+
+end

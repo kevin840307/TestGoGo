@@ -1,0 +1,15 @@
+--MQ017_F  夢魘魔
+
+
+function start()
+
+	if GetFlag("MQ017_F")==1 or GetFlag("MQ017_Task")~=3 then
+		QuestEnd()
+
+	else
+		SetFlag("MQ017_F",1)
+		Say("n1呼呼……這種怪物，應該就是操縱瑪麗的元兇吧？","End")
+	end
+end
+
+

@@ -1,0 +1,18 @@
+function CannnotMove()
+	Say("n1封印之地嚴禁進入")
+	QuestEnd()
+end
+
+function CanMove()
+	name = GetLocName()
+	Ask("n要進入"..name.."嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		x, y, id = GetLoc()
+		MovePlayer(x, y, id)
+	end
+	QuestEnd()
+end

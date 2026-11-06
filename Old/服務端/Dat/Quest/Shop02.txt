@@ -1,0 +1,5 @@
+--Shop02 ªZ¾¹©±
+
+function start()
+	OpenShop (2,0.7)
+end

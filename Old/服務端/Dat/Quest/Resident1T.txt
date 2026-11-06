@@ -1,0 +1,5 @@
+--People01 麥維里
+
+function start()
+	Say("n1尼尼亞皇國的國旗標誌是羊來的喔！","End")
+end

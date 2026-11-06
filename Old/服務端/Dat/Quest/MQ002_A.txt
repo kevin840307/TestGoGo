@@ -1,0 +1,93 @@
+--MQ002_A 守衛
+
+function start()
+	if GetData("Career")>=5 and GetData("Career")<9 or GetData("Career")==10 then
+		Say("n1是魔法師嗎．．．果然是一個弱不禁風的人。","End")
+	elseif GetData("Career")==0 then
+		Say("n1你這個弱不禁風的，想幹什麼？","End")
+	else
+		Exam()
+	end
+end
+
+function Exam()
+	lv = GetData("Level")
+        if lv<10  then
+		if GetFlag("MQ_001_END")==1 then
+			Say("n1魔法學校的一份子嗎．．．果然是一個弱不禁風的人而已。","End")
+		else
+			Say("n1你這個弱不禁風的，想幹什麼？")
+			Say("n7守衛和你說完之後，就不理你了。")
+			Say("p7我的樣子真的很弱嗎…？看來真的要再鍛鍊一下！","End")
+		end
+	elseif GetFlag("MQ_002_Task")==1 then
+			if GetCountItemCount(10025)>=1 then
+				Say("p7打倒小星光鳥後，並手持星光之羽")--have a name
+				Say("p7把星光之羽拿回去給守衛：")
+				success()		
+			else 
+	 			Say("n1我看你還是早點放棄吧，不過我心腸好，說你知道小星光鳥在哪兒吧！")
+				Say("n1牠們都生活在在流星之河附近。","End")
+			end
+	
+	elseif GetFlag("MQ_002_Task")==2 then
+		Ask("n格靈的人都很強壯！","我要進入格靈。","守衛的工作真辛苦呢。","response2")
+        else 
+	        Say("n7玩家來到學院門前，看到有一個守衛站在門旁")
+		Say("n7守衛走過來，問.....")
+		Ask("n你有什麼事？","我想成為白鷹騎士訓練學校的學生！","沒事，只是逛逛而已啦。","response1")
+		
+	end
+end
+
+	
+function response1()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("n1想進入格靈？看你一副弱不禁風的樣子──要是你可以打敗小星光鳥，")
+		Say("n1並把星光之羽拿回來的話，我就給你進去。我這可是為你好耶，")
+		Say("n1不然你進去了也只有給人嘲弄的份兒。")
+		Say("p1我這下就去拿給你看！","End")
+		SetFlag("MQ_002_Task",1)
+	else
+		Say("n1快些離開，別在這兒說東說西的。", "End")		
+	end
+end
+
+
+function response2()
+	choice=GetChoice()
+	if choice==0 then
+	--進入格靈
+		MovePlayer (5376,3392,23)
+	else
+		QuestEnd()
+	end
+end
+
+
+function success()
+	Say("p7守衛瞪大眼看著你，嘴巴開得大大的，似乎不大相信你會拿到星光之羽的樣子，此時你的心不禁得意了一下。")
+	Say("p7正在此時，你看到一個穿著光鮮的騎士走過，他也在瞪大眼睛看著你。")
+	Say("n7騎士加利")
+	Say("n1騎士加利：這個星光之羽你是什麼得來的？真的是你自己打倒小星光鳥的嗎？")
+	Say("p1這當然了！那我何時可以入去考試呢？")
+	Say("n7騎士加利拿走你的星光之羽")
+	Say("n1騎士加利：你不用考了！")
+	Say("p1為什麼！？我可是辛辛苦苦的打回來呀！")
+	Say("n1騎士加利：你已經通過了，我從沒有看過一個小伙子可以打敗小星光鳥的。你已經是我們的學生了！")
+	Say("n1守衛：加利先生，你確定這樣嗎？")
+	Say("n1騎士加利：對！就這麼辦！")
+	Say("n1守衛：真是厲害呢！你要加油啊！我以前真是太少看你了。")
+	Say("p7得到650Exp","End")
+	RemoveItem(10025)
+	gainExp(650)
+	SetFlag("MQ_002_END", 1)
+	SetFlag("MQ_002_Task",2)
+end
+
+
+function gainExp(x)
+	ModifyData("ExpAcc",x)
+end
+

@@ -1,0 +1,83 @@
+--NQ009_D  畢加
+
+
+function start()
+
+	statue=GetFlag("NQ009_Task")
+	
+	if statue==4 then
+		Say("n1謝謝你！謝謝你！","End")
+		
+	elseif statue==3 and CheckItem(10178)>0 then
+		if GetFlag("NQ009_D_Done")==1 then
+			if CheckItem(10179)>0 or CheckItem(10180)>0 then
+				Say("p1這又是你的吧？")
+				Say("n1對…！你又幫我拿回來了……？")
+				Say("p1你什麼會到處放的啊？")
+				Say("n1就是因為不想給人找到……對了，那個在寶箱內的圖……也是我畫的，我怕自己記不起來……")
+				Say("p1你這樣會很易給人發現的啦！真拿你沒辦法！")
+				Say("哎呀呀……對了，這次我沒什麼東西可以送你了，你拿著這些錢吧……")
+				Say("p7得到3400元")
+				ModifyData("Money",3400)
+			else
+				Say("p1這又是你的吧？")
+				Say("n1對…！你又幫我拿回來了……？")
+				Say("n1你什麼會到處放的啊？")
+				Say("p1就是因為不想給人找到……對了，那個在寶箱內的圖……也是我畫的，我怕自己記不起來……")
+				Say("p1你這樣會很易給人發現的啦！真拿你沒辦法！")
+				Say("n1嗯……我會小心的。")
+				Say("p1對了！我又發現一對手環，送給你吧！")
+				AddItem (10179)
+				AddItem (10180)
+					
+			end
+			SetFlag("NQ009_Task",4)
+			SetFlag("NQ009_Completed",1)
+			RemoveItem(10178)	
+
+		else
+			if HasTitle(11)==1 then
+				Say("n1咦？這個壺？")
+				Say("n1是我的！這個壺真的真的是我的！你可以還給我嗎？")
+				Say("p1嗯？沒問題啊，拿去吧，反正對我來說沒什麼用。")
+				Say("n1謝謝你！嗚……這個可是我的寶貝呢……")
+				if ItemListCountLeft(1)<2 then
+					Say("p7對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+				else
+					Say("p7失去里歐石的壺")
+					RemoveItem(10178)
+					Say("p1我走了，再見。")
+					Say("n1等……等等！")
+					Say("p1什麼了？")
+					Say("n1這個，你拿去吧！")
+					Say("p1這是…？")
+					Say("n1這個是天使手環……呵呵。")
+					Say("n1你戴上它，就會知道它的力量了。")
+					AddItem(10179)
+					AddItem(10180)
+					Say("p7得到天使手環","End")
+					SetFlag("NQ009_D_Done",1)
+					SetFlag("NQ009_Task",4)
+					SetFlag("NQ009_Completed",1)		
+				end	
+			else
+				Say("n1咦？這個壺？")
+				Say("n1是我的！這個壺真的真的是我的！你可以還給我嗎？")
+				Say("p1老頭，有什麼證據證明是你的～？")
+				Say("n1呃……")	
+				Say("p1別阻著啊，我還有事要忙～","End")
+	
+			end
+	
+		end
+
+	elseif statue==3 then
+		Say("n1請問你沒有看見我的壺……？","End")
+		--SetFlag("NQ009_Task",0)
+
+	else
+		Say("n1請問你沒有看見我的壺……？","End")
+
+	end
+
+end

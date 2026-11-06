@@ -1,0 +1,13 @@
+--Desert(P03) to Desert(P07)
+
+function start()
+	Ask("n要進入地精靈祭壇嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(6528,6528,35)
+	end
+	QuestEnd()
+end

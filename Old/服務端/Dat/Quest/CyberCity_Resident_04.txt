@@ -1,0 +1,6 @@
+--People01 克莉絲
+
+function start()
+	Say("n1雖說機動靈是機械，可是還是有感情的。")
+	Say("n1他們似乎很喜歡和人類一起工作……","End")
+end

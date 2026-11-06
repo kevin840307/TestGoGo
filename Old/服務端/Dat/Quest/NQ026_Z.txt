@@ -1,0 +1,8 @@
+--NQ026_Z 基地地圖
+
+function start()
+    Say("p7使用基地地圖")
+    AddItem(10561)
+    Say("mH#BG_COMPLXE_MAP.spr#na##","End") 
+    --Say("p7這就是地圖了","End") 
+end

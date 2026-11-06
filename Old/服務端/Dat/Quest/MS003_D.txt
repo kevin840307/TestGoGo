@@ -1,0 +1,31 @@
+-- MS003_D 洛卡龍甲獸
+
+-- MS003_Task
+-- 0: ShowTitle
+-- 1: quest start
+-- 2: get the blood, go to get metal
+-- 3: get the metal, not the passport yet
+-- 4: get the passport
+
+function start()
+	status = GetFlag("MS003_Task")
+	if status >= 2 then
+		if RemoveItem(10257)~=1 then
+			dialogue_01()
+		else
+			dialogue_02()
+		end
+	end
+	QuestEnd()
+end
+
+function dialogue_01()
+	Say("p7沒有魔甲龍血．．．\n洛卡金屬氧化了．．．","End")
+end
+
+function dialogue_02()
+	Say("p7將魔甲龍血塗上洛卡金屬。")
+	Say("p7失去“魔甲龍血”")
+	Say("p7得到“洛卡金屬”")
+	AddItem(10259)
+end

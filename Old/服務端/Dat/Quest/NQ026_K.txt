@@ -1,0 +1,13 @@
+--NQ026_K (瞬殺戰鬥員)
+
+function start()
+    Say("p7在戰鬥員死亡的一刻，一度魔光在其體內射出，之後發生強烈的爆炸！！！")
+    Say("p3轟隆隆！！")
+    Say("p7受到了嚴重的傷害！")
+    Say("p7你被第3魔裝軍團的同伴送回研究所中治療。", "go_back")    
+end
+
+function go_back()
+    SetData("HP",1)
+    MovePlayer(4416,2912,18)
+end

@@ -1,0 +1,669 @@
+function start()
+	if GetFlag("TQ038_Done") > 0 then
+		Step26()
+	else
+		if GetData("Level") < 30 then
+			Step01()
+		else
+			if CheckItem(6905) ~= 1 then
+				if ItemListCountLeft(4) < 1 then
+					Step27()
+				else
+					Step02()
+				end
+			else
+				if GetCountItemCount(6905) < 80 then
+					Step02()					
+				else
+					Step27()
+				end
+			end
+		end
+	end
+end
+
+function Step01()
+--//＜如玩家角色等級少於30＞
+	Say("n1你好！我是星空調查員，我現在正進行有關推薦計劃的問卷調查，對象是等級30或以上的國民。完成問卷後可得魔靈電池一顆。")
+end
+
+function Step02()
+--//＜如玩家角色等級在30或以上＞
+--//＜如玩家身上沒有足夠機甲裝備空間放置魔靈電池(6905)＞→Step27
+--//＜如玩家曾完成問卷＞→Step26
+--//＜清洗有關本Quest的Player Flag＞
+	Say("n1你好！我是星空調查員，我現在正進行有關推薦計劃的問卷調查，完成問卷後可得魔靈電池一顆。")
+	Say("n1你的選擇會影響下一次推薦計劃的獎品！")
+	Ask("n你可以幫我完成這份問卷嗎？","好的。","我暫時沒有時間啊！","Step02_ans");
+end
+
+function Step02_ans()
+	if GetChoice() == 0 then
+		Step03()
+	else
+		QuestEnd();
+	end
+end
+
+function Step03()
+	Ask("n你最喜歡什麼類型的推薦計劃禮物呢？","頭飾","背部裝備","武器","其他","Step03_ans");
+end
+
+function Step03_ans()
+	if GetChoice() == 0 then
+		Q1Ans(0)	
+	elseif GetChoice() == 1 then
+		Q1Ans(1)
+	elseif GetChoice() == 2 then
+		Q1Ans(2)
+	elseif GetChoice() == 3 then
+		Step04()
+	end
+end
+
+function Step04()
+	Ask("n你最喜歡什麼類型的推薦計劃禮物呢？","戰鬥精靈","機甲裝備","機甲電池","其他","Step04_ans")
+end
+
+function Step04_ans()
+	if GetChoice() == 0 then
+		Q1Ans(3)
+	elseif GetChoice() == 1 then
+		Q1Ans(4)
+	elseif GetChoice() == 2 then
+		Q1Ans(5)
+	elseif GetChoice() == 3 then
+		Step05()
+	end
+end
+
+function Step05()
+	Ask("n你最喜歡什麼類型的推薦計劃禮物呢？","特殊強化劑(如戰神之力、加速藥等)","其他"," Step05_ans")
+end
+
+function Step05_ans()
+if GetChoice() == 0 then
+		Q1Ans(6)
+	elseif GetChoice() == 1 then
+		Step03()
+	end
+end
+
+function Step06()
+	Ask("n過住你最喜愛的推薦計劃禮物是什麼呢？","戰神之力(使用後可暫時得到近乎無敵的力量)","加速藥","精靈之魂(可使召喚中的戰鬥精靈壽命+1)","其他","Step06_ans")
+end
+
+function Step06_ans()
+	if GetChoice() == 0 then
+		Q2Ans(0)	
+	elseif GetChoice() == 1 then
+		Q2Ans(1)
+	elseif GetChoice() == 2 then
+		Q2Ans(2)
+	elseif GetChoice() == 3 then
+		Step07()
+	end
+end
+
+function Step07()
+	Ask("n過住你最喜愛的推薦計劃禮物是什麼呢？","魔靈電池S(機甲用長壽電池，可使用機甲7小時)","再生水晶(使用後可以重新分配角色主參數)","小天使之翼","其他","Step07_ans")
+end
+
+function Step07_ans()
+	if GetChoice() == 0 then
+		Q2Ans(3)	
+	elseif GetChoice() == 1 then
+		Q2Ans(4)
+	elseif GetChoice() == 2 then
+		Q2Ans(5)
+	elseif GetChoice() == 3 then
+		Step08()
+	end
+end	
+
+function Step08()
+	Ask("n過住你最喜愛的推薦計劃禮物是什麼呢？","趣怪小豬帽","幸運風水魚","星空女管家‧小瞳（等級1戰鬥精靈）","其他","Step08_ans")
+end
+
+function Step08_ans()
+	if GetChoice() == 0 then
+		Q2Ans(6)	
+	elseif GetChoice() == 1 then
+		Q2Ans(7)
+	elseif GetChoice() == 2 then
+		Q2Ans(8)
+	elseif GetChoice() == 3 then
+		Step09()
+	end
+end	
+
+function Step09()
+	Ask("n過住你最喜愛的推薦計劃禮物是什麼呢？","星空女管家‧小純（等級10戰鬥精靈）","星空女管家‧小葵（等級20戰鬥精靈）","小惡魔之翼","其他", "Step09_ans")
+end
+
+function Step09_ans()
+	if GetChoice() == 0 then
+		Q2Ans(9)	
+	elseif GetChoice() == 1 then
+		Q2Ans(10)
+	elseif GetChoice() == 2 then
+		Q2Ans(11)
+	elseif GetChoice() == 3 then
+		Step10()
+	end
+end	
+
+
+function Step10()
+	Ask("n過住你最喜愛的推薦計劃禮物是什麼呢？","爆爆爆炸頭","波波河童帽","星行者機甲","其他","Step10_ans")
+end
+
+function Step10_ans()
+	if GetChoice() == 0 then
+		Q2Ans(12)	
+	elseif GetChoice() == 1 then
+		Q2Ans(13)
+	elseif GetChoice() == 2 then
+		Q2Ans(14)
+	elseif GetChoice() == 3 then
+		Step11()
+	end
+end
+
+function Step11()
+	Ask("n過住你最喜愛的推薦計劃禮物是什麼呢？","星擊號機甲","重星號機甲","古代機甲","其他", "Step11_ans")
+end
+
+function Step11_ans()
+	if GetChoice() == 0 then
+		Q2Ans(15)	
+	elseif GetChoice() == 1 then
+		Q2Ans(16)
+	elseif GetChoice() == 2 then
+		Q2Ans(17)
+	elseif GetChoice() == 3 then
+		Step12()
+	end	
+end
+
+function Step12()
+	Ask("n過住你最喜愛的推薦計劃禮物是什麼呢？","雪糕頭飾","雙魚座頭飾","小海龜","其他", "Step12_ans")
+end
+
+function Step12_ans()
+	if GetChoice() == 0 then
+		Q2Ans(18)	
+	elseif GetChoice() == 1 then
+		Q2Ans(19)
+	elseif GetChoice() == 2 then
+		Q2Ans(20)
+	elseif GetChoice() == 3 then
+		Step13()
+	end	
+end
+
+
+function Step13()
+	Ask("n過住你最喜愛的推薦計劃禮物是什麼呢？","天馬裝備","水星行者機甲","風星行者機甲","其他","Step13_ans")
+end
+
+function Step13_ans()
+	if GetChoice() == 0 then
+		Q2Ans(21)	
+	elseif GetChoice() == 1 then
+		Q2Ans(22)
+	elseif GetChoice() == 2 then
+		Q2Ans(23)
+	elseif GetChoice() == 3 then
+		Step14()
+	end	
+end
+
+function Step14()
+	Ask("n過住你最喜愛的推薦計劃禮物是什麼呢？","火星行者機甲","白羊座頭飾","其他","Step14_ans")
+end
+
+function Step14_ans()
+	if GetChoice() == 0 then
+		Q2Ans(24)	
+	elseif GetChoice() == 1 then
+		Q2Ans(25)
+	elseif GetChoice() == 2 then
+		Step06()
+	end	
+end
+
+function Step15()
+	Ask("n在下一次的推薦計劃，你最想得到什麼類型的特殊禮物呢？","頭飾","背部裝備","武器","其他","Step15_ans")
+end
+
+function Step15_ans()
+	if GetChoice() == 0 then
+		Q3Ans(0)	
+	elseif GetChoice() == 1 then
+		Q3Ans(1)
+	elseif GetChoice() == 2 then
+		Q3Ans(2)
+	elseif GetChoice() == 3 then
+		Step16()
+	end	
+end
+
+function Step16()
+	Ask("n在下一次的推薦計劃，你最想得到什麼類型的特殊禮物呢？","戰鬥精靈","機甲裝備","其他","Step16_ans")
+end
+
+function Step16_ans()
+	if GetChoice() == 0 then
+		Q3Ans(3)	
+	elseif GetChoice() == 1 then
+		Q3Ans(4)
+	elseif GetChoice() == 2 then
+		Step15()
+	end
+end
+
+function Step17()
+	Ask("n你認為推薦計劃的裝備設定應該是?","不設等級限制，附加不直接影響戰鬥的數值（如幸運、生命上限、魔力上限）","設等級限制，附加強大的數值", "Step17_ans")
+end
+
+function Step17_ans()
+	if GetChoice() == 0 then
+		Q4Ans(0)	
+	elseif GetChoice() == 1 then
+		Q4Ans(1)
+	end
+end
+
+function Step18()
+	Ask("n你會比較想裝備會附加什麼特效?","生命上限","魔力上限","攻擊","其他","Step18_ans")
+end
+
+function Step18_ans()
+	if GetChoice() == 0 then
+		Q5Ans(0)	
+	elseif GetChoice() == 1 then
+		Q5Ans(1)
+	elseif GetChoice() == 2 then
+		Q5Ans(2)
+	elseif GetChoice() == 3 then
+		Step19()
+	end
+end
+
+function Step19()
+	Ask("n你會比較想裝備會附加什麼特效?","防禦","魔攻","魔防","其他","Step19_ans")
+end
+
+function Step19_ans()
+	if GetChoice() == 0 then
+		Q5Ans(3)	
+	elseif GetChoice() == 1 then
+		Q5Ans(4)
+	elseif GetChoice() == 2 then
+		Q5Ans(5)
+	elseif GetChoice() == 3 then
+		Step20()
+	end
+end
+
+function Step20()
+	Ask("n你會比較想裝備會附加什麼特效?","命中","迴避","幸運","其他","Step20_ans")
+end
+
+function Step20_ans()
+	if GetChoice() == 0 then
+		Q5Ans(6)	
+	elseif GetChoice() == 1 then
+		Q5Ans(7)
+	elseif GetChoice() == 2 then
+		Q5Ans(8)
+	elseif GetChoice() == 3 then
+		Step18()
+	end
+end
+
+function Step21()
+	Ask("n如推薦計劃的裝備是設等級限制，你希望的等級是?","等級1-10","等級11-20","等級21-30","其他","Step21_ans")
+end
+
+function Step21_ans()
+	if GetChoice() == 0 then
+		Q6Ans(0)	
+	elseif GetChoice() == 1 then
+		Q6Ans(1)
+	elseif GetChoice() == 2 then
+		Q6Ans(2)
+	elseif GetChoice() == 3 then
+		Step22()
+	end
+end
+
+function Step22()
+	Ask("n如推薦計劃的裝備是設等級限制，你希望的等級是?","等級31-40","等級41-50","等級51-60","其他","Step22_ans")
+end
+
+function Step22_ans()
+	if GetChoice() == 0 then
+		Q6Ans(3)	
+	elseif GetChoice() == 1 then
+		Q6Ans(4)
+	elseif GetChoice() == 2 then
+		Q6Ans(5)
+	elseif GetChoice() == 3 then
+		Step23()
+	end
+end
+
+function Step23()
+	Ask("n如推薦計劃的裝備是設等級限制，你希望的等級是?","等級61-70","等級71-80","等級81-90","其他","Step23_ans")
+end
+
+function Step23_ans()
+	if GetChoice() == 0 then
+		Q6Ans(6)	
+	elseif GetChoice() == 1 then
+		Q6Ans(7)
+	elseif GetChoice() == 2 then
+		Q6Ans(8)
+	elseif GetChoice() == 3 then
+		Step24()
+	end
+end
+
+function Step24()
+	Ask("n如推薦計劃的裝備是設等級限制，你希望的等級是?","等級91-100","其他","Step24_ans")
+end
+
+function Step24_ans()
+	if GetChoice() == 0 then
+		Q6Ans(6)	
+	else
+		Step21()
+	end
+end
+
+function Step25()
+--//＜以記錄得的Player Flag調整對應的World Flag＞
+if GetWorldFlag("Jun_Q1_A") < 0 then SetWorldFlag("Jun_Q1_A", 0) end
+if GetWorldFlag("Jun_Q1_B") < 0 then SetWorldFlag("Jun_Q1_B", 0) end
+if GetWorldFlag("Jun_Q1_C") < 0 then SetWorldFlag("Jun_Q1_C", 0) end
+if GetWorldFlag("Jun_Q1_D") < 0 then SetWorldFlag("Jun_Q1_D", 0) end
+if GetWorldFlag("Jun_Q1_E") < 0 then SetWorldFlag("Jun_Q1_E", 0) end
+if GetWorldFlag("Jun_Q1_F") < 0 then SetWorldFlag("Jun_Q1_F", 0) end
+if GetWorldFlag("Jun_Q1_G") < 0 then SetWorldFlag("Jun_Q1_G", 0) end
+if GetWorldFlag("Jun_Q2_A") < 0 then SetWorldFlag("Jun_Q2_A", 0) end
+if GetWorldFlag("Jun_Q2_B") < 0 then SetWorldFlag("Jun_Q2_B", 0) end
+if GetWorldFlag("Jun_Q2_C") < 0 then SetWorldFlag("Jun_Q2_C", 0) end
+if GetWorldFlag("Jun_Q2_D") < 0 then SetWorldFlag("Jun_Q2_D", 0) end
+if GetWorldFlag("Jun_Q2_E") < 0 then SetWorldFlag("Jun_Q2_E", 0) end
+if GetWorldFlag("Jun_Q2_F") < 0 then SetWorldFlag("Jun_Q2_F", 0) end
+if GetWorldFlag("Jun_Q2_G") < 0 then SetWorldFlag("Jun_Q2_G", 0) end
+if GetWorldFlag("Jun_Q2_H") < 0 then SetWorldFlag("Jun_Q2_H", 0) end
+if GetWorldFlag("Jun_Q2_I") < 0 then SetWorldFlag("Jun_Q2_I", 0) end
+if GetWorldFlag("Jun_Q2_J") < 0 then SetWorldFlag("Jun_Q2_J", 0) end
+if GetWorldFlag("Jun_Q2_K") < 0 then SetWorldFlag("Jun_Q2_K", 0) end
+if GetWorldFlag("Jun_Q2_L") < 0 then SetWorldFlag("Jun_Q2_L", 0) end
+if GetWorldFlag("Jun_Q2_M") < 0 then SetWorldFlag("Jun_Q2_M", 0) end
+if GetWorldFlag("Jun_Q2_N") < 0 then SetWorldFlag("Jun_Q2_N", 0) end
+if GetWorldFlag("Jun_Q2_O") < 0 then SetWorldFlag("Jun_Q2_O", 0) end
+if GetWorldFlag("Jun_Q2_P") < 0 then SetWorldFlag("Jun_Q2_P", 0) end
+if GetWorldFlag("Jun_Q2_Q") < 0 then SetWorldFlag("Jun_Q2_Q", 0) end
+if GetWorldFlag("Jun_Q2_R") < 0 then SetWorldFlag("Jun_Q2_R", 0) end
+if GetWorldFlag("Jun_Q2_S") < 0 then SetWorldFlag("Jun_Q2_S", 0) end
+if GetWorldFlag("Jun_Q2_T") < 0 then SetWorldFlag("Jun_Q2_T", 0) end
+if GetWorldFlag("Jun_Q2_U") < 0 then SetWorldFlag("Jun_Q2_U", 0) end
+if GetWorldFlag("Jun_Q2_V") < 0 then SetWorldFlag("Jun_Q2_V", 0) end
+if GetWorldFlag("Jun_Q2_W") < 0 then SetWorldFlag("Jun_Q2_W", 0) end
+if GetWorldFlag("Jun_Q2_X") < 0 then SetWorldFlag("Jun_Q2_X", 0) end
+if GetWorldFlag("Jun_Q2_Y") < 0 then SetWorldFlag("Jun_Q2_Y", 0) end
+if GetWorldFlag("Jun_Q2_Z") < 0 then SetWorldFlag("Jun_Q2_Z", 0) end
+if GetWorldFlag("Jun_Q3_A") < 0 then SetWorldFlag("Jun_Q3_A", 0) end
+if GetWorldFlag("Jun_Q3_B") < 0 then SetWorldFlag("Jun_Q3_B", 0) end
+if GetWorldFlag("Jun_Q3_C") < 0 then SetWorldFlag("Jun_Q3_C", 0) end
+if GetWorldFlag("Jun_Q3_D") < 0 then SetWorldFlag("Jun_Q3_D", 0) end
+if GetWorldFlag("Jun_Q3_E") < 0 then SetWorldFlag("Jun_Q3_E", 0) end
+if GetWorldFlag("Jun_Q4_A") < 0 then SetWorldFlag("Jun_Q4_A", 0) end
+if GetWorldFlag("Jun_Q4_B") < 0 then SetWorldFlag("Jun_Q4_B", 0) end
+if GetWorldFlag("Jun_Q5_A") < 0 then SetWorldFlag("Jun_Q5_A", 0) end
+if GetWorldFlag("Jun_Q5_B") < 0 then SetWorldFlag("Jun_Q5_B", 0) end
+if GetWorldFlag("Jun_Q5_C") < 0 then SetWorldFlag("Jun_Q5_C", 0) end
+if GetWorldFlag("Jun_Q5_D") < 0 then SetWorldFlag("Jun_Q5_D", 0) end
+if GetWorldFlag("Jun_Q5_E") < 0 then SetWorldFlag("Jun_Q5_E", 0) end
+if GetWorldFlag("Jun_Q5_F") < 0 then SetWorldFlag("Jun_Q5_F", 0) end
+if GetWorldFlag("Jun_Q5_G") < 0 then SetWorldFlag("Jun_Q5_G", 0) end
+if GetWorldFlag("Jun_Q5_H") < 0 then SetWorldFlag("Jun_Q5_H", 0) end
+if GetWorldFlag("Jun_Q5_I") < 0 then SetWorldFlag("Jun_Q5_I", 0) end
+if GetWorldFlag("Jun_Q6_A") < 0 then SetWorldFlag("Jun_Q6_A", 0) end
+if GetWorldFlag("Jun_Q6_B") < 0 then SetWorldFlag("Jun_Q6_B", 0) end
+if GetWorldFlag("Jun_Q6_C") < 0 then SetWorldFlag("Jun_Q6_C", 0) end
+if GetWorldFlag("Jun_Q6_D") < 0 then SetWorldFlag("Jun_Q6_D", 0) end
+if GetWorldFlag("Jun_Q6_E") < 0 then SetWorldFlag("Jun_Q6_E", 0) end
+if GetWorldFlag("Jun_Q6_F") < 0 then SetWorldFlag("Jun_Q6_F", 0) end
+if GetWorldFlag("Jun_Q6_G") < 0 then SetWorldFlag("Jun_Q6_G", 0) end
+if GetWorldFlag("Jun_Q6_H") < 0 then SetWorldFlag("Jun_Q6_H", 0) end
+if GetWorldFlag("Jun_Q6_I") < 0 then SetWorldFlag("Jun_Q6_I", 0) end
+if GetWorldFlag("Jun_Q6_J") < 0 then SetWorldFlag("Jun_Q6_J", 0) end
+
+if GetFlag("Jun_Q1_A") >0 then SetWorldFlag("Jun_Q1_A", GetWorldFlag("Jun_Q1_A")+1) end
+if GetFlag("Jun_Q1_B") >0 then SetWorldFlag("Jun_Q1_B", GetWorldFlag("Jun_Q1_B")+1) end
+if GetFlag("Jun_Q1_C") >0 then SetWorldFlag("Jun_Q1_C", GetWorldFlag("Jun_Q1_C")+1) end
+if GetFlag("Jun_Q1_D") >0 then SetWorldFlag("Jun_Q1_D", GetWorldFlag("Jun_Q1_D")+1) end
+if GetFlag("Jun_Q1_E") >0 then SetWorldFlag("Jun_Q1_E", GetWorldFlag("Jun_Q1_E")+1) end
+if GetFlag("Jun_Q1_F") >0 then SetWorldFlag("Jun_Q1_F", GetWorldFlag("Jun_Q1_F")+1) end
+if GetFlag("Jun_Q1_G") >0 then SetWorldFlag("Jun_Q1_G", GetWorldFlag("Jun_Q1_G")+1) end
+if GetFlag("Jun_Q2_A") >0 then SetWorldFlag("Jun_Q2_A", GetWorldFlag("Jun_Q2_A")+1) end
+if GetFlag("Jun_Q2_B") >0 then SetWorldFlag("Jun_Q2_B", GetWorldFlag("Jun_Q2_B")+1) end
+if GetFlag("Jun_Q2_C") >0 then SetWorldFlag("Jun_Q2_C", GetWorldFlag("Jun_Q2_C")+1) end
+if GetFlag("Jun_Q2_D") >0 then SetWorldFlag("Jun_Q2_D", GetWorldFlag("Jun_Q2_D")+1) end
+if GetFlag("Jun_Q2_E") >0 then SetWorldFlag("Jun_Q2_E", GetWorldFlag("Jun_Q2_E")+1) end
+if GetFlag("Jun_Q2_F") >0 then SetWorldFlag("Jun_Q2_F", GetWorldFlag("Jun_Q2_F")+1) end
+if GetFlag("Jun_Q2_G") >0 then SetWorldFlag("Jun_Q2_G", GetWorldFlag("Jun_Q2_G")+1) end
+if GetFlag("Jun_Q2_H") >0 then SetWorldFlag("Jun_Q2_H", GetWorldFlag("Jun_Q2_H")+1) end
+if GetFlag("Jun_Q2_I") >0 then SetWorldFlag("Jun_Q2_I", GetWorldFlag("Jun_Q2_I")+1) end
+if GetFlag("Jun_Q2_J") >0 then SetWorldFlag("Jun_Q2_J", GetWorldFlag("Jun_Q2_J")+1) end
+if GetFlag("Jun_Q2_K") >0 then SetWorldFlag("Jun_Q2_K", GetWorldFlag("Jun_Q2_K")+1) end
+if GetFlag("Jun_Q2_L") >0 then SetWorldFlag("Jun_Q2_L", GetWorldFlag("Jun_Q2_L")+1) end
+if GetFlag("Jun_Q2_M") >0 then SetWorldFlag("Jun_Q2_M", GetWorldFlag("Jun_Q2_M")+1) end
+if GetFlag("Jun_Q2_N") >0 then SetWorldFlag("Jun_Q2_N", GetWorldFlag("Jun_Q2_N")+1) end
+if GetFlag("Jun_Q2_O") >0 then SetWorldFlag("Jun_Q2_O", GetWorldFlag("Jun_Q2_O")+1) end
+if GetFlag("Jun_Q2_P") >0 then SetWorldFlag("Jun_Q2_P", GetWorldFlag("Jun_Q2_P")+1) end
+if GetFlag("Jun_Q2_Q") >0 then SetWorldFlag("Jun_Q2_Q", GetWorldFlag("Jun_Q2_Q")+1) end
+if GetFlag("Jun_Q2_R") >0 then SetWorldFlag("Jun_Q2_R", GetWorldFlag("Jun_Q2_R")+1) end
+if GetFlag("Jun_Q2_S") >0 then SetWorldFlag("Jun_Q2_S", GetWorldFlag("Jun_Q2_S")+1) end
+if GetFlag("Jun_Q2_T") >0 then SetWorldFlag("Jun_Q2_T", GetWorldFlag("Jun_Q2_T")+1) end
+if GetFlag("Jun_Q2_U") >0 then SetWorldFlag("Jun_Q2_U", GetWorldFlag("Jun_Q2_U")+1) end
+if GetFlag("Jun_Q2_V") >0 then SetWorldFlag("Jun_Q2_V", GetWorldFlag("Jun_Q2_V")+1) end
+if GetFlag("Jun_Q2_W") >0 then SetWorldFlag("Jun_Q2_W", GetWorldFlag("Jun_Q2_W")+1) end
+if GetFlag("Jun_Q2_X") >0 then SetWorldFlag("Jun_Q2_X", GetWorldFlag("Jun_Q2_X")+1) end
+if GetFlag("Jun_Q2_Y") >0 then SetWorldFlag("Jun_Q2_Y", GetWorldFlag("Jun_Q2_Y")+1) end
+if GetFlag("Jun_Q2_Z") >0 then SetWorldFlag("Jun_Q2_Z", GetWorldFlag("Jun_Q2_Z")+1) end
+if GetFlag("Jun_Q3_A") >0 then SetWorldFlag("Jun_Q3_A", GetWorldFlag("Jun_Q3_A")+1) end
+if GetFlag("Jun_Q3_B") >0 then SetWorldFlag("Jun_Q3_B", GetWorldFlag("Jun_Q3_B")+1) end
+if GetFlag("Jun_Q3_C") >0 then SetWorldFlag("Jun_Q3_C", GetWorldFlag("Jun_Q3_C")+1) end
+if GetFlag("Jun_Q3_D") >0 then SetWorldFlag("Jun_Q3_D", GetWorldFlag("Jun_Q3_D")+1) end
+if GetFlag("Jun_Q3_E") >0 then SetWorldFlag("Jun_Q3_E", GetWorldFlag("Jun_Q3_E")+1) end
+if GetFlag("Jun_Q4_A") >0 then SetWorldFlag("Jun_Q4_A", GetWorldFlag("Jun_Q4_A")+1) end
+if GetFlag("Jun_Q4_B") >0 then SetWorldFlag("Jun_Q4_B", GetWorldFlag("Jun_Q4_B")+1) end
+if GetFlag("Jun_Q5_A") >0 then SetWorldFlag("Jun_Q5_A", GetWorldFlag("Jun_Q5_A")+1) end
+if GetFlag("Jun_Q5_B") >0 then SetWorldFlag("Jun_Q5_B", GetWorldFlag("Jun_Q5_B")+1) end
+if GetFlag("Jun_Q5_C") >0 then SetWorldFlag("Jun_Q5_C", GetWorldFlag("Jun_Q5_C")+1) end
+if GetFlag("Jun_Q5_D") >0 then SetWorldFlag("Jun_Q5_D", GetWorldFlag("Jun_Q5_D")+1) end
+if GetFlag("Jun_Q5_E") >0 then SetWorldFlag("Jun_Q5_E", GetWorldFlag("Jun_Q5_E")+1) end
+if GetFlag("Jun_Q5_F") >0 then SetWorldFlag("Jun_Q5_F", GetWorldFlag("Jun_Q5_F")+1) end
+if GetFlag("Jun_Q5_G") >0 then SetWorldFlag("Jun_Q5_G", GetWorldFlag("Jun_Q5_G")+1) end
+if GetFlag("Jun_Q5_H") >0 then SetWorldFlag("Jun_Q5_H", GetWorldFlag("Jun_Q5_H")+1) end
+if GetFlag("Jun_Q5_I") >0 then SetWorldFlag("Jun_Q5_I", GetWorldFlag("Jun_Q5_I")+1) end
+if GetFlag("Jun_Q6_A") >0 then SetWorldFlag("Jun_Q6_A", GetWorldFlag("Jun_Q6_A")+1) end
+if GetFlag("Jun_Q6_B") >0 then SetWorldFlag("Jun_Q6_B", GetWorldFlag("Jun_Q6_B")+1) end
+if GetFlag("Jun_Q6_C") >0 then SetWorldFlag("Jun_Q6_C", GetWorldFlag("Jun_Q6_C")+1) end
+if GetFlag("Jun_Q6_D") >0 then SetWorldFlag("Jun_Q6_D", GetWorldFlag("Jun_Q6_D")+1) end
+if GetFlag("Jun_Q6_E") >0 then SetWorldFlag("Jun_Q6_E", GetWorldFlag("Jun_Q6_E")+1) end
+if GetFlag("Jun_Q6_F") >0 then SetWorldFlag("Jun_Q6_F", GetWorldFlag("Jun_Q6_F")+1) end
+if GetFlag("Jun_Q6_G") >0 then SetWorldFlag("Jun_Q6_G", GetWorldFlag("Jun_Q6_G")+1) end
+if GetFlag("Jun_Q6_H") >0 then SetWorldFlag("Jun_Q6_H", GetWorldFlag("Jun_Q6_H")+1) end
+if GetFlag("Jun_Q6_I") >0 then SetWorldFlag("Jun_Q6_I", GetWorldFlag("Jun_Q6_I")+1) end
+if GetFlag("Jun_Q6_J") >0 then SetWorldFlag("Jun_Q6_J", GetWorldFlag("Jun_Q6_J")+1) end
+SetFlag("TQ038_Done",1)
+AddItem(6905)
+Say("n1謝謝你的寶貴意見！")
+Say("n1這裡有一顆魔靈電池是送給你的！")
+Say("p7得到魔靈電池。")
+end
+
+function Step26()
+	Say("n1謝謝你的寶貴意見！請支持下一期的推薦計劃^_^")
+end
+
+function Step27()
+	Say("p1身上的機甲裝備太多了，還是先整理一下好了!")
+end
+
+
+function Q1Ans(idx)
+	if idx == 0 then
+		SetFlag("Jun_Q1_A",1)
+	elseif idx == 1 then
+		SetFlag("Jun_Q1_B",1)
+	elseif idx == 2 then
+		SetFlag("Jun_Q1_C",1)
+	elseif idx == 3 then
+		SetFlag("Jun_Q1_D",1)
+	elseif idx == 4 then
+		SetFlag("Jun_Q1_E",1)
+	elseif idx == 5 then
+		SetFlag("Jun_Q1_F",1)
+	elseif idx == 6 then
+		SetFlag("Jun_Q1_G",1)
+	end
+	Step06()
+end
+
+function Q2Ans(idx)
+	if idx == 0 then
+		SetFlag("Jun_Q2_A",1)
+	elseif idx == 1 then
+		SetFlag("Jun_Q2_B",1)
+	elseif idx == 2 then
+		SetFlag("Jun_Q2_C",1)
+	elseif idx == 3 then
+		SetFlag("Jun_Q2_D",1)
+	elseif idx == 4 then
+		SetFlag("Jun_Q2_E",1)
+	elseif idx == 5 then
+		SetFlag("Jun_Q2_F",1)
+	elseif idx == 6 then
+		SetFlag("Jun_Q2_G",1)
+	elseif idx == 7 then
+		SetFlag("Jun_Q2_H",1)
+	elseif idx == 8 then
+		SetFlag("Jun_Q2_I",1)
+	elseif idx == 9 then
+		SetFlag("Jun_Q2_J",1)
+	elseif idx == 10 then
+		SetFlag("Jun_Q2_K",1)
+	elseif idx == 11 then
+		SetFlag("Jun_Q2_L",1)
+	elseif idx == 12 then
+		SetFlag("Jun_Q2_M",1)
+	elseif idx == 13 then
+		SetFlag("Jun_Q2_N",1)	
+	elseif idx == 14 then
+		SetFlag("Jun_Q2_O",1)
+	elseif idx == 15 then
+		SetFlag("Jun_Q2_P",1)
+	elseif idx == 16 then
+		SetFlag("Jun_Q2_Q",1)
+	elseif idx == 17 then
+		SetFlag("Jun_Q2_R",1)
+	elseif idx == 18 then
+		SetFlag("Jun_Q2_S",1)
+	elseif idx == 19 then
+		SetFlag("Jun_Q2_T",1)
+	elseif idx == 20 then
+		SetFlag("Jun_Q2_U",1)
+	elseif idx == 21 then
+		SetFlag("Jun_Q2_V",1)
+	elseif idx == 22 then
+		SetFlag("Jun_Q2_W",1)
+	elseif idx == 23 then
+		SetFlag("Jun_Q2_X",1)
+	elseif idx == 24 then
+		SetFlag("Jun_Q2_Y",1)
+	elseif idx == 25 then
+		SetFlag("Jun_Q2_Z",1)
+	end
+	Step15()
+end
+
+function Q3Ans(idx)
+	if idx == 0 then
+		SetFlag("Jun_Q3_A",1)
+	elseif idx == 1 then
+		SetFlag("Jun_Q3_B",1)
+	elseif idx == 2 then
+		SetFlag("Jun_Q3_C",1)
+	elseif idx == 3 then
+		SetFlag("Jun_Q3_D",1)
+	elseif idx == 4 then
+		SetFlag("Jun_Q3_E",1)
+	end
+	Step17()
+end
+
+function Q4Ans(idx)
+	if idx == 0 then
+		SetFlag("Jun_Q4_A",1)
+	elseif idx == 1 then
+		SetFlag("Jun_Q4_B",1)
+	end
+	Step18()
+end
+
+function Q5Ans(idx)
+	if idx == 0 then
+		SetFlag("Jun_Q5_A",1)
+	elseif idx == 1 then
+		SetFlag("Jun_Q5_B",1)
+	elseif idx == 2 then
+		SetFlag("Jun_Q5_C",1)
+	elseif idx == 3 then
+		SetFlag("Jun_Q5_D",1)
+	elseif idx == 4 then
+		SetFlag("Jun_Q5_E",1)
+	elseif idx == 5 then
+		SetFlag("Jun_Q5_F",1)
+	elseif idx == 6 then
+		SetFlag("Jun_Q5_G",1)
+	elseif idx == 7 then
+		SetFlag("Jun_Q5_H",1)
+	elseif idx == 8 then
+		SetFlag("Jun_Q5_I",1)
+	end
+	Step21()
+end
+
+function Q6Ans(idx)
+	if idx == 0 then
+		SetFlag("Jun_Q6_A",1)
+	elseif idx == 1 then
+		SetFlag("Jun_Q6_B",1)
+	elseif idx == 2 then
+		SetFlag("Jun_Q6_C",1)
+	elseif idx == 3 then
+		SetFlag("Jun_Q6_D",1)
+	elseif idx == 4 then
+		SetFlag("Jun_Q6_E",1)
+	elseif idx == 5 then
+		SetFlag("Jun_Q6_F",1)
+	elseif idx == 6 then
+		SetFlag("Jun_Q6_G",1)
+	elseif idx == 7 then
+		SetFlag("Jun_Q6_H",1)
+	elseif idx == 8 then
+		SetFlag("Jun_Q6_I",1)
+	elseif idx == 9 then
+		SetFlag("Jun_Q6_J",1)
+	end
+	Step25()
+end

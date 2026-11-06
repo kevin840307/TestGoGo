@@ -1,0 +1,367 @@
+--NQ008_B  凱兒
+
+--statue(NQ012_Task) =1 : receive the mission
+-- =2 : after talking with 凱兒
+-- =3 : need to find 金妮露
+-- =4 : after finding the 金妮露
+-- =5 : NQ012_Task is completed
+
+
+--statue(NQ013_Task) =1 : receive the mission
+--		     =2 : need to find 泊裘斯
+--		     =3 : after talking/finding 泊裘斯
+--		     =4 : need to find 蘑菇探測鏡
+--		     =5 : NQ013_Task is completed
+
+--statue(NQ014_Task) =1 : receive the mission
+--		     =2 : can go to find 福爾
+--		     =3 : go to find 治療藥水．3
+--		     =4 : got the letter already
+
+--statue(NQ015_Task) =1: receive the mission
+-- 		     =2: go to find  阿爾瑪
+--		     =3: find 月霧石
+--		     =4: mission is completed
+
+function start()
+
+	lv = GetData("Level")
+	done=GetFlag("NQ008_Done")
+	done15=GetFlag("NQ015_Done")
+	statue=GetFlag("NQ008_Task")
+	statue12= GetFlag("NQ012_Task")
+	statue13= GetFlag("NQ013_Task")
+	statue14= GetFlag("NQ014_Task")
+	statue15= GetFlag("NQ015_Task")
+
+
+	if statue15>=3 then
+		Say("p1到底你喜歡阿爾瑪什麼啊？")
+		Say("n1嗯…我喜歡他細心，又喜歡我…")
+		Say("p1真是太肉麻了！")
+		Say("n1才沒有！咦？為什麼你知道他叫阿爾瑪？")
+		Say("p1咦！？這個嘛……我向小孩們打聽回來的！","End")
+
+
+	elseif statue15>=1 then
+		Say("n1嗯～你去工作吧！我有什麼事一定會找你的！","End")
+
+
+	elseif statue14>=1 then
+		if RemoveItem(10211)==1 then
+			if done15==1 then
+				Say("n1是他的信？")
+				Say("n1該不會又是那些說話吧？")
+				Say("n7……")
+				Say("n7……")
+				Say("n3…他說，快可以回來了！")
+				Say("p1那就好了。我先走了～記著有什麼事，一定要找我幫忙！")
+				Say("n1謝謝！謝謝！耶～～～！")
+				
+			else
+				Say("n1又有信了？真的！？")
+				Say("n7……")
+				Say("n7……")
+				Say("n1唉…")
+				Say("p1信中說了什麼？")
+				Say("n1還是這些東西，什麼保重身體，好好照顧小孩之類的。")
+				Say("p1不要那麼灰心嘛！知道他還在生，不是很好嗎？")
+				Say("n1是這樣沒錯，可是……")
+				Say("p1別亂想了，你還是照著他的意思，好好的生活下去！")
+				Say("n1謝謝你…")
+				Say("p1我有事！先走了，有什麼幫忙就找我，知道嗎？")
+				
+			end
+
+			Say("n7得到700EXP","End")
+			gainexp(700)
+			SetFlag("NQ015_Task",1)
+		else
+			Say("n1我沒事了，麻煩你幫我照顧小孩們吧。","End")
+		end
+	elseif statue13==5 then
+		if lv<25 then
+			Say("n1咦？你回來了？泊裘斯沒事了？")
+			Say("n1我收到一封信…可是現在我在工作，沒空看，你一會再來找我吧？","End")
+
+
+		else
+			if done15==1 then			
+				Say("n1泊裘斯沒事了吧？真的太好了。")
+				Say("n1我收到一首信了，又是我的男朋友寄來的。叫我保重身體呢！可是…我才不需要這些說話！")
+				Say("n1到底他在幹什麼？我真的很想，很想他…")
+				Say("p6唉…可惜阿爾瑪叫我不要說她知道…不然我真想告訴她…")
+				Say("n1咦？你什麼了？")
+				Say("p1沒什麼，我有點難過而已。")
+				Say("n1唉，謝謝你。")
+				Say("p6我還是去問一下那些小孩吧，應該可以再勸勸阿爾瑪的…","End")
+			else
+				
+				Say("n1泊裘斯沒事了吧？真的太好了。")
+				Say("n1你看！我收到我男朋友寄來的信啊！他在信上叫我不用擔心他呢！")
+				Say("n1到現在，我還很是想他，想得不得了…為什麼他還沒有回來？唉～～")
+				Say("p6真可憐……他男朋友的話…孤兒院的小孩會不會知道他在在哪…？","End")
+
+			end
+			SetFlag("NQ014_Task",1)
+		end		
+	elseif statue13==4 then
+		Say("n2謝謝你……")
+		Say("n1記著要先買下蘑菇探測鏡才去找啊…要是不夠力量的話，最好找朋友幫忙…","End")
+
+
+	elseif statue13==3 then
+		if done15==1 then
+			Say("n3他的病情又惡化了！？")
+			Say("n1嗚……什麼辦，我的錢還沒有賺夠來買藥引……")
+			Say("p1又是什麼雪山紅菇嗎？我幫你去找！")
+			Say("n1咦！不要勉強啊！")
+			Say("n1是～是～","End")
+		else
+			Say("n3他的病情惡化了！？")
+			Say("n1嗚……什麼辦，我的錢還沒有賺夠來買藥引……")
+			Say("p1是什麼藥引？我幫你去找！")
+			Say("n1以你的力量嗎…好像不大可能…")
+			Say("p1你說出來吧！我會幫你的！")
+			Say("n1藥引就是雪山紅菇…在獅鷲山上。")
+			Say("p1那兒…的確好像很難。")
+			Say("n1還有，要找這種菌類，一定要使用蘑菇探測鏡…唉…雖說可以去找達力博士買，可是還是太貴了…")
+			Say("p6雪山紅菇就拜託朋友找好了…先去買下蘑菇探測鏡才行！")
+			Say("n1你在想什麼？")
+			Say("p1我幫你去拿藥引回來！")
+			Say("n1咦！不要勉強啊！")
+			Say("p1是～是～","End")
+
+
+		end
+		SetFlag("NQ013_Task",4)
+
+	elseif statue13==2 then
+		Say("n1幫我去看看泊裘斯吧？他的病不知道如何了…","End")
+
+	elseif statue13==1 then
+		if lv<20 then
+			Say("n1唉…還是別說了！我也不想再說起這件事…","End")
+		else
+			
+			SpeechNQ14()
+			SetFlag("NQ013_Task",2)			
+		end
+
+	elseif statue12==4 and RemoveItem(10208)==1 then
+		if done15==1 then
+			Say("n1咦？又是這個嗎？始終都是有點感觸…")
+			Say("p1對了，你還有什麼我需要幫手的？","End")
+			Say("n1幫我去看看泊裘斯吧？他的病不知道如何了…","End")
+			SetFlag("NQ013_Task",2)	
+		else
+			Say("n1這幅圖是……？")
+			Say("p1是立波利他給你畫的。")
+			Say("p6我看我還是別說她知道金妮露失蹤的事吧…免得她又再擔心了。")
+			Say("n1咦…他竟然………")
+			Say("p1你什麼了？")
+			Say("n1沒什麼…我有點感觸而已…")
+			Say("p1其實我想問你很久了…")
+			Say("p1你那麼年輕，為什麼是那麼多孩子的媽媽？")
+
+			if lv<20 then
+				Say("n1唉…還是別說了！我也不想再說起這件事…","End")
+				SetFlag("NQ013_Task",1)	
+			else
+				SpeechNQ14()
+				SetFlag("NQ013_Task",2)	
+			
+			end
+
+		end
+		SetFlag("NQ012_Task",5)
+		SetFlag("NQ012_Done",1)
+	
+			
+	elseif statue12>=2 then
+		Say("n1我真的不用幫忙啦，回去找小孩吧。","End")
+	
+
+	elseif statue12==1 then
+		if done15==1 then
+			Say("n1咦？你又來啦？")
+			Say("p1有什麼要幫忙的嗎？立波利他擔心你。")
+			Say("n1嗯～～我沒事，你回去陪他好了，我記得上次金妮露走失了，我怕這次她又…")
+			Say("n1你還是幫我去看著他們會比較好！謝謝！","End")
+		else
+
+			Say("n1又是你…嗎？有什麼事？")
+			Say("p1你的兒子立波利他拿了我500元喔。")
+			Say("n1真的嗎？他拿了你的錢？唉…真是太不長進了。")
+			Say("p1其實你是不是真的有點困難？我可以幫到你嗎？")
+			Say("n1不，不用了，我不用你的幫助。")
+			Say("p1嗯……")
+			Say("n1你陪他們玩玩吧？我真沒有做好媽媽的責任…","End")
+
+		end		
+		SetFlag("NQ012_Task",2)
+
+	elseif statue==3 then
+		if RemoveItem(10173)==1 then
+			Step05()
+			SetFlag("NQ008_Done",1)
+			SetFlag("NQ008_Task",0)
+		else
+			Say("n1希望你能幫我找到娜依艾州草","End")
+		end
+
+	elseif statue==2 then
+		if GetCountItemCount(1)>=10 then
+			if done==1 then
+				Speech04b()
+				
+			else
+				Speech04a()
+			end
+
+			RemoveItem(1,10)
+			SetFlag("NQ008_Task",3)
+
+		else
+			Say("p1是10個小紅晶石吧？我去找給你。","End")
+		end
+
+        elseif statue==1 then
+		if done==1 then
+			Speech02b()
+		else
+			Speech02a()
+		end
+
+		SetFlag("NQ008_Task",2)					
+
+	else
+		if done==1 then	
+			Say("n1真的謝謝你原諒我！","End")
+
+		else
+			Say("n1我正在收集小紅晶石……有了它，人們就可以得到救贖……","End")
+
+
+		end
+
+	end
+	
+
+end
+
+function Speech02a()
+	Say("n1……那位……")
+	Say("p1看你這身打扮……你就是天使嗎？")
+	Say("n1對……呀！不對……！")
+	Say("p1那到底是不是呢？")
+	Say("n1我不是…你是不是想要得到祝福？")
+	Say("p1是！")
+	Say("p6嗯？有點奇怪……")
+	Say("n1那你找10個小紅晶石給我，我才叫天使大人祝福於你……")
+	Say("p1好的！我有很多願望的呢！")
+	Say("p6有點奇怪……好！就看看她有什麼花樣！","End")
+end
+
+
+function Speech02b()
+	Say("p1你又在收集小紅晶石了，是不是？")
+	Say("n1是這樣……可是我還是有苦衷的！")
+	Say("p1唉，算了，我也不想知道是什麼……你想要小紅晶石吧？我幫你拿好了！")
+	Say("p1是10個吧？")
+	Say("n2謝謝你……","End")
+end
+
+function Speech04a()
+	Say("n1是這些了……")
+	Say("n1天使說很感謝你……你可以走了。")
+	Say("p1祝福呢？願望呢？")
+	Say("n1嗯……是這樣的啦，其實天使有點力量不足……所以不可以再實現願望了……")
+	Say("n1你遲些再來吧……")
+	Say("p3不行！我等到可以為止！")
+	Say("n1咦……這樣……")
+	Say("p1如何？")
+	Say("n1這樣吧？不如你去找一種叫娜依艾州草的東西給我……這種藥草可以暫時回復天使的力量……","End")
+
+
+	
+end
+
+
+function Speech04b()
+	Say("n2謝謝你！")
+	Say("p1沒什麼了吧？我先走了…")
+	Say("n1等等！其實我還想你幫我找娜依艾州草！")
+	Say("p3你煩不煩啊？")
+	Say("n1我知道我真的很煩……可是……")
+	Say("p1好吧！就幫你一次！")
+	Say("n1回來時我給一些錢你吧！麻煩你了……","End")
+
+
+end
+
+
+function Step05()
+	if GetFlag("NQ008_Done")==1 then
+		Say("n1謝謝你！這下有救了！")
+		Say("p1什麼？")
+		Say("n1沒什麼…總之真的太感謝你了！")
+		Say("n1對了，這些錢你收下吧！是我賣小紅晶石所換來的錢！")
+		Say("p1真的嗎？那我就收下了……可是你不是很窮吧？")
+		Say("n1最近經濟是有好轉了……謝謝你的關心！")
+		Say("p7得到1300元","End")
+		ModifyData("Money",1300)
+
+	
+	else
+		Say("n1這……的確是娜依艾州草……")
+		Say("p1那你可以給我願望了吧！")
+		Say("n1唉……")
+		Say("p1怎樣？")
+		Say("n1其實…其實我是騙你的啦！這個世界哪會有天使？")
+		Say("p3你……！")
+		Say("n1對不起……我真的不想……我真的太缺錢了！其實我也不想騙人的！真的對不起！")
+		Say("p1唉……我就知道是這樣。")
+		Say("n1對不起…")
+		Say("p1算了吧！")
+		Say("n1真的嗎？你真的很寬宏大量！")
+		Say("p1我看你是有苦衷的，這次就算了，不過你下次不要再騙人了！")
+		Say("n1知道！我知道了！")
+		Say("p7得到600exp")
+		Say("p7得到稱號\“好心人\”","End")
+		gainexp(600)
+		if HasTitle(11)~=1 then
+			AddTitle(11)
+		end
+		
+	end
+
+end
+
+function SpeechNQ14()
+	Say("n1唉！其實，這是我責任。")
+	Say("p1責任？為什麼？這些孩子不是你的嗎？")
+	Say("n1不是的…不過他們在我心中，已經好像是我親生一樣。")
+	Say("p1他們……是孤兒？")
+	Say("n1是的…")
+	Say("p1唉…為什麼會這樣的…")
+	Say("n1其實，我的男友是孤兒院的院長。")
+	Say("n1有一天，他留下了一封信，就說去找一樣他必須找到的東西，之後就不見了，我記得我找了很久很久，還是找不到。")
+	Say("n1於是，當時身為他女朋友的我，就幫他打理孤兒院…我想，這也是我必須要幫他的事吧！這已經幾年前的事了…")
+	Say("p1……")
+	Say("n1在這孤兒院內，實在有太多小孩要我的幫忙…我不能丟下他們的。")
+	Say("p1真是太辛苦你了…")
+	Say("n1唉…其實我想賺更多的錢就是…有一位小孩正在生病，我必須賺更多的錢……")
+	Say("n1你記得嗎？我問過你要藥草，這也是為了救他的命。現在他不知道如何了，不如你幫我去看看他，可以嗎？","End")
+
+
+
+
+end
+
+function gainexp(exp)
+
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+
+end

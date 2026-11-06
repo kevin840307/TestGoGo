@@ -1,0 +1,24 @@
+--MQ016_D  企鵝怪
+
+
+function start()
+
+	statue=GetFlag("MQ016_Task")
+
+	if statue==2 and GetFlag("MQ016_D")~=1 then
+		if ItemListCountLeft(0)<1 then
+			Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			Say("p7得到"..Color(0,45,198).."企鵝蛋"..Color(0,0,0).."")
+			AddItem(10189)
+			Say("p1好像很好吃的樣子……不過還是快點帶回去好了。","End")
+			
+			SetFlag("MQ016_D",1)
+		end
+	else
+		QuestEnd()
+
+	end
+		
+
+end

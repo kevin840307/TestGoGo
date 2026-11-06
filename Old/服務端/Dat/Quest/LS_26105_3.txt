@@ -1,0 +1,19 @@
+--LS_26105_3 "夜星之力‧三級"
+
+function GetSkillData()
+	return 26105,3,40,31486,"夜星之力‧三級","夜星之力‧二級","魔動使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 5 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

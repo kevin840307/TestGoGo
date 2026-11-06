@@ -1,0 +1,13 @@
+--NQ026_W 主控制室出口
+
+function start()
+    Ask("p要離開基地嗎？","是的","不是","ans_handler")
+end
+
+function ans_handler()
+    if GetChoice() == 0 then
+        MovePlayer(12672,1848,57)
+    else
+        QuestEnd()
+    end                
+end

@@ -1,0 +1,70 @@
+--MQ051_D 工具技工路特
+
+--MQ051_TaskB
+-- 1: quest start, find路特
+-- 2: get the mechine
+-- 3: return the mechine
+
+function start()
+	status = GetFlag("MQ051_TaskB")
+	if status==2 and HasSkill(2103)==1 then
+		dialogue_03()
+	elseif status==1 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1……嗯～出租工具的生意，真是賺翻了。","End")
+end
+
+function dialogue_02()
+	Say("n1……嗯～出租工具的生意，真是賺翻了。")
+	Say("p1你有遠心分離器出租嗎？")
+	Ask("n當然有了～你要遠心分離器吧？我就算你5000元好了！不過呢～這只是抵押而已唷，會還給你的！","給你好了。","我才不會給你騙。","reply")
+end
+
+function reply()
+	if GetChoice()==0 then
+		if GetData("Money")>=5000 then
+			dialogue_02a()
+		else
+			Say("n1你未夠錢當抵押喔！","End")
+		end
+	else
+		Say("n1我不會騙人的！不要就算了～","End")
+	end
+end
+
+function dialogue_02a()
+	Say("n1謝謝你唷～記著用完之後還給我。")
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7交出5000元")
+		Say("p7得到“遠心分離器”","End")
+		ModifyData("Money", -5000)
+		AddItem(10230)
+		SetFlag("MQ051_TaskB", 2)
+	end
+end
+
+function dialogue_03()
+	Say("n1你用完了吧？把遠心分離器還給我啊～")
+	if RemoveItem(10230)==1 then
+		dialogue_03a()
+	else
+		QuestEnd()
+	end
+end
+
+function dialogue_03a()
+	Say("p7交出“遠心分離器”")
+	Say("n1好，這是你的5000元。")
+	Say("p7得到5000元","End")
+	RemoveItem(10230)
+	ModifyData("Money", 5000)
+	SetFlag("MQ051_TaskB", 3)
+end

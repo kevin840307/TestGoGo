@@ -1,0 +1,14 @@
+--魔法生化機甲囊
+--Recommend_May_B
+
+function lGetItemName()
+	return "魔法生化機甲囊"
+end
+function lGetItemID()
+	return 10600
+end
+function lGetGiftDetail()
+	return "魔法生化機甲一套", 6660, 6661, 6662
+end
+
+#include "Recommend_May_Comm.txt"

@@ -1,0 +1,40 @@
+--flag
+--TQ035_LastGift:id of last gift
+
+function start()
+	itemname, itemid = lGetItemName()
+	if GetCountItemCount(itemid)>299 then
+		Say("p7使用"..itemname.."。", "start2")
+	else
+		Say("p7使用"..itemname.."。")
+		start2()
+	end
+end
+
+function start2()
+	itemname, itemid = lGetItemName()
+	AddItem(itemid)
+	if ItemListCountLeft(0) < 1 then
+		dia_01()
+	elseif ItemListCountLeft(1) < 1 then
+		dia_02()
+	else
+		Say("p7軍方會隨機送出獎勵！！", "GiveItem")
+	end
+end
+
+function GiveItem()
+	itemname, itemid = lGetItemName()
+	RemoveItem(itemid)
+	itemname, itemid = lGetRandGift()
+	SetFlag("TQ035_LastGift", itemid)
+	Say("p7得到"..itemname.."。","End")
+end
+
+function dia_01()
+	Say("p7身上的物品太多了，還是先整理一下吧！","End")
+end
+
+function dia_02()
+	Say("p7身上的裝備太多了，還是先整理一下吧！","End")
+end

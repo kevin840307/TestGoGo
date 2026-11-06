@@ -1,0 +1,19 @@
+--MQ015_C  魔冰獸
+
+function start()
+
+	statue=GetFlag("MQ015_Task")
+	if statue==2 and GetFlag("MQ015_C_GetBlood")~=1 then
+		if ItemListCountLeft(0)<1 then
+			Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			Say("p7得到"..Color(0,45,198).."\“魔冰獸的血\”"..Color(0,0,0).."")
+			Say("p1什麼這些血…感覺有點冷的樣子……。","End")
+			AddItem(10186)
+			SetFlag("MQ015_C_GetBlood",1)
+		end
+	else
+		QuestEnd()
+	
+	end
+end

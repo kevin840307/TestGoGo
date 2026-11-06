@@ -1,0 +1,13 @@
+--Forest03 to Forest02
+
+function start()
+	Ask("n要進入尼尼亞森林．西嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(6304,4960,13)
+	end
+	QuestEnd()
+end

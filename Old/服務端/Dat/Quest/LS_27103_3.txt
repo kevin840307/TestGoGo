@@ -1,0 +1,19 @@
+--LS_27103_3 "加速術‧三級"
+
+function GetSkillData()
+	return 27103,3,60,31516,"加速術‧三級","加速術‧二級","守護使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 6 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

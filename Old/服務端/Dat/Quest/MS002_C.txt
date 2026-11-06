@@ -1,0 +1,68 @@
+--MS002_C 科吉大叔
+
+--MS002_Task:
+-- 1: quest started, go to fing 事務長
+-- 2: go to find 拉潔
+-- 3: go to find 科吉 for doll
+-- 4: get the doll, find 拉潔
+-- 5: go to find 公主
+-- 6: talked with 公主 once
+-- 7: talked with 公主 twice
+-- 8: back to 事務長
+-- 9: quest completed
+
+--MS002_Done
+-- 1: quest completed at least once
+
+function start()
+	status = GetFlag("MS002_Task")
+	if status==3 then
+		dialogue_02()
+	elseif status>=2 and status<5 then
+		dialogue_01()
+	else
+		dialogue_AllTimes()
+	end
+end
+
+function dialogue_AllTimes()
+	Say("n1你到過魔法之都嗎？那是一個很有趣的地方！那裡的魚會飛天，豬會游泳…")
+	Say("p6這大叔想必是瘋了。","End")
+end
+
+function dialogue_01()
+	Say("n1為什麼這隻豬不會游泳呢？")
+	Say("p1科吉大叔，請問你到過魔法之都嗎？")
+	Say("n1哈哈~魔法之都？我剛從那裡回來。那真是一個有趣的地方啊！那兒的魚會…")
+	Say("p1你真的在那裡見到奧拉公主嗎？")
+	randAns = random(5)
+	if randAns==1 then
+		direction="東"
+	elseif randAns==2 then
+		direction="南"
+	elseif randAns==3 then
+		direction="西"
+	elseif randAns==4 then
+		direction="東南"
+	else
+		direction="西南"
+	end
+	Say("n1當然是真的了！公主就住在城的"..Color(0,45,198)..direction.."方"..Color(0,0,0).."，…")
+	Say("n1她穿著紫色的長裙，項上一條薰衣草編織成的項圈，牽著三頭豬，一邊走，一邊…")
+	Say("p6這大叔的說話可靠嗎？")
+	Say("p6算了，還是到魔法之都走一趟吧。","End")
+end
+
+function dialogue_02()
+	Say("p1科吉大叔，你手上的豬是從何得來的呀？")
+	Say("n1這隻豬？這隻豬最不中用，竟然不會游泳啊。")
+	Say("p1那麼你可以送給我嗎？")
+	Say("n1不會游泳的豬你也要嗎？好吧！你拿去吧。")
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到“小豬布偶”","End")
+		AddItem(10251)
+		SetFlag("MS002_Task", 4)
+	end
+end

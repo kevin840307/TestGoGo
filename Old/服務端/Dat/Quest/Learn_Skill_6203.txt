@@ -1,0 +1,12 @@
+--Learn_Skill_J2_S1_6203 §È∞√∏t√~°EßﬁØ‡±≤∂b
+
+function init_data()
+	level_needed = 65
+	item_index, item_name, skill_index, skill_name, pre_skill_index, pre_skill_name, god_name, career_id, job_id, career_name = get_data(6)
+end
+
+#include "Learn_Skill_common_203.txt"
+
+
+
+

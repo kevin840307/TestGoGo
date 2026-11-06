@@ -1,0 +1,17 @@
+--StarRiver02(P01) to StarRiver02(P02)
+
+function start()
+Say("n1封印之地嚴禁進入","End")
+end
+
+function notuse()
+	Ask("n要進入大星果樹下嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(5888,2624,30)
+	end
+	QuestEnd()
+end

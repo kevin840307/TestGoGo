@@ -1,0 +1,15 @@
+--MQ051_E 遠心分離器
+
+function start()
+	if RemoveItem(10229)~=1 then
+		Say("p1沒有黑曜石，有它也沒用呢…… ","End")
+		AddItem(10230)
+	else
+		Say("p1看我的～！")
+		Say("p1啊～它轉起來了！！")
+		Say("p1嗯～我看好了吧？")
+		Say("p7得到黑色結晶。","End")
+		AddItem(10230)
+		AddItem(10231)
+	end
+end

@@ -1,0 +1,15 @@
+--shop_d.txt
+
+function start()
+	Ask("s請問客人您要買什麼？", "先看左手手袖。", "我想看右手手袖。", "不需要了","reply")	
+end
+
+function reply()
+	ans = GetChoice()
+	if ans==0 then
+		OpenShop(5, 100)
+	elseif ans==1 then
+		OpenShop(6, 100)
+	end
+	QuestEnd()
+end

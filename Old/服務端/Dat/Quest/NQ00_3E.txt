@@ -1,0 +1,30 @@
+--NQ003_E 百福袋
+
+function start()
+	result = random(20)
+	if result == 1 then
+		Say("p6不知道裡面有什麼呢～？")
+		Say("p6什麼嘛！只是一張字條！")
+		Say("p6等等……上面寫著「請往森林，打倒大福立普。」")
+		Say("p6這是什麼玩意兒？", "End")
+		SetFlag("NQ_001_KillBug", 1)
+	else
+		result2 = random(2)
+		if result2 == 1 then
+			Say("p6不知道裡面有什麼呢～？")
+			Say("p6什麼有火藥的味道……")
+			Say("p3耶！？真的是火藥！？")
+			Say("p3快爆炸了！糟！走不掉了！", "End")
+			SetData("HP",1)
+		else
+			Say("p6不知道裡面有什麼呢～？")
+			if ItemListCountLeft(1)<1 then
+				Say("p7對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+			else
+				Say("p6原來是一雙玻璃造的鞋？哇！真是太好了！不過好像很脆弱的樣子……", "End")
+				AddItem(10016,1)
+			end
+		end
+	end
+	
+end

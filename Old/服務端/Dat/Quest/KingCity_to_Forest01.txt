@@ -1,0 +1,13 @@
+--KingCity to Forest01
+
+function start()
+	Ask("n要進入古尼爾森林嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(2368,5152,7)
+	end
+	QuestEnd()
+end

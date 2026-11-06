@@ -1,0 +1,57 @@
+--尼路亞星魔法大地圖（NQ020_H）
+
+
+function start()
+	AddItem(10460)
+	Ask("p請選擇觀看的地方：","尼路亞星","尼尼亞皇城","其他城市","還是不看了","reply")
+end
+
+function reply()
+	ans = GetChoice()
+	if ans==0 then
+		map_5()
+	elseif ans==1 then
+		map_2()
+	elseif ans==2 then
+		dia_01()
+	else
+		QuestEnd()
+	end
+end
+
+function dia_01()
+	Ask("p請選擇觀看的地方：","魔法之都－古尼爾","騎士之城－格靈","機械之城－絲蘭","還是不看了","reply_01")
+end
+
+function reply_01()
+	ans = GetChoice()
+	if ans==0 then
+		map_1()
+	elseif ans==1 then
+		map_4()
+	elseif ans==2 then
+		map_3()
+	else
+		QuestEnd()
+	end
+end
+
+function map_1()
+	Say("mH#BG_MAP_BIG_01.spr#na##","End")
+end
+
+function map_2()
+	Say("mH#BG_MAP_BIG_02.spr#na##","End")
+end
+
+function map_3()
+	Say("mH#BG_MAP_BIG_03.spr#na##","End")
+end
+
+function map_4()
+	Say("mH#BG_MAP_BIG_04.spr#na##","End")
+end
+
+function map_5()
+	Say("mH#BG_MAP_BIG_05.spr#na##","End")
+end

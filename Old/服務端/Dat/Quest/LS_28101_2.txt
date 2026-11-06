@@ -1,0 +1,19 @@
+--LS_28101_2 "治療術‧二級"
+
+function GetSkillData()
+	return 28101,2,25,31544,"治療術‧二級","治療術‧一級","見習聖靈使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 7 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

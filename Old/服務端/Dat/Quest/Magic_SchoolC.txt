@@ -1,0 +1,5 @@
+--People01 金絲．羅絲
+
+function start()
+	Say("n1我們的校長和騎士學校的校長是兩兄弟，真是令人意想不到。","End")
+end

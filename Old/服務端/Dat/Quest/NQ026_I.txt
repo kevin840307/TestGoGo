@@ -1,0 +1,19 @@
+--NQ026_I (研究所情報員‧那智)
+
+function start()
+    if GetFlag("NQ026_I_STEP") < 1 then
+        Say("n1是第3魔裝軍團的戰鬥員嗎？我們發現了敵人的基地入口，在入口我們發現了一個七色的凹口，應該是開門的裝置。")
+        Say("n1而門前有一個瞬殺戰鬥員，凡是被他擊中的人，一定必死無疑！進入機地前要收集鎖匙和避開瞬殺戰鬥員的攻擊。萬事小心！")
+        SetFlag("NQ026_I_STEP",1)
+    else        
+        Ask("n要回研究所進行補給嗎？","是的","不是","ans_handler")
+    end
+end
+
+function ans_handler()
+    if GetChoice() == 0 then
+        MovePlayer(4416,2912,18)
+    else
+        QuestEnd()
+    end                
+end

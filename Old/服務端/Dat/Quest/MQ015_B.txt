@@ -1,0 +1,119 @@
+--MQ015_B  古洛尼．尼美斯
+
+--For MQ015_Task
+--if it is 1 then 找古洛尼
+--if it is 2 then 找魔冰獸的血
+--if it is 3 then 問問校長的意見
+
+---Rememeber to handle the case when the player accept the mission 017
+function start()
+
+	statue=GetFlag("MQ015_Task")
+	statue2=GetFlag("MQ016_Task")
+	statue3=GetFlag("MQ017_Task")
+
+	if statue3>= 4 then
+		Say("p7向校長陳述這一切……")
+		Say("n1原來是這樣……看來真的要改一下校規呢？","End")
+
+	elseif statue3>=1 then
+		description01()
+		Say("n1有什麼問題記著要向老師們請教！","End")
+
+	elseif statue2==4 then
+		Say("n1忘記這次事件吧……")
+		Ask("p什麼有點奇怪……事件好像都沒完的樣子呢？到底賊人是誰？","一定要把賊人找出來！","還是別理好了。","response2")
+	
+	elseif statue2==3 then
+		Say("n1嗯！你的任務已經完成了，忘記它吧！這兒有一件"..Color(0,45,198).."安卡保護服．2"..Color(0,0,0).."，送給你吧！")	
+		if ItemListCountLeft(0)<1 then
+			Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			AddItem(579)
+			Say("p7得到"..Color(0,45,198).."安卡保護服．2"..Color(0,0,0).."","End")
+			SetFlag("MQ016_Task",4)
+		end
+	elseif statue2 ==1 or statue2==2 then
+		Say("n1 快去騎士學校問一下吧？麻煩你了。","End")
+
+	elseif statue==4 then
+		Ask("n呵呵……真的如此嗎？那你前往騎士之城找加路卡．穆斯好了，去問一下究竟好嗎？","嗯，好吧！","我想還是交給老師自己問好比較好。","response1")
+
+	elseif statue==3 then
+		Say("n1呵呵……")
+		Say("p6校長笑得有點詭異","End")
+
+	elseif statue==2 then
+		if CheckItem(10186)>0 then
+			Speech1()
+		
+		else
+			Say("n1快去找"..Color(0,45,198).."魔冰獸的血"..Color(0,0,0).."給我吧？我想魔冰獸應該在"..Color(0,45,198).."獅鷲山"..Color(0,0,0).."附近才對…","End")
+
+		end
+
+	elseif statue==1 then
+		description01()
+		Say("n1娜姬她叫你來找我，有什麼事呢？")
+		Say("p1是這樣的…老師叫我把書籤拿給你看，她說書籤好像有點奇怪…")
+		Say("n1給我看看好了……")
+		Say("n7園長拿著書籤，仔細的看著")
+		Say("n1我想應該是有人用了隱形墨水在上面寫了些字？")
+		Say("p1那應該什麼辦？最近學校好像有賊人出沒呢！")
+		Say("n1你去拿"..Color(0,45,198).."魔冰獸的血"..Color(0,0,0).."給我！這就可以調配出示現藥水了……我想魔冰獸應該在"..Color(0,45,198).."獅鷲山"..Color(0,0,0).."附近……")
+		Say("p1我這下就去！")
+		Say("n1不過你要小心，魔冰獸不什麼好對付的。","End")
+		SetFlag("MQ015_Task",2)
+
+	else
+		
+		description01()
+		Say("n1有什麼問題記著要向老師們請教！","End")
+	end
+end
+
+
+function description01()
+
+	Say("p7這就是我們的校長，叫作古洛尼．尼美斯，給人高不可攀的感覺。")
+	Say("p7但他卻是一個為人設想的人呢！")
+	
+end
+
+function Speech1()
+
+	Say("n1嗯！很好。")
+	RemoveItem(10186)
+	Say("n7只見園長他把魔冰獸的血加入一點黃色的液體，再滴到書籤上，原本空白的書籤竟然有了字跡！")
+	Say("n1這是什麼……？字體奇奇怪怪……好像寫著『我喜歡……』什麼似的。")
+	Say("n1我先把它交回給娜姬老師好了，我去問問她！","End")
+	SetFlag("MQ015_Task",3)
+
+end
+
+function response1()
+	choice=GetChoice()
+
+	if choice==0 then
+		Say("n1那你好好加油喔，我等你的好消息。")
+		Say("p6依然是笑得有點詭異似的，是我的幻覺嗎？","End")
+		SetFlag("MQ016_Task",1)
+	else 
+		Say("n1可是老師們可能沒什麼時間呢？我想你還是考慮一下幫忙吧？","End")
+	end
+
+
+end
+
+function response2()
+
+	choice=GetChoice()
+
+	if choice==0 then
+		Say("p6我想"..Color(0,45,198).."柯爾"..Color(0,0,0).."可能會有什麼新消息……去再問問他才行。","End")
+		SetFlag("MQ017_Task",1)
+
+	else
+		Say("p6這不關我的事，還是別理好了。","End")
+	end
+end

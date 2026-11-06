@@ -1,0 +1,69 @@
+--Monthly_Gift02 星空禮物盒(10371)
+
+function start()
+	AddItem(10371)
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Ask("p請選擇你想要的禮物：","冰雪手部裝備卡", "冰雪上身裝備卡", "冰雪下身裝備卡", "其他選擇...", "reply_01")
+end
+
+function dialogue_02()
+	Ask("p請選擇你想要的禮物：","冰雪頭飾裝備卡", "冰雪之劍裝備卡", "冰雪盾牌裝備卡", "其他選擇...", "reply_02")
+end
+
+function reply_01()
+	ans = GetChoice()
+	if ans == 0 then
+		GetItem(1)
+	elseif ans == 1 then
+		GetItem(2)
+	elseif ans == 2 then
+		GetItem(3)
+	else
+		dialogue_02()
+	end
+end
+
+function reply_02()
+	ans = GetChoice()
+	if ans == 0 then
+		GetItem(4)
+	elseif ans == 1 then
+		GetItem(5)
+	elseif ans == 2 then
+		GetItem(6)
+	else
+		dialogue_01()
+	end
+end
+
+function GetItem(ans)
+	item_id, name, flag_id = get_name(ans)
+
+	RemoveItem(10371)
+	AddItem(item_id)
+	SetFlag(flag_id, 1)
+	Say("p7得到「"..name.."」", "End")
+end
+
+function get_name(ans)
+	if ans==1 then
+		return 10372, "冰雪手部裝備卡", "Monthly_Gift_10372"
+	elseif ans==2 then
+		return 10373, "冰雪上身裝備卡", "Monthly_Gift_10373"
+	elseif ans==3 then
+		return 10374, "冰雪下身裝備卡", "Monthly_Gift_10374"
+	elseif ans==4 then
+		return 10375, "冰雪頭飾裝備卡", "Monthly_Gift_10375"
+	elseif ans==5 then
+		return 10376, "冰雪之劍裝備卡", "Monthly_Gift_10376"
+	else
+		return 10377, "冰雪盾牌裝備卡", "Monthly_Gift_10377"
+	end
+end

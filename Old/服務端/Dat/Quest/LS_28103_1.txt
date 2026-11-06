@@ -1,0 +1,19 @@
+--LS_28103_1 "艶活锣传"
+
+function GetSkillData()
+	return 28103,1,25,31553,"艶活锣传","","ǎ策竧艶ㄏ"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 7 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

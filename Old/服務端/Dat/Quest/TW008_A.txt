@@ -1,0 +1,103 @@
+function start()
+	if GetFlag("TW008_A_Step") >= 2 then
+		if CheckItem(10704) ~= 0 and CheckItem(10705) ~= 0 and CheckItem(10706) ~= 0 and GetCountItemCount(10703) >= 10 then
+			Step04()
+		else
+			Step03()
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("n1嗚嗚～怎麼辦T.T")
+	Say("p1小朋友～什麼事在哭啊？")
+	Say("n1我在找一些東西，可是我也不知那些是什麼東西")
+	Say("p1這麼奇怪！？你要找的東西究竟是什麼？")
+	Say("n1我在找善良、真心和信任．．．")
+	Say("p1這些都不是物件啊，要怎麼找？")
+	Ask("n是大神叫我來人間找這些東西，我給你找這些東西的力量好不好？你找回來給我，再加10個幸福可可豆，我就替你製作天使巧克力吧。","好的，找善良、真心和信任的事就交給我吧。","抱歉，我現在沒有時間。","Step01_Handler")
+--＜選擇＞
+--．好的，找善良、真心和信任的事就交給我吧。→Step02
+--．抱歉，我現在沒有時間。→Quest End
+end
+
+function Step01_Handler()
+	if GetChoice() == 0 then
+		Step02()
+	else
+		QuestEnd()
+	end
+end
+
+function Step02()
+	Say("n1啊！真的謝謝你！^_^")
+	Say("p7得到了收集善良、真心和信任的能力。")
+	SetFlag("TW008_A_Step",2)
+end
+
+function Step03()
+--<After TW008_A Step 02>
+	Say("n1啊！真的謝謝你！^_^")
+	Say("n1當你找到善良、真心和信任回來，再加10個幸福可可豆，我就會幫你製作天使巧克力的啊～")
+	SetFlag("TW008_A_Step",3)
+end
+
+function Step04()
+--＜玩家手持善良(10704)、真心(10705)、信任(10706)和10個幸福可可豆(10703)＞
+--＜如玩家身上立普娃娃巧克力(10710)數量大於299＞→Step05
+--＜如玩家身上索爾魔怪巧克力(10711)數量大於299＞→Step06
+--＜如玩家身上古尼獸娃娃巧克力(10712)數量大於299＞→Step07
+	if GetCountItemCount(10710) > 299 then
+		Step05()
+	elseif GetCountItemCount(10711) > 299 then
+		Step06()
+	elseif GetCountItemCount(10712) > 299 then
+		Step07()
+	else
+		Say("n1你已然將東西找回來啦？")
+		Say("p1嗯，我已經將善良、真心和信任找回來了，另外這裡有10個幸福可可豆。")
+		Say("p7交出善良、真心、信任和10個幸福可可豆。")
+		Say("n1嘩～真的謝謝你啊～我現在就幫你製作天使巧克力．．．")
+		Say("p7．．．．．．")
+		Say("p7．．．．．．")
+		Say("n1啊～")
+		Say("n3轟隆隆～")		
+		Say("n1嗚～天使巧克力製作失敗了，只得這些。")			
+		Say("p7得到立普娃娃巧克力。")
+		Say("p7得到索爾魔怪巧克力。")
+		Say("p7得到古尼獸娃娃巧克力。")
+		Say("n1嗚嗚～善良、真心和信任就不見了。")
+		Say("n1嗚嗚嗚～怎麼辦T.T")
+		RemoveItem(10704)
+		RemoveItem(10705)
+		RemoveItem(10706)
+		RemoveItem(10703,10)
+		AddItem(10710)
+		AddItem(10711)
+		AddItem(10712)
+		SetFlag("TW008_A_Step",0)
+		SetFlag("TW008_B_Step",0)
+		SetFlag("TW008_C_Step",0)
+		SetFlag("TW008_D_Step",0)
+		SetFlag("TW008_E_Step",0)
+		SetFlag("TW008_F_Step",0)
+		SetFlag("TW008_Emotion",0)
+		if GetFlag("TW008_Done") <= 0 then
+			SetFlag("TW008_Done",1)
+		else
+			SetFlag("TW008_Done",GetFlag("TW008_Done")+1)
+		end
+	--＜將玩家旗標設回可重做此任務＞
+	end
+end
+function Step05()
+	Say("p7身上的立普娃娃巧克力太多了，還是先整理一下。")
+end
+function Step06()
+	Say("p7身上的索爾魔怪巧克力太多了，還是先整理一下。")
+end
+function Step07()
+	Say("p7身上的古尼獸娃娃巧克力太多了，還是先整理一下。")
+end

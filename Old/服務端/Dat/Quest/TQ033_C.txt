@@ -1,0 +1,42 @@
+--巴力的父親
+--(TQ033_C)
+
+function start()
+	state = GetFlag("TQ033_Task")
+	state_c = GetFlag("TQ033_C")
+
+	if state_c >= 2 then
+		dia_04()
+	elseif state_c >= 1 then
+		dia_03()
+	elseif state >= 2 then
+		dia_02()
+	else
+		dia_01()
+	end
+end
+
+function dia_01()
+	Say("n1我的兒子是在機械之城當兵的，他就是跟隨處事果斷的機動靈軍團的將軍‧斯卡爾，很威風吧！？","End")
+end
+
+--＜After TQ033_B Step02＞
+function dia_02()
+	Say("p1啊！你就是巴力的父親嗎？我是受巴力所託來找你的．．．")
+	Say("p7你將事件的詳情告知巴力的父親．．．")
+	Say("n1啊！那傻孩子竟然那麼做．．．？依我來看要為將軍驅邪，你必需找到堅定樹的樹枝，用樹枝敲打斯卡爾將軍的頭，就可以把邪魔驅走。")
+	Say("p1那麼堅定樹在那裡可以找到？")
+	Say("n1堅定樹是生長在戰爭平原的，而且要得到堅定樹的樹枝需要集６人之力！我兒子的事就拜託你了！","End")
+	SetFlag("TQ033_C", 1)
+end
+
+--＜After TQ033_C Step02＞
+function dia_03()
+	Say("n1你必需找到堅定樹的樹枝，用樹枝敲打斯卡爾將軍的頭，就可以把邪魔驅走。")
+	Say("n1堅定樹是生長在戰爭平原的，而且要得到堅定樹的樹枝需要集６人之力！我兒子的事就拜託你了！","End")
+end
+
+--＜After TQ033_D Step04＞
+function dia_04()
+	Say("p1堅定樹是生長在戰爭平原的，而且要得到堅定樹的樹枝需要集６人之力！我兒子的事就拜託你了！","End")
+end

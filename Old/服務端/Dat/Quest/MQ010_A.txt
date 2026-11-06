@@ -1,0 +1,118 @@
+--路絲(MQ010_A)
+
+--MQ010_Task
+--1 quest started
+--2 go to find 10 medicine
+--3 given the powder to janie
+--4 go to find green crystal
+--5 given the green stone
+--6 go to find purple crystal
+--7 got the bullet
+--8 quest completed
+
+function start()
+	status = GetFlag("MQ010_Task")
+	if status>=8 then
+		dia_05()
+	elseif status>=7 and GetCountItemCount(10030)>0 then
+		dia_04()
+	elseif status>=1 then
+		dia_03()
+	elseif GetData("Career")==4 and GetData("Level")>=40 then
+		dia_02()
+	else
+		dia_01()
+	end
+end
+
+--<玩家條件不附合時>
+function dia_01()
+	Say("n1銃要好好的保養喔，不然就會有誤差了。","End")
+end
+
+--<條件附合>
+function dia_02()
+	Say("n7她是一位銃戰士，也是老師，名字叫作路絲，她閃避的功夫很到家呢。")
+	Say("p1銃戰士的工作是什麼樣的呢？")
+	Say("n1嗯？銃戰士的閃避很厲害喔！而且攻擊距離很長，在遠方攻擊，很安全唷！不過我們魔法防禦方面有點弱，而且可惜的是，我們是要消耗子彈。")
+	Ask("n其次，我們的武術力量是依靠“雷之依加魯能量微粒”的所產生的，雷神是我們的守護神。","我想成為銃戰士！","想來知道銃戰士的工作而已。","reply_02")
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		dia_02a()
+	else
+		dia_02b()
+	end
+end
+
+--選項：「我想成為聖劍士！」
+function dia_02a()
+	Say("n1嘿嘿，太好了，那你先去收集"..Color(0,45,198).."風速彈"..Color(0,0,0).."吧。")
+	Say("p1風速彈？")
+	Say("n1是的！你問問學長，我不會告訴你什麼的，不過，子彈應該要用到"..Color(0,45,198).."火藥"..Color(0,0,0).."的…","End")
+	SetFlag("MQ010_Task",1)
+end
+
+--<選：「想來知道聖劍士的工作。」>
+function dia_02b()
+	Say("n1是這樣啊？那你想加入我們嗎？","End")
+end
+
+--<玩家接下此任務後>
+function dia_03()
+	Say("n1努力的找吧！","End")
+end
+
+--<完成條件後>
+function dia_04()
+	Ask("n你要成為銃戰士了嗎？","是的！","我要再考慮一下。","reply_04")
+end
+
+function reply_04()
+	if GetChoice()==0 then
+		dia_04a()
+	else
+		dia_04b()
+	end
+end
+
+--<選 是的！>
+function dia_04a()
+	Say("p7交出「風速彈」")
+	Say("n1看著這兒。")
+	Say("n7路絲把風速彈放在掌心，突然“翹”的一聲，你就發現風速彈在你身上快速的圍繞著，你感覺到一股雷之依加魯力量在你身上產生……")
+	Say("n1你是銃戰士了！這把屠龍神銃就送給你吧。")
+	if ItemListCountLeft(1)<1 then
+			Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+	else
+		Say("p7得到850Exp")
+		Say("p7得到「銃戰士」的稱號")
+		Say("p7得到「屠龍神銃」","dia_04a2")
+	end
+end
+function dia_04a2()
+	RemoveItem(10030)
+	SetFlag("MQ010_Task", 8)
+	SetFlag("MQ010_Done", 1)
+	gainexp(850)
+	AddTitle(16)
+	AddJob(2)
+	AddItem(8350)
+	QuestEnd()
+end
+
+--<選　我要再考慮一下。>
+function dia_04b()
+	Say("n1考慮清楚喔。","End")
+end
+
+--<任務完成後>
+function dia_05()
+	Say("n1嗯，有什麼問題就來找我吧。","End")
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end

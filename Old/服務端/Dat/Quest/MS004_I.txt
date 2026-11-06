@@ -1,0 +1,12 @@
+--出口(MS004_I)
+
+function start()
+	Ask("n要離開野花的基地嗎？","是的。","不是。","reply")
+end
+
+function reply()
+	if GetChoice()==0 then
+		MovePlayer(7104,4448,25)
+	end
+	QuestEnd()
+end

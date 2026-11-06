@@ -1,0 +1,39 @@
+function Step01()
+AddItem(10758)
+Ask("n請問是否要換領發條龍任務的物品呢？","是的。","不是。","Step01_Handler")
+--＜選擇＞                                                        
+--．是的。→Step02                                                
+--．不是。→AddItem(10758)→Quest End                             
+end                                                                
+function Step01_Handler()
+	if GetChoice()==0 then
+		Step02()
+	else
+		QuestEnd()
+	end
+end                                                              
+function Step02()
+	if CheckItem(6005) == 1 then 
+		Step03()
+	else
+		if ItemListCountLeft(3) < 1 or ItemListCountLeft(4) < 3 then
+			Step04()
+		else
+--<如玩家已有發條龍(6005)>→Step03                      
+--＜玩家機甲卡空間少於一或機甲裝備空間少於三＞→Step04            
+--<取回玩家身上的發條龍特惠卡(10758)>                             
+			Say("p7這是你的發條龍，請小心拿定了。")
+			RemoveItem(10758)
+			AddItem(6005)
+--<加發條龍(6005)>                                                
+		end
+	end
+end
+
+function Step03()
+	Say("p7對不起，你已經擁有發條龍了，請稍後再換取禮物。")
+end
+
+function Step04()
+	Say("n1你沒有足夠的機甲空間來容納發條龍，請你先整理行裝。")
+end

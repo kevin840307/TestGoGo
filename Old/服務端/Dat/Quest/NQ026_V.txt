@@ -1,0 +1,24 @@
+--NQ026_V 主控制室入口
+
+function start()
+    Say("p7門上有八個鎖匙的凹口，應該是開門的裝置。")
+    if CheckItem(10551) == 1 and CheckItem(10552) == 1 and CheckItem(10553) == 1 and CheckItem(10554) == 1 and CheckItem(10555) == 1 and CheckItem(10556) == 1 and CheckItem(10557) == 1 and CheckItem(10558) == 1 then
+        Ask("p門上有八個鎖匙的凹口，應該是開門的裝置。要使用主控制室鎖匙零件嗎？","是的","不是","ans_handler")
+    end        
+end
+
+function ans_handler()
+    if GetChoice()==0 then
+        RemoveItem(10551)
+        RemoveItem(10552)
+        RemoveItem(10553)
+        RemoveItem(10554)
+        RemoveItem(10555)
+        RemoveItem(10556)
+        RemoveItem(10557)
+        RemoveItem(10558)
+        MovePlayer(24256,11680,59)
+    else
+        QuestEnd()
+    end        
+end

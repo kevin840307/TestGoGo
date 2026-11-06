@@ -1,0 +1,121 @@
+--TQ029_C
+function start()
+    if ItemListCountLeft(0) < 1 then
+        Say("p7對不起，你身上的物品太多了，請整理一下吧！")
+        AddItem(10578)
+    elseif ItemListCountLeft(1) < 1 then
+        Say("p7對不起，你身上的裝備太多了，請整理一下吧！")
+        AddItem(10578)
+    elseif GetCountItemCount(73) > 295 then
+        Say("p7對不起，你身上的治療神水太多了，請整理一下吧！")
+        AddItem(10578)
+    elseif GetCountItemCount(78) > 295 then
+        Say("p7對不起，你身上的魔法神水太多了，請整理一下吧！")
+        AddItem(10578)
+    elseif GetCountItemCount(10505) > 290 then
+        Say("p7對不起，你身上的魔法之都幹線單程車票太多了，請整理一下吧！")
+        AddItem(10578)
+    elseif GetCountItemCount(10506) > 290 then
+        Say("p7對不起，你身上的機械之城幹線單程車票太多了，請整理一下吧！")
+        AddItem(10578)
+    elseif GetCountItemCount(10506) > 290 then
+        Say("p7對不起，你身上的騎士之城幹線單程車票太多了，請整理一下吧！")
+        AddItem(10578)
+    else
+        Say("p7打開出奇復活蛋...")
+        Say("p7會得到什麼呢...")
+        Say("p7你又想得到什麼呢...")
+        Say("p7你得到的是...","getRandom")
+    end    
+end
+
+function getRandom()
+    result = random(100)
+    if result < 3 then
+        if GetWorldFlag("TQ029_FighterSword") < 50 then
+            Say("p7戰神兵之劍！！")
+            AddItem(20009)
+            SetWorldFlag("TQ029_FighterSword",GetWorldFlag("TQ029_FighterSword")+1)
+        else
+            if random(2) == 1 then
+                Say("p7治療神水x5！！")
+                AddItem(73,5)
+            else
+                Say("p7魔法神水x5！！")
+                AddItem(78,5)
+            end
+        end            
+    elseif result < 6 then
+        if GetWorldFlag("TQ029_MagicWond") < 50 then
+            Say("p7魔神軍之杖！！")
+            AddItem(20017)
+            SetWorldFlag("TQ029_MagicWond",GetWorldFlag("TQ029_MagicWond")+1)
+        else
+            if random(2) == 1 then
+                Say("p7治療神水x5！！")
+                AddItem(73,5)
+            else
+                Say("p7魔法神水x5！！")
+                AddItem(78,5)
+            end
+        end            
+    elseif result < 9 then
+        if GetWorldFlag("TQ029_MeteorGun") < 50 then
+            Say("p7流星之銃！！")
+            AddItem(20025)
+            SetWorldFlag("TQ029_MeteorGun",GetWorldFlag("TQ029_MeteorGun")+1)
+        else
+            if random(2) == 1 then
+                Say("p7治療神水x5！！")
+                AddItem(73,5)
+            else
+                Say("p7魔法神水x5！！")
+                AddItem(78,5)
+            end        
+        end            
+    elseif result < 44 then
+        AddItem(73,5)
+        Say("p7治療神水x5！！")
+    elseif result < 79 then    
+        AddItem(78,5)
+        Say("p7魔法神水x5！！")
+    elseif result < 80 then
+        if GetWorldFlag("TQ029_MobileMedal") < 30 then
+            Say("p7機動勳章！！")
+            AddItem(10576)
+            SetWorldFlag("TQ029_MobileMedal",GetWorldFlag("TQ029_MobileMedal")+1)
+        else
+            if random(2) == 1 then
+                Say("p7治療神水x5！！")
+                AddItem(73,5)
+            else
+                Say("p7魔法神水x5！！")
+                AddItem(78,5)
+            end        
+        end            
+    elseif result < 87 then
+        AddItem(10505,10)
+        Say("p7魔法之都幹線單程車票x10！！")
+    elseif result < 93 then
+        AddItem(10506,10)
+        Say("p7機械之城幹線單程車票x10！！")
+    elseif result < 100 then
+        AddItem(10507,10)
+        Say("p7騎士之城幹線單程車票x10！！")    
+    end        
+end
+
+function init_item()
+    if GetWorldFlag("TQ029_MobileMedal")<0 then
+        SetWorldFlag("TQ029_MobileMedal",0)
+    end    
+    if GetWorldFlag("TQ029_FighterSword")<0 then
+        SetWorldFlag("TQ029_FighterSword",0)
+    end
+    if GetWorldFlag("TQ029_MagicWond")<0 then
+        SetWorldFlag("TQ029_MagicWond",0)
+    end
+    if GetWorldFlag("TQ029_MeteorGun")<0 then
+        SetWorldFlag("TQ029_MeteorGun",0)
+    end
+end

@@ -1,0 +1,121 @@
+--查特(MQ009_A)
+
+--MQ009_Task
+--1 quest started
+--2 go to find 10 medicine
+--3 given the powder to janie
+--4 go to find green crystal
+--5 given the green stone
+--6 go to find purple crystal
+--7 got the bullet
+--8 quest completed
+
+function start()
+	status = GetFlag("MQ009_Task")
+	if status>=8 then
+		dia_05()
+	elseif status>=7 and GetCountItemCount(10030)>0 then
+		dia_04()
+	elseif status>=1 then
+		dia_03()
+	elseif GetData("Career")==3 and GetData("Level")>=40 then
+		dia_02()
+	else
+		dia_01()
+	end
+end
+
+--<玩家條件不附合時>
+function dia_01()
+	Say("n1快而準才是真正的戰士！")
+	Say("p1是呢？","End")
+end
+
+--<條件附合>
+function dia_02()
+	Say("n7聖劍士老師－查特，他那快而準的劍法真是很厲害。")
+	Say("p1老師你是聖劍士嗎？")
+	Say("n1是的。")
+	Say("p1那麼聖劍士有什麼特點？")
+	Say("n1聖劍士速度和命中都很高，一切都講求速度！雖然攻擊力有點弱，而且攻擊距離也短了點，不過快攻的魅力還是很高的。")
+	Ask("n其次，我們的武術是依靠“風之依加魯能量微粒”的所產生的，風神是我們的守護神。","我想成為聖劍士！","想來知道聖劍士的工作。","reply_02")
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		dia_02a()
+	else
+		dia_02b()
+	end
+end
+
+--選項：「我想成為聖劍士！」
+function dia_02a()
+	Say("n1果然速度真的很吸引呢？不過轉職需要"..Color(0,45,198).."風速彈"..Color(0,0,0).."，把它找回來吧。")
+	Say("p1風速彈？")
+	Say("n1對！你問學長們吧，我不會告訴你什麼，不過，子彈應該要用到"..Color(0,45,198).."火藥"..Color(0,0,0).."吧…","End")
+	SetFlag("MQ009_Task",1)
+end
+
+--<選：「想來知道聖劍士的工作。」>
+function dia_02b()
+	Say("n1我想你也要好好的加油才行。","End")
+end
+
+--<玩家接下此任務後>
+function dia_03()
+	Say("n1嗯？找到了嗎？","End")
+end
+
+--<完成條件後>
+function dia_04()
+	Ask("n你真的要成為聖劍士了嗎？","是的！","我要再考慮一下。","reply_04")
+end
+
+function reply_04()
+	if GetChoice()==0 then
+		dia_04a()
+	else
+		dia_04b()
+	end
+end
+
+--<選 是的！>
+function dia_04a()
+	Say("p7交出「風速彈」")
+	Say("n1呼……看著。")
+	Say("n7查特把風速彈放在掌心，突然“翹”的一聲，你就發現風速彈在你身上快速的圍繞著，你感覺到一股風之依加魯力量在你身上產生……")
+	Say("n1你是聖劍士了！這把屠龍巨劍就送給你吧。")
+	if ItemListCountLeft(1)<1 then
+			Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+	else
+		Say("p7得到850Exp")
+		Say("p7得到「聖劍士」的稱號")
+		Say("p7得到「屠龍巨劍」","dia_04a2")
+	end
+end
+function dia_04a2()
+	RemoveItem(10030)
+	SetFlag("MQ009_Task", 8)
+	SetFlag("MQ009_Done", 1)
+	gainexp(850)
+	AddTitle(15)
+	AddJob(2)
+	AddItem(8348)
+	QuestEnd()
+end
+
+--<選　我要再考慮一下。>
+function dia_04b()
+	Say("n1呃？好吧。","End")
+end
+
+--<任務完成後>
+function dia_05()
+	Say("n1加油練好快而準的劍法！有什麼問題就來問我！","End")
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end

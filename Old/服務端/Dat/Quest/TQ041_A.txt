@@ -1,0 +1,72 @@
+function start()
+	if GetFlag("TQ041_B_Step") > 0 then
+		Step04()
+	elseif GetFlag("MS003_Done") == 1 then
+		if GetFlag("TQ041_A_Step") == 2 then
+			Step03()					
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+
+
+--//流程說明
+--//國家皇室護衛
+--//(TQ041_A)
+
+function Step01()
+	Say("n1重建星空之門的工程快將要完成了！")
+end
+
+function Step02()
+--//＜玩家已然完成MS003（重建星空之門）＞
+	Say("n1你知道嗎？重建星空之門的工程已經完成了！")
+	Say("n1國王現正邀請曾為建造星空之門出過力的人參加星空之門的開啟典禮。")
+	Say("n1啊！你不就是幫祖加尼．馬奇找到烏洛特金屬的"..GetName())
+	Ask("n星空之門的開啟典禮快要開始了，你現在就要參加嗎？","是的","不是","Step02_Handler")
+end
+
+function Step02_Handler()
+	SetFlag("TQ041_A_Step",2)
+	if GetChoice() == 0 then
+		MovePlayer(10816,3104,16)		
+	else
+		QuestEnd()
+	end
+end
+
+function Step03()
+--//＜After TQ041_A．Step02＞
+	Ask("n星空之門的開啟典禮快要開始了，你現在就要參加嗎？","是的","不是","Step03_Handler")
+--//＜選項＞
+--//．是的→MovePlayer (10816,3104,16)
+--//．不是→Quest End
+end
+
+function Step03_Handler()
+	if GetChoice() == 0 then
+		MovePlayer(10816,3104,16)		
+	else
+		QuestEnd()
+	end
+end
+
+function Step04()
+--//＜After TQ041_B．Step0X＞
+	Ask("n你要進入皇宮嗎？","是的","不是","Step04_Handler")
+--//＜選項＞
+--//．是的→MovePlayer (10816,3104,16)
+--//．不是→Quest End
+
+end
+
+function Step04_Handler()
+	if GetChoice()==0 then
+		MovePlayer (10816,3104,16)
+	else
+		QuestEnd()
+	end
+end

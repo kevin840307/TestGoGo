@@ -1,0 +1,19 @@
+--LS_30106_2 "電光爆彈‧二級"
+
+function GetSkillData()
+	return 30106,2,40,31649,"電光爆彈‧二級","電光爆彈‧一級","魔銃使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 8 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

@@ -1,0 +1,13 @@
+--StarRiver02(P01) to StarLake(P01)
+
+function start()
+	Ask("n要進入星之湖嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(4480,1984,31)
+	end
+	QuestEnd()
+end

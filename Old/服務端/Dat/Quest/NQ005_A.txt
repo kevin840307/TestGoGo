@@ -1,0 +1,81 @@
+-- NQ005_A 廚師比達
+
+function start()
+	lv = GetData("Level")
+	statue=GetFlag("NQ_005_GotQuest")
+
+	if lv<20 or GetFlag("NQ002_Completed") ~= 1 then
+ 		Say("n1烹調是很講求技術的！", "End")
+
+	elseif statue==6 then
+		if CheckItem(10023)>0 then
+			Say("n1我上次不是已經給你一個是紅蘿蔔果凍了嗎？現在暫時不用紅蘿蔔了。","End")
+		else
+			begin()
+		end
+
+	elseif statue==5 then
+		if ItemListCountLeft(0)<1 then
+			Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			if RemoveItem(10022) == 1 then
+				Say("n1啊！是紅蘿蔔！謝謝你！你等我一下喔！這個果凍，是用上好的紅蘿蔔做的！很好吃啊！")
+				Say("p1謝謝你！", "End")
+				AddItem(10023, 1)
+				SetFlag("NQ_005_GotQuest", 6) 
+			else
+				Say("n1可是始終沒有紅蘿蔔．．．有點遺憾。", "End")
+			end
+		end
+		
+	elseif statue==4 then
+		if ItemListCountLeft(0)<1 then
+			Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			if RemoveItem(10020) == 1 then
+				Say("n1嗯～雖然沒有紅蘿蔔～不過南瓜也不錯！這個南瓜雞湯就送給你吧！反正我煮了很多。")
+				Say("n1可是始終沒有紅蘿蔔．．．有點遺憾。")
+				Say("n7得到500Exp","End")
+				AddItem(10021, 1)
+				gainexp(500)
+				
+			
+			elseif  CheckItem(10021)<1 then
+				begin()
+				
+			else 
+				Say("n1可是始終沒有紅蘿蔔．．．有點遺憾。", "End")
+			end
+		end
+	elseif statue == 2 or statue==3 then
+		Say("n1什麼？沒有紅蘿蔔，只有南瓜？那其實南瓜也行啦……", "End")
+		SetFlag("NQ_005_GotQuest",3)		
+
+	elseif statue == 1 then
+		Say("n1那就拜託你了囉！", "End")
+	
+	else 
+		begin()
+	
+	end
+end
+
+function begin()
+	Say("n1小伙子，可以來幫我一個小忙嗎？")
+	Say("p1有什麼事？")
+	Ask("n是這樣的啦！我的紅蘿蔔已經用完了。可以麻煩你幫我去找些紅蘿蔔回來嗎？我目前不能走開。","沒問題！","不行啦，我也有事忙。","Step2")
+end
+
+function Step2()
+	if GetChoice() == 0 then
+		Say("n1那就拜託你了囉！")
+		Say("p6我想森林中的米奧應該會有才對。", "End")
+		SetFlag("NQ_005_GotQuest", 1)
+	else
+		Say("n1那我拜託別人好了。", "End")
+	end
+end
+
+function gainexp(value)
+	ModifyData("ExpAcc", value)
+end

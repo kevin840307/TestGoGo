@@ -1,0 +1,54 @@
+--NQ008_A  亞迪路
+
+
+function start()
+
+	lv=GetData("Level")
+	statue=GetFlag("NQ008_Task")	
+
+	if lv<5 then
+		Say("n1你聽過嗎？最近有一位天使下凡耶！真的是天使呢！")
+		Say("p1真的？")
+		Say("n1這當然了～不過我想你跟本看不到她呢！","End")
+
+
+	elseif statue>=1 then	
+		Say("n1天使啊……我一下子就去找天使～～沒想到真的有天使呢！","End")
+
+	else
+		if GetFlag("NQ008_Done")==1 then
+			
+			Ask("n那位天使小姐好像還在收集小紅晶石！說什麼有小紅晶石就可以得到願望呢～呵呵～我也要快點收集了！","真的？","沒興趣～","response1")
+
+		else
+			Ask("n你聽過嗎？最近有一位天使下凡耶！真的是天使呢！","真的？","沒興趣～","response1")
+
+		end
+
+	end
+
+end
+
+
+function response1()
+	
+	if GetChoice()==0 then
+		if GetFlag("NQ008_Done")==1 then
+			Say("n1對！聽說已經收集到很多了呢！你也去看看吧！我自己也趕著去找她呢！","End")
+
+
+		else
+			Say("n1對對對！是這樣的啦！")
+			Say("n1最近尼尼亞皇城附近的森林那邊出現了一個天使！聽說她可是有求必應的！")
+			Say("n1不如你去找找她吧？我自己也趕著去找她呢！","End")
+
+
+		end
+		SetFlag("NQ008_Task",1)
+	else
+		Say("n1呵呵～這樣更好，少了人和我爭願望～","End")
+
+	end	
+
+
+end

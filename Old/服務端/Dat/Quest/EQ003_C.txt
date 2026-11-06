@@ -1,0 +1,12 @@
+function start()
+	Ask("n要離開星空射擊場嗎？","是的","不是","ans")
+
+end
+
+function ans()
+	if GetChoice() ==0  then
+		MovePlayer(7364,7221,22)
+	else
+		QuestEnd()
+	end
+end

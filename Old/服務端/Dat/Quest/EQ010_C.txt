@@ -1,0 +1,63 @@
+--流程說明	青青河(EQ010_C)
+function start()
+	if GetFlag("EQ010_B_Step") >=3 then
+		if GetFlag("EQ010_C_Step") >= 2 then
+			if GetFlag("EQ010_C_Step") >= 3 then
+				if GetFlag("EQ010_D_Step") >= 1 then
+					Step05()			
+				else
+					Step03()
+				end
+			else
+				Step03()
+			end
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+function Step01()
+	Say("p1魔法樹林看不到花火吧，她不知道又會怎樣了。")
+end
+
+function Step02()
+--<After EQ010_B Step03>
+Say("p1你好，請問你是魔女青青河嗎？")
+Say("n1是的，你這次來是有關花火嗎。")
+Say("p6魔女真是聰明，還是會讀心術。")
+Say("p1你已經知道了嗎？慶祝國慶活動中的花火給一個魔女下了咒語，怎樣都燒不起來，活動要取消了。")
+Say("n1花火活動不可以取消的，會令所有國民失望，魔法不是要令人不快的。")
+Say("n1這樣吧，我可以將你送到魔法樹林，對付那個名叫斐兒的魔女。")
+Say("n1她每次遇著妒嫉的事便會作出破壞，這次要將她好好教訓才行。")
+Say("p5她太壞了，破壞大家的興緻，我要去警惡懲奸。")
+SetFlag("EQ010_C_Step", 2)
+end
+
+function Step03()
+	Ask("n準備好了嗎？我可以將你送到魔法樹林。","是的，我趕著去懲罰她。","不是，我還未準備好對付魔女。","Step03_Handler")
+--＜選項＞
+--．是的，我趕著去懲罰她。→Step04
+--．不是，我還未準備好對付魔女。→Quest End
+end
+
+function Step03_Handler()
+	if GetChoice() == 0 then
+		Step04()
+	else
+		QuestEnd()
+	end
+end
+
+function Step04()
+--＜傳送玩家至＞
+	MovePlayer(3328,2944,87)
+	Say("p1這就是魔女的家嗎？")
+	SetFlag("EQ010_C_Step", 4)
+end
+
+function Step05()
+--<After EQ010_D Step03>
+	Say("n1真不想傷害她，但國慶這個大節日，她也太過份了。")
+end

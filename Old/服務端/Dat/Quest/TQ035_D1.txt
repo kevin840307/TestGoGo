@@ -1,0 +1,22 @@
+--一般軍餉券
+--TQ035_D1
+
+function lGetItemName()
+	return "一般軍餉券", 10663
+end
+
+function lGetRandGift()
+	ans = random(100)
+	if ans <= 40 then		--40%
+		AddItem(252, 5)
+		return "加速藥x5", 252
+	elseif ans <= 65 then	--25%
+		AddItem(10517)
+		return "星擊號機甲囊", 10517
+	else					--35%
+		AddItem(10592)
+		return "特級天馬裝備換領券", 10592
+	end
+end
+
+#include "TQ035_D_Comm.txt"

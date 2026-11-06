@@ -1,0 +1,80 @@
+function start()
+	if GetFlag("EQ001_A_Step") >= 2 then 
+		if GetFlag("EQ001_B_Step") >= 3 then
+			if GetFlag("EQ001_A_Step") >= 4 then
+				Step05()
+			else
+				Step04()
+			end
+		else
+			Step03()
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("n1這是四年一次的星空世運會的選手選召集處，如果你想參加今年的星空世運會，你就要去神團聖殿找世運公證人，向他宣誓，取得星空世運聖火回來。")
+	Ask("n你要參加今年的星空世運會嗎？","是的，我想參加。","不～我只是路過的。","Step01_Handler")
+end
+
+function Step01_Handler()
+	if GetChoice() == 0 then
+		Step02()
+	else
+		QuestEnd()
+	end
+end
+
+function Step02()
+	Say("n1只要你能手持星空世運聖火回來，便可以參加星空世運會。")
+	SetFlag("EQ001_A_Step", 2)
+end
+		
+function Step03()	
+--<After EQ001_A Step02>
+	Say("n1你忘了嗎？如果你想參加今年的星空世運會，你就要去神團聖殿找世運公證人，向他宣誓，取得星空世運聖火回來。")
+	SetFlag("EQ001_A_Step", 3)
+end
+	
+function Step04()		
+--<After EQ001_B Step03>
+--<手持星空世運聖火(10702)>
+--<如玩家身上物品空間少於１>→Step06
+--<如玩家身上裝備空間少於１>→Step07
+	if CheckItem(10702) == 1 then
+		if ItemListCountLeft(0) < 1 then
+			Step06()
+		elseif ItemListCountLeft(1) < 1 then
+			Step07()
+		else
+			Say("p7將星空世運聖火交出。")
+			Say("n1很好，這代表你已經得到參加星空世運會的資格了，這是世運第1環和馬拉松路線指南。")
+			Say("p7得到世運第1環。")
+			Say("p7得到馬拉松路線指南。")
+			Say("n1第一個比賽項目便是馬拉松大賽，你可以去機械之城的馬拉松大賽‧起點，便可以參加今次的馬拉松大賽。")
+			RemoveItem(10702)
+			AddItem(10701)
+			AddItem(10696)
+			SetFlag("EQ001_A_Step", 4)
+			SetFlag("EQ001_Done",1)
+		end
+	else
+		Step03()
+	end
+end
+
+function Step05()	
+--<After EQ001_A Step03>
+	Say("n1這是四年一次的星空世運會的選手選召集處，恭喜你成為選手之一。")
+	SetFlag("EQ001_A_Step", 5)
+end
+
+function Step06()
+	Say("p7身上的物品太多了，還是先整理一下吧！")
+end
+
+function Step07()
+	Say("p7身上的裝備太多了，還是先整理一下吧！")
+end

@@ -1,0 +1,26 @@
+--皇城鐵道大使(NQ024_K)
+
+function get_time()
+	now = GetRealTime()
+	return (floor(now/60) - floor(now/600)*10)
+end
+
+function start()
+	time = get_time()
+	if time>4 then
+		time = time-5
+	end
+	if time<2 then
+		dia_02()
+	else
+		dia_01(5-time)
+	end
+end
+
+function dia_01(time)
+	Say("n1歡迎使用皇城鐵路，列車還有約"..time.."分鐘才到達本站，請閣下先靜候一會。","End")
+end
+
+function dia_02()
+	Say("n1歡迎使用皇城鐵路，列車已到站了快點上車吧。","End")
+end

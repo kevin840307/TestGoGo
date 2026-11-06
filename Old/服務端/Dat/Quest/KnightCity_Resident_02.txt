@@ -1,0 +1,6 @@
+--People01 利亞修
+
+function start()
+	Say("n1飲了治療藥水之後，人會精神百倍！")
+	Say("n1城外的生物都好像會帶著它。","End")
+end

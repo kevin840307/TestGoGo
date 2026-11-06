@@ -1,0 +1,13 @@
+--MagicCityRooms(P14) to MagicCityRooms(P13)
+
+function start()
+	Ask("n要進入下層嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(13120,1504,10)
+	end
+	QuestEnd()
+end

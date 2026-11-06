@@ -1,0 +1,226 @@
+-- skillcommon.txt
+
+--function RangeAttack(Value1, Value2 ,Value3, requestmp, AttackRange)
+--		if attackType == 0 or attackType==1 then
+--			if GetData("MP") >= requestmp then
+--				ModifyData("MP",-requestmp)
+--				hasdefender, defender = GetVisEnemyList_First(AttackRange)
+--				while hasdefender ~= 0 do
+--					defenderType=GetTargetType(defender)
+--					DoHit(defender,skillLv,Value1, Value2 ,Value3)
+--				hasdefender, defender = GetVisList_Next()
+--				end
+--			else	
+--				Say("p7"..mp_msg)
+--			end	
+--		elseif attackType==3 then
+--			DoHit(defender,skillLv,Value1, Value2 ,Value3)
+--		end
+--end
+
+function Attack()
+	if defender ~= GetCallerPtr() then
+		if attackType == 0 or attackType==1 then
+			if GetData(consume) >= conTotal then
+				ModifyData(consume, -conTotal)
+				DoHit(defender)
+			end	
+		elseif attackType==3 then
+			DoHit(defender)
+		end
+	end
+end
+
+-- do each hit 
+function DoHit(defender)
+	CheckPKAttack(GetCallerPtr(), defender)
+	SetSkillDefender(defender)
+	DoHit_PerDefender(defender)
+	checklasthit(defender)
+end
+
+function DoHit_PerDefender(defender)
+	damage_perhit = GetTotalDamage(defender)
+	damage_perhit = damage_perhit / GetSkillHitCount()
+	final_Total_damage = 0
+	for PerHitCount =1, GetSkillHitCount() do 
+		this_hit_damage = DoHit_PerHitCount(defender, damage_perhit)
+		calhp_final(defender, this_hit_damage)
+		final_Total_damage = final_Total_damage + this_hit_damage
+	end
+end
+
+function GetMinDamage()
+	return random(MinHitDelta)
+end
+
+function GetTotalDamage(defender)	
+	damage = 0
+	
+	DefLv = GetTargetData(defender, "Level")
+	AttLv = GetData("Level")
+	LvDif = DefLv - AttLv
+	if LvDif > 9 then
+		damage = GetMinDamage()
+	else
+		attackerAP=GetData(APcount) + effect
+		attackerAP= attackerAP+ attackerAP * (varyDelta - random(varyDelta*2)) / 100
+		defenderDP=GetTargetData(defender,DPcount)
+	
+		damage = attackerAP-defenderDP
+		if damage < MinHit then
+			damage = GetMinDamage()
+		elseif LvDif > 0 then
+			damage = damage * (10 - LvDif) / 10
+		end
+	end
+	
+	return damage
+end
+
+function DoHit_PerHitCount(defender, damage_perhit)
+	totaldamage = damage_perhit
+	if checkHR(defender) ~= 0 then 
+		--EffectToDefender()
+		totaldamage = totaldamage + totaldamage * (varyDelta - random(varyDelta*2)) / 100
+		if totaldamage < MinHit then
+			totaldamage = GetMinDamage()
+		end
+		AttackDefender(totaldamage, 0)
+	else
+		AttackDefender_Miss()
+	end
+	return totaldamage 
+end
+
+function calhp_final(defender, totaldamage)
+	hp=GetTargetData(defender,"HP")
+
+	if hp>0 then
+		-- On Die
+		if hp<=totaldamage then
+			totaldamage = hp
+			-- enemy
+			if defenderType == 3 then 
+				if attackType == 0 then 
+					CalHurt_ForDropItem(defender, GetCallerPtr(), totaldamage)
+					OnLastHit(defender,GetCallerPtr())
+				elseif attackType == 1 then 
+					CalHurt_ForDropItem(defender, GetPetOwnerPtr(), totaldamage)
+					OnLastHit(defender,GetPetOwnerPtr())
+				end
+			else
+				SetTargetData(defender,"HP", 0)
+			end
+			PostSkillKill(GetCallerPtr(), defender)
+		else
+			ModifyTargetData(defender,"HP", -totaldamage)
+			if defenderType == 3 then 
+				if attackType == 0 then 
+					CalHurt_ForDropItem(defender, GetCallerPtr(), totaldamage)
+				elseif attackType == 1 then 
+					CalHurt_ForDropItem(defender, GetPetOwnerPtr(), totaldamage)
+				end
+				OnHurt(defender)
+			end 
+		end
+	end
+end 
+
+function checklasthit(defender)
+	if GetTargetData(defender,"HP") == 0 and defenderType==3 then
+		CheckKillingArrange(defender)
+	end 
+end
+
+-- is hit or miss ?
+function checkHR(defender)
+	HRDiff = GetData("HR") - GetTargetData(defender, "DR")
+	LvDiff = ( GetData("Level")  - GetTargetData(defender, "Level") ) * 2
+	HRFinal = HRDiff + LvDiff + 60
+	if HRFinal < 30 then
+		HRFinal = 30
+	end
+	if random(100) <= HRFinal then
+		return 1
+	else
+		return 0
+	end
+end
+
+------------------------------------------------------------------------------------------------------------
+function Attack_2_Consume()
+	if defender ~= GetCallerPtr() then
+		if attackType == 0 or attackType==1 then
+			if GetData(consume) >= conTotal  and GetData(other_consume) >= other_conTotal then
+				ModifyData(consume, -conTotal)
+				ModifyData(other_consume, -other_conTotal)
+				DoHit(defender)
+			end	
+		elseif attackType==3 then
+			DoHit(defender)
+		end
+	end
+end
+
+------------------------------------------------------------------------------------------------------------
+function Attack_Cure()
+	if defender ~= GetCallerPtr() then
+		if attackType == 0 or attackType==1 then
+			if  GetData(consume) >= conTotal then
+				ModifyData(consume, -conTotal)
+				DoHit(defender)
+				if final_Total_damage <= other_conTotal then
+					ModifyData(other_consume, final_Total_damage)				
+				else
+					ModifyData(other_consume, other_conTotal)		
+				end		
+			end	
+		elseif attackType==3 then
+			DoHit(defender)
+		end
+	end
+end
+
+------------------------------------------------------------------------------------------------------------
+function Attack_Range(AttackRange)
+		if attackType == 0 or attackType==1 then
+			if GetData(consume) >= conTotal then
+				hasdefender, defender = GetVisEnemyList_First(AttackRange)
+				if hasdefender ~= 0 then
+					ModifyData(consume,-conTotal)
+				end
+				while hasdefender ~= 0 do
+					defenderType=GetTargetType(defender)
+					--DoHit(defender,skillLv,Value1, Value2 ,Value3)
+					DoHit(defender)
+				hasdefender, defender = GetVisList_Next()
+				end
+			end	
+		elseif attackType==3 then
+			--DoHit(defender,skillLv,Value1, Value2 ,Value3)
+			DoHit(defender)
+		end
+end
+
+------------------------------------------------------------------------------------------------------------
+function Attack_Range_2_Consume(AttackRange)
+		if attackType == 0 or attackType==1 then
+			if GetData(consume) >= conTotal and GetData(other_consume) >= other_conTotal then			
+				hasdefender, defender = GetVisEnemyList_First(AttackRange)
+				if hasdefender ~= 0 then
+					ModifyData(consume,-conTotal)
+					ModifyData(other_consume,-other_conTotal)	
+				end
+				while hasdefender ~= 0 do
+					defenderType=GetTargetType(defender)
+					--DoHit(defender,skillLv,Value1, Value2 ,Value3)
+					DoHit(defender)
+				hasdefender, defender = GetVisList_Next()
+				end
+			end	
+		elseif attackType==3 then
+			--DoHit(defender,skillLv,Value1, Value2 ,Value3)
+			DoHit(defender)
+		end
+end

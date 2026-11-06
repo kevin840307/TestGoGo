@@ -1,0 +1,19 @@
+--LS_25102_3 "¼É­·°{¼C¡E¤T¯Å"
+
+function GetSkillData()
+	return 25102,3,30,31436,"¼É­·°{¼C¡E¤T¯Å","¼É­·°{¼C¡E¤G¯Å","¸t¼C¤h"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 3 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

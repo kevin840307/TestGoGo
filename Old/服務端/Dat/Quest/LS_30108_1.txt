@@ -1,0 +1,19 @@
+--LS_30108_1 "魔影‧一級"
+
+function GetSkillData()
+	return 30108,1,45,31658,"魔影‧一級","","魔銃使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 8 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

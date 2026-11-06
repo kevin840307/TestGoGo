@@ -1,0 +1,14 @@
+--KingCity to Forest01往尼西亞台地
+
+function start()
+--下面句子層於13-11-03作出地名修改
+	Ask("n要進入往尼西亞台地嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(6304,4960,13)
+	end
+	QuestEnd()
+end

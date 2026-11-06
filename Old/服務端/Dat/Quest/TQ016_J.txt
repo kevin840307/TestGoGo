@@ -1,0 +1,11 @@
+--給泰倫的聖誕卡(TQ016J)
+
+function start()
+	Say("p7聖誕快樂！")
+	Say("p7這是被祝福的人才得到的聖誕卡。","showcard")
+	AddItem(10419)
+end
+
+function showcard()
+	Say("m#X_mas_card\\X_MAS_CARD02.spr#na##","End")
+end

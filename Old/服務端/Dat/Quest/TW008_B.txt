@@ -1,0 +1,222 @@
+--id:
+-- -1: none
+--0: 
+--1:
+--2: shop
+--3: dance 2
+--4: sleep
+--5: sorry
+--6: 暈
+--7: angry
+--8: cry
+--9: dance
+--10: happy
+--11: love
+--12: win
+--13: wave
+--揮手
+--憤怒
+--勝利
+--頭暈
+--示愛
+--道歉
+--高興
+--睡覺
+--跳舞
+--跳土風舞
+--哭泣
+--擺攤子
+
+function GetEmotionById(id)
+	if id==13 then 
+		return "揮手"
+	elseif id==7 then 
+		return "憤怒"
+	elseif id==12 then 
+		return "勝利"
+	elseif id==6 then 
+		return "頭暈"
+	elseif id==11 then 
+		return "示愛"
+	elseif id==5 then 
+		return "道歉"
+	elseif id==10 then 
+		return "高興"
+	elseif id==4 then 
+		return "睡覺"
+	elseif id==9 then 
+		return "跳舞"
+	elseif id==3 then 
+		return "跳土風舞"
+	elseif id==8 then 
+		return "哭泣"
+	elseif id==2 then 
+		return "擺攤子"
+	else
+		return " "
+	end
+end
+
+function start()
+	if GetFlag("TW008_A_Step") >= 2 then
+		if GetFlag("TW008_B_Step") >= 2 then
+			if GetFlag("TW008_B_Step") >= 4 then
+				if GetFlag("TW008_B_Step") >= 7 then
+					if GetFlag("TW008_B_Step") >= 9 then
+						Step12()
+					else
+						Step09()
+					end
+				else
+					Step06()
+				end
+			else
+				Step04()
+			end
+		else
+			Step02()
+		end	
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("n5．．．．．．")
+	Say("p1這個小朋友好奇怪啊！")
+	SetFlag("TW008_B_Step",1)
+end
+
+function Step02()
+	--<After TW008_A Step 02>
+	--＜玩家稱號不是好心人＞→Step 03
+	if HasTitle(11) ~= 1 then
+		Step03()
+	else
+		Say("p7這個小朋友看著你，好像有東西想對你說．．．")
+		Say("p1小朋友，你在做什麼啊？")
+		Say("n5．．．．．．")
+		Say("p1小朋友，不要怕～有人欺負你嗎？")
+		Say("n1不是，我只是很悶，想找人跟我玩個小遊戲．．．")
+		Say("p1我來和你玩吧^_^")
+		Say("n1好啊～可是你可不可以找多一個朋友來跟我一起玩？")
+		Say("p1好，你在這裡等我一下。")
+		SetFlag("TW008_B_Step",2)
+	end
+end
+function Step03()
+	Say("p7這個小朋友看著你，好像有東西想對你說．．．")
+	Say("p1小朋友，你在做什麼啊？")
+	Say("n5．．．．．．")
+	Say("p7他好像有一點害怕你．．．是因為看起來我不好心嗎?")
+end
+function Step04()
+--<After TW008_B Step 02>
+--＜玩家團隊成完小於一人＞→Step05
+	hasmember, teammember = GetTeamList_First()
+	if hasmember ~= 1 then
+		Step05()
+	else	
+		Say("n1嘩～你真的帶了朋友來跟我玩啊！謝謝你^_^")
+		Say("n1遊戲是這樣玩的，我會做一個動作給你看，之後你告訴你的朋友，讓他也跟我做同一個動作～")
+		Say("n1我們開始玩吧～")
+		SetFlag("TW008_B_Step",4)
+	end
+end
+function Step05()
+	Say("n1我在等你和你朋友來跟我一起玩，這遊戲需要你跟你朋友組隊才可玩的，我等你啊～^_^")
+end
+function Step06()
+--<After TW008_B Step 04>
+	hasmember, teammember = GetTeamList_First()
+	if hasmember ~= 1 then
+		Step05()
+	else	
+		Ask("n我們開始玩吧！？","開始吧！^_^","我想再聽遊戲的玩法。","你等一下，我會再回來跟你玩遊戲的。","Step06_Handler")
+	end
+--＜選項＞
+--．開始吧！^_^　→Step07
+--．我想再聽遊戲的玩法。→Step08
+--．你等一下，我會再回來跟你玩遊戲的。→Quest End
+end
+
+function Step06_Handler()
+	if GetChoice() == 0 then
+		Step07()
+	elseif GetChoice() == 1 then
+		Step08()	
+	else
+		QuestEnd()	
+	end
+end
+
+function Step07()
+	hasmember, teammember = GetTeamList_First()
+	if hasmember ~= 1 then
+		Step05()
+	else	
+		em = random(11) + 2
+		Say("n1看好了～我在做什麼動作呢～")
+		Say("n1．．．．．．")
+		Say("n1．．．．．．")	
+		Say("n1我在做。"..GetEmotionById(em))	
+		Say("n1快叫你的朋友跟我做吧～")
+		SetFlag("TW008_Emotion",em)
+		SetFlag("TW008_B_Step",7)
+	end
+end
+
+function Step08()
+	Say("n1遊戲是這樣玩的，我會做一個動作給你看，之後你告訴你的朋友，讓他也跟我做同一個動作～")
+	Say("n1我們開始玩吧～")
+	SetFlag("TW008_B_Step",8)
+end
+
+function Step09()
+--<After TW008_B Step 07>
+--＜玩家身上物品空間少於1＞→Step11
+--＜玩家團隊中沒有人在做出指定的動作＞→Step10
+	hasmember, teammember = GetTeamList_First()
+	IsNotValidEmotion = true
+	while hasmember == 1 do
+		if GetTargetEmotion(teammember) == GetFlag("TW008_Emotion") then
+			IsNotValidEmotion = false
+		end
+		hasmember, temmember = GetTeamList_Next()
+	end
+	if IsNotValidEmotion then
+		Step10()
+	else	
+		if ItemListCountLeft(0) < 1 then
+			Step11()
+		else
+			Say("n1呵呵～對了！對了！就是這樣！")
+			Say("p7就這樣，跟小米古玩了幾個小時．．．")
+			Say("p7．．．．．．")
+			Say("p7．．．．．．")
+			Say("n1謝謝你們陪我玩了這樣久～^_^")
+			Say("n1今天真的很高興～")
+			Say("p7這時你在小米古身上得到了一點善良。")
+			AddItem(10704)
+			SetFlag("TW008_B_Step",9)
+		end
+	end
+end
+
+function Step10()
+	Say("n1啊～不對！不對！")
+	Say("n1我剛才都不是這麼做的～")
+	Say("n1再來一次吧～")
+--→Step 07
+	Step07()
+end
+
+function Step11()
+	Say("p7身上的物品太多了，還是先整理一下。")
+end
+
+function Step12()
+--<After TW008_B Step 09>
+	Say("n1謝謝你陪我玩了這樣久～^_^")
+	Say("n1真的很高興啊～")
+end

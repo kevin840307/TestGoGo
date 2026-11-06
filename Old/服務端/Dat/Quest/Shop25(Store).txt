@@ -1,0 +1,30 @@
+--Shop25 雜貨店
+
+function start()
+	dialogue_Welcome()
+end
+
+function dialogue_Welcome()
+	Ask("s歡迎光臨雜貨店，子彈、合成材料和機動靈頭部配件這裡也有很多款式。要看什麼呢？","我要看一般的雜貨。","我要看看機動靈頭部配件。","不要了。","reply_Welcome")
+end
+
+function reply_Welcome()
+	choice = GetChoice()
+	if choice == 0 then
+		if GetData("Career")==9 then
+			OpenShop (25,80)
+		else
+			OpenShop (25,100)
+		end
+	elseif choice == 1 then
+		if GetData("Career")==9 then
+			OpenShop (10,80)
+		else
+			OpenShop (10,100)
+		end
+	else
+		Say("s歡迎下次再光臨。","End")
+	end
+end
+
+

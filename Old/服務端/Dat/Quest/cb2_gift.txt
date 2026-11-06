@@ -1,0 +1,165 @@
+function start()
+	if GetFlag("cb2_gift_step") < 1 then
+		if GetFlag("iscb1") ~= 1 then		
+			Step00()
+		else
+			Step01()
+		end	
+	elseif GetFlag("cb2_gift_step") < 2 then
+		Step02()
+	elseif GetFlag("cb2_gift_step") < 3 then
+		Step03()
+	elseif GetFlag("cb2_gift_step") < 4 then
+		Step04()
+	elseif GetFlag("cb2_gift_step") < 5 then
+		Step05()
+	else
+		Step12()
+	end
+end
+
+function Step00()
+	Say("n1謝謝你參加《星空之門》的封閉測試，我們十分感謝您對我們的支持，因此準備了一系系列的獎勵給您。")
+	Say("n1本次測試的目的是希望玩家替我們測試出遊戲內的問題，或玩後感想。由於遊戲內還在測試中，因此出現了問題請玩家多多見諒。")
+	Say("n1請先收下我們為您準備的禮物。")
+	AddItem(2004)
+	if GetData("Level") < 8 then			
+		exp = 8 - GetData("Level") * 2
+		ModifyData("ExpUse", exp)
+		SetData("Level",8)
+	end
+	ModifyData("Money",5000)
+	Say("n1當你到達等級十六時請再來找我，我有更多的禮物給你。")
+	Say("n1若在遊戲中發現任何問題，請問我們的客服人員聯絡，謝謝^_^。")
+	SetFlag("cb2_gift_step",1)
+end
+
+function Step01()
+	Say("n1謝謝你參加《星空之門》的封閉測試，我們十分感謝您一直對我們的支持，因此準備了一系列的獎勵給您。")
+	Say("n1本次測試的目的是希望玩家替我們測試出遊戲內的問題，或玩後感想。由於遊戲內還在測試中，因此出現了問題請玩家多多見諒。")
+	Say("n1請先收下我們為您準備的禮物。")
+	AddItem(2004)
+	if GetData("Level") < 12 then			
+		exp = 12 - GetData("Level") * 2
+		ModifyData("ExpUse", exp)
+		SetData("Level", 12)
+	end
+	ModifyData("Money", 10000)		
+	Say("n1當你到達等級十六時請再來找我，我有更多的禮物給你。")
+	Say("n1若在遊戲中發現任何問題，請問我們的客服人員聯絡，謝謝^_^。")
+	SetFlag("cb2_gift_step",1)
+end
+
+function Step02()
+	if GetData("Level") >= 16 then
+		if GetCountItemCount(31004) > 280 or GetCountItemCount(31028)>280 or GetCountItemCount(31024) > 280 then
+			Step07()
+		else
+			Say("p1我已經等級十六了，有什麼禮物要給我？")
+			Say("n1請收下吧，希望可以幫忙你繼續旅程。")
+			AddItem(31004,20)
+			AddItem(31028,20)
+			AddItem(31024,20)
+			ModifyData("Money", 5000)
+			Say("n1別看小這些甲殼或羽毛，你在日後必定會需要它，記著別將它們賣掉啊。")
+			Say("n1當你到達等級二十時請再來找我，我有更好的禮物給你。")
+			Say("n1若在遊戲中發現任何問題，請問我們的客服人員聯絡，謝謝^_^。")
+			SetFlag("cb2_gift_step",2)
+		end
+	else
+		Step06()
+	end
+end
+
+function Step03()
+	if GetData("Level") >= 20 then
+		if ItemListCountLeft(3) < 1 then
+			Step08()
+		else
+			Say("p1我已經等級二十了，有什麼禮物要給我？")
+			Say("n1請收下吧，希望可以幫忙你繼續旅程。")
+			rd = random(100)
+			if rd < 33 then
+				AddItem(6105)
+			elseif rd < 66 then
+				AddItem(6106)
+			else
+				AddItem(6107)
+			end
+			Say("n1當你到達等級二十三時請再來找我，我有更好的禮物給你。")
+			Say("n1若在遊戲中發現任何問題，請問我們的客服人員聯絡，謝謝^_^。")
+			SetFlag("cb2_gift_step",3)
+		end
+	else
+		Step09()
+	end
+end
+
+function Step04()
+	if GetData("Level") >= 23 then
+		if ItemListCountLeft(3) < 1 then
+			Step08()
+		else
+			Say("p1我已經等級二十三了，有什麼禮物要給我？")
+			Say("n1請收下吧，希望可以幫忙你繼續旅程。")
+			rd =random(100)
+			if rd < 33 then
+				AddItem(6210)
+			elseif rd < 66  then
+				AddItem(6218)
+			else
+				AddItem(6214)
+			end
+			Say("n1當你到達等級二十六時請再來找我，我有更好的禮物給你。")
+			Say("n1若在遊戲中發現任何問題，請問我們的客服人員聯絡，謝謝^_^。")
+			SetFlag("cb2_gift_step",4)
+		end
+	else
+		Step10()
+	end
+end
+
+function Step05()
+	if GetData("Level") >= 26 then
+		if ItemListCountLeft(3) < 1 then
+			Step08()
+		else
+			Say("p1我已經等級二十六了，有什麼禮物要給我？")
+			Say("n1請收下吧，希望可以幫忙你繼續旅程。")
+			rd = random(100)
+			if rd < 33 then
+				AddItem(6309)
+			elseif rd < 66 then
+				AddItem(6319)
+			else
+				AddItem(6313)
+			end
+			Say("n1謝謝您為測試付出的努力，若在遊戲中發現任何問題，請問我們的客服人員聯絡，謝謝^_^。")
+			SetFlag("cb2_gift_step",5)
+		end
+	else
+		Step11()
+	end	
+end
+
+function Step06()		
+	Say("n1對不起，禮物已經派完了，請在等級十六時再來。")
+end
+function Step09()		
+	Say("n1對不起，禮物已經派完了，請在等級二十時再來。")
+end
+function Step10()		
+	Say("n1對不起，禮物已經派完了，請在等級二十三時再來。")
+end
+function Step11()		
+	Say("n1對不起，禮物已經派完了，請在等級二十六時再來。")
+end
+function Step12()		
+	Say("n1禮物已經派完了，謝謝您為測試付出的努力，若在遊戲中發現任何問題，請問我們的客服人員聯絡，謝謝^_^。")
+end
+function Step07()
+	Say("n1你身上的物品太多了，已經拿不下禮物，請先整理一下。")
+end
+function Step08()
+	Say("n1你身上的機甲裝備太多了，已經拿不下禮物，請先整理一下。")
+end

@@ -1,0 +1,13 @@
+--Forest05(P01) to WarLand戰爭平原
+
+function start()
+	Ask("n要進入戰爭平原嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(3648,6368,43)
+	end
+	QuestEnd()
+end

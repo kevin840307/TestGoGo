@@ -1,0 +1,5 @@
+--Shop01 King City ¨¾¨ã©±
+
+function start()
+	OpenShop (13,100)
+end

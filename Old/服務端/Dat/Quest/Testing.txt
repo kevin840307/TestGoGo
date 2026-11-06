@@ -1,0 +1,17 @@
+--testing
+
+function start()
+	SetCareer(0,1)
+	crr=GetData("Career")
+	Say("p Change the Career to 0,1" ,"End")
+	Say("p"..crr.."is my career","End")
+	AddItem(15011,1)
+	AddItem(15004,5)
+	AddItem(15005,5)
+	AddItem(15006,5)
+	AddItem(15007,5)
+	AddItem(15008,5)
+	AddItem(15009,5)
+	AddItem(15010,5)
+	AddItem(10034,10)
+end

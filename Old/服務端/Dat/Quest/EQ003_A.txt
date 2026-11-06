@@ -1,0 +1,101 @@
+function start()
+	if GetFlag("EQ003_Done") == 1 then
+		Step07()
+	else
+		if GetData("Bonnet") ==  10697 then
+			if GetFlag("EQ003_A_Step") >= 3 then 
+				if GetFlag("EQ003_B_Step") >= 5 then
+					Step05()
+				else	
+					Step04()
+				end
+			else
+				Step02()			
+			end
+		else
+			Step01()
+		end
+	end
+end
+
+function Step01()
+	Say("n1這裡是射擊比賽的報名處。你亦必需配帶世運第2環，才可參加。")
+	SetFlag("EQ003_A_Step",1)
+end
+
+function Step02()
+	--＜如玩家已裝備世運第2環(10697)＞
+	Say("n1這裡是射擊比賽的報名處！")
+	Say("n1讓我跟你說明一下比賽的規則吧。")
+	Say("n1首先你要在這裡進入星空射擊場。")
+	Say("n1先以新技能世運射擊術攻擊任何一種波奇鳥。")
+	Say("n1星空射擊場的波奇鳥只會被世運射擊術打倒的。")
+	Say("n1在打倒星空射擊場的波奇鳥後，牠便會給你一個顏色指示，之後你如果能按顏色指示打倒同色的波奇鳥，便可以得到一分。")
+	Say("n1在完成100隻之後，如分數達85或以上，便可得到「奧運第3環」。")
+	Say("n1比賽限時1小時。")
+	Ask("n你要報名參加射擊比賽嗎？","是的。","不是。","Step02_Handler")
+--	＜選項＞
+--	．是的。→Step03
+--	．不是。→Quest End
+end
+
+function Step02_Handler()
+	if GetChoice() == 0 then
+		Step03()
+	else
+		QuestEnd()
+	end
+end
+
+function Step03()
+	Say("n1好的，那麼我現在就教你世運射擊術吧。")
+	Say("n1世運射擊術只可在星空射擊場使用。")
+	Say("n1而且用世運射擊術時，是不會得到任何經驗值的。")
+	Say("n1你準備好之後，來找我便可以進入星空射擊場。")
+	AddSkill(11106)
+	SetFlag("EQ003_A_Step",3)
+end
+
+function Step04()
+--<After EQ003_A Step03>
+	Ask("n你準備好進入星空射擊場嗎？","是的，我已準備好了。","不，我還沒有準備好。","Step04_Handler")
+--＜選項＞
+--．是的，我已準備好了。→Move Player (7152,6000,97)
+--．不，我還沒有準備好。→Quest End
+end
+
+function Step04_Handler()
+	if GetChoice() == 0 then
+		MovePlayer(7152,6000,97)
+		SetFlag("EQ003_A_Step", 4)
+	else
+		QuestEnd()
+	end
+end
+
+function Step05()
+--<After EQ003_B Step05>
+--<如玩家身上裝備空間少於１>→Step06
+	if ItemListCountLeft(1) < 1 then
+		Step06()
+	else
+		Say("n1恭喜你完成了星空射擊比賽！")
+		Say("n1這個世運第3環，這是你可以參加下一個項目的證明。")
+		Say("p7得到世運第3環。")
+		Say("p7收回世運射擊術。")
+		AddItem(10698)
+		DelSkill(11106)
+		SetFlag("EQ003_A_Step", 5)
+		SetFlag("EQ003_Done",1)
+		SetFlag("EQ003_Start",0)
+		SetFlag("EQ003_Hits",0)
+		SetFlag("EQ003_Score",0)
+	end
+end
+function Step06()
+	Say("p7身上的裝備太多了，還是先整理一下吧！")
+end
+function Step07()
+--<After EQ003_A Step05>
+	Say("n1星空世運會的選手啊！你已然完成了星空射擊比賽了！你可以為參加下一個項目準備一下。")
+end

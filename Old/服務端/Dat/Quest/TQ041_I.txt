@@ -1,0 +1,83 @@
+function start()
+	if GetFlag("TQ041_B_Step") >= 1 then
+		if GetFlag("TQ041_B_Step") >=3 then
+			if GetFlag("TQ041_I_Step") >=3 then
+				if GetFlag("TQ041_H_Step") >=3 then
+					if GetFlag("TQ041_I_Step") >= 5 then
+						if GetFlag("TQ041_K_Step") >= 1 then
+							Step07()
+						else
+							Step06()
+						end
+					else
+						Step05()
+					end
+				else
+					Step04()
+				end
+			else			
+				Step03()
+			end 
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("n1星之門的工程已經進入完成階段，要盡快增強自已的實力，以面對快將來臨的戰爭啊！ ")
+	SetFlag("TQ041_I_Step",1)
+end
+
+function Step02()
+--//＜After TQ041_B．function Step01＞
+	Say("n1你就是首批進入星之道的探險者嗎？如果我再年輕10歲，我也會跟你一起去星之道看一看。")
+	SetFlag("TQ041_I_Step",2)
+end
+
+function Step03()
+--//＜After TQ041_B．function Step03＞
+	Say("n1什麼！？星之道竟然被結界封印著？")
+	Say("p1就是啊～在半路中出現了強大的能量牆，我們不能再前進了！")
+	Say("n1我對這事也沒什麼頭緒…")
+	Say("n1就這樣吧，你給我去取一些結界能量樣本回來給我，讓我分析一下那是什麼能量。")
+	SetFlag("TQ041_I_Step",3)
+end
+
+function Step04()
+--//＜After TQ041_I．function Step03＞
+	Say("n1請你再去到星之道中採集一些結界能量樣本回來給我，讓我分析一下那是什麼能量。")
+	SetFlag("TQ041_I_Step",4)
+end
+
+function Step05()
+--//＜After TQ041_H．function Step03＞
+--//＜玩家持有結界能量樣本(10687)＞
+	Say("n1這就是結界能量樣本了嗎！？")
+	Say("n1先讓我分析一下…")
+	Say("n1首先是這樣…")
+	Say("n1之後是…")
+	Say("n1然後是…")
+	Say("n1……")
+	Say("n1……")
+	Say("n1……")
+	Say("n3呀！！怎麼搞的，這能量不應該會存在的…太神奇了！這並不是這世上存在的能量。")
+	Say("n1對不起，我幫不上什麼忙…")
+	Say("n1你還是回去向皇上報告，看看大臣們有沒有什麼辦法吧！")
+	SetFlag("TQ041_I_Step",5)
+end
+
+function Step06()
+--//＜After TQ041_I．function Step05＞
+	Say("n1對不起，我幫不上什麼忙…")
+	Say("n1你還是回去向皇上報告，看看大臣們有沒有什麼辦法吧！")
+	SetFlag("TQ041_I_Step",6)
+end
+
+function Step07()
+--//＜After TQ041_K．function Step01＞
+	Say("n1原來這是由大神奧米加設下的結界，怪不得我沒法得知結界是什麼力量形成的了…")
+	SetFlag("TQ041_I_Step",7)
+end

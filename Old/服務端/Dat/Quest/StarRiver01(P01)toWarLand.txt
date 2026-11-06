@@ -1,0 +1,13 @@
+--StarRiver01(P01) to WarLand
+
+function start()
+	Ask("n要進入戰爭平原嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(16832,2848,43)
+	end
+	QuestEnd()
+end

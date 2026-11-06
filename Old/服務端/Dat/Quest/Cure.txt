@@ -1,0 +1,42 @@
+function start()
+	Lv = GetData("Level")
+	hp = GetData("HP")
+	MaxHP = GetData("HPMAX")
+	mp = GetData("MP")
+	MaxMP = GetData("MPMAX")
+
+	if Lv > 10 then
+		Money = (((MaxHP-hp)*0.25)+((MaxMP-mp)*0.25))*(1+(Lv/100))
+		Money = floor(Money)
+--//		Question = format("s要為你治療，需要 %d 。", Money)
+		Ask("s要為你治療，需要 "..Money.." 。", "好的", "不需要了", "Ans")
+	else
+		Say("n1在等級10之前，可以免費使用治療服務。","End")
+		SetData("HP", MaxHP)
+		SetData("MP", MaxMP)
+		CureStatus()
+	end
+end
+
+function Ans()
+	if GetChoice() == 0 then
+		Lv = GetData("Level")
+		hp = GetData("HP")
+		MaxHP = GetData("HPMAX")
+		mp = GetData("MP")
+		MaxMP = GetData("MPMAX")
+		Money = (((MaxHP-hp)*0.25)+((MaxMP-mp)*0.25))*(1+(Lv/100))
+		Money = floor(Money)
+		if GetData("Money") < Money then
+			Say("n1你沒有足夠的金錢呢！","End")
+		else
+			Say("n1已經為你治療了。","End")
+			SetData("HP", MaxHP)
+			SetData("MP", MaxMP)
+			ModifyData("Money", -1 * Money)
+			CureStatus()			
+		end
+	else
+		QuestEnd()
+	end
+end

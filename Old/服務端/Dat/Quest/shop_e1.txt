@@ -1,0 +1,15 @@
+--shop_e1.txt
+
+function start()
+	Ask("s想買什麼請揚聲。", "麻煩你，請拿子彈給我看。", "我要看武器", "不需要了","reply")	
+end
+
+function reply()
+	ans = GetChoice()
+	if ans==0 then
+		OpenShop(7, 100)
+	elseif ans==1 then
+		OpenShop(8, 100)
+	end
+	QuestEnd()
+end

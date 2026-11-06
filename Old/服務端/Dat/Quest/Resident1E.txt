@@ -1,0 +1,6 @@
+--People01 弗利克
+
+function start()
+	Say("n1將來我長大了，我想入讀魔法學校．．．")
+	Say("好像騎士學校的戰士也很帥．．．","End")
+end

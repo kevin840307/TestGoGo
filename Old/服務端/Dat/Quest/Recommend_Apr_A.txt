@@ -1,0 +1,120 @@
+--Recommend_Apr_A 天馬頭飾換領券
+
+function start()
+    if GetCountItemCount(10590) < 300 then
+        AddItem(10590)
+        Say("p7使用天馬頭飾換領券。")
+        if ItemListCountLeft(1) < 1 then
+            Say("p7對不起，你身上的裝備太多了，請整理一下吧！")
+        else        
+            page1()
+        end
+    else    
+        Say("p7使用天馬頭飾換領券。","start300")
+    end        
+end
+
+function start300()
+    AddItem(10590)
+    if ItemListCountLeft(1) < 1 then
+        Say("p7對不起，你身上的裝備太多了，請整理一下吧！")
+    else        
+        page1()
+    end
+end
+
+function page1()
+    Ask("p請問你要什麼等級的天馬頭飾呢？","等級25的天馬頭飾。","等級35的退邪天馬頭飾。","等級45的伏妖天馬頭飾。","更多選擇","page1Handler")
+end
+
+function page2()
+    Ask("p請問你要什麼等級的天馬頭飾呢？","等級55的降龍天馬頭飾。","等級65的王者天馬頭飾。","等級75的戰神天馬頭飾。","更多選擇","page2Handler")
+end
+
+function page3()
+    Ask("p請問你要什麼等級的天馬頭飾呢？","等級85的魔神天馬頭飾。","等級95的神聖天馬頭飾。","更多選擇","請讓我再考慮一下。","page3Handler")
+end
+
+function page1Handler()
+    if GetChoice() == 3 then
+        page2()
+    elseif GetChoice() == 2 then
+        Say("p7伏妖天馬頭飾","GiveItem3")
+    elseif GetChoice() == 1 then
+        Say("p7退邪天馬頭飾","GiveItem2")
+    elseif GetChoice() == 0 then
+        Say("p7天馬頭飾","GiveItem1")
+    end
+end
+
+function page2Handler()
+    if GetChoice() == 3 then
+        page3()
+    elseif GetChoice() == 2 then
+        Say("p7戰神天馬頭飾","GiveItem6")
+    elseif GetChoice() == 1 then
+        Say("p7王者天馬頭飾","GiveItem5")
+    elseif GetChoice() == 0 then
+        Say("p7降龍天馬頭飾","GiveItem4")
+    end
+end
+
+function page3Handler()
+    if GetChoice() == 3 then
+        QuestEnd()
+    elseif GetChoice() == 2 then
+        page1()
+    elseif GetChoice() == 1 then
+        Say("p7神聖天馬頭飾","GiveItem8")
+    elseif GetChoice() == 0 then
+        Say("p7魔神天馬頭飾","GiveItem7")
+    end
+end
+
+function GiveItem1()
+    RemoveItem(10590)
+    AddItem(26041)
+    QuestEnd()
+end
+
+function GiveItem2()
+    RemoveItem(10590)
+    AddItem(26042)
+    QuestEnd()
+end
+
+function GiveItem3()
+    RemoveItem(10590)
+    AddItem(26043)
+    QuestEnd()
+end
+
+function GiveItem4()
+    RemoveItem(10590)
+    AddItem(26044)
+    QuestEnd()
+end
+
+function GiveItem5()
+    RemoveItem(10590)
+    AddItem(26045)
+    QuestEnd()
+end
+
+function GiveItem6()
+    RemoveItem(10590)
+    AddItem(26046)
+    QuestEnd()
+end
+
+function GiveItem7()
+    RemoveItem(10590)
+    AddItem(26047)
+    QuestEnd()
+end
+
+function GiveItem8()
+    RemoveItem(10590)
+    AddItem(26048)
+    QuestEnd()
+end

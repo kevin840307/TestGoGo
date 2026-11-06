@@ -1,0 +1,61 @@
+--SKC28J105
+#include "txt_28105.txt"
+
+function init_data()
+	skillflag 	= "28105"
+	TXT_SkillName()
+	boost		= "EffHPMAX"
+end
+
+function start()
+	init_data()
+	consume 	= "MP"
+	
+	varyDelta 	= 10
+
+	recastTime 	= 600
+	duration 	= 600
+	
+	skillid 	= 28105
+	
+	defender	= GetTargetPtr()
+	
+	skillLv 	= GetSkillLv()
+	effect		= GetPara(skillLv)
+	conTotal 	= GetConTotal(skillLv)
+	
+	GoBoost()
+end
+
+function GetPara(lv)
+	if lv == 1 then
+		return 159
+	elseif lv == 2 then
+		return 204
+	elseif lv == 3 then
+		return 255
+	elseif lv == 4 then
+		return 312
+	else
+		return 375
+	end
+end
+
+function GetConTotal(lv)
+	if lv == 1 then
+		return 36
+	elseif lv == 2 then
+		return 45
+	elseif lv == 3 then
+		return 56
+	elseif lv == 4 then
+		return 68
+	else
+		return 81
+	end
+end
+
+#include "boostcommon.txt"
+
+
+

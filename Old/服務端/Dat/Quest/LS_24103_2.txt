@@ -1,0 +1,19 @@
+--LS_24103_2 "霧影術‧二級"
+
+function GetSkillData()
+	return 24103,2,30,31405,"霧影術‧二級","霧影術‧一級","守護劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 2 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

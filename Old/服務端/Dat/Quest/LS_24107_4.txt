@@ -1,0 +1,19 @@
+--LS_24107_4 "生命強化‧四級"
+
+function GetSkillData()
+	return 24107,4,60,31427,"生命強化‧四級","生命強化‧三級","守護劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 2 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

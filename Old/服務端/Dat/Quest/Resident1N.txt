@@ -1,0 +1,5 @@
+--People01 修格
+
+function start()
+	Say("n1聽說最近國皇想找女性和皇子們配婚．．．","End")
+end

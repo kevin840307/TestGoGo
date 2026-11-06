@@ -1,0 +1,114 @@
+--星空禮服卡(TQ024H)
+
+function start()
+	Ask("p你要換取星空禮服嗎？","是的。","不是。","reply01")
+end
+
+function reply01()
+	if GetChoice()==0 then
+		dia_02()
+	else
+		AddItem(10470)
+		QuestEnd()
+	end
+end
+
+function dia_02()
+	if GetData("Race")==0 then
+		if ItemListCountLeft(1)>=4 then
+			Say("p1這是你的星空禮服。","End")
+			AddItem(10473)
+			AddItem(10474)
+			AddItem(10475)
+			AddItem(10476)
+		else
+			no_space()
+		end
+	elseif GetData("Race")==1 then
+		if ItemListCountLeft(1)>=5 then
+			Say("p1這是你的星空禮服。","End")
+			AddItem(10477)
+			AddItem(10478)
+			AddItem(10479)
+			AddItem(10480)
+			AddItem(10481)
+		else
+			no_space()
+		end
+	elseif GetData("Race")==2 then
+		Ask("p你要換取什麼款式的星空禮服呢？","男裝的星空禮服","女裝的星空禮服","不需要了。","reply02")
+	else
+		Ask("p你要換取什麼款式的星空禮服呢？","男裝的星空禮服","女裝的星空禮服","不需要了。","reply03")
+	end
+end
+function dia_02a()
+	if ItemListCountLeft(1)>=4 then
+		Say("p1這是你的星空禮服。","End")
+		AddItem(10483)
+		AddItem(10484)
+		AddItem(10485)
+		AddItem(10486)
+	else
+		no_space()
+	end
+end
+function dia_02b()
+	if ItemListCountLeft(1)>=5 then
+		Say("p1這是你的星空禮服。","End")
+		AddItem(10487)
+		AddItem(10488)
+		AddItem(10489)
+		AddItem(10490)
+		AddItem(10491)
+	else
+		no_space()
+	end
+end
+function reply02()
+	if GetChoice()==0 then
+		dia_02a()
+	elseif GetChoice()==1 then
+		dia_02b()
+	else
+		AddItem(10470)
+		QuestEnd()
+	end
+end
+function dia_03a()
+	if ItemListCountLeft(1)>=5 then
+		Say("p1這是你的星空禮服。","End")
+		AddItem(10492)
+		AddItem(10493)
+		AddItem(10494)
+		AddItem(10495)
+		AddItem(10496)
+	else
+		no_space()
+	end
+end
+function dia_03b()
+	if ItemListCountLeft(1)>=5 then
+		Say("p1這是你的星空禮服。","End")
+		AddItem(10497)
+		AddItem(10498)
+		AddItem(10499)
+		AddItem(10500)
+		AddItem(10501)
+	else
+		no_space()
+	end
+end
+function reply03()
+	if GetChoice()==0 then
+		dia_03a()
+	elseif GetChoice()==1 then
+		dia_03b()
+	else
+		AddItem(10470)
+		QuestEnd()
+	end
+end
+function no_space()
+	AddItem(10470)
+	Say("p1對不起，你身上的物品太多了，請清除一些物品後再試。","End")
+end

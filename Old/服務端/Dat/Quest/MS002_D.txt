@@ -1,0 +1,96 @@
+--MS002_D 拉潔(小女孩)
+
+--MS002_Task:
+-- 1: quest started, go to fing 事務長
+-- 2: go to find 拉潔
+-- 3: go to find 科吉 for doll
+-- 4: get the doll, find 拉潔
+-- 5: go to find 公主
+-- 6: talked with 公主 once
+-- 7: talked with 公主 twice
+-- 8: back to 事務長
+-- 9: quest completed
+
+--MS002_Done
+-- 1: quest completed at least once
+
+function start()
+	status = GetFlag("MS002_Task")
+	if GetFlag("MS002_Done")==1 then
+		dialogue_AllTimes()
+	elseif status>=5 then
+		dialogue_05()
+	elseif status==4 and RemoveItem(10251) then
+		dialogue_03()
+	elseif status>=3 then
+		dialogue_02()
+	elseif status==2 then
+		dialogue_01()
+	else
+		dialogue_AllTimes()
+	end
+end
+
+function dialogue_AllTimes()
+	Say("n1這條項鍊就只得我有，哈！","End")
+end
+
+function dialogue_01()
+	Say("n1這條項鍊就只得我有，哈！")
+	Say("p1小妹妹，你的項鍊很漂亮啊，可以給我看一看嗎？")
+	Say("n1媽媽教我不要和陌生人說話。")
+	if GetData("Race")==1 then
+		dialogue_01_a()
+	else
+		dialogue_01_b()
+	end
+end
+
+function dialogue_01_a()
+	Say("n1不過我覺得姐姐你是好人，我可以給你看。")
+	dialogue_04()
+end
+
+function dialogue_01_b()
+	Say("p1小妹妹你不用怕，我不會傷害你的。你可以借你的項鍊給我看一看嗎？")
+	Say("n1我才不會借給你啊！早些日子，有個古怪的大叔借了我的小豬布偶去玩，之後就沒有還給我了。")
+	Say("p7古怪的大叔？")
+	Say("p1小妹妹，如果我替你把小豬布偶找回來，你可以借你的項鍊給我看一看嗎？")
+	Say("n1你可以把小豬找回來嗎？太好了。我很掛念它啊！","End")
+	SetFlag("MS002_Task", 3)
+end
+
+function dialogue_02()
+	Say("n1我很掛念小豬啊！","End")
+end
+
+function dialogue_03()
+	Say("n1太好了！小豬，你知道嗎，我想你想得很苦啊！")
+	Say("p7交出“小豬布偶”")
+	Say("p7得到500EXP")
+	gainexp(500)
+	Say("p1小妹妹，你現在可以借你的項鍊給我看一看嗎？")
+	Say("n1好吧。")
+	dialogue_04()
+end
+
+function dialogue_04()
+	Say("p7是一條刻有皇家徽號的項鍊")
+	Say("p6這項鍊刻有皇家徽號，原有人必定是王室成員。")
+	Say("p1小妹妹，這條項鍊你是從何得來的？")
+	Say("n1是一個天使姐姐送的。")
+	Say("p1天使姐姐？")
+	Say("n1是啊，半年前我和其他小朋友到流星之河遊玩。怎料我迷了路，和其他小朋友失散了。…")
+	Say("n1幸好有一位漂亮的姐姐發現了我，把我送回家，還把這條項鍊送給我。所以我叫她做天使姐姐。")
+	Say("p6是流星之河嗎？","End")
+	SetFlag("MS002_Task", 5)
+end
+
+function dialogue_05()
+	Say("n1天使姐姐？她住在流星之河呀！","End")
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end

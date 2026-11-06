@@ -1,0 +1,26 @@
+--TQ002_A 精靈管理人
+
+function start()
+	Career = GetData("Career")
+		if Career == 9 then
+			CheckFinish()
+		else
+			
+function CheckFinish()
+	if GetFlag("TQ002戰鬥精靈")==1 then
+		checkitem()
+	else
+		Say("n1我正在找一個有能力去照顧這小傢伙的人，你看來也相當合適當牠的主人…")
+		Say("n1可是我仍未可以放心將這小傢伙交給你。")
+		Say("n1如果你能找到一個等級15以下的戰士和一個等級15以下的魔法師…")
+		Say("n1為你在獅鷲山打倒戰靈鳥和魔靈鳥，拿白色戰紋和白色魔紋回來。")
+		Say("n1等級15以下的戰士可在戰靈鳥身上得到白色戰紋。")
+		Say("n1另外等級15以下的魔法師可在魔靈鳥身上得到白色魔紋。")
+		Say("n1戰靈鳥和魔靈鳥都是很強的敵人，如果有人願意為你冒這個險…")
+		Say("n1就證明你是一個可以信任的人，那時我會將這小傢伙交給你照顧。","End")
+		SetFlag("TQ002戰鬥精靈", 1)
+	end
+end
+
+function checkitem()
+	if RemoveItem(10039) == 1 then

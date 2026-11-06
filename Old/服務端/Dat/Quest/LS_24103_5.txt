@@ -1,0 +1,19 @@
+--LS_24103_5 "霧影術‧五級"
+
+function GetSkillData()
+	return 24103,5,45,31408,"霧影術‧五級","霧影術‧四級","守護劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 2 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

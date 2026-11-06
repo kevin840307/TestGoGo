@@ -1,0 +1,54 @@
+--SKC25J101
+#include "txt_25101.txt"
+
+function start()
+	consume 	= "MP"
+	boost 		= "HP"
+	varyDelta 	= 10
+
+	skillid 	= 25101
+	TXT_SkillName()
+	skillflag 	= "25101"
+	
+	defender 	= GetCallerPtr()	
+	
+	attackType	= GetType()
+	skillLv 	= GetSkillLv()
+	effect 		= GetPara(skillLv)
+	conTotal 	= GetConTotal(skillLv)
+	
+	Cure()
+end
+
+function GetPara(lv)
+	if lv == 1 then
+		return 13
+	elseif lv == 2 then
+		return 21
+	elseif lv == 3 then
+		return 33
+	elseif lv == 4 then
+		return 49
+	else
+		return 70
+	end
+end
+
+function GetConTotal(lv)
+	if lv == 1 then
+		return 22
+	elseif lv == 2 then
+		return 30
+	elseif lv == 3 then
+		return 42
+	elseif lv == 4 then
+		return 55
+	else
+		return 72
+	end
+end
+
+#include "curecommon.txt"
+
+
+

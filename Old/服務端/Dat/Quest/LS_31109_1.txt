@@ -1,0 +1,19 @@
+--LS_31109_1 "材料製造"
+
+function GetSkillData()
+	return 31109,1,40,31687,"材料製造","","道具使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 9 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

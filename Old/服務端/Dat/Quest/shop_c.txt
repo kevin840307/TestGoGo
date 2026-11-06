@@ -1,0 +1,13 @@
+--shop_c.txt
+
+function start()
+	Ask("s你好，有興趣看新運到的盾牌嗎？", "好的。", "不需要了","reply")	
+end
+
+function reply()
+	ans = GetChoice()
+	if ans==0 then
+		OpenShop(4, 100)
+	end
+	QuestEnd()
+end

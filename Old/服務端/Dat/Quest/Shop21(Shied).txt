@@ -1,0 +1,24 @@
+--Shop21 盾牌坊
+
+function start()
+	dialogue_Welcome()
+end
+
+function dialogue_Welcome()
+	Ask("s歡迎光臨盾牌坊，這裡有各式各樣的盾牌，要看看嗎？","讓我看看吧。","不要了。","reply_Welcome")
+end
+
+function reply_Welcome()
+	choice = GetChoice()
+	if choice == 0 then
+		if GetData("Career")==9 then
+			OpenShop (21,80)
+		else
+			OpenShop (21,100)
+		end
+	else
+		Say("s歡迎下次再光臨。","End")
+	end
+end
+
+

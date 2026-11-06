@@ -1,0 +1,13 @@
+--KingCity(P08) to KingCity(P10)
+
+function start()
+	Ask("n要進入二皇子的房間嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(11968,7520,16)
+	end
+	QuestEnd()
+end

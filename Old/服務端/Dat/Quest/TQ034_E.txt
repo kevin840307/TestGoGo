@@ -1,0 +1,73 @@
+--冰塊
+--(TQ034_E)
+
+#include "CommTeam.txt"
+
+function start()
+	if GetFlag("TQ034_Task") < 4 then
+		dia_01()
+	elseif CheckItem(10642)>0 then
+		dia_06()
+	else
+		--4= sleep, 200 is range
+		total_eMember = GetTeamEmotion(4)
+		if total_eMember >= 5 then
+			if IsTeamCloseTo(7680,5120,45, 250) >0 then
+				dia_04()
+			else
+				Say("p1冷靜蘑菇就是生長在這冰塊下！")
+				Say("p1隊員們，再走近一黠吧～","End")
+			end
+		elseif total_eMember >0 then
+			dia_03()
+		else
+			dia_02()
+		end
+	end
+end
+
+function dia_01()
+	Say("p7一個普通的冰塊．．．","End")
+end
+
+--＜After TQ034_D Step02＞
+--＜團隊中沒有人在指定範圍做出睡覺動作＞
+function dia_02()
+	Say("p1冷靜蘑菇就是生長在這冰塊下！")
+	Say("p1要找多些人來才可將冰塊溶解．．．","End")
+end
+
+--＜After TQ034_C Step02＞
+--＜團隊中有人在指定範圍做出睡覺動作，但人數少於5＞
+function dia_03()
+	Say("p1冷靜蘑菇就是生長在這冰塊下！")
+	Say("p1大家躺下用體溫慢慢把冰塊溶化吧！！")
+	Say("p1．．．．．．")
+	Say("p1．．．．．．")
+	Say("p1冰塊還沒有溶化啊．．．是不是人數不足呢！？","End")
+end
+
+--＜After TQ034_C Step02＞
+--＜團隊中有人在指定範圍做出睡覺動作，且人數等於5＞
+function dia_04()
+	if ItemListCountLeft(0)<1 then
+		dia_05()
+	else
+		Say("p1冷靜蘑菇就是生長在這冰塊下！")
+		Say("p1大家躺下用體溫慢慢把冰塊溶化吧！！")
+		Say("p1．．．．．．")
+		Say("p1．．．．．．")
+		Say("p3冰塊溶化了！")
+		Say("p7得到冷靜蘑菇。","End")
+		AddItem(10642)
+	end
+end
+
+function dia_05()
+	Say("p7身上沒有足夠的物品空間啊．．．先整理一下好了。","End")
+end
+
+--＜玩家身上持有冷靜蘑菇(10642)＞
+function dia_06()
+	Say("p7之前已經取得了冷靜蘑菇。","End")
+end

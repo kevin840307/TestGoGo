@@ -1,0 +1,13 @@
+--NQ026_F (研究所通訊員‧蘿莉)
+
+function start()
+    if GetFlag("NQ026_Y_STEP") >= 2 then
+        Say("n1多謝你拯救了尼尼亞王國！")
+    else
+        if GetFlag("NQ026_G_STEP") < 1 then
+            Say("n1歡迎你加入魔裝機甲研究所，我是通訊員‧蘿莉，有問題可以找我商量啊！")
+        else
+            Say("n1要小心點啊！衛星探測到的能量是所未有的強大！你準備好出發之後，可以透過傳送器去到火山島！")
+        end        
+    end
+end

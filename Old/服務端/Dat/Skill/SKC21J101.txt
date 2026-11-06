@@ -1,0 +1,61 @@
+--SKC21J101
+#include "txt_21101.txt"
+
+function init_data()
+	skillflag 	= "21101"
+	TXT_SkillName()
+	boost 		= "EffAP"
+end
+
+function start()
+	init_data()
+	consume 	= "MP"
+	varyDelta 	= 20
+
+	recastTime 	= 900
+	duration 	= 900
+	
+	skillid 	= 21101
+	
+	defender 	= GetCallerPtr()
+	
+	attackType	= GetType()
+	skillLv 	= GetSkillLv()
+	effect 		= GetPara(skillLv)
+	conTotal 	= GetConTotal(skillLv)
+	
+	GoBoost()
+end
+
+function GetPara(lv)
+	if lv == 1 then
+		return 1
+	elseif lv == 2 then
+		return 2
+	elseif lv == 3 then
+		return 4
+	elseif lv == 4 then
+		return 7
+	else
+		return 11
+	end
+end
+
+function GetConTotal(lv)
+	if lv == 1 then
+		return 15
+	elseif lv == 2 then
+		return 30
+	elseif lv == 3 then
+		return 55
+	elseif lv == 4 then
+		return 90
+	else
+		return 135
+	end
+end
+
+#include "boostcommon.txt"
+
+
+

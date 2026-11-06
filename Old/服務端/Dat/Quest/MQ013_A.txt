@@ -1,0 +1,86 @@
+--MQ013_A  綠加
+
+--MQ_001_End <==> (魔法學校的學生)
+
+--statue 5 : Mission is completed
+--statue 4 : got the 書籤
+--statue 3 : receive the mission that have to find the 書籤
+--statue 2 : got the history book
+
+function start()
+	
+	lv=GetData("Level")
+	statue=GetFlag("MQ013_Task")
+
+	if lv<25 or GetFlag("MQ_001_End") ~=1 then
+		MissionNotMatch()	
+	
+	elseif statue==5 then
+		Say("n1上次很抱歉呢，我沒問什麼就說你不對…我真的太白痴了，對不起。","End")	
+
+	elseif statue==4 then
+		Say("n1嗯，肯拿回出來了吧？可是書我已經交給老師了，你自己去找她吧！","End")
+	
+	elseif statue==3 then
+		Say("n1你還在幹什麼？還不去找？","End")
+
+	elseif GetFlag("MQ013_NotGet")==1 then
+		Say("n1等著吧，我一定會說給老師知道的！")
+
+	elseif statue==1 then
+		Say("n1我想…應該會掉在一些不起眼的地方…我今天曾經到"..Color(0,45,198).."大樹"..Color(0,0,0).."下休息過一會兒,不知…請你一定要加油！","End")
+		
+	elseif statue==2 then
+		RemoveItem(10184)
+		Say("n1耶！？你在哪兒找到的？真的太感謝你了！")
+		Say("p7得到 1000Exp")
+		gainexp(1000)	
+		Say("n3啊！？書內的書籤不見了！？什麼辦！不會是你拿了吧？這個書籤不是我的啊！是娜姬．連特老師的！")
+		Ask("n你快點去拿回來給我，不然我就說老師知道是你偷了去的！到時就有你好受！","唉…我幫你找回來吧！","又不關我的事！你喜歡什麼做就什麼做！","response2")
+					
+	else 
+		Say("n1什麼辦…我的歷史書不見了…")
+		Say("n7綠加舉頭看一看你")
+		Ask("n你可以幫我一個忙嗎？我的歷史書不見了…可以幫我找回來嗎？","我幫你找回來吧！","嗯……我想起有點事要做。","response1")
+
+	end
+
+end
+
+
+function MissionNotMatch()
+	Say("n1什麼辦…我的歷史書不見了…")
+	Say("n7綠加舉頭看一看你")
+	Say("n1我看我還是自己找好了……嗚…","End")
+end
+
+function response1()
+	choice=GetChoice()
+	if choice==0 then
+		Say("n1真的嗎？！謝謝你！")
+		Say("p1可是……你的書何時不見了的？")
+		Say("n1好像是晚上不見了的…我想…會不會在一些不起眼處留下呢？我今天曾經到"..Color(0,45,198).."大樹"..Color(0,0,0).."下休息過一會兒.....麻煩你幫我找了…","End")
+		SetFlag("MQ013_Task",1)
+	else
+		Say("n1那我自己去找好了……嗚……","End")
+	end
+end
+
+function response2()
+	choice=GetChoice()
+	if choice==0 then
+		Say("p1唉……真是好心沒好報，我幫你找回來吧。")
+		Say("n1這才差不多。","End")	
+		SetFlag("MQ013_Task",3)
+	
+	else
+		Say("n1好！那你等著吧，我一定會說給老師知道的！")
+		SetFlag("MQ013_NotGet",1)
+	end
+		
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end

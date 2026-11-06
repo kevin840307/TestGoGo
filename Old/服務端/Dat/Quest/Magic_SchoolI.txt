@@ -1,0 +1,5 @@
+--People01 莫雅
+
+function start()
+	Say("n1古洛尼校長雖然給人高不可攀的感覺，但他是個十分為他人著想的人。","End")
+end

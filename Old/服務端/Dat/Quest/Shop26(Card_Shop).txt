@@ -1,0 +1,24 @@
+--Shop26 卡片世界
+
+function start()
+	dialogue_Welcome()
+end
+
+function dialogue_Welcome()
+	Ask("s歡迎光臨卡片世界，我們有很多合成用卡片的款式。來看看吧！","讓我看看吧。","不要了。","reply_Welcome")
+end
+
+function reply_Welcome()
+	choice = GetChoice()
+	if choice == 0 then
+		if GetData("Career")==9 then
+			OpenShop (26,80)
+		else
+			OpenShop (26,100)
+		end
+	else
+		Say("s歡迎下次再光臨。","End")
+	end
+end
+
+

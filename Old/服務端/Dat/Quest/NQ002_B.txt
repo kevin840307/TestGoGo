@@ -1,0 +1,36 @@
+-- NQ002_B 茶店小姐狄蘭
+
+function start()
+	lv = GetData("Level")
+	if lv< 5 or GetFlag("NQ002_Task")~=2 then
+		Say("n2歡迎來到森林茶店～！來坐一下吧～？", "End")
+	
+	elseif CheckItem(10010) >0 then
+		Say("n2謝謝惠顧～有空再來唷！", "End")
+	
+	else
+		Say("n2歡迎來到森林茶店～！來坐一下吧～？")
+		Say("p1請問有沒有煙絲賣呢？")
+		Say("n1當然！我算算看……")
+		Ask("n一包要300元，已經打了折囉！","這是300元～","好貴喔！","Step2")
+	end
+end
+
+function Step2()
+	if GetChoice() == 0 then
+		mo = GetData("Money")
+		if mo >= 300 then
+			if ItemListCountLeft(0)<1 then
+				Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				AddItem(10010, 1)
+				ModifyData("Money",-300)
+				Say("n2謝謝惠顧～有空再來唷！", "End")
+			end
+		else
+			Say("p3哎呀呀……這兒未夠300元喔！", "End")			
+		end
+	else
+		Say("n2不能再打折了啦，已經算得最便宜的了。","End")
+	end
+end		

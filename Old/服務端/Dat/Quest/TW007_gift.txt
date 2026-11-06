@@ -1,0 +1,26 @@
+--TW007_gift
+
+function GetRandGift()
+	ans = random(100)
+	if ans <= 20 then
+		return '索爾魔怪甲殼',10047,10
+	elseif ans <= 40 then
+		return '治療藥水',70,3
+	elseif ans <= 60 then
+		return '治療藥劑',71,1
+	elseif ans <= 65 then
+		return '魔靈小電池',6909,2
+	elseif ans <= 69 then
+		return '魔靈電池',6905,1
+	elseif ans <= 76 then
+		return '生命強化劑',221,1
+	elseif ans <= 83 then
+		return '魔力強化劑',226,1
+	elseif ans <= 98 then
+		return '燒肉',10238,1
+	elseif ans <= 99 then
+		return '小蝴蝶翅膀',10512,1
+	else
+		return '水瓶座頭飾',10514,1
+	end
+end

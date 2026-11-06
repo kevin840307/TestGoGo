@@ -1,0 +1,102 @@
+--偉爾．尼尼亞( MS006_C)
+
+--MS006_Task
+-- 1: title shown
+-- 2: quest started
+-- 3: quest completed
+
+--MS006_Done
+-- 1: quest completed
+
+function start()
+	status = GetFlag("MS006_Task")
+	if status>=3 then
+		dialogue_04()
+	elseif status >=2 then
+		if GetCountItemCount(10301)>=1 and GetCountItemCount(10302)>=1 then
+			dialogue_03()
+		else
+			dialogue_02d()
+		end
+	elseif status >=1 then
+		dialogue_02()
+	elseif GetFlag("MS005_Done")~=1 then
+		dialogue_01()
+	else
+		show_title()
+	end
+end
+
+function dialogue_01()
+	Say("n1‧‧‧‧‧‧", "End")
+end
+
+function show_title()
+	Say("m#STORY_NAME_05A.spr#STORY_NAME_05B.spr#030.mp3#", "dialogue_02")
+	SetFlag("MS006_Task", 1)
+end
+
+--玩家完成MS006_A－Step03_Choice1
+function dialogue_02()
+	Say("s你便是普頓所說的年輕人，他曾經提起過你，說你充滿了熱誠，今後在皇國內希望你也能盡自己的能力為人民服務。")
+	Say("s這次找你來的原因，是有一個任務給你。")
+	Say("s近日騎士訓練學校和魔法學園好像發生了糾紛，我想你把這兩封信，"..Color(0,45,198).."送交魔法學園和騎士訓練學校的校長"..Color(0,0,0).."，希望能平息這場小風波和軟化他們的學生。")
+	Say("s切記，你必須把兩個校長的回信拿回來。")
+	Say("p1明白了。","dialogue_02b")
+end
+function dialogue_02b()
+	if ItemListCountLeft(0)<2 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到“給古加尼的信”","dialogue_02c")
+		AddItem(10299)
+	end
+end
+function dialogue_02c()
+	Say("p7得到“給古洛尼的信”")
+	AddItem(10300)
+	SetFlag("MS006_Task", 2)
+	dialogue_02d()
+end
+function dialogue_02d()
+	Say("s快去"..Color(0,45,198).."把兩封信給兩個校長"..Color(0,0,0).."，並把回信拿回來吧，不要再擔誤了。","End")
+end
+
+--玩家完成MS006_A－Step05
+function dialogue_03()
+	Say("s很好，似乎你已把校長的信拿回來了？")
+	Say("p1殿下，這是兩個校長的回信。","dialogue_03b")
+end
+function dialogue_03b()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	elseif ItemListCountLeft(1)<1 then
+		Say("s對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+	else
+		Say("p7失去“古加尼給大皇子的信”","dialogue_03c")
+		SetFlag("MS006_Task", 3)
+		SetFlag("MS006_Done", 1)
+		RemoveItem(10302)
+		RemoveItem(10301)
+		AddItem(10262)
+		AddItem(10303)
+	end
+end
+function dialogue_03c()
+	Say("p7失去“古洛尼給大皇子的信”")
+
+	Say("n7偉爾．尼尼亞把信細讀")
+	Say("s很好，兩位校長也盡力了。")
+	Say("s辛苦你了，希望你會繼續為人民服務，這裡是給你的獎勵。","dialogue_03d")
+end
+function dialogue_03d()
+	Say("p7得到“星之徽章”","dialogue_03e")
+end
+function dialogue_03e()
+	Say("p7得到“皇家戰盾”","End")
+end
+
+--END
+function dialogue_04()
+	Say("s辛苦你了，希望你會繼續為人民服務。","End")
+end

@@ -1,0 +1,6 @@
+--Debug用NPC02
+
+function start()
+	Say("n1扣一件小紅晶石","End")
+	RemoveItem(1)
+end

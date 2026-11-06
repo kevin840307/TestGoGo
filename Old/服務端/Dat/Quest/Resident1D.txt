@@ -1,0 +1,6 @@
+--People01 潘
+
+function start()
+	Say("n1我的女兒她啊！長大了之後就不聽我的說話了！")
+	Say("n1唉．．．","End")
+end

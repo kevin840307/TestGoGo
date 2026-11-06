@@ -1,0 +1,18 @@
+--大競技場售票員(NQ021_C)
+
+function start()
+	Ask("n大競技場是給各勇士比鬥，挑戰不同對手的地方，入場費只是10元星幣，十分便宜。", "好吧，我款出10元進入大競技場。", "我還沒有空進去。", "reply_01")
+end
+
+function reply_01()
+	if GetChoice()==0 then
+		if GetData("Money")<10 then
+			Say("n1對不起，你身上好像沒有足夠的金錢。", "End")
+		else
+			ModifyData("Money", -10)
+			PKModifyBonus(10)
+			MovePlayer(9040, 3616, 48)
+		end
+	end
+	QuestEnd()
+end

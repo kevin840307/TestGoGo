@@ -1,0 +1,27 @@
+--MQ001_F 紫樹
+
+function start()
+	sick = GetFlag("MQ_001_1")
+	if GetFlag("MQ_001_TreeJuice")==1 then
+		Say("p6這棵樹真奇怪！很多紫色的液體由樹幹流出來．．．嗯？好像還有些香味！","End")
+	elseif sick == 9 then
+		Ask("p一滴一滴的紫色液體從樹上流下，香氣四溢．．．","拿一些回去吧！","這是什麼玩意！？","GetTreeJuice")
+	else
+		Say("p6這棵樹真奇怪！很多紫色的液體由樹幹流出來．．．嗯？好像還有些香味！","End")
+	end
+end
+
+function GetTreeJuice()
+	choice = GetChoice()
+	if choice == 0 then
+		if ItemListCountLeft(0)<1 then
+			Say("p7你身上的物品太多了，請下次再來！","End")
+		else
+			Say("p6嗯．．．這些應該就是"..Color(0,45,198).."紫色樹漿"..Color(0,0,0).."，拿一些回去好了！","End")
+			AddItem (10004,1)
+			SetFlag("MQ_001_TreeJuice", 1)
+		end
+	else
+		Say("p6這些東西怪裡怪氣的，還是不碰為妙！","End")
+	end
+end

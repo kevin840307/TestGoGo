@@ -1,0 +1,62 @@
+--Monthly_Gift01 星空抽獎卡(10370)
+
+function start()
+	dialogue_01()
+end
+
+function dialogue_01()
+	if all_item_got()==1 then
+		all_item_release()
+	end
+	-- random out the item player not yet get
+	item_ok = 0
+	while item_ok==0 do
+		ans = random(6)
+		item_id, name, flag_id = get_name(ans)
+		if GetFlag(flag_id) < 0 then
+			item_ok = 1
+		end
+	end
+
+	AddItem(item_id)
+	SetFlag(flag_id, 1)
+	Say("p7得到「"..name.."」", "End")
+end
+
+function get_name(ans)
+	if ans==1 then
+		return 10372, "冰雪手部裝備卡", "Monthly_Gift_10372"
+	elseif ans==2 then
+		return 10373, "冰雪上身裝備卡", "Monthly_Gift_10373"
+	elseif ans==3 then
+		return 10374, "冰雪下身裝備卡", "Monthly_Gift_10374"
+	elseif ans==4 then
+		return 10375, "冰雪頭飾裝備卡", "Monthly_Gift_10375"
+	elseif ans==5 then
+		return 10376, "冰雪之劍裝備卡", "Monthly_Gift_10376"
+	else
+		return 10377, "冰雪盾牌裝備卡", "Monthly_Gift_10377"
+	end
+end
+
+-- return true if all item got
+function all_item_got()
+	ans = 1
+	while ans < 7 do
+		item_id, name, flag_id = get_name(ans)
+		if GetFlag(flag_id)<0 then
+			return 0
+		end
+		ans = ans + 1
+	end
+	return 1
+end
+-- remove all got item flag
+function all_item_release()
+	ans = 1
+	while ans < 7 do
+		item_id, name, flag_id = get_name(ans)
+		RemoveFlag(flag_id)
+		ans = ans + 1
+	end
+end

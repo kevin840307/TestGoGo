@@ -1,0 +1,6 @@
+--People01 恰恰
+
+function start()
+	Say("n1有人說在大型工廠內正在開發巨型兵器。")
+	Say("n1不知道是不是真的呢？","End")
+end

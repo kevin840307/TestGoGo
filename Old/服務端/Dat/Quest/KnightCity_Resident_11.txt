@@ -1,0 +1,6 @@
+--People01 艾波琳
+
+function start()
+	Say("n1我很想知道在騎士學校那個高高的塔內藏了什麼……")
+	Say("n1我想一定是很貴重的東西！","End")
+end

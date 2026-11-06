@@ -1,0 +1,165 @@
+--SKC31J102 
+
+#include "txt_31102.txt"
+
+function start()
+	SetSkillDefender(GetCallerPtr())
+	Step01()
+end
+
+function Step01()
+	Ask("n"..TXT_AskBasic(),TXT_Yes(),TXT_No(), "Choice_Step01")
+end
+
+function Choice_Step01()
+	if GetChoice() == 0 then
+		Step02()
+	end
+	QuestEnd()
+end
+
+function Step02()
+	Ask("n"..TXT_Which(),TXT_Iron(),TXT_Crystal(),TXT_Grass(),TXT_Other(), "Choice_Step02")
+end
+
+function Choice_Step02()
+	if GetChoice() == 0 then
+		Step05()
+	elseif GetChoice() == 1 then
+		Step06()
+	elseif GetChoice() == 2 then		
+		Step07()
+	else
+		Step03()	
+	end
+end
+
+function Step03()
+	Ask("n"..TXT_Which(),TXT_Wood(),TXT_Fur(),TXT_Fruit(),TXT_Other(), "Choice_Step03")
+end
+
+function Choice_Step03()
+	if GetChoice() == 0 then
+		Step08()
+	elseif GetChoice() == 1 then
+		Step09()
+	elseif GetChoice() == 2 then		
+		Step10()
+	else
+		Step04()	
+	end
+end
+
+function Step04()
+	Ask("n"..TXT_Which(),TXT_Shell(),TXT_Feather(),TXT_Other(),TXT_Leave(), "Choice_Step04")
+end
+
+function Choice_Step04()
+	if GetChoice() == 0 then
+		Step11()
+	elseif GetChoice() == 1 then
+		Step12()
+	elseif GetChoice() == 2 then		
+		Step02()
+	else
+		QuestEnd()
+	end
+end
+
+function Step05()
+	TXT_05()
+	
+	BeforeConagulateID			= 31000
+	AfterConagulateID			= 31001
+	
+	NeedToConagulateNum			= 20
+	MaxUserHoldAfterConagulare	= 299
+	
+	conagilate(BeforeConagulateID,AfterConagulateID,NeedToConagulateNum,MaxUserHoldAfterConagulare)
+end
+
+function Step06()
+	TXT_06()
+	
+	BeforeConagulateID			= 31004
+	AfterConagulateID			= 31005
+	
+	NeedToConagulateNum			= 20
+	MaxUserHoldAfterConagulare	= 299
+	
+	conagilate(BeforeConagulateID,AfterConagulateID,NeedToConagulateNum,MaxUserHoldAfterConagulare)
+end
+
+function Step07()
+	TXT_07()
+	
+	BeforeConagulateID			= 31008
+	AfterConagulateID			= 31009
+	
+	NeedToConagulateNum			= 20
+	MaxUserHoldAfterConagulare	= 299
+	
+	conagilate(BeforeConagulateID,AfterConagulateID,NeedToConagulateNum,MaxUserHoldAfterConagulare)
+end
+
+function Step08()
+	TXT_08()
+	
+	BeforeConagulateID			= 31012
+	AfterConagulateID			= 31013
+	
+	NeedToConagulateNum			= 20
+	MaxUserHoldAfterConagulare	= 299
+	
+	conagilate(BeforeConagulateID,AfterConagulateID,NeedToConagulateNum,MaxUserHoldAfterConagulare)
+end
+
+function Step09()
+	TXT_09()
+	
+	BeforeConagulateID			= 31016
+	AfterConagulateID			= 31017
+	
+	NeedToConagulateNum			= 20
+	MaxUserHoldAfterConagulare	= 299
+	
+	conagilate(BeforeConagulateID,AfterConagulateID,NeedToConagulateNum,MaxUserHoldAfterConagulare)
+end
+
+function Step10()
+	TXT_10()
+	
+	BeforeConagulateID			= 31020
+	AfterConagulateID			= 31021
+	
+	NeedToConagulateNum			= 20
+	MaxUserHoldAfterConagulare	= 299
+	
+	conagilate(BeforeConagulateID,AfterConagulateID,NeedToConagulateNum,MaxUserHoldAfterConagulare)
+end
+
+function Step11()
+	TXT_11()
+	
+	BeforeConagulateID			= 31024
+	AfterConagulateID			= 31025
+	
+	NeedToConagulateNum			= 20
+	MaxUserHoldAfterConagulare	= 299
+	
+	conagilate(BeforeConagulateID,AfterConagulateID,NeedToConagulateNum,MaxUserHoldAfterConagulare)
+end
+
+function Step12()
+	TXT_12()
+	
+	BeforeConagulateID			= 31028
+	AfterConagulateID			= 31029
+	
+	NeedToConagulateNum			= 20
+	MaxUserHoldAfterConagulare	= 299
+	
+	conagilate(BeforeConagulateID,AfterConagulateID,NeedToConagulateNum,MaxUserHoldAfterConagulare)
+end
+
+#include "CoagulateCommon.txt"

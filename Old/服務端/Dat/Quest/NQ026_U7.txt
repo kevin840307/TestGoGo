@@ -1,0 +1,20 @@
+--NQ026_U7
+
+function start()
+    if GetData("ComplexType") ~= 0 then
+        if ItemListCountLeft(0) < 1 then
+            Say("p7身上的物品太多了，清除一些物品再來吧！")
+        else
+            Say("p7在巨靈死亡的一刻，一度魔光在其體內射出．．．")
+            Say("p7開動魔裝機甲的特殊能力！吸收爆炸能量！")
+            AddItem(10557)
+            Say("p7得到靛‧主控制室鎖匙零件。")
+        end
+    else
+        Say("p7在巨靈死亡的一刻，一度魔光在其體內射出，之後發生強烈的爆炸！！！")
+        Say("p3轟隆隆！！")
+        Say("p7受到了嚴重的傷害！")
+        SetData("HP",1)
+        Say("p6噢！可惡的魔物，差點便栽在你的手上．．．")
+    end
+end

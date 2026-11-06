@@ -1,0 +1,28 @@
+function start()
+	if GetFlag("TQ041_B_Step") >= 1 then
+		Step02()
+	else
+		Step01()
+	end
+end
+
+function Step01()
+
+	Say("n1謝謝你的幫忙，我才能夠找到烏洛特金屬完成星之門的工程。 ")
+	SetFlag("TQ041_E_Step",1)
+end
+
+function Step02()
+--//＜After TQ041_B．Step01＞
+	Say("n1小伙子！看來你已經得到國皇的信任，將這麼重要的任務交給你。")
+	Ask("n你已準備好進入星之道嗎？","是的，我已準備好了！","我還需要一點時間。","Step02_Handler")
+end
+
+function Step02_Handler()
+	SetFlag("TQ041_E_Step",2)
+	if GetChoice() == 0 then
+		MovePlayer(8384,6624,69)
+	else
+		QuestEnd()
+	end
+end

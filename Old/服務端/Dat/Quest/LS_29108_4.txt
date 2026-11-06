@@ -1,0 +1,19 @@
+--LS_29108_4 "雷神之轟擊‧四級"
+
+function GetSkillData()
+	return 29108,4,70,31618,"雷神之轟擊‧四級","雷神之轟擊‧三級","銃戰士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 4 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

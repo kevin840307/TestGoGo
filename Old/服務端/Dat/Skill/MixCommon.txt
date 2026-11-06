@@ -1,0 +1,9 @@
+-- Mix Common
+
+function GoMix()
+	if GetData("MP") >= MPNeeded then
+		ModifyData("MP", -MPNeeded)
+		SetSkillDefender(GetCallerPtr())
+		OpenMix(MixPlace, skillname)
+	end
+end

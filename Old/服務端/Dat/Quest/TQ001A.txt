@@ -1,0 +1,74 @@
+--TQ002_A 臨時技能教授
+
+function start()
+	Career = GetData("Career")
+	if GetFlag("基礎攻擊技能")==2 then
+		FinishJob()
+	elseif GetFlag("基礎攻擊技能")==1 then
+		CheckFinish()
+	elseif Career == 0 then
+		Say("n1我可以教你一項項基礎攻擊技能，可是你必須先就職為戰士或魔法師。")
+		Say("n1你先去就職再來找我吧。","End")
+	elseif Career == 9 or Career == 10 then
+		Explain()
+	else
+		Explain()
+	end
+end
+
+function Explain()
+	Say("n1你要學習基礎攻擊技能的話，請你帶一個等級5或以下的朋友．．．")
+	Say("n1和你一起去流星之河中，讓他打倒5隻卡卡鳥。")
+	Say("n1一路上你要保護他的安全，讓他取得卡卡鳥蛋給你。")
+	Say("n1如果你能完成這個試煉，我就教你一項基礎攻擊技能。","End")
+	SetFlag("基礎攻擊技能", 1)
+end
+
+function FinishJob()
+	Say("n1你已經學會了基礎攻擊技能。")
+end
+
+function CheckFinish()
+	if RemoveItem(2004) == 1 then
+		Teach()
+	else
+		Explain()
+	end
+end
+
+function AddAllItem()
+	if Career == 9 then
+		Say("p7得到了技能卷軸　藥水合成‧一級。")
+		Say("p7得到了技能卷軸　材料加工。")
+		AddItem(31663)
+		AddItem(31666)
+	elseif Career == 4 then
+		Say("p7得到了技能卷軸　幻靈咒‧一級。")
+		Say("p7得到了技能卷軸　製彈術‧一級。")
+		AddItem(31587)
+		AddItem(31582)
+	elseif Career == 8 then
+		Say("p7得到了技能卷軸　幻靈咒‧一級。")
+		Say("p7得到了技能卷軸　魔彈術‧一級。")
+		AddItem(31587)
+		AddItem(31625)
+	elseif Career == 1 or Career == 2 or Career == 3 then
+		Say("p7得到了技能卷軸　赤之星‧一級。")
+		Say("p7得到了技能卷軸　鐵之星‧一級。")
+		AddItem(31334)
+		AddItem(31339)
+	elseif Career == 5 or Career == 6 or Career == 7 then
+		Say("p7得到了技能卷軸　暗之力‧一級。")
+		Say("p7得到了技能卷軸　光之盾‧一級。")
+		AddItem(31349)
+		AddItem(31354)
+	end
+end
+
+function Teach()
+	Say("n1很好！我現在就教你兩項技能，好好運用啊！。")
+	AddAllItem()
+	SetFlag("基礎攻擊技能", 2)
+	QuestEnd()
+end
+	

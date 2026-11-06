@@ -1,0 +1,73 @@
+--MQ050_C 魔動爐
+
+--MQ050_Task
+-- 1: quest start, find 大牧師
+-- 2: player get the 魔動爐
+-- 3: player returned the 魔動爐
+
+--MQ050_MPBank
+-- store the total MP Banked
+
+function start()
+	bankMP = GetFlag("MQ050_MPBank")
+	if bankMP>=500 then
+		dialogue_02()
+	elseif ItemListCountLeft(0)<2 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		AddItem(10226)
+	else		
+		totalMP = GetData("MP") + bankMP
+		SetFlag("MQ050_MPBank", totalMP)
+		SetData("MP", 0)
+		if totalMP>=500 then
+			dialogue_01c()
+		else
+			dialogue_01()
+		end
+	end
+end
+
+function dialogue_01()
+	Say("p1這個真是奇怪的東西……")
+	Say("p1把手放上去看看好了……")
+	Say("p3是什麼吸著我的手了！抽不起來！")
+	if random(2)==1 then
+		dialogue_01b()
+	else
+		dialogue_01a()
+	end
+end
+
+function dialogue_01a()
+	Say("p1啊……好累喔。","End")
+end
+
+function dialogue_01b()
+	Say("p3啊！是什麼奇怪的光！好像要爆炸了！走不掉了！！","End")
+	tmpHP = GetData("HP")/2
+	if tmpHP <= 1 then
+		tmpHP = 1
+	end
+	SetData("HP", tmpHP)
+end
+
+function dialogue_01c()
+	Say("p1魔動爐好像掉下了什麼……\n撿來看看……")
+	Say("p1是一粒紅色的水晶！\n這應該就是火依加魯結晶了吧～")
+	Say("p7得到“火依加魯結晶”")
+	Say("p7得到3000EXP","End")
+	AddItem(10226)
+	AddItem(10227)
+	gainexp(3000)
+end
+
+function dialogue_02()
+	Say("p1我才不要再放手上去……","End")
+	AddItem(10226)
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+
+end

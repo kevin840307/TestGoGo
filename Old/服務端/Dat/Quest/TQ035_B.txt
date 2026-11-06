@@ -1,0 +1,40 @@
+--人造魔獸
+--(TQ035_B)
+
+--world flag
+--TQ035_KillCount:count of enemy killed
+
+function start()
+	if GetData("ComplexType")==0 then
+		dia_01()
+	elseif lIsResting()==1 then
+		lUpdateTotal()
+		dia_01()
+	else
+		dia_02()
+	end
+end
+
+--＜玩家不在合體形態＞
+--＜現在不是出征的時間(現實世界星期二中午12時至星期日晚上12時)＞
+function dia_01()
+	Say("p7人造魔獸發出一陣強烈的光芒．．．", "MoveOut")
+end
+
+--＜玩家在合體形態＞
+function dia_02()
+	total = GetWorldFlag("TQ035_KillCount")
+	total = total + 1
+	SetWorldFlag("TQ035_KillCount", total)
+	Say("p7人造魔獸發出一陣強烈的光芒．．．")
+	Say("p7魔裝機甲吸收了這光芒的力量！！！")
+	Say("p7太陽聖戰軍團已經打倒了"..total.."隻人造魔獸！","End")
+end
+
+
+function MoveOut()
+	MovePlayer(10000,10000,15)
+	QuestEnd()
+end
+
+#include "TQ035_Comm.txt"

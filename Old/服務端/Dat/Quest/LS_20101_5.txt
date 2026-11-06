@@ -1,0 +1,19 @@
+--LS_20101_5 "í︹紆き"
+
+function GetSkillData()
+	return 20101,5,25,31328,"í︹紆き","í︹紆","ǎ策臸笆ㄏǎ策臔ㄏǎ策竧艶ㄏǎ策臸喽ㄏ┪ǎ策弘艶ㄏ"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 5 or career == 6 or career == 7 or career == 8 or career == 10 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

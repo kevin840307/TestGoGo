@@ -1,0 +1,14 @@
+--TW005_A
+
+function start()
+    Say("n1您好！歡迎光臨77乳加巧克力專賣店。")
+    Ask("n我們目前正在促銷77乳加巧克力喔！使用後可以增加體力呢，你想購買我們的產品嗎？","是的，我想看看77 乳加巧克力。","不用了！下次再說吧。","whatshop")
+end
+
+function whatshop()
+    if GetChoice() == 0 then
+        OpenShop(31,100)
+    else
+        QuestEnd()
+    end                
+end

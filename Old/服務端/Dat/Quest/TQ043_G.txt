@@ -1,0 +1,14 @@
+function start()
+	if GetFlag("TQ043_E_Step") >= 5 then
+		if ItemListCountLeft(0) < 1 then 
+			Say("p7哎呀，拿不下了，要先處理一些雜物。")
+		elseif GetCountItemCount(10752) >299 then 
+			Say("p7哎呀，拿不下了，要先處理一些雜物。")
+		else	
+			Say("p1這物品拿在手裡會有清涼的感覺，真舒服。")
+			Say("p1還要收集茉莉香及糖蜜給道具使製作出甜點。")      
+			Say("p7得到薄荷。")
+			AddItem(10752)                                    
+		end
+	end
+end                              

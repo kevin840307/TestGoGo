@@ -1,0 +1,184 @@
+--NQ017_A 議會配給守衛
+
+--NQ017_TaskType
+-- 1: 簽名版工作
+-- 2: 送信工作
+
+--NQ017_Task
+-- 1: quest start, do NQ017_TaskType
+-- 2: task finished, go back to get battery
+-- 3: quest completed
+
+--NQ017_Done
+-- 1: quest done at least once
+
+--NQ017_LastBattery
+-- store the last player get the battery
+
+--86400: time for one day - 30min for maintain
+--82800: 1 hr. before he get the battery
+
+function start()
+	batteryLimit = 70
+	status = GetFlag("NQ017_Task")
+	taskType = GetFlag("NQ017_TaskType")
+	if GetFlag("NQ017_Done")==1 then
+		timeLeft = GetRealTime()-GetFlag("NQ017_LastBattery")
+		if timeLeft<82800 then
+			dialogue_05a()
+		elseif timeLeft<86400 then
+			dialogue_05a_2(floor((86400-timeLeft)/60))
+		elseif GetCountItemCount(6901)>=batteryLimit then
+			dialogue_05c()
+		else
+			dialogue_05b()
+		end
+	elseif status==2 then
+		if taskType==1 and RemoveItem(10218)~=1 then
+			-- this case is no 已完成的簽名板
+			dialogue_03a()
+		else
+			dialogue_04()
+		end
+	elseif status==1 then
+		if taskType==1 then
+			dialogue_03a()
+		else
+			dialogue_03b()
+		end
+	elseif GetFlag("NQ016_Done")==1 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1嗯？你有機甲卡嗎？")
+	Say("n1沒有的話，先去弄一張吧，不然不可以配給魔靈電池。", "End")
+end
+
+function dialogue_02()
+	Say("n1你要的是機甲的能源──魔靈電池吧？")
+	Say("n1等一下唷，我正忙著國家的工務，不能去找電池給你。這樣吧你替我完成工作，我便可替你找來電池了。")
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		workType = random(2)
+		SetFlag("NQ017_TaskType", workType)
+		if workType == 1 then
+			dialogue_02a()
+		else
+			dialogue_02b()
+		end
+		SetFlag("NQ017_Task", 1)
+	end
+end
+
+function dialogue_02a()
+	Say("n1你把這個簽名板拿給"..Color(0,45,198).."拉達、沙菈和史堤芬妮"..Color(0,0,0).."，他們都在這個城中。這是給議會確認他們的工作情況的，叫他們簽個名就成。")
+	Say("p7得到“簽名板”", "End")
+	AddItem(10217)
+end
+
+function dialogue_02b()
+	Say("n1嗯～～那請你把這封議會公函送給住在"..Color(0,45,198).."魔法之城附近的亞可"..Color(0,0,0).."便行了。")
+	Say("p7得到“送給亞可的公函”", "End")
+	AddItem(10219)
+end
+
+function dialogue_03a()
+	Say("n1咦？你不是去給拉達、沙菈和史堤芬妮簽名嗎？快去吧。", "End")
+end
+
+function dialogue_03b()
+	Say("n1還不去送信？","End")
+end
+
+function dialogue_04()
+	if GetFlag("NQ17_TaskType")==1 then
+		Say("p7交出“完成了的簽名版”")
+	end
+	Say("n1好，謝謝你，辛苦了。")
+	Say("p7得到200EXP","End")
+	gainexp(200)
+	SetFlag("NQ017_Task", 3)
+	SetFlag("NQ017_Done", 1)
+	Ask("n你想要機甲的能源──魔靈電池嗎？","我想要魔靈電池","還是稍等一會兒。","reply_01")
+end
+
+function dialogue_04a(total)
+	if total>=7 then
+		total = 7
+		SetFlag("NQ017_LastBattery", GetRealTime())
+	else
+		lastTime = GetFlag("NQ017_LastBattery")
+		SetFlag("NQ017_LastBattery", lastTime+(total*86400))
+	end
+	Say("n1好！這是你的魔靈電池喔～")
+	Say("p7得到"..total.."個“魔靈電池”", "End")
+	AddItem(6901,total)
+end
+
+function dialogue_04b(total)
+	Say("n1好！這是你的精靈之約喔～")
+	Say("p7得到"..total.."個“精靈之約”", "End")
+	AddItem(6902,total)
+	SetFlag("NQ017_LastBattery", GetRealTime())
+end
+
+function dialogue_05a()
+	Say("n1機甲的能源已經配給完畢了，明天再來吧！", "End")
+end
+
+function dialogue_05a_2(time)
+	Say("n1快了！快了！還有"..time.."分鐘你便可領取魔靈電池了！", "End")
+end
+
+function dialogue_05b()
+	Ask("n你是來配給魔靈電池的嗎？","對，我是來拿能源的。","啊！我只是剛好經過。","reply_01")
+end
+
+function dialogue_05c()
+	Say("n1唔...你身上已經有太多魔靈電池了，你還是遲些再來吧！", "End")
+end
+
+function dialogue_06()
+	Ask("n你想要魔靈電池嗎？","我想要魔靈電池","還是稍等一會兒。","reply_01")
+end
+
+
+function reply_01()
+	if ItemListCountLeft(4)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		lastTime = GetFlag("NQ017_LastBattery")
+		if lastTime==-1 then
+			total = 1
+			SetFlag("NQ017_LastBattery", GetRealTime()-86400)
+		else
+			total = floor((GetRealTime()-lastTime) / 86400)
+		end
+		if GetChoice()==0 then
+			dialogue_04a(total)
+		else
+--			dialogue_04b(total)
+			QuestEnd()
+		end
+	end
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		dialogue_06()
+	else
+		QuestEnd()
+	end
+end
+
+function gainexp(exp)
+
+	ModifyData("ExpAcc",exp)
+
+end
+

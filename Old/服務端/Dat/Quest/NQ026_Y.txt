@@ -1,0 +1,32 @@
+--NQ026_Y 鬼戰魔獸
+
+function start()
+    if GetData("ComplexType") == 0 then
+        Say("p7在鬼戰魔獸死亡的一刻，一度魔光在其體內射出，之後發生強烈的爆炸！！！")
+        Say("p3轟隆隆！！")
+        Say("p7受到了嚴重的傷害！")
+        SetData("HP",1)
+        Say("p6噢！可惡的魔物，差點便栽在你的手上．．．")
+    else
+        if ItemListCountLeft(0) < 1 then
+            Say("p7身上的物品太多了，清除一些物品再來吧！")
+        else
+            Say("p7在鬼戰魔獸死亡的一刻，一度魔光在其體內射出．．．")
+            Say("p7開動魔裝機甲的特殊能力！吸收爆炸能量！")
+            Say("p7得到 1 個鬼戰魔獸魂")
+            Say("p7這時基地傳來一把瘋狂的叫聲！")
+            Say("p3野花首領‧古羅札克：『哈哈哈！！！需然你打敗了鬼戰魔獸！可是今天你仍然要死在這裡！我現在就要引爆這個基地！就讓這裡成為我們的墳墓吧！！』")
+            Say("p3轟隆隆！！")
+            Say("p3轟隆隆！！")
+            Say("p7正當千均一發之際，收到研究所的通訊．．．")
+            Say("p7蘿莎：『我們現在用傳送衛星光線把你們送回機械之城！！』","GoToFinishQuest")
+        end
+    end        
+end 
+
+function GoToFinishQuest()
+    MovePlayer(14848,7936,17)
+    AddItem(10560)
+    SetFlag("NQ026_Y_STEP",2)
+    SetFlag("NQ026_Done",1)
+end

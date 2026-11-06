@@ -1,0 +1,52 @@
+--NQ009_B  異樣的大樹
+
+
+function start()
+
+	statue=GetFlag("NQ009_Task")
+	done=GetFlag("NQ009_Done")
+	done2 = GetFlag("NQ009_D_Done")
+
+	if done==1 or done2==1 then
+		Say("p1這棵樹下的泥好像剛剛被挖過似的。","End")
+	elseif statue>1 then
+		Say("p1我想不會再收了東西吧？","End")
+
+	elseif statue==1 then	
+		if ItemListCountLeft(0)<1 then
+			Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			if done==1 then
+				Say("p1一定又是這兒吧，我看這兒的泥好像又給人挖過……")
+				Say("p7……")
+				Say("p7……")
+				Say("p3咦？又是一個爛壺？")
+				Say("p1形狀好像有點不同……想去鑑定一下好了。")
+				Say("p7得到破爛的壺","End")
+
+			else
+				Say("p1呵呵……寶藏應該就在這兒了。看這兒的泥好像特別鬆散似的……")
+				Say("p1好，就挖一下，看你有什麼好東西！")
+				Say("p7……")
+				Say("p7……")
+				Say("p1咦？這是什麼？")
+				Say("p7得到破爛的壺")
+				Say("p3嗯？只是一個爛壺嘛！真是垃圾～！")
+				Say("p1算了…總比沒有好……")
+				SetFlag("NQ009_Task",2)
+				Say("p1對了！我應該把這個東西拿去鑑定一下！可能是一個寶貝也說不定…","End")
+			end
+			AddItem(10177)
+			SetFlag("NQ009_Task",2)
+		end
+	else
+		if done==1 then
+			Say("p1我想不會再收了東西吧？","End")
+	
+		else 	
+			Say("p1這棵樹下的泥好像剛剛被挖過似的。","End")
+		end
+
+	end
+
+end

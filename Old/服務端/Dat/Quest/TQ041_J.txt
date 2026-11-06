@@ -1,0 +1,79 @@
+function start()
+	if GetFlag("TQ041_B_Step") >= 1 then
+		if GetFlag("TQ041_B_Step") >= 6 then
+			if GetFlag("TQ041_J_Step") >= 3 then
+				if GetFlag("TQ041_K_Step") >= 1 then
+					Step05()
+				else
+					Step04()
+				end
+			else
+				Step03()
+			end
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("s聽說星之前快要打開了，希望不要有太多人犧牲就好了！")
+	SetFlag("TQ041_J_Step",1)
+end
+
+function Step02()
+--//＜After TQ041_B．Step01＞
+	Say("s在星之道中的魔獸，是由1000年前逃難失敗的人們留下的怨念幻化而成的，戰爭的確非常可怕。")
+	SetFlag("TQ041_J_Step",2)
+end
+
+function Step03()
+
+--//＜After TQ041_B．Step06＞
+	Say("p3山尼茲大人…")
+	Say("s先不要慌張，我們已經知道你的困難，我想以聖女與神溝通的能力，可以查出能量的來源。")
+	Say("s聖女已經準備好接見你…")
+	Ask("n要進入神團聖殿嗎？","是的。","不了。","Step03_Handler")
+end
+
+function Step03_Handler()
+	SetFlag("TQ041_J_Step",3)
+	if GetChoice() == 0 then
+		MovePlayer(1600,2061,5)
+	else
+		QuestEnd()
+	end
+end
+
+function Step04()
+--//＜After TQ041_J．Step03＞
+	Say("s聖女已經準備好接見你…")
+	Ask("n要進入神團聖殿嗎？","是的。","不了。","Step04_Handler")
+end
+
+function Step04_Handler()
+	SetFlag("TQ041_J_Step",4)
+	if GetChoice() == 0 then
+		MovePlayer(1600,2016,5)
+	else
+		QuestEnd()
+	end
+end
+
+function Step05()
+--//＜After TQ041_K．Step01＞
+	Say("s原來大神奧米加也不希望再次發生戰爭的．．．")
+	Say("s聖女已經準備好接見你…")
+	Ask("s要進入神團聖殿嗎？","是的。","不了。","Step05_Handler")
+end
+
+function Step05_Handler()
+	SetFlag("TQ041_J_Step",5)
+	if GetChoice() == 0 then
+		MovePlayer(1600,2016,5)
+	else
+		QuestEnd()
+	end
+end

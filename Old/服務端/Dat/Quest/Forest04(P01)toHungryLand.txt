@@ -1,0 +1,13 @@
+--Forest04(P01) to HungryLand饑餓荒地
+
+function start()
+	Ask("n要進入饑餓荒地嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(10688,8544,44)
+	end
+	QuestEnd()
+end

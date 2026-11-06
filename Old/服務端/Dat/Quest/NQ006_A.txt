@@ -1,0 +1,146 @@
+--NQ006_A  依凱路
+
+
+function start()
+
+
+	statue=GetFlag("NQ006_Task")
+	if CheckItem(10169)>0 then
+		Say("n1嗯？我上次送給你的聖靈盾還沒用嗎？你用了之後找我吧？","End")
+	
+	elseif GetFlag("NQ006_Delay")==1 then
+		if GetData("Bonnet")==10170 then
+			Say("p6等我除了眼鏡還給他先","End")
+		else
+			if ItemListCountLeft(0)<1 then
+				Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			elseif ItemListCountLeft(1)<1 then
+				Say("p7對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+			else
+				ItemID,object=speech(statue)
+				Say("p7得到"..object.." ","End")
+				AddItem(ItemID)
+				Say("p7得到 40Exp","End")
+				gainexp(40)
+			end
+		end
+	
+	elseif statue==3 or statue==4 then
+		Say("n2謝謝你!!!","End")
+
+	elseif statue==1 then
+		if CheckItem(10168)>0 then
+			Say("n1……")
+			Say("p1什麼了？怏吃吧！你不是要出去的嗎？")
+			Say("n1其實我只是裝出來的啦…")
+			Say("p3你不是真的肚痛????")
+			Say("n1我只是不想出去巡遊啦……太陽對我來說太猛烈了……我天生就很容易中暑……所以……")
+			Ask("n對了！不如你代我去巡遊吧？","……唉，好吧！","不行！","response2")
+			
+		else
+			Say("n1......","End")
+			Say("p1請忍耐多一會兒,我現在就立即買肚痛藥回來!!","End")
+	
+		end
+
+	else	
+		if GetFlag("NQ006_Done")==1 then
+			Ask("n哎呀哎呀……我的肚子又痛了！","什麼了？","我正忙著呢！","response1")
+		
+		else
+			Say("n3哎呀哎呀……我的肚子痛得要命！")
+			Ask("n你可不可以幫我一下呀？","什麼了？","我正忙著呢！","response1")
+		end
+	end
+end
+
+
+function response1()
+	
+	if GetFlag("NQ006_Done")==1 then
+	
+		if GetChoice()==0 then
+			Say("p1你這次不是裝出來的吧？")
+			Say("n1不是啦！拜託你啦！幫我買藥……一會我就要出去巡遊了……","End")
+			SetFlag("NQ006_Task",1)
+		
+		else
+
+			Say("n3真沒同情心！","End")	
+		end		
+	else
+		if GetChoice()==0 then
+			SetFlag("NQ006_Task",1)
+			Say("n1我的肚子很痛……！一下我還要去參加巡禮……")
+			Say("p1我幫你去買肚痛藥吧？")
+			Say("n1咦？等……等等耶！")
+			Say("p1什麼了？")
+			Say("n1沒……沒什麼了。")
+			Say("p1那麼請忍耐多一會兒,我現在就立即買肚痛藥回來!!","End")
+			
+		else
+			Say("n3真沒同情心！","End")
+		end
+	end	
+
+
+end
+
+function response2()
+	if ItemListCountLeft(1)<1 then
+		Say("p7對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+	else
+		if GetChoice()==0 then
+			SetFlag("NQ006_Task",3)
+			Say("n2謝謝你！真的太感謝了！")
+			
+		else
+		
+			SetFlag("NQ006_Task",4)
+			Say("n1唉……")
+			Say("n1果然沒人可以幫我嗎……")
+			Say("n7遠處傳來：依凱路！你還沒好嗎？")
+			Say("n7快點！要集合了！")
+			Say("p6……我想我還是幫他好了。")
+			Say("p1唉！算了！我來幫你吧！")
+			Say("n2謝謝你！")
+		
+		end
+
+		Say("n1來！戴上這個之後去找負責巡禮的官員吧！嗯～滿合你的！記著一定要"..Color(0,45,198).."戴上"..Color(0,0,0).."它喔！")
+		Say("n7得到巡遊眼鏡","End")	
+		RemoveItem(10168)
+		AddItem(10170)
+	end
+end
+
+function speech(statue)
+	Say("p1來！這個還給你！巡禮要延遲了。")
+	Say("p7交出巡遊眼鏡")
+	RemoveItem(10170)
+	Say("n3什麼？要延遲了？")
+	Say("n2真是謝天謝地！嗯～～太感謝你了，你幫了我不少…對了對了，為了謝謝你的幫忙，這個東西就送給你吧！")
+	
+	if statue==3 then
+		object="聖靈盾"
+		ItemID=10169
+		Say("n1這個是聖靈盾喔！可以加強你的防禦力的！")
+		
+
+	elseif statue==4 then
+		object="治療特效藥"
+		ItemID=72
+		Say("n1這支藥水很少見唷，好好使用吧！")
+
+	end
+	SetFlag("NQ006_Done",1)
+	SetFlag("NQ006_Task",0)
+	SetFlag("NQ006_Delay",0)
+	return ItemID , object
+end
+
+
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+end

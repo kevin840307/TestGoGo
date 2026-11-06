@@ -1,0 +1,17 @@
+--MagicCity(P02) to MagicCityRooms
+
+function start()
+	Say("n1魔法校園課室尚未開學","End")
+end
+
+function notuse()
+	Ask("n要進入多層魔法嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(1408,1408,10)
+	end
+	QuestEnd()
+end

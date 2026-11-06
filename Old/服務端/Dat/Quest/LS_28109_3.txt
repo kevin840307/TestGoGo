@@ -1,0 +1,19 @@
+--LS_28109_3 "天使的祝福‧三級"
+
+function GetSkillData()
+	return 28109,3,60,31581,"天使的祝福‧三級","天使的祝福‧二級","聖靈使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 7 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

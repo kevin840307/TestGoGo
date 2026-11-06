@@ -1,0 +1,19 @@
+--LS_26105_1 "夜星之力‧一級"
+
+function GetSkillData()
+	return 26105,1,30,31484,"夜星之力‧一級","","魔動使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 5 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

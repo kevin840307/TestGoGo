@@ -1,0 +1,15 @@
+--shop_e4.txt
+
+function start()
+	Ask("s嗨，想找那種書？", "先看戰士的技能捲軸。", "請問魔法書在哪？", "不需要了","reply")	
+end
+
+function reply()
+	ans = GetChoice()
+	if ans==0 then
+		OpenShop(12, 100)
+	elseif ans==1 then
+		OpenShop(13, 100)
+	end
+	QuestEnd()
+end

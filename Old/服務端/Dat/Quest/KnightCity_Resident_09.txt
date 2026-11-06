@@ -1,0 +1,5 @@
+--People01 華天娜
+
+function start()
+	Say("n1每當我想起星之門就快可以建成，我的心就很緊張了。","End")
+end

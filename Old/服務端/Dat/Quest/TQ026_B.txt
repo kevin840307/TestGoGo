@@ -1,0 +1,76 @@
+--TQ026_B 機甲守墓者
+
+function start()
+	Say("p7打倒機甲守墓者之後，英雄狄更斯的靈魂出現對你說…")
+	if GetHorseEquipCountLeft()<3 then
+		step02()
+	else
+		Say("p7如你可以答對我問的3條問題，我便我的機甲交給你…")
+		Ask("p問題1：『我在加米蘭特的人民逃進尼路亞時，曾獨力面對一百隻什麼呢』","一百隻波奇鳥。","一百隻花花立普。","一百隻冰柏古獸。","一百隻古尼獸。","step01_reply")
+	end
+end
+
+function step01_reply()
+	if GetChoice() == 2 then
+		step04()
+	else
+		step03()
+	end
+end
+
+function step02()
+	Say("p7對不起，你身上的坐騎裝備太多了，請清除一些坐騎裝備再來。")
+	Say("p7英雄狄更斯的靈魂在你的眼前消失了。","End")
+end
+
+function step03()
+	Say("p7對不起，你答錯了…")
+	Say("p7英雄狄更斯的靈魂在你的眼前消失了。","End")
+end
+
+function step04()
+	Ask("p問題2：『那麼人們在拜祭我時，會帶著幾多隻冰柏古獸牙呢？』","50隻。","100隻。","150隻。","200隻。","step04_reply")
+end
+
+function step04_reply()
+	if GetChoice()==0 then
+		step05()
+	else
+		step03()
+	end
+end
+
+function step05()
+	Ask("p問題3：『那麼用50隻冰柏古獸牙拜祭我之後，可以得到什麼呢？』","英雄之血。","英雄之心。","英雄之劍。","英雄之魂。","step05_reply")
+end
+
+function step05_reply()
+	if GetChoice()==1 then
+		step06()
+	else
+		step03()
+	end
+end
+
+function step06()
+	Ask("p好小子！果然對我的事跡有些認識，我生前著擁有2套機甲，你是要選擇什麼機甲呢？","神劍機甲。","魔劍機甲。","step06_reply")
+end
+
+function step06_reply()
+	if GetChoice()== 0 then
+		AddItem(6645)
+		AddItem(6646)
+		AddItem(6647)
+	else
+		AddItem(6642)
+		AddItem(6643)
+		AddItem(6644)
+	end
+	RemoveItem(10522)	
+	Say("p7聽到墓中傳來的聲音：『為了同胞的幸福，請好好的利用這套機甲。』","step06b")
+end
+
+function step06b()
+	MovePlayer(6848,3616,7)
+	QuestEnd()
+end

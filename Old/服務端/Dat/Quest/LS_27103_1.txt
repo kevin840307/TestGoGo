@@ -1,0 +1,19 @@
+--LS_27103_1 "加速術‧一級"
+
+function GetSkillData()
+	return 27103,1,20,31514,"加速術‧一級","","見習守護使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 6 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

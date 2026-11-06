@@ -1,0 +1,24 @@
+--TQ013_C Lvup大使
+
+--TQ013_C
+-- 1: Has level up already
+
+function start()
+	if GetFlag("TQ013_C")~=1 then
+		Say("n1你好，歡迎你的參與。")
+		Say("n1讓我幫助你開始你的旅程吧！")
+		Say("p7得到5000元")
+		Say("p7得到160000EXP","End")
+		ModifyData("Money", 5000)
+		gainexp(160000)
+		SetFlag("TQ013_C", 1)
+	else
+		Say("n1做人不可以太過貪心，接下來要靠自己囉！","End")
+	end
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end
+

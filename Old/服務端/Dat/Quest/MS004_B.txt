@@ -1,0 +1,40 @@
+--星之門建造場守衛(MS004_B)
+
+function start()
+	Ask("n要離開星之門建造場嗎？","是的。","不是。","reply_01")
+end
+
+function dialogue_02()
+	Say("n1"..get_title_name().."的"..GetName().."離開星之門建造場，現在已經幫你進行登記程序，請稍等。")
+	Say("n1．．．")
+	Say("n1．．．")
+	Say("n1已經完成了登記程序，你可以離開星之門建造場了。","go_away")
+end
+
+function go_away()
+	MovePlayer(6272,8448,15)
+	QuestEnd()
+end
+
+function reply_01()
+	if GetChoice()==0 then
+		dialogue_02()
+	else
+		QuestEnd()
+	end
+end
+
+function get_title_name()
+	careerType = GetData("Career")
+	if careerType<=3 then
+		return "格靈騎士團"
+	elseif careerType==4 or careerType==8 then
+		return "絲蘭狙擊兵團"
+	elseif careerType<=7 then
+		return "古尼爾魔法軍團"
+	elseif careerType==10 then
+		return "皇家精靈戰團"
+	else
+		return "尼尼亞補給團"
+	end
+end

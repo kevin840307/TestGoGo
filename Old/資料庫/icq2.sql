@@ -1,0 +1,1 @@
+insert into playerdb(game_id, id, constr) values(0,1,'Provider=''sqloledb'';Data Source=''(local)'';Initial Catalog=''game'';User ID=''user'';password=''pass'';Connect Timeout=''60''')

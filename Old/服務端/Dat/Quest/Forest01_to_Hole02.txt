@@ -1,0 +1,18 @@
+--Forest01(古尼爾森林) to Hole02(古代機甲之墓)
+
+function start()
+Say("n1封印之地嚴禁進入","End")
+end
+
+function notuse()
+--下面句子層於13-11-03作出地名修改
+	Ask("n要進古代機甲之墓嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(3968,5376,8)
+	end
+	QuestEnd()
+end

@@ -1,0 +1,13 @@
+--Forest03 to King_City(P01)
+
+function start()
+	Ask("n要進入尼尼亞皇城嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(13952,12544,15)
+	end
+	QuestEnd()
+end

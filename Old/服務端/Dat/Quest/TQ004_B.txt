@@ -1,0 +1,35 @@
+--TQ004B  合成機動偶
+
+function start()
+	
+	statue=GetFlag("TQ004_Task")
+	enemykilled=GetFlag("TQ004B")
+	
+	if enemykilled<0 or enemykilled>5 then
+		enemykilled=0 
+	end
+
+	if statue==1 and enemykilled<5 then
+		if ItemListCountLeft(0)<1 then
+			Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			enemykilled=enemykilled+1
+			SetFlag("TQ004B",enemykilled)
+			
+			if enemykilled == 5 then
+				Say("p7打倒了"..Color(0,45,198).."5"..Color(0,0,0).."隻合成機動偶。")
+				Say("p7得到"..Color(0,45,198).."合成器零件"..Color(0,0,0).."。","End")
+				AddItem(10187)
+			
+			else		
+				Say("p7打倒了"..Color(0,45,198)..""..enemykilled..""..Color(0,0,0).."隻合成機動偶。","End")
+			
+			end
+		end
+	else
+		QuestEnd()
+
+	end
+		
+
+end

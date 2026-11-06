@@ -1,0 +1,186 @@
+--屈原
+
+--TW007_Type
+--TW007_Ans
+--TW007_Level
+--TW007_QID
+
+
+function dia_wrong_level(level)
+	if level <= 20 then
+		place = '機械之城'
+	elseif level <= 40 then
+		place = '尼尼亞皇城'
+	elseif level <= 60 then
+		place = '魔法之都'
+	else
+		place = '騎士之城'
+	end
+	
+	Say("n1你應該去"..place.."找屈原喔！","End")
+end
+function RestartQuest()
+	RemoveFlag("TW007_Type")
+	RemoveFlag("TW007_Ans")
+	RemoveFlag("TW007_Level")
+	RemoveFlag("TW007_QID")
+	RemoveFlag("TW007_B_Task")
+end
+
+function main(city)
+	if GetFlag("TW007_Level")<0 then
+		level=GetData("Level")
+		SetFlag("TW007_Level", level)
+	else
+		level=GetFlag("TW007_Level")
+	end
+
+	if city==0 then
+		if level<=20 then
+			dia_01()
+		else
+			dia_wrong_level(level)
+		end
+	elseif city==1 then
+		if level>20 and level<=40 then
+			dia_01()
+		else
+			dia_wrong_level(level)
+		end
+	elseif city==2 then
+		if level>40 and level<=60 then
+			dia_01()
+		else
+			dia_wrong_level(level)
+		end
+	else
+		if level>60 then
+			dia_01()
+		else
+			dia_wrong_level(level)
+		end
+	end
+end
+
+function dia_01()
+	if GetFlag("TW007_B_Task")>=2 and GetCountItemCount(10681)>0 then
+		dia_09()
+	elseif GetFlag("TW007_B_Task")>=0 then
+		dia_12()
+	else
+		if GetFlag("TW007_Type")<0 then
+			if random(4)==1 then
+				SetFlag("TW007_Type", 0)
+			else
+				SetFlag("TW007_Type", 1)
+			end
+		end
+		dia_03()
+	end
+end
+function dia_03()
+	Say("n1誰…..誰能告訴我答案？")
+	Say("p1花生什麼事情了！")
+	Say("n1花生????")
+	Say("p1啊！不好意思發音不標準，是發生什麼事情了！")
+	Ask("n我手上有一首詩，但有些問題我不知道，你能告訴我答案嗎？","可以啊！看看是什麼問題，我會我一定會幫忙的。", "抱歉沒興趣。","reply_03")
+end
+function reply_03()
+	if GetChoice()==0 then
+		if GetFlag("TW007_Type")==0 then
+			dia_05()
+		else
+			dia_08()
+		end
+	end
+	QuestEnd()
+end
+
+-- type 0
+function dia_05()
+	ansindex, quetype, question, ans1, ans2, ans3, ans4 = RandomQuestion1()
+	SetFlag("TW007_Ans", ansindex)
+	if quetype == 0 then
+		question = question.."\n請問此詩的詩名是哪個?"
+	else
+		question = question.."\n請問此詩的作者是誰? "
+	end
+	Ask("n"..question, ans1, ans2, ans3, ans4, "reply_05")
+end
+function reply_05()
+	if GetChoice() == GetFlag("TW007_Ans") then
+		dia_06()
+	else
+		dia_07()
+	end
+	QuestEnd()
+end
+function dia_06()
+	if ItemListCountLeft(0) < 1 then
+		dia_13()
+	else
+		Say("n1我看一下，嗯！你選的是正確答案……^^ , 來這是給你的禮物。")
+		Say("p7得到端午禮物1個。","End")
+		AddItem (10682)
+	end
+	RestartQuest()
+end
+function dia_07()
+	Say("n1哇！..>*<….選錯了耶，那下次再努力吧。","End")
+	RestartQuest()
+end
+
+-- type 1
+function dia_08()
+	qid=GetFlag("TW007_QID")
+	if qid<0 then
+		qid=RandomQuestion2()
+		SetFlag("TW007_QID", qid)
+	end
+	question = GetQuestion2(qid)
+	Say("n1"..question)
+	Ask("n上面這首詩缺了一個字，可不可以麻煩你去找本城的”集字者”要字？","可以啊！我去看看。","不想去。","reply_08")
+end
+function reply_08()
+	if GetChoice()==0 then
+		SetFlag("TW007_B_Task", 0)
+	end
+	QuestEnd()
+end
+function dia_09()
+	Say("p7交出字的寶盒。")
+	Say("n1你回來啦！辛苦了。咦！怎麼那麼多字ㄚ，到底是哪一個呢？")
+	ansindex, question, ans1, ans2, ans3, ans4 = GetQnA2(GetFlag("TW007_QID"))
+	SetFlag("TW007_Ans", ansindex)
+	Ask("n"..question.."\n請問此詩空格內缺少的是什麼字?", ans1, ans2, ans3, ans4, "reply_09")
+end
+function reply_09()
+	if GetChoice() == GetFlag("TW007_Ans") then
+		dia_10()
+	else
+		dia_11()
+	end
+	RestartQuest()
+end
+function dia_10()
+	if ItemListCountLeft(0) < 1 then
+		dia_13()
+	else
+		Say("n1嗯！你選的是答案，唸起來很順喔……^^ , 來這是給你的禮物。")
+		Say("p7得到端午禮物1個。","End")
+		RemoveItem(10681)
+		AddItem (10682)
+	end
+end
+function dia_11()
+	Say("n1哇！..>*<….一點都不順，下次再加油吧。","End")
+end
+
+function dia_12()
+	Say("n1記得要去找本城的“集字者”要字喔！","End")
+end
+function dia_13()
+	Say("n1身上的物品太多了，還是先整理一下，"..Color(0,45,198).."再來找我重解任務吧。"..Color(0,0,0),"End")
+end
+
+#include "TW007_A_Que.txt"

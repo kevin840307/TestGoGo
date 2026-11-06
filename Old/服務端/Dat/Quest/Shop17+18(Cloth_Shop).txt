@@ -1,0 +1,30 @@
+--Shop17+18 服飾店
+
+function start()
+	dialogue_Welcome()
+end
+
+function dialogue_Welcome()
+	Ask("s歡迎光臨服飾店，這裡有各式各樣的衣服裝備，要看看嗎？","我要看上衣。","我要看下衣。","不要了。","reply_Welcome")
+end
+
+function reply_Welcome()
+	choice = GetChoice()
+	if choice == 0 then
+		if GetData("Career")==9 then
+			OpenShop (17,80)
+		else
+			OpenShop (17,100)
+		end
+	elseif choice == 1 then
+		if GetData("Career")==9 then
+			OpenShop (18,80)
+		else
+			OpenShop (18,100)
+		end
+	else
+		Say("s歡迎下次再光臨。","End")
+	end
+end
+
+

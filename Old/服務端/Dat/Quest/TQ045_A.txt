@@ -1,0 +1,137 @@
+function start()
+	Step01()
+end
+
+function Step01()
+	Ask("n最新的發條龍機甲已成功研製，你想試用嗎？","是啊，請問要怎樣才可得到？","我要知道更多發條龍的資料。","我想索取發條龍試用版。","我只是路過的．．．","Step01_Handler")
+--	＜選項＞
+--	．是啊，請問要怎樣才可得到？→Step02
+--	．我要知道更多發條龍的資料。→Step03
+--	．我想索取發條龍試用版。→Step04
+--	．我只是路過的．．．→Quest End	
+end
+
+function Step01_Handler()
+	if GetChoice() == 0 then
+		Step02()
+	else
+		if GetChoice() == 1 then
+			Step03()
+		else
+			if GetChoice() == 2 then
+				Step04()
+			else
+				QuestEnd()
+			end
+		end
+	end
+end
+
+function Step02()
+	Say("n1購買發條龍需要付出四百元及星果一個。")
+	Ask("n你要購買嗎？","好吧，快拿出來給我。","我沒錢啊。","我還是走路吧。","Step02_Handler")
+--	＜選項＞
+--	．好吧，快拿出來給我。→Step05
+--	．我沒錢啊。→Step06
+--	．我還是走路吧。→Quest End	
+end
+
+function Step02_Handler()
+	if GetChoice() == 0 then
+		Step05()
+	else
+		if GetChoice() == 1 then
+			Step06()
+		else
+			QuestEnd()
+		end
+	end
+end
+
+function Step03()
+	Say("n1發條龍是新研製的代步工具，國民玩家自由到達任何地方，不像皇國鐵路那麼多限制，你可以考慮一下改乘坐發條龍啊。")
+	Say("n1若要得到發條龍機甲，而你還是等級二十的以下的話，我們給你一個特別試用優惠。")
+	Say("n1但日後若想繼續使用，便要付出正常的金額了。")
+	Say("n1在駕駛發龍條時有一些地方需要注意。一、每位玩家身上只限有一隻發條龍。二、坐在發條龍上不能攻擊")
+	Say("n1三、坐在發條龍上不能召喚寵物。四、發條龍不能更換機甲裝備，要好好記著啊。")
+	Step01()
+end
+
+function Step04()
+	if GetFlag("TQ045_Done") == 1 then
+		Step06()
+	else
+		if GetData("Level") > 20 then
+			Step07()
+		else
+			if CheckItem(6005) == 1 or CheckItem(6009) == 1 then
+				Step09()
+			else
+				if ItemListCountLeft(3) < 1 or ItemListCountLeft(4) < 3 then
+					Step08()
+				else
+					Say("n1這就是你的試用裝發條龍，若喜歡使用的話，請多些光顧。")
+					AddItem(6009,1)
+					SetFlag("TQ045_Done", 1)
+				end
+			end
+		end
+	end
+end
+-- Step04
+--	＜內容＞	
+--	＜玩家等級高於20＞→step07
+--	＜玩家身上已有發條龍(6005)＞→step09
+--	＜玩家機甲卡空間少於一或機甲裝備空間少於三＞→Step08
+--	＜玩家已拿取過試用裝發條龍(6009)＞→step09
+--	(n1)這就是你的試用裝發條龍，若喜歡使用的話，請多些光顧。
+--	AddItem(6009)	
+
+function Step05()
+	if CheckItem(6005) == 1 then
+		Step09()	
+	else
+		if ItemListCountLeft(3) < 1 or ItemListCountLeft(4) < 3 then
+			Step08()
+		else
+			if GetData("Money") < 400 or GetCountItemCount(31020) < 1 then
+				Step10()
+			else
+				Say("n1這是你的發條龍，謝謝光顧。")
+	
+				ModifyData("Money",-400)
+				RemoveItem(31020)		
+				AddItem(6005,1)
+			end
+		end
+	end
+end
+--Step05
+--	＜內容＞		
+--	＜玩家身上已有發條龍(6005)＞→step09
+--	＜玩家機甲卡空間少於一或機甲裝備空間少於三＞→Step08
+--	＜玩家沒有5000玩或魔靈小電池(6909)3個＞→Step10
+--	(n1)這是你的發條龍，謝謝光顧。
+--	＜取去玩家身上的5000元及魔靈小電池(6909)3個＞
+--	AddItem(6005,1)	
+
+function Step06()
+	Say("n1若你是等級二十以下，可以領取一個發條龍試用版。")
+	Say("n1但你若是高於等級二十的話，請積極儲存金錢再來吧。")
+end
+
+function Step07()
+	Say("n1對不起，只有等級二十以下的國民才可以索取試用版發條龍。")
+end
+
+function Step08()
+	Say("n1你沒有足夠的機甲空間來容納發條龍，請你先整理行裝。")
+end
+
+function Step09()
+	Say("n1你已經擁有發條龍了。")
+end
+
+function Step10()
+	Say("n1你並沒有四百元及星果一個，請準備好了再來找我。")
+end

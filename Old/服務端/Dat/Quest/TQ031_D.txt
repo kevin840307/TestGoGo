@@ -1,0 +1,81 @@
+--熱血之花
+--(TQ031_D)
+
+--TQ031_C
+--1. Talked with 花之魔藥師
+--2. Got the flower
+
+#include "CommTeam.txt"
+
+function start()
+	if GetFlag("TQ031_C") < 1 then
+		dia_01()
+	elseif CheckItem(10633)>0 then
+		dia_06()
+	else
+		--12= win, 200 is range
+		total_eMember = GetTeamEmotion(12)
+		if total_eMember >= 5 then
+			if IsTeamCloseTo(7808,6720,44, 250) >0 then
+				dia_04()
+			else
+				Say("p1這就是熱血之花吧！？")
+				Say("p1隊員們，再走近一黠吧～","End")
+			end
+		elseif total_eMember >0 then
+			dia_03()
+		else
+			dia_02()
+		end
+	end
+end
+
+function dia_01()
+	Say("p7好古怪的花．．．","End")
+end
+
+--＜After TQ031_C Step02＞
+--＜團隊中沒有人在指定範圍做出勝利動作＞
+function dia_02()
+	Say("p1這就是熱血之花吧！？")
+	Say("p1它果然沒有開花啊．．．","End")
+end
+
+--＜After TQ031_C Step02＞
+--＜團隊中有人在指定範圍做出勝利動作，但人數少於5＞
+function dia_03()
+	Say("p1這就是熱血之花吧！？")
+	Say("p3大家來擺出勝利的姿態吧！！")
+	Say("p1．．．．．．")
+	Say("p1．．．．．．")
+	Say("p1它還沒有開花啊．．．是不是人數不足呢！？","End")
+end
+
+--＜After TQ031_C Step02＞
+--＜團隊中有人在指定範圍做出勝利動作，且人數等於5＞
+function dia_04()
+--＜玩家身上沒有足夠空間得到熱血之花(10633)＞→Step05
+	if ItemListCountLeft(0)<1 then
+		dia_05()
+	else
+		Say("p7這就是熱血之花吧！？")
+		Say("p3大家來擺出勝利的姿態吧！！")
+		Say("p1．．．．．．")
+		Say("p1．．．．．．")
+		Say("p3它開花了啊！")
+		Say("p7得到熱血之花。","End")
+		AddItem(10633)
+		SetFlag("TQ031_C", 2)
+	end
+end
+
+function dia_05()
+	Say("p7身上沒有足夠的物品空間啊．．．先整理一下好了。","End")
+end
+
+--＜玩家身上持有熱血之花(10633)＞
+function dia_06()
+	Say("p7不要過度採集啊！","End")
+end
+
+

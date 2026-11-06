@@ -1,0 +1,92 @@
+--盧杜(MQ007_B)
+
+--MQ007_Task
+--1 quest start
+--2 already talk with 盧杜
+--3 talked with 芬娜
+--4 given the 灰紅之石
+--5 asked to find  小紅晶石
+--6 given the 小紅晶石
+--7 asked to find  小黃晶石
+--8 got the 聖水
+--9 quest completed
+
+function start()
+	status = GetFlag("MQ007_Task")
+	status8 = GetFlag("MQ008_Task")
+	if status8>=1 then
+		if status8>=9 then
+			dialogue_06()
+		elseif status8>=8 then
+			dialogue_05()
+		elseif status8>=2 then
+			if GetCountItemCount(10029)>0 then
+				dialogue_04()
+			else
+				dialogue_03()
+			end
+		else
+			dialogue_02()
+		end
+	elseif status>=1 then
+		if status>=9 then
+			dialogue_06()
+		elseif status>=8 then
+			dialogue_05()
+		elseif status>=2 then
+			if GetCountItemCount(10029)>0 then
+				dialogue_04()
+			else
+				dialogue_03()
+			end
+		else
+			dialogue_02()
+		end
+	else
+		dialogue_01()
+	end
+end
+
+--<任務未開始>
+function dialogue_01()
+	Say("n1記著要是有什麼問題，都要發問。","End")
+end
+
+--<任務開始時>
+function dialogue_02()
+	Say("p1學長！")
+	Say("n1什麼？")
+	Say("p1請問你知道什麼是“灰紅色聖水”嗎？")
+	Say("n1灰紅色聖水…？應該是轉職用的東西吧？")
+	Say("p7點點頭")
+	Say("n1灰紅色聖水應該要製作的，而材料是灰紅之石…")
+	Say("p1灰紅之石？")
+	Say("n1嗯，應該在"..Color(0,45,198).."淡火貓咪"..Color(0,0,0).."的身上，前陣子我在"..Color(0,45,198).."流星之河"..Color(0,0,0).."好像見到有淡火貓咪出沒，你不妨去找找。")
+	Say("p1可是，怎麼調製呢？")
+	Say("n1"..Color(0,45,198).."芬娜"..Color(0,0,0).."應該可以幫到你的，快去找吧。","End")
+	if GetFlag("MQ007_Task")>0 then
+		SetFlag("MQ007_Task", 2)
+	else
+		SetFlag("MQ008_Task", 2)
+	end
+end
+
+--<任務進行中>
+function dialogue_03()
+	Say("n1灰紅之石可以在淡火貓咪身上找到，前陣子我在流星之河好像見到有"..Color(0,45,198).."淡火貓咪"..Color(0,0,0).."出沒。","End")
+end
+
+--<得到灰紅之石後>
+function dialogue_04()
+	Say("n1要調製灰紅色聖水，你可以找"..Color(0,45,198).."芬娜"..Color(0,0,0).."幫忙。","End")
+end
+
+--<完成條件後>
+function dialogue_05()
+	Say("n1快交給老師吧！","End")
+end
+
+--<任務完成後>
+function dialogue_06()
+	Say("n1嗯……恭喜你轉職了！","End")
+end

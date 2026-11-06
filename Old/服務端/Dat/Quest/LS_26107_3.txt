@@ -1,0 +1,19 @@
+--LS_26107_3 "闇黑魔獸‧三級"
+
+function GetSkillData()
+	return 26107,3,50,31496,"闇黑魔獸‧三級","闇黑魔獸‧二級","魔動使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 5 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

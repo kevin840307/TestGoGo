@@ -1,0 +1,5 @@
+--People01 古格
+
+function start()
+	Say("n1聖女大人是我們心中的女神，只要能看她一眼我已滿足了。","End")
+end

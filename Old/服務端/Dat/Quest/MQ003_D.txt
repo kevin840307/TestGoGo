@@ -1,0 +1,26 @@
+--魔物柏古(MQ003_D)
+
+--MQ003_Task
+--1 Quest started
+
+--MQ004_Task
+--1 Quest started
+
+--MQ003_Blood
+--1 already get the stone
+
+function start()
+	if GetFlag("MQ003_Task")>=1 or GetFlag("MQ004_Task")>=1 then
+		if GetFlag("MQ003_Blood")<1 then
+			if ItemListCountLeft(0)<1 then
+				Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				Say("p7得到「魔物之血」")
+				Say("p1嗯…這些血黏糊糊的，真是嘔心。","End")
+				AddItem(10007)
+				SetFlag("MQ003_Blood", 1)
+			end
+		end
+	end
+	QuestEnd()
+end

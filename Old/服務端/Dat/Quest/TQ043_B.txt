@@ -1,0 +1,118 @@
+function start()
+	if GetFlag("TQ043_A_Step") >= 3 then
+		if GetFlag("TQ043_B_Step") >= 2 then
+			if GetFlag("TQ043_A_Step")>=9 then
+				if GetFlag("TQ043_B_Step") >= 4 then
+					if GetFlag("TQ043_D_Step") >=9 then
+						if GetFlag("TQ043_B_Step")>=6 then
+							if GetFlag("TQ043_C_Step") >= 6 then
+								Step08()
+							else
+						    	Step07()
+						    end
+						else
+							Step06()
+						end
+					else
+						Step05()
+					end
+				else
+					Step04()
+				end
+			else
+				Step03()
+			end
+		else		
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("n1最近好像有什麼不妥當，看來我要加強收集情報了。")
+end
+
+function Step02()
+--＜After TQ043_A．function Step03＞
+	Say("n1『"..GetName().."』，為什麼你氣急敗壞的樣子，是不是發生了什麼事。")
+	Say("p3將軍，大事不妙了，請快快封鎖天空島。")
+	Say("n1要封鎖任何地區，只有國王及皇子才有這個權力我只是一個將軍，沒有下令封鎖的權力，是發生了什麼事？")
+	Say("p1天空島中給魔物入侵了，而且聖獸亦會襲擊人民，已經有人民因此而傷亡。")
+	Say("n1情況嚴重，這件事不能遲的，你快準備去見國王陛下。")
+	SetFlag("TQ043_B_Step",2)
+end
+
+function Step03()
+--＜After TQ043_B．function Step02＞
+	Ask("n你是不是已經準備好去見國王陛下？","是的","不是","Step03_Handler")
+--＜選項＞
+--．是的→MovePlayer (11136,2944,88)
+--．不是→Quest End
+end
+
+function Step03_Handler()
+	if GetChoice() == 0 then
+		SetFlag("TQ043_B_Step",3)
+		MovePlayer(11136,2944,88)
+	else
+		QuestEnd()
+	end
+end
+
+function Step05_Handler()
+	if GetChoice() == 0 then
+		SetFlag("TQ043_B_Step",5)
+		MovePlayer(11136,2944,88)
+	else
+		QuestEnd()
+	end
+end
+
+function Step07_Handler()
+	if GetChoice() == 0 then
+		SetFlag("TQ043_B_Step",7)
+		MovePlayer(11136,2944,88)
+	else
+		QuestEnd()
+	end
+end
+function Step04()
+--＜After TQ043_A．function Step09＞
+	Say("p1將軍，我回來了，我看到天使。")
+	Say("n1怎麼了，天使？你有沒有受傷。")
+	Say("p1不，我也只是懷疑他是天使，請將軍領我去晉見國王陛下。")
+	Say("n1我先去安排，你準備妥當再來找我。")
+	SetFlag("TQ043_B_Step",4)
+end
+
+function Step05()
+--＜After TQ043_B．function Step04＞
+	Ask("n你是不是已經準備好去見國王陛下？","是的","不是","Step05_Handler")
+--＜選項＞
+--．是的→MovePlayer (11136,2944,88)
+--．不是→Quest End
+end
+
+
+function Step06()
+--＜After TQ043_D．function Step09＞
+	Say("p1將軍，事情又有新發展了，請領我去晉見國王陛下。")
+	Say("n1我先去安排，你準備妥當再來找我。")
+	SetFlag("TQ043_B_Step",6)
+end
+
+function Step07()
+--＜After TQ043_B．function Step06＞
+	Ask("n你是不是已經準備好去見國王陛下？","是的","不是","Step07_Handler")
+--(N)你是不是已經準備好去見國王陛下？
+--＜選項＞
+--．是的→MovePlayer (11136,2944,88)
+--．不是→Quest End
+end
+function Step08()
+--＜After TQ043_C．function Step06＞
+	Say("n1我已收到國王陛下的命令，若日後需要協助，我們會繼續為你作出支援。")
+	SetFlag("TQ043_B_Step",8)
+end

@@ -1,0 +1,19 @@
+--LS_23104_1 "炎之力‧一級"
+
+function GetSkillData()
+	return 23104,1,30,31374,"炎之力‧一級","","靈鬥士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 1 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

@@ -1,0 +1,16 @@
+function start()
+	Ask("n需要回復生命與魔力嗎?","是的","不需要了","Ans")
+end
+
+function Ans()
+	choice = GetChoice()
+	MaxHP = GetData("HPMAX")
+	MaxMP = GetData("MPMAX")
+	if choice == 0 then
+		Say("n1已回復生命與魔力了。")
+		SetData("HP", MaxHP)
+		SetData("MP", MaxMP)
+	else
+	QuestEnd()
+	end
+end

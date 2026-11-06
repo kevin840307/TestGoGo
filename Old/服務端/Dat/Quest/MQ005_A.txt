@@ -1,0 +1,125 @@
+--艾文(MQ005_A)
+
+--MQ005_Task
+--1 quest start
+--2 already talked with student
+--3 quest done
+
+function start()
+	if GetData("Career")==7 and GetData("Level")>=40 then
+		status = GetFlag("MQ005_Task")
+		if status >= 3 then
+			dialogue_05()
+		elseif status >= 1 then
+			if GetCountItemCount(10026)>=1 then
+				dialogue_04()
+			else
+				dialogue_03()
+			end
+		else
+				dialogue_02()
+		end
+	else
+		dialogue_01()
+	end
+end
+
+--<玩家條件不附合>
+function dialogue_01()
+	Say("n1聖靈魔法，速度是很重要的哦！")
+	Say("p1是這樣嗎？")
+	Say("n1嗯，沒錯，你看我的杖。")
+	Say("n7只見艾文老師的杖快打到自己身上")
+	Say("p7嚇…！")
+	Say("n1哈哈哈，真是有趣！")
+	Say("n7老師繼續研究起魔法來。","End")
+end
+
+--<條件附合>
+function dialogue_02()
+	Say("n7這是一位年輕的老師，叫作艾文。他使用魔法時速度非常之快，是在學院中非常有名的。")
+	Say("p1老師，你的工作是做什麼的？")
+	Say("n1嗯，你知道聖靈使沒有？這是最著重快而準的職業喔！我可是這個工作的老師！我可以操縱風的力量，暴風聖獸也在守護著我們。")
+	Say("p7玩家點點頭。")
+	Say("n1聖靈使的速度很快，而且攻擊時很準確，可說是快而準的喔！不過可是這樣，但是我們的魔法攻擊會比其他職業弱一點點，")
+	Say("n1不過呢，我們的魔法又快又準，很好用的啊！還有還有，我們魔法力的來源是大氣中的"..Color(0,45,198).."“風之依加魯能量微粒”"..Color(0,0,0).."的。")
+	Ask("n說起來，有什麼事了嗎？","我想成為聖靈使！","想來聽聽聖靈使的工作日程而已。","reply_02")
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		dialogue_02a()
+	else
+		dialogue_02b()
+	end
+end
+
+--選項：「我想成為聖靈使！」
+function dialogue_02a()
+	Say("n1嗯，速度果然很是吸引吧？而要當聖靈使之前，必須要有"..Color(0,45,198).."靈金彈"..Color(0,0,0).."才行。")
+	Say("p1嗯？靈金彈？什麼來的啊？")
+	Say("n1嗯…我不可以說給你知道呢，所有人都應該自己去找，不過，應該會有學生會知道喔…","End")
+	SetFlag("MQ005_Task",1)
+end
+
+--<選：「想來聽聽聖靈使的工作日程而已。」>
+function dialogue_02b()
+	Say("n1原來是這樣，你考慮一下當聖靈使吧。","End")
+end
+
+--<玩家接下此任務後>
+function dialogue_03()
+	Say("n1加油喔！"..Color(0,45,198).."靈金彈"..Color(0,0,0).."應該不會很難拿到才對。","End")
+end
+
+--<完成條件後>
+function dialogue_04()
+	Ask("n很好！你確定要成為聖靈使了？","是的！","我要再考慮一下。","reply_04")
+end
+
+function reply_04()
+	if GetChoice()==0 then
+		dialogue_04a()
+	else
+		dialogue_04b()
+	end
+end
+
+--<選 是的！>
+function dialogue_04a()
+	Say("n1看著吧。")
+	Say("n7只見艾文把靈金彈放在桌上，再加幾個動作，一陣奇怪的閃光就突然發出！此時眼前突然一亮，你感覺到被風之依加魯能量微粒包圍著。")
+	Say("n1你已經是聖靈使了！這把屠龍魔杖就送給你吧，就當作是獎勵。")
+	if ItemListCountLeft(1)<1 then
+			Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+	else
+		Say("p7得到850Exp")
+		Say("p7得到「聖靈使」的稱號")
+		Say("p7得到「屠龍魔杖」","dialogue_04a2")
+	end
+end
+function dialogue_04a2()
+	RemoveItem(10026)
+	SetFlag("MQ005_Task", 3)
+	SetFlag("MQ005_Done", 1)
+	gainexp(850)
+	AddTitle(19)
+	AddJob(2)
+	AddItem(8349)
+	QuestEnd()
+end
+
+--<選　我要再考慮一下。>
+function dialogue_04b()
+	Say("p7好好考慮清楚囉。","End")
+end
+
+--<任務完成後>
+function dialogue_05()
+	Say("p7快而準的魔法很重要，多點練習才可以得到成果！","End")
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end

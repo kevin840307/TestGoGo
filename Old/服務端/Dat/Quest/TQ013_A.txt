@@ -1,0 +1,33 @@
+--TQ013_A 合成王
+
+function start()
+	if GetCountItemCount(10048)>=60 and CheckItem(10193)>0 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1只要你們的隊長取得"..Color(0,45,198).."60個古尼獸甲殼"..Color(0,0,0).."來，我便可將之合成為古尼結晶石。","End")
+end
+
+function dialogue_02()
+	Ask("n要合成古尼結晶石嗎？","是的","不是","reply_02")
+end
+
+function reply_02()
+	choice = GetChoice()
+	if choice == 0 then
+		if ItemListCountLeft(0)<1 then
+			Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			RemoveItem(10048, 60)
+			Say("p7得到“古尼結晶石”","End")
+			AddItem(10254)
+		end
+	else
+		QuestEnd()
+	end
+end
+

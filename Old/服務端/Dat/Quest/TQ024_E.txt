@@ -1,0 +1,9 @@
+--情人卡(TQ024E)
+
+function start()
+	Say("p7送給親愛的“"..GetName().."”：\n我愛你＞３＜。\n愛你的上。”","showpic")
+	AddItem(10467)
+end
+function showpic()
+	Say("m#X_mas_card\\EVENT_CARD02.spr#na##","End")
+end

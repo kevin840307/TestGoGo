@@ -1,0 +1,106 @@
+--流程說明	煙火管理員
+--(EQ010_B)
+
+function start()
+	if GetFlag("EQ010_A_Step") >= 3 then
+		if GetFlag("EQ010_B_Step") >= 3 then
+			if GetFlag("EQ010_D_Step") >= 1 then
+				if GetFlag("EQ010_B_Step") >= 6 then
+					Step09()
+				else
+					Step05()
+				end
+			else
+				Step04()
+			end
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("n1這次要令所有市民都失望了")
+	SetFlag("EQ010_B_Step",1)
+end
+
+function Step02()
+--<After EQ010_A Step03>
+	Say("n1怎麼辦，這件事我如何承擔得起。")
+	Say("p3快快告訴我知道，發生了什麼事，我今晚已約了朋友觀看火花了。")
+	Say("n1是一個魔法師，他惡作劇的使所有花火都燒不起")
+	Say("n1還說要解咒，就必須有他的頭髮和花火一起燒才可以。")
+	Ask("n而且之前的引爆材料都壞了，所以還要有三條花花立普羽毛及烈甲彈給我做材料引爆花火。","可惡，我要找她的頭髮來解咒。","那麼只好算了吧，約會要取消了。","Step02_Handler")
+--＜選項＞
+--．可惡，我要找她的頭髮來解咒。→Step03
+--．那麼只好算了吧，約會要取消了。→Quest End
+end
+
+function Step02_Handler()
+	if GetChoice() == 0 then
+		Step03()
+	else
+		SetFlag("EQ010_B_Step",2)
+		QuestEnd()
+	end
+end
+
+function Step03()
+	Say("n1他在的地方很隱密的，要找也不容易。")
+	Say("n1你儘管問一問魔法之都中的『青青河』吧，她是和魔女有接觸而有友善的人。")
+	Say("n1得到魔女頭髮後，記得還要帶三條花花立普羽毛及烈甲彈給我做材料啊。")
+	Say("p3好，我立即出發去看看。")
+	SetFlag("EQ010_B_Step",3)
+end
+
+function Step04()
+--<After EQ010_B Step03>
+	Say("n1若未能找到魔法之都中的『青青河』幫忙，也只好取消花火活動。但即使你能打敗魔女，一時間又如何收集三條花花立普羽毛及烈甲彈，唉。")
+	Say("p3不行，等我回來再說。")
+	SetFlag("EQ010_B_Step",4)
+end
+
+function Step05()
+--<After EQ010_D Step01>
+--＜玩家身上持有魔女頭髮(10732)、三條花花立普羽毛(10061)及烈甲彈(193)＞
+--＜玩家身上裝備空間少於1＞→Step08
+	if CheckItem(10732) == 1 and CheckItem(193) == 1 and GetCountItemCount(10061) >= 3 then
+		if ItemListCountLeft(1) < 1 then
+			Step08()
+		else
+			Say("n2你是真的解決了那魔法師嗎，太棒了，今晚的花火活動可以如期舉行了。")
+			Say("n1這個是給你的，希望你和你的朋友今晚好好欣賞花火。")
+			if GetData("Race") <= 2 then
+				Step06()
+			else
+				Step07()
+			end
+--＜玩家是人類及米古族＞- Step06
+--＜玩家是機動靈＞－Step07
+		end
+	else
+		Say("n1這得到魔女頭髮後，記得還要帶三條花花立普羽毛及烈甲彈給我做材料啊。")
+	end
+end
+
+function Step06()
+	Say("n7得到『吱吱雞頭飾』")
+	SetFlag("EQ010_B_Step",6)
+	AddItem(10733)
+end
+
+function Step07()
+	Say("n7得到『紙袋頭飾』")
+	SetFlag("EQ010_B_Step",7)
+	AddItem(10734)
+end
+
+function Step08()
+	Say("p7身上的裝備太多了，還是先整理一下吧！")
+end
+
+function Step09()
+	Say("p7花火觀賞匯演快要開始了。")
+end

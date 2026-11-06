@@ -1,0 +1,622 @@
+--K27001_A  皇家侍衛
+
+function response1()
+	choice=GetChoice()
+	if choice==0 then
+		Say("n1很抱歉，由於就職必須“皇家就職師－古尼達博士”認可才能就職，但他去了搜集研究資料，所以暫時不能讓你就職啊。")
+		Say("n1若你急著要就職，便必須要親自找他了。")
+		Say("n1有人說古尼達博士沿尼尼亞皇城南下了，你可以往那兒找找。","End")
+		SetFlag("K27001_Task",1)
+		SetFlag("K27001_Start",1)
+	else 
+		Say("n1若你需要就職，歡迎你隨時回來。","End")
+	end
+end
+
+function response2()
+	choice=GetChoice()
+	if choice==0 then
+		AskingCareer()
+	else
+		AskingUpdatingCareer()	
+	end
+end
+
+function AskingCareer()
+	--Ask ("n你想查詢的資料是？","有關戰士系的資料。","有關魔法系的資料。","有關道具使的資料。","有關精靈使的資料。","choosecareer")
+	Ask ("n你想查詢的資料是？","有關戰士系的資料。","有關魔法系的資料。","有關道具使的資料。","choosecareer")
+end
+
+function AskingUpdatingCareer()
+	--Ask ("n你想就職的職業是？","戰士系的職業。","魔法系的職業。","其他職業。","還是多考慮一會。" , "promotion")
+	Ask ("n你想就職的職業是？","戰士系的職業。","魔法系的職業。","道具使。","還是多考慮一會。" , "promotion")
+end
+
+function promotion()
+	choice=GetChoice()
+	race=GetData("Race")
+
+	if choice==0 then
+		PromoteToFighter(race)
+
+	elseif choice==1 then
+		PromoteToMagic(race)
+		
+	elseif choice==2 then
+		--Ask("n你想就職的職業是？","道具使。","精靈使。","還是多考慮一會。","PromoteToOther")
+		Ask("n你決定就職成為“見習道具使”嗎？","對，我願意就職為\“見習道具使\”。","還是多考慮一會。","ConfirmItem")
+	else
+		QuestEnd()
+	end
+end
+
+
+function PromoteToOther()
+	choice=GetChoice()
+	if choice==0 then
+		Ask("n你決定就職成為“見習道具使”嗎？","對，我願意就職為\“見習道具使\”。","還是多考慮一會。","ConfirmItem")
+	elseif choice==1 then
+		Ask("n你決定就職成為“見習精靈使”嗎？","對，我願意就職為\“見習精靈使\”。","還是多考慮一會。","ConfirmDobby")
+	else 
+		QuestEnd()
+	end
+end
+
+
+function PromoteToFighter(race)
+	if race==0 or race==1 then
+		Ask("n你想就職的戰士是？","守護劍士。","銃戰士。","還是多考慮一會。","PTFR0R1")
+	
+	elseif race==2 then
+		Ask("n你想就職的戰士是？","聖劍士。","銃戰士。","還是多考慮一會。","PTFR2")
+	else
+		Ask("n你想就職的戰士是？","靈鬥士。","銃戰士。","還是多考慮一會。","PTFR3")
+	end
+end
+
+function PTFR0R1()
+	choice=GetChoice()
+	if choice==0 then
+		Ask("n你決定就職成為\“見習守護劍士\”嗎？","對，我願意就職為\“見習守護劍士\”。","還是多考慮一會。","ConfirmFighterType1R0R1")
+
+	elseif choice==1 then
+		Ask("n你決定就職成為\“見習銃戰士\”嗎？","對，我願意就職為\“見習銃戰士\”。","還是多考慮一會。","ConfirmFighterType2RALL")
+
+	else
+		QuestEnd()
+	end
+end
+
+function PTFR2()
+	choice=GetChoice()
+	if choice==0 then
+		Ask("n你決定就職成為\“見習聖劍士\”嗎？","對，我願意就職為\“見習聖劍士\”。","還是多考慮一會。","ConfirmFighterType1R2")
+	elseif choice==1 then
+		Ask("n你決定就職成為\“見習銃戰士\”嗎？","對，我願意就職為\“見習戰銃士\”。","還是多考慮一會。","ConfirmFighterType2RALL")
+
+	else
+		QuestEnd()
+	end
+end
+
+function PTFR3()
+	choice=GetChoice()
+	if choice==0 then
+		Ask("n你決定就職成為\“見習靈鬥士\”嗎？","對，我願意就職為\“見習靈鬥士\”。","還是多考慮一會。","ConfirmFighterType1R3")
+	elseif choice==1 then
+		Ask("n你決定就職成為\“見習銃戰士\”嗎？","對，我願意就職為\“見習戰銃士\”。","還是多考慮一會。","ConfirmFighterType2RALL")
+
+	else
+		QuestEnd()
+	end
+end
+
+
+function ConfirmFighterType1R0R1()
+	choice=GetChoice()
+	if choice==0 then
+		name=GetName()
+		Say("n1以吾皇之名，星空引以為證，"..name.."於始進入守護劍士之門廊，成為\“見習守護劍士\”。")
+		Say("p7得到"..Color(0,45,198).."見習守護劍士"..Color(0,0,0).."稱號")
+		Say("p7就職為"..Color(0,45,198).."見習守護劍士")
+		SetFlag("K27001_End",1)
+		if HasTitle(2)~=1 then
+			AddTitle(2)
+		end
+		SetData("Title",2)
+		SetCareer(2,1)
+		SetFlag("K27001_END",1)
+	end
+	QuestEnd()
+end
+
+function ConfirmFighterType1R2()
+	choice=GetChoice()
+	if choice==0 then
+		name=GetName()
+		Say("n1以吾皇之名，星空引以為證，"..name.."於始進入聖劍士之門廊，成為\“見習聖劍士\”。")
+		Say("p7得到"..Color(0,45,198).."見習聖劍士"..Color(0,0,0).."稱號")
+		Say("p7就職為"..Color(0,45,198).."見習聖劍士")
+		SetFlag("K27001_End",1)
+		if HasTitle(3)~=1 then
+			AddTitle(3)
+		end
+		SetData("Title",3)
+		SetCareer(3,1)
+		SetFlag("K27001_END",1)
+	end
+	QuestEnd()
+end
+
+function ConfirmFighterType1R3()
+choice=GetChoice()
+	if choice==0 then
+		name=GetName()
+		Say("n1以吾皇之名，星空引以為證，"..name.."於始進入靈鬥士之門廊，成為\“見習靈鬥士\”。")
+		Say("p7得到"..Color(0,45,198).."見習靈鬥士"..Color(0,0,0).."稱號")
+		Say("p7就職為"..Color(0,45,198).."見習靈鬥士")
+		SetFlag("K27001_End",1)
+		if HasTitle(1)~=1 then
+			AddTitle(1)
+		end
+		SetData("Title",1)
+		SetCareer(1,1)
+		SetFlag("K27001_END",1)
+	end
+	QuestEnd()
+end
+
+function ConfirmFighterType2RALL()
+	choice=GetChoice()
+	if choice==0 then
+		name=GetName()
+		Say("n1以吾皇之名，星空引以為證，"..name.."於始進入銃戰士之門廊，成為\“見習銃戰士\”。")
+		Say("p7得到"..Color(0,45,198).."見習銃戰士"..Color(0,0,0).."稱號")
+		Say("p7就職為"..Color(0,45,198).."見習銃戰士")
+		SetFlag("K27001_End",1)
+		if HasTitle(4)~=1 then
+			AddTitle(4)
+		end
+		SetData("Title",4)
+		SetCareer(4,1)
+		SetFlag("K27001_END",1)
+	end
+	QuestEnd()
+end
+
+function PromoteToMagic(race)
+	if race==0 or race==1 then
+		Ask("n你想就職的魔法使是？","守護使。","魔銃使。","還是多考慮一會。","PTMR0R1")
+	
+	elseif race==2 then
+		Ask("n你想就職的魔法使是？","聖靈使。","魔銃使。","還是多考慮一會。","PTMR2")
+	else
+		Ask("n你想就職的魔法使是？","魔動使。","魔銃使。","還是多考慮一會。","PTMR3")
+	end
+end
+
+function PTMR0R1()
+	choice=GetChoice()
+	if choice==0 then
+		Ask("n你決定就職成為\“見習守護使\”嗎？","對，我願意就職為\“見習守護使\”。","還是多考慮一會。","ConfirmMagicType1R0R1")
+
+	elseif choice==1 then
+		Ask("n你決定就職成為\“見習魔銃使\”嗎？","對，我願意就職為\“見習魔銃使\”。","還是多考慮一會。","ConfirmMagicType2RALL")
+
+	else
+		QuestEnd()
+	end
+end
+
+function PTMR2()
+	choice=GetChoice()
+	if choice==0 then
+		Ask("n你決定就職成為\“見習聖靈使\”嗎？","對，我願意就職為\“見習聖靈使\”。","還是多考慮一會。","ConfirmMagicType1R2")
+	elseif choice==1 then
+		Ask("n你決定就職成為\“見習魔銃使\”嗎？","對，我願意就職為\“見習魔銃使\”。","還是多考慮一會。","ConfirmMagicType2RALL")
+
+	else
+		QuestEnd()
+	end
+end
+
+function PTMR3()
+	choice=GetChoice()
+	if choice==0 then
+		Ask("n你決定就職成為\“見習魔動使\”嗎？","對，我願意就職為\“見習魔動使\”。","還是多考慮一會。","ConfirmMagicType1R3")
+	elseif choice==1 then
+		Ask("n你決定就職成為\“見習魔銃使\”嗎？","對，我願意就職為\“見習魔銃使\”。","還是多考慮一會。","ConfirmMagicType2RALL")
+
+	else
+		QuestEnd()
+	end
+end
+
+
+function ConfirmMagicType1R0R1()
+	choice=GetChoice()
+	if choice==0 then
+		name=GetName()
+		Say("n1以吾皇之名，星空引以為證，"..name.."於始進入守護使之門廊，成為\“見習守護使\”。")
+		Say("p7得到"..Color(0,45,198).."見習守護使"..Color(0,0,0).."稱號")
+		Say("p7就職為"..Color(0,45,198).."見習守護使")
+		SetFlag("K27001_End",1)
+		if HasTitle(6)~=1 then
+			AddTitle(6)
+		end
+		SetData("Title",6)
+		SetCareer(6,1)
+		SetFlag("K27001_END",1)
+	end
+	QuestEnd()
+end
+
+function ConfirmMagicType1R2()
+	choice=GetChoice()
+	if choice==0 then
+		name=GetName()
+		Say("n1以吾皇之名，星空引以為證，"..name.."於始進入聖靈使之門廊，成為\“見習聖靈使\”。")
+		Say("p7得到"..Color(0,45,198).."見習守聖靈使"..Color(0,0,0).."稱號")
+		Say("p7就職為"..Color(0,45,198).."見習聖靈使")
+		SetFlag("K27001_End",1)
+		if HasTitle(7)~=1 then
+			AddTitle(7)
+		end
+		SetData("Title",7)
+		SetCareer(7,1)
+		SetFlag("K27001_END",1)
+	end
+	QuestEnd()
+end
+
+function ConfirmMagicType1R3()
+choice=GetChoice()
+	if choice==0 then
+		name=GetName()
+		Say("n1以吾皇之名，星空引以為證，"..name.."於始進入魔動使之門廊，成為\“見習魔動使\”。")
+		Say("p7得到"..Color(0,45,198).."見習魔動使"..Color(0,0,0).."稱號")
+		Say("p7就職為"..Color(0,45,198).."見習魔動使")
+		SetFlag("K27001_End",1)
+		if HasTitle(5)~=1 then
+			AddTitle(5)
+		end
+		SetData("Title",5)
+		SetCareer(5,1)
+		SetFlag("K27001_END",1)
+	end
+	QuestEnd()
+end
+
+function ConfirmMagicType2RALL()
+	choice=GetChoice()
+	if choice==0 then
+		name=GetName()
+		Say("n1以吾皇之名，星空引以為證，"..name.."於始進入魔銃使之門廊，成為\“見習魔銃使\”。")
+		Say("n7得到"..Color(0,45,198).."見習魔銃使"..Color(0,0,0).."稱號")
+		Say("n7就職為"..Color(0,45,198).."見習魔銃使")
+		SetFlag("K27001_End",1)
+		if HasTitle(8)~=1 then
+			AddTitle(8)
+		end
+		SetData("Title",8)
+		SetCareer(8,1)
+		SetFlag("K27001_END",1)
+	end
+	QuestEnd()
+end
+
+function ConfirmItem()
+	choice=GetChoice()
+	if choice==0 then
+		name=GetName()
+		Say("n1以吾皇之名，星空引以為證，"..name.."於始進入道具使之門廊，成為\“見習道具使\”。")
+		Say("n7得到"..Color(0,45,198).."見習道具使"..Color(0,0,0).."稱號")
+		Say("n7就職為"..Color(0,45,198).."見習道具使","End")
+		SetFlag("K27001_End",1)
+		if HasTitle(9)~=1 then
+			AddTitle(9)
+		end
+		SetData("Title",9)
+		SetCareer(9,1)
+		SetFlag("K27001_END",1)
+	else 
+		QuestEnd()
+	end
+end
+
+function ConfirmDobby()
+	choice=GetChoice()
+	if choice==0 then
+		name=GetName()
+		Say("n1以吾皇之名，星空引以為證，"..name.."於始進入精靈使之門廊，成為\“見習精靈使\”。")
+		Say("n7得到"..Color(0,45,198).."見習精靈使"..Color(0,0,0).."稱號")
+		Say("n7就職為"..Color(0,45,198).."見習精靈使")
+		SetFlag("K27001_End",1)
+		if HasTitle(10)~=1 then
+			AddTitle(10)
+		end
+		SetData("Title",10)
+		SetCareer(10,1)
+		SetFlag("K27001_END",1)
+	end
+	QuestEnd()
+end
+
+function choosecareer()
+	choice=GetChoice()
+	race=GetData("Race")
+	
+	if choice==0 then 
+		Fighter(race)
+		
+	elseif choice==1 then
+		Magic(race)
+		
+		
+--	elseif choice==2 then
+	else
+		Item()
+	
+--	else 
+--		Dobby()
+	end
+			
+end
+
+function Item()
+	Say("n1道具使是相當全面的職業，可使用多種強力道具，而且有合成技能。當然強力道具會比率昂貴和難得到。","End")
+end
+
+function Dobby()
+	Say("n1精靈使可以捕捉戰鬥精靈，而且在育成戰鬥精靈的速度會比別人快，")
+	Say("n1並且可使用比自己等級高的戰鬥精靈，單獨練習，會比別人輕鬆。","End")
+end
+
+
+--有關魔法系的資料--
+function Magic(race)
+	if race==0 or race ==1 then
+		MagicR0R1()	
+
+	elseif race==2 then
+		MagicR2()
+
+	else
+		MagicR3()
+
+	end	
+end
+
+function MagicR0R1()
+	Ask("n你想查詢的魔法使資料是？","有關守護使的資料。","有關魔銃使的資料。","有關其他職業的資料。","謝謝，我明白了。","RequestjobdetailMR0R1")
+
+end
+
+function MagicR2()
+	Ask("n你想查詢的魔法使資料是？","有關聖靈使的資料。","有關魔銃使的資料。","有關其他職業的資料。","謝謝，我明白了。","RequestjobdetailMR2")
+end
+
+function MagicR3()
+	Ask("n你想查詢的魔法使資料是？","有關魔動使的資料。","有關魔銃使的資料。","有關其他職業的資料。","謝謝，我明白了。","RequestjobdetailMR3")
+end
+
+
+function RequestjobdetailMR0R1()
+	choice=GetChoice()
+
+	if choice==0 then
+		jobdetail0MR0R1()
+
+	elseif choice==1 then
+		jobdetail1MALL()
+
+	elseif choice==2 then
+		AskingCareer()
+
+	else
+		QuestEnd()
+
+	end
+
+end
+
+function RequestjobdetailMR2()
+	choice=GetChoice()
+	
+	if choice==0 then
+		jobdetail0MR2()
+	
+	elseif choice==1 then
+		jobdetail1MALL()
+	
+	elseif choice==2 then
+		AskingCareer()
+	
+	else 
+		QuestEnd()	
+	end
+end
+
+
+function RequestjobdetailMR3()
+	choice=GetChoice()
+	if choice==0 then
+		jobdetail0MR3()
+
+	elseif choice==1 then
+		jobdetail1MALL()
+	
+	elseif choice==2 then
+		AskingCareer()
+	
+	else
+		QuestEnd()
+	end
+
+end
+
+--守護使--
+function jobdetail0MR0R1()
+
+	Say("n1守護使是絕對能左右勝負的人物，他常常手持短小的利刀，操縱各種不同的靈氣，")
+	Say("n1能迅間弱化目標或增強團隊能力，當你奄奄一息時，還能替你召回迷失的靈魂，使你能繼續再戰。","End")
+	
+end
+
+--聖靈使--
+function jobdetail0MR2()
+	
+	Say("n1黑暗中的光芒，戰場上的無私者，也是形容聖靈使的讚美字句。")
+	Say("n1擁有強大的治療能力，加上能使同伴復生，使他成為隊伍中不可缺少的一員。","End")
+
+end
+	
+
+--魔動使--	
+function jobdetail0MR3()
+	Say("n1魔動使－很多人也不相信機動靈擁有如此絕對的魔法力量，但他成功做到了，")
+	Say("n1，以科學來解開魔法的奧秘，還得到了強大的魔法攻擊力，代價便是他放棄了戰士應有的防禦力。","End")
+end
+
+--魔銃使--
+function jobdetail1MALL()
+	Say("n1魔咒子彈加上魔法槍，再以魔力推動，在黑暗中向目標射出魔咒彈。")
+	Say("n1神秘的魔銃使，以魔法結合手上的槍，以迅雷的速度攻擊，上彈，消失，成為戰場上迷一般的暗殺者。","End")
+end
+
+
+
+--有關戰士系的資料。--
+function Fighter(race)
+	if race==0 or race ==1 then
+		FighterR0R1()	
+
+	elseif race==2 then
+		FighterR2()
+	
+	else
+		FighterR3()
+	end	
+
+end
+
+
+function FighterR0R1()
+	Ask("n你想查詢的戰士資料是？","有關守護劍士的資料。","有關銃戰士的資料。","有關其他職業的資料。","謝謝，我明白了。","RequestjobdetailFR0R1")
+end
+
+
+function FighterR2()
+	Ask("n你想查詢的戰士資料是？","有關聖劍士的資料。","有關銃戰士的資料。","有關其他職業的資料。","謝謝，我明白了。","RequestjobdetailFR2")
+end
+
+
+
+function FighterR3()
+	Ask("n你想查詢的戰士資料是？","有關靈鬥士的資料。","有關銃戰士的資料。","有關其他職業的資料。","謝謝，我明白了。","RequestjobdetailFR3")
+end
+
+function RequestjobdetailFR0R1()
+	choice=GetChoice()
+	if choice==0 then
+		jobdetail0FR0R1()
+
+	elseif choice==1 then
+		jobdetail1FRALL()
+	
+	elseif choice==2 then
+		AskingCareer()
+	
+	else
+		QuestEnd()
+	end
+
+end
+
+function RequestjobdetailFR2()
+	choice=GetChoice()
+	if choice==0 then
+		jobdetail0FR2()
+
+	elseif choice==1 then
+		jobdetail1FRALL()
+	
+	elseif choice==2 then
+		AskingCareer()
+	
+	else
+		QuestEnd()
+	end
+end
+
+function RequestjobdetailFR3()
+	choice=GetChoice()
+	if choice==0 then
+		jobdetail0FR3()
+
+	elseif choice==1 then
+		jobdetail1FRALL()
+	
+	elseif choice==2 then
+		AskingCareer()
+	
+	else
+		QuestEnd()
+	end
+end
+
+function jobdetail0FR0R1()
+
+	Say("n1守護劍士－保護朋友是他的使命，把身體鍛鍊出比鋼鐵更堅韌，面對大部份的敵人都可以坦然面對，")
+	Say("n1，「活到最後才是勝利者」是他的信念。他追求的不是必殺的破壞力，而是不死的身軀與精神。","End")
+
+end
+
+
+function jobdetail0FR2()
+	
+	Say("n1聖劍士能在戰場上以利劍殺敵，以神聖的力量治療戰友，完美地把攻防合一，")
+	Say("n1把米古族天生的魔法能力彌補物理攻擊上的不足。但兩方面能力的平衡，你會如何取捨呢？","End")
+	
+end
+
+
+function jobdetail0FR3()
+
+	Say("n1靈鬥士是攻擊型戰士，擁有強大的物理攻擊力，缺點是攻擊速度較其他職業慢，")
+	Say("n1但他的殺傷力已壓倒一切，多餘的防禦力他只會用來換取更強大的破懷力使敵人在眼前消失，戰鬥就是他的生命。","End")
+
+end
+
+function jobdetail1FRALL()
+	Say("n1銃戰士常常也囉嗦說著一貧如洗，口裡滿是賺錢的道理，因為他的子彈就是他的力量、金錢。")
+	Say("n1但只要你曾和他合作，你便會發現他槍裡子彈的價值，面對眾多敵人時，")
+	Say("n1其遠距離的攻擊可將牠們逐一擊破，當隊伍遇上危險時，他往往能全身而退。","End")
+end
+
+
+function start() 
+	lv=GetData("Level")
+	statue=GetFlag("K27001_Task")
+	if lv<10 then	
+		Say("n1你好，我是專門處理就職的侍衛，當你到達等級十便可找我查詢就職事宜。","End")
+	
+	elseif GetFlag("K27001_END")==1 then
+		Say("n1你已選擇了你今後的道路，但最終結果如何，還是要看你怎樣走下去。","End")
+	
+	elseif statue==4 then
+		Ask("n你是來就職的嗎？","我想查詢一些職業的資料。","對啊，我是來就職的。","response2")
+
+	elseif statue==3 then
+		Say("p7向皇家侍衛交出認可書")
+		Say("n1啊！你已經找到了古尼達博士嗎。現在開始你隨時也可以來就職了，你現在可先回去想清楚想當的職業。","End")
+		RemoveItem(10035)
+		SetFlag("K27001_Task",4)
+
+	elseif statue==1 or statue==2 then
+		Say("n1有人說古尼達博士沿尼尼亞皇城南下了，你可以往那兒找找。","End")
+	
+	else
+		Ask("n等級十或以上便可以就職，你需要就職嗎？","我想馬上就職。","沒事，只是逛逛而已。","response1")
+	end
+end

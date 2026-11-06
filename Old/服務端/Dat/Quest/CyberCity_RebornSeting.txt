@@ -1,0 +1,18 @@
+--Cyber_City 機械之城
+
+function start()
+--AFTER JP TRANSLATION PART 2
+	Ask("s要在機械之城設定復活點嗎？","好的。","不需要了。","我想進入初心者之間。","set")
+end
+
+function set()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("s好了，已經設定復活點了。","End")
+		SetRebornLocation(9024,4832,17)
+	elseif choice == 2 then
+		MovePlayer(3456,6272,40)
+	else
+	QuestEnd()
+	end
+end

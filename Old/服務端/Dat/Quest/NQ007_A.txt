@@ -1,0 +1,78 @@
+--NQ007_A  汀蘭
+
+--statue 1 : receive the mission
+--statue 2 : 與羅尼斯對話後,去找治療藥水
+--statue 3 : 找到治療藥水後,得到普通的藥水
+--statue 4 : 與汀蘭對話後,得到小鋤頭
+
+
+
+function start()
+	lv=GetData("Level")
+	statue=GetFlag("NQ007_Task")
+	
+	if lv<5 then
+		Say("n1嗚……我的兒子他…都是我不對！唉……","End")
+
+	
+	elseif statue==4 then
+		Say("n1記著要幫我好好看著羅尼斯……這個兒子真是太亂來了……","End")
+	
+		
+	elseif statue>=1 and statue <=3 then
+		if GetCountItemCount(10176)>=1 then
+			Say("n1我的兒子他怎麼了？他沒有弄傷了吧？！")
+			Say("p1嗯……沒有。這個藥草是他叫我給妳的")
+			Say("p6要是說她兒子傷了……她一定很難過吧……")
+			Say("n1謝謝你啊，我終於放心了。")
+			Say("p1對了大嬸，你兒子叫我來找你拿一個小鋤頭，他發現了一些更好的藥草！")
+			Say("n1那兒不危險的吧？你一定要好好看著他啊！有你在我才放心些……")
+			Say("n1對了，你把這個也拿去吧！這是一種很好的療傷藥…對機動靈也有幫助！")
+			if ItemListCountLeft(0)<2 then
+				Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				Say("p1謝謝大嬸！")
+				Say("p7得到小鋤頭")
+				Say("p7得到娜依艾州草","End")
+				SetFlag("NQ007_Task",4)
+				RemoveItem(10176)
+				AddItem(10173)
+				AddItem(10175)
+			end
+		else
+			Say("n1嗚嗚……怎麼辦……","End")
+		end
+
+	
+	else
+		
+		Ask("n我的兒子還沒回來……嗚……","大嬸你怎麼了？","……","response1")
+
+	end
+
+
+	
+	
+end      
+
+
+function response1()
+
+	if GetChoice()==0 then
+		if GetFlag("NQ007_Done")==1 then
+			Say("n1是你嗎……好心人……我的兒子現在還沒有回來……！")
+			Say("n1這下……我都不知道怎麼辦了……嗚嗚……")
+			Say("p1我幫你找他吧！","End")
+		else
+			Say("n1你一定要幫幫我啊……好心人……")
+			Say("n1我的兒子為了醫我的腿，竟然傻得去城外那個森林找藥草……那兒很危險啊…！")
+			Say("n1這下……我都不知道怎麼辦了……嗚嗚……")
+			Say("p1我幫你找兒子回來吧！","End")
+		end
+		SetFlag("NQ007_Task",1)
+	else
+		Say("n1嗚嗚……怎麼辦……","End")
+	
+	end
+
+end

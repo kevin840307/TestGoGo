@@ -1,0 +1,29 @@
+function start()
+	if GetFlag("TW008_E_Step") >= 2 then
+		if GetFlag("TW008_F_Step") >= 2 then
+			Step03()
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end		
+end	
+function Step01()
+	Say("n1我老伴做的飯團是很美味的啊．．．")
+end
+function Step02()
+--<After TW008_E Step 02>
+--<玩家身上持有美味飯糰(10708)＞
+	Say("p1我是幫老伯送飯糰來給妳的。")
+	Say("n1年輕人，真的謝謝你，這美味飯糰收據是給你的，沒有這個，我那多疑的老伴一定會以你偷吃飯糰的啊。")
+	Say("p7交出美味飯糰。")
+	Say("p7得到美味飯糰收據。")
+	RemoveItem(10708)
+	AddItem(10709)
+	SetFlag("TW008_F_Step",2)
+end
+function Step03()
+--<After TW008_F Step 02>
+	Say("n1年輕人，謝謝你，我老伴做的飯團真是很美味啊．．．要吃一點嗎？")
+end

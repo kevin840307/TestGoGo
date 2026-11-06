@@ -1,0 +1,94 @@
+--小商店任務(NQ022_A)
+
+function start()
+	if GetFlag("NQ022A_Done") == -1 then
+		if GetFlag("NQ022A_GotQuest") == -1 then
+			ApplyLicense0()
+		else
+			if GetCountItemCount(10320) < 1 and GetCountItemCount(10389) < 1 and GetCountItemCount(10408) < 1 then
+				Say("n1你忘記了嗎?必須找來油燈、幸運小球或巨毛蟲觸鬚，三樣東西其中一項回來便可了。")
+			else			
+				ApplyLicense2()
+			end
+		end
+	else
+		VendorRankLevelUp0()
+	end
+
+	QuestEnd()
+end
+
+function ApplyLicense0()
+	Ask("n國皇為了更方便市民的交易往來，決定發出小商店牌照給各有熱誠的小商人。", "怎樣申請呢？", "對不起，我沒有空。", "ApplyLicense0Reply")
+end
+
+function ApplyLicense0Reply()
+	Result = GetChoice()
+
+	if Result == 0 then
+		ApplyLicense1()
+	end
+end
+
+function ApplyLicense1()
+	Ask("n首先，你要証明你對貨品有一定的了解。", "如何証明呢？", "ApplyLicense1Reply")
+end
+
+function ApplyLicense1Reply()
+	Result = GetChoice()
+
+	if Result == 0 then
+		Say("n1你必須找來油燈、幸運小球或巨毛蟲觸鬚，三樣東西其中一項回來便可了。")
+		SetFlag("NQ022A_GotQuest", 1)
+	else
+		Say("n1Debug: Error!")
+	end	
+end
+
+function ApplyLicense2()
+	Ask("n很好，你已經把東西找回來了。", "那可以給商人牌照我了嗎？", "ApplyLicense2Reply")
+end
+
+function ApplyLicense2Reply()
+	Ask("n你只証明你有資格申請牌照吧了，小商店牌照共分9級，升級後會增加可擺放物品的數目及一些王國的優惠，而每一級的牌照費用也不同，並會根據當時申請人數而作出調整。", "什麼還要星幣？", "ApplyLicense3")
+end
+
+function ApplyLicense3()
+	Say("n1不用擔心，第一級的牌照是免費的。但你要切記，當你開小商店和別人交易時，便會得到從商經驗值，")
+	Say("n1累積一定經驗值後商人的等級便會上升，這樣你便可以再來申請更高級的商人牌照了。")
+	SetFlag("NQ022A_Done", 1)
+	if GetCountItemCount(10320) > 0 then
+		RemoveItem(10320)
+	elseif GetCountItemCount(10389) > 0 then
+		RemoveItem(10389)
+	else
+		RemoveItem(10408)
+	end
+
+	SetVendorRank(0)
+	SetVendorLicense(0)
+end
+
+function VendorRankLevelUp0()
+	if GetVendorRank() == GetVendorLicense() then
+		Say("n1當你提升一定商人等級，便可再來申請更高級的牌照了。")
+	elseif GetVendorRank() > GetVendorLicense() then
+		Ask("n你已有資格申請新的商人牌照了，現在的牌照價錢是（那級的牌照計算），你要申請嗎？", "對，我要用（那級的牌照計算）來申請牌照。", "我還是多考慮一會。", "VendorRankLevelUp0Reply")
+	else
+		Say("n1商人牌照 > 商人等級: Only allowed in Debug Mode.")
+	end	
+end
+
+function VendorRankLevelUp0Reply()
+	Result = GetChoice()
+
+	if Result == 0 then
+		-- check money
+		Say("n1恭喜你，這是你的牌照，請繼續加油。")
+		-- deduct money
+		-- level up Vendor's License
+		SetVendorLicense(GetVendorLicense() + 1)
+		-- else
+		Say("n1很抱歉，你身上好像沒有足夠的金錢申請牌照，請你繼續努力吧，但是要快一點，下次的費用可能又會向上調整了。")	
+	end
+end

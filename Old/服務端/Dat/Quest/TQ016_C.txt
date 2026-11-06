@@ -1,0 +1,37 @@
+--聖誕樹(TQ016C)
+
+--TQ016_TaskC
+-- 1: send the card to telan
+-- 2: already given the card to telan
+
+function start()
+	status = GetFlag("TQ016_TaskC")
+	if status >=2 then
+		dialogue_03()
+	elseif status>=1 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("p1啊！～這聖誕樹真是美麗啊！")
+	Say("p7這時聖誕樹上的裝飾突然閃耀出彩色的光輝，一隻雪白的精靈出現了對你說．．．")
+	Say("n1你好～我有一件事想拜託你，這是送給"..Color(0,45,198).."泰倫"..Color(0,0,0).."的聖誕卡，請你幫我送給他好嗎？")
+	Say("n1是祝福的聖誕卡．．．","get_item")
+end
+function get_item()
+	Say("p7得到「給泰倫的聖誕卡」","End")
+	SetFlag("TQ016_TaskC", 1)
+	AddItem(10419)
+end
+
+function dialogue_02()
+	Say("n1拜託你將聖誕卡送給"..Color(0,45,198).."泰倫"..Color(0,0,0).."吧^^","End")
+end
+
+function dialogue_03()
+	Say("p1啊！～這聖誕樹真是美麗啊！","End")
+end
+

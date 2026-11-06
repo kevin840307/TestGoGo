@@ -1,0 +1,5 @@
+--People01 阿拉佰托
+
+function start()
+	Say("n1這兒的高科技建築沒有把你嚇倒吧？","End")
+end

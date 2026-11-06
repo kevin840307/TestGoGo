@@ -1,0 +1,201 @@
+--TQ036_A
+--國王．加魯加．尼尼亞
+--
+--TQ036_B
+--娛樂大臣．斯狄依
+--
+--TQ036_C1
+--紅色機動偶
+--
+--TQ036_C2
+--黃色機動偶
+--
+--TQ036_C3
+--藍色機動偶
+--
+--TQ036_C4
+--綠色機動偶
+--
+--勝利之翼	數碼娛樂打怪大賽的獎品			10655	Lv30(+迴避)
+--喜樂之環	數碼娛樂打怪大賽的獎品			10656	Lv30(+迴避)
+--榮光之劍	數碼娛樂打怪大賽的獎品			10657	Lv30(+迴避)
+--實力之盾	數碼娛樂打怪大賽的獎品			10658	Lv30(+迴避)
+--紅隊絲帶	數碼娛樂打怪大賽的分隊用頭飾	10659	不可交易
+--黃隊絲帶	數碼娛樂打怪大賽的分隊用頭飾	10660	不可交易
+--藍隊絲帶	數碼娛樂打怪大賽的分隊用頭飾	10661	不可交易
+--綠隊絲帶	數碼娛樂打怪大賽的分隊用頭飾	10662	不可交易
+--勝利之翼	數碼娛樂打怪大賽的獎品			10655	Lv30(+迴避)
+--
+--紅色機動偶	Lv35	TQ036_C1
+--黃色機動偶	Lv35	TQ036_C2
+--藍色機動偶	Lv35	TQ036_C3
+
+--global flag:
+--TQ036_Bteam_Mark 紅隊
+--TQ036_Yteam_Mark 黃隊
+--TQ036_Bteam_Mark 藍隊
+--TQ036_Gteam_Mark 綠隊
+--TQ036_st winner
+--TQ036_nd 
+--TQ036_rd 
+--TQ036_th 
+-- 1: 勝利之藍
+-- 2: 榮譽之黃
+-- 3: 勝利之藍
+-- 4: 實力之綠
+function start()	
+	if GetData("Bonnet") >= 10659 and GetData("Bonnet") <= 10662 then
+		if GetData("Bonnet") ~= 10661 then
+			if GetWorldFlag("TQ036_Bteam_Mark") > 88887 then
+				Step05()
+			else
+				myteam = GetFlag("TQ036_team")
+				if myteam == 2 then 
+					if GetWorldFlag("TQ036_Yteam_Mark") > 88887 then
+						if GetFlag("TQ036_miss_behave") >= 1 then
+							Step07()	
+						else
+							Step06()
+						end
+					else
+						Step01()
+					end
+				elseif myteam == 4 then 
+					if GetWorldFlag("TQ036_Gteam_Mark") > 88887 then
+						if GetFlag("TQ036_miss_behave") >= 1 then
+							Step07()	
+						else
+							Step06()
+						end
+					else
+						Step01()
+					end
+				elseif myteam == 1 then 		
+					if GetWorldFlag("TQ036_Rteam_Mark") > 88887 then
+						if GetFlag("TQ036_miss_behave") >= 1 then
+							Step07()	
+						else
+							Step06()
+						end
+					else
+						Step01()
+					end
+				else
+					Step01()
+				end
+			end
+		else
+			if GetWorldFlag("TQ036_Bteam_Mark") > 88887 then
+				if GetFlag("TQ036_miss_behave") >= 1 then
+					Step07()	
+				else
+					Step06()
+				end
+			else
+				Step04()
+			end
+		end
+	else
+		if GetFlag("TQ036_miss_behave") >= 1 then
+			Step03()
+		else
+			Step02()
+		end
+	end
+end
+
+function Step01()
+	--//＜玩家沒有裝備分隊用的絲帶(10659-10662)＞或
+	--//＜玩家並未參加這次比賽Before TQ036_B Step03＞ -> Step03
+	--//＜玩家裝備了相應的絲帶打倒了相應的機動偶＞→Step04
+	--//＜機動偶所對應的隊伍的分數已達88888＞→Step05
+	RMark = GetWorldFlag("TQ036_Bteam_Mark")
+	if RMark > 0 then 
+		RMark = RMark - 2
+	elseif RMark < 0 then		
+		RMark = 0
+	end
+	Say("p7成功打倒勝利之藍的機動偶。")
+	Say("p7勝利之藍的分數跌至"..RMark.."。", "step01_update")
+end
+
+function step01_update()
+	RMark = GetWorldFlag("TQ036_Bteam_Mark")
+	if RMark > 0 then 
+		RMark = RMark - 2
+	elseif RMark < 0 then		
+		RMark = 0
+	end
+	SetWorldFlag("TQ036_Bteam_Mark", RMark)	
+end
+
+function Step02()
+--//＜玩家沒有裝備分隊用的絲帶(10659-10662)＞或
+--//＜玩家並未參加這次比賽Before TQ036_B Step03＞
+--//＜玩家曾完成TQ036_C1-C4 Step02＞→Step03
+	Say("p7這些機動偶是今次數碼娛樂打怪大賽的專用敵人，請先參加比賽再裝備好分別隊伍用的絲帶再來，否則會視為搗亂比賽而被送至神團聖殿。","step02_set_flag")	
+end
+
+function step02_set_flag()
+	SetFlag("TQ036_miss_behave",1)
+end
+
+function Step03()
+	Say("p7對不起！這些機動偶是今次數碼娛樂打怪大賽的專用敵人，請先參加比賽再裝備好分別隊伍用的絲帶，現在因你的行為搗亂了比賽的進行，你將被送至神團聖殿。")
+	MovePlayer (6464,4768,4)
+end
+
+function Step04()
+--//＜自己所屬的隊伍分數已達88888＞→Step06
+	RMark = GetWorldFlag("TQ036_Bteam_Mark")
+	if RMark >= 0 then 
+		RMark = RMark + 5
+	elseif RMark < 0 then		
+		RMark = 0
+	end
+	if RMark < 88888 then
+		Say("p7成功打倒勝利之藍的機動偶。")
+		Say("p7你所屬的勝利之藍分數升至"..RMark.."。" ,"step04_update")
+		QuestEnd()
+	else
+		Say("p7成功打倒勝利之藍的機動偶。")
+		Say("p7你所屬的勝利之藍分數升至"..RMark.."。")
+		Say("p7恭喜你們！你們隊伍的分數已達至要求！可以回去找娛樂大臣．斯狄依領取獎品！","step04_update")
+	end
+end
+
+function step04_update()
+	RMark = GetWorldFlag("TQ036_Bteam_Mark")
+	if RMark >= 0 then 
+		RMark = RMark + 5
+	elseif RMark < 0 then		
+		RMark = 0
+	end
+	SetWorldFlag("TQ036_Bteam_Mark", RMark)		
+		if RMark > 88887 then
+		if GetWorldFlag("TQ036_st") < 1 then
+			SetWorldFlag("TQ036_st", 3)
+		elseif GetWorldFlag("TQ036_nd") < 1 then
+			SetWorldFlag("TQ036_nd", 3)
+		elseif GetWorldFlag("TQ036_rd") < 1 then
+			SetWorldFlag("TQ036_rd", 3)
+		elseif GetWorldFlag("TQ036_th") < 1 then
+			SetWorldFlag("TQ036_th", 3)
+		end
+	end
+end
+
+function Step05()
+	Say("p7這隊伍己完成今次的比賽，打倒這些機動偶也沒有用啊～")
+end
+
+function Step06()
+--//＜玩家曾完成TQ036_C1-C4 Step06＞→Step07
+	Say("p7恭喜你們！你們隊伍的分數以達至要求！可以回去找娛樂大臣．斯狄依領取獎品！")
+	Say("p7請注意，你所屬的隊伍己完成今次的比賽，請不要再干擾比賽進行，否則會視為搗亂比賽而被送至神團聖殿。","step02_set_flag")
+end
+
+function Step07()
+	Say("p7你所屬的隊伍己完成今次的比賽，請不要再干擾比賽進行，現在因你的行為搗亂了比賽的進行，你將被送至神團聖殿。")
+	MovePlayer(6464,4768,4)
+end

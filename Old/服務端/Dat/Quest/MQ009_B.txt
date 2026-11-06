@@ -1,0 +1,106 @@
+--沙姬(MQ009_B)
+
+--MQ009_Task
+--1 quest started
+--2 go to find 10 medicine
+--3 given the powder to janie
+--4 go to find green crystal
+--5 given the green stone
+--6 go to find purple crystal
+--7 got the bullet
+--8 quest completed
+
+--MQ009_Powder
+--1 got the powder already
+
+function start()
+	status = GetFlag("MQ009_Task")
+	status10 = GetFlag("MQ010_Task")
+	if status10 >=1 then
+		if status10>=8 then
+			dia_05()
+		elseif status10>=3 then
+			dia_01()
+		elseif GetFlag("MQ009_Powder")<0 then
+			if status10>=2 then
+				if GetCountItemCount(70)>=10 then
+					dia_04()
+				else
+					dia_03()
+				end
+			elseif status10>=1 then
+				dia_02()
+			else
+				dia_01()
+			end
+		else
+			dia_01()
+		end
+	elseif status >=1 then
+		if status>=8 then
+			dia_05()
+		elseif status>=3 then
+			dia_01()
+		elseif GetFlag("MQ009_Powder")<0 then
+			if status>=2 then
+				if GetCountItemCount(70)>=10 then
+					dia_04()
+				else
+					dia_03()
+				end
+			elseif status>=1 then
+				dia_02()
+			else
+				dia_01()
+			end
+		else
+			dia_01()
+		end
+	else
+		dia_01()
+	end
+end
+
+--<任務未開始>
+function dia_01()
+	Say("n1有火藥要發售喔！","End")
+end
+
+--<任務開始時>
+function dia_02()
+	Say("n1來看看喔！很多火藥我們也有！")
+	Say("p1請問你知道什麼是“風速彈”嗎？")
+	Say("n1風速彈？當然知道！你要轉職嗎？")
+	Say("p7點點頭")
+	Say("n1風速彈要風速火藥喔！你要買嗎？十萬元！")
+	Say("p1我沒有錢啦！")
+	Say("n1嘖…真麻煩，好吧，我今天大特價，你拿"..Color(0,45,198).."10個治療藥水"..Color(0,0,0).."回來，我就和你交換！","End")
+	if GetFlag("MQ010_Task") > 0 then
+		SetFlag("MQ010_Task", 2)
+	else
+		SetFlag("MQ009_Task", 2)
+	end
+end
+
+--<任務進行中>
+function dia_03()
+	Say("n1嗯？別和我討價還價，快拿"..Color(0,45,198).."10個治療藥水"..Color(0,0,0).."回來，不然我賣給別人了。","End")
+end
+
+--<完成條件後>
+function dia_04()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("n1嗯，不錯，這風速火藥是你的了！")
+		Say("p7得到「風速火藥」","End")
+		RemoveItem(70,10)
+		AddItem(10031)
+		SetFlag("MQ009_Powder", 1)
+	end
+end
+
+--<任務完成後>
+function dia_05()
+	Say("n1恭喜你轉職！","End")
+end

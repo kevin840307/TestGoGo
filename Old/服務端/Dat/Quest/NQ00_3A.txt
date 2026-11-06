@@ -1,0 +1,28 @@
+--NQ003_A 員工奧斯
+
+function start()
+	lv = GetData("Level")
+	lt = GetFlag("NQ003_LastTime")
+	statue=GetFlag("NQ_003_GotQuest")
+	
+	
+	if lv<10 or  GetGameHours()-lt< 1  then
+		Say("n1拍賣會還沒有開始，請稍後再來。", "End")
+
+	elseif statue>=2 then
+		if RemoveItem(10014)==1 then
+			SetFlag("NQ_003_GotQuest", 3)
+		end	
+		Say("n1歡迎光臨尼尼亞皇城的拍賣會！請你和司儀叫價吧！", "End")
+		
+	elseif statue==1 then
+		Say("n1你問狄福吧，他負責入場券的事務。", "End")
+
+	else
+		SetFlag("NQ_003_GotQuest", 1)
+		Say("n1拍賣會開始了，要入場的話，請先購買入場券。")
+		Say("p1在哪兒可以買到？")
+		Say("n1你問狄福吧，他負責入場券的事務。", "End")
+	end
+
+end

@@ -1,0 +1,99 @@
+--Key001 主人匙
+--ItemNumber:10204
+
+function start()
+	Ask("p請問想用這條匙做些什麼呢?", "傳送我到家!","幫我複製客人匙","response1")	
+	AddItem(10204)	
+end
+
+
+function response1()
+	choice=GetChoice()
+	
+	if choice==0 then
+		MovePlayer(3328,2944,85)
+	else
+		Ask("p請問你要製造多少條客人匙呢? 每條要$50 元","一條","十條","三十條","五十條","response2")
+	end
+end
+
+
+function response2()
+	choice=GetChoice()
+	money=GetData("Money")
+
+	if choice==0 then
+		if money >=50 then
+			if OverFlow(1)==1 then
+				Say("p7對不起!你沒有足夠空間,請先將一些客人匙放在倉庫,然後才購買!","End")
+			elseif ItemListCountLeft(0)<1 then
+				Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				Say("p7製造了一條客人匙!","End")
+				AddItem(10205)
+				ModifyData("Money" , -50)
+			end
+		else
+			Say("p7對不起!你沒有足夠金錢去購買!","End")
+		end
+	
+	elseif choice==1 then
+		if money >=50*10 then
+
+			if OverFlow(10)==1 then
+				Say("p7對不起!你沒有足夠空間,請先將一些客人匙放在倉庫,然後才購買!","End")
+			elseif ItemListCountLeft(0)<10 then
+				Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				Say("p7製造了十條客人匙!","End")
+				AddItem(10205,10)
+				ModifyData("Money" , -50*10)
+			end
+		else
+			Say("p7對不起!你沒有足夠金錢去購買!","End")
+		end
+	
+	elseif choice==2 then
+		if money >=50*30 then
+			
+			if OverFlow(30)==1 then
+				Say("p7對不起!你沒有足夠空間,請先將一些客人匙放在倉庫,然後才購買!","End")
+			elseif ItemListCountLeft(0)<30 then
+				Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				Say("p7製造了三十條客人匙!","End")
+				AddItem(10205,30)
+				ModifyData("Money" , -50*30)
+			end
+		else
+			Say("p7對不起!你沒有足夠金錢去購買!","End")
+		end
+
+	else 
+		if money >=50*50 then
+		
+			if OverFlow(50)==1 then
+				Say("p7對不起!你沒有足夠空間,請先將一些客人匙放在倉庫,然後才購買!","End")
+			elseif ItemListCountLeft(0)<50 then
+				Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				Say("p7製造了五十條客人匙!","End")
+				AddItem(10205,50)
+				ModifyData("Money" , -50*50)
+			end
+		else
+			Say("p7對不起!你沒有足夠金錢去購買!","End")
+		end
+
+	end
+
+end
+
+
+function OverFlow(amount) 
+ 	if GetCountItemCount(10205)+amount>999 then
+		return 1 
+	else
+		return 0
+	end
+end

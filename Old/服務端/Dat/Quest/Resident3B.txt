@@ -1,0 +1,5 @@
+--People01 占士
+
+function start()
+	Say("n1機械之城是機動靈的故鄉，我生活在這兒，也很有親切感。","End")
+end

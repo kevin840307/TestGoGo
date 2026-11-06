@@ -1,0 +1,191 @@
+function start()
+	Step01()
+end
+
+function Step01()
+	if GetData("Bonnet") == 10696 or GetData("Bonnet") == 10697 or GetData("Bonnet") == 10698 or GetData("Bonnet") == 10699 or GetData("Bonnet") == 10700 then
+		Say("n1請不要裝備以下物品：世運第１環、世運第２環、世運第３環、世運第４環、世運第５環。")
+	else
+		Ask("n這是星空世運會的頒獎典禮，你想來換取什麼獎品呢？","冠軍獎","亞軍獎","季軍獎","殿軍獎","Step01_Handler")
+--＜選項＞
+--．冠軍獎→Step 02
+--．亞軍獎→Step 03
+--．季軍獎→Step 04
+--．殿軍獎→Step 05
+	end
+end
+
+function Step01_Handler()
+	if GetChoice() == 0 then
+		Step02()
+	elseif GetChoice() == 1 then
+		Step03()
+	elseif GetChoice() == 2 then
+		Step04()
+	elseif GetChoice() == 3 then	
+		Step05()
+	end
+end
+
+function Step02()
+	if ItemListCountLeft(0) < 2 then
+		Step14()
+	elseif CheckItem(10696) ~= 1 or CheckItem(10697) ~= 1 or CheckItem(10698) ~= 1 or CheckItem(10699) ~= 1 or CheckItem(10700) ~= 1 then
+		Step06()
+	else
+--＜玩家身上物品空間少於2＞→Step 14
+--＜玩家沒有以下物品＞→Step 06
+--(10696、10697、10698、10699、10700)
+		Say("n1冠軍獎是天馬頭飾換領券和極級天馬裝備換領券。")
+		Ask("n你要用世運第１環、世運第２環、世運第３環、世運第４環、世運第５環去換取冠軍獎嗎？","是的","不是","Step02_Handler")
+--＜選項＞
+--．是的→Step10
+--．不是→Quest End
+	end
+end
+
+function Step02_Handler()
+	if GetChoice() == 0 then
+		Step10()
+	else
+		QuestEnd()
+	end
+end
+
+function Step03()
+--＜玩家身上裝備空間少於1＞→Step 15
+--＜玩家沒有以下物品＞→Step 07
+--(10696、10697、10698、10699)
+	if ItemListCountLeft(1) < 1 then
+		Step15()
+	elseif CheckItem(10696) ~= 1 or CheckItem(10697) ~= 1 or CheckItem(10698) ~= 1 or CheckItem(10699) ~= 1 then
+		Step07()
+	else
+		Say("n1亞軍獎是白羊座頭飾。")
+		Ask("n你要用世運第１環、世運第２環、世運第３環、世運第４環去換取亞軍獎嗎？","是的","不是","Step03_Handler")
+--＜選項＞
+--．是的→Step11
+--．不是→Quest End
+	end
+end
+
+function Step03_Handler()
+	if GetChoice() == 0 then
+		Step11()
+	else
+		QuestEnd()
+	end
+end
+
+function Step04()
+	if ItemListCountLeft(4) < 3 then
+		Step16()
+	elseif CheckItem(10696) ~= 1 or CheckItem(10697) ~= 1 or CheckItem(10698) ~= 1 then
+		Step08()
+	else
+	
+--＜玩家身上機甲裝備空間少於3＞→Step 16
+--＜玩家身上機甲卡空間少於1＞→Step 16
+--＜玩家沒有以下物品＞→Step 08
+--(10696、10697、10698)
+		Say("n1季軍獎是世運機甲卡。")
+		Ask("n你要用世運第１環、世運第２環、世運第３環去換取季軍獎嗎？","是的","不是","Step04_Handler")
+--＜選項＞
+--．是的→Step12
+--．不是→Quest End
+	end
+end
+
+function Step04_Handler()
+	if GetChoice() == 0 then
+		Step12()
+	else
+		QuestEnd()
+	end
+end
+
+function Step05()
+	if ItemListCountLeft(2) < 1 then
+		Step17()
+	elseif CheckItem(10696) ~= 1 or CheckItem(10697) ~= 1 then
+		Step09()
+	else
+--＜玩家身上寵物空間少於1＞→Step 17
+--＜玩家沒有以下物品＞→Step 09
+--(10696、10697)
+		Say("n1殿軍獎是戰鬥精靈‧黑蝙蝠。")
+		Ask("n你要用世運第１環、世運第２環去換取殿軍獎嗎？","是的","不是","Step05_Handler")
+--＜選項＞
+--．是的→Step13
+--．不是→Quest End
+	end
+end
+
+function Step05_Handler()
+	if GetChoice() == 0 then
+		Step13()
+	else
+		QuestEnd()
+	end
+end
+
+function Step06()
+	Say("n1你必須要有世運第１環、世運第２環、世運第３環、世運第４環、世運第５環才可以領取冠軍獎。")
+end
+function Step07()
+	Say("n1你必須要有世運第１環、世運第２環、世運第３環、世運第４環才可以領取亞軍獎。")
+end
+function Step08()
+	Say("n1你必須要有世運第１環、世運第２環、世運第３環才可以領取季軍獎。")
+end
+function Step09()
+	Say("n1你必須要有世運第１環、世運第２環才可以領取殿軍獎。")
+end
+function Step10()
+	Say("n1交出世運第１環、世運第２環、世運第３環、世運第４環、世運第５環。")
+	Say("n1得到天馬頭飾換領券和極級天馬裝備換領券。")
+	RemoveItem(10696)
+	RemoveItem(10697)
+	RemoveItem(10698)
+	RemoveItem(10699)
+	RemoveItem(10700)
+	AddItem(10590)
+	AddItem(10593)
+end
+function Step11()
+	Say("n1交出世運第１環、世運第２環、世運第３環、世運第４環。")
+	Say("n1得到白羊座頭飾。")
+	RemoveItem(10696)
+	RemoveItem(10697)
+	RemoveItem(10698)
+	RemoveItem(10699)
+	AddItem(10584)
+end
+
+function Step12()
+	Say("n1交出世運第１環、世運第２環、世運第３環。")
+	Say("n1得到世運機甲卡。")
+	RemoveItem(10696)
+	RemoveItem(10697)
+	RemoveItem(10698)
+	AddItem(6006)
+end
+function Step13()
+	Say("n1交出世運第１環、世運第２環。")
+	Say("n1得到戰鬥精靈‧黑蝙蝠。")
+	RemoveItem(10696)
+	RemoveItem(10697)
+	AddItem(5007)
+end
+function Step14()
+	Say("p7身上的物品太多了，還是先整理一下吧！")
+end
+function Step15()
+	Say("p7身上的裝備太多了，還是先整理一下吧！")
+end
+function Step16()
+	Say("p7身上的機甲卡或機甲裝備太多了，還是先整理一下吧！")
+end
+function Step17()
+	Say("p7身上的戰鬥精靈太多了，還是先整理一下吧！")
+end

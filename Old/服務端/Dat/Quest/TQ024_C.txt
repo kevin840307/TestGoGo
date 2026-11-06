@@ -1,0 +1,32 @@
+--結晶球(TQ024C)
+
+function start()
+	race = GetData("Race")
+	name=get_crystal_name(race)
+	id=get_crystal_id(race)
+	AddItem(id)
+	Say("p7得到“"..name.."”。","End")
+end
+
+function get_crystal_name(race)
+	if race==0 then
+		return "濃情結晶"
+	elseif race==1 then
+		return "柔情結晶"
+	elseif race==2 then
+		return "真情結晶"
+	else
+		return "深情結晶"
+	end
+end
+function get_crystal_id(race)
+	if race==0 then
+		return 10461
+	elseif race==1 then
+		return 10462
+	elseif race==2 then
+		return 10463
+	else
+		return 10464
+	end
+end

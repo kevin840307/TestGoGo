@@ -1,0 +1,31 @@
+--藥師‧柯尼
+--(TQ034_D)
+
+function start()
+	if GetFlag("TQ034_Task") >=4 then
+		dia_03()
+	elseif GetFlag("TQ034_Task") >=3 then
+		dia_02()
+	else
+		dia_01()
+	end
+end
+
+function dia_01()
+	Say("n1你身體很健康啊！那麼你沒有需要跟我買藥吧？","End")
+end
+
+
+--＜After TQ034_C Step01＞
+function dia_02()
+	Say("p1啊！你就是藥師‧柯尼嗎？我是受塞莉所託來找你的．．．")
+	Say("p7你將事件的詳情告知藥師‧柯尼．．．")
+	Say("n1原來事情是這樣的！那麼你需要找一種生長在冰花山谷的冷靜蘑菇。")
+	Say("n1冷靜蘑菇是生長在冰塊下的，要得到冷靜蘑菇就要找人睡在冰塊旁邊，以體溫慢慢溶化冰塊才可。","End")
+	SetFlag("TQ034_Task",4)
+end
+
+--＜After TQ034_D Step02＞
+function dia_03()
+	Say("n1冷靜蘑菇是生長在冰塊下的，要得到冷靜蘑菇就要找人睡在冰塊旁邊，以體溫慢慢溶化冰塊才可。","End")
+end

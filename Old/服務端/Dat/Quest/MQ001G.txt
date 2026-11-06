@@ -1,0 +1,30 @@
+--MQ001_G 冰蘋果樹
+
+function start()
+	Say("n7你見到一個藍色、好像是透明的蘋果狀物體在樹上高高掛著．．．","End")
+end
+function ostart()
+	sick = GetFlag("MQ_001_1")
+	if GetFlag("MQ_001_GetApple")==1 then
+		Say("p7你見到一個藍色、好像是透明的蘋果狀物體在樹上高高掛著．．．","End")
+	elseif sick == 7 then
+		Ask("p嗯！這是"..Color(0,45,198).."冰蘋果"..Color(0,0,0).."了吧！不過長得那麼高．．．","一定要拿回去！","太高了．．．還是放棄吧！","TryGetApple")
+	else
+		Say("n7你見到一個藍色、好像是透明的蘋果狀物體在樹上高高掛著．．．","End")
+	end
+end
+
+function TryGetApple()
+	choice = GetChoice()
+	Str = GetData("Str")
+	if choice == 0 and Str>9 then
+		Say("p1太好了！要快點拿回去！","End")
+		AddItem (10002,1)
+		SetFlag("MQ_001_GetApple", 1);
+	elseif chioce == 0 and Str < 10 then
+		Say("p6太高了．．．我爬不上去！")
+		Say("p6我的力量果然不夠．．．","End")
+	else
+		Say("p6果實還在樹上，似乎不會掉下來的樣子！")
+	end
+end

@@ -1,0 +1,83 @@
+--MQ012_A  里拉
+
+function notmatch()
+	Say("n1和精靈在一起的感覺很親切呢！")
+	Say("p1精靈們都很可愛吧？","End")
+end
+
+function jobmatch()
+
+	Say("n7這是精靈使老師里拉，在學校內常常看到他帶著幾隻精靈遊玩。")
+	Say("p1精靈使的工作很辛苦吧？")
+	Say("n1不會呢！")
+	Say("p1嗯？什麼說？")
+	Say("n1精靈使雖然本身的力量比較弱，可是和精靈們在一起的感覺很不錯啊！")
+	Ask("n只有我們的職業可以捕捉戰鬥精靈，而且也只有我們我們可以訓練牠們呢！","我想成為精靈使！","想來知道精靈使到底是什麼而已。","response1")
+
+end
+
+function response1()
+ 	choice=GetChoice()
+	if  choice==0  then
+		Say("n1嗯……不過我先要麻煩你幫我找到藍寶石呢。")
+		Say("p1藍寶石？")
+		Say("n1嗯…因為藍寶石是我的精靈要吸收的力量之一…也就是食糧啦！")
+		Say("n1如果牠餓壞了，我也沒什麼心思去教你成為精靈使了。","End")
+		SetFlag("MQ012_Task",1)
+	else
+		Say("n1那我和精靈遊玩去囉。","End")
+	end
+end
+
+function response2()
+	choice=GetChoice()
+	if choice==0 then
+		Say("n1這本是初級培育指南，你看了的話，應該會對你有幫助的。")
+		Say("n1我先去照顧精靈了啦，對了，這個屠龍魔杖就送給你吧！")
+		if ItemListCountLeft(1)<1 then
+			Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+		else
+			Say("p7得到\“屠龍魔杖\”")
+			Say("p7得850Exp")
+			Say("p7得到\“精靈使\”的稱號")
+			gainExp(850)
+			AddJob(2)
+			AddTitle(22)
+			RemoveItem(10188,1)
+			AddItem(8349,1)
+			SetFlag("MQ012_Mission",1)
+			SetFlag("MQ012_Task",3)
+		end		
+	else
+		Say("n1嗯……快點決定吧？","End")
+	end
+end
+
+function gainExp(x)
+	ModifyData("ExpUse",x)
+	ModifyData("ExpAcc",x)
+end
+
+function start()
+
+   	lv=GetData("Level")
+	crr= GetData("Career")
+	statue=GetFlag("MQ012_Task")
+	if statue==3 then
+		Say("n1和精靈在一起，真是幸福。","End")
+
+ 	elseif lv<40 or crr~=10 then
+		notmatch()
+
+	elseif statue==1 or statue==2 then
+
+		if CheckItem(10188)>0 then
+			Ask("n謝謝你，那你現在要成為精靈使了嗎？","是的！","我要再考慮一下","response2")	
+		else
+			Say("n1嗯……找回來了沒有？我的精靈等著你呢？")
+		end
+
+	else 
+		jobmatch()
+	end
+end

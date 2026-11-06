@@ -1,0 +1,48 @@
+--MS002_A 皇家侍衛(共四人)
+
+--MS002_Task:
+-- 0: title shown
+-- 1: quest started, go to fing 事務長
+-- 2: go to find 拉潔
+-- 3: go to find 科吉 for doll
+-- 4: get the doll, find 拉潔
+-- 5: go to find 公主
+-- 6: talked with 公主 once
+-- 7: talked with 公主 twice
+-- 8: back to 事務長
+-- 9: quest completed
+
+--MS002_Done
+-- 1: quest completed at least once
+
+function start()
+	status = GetFlag("MS002_Task")
+	ready = GetFlag("MS001_Done")
+	if GetFlag("MS002_Done")==1 then
+		dialogue_AllTimes()
+	elseif status>=2 then
+		dialogue_02()
+	elseif ready==1 then
+		if status<0 then
+			Say("m#STORY_NAME_01A.spr#STORY_NAME_01B.spr#030.mp3#","dialogue_01")
+		else
+			dialogue_01()
+		end
+	else
+		dialogue_AllTimes()
+	end
+end
+
+function dialogue_01()
+	Say("n1"..GetName().."，事務長好像在找你啊！","End")
+	SetFlag("MS002_Task", 1)
+end
+
+function dialogue_02()
+	Say("n1希望你早日完成任務。","End")
+end
+
+function dialogue_AllTimes()
+	Say("n1我也希望得到事務長的讚賞啊！","End")
+end
+

@@ -1,0 +1,175 @@
+--MQ014_D  娜姬．連特
+
+--statue : MQ013
+
+--statue2: MQ014
+
+--statue3: MQ015
+--statue3=2 : Finding 魔冰獸的血
+
+--statue4=3 : MQ016_Task is completed
+
+--statue5=1 : MQ017 Mission starts
+--statue5=2 : After Talking with 娜姬．連特 
+--statue5=3 :
+
+function start()
+	
+	statue=GetFlag("MQ013_Task")
+	statue2=GetFlag("MQ014_Task")
+	statue3=GetFlag("MQ015_Task")
+	statue4=GetFlag("MQ016_Task")
+	statue5=GetFlag("MQ017_Task")
+	
+	if statue5==5 then
+		Say("n1我想，學校的規條也是時候要再改了…","End")
+	
+	elseif statue5==4 then
+		speech2()
+		SetFlag("MQ017_Task",5)
+
+	elseif statue5>=2 then
+		Say("n1找到了賊人了沒有？","End")
+
+	elseif statue5== 1 then
+		Say("p1老師！")
+		Say("n1呃呃……什麼了？")
+		Say("p1最近賊人好像還有出沒在附近，我聽有位路人說看到賊人好像是我們學校的學生耶！")
+		Say("n1什麼會這樣……？會不會是認錯了？")
+		Say("p1有這個可能，不過這陣子的事都好像是關於我們學校的，我想查清楚會比較呢！")
+		Say("n1是這樣嗎……那你去查一下，之後說給我知道好了，你先去問一下其他學生，")
+		Say("n1看他們知不知道內情？","End")
+		SetFlag("MQ017_Task",2)
+
+
+	elseif statue4>=3 then
+		Say("n1嗯…他什麼也沒說嗎？有沒有提過我的名字？")
+		Say("p1呃…好像沒有…")
+		Say("n1你想清楚一點啦！有沒有啊？")
+		Say("p1呃……")
+		Say("p6老師不斷問你這個……還是快走為妙。","End")
+
+	elseif statue4>=1 then
+		Say("n3真的要去白鷹騎士訓練學校？")
+		Say("n1記著好好問清楚加路卡喔！還要幫我問問他的身體好不好之類的！","End")
+
+	elseif statue3 == 4 then
+		Say("p7老師一直在自言自語，就好像一個少女情竇初開似的……真是令人汗顏啊……還是別去吵她好了。","End")
+	
+	elseif statue3==3 then
+	
+		Say("n1耶？書籤上是什麼字跡……？給我看看？")
+		Say("n7老師她看了一會，就突然大喊一聲。")
+		Say("n1好像是騎士學校的加路卡．穆斯的字跡！什麼會這樣的呢？你去問問校長的意見喔？")
+		Say("n7老師好像很高興的樣子，當真是心花怒放")
+		Say("得到3000Exp")
+		gainexp(3000)
+		SetFlag("MQ015_Task",4)
+
+	elseif statue3==2 then
+		
+		Say("n1需要魔冰獸的血嗎？你一定要小心！知道了沒有？牠的實力應該很強呢……真有點擔心。","End")
+		
+	
+	elseif statue3== 1 then
+		lv=GetData("Level")
+		if lv<28 then
+			Say("n1不過在這之前，我想你應該鍛鍊一下自己，不然我害怕會有什麼意外……","End")
+		else
+			Say("n1麻煩你了，請去找古洛尼．尼美斯園長問問他的意見。","End")
+		end	
+	
+
+	
+	elseif statue2== 1 then
+		if GetFlag("MQ014_Completed")==1 then
+			Ask("n你幫我問問他的意見好了。","好的。","我還有工作要做呢……","response1")  
+
+		else
+			if CheckItem(10185)>0 then
+				Say("n1這張書籤的確是我的！謝謝你！這是安卡星護腕．2，你收下吧！真的謝謝你呢！")
+				if ItemListCountLeft(0)<1 then
+					Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+				eles
+					
+					gainexp(1500)
+					Say("p7得到"..Color(0,45,198).."安卡星護腕．2"..Color(0,0,0).."","End")
+					AddItem(1006)
+					speech1()	
+				end
+			else	
+				Say("n1真的麻煩你幫我找了，你真是好學生。","End")
+			end
+		end
+
+	elseif statue==3 or statue==4 or GetFlag("MQ013_NotGet")==1 then
+		description1()
+		Say("n1嗯…我聽綠加他說過了……我想他只是太緊張才會這樣說的吧？")
+		Say("n1你把放在心上，可是這個書籤對我來說很重要，你可以幫我找一找嗎？","End")
+		SetFlag("MQ014_Task",1)
+
+	else
+		description1()
+		Say("n1要是有什麼魔法的問題一定要找我喔，我會盡力幫你的。","End")
+		
+	
+	end	
+
+end 
+
+
+
+function gainexp(exp)
+
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+
+end
+
+
+function speech1()
+	Say("n1嗯？什麼感覺上……有點奇怪？你是不是對書籤做過什麼？")
+	Say("p1沒有啊！我一直就是這樣把它拿回來的。")
+	Say("n1這就奇怪了……什麼我會感到一些奇怪的依加魯能量由書籤上發出來的？")
+	Say("n1不如你去找古洛尼．尼美斯校長，他比我還厲害得很呢！")
+	SetFlag("MQ013_Task",5)
+	Ask("n你幫我問問他的意見好了。","好的。","我還有工作要做呢……","response1")  
+
+
+
+end
+
+function speech2()
+	Say("n1原來是瑪麗這個傻女孩得了夢遊症，我一早也應該要發現的，唉……我們兩所學校的規條，")
+	Say("n1也許真的苦了不少學生，看來真的要反映一下才行…")
+	Say("n1對了，謝謝你幫忙找出原因！這把炎風之杖就送給你吧！")
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到"..Color(0,45,198).."炎風之杖"..Color(0,0,0).."","End")
+		Say("p7得到5000EXP","End")
+		AddItem(10195)
+		gainexp(5000)
+	end
+end
+
+function response1()
+	if GetChoice()==0 then	
+		Say("n1那就麻煩你了，請一定要好好加油。")
+		lv=GetData("Level")
+		if lv<28 then
+			Say("n1不過在這之前，我想你應該鍛鍊一下自己，不然我害怕會有什麼意外……","End")
+		end
+		SetFlag("MQ015_Task",1)			
+
+	else
+		Say("n1是這樣嗎…那我不勉強你了。","End")
+		SetFlag("MQ014_Completed",1)
+	end
+
+end
+
+function description1()
+	Say("n7這位就是魔法學院的魔光學導師，娜姬．連特。有點天才魔女的稱號，")
+	Say("n7年紀輕輕就成為了魔法學校的導師，真的很厲害。")
+end

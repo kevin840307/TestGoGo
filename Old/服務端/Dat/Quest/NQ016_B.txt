@@ -1,0 +1,78 @@
+--NQ016_B 艾伯博士
+
+---status (NQ016_Task)
+-- 1: quest start, go to find 艾伯博士
+-- 2: go items for 艾伯博士
+-- 3: go to find 穆蘭卡博士
+-- 4: quest completed
+
+function start()
+	status = GetFlag("NQ016_Task")
+	if status == 2 then
+		if ItemListCountLeft(0)<1 then
+			Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		elseif check_item()==1 then
+			dialogue_04()
+		else
+			dialogue_03()
+		end
+	elseif status==1 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function check_item()
+	if GetCountItemCount(10050)>=50 and GetCountItemCount(10063)>=50 and GetCountItemCount(10049)>=50 then
+		RemoveItem(10050,50)
+		RemoveItem(10063,50)
+		RemoveItem(10049,50)
+		return 1
+	else
+		return 0
+	end
+end
+
+function dialogue_01()
+	Say("n1呵呵，研究也運行得如火如荼～","End")
+end
+
+function dialogue_02()
+	Say("n1這個…再拼成這個…")
+	Say("p1艾伯博士吧？有一件急事要找你！")
+	Say("n1嗯？又關於我的孫女嗎？")
+	Say("p1嗯～～沒錯沒錯～～咦？你什麼會知道的？")
+	Say("n1因為她已經弄丟了很多很多的零件了啊，這次她又弄丟了什麼啊？")
+	Say("p1今次是新機甲的晶片～呵呵。")
+	Say("n1是水晶晶片吧…連這個也可以弄丟，她真的是我的孫女嗎…？")
+	Say("n1水晶晶片我是有，可是你要幫我拿一些研究物回來～")
+	Say("p1咦？為什麼要我？")
+	Say("n1你一定有答應過她的什麼條件吧？幫一個老人家做事很難為你嗎？")
+	Say("p1哎，算了，我是有交換條件，那你要什麼？")
+	Say("n1呵呵，這可太簡單了。就是"..Color(0,45,198).."圓龜獸甲殼50個"..Color(0,0,0).."，"..Color(0,45,198).."鳥爪獸甲殼50個"..Color(0,0,0).."及"..Color(0,45,198).."大眼立普羽毛50個"..Color(0,0,0).."！")
+	Say("p1這些…真的是簡單的事嗎？")
+	Say("n1呵呵～我認為是～不喜歡就別做了啦～我也不用煩。")
+	Say("p1好～我做就是！")
+	Say("n1那我就等你回來囉～","End")
+	SetFlag("NQ016_Task", 2)
+end
+
+function dialogue_03()
+	Say("n1我要的是"..Color(0,45,198).."圓龜獸甲殼50個"..Color(0,0,0).."，"..Color(0,45,198).."鳥爪獸甲殼50個"..Color(0,0,0).."及"..Color(0,45,198).."大眼立普羽毛50個"..Color(0,0,0).."～這不會難到你吧？")
+	Say("p3絕對不會。")
+end
+
+function dialogue_04()
+	Say("p7交出“圓龜獸甲殼50個”")
+	Say("p7交出“鳥爪獸甲殼50個”")
+	Say("p7交出“大眼立普羽毛50個”")
+	Say("n1嗯嗯嗯～就是這些東西，真是辛苦你囉！")
+	Say("n1喔呵呵…這些東西完全足夠我研究了。")
+	Say("p1呼呼呼…那水晶晶片呢？")
+	Say("n1嗯～這個就是。")
+	Say("p7得到“水晶晶片”")
+	Say("n1叫她別再弄丟了喔～")
+	SetFlag("NQ016_Task", 3)
+	AddItem(10216, 1)
+end

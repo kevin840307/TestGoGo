@@ -1,0 +1,20 @@
+--MQ051_F 黑色結晶
+
+function start()
+	Say("p6把它吞到肚子內嗎……？")
+	Say("p6哎呀，真有點可怕！")
+	Say("p6不理了！吃了才算……")
+	Say("p6耶？甜甜的，還不錯……")
+	Say("p7習得“黑石破劍”")
+	Say("p7得到3000EXP","End")
+	gainexp(3000)
+	AddSkill(2103)
+end
+
+function gainexp(exp)
+
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+
+end
+

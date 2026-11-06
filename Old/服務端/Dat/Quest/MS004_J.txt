@@ -1,0 +1,49 @@
+--主電腦‧野花6號(MS004_J)
+
+--MS004_Task
+-- 1: quest start, go to 泰雲
+-- 2: go to 依加魯穩定器
+-- 3: go to 迪爾
+-- 4: go to 資訊大樓
+-- 5: go to 嘉迪尼事務長
+-- 6: go to 格靈森林
+-- 7: got the 野花電子卡
+-- 8: 基地destoryed
+-- 9: quest completed
+
+function start()
+	if GetCountItemCount(10275)>=1 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n7請插入電腦卡。")
+	Say("n7．．．")
+	Say("n7．．．")
+	Say("n7沒有合適的電腦卡。","End")
+end
+
+--玩家手持野花電子卡。
+function dialogue_02()
+	Say("n7請插入電腦卡。")
+	Say("n7插入野花電子卡。")
+	Say("n7．．．")
+	Say("n7．．．")
+	Say("n5！！警告！！")
+	Say("n5指紋不符！使用者不是野花的成員，現在啟動自爆裝置！")
+	Say("p3不好了！要立即逃離這裡！","dialogue_03")
+end
+
+function dialogue_03()
+	RemoveItem(10275, GetCountItemCount(10275))
+	Say("p7失去“野花電子卡”","dialogue_04")
+end
+
+function dialogue_04()
+	MovePlayer(7104,4448,25)
+	SetFlag("MS004_Task", 8)
+	QuestEnd()
+end

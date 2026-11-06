@@ -1,0 +1,5 @@
+--People01 艾特．布坎尼
+
+function start()
+	Say("n1教皇給人威嚴且神聖的感覺，大家的心中也十分敬愛他。","End")
+end

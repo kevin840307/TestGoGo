@@ -1,0 +1,6 @@
+--People01 弗蘭茲
+
+function start()
+	Say("n1在機械之城很難找到餐館……")
+	Say("n1可能是機動靈很少吃東西吧。","End")
+end

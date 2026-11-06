@@ -1,0 +1,71 @@
+--極級軍餉券
+--TQ035_D3
+
+--world flag
+--TQ035_D3_Bingo:last time player gain bingo
+
+--flag
+--TQ035_D3_EverBingo:1 if the player ever gain the bingo
+
+function lGetItemName()
+	return "極級軍餉券", 10665
+end
+
+function lGetRandGift()
+	ans = random(100)
+	if ans <= 20 then		--20%
+		AddItem(252,5)
+		return "加速藥x5", 252
+	elseif ans <= 30 then	--10%
+		AddItem(10597)
+		return "神秘技能捲軸‧上卷", 10597
+	elseif ans <= 40 then	--10%
+		AddItem(10598)
+		return "神秘技能捲軸‧下卷", 10598
+	elseif ans <= 60 then	--20%
+		AddItem(10235)
+		return "榮譽勳章", 10235
+	elseif ans <= 65 then	--5%
+		AddItem(10575)
+		return "封印山洞仙級團簽證", 10575
+	elseif ans <= 75 then	--10%
+		AddItem(10522)
+		return "古代機甲之墓傳送器", 10522
+	elseif ans <= 85 then	--10%
+		AddItem(10593)
+		return "極級天馬裝備換領券", 10593
+	elseif ans <= 95 then	--10%
+		AddItem(10307)
+		return "小天使之翼", 10307
+	elseif ans <= 99 then	--4%
+		AddItem(10601)
+		return "魔獸生化機甲囊", 10601
+	else
+		nextTime = GetTimeForDay(7) + GetWorldFlag("TQ035_D3_Bingo")
+		if GetFlag("TQ035_D3_EverBingo") == 1 then
+			AddItem(10601)
+			return "魔獸生化機甲囊", 10601
+		elseif GetRealTime() < nextTime then
+			AddItem(10601)
+			return "魔獸生化機甲囊", 10601
+		else
+			if random(100)>50 then			--0.5 %
+				AddItem(10601)
+				return "魔獸生化機甲囊", 10601
+			else							--0.5 %
+				SetFlag("TQ035_D3_EverBingo", 1)
+				SetWorldFlag("TQ035_D3_Bingo", GetRealTime())
+				gainexp(100000000)
+				return "1億Exp", 0
+			end
+		end
+	end
+end
+
+function gainexp(value)
+	ModifyData("ExpUse", value)
+	ModifyData("ExpAcc", value)
+end
+
+#include "TQ035_D_Comm.txt"
+#include "CommTime.txt"

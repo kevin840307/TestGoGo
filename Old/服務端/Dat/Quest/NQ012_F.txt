@@ -1,0 +1,96 @@
+--NQ012_F  泊裘斯
+
+--statue(NQ012_Task) =1 : receive the mission
+-- =2 : after talking with 凱兒
+-- =3 : need to find 金妮露
+-- =4 : after finding the 金妮露
+-- =5 : NQ012_Task is completed
+
+--statue(NQ013_Task) =1 : receive the mission
+--		     =2 : need to find 泊裘斯
+--		     =3 : after talking/finding 泊裘斯
+--		     =4 : need to find 蘑菇探測鏡
+--		     =5 : NQ013_Task is completed
+
+--statue(NQ014_Task) =1 : receive the mission
+--		     =2 : can go to find 福爾
+
+
+function start()
+
+	statue=GetFlag("NQ012_Task")
+	statue13=GetFlag("NQ013_Task")
+	statue14=GetFlag("NQ014_Task")
+	done15=GetFlag("NQ015_Done")	
+
+	if statue14==1 then
+		if done15==1 then
+			Say("n1…院長？")
+			Say("n1他好像很久沒回來了…不過還是有信…應該還在西南方…","End")
+		
+		else 
+			Say("n1……？")
+			Say("n1你想知道院長…的事？")
+			Say("p1嗯！你知道他在哪嗎？")
+			Say("n1不…我只記得他…好像去了西南方…","End")
+		end
+
+	elseif statue13==5 then
+		Say("n1你不是…找我媽媽嗎？","End")
+
+	elseif statue13==4 then	
+		if RemoveItem(10210)==1 then
+			Say("n1……很辛苦啊。")
+			Say("p1我找到藥引了！你快吃下去……")
+			Say("n7泊裘斯吃了一口…")
+			Say("p1什麼樣？好些了嗎？")
+			Say("n1……嗚…好像好了點…")
+			Say("p1那太好了！")
+			Say("n1謝謝你…媽媽她會很擔心吧…去找她…告訴她我沒事了。")
+			Say("p1你休息一下吧！","End")
+			Say("p7得到520Exp")
+			gainexp(520)
+			SetFlag("NQ013_Task",5)
+		else
+			Say("n1我看到星星了…我要死了嗎…")
+			Say("p1你支持下去啊！","End")
+		end
+	elseif statue13==3 then
+		Say("p1要馬上去找你媽媽才行！你要支持著！加油！","End")
+
+	elseif statue13== 2 then
+		if done15==1 then
+			Say("n1嗯…好辛苦…")
+			Say("p1咦！？又發高燒了！？要馬上去找你媽媽才行！","End")
+
+		
+		else
+			Say("n1嗯…好辛苦…")
+			Say("p1咦！？發高燒！？你…還好吧？")
+			Say("n1我…我…我很辛苦…")
+			Say("p1這什麼辦？")
+			Say("n1媽媽…")
+			Say("p1對了！我去找你的媽媽問問看！你要支持著！加油！","End")
+
+
+			
+		end
+		SetFlag("NQ013_Task",3)
+		
+	elseif statue==3 then
+		Say("n1她…金妮露不見了嗎…嗯…我什麼都不知道…","End")
+
+	else
+
+		Say("n1嗯…頭好重唷…","End")
+	end
+
+
+end
+
+function gainexp(exp)
+
+	ModifyData("ExpUse",exp)
+	ModifyData("ExpAcc",exp)
+
+end

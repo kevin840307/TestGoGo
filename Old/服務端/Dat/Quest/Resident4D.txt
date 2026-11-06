@@ -1,0 +1,6 @@
+--People01 妲其
+
+function start()
+	Say("n1看著這兒的大樹，我就覺得心情好了很多。")
+	Say("n1可能是平時的訓練太辛苦吧！","End")
+end

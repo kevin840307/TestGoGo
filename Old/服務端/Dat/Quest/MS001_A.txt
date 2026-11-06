@@ -1,0 +1,230 @@
+--MS001_A 禁衛長柏魯達
+
+--MS001_Task
+-- 0: quest title shown
+-- 1: quest started, go to find 50冰柏古獸的牙
+-- 2: back from the tomb
+-- 3: quest competed
+
+--MS001_Done
+-- 1: quest has been done once
+
+function start()
+	status = GetFlag("MS001_Task")
+	if GetFlag("MS001_Task")==-1 then
+		show_title()
+	elseif GetFlag("MS001_Done")==1 then
+		dialogue_05()
+	elseif status==2 and CheckItem(10225)>0 then
+		dialogue_04()
+	elseif status>=1 then
+		dialogue_03()
+	elseif GetData("Career")~=0 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function show_title()
+	SetFlag("MS001_Task", 0)
+	Say("m#STORY_NAME_00A.spr#STORY_NAME_00B.spr#030.mp3#","goCheckCareer")
+end
+
+function goCheckCareer()
+	if GetData("Career")~=0 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+--未就職
+function dialogue_01()
+	Ask("n由於幻之日來臨的影響，王國內的野生動物變得兇悍和較以往更主動襲擊王國內的市民，所以王城現正召集各有能之士，加入王國軍成為五大軍團其中一員。","怎麼樣才能加入呢？","啊！這與我何干。","reply_01")
+end
+
+function dialogue_01a()
+	Say("n1王國軍只召收已就業的人，你還是先就職再回來吧。", "End")
+end
+
+--己就職
+function dialogue_02()
+	Ask("n由於幻之日來臨的影響，王國內的野生動物變得兇悍和較以往更主動襲擊王國內的市民，所以王城現正召集各有能之士，加入王國軍成為五大軍團其中一員。","怎麼樣才能加入呢？","啊！這與我何干。","reply_02")
+end
+
+function dialogue_02a()
+	Ask("n你有興趣加入嗎？國皇為了齊集王國內的精英，每一個王國軍候選人也必須通過一個考驗才能成為五大軍團其中一員。","請問是個怎麼樣的考驗呢？","很抱歉，我沒有空參加。","reply_02a")
+end
+
+function dialogue_02b()
+	Ask("n候選人必須前去往獅鷲山拜祭王國的英雄狄更斯．麥可，從那兒把一顆叫英雄之心的寶石拿回來。","好，請你等著我回來吧。","很抱歉，我沒有空參加。","reply_02b")
+end
+
+function dialogue_02c()
+	Ask("n且慢，還有一件事你必須知道的，由於狄更斯．麥可在加米蘭特的人民逃進尼路亞時，曾獨力面對一百隻冰柏古獸，因此人們在拜祭他時也必會帶著50隻冰柏古獸的牙去拜祭，所以你也必須依照傳統的儀式帶著冰柏古獸的牙拜祭。","明白，我馬上便出發。","很抱歉，我沒有空參加。","reply_02c")
+end
+
+function dialogue_02d()
+	SetFlag("MS001_Task", 1)
+	Say("n1記著！帶著"..Color(0,45,198).."50隻冰柏古獸的牙"..Color(0,0,0).."去拜祭"..Color(0,45,198).."英雄狄更斯．麥可"..Color(0,0,0).."，把"..Color(0,45,198).."英雄之心"..Color(0,0,0).."帶回來。", "End")
+end
+
+--quest started
+function dialogue_03()
+	Say("n1忘了嗎？帶著"..Color(0,45,198).."50隻冰柏古獸的牙"..Color(0,0,0).."去"..Color(0,45,198).."獅鷲山"..Color(0,0,0).."拜祭"..Color(0,45,198).."英雄狄更斯．麥可"..Color(0,0,0).."，把"..Color(0,45,198).."英雄之心"..Color(0,0,0).."帶回來。", "End")
+end
+
+--quest going to complete
+function dialogue_04()
+	Ask("n十分之好，看來你已把英雄之心帶來了。","對，我已把英雄之心帶回來了。","還是遲一會才給他。","reply_04")
+end
+
+function dialogue_04a()
+	if ItemListCountLeft(1)<1 then
+		Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+	else
+		Say("n1很好，以吾皇之名，"..GetName().."正式成為王國軍的一份子，今後你必須守護正義保衛國土，面對邪惡而不退縮。")
+		Say("p7失去“英雄之心”")
+		RemoveItem(10225)
+		SetFlag("MS001_Task", 3)
+		SetFlag("MS001_Done", 1)
+		careerType = GetData("Career")
+		if careerType<=3 then
+			dialogue_04aa()
+		elseif careerType==4 or careerType==8 then
+			dialogue_04ab()
+		elseif careerType<=7 then
+			dialogue_04ac()
+		elseif careerType==10 then
+			dialogue_04ad()
+		else
+			dialogue_04ae()
+		end
+	end
+end
+
+--give 光劍
+function dialogue_04aa()
+	Say("n1跟據你現有的職業，你被編入了格靈騎士團。")
+	Say("n1這裡有一把王國制式光劍，是王國軍的象徵，現在就交給你吧。")
+	Say("p7得到“王國制式光劍”","End")
+	AddItem(10220)
+end
+
+--give 戰統
+function dialogue_04ab()
+	Say("n1跟據你現有的職業，你被編入了絲蘭狙擊兵團。")
+	Say("n1這裡有一把王國制式戰銃，是王國軍的象徵，現在就交給你吧。")
+	Say("p7得到“王國制式戰統”","End")
+	AddItem(10222)
+end
+
+--give 魔杖
+function dialogue_04ac()
+	Say("n1跟據你現有的職業，你被編入了古尼爾魔法軍團。")
+	Say("n1這裡有一把王國制式魔杖，是王國軍的象徵，現在就交給你吧。")
+	Say("p7得到“王國制式魔杖”","End")
+	AddItem(10221)
+end
+
+--give 長矛
+function dialogue_04ad()
+	Say("n1跟據你現有的職業，你被編入了皇家精靈戰團。")
+	Say("n1這裡有一把王國制式長矛，是王國軍的象徵，現在就交給你吧。")
+	Say("p7得到“王國制式長矛”","End")
+	AddItem(10223)
+end
+
+--give 戰盾
+function dialogue_04ae()
+	Say("n1跟據你現有的職業，你被編入了尼尼亞補給團。")
+	Say("n1這裡有一把王國制式戰盾，是王國軍的象徵，現在就交給你吧。")
+	Say("p7得到“王國制式戰盾”","End")
+	AddItem(10224)
+end
+
+--quest completed
+function dialogue_05()
+	Ask("n現有的王國任務已派了其他戰士調查了。暫時沒有新的任務。","我想詢問有關戰團和尼路亞星的事。","啊！這樣我先行去提升自己的實力。","reply_05")
+end
+
+function dialogue_05a()
+	Ask("n你詢問的是什麼資料？","有關五大軍團的事。","有關尼路亞星的歷史。","沒有什麼了，謝謝。","reply_05a")
+end
+
+function dialogue_05b()
+	Say("n1尼尼亞王國在皇上統治下有五大軍團，分別是由戰士組成的格靈騎士團，魔法師組成的古尼爾魔法軍團，…")
+	Say("n1統士組成的絲蘭狙擊團，精靈使組成的皇家精靈戰團與道具使組成的尼尼亞補給團。")
+	Say("n1在一般的情況下，各團長也不會直接指揮團員，團員的工作也會由國家委派，團長只會在特殊的任務上才會召集團員。","End")
+end
+
+function dialogue_05c()
+	Say("n1有關尼路亞星的歷史？你這個不好好讀史科的人，往官方網頁再好好學習吧！","End")
+end
+
+function reply_01()
+	if GetChoice()==0 then
+		dialogue_01a()
+	else
+		QuestEnd()
+	end
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		dialogue_02a()
+	else
+		QuestEnd()
+	end
+end
+
+function reply_02a()
+	if GetChoice()==0 then
+		dialogue_02b()
+	else
+		QuestEnd()
+	end
+end
+
+function reply_02b()
+	if GetChoice()==0 then
+		dialogue_02c()
+	else
+		QuestEnd()
+	end
+end
+
+function reply_02c()
+	if GetChoice()==0 then
+		dialogue_02d()
+	else
+		QuestEnd()
+	end
+end
+
+function reply_04()
+	if GetChoice()==0 then
+		dialogue_04a()
+	else
+		QuestEnd()
+	end
+end
+
+function reply_05()
+	if GetChoice()==0 then
+		dialogue_05a()
+	else
+		QuestEnd()
+	end
+end
+
+function reply_05a()
+	if GetChoice()==0 then
+		dialogue_05b()
+	elseif GetChoice()==1 then
+		dialogue_05c()
+	else
+		QuestEnd()
+	end
+end

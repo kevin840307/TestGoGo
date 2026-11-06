@@ -1,0 +1,19 @@
+--LS_29106_5 "雷之閃影‧五級"
+
+function GetSkillData()
+	return 29106,5,50,31609,"雷之閃影‧五級","雷之閃影‧四級","銃戰士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 4 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

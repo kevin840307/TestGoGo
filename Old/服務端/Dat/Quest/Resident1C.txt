@@ -1,0 +1,6 @@
+--People01 潘
+
+function start()
+	Say("n1應該買的是……菜和水果……")
+	Say("n1哎呀！你又害我忘記買什麼了！","End")
+end

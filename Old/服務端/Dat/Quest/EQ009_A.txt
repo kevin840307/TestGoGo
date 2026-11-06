@@ -1,0 +1,208 @@
+--//EQ009_A
+
+function start()
+	AddItem(10715)
+	if GetWorldFlag("EQ009") <= 0 then
+		Step01()
+	elseif GetWorldFlag("EQ009") == 1 then
+		Step03()
+	elseif GetWorldFlag("EQ009") == 2 then
+		Step05()
+	elseif GetWorldFlag("EQ009") == 3 then
+		Step07()
+	elseif GetWorldFlag("EQ009") == 4 then
+		Step09()
+	elseif GetWorldFlag("EQ009") == 5 then
+		Step11()
+	elseif GetWorldFlag("EQ009") == 6 then
+		Step13()
+	end
+end
+
+--//＜如WorldFlag (EQ009= -1)＞
+--//AddItem(10715) 
+--//(P1)使用高級武道大會控制器！
+--//(P)請選擇功能。
+--//＜選擇＞
+--//．開始領取參加表格。→Step02
+--//．不需要了。→Quest End
+function Step01()
+	Say("p1使用高級武道大會控制器！")
+	Ask("p請選擇功能。","開始領取參加表格。","查詢場地玩家人數。","不需要了。","Step01_Handler")
+end
+
+function Step01_Handler()
+	if GetChoice() == 0 then
+		Step02()
+	elseif GetChoice() == 1 then
+		Step15()
+	else
+		QuestEnd()
+	end
+end
+
+
+--//Set WorldFlag (EQ009=1)
+--//Step03
+function Step02()
+	SetWorldFlag("EQ009", 1)
+end
+
+--//＜如WorldFlag (EQ009=1)＞
+--//AddItem(10715) 
+--//(P1)使用高級武道大會控制器！
+--//(P)請選擇功能。
+--//＜選擇＞
+--//．中止領取參加表格。→Step04
+--//．不需要了。→Quest End
+function Step03()	
+	Say("p1使用高級武道大會控制器！")
+	Ask("p請選擇功能。","中止領取參加表格。","查詢場地玩家人數。","不需要了。","Step03_Handler")
+end
+
+function Step03_Handler()
+	if GetChoice() == 0 then
+		Step04()
+	elseif GetChoice() == 1 then
+		Step15()		
+	else
+		QuestEnd()
+	end
+end
+
+function Step04()
+	SetWorldFlag("EQ009",2)
+end
+
+--//＜如WorldFlag (EQ009=2)＞
+--//AddItem(10715)
+--//(P1)使用高級武道大會控制器！
+--//(P)請選擇功能。
+--//＜選擇＞
+--//．開始入場。→Step06
+--//．不需要了。→Quest End
+function Step05()	
+	Say("p1使用高級武道大會控制器！")
+	Ask("p請選擇功能。","開始入場。","查詢場地玩家人數。","不需要了。","Step05_Handler")
+end
+
+function Step05_Handler()
+	if GetChoice() == 0 then
+		Step06()
+	else
+		QuestEnd()
+	end	
+end
+
+function Step06()
+	SetWorldFlag("EQ009",3)
+end
+
+--//＜如WorldFlag (EQ009=3)＞
+--//AddItem(10715)
+--//(P1)使用高級武道大會控制器！
+--//(P)請選擇功能。
+--//＜選擇＞
+--//．中止入場。→Step08
+--//．不需要了。→Quest End
+function Step07()
+	Say("p1使用高級武道大會控制器！")
+	Ask("p請選擇功能。","中止入場。","查詢場地玩家人數。","不需要了。","Step07_Handler")
+end
+
+function Step07_Handler()
+	if GetChoice() == 0 then
+		Step08()
+	elseif GetChoice() == 1 then
+		Step15()
+	else
+		QuestEnd()
+	end
+end
+
+function Step08()
+	SetWorldFlag("EQ009",4)
+end
+
+--//＜如WorldFlag (EQ009=4)＞
+--//AddItem(10715)
+--//(P1)使用高級武道大會控制器！
+--//(P)請選擇功能。
+--//＜選擇＞
+--//．開始PvP Mode。→Step10
+--//．不需要了。→Quest End
+function Step09()
+	Say("p1使用高級武道大會控制器！")
+	Ask("p請選擇功能。","開始PvP Mode。","查詢場地玩家人數。","不需要了。","Step09_Handler")
+end
+
+function Step09_Handler()
+	if GetChoice() == 0 then
+		Step10()
+	elseif GetChoice() == 1 then
+		Step15()
+	else
+		QuestEnd()
+	end
+end
+
+
+function Step10()
+	SetWorldFlag("EQ009",5)
+end
+
+--//＜如WorldFlag (EQ009=5)＞
+--//AddItem(10715) 
+--//(P1)使用高級武道大會控制器！
+--//(P)請選擇功能。
+--//＜選擇＞
+--//．中止轉換PvP Mode。→Step12
+--//．不需要了。→Quest End
+function Step11()
+	Say("p1使用高級武道大會控制器！")
+	Ask("p請選擇功能。","中止轉換PvP Mode。","查詢場地玩家人數。","不需要了。","Step11_Handler")
+end
+
+function Step11_Handler()
+	if GetChoice() == 0 then
+		Step12()
+	elseif GetChoice() == 1 then
+		Step15()
+	else
+		QuestEnd()
+	end
+end
+
+function Step12()
+	SetWorldFlag("EQ009",6)
+end
+
+--//＜如WorldFlag (EQ009=6)＞
+--//AddItem(10715) 
+--//(P1)使用高級武道大會控制器！
+--//(P)請選擇功能。
+--//＜選擇＞
+--//．消滅參加表格。→Step14
+--//．不需要了。→Quest End
+function Step13()
+	Say("p1使用高級武道大會控制器！")
+	Ask("p請選擇功能。","消滅參加表格。","查詢場地玩家人數。","不需要了。","Step13_Handler")
+end
+
+function Step13_Handler()
+	if GetChoice() == 0 then
+		Step14()
+	elseif GetChoice() == 1 then
+		Step15()		
+	else
+		QuestEnd()
+	end
+end
+
+function Step14()
+	SetWorldFlag("EQ009",-1)
+end
+
+function Step15()
+	Say("p1場地玩家人數:"..GetMapPlayerCount(70))
+end

@@ -1,0 +1,6 @@
+--Ãz¯}¾÷±ñ°¸(MS004_K)
+
+function start()
+	Say("p7±o¨ì¡§Ãz¯}Ã­©w¾¯¡¨","End")
+	AddItem(10274)
+end

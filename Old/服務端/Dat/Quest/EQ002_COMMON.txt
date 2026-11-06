@@ -1,0 +1,109 @@
+function GetNextMidway(curMidway)
+	if curMidway < 0 then
+	return Color(0,0,0)
+	elseif curMidway == 0 then
+	return "絲蘭森林‧中途站(1)"
+	elseif curMidway == 1 then
+	return "饑餓荒地‧中途站(2)"
+	elseif curMidway == 2 then
+	return "星之湖‧中途站(3)"
+	elseif curMidway == 3 then
+	return "流星之河下游‧中途站(4)"
+	elseif curMidway == 4 then
+	return "流星之河上游‧中途站(5)"
+	elseif curMidway == 5 then
+	return "尼尼亞盆地‧中途站(6)"
+	elseif curMidway == 6 then
+	return "尼尼亞皇城‧中途站(7)"
+	elseif curMidway == 7 then
+	return "孤寂山區‧中途站(8)"
+	elseif curMidway == 8 then
+	return "古尼爾森林‧中途站(9)"
+	elseif curMidway == 9 then
+	return "魔法之都‧中途站(10)"
+	elseif curMidway == 10 then
+	return "古尼爾森林‧中途站(11)"
+	elseif curMidway == 11 then
+	return "孤寂山區‧中途站(12)"
+	elseif curMidway == 12 then
+	return "尼尼亞皇城‧中途站(13)"
+	elseif curMidway == 13 then
+	return "尼尼亞盆地‧中途站(14)"
+	elseif curMidway == 14 then
+	return "流星之河上游‧中途站(15)"
+	elseif curMidway == 15 then
+	return "流星之河下游‧中途站(16)"
+	elseif curMidway == 16 then
+	return "星之湖‧中途站(17)"
+	elseif curMidway == 17 then
+	return "饑餓荒地‧中途站(18)"
+	elseif curMidway == 18 then
+	return "絲蘭森林‧中途站(19)"
+	elseif curMidway == 19 then
+	return "馬拉松大賽起點"
+	end
+end                 
+
+function IsExpire()
+	if (GetRealTime() - GetFlag("EQ002_START")) > 18000 then 
+		return true
+	else
+		return false
+	end
+end
+
+function AtMidWay(i)
+	if GetFlag("EQ002_Done") <= 0 then
+		if GetFlag("EQ002_START") > 0 then
+			if GetFlag("EQ002_MID_WAY")+1 == i then
+				Step02_Common()
+			else	
+				Step03_Common()
+			end
+		else
+			Step01_Common()
+		end
+	else
+		Say("n7恭喜你已經完成馬拉松大賽。")
+	end
+end
+
+function Step01_Common()
+	Say("n1這裡是星空馬拉松的中途站，你還沒有參加星空馬拉松啊！")
+end
+
+function Step02_Common()		
+--<玩家已經參加馬拉松中，而且到達了正確的中途站>
+--＜如時限已經超過5小時＞→Step05
+	if IsExpire() then
+		Step05_Common()
+	else
+		Say("n1現在幫你登記"..GetNextMidway(GetFlag("EQ002_MID_WAY")).."的記錄，你下一個中途站是"..GetNextMidway(GetFlag("EQ002_MID_WAY")+1).."，加油啊！")
+		SetFlag("EQ002_MID_WAY", GetFlag("EQ002_MID_WAY")+1)
+	end
+end
+
+function Step03_Common()
+--<玩家已經參加馬拉松中，但到達了不正確的中途站>
+--＜如時限已經超過5小時＞→Step05
+	if IsExpire() then
+		Fail()
+	else	
+		Say("n1這不是你應該來的中途站，路線錯誤，你下一個中途站應該是"..GetNextMidway(GetFlag("EQ002_MID_WAY")).."，加油啊！")
+	end
+end
+
+function Step04_Common()
+--<After EQ002_A Step07＞
+	Say("n1星空世運會的選手啊！你已然完成了星空馬拉松了！你可以為參加下一個項目準備一下。")
+end
+
+function Fail()
+	Say("n1對不起，你已經超過了比賽時間的限制了，不過你可以再得一次參加馬拉松的機會。")
+--＜清除旗標，使玩家回復到可再進行馬拉松的狀態＞
+	SetFlag("EQ002_MID_WAY", 0)
+	SetFlag("EQ002_START", 0)
+	SetFlag("EQ002_LAP", 0)	
+	SetFlag("EQ002_Done",0)
+	SetFlag("EQ002_A_Step",0)
+end   

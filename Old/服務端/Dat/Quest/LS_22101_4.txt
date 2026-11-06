@@ -1,0 +1,19 @@
+--LS_22101_4 "暗之力‧四級"
+
+function GetSkillData()
+	return 22101,4,40,31352,"暗之力‧四級","暗之力‧三級","魔動使、守護使或聖靈使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 5 or career == 6 or career == 7 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

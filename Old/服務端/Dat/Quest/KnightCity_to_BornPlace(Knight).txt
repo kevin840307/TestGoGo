@@ -1,0 +1,13 @@
+--KnightCity to BornPlace(Knight)
+
+function start()
+	Ask("n要往初心者之間嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(2304,3008,40)
+	end
+	QuestEnd()
+end

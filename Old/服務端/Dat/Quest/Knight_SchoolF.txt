@@ -1,0 +1,5 @@
+--People01 騎士榮恩
+
+function start()
+	Say("n1魔法師常常玩弄他們的法術，不實在地鍛鍊自己的體魄。","End")
+end

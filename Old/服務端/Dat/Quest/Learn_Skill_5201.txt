@@ -1,0 +1,13 @@
+--Learn_Skill_J2_S1_5201 血色月蝕‧技能捲軸
+
+function init_data()
+	level_needed = 50
+	item_index, item_name, skill_index, skill_name, pre_skill_index, pre_skill_name, god_name, career_id, job_id, career_name = get_data(5)
+end
+
+#include "Learn_Skill_common_201.txt"
+
+
+
+
+

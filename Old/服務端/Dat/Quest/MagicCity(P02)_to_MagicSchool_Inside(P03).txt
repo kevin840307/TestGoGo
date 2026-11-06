@@ -1,0 +1,12 @@
+--MagicCity(P02) to Magic_School_Inside(P03)
+function start()
+	Ask("n要進入魔法學園嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(3136,7008,10)
+	end
+	QuestEnd()
+end

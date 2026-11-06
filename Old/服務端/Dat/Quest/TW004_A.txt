@@ -1,0 +1,89 @@
+--TW004_A (大富翁)
+
+function start()
+    if GetFlag("TW004_A_STEP") < 3 then
+        Ask("n唉！這可怎麼辦呢。","發生了什麼事嗎？","對不起我認錯人了。","step1_ans")
+    else
+        step5_dia()
+    end        
+end
+
+function step1_ans()
+    if GetChoice() == 0 then
+        step2_dia()
+    else
+        QuestEnd()
+    end    
+end
+
+function step2_dia()
+    Ask("n是這樣的，我是這城裡最有錢的人。我的女兒現在生了很嚴重的病，需要很特殊的藥才能治好她。可是醫生說這種藥材沒有在賣，需要去郊外才找的到！","這樣啊，那需要什麼藥材才能幫助你的女兒呢？","我很忙，現在沒空幫你！對不起喔。","step2_ans")
+end
+
+function step2_ans()
+    if GetChoice()==0 then
+        step3_dia()
+    else
+        QuestEnd()
+    end        
+end
+
+function step3_dia()
+    Say("n1你真的願意幫我！太好了，我就知道你是個好心的人。等你幫我取回材料後我一定會給你很多錢的。")
+    Say("n1現在我就跟你說明一下，如何獲得這些藥材。")
+    Ask("n在古尼爾森林、絲蘭森林、戰爭平原、和獅鷲山上分別有袋子金魚、滾滾豬、河童波波、和精靈哈密四種怪物。你必須從他們身上取得金魚鱗片7個、滾滾豬尾6個、河童牙4個、以及哈密羽毛一個。都聽清楚了嗎？","清楚了我現在馬上幫你收集材料。","好麻煩喔！要走很遠耶，我放棄了。","step3_ans")
+end
+
+function step3_ans()
+    if GetChoice()==0 then
+        Say("n1謝謝！那我就在這裡等你回來吧。")
+        SetFlag("TW004_A_STEP",3)
+    else
+        QuestEnd()
+    end
+end
+
+function step5_dia()
+    if GetCountItemCount(10312) < 7 or GetCountItemCount(10315) < 6 or GetCountItemCount(10326) < 4 or GetCountItemCount(10378) < 1 then
+        Say("n1我要的材料是金魚鱗片7個、滾滾豬尾6個、河童牙4個、哈密羽毛一個，我的女兒現在生了很嚴重的病，需要這些東西才能治好她！")
+    else
+        Say("n1咦！？你怎麼回來了，難道你真的去幫我找材料嗎！")
+        Ask("n其實我只是騙你的，我的女兒根本沒有生病。我只是想說愚人節快到了，說說謊話欺騙大家啦！","你怎麼可以這樣呢！","摸摸鼻子走人，把打到的東西賣掉，就當作被富翁騙了！","step5_ans")
+    end
+end
+
+function step5_ans()
+    if GetChoice() == 0 then
+       	step6_dia()    
+    else
+        QuestEnd()
+    end
+end
+
+function step6_dia()
+    if ItemListCountLeft(0) < 1 then
+        step8_dia()
+    else
+	Say("n1好吧！我知道騙人是不對的，那我送你一樣禮物賠罪好了，不要生氣喔。")
+        Say("n1請你先把材料交給我，證明你真的有幫我收集材料。")
+        Say("p7交出金魚鱗片7個。")
+        Say("p7交出滾滾豬尾6個。")
+        Say("p7交出河童牙4個。")
+        Say("p7交出哈密羽毛一個。")
+        Say("n1很好，這是給你的禮物，祝你好運！")
+        Say("p7得到〝愚樂刮刮彩卷〞。", "step6_get")
+    end
+end
+
+function step6_get()
+    RemoveItem(10312,7)
+    RemoveItem(10315,6)
+    RemoveItem(10326,4)
+    RemoveItem(10378,1)
+    AddItem(10569)
+    SetFlag("TW004_A_STEP",-1)        
+end
+
+function step8_dia()
+   Say("n1對不起，你身上的物品太多了，請整理一下再來找我吧！")
+end

@@ -1,0 +1,34 @@
+--TQ008A 瑤瑤郡主的侍從
+
+function start()
+	Say("n1瑤瑤郡主現在邀請40位國民參加在皇宮所舉行的生日會。")
+	Say("n1用300顆天藍寶石便可換得郡主生日會邀請函一封。")
+	Say("n1而天藍寶石就在天藍怪寶身上。")
+	Say("n1在03年10月2日11時前，得到最多邀請函的40位國民，便可參與10月7日所舉辦的郡主生日會。")
+	Say("n1在當天還會舉行收集大賽，勝出者可得到神秘禮物。")
+	Ask("n你要換取邀請函嗎？","是的，這裡有300顆天藍寶石。","不了。","CheckFinish")
+end
+
+function CheckFinish()
+	choice = GetChoice()
+	if choice == 0 then
+		Check300()
+	else
+		Say("神秘禮物是很豐富的，而且有機會見到到瑤瑤郡主，你可不要錯過這個機會。")
+	end
+end
+
+function Check300()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		if RemoveItem(10214,300) == 1 then
+			Say("n1這是郡主生日會邀請函，請多加努力，希望在生日會當天可以見到你。",End)
+			AddItem(10215)
+		else
+			Say("n1你身上沒有足夠的天藍寶石呢！請多加努力，希望在生日會當天可以見到你。",End)
+		end
+	end
+end
+
+	

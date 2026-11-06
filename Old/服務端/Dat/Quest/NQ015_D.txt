@@ -1,0 +1,29 @@
+--NQ015_D  月出鳥
+
+
+function start()
+
+	if GetFlag("NQ015_Task") == 3 and CheckItem(10212)<1 then
+		if ItemListCountLeft(0)<1 then
+			Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			SetFlag("NQ015_D",GetFlag("NQ015_D")+1)
+			if GetFlag("NQ015_D")>=5 then
+				getMoonFolkStone()
+			end
+		end
+	else
+		QuestEnd()
+	end	
+
+
+end
+
+
+function getMoonFolkStone()
+	Say("p7得到"..Color(0,45,198).."月霧石"..Color(0,0,0).."")
+	AddItem(10212)	
+	Say("p1這就是月霧石了吧！要快點拿回去才行！不然這可是"..Color(0,45,198).."會溶"..Color(0,0,0).."的…","End")
+	SetFlag("NQ015_Bird",GetGameHours())
+	SetFlag("NQ015_D",0)
+end

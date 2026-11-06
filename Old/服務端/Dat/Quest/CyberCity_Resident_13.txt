@@ -1,0 +1,6 @@
+--People01 西西昆
+
+function start()
+	Say("n1什麼？我的名字有點奇怪？")
+	Say("n1這是我媽幫我取的，有什麼關係。","End")
+end

@@ -1,0 +1,19 @@
+--LS_21102_2 "鐵之星‧二級"
+
+function GetSkillData()
+	return 21102,2,20,31340,"鐵之星‧二級","鐵之星‧一級","見習靈鬥士、見習守護劍士或見習聖劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 1 or career == 2 or career == 3 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

@@ -1,0 +1,63 @@
+function start()
+	if GetFlag("EQ001_A_Step") >= 2 then 
+		if GetFlag("EQ001_B_Step") >= 3 then
+			if GetFlag("EQ001_A_Step") >= 5 then
+				Step05()
+			else
+				Step04()
+			end
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("n1星空世運會是公平而且神聖的，是一個絕不容許作弊的運動會。")
+	SetFlag("EQ001_B_Step", 1)
+end
+
+function Step02()		--<After EQ001_A Step02>
+	Say("n1星空世運會是公平而且神聖的，是一個絕不容許作弊的運動會。")
+	Ask("n你可以在此宣誓，承諾會公平的進行競賽嗎？","是的，我在此宣誓．．．","不～我只是路過的。","Step02_Handler")
+--＜選項＞
+--．是的，我在此宣誓．．．→Step03
+--．不～我只是路過的。→QuestEnd
+end
+
+function Step02_Handler()
+	if GetChoice() == 0 then
+		Step03()
+	else
+		QuestEnd()
+	end
+end
+
+function Step03()		--<如玩家身上物品空間少於１>→Step06
+	if ItemListCountLeft(0) < 1 then
+		Step06()
+	else
+		Say("p1我在此宣誓，我會承諾會公平的進行競賽，因為我明白星空世運會是公平而且神聖的，絕不作弊。")
+		Say("n1很好，我就將星空世運聖火交給你，當你完成傳送聖火的儀式，便可得到參加星空世運會的資格。")
+		Say("p7得到星空世運聖火。")
+		AddItem(10702)
+		SetFlag("EQ001_B_Step", 3)
+	end
+end
+
+function Step04()		--<After EQ001_B Step03>
+	Say("n1你回去快把星空世運聖火交給世運大使吧！")
+	Say("n1完成傳送聖火的儀式，便可得到參加星空世運會的資格。")
+	SetFlag("EQ001_B_Step", 4)
+end
+
+function Step05()		--<After EQ001_A Step05>
+	Say("n1星空世運會是公平而且神聖的，是一個絕不容許作弊的運動會。")
+	SetFlag("EQ001_B_Step", 5)
+end
+
+function Step06()
+	Say("p7身上的物品太多了，還是先整理一下吧！")
+end

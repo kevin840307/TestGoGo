@@ -1,0 +1,5 @@
+--People01 騎士布賓
+
+function start()
+	Say("n1騎士，這個名字使每一個騎士也背負著一份使命，一份榮譽。","End")
+end

@@ -1,0 +1,33 @@
+--MQ051_C 麵包師傅查查
+
+--MQ051_TaskA
+-- 1: quest start, find 古米爾
+-- 2: go to get the bread for 古米爾
+-- 3: quest completed
+
+function start()
+	Ask("n你想買騎士麵包嗎？一個才2000元唷！","給我一個。","不用了。","reply")
+end
+
+function reply()
+	if GetChoice()==0 then
+		if GetData("Money")>=2000 then
+			dialogue_01()
+		else
+			Say("n1對不起，你未夠錢買喔！","End")
+		end
+	else
+		Say("n1下次再來看啊！","End")
+	end
+end
+
+function dialogue_01()
+	Say("n1謝謝！這是你的麵包！")
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到一個“騎士麵包”","End")
+		ModifyData("Money", -2000)
+		AddItem(10228)
+	end
+end

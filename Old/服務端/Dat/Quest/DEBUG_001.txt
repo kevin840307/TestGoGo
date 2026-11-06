@@ -1,0 +1,7 @@
+--DEBUG_001.txt
+--統計怪死的數量
+
+function start()
+	ans = GetFlag("DEBUG_001")
+	SetFlag("DEBUG_001", ans+1)
+end

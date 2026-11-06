@@ -1,0 +1,12 @@
+--黑蝙蝠-Lv10(TQ015B)
+
+function start()
+	if random(100)>80 then
+		Say("p7得到“杏仁”。")
+		AddItem(10276)
+	else
+		Say("p7得到“蘋果”。")
+		AddItem(10277)
+	end
+	QuestEnd()
+end

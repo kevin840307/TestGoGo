@@ -1,0 +1,37 @@
+--Learn_Skill_7103(魔風咒)
+
+function start()
+	Giveback()
+	if GetData("Career") == 7 then
+	CheckOther()
+	else
+	Say("p7只有聖靈使才可學習魔風咒。","End")
+	end
+end
+
+function CheckOther()
+	if GetData("Level") < 20 then
+	Say("p7你的等級仍未可學習魔風咒啊。","End")
+	elseif HasSkill(7103)==1 then
+	Say("p7你已經學會了魔風咒。","End")
+	else
+	Say("p7你的眼前出現一道白光，你看到了暴風聖獸的形象，這時祂對你說．．．")
+		Ask("p你要學習魔風咒嗎?","是的。","不是。","Teach")
+	end
+end
+
+function Teach()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("p7我現在就將魔風咒傳授給你．．．")
+		Say("p7你已經學會了魔風咒。","End")
+		RemoveItem(10338)
+		AddSkill(7103)
+	else
+	Say("p7需要學習魔風咒時，可以再次召喚我。","End")
+	end
+end
+
+function Giveback()
+	AddItem(10338)
+end

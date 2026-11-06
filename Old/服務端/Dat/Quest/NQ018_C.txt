@@ -1,0 +1,77 @@
+--NQ018_C 亞當
+
+-- NQ018_Task_3		米古族任務
+-- 1: mission started
+-- 2: mission completed
+
+function start()
+	status = GetFlag("NQ018_Task_3")
+	if status ==1 then
+		if GetCountItemCount(10063)>=20 and GetCountItemCount(70)>=20 and GetCountItemCount(10266)>=1 then
+			dialogue_05()
+		else
+			dialogue_04()
+		end
+	elseif GetCountItemCount(10266)>=1 then
+		if GetData("Race")==2 then
+			dialogue_03()
+		else
+			dialogue_02()
+		end
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1呵呵…我是米古族的長老之一喔。","End")
+end
+
+function dialogue_02()
+	Say("p1你好，可以幫我寫這個推薦報告嗎？")
+	Say("n1為什麼我要幫你呢？你不是米古族吧？")
+	Say("n1報告上也說得清清楚楚，一定要找米古族的吧？","End")
+end
+
+function dialogue_03()
+	Say("p1亞當長老～～你看這個～～")
+	Say("n1嗯？你是…？")
+	Say("p1是這本書叫我來找你的！它說你是一個慈祥的人～～很有權威！")
+	Say("n1嗯…這本東西真的是這樣說？這本是介紹書吧？要我寫嗎？")
+	Say("p1長老真是太聰明了！沒錯～！")
+	Say("n1沒問題！就幫你寫吧！")
+	Say("p1耶！長老萬歲！")
+	Say("n1幫你是可以，可是我有個條件！")
+	Say("p1嗯嗯嗯？")
+	Say("n1你幫我找20支治療藥水和20根大眼立普羽毛回來，我就幫你了。")
+	Say("p1這麼多…不可以減些嗎？")
+	Say("n1不．行。","End")
+	SetFlag("NQ018_Task_3", 1)
+end
+
+function dialogue_04()
+	Say("n1如何？找到20支治療藥水和20根大眼立普羽毛回來了沒有？","End")
+end
+
+function dialogue_05()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("n1呵呵…真是大豐收，來，把書交給我吧！")
+		Say("p7交出“米古族推薦報告”")
+		Say("p7只見長老隨便在上面簽了個名…")
+		Say("n1這樣就行了～拿回去吧！")		
+		Say("p7得到“完成．米古族推薦報告”")
+		Say("p1啥！？這樣就行！？")
+		Say("n1對啊。")
+		Say("p6可惡！早知是這樣的話，我自己寫就好……")
+		Say("p1那我走了！謝謝！")
+		Say("n1慢走喔…呵呵。","End")
+        RemoveItem(10063, 20)
+		RemoveItem(70, 20)
+		RemoveItem(10266)
+		AddItem(10269)
+		SetFlag("NQ018_Task_3", 2)
+	end
+end
+

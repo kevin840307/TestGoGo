@@ -1,0 +1,13 @@
+function start()
+	CanMove()
+end
+
+function GetLocName()
+	return "廢水處理廠遺址"
+end
+
+function GetLoc()
+	return 3008,2208,14
+end
+
+#include "TS_Common.txt"

@@ -1,0 +1,21 @@
+--NQ018_D 靈感獸
+
+function start()
+	if GetData("Race")<=1 and GetCountItemCount(10265)>=1 then
+		dialogue_01()
+	end
+	QuestEnd()
+end
+
+function dialogue_01()
+    if ItemListCountLeft < 0 then
+        Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+    else        
+    	Say("p1嘿，這個一定是靈感獸的血吧？")
+    	Say("p1嗯…現在只要使用這血寫企劃書便行…")
+    	Say("p1得到“靈感獸的血”")
+    	AddItem(10270)
+    end    	
+end
+
+

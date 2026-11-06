@@ -1,0 +1,78 @@
+--SKC26J108
+#include "txt_26108.txt"
+
+function init_data()
+	skillflag 		= "26108"
+	TXT_SkillName()
+	boost 			= "EffHR"
+	other_boost 	= "EffMAP"
+end
+
+function start()
+	init_data()
+	consume 		= "MP"
+
+	varyDelta 		= 20
+
+	recastTime 		= 900
+	duration 		= 900
+	
+	skillid 		= 26108
+	
+	defender 		= GetCallerPtr()	
+	
+	--attackType		= GetType()
+	skillLv 		= GetSkillLv()
+	effect 			= GetPara(skillLv)
+	conTotal 		= GetConTotal(skillLv)
+	other_effect 	= GetPara_Other(skillLv)
+	
+	GoBoost_2_Boost()
+end
+
+function GetPara(lv)
+	if lv == 1 then
+		return 8
+	elseif lv == 2 then
+		return 9
+	elseif lv == 3 then
+		return 10
+	elseif lv == 4 then
+		return 11
+	else
+		return 12
+	end
+end
+
+function GetConTotal(lv)
+	if lv == 1 then
+		return 56
+	elseif lv == 2 then
+		return 68
+	elseif lv == 3 then
+		return 81
+	elseif lv == 4 then
+		return 95
+	else
+		return 115
+	end
+end
+
+function GetPara_Other(lv)
+	if lv == 1 then
+		return -18
+	elseif lv == 2 then
+		return -21
+	elseif lv == 3 then
+		return -26
+	elseif lv == 4 then
+		return -30
+	else
+		return -35
+	end
+end
+
+#include "boostcommon.txt"
+
+
+

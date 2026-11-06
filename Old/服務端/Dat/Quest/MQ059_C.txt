@@ -1,0 +1,83 @@
+--MQ059_C 沈重的鐵箱子
+
+--MQ059_Counter
+-- store the last time get the paper
+
+function start()
+	counter = GetFlag("MQ059_Counter")
+	if counter~=-1 then
+		if GetGameHours()-counter<2016 then
+			dialogue_03()
+		else
+			dialogue_04()
+		end
+	else
+		if GetData("Race")~=3 then
+			dialogue_NonRobot()
+		else
+			if GetData("Level")<40 or GetData("AP")<140 then
+				dialogue_01()
+			else
+				dialogue_02()
+			end
+		end
+	end
+end
+
+--不是機動靈的玩家點選時
+function dialogue_NonRobot()
+	Say("p1這個鐵箱子好像很重的樣子……")
+	Say("p1不知道裡面有什麼呢？")
+	Say("p1可是我應該打不開吧……","End")
+end
+
+--機動靈的玩家點選，但級數或AP不夠40/140時
+function dialogue_01()
+	Say("p1這個鐵箱子好像很重的樣子……")
+	Say("p1不知道裡面有什麼呢？")
+	Say("p1我打開它來試試……")
+	Say("p1……打不開啊……太重了。","End")
+end
+
+--機動靈的玩家點選，級數和AP夠40/140時
+function dialogue_02()
+	Say("p1這個鐵箱子好像很重的樣子……")
+	Say("p1不知道裡面有什麼呢？")
+	Say("p1我打開它來試試……")
+	Say("p3……喝……！")
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p1打開了！打開了！這個東西是什麼？")
+		Say("p7得到“召雷金鈴”")
+		Say("p7得到4000EXP","End")
+		AddItem(10249)
+		gainexp(4000)
+		SetFlag("MQ059_Counter", GetGameHours())
+	end
+end
+
+--機動靈點選，但拿到之後未過一星期
+function dialogue_03()
+	Say("p1這個箱子已經沒什麼可以拿了。","End")
+end
+
+--機動靈點選，拿到之後過了一星期
+function dialogue_04()
+	Say("p1箱子又關上了……")
+	Say("p1不知道裡面有什麼呢？")
+	Say("p1我打開它來試試……")
+	Say("p3……喝……！")
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p1打開了！打開了！")
+		Say("p7得到“召雷金鈴”","End")
+		AddItem(10249)
+	end
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end

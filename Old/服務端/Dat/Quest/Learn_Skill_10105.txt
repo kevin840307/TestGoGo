@@ -1,0 +1,37 @@
+--Learn_Skill_10105(治靈聖經)
+
+function start()
+	Giveback()
+	if GetData("Career") == 10 then
+	CheckOther()
+	else
+	Say("p7只有精靈使才可學習治靈聖經。","End")
+	end
+end
+
+function CheckOther()
+	if GetData("Level") < 70 then
+	Say("p7你的等級仍未可學習治靈聖經啊。","End")
+	elseif HasSkill(10105)==1 then
+	Say("p7你已經學會了治靈聖經。","End")
+	else
+	Say("p7你的眼前出現一道白光，你看到了精靈王的形象，這時祂對你說．．．")
+		Ask("p你要學習治靈聖經嗎?","是的。","不是。","Teach")
+	end
+end
+
+function Teach()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("p7我現在就將治靈聖經傳授給你．．．")
+		Say("p7你已經學會了治靈聖經。","End")
+		RemoveItem(10356)
+		AddSkill(10105)
+	else
+	Say("p7需要學習治靈聖經時，可以再次召喚我。","End")
+	end
+end
+
+function Giveback()
+	AddItem(10356)
+end

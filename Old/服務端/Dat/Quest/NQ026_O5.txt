@@ -1,0 +1,13 @@
+--NQ026_O5(黃魔隊‧初級戰鬥員)
+
+function start()
+    if GetFlag("NQ026_KILL_SEQ") == -1 then
+        Say("p7體內出現了一道黃色的微弱魔獸能量。")
+        SetFlag("NQ026_KILL_SEQ",5)
+    else        
+        Say("p7體內的魔獸能量消失了！")
+        Say("p7感應到另一道魔獸能量出現。")
+        Say("p7體內得到一道黃色的微弱魔獸能量。")
+        SetFlag("NQ026_KILL_SEQ",5)
+    end        
+end

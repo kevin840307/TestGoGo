@@ -1,0 +1,14 @@
+--tq029_d
+
+function start()
+    AddItem(10576)
+    Ask("p機動勳章發出一道白光，白光直指機械之城的方向。\n要傳送到機械之城嗎？","是的","不是","ans_handler")
+end
+
+function ans_handler()
+    if GetChoice() == 0 then
+        MovePlayer(9024,4832,17)
+    else
+        QuestEnd()
+    end        
+end

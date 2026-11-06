@@ -1,0 +1,69 @@
+--NQ002_D  迷之箱子
+
+function GetItemData(choice)
+	if choice<=550 then
+		return 31229, "熱光劍", 1, 1
+	elseif choice<=600 then
+		return 31230, "熱光斧", 1, 1
+	elseif choice<=650 then
+		return 31231, "熱光槍", 1, 1
+	elseif choice<=700 then
+		return 31232, "熱光木杖", 1, 1
+	elseif choice<=750 then
+		return 31233, "熱光小刀", 1, 1
+	elseif choice<=800 then
+		return 31234, "熱光單銃", 1, 1
+	elseif choice<=850 then
+		return 31235, "熱光雙銃", 1, 1
+	elseif choice<=900 then
+		return 281, "魔咒彈", 0, 100
+	elseif choice<=950 then
+		return 10012, "金刀子", 1, 1
+	elseif choice<=955 then
+		return 31024, "甲殼", 0, 60
+	elseif choice<=960 then
+		return 31207, "生命強化水", 0, 5
+	elseif choice<=965 then
+		return 31208, "魔力強化水", 0, 5
+	elseif choice<=970 then
+		return 31210, "防禦強化水", 0, 5
+	elseif choice<=975 then
+		return 31212, "魔障強化水", 0, 5
+	elseif choice<=980 then
+		return 31214, "命中提升水", 0, 5
+	elseif choice<=985 then
+		return 31215, "加強閃避水", 0, 5
+	elseif choice<=990 then
+		return 31176, "厚棉甲", 1, 1
+	elseif choice<=995 then
+		return 31084, "厚棉褲子", 1, 1
+	else
+		return 31244, "石制銀盾", 1, 1
+	end
+end
+
+function start()
+	choice=random(1000)
+	if choice <=500 then
+		Explose()
+	else
+		ID, Name, Type, Total = GetItemData(choice)
+		if ItemListCountLeft(Type)<Total then
+			Explose()
+		else
+			Say("p4啦啦啦～是什麼來的呢～？")
+			Say("p1原來是"..Name.."……嗯！太好了！")
+			Say("p7得到"..Name)
+			AddItem(ID,Total)
+		end
+	end
+	QuestEnd()
+end
+
+function Explose()
+	Say("p4啦啦啦～是什麼來的呢～？")
+	Say("p4這是什麼怪東西？")
+	Say("p1好像是火藥！！")
+	Say("p3糟了！要爆炸了！！")
+	SetData("HP",1)
+end

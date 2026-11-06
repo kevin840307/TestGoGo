@@ -1,0 +1,6 @@
+--People01 泰奧
+
+function start()
+	Say("n1天快下雨的話，燕子會低飛喔。")
+	Say("n1呼．．．最近都沒下雨的．．．","End")
+end

@@ -1,0 +1,9 @@
+--玫瑰一朵(TQ024D)
+
+function start()
+	Say("p7送給親愛的“"..GetName().."”：\n玫瑰花，是“美神”的化身，是“愛情之花”。玫瑰一朵代表“你是我的唯一”","showpic")
+	AddItem(10466)
+end
+function showpic()
+	Say("m#X_mas_card\\EVENT_CARD01.spr#na##","End")
+end

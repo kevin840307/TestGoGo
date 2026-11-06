@@ -1,0 +1,5 @@
+--People01 萊奧納多
+
+function start()
+	Say("n1咳咳咳……最近天氣有點壞，看來我不小心給冷倒了。","End")
+end

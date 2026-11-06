@@ -1,0 +1,12 @@
+--皇城鐵道助理(NQ024_G)
+
+function start()
+	Ask("n你要離開尼尼亞皇城的火車站嗎？","離開尼尼亞皇城火車站。","只是剛巧路過。","dia_02")
+end
+
+function dia_02()
+	if GetChoice()==0 then
+		MovePlayer(9726,9658,15)
+	end
+	QuestEnd()
+end

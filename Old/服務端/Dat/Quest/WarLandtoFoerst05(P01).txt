@@ -1,0 +1,13 @@
+--WarLand to Forest05(P01)
+
+function start()
+	Ask("n要進入格靈森林嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(4547,2587,25)
+	end
+	QuestEnd()
+end

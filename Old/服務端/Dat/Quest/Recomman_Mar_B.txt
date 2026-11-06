@@ -1,0 +1,18 @@
+--Recomman_Mar_B 重星號機甲囊
+
+function start()
+	if GetHorseEquipCountLeft()<3 then
+		step02()
+	else
+	Say("p1換取重星號機甲。")
+	Say("p1得到重星號、重星號重裝炮和重星號二足引擎。","End")
+	AddItem(6639)
+	AddItem(6640)
+	AddItem(6641)
+	end
+end
+
+function step02()
+	Say("p7對不起，你身上的坐騎裝備太多了，請清除一些坐騎裝備再來。","End")
+	AddItem(10518)
+end

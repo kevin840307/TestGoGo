@@ -1,0 +1,19 @@
+--LS_23107_1 "精準目標‧一級"
+
+function GetSkillData()
+	return 23107,1,45,31389,"精準目標‧一級","","靈鬥士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 1 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

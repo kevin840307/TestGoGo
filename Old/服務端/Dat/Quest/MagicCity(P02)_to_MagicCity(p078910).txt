@@ -1,0 +1,26 @@
+--MagicCity(P02) to MagicCityRooms
+
+function start()
+	Say("n1魔法校園課室尚未開學","End")
+end
+
+function notuse()
+	Ask("n要進入魔法之都嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(0000,0000,10)
+	end
+	QuestEnd()
+end
+
+--進入初班魔法研究室嗎?(p07)
+--MovePlayer(6272,4864,10)
+--進入中魔法研究室嗎?(p08)
+--MovePlayer(8640,5856,10)
+--進入高魔法研究室嗎?(p09)
+--MovePlayer(4224,8960,10)
+--進入終極魔法研究室嗎?(p10)
+--MovePlayer(11392,10240,10)

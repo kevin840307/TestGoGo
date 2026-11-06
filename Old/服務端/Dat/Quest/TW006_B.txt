@@ -1,0 +1,105 @@
+--Quest:
+--TW006_A 		小米古 機械之城-絲蘭
+--TW006_B 		小米古母親 神團聖殿
+--TW006_C 		給小米古的信 				10653
+--Item:
+--康乃馨 									10650
+--康乃馨花束 								10651
+--冰地鳥獸羽毛 								10066
+--魔靈電池									6905
+--羽毛衣									10652
+--給小米古的信								10653
+--孝子光環		等級１裝備，生命上限+200	10654
+--Task:
+-- 1 : TW006_A step 1 fin
+-- 2 : TW006_A step 4 fin
+-- 3 : TW006_B step 4 fin
+-- 4 : TW006_A step 7 fin
+
+
+function start()
+	state = GetFlag("TW006_Task")
+	if state == 2 then
+		Step02()
+	elseif state == 3 then
+		Step07()
+	elseif state == 4 then
+		Step08()
+	else
+		Say("n1好忙好忙喔！忙到都沒時間回家看兒子。")
+	end
+end
+
+function Step02()
+--//＜玩家已完成TW006_A Step04＞
+--//＜身上沒有10個冰地鳥獸羽毛(10066)+ 康乃馨花束(10651)。＞→Step03
+--//＜如玩家身上物品空間少於1＞→Step05
+--//＜如玩家身上沒有空間得到魔靈電池10枚＞→Step06
+	if GetCountItemCount(10066) < 10 then
+		Step03()
+	elseif CheckItem(10651) ~= 1 then
+		Step03a()
+	elseif ItemListCountLeft(0) < 1 then
+		Step05()
+	elseif ItemListCountLeft(4) < 1 then
+		if (CheckItem(6905) ~= 1 or GetCountItemCount(6905) > 70) then
+			Step06()
+		else
+			Ask("n請問有什麼事情嗎？","這是小米古要給您的。","沒事。","Q2Ans")
+		end	
+	else
+		Ask("n請問有什麼事情嗎？","這是小米古要給您的。","沒事。","Q2Ans")
+	end		
+end	
+
+function Q2Ans()
+	if GetChoice() == 0 then
+		Step04()
+	else
+		QuestEnd()
+	end		
+end
+
+function Step03a()
+	Say("n1小米古是不是有甚麼東西要交給我呢？")
+end
+
+function Step03()
+	Say("n1請收集10張冰地鳥獸羽毛再來找我。")
+end	
+
+function Step04()
+	Say("n1真是謝謝你幫那懶惰的孩子送東西給我。")
+	Say("n1我有東西要送你，再麻煩你將東西拿給小米古。")
+	Say("p1可以啊！")
+	Say("n1這是給你的禮物。(得到魔靈電池10枚)")
+	Say("n1麻煩你幫我將羽毛衣和這封信一起拿給小米古，謝謝你！","Step04_AddItem")
+end
+
+function Step04_AddItem()	
+	SetFlag("TW006_Task",3)
+	RemoveItem(10651)
+	RemoveItem(10066,10)
+	AddItem(10652)
+	AddItem(10653)
+	AddItem(6905,10)
+end
+
+function Step05()
+	Say("p7身上的物品太多了，還是先整理一下吧！")
+end
+
+function Step06()
+	Say("p7身上的機甲裝備或魔靈電池太多了，還是先整理一下吧！")
+end
+
+function Step07()
+--//＜玩家已完成TW006_B Step04＞
+	Say("n1麻煩你幫我將羽毛衣和這封信一起拿給小米古，謝謝你！")
+end
+
+function Step08()
+--//＜玩家已完成TW006_A Step07＞
+	Say("n1好忙好忙喔！忙到都沒時間回家看兒子。")
+	Say("n1小米古喜歡我送的羽毛衣嗎？")
+end

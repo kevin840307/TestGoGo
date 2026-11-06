@@ -1,0 +1,23 @@
+function TXT_Success()
+	return "成功將"
+end
+
+function TXT_ChangeTo()
+	return "加工為"
+end
+
+function TXT_FullStop()
+	return "。"
+end
+
+function TXT_BagFull()
+	return "對不起，你的袋子滿了，請先預出空間。"
+end
+
+function TXT_NotEnough()
+	return "你需要加工的材料不足啊。"
+end
+
+function TXT_TooMany()
+	return "你身上已加工的材料太多了，請先預出空間。"
+end

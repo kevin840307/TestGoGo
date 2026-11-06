@@ -1,0 +1,53 @@
+--神聖獅鷲之魂
+--TQ030_C5
+
+function get_data()
+	return 81, 10000, "神聖獅鷲", "神聖獅鷲之魂", 10583
+end
+function get_data2()
+	return 10583, 380000
+end
+
+function start()
+	slv, elv, enemyname, itemname, itemid = get_data()
+
+	AddItem(itemid)
+	lv = GetData("Level")
+	if lv < slv or lv > elv then
+		Say("p7對不起，你的等級不合適使用"..itemname.."！")
+		Say("p7只有等級"..slv.."至"..elv.."的人才可使用"..itemname.."！", "End")
+	else
+		Say("p7使用了"..itemname.."。")
+		Say("p7"..enemyname.."的形象出現對你說．．．")
+		Say("p5將我收伏的戰士啊！")
+		Say("p5你的願望是什麼啊！？")
+		Ask("p是力量或是同伴？","力量","同伴","reply_01")
+	end
+end
+
+function reply_01()
+	itemid, power = get_data2()
+	if GetChoice()==0 then
+		Say("p5好的！請接受我的力量吧！")
+		Say("p5得到"..power.."Exp。")
+		gainexp(power)
+		RemoveItem(itemid)
+	else
+		Say("p5好的！我現在就轉生為藍鎧獅鷲，成為閣下的戰鬥精靈！")
+		if ItemListCountLeft(2)<1 then
+			Say("p5對不起，你身上的戰鬥精靈太多了，請整理一下吧！","End")
+		else
+			Say("p7得到藍鎧獅鷲。")
+			AddItem(5016)
+			RemoveItem(itemid)
+		end
+	end
+	QuestEnd()
+end
+
+function gainexp(exp)
+
+	ModifyData("ExpUse",exp)
+	ModifyData("ExpAcc",exp)
+
+end

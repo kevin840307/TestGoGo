@@ -1,0 +1,22 @@
+--靈金獸(MQ005_C)
+
+--MQ005_Task
+--1 quest start
+--2 already talked with student
+--3 quest done
+
+--MQ005_Bullet
+--1 get the bullet already
+
+function start()
+	if GetFlag("MQ005_Task")==2 or GetFlag("MQ006_Task")==2 then
+		if GetFlag("MQ005_Bullet")~=1 then
+			Say("p7得到「靈金彈」")
+			Say("p1這就是靈金彈了嗎？樣子真是奇怪。")
+			RemoveItem(10027)
+			AddItem(10026)
+			SetFlag("MQ005_Bullet", 1)
+		end
+	end
+	QuestEnd()
+end

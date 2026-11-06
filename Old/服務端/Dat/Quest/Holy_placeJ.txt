@@ -1,0 +1,5 @@
+--People01 克妮．美麗
+
+function start()
+	Say("n1教皇大人是我們的偶像，我不許任何人說他的壞話。","End")
+end

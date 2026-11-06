@@ -1,0 +1,112 @@
+function start()
+	if GetFlag("EQ002_A_Step") >= 3 then
+		if GetFlag("EQ002_A_Step") >= 7 then
+			Step09()
+		else	
+			Step04()
+		end
+	else
+		Step02()
+	end
+end
+
+#include "EQ002_COMMON.txt"
+
+function Step01()
+	Say("n1這裡是馬拉松大賽的起點，只接受星空世運會的選手參加。而你亦必需配帶世運第１環。")
+	SetFlag("EQ002_A_Step",1)
+end
+
+function Step02()		
+--＜玩家完成了EQ001＞
+--＜如玩家已裝備世運第１環(10696)＞
+	if GetFlag("EQ001_Done") ~= 1 then
+		Step01()
+	else
+		if GetData("Bonnet") ~= 10696 then
+			Step01()
+		else
+			Say("n1歡迎來到馬拉松大賽的起點！")
+			Say("n1你只要在5小時之內，按著中途站的次序去完成由這裡來往魔法之都的賽程10次，便可完成。")
+			Ask("n星空世運會的選手啊！你準備好接受馬拉松的挑戰嗎？","是的，我已經準備好了。","不，我還沒有準備好。","Step02_Handler")
+		end
+	end
+end
+
+function Step02_Handler()
+	if GetChoice() == 0 then
+		Step03()	
+	else
+		QuestEnd()
+	end
+end
+
+function Step03()
+	Say("n1你第一個中途站是絲蘭森林‧中途站(1)，加油啊！")
+	SetFlag("EQ002_MID_WAY", 0)
+	SetFlag("EQ002_START", GetRealTime())
+	SetFlag("EQ002_LAP", 0)
+	SetFlag("EQ002_A_Step",3)
+end
+
+function Step04()		
+--＜After EQ002_A Step03＞
+--＜如已完成一圈賽程＞→Step05
+	if IsExpire() then
+		Step06()
+	else
+		if GetFlag("EQ002_MID_WAY") >= 19 then
+			SetFlag("EQ002_LAP", GetFlag("EQ002_LAP")+1)
+		end
+		if GetFlag("EQ002_LAP") >= 1 then
+			Step05()
+		else
+			Say("n1你下一個中途站是"..GetNextMidway(GetFlag("EQ002_MID_WAY")).."，加油啊！")
+			SetFlag("EQ002_A_Step",4)
+		end
+	end
+end
+
+function Step05()
+--＜如時限已經超過5小時＞→Step06
+--＜如玩家已經完成了10圈的賽程＞→Step07
+	if IsExpire() then
+		Step06()
+	else
+		if GetFlag("EQ002_LAP") < 10 then
+			Say("n1星空世運會的選手啊！你已然完成了第"..GetFlag("EQ002_LAP").."圈的賽程，努力啊～！！！")
+			Say("n1你下一個中途站是絲蘭森林‧中途站(1)，加油啊！")
+			SetFlag("EQ002_A_Step",5)
+			SetFlag("EQ002_MID_WAY", 1)
+		else
+			Step07()
+		end
+	end
+end
+
+function Step06()
+	Fail()
+end
+
+function Step07()
+--<如玩家身上裝備空間少於１>→Step08
+	if ItemListCountLeft(1) < 1 then 
+		Step08()
+	else
+		Say("n1恭喜你！你已經完成了今次的星空馬拉松！！")
+		Say("n1這個世運第2環，這是你可以參加下一個項目的證明。")
+		Say("p7得到世運第2環。")
+		AddItem(10697)
+		SetFlag("EQ002_A_Step",7)
+		SetFlag("EQ002_Done",1)
+	end
+end
+
+function Step08()
+	Say("p7身上的裝備太多了，還是先整理一下吧！")
+end
+
+function Step09()
+--＜After EQ002_A Step07＞
+	Say("n1星空世運會的選手啊！你已然完成了星空馬拉松了！你可以為參加下一個項目準備一下。")
+end

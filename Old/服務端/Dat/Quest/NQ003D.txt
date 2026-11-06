@@ -1,0 +1,14 @@
+--NQ003_D 大福立普
+
+function start()
+	kill = GetFlag("MQ_001_KillBug")
+	if kill >= 1 then
+		QuestEnd()
+	elseif kill < 0 then
+		QuestEnd()
+	else
+		SetFlag("MQ_001_KillBug", 1)
+		Say("p7得到"..Color(255,229,0).."大福盾")
+		Say("p6原來有這個東西呢！嗯～真是不錯。", "End")
+	end
+end

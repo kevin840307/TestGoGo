@@ -1,0 +1,79 @@
+--競技場服務員 NQ021_A
+
+function start()
+	Ask("n歡迎來到大競技場，參加比賽者會收取一定的手續費，而入場的觀眾是免費的啊！","我想參加或取消比賽。","我想參觀比賽。","我想進入選手預備區。","我還是多想一會。","reply_01")
+end
+
+function reply_01()
+	ans = GetChoice()
+	if ans==0 then
+		dialog_02()
+	elseif ans==1 then
+		if PKAudience(1) == 0  then
+			Say("n1比賽進行中，觀暫時不能進入。","End")
+		end
+	elseif ans==2 then
+		MovePlayer(7200,6000,58)
+	end
+	QuestEnd()
+end
+
+function dialog_02()
+	Ask("n參加王者之戰須要200元星幣和等級必須20以上，而參加友誼賽的費用是100元星幣。若大會安排的比賽時間，你未有空出賽，可選擇取消比賽，但手續費不能退還啊！","我想參加王者之戰，手續費50，報名費150星幣，合共200星幣","我想參加友誼賽，二人手續費100星幣。","我想取消比賽，退回報名費。","我還是多想一會。","reply_02")
+end
+
+function reply_02()
+	ans = GetChoice()
+	if ans==0 then
+		dialog_03()
+	elseif ans==1 then
+		dialog_06()
+	elseif ans==2 then
+		dialog_07()
+	end
+	QuestEnd()
+end
+
+function dialog_03()
+	if GetData("Level")>=20 and GetData("Money")>=200 then
+		if PKAddPlayer() ~= 0 then
+			ModifyData("Money", -200)
+			PKModifyBonus(200)
+			Say("n1大會即將會替你按排適當的賽事！安排妥當後，你可以往競技場大使那兒觀看賽程。記著！於開賽前必須進入選手預備區。","End")
+		else
+			dialog_04()
+		end
+	else
+		Say("n1對不起，參賽的選手必須等級在20以上，及付出200元星幣。","End")
+	end
+end
+
+function dialog_04()
+	Say("n1對不起，閣下已登記參賽了，在比賽結束前不能再次參賽。","End")
+end
+
+function dialog_05()
+	Say("n1對不起，閣下在本屆的參加次數已到達上限，不能再參加了，歡迎下屆再來參加。","End")
+end
+
+function dialog_06()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上沒有足夠空間。","End")
+	elseif GetData("Money")>=100 then
+		ModifyData("Money", -100)
+		PKModifyBonus(100)
+		AddItem(10515)
+		Say("n1請你馬上邀請朋友進行比賽，一經答允後大會即將會替你按排適當的賽事！安排妥當後，你可以往競技場大使那兒觀看賽程。記著！於開賽前必須進入選手預備區。","End")
+	else
+		Say("n1對不起，你身上沒有100元。","End")
+	end
+end
+
+function dialog_07()
+	if PKRemoveFixture()==1 then
+		PKModifyBonus(-150)
+		ModifyData("Money", 150)
+	else
+		Say("n1你還未申請參賽，無須退出。","End")
+	end
+end

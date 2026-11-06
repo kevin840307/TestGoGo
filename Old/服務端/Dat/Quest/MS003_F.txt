@@ -1,0 +1,29 @@
+-- 卡瑪魔甲龍(MS003_F)
+
+-- MS003_Task
+-- 0: ShowTitle
+-- 1: quest start
+-- 2: get the blood, go to get metal
+-- 3: get the metal, not the passport yet
+-- 4: get the passport
+
+function start()
+	status = GetFlag("MS003_Task")
+	if status >= 1 then
+		if GetCountItemCount(10257)>=1 then
+			dialogue_02()
+		else
+			dialogue_01()
+		end
+	end
+	QuestEnd()
+end
+
+function dialogue_01()
+	Say("p7得到“魔甲龍血”","End")
+	AddItem(10257)
+end
+
+function dialogue_02()
+	Say("p7你已經擁有魔甲龍血了。","End")
+end

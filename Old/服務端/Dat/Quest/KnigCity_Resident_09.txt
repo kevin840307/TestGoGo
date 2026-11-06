@@ -1,0 +1,5 @@
+--People01 史提芬
+
+function start()
+	Say("n1啊～～好想出外旅行，老是困在家，真有點無聊。","End")
+end

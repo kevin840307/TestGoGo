@@ -1,0 +1,133 @@
+-- boostcommon.txt
+
+#include "txt_boostcom.txt"
+
+function GoBoost()
+	if GetType() == 3 then
+		ModifyData(boost,effect)
+	else
+		currentmp=GetData(consume)
+		CheckMagic(currentmp, conTotal)
+	end
+end
+
+function CheckMagic(playermp,mpvalue)
+	if playermp>=mpvalue then
+		DoMagic(mpvalue)
+	end
+end
+
+function DoMagic(mpvalue)
+	ModifyData(consume,-mpvalue)	
+	UseMagic()
+end
+
+function UseMagic()
+	SetSkillDefender(defender)
+
+	if IsSkillFinish(defender, skillId)==1 then
+		SetFlag(skillflag,skillLv)
+		ModifyTargetData(defender,boost,effect)
+	else
+		lastSkillLv = GetFlag(skillflag)
+		if lastSkillLv < skillLv then
+			RemoveSkillTimer(defender, skillid)		
+			SetFlag(skillflag,skillLv)
+
+			last_effect = GetPara(lastSkillLv)
+			ModifyTargetData(defender,boost,-last_effect)
+			ModifyTargetData(defender,boost,effect)
+		end
+	end
+	SetSkillTimer(defender,duration,"Finish")
+end
+
+function Finish()
+	init_data()
+	skillLv = GetFlag(skillflag)
+	effect = GetPara(skillLv)
+
+	ModifyData(boost,-effect)
+	SetFlag(skillflag,0)
+
+	Say("p7"..skillname..TXT_EffGone())
+	QuestEnd()
+end
+
+----------------------------------------------------------------------------------------------------
+function GoBoost_2_Consume()
+	if GetType() == 3 then
+		ModifyData(boost,effect)
+	else
+		if GetData(consume) >= conTotal and GetData(other_consume) >= other_conTotal then
+			ModifyData(consume,-conTotal)
+			ModifyData(other_consume,-other_conTotal)
+			
+			UseMagic()
+		end
+	end
+end
+
+----------------------------------------------------------------------------------------------------
+function GoBoost_2_Boost()
+	if GetType() == 3 then
+		ModifyData(boost,effect)
+	else
+		if GetData(consume) >= conTotal then
+			ModifyData(consume,-conTotal)
+			UseMagic_2_Boost()
+		end
+	end
+end
+
+function UseMagic_2_Boost()
+	SetSkillDefender(defender)
+
+	if IsSkillFinish(defender, skillId)==1 then
+		SetFlag(skillflag,skillLv)
+	
+		ModifyTargetData(defender,boost,effect)
+		ModifyTargetData(defender,other_boost,other_effect)
+	else
+		lastSkillLv = GetFlag(skillflag)
+		if lastSkillLv < skillLv then
+			RemoveSkillTimer(defender, skillid)		
+			SetFlag(skillflag,skillLv)
+			
+			last_effect = GetPara(lastSkillLv)
+			last_other_effect = GetPara_Other(lastSkillLv)
+			
+			ModifyTargetData(defender,boost,-last_effect)
+			ModifyTargetData(defender,other_boost,-last_other_effect)
+			
+			ModifyTargetData(defender,boost,effect)
+			ModifyTargetData(defender,other_boost,other_effect)
+		end
+	end
+	
+	SetSkillTimer(defender,duration,"Finish_2_Boost")
+end
+
+function Finish_2_Boost()
+	init_data()
+
+	skillLv = GetFlag(skillflag)
+	effect = GetPara(skillLv)
+	other_effect = GetPara_Other(skillLv)
+	
+	ModifyData(boost,-effect)
+	ModifyData(other_boost,-other_effect)
+	SetFlag(skillflag,0)
+	
+	Say("p7"..skillname..TXT_EffGone())
+	QuestEnd()
+end
+
+----------------------------------------------------------------------------------------------------
+function Acquest()
+	if GetData(consume) >= conTotal then
+		ModifyData(consume,-conTotal)
+		AddItem(boost,effect)
+		SetSkillDefender(GetTargetPtr())
+	end
+end

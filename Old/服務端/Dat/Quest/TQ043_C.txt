@@ -1,0 +1,116 @@
+function start()
+	if GetFlag("TQ043_B_Step") >= 3 then
+		if GetFlag("TQ043_C_Step")>=1 then
+			if GetFlag("TQ043_B_Step")>=5 then
+				if GetFlag("TQ043_C_Step")>=3 then
+					if GetFlag("TQ043_D_Step")>=6 then
+						if GetFlag("TQ043_B_Step")>=6 then
+							if GetFlag("TQ043_C_Step")>=6 then
+								Step07()
+							else
+								Step06()
+							end
+						else
+							Step05()
+						end
+					else
+						Step04()
+					end
+				else
+					Step03()
+				end
+			else
+				Step02()
+			end
+		else	
+			Step01()
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+--		＜After TQ043_B．function Step03＞
+	Say("p1參見國王陛下！")
+	Say("s『"..GetName().."』，很久沒有看到你了，最近還好嘛？這次晉見是為了什麼事？")
+	Say("p1國王陛下，在下經過地下神殿時，發現一位名為豆貝斯的人民。")
+	Say("p1當時他身受重傷，經過在下搶救後，他已清醒了，及對我說出當時情況。")
+	Say("s豆貝斯他怎樣？傷得很重嗎？")
+	Say("p1他險些便斷氣，幸好搶救及時，現在他正在休息中。")
+	Say("s請替我向他問好。現在天空島的情況怎樣？")
+	Say("p1那裡出現了魔物，而且聖獸還對人民襲擊，若再不封鎖天空島，恐怖會有更多國民有傷亡。請國王陛下定奪。")
+	Say("s好吧，傳令下去，即時封鎖天空島，所有國民都不得進入。")
+	Say("s『"..GetName().."』，請替我為這件事作出調查，聖獸到處襲擊人，此事絕不尋常。若發現到任何消息，要立即向我回報。")
+	Say("p1在下遵命，定必全力去辦。")
+	Say("s但也要記得千萬要小心，別受傷啊。")
+	Say("p1在下遵命，在下現在先向豆貝斯問好。")
+	SetFlag("TQ043_C_Step",1)
+end
+function Step02()
+--		＜After TQ043_C．function Step01＞
+	Say("s快代我去向豆貝斯問好吧。")
+	SetFlag("TQ043_C_Step",2)
+end
+function Step03()
+--		＜After TQ043_B．function Step05＞
+	if CheckItem(10745)~=1 then
+		Step02()
+	else
+		Say("p1參見國王陛下！")
+		Say("s『"..GetName().."』，事情有新的發展嗎？")
+		Say("p1在下在豆貝斯口中，得知他受傷後曾經有一個貌似天使的人將他救出。而經在下進入天空島調查，亦發現了這一個人物。")
+		Say("p1而且還在他的身邊撿到了這封信。")
+		Say("p7加魯加．尼尼亞細心地把信件細讀")
+	--<收去玩家「破舊的信件」(10745)>
+		Say("s這封信．．．是天堂寄來的信件，『"..GetName().."』，你是真的看到天使嗎？")
+		Say("p1國王，我也不能肯定他就是天使，但以他的衣著及聲音，應該沒錯了。")
+		Say("s這個．．．信中的內容是在天堂中的人，希望我們派兵平息天空島的戰爭。")
+		Say("p1戰爭？難道聖獸到攻擊人民，是因為牠的家受到入侵而作出反抗。")
+		Say("s也有可能，這樣吧，你繼續去調查，並將這封信交給天使。而你就盡力協助天使，若有需要，可找將軍幫忙。")
+		Say("p1在下遵命，在下現在就去將這封信交給天使。")
+		Say("p7得到給天使的信。")
+		RemoveItem(10745)
+		AddItem(10746)
+		SetFlag("TQ043_C_Step",3)
+	end
+end
+
+function Step04()
+--		＜After TQ043_C．function Step03＞
+	Say("s請替我將信件交給天使。")
+	SetFlag("TQ043_C_Step",4)
+end
+function Step05()
+--		＜After TQ043_D．function Step06＞
+	Say("s請替我為天使一事作出調查。")
+	SetFlag("TQ043_C_Step",5)
+end
+function Step06()
+--		＜After TQ043_B．function Step06＞
+	Say("p1參見國王陛下！")
+	Say("s『"..GetName().."』辛苦你了。天使怎樣了？")
+	Say("p1在下已替這位天使療傷了，而他說出，由於一般人類沒有飛行的能力，因此也不能參與天上的戰爭，所以也只好利用機械來幫助。")
+	Say("p1而以他們所知道，我們已發明出機械來協助飛行，但是這個仍未普遍。")
+	Say("s天使說的是真的，研究還在測試中，還未可以給人民使用。")
+	Say("p1天使還說出，戰神亞魯斯已將用作協助人類飛翔的物品放在野生動物中，但這是指什麼物品，天使也不知道。")
+	Say("s難道是指古尼爾魔裝合體卡．．．")
+	Say("p1擁有這卡就可以飛行？")
+	Say("s只有這卡當然不能飛行。但只要集合數人機甲的力量便可以，不過每人也要有一套三張古尼爾魔裝合體卡才可以辦得到。")
+	Say("p1這個．．．我再試試和我的朋友一起打聽，希望可以找出線索。")
+	Say("s我也下令加緊研究個人的飛行裝置吧。這次你做得很好，這是給你的獎勵。")
+	Say("p3感謝皇上賞賜！！")
+	Say("p7得到經驗值100000。")
+	--AddExp(100000)
+	ModifyData("ExpUse",100000)
+	ModifyData("ExpAcc",100000)
+	SetFlag("TQ043_C_Step",6)
+end
+
+
+
+function Step07()
+--		＜After TQ043_C．function Step06＞
+	Say("s若再有新的發現，請通知將軍，我們繼續保持聯絡。")
+	SetFlag("TQ043_C_Step",7)
+end

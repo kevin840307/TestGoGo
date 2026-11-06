@@ -1,0 +1,37 @@
+--Learn_Skill_5103(魔影術)
+
+function start()
+	Giveback()
+	if GetData("Career") == 5 then
+	CheckOther()
+	else
+	Say("p7只有魔動使才可學習魔影術。","End")
+	end
+end
+
+function CheckOther()
+	if GetData("Level") < 20 then
+	Say("p7你的等級仍未可學習魔影術啊。","End")
+	elseif HasSkill(5103)==1 then
+	Say("p7你已經學會了魔影術。","End")
+	else
+	Say("p7你的眼前出現一道白光，你看到了間黑魔獸的形象，這時祂對你說．．．")
+		Ask("p你要學習魔影術嗎?","是的。","不是。","Teach")
+	end
+end
+
+function Teach()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("p7我現在就將魔影術傳授給你．．．")
+		Say("p7你已經學會了魔影術。","End")
+		RemoveItem(10336)
+		AddSkill(5103)
+	else
+	Say("p7需要學習魔影術時，可以再次召喚我。","End")
+	end
+end
+
+function Giveback()
+	AddItem(10336)
+end

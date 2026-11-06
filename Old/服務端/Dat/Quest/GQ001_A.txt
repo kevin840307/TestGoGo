@@ -1,0 +1,43 @@
+--皇國魔裝卡換領券
+--(GQ001_A)
+
+function start()
+	if GetCountItemCount(10649)>299 then
+		Say("p7使用皇國魔裝卡換領券．．．", "dia_01")
+	else
+		Say("p7使用皇國魔裝卡換領券．．．")
+		dia_01()
+	end
+end
+
+function dia_01()
+	AddItem(10649)
+	if ItemListCountLeft(4)<1 then
+		dia_02()
+	else
+		Ask("p請問你要換領那一張皇國魔裝卡呢？","皇國星之魔裝卡。","皇國月之魔裝卡。","皇國日之魔裝卡。","不需要了。","reply_01")
+	end
+end
+
+function reply_01()
+	ans = GetChoice()
+	if ans == 3 then
+		QuestEnd()
+	else
+		RemoveItem(10649)
+		if ans==0 then
+			Say("p7得到皇國星之魔裝卡。","End")
+			AddItem(6329)
+		elseif ans==1 then
+			Say("p7得到皇國月之魔裝卡。","End")
+			AddItem(6330)
+		else
+			Say("p7得到皇國日之魔裝卡。","End")
+			AddItem(6331)
+		end
+	end
+end
+
+function dia_02()
+	Say("p7身上的機甲裝備太多了，整理一下好了！","End")
+end

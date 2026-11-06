@@ -1,0 +1,11 @@
+--星空聖誕卡(TQ016Q)
+
+function start()
+	Say("p7"..GetName().."收：")
+	Say("p7祝你有一個快樂、幸福、開心和幸運的聖誕！", "showcard")
+	AddItem(10426)
+end
+
+function showcard()
+	Say("m#X_mas_card\\X_MAS_CARD05.spr#na##","End")
+end

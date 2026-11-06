@@ -1,0 +1,87 @@
+--MQ004_A 帕米
+
+function start()
+	Career=GetData("Career")
+	Race=GetData("Race")
+	if GetFlag("光明魔法使就職完成")==1 then
+		Done()
+	elseif Career=0 and Race=3 then
+		Get_Job()
+	elseif Career<>0 then
+		Job_Not_Match()
+	elseif Race<>3 then
+		Race_Not_Robot()
+	elseif RemoveItem(10006,1) and RemoveItem(10007,1) and GetFlag("闇黑魔法使就職")==1
+		FinalAsk
+	elseif GetFlag("光明魔法使就職")==1 then
+		Say("n1努力去找“暗之光”和“魔物之血”回來吧，好好加油喔……呼呵呵……","End")
+	else
+		Job_Not_Match()
+	end
+end
+
+function Get_Job()
+	Say("p7你看到一位外貌甚有活力的老先生，他就是學院的光明魔法使老師，帕米先生。")
+	Say("p1老師，你的工作是什麼樣的呢？")
+	Say("n1我是當光明魔法使的，這個工作充滿了光輝和活力。我可以操縱光明的力量，而且有著日冕聖獸守護著。")
+	Say("p7你點點頭。")
+	Say("n1光明魔法使的魔法防禦力很強，魔法對我們的侵害不會很大，但是我們還是有著缺點，就是我們的速度比較弱……")
+	Ask("n是這樣，我們還是可靠的一群。。順帶說明，我們魔法力的來源是大氣中的“光之依加魯能量微粒”的。有什麼事了嗎…？","我想成為光明魔法使！","沒什麼事！只是來聽聽老師的說話而已。","Q1_Get_Choice")
+end
+	
+function Q1_Get_Choice()
+	choice = GetChoice()
+	if choice == 0 then
+		Teach()
+	else
+		Say("n1嗯，謝謝你來聽我的說話。","End")
+	end
+end
+
+function
+
+function Teach()
+	Say("n1呵，聽見你這樣說，真是太好了。要成為光明魔法使，必須先成為微光術士，而且要舉行一個儀式。這個儀式需要有“暗之光”和“魔物之血”。"
+	Say("p1嗯？這是什麼？")
+	Say("n1自己努力去找！所有人想當微光術士之前都必須自己找，給你一個暗示吧，我想學校內一定會有學生知道的，你去問問學長們。","End")
+	SetFlag("光明魔法使就職", 1)
+end
+
+function Job_Not_Match()
+	Say("n1光明魔法，是洗滌心靈的良方呢。")
+	Say("p7真的呢。")
+	Say("n1可惜你已經不是遊民了。")
+	Say("p7老師又再做起自己的事來。","End")
+end
+
+function Race_Not_Robot()
+	Say("n1嗯？你什麼跑來這兒了？光明魔法使只有人類才可以做到，你去找其他老師看看。","End")
+end
+
+function FinalAsk()
+	Ask("n你確定要成為微光術士了嗎？這真是太好了。","是的！","我要再考慮一下。","Q1_Get_Choice")
+end
+
+function Q1_Get_Choice()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("p7把魔物之血和暗之光交出去。")
+		Say("n1嗯……很好。你留心看著石頭。")
+		Say("n7只見帕米把魔物之血滴了滴在暗之光上，本來平平無奇的石頭竟然在此時，發出奇異的光芒！")
+		Say("p7你的身上感覺到被光之依加魯能量微粒包圍著。")
+		Say("n1嗯，好了，你已經是微光術士了！這把光木杖，就送給你吧，當作是獎勵你的努力。","End")
+		AddItem(394,1)
+		AddTittle(6)
+		ModifyData("Career",2)
+		ModifyData("Career",1)
+		ModifyData("ExpUse",850)
+		ModifyData("ExpAcc",850)
+	SetFlag("闇黑魔法使就職完成", 1)
+	else
+		Say("n1好好考慮清楚吧！我等你的答覆。","End")
+	end
+end
+
+function Done()
+	Say("n1要是有光明魔法的問題，不要客氣，來問我吧！","End")
+end

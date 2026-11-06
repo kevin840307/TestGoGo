@@ -1,0 +1,5 @@
+--People01 騎士卡洛維
+
+function start()
+	Say("n1學校內有一個多層武鬥塔，塔的最高層藏著學校內最強的武器。","End")
+end

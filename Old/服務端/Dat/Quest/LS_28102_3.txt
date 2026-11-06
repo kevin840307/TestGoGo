@@ -1,0 +1,19 @@
+--LS_28102_3 "心靈轉換‧三級"
+
+function GetSkillData()
+	return 28102,3,40,31550,"心靈轉換‧三級","心靈轉換‧二級","聖靈使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 7 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

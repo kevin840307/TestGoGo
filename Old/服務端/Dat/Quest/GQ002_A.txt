@@ -1,0 +1,53 @@
+function start()
+	Step01()
+end
+
+function Step01()
+	Say("p7使用合體魔裝卡換領券．．．")
+	AddItem(10683)
+--//＜如玩家身上機甲裝備空間少於１＞→Step04
+	if ItemListCountLeft(4) < 1 then 
+		Step04()
+	else
+		Ask("p請問你要換領那一張合體魔裝卡呢？","人形合體的皇國星之魔裝卡。","人形合體的皇國月之魔裝卡。","人形合體的皇國日之魔裝卡。","更多選擇。","Step01_Handler")
+	end
+end
+
+function Step01_Handler()
+	if GetChoice() == 0 then
+		Step03(6329,"人形合體的皇國星之魔裝卡。")
+	elseif GetChoice() == 1 then
+		Step03(6330,"人形合體的皇國月之魔裝卡。")
+	elseif GetChoice() == 2 then
+		Step03(6331,"人形合體的皇國日之魔裝卡。")
+	else
+		Step02()
+	end
+end
+
+function Step02()
+	Say("p7使用合體魔裝卡換領券．．．")
+	Ask("p請問你要換領那一張合體魔裝卡呢？","鳥形合體的古尼爾星之魔裝卡。","鳥形合體的古尼爾月之魔裝卡。","鳥形合體的古尼爾日之魔裝卡。","不需要了。","Step02_Handler")
+end
+
+function Step02_Handler()
+	if GetChoice() == 0 then
+		Step03(6341,"鳥形合體的古尼爾星之魔裝卡。")
+	elseif GetChoice() == 1 then
+		Step03(6342,"鳥形合體的古尼爾月之魔裝卡。")
+	elseif GetChoice() == 2 then
+		Step03(6343,"鳥形合體的古尼爾日之魔裝卡。")
+	else
+		QuestEnd()
+	end
+end
+
+function Step03(itemid, itemdesc)
+	Say("p7得到"..itemdesc)
+	RemoveItem(10683)
+	AddItem(itemid)
+end
+
+function Step04()
+	Say("p7身上的機甲裝備太多了，整理一下好了！")
+end

@@ -1,0 +1,148 @@
+--斯卡爾將軍
+--(TQ033_A)
+
+#include "CommComplex.txt"
+
+function start()
+	--if GetFlag("TQ035_Done")==1 and GetFlag("TQ033_Done")==1 then
+	--	RemoveFlag("TQ033_Task")
+	--	RemoveFlag("TQ033_C")
+	--	RemoveFlag("TQ033_Done")
+	--end
+
+	state = GetFlag("TQ033_Task")
+
+	if state>=4 then
+		dia_10()
+	elseif state>=3 then
+		equip, color = GetComplexArray()
+		if CheckItem(10640)>0 then
+			dia_08()
+		elseif CheckItem(10639)>0 and equip==1 and color==1 then
+			dia_06()
+		else
+			dia_05()
+		end
+	elseif state >= 2 then
+		if CheckItem(10639)>0 then
+			dia_04()
+		else
+			dia_03()
+		end
+	elseif GetData("Level")>=50 then
+		dia_01()
+	else
+		dia_02()
+	end
+end
+
+--＜玩家等級低於50＞→Step02
+function dia_01()
+	Say("n1唔～真煩惱～")
+	Say("n1應該處罰他～")
+	Say("n1還是不處罰他呢～")
+	Say("p1斯卡爾將軍怎麼了？一向處事果斷的他，正為什麼煩惱呢？")
+	Say("n1唔～真煩惱．．．")
+	Say("p7在旁的士兵‧巴力就對你說．．．")
+	Say("p7巴力：你可不可以幫我一個忙？","End")
+	SetFlag("TQ033_Task", 1)
+end
+
+function dia_02()
+	Say("n1唔～真煩惱～")
+	Say("n1應該處罰他～")
+	Say("n1還是不處罰他呢～")
+	Say("p1斯卡爾將軍怎麼了？一向處事果斷的他，正為什麼煩惱呢？")
+	Say("n1唔～真煩惱．．．","End")
+end
+
+
+--＜After TQ033_B Step02＞
+function dia_03()
+	Say("n1唔～真煩惱～")
+	Say("n1應該處罰他～")
+	Say("n1遠是不處罰他呢～")
+	Say("p7斯卡爾將軍，我一定會找出治好你的方法！","End")
+end
+
+
+--＜玩家身上持有堅定樹的樹枝(10639)＞
+function dia_04()
+	Say("p1斯卡爾將軍，多多得罪了．．．")
+	Say("p7用堅定樹的樹枝敲打斯卡爾將軍的頭．．．")
+	Say("n3啪！～")
+	Say("n3哎呀～好痛！！是誰打我！？")
+	Say("p1是巴力！是他打你的！")
+	Say("n5．．．．．．無奈")
+	Say("n7巴力向團長說出事件的詳情．．．")
+	Say("n1"..GetName().."，謝謝你的幫忙！雖然巴力是出於好意，可是中邪之說是不能服眾的，不處罰他就有違軍紀。這樣吧！你幫我查出今次事件發生的原因，我就網開一面吧！")
+	Say("p1我一定會將事情查個水落石出！")
+	Say("n1好！那就交給你去辦！我記得上次在黑岩洞討伐黑岩魔龍獸之後，便像中邪似的。")
+	Say("n1可是黑岩洞中充滿了黑流酸氣，不是一般人可以抵受得了，而且那地方好像受了邪魔的詛咒．．．")
+	Say("n1你可嘗試用皇國大地戰甲的保護以防黑流酸氣的侵蝕，並配帶堅定樹的樹枝以驅散邪魔。")
+	Say("n1你準備好再來找我吧！","End")
+	RemoveItem(10639)
+	SetFlag("TQ033_Task", 3)
+end
+
+--＜After TQ033_A Step04＞
+--＜玩家不符合下列要求＞
+--1．皇國大地戰甲形態
+--2．持有堅定樹的樹枝(10639)
+function dia_05()
+	Say("n1黑岩洞中充滿了黑流酸氣，不是一般人可以抵受得了，而且那地方好像受了邪魔的詛咒．．．")
+	Say("n1你可嘗試用皇國大地戰甲的保護以防黑流酸氣的侵蝕，並配帶堅定樹的樹枝以驅散邪魔。")
+	Say("n1你準備好再來找我吧！","End")
+end
+
+--＜After TQ033_A Step04＞
+--＜玩家符合下列要求＞
+--1．皇國大地戰甲形態
+--2．持有堅定樹的樹枝(10639)
+function dia_06()
+	Ask("n你已經準備好前往黑岩洞了嗎？","是的。","不是。","reply_06")
+end
+
+function reply_06()
+	if GetChoice()==0 then
+		dia_07()
+	end
+	QuestEnd()
+end
+
+function dia_07()
+	MovePlayer(3456,2624,63)
+	Say("p7使用堅定樹的樹枝驅散邪魔。","End")
+	RemoveItem(10639)
+end
+
+--＜玩家身上持有黑魔岩(10640)＞
+function dia_08()
+	if ItemListCountLeft(1)<1 then
+		dia_09()
+	else
+		Say("n1啊！這真的是烈火岩！！原來是黑岩魔龍獸幽靈作怪．．．")
+		Say("n1太感謝你了！我就將這黑魔岩上裝送給你吧！")
+		Say("p7得到黑魔岩上裝")
+		Say("p7得到30000Exp","End")
+		RemoveItem(10640)
+		AddItem(10641)
+		gainexp(30000)
+		SetFlag("TQ033_Task", 4)
+		SetFlag("TQ033_Done", 1)
+	end
+end
+
+function dia_09()
+	Say("p7身上沒有足夠的裝備空間啊．．．先整理一下好了。","End")
+end
+
+--＜After TQ033_A Step08＞
+function dia_10()
+	Say("n1感謝你幫我們查出事實的真相！","End")
+end
+
+function gainexp(value)
+	ModifyData("ExpUse", value)
+	ModifyData("ExpAcc", value)
+end

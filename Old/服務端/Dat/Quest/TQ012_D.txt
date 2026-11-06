@@ -1,0 +1,9 @@
+--TQ012 重陽避難日
+--TQ012_D 卡瑪魔鳥
+
+function start()
+	if random(100)>50 then
+		AddItem(10237)
+	end
+	QuestEnd()
+end

@@ -1,0 +1,19 @@
+--LS_26102_2 "幽暗魔力‧二級"
+
+function GetSkillData()
+	return 26102,2,20,31470,"幽暗魔力‧二級","幽暗魔力‧一級","見習魔動使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 5 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

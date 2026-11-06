@@ -1,0 +1,5 @@
+--People01 倩西奈
+
+function start()
+	Say("n1騎士之城的麵包很出名唷。","End")
+end

@@ -1,0 +1,13 @@
+--Forest03 to StarRivert01
+
+function start()
+	Ask("n要進入流星之河．上游嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(2688,3008,27)
+	end
+	QuestEnd()
+end

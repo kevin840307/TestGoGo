@@ -1,0 +1,19 @@
+--LS_26102_4 "幽暗魔力‧四級"
+
+function GetSkillData()
+	return 26102,4,30,31472,"幽暗魔力‧四級","幽暗魔力‧三級","魔動使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 5 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

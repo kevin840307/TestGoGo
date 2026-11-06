@@ -1,0 +1,143 @@
+--NQ015_B  阿爾瑪
+
+
+
+--statue(NQ015_Task) =1: receive the mission
+-- 		     =2: go to find  阿爾瑪
+--		     =3: find 月霧石
+--		     =4: mission is completed
+
+function start()
+
+	statue=GetFlag("NQ015_Task")
+	done15=GetFlag("NQ015_Done")	
+
+	if statue==4 then
+		Say("n1	我正在造戒指…！凱兒正在等著我吧！","End")	
+
+	elseif statue==3 then
+		if GetCountItemCount(10212)>=1 then
+			if done15==1 then
+				Action1b()
+			else
+				Action1a()
+			end
+		else
+			Say("n1總之，在流星之河有一種叫月出鳥的動物，牠們最喜歡月霧石的了！拜託你… ","End")
+		end
+	elseif statue==2 then
+		if done15==1 then
+			Speech1b()
+		else
+			Speech1a()
+		end		
+		SetFlag("NQ015_D",0)
+		SetFlag("NQ015_Task",3)
+	else
+		Say("n1我很想念我的小孩子…我真的很想回去… ","End")
+
+	end
+
+
+end
+
+
+function Speech1a()
+
+	Say("n1我很想念我的小孩子…")
+	Say("p1你就是阿爾瑪？")
+	Say("n1對！你是…？")
+	Say("p3你這還算是男人嗎！？")
+	Say("n1咦？咦？")
+	Say("p1你知道凱兒她為了你做了什麼嗎？你知道她有多辛苦嗎？")
+	Say("p1你只顧在這兒休休憩憩的，要一個女人幫你做那麼多事！")
+	Say("n1等等，你到底是誰？")
+	Say("p1我是凱兒的朋友！你這個沒用的人！難得她還為了你做了那麼多！")
+	Say("n1我知道她這幾年是很辛苦…福爾已經說我知道了…")
+	Say("p1那你這個笨人！還不回去？")
+	Say("n1我也想回去啊！我不想嗎？我也想念我的凱兒，無時無刻都在想她！")
+	Say("n1你知道嗎！？就算我發夢時，我也看到她！")
+	Say("p1那你為什麼不回去？")
+	Say("n1因為我的家人…我的家人說，幫人是沒出色的！他們反對我開孤兒院！也反對我喜歡凱兒！")
+	Say("p1這世俗的眼光，你真的在意？")
+	Say("n1我這也是為了凱兒…我覺得我配不起她…")
+	Say("p1她也不介意了，你還介意什麼？")
+	Say("n1唉…最大的問題，還不止這個。我的家人一直說我沒用，他們說，要是我找到一隻由月霧石所造成的戒指，")
+	Say("n1才肯讓我和凱兒在一起！")
+	Say("p1那你去找啊！")
+	Say("n1唉…要不就是很貴，要不就是太難拿……我真的不知道什麼辦！")
+	Say("n1家人又一分錢都不給我！雖說在流星之河的月出鳥會有，可是以我的力量…")
+	Say("p1月出鳥嗎？好！我來幫你！你只要對凱兒好就行了。")
+	Say("n1真的嗎？…謝謝…可是…這石可是"..Color(0,45,198).."會溶"..Color(0,0,0).."的，拿到之後一定要"..Color(0,45,198).."快點回來"..Color(0,0,0).."！","End")
+
+
+end
+
+function Speech1b()
+	Say("p1你為什麼還沒去找凱兒？我不是幫你了嗎？")
+	Say("n1我…打造戒指失敗了…我沒臉回去…")
+	Say("p3你這笨人！！")
+	Say("p1我幫你再去找回來！你這次不要再失敗了！知道嗎！？","End")
+
+
+end
+
+function Timeout()
+
+	Say("n1這個…真的是月霧石！可惜已溶掉了…","End")
+
+
+end
+function Action1a()
+	hr=GetGameHours()
+	if hr-GetFlag("NQ015_Bird")>6 then
+		Say("n1這個…真的是月霧石！可惜已溶掉了…","End")
+		RemoveItem(10212)
+		SetFlag("NQ015_Get",0)
+
+	else
+		Say("n1這個…真的是月霧石！謝謝你！我這下可以打造戒指了……")
+		Say("n1拿著這個！我一定要把它送給你！")
+		if ItemListCountLeft(1)<1 then
+			Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+		else
+			Say("n7得到"..Color(0,45,198).."幸福鳥之帽"..Color(0,0,0).."")
+			RemoveItem(10212)
+			AddItem(10213)
+			Say("n1嗯…也送多一個稱號給你吧！")
+			Say("n7得到稱號"..Color(0,45,198).."幸福使者"..Color(0,0,0).."")
+			AddTitle(12)
+			Say("n1不過你一定要守秘密！知道嗎？我想給她一個驚喜！","End")
+			QuestGoFinish()
+		end
+	end
+	
+end
+
+function Action1b()
+	hr=GetGameHours()
+	if hr-GetFlag("NQ015_Bird")>6 then
+		Say("n1這個…真的是月霧石！可惜已溶掉了…","End")
+		RemoveItem(10212)
+		SetFlag("NQ015_Get",0)
+
+	else
+		Say("n1這個…真的是月霧石！謝謝你！我這下可以打造戒指了……")
+		Say("n1拿著這個！我一定要把它送給你！")
+		Say("n7得到8000元")
+		Say("p1是錢？為什麼你有那麼多錢？")
+		Say("n1我的家人知道我找到月霧石，就好像安心下來了！所以他們有給我一些錢！")
+		Say("p1那你就要加油啦！","End")
+		ModifyData("Money",8000)
+		QuestGoFinish()
+	end
+	
+end	
+
+function QuestGoFinish()
+	SetFlag("NQ012_Task",0)
+	SetFlag("NQ013_Task",0)
+	SetFlag("NQ014_Task",0)
+	SetFlag("NQ015_Done",1)
+	SetFlag("NQ015_Task",4)
+end

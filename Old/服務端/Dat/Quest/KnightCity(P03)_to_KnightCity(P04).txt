@@ -1,0 +1,13 @@
+--KnightCity(P03) to KnightCity(P04)
+
+function start()
+	Ask("n要進入初班課室嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(7224,2968,23)
+	end
+	QuestEnd()
+end

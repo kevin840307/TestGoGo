@@ -1,0 +1,154 @@
+--TQ031_A	灼熱騎士團團長
+
+--TQ031_Task
+--1. lv > 50 and talked with TQ031_A
+--2. talked with TQ031_B, need to get the 熱血之花
+--3. talked with TQ031_A, need to get the 熱血之花 again
+--4. quest completed
+
+#include "CommComplex.txt"
+
+function start()
+	--＜完成TQ035之後＞
+	--＜Reset TQ031＞→Step01
+	--if GetFlag("TQ035_Done")==1 and GetFlag("TQ031_Done")==1 then
+	--	RemoveFlag("TQ031_Task")
+	--	RemoveFlag("TQ031_C")
+	--	RemoveFlag("TQ031_Done")
+	--end
+
+	state = GetFlag("TQ031_Task")
+
+	if state>=4 then
+		dia_09()
+	elseif state>=3 then
+		equip, color = GetComplexArray()
+		if CheckItem(10634)>0 then
+			dia_07()
+		elseif CheckItem(10633)>0 and equip==1 and color==3 then
+			dia_06()
+		else
+			dia_05()
+		end
+	elseif state >= 2 then
+		if CheckItem(10633)>0 then
+			dia_04()
+		else
+			dia_03()
+		end
+	elseif GetData("Level")>=50 then
+		dia_01()
+	else
+		dia_02()
+	end
+end
+
+--＜玩家等級低於50＞→Step02
+function dia_01()
+	Say("n1唉～")
+	Say("n1唉～唉～")
+	Say("n1唉～唉～唉～")
+	Say("p1你發生什麼事了？整天在嘆氣？")
+	Say("n1唉～唉～讓你知道你也幫不了我．．．")
+	Say("p7在旁的灼熱騎士團後補生就對你說．．．")
+	Say("p7後補生：你想知道團長發生什麼事，你過來讓我說給你知吧","End")
+	SetFlag("TQ031_Task", 1)
+end
+
+function dia_02()
+	Say("n1唉～")
+	Say("n1唉～唉～")
+	Say("n1唉～唉～唉～")
+	Say("p1你發生什麼事了？整天在嘆氣？")
+	Say("n1唉～唉～讓你知道你也幫不了我．．．","End")
+end
+
+--＜After TQ031_B Step02＞
+function dia_03()
+	Say("n1唉～")
+	Say("n1唉～唉～")
+	Say("n1唉～唉～唉～")
+	Say("p7這個人好煩！要快點取得熱血之花回來！","End")
+end
+
+
+--＜玩家身上持有熱血之花(10633)＞
+function dia_04()
+	Say("p1快來讓團長服下熱血之花．．．")
+	Say("n7．．．．．．")
+	Say("n7．．．．．．")
+	Say("p3團長！！團長！！你沒事吧！")
+	Say("n1我沒有事．．．這裡是！？")
+	Say("n7後補生向團長說出事件的詳情．．．")
+	Say("n1"..GetName().."，謝謝你的幫忙！我現在還有一件想拜託你，我現在剛剛復原，行動有些不便，你可以替我完成任務，去地獄火山採集烈火岩回來嗎？")
+	Say("p1這個包在我身上吧！")
+	Say("n1那太好了！可是地獄火山的溫度不是一般人可以抵受得了，而且那地方好像受了詛咒般會使人意志消沉．．．")
+	Say("n1你可嘗試用熱血之花保持鬥志和以皇國烈火戰靈的形態去抵受地獄火山的溫度。")
+	Say("n1你準備好再來找我吧！","End")
+	RemoveItem(10633)
+	SetFlag("TQ031_Task", 3)
+end
+
+--＜After TQ031_A Step04＞
+--＜玩家不符合下列要求＞
+--1．皇國烈火戰靈形態
+--2．持有熱血之花(10633)
+function dia_05()
+	Say("n1地獄火山的溫度不是一般人可以抵受得了，而且那地方好像受了詛咒般會使人意志消沉．．．")
+	Say("n1你可嘗試用熱血之花保持鬥志和以皇國烈火戰靈的形態去抵受地獄火山的溫度。")
+	Say("n1你準備好再來找我吧！","End")
+end
+
+--＜After TQ031_A Step04＞
+--＜玩家符合下列要求＞
+--1．皇國烈火戰靈形態
+--2．持有熱血之花(10633)
+function dia_06()
+	Ask("n你已經準備好前往地獄火山了嗎？","是的。","不是。","reply_06")
+end
+
+function reply_06()
+	if GetChoice()==0 then
+		dia_06_a()
+	end
+	QuestEnd()
+end
+
+function dia_06_a()
+--＜傳送玩家至(X,Y,Z)＞
+	MovePlayer(3392,2592,60)
+	Say("p7服下熱血之花保持鬥志。","End")
+	RemoveItem(10633)
+end
+
+--＜玩家身上持有烈火岩(10634)＞
+--＜玩家身上裝備空間少於1＞→Step09
+function dia_07()
+	if ItemListCountLeft(1)<1 then
+		dia_08()
+	else
+		Say("n1啊！這真的是烈火岩！！")
+		Say("n1太感謝你了！我就將這烈火岩之劍送給你吧！")
+		Say("p7得到烈火岩之劍")
+		Say("p7得到30000Exp","End")
+		RemoveItem(10634)
+		AddItem(10635)
+		gainexp(30000)
+		SetFlag("TQ031_Task", 4)
+		SetFlag("TQ031_Done", 1)
+	end
+end
+
+function dia_08()
+	Say("p7身上沒有足夠的裝備空間啊．．．先整理一下好了。","End")
+end
+
+--＜After TQ031_A Step08＞
+function dia_09()
+	Say("n1感謝你幫我們完成採集烈火岩的任務！","End")
+end
+
+function gainexp(value)
+	ModifyData("ExpUse", value)
+	ModifyData("ExpAcc", value)
+end

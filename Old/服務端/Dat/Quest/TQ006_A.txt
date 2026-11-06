@@ -1,0 +1,41 @@
+--TQ006A  廚師.阿月
+
+
+function start()
+
+	if GetCountItemCount(10194)>=7 then
+		Ask("n如果你給我"..Color(0,45,198).."7個月餅"..Color(0,0,0).."，我可以換一隻"..Color(0,45,198).."棉花兔"..Color(0,0,0).."給你。要交換嗎？","好的，這裡有7個月餅。","不要了。","response1")
+	else
+		Say("n1唉～怎麼辦？")
+		Say("p1我有什麼可以幫到你呢？")
+		Say("n1我正為了今年的"..Color(0,45,198).."月圓節"..Color(0,0,0).."而準備"..Color(0,45,198).."月餅"..Color(0,0,0).."，可是數量還差很多，你可以幫我找一些回來嗎？")
+		Say("n1如果你給我"..Color(0,45,198).."7個月餅"..Color(0,0,0).."，我可以換一隻"..Color(0,45,198).."棉花兔"..Color(0,0,0).."給你。")	
+		Say("n1而製造"..Color(0,45,198).."月餅材料"..Color(0,0,0).."需要"..Color(0,45,198).."蓮容、麵粉和蛋黃"..Color(0,0,0).."，這些你都可以在"..Color(0,45,198).."棉花兔"..Color(0,0,0).."身上得到的。")
+		Say("n1你只要用"..Color(0,45,198).."初級製藥"..Color(0,0,0).."將這3種材料合成，就可以得到"..Color(0,45,198).."月餅"..Color(0,0,0).."了","End")
+	end
+	
+end
+
+
+function response1()
+	
+	if GetChoice()==0 then
+		GiveMoonCake()
+	else
+		Say("n1啊！那我一定不能準備好足夠的月餅了，怎麼辦好…","End")
+	end
+
+
+end
+
+function GiveMoonCake()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		RemoveItem(10194,7)
+		Say("n1謝謝你，這隻"..Color(0,45,198).."棉花兔"..Color(0,0,0).."給你，你要好好照顧牠啊。")
+		Say("n7得到"..Color(0,45,198).."棉花兔"..Color(0,0,0).."","End")
+		AddItem(5005)
+	end
+end
+

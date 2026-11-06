@@ -1,0 +1,10 @@
+tq031_34_mapid = GetData("MapID")
+if tq031_34_mapid== 60 then
+	MovePlayer(10492,5792,22)
+elseif tq031_34_mapid== 61 then
+	MovePlayer(8256,8544,15)
+elseif tq031_34_mapid== 62 then
+	MovePlayer(2560,2688,9)
+elseif tq031_34_mapid== 63 then
+	MovePlayer(13298,6215,17)
+end

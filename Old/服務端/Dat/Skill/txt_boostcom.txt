@@ -1,0 +1,4 @@
+
+function TXT_EffGone()
+	return "效果經已消失。"
+end

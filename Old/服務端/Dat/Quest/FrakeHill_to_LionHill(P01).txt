@@ -1,0 +1,17 @@
+--FrakeHill  to LionHill(P01)
+
+function start()
+	Say("n1封印之地嚴禁進入","End")
+end
+
+function nouse()
+	Ask("n要進入獅鷲山嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(6592,6560,12)
+	end
+	QuestEnd()
+end

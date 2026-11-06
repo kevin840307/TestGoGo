@@ -1,0 +1,33 @@
+function start()
+	itemName = lGetItemName()
+	Say("p7使用"..itemName.."。")
+	if ItemListCountLeft(4) < 3 then
+		horseequipfull()
+	else
+		--itemId = lGetItemID()
+		giftName, giftID1, giftID2, giftID3 = lGetGiftDetail()
+		Say("p7得到"..giftName.."。","End")
+		--RemoveItem(itemId)
+		AddItem(giftID1)
+		AddItem(giftID2)
+		AddItem(giftID3)
+	end
+end
+
+function itemfull()	
+	Say("p7對不起，你身上的物品太多了，請整理一下吧！","giveBack")
+end
+
+function equipfull()
+	Say("p7對不起，你身上的裝備太多了，請整理一下吧！","giveBack")
+end
+
+function horseequipfull()	
+	Say("p7對不起，你身上的機甲裝備太多了，請整理一下吧！","giveBack")
+end
+
+function giveBack()
+	itemId = lGetItemID()
+	AddItem(itemId)
+	QuestEnd()
+end

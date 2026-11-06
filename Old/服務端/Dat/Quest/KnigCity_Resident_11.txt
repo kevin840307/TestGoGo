@@ -1,0 +1,6 @@
+--People01 紗紗
+
+function start()
+	Say("n1這個紀念碑，在星之戰爭之後就一直放在這兒。")
+	Say("n1有很長的歷史了……","End")
+end

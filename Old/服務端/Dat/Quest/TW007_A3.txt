@@ -1,0 +1,8 @@
+--й}нь
+--TW007_A3
+
+function start()
+	main(2)
+end
+
+#include "TW007_A_com.txt"

@@ -1,0 +1,231 @@
+--MQ056_B 神秘的女人愛麗(巫婆)
+
+--MQ056_Task
+-- 1: quest started
+-- 2: 愛麗 mission started
+-- 3: 愛麗 mission completed
+-- 4: quest completed
+
+--MQ057_Task
+-- 1: quest started
+-- 2: 愛麗 mission started
+-- 3: 愛麗 mission completed
+-- 4: quest completed
+
+--MQ058_Task
+-- 1: quest started
+-- 2: 愛麗 mission started
+-- 3: 愛麗 mission completed
+-- 4: quest completed
+
+--MQ059_Task
+-- 1: quest started
+-- 2: 愛麗 mission started
+-- 3: 愛麗 mission completed
+-- 4: quest completed
+
+
+function start()
+	if GetData("Level")<40 then
+		dialogue_Below40()
+	else
+		switch_After40()
+	end
+end
+
+function switch_After40()
+	career=GetData("Career")
+	if career==5 then
+		status=GetFlag("MQ056_Task")
+	elseif career==6 then
+		status=GetFlag("MQ057_Task")
+	elseif career==7 then
+		status=GetFlag("MQ058_Task")
+	else
+		status=GetFlag("MQ059_Task")
+	end
+
+	if status>=3 then
+		dialogue_final()
+	elseif status==2 then
+		dialogue_02()
+	elseif status==1 then
+		dialogue_01()
+	else
+		dialogue_Below40()
+	end
+end
+
+function dialogue_Below40()
+	Say("n1……")
+	Say("p1這個女人神秘兮兮的……","End")
+end
+
+function dialogue_final()
+	Say("n1……這世界，幾乎令我瘋狂起來。","End")
+end
+
+function dialogue_01()
+	Say("n3……你終於來了，我等你好久了。")
+	Say("p1你為什麼知道我會來？你就是巫婆？")
+	Say("n1……真神已經在等著你了。")
+	Say("p1你在說什麼？")
+	Say("n1……你還不知道嗎？\n我需要你的力量。")
+	Say("n1……你必須想起你來這兒是為了什麼。")
+	Say("p1我來就是為了向你請教魔法和想和你談談關於你的事啊！")
+	Say("n3……這跟本不重要。")
+	
+	career=GetData("Career")
+	if career==5 then
+		dialogue_01_5()
+	elseif career==6 then
+		dialogue_01_6()
+	elseif career==7 then
+		dialogue_01_7()
+	else
+		dialogue_01_8()
+	end
+end
+
+-- for 機動靈法使
+function dialogue_01_5()
+	SetFlag("MQ056_Task", 2)
+	Say("n1你目前要做的，就是把一隻金金立普帶到我的身邊，你要的願望我是可以實現的……","End")
+end
+-- for 人族魔法使
+function dialogue_01_6()
+	SetFlag("MQ057_Task", 2)
+	Say("n1你目前要做的，就是在星之湖迷宮內找到一張活生生符紙。你要的願望我是可以實現的……","End")
+end
+-- for 米古魔法使
+function dialogue_01_7()
+	SetFlag("MQ058_Task", 2)
+	Say("n1你目前要做的，就是在星之湖迷宮內找到神秘的粉。你要的願望我是可以實現的……","End")
+end
+-- for 魔銃使
+function dialogue_01_8()
+	SetFlag("MQ059_Task", 2)
+	Say("n1你目前要做的，就是在星之湖迷宮內找到召雷金鈴。你要的願望我是可以實現的……","End")
+end
+
+function dialogue_02()
+	if ItemListCountLeft(0)<2 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		career=GetData("Career")
+		if career==5 then
+			if RemoveItem(10239)==1 then
+				dialogue_02_5a()
+			else
+				dialogue_02_5()
+			end
+		elseif career==6 then
+			if RemoveItem(10243)==1 then
+				dialogue_02_6a()
+			else
+				dialogue_02_6()
+			end
+		elseif career==7 then
+			if RemoveItem(10246)==1 then
+				dialogue_02_7a()
+			else
+				dialogue_02_7()
+			end
+		else
+			if RemoveItem(10249)==1 then
+				dialogue_02_8a()
+			else
+				dialogue_02_8()
+			end
+		end
+	end
+end
+
+-- for 機動靈法使
+function dialogue_02_5()
+	Say("n1…想要學習魔法的話，就把金金立普帶給我。")
+	Say("n1順帶一點，你最好帶一位精靈使同行，不然用你的雙手，也不知道我要等到何時……","End")
+end
+-- for 人族魔法使
+function dialogue_02_6()
+	Say("n1…想要學習魔法的話，就把活生生符紙帶給我。")
+	Say("n1順帶一點，你最好帶一位米古魔法使同行，不然用你的雙手，也不知道我要等到何時……","End")
+end
+-- for 米古魔法使
+function dialogue_02_7()
+	Say("n1…想要學習魔法的話，就把神秘的粉帶給我。")
+	Say("n1順帶一點，你最好帶一位人族魔法使同行，不然靠你的力量，我想無法可以得到。")
+	Say("n1……還有，留意一下光風怪這傢伙，神秘的粉應該是他持有的。","End")
+end
+-- for 魔銃使
+function dialogue_02_8()
+	Say("n1…想要學習魔法的話，就把召雷金鈴帶給我。")
+	Say("n1順帶一點，你最好帶一位機動靈同行，不然只靠你的話，一定不行……","End")
+end
+
+
+function dialogue_02_global()
+	Say("n1……這個世界，又更接近真神了。")
+	Say("p1你到底在說什麼？")
+	Say("n1……你難道真的不明白？\n這個世界的戰爭太多，罪孽太多，不快的事令我頭昏腦脹。")
+	Say("n1只有祂，才可以帶來一個平靜，沒有罪惡，沒有戰爭，沒有痛苦的世界。")
+	Say("p1難道你的頭腦有點問題對不對？\n我可不想再浪費時間。")
+	Say("n1……慢著，你不是想要學魔法的嗎？\n這些東西，給你。")
+end
+function dialogue_02_global_2()
+	Say("n1這些就當是真神賜給你的。")
+	Say("p7得到4000EXP","End")
+	gainexp(4000)
+end
+-- for 機動靈法使
+function dialogue_02_5a()
+	Say("p7交出“金金立普”")
+	dialogue_02_global()
+	Say("p7得到“幽暗魔力法書”")
+	Say("p7得到“月之頭帶”")
+	AddItem(10240)
+	AddItem(10241)
+	SetFlag("MQ056_Task", 3)
+	dialogue_02_global_2()
+end
+-- for 人族魔法使
+function dialogue_02_6a()
+	Say("p7交出“活生生符紙”")
+	dialogue_02_global()
+	Say("p7得到“安寧符文咒語籤”")
+	Say("p7得到“日之輪”")
+	AddItem(10242)
+	AddItem(10244)
+	SetFlag("MQ057_Task", 3)
+	dialogue_02_global_2()
+end
+-- for 米古魔法使
+function dialogue_02_7a()
+	Say("p7交出“神秘的粉”")
+	dialogue_02_global()
+	Say("p7得到“清風符文咒語本”")
+	Say("p7得到“風神羽飾”")
+	AddItem(10245)
+	AddItem(10247)
+	SetFlag("MQ058_Task", 3)
+	dialogue_02_global_2()
+end
+-- for 魔銃使
+function dialogue_02_8a()
+	Say("p7交出“召雷金鈴”")
+	dialogue_02_global()
+	Say("p7得到“閃電符文書”")
+	Say("p7得到“雲霧之帽”")
+	AddItem(10248)
+	AddItem(10250)
+	SetFlag("MQ059_Task", 3)
+	dialogue_02_global_2()
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end
+
+
+

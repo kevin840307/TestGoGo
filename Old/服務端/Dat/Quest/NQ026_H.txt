@@ -1,0 +1,21 @@
+--NQ026_H (研究所傳送器)
+
+function start()
+    if GetFlag("NQ026_G_STEP") < 1 or GetFlag("NQ026_Y_STEP") >= 2 then
+        Say("n1這是緊急出動用的處理器")
+    else
+        if GetData("ComplexType") ~= 0 then
+            Say("n1使用魔裝機甲時，不可使用傳送器。")
+        else
+            Ask("n啟動傳送器！前往東方海洋的火山島！","確定","取消","Ans_Handler")
+        end                
+    end
+end
+
+function Ans_Handler()
+    if GetChoice() == 0 then
+        MovePlayer(2176,2176,57)
+    else
+        QuestEnd()
+    end
+end

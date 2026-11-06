@@ -1,0 +1,206 @@
+function start()
+	Step01()
+end
+
+
+function Step01()
+	if GetData("Bonnet") == 10696 or GetData("Bonnet") == 10697 or GetData("Bonnet") == 10698 or GetData("Bonnet") == 10699 or GetData("Bonnet") == 10700 then
+		Say("n1請不要裝備以下物品：世運第１環、世運第２環、世運第３環、世運第４環、世運第５環或星空世運盾牌。")
+	elseif GetData("Shield") == 10731 then
+		Say("n1請不要裝備以下物品：世運第１環、世運第２環、世運第３環、世運第４環、世運第５環或星空世運盾牌。")
+	else
+		Ask("n這是星空世運會的頒獎典禮，你想來換取什麼獎品呢？","冠軍獎","亞軍獎","季軍獎","殿軍獎","Step01_Handler")
+--＜選項＞
+--．冠軍獎→Step 02
+--．亞軍獎→Step 03
+--．季軍獎→Step 04
+--．殿軍獎→Step 05
+	end
+end
+
+function Step01_Handler()
+	if GetChoice() ==0 then
+		Step02()
+	elseif GetChoice() ==1 then
+		Step03()
+	elseif GetChoice() ==2 then
+		Step04()
+	elseif GetChoice() ==3 then
+		Step05()
+	end
+end
+
+function Step02()
+	if ItemListCountLeft(4) < 3 then
+		Step14()
+	elseif CheckItem(10696) ~= 1 or CheckItem(10697) ~= 1 or CheckItem(10698) ~= 1 or CheckItem(10699) ~= 1 or CheckItem(10700) ~= 1 or CheckItem(10731) ~= 1 then
+		Step06()
+	else
+--＜玩家身上機甲空間少於3＞→Step 14
+--＜玩家沒有以下物品＞→Step 06
+--(10696、10697、10698、10699、10700、10731)
+		Say("n1冠軍獎是世運冠軍機甲一套。")
+		Ask("n你要用世運第１環、世運第２環、世運第３環、世運第４環、世運第５環和星空世運盾牌去換取冠軍獎嗎？","是的","不是","Step02_Handler")
+--＜選項＞
+--．是的→Step10
+--．不是→Quest End
+	end
+end
+
+function Step02_Handler()
+	if GetChoice() == 0 then
+		Step10()
+	else
+		QuestEnd()
+	end
+end
+
+function Step03()
+	if ItemListCountLeft(4) < 3 then
+		Step14()
+	elseif CheckItem(10696) ~= 1 or CheckItem(10697) ~= 1 or CheckItem(10698) ~= 1 or CheckItem(10699) ~= 1 or CheckItem(10700) ~= 1 then
+		Step07()
+	else
+--＜玩家身上機甲空間少於3＞→Step 14
+--＜玩家沒有以下物品＞→Step 07
+--(10696、10697、10698、10699、10700)
+	Say("n1亞軍獎是世運號機甲一套。")
+	Ask("n你要用世運第１環、世運第２環、世運第３環、世運第４環和世運第５環去換取亞軍獎嗎？","是的","不是","Step03_Handler")
+--＜選項＞
+--．是的→Step11
+--．不是→Quest End
+	end
+end
+
+function Step03_Handler()
+	if GetChoice() == 0 then
+		Step11()
+	else
+		QuestEnd()
+	end
+end
+
+function Step04()
+--＜玩家身上裝備空間少於2＞→Step 15
+--＜玩家沒有以下物品＞→Step 08
+--(10696、10697、10698、10699、10731)
+	if ItemListCountLeft(1) < 2 then
+		Step15()
+	elseif CheckItem(10696) ~= 1 or CheckItem(10697) ~= 1 or CheckItem(10698) ~= 1 or CheckItem(10699) ~= 1 or CheckItem(10731) ~= 1 then 
+		Step08()
+	else
+
+		Say("n1季軍獎是緋色佳雅頭飾和朱色戰神兵頭飾。")
+		Ask("n你要用世運第１環、世運第２環、世運第３環、世運第４環和星空世運盾牌去換取季軍獎嗎？","是的","不是","Step04_Handler")
+--＜選項＞
+--．是的→Step12
+--．不是→Quest End
+	end
+end
+
+function Step04_Handler()
+	if GetChoice() == 0 then
+		Step12()
+	else
+		QuestEnd()
+	end
+end
+
+function Step05()
+--＜玩家身上裝備空間少於1＞→Step 15
+--＜玩家沒有以下物品＞→Step 09
+--(10696、10697、10698、10699)
+	if ItemListCountLeft(1) < 1 then
+		Step15()
+	elseif CheckItem(10696) ~= 1 or CheckItem(10697) ~= 1 or CheckItem(10698) ~= 1 or CheckItem(10699) ~= 1 then
+		Step09()
+	else
+		Say("n1殿軍獎是翠色佳雅頭飾和藍色戰神兵頭飾。")
+		Ask("n你要用世運第１環、世運第２環、世運第３環和世運第４環去換取殿軍獎嗎？","是的","不是","Step05_Handler")
+--＜選項＞
+--．是的→Step13
+--．不是→Quest End
+	end
+end
+
+function Step05_Handler()
+	if GetChoice() == 0 then
+		Step13()
+	else
+		QuestEnd()
+	end
+end
+
+function Step06()
+	Say("n1你必須要有世運第１環、世運第２環、世運第３環、世運第４環、世運第５環和星空世運盾牌才可以領取冠軍獎。")
+end
+
+function Step07()
+	Say("n1你必須要有世運第１環、世運第２環、世運第３環、世運第４環和世運第５環才可以領取亞軍獎。")
+end
+
+function Step08()
+	Say("n1你必須要有世運第１環、世運第２環、世運第３環、世運第４環和星空世運盾牌才可以領取季軍獎。")
+end
+
+function Step09()
+	Say("n1你必須要有世運第１環、世運第２環、世運第３環和世運第４環才可以領取殿軍獎。")
+end
+
+function Step10()
+	Say("n1交出世運第１環、世運第２環、世運第３環、世運第４環、世運第５環和星空世運盾。")
+	Say("n1得到世運冠軍號、世運冠軍號武裝和世運冠軍號二足引擎。")
+	RemoveItem(10696)
+	RemoveItem(10697)
+	RemoveItem(10698)
+	RemoveItem(10699)
+	RemoveItem(10700)
+	RemoveItem(10731)
+	AddItem(6683)
+	AddItem(6684)
+	AddItem(6685)
+end
+
+function Step11()
+	Say("n1交出世運第１環、世運第２環、世運第３環、世運第４環和世運第５環。")
+	Say("n1得到世運號、世運號武裝和世運號二足引擎。")
+	RemoveItem(10696)
+	RemoveItem(10697)
+	RemoveItem(10698)
+	RemoveItem(10699)
+	RemoveItem(10700)
+	AddItem(6680)
+	AddItem(6681)
+	AddItem(6682)
+end
+
+function Step12()
+	Say("n1交出世運第１環、世運第２環、世運第３環、世運第４環和星空世運盾牌。")
+	Say("n1得到緋色佳雅頭飾和朱色戰神兵頭飾。")
+	RemoveItem(10696)
+	RemoveItem(10697)
+	RemoveItem(10698)
+	RemoveItem(10699)
+	RemoveItem(10731)
+	AddItem(26030)
+	AddItem(26022)
+end
+
+function Step13()
+	Say("n1交出世運第１環、世運第２環、世運第３環和世運第４環。")
+	Say("n1得到翠色佳雅頭飾和藍色戰神兵頭飾。")
+	RemoveItem(10696)
+	RemoveItem(10697)
+	RemoveItem(10698)
+	RemoveItem(10699)
+	AddItem(26025)
+	AddItem(26017)
+end
+
+function Step14()
+	Say("p7身上的機甲裝備太多了，還是先整理一下吧！")
+end
+
+function Step15()
+	Say("p7身上的裝備太多了，還是先整理一下吧！")
+end

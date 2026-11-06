@@ -1,0 +1,19 @@
+--LS_25105_3 "藍氣流‧三級"
+
+function GetSkillData()
+	return 25105,3,45,31451,"藍氣流‧三級","藍氣流‧二級","聖劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 3 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

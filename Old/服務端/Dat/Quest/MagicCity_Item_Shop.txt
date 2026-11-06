@@ -1,0 +1,5 @@
+--Shop01 ¹D¨ã©±
+
+function start()
+	OpenShop (1,100)
+end

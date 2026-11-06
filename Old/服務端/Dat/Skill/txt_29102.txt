@@ -1,0 +1,4 @@
+
+function TXT_SkillName()
+	skillname 	= "¤ÛÆF©G"
+end

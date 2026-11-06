@@ -1,0 +1,19 @@
+--LS_31101_2 "藥水合成‧二級"
+
+function GetSkillData()
+	return 31101,2,20,31664,"藥水合成‧二級","藥水合成‧一級","見習道具使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 9 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

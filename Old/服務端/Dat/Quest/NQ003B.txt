@@ -1,0 +1,25 @@
+--NQ003_B 售票員狄福
+
+function start()
+	if CheckItem(10014)>0 then
+		Say("n1謝謝你！請享受拍賣的過程。", "End")
+	elseif GetFlag("NQ_003_GotQuest")== 1 then
+		Ask("n歡迎你！請問你要買拍賣會的入場券嗎？每張只要1000元。", "好！這是1000～", "太貴了……", "Step2")
+	else
+		Say("n1拍賣會的入場券未開始發售。", "End")
+	end
+end
+
+function Step2()
+	if GetChoice()== 0 then
+		if GetData("Money") > 1000 then
+			Say("n1謝謝你！請往奧斯那兒，把入場券交給他，之後就可以正式入場了。", "End")
+			ModifyData("Money", -1000)
+			AddItem (10014,1)
+		else
+			Say("n1入場券為1000元！要是沒有的話請遲些再來。", "End")
+		end
+	else
+		Say("n1這是定價，不可以減價的了。", "End")
+	end
+end

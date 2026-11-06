@@ -1,0 +1,19 @@
+--LS_25106_5 "大氣旋風‧五級"
+
+function GetSkillData()
+	return 25106,5,80,31458,"大氣旋風‧五級","大氣旋風‧四級","聖劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 3 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

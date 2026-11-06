@@ -1,0 +1,111 @@
+--Learn_Skill_common_201.txt
+
+--para needed:
+--	god_name
+--	level_needed
+--	career_id
+--	job_id
+--	career_name
+--	item_index
+--	item_name
+--	skill_index
+--	skill_name
+--	pre_skill_index
+--	pre_skill_name
+
+function get_data(index)
+	if index==1 then
+		return 10609,"赤星爆炸‧技能捲軸",1201,"赤星爆炸",1104,"烈火鬥氣","火神",1,2,"靈鬥士"
+	elseif index==2 then
+		return 10610,"飛石破碎‧技能捲軸",2201,"飛石破碎",2104,"沙甲","土神",2,2,"守護劍士"
+	elseif index==3 then
+		return 10611,"大氣旋風‧技能捲軸",3201,"大氣旋風",3104,"藍氣流","風神",3,2,"聖劍士"
+	elseif index==4 then
+		return 10612,"爆雷追擊‧技能捲軸",4201,"爆雷追擊",4104,"閃影術","雷神",4,2,"銃戰士"
+	elseif index==5 then
+		return 10613,"血色月蝕‧技能捲軸",5201,"血色月蝕",5104,"幽暗魔力","間黑魔獸",5,2,"魔動使"
+	elseif index==6 then
+		return 10614,"烈日光輝‧技能捲軸",6201,"烈日光輝",6104,"安寧符文","日冕聖獸",6,2,"守護使"
+	elseif index==7 then
+		return 10615,"暴風氣流‧技能捲軸",7201,"暴風氣流",7104,"清風符文","暴風聖獸",7,2,"聖靈使"
+	else
+		return 10616,"電光爆彈‧技能捲軸",8201,"電光爆彈",8104,"閃電符文","聖光雷獸",8,2,"魔銃使"
+	end
+end
+
+function start()
+	init_data()
+	if GetCountItemCount(item_index)<300 then
+		Say("p7使用"..item_name.."...")
+		dia_01()
+	else
+		Say("p7使用"..item_name.."...","dia_01")
+	end
+end
+	
+function dia_01()
+	init_data()
+	AddItem(item_index)
+
+	if GetData("Career") ~= career_id or GetData("Job") ~= job_id then
+		dia_02()
+	elseif GetData("Level") < level_needed then
+		dia_03()
+	elseif HasSkill(pre_skill_index)~=1 then
+		dia_04()
+	elseif HasSkill(skill_index)==1 then
+		dia_05()
+	else
+		Say("p7你的眼前出現一道白光，你看到了"..god_name.."的形象，這時祂對你說．．．")
+		Ask("p你要學習"..skill_name.."嗎？", "是的。", "不是。", "reply_01")
+	end
+end
+
+function reply_01()
+	init_data()
+	if GetChoice()==0 then
+		dia_06()
+	else
+		dia_07()
+	end
+end
+
+function dia_02()
+	Say("p7只有真正的"..career_name.."才可學習"..skill_name.."。")
+	QuestEnd()
+end
+
+function dia_03()
+	Say("p7你的等級仍未可學習"..skill_name.."啊。")
+	QuestEnd()
+end
+
+function dia_04()
+	Say("p7要學習"..skill_name.."之前，你必須先學會"..pre_skill_name.."啊。")
+	QuestEnd()
+end
+
+function dia_05()
+	Say("p7你已經學會了"..skill_name.."。")
+	QuestEnd()
+end
+
+function dia_06()
+	Say("p7我現在就將"..skill_name.."傳授給你．．．")
+	Say("p7你已經學會了"..skill_name.."。")
+	RemoveItem(item_index)
+	AddSkill(skill_index)
+	flag_name = "SkillLearned_"..skill_index
+	if HasSkill(skill_index)==1 then
+		SetFlag(flag_name, 1)
+	else
+		SetFlag(flag_name, 0)
+	end
+	QuestEnd()
+end
+
+function dia_07()
+	Say("p7需要學習"..skill_name.."時，可以再次召喚我。")
+	QuestEnd()
+end
+

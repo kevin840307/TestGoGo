@@ -1,0 +1,31 @@
+--K27003_C  古可暴族
+
+function start()
+
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		number=random(100)
+		
+		
+		if number>48 then
+
+			if number>=99 and number<=100 and GetFlag("K27003_GetRing")~=1 then
+
+				Say("p7得到盟誓戒指")
+				AddItem(10164)
+				Say("p7古可暴族：「呀～喔～！！寶～貝！！．．．．．．」","End")
+				SetFlag("K27003_GetRing",1)
+		
+			else
+				Say("p7得到古可的傳送蘑菇","End")
+				AddItem(10165)
+
+			end
+
+			
+		end
+	end
+
+end
+

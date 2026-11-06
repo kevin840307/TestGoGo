@@ -1,0 +1,17 @@
+--Forest05(P01) to Desert(P01)
+
+function start()
+	Say("n1封印之地嚴禁進入","End")
+end
+
+function nouse()
+	Ask("n要進入灼熱沙漠嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(13248,5152,34)
+	end
+	QuestEnd()
+end

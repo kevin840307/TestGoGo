@@ -1,0 +1,5 @@
+--People01 騎士蘭絲
+
+function start()
+	Say("n1女孩子也可當上騎士，不是男士們的專利。","End")
+end

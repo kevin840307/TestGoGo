@@ -1,0 +1,19 @@
+--LS_27109_5 "偵測弱點‧五級"
+
+function GetSkillData()
+	return 27109,5,65,31542,"偵測弱點‧五級","偵測弱點‧四級","守護使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 6 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

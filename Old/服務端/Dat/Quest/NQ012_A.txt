@@ -1,0 +1,193 @@
+--NQ012_A  立波利
+
+
+--statue(NQ012_Task) =1 : receive the mission
+-- =2 : after talking with 凱兒
+-- =3 : need to find 金妮露
+-- =4 : after finding the 金妮露
+-- =5 : NQ012_Task is completed
+
+--statue(NQ014_Task) =1 : receive the mission
+--		     =2 : can go to find 福爾
+
+function start()
+
+	lv=GetData("Level")
+	done8=GetFlag("NQ008_Done")
+	done15= GetFlag("NQ015_Done")
+	statue=GetFlag("NQ012_Task")
+	statue13=GetFlag("NQ013_Task")
+	statue14=GetFlag("NQ014_Task")
+	
+	
+	if lv<15 or done8~=1 then
+		Say("n1媽媽出了去很久喔…","End")	
+
+	elseif statue14==1 then
+		if done15==1 then
+			Speech1b()
+		else
+			Speech1a()
+		end
+		SetFlag("NQ014_Task",2)
+
+	elseif statue13==5 then
+		Say("n1媽媽出了去很久喔…","End")
+
+	elseif statue13>=1 then
+		Say("n1泊裘斯好像很辛苦…","End")	
+
+	elseif statue==5 then
+		Say("n1媽媽出了去很久喔…","End")
+
+	elseif statue==4 then
+		if CheckItem(10208)>0 then
+			Say("n1媽媽出了去很久喔…","End")
+		else
+			Say("n1她沒事吧？")
+			Say("n1唉…我就放心了！")
+			Say("p1你們真的很危險啊！為什麼去森林捉迷藏？不知道森林有很多怪獸的嗎？")
+			Say("n1嗚…對不起，我不敢了…")
+			Say("p1我想你的媽媽一定會很生氣！我這就告訴你媽去！")
+			Say("n1耶！？不要啦！")
+			Say("p1不行！")
+			Say("n1那……這幅圖，你可以幫我交給媽媽嗎？")
+			Say("p1好！不過等一下就有你受的！")
+			Say("p6這幅圖…好像是全家幅…吧？")
+			if ItemListCountLeft(0)<1 then
+				Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				Say("p7得到"..Color(0,45,198).."胡亂畫的圖"..Color(0,0,0).."")
+				Say("p7得到260EXP","End")
+				AddItem(10208)
+				gainexp(260)
+			end
+		end
+		
+
+	elseif statue==3 then
+		Say("n1我很擔心她，請幫我去找她","End")
+
+	elseif statue==2 then
+		if done15==1 then
+			Say("n1你回來真的太好了！")
+			Say("p1咦？又什麼了？")
+			Say("n1金妮露她好像還沒有出現喔！")
+			Say("p1耶？")
+			Say("n1我很擔心她，你幫我去找她可以嗎？不過別說給媽媽知道喔！","End")
+		
+		else
+			Say("n1嗚～～～你回來真的太好了！")
+			Say("p1咦？什麼了？")
+			Say("n1金妮露被抓走了～～嗚嗚～～")
+			Say("p1金妮露？她是誰？")
+			Say("n1她也是媽媽的孩子啦～～你走了之後，我們和她玩迷藏，之後她就不見了…嗚嗚嗚～～～")
+			Say("p1你們去哪捉迷藏了？")
+			Say("n1就在往"..Color(0,45,198).."獅鷲山"..Color(0,0,0).."的那邊的"..Color(0,45,198).."森林"..Color(0,0,0).."而已～～")
+			Say("p1你先別哭，我去把她找回來！")
+			Say("n1謝，謝謝！","End")
+
+		end
+		SetFlag("NQ012_Task",3)
+
+	elseif statue==1 then
+		Say("n1媽媽她去了森林！","End")
+
+	
+	else
+		if done15==1 then
+
+			if GetData("Money")>=500 then
+				Ask("n啊，你又來了～～！給我們幾百元買零吃好嗎？","給你500元吧？","不行不行。","response1")
+			else
+				Ask("n啊，你又來了～～！給我們幾百元買零吃好嗎？","給你500元吧？","不行不行。","nomoney")
+			end
+
+		else
+			
+			Say("n1嗚……餓死人了……")
+			if GetData("Money")>=500 then
+				Ask("n求求你啊…給我一點錢吧…我們已經幾天沒吃東西了…","給你500元吧？","不行不行。","response1")
+			else
+				Ask("n求求你啊…給我一點錢吧…我們已經幾天沒吃東西了…","給你500元吧？","不行不行。","nomoney")
+			end
+
+		end
+		
+	end	
+
+
+end
+
+function nomoney()
+
+	Say("n1咦～真沒有同情心嘛～","End")
+
+end
+
+
+
+function response1()
+
+
+	if GetChoice()==0 then
+		if GetFlag("NQ012_Done")==1 then
+			Say("n1謝謝你啦！我可沒有頑皮喔！")
+			Say("n1我很聽媽媽的說話～你可不可以幫我去看看媽媽呢？")
+			Say("n1我有點擔心她！","End")
+			SetFlag("NQ015_Task",0)
+		else
+	
+			Say("n1謝謝～呵呵…")
+			Say("p1笑得有點詭異嘛，不像是肚餓呢！？")
+			Say("n1哎呀，沒有啦沒有啦！")
+			Say("n1莎萊你說對吧！？")
+			Say("n7呃，我什麼都不知道…")
+			Say("p1連你的朋友都不幫你了！還錢來～")
+			Say("n1要錢去問我媽媽拿！")
+			Say("p1你媽媽是誰～？")
+			Say("n1不說你知道～我媽媽才不是凱兒呢～")
+			Say("p6咦？是"..Color(0,45,198).."森林的那個凱兒"..Color(0,0,0).."？真看不出她有那麼多孩子…")
+			Say("p1好！我就找你媽媽算帳！","End")
+
+		end
+		ModifyData("Money",-500)
+		SetFlag("NQ012_Task",1)
+	
+	else
+		Say("n1咦～真沒有同情心嘛～","End")
+	
+	end
+				
+
+
+end
+
+function Speech1a()
+
+	Say("n1你說院長嗎？")
+	Say("n1我知道我知道！他有托人把信拿來呢！")
+	Say("p1什麼你們不說給你們的媽媽知道！？")
+	Say("n1因為媽媽沒有問我們唷～")
+	Say("p3我真是敗給你們了…")
+	Say("p1那院長在哪兒？")
+	Say("n1嗯…我不知道唷！")
+	Say("n1不過有一個叫福爾的叔叔常把信拿回來～")
+	Say("p1是叫福爾…嗎？","End")
+
+
+end
+
+function Speech1b()
+	Say("n1你說院長嗎？不過福爾叔叔還有把信拿來喔！")
+	Say("p1嗯～那我知道福爾在哪了～謝謝啦！","End")
+
+end
+
+
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+
+end

@@ -1,0 +1,133 @@
+--MS004_C 皇家事務長‧嘉迪尼
+
+--MS004_Task
+-- 0: shown title
+-- 1: quest start, go to 泰雲
+-- 2: go to 依加魯穩定器
+-- 3: go to 迪爾
+-- 4: go to 資訊大樓
+-- 5: go to 嘉迪尼事務長
+-- 6: go to 格靈森林
+-- 7: got the 野花電子卡
+-- 8: 基地destoryed
+-- 9: quest completed
+
+--MS004_Done
+-- 1: mission completed
+
+function start()
+	status = GetFlag("MS004_Task")
+	if status >= 9 then
+		dialogue_08()
+	elseif status >= 8 then
+		dialogue_07()
+	elseif status >= 6 then
+		dialogue_06()
+	elseif status >= 5 then
+		dialogue_05()
+	elseif status >= 2 then
+		dialogue_04b()
+	elseif status >= 1 then
+		dialogue_04()
+	elseif GetData("Level")>=35 and GetFlag("MS003_Done")==1 then
+		if status>=0 then
+			dialogue_02b()
+		else
+			dialogue_02()
+		end
+	else
+		dialogue_01()
+	end
+end
+
+--玩家等級在35以下
+function dialogue_01()
+	Say("n1這裡剛剛發生了意外事故呢！你不要妨礙我進行調查的工作啊！","End")
+end
+
+--玩家等級在35或以上
+function dialogue_02()
+	Say("m#STORY_NAME_03A.spr#STORY_NAME_03B.spr#030.mp3#", "dialogue_02b")
+	SetFlag("MS004_Task", 0)
+end
+function dialogue_02b()
+	Say("n1這裡剛剛發生了意外事故呢！")
+	Ask("n你就是找到烏洛特金屬回來的"..GetName().."嗎？祖加尼．馬奇先生有向我提及你的事，你可以幫助加入調查工作嗎？","好的，這件事就交給我吧！","對不起，讓我再考慮一下吧．．．","reply_02")
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		dialogue_03()
+	else
+		QuestEnd()
+	end
+end
+
+function dialogue_03()
+	Say("n1事情是這樣的，在穩定能量的過程中，依加魯穩定器突然發生輕微爆炸！幸好當時沒有人在穩定器附近，才會沒有人受傷，可是穩定器卻因此壞掉了。")
+	Say("n1你幫我調查一下穩定器的爆炸原因好嗎？","End")
+	SetFlag("MS004_Task", 1)
+end
+
+--玩家完成了MS004C－Step03
+function dialogue_04()
+	Say("n1調查一下穩定器的爆炸原因的事就拜託你了！\n你可以去問"..Color(0,45,198).."技術員‧泰雲"..Color(0,0,0).."吧，因為當時是由他負責操作的。","End")
+end
+
+--玩家完成了MS004D－Step02
+function dialogue_04b()
+	Say("n1調查一下穩定器的爆炸原因的事就拜託你了！","End")
+end
+
+--玩家完成了MS004G－Step02
+function dialogue_05()
+	Say("p3不好了！嘉迪尼事務長．．．")
+	Say("n1什麼事！？不要急，慢慢說給我知道吧！")
+	Say("p7你將野花的事情告知嘉迪尼事務長。")
+	Say("n1那麼事不宜遲！你先去他們在"..Color(0,45,198).."格靈森林的基地"..Color(0,0,0).."的基地破壞他們的計劃，我回去召集軍團的人再去支援你。","End")
+	SetFlag("MS004_Task", 6)
+end
+
+--玩家完成了MS004C－Step06
+function dialogue_06()
+	Say("n1事不宜遲！你先去他們在"..Color(0,45,198).."格靈森林的基地"..Color(0,0,0).."破壞他們的計劃，我回去召集軍團的人再去支援你。","End")
+end
+
+--玩家完成了MS004J－Step02
+function dialogue_07()
+	Say("n1你竟然能在援軍來到之前就破壞了野花的基地！真是令人驚訝！")
+	Say("n1這個星之徽章和5000星幣是你應得的。")
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("n1"..GetName().."，今次你做得非常好！")
+		Say("p1能夠為王國效力，是我的光榮。","dialogue_07a")
+		SetFlag("MS004_Task", 9)
+		SetFlag("MS004_Done", 1)
+	end
+end
+
+function dialogue_07a()
+	Say("p7得到“星之徽章”","dialogue_07b")
+	AddItem(10262)
+end
+
+function dialogue_07b()
+	ModifyData("Money", 5000)
+	Say("p7得到5000星幣","dialogue_07c")
+end
+
+function dialogue_07c()
+	gainexp(20000)
+	Say("p7得到20000Exp","End")
+end
+
+--玩家完成了MS004C－Step07
+function dialogue_08()
+	Say("n1為了將來的星之戰爭，你要努力的鍛鍊自己，知道嗎？","End")
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end

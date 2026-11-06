@@ -1,0 +1,8 @@
+--¶°¦rªÌ
+--TW007_B2
+
+function start()
+	main(1)
+end
+
+#include "TW007_B_com.txt"

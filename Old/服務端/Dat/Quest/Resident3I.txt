@@ -1,0 +1,6 @@
+--People01 馬卡巴
+
+function start()
+	Say("n1聽說要是利用不同磁場的力量，就可以增加機械的能量。")
+	Say("n1可是我還未試過...","End")
+end

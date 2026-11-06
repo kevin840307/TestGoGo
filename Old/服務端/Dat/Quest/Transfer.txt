@@ -1,0 +1,74 @@
+--Transfer.txt
+
+--function response1()
+--	choice=GetChoice()
+--	if choice==0 then
+--		Ask("p確定要去魔法之都嗎?","是","還是不去","gotocity01")
+--	elseif choice==1 then
+--		Ask("p確定要去騎士之城嗎?","是","還是不去","gotocity02")
+--	elseif choice==2 then
+--		Ask("p確定要去機械之城嗎?","是","還是不去","gotocity03")
+--	else
+--		Ask("p確定要去尼尼亞皇城嗎?","是","還是不去","gotocity04")
+--	end
+--end
+
+function response01()
+	choice=GetChoice()
+	if choice==0 then
+		Ask("p確定要去魔法之都嗎?","是","還是不去","gotocity01")
+	else
+		Ask("p確定要去尼尼亞皇城嗎?","是","還是不去","gotocity04")
+	end
+end
+
+function gotocity01()
+	choice=GetChoice()
+	if choice==0 then
+		MovePlayer(2112,3488,09)
+	else
+		AddItem(10034,1)
+		QuestEnd()
+	end
+end
+
+function gotocity02()
+	choice=GetChoice()
+	if choice==0 then
+		MovePlayer(3456,10560,22)
+	else
+		AddItem(10034,1)
+		QuestEnd()
+	end
+end
+
+function gotocity03()
+	choice=GetChoice()
+	if choice==0 then
+		MovePlayer(13888,7456,17)
+	else
+		AddItem(10034,1)
+		QuestEnd()
+	end
+end
+
+
+function gotocity04()
+	choice=GetChoice()
+	if choice==0 then
+		MovePlayer(13568,12096,15)
+	else
+		AddItem(10034,1)
+		QuestEnd()
+	end
+end
+
+
+function start()
+	--if the map is completed , uncomment the following command and the function response1
+        -- then delete the function response01
+	--Ask("p請問去那個城市呢?","魔法之都","騎士之城","機械之城","尼尼亞皇城","response1")
+	Ask("p請問去那個城市呢?","魔法之都","尼尼亞皇城","response01")
+end
+
+

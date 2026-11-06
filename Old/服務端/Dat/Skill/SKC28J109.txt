@@ -1,0 +1,98 @@
+--SKC28J109
+#include "txt_28109.txt"
+
+function start()
+	consume 	= "MP"	
+	
+	Reanimate_HP = "HP"
+	Reanimate_MP = "MP"
+	Reanimate_ExpDeath = "ExpDeath"
+		
+	defender	= GetTargetPtr()
+	defenderType=GetTargetType(defender)
+	skillid		= 28109
+	TXT_SkillName()
+	skillLv 	= GetSkillLv()
+
+	--HP_Value = GetHP(skillLv)
+	--MP_Value = GetMP(skillLv)
+	--ExpDeath_Value = GetMyExpDeath(skillLv)	
+	conTotal = GetConTotal(skillLv)
+		
+	Reanimate()
+end
+
+function GetConTotal(lv)
+	if lv == 1 then
+		return 50
+	elseif lv == 2 then
+		return 150
+	else
+		return 320
+	end
+end
+
+function GetHP(lv)
+	if lv == 1 then
+		return GetReanimate_HP(30)
+	elseif lv == 2 then
+		return GetReanimate_HP(50)
+	else
+		return GetReanimate_HP(70)
+	end
+end
+
+function GetMP(lv)
+	if lv == 1 then
+		return GetReanimate_MP(30)
+	elseif lv == 2 then
+		return GetReanimate_MP(50)
+	else
+		return GetReanimate_MP(70)
+	end
+end
+
+function GetMyExpDeath(lv, mylv)
+	if lv == 1 then
+		return GetReanimate_ExpDeath(mylv,10)
+	elseif lv == 2 then
+		return GetReanimate_ExpDeath(mylv,20)
+	else
+		return GetReanimate_ExpDeath(mylv,30)
+	end
+end
+
+function reborn()
+	if GetData("HP")==0 then				
+		skillLv = GetFlag("skillLv")
+		Lv = GetData("Level")
+		HP_Value = GetHP(skillLv)
+		MP_Value = GetMP(skillLv)
+		ExpDeath_Value = GetMyExpDeath(skillLv, Lv)	
+		
+		MapID = GetData("MapID")
+		if MapID ~= 15 then
+			level = GetData("Level")
+			if level >= 11 then
+				currDeathExp = GetData("ExpDeath")
+				if currDeathExp > ExpDeath_Value then
+					ModifyData("ExpDeath", -ExpDeath_Value)
+				else
+					SetData("ExpDeath",0)
+				end		
+			end
+		end
+
+		DoNoDie(GetCallerPtr())
+		SetData(Reanimate_HP,HP_Value)
+		SetData(Reanimate_MP,MP_Value)
+		--SetData(boost,effect)
+		--SetData("HP", floor(GetData("HPMAX")/2))
+		--SetData("MP", floor(GetData("MPMAX")/2))
+	end
+end
+
+#include "curecommon.txt"
+
+
+

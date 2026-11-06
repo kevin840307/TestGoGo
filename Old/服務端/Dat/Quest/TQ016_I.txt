@@ -1,0 +1,11 @@
+--倒此竧较(TQ016I)
+
+function start()
+	Say("p7竧较е贾")
+	Say("p7硂琌砆褐眔竧较","showcard")
+	AddItem(10418)
+end
+
+function showcard()
+	Say("m#X_mas_card\\X_MAS_CARD01.spr#na##","End")
+end

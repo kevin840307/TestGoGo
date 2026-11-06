@@ -1,0 +1,131 @@
+--NQ016_A 穆蘭卡博士
+
+--status (NQ016_Task)
+-- 1: quest start, go to find 艾伯博士
+-- 2: go items for 艾伯博士
+-- 3: go to find 穆蘭卡博士
+-- 4: quest completed
+
+--NQ016_Done
+-- 1: Quest completed, this flag will be checked by NQ017_A
+
+function start()
+	status = GetFlag("NQ016_Task")
+	if status==4 then
+		dialogue_05()
+	elseif status==3 and CheckItem(10216)>0 then
+		dialogue_04()
+	elseif status>= 1 then
+		dialogue_03()
+	elseif GetData("Level")<20 then
+		dialogue_00()
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_00()
+	Say("n1靜一點喔！","End")
+end
+
+function dialogue_01()
+	Say("n1嗯嗯~~你過來~~靜一點喔！")
+	Ask("n你需要機甲嗎？只要你幫我一個小忙，我就可以送你一張機甲卡~~","嗯~好啊。","機甲是什麼？能吃嗎？","reply_01")
+end
+
+function dialogue_02a()
+	Say("n1呵呵，謝謝你，我就知道你會幫忙。")
+	Say("n1目前科技部正在積極研究機甲的事，你知道嗎？")
+	Say("p1咦？")
+	Say("n1你不知道就算了…其實我是想你幫我一個小忙。")
+	Say("n1上星期我不小心弄丟了一張非常重要的晶片，是用作驅動最新機甲的…")
+	Say("p3什麼！？")
+	Say("n1嘖！別那麼大聲！")
+	Say("p1好…好…")
+	Say("n1我給你的任務就是找我的爺爺艾伯博士，他知道如何製造出新晶片的！找到他我就有救了！")
+	Say("p1他在哪兒？")
+	Say("n1就在"..Color(0,45,198).."城外的森林"..Color(0,0,0).."…他很久沒有回來了，真是急死我了，本來還想等他回來救我的命，現在只好拜託你了。")
+	Say("p1嗯？你什麼不自己出去找他呢？")
+	Say("n1我也想啊！可是要是我出去的話，一定會給研究所的人逮到吧！你快去快回！還有，一定要保守祕密喔！")
+	Say("p1知道了！","End")
+	SetFlag("NQ016_Task", 1)
+end
+
+function dialogue_02b()
+	Say("n1我想你沒救了…不是什麼也可以放入口的…", "End")
+end
+
+function dialogue_03()
+	Say("n1你不是去找艾伯博士嗎？還站在這兒做什麼？我都快要歸天了，你快一點好不好？", "End")
+end
+
+function dialogue_04()
+	Say("n1穆蘭卡博士：這個！就是這個！太好了！我不用被趕出研究所了！")
+	if GetHorseEquipCountLeft()<4 or GetHorseCountLeft()<1 then
+		dialogue_04c()
+	else
+		Say("n1來，這個是你的！你可以去試著操作機甲的滋味了～呵呵呵。")
+		Say("p7交出“水晶晶片”","dialogue_04a")
+	end
+	QuestEnd()
+end
+
+function dialogue_04a()
+-- >>>> the count left checked at dialogue_04 already !!
+--	if ItemListCountLeft(3)<1 then
+--		Say("p7對不起，你身上的機甲太多了，請清除一些機甲後再來。","End")
+--	elseif ItemListCountLeft(4)<1 then
+--		Say("p7對不起，你身上的機甲太多了，請清除一些機甲後再來。","End")
+--	else
+		Say("p7得到“機甲卡”")
+		Say("n1要是科技部查起來，你就說這是穆蘭卡博士給你的機甲執照，知道嗎？")
+		Say("p1那我走囉！謝謝！")
+		Say("n1忘了說一件事你知道。")
+		Say("p1什麼事？")
+		Say("n1用機甲一定要有動力，對嗎？可是現在機甲是沒有動力的。")
+		Say("p1那怎麼辦？")
+		Say("n1當然是去找動力來源──"..Color(0,45,198).."魔靈電池"..Color(0,0,0).."啦！")
+		Say("p1那麼那個什麼電池的在哪可以拿到？")
+		Say("n1我這兒有三個電池，你先拿去試著操作機甲，至於以後的電池，你只好自己想辦法了。")
+		Say("p7得到2000EXP","dialogue_04b")
+--	end
+end
+
+function dialogue_04b()
+	Say("p7得到三枚「魔靈電池」","End")
+	AddItem(6901,3)
+	SetFlag("NQ016_Task", 4)
+	SetFlag("NQ016_Done", 1)
+	gainexp(2000)
+	RemoveItem(10216,1)
+	AddItem(6001)
+	if CheckItem(6001)>0 then
+		SetFlag("NQ016_GetHorse", 1)
+	else
+		SetFlag("NQ016_GetHorse", 0)
+	end
+end
+
+function dialogue_04c()
+	Say("n1你身上的機甲卡或機甲裝備太多了，已沒有空收下，你還是先整理一會再回來。","End")
+end
+
+function dialogue_05()
+	Say("n1試過用機甲了嗎？這是很好玩的。")
+	Say("n1還有忘了告訴你一件事，當駕駛機甲後是不能移隨機甲裝備的，必須回收後才能裝配你的機甲。","End")
+end
+
+function reply_01()
+	if GetChoice()==0 then
+		dialogue_02a()
+	else
+		dialogue_02b()
+	end
+end
+
+function gainexp(exp)
+
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+
+end

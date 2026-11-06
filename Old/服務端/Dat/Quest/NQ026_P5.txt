@@ -1,0 +1,11 @@
+--NQ026_P5
+
+function start()
+    if GetFlag("NQ026_KILL_SEQ") == 5 then
+        Say("p7體內出現了一道黃色的小型魔獸能量。")
+        SetFlag("NQ026_KILL_SEQ",13)
+    elseif GetFlag("NQ026_KILL_SEQ") ~= -1 then        
+        Say("p7體內的魔獸能量消失了！")
+        SetFlag("NQ026_KILL_SEQ",-1)
+    end        
+end

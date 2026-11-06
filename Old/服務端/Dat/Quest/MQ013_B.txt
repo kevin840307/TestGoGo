@@ -1,0 +1,59 @@
+--MQ013_B  奇怪的樹木
+
+
+
+function start()
+	statue=GetFlag("MQ013_Task")
+	
+	if statue >= 4 then
+		Say("n1這棵樹看來真有很久的歷史了……","End")	
+	
+	elseif GetFlag("MQ014_C")==1 then	
+		Ask("p聽柯爾那麼說，可能會再有東西在樹洞內呢？","嗯，再找多一次。","還是不好了…好像很多餘了呢。","response2")
+	
+	elseif statue==3 then
+		Say("p1樹洞內應該不會有東西了吧？","End")
+	
+	elseif statue==2 then
+		Say("p6這棵樹看來真有很久的歷史了……","End")
+
+	elseif statue==1 then
+		Say("p6這兒好像有個樹洞的樣子……")
+		Ask("n要伸手去看看嗎？","應該不會有什麼奇怪的東西吧？","還是不好了…好像很可怕的樣子。","response1")		
+	
+	else
+		Say("n1這棵樹……有個樹洞的樣子。","End")
+	end
+
+end
+
+function response1()
+	choice=GetChoice()
+	if choice == 0 then
+		Say("p6耶？這是什麼？好像是一本書耶！應該就是綠加的歷史書了吧？")
+		Say("p7得到歷史書","End")
+		SetFlag("MQ013_Task",2)
+		AddItem (10184)
+		
+	else
+		Say("n1小心為上……可能會有蟲咬呢！","End")
+	
+	end
+end
+
+
+function response2()
+	choice=GetChoice()
+	if choice==0 then
+		if ItemListCountLeft(0)<1 then
+			Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			Say("p6嗯！真的有東西……耶？這張東西是什麼……拿它出來看看才行…這應該是老師的書籤了吧！")
+			Say("p7得到娜姬．連特的書籤","End")
+			AddItem(10185)
+			SetFlag("MQ013_Task",4)
+		end
+	else
+		Say("p1還是去別的地方找找好了。","End")
+	end	
+end

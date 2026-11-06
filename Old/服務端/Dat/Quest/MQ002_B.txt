@@ -1,0 +1,22 @@
+--MQ002_B 小星光鳥
+
+function start()
+	if GetFlag("MQ_002_Task")==1 then
+		if ItemListCountLeft(0)>0 then
+			if GetFlag("MQ002_getfeather")~=1 then
+				GetFeather()
+			end
+			Say("p1已經拿到星光之羽了！快點拿回去給那個大口氣的守衛看看，以消心頭之恨。","End")	
+		elseif GetFlag("MQ002_getfeather")~=1 then
+			Say("p1身上的物品已滿，未能拿取星光之羽。","End")	
+		end
+	end
+	QuestEnd()
+end
+
+
+function GetFeather()
+	Say("p7星光之羽")
+	AddItem(10025,1)
+	SetFlag("MQ002_getfeather",1)
+end	

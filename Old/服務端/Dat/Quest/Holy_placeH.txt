@@ -1,0 +1,5 @@
+--People01 史琳達．貝爾
+
+function start()
+	Say("n1卡加莉雖然身為聖女，但她十分平易近人，喜歡別人叫她的名字。","End")
+end

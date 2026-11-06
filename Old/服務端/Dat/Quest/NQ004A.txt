@@ -1,0 +1,81 @@
+-- NQ004_A 艾魯
+
+function start()
+
+	lv = GetData("Level")
+	statue=GetFlag("NQ_004_GotQuest")
+		
+	if lv<15 then
+		Say("n1年輕人～你喜歡釣魚嗎？這是很有趣的。", "End")
+
+		
+	elseif statue==2 then
+	
+		if GetFlag("NQ004_Box1opened")==1 and CheckItem(72) >0 then
+			Ask("n呃！原來箱子中是裝著這支藥水嗎？你可以把它交給我嗎？我有點想用它……","你拿去吧！","不要，那是我的。","Step3")
+
+		elseif GetFlag("NQ004_Box2opened")==1 and CheckItem(77) >0 then
+			Ask("n呃！原來箱子中是裝著這支藥水嗎？你可以把它交給我嗎？我有點想用它……","你拿去吧！","不要，那是我的。","Step3")
+
+		else
+			Say("n1你不妨拿著它去魔法之城看看？","End")		
+		end
+
+	elseif statue== 1 then
+		if GetCountItemCount(10018)>=1 then
+			if ItemListCountLeft(0)<1 then
+				Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				Say("n1謝謝你啊，年輕人！我的腰好像好了點……這把金鑰匙送給你好了，你不妨拿著它去魔法之城看看？","End")
+				SetFlag("NQ_004_GotQuest",2)
+				RemoveItem(10018)
+				AddItem(10019,1)
+			end
+		else 
+			Say("n1那就謝謝你了…哎唷……好痛……", "End")
+		end
+	else
+		Say("n3哎呀呀呀呀…釣魚時坐得久了，站不起來，腰那兒痛死了……")
+		Say("p1老伯你什麼了呢？")
+		Ask("n來得正好……年輕人，你可以幫我去尼尼亞皇城找藥師嗎？我的腰痛得不像話……","老伯你等一下，我馬上買回來！","等一下你就沒事了吧？","Step2")
+	
+	end
+
+end
+
+function Step2()
+
+	if GetChoice() == 0 then
+		SetFlag("NQ_004_GotQuest",1)
+		Say("n1那就謝謝你了…哎唷……好痛……", "End")
+
+	else
+		Say("n3希望吧……呀呀，痛死了。","End")
+
+	end
+
+end
+
+function Step3()
+
+	if GetChoice() == 0 then
+		Say("n1謝謝你！這兒有900元，就當是藥水的錢吧？謝謝你！")
+		Say("p7得到1000Exp","End") 
+		if CheckItem(72)>0 then
+			RemoveItem(72)
+			SetFlag("NQ004_Box1opened",0)
+		else
+			RemoveItem(77)
+			SetFlag("NQ004_Box2opened",0)
+		end
+		ModifyData("Money", 900)
+		ModifyData("ExpAcc", 1000)
+		SetFlag("NQ_004_GotQuest",0)
+
+	else
+		Say("n1拜託你嘛！我真的很想要！", "End")
+
+	end
+
+end
+

@@ -1,0 +1,5 @@
+--People01 佛茶漠
+
+function start()
+	Say("n1依加魯力量會依著力量的大小而轉變成不同的顏色喔。","End")
+end

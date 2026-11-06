@@ -1,0 +1,18 @@
+--Shop03 防具店
+
+function start()
+	Ask("n歡迎光臨，想看看什麼貨品呢？","武器和盾牌","上身和下身裝備","手部裝備","頭部裝備","check")
+end
+
+function check()
+	choice = GetChoice()
+	if choice == 0 then
+		OpenShop (9,0.7)
+	elseif choice == 1 then
+		OpenShop (8,0.7)
+	elseif choice == 2 then
+		OpenShop (7,0.7)
+	else
+		OpenShop (6,0.7)
+	end
+end

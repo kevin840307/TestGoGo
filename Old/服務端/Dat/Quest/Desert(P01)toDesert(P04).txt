@@ -1,0 +1,17 @@
+--Desert(P01) to Desert(P04)
+
+function start()
+Say("n1封印之地嚴禁進入","End")
+end
+
+function notuse()
+	Ask("n要進入佳雅地靈室嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(7168,10240,35)
+	end
+	QuestEnd()
+end

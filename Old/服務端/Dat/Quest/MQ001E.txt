@@ -1,0 +1,54 @@
+--MQ001_E 老伯
+
+
+function start()
+	sick = GetFlag("MQ_001_1")
+	if sick == 6 or sick == 8 or sick == 10 then
+		if GetFlag("MQ_001_GetCure")==1 then
+			Say("n1我家甚麼藥材也有，有需要的話儘管跟我說吧！","End")
+		elseif GetFlag("MQ_001_KillBug")>=10 then
+			Say("n1謝謝你！你需要什麼藥材都可以問我．．．")
+			Say("n1我一個人生活，就只有這些藥材．．．來！這個送給你！","Give")
+		elseif GetFlag("MQ_001_KillBug")>-1 then
+			Say("n1"..Color(0,45,198).."古可"..Color(0,0,0).."仍然在破壞我的藥田，請快去幫我驅除牠們？","End")
+		elseif GetFlag("MQ_001_KnowCureWay")==1 then
+			Say("n1年輕人．．．森林中突然有很多古可出沒．．．")
+			Ask("n藥草田都給牠們破壞了！我的手腳不中用，你可以替我把牠們驅除嗎？","好的！","老頭你自己搞定吧！別煩我！","Ans01")
+		else
+			Say("n1我家甚麼藥材也有，有需要的話儘管跟我說吧！", "End")		
+		end
+	else
+		Say("n1我家甚麼藥材也有，有需要的話儘管跟我說吧！", "End")
+	end
+end
+
+function Ans01()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("n1年輕人謝謝你啊！", "End")
+		SetFlag("MQ_001_KillBug",0)
+	else
+		Say("n1現在的人真是沒有同情心，世界和以前不同了！","End")
+	end
+end
+
+function Give()
+	sick = GetFlag("MQ_001_1")
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		if sick == 6 then
+			Say("n1得到"..Color(0,45,198).."火光種子"..Color(0,0,0).."．．．","End")
+			AddItem(10001,1)
+			SetFlag("MQ_001_GetCure",1)
+		elseif sick == 8 then
+			Say("n1得到"..Color(0,45,198).."魔洋蔥"..Color(0,0,0).."．．．","End")
+			AddItem(10003,1)
+			SetFlag("MQ_001_GetCure",1)
+		elseif sick == 10 then
+			Say("n1得到"..Color(0,45,198).."跳蚤花"..Color(0,0,0).."．．．","End")
+			AddItem(10005,1)
+			SetFlag("MQ_001_GetCure",1)
+		end
+	end
+end

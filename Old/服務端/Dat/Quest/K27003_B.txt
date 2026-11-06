@@ -1,0 +1,198 @@
+--K27003_B  獵人卡夫特
+
+
+function start()
+
+	statue=GetFlag("K27003_Task")
+
+	if GetFlag("K27003_Completed")==1 then
+		Say("n1鐵諾的老家每一代也是打鐵，很多時我也會請他幫我修理物品。","End")
+
+	elseif statue==4 then
+		if CheckItem(10164)>0 then
+			Say("n1你已尋回戒指了嗎？快拿去給鐵諾吧。","End")
+		
+		elseif GetFlag("K27003_Know")==1 then
+						
+			if GetFlag("K27003_Ready")==1 then
+				Ask("n你已經準備好了嗎？","我已準備好出發了。","我還需準備一會。","response7")
+			
+			elseif conditionsatisfied(50) then
+				
+				Ask("n你已收集好回來了嗎？","已收集好了，這裡是50件零件。","還沒有啊！","response6")
+							
+			else
+				
+				Say("n1傳送器已損毀了，若你想再啟動，必須再找來50件零件，我便可以修理傳送器了。")
+			
+			end
+
+		else 	
+			
+			Say("n1傳送器已損毀了，若你想再啟動，必須再找來50件零件，我便可以修理傳送器了。")
+			SetFlag("K27003_Know",1)
+	
+		end
+		
+	
+	elseif statue ==3 then
+		
+		Ask("n你已經準備好了嗎？","已準備好了。","還是多等侯一會。","response5")
+		
+
+	elseif statue==2 then
+		if GetFlag("K27003_Transfer")==1 then
+			Ask("n已完成了，可是由於零件不足，它只能傳送一人後便會再度損毀了，而我又必須進行操作，所以只好由你進入山洞奪回戒指了。","明白，我一定會奪回戒指的。","你還是另找他人吧。","response4")	
+			
+		elseif conditionsatisfied(50) then
+			Ask("n你已收集好回來了嗎？","已收集好了，這裡是50件零件。","還沒有啊！","response3")
+		
+		else
+			Say("n1你可以從機動偶身上尋得零件，只要找來50件零件，我便可以修理傳送器了","End")
+		
+		end
+
+	elseif statue==1 then
+
+		name=GetName()
+		Ask("n那群可惡的古可搶走了我朋友的戒指，可是山洞封閉了，我需要一些零件，才能修理傳送器入內。","我是"..name.."，鐵諾已向我說明了一切，有什麼事我能幫忙嗎？","對不起，我不能幫上什麼。","response1")
+		
+
+	else
+
+		Say("n1那群可惡的古可搶走了我朋友的戒指，可是山洞封閉了，我需要一些零件，才能修理傳送器入內。","End")
+
+	end
+
+end
+
+
+function response1()
+
+	if GetChoice()==0 then
+		
+		name=GetName()
+		Ask("n啊！這樣太好了，"..name.."你能替我找50件靈件來修理傳送器嗎？","沒問題，找尋零件的工作便交給我。","我才沒有這麼多時間。","response2")	 	
+		
+	else
+		Say("n1是嗎.......?","End")
+
+	end
+
+
+end
+
+
+function response2()
+
+	if GetChoice() ==0 then
+		
+		Say("n1你可以從機動偶身上尋得零件，只要找來50件零件，我便可以修理傳送器了。","End")		
+		SetFlag("K27003_Task",2)
+		
+
+	else
+		Say("n1......","End")
+	end
+
+end
+
+
+function response3()
+	if GetChoice() ==0 then
+		
+		speech1()
+		RemoveTheCompontent(50)
+		SetFlag("K27003_Transfer",1)
+		Ask("n已完成了，可是由於零件不足，它只能傳送一人後便會再度損毀了，而我又必須進行操作，所以只好由你進入山洞奪回戒指了。","明白，我一定會奪回戒指的。","你還是另找他人吧。","response4")
+		
+	else
+		Say("n1請盡快找回來吧!!","End")
+	
+	end
+	
+end
+
+function response4()
+	if GetChoice()==0 then
+		Say("n1我現在須調整傳送器，你可以先準備一會。","End")
+		SetFlag("K27003_Task",3)
+		
+	else
+		Say("n1請再考慮清楚!!","End")
+	end
+end
+
+function response5()
+	if GetChoice()==0 then
+		
+		Say("p7獵人卡夫特開始發動傳送器，只見傳送器向你發出一道淺藍白光，你的身體開始消失。","End")
+		SetFlag("K27003_Task",4)
+		MovePlayer(3456,6912,14)
+	else
+		QuestEnd()
+	end
+
+end
+
+function response6()
+	if GetChoice()==0 then
+		speech1()
+		RemoveTheCompontent(50)
+		Say("n1已修理好了，你可以再度使用傳送器。","End")
+		SetFlag("K27003_Ready",1)		
+
+	else
+		Say("n1請盡快找回來吧!!","End")
+	end
+
+end
+
+function response7()
+	if GetChoice()==0 then
+		Say("n7獵人卡夫特開始發動傳送器，只見傳送器向你發出一道淺藍白光，你的身體開始消失。")
+		SetFlag("K27003_Ready",0)
+		SetFlag("K27003_Know",0)
+		MovePlayer(3456,6912,14)
+	end
+end
+
+function speech1()
+	
+	Say("n1你稍後一會，待我修理傳送器。")
+	Say("n7獵人卡夫特正努力修理傳送器。")
+	Say("n7．．．．．．")
+	Say("n1你稍後一會，很快便會修理完成。")
+	Say("n7．．．．．．")
+	
+end
+
+function conditionsatisfied(RequiredTotalNumber)
+	total=0
+	for var=10121 ,10125 , 1 do
+		total=total+GetCountItemCount(var)
+		
+	end
+	return total>=RequiredTotalNumber
+
+end
+
+function RemoveTheCompontent(y)
+
+	for var=10121,10125,1 do
+
+		x=GetCountItemCount(var)		
+
+		if y==0 then
+			break
+
+		elseif x>=y then
+			RemoveItem(var,y)
+			y=0
+	
+		else
+			RemoveItem(var,x)
+			y=y-x
+		end
+	end	
+end

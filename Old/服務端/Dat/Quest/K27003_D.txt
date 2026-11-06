@@ -1,0 +1,55 @@
+--K27003_D  古可的傳送蘑菇
+
+
+function start()
+	type=mushroom()
+	action(type)
+	
+end
+
+
+function mushroom()
+	result=random(3)
+	if result==1 then
+		return 0
+	
+	elseif result==2 then
+		return 1
+	
+	else
+		return 2
+	end	
+
+end
+
+function action(value)
+	if value==0 then
+		Say("p7身體開始漸漸消失","End")
+		MovePlayer(3456,2432,13)
+
+	elseif value==1 then
+	 	race=GetData("Race")
+		if race==0 or race==1 or race==2 then
+			Say("p7吃掉蘑菇後，你的身體開始不正常。")
+			Say("p1糟糕！蘑菇有毒。","End")
+			SetData("HP",1)
+	
+		else
+			Say("p7吃掉蘑菇後，偵查到蘑菇有毒，但毒性已被機體自行中和，你的身體開始漸漸消失。","End")
+			MovePlayer(3456,2432,13)
+
+		end
+	
+	elseif value==2 then
+		race=GetData("Race")
+		if race==3 then
+			Say("p7吃掉蘑菇後，偵查到蘑菇帶有電磁粉，機體出現不正常現象，機體內部受到嚴重損耗。","End")
+			SetData("HP",1)
+	
+		else 
+			Say("p7吃掉蘑菇後，在手上發現一些粉狀東西，身體開始漸漸消失。","End")
+			MovePlayer(3456,2432,13)
+		end
+	end
+
+end

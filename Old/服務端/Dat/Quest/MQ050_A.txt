@@ -1,0 +1,341 @@
+--MQ050_A 中級武術導師歐麗
+
+--MQ050_Task
+-- 1: quest start, find 大牧師
+-- 2: player get the 魔動爐
+-- 3: player returned the 魔動爐
+
+--MQ050_Done
+-- 1: quest completed
+
+--MQ051_TaskA
+-- 1: quest start, find古米爾
+
+--MQ051_TaskB
+-- 1: quest start, find路特
+
+--MQ050_Done
+-- 1: quest completed
+
+--MQ052_Task
+-- 1: quest started
+-- 2: go to find 巴基木
+-- 3: got the 魔法火藥
+-- 4: got the 魔風彈
+
+--MQ052_Done
+-- 1: quest completed
+
+--MQ053_Task
+-- 1: quest started
+-- 2: go to find 巴基木
+-- 3: got the 魔法火藥
+-- 4: got the 魔風彈
+
+--MQ053_Done
+-- 1: quest completed
+
+function start()
+	career=GetData("Career")
+	if GetData("Level")<30 then
+		dialogue_below30()
+	elseif career==0 then
+		dialogue_below30()
+	elseif career==1 then
+		goCareer_01()
+	elseif career==2 then
+		goCareer_02()
+	elseif career==3 then
+		goCareer_03()
+	elseif career==4 then
+		goCareer_04()
+	else
+		--道具使
+		dialogue_item_man()
+	end
+end
+
+function dialogue_item_man()
+	Say("n1你不需要學習武術的。","End")
+end
+
+function dialogue_below30()
+	Say("n1歡迎你來到中級的課室，我是中級導師歐麗，請多多指教。","End")
+end
+
+-- 與靈鬥士的對話 start
+function goCareer_01()
+	status = GetFlag("MQ050_Task")
+	if HasSkill(1103)==1 then
+		dialogue_1_03()
+	elseif status>=1 then
+		dialogue_1_02()
+	elseif HasSkill(1102)~=1 then
+		dialogue_below30()
+	else
+		dialogue_1_01()
+	end
+end
+
+function dialogue_1_01()
+	Say("n1歡迎你來到中級的課室，我是中級導師歐麗，…")
+	Ask("n初級的武術你已經學會了吧？你現在要學習新的武術嗎？","是的！","暫時沒需要。","reply_1_01")
+end
+
+function dialogue_1_01a()
+	Say("n1你目前要學的是烈火爆劍，烈火爆劍的力量源自烈火力量，要弱化敵人就等於要溶化他的裝備，要引發這種力量，…")
+	Say("n1就要找尼尼亞皇城大聖殿中大牧師借用魔動爐，這種東西可以煉出火依加魯結晶，只是集中依加魯力，要成烈火爆劍就不會很難。","End")
+	SetFlag("MQ050_Task", 1)
+end
+
+function dialogue_1_01b()
+	Say("n1這是什麼話？算了。","End")
+end
+
+function reply_1_01()
+	if GetChoice()==0 then
+		dialogue_1_01a()
+	else
+		dialogue_1_01b()
+	end
+end
+
+function dialogue_1_02()
+	Say("n1去尼尼亞皇城找"..Color(0,45,198).."大牧師"..Color(0,0,0).."吧！她應該會有"..Color(0,45,198).."魔動爐"..Color(0,0,0).."的。","End")
+end
+
+function dialogue_1_03()
+	Say("n1太好了，你已經學會了，很少有你這樣有潛質的學生呢！")
+	Say("n1目前我已經沒什麼可以教你了，不如你前往"..Color(0,45,198).."星之湖"..Color(0,0,0).."找一個退隱騎士吧！他是我的師傅，應該會有東西教你的。","End")
+	SetFlag("MQ050_Done", 1)
+end
+-- 與靈鬥士的對話 stop
+
+-- 與人類戰士的對話 start
+function goCareer_02()
+	statusA = GetFlag("MQ051_TaskA")
+	statusB = GetFlag("MQ051_TaskB")
+	if HasSkill(2103)==1 then
+		dialogue_2_03()
+	elseif statusA>=1 then
+		dialogue_2_02()
+	elseif HasSkill(2102)~=1 then
+		dialogue_below30()
+	else
+		dialogue_2_01()
+	end
+end
+
+function dialogue_2_01()
+	Say("n1歡迎你來到中級的課室，我是中級導師歐麗，…")
+	Ask("n初級的武術你已經學會了吧？你現在要學習新的武術嗎？","是的！","暫時沒需要。","reply_2_01")
+end
+
+function dialogue_2_01a()
+	Say("n1你目前要學的是黑石破劍，黑石破劍的力量源自特殊的土力量，要令敵人變得無力，就等於要令他的武器變得軟軟的，…")
+	Say("n1要引發這種力量，就要在黑曜石上吸取了。\n至於力量的吸取就要用到遠心分離器，把黑曜石的力量完全抽取出來。")
+	Say("n1我想你必須要去騎士之城和機械之城……因為黑曜石在騎士之城中會有，而機械之城則有遠心分離器。","End")
+	SetFlag("MQ051_TaskA", 1)
+	SetFlag("MQ051_TaskB", 1)
+end
+
+function dialogue_2_01b()
+	Say("n1這是什麼話？算了。","End")
+end
+
+function reply_2_01()
+	if GetChoice()==0 then
+		dialogue_2_01a()
+	else
+		dialogue_2_01b()
+	end
+end
+
+function dialogue_2_02()
+	Say("n1我想你必須要去"..Color(0,45,198).."騎士之城"..Color(0,0,0).."和"..Color(0,45,198).."機械之城"..Color(0,0,0).."……因為"..Color(0,45,198).."黑曜石"..Color(0,0,0).."在騎士之城中會有，而機械之城則有"..Color(0,45,198).."遠心分離器"..Color(0,0,0).."。","End")
+end
+
+function dialogue_2_03()
+	Say("n1太好了，你已經學會了，很少有你這樣有潛質的學生呢！")
+	Say("n1目前我已經沒什麼可以教你了，不如你前往"..Color(0,45,198).."星之湖"..Color(0,0,0).."找一個退隱騎士吧！他是我的師傅，應該會有東西教你的。","End")
+	SetFlag("MQ051_Done", 1)
+end
+-- 與人類戰士的對話 stop
+
+-- 與米古戰士的對話 start
+function goCareer_03()
+	status = GetFlag("MQ052_Task")
+	if HasSkill(3103)==1 then
+		dialogue_3_04()
+	elseif status>=4 then
+		dialogue_3_05()
+	elseif status>=1 then
+		if GetCountItemCount(10232)>=1 and GetCountItemCount(10233)>=1 then
+			dialogue_3_03()
+		else
+			dialogue_3_02()
+		end
+	elseif HasSkill(3102)~=1 then
+		dialogue_below30()
+	else
+		dialogue_3_01()
+	end
+end
+
+function dialogue_3_01()
+	Say("n1歡迎你來到中級的課室，我是中級導師歐麗，…")
+	Ask("n初級的武術你已經學會了吧？你現在要學習新的武術嗎？","是的！","暫時沒需要。","reply_3_01")
+end
+
+function dialogue_3_01a()
+	Say("n1你目前要學的是暴風閃劍，暴風閃劍的能量源自風和雷，也是令敵人減慢的武術。")
+	Say("n1不過目前你的身體是受不了這力量的。\n我想你需要"..Color(0,45,198).."魔風彈"..Color(0,0,0).."，這彈的力量很強，有足夠的依加魯能量去衝破身體限制。")
+	Say("n1不過這是需要合成的，你去找"..Color(0,45,198).."魔法火藥"..Color(0,0,0).."和"..Color(0,45,198).."暴風之眼"..Color(0,0,0).."來給我吧。","End")
+	SetFlag("MQ052_Task", 1)
+end
+
+function dialogue_3_01b()
+	Say("n1這是什麼話？算了。","End")
+end
+
+function dialogue_3_02()
+	Say("n1老師們應該有魔法火藥的了，而暴風之眼就要去"..Color(0,45,198).."獅鷲山找黃金鳥"..Color(0,0,0).."了。","End")
+end
+
+function dialogue_3_03()
+	RemoveItem(10232)
+	RemoveItem(10233)
+	Say("n1你等我一下……")
+	Say("n1好了！你用一下試試看吧。")
+	Say("p7得到“魔風彈”","End")
+	AddItem(10234)
+	SetFlag("MQ052_Task", 4)
+end
+
+function dialogue_3_05()
+	Say("n1用完之後請把魔風彈還給我。","End")
+end
+
+function dialogue_3_04()
+	hasDone=GetFlag("MQ052_Done")
+	if hasDone~=1 then
+		dialogue_3_04a()
+	else
+		dialogue_3_04b()
+	end
+end
+
+function dialogue_3_04a()
+	Say("p1我已經用完魔風彈了……")
+	if RemoveItem(10234)==1 then
+		Say("p7交出“魔風彈”")
+		dialogue_3_04b()
+	else
+		QuestEnd()
+	end
+end
+
+function dialogue_3_04b()
+	Say("n1太好了，你已經學會了，很少有你這樣有潛質的學生呢！")
+	Say("n1目前我已經沒什麼可以教你了，不如你前往"..Color(0,45,198).."星之湖"..Color(0,0,0).."找一個退隱騎士吧！他是我的師傅，應該會有東西教你的。","End")
+	SetFlag("MQ052_Done", 1)
+end
+
+function reply_3_01()
+	if GetChoice()==0 then
+		dialogue_3_01a()
+	else
+		dialogue_3_01b()
+	end
+end
+-- 與米古戰士的對話 stop
+
+-- 與銃戰士的對話 start
+function goCareer_04()
+	status = GetFlag("MQ053_Task")
+	if HasSkill(4103)==1 then
+		dialogue_4_04()
+	elseif status>=4 then
+		dialogue_4_05()
+	elseif status>=1 then
+		if GetCountItemCount(10232)>=1 and GetCountItemCount(10233)>=1 then
+			dialogue_4_03()
+		else
+			dialogue_4_02()
+		end
+	elseif HasSkill(4102)~=1 then
+		dialogue_below30()
+	else
+		dialogue_4_01()
+	end
+end
+
+function dialogue_4_01()
+	Say("n1歡迎你來到中級的課室，我是中級導師歐麗，…")
+	Ask("n初級的武術你已經學會了吧？你現在要學習新的武術嗎？","是的！","暫時沒需要。","reply_4_01")
+end
+
+function dialogue_4_01a()
+	Say("n1你目前要學的是鐵彈擊，鐵彈擊的能量源自風和雷，也是令敵人中毒的武術。")
+	Say("n1不過目前你的身體是受不了這力量的。\n我想你需要"..Color(0,45,198).."魔風彈"..Color(0,0,0).."，這彈的力量很強，有足夠的依加魯能量去衝破身體限制。")
+	Say("n1不過這是需要合成的，你去找"..Color(0,45,198).."魔法火藥"..Color(0,0,0).."和"..Color(0,45,198).."暴風之眼"..Color(0,0,0).."來給我吧。","End")
+	SetFlag("MQ053_Task", 1)
+end
+
+function dialogue_4_01b()
+	Say("n1這是什麼話？算了。","End")
+end
+
+function dialogue_4_02()
+	Say("n1老師們應該有魔法火藥的了，而暴風之眼就要去"..Color(0,45,198).."獅鷲山找黃金鳥"..Color(0,0,0).."了。","End")
+end
+
+function dialogue_4_03()
+	RemoveItem(10232)
+	RemoveItem(10233)
+	Say("n1你等我一下……")
+	Say("n1好了！你用一下試試看吧。")
+	Say("p7得到“魔風彈”","End")
+	AddItem(10234)
+	SetFlag("MQ053_Task", 4)
+end
+
+function dialogue_4_05()
+	Say("n1用完之後請把魔風彈還給我。","End")
+end
+
+function dialogue_4_04()
+	hasDone=GetFlag("MQ053_Done")
+	if hasDone~=1 then
+		dialogue_4_04a()
+	else
+		dialogue_4_04b()
+	end
+end
+
+function dialogue_4_04a()
+	Say("p1我已經用完魔風彈了……")
+	if RemoveItem(10234)==1 then
+		Say("p7交出“魔風彈”")
+		dialogue_4_04b()
+	else
+		QuestEnd()
+	end
+end
+
+function dialogue_4_04b()
+	Say("n1太好了，你已經學會了，很少有你這樣有潛質的學生呢！")
+	Say("n1目前我已經沒什麼可以教你了，既然你已經學會這技能，就應該好好的鍛鍊自己！")
+	Say("n1還有，往後你可以嚐試尋找一位"..Color(0,45,198).."退隱騎士"..Color(0,0,0).."。他是我的師傅，應該會有東西教你的。","End")
+	SetFlag("MQ053_Done", 1)
+end
+
+function reply_4_01()
+	if GetChoice()==0 then
+		dialogue_4_01a()
+	else
+		dialogue_4_01b()
+	end
+end
+-- 與銃戰士的對話 stop
+

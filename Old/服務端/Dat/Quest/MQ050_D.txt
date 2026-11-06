@@ -1,0 +1,20 @@
+--MQ050_D 火依加魯結晶
+
+function start()
+	Say("p7突然一陣強烈的熱氣傳上來！")
+	Say("p3熱死人了……不過，該是時間練習烈火爆劍！")
+	Say("p3喝！喝！")
+	Say("p1嗯……我想練成了吧……")
+	Say("p7習得“烈火爆劍”")
+	Say("p7得到3000EXP","End")
+	AddSkill(1103)
+	gainexp(3000)
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+
+end
+
+

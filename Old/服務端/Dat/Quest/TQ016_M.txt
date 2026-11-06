@@ -1,0 +1,11 @@
+--快樂聖誕卡(TQ016M)
+
+function start()
+	Say("p7"..GetName().."收：")
+	Say("p7祝你有一個快樂的聖誕！", "showcard")
+	AddItem(10422)
+end
+
+function showcard()
+	Say("m#X_mas_card\\X_MAS_CARD01.spr#na##","End")
+end

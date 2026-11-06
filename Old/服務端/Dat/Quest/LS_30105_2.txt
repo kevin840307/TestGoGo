@@ -1,0 +1,19 @@
+--LS_30105_2 "閃電符文‧二級"
+
+function GetSkillData()
+	return 30105,2,35,31644,"閃電符文‧二級","閃電符文‧一級","魔銃使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 8 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

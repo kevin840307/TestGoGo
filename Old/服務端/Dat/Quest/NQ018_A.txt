@@ -1,0 +1,187 @@
+--NQ018_A 皇家皇家學會申請員
+
+-- NQ018_Task
+-- 1: quest started
+-- 2: quest completed
+
+-- NQ018_Done
+-- 1: can start soc.
+
+-- NQ018_Task_1		機動靈任務
+-- 1: Got the pen
+-- 2: used the pen
+
+-- NQ018_Task_3		米古族任務
+-- 1: mission started
+-- 2: mission completed
+
+
+function start()
+	status = GetFlag("NQ018_Task")
+	if status >= 2 then
+		dialogue_07()
+	elseif status >=1 then
+		if GetCountItemCount(10267)>=1 and GetCountItemCount(10268)>=1 and GetCountItemCount(10269)>=1 then
+			dialogue_06()
+		else
+			dialogue_05()
+		end
+	else
+		if GetData("Level")>=18 then
+			if ClubCheckMember() == -1 then
+				dialogue_02()
+			else
+				dialogue_01b()
+			end
+		else
+			dialogue_01()
+		end
+	end
+end
+
+function dialogue_01()
+	Say("n1想申請學會就一定要先找我，等你再成長多點時，才來找我吧！","End")
+end
+
+function dialogue_01b()
+	Say("n1你想成立學會嗎？身為學會成員是不能建立學會的，你還是先脫離現有學會吧。","End")
+end
+
+function dialogue_02()
+	Ask("n你想成立學會嗎？需要的話就向我說一聲吧！只要付出20000元就可以申請了唷，不過你要留意一點，就是在我這兒提交了申請之後，你還是需要再向皇家學會管理員申請多次喔。","不會太貴了嗎？","嗯…等我數一數給你。","reply_02")
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		dialogue_03()
+	else
+		dialogue_04()
+	end
+end
+
+function dialogue_03()
+	Say("n1這是國家所訂立的價錢，很抱歉呢。等你有錢時再來這兒申請吧？","End")
+end
+
+function dialogue_04()
+	if GetData("Money")>=20000 then
+		if ItemListCountLeft(0)<3 then
+			Say("p119999，20000！夠了，給你～")
+			Say("n1謝謝你，現在接受你的申請了。")
+			Say("n1唔...還是不行，不能接受你的申請。")
+			Say("p1為甚麼呢？我錢也湊足了，為甚麼不讓我申請？")
+			Say("n1因為你身上的物品太多啦，要申請的話，請你預備"..Color(0,45,198).."三個空間"..Color(0,0,0).."來接受我給你的物品吧。","End")
+		else
+			Say("p119999，20000！夠了，給你～")
+			Say("p7交出20000元")
+			Say("n1謝謝你，現在接受你的申請了。")
+			Say("n1來，這三份東西拿去，填完之後交給我就行了。")
+			Say("p7得到“機動靈計策報告”")
+			Say("p7得到“人族企劃書”")
+			Say("p7得到“米古族推薦報告”")
+			Say("n1看到這些東西上，都有寫著不同的種族名稱嗎？")
+			Say("n1你必須要依照以上的種族分給其他人，例如你的朋友，親戚等，來填好這三份東西喔。")
+			Say("p1那麼麻煩啊？那麼應該如何寫的？")
+			Say("n1這些書就會告訴你了，自己察看吧！")
+			Say("n1記著，你只可以寫屬於自己種族的那本書，其他的種族不能幫忙喔！")
+			ModifyData("Money", -20000)
+			AddItem(10264)
+			AddItem(10265)
+			AddItem(10266)
+			SetFlag("NQ018_Task", 1)
+		end
+	else
+		Say("p1嗯…好像不大夠錢…我遲些再回來好了…")
+	end
+	QuestEnd()
+end
+
+function dialogue_05()
+	Say("n1請你好好加油！完成之後就把那些企劃本都交給我吧？")
+	Ask("n如果有須要，你可以向我補購道具，每件道具7000元。\n你須要補購道具嗎？","補購機動靈計策報告","補購人族企劃書","補購米古族推薦報告","不須補購","reply_05")
+end
+
+function reply_05()
+	ans = GetChoice()
+	if ans==0 then
+		dialogue_05a()
+	elseif ans==1 then
+		dialogue_05b()
+	elseif ans==2 then
+		dialogue_05c()
+	else
+		QuestEnd()
+	end
+end
+
+--<補購機動靈計策報告>
+function dialogue_05a()
+	if GetData("Money")>=7000 then
+	    if ItemListCountLeft(0) >= 1 then
+    		Say("n1好好保管這道具啊！")
+    		Say("p7失去7000元")
+    		Say("p7得到“機動靈計策報告”","End")
+    		ModifyData("Money", -7000)
+    		AddItem(10264)
+        else
+            Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+        end            
+	else
+		Say("p1嗯…好像不大夠錢…我遲些再回來好了…","End")
+	end
+end
+
+--<補購人族企劃書>
+function dialogue_05b()
+	if GetData("Money")>=7000 then
+	    if ItemListCountLeft(0) >= 1 then 
+    		Say("n1好好保管這道具啊！")
+    		Say("p7失去7000元")
+    		Say("p7得到“人族企劃書”","End")
+    		ModifyData("Money", -7000)
+    		AddItem(10265)
+        else
+            Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+        end            
+	else
+		Say("p1嗯…好像不大夠錢…我遲些再回來好了…","End")
+	end
+end
+
+--<補購米古族推薦報告>
+function dialogue_05c()
+	if GetData("Money")>=7000 then
+	    if ItemListCountLeft(0) >= 1 then 
+    		Say("n1好好保管這道具啊！")
+    		Say("p7失去7000元")
+    		Say("p7得到“米古族推薦報告”","End")
+    		ModifyData("Money", -7000)
+    		AddItem(10266)
+        else
+            Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+        end            
+	else
+		Say("p1嗯…好像不大夠錢…我遲些再回來好了…","End")
+	end
+end
+
+function dialogue_06()
+		Say("p7交出“完成．機動靈計策報告”")
+		Say("p7交出“完成．人族企劃書”")
+		Say("p7交出“完成．米古族推薦報告”")
+		Say("n1嗯，我看看。")
+		Say("n1……")
+		Say("n1……")
+		Say("n1……")
+		Say("n1寫得不錯！你的申請通過了！現在你可以去找皇家學會管理員了唷，他會幫你辦成立學會的手續！","End")
+		RemoveItem(10267)
+		RemoveItem(10268)
+		RemoveItem(10269)
+
+		SetFlag("NQ018_Task", 2)
+		SetFlag("NQ018_Done", 1)
+end
+
+function dialogue_07()
+		Say("n1要辦理成立學會的手續，可以找皇家學會管理員。","End")
+end

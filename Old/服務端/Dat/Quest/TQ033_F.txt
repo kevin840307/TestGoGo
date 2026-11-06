@@ -1,0 +1,14 @@
+--出口
+--(TQ033_F)
+
+
+function start()
+	Ask("n要離開山洞嗎？","是的。","不是。","reply")
+end
+
+function reply()
+	if GetChoice()==0 then
+		MovePlayer(13298,6215,17)
+	end
+	QuestEnd()
+end

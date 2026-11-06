@@ -1,0 +1,128 @@
+function start()
+	if GetFlag("TQ041_B_Step") >= 1 then
+		if GetFlag("TQ041_H_Step") >= 1 then
+			if GetFlag("TQ041_B_Step") >= 3 then
+				if GetFlag("TQ041_I_Step") >= 3 then
+					if GetFlag("TQ041_I_Step") >= 5 then
+						if GetFlag("TQ041_B_Step") >= 6 then
+							if GetFlag("TQ041_K_Step") >= 1 then
+								if GetFlag("TQ041_B_Step") >= 8 then
+									Step09()
+								else
+									Step08()
+								end
+							else
+								Step07()
+							end											
+						else
+							Step06()							
+						end					
+					else
+						Step05()
+					end
+				else
+					Step04()	
+				end
+			else
+				Step03()
+			end			
+		else
+			Step02()	
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("p1參見國王陛下！")
+	Say("s你就是替祖加尼．馬奇找到烏洛特金屬的"..GetName().."嗎？")
+	Say("p1在下正是！")
+	Say("s今天是我們完成星空之門重建工程的大日子，亦表示我們將再次展開與亞斯人的戰爭，現在國家需要正直、勇敢和忠誠的勇士進行第一輪探索星之道的任務。")
+	Say("s你願意接下這項任務嗎？")
+	Say("p1可以為國家效力，是我的光榮！")
+	Say("s那麼你先去準備一下，之後去找祖加尼．馬奇，他會帶你進入星之道的了。")
+	SetFlag("TQ041_B_Step", 1)
+end
+
+function Step02()
+--//＜After TQ041_B．Step01＞
+	Say("s探索星之道的任務就交給你了，準備好行裝之後去找祖加尼．馬奇，他會帶你進入星之道的了。")
+	SetFlag("TQ041_B_Step", 2)
+end
+
+function Step03()
+
+--//＜After TQ041_H．Step01＞
+	Say("p1參見國王陛下！")
+	Say("p7將星之道和結界的事告知國皇…")
+	Say("s原來如此！那麼就請你去騎士之城找星之門研究博士，詢問一下他的意見。")
+	Say("p1遵命！")
+	SetFlag("TQ041_B_Step", 3)
+end
+
+function Step04()
+
+--//＜After TQ041_B．Step03＞
+	Say("s星之門研究博士就在騎士之城，希望他可以幫助我們打開星之道的結界。")
+	SetFlag("TQ041_B_Step", 4)
+end
+
+function Step05()
+
+--//＜After TQ041_I．Step03＞
+	Say("s採集結界能量樣本的任務就交給你了，準備好行裝之後去找祖加尼．馬奇，他會帶你進入星之道的了。")
+	SetFlag("TQ041_B_Step", 5)
+end
+
+
+function Step06()
+
+--//＜After TQ041_I．Step05＞
+	Say("p7將結界能量樣本不能分析的事情告知國皇。")
+	Say("s這樣子…我想唯有要神團聖殿的人幫忙一下，非科學的事情就得找他們幫忙了。")
+	SetFlag("TQ041_B_Step", 6)
+end
+
+function Step07()
+
+--//＜After TQ041_B．Step06＞
+	Say("s結界能量的事，我想要神團聖殿的人幫忙才可。")
+	SetFlag("TQ041_B_Step", 7)
+end
+
+function Step08()
+
+--//＜After TQ041_K．Step01＞
+	Say("s如果這是神的旨意，我們唯有遵從吧！")
+	career =  GetData("Career")
+	if career == 1 or career == 2 or career == 3 or career == 9 then
+		Say("s為答謝你的幫忙，這真實之劍就送結你吧！")
+		Say("p3感謝皇上賞賜！！")
+		Say("p7得到真實之劍。")
+	elseif career == 5 or career == 6 or career == 7 or career == 10 then
+		Say("s為答謝你的幫忙，這真實之杖就送結你吧！")
+		Say("p3感謝皇上賞賜！！")
+		Say("p7得到真實之杖。")
+	elseif career == 4 or career == 8 then
+		Say("s為答謝你的幫忙，這真實之銃就送結你吧！")
+		Say("p3感謝皇上賞賜！！")
+		Say("p7得到真實之銃。")
+	end
+	Say("s請你去查出奧米加的希望這東西的下落！")
+	if career == 1 or career == 2 or career == 3 or career == 9 then
+		AddItem(10688)
+	elseif career == 5 or career == 6 or career == 7 or career == 10 then
+		AddItem(10689)
+	elseif career == 4 or career == 8 then
+		AddItem(10690)
+	end
+	SetFlag("TQ041_B_Step", 8)
+end
+
+function Step09()
+
+--//＜After TQ041_B．Step01＞
+	Say("s找尋奧米加的希望這件事就交給你去辦！希望可以得到你的好消息！")
+	SetFlag("TQ041_B_Step", 9)
+end

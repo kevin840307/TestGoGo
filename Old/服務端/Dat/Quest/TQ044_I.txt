@@ -1,0 +1,17 @@
+function start()
+	Step01()
+end
+
+function Step01()
+	Ask("n要傳送到騎士之城嗎？","是的。","不是。","Step01_Handler")
+end
+
+function Step01_Handler()
+	if GetChoice() == 0 then
+		MovePlayer(5174,9674,22)
+	else
+		if GetChoice() == 1 then
+			QuestEnd()
+		end
+	end
+end

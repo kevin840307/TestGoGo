@@ -1,0 +1,6 @@
+--People01 米莉亞
+
+function start()
+	Say("n1來來來，嘗嘗我造的肉餡餅。")
+	Say("n1呵呵，不錯吧？我的願望是成為大廚師！","End")
+end

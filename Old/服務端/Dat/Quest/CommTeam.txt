@@ -1,0 +1,95 @@
+--CommTeam.txt
+
+--id:
+-- -1: none
+--0: 
+--1:
+--2: shop
+--3: dance 2
+--4: sleep
+--5: sorry
+--6: ·w
+--7: angry
+--8: cry
+--9: dance
+--10: happy
+--11: love
+--12: win
+--13: wave
+function GetTeamEmotion(id)
+	total = 0
+
+	hasmember, teammember = GetTeamList_First()
+	while hasmember==1 do
+		if GetTargetEmotion(teammember)==id then
+			total = total + 1
+		end
+		hasmember, teammember = GetTeamList_Next()
+	end
+
+	return total
+end
+
+function GetTeamTotal()
+	total = 0
+
+	hasmember, teammember = GetTeamList_First()
+	while hasmember==1 do
+		total = total + 1
+		hasmember, teammember = GetTeamList_Next()
+	end
+
+	return total
+end
+
+-- This functionis used to set all the flag for the team
+-- caller will also set
+function SetTeamFlag(flag, value)
+	SetFlag(flag, value)
+	hasmember, teammember = GetTeamList_First()
+	while hasmember==1 do
+		SetTargetFlag(teammember, flag, value)
+		hasmember, teammember = GetTeamList_Next()
+	end
+end
+
+function IsTeamCloseTo(posx, posy, mapid, range)
+	closeto = 1
+
+	if IsTargetCloseTo(GetCallerPtr(), posx, posy, mapid, range) == 0 then
+		closeto = 0
+	else
+		hasmember, teammember = GetTeamList_First()
+		while hasmember==1 do
+			if IsTargetCloseTo(teammember, posx, posy, mapid, range)==0 then
+				closeto = 0
+				hasmember = 0
+			else
+				hasmember, teammember = GetTeamList_Next()
+			end
+		end
+	end
+
+	return closeto
+end
+
+function IsTargetCloseTo(object, posx, posy, mapid, range)
+	if GetTargetData(object, "MapID")~=mapid then
+		return 0
+	else
+		x, y = GetTargetXY(object)
+		disx = x-posx
+		if disx<0 then
+			disx = 0-disx
+		end
+		disy = y-posy
+		if disy<0 then
+			disy = 0-disy
+		end
+		if disx > range or disy>range then
+			return 0
+		else
+			return 1
+		end
+	end
+end

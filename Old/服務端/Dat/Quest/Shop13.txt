@@ -1,0 +1,24 @@
+--Shop13 坐騎武裝
+
+function start()
+	dialogue_Welcome()
+end
+
+function dialogue_Welcome()
+	Ask("n歡迎光臨坐騎商店，你要購買坐騎武裝配件嗎？","要","不要","reply_Welcome")
+end
+
+function reply_Welcome()
+	choice = GetChoice()
+	if choice == 0 then
+		if GetData("Career")==9 then
+			OpenShop (13,80)
+		else
+			OpenShop (13,100)
+		end
+	else
+		Say("n1歡迎下次再光臨。","End")
+	end
+end
+
+

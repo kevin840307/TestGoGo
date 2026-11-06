@@ -1,0 +1,19 @@
+--LS_25104_1 "生命吸收‧一級"
+
+function GetSkillData()
+	return 25104,1,30,31444,"生命吸收‧一級","","聖劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 3 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

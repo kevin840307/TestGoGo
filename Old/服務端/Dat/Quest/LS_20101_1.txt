@@ -1,0 +1,15 @@
+--LS_20101_1 "赤色光彈‧一級"
+
+function GetSkillData()
+	return 20101,1,5,31324,"赤色光彈‧一級","","任何職業"
+end
+
+function CheckCareer(career, job)
+	if job < 0 then
+		return 0
+	end
+
+	return 1
+end
+
+#include "LS_common.txt"

@@ -1,0 +1,27 @@
+--Add Gift
+
+function start()
+	Ask("n要領取你的虛擬道具嗎？","是的","不是","CheckGift")
+end
+
+function CheckGift()
+	choice = GetChoice()
+	if choice == 0 then
+	AddGift("OK","Fail","None")
+	Say("c請你等一下。","End")
+	else
+	QuestEnd()
+	end
+end
+
+function OK()
+	Say("n1這是你的虛擬道具。","End")
+end
+
+function Fail()
+	Say("n1你身上沒有足夠空間，請整理好之後再來領取你的虛擬道具。","End")
+end
+
+function None()
+	Say("n1你沒有未領取的虛擬道具啊。","End")
+end

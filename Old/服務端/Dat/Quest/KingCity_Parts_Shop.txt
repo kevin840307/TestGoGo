@@ -1,0 +1,5 @@
+--Shop04 KingCity §÷®Æ©±
+
+function start()
+	OpenShop (14,100)
+end

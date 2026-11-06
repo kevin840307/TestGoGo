@@ -1,0 +1,42 @@
+--富豪‧艾森(TQ019A)
+
+--TQ019_Done
+-- quest done
+
+function start()
+	if GetFlag("TQ019_Done") > 0 then
+		dia_04()
+	elseif GetCountItemCount(10440)>0 then
+		dia_01()
+	else
+		dia_03()
+	end
+end
+
+function dia_01()
+	Ask("n啊！這不就是我家族的星星金幣？你可以將它交回給我嗎？我可以給你10000星幣作交換的。","好的。","不了，謝謝。","reply_01")
+end
+
+function reply_01()
+	if GetChoice()==0 then
+		dia_02()
+	end
+	QuestEnd()
+end
+function dia_02()
+	Say("n1這裡10000星幣。")
+	Say("n1啊！還有一件事要告訴你，在測試期之內，如果你能成為尼尼亞大陸的富豪，就可以得到豐富的獎勵啊！","dia_02a")
+end
+function dia_02a()
+	Say("p7得到10000星幣。","End")
+	ModifyData("Money", 10000)
+	SetFlag("TQ019_Done",1)
+	RemoveItem(10440)
+end
+
+function dia_03()
+	Say("n1你好～我正在尋找"..Color(0,45,198).."星星的金幣"..Color(0,0,0).."，我可以出10000星幣向你買入的。","End")
+end
+function dia_04()
+	Say("n1在測試期之內，如果你能成為尼尼亞大陸的富豪，就可以得到豐富的獎勵啊！","End")
+end

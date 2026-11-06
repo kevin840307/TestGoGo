@@ -1,0 +1,5 @@
+--Shop05 ¤l¼u©±
+
+function start()
+	OpenShop (5,0.7)
+end

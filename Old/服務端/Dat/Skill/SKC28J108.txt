@@ -1,0 +1,41 @@
+--SKC28J108
+#include "txt_28108.txt"
+
+function start()
+	consume 		= "HP"
+	other_consume 	= "MP"
+	
+	boost			= "HP"
+		
+	varyDelta 		= 10
+
+	skillid 		= 28108
+	TXT_SkillName()
+	skillflag 		= "28108"
+	
+	defender		= GetTargetPtr()
+	
+	skillLv 		= GetSkillLv()
+	effect			= GetPara(skillLv)
+	conTotal 		= GetConTotal(skillLv)
+	other_conTotal 	= GetConTotal_Other(skillLv)
+	
+	Cure_2_Consume()
+end
+
+function GetPara(lv)
+	return GetTargetData(defender,"OrgHPMAX")
+end
+
+function GetConTotal(lv)
+	return 1040
+end
+
+function GetConTotal_Other(lv)
+	return 520
+end
+
+#include "curecommon.txt"
+
+
+

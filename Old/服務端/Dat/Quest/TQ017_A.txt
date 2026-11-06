@@ -1,0 +1,92 @@
+--TQ017_A 波奇鳥獸‧精靈管理員
+
+--TQ017_VoteA
+-- 波奇鳥獸票數
+--TQ017_VoteB
+-- 立普票數
+--TQ017_VoteC
+-- 索爾魔怪票數
+--TQ017_VoteD
+-- 古尼獸票數
+--TQ017_VoteE
+-- 機動偶票數
+
+function get_data()
+	return 1;
+end
+
+function start()
+	if GetWorldFlag("TQ017_VoteE")<0 then
+		set_all_zero()
+	end
+	if GetCountItemCount(10439)>0 then
+		dia_03()
+	else
+		dia_02()
+	end
+end
+
+--玩家身上沒有＜寵物選票10439＞
+function dia_02()
+	Say("n1現在正進行寵物公投，有寵物選票的也可以投票啊！")
+	Say("n1請投波奇鳥獸神聖一票！","get_vote")
+end
+
+--玩家身上持有＜寵物選票10439＞而波奇鳥獸限額(500)未達上限。
+function dia_03()
+	Ask("n你要投波奇鳥獸神聖一票嗎？","是的，我要投波奇鳥獸一票","不是，我只是路過而已．．．哈哈！","reply_03")
+end
+function reply_03()
+	if GetChoice()==0 then
+		dia_04()
+	else
+		get_vote()
+	end
+end
+
+function dia_04()
+	Say("n1謝謝你的支持，這波奇鳥獸是送給你的。","dia_04b")
+end
+function dia_04b()
+	if ItemListCountLeft(2)<1 then
+		Say("p7對不起，你身上的寵物太多了，請清除一些寵物後再來。","End")
+	else
+		Say("p7得到「波奇鳥獸」","get_vote")
+		RemoveItem(10439)
+		AddItem(5000)
+		tmp=GetWorldFlag("TQ017_VoteA")
+		tmp = tmp+1
+		SetWorldFlag("TQ017_VoteA", tmp)
+	end
+end
+
+function dia_05()
+	Ask("n你要用寵物選票換取波奇鳥獸嗎？","是的。","不是，我只是路過而已．．．哈哈！","reply_03")
+end
+
+function get_name(winner)
+	if winner==1 then
+		return "波奇鳥獸"
+	elseif winner==2 then
+		return "立普"
+	elseif winner==3 then
+		return "索爾魔怪"
+	elseif winner==4 then
+		return "古尼獸"
+	else
+		return "機動偶"
+	end
+end
+
+function get_vote()
+	Say("n1以下是各寵物所得的票數：")
+	Say("n1波奇鳥獸："..GetWorldFlag("TQ017_VoteA").."票\n立普　　："..GetWorldFlag("TQ017_VoteB").."票\n索爾魔怪："..GetWorldFlag("TQ017_VoteC").."票\n古尼獸　："..GetWorldFlag("TQ017_VoteD").."票\n機動偶　："..GetWorldFlag("TQ017_VoteE").."票","End")
+end
+
+function set_all_zero()
+	SetWorldFlag("TQ017_VoteA", 0)
+	SetWorldFlag("TQ017_VoteB", 0)
+	SetWorldFlag("TQ017_VoteC", 0)
+	SetWorldFlag("TQ017_VoteD", 0)
+	SetWorldFlag("TQ017_VoteE", 0)
+end

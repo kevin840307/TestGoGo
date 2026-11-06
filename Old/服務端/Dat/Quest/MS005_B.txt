@@ -1,0 +1,56 @@
+--尼可(MS005_B)
+
+--MS005_Task
+--1:quest started
+--2:talked with the girl
+
+--MS005_Done
+--1:quest completed
+
+function start()
+	status = GetFlag("MS005_Task")
+	if status>=2 then
+		dialogue_03()
+	elseif status>=1 and GetCountItemCount(10297)>=1 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1這個機械之城是我們的故鄉，我只希望大家能和平地一起成長。","End")
+end
+
+--玩家完成MS005_C－Step01手持騎士布娃娃
+function dialogue_02()
+	Say("n1你來是找普普嗎？對不起這孩子不愛說話，請你原諒，你來找她有什麼事呢？")
+	Say("p1在騎士之城的普頓拜託我把這個布娃娃給她的。")
+	Say("n1是普頓．．．他好嗎？他是否仍在當騎士了？")
+	Say("p1沒錯，他仍然當騎士，還把奪回加米蘭特星當成他的目標。")
+	Say("n1是嗎．．．似乎他是不會改變心意的了．．．")
+	Say("p1抱歉，妳和他好像也有什麼心事似的，我能幫上什麼嗎？")
+	Say("n1我和普頓是從小便相識的朋友，有一天我和他外出玩耍之際，城內特然發生了一場小叛亂．．．")
+	Say("n1普頓的父母意外被殺，而普普亦因目到父母的慘劇而而變得孤僻，而普頓便立誓消滅一切的邪惡，從而當起騎士來。")
+	Say("p1雖然他經過如此遭遇，但他能有消滅邪惡這個決心也不錯啊！不是嗎？")
+	Say("n1你真的認為消滅邪惡便可帶來幸福嗎？就如聖女所說，戰爭只會留下哀傷的回憶，難度打倒亞斯人我們所有人會幸福嗎？普普的父母會回來嗎？")
+	Say("p1．．．．．．")
+	Say("n1一切也不會改變．．．我不想普普再一次失去親人，我只想他能回到我們身邊，難度留下普普便是他所說的正義嗎？")
+	Say("n1對不起．．．這個娃娃我先替普普收下，這裡有個星之石，你能替我交給普頓嗎？","dialogue_02a")
+end
+
+function dialogue_02a()
+	Say("p7失去「騎士布娃娃」","dialogue_02b")
+	RemoveItem(10297)
+end
+
+function dialogue_02b()
+	AddItem(10298)
+	Say("p7得到「星之石」")
+	SetFlag("MS005_Task", 2)
+	Say("p1我一定會把它帶給普頓的。","End")
+end
+
+function dialogue_03()
+	Say("n1就如聖女所說，戰爭只會留下哀傷的回憶。","End")
+end

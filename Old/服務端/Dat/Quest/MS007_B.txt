@@ -1,0 +1,75 @@
+--娜姬．連特 (MS007_B)
+
+--MS007_Task
+-- 1: quest started
+-- 2: go to find lolosie
+-- 3: get the flower, go to find prince
+-- 4: found prince, got the water
+-- 5: get the report
+-- 6: give the report to prince
+
+function start()
+	status=GetFlag("MS007_Task")
+	if status>=5 then
+		dialogue_06()
+	elseif status>=4 then
+		dialogue_05()
+	elseif status>=3 then
+		dialogue_04()
+	elseif status>=2 then
+		dialogue_02()
+	elseif status>=1 then
+		dialogue_01()
+	else
+		dialogue_03()
+	end
+end
+
+function dialogue_01()
+	Say("n1你好，請問你是？")
+	Say("p1我是大皇子派來協助你調查兩所學園紛爭的皇國軍。")
+
+	Say("n1太好了，你這麼快便到來。近日，我發現魔法學園的食物，被人下了一種奇怪的魔法藥劑，使同學的情緒異常，很容易生氣和暴躁。")
+	Say("p1難怪會和騎士學校的學生引起衝突。")
+	Say("n1我已使用過各種各樣的方法也無法完全解除那魔法的力量，現在只有"..Color(0,45,198).."露露絲的星晨花"..Color(0,0,0).."才能完全醫治他們。")
+	Say("p1露露絲？")
+	Say("n1露露絲是來自天空島的占卜師，她有一棵在天空島生長的星晨花，只要有它的花蜜便可醫治他們了。")
+	Say("p1那麼，露露絲在那兒？我馬上去找她。")
+	Say("n1她的占卜店就在尼尼亞皇城，你只要說出原委，她一定會借出星晨花的。")
+	Say("p1好，我馬上便去找露露絲。","End")
+	SetFlag("MS007_Task", 2)
+end
+
+function dialogue_02()
+	Say("n1露露絲的占卜店就在尼尼亞皇城，你只要說出原委，她一定會借出星晨花的。","End")
+end
+
+function dialogue_03()
+	Say("n1魔法，就像是湖面的漣漪，每施放一個魔法時也會產生更多的漣漪，若胡亂使用魔法，只會帶來數不清的惡果。","End")
+end
+
+function dialogue_04()
+	Say("n1你把星晨花帶回來嗎？")
+	Say("p1可是露露絲說沒有天空之露水，星晨花是不會開的，而擁有天空之露水的公主亦失蹤了。")
+	Say("n1這樣只好去尋找公主拿天空之露水了。","End")
+end
+
+function dialogue_05()
+	Say("p7交出天空之露水和星晨花。")
+	Say("n1真是太好了，這樣我便可以醫治大家了，真是謝謝你。")
+	Say("n1我現在先去醫治大家，我這兒有份報告記下了我們的調查，你先拿去給大皇子吧。","dialogue_05b")
+end
+
+function dialogue_05b()
+	Say("p7失去了天空之露水")
+	Say("p7失去了星晨花")
+	Say("p7得到了娜姬的報告書","End")
+	SetFlag("MS007_Task", 5)
+	RemoveItem(10329)
+	RemoveItem(10330)
+	AddItem(10331)
+end
+
+function dialogue_06()
+	Say("n1全靠你，我才能醫治好我的學生。","End")
+end

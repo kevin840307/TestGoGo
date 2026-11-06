@@ -1,0 +1,151 @@
+--MQ056_A 中級魔法導師卡爾
+
+--MQ056_Task
+-- 1: quest started
+-- 2: 愛麗 mission started
+-- 3: 愛麗 mission completed
+-- 4: quest completed
+
+--MQ057_Task
+-- 1: quest started
+-- 2: 愛麗 mission started
+-- 3: 愛麗 mission completed
+-- 4: quest completed
+
+--MQ058_Task
+-- 1: quest started
+-- 2: 愛麗 mission started
+-- 3: 愛麗 mission completed
+-- 4: quest completed
+
+--MQ059_Task
+-- 1: quest started
+-- 2: 愛麗 mission started
+-- 3: 愛麗 mission completed
+-- 4: quest completed
+
+
+function start()
+	career=GetData("Career")
+	if career==5 then
+		hasDone=GetFlag("MQ056_Done")
+		status=GetFlag("MQ056_Task")
+		switch_Career()
+	elseif career==6 then
+		hasDone=GetFlag("MQ057_Done")
+		status=GetFlag("MQ057_Task")
+		switch_Career()
+	elseif career==7 then
+		hasDone=GetFlag("MQ058_Done")
+		status=GetFlag("MQ058_Task")
+		switch_Career()
+	elseif career==8 then
+		hasDone=GetFlag("MQ059_Done")
+		status=GetFlag("MQ059_Task")
+		switch_Career()
+	else
+		dialogue_NonMagician()
+	end
+end
+
+function switch_Career()
+	if hasDone==1 then
+		dialogue_04()
+	elseif checkSkill()==1 then
+		dialogue_03()
+	elseif status>=1 then
+		dialogue_02()
+	else
+		dialogue_WantToLearn()
+	end
+end
+
+function dialogue_NonMagician()
+	Say("n1你好像不是魔法使呢？","End")
+end
+
+function dialogue_WantToLearn()
+	Ask("n你很有潛質呢，那麼快就學完了。那麼你想學習新的魔法嗎？","當然想了！","還未是時候。","reply_WantToLearn")
+end
+
+function reply_WantToLearn()
+	if GetChoice()==0 then
+		if GetData("Level")>=40 and checkB4Skill()==1 then
+			dialogue_01()
+		else
+			Say("n1你還是遲點再來找我好了。\n等你熟習多點魔法吧！","End")
+		end
+	else
+		Say("n1等你熟習多點魔法吧！","End")
+	end
+end
+
+function dialogue_01()
+	Say("n1可是我暫時沒什麼可以教到你…")
+	Say("n1我聽說在星之湖有一位巫婆，她的法力很是強大。")
+	Say("n1不過一直都很固執，好像很仇恨人們的樣子。\n不如你試著去勸服一下她。")
+	Say("n1可能她還會教你魔法呢！","End")
+	career=GetData("Career")
+	if career==5 then
+		SetFlag("MQ056_Task",1)
+	elseif career==6 then
+		SetFlag("MQ057_Task",1)
+	elseif career==7 then
+		SetFlag("MQ058_Task",1)
+	else
+		SetFlag("MQ059_Task",1)
+	end
+end
+
+function dialogue_02()
+	Say("n1你試著去"..Color(0,45,198).."星之湖"..Color(0,0,0).."…")
+	Say("n1找一位巫婆，去勸服她。\n可能她會教你魔法，好好加油！","End")
+end
+
+function dialogue_03()
+	Say("n1真的？巫婆她有教你魔法吧？\n看來巫婆也不是完全的壞。")
+	career=GetData("Career")
+	if career==5 then
+		SetFlag("MQ056_Done",1)
+		SetFlag("MQ056_Task", 4)
+	elseif career==6 then
+		SetFlag("MQ057_Done",1)
+		SetFlag("MQ057_Task", 4)
+	elseif career==7 then
+		SetFlag("MQ058_Done",1)
+		SetFlag("MQ058_Task", 4)
+	else
+		SetFlag("MQ059_Done",1)
+		SetFlag("MQ059_Task", 4)
+	end
+	dialogue_04()
+end
+
+function dialogue_04()
+	Say("n1說起來，我已經沒什麼可以教你了。")
+	Say("n1不如你去找高級的導師吧？","End")
+end
+
+function checkSkill()
+	if career==5 then
+		return HasSkill(5104)
+	elseif career==6 then
+		return HasSkill(6104)
+	elseif career==7 then
+		return HasSkill(7104)
+	else
+		return HasSkill(8104)
+	end
+end
+
+function checkB4Skill()
+	if career==5 then
+		return HasSkill(5103)
+	elseif career==6 then
+		return HasSkill(6103)
+	elseif career==7 then
+		return HasSkill(7103)
+	else
+		return HasSkill(8103)
+	end
+end

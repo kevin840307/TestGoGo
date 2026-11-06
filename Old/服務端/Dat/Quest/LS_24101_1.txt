@@ -1,0 +1,19 @@
+--LS_24101_1 "®F•“°E§@Ø≈"
+
+function GetSkillData()
+	return 24101,1,15,31394,"®F•“°E§@Ø≈","","®£≤ﬂ¶u≈@ºC§h"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 2 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

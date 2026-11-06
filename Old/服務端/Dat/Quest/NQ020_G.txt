@@ -1,0 +1,6 @@
+--NQ020_G
+
+function start()
+	AddItem(10459)
+	Say("mH#BG_MAP_BIG_05.spr#na##","End")
+end
