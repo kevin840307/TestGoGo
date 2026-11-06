@@ -491,6 +491,48 @@ try
           Convert.ToInt32(Convert.ToDouble(selected["LocY"])) == 7783,
         "movement persists to SQLite");
 
+    var merchant = map15Npcs.First(x =>
+        x.Script.Equals("shop_e3.txt", StringComparison.OrdinalIgnoreCase));
+
+    using (var moveToMerchant = Json(JsonSerializer.Serialize(new
+    {
+        Type = "SyncPosition",
+        X = merchant.X,
+        Y = merchant.Y
+    })))
+    {
+        router.Handle(moveToMerchant.RootElement, session);
+    }
+
+    using (var interactMerchant = Json(JsonSerializer.Serialize(new
+    {
+        Type = "InteractRequest",
+        EntityID = merchant.EntityId
+    })))
+    {
+        var responses = router.Handle(interactMerchant.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("\"Type\":\"NpcDialogResponse\"") &&
+                JsonSerializer.Serialize(x).Contains("reply#0")),
+            "Map15 merchant is interactable through world entity");
+    }
+
+    using (var openMerchantShop = Json(JsonSerializer.Serialize(new
+    {
+        Type = "NpcOptionRequest",
+        EntityID = merchant.EntityId,
+        ScriptName = merchant.Script,
+        TargetNode = "reply#0"
+    })))
+    {
+        var responses = router.Handle(openMerchantShop.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("\"Type\":\"NpcShopViewResponse\"") &&
+                JsonSerializer.Serialize(x).Contains("\"ShopID\":7") &&
+                JsonSerializer.Serialize(x).Contains("\"Items\":[")),
+            "Map15 merchant option opens populated NPC shop");
+    }
+
     var portal = map15Npcs[0];
 
     using (var interact = Json(JsonSerializer.Serialize(new
