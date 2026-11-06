@@ -100,6 +100,13 @@ Check(map15Enemies.All(x => x.EnemyId == 245),
 Check(world.BuildMapSpawnPackets(15).Count == 52,
     "Map15 city suppresses combat enemy spawns");
 
+var map15Merchant = map15Npcs.First(x => x.IsMerchant);
+Check(map15Merchant.Sprite == "NPC002.png",
+    "Map15 merchant uses visible fallback sprite");
+Check(shopCatalog.GetItems(7).Count > 0 &&
+      shopCatalog.GetItems(10).Count > 0,
+    "NPC shop catalog exposes normal and mecha goods");
+
 var payload = new { Type = "LoginRequest", User = "offline", Pass = "test" };
 var ciphertext = ClientProtocol.Encode(payload);
 using (var packet = ClientProtocol.Decode(ciphertext))
@@ -124,6 +131,7 @@ try
         world,
         quests,
         combat,
+        shopCatalog,
         NullLogger<PacketRouter>.Instance);
     var session = new ClientSession();
 
@@ -231,6 +239,30 @@ try
             "first select response enters world");
         Check(first.RootElement.Int("MapID") == 15,
             "enter world includes Map15");
+    }
+
+    var moneyBeforeShop = Convert.ToInt64(
+        store.GetCharacter(account.Value, id)!["Money"]);
+    using (var buy = Json(JsonSerializer.Serialize(new
+    {
+        Type = "ShopAction",
+        Action = "BuyNpcItem",
+        ShopID = 1,
+        ItemIndex = 10046,
+        Count = 2
+    })))
+    {
+        var responses = router.Handle(buy.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("\"Type\":\"SyncMoney\"")),
+            "BuyNpcItem emits SyncMoney");
+        Check(store.GetCharacterAssets(account.Value, id).Inventory
+                .Any(x => Convert.ToInt32(x["ItemIndex"]) == 10046 &&
+                          Convert.ToInt32(x["Count"]) >= 2),
+            "BuyNpcItem persists purchased inventory");
+        Check(Convert.ToInt64(
+                  store.GetCharacter(account.Value, id)!["Money"]) < moneyBeforeShop,
+            "BuyNpcItem deducts money");
     }
 
     using (var equip = Json(JsonSerializer.Serialize(new { Type = "EquipRequest", ItemUID = equipUid, TargetSlot = 5 })))
