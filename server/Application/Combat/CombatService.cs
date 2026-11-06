@@ -141,13 +141,17 @@ public sealed class CombatService
 
                 if (homeDistance > 1.0)
                 {
+                    var moveDx = monster.SpawnX - monster.X;
+                    var moveDy = monster.SpawnY - monster.Y;
                     monster.X = monster.SpawnX;
                     monster.Y = monster.SpawnY;
                     packets.Add(BuildMovePacket(
                         monster,
                         monster.X,
                         monster.Y,
-                        0.6));
+                        0.6,
+                        moveDx,
+                        moveDy));
                 }
 
                 continue;
@@ -165,6 +169,8 @@ public sealed class CombatService
 
             var nx = monster.X + dx / distance * step;
             var ny = monster.Y + dy / distance * step;
+            var moveDx = nx - monster.X;
+            var moveDy = ny - monster.Y;
 
             monster.X = nx;
             monster.Y = ny;
@@ -173,7 +179,9 @@ public sealed class CombatService
                 monster,
                 nx,
                 ny,
-                0.5));
+                0.5,
+                moveDx,
+                moveDy));
         }
 
         return packets;
@@ -266,16 +274,16 @@ public sealed class CombatService
         MonsterRuntimeState monster,
         double x,
         double y,
-        double speedTime)
+        double speedTime,
+        double moveDx,
+        double moveDy)
         => new
         {
             Type = "MoveEntity",
             EntityID = monster.EntityId,
             X = x,
             Y = y,
-            Dir = DirectionFromDelta(
-                x - monster.SpawnX,
-                y - monster.SpawnY),
+            Dir = DirectionFromDelta(moveDx, moveDy),
             SpeedTime = speedTime
         };
 
