@@ -8,26 +8,26 @@
  
  	var extra = data.get("ExtraData", {})
  	var sprite_name = str(extra.get("Sprite", ""))
-+	var legacy_npc_type_id = int(extra.get("LegacyNpcTypeID", 0))
++	var npc_type_id = int(extra.get("NpcTypeID", 0))
 +	var is_merchant = bool(extra.get("IsMerchant", false))
  	npc_script_name = str(extra.get("Script", ""))
  	is_portal = bool(extra.get("IsPortal", npc_script_name.begins_with("Portal_")))
  
 -	_load_visuals(sprite_name)
-+	_load_visuals_compatible(sprite_name, legacy_npc_type_id, is_merchant)
++	_load_visuals_compatible(sprite_name, npc_type_id, is_merchant)
 +
-+func _load_visuals_compatible(sprite_name: String, legacy_npc_type_id: int, is_merchant: bool) -> void:
++func _load_visuals_compatible(sprite_name: String, npc_type_id: int, is_merchant: bool) -> void:
 +	var candidates: Array[String] = []
 +	if sprite_name != "":
 +		candidates.append(sprite_name)
 +
-+	if legacy_npc_type_id > 0:
++	if npc_type_id > 0:
 +		for candidate in [
-+			"NPC%03d.png" % legacy_npc_type_id,
-+			"NPC%04d.png" % legacy_npc_type_id,
-+			"NPC_%03d.png" % legacy_npc_type_id,
-+			"%03d.png" % legacy_npc_type_id,
-+			"%04d.png" % legacy_npc_type_id
++			"NPC%03d.png" % npc_type_id,
++			"NPC%04d.png" % npc_type_id,
++			"NPC_%03d.png" % npc_type_id,
++			"%03d.png" % npc_type_id,
++			"%04d.png" % npc_type_id
 +		]:
 +			if candidate not in candidates:
 +				candidates.append(candidate)
@@ -37,8 +37,8 @@
 +			_load_visuals(candidate)
 +			return
 +
-+	# Keep functional NPCs clickable/visible even when the recovered asset
-+	# uses a legacy filename we have not mapped yet.
++	# Keep functional NPCs clickable/visible even when the asset
++	# uses a source filename we have not mapped yet.
 +	if is_merchant:
 +		for fallback in ["NPC002.png", "NPC001.png"]:
 +			if ResourceLoader.exists("res://Assets/NPC/" + fallback):
