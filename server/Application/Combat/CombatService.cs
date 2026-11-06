@@ -8,6 +8,12 @@ namespace SGO.Server.Application.Combat;
 public sealed class CombatService
 {
     private static readonly TimeSpan RespawnDelay = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan AiTickInterval = TimeSpan.FromMilliseconds(500);
+
+    private const double AggroRadius = 420.0;
+    private const double LoseTargetRadius = 700.0;
+    private const double StopDistance = 90.0;
+    private const double MoveStep = 70.0;
 
     private readonly IGameStore _store;
     private readonly LegacyWorldService _world;
@@ -47,6 +53,8 @@ public sealed class CombatService
                 Level = Math.Max(1, enemy.Level),
                 MaxHp = Math.Max(1, enemy.MaxHp),
                 CurrentHp = Math.Max(1, enemy.MaxHp),
+                SpawnX = enemy.X,
+                SpawnY = enemy.Y,
                 X = enemy.X,
                 Y = enemy.Y
             };
@@ -74,7 +82,98 @@ public sealed class CombatService
 
             monster.CurrentHp = monster.MaxHp;
             monster.RespawnAt = null;
+            monster.HasTarget = false;
+            monster.X = monster.SpawnX;
+            monster.Y = monster.SpawnY;
             packets.Add(BuildMonsterSpawnPacket(monster));
+        }
+
+        return packets;
+    }
+
+    public IReadOnlyList<object> TickAi(
+        ClientSession session,
+        double playerX,
+        double playerY,
+        DateTimeOffset now)
+    {
+        if (now - session.LastMonsterAiTick < AiTickInterval)
+            return [];
+
+        session.LastMonsterAiTick = now;
+
+        var packets = new List<object>();
+
+        foreach (var monster in session.Monsters.Values)
+        {
+            if (!monster.IsAlive)
+                continue;
+
+            var dx = playerX - monster.X;
+            var dy = playerY - monster.Y;
+            var distance = Math.Sqrt(dx * dx + dy * dy);
+
+            if (!monster.HasTarget && distance <= AggroRadius)
+            {
+                monster.HasTarget = true;
+                packets.Add(new
+                {
+                    Type = "MonsterTarget",
+                    EntityID = monster.EntityId,
+                    HasTarget = true
+                });
+            }
+
+            if (monster.HasTarget && distance > LoseTargetRadius)
+            {
+                monster.HasTarget = false;
+                packets.Add(new
+                {
+                    Type = "MonsterTarget",
+                    EntityID = monster.EntityId,
+                    HasTarget = false
+                });
+
+                var homeDx = monster.SpawnX - monster.X;
+                var homeDy = monster.SpawnY - monster.Y;
+                var homeDistance = Math.Sqrt(
+                    homeDx * homeDx + homeDy * homeDy);
+
+                if (homeDistance > 1.0)
+                {
+                    monster.X = monster.SpawnX;
+                    monster.Y = monster.SpawnY;
+                    packets.Add(BuildMovePacket(
+                        monster,
+                        monster.X,
+                        monster.Y,
+                        0.6));
+                }
+
+                continue;
+            }
+
+            if (!monster.HasTarget || distance <= StopDistance)
+                continue;
+
+            var step = Math.Min(
+                MoveStep,
+                Math.Max(0.0, distance - StopDistance));
+
+            if (step <= 0.0)
+                continue;
+
+            var nx = monster.X + dx / distance * step;
+            var ny = monster.Y + dy / distance * step;
+
+            monster.X = nx;
+            monster.Y = ny;
+
+            packets.Add(BuildMovePacket(
+                monster,
+                nx,
+                ny,
+                0.5));
         }
 
         return packets;
@@ -149,6 +248,7 @@ public sealed class CombatService
         {
             monster.RespawnAt =
                 DateTimeOffset.UtcNow + RespawnDelay;
+            monster.HasTarget = false;
 
             packets.Add(new
             {
@@ -160,6 +260,40 @@ public sealed class CombatService
         }
 
         return packets;
+    }
+
+    private static object BuildMovePacket(
+        MonsterRuntimeState monster,
+        double x,
+        double y,
+        double speedTime)
+        => new
+        {
+            Type = "MoveEntity",
+            EntityID = monster.EntityId,
+            X = x,
+            Y = y,
+            Dir = DirectionFromDelta(
+                x - monster.SpawnX,
+                y - monster.SpawnY),
+            SpeedTime = speedTime
+        };
+
+    private static string DirectionFromDelta(
+        double dx,
+        double dy)
+    {
+        if (Math.Abs(dx) < 0.001 &&
+            Math.Abs(dy) < 0.001)
+            return "1";
+
+        var degrees = Math.Atan2(dy, dx) * 180.0 / Math.PI;
+        if (degrees < 0)
+            degrees += 360.0;
+
+        var dirs = new[] { "6", "7", "8", "1", "2", "3", "4", "5" };
+        var index = (int)Math.Round(degrees / 45.0) % 8;
+        return dirs[index];
     }
 
     private static object BuildMonsterSpawnPacket(
