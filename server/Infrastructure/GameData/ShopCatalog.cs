@@ -180,6 +180,8 @@ public sealed class ShopCatalog
                 Name: name);
 
             Add(item);
+            // Legacy scripts use both Shop2 and Shop10 for weapon views.
+            Add(item with { ShopId = 10 });
             Add(item with { ShopId = 29 });
         }
     }
