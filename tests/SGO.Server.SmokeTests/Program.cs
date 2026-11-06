@@ -256,6 +256,64 @@ try
             "Map16 legacy NPCs spawn after map load");
     }
 
+    // Combat runtime: use a monster map directly so this test is independent
+    // from the exact portal route used by the recovered client.
+    var combatMapId = 7;
+    var combatEnemy = world.GetEnemies(combatMapId)
+        .First(x => x.Level < 65535);
+
+    store.UpdateLocation(
+        account.Value,
+        id,
+        combatMapId,
+        combatEnemy.X,
+        combatEnemy.Y);
+
+    session.CurrentMapId = combatMapId;
+    session.PendingMapSpawn = false;
+    var combatSpawns = combat.EnterMap(session, combatMapId);
+
+    Check(session.Monsters.Count > 0 &&
+          combatSpawns.Any(x =>
+              JsonSerializer.Serialize(x).Contains("\"EntityType\":1")),
+        "monster map initializes per-session combat entities");
+
+    var monster = session.Monsters.Values.First();
+    var sawDeath = false;
+
+    for (var i = 0; i < 100 && !sawDeath; i++)
+    {
+        var attackPackets = combat.Attack(
+            session,
+            account.Value,
+            monster.EntityId,
+            1);
+
+        Check(attackPackets.Count >= 1,
+            "AttackEntity returns combat packet");
+
+        sawDeath = attackPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EntityDeath\""));
+    }
+
+    Check(sawDeath &&
+          monster.CurrentHp == 0 &&
+          monster.RespawnAt.HasValue,
+        "monster reaches death state and schedules respawn");
+
+    monster.RespawnAt = DateTimeOffset.UtcNow.AddMilliseconds(-1);
+    var respawnPackets = combat.TickRespawns(
+        session,
+        DateTimeOffset.UtcNow);
+
+    Check(monster.CurrentHp == monster.MaxHp &&
+          monster.RespawnAt is null &&
+          respawnPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"SpawnEntity\"")),
+        "dead monster respawns with full HP");
+
     using (var chat = Json(
         """{"Type":"ChatMessage","Channel":0,"Message":"hello","BubbleType":0}"""))
     {
