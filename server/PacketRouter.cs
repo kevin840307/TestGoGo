@@ -371,6 +371,19 @@ public sealed class PacketRouter
                 choice,
                 name => GetLegacyCharacterData(character, name));
 
+            if (result.RebornMapId.HasValue &&
+                result.RebornX.HasValue &&
+                result.RebornY.HasValue &&
+                state.CharacterId.HasValue)
+            {
+                _store.SetRebornLocation(
+                    accountId,
+                    state.CharacterId.Value,
+                    result.RebornMapId.Value,
+                    result.RebornX.Value,
+                    result.RebornY.Value);
+            }
+
             if (result.NewMapId.HasValue &&
                 result.NewX.HasValue &&
                 result.NewY.HasValue &&
