@@ -4,6 +4,7 @@ using System.Text.Json;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Protocol;
 using SGO.Server.Domain.Assets;
+using SGO.Server.Domain.Shops;
 
 namespace SGO.Server.Infrastructure.Persistence.Sqlite;
 
@@ -627,6 +628,301 @@ public sealed class SqliteGameStore : IGameStore
         Arg(cmd, "$color", Math.Max(0, color));
         Arg(cmd, "$part", part);
         return Convert.ToInt64(cmd.ExecuteScalar());
+    }
+
+    public ShopMutationResult BuyShopItem(
+        long accountId,
+        long dbid,
+        int itemIndex,
+        int tabType,
+        int count,
+        int totalPrice)
+    {
+        if (itemIndex <= 0 || count <= 0 || totalPrice < 0)
+            return new(false, "購買資料無效", 0);
+
+        if (tabType != 0 && count != 1)
+            return new(false, "此類物品一次只能購買一件", 0);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在", 0);
+
+        long currentMoney;
+        using (var money = db.CreateCommand())
+        {
+            money.Transaction = tx;
+            money.CommandText = """
+                SELECT money
+                  FROM characters
+                 WHERE id=$id AND account_id=$a
+                """;
+            Arg(money, "$id", dbid);
+            Arg(money, "$a", accountId);
+            var raw = money.ExecuteScalar();
+            if (raw is null)
+                return new(false, "角色不存在", 0);
+
+            currentMoney = Convert.ToInt64(raw);
+        }
+
+        if (currentMoney < totalPrice)
+            return new(false, "金錢不足", checked((int)Math.Min(int.MaxValue, currentMoney)));
+
+        switch (tabType)
+        {
+            case 0:
+            {
+                using var stack = db.CreateCommand();
+                stack.Transaction = tx;
+                stack.CommandText = """
+                    SELECT uid
+                      FROM inventory_items
+                     WHERE character_id=$id
+                       AND item_index=$idx
+                       AND in_bank=0
+                       AND in_shop=0
+                     ORDER BY uid
+                     LIMIT 1
+                    """;
+                Arg(stack, "$id", dbid);
+                Arg(stack, "$idx", itemIndex);
+                var existing = stack.ExecuteScalar();
+
+                if (existing is not null)
+                {
+                    using var update = db.CreateCommand();
+                    update.Transaction = tx;
+                    update.CommandText = """
+                        UPDATE inventory_items
+                           SET count = count + $count
+                         WHERE uid=$uid AND character_id=$id
+                        """;
+                    Arg(update, "$count", count);
+                    Arg(update, "$uid", Convert.ToInt64(existing));
+                    Arg(update, "$id", dbid);
+                    update.ExecuteNonQuery();
+                }
+                else
+                {
+                    using var insert = db.CreateCommand();
+                    insert.Transaction = tx;
+                    insert.CommandText = """
+                        INSERT INTO inventory_items(character_id,item_index,count)
+                        VALUES($id,$idx,$count)
+                        """;
+                    Arg(insert, "$id", dbid);
+                    Arg(insert, "$idx", itemIndex);
+                    Arg(insert, "$count", count);
+                    insert.ExecuteNonQuery();
+                }
+                break;
+            }
+
+            case 1:
+            {
+                using var insert = db.CreateCommand();
+                insert.Transaction = tx;
+                insert.CommandText = """
+                    INSERT INTO equipment_items(
+                        character_id,item_index,damage,color,part,in_bank,in_shop)
+                    VALUES($id,$idx,0,0,255,0,0)
+                    """;
+                Arg(insert, "$id", dbid);
+                Arg(insert, "$idx", itemIndex);
+                insert.ExecuteNonQuery();
+                break;
+            }
+
+            case 3:
+            {
+                using var insert = db.CreateCommand();
+                insert.Transaction = tx;
+                insert.CommandText = """
+                    INSERT INTO horse_equipment(
+                        character_id,equip_index,horse_uid,damage,color,part,in_bank,in_shop)
+                    VALUES($id,$idx,-1,0,0,255,0,0)
+                    """;
+                Arg(insert, "$id", dbid);
+                Arg(insert, "$idx", itemIndex);
+                insert.ExecuteNonQuery();
+                break;
+            }
+
+            default:
+                return new(false, "尚未支援此物品類型", checked((int)Math.Min(int.MaxValue, currentMoney)));
+        }
+
+        var newMoney = currentMoney - totalPrice;
+        using (var updateMoney = db.CreateCommand())
+        {
+            updateMoney.Transaction = tx;
+            updateMoney.CommandText = """
+                UPDATE characters
+                   SET money=$money
+                 WHERE id=$id AND account_id=$a
+                """;
+            Arg(updateMoney, "$money", newMoney);
+            Arg(updateMoney, "$id", dbid);
+            Arg(updateMoney, "$a", accountId);
+            updateMoney.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+        return new(
+            true,
+            "購買成功",
+            checked((int)Math.Min(int.MaxValue, newMoney)));
+    }
+
+    public ShopMutationResult SellShopItem(
+        long accountId,
+        long dbid,
+        long uid,
+        int tabType,
+        int count,
+        int unitPrice)
+    {
+        if (uid <= 0 || count <= 0 || unitPrice < 0)
+            return new(false, "出售資料無效", 0);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在", 0);
+
+        switch (tabType)
+        {
+            case 0:
+            {
+                int ownedCount;
+                using (var get = db.CreateCommand())
+                {
+                    get.Transaction = tx;
+                    get.CommandText = """
+                        SELECT count
+                          FROM inventory_items
+                         WHERE uid=$uid AND character_id=$id
+                           AND in_bank=0 AND in_shop=0
+                        """;
+                    Arg(get, "$uid", uid);
+                    Arg(get, "$id", dbid);
+                    var raw = get.ExecuteScalar();
+                    if (raw is null)
+                        return new(false, "找不到物品", 0);
+                    ownedCount = Convert.ToInt32(raw);
+                }
+
+                if (ownedCount < count)
+                    return new(false, "物品數量不足", 0);
+
+                using (var update = db.CreateCommand())
+                {
+                    update.Transaction = tx;
+                    update.CommandText = """
+                        UPDATE inventory_items
+                           SET count=count-$count
+                         WHERE uid=$uid AND character_id=$id
+                        """;
+                    Arg(update, "$count", count);
+                    Arg(update, "$uid", uid);
+                    Arg(update, "$id", dbid);
+                    update.ExecuteNonQuery();
+                }
+
+                using (var delete = db.CreateCommand())
+                {
+                    delete.Transaction = tx;
+                    delete.CommandText = """
+                        DELETE FROM inventory_items
+                         WHERE uid=$uid AND character_id=$id AND count<=0
+                        """;
+                    Arg(delete, "$uid", uid);
+                    Arg(delete, "$id", dbid);
+                    delete.ExecuteNonQuery();
+                }
+                break;
+            }
+
+            case 1:
+            {
+                if (count != 1)
+                    return new(false, "裝備一次只能出售一件", 0);
+
+                using var delete = db.CreateCommand();
+                delete.Transaction = tx;
+                delete.CommandText = """
+                    DELETE FROM equipment_items
+                     WHERE uid=$uid AND character_id=$id
+                       AND part=255 AND in_bank=0 AND in_shop=0
+                    """;
+                Arg(delete, "$uid", uid);
+                Arg(delete, "$id", dbid);
+                if (delete.ExecuteNonQuery() != 1)
+                    return new(false, "已裝備或找不到此物品", 0);
+                break;
+            }
+
+            case 3:
+            {
+                if (count != 1)
+                    return new(false, "機甲裝備一次只能出售一件", 0);
+
+                using var delete = db.CreateCommand();
+                delete.Transaction = tx;
+                delete.CommandText = """
+                    DELETE FROM horse_equipment
+                     WHERE uid=$uid AND character_id=$id
+                       AND horse_uid=-1 AND in_bank=0 AND in_shop=0
+                    """;
+                Arg(delete, "$uid", uid);
+                Arg(delete, "$id", dbid);
+                if (delete.ExecuteNonQuery() != 1)
+                    return new(false, "已安裝或找不到此機甲裝備", 0);
+                break;
+            }
+
+            default:
+                return new(false, "尚未支援此物品類型", 0);
+        }
+
+        var income = checked((long)unitPrice * count);
+        long newMoney;
+
+        using (var updateMoney = db.CreateCommand())
+        {
+            updateMoney.Transaction = tx;
+            updateMoney.CommandText = """
+                UPDATE characters
+                   SET money=money+$income
+                 WHERE id=$id AND account_id=$a
+                """;
+            Arg(updateMoney, "$income", income);
+            Arg(updateMoney, "$id", dbid);
+            Arg(updateMoney, "$a", accountId);
+            updateMoney.ExecuteNonQuery();
+        }
+
+        using (var readMoney = db.CreateCommand())
+        {
+            readMoney.Transaction = tx;
+            readMoney.CommandText = """
+                SELECT money FROM characters
+                 WHERE id=$id AND account_id=$a
+                """;
+            Arg(readMoney, "$id", dbid);
+            Arg(readMoney, "$a", accountId);
+            newMoney = Convert.ToInt64(readMoney.ExecuteScalar());
+        }
+
+        tx.Commit();
+        return new(
+            true,
+            "出售成功",
+            checked((int)Math.Min(int.MaxValue, newMoney)));
     }
 
     public bool EquipItem(long accountId, long dbid, long itemUid, int targetSlot)
