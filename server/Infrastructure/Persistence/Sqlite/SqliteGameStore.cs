@@ -251,8 +251,8 @@ public sealed class SqliteGameStore : IGameStore
         using var cmd = db.CreateCommand();
         cmd.Transaction = tx;
         cmd.CommandText = """
-            INSERT INTO characters(account_id,name,password,race,hair,hair_color,str,dex,con,wis)
-            VALUES($a,$n,$p,$r,$h,$c,$s,$d,$co,$w)
+            INSERT INTO characters(account_id,name,password,race,hair,hair_color,str,dex,con,wis,money)
+            VALUES($a,$n,$p,$r,$h,$c,$s,$d,$co,$w,10000)
             """;
         Arg(cmd, "$a", accountId);
         Arg(cmd, "$n", name);
