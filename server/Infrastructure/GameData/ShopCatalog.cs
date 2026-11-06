@@ -18,6 +18,12 @@ public sealed class ShopCatalog
         LoadEquip(Path.Combine(dataRoot, "Item", "Equip.itd"));
         LoadWeapons(Path.Combine(dataRoot, "Item", "Weapon.itd"));
 
+        // The item files define metadata; the source Shop.csv is authoritative
+        // for which ItemIndex belongs to each NPC shop. This prevents heuristic
+        // misclassification that produced strange items in the recovered client.
+        _shops.Clear();
+        LoadShopMap(Path.Combine(dataRoot, "Shop", "Shop.csv"));
+
         foreach (var list in _shops.Values)
             list.Sort((a, b) => a.ItemIndex.CompareTo(b.ItemIndex));
     }
@@ -183,6 +189,51 @@ public sealed class ShopCatalog
             // Legacy scripts use both Shop2 and Shop10 for weapon views.
             Add(item with { ShopId = 10 });
             Add(item with { ShopId = 29 });
+        }
+    }
+
+    private void LoadShopMap(string path)
+    {
+        if (!File.Exists(path)) return;
+
+        foreach (var raw in File.ReadLines(path))
+        {
+            var line = raw.Trim();
+            if (string.IsNullOrWhiteSpace(line) ||
+                !line.Contains(','))
+                continue;
+
+            var cols = line.Split(',');
+            if (cols.Length < 3 ||
+                !int.TryParse(cols[0], out var shopId) ||
+                !int.TryParse(cols[1], out var declaredCount))
+                continue;
+
+            var itemIds = cols
+                .Skip(2)
+                .Select(x => int.TryParse(x.Trim(), out var id) ? id : 0)
+                .Where(x => x > 0)
+                .Take(Math.Max(0, declaredCount));
+
+            foreach (var itemIndex in itemIds)
+            {
+                if (_items.TryGetValue(itemIndex, out var def))
+                {
+                    Add(def with { ShopId = shopId });
+                    continue;
+                }
+
+                // Keep the source shop entry even when a legacy item parser has
+                // not been reconstructed yet. The recovered client resolves
+                // item name/icon from its own ItemLoader using ItemIndex.
+                Add(new ShopItemDefinition(
+                    ShopId: shopId,
+                    ItemIndex: itemIndex,
+                    TabType: 0,
+                    Price: 10,
+                    CanSell: true,
+                    Name: string.Empty));
+            }
         }
     }
 
