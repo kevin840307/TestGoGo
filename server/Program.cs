@@ -27,6 +27,12 @@ builder.Services.AddSingleton(
 builder.Services.AddSingleton(
     new HorseBatteryCatalog(
         Path.Combine(gameDataRoot, "Horse", "HorseBattery.csv")));
+builder.Services.AddSingleton(
+    new RecoveryItemCatalog(
+        Path.Combine(gameDataRoot, "Item", "Recovery.itd")));
+builder.Services.AddSingleton(
+    new HorseCardCatalog(
+        Path.Combine(gameDataRoot, "Horse", "HorseMA.csv")));
 builder.Services.AddSingleton(sp =>
     new QuestRuntime(
         Path.Combine(gameDataRoot, "Quest"),
