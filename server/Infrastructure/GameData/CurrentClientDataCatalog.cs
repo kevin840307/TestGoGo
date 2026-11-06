@@ -69,6 +69,25 @@ public sealed class CurrentClientDataCatalog
         LoadSkills(Root);
     }
 
+    public CurrentClientDataCatalog(
+        IEnumerable<CurrentItemDefinition> items,
+        IEnumerable<CurrentSkillDefinition> skills)
+    {
+        Root = "<in-memory>";
+
+        foreach (var item in items)
+        {
+            _items[item.ItemId] = item;
+            AddByName(_itemsByName, item.Name, item);
+        }
+
+        foreach (var skill in skills)
+        {
+            _skills[skill.SkillId] = skill;
+            AddByName(_skillsByName, skill.Name, skill);
+        }
+    }
+
     public CurrentItemDefinition? FindItem(int id)
         => _items.TryGetValue(id, out var item) ? item : null;
 
