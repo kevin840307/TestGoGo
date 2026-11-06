@@ -24,6 +24,9 @@ public interface IGameStore
     bool EquipHorseItem(long accountId, long dbid, long equipUid, long horseUid);
     bool UnequipHorseItem(long accountId, long dbid, long equipUid, long horseUid);
     bool SetPetState(long accountId, long dbid, long petUid, int state);
+    bool RenamePet(long accountId, long dbid, long petUid, string name);
+    bool EquipPetItem(long accountId, long dbid, long petUid, long itemUid, int targetSlot);
+    bool UnequipPetItem(long accountId, long dbid, long petUid, int targetSlot);
 
     (bool Success, string Message) Create(long accountId, JsonElement data);
     bool Delete(long accountId, long dbid, string password);
