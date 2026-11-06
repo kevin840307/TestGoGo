@@ -34,6 +34,23 @@ public interface IGameStore
     bool EquipPetItem(long accountId, long dbid, long petUid, long itemUid, int targetSlot);
     bool UnequipPetItem(long accountId, long dbid, long petUid, int targetSlot);
 
+    AssetPurchaseResult BuyAsset(
+        long accountId,
+        long dbid,
+        AssetPurchaseKind kind,
+        int itemIndex,
+        int count,
+        int unitPrice);
+
+    bool SellAsset(
+        long accountId,
+        long dbid,
+        long uid,
+        int tabType,
+        int count,
+        int unitPrice,
+        out long newMoney);
+
     (bool Success, string Message) Create(long accountId, JsonElement data);
     bool Delete(long accountId, long dbid, string password);
     bool ChangeCharacterPassword(long accountId, long dbid, string newPassword);
