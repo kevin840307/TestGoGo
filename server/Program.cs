@@ -1,5 +1,6 @@
 using SGO.Server.Application;
 using SGO.Server.Application.Combat;
+using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Infrastructure.Quest;
 using SGO.Server.Infrastructure.World;
 using SGO.Server.Infrastructure.Persistence;
@@ -20,9 +21,11 @@ var gameDataRoot = Path.Combine(
 builder.Services.AddSingleton(
     new WorldDataService(gameDataRoot));
 
-builder.Services.AddSingleton(
+builder.Services.AddSingleton<NpcShopCatalog>();
+builder.Services.AddSingleton(sp =>
     new QuestRuntime(
-        Path.Combine(gameDataRoot, "Quest")));
+        Path.Combine(gameDataRoot, "Quest"),
+        sp.GetRequiredService<NpcShopCatalog>()));
 
 builder.Services.AddSingleton<CombatService>();
 builder.Services.AddSingleton<PacketRouter>();
