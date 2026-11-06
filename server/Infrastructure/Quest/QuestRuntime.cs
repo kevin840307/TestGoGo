@@ -52,7 +52,7 @@ public sealed class QuestRuntime
         {
             result.Packets.Add(new {
                 Type = "SystemMessageChat",
-                Message = $"找不到舊任務腳本: {scriptName}"
+                Message = $"找不到任務腳本: {scriptName}"
             });
             return result;
         }
@@ -63,7 +63,7 @@ public sealed class QuestRuntime
         script.Globals["GetChoice"] = (Func<int>)(() => choiceIndex ?? 0);
         script.Globals["GetData"] = (Func<string, object?>)(name => getData(name));
 
-        // Common legacy quest APIs. State-changing calls that are not yet wired
+        // Common quest APIs. State-changing calls that are not yet wired
         // to persistence are safe compatibility shims instead of nil globals.
         script.Globals["GetFlag"] = (Func<string,int>)(_ => 0);
         script.Globals["SetFlag"] = (Action<string,int>)((_, _) => { });
@@ -80,7 +80,7 @@ public sealed class QuestRuntime
 
         script.Globals["RankQuery"] = (Action<int>)(rankType =>
         {
-            // Legacy 0=level, 1=money. Recovered client uses 1=level, 2=money.
+            // Source 0=level, 1=money. Recovered client uses 1=level, 2=money.
             result.Packets.Add(new
             {
                 Type = "OpenRankWindow",
@@ -191,7 +191,7 @@ public sealed class QuestRuntime
             var priceRate = args.Count > 1 ? (int)args[1].Number : 100;
 
             // The client has a dedicated NPC shop UI. Item population is wired
-            // separately from legacy item/shop data; returning an empty list here
+            // separately from item/shop data; returning an empty list here
             // is still a valid functional OpenShop packet and avoids Lua failure.
             result.Packets.Add(new
             {
@@ -224,7 +224,7 @@ public sealed class QuestRuntime
     {
         var fullPath = Path.GetFullPath(path);
         if (!includeStack.Add(fullPath))
-            throw new InvalidDataException($"Circular legacy quest include: {fullPath}");
+            throw new InvalidDataException($"Circular quest include: {fullPath}");
 
         var source = ReadScriptText(fullPath);
         var output = new StringBuilder();
@@ -246,7 +246,7 @@ public sealed class QuestRuntime
                 }
             }
 
-            // Some legacy scripts contain backslashes before Chinese smart quotes,
+            // Some quest scripts contain backslashes before Chinese smart quotes,
             // e.g. \“...\”. Old CDELua tolerated these; standard Lua/MoonSharp does not.
             output.AppendLine(
                 rawLine
