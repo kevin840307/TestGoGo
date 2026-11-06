@@ -638,6 +638,16 @@ try
 
     var portal = map15Npcs[0];
 
+    using (var moveBackToPortal = Json(JsonSerializer.Serialize(new
+    {
+        Type = "SyncPosition",
+        X = portal.X,
+        Y = portal.Y
+    })))
+    {
+        router.Handle(moveBackToPortal.RootElement, session);
+    }
+
     using (var interact = Json(JsonSerializer.Serialize(new
     {
         Type = "InteractRequest",
