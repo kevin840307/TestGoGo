@@ -96,6 +96,15 @@ app.Map("/", async (
                         true,
                         ctx.RequestAborted);
                 }
+
+                if (state.CloseRequested)
+                {
+                    await socket.CloseAsync(
+                        WebSocketCloseStatus.NormalClosure,
+                        "Logout",
+                        CancellationToken.None);
+                    break;
+                }
             }
             catch (Exception e) when (
                 e is FormatException or
