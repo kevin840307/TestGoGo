@@ -412,6 +412,20 @@ public sealed class SqliteGameStore
         return cmd.ExecuteNonQuery() == 1;
     }
 
+    public bool UpdateLocation(long accountId, long dbid, int mapId, int x, int y)
+    {
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText =
+            "UPDATE characters SET map_id=$m,x=$x,y=$y WHERE id=$id AND account_id=$a";
+        Arg(cmd, "$m", mapId);
+        Arg(cmd, "$x", x);
+        Arg(cmd, "$y", y);
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+        return cmd.ExecuteNonQuery() == 1;
+    }
+
     public bool UpdateState(long accountId, long dbid, string state)
     {
         if (state.Length > 32) return false;
