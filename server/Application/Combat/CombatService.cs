@@ -3,6 +3,7 @@ using SGO.Server.Application.Assets;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
 using SGO.Server.Infrastructure.World;
+using SGO.Server.Infrastructure.GameData;
 
 namespace SGO.Server.Application.Combat;
 
@@ -19,13 +20,16 @@ public sealed class CombatService
 
     private readonly IGameStore _store;
     private readonly WorldDataService _world;
+    private readonly CurrentClientDataCatalog _current;
 
     public CombatService(
         IGameStore store,
-        WorldDataService world)
+        WorldDataService world,
+        CurrentClientDataCatalog current)
     {
         _store = store;
         _world = world;
+        _current = current;
     }
 
     public IReadOnlyList<object> EnterMap(
@@ -194,7 +198,8 @@ public sealed class CombatService
                         session.CharacterId.Value);
                     var effective = CharacterStatCalculator.Calculate(
                         character,
-                        assets);
+                        assets,
+                        _current);
                     var defense = Math.Max(0, effective.Defense);
 
                     var rawDamage = Math.Max(
@@ -380,7 +385,8 @@ public sealed class CombatService
             session.CharacterId.Value);
         var effective = CharacterStatCalculator.Calculate(
             character,
-            assets);
+            assets,
+            _current);
 
         var attackRange = Math.Max(
             80,
