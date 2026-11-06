@@ -13,3 +13,4 @@ jobs:
         with:
           dotnet-version: '8.0.x'
       - run: dotnet build server/SGO.Server.csproj -c Release
+      - run: dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release
