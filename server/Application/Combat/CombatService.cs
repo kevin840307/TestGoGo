@@ -1,7 +1,7 @@
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
-using SGO.Server.Infrastructure.Legacy.World;
+using SGO.Server.Infrastructure.World;
 
 namespace SGO.Server.Application.Combat;
 
@@ -17,11 +17,11 @@ public sealed class CombatService
     private const double MoveStep = 70.0;
 
     private readonly IGameStore _store;
-    private readonly LegacyWorldService _world;
+    private readonly WorldDataService _world;
 
     public CombatService(
         IGameStore store,
-        LegacyWorldService world)
+        WorldDataService world)
     {
         _store = store;
         _world = world;
@@ -47,7 +47,7 @@ public sealed class CombatService
             var state = new MonsterRuntimeState
             {
                 EntityId = enemy.EntityId,
-                LegacyEnemyId = enemy.EnemyId,
+                EnemyId = enemy.EnemyId,
                 MapId = enemy.MapId,
                 Name = enemy.Name,
                 Sprite = enemy.Sprite,
@@ -403,7 +403,7 @@ public sealed class CombatService
                 Scale = 1.0,
                 RequireCtrlToAttack = false,
                 IsWorldBoss = false,
-                LegacyEnemyID = monster.LegacyEnemyId
+                LegacyEnemyID = monster.EnemyId
             }
         };
 }
