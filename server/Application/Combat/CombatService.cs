@@ -9,6 +9,7 @@ public sealed class CombatService
 {
     private static readonly TimeSpan RespawnDelay = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan AiTickInterval = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan MonsterAttackCooldown = TimeSpan.FromMilliseconds(1400);
 
     private const double AggroRadius = 420.0;
     private const double LoseTargetRadius = 700.0;
@@ -93,6 +94,7 @@ public sealed class CombatService
 
     public IReadOnlyList<object> TickAi(
         ClientSession session,
+        long accountId,
         double playerX,
         double playerY,
         DateTimeOffset now)
@@ -152,6 +154,84 @@ public sealed class CombatService
                         0.6,
                         returnMoveDx,
                         returnMoveDy));
+                }
+
+                continue;
+            }
+
+            if (monster.HasTarget &&
+                distance <= StopDistance &&
+                session.CharacterId.HasValue &&
+                now - monster.LastAttackAt >= MonsterAttackCooldown)
+            {
+                var character = _store.GetCharacter(
+                    accountId,
+                    session.CharacterId.Value);
+
+                if (character is not null &&
+                    Convert.ToInt32(character["HP"]) > 0)
+                {
+                    var defense = Math.Max(
+                        0,
+                        Convert.ToInt32(character["Defense"]));
+
+                    var rawDamage = Math.Max(
+                        1,
+                        monster.Level * 2);
+
+                    var damage = Math.Max(
+                        1,
+                        rawDamage - defense / 5);
+
+                    var updated = _store.ApplyDamage(
+                        accountId,
+                        session.CharacterId.Value,
+                        damage);
+
+                    if (updated is not null)
+                    {
+                        monster.LastAttackAt = now;
+                        var currentHp = Convert.ToInt32(updated["HP"]);
+                        var maxHp = Convert.ToInt32(updated["MaxHP"]);
+
+                        packets.Add(new
+                        {
+                            Type = "EntityDamage",
+                            TargetID = session.CharacterId.Value,
+                            TargetType = 0,
+                            Damage = damage,
+                            CurrentHP = currentHp,
+                            MaxHP = maxHp,
+                            IsCrit = false,
+                            SkillID = 0,
+                            SkillLevel = 1,
+                            AttackerID = monster.EntityId
+                        });
+
+                        packets.Add(new
+                        {
+                            Type = "PlayerStatusSync",
+                            HP = currentHp,
+                            MP = updated["MP"],
+                            SP = updated["SP"],
+                            MaxHP = maxHp,
+                            MaxMP = updated["MaxMP"],
+                            MaxSP = updated["MaxSP"]
+                        });
+
+                        if (currentHp <= 0)
+                        {
+                            packets.Add(new
+                            {
+                                Type = "EntityDeath",
+                                EntityID = session.CharacterId.Value,
+                                EntityType = 0,
+                                KillerID = monster.EntityId
+                            });
+
+                            monster.HasTarget = false;
+                        }
+                    }
                 }
 
                 continue;
