@@ -165,7 +165,7 @@ public sealed class PacketRouter
                     return [];
 
                 state.PendingMapSpawn = false;
-                return _world.BuildNpcSpawnPackets(state.CurrentMapId);
+                return _world.BuildMapSpawnPackets(state.CurrentMapId);
             }
 
             case "SyncState":
