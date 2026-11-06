@@ -202,7 +202,7 @@ try
     }
 
     using (var select = Json(
-        $$$"""{"Type":"SelectCharacterRequest","DBID":{{id}}}"""))
+        $"""{"Type":"SelectCharacterRequest","DBID":{{id}}}"""))
     {
         var responses = router.Handle(select.RootElement, session);
         Check(session.CharacterId == id,
@@ -367,7 +367,7 @@ try
     var portal = map15Npcs[0];
 
     using (var interact = Json(
-        $$$"""{"Type":"InteractRequest","EntityID":{{portal.EntityId}}}"""))
+        $"""{"Type":"InteractRequest","EntityID":{{portal.EntityId}}}"""))
     {
         var responses = router.Handle(interact.RootElement, session);
         Check(responses.Count >= 1 &&
@@ -379,7 +379,7 @@ try
     }
 
     using (var option = Json(
-        $$$"""{"Type":"NpcOptionRequest","EntityID":{{portal.EntityId}},"ScriptName":"{{portal.Script}}","TargetNode":"Check#0"}"""))
+        $"""{"Type":"NpcOptionRequest","EntityID":{{portal.EntityId}},"ScriptName":"{{portal.Script}}","TargetNode":"Check#0"}"""))
     {
         var responses = router.Handle(option.RootElement, session);
         Check(responses.Any(x =>
