@@ -1134,10 +1134,12 @@ public sealed class SqliteGameStore : IGameStore
         set.Transaction = tx;
         set.CommandText = """
             UPDATE horse_equipment
-               SET horse_uid=$horse
+               SET horse_uid=$horse,
+                   part=$part
              WHERE uid=$uid AND character_id=$id
             """;
         Arg(set, "$horse", horseUid);
+        Arg(set, "$part", part);
         Arg(set, "$uid", equipUid);
         Arg(set, "$id", dbid);
         if (set.ExecuteNonQuery() != 1) return false;
@@ -1397,11 +1399,12 @@ public sealed class SqliteGameStore : IGameStore
                 add.Transaction = tx;
                 add.CommandText = """
                     INSERT INTO horse_equipment(character_id,equip_index,horse_uid,damage,color,part)
-                    VALUES($id,$idx,-1,0,0,255);
+                    VALUES($id,$idx,-1,0,0,$part);
                     SELECT last_insert_rowid();
                     """;
                 Arg(add, "$id", dbid);
                 Arg(add, "$idx", itemIndex);
+                Arg(add, "$part", ResolveHorseEquipPart(itemIndex));
                 uid = Convert.ToInt64(add.ExecuteScalar());
                 break;
             }
