@@ -24,7 +24,8 @@ var questRoot = Path.Combine(gameDataRoot, "Quest");
 Check(Directory.Exists(gameDataRoot), "server data directory exists");
 
 var world = new WorldDataService(gameDataRoot);
-var quests = new QuestRuntime(questRoot);
+var shopCatalog = new NpcShopCatalog();
+var quests = new QuestRuntime(questRoot, shopCatalog);
 var map15Npcs = world.GetNpcs(15);
 
 Check(map15Npcs.Count == 52, "Map15 NPC.dat contains 52 NPC records");
