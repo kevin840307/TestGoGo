@@ -1,7 +1,7 @@
 namespace SGO.Server.Infrastructure.GameData;
 
 public sealed record EnemySpawnRecord(
-    int LegacyFlags,
+    int SourceFlags,
     int EnemyId,
     int X,
     int Y,
@@ -9,9 +9,9 @@ public sealed record EnemySpawnRecord(
 
 public static class EnemyDatReader
 {
-    // Record layout observed across the legacy map files:
+    // Record layout used by the map Enemy.dat files:
     // int32 legacy field, zero-terminated ASCII enemy id, int32 X, int32 Y,
-    // followed by a fixed 207-byte legacy payload.
+    // followed by a fixed 207-byte source payload.
     private const int TailSize = 207;
 
     public static IReadOnlyList<EnemySpawnRecord> Read(string path)
@@ -24,7 +24,7 @@ public static class EnemyDatReader
 
         for (var i = 0; i < count; i++)
         {
-            var legacyFlags = reader.ReadInt32();
+            var sourceFlags = reader.ReadInt32();
             var enemyIdText = ReadNullTerminatedAscii(reader);
             if (!int.TryParse(enemyIdText, out var enemyId))
                 throw new InvalidDataException(
@@ -38,7 +38,7 @@ public static class EnemyDatReader
                     $"Enemy.dat record {i} ended early in {path}");
 
             result.Add(new EnemySpawnRecord(
-                legacyFlags,
+                sourceFlags,
                 enemyId,
                 x,
                 y,
