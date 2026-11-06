@@ -272,6 +272,70 @@ public sealed class CombatService
         return packets;
     }
 
+    public IReadOnlyList<object> PetAttack(
+        ClientSession session,
+        long petUid,
+        int petAttack,
+        int targetEntityId)
+    {
+        if (!session.Monsters.TryGetValue(
+                targetEntityId,
+                out var monster) ||
+            !monster.IsAlive ||
+            monster.MapId != session.CurrentMapId)
+            return [];
+
+        var petEntityId = 4_000_000L + petUid;
+        var damage = Math.Max(1, petAttack);
+
+        monster.CurrentHp = Math.Max(
+            0,
+            monster.CurrentHp - damage);
+
+        var packets = new List<object>
+        {
+            new
+            {
+                Type = "MoveEntity",
+                EntityID = petEntityId,
+                X = monster.X - 30,
+                Y = monster.Y + 10,
+                Dir = "6",
+                SpeedTime = 0.25
+            },
+            new
+            {
+                Type = "EntityDamage",
+                TargetID = monster.EntityId,
+                TargetType = 1,
+                Damage = damage,
+                CurrentHP = monster.CurrentHp,
+                MaxHP = monster.MaxHp,
+                IsCrit = false,
+                SkillID = 0,
+                SkillLevel = 1,
+                AttackerID = petEntityId
+            }
+        };
+
+        if (monster.CurrentHp == 0)
+        {
+            monster.RespawnAt =
+                DateTimeOffset.UtcNow + RespawnDelay;
+            monster.HasTarget = false;
+
+            packets.Add(new
+            {
+                Type = "EntityDeath",
+                EntityID = monster.EntityId,
+                EntityType = 1,
+                KillerID = petEntityId
+            });
+        }
+
+        return packets;
+    }
+
     public IReadOnlyList<object> Attack(
         ClientSession session,
         long accountId,
