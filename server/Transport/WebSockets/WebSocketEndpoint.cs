@@ -35,6 +35,10 @@ public static class WebSocketEndpoint
             var buffer = new byte[64 * 1024];
             using var message = new MemoryStream();
             using var sendGate = new SemaphoreSlim(1, 1);
+            using var worldTickCts =
+                CancellationTokenSource.CreateLinkedTokenSource(
+                    ctx.RequestAborted);
+            var worldTickToken = worldTickCts.Token;
 
             async Task SendPacketsAsync(
                 IReadOnlyList<object> packets,
@@ -69,12 +73,12 @@ public static class WebSocketEndpoint
             {
                 try
                 {
-                    while (!ctx.RequestAborted.IsCancellationRequested &&
+                    while (!worldTickToken.IsCancellationRequested &&
                            socket.State == WebSocketState.Open)
                     {
                         await Task.Delay(
                             TimeSpan.FromMilliseconds(250),
-                            ctx.RequestAborted);
+                            worldTickToken);
 
                         IReadOnlyList<object> packets;
                         lock (state)
@@ -86,7 +90,7 @@ public static class WebSocketEndpoint
 
                         await SendPacketsAsync(
                             packets,
-                            ctx.RequestAborted);
+                            worldTickToken);
                     }
                 }
                 catch (OperationCanceledException)
@@ -194,6 +198,8 @@ public static class WebSocketEndpoint
             }
             finally
             {
+                worldTickCts.Cancel();
+
                 try
                 {
                     await worldTickTask;
