@@ -54,3 +54,30 @@ The server now reads the uploaded legacy server data under `Old/服務端/Dat`:
 Map15 is explicitly treated as the main city: NPC/portal spawns are loaded, but combat Enemy.dat records are not spawned there. A portal script can issue `MovePlayer(x,y,mapId)`; the destination is persisted to SQLite and destination entities are spawned only after the first `SyncPosition` from the newly loaded client map.
 
 Implemented Lua compatibility calls: `Say`, `Ask`, `GetChoice`, `GetData`, `MovePlayer`, `QuestEnd`. `OpenShop` is currently a compatibility stub.
+
+
+## Code layout
+
+See `ARCHITECTURE.md`. The server is now split into:
+
+- `Application/`: packet/game flow and persistence abstractions.
+- `Domain/`: session/domain state.
+- `Protocol/`: recovered-client AES/Base64/JSON compatibility.
+- `Transport/WebSockets/`: WebSocket framing and connection lifecycle.
+- `Infrastructure/Legacy/`: old NPC/Enemy/Lua compatibility, split into Data/Quest/World.
+- `Infrastructure/Persistence/`: database providers.
+
+`PacketRouter` depends on `IGameStore`, not SQLite. Database selection is configuration-driven:
+
+```json
+"Database": {
+  "Provider": "Sqlite",
+  "Sqlite": {
+    "Path": ""
+  }
+}
+```
+
+To add MySQL later, implement `MySqlGameStore : IGameStore` under `Infrastructure/Persistence/MySql/` and register the provider. No game-flow, WebSocket, map or Lua code should need changes.
+
+Legacy dialog presentation prefixes such as `n`, `n1`, `p7`, and `s` are stripped before sending dialog text to the recovered client.
