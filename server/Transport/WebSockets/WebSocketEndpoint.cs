@@ -34,6 +34,74 @@ public static class WebSocketEndpoint
             var state = new ClientSession();
             var buffer = new byte[64 * 1024];
             using var message = new MemoryStream();
+            using var sendGate = new SemaphoreSlim(1, 1);
+
+            async Task SendPacketsAsync(
+                IReadOnlyList<object> packets,
+                CancellationToken cancellationToken)
+            {
+                if (packets.Count == 0 ||
+                    socket.State != WebSocketState.Open)
+                    return;
+
+                await sendGate.WaitAsync(cancellationToken);
+                try
+                {
+                    foreach (var packet in packets)
+                    {
+                        var output = Encoding.UTF8.GetBytes(
+                            ClientProtocol.Encode(packet));
+
+                        await socket.SendAsync(
+                            output.AsMemory(),
+                            WebSocketMessageType.Text,
+                            true,
+                            cancellationToken);
+                    }
+                }
+                finally
+                {
+                    sendGate.Release();
+                }
+            }
+
+            var worldTickTask = Task.Run(async () =>
+            {
+                try
+                {
+                    while (!ctx.RequestAborted.IsCancellationRequested &&
+                           socket.State == WebSocketState.Open)
+                    {
+                        await Task.Delay(
+                            TimeSpan.FromMilliseconds(250),
+                            ctx.RequestAborted);
+
+                        IReadOnlyList<object> packets;
+                        lock (state)
+                        {
+                            packets = router.Tick(
+                                state,
+                                DateTimeOffset.UtcNow);
+                        }
+
+                        await SendPacketsAsync(
+                            packets,
+                            ctx.RequestAborted);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                catch (WebSocketException)
+                {
+                }
+                catch (Exception ex)
+                {
+                    log.LogError(
+                        ex,
+                        "World tick failed");
+                }
+            });
 
             try
             {
@@ -76,19 +144,18 @@ public static class WebSocketEndpoint
                     try
                     {
                         using var packet = ClientProtocol.Decode(encoded);
-                        var responses = router.Handle(packet.RootElement, state);
 
-                        foreach (var response in responses)
+                        IReadOnlyList<object> responses;
+                        lock (state)
                         {
-                            var output = Encoding.UTF8.GetBytes(
-                                ClientProtocol.Encode(response));
-
-                            await socket.SendAsync(
-                                output.AsMemory(),
-                                WebSocketMessageType.Text,
-                                true,
-                                ctx.RequestAborted);
+                            responses = router.Handle(
+                                packet.RootElement,
+                                state);
                         }
+
+                        await SendPacketsAsync(
+                            responses,
+                            ctx.RequestAborted);
 
                         if (state.CloseRequested)
                         {
@@ -127,6 +194,15 @@ public static class WebSocketEndpoint
             }
             finally
             {
+                try
+                {
+                    await worldTickTask;
+                }
+                catch
+                {
+                    // Connection shutdown owns cancellation/close semantics.
+                }
+
                 if (socket.State == WebSocketState.Open)
                 {
                     await socket.CloseAsync(
