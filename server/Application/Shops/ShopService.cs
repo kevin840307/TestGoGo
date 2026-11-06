@@ -69,13 +69,20 @@ public sealed class ShopService
             _ => AssetPurchaseKind.General
         };
 
+        var character = _store.GetCharacter(accountId, characterId);
+        if (character is null)
+            return Failure("角色不存在");
+
+        var rate = Convert.ToInt32(character["Career"]) == 9 ? 80 : 100;
+        var unitPrice = Math.Max(1, item.Price * rate / 100);
+
         var result = _store.BuyAsset(
             accountId,
             characterId,
             kind,
             item.ItemIndex,
             count,
-            item.Price);
+            unitPrice);
 
         if (!result.Success)
             return Failure(result.Message);
