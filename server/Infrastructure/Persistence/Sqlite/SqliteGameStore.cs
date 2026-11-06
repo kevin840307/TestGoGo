@@ -537,6 +537,88 @@ public sealed class SqliteGameStore : IGameStore
         return assets;
     }
 
+    public List<Dictionary<string, object>> GetSkills(
+        long accountId,
+        long dbid)
+    {
+        var result = new List<Dictionary<string, object>>();
+        using var db = Open();
+
+        if (!OwnsCharacter(db, accountId, dbid))
+            return result;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT skill_id,level,exp
+              FROM character_skills
+             WHERE character_id=$id
+             ORDER BY skill_id
+            """;
+        Arg(cmd, "$id", dbid);
+
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+        {
+            var skillId = r.GetInt32(0);
+            var level = r.GetInt32(1);
+            var exp = r.GetInt32(2);
+
+            result.Add(new Dictionary<string, object>
+            {
+                ["skill_id"] = skillId,
+                ["level"] = level,
+                ["exp"] = exp,
+                ["SkillID"] = skillId,
+                ["SkillLevel"] = level
+            });
+        }
+
+        return result;
+    }
+
+    public bool SetSkill(
+        long accountId,
+        long dbid,
+        int skillId,
+        int level)
+    {
+        if (skillId <= 0 || level <= 0)
+            return false;
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return false;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO character_skills(
+                character_id,skill_id,level,exp)
+            VALUES($id,$skill,$level,0)
+            ON CONFLICT(character_id,skill_id)
+            DO UPDATE SET level=excluded.level
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$skill", skillId);
+        Arg(cmd, "$level", Math.Clamp(level, 1, 99));
+        return cmd.ExecuteNonQuery() == 1;
+    }
+
+    public bool ClearSkills(long accountId, long dbid)
+    {
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return false;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            DELETE FROM character_skills
+             WHERE character_id=$id
+            """;
+        Arg(cmd, "$id", dbid);
+        cmd.ExecuteNonQuery();
+        return true;
+    }
+
     public long AddInventoryItem(long accountId, long dbid, int itemIndex, int count)
     {
         if (count <= 0) return 0;
