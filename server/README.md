@@ -20,12 +20,12 @@ In the recovered project's `scripts/network_manager.gd`, set `USE_DDNS` from `tr
 
 - WebSocket + AES-256-CBC Base64-encoded JSON compatible with existing client wire format.
 - Account registration/login, role create/list/delete/password change, preliminary role selection.
-- SQLite persistence and PBKDF2 account password hashing.
+- SQLite persistence and PBKDF2 account password hashing.\n- Character bootstrap fields required by `PlayerData.load_from_json()`.\n- Local movement/state persistence, local chat echo, revive status sync.\n- Logout handshake closes WebSocket to match the recovered client's return-to-login flow.
 - Three-character limit, authenticated session checks, 2 MiB packet bound.
 
 ## Known gaps
 
-- Preliminary `EnterWorldSuccess` payload and empty inventory/equipment/pet/horse/skill/quest sync; **unverified** against live Godot runtime.
+- `EnterWorldSuccess` now contains complete safe defaults plus empty inventory/equipment/pet/horse/skill/buff/quest sync; **still unverified** against live Godot runtime.
 - No monster AI, NPC logic, quests, combat, movement or save-position handling yet.
 - The recovered client's static AES key/IV provide **no authenticated transport security**. Listener is deliberately loopback only.
 - Client character password verification expects a password field in character list; prototype stores that specific character password as plaintext for protocol compatibility. Do not reuse real passwords.
