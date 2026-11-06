@@ -78,27 +78,27 @@ public sealed class ShopCatalog
 
             var name = ReadFixedString(big5, bytes, offset + nameOffset, nameLength);
             var item = new ShopItemDefinition(
-                ShopId: 13,
+                ShopId: 1,
                 ItemIndex: itemIndex,
                 TabType: 0,
                 Price: price,
                 CanSell: bytes[offset + 2] != 0,
                 Name: name);
 
-            // Shop 13 is the general-goods / magic-book shop in the source scripts.
+            // KingCity_All_Shop: 1=items, 8=materials.
+            // Keep 13 for other legacy shop scripts that reference the broad
+            // general-goods catalog.
             Add(item);
+            Add(item with { ShopId = 8 });
+            Add(item with { ShopId = 13 });
 
             if (name.Contains("彈", StringComparison.Ordinal))
-            {
                 Add(item with { ShopId = 7 });
-            }
 
             if (name.Contains("卷", StringComparison.Ordinal) ||
                 name.Contains("書", StringComparison.Ordinal) ||
                 name.Contains("技能", StringComparison.Ordinal))
-            {
                 Add(item with { ShopId = 12 });
-            }
         }
     }
 
@@ -122,13 +122,16 @@ public sealed class ShopCatalog
             var price = NormalizePrice(ReadI32(bytes, offset + 75), 50);
             if (itemIndex <= 0) continue;
 
+            // KingCity_All_Shop mapping:
+            // 3/4=hands, 5=upper, 6=lower, 7=shield, 10=mechanical head.
             var shopId = slot switch
             {
-                4 => 2, // lower armor / pants
-                3 => 3, // upper armor
-                6 => 4, // shield
-                1 => 5, // left-hand sleeve
-                2 => 6, // right-hand sleeve
+                1 => 3,
+                2 => 4,
+                3 => 5,
+                4 => 6,
+                6 => 7,
+                0 => 10,
                 _ => 0
             };
 
@@ -166,7 +169,7 @@ public sealed class ShopCatalog
 
             var name = ReadFixedString(big5, bytes, offset + nameOffset, nameLength);
             Add(new ShopItemDefinition(
-                ShopId: 10,
+                ShopId: 2,
                 ItemIndex: itemIndex,
                 TabType: 1,
                 Price: price,
