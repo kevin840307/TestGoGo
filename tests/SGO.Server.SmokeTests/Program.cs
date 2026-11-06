@@ -590,9 +590,9 @@ try
     }
 
     var selected = store.GetCharacter(account.Value, id);
-    Check(Convert.ToInt32(Convert.ToDouble(selected!["LocX"])) == 4932 &&
-          Convert.ToInt32(Convert.ToDouble(selected["LocY"])) == 7783,
-        "movement persists to SQLite");
+    Check(Convert.ToInt32(Convert.ToDouble(selected!["LocX"])) == 5000 &&
+          Convert.ToInt32(Convert.ToDouble(selected["LocY"])) == 7800,
+        "movement and pet-follow position persist to SQLite");
 
     var merchant = map15Npcs.First(x =>
         x.Script.Equals("shop_e3.txt", StringComparison.OrdinalIgnoreCase));
