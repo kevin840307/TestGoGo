@@ -47,7 +47,8 @@ public sealed class LegacyWorldService
             Script = npc.Script,
             Name = DecodeName(big5, npc.NameBytes),
             Sprite = $"NPC{npc.NpcTypeId:D3}.png",
-            IsPortal = IsPortalScript(npc.Script)
+            IsPortal = IsPortalScript(npc.Script),
+            IsMerchant = IsMerchantScript(npc.Script)
         }).ToArray();
 
         return _npcCache[mapId] = list;
@@ -140,6 +141,7 @@ public sealed class LegacyWorldService
                 Sprite = npc.Sprite,
                 Script = npc.Script,
                 IsPortal = npc.IsPortal,
+                IsMerchant = npc.IsMerchant,
                 LegacyNpcTypeID = npc.NpcTypeId
             }
         };
@@ -181,6 +183,17 @@ public sealed class LegacyWorldService
         }
     }
 
+    private static bool IsMerchantScript(string script)
+    {
+        if (string.IsNullOrWhiteSpace(script))
+            return false;
+
+        var s = script.ToLowerInvariant();
+        return s.StartsWith("shop_") ||
+               s.Contains("_shop") ||
+               s.Contains("all_shop");
+    }
+
     private static bool IsPortalScript(string script)
     {
         if (string.IsNullOrWhiteSpace(script))
@@ -204,6 +217,7 @@ public sealed class LegacyWorldNpc
     public string Name { get; init; } = "";
     public string Sprite { get; init; } = "";
     public bool IsPortal { get; init; }
+    public bool IsMerchant { get; init; }
 }
 
 public sealed class LegacyWorldEnemy
