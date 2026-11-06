@@ -1,5 +1,6 @@
 using SGO.Server.Application;
 using SGO.Server.Application.Combat;
+using SGO.Server.Application.Gm;
 using SGO.Server.Application.Shops;
 using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Infrastructure.Quest;
@@ -33,6 +34,17 @@ builder.Services.AddSingleton(
 builder.Services.AddSingleton(
     new HorseCardCatalog(
         Path.Combine(gameDataRoot, "Horse", "HorseMA.csv")));
+
+var clientDataRoot = Path.Combine(
+    AppContext.BaseDirectory,
+    "ClientData");
+
+builder.Services.AddSingleton(
+    new SkillCatalog(
+        Path.Combine(
+            clientDataRoot,
+            "Interface",
+            "skill_cht.dat")));
 builder.Services.AddSingleton(sp =>
     new QuestRuntime(
         Path.Combine(gameDataRoot, "Quest"),
@@ -40,6 +52,7 @@ builder.Services.AddSingleton(sp =>
 
 builder.Services.AddSingleton<CombatService>();
 builder.Services.AddSingleton<ShopService>();
+builder.Services.AddSingleton<GmCommandService>();
 builder.Services.AddSingleton<PacketRouter>();
 
 var app = builder.Build();
