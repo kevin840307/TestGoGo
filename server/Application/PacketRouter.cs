@@ -132,6 +132,7 @@ public sealed class PacketRouter
                 character["Type"] = "EnterWorldSuccess";
 
                 var assets = _store.GetCharacterAssets(accountId, dbid);
+                ApplyAssetsToCharacterBootstrap(character, assets);
 
                 return
                 [
@@ -671,6 +672,48 @@ public sealed class PacketRouter
                 Type = "SystemMessageChat",
                 Message = $"NPC 腳本執行失敗: {npc.Script}"
             }];
+        }
+    }
+
+    private static void ApplyAssetsToCharacterBootstrap(
+        Dictionary<string, object> character,
+        SGO.Server.Domain.Assets.CharacterAssets assets)
+    {
+        character["Inventory"] = assets.Inventory;
+        character["InventoryMaxSize"] = assets.InventoryMaxSize;
+        character["EquipList"] = assets.Equips;
+        character["EquipMaxSize"] = assets.EquipMaxSize;
+        character["PetList"] = assets.Pets;
+        character["PetMaxSize"] = assets.PetMaxSize;
+        character["HorseList"] = assets.Horses;
+        character["HorseEquipList"] = assets.HorseEquips;
+        character["HorseEquipMaxSize"] = assets.HorseEquipMaxSize;
+
+        foreach (var eq in assets.Equips)
+        {
+            if (Convert.ToInt32(eq["InBank"]) != 0 ||
+                Convert.ToInt32(eq["InShop"]) != 0)
+                continue;
+
+            var part = Convert.ToInt32(eq["Part"]);
+            var itemIdx = Convert.ToInt32(eq["ItemIdx"]);
+            var color = Convert.ToInt32(eq["Color"]);
+
+            switch (part)
+            {
+                case 0: character["Bonnet"] = itemIdx; break;
+                case 1: character["Left_hand"] = itemIdx; break;
+                case 2: character["Right_hand"] = itemIdx; break;
+                case 3: character["Upper_armor"] = itemIdx; break;
+                case 4: character["Lower_armor"] = itemIdx; break;
+                case 5: character["Weapon"] = itemIdx; break;
+                case 6: character["Shield"] = itemIdx; break;
+                case 7: character["Back"] = itemIdx; break;
+                case 8: character["Amulet"] = itemIdx; break;
+            }
+
+            if (part is >= 0 and <= 8)
+                character[$"EquipColor{part}"] = color;
         }
     }
 
