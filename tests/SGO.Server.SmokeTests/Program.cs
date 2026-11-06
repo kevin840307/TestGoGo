@@ -187,8 +187,11 @@ try
             x.TryGetValue("NAME", out var n) &&
             n?.ToString() == "TestCharacter")["DBID"]);
 
+    var moneyBeforeFunding = Convert.ToInt64(
+        store.GetCharacter(account.Value, id)!["Money"]);
     var funded = store.AddRewards(account.Value, id, 0, 10_000);
-    Check(funded is not null && Convert.ToInt32(funded["Money"]) == 10_000,
+    Check(funded is not null &&
+          Convert.ToInt64(funded["Money"]) == moneyBeforeFunding + 10_000,
         "fund character for NPC shop transaction tests");
 
     var generalShopItem = shopCatalog.GetShopItems(1).First();
