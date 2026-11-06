@@ -7,6 +7,8 @@ public sealed class ClientSession
     public long? AccountId { get; set; }
     public long? CharacterId { get; set; }
     public int CurrentMapId { get; set; }
+    public double LastX { get; set; }
+    public double LastY { get; set; }
     public bool PendingMapSpawn { get; set; }
     public bool CloseRequested { get; set; }
     public DateTimeOffset LastMonsterAiTick { get; set; } = DateTimeOffset.MinValue;
