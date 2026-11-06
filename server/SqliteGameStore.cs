@@ -74,6 +74,56 @@ public sealed class SqliteGameStore
             CREATE INDEX IF NOT EXISTS ix_characters_account ON characters(account_id);
             """;
         cmd.ExecuteNonQuery();
+        EnsureCharacterSchema(db);
+    }
+
+    private static void EnsureCharacterSchema(SqliteConnection db)
+    {
+        var required = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["hp"] = "INTEGER NOT NULL DEFAULT 100",
+            ["max_hp"] = "INTEGER NOT NULL DEFAULT 100",
+            ["mp"] = "INTEGER NOT NULL DEFAULT 50",
+            ["max_mp"] = "INTEGER NOT NULL DEFAULT 50",
+            ["sp"] = "INTEGER NOT NULL DEFAULT 100",
+            ["max_sp"] = "INTEGER NOT NULL DEFAULT 100",
+            ["money"] = "INTEGER NOT NULL DEFAULT 0",
+            ["exp_use"] = "INTEGER NOT NULL DEFAULT 0",
+            ["exp_acc"] = "INTEGER NOT NULL DEFAULT 0",
+            ["exp_death"] = "INTEGER NOT NULL DEFAULT 0",
+            ["max_exp"] = "INTEGER NOT NULL DEFAULT 1000",
+            ["career"] = "INTEGER NOT NULL DEFAULT 0",
+            ["job"] = "INTEGER NOT NULL DEFAULT 0",
+            ["attack"] = "INTEGER NOT NULL DEFAULT 10",
+            ["defense"] = "INTEGER NOT NULL DEFAULT 5",
+            ["magic_attack"] = "INTEGER NOT NULL DEFAULT 5",
+            ["magic_defense"] = "INTEGER NOT NULL DEFAULT 5",
+            ["hit"] = "INTEGER NOT NULL DEFAULT 100",
+            ["dodge"] = "INTEGER NOT NULL DEFAULT 0",
+            ["lucky"] = "INTEGER NOT NULL DEFAULT 0",
+            ["move_speed"] = "INTEGER NOT NULL DEFAULT 100",
+            ["attack_speed"] = "INTEGER NOT NULL DEFAULT 100",
+            ["attack_range"] = "INTEGER NOT NULL DEFAULT 80",
+            ["crit_rate"] = "INTEGER NOT NULL DEFAULT 0",
+            ["crit_damage"] = "INTEGER NOT NULL DEFAULT 125",
+            ["state"] = "TEXT NOT NULL DEFAULT 'idle'"
+        };
+
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using (var info = db.CreateCommand())
+        {
+            info.CommandText = "PRAGMA table_info(characters)";
+            using var reader = info.ExecuteReader();
+            while (reader.Read()) existing.Add(reader.GetString(1));
+        }
+
+        foreach (var (name, definition) in required)
+        {
+            if (existing.Contains(name)) continue;
+            using var alter = db.CreateCommand();
+            alter.CommandText = $"ALTER TABLE characters ADD COLUMN {name} {definition}";
+            alter.ExecuteNonQuery();
+        }
     }
 
     private SqliteConnection Open()
