@@ -53,6 +53,33 @@ Check(shopBuy.Packets.Any(x =>
         JsonSerializer.Serialize(x).Contains("\"ShopID\":7")),
     "legacy OpenShop emits client NPC shop response");
 
+var ranking = quests.Execute(
+    "Ranking.txt", "Check", 4, "排行", 0, _ => 0);
+Check(ranking.Packets.Any(x =>
+        JsonSerializer.Serialize(x).Contains("\"Type\":\"OpenRankWindow\"") &&
+        JsonSerializer.Serialize(x).Contains("\"RankType\":1")),
+    "legacy RankQuery emits OpenRankWindow");
+
+var reborn = quests.Execute(
+    "King_RebornSeting.txt", "set", 5, "復活點", 0, _ => 0);
+Check(reborn.RebornMapId == 15 &&
+      reborn.RebornX == 9408 &&
+      reborn.RebornY == 10336,
+    "legacy SetRebornLocation captured");
+
+var tsPortal = quests.Execute(
+    "TS_KINGTD_KING.txt", "start", 6, "傳送點", null, _ => 0);
+Check(tsPortal.Packets.Any(x =>
+        JsonSerializer.Serialize(x).Contains("\"Type\":\"NpcDialogResponse\"")),
+    "legacy #include TS_Common parses and opens dialog");
+
+var careerNpc = quests.Execute(
+    "K27001_A.txt", "start", 7, "皇家侍衛", null,
+    key => key == "Level" ? 1 : 0);
+Check(careerNpc.Packets.Any(x =>
+        JsonSerializer.Serialize(x).Contains("\"Type\":\"NpcDialogResponse\"")),
+    "legacy nonstandard smart-quote escapes are normalized");
+
 var map15Enemies = world.GetEnemies(15);
 Check(map15Enemies.Count == 4,
     "Map15 Enemy.dat binary parser reads four legacy records");
