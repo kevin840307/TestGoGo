@@ -45,9 +45,20 @@ try
 
     slots = store.Characters(account.Value);
     Check(slots.Count == 1 && slots[0]["NAME"].ToString() == "TestCharacter",
-        "list character");
+        "list first character");
 
-    var id = Convert.ToInt64(slots[0]["DBID"]);
+    using var character2 = Json("""
+        {"Name":"SecondCharacter","Password":"5678","Race":0,"Hair":1,"HairColor":2,"Str":7,"Dex":6,"Con":5,"Wis":4}
+        """);
+    Check(store.Create(account.Value, character2.RootElement).Success,
+        "create second character");
+    slots = store.Characters(account.Value);
+    Check(slots.Count == 2, "two characters remain in same account");
+    Check(slots.Any(x => x["NAME"].ToString() == "TestCharacter") &&
+          slots.Any(x => x["NAME"].ToString() == "SecondCharacter"),
+        "creating second character does not replace first");
+
+    var id = Convert.ToInt64(slots.First(x => x["NAME"].ToString() == "TestCharacter")["DBID"]);
     var selected = store.GetCharacter(account.Value, id);
     Check(selected is not null, "select owned character");
     Check(Convert.ToInt32(selected!["HP"]) == 100 &&
@@ -65,7 +76,7 @@ try
     {
         var responses = router.Handle(select.RootElement, session);
         Check(session.CharacterId == id, "router selects character");
-        Check(responses.Count >= 9, "enter world emits initial sync packet set");
+        Check(responses.Count >= 10, "enter world emits initial sync packet set plus Map15 monster");
 
         var firstJson = JsonSerializer.Serialize(responses[0]);
         using var first = Json(firstJson);
@@ -73,6 +84,16 @@ try
             "first select response enters world");
         Check(first.RootElement.Int("MapID") == 15,
             "enter world includes map id");
+        Check(responses.Any(x => JsonSerializer.Serialize(x).Contains(""Type":"SpawnEntity"")),
+            "Map15 spawns local test monster");
+    }
+
+    using (var attack = Json("""{"Type":"AttackEntity","TargetEntityID":900001,"TargetType":1}"""))
+    {
+        var responses = router.Handle(attack.RootElement, session);
+        Check(responses.Count >= 1 &&
+              JsonSerializer.Serialize(responses[0]).Contains(""Type":"EntityDamage""),
+            "basic attack damages Map15 test monster");
     }
 
     using (var move = Json("""{"Type":"SyncPosition","X":1234,"Y":5678}"""))
@@ -107,9 +128,16 @@ try
     Check(!store.Delete(account.Value, id, "wrong"),
         "reject wrong character password");
     Check(store.Delete(account.Value, id, "1234"),
-        "delete character");
+        "delete first character");
+    slots = store.Characters(account.Value);
+    Check(slots.Count == 1 && slots[0]["NAME"].ToString() == "SecondCharacter",
+        "second character remains after deleting first");
+
+    var secondId = Convert.ToInt64(slots[0]["DBID"]);
+    Check(store.Delete(account.Value, secondId, "5678"),
+        "delete second character");
     Check(Convert.ToInt64(store.Characters(account.Value)[0]["DBID"]) == 0,
-        "empty slots after delete");
+        "empty slots after deleting all characters");
 }
 finally
 {
