@@ -908,9 +908,30 @@ public sealed class PacketRouter
                     dbid,
                     state.LastX,
                     state.LastY));
+
+            state.WorldSnapshotRetriesRemaining = 4;
+            state.NextWorldSnapshotAt =
+                now + TimeSpan.FromMilliseconds(750);
         }
         else
         {
+            if (state.WorldSnapshotRetriesRemaining > 0 &&
+                now >= state.NextWorldSnapshotAt)
+            {
+                packets.AddRange(
+                    _combat.BuildCurrentMapSnapshot(state));
+                packets.AddRange(
+                    BuildActivePetSpawnPackets(
+                        accountId,
+                        dbid,
+                        state.LastX,
+                        state.LastY));
+
+                state.WorldSnapshotRetriesRemaining--;
+                state.NextWorldSnapshotAt =
+                    now + TimeSpan.FromMilliseconds(750);
+            }
+
             packets.AddRange(
                 _combat.TickAi(
                     state,
