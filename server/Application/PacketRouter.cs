@@ -908,6 +908,107 @@ public sealed class PacketRouter
             if (part is >= 0 and <= 8)
                 character[$"EquipColor{part}"] = color;
         }
+
+        var summonedHorseUid = Convert.ToInt64(
+            character.GetValueOrDefault("SummonedHorseUID", -1L));
+
+        if (summonedHorseUid > 0)
+        {
+            var horse = assets.Horses.FirstOrDefault(x =>
+                Convert.ToInt64(x["HorseUID"]) == summonedHorseUid);
+
+            if (horse is not null)
+            {
+                character["MechaType"] =
+                    Convert.ToString(horse["HorseType"]) ?? "MS";
+            }
+
+            foreach (var eq in assets.HorseEquips)
+            {
+                if (Convert.ToInt64(eq["HorseUID"]) != summonedHorseUid)
+                    continue;
+
+                var part = Convert.ToInt32(eq["Part"]);
+                var itemIdx = Convert.ToInt32(eq["EquipIdx"]);
+                var color = Convert.ToInt32(eq["Color"]);
+
+                switch (part)
+                {
+                    case 0:
+                        character["MechaBody"] = itemIdx;
+                        character["EquipColor0"] = color;
+                        break;
+                    case 1:
+                        character["MechaWeapon"] = itemIdx;
+                        character["EquipColor1"] = color;
+                        break;
+                    case 2:
+                        character["MechaEngine"] = itemIdx;
+                        character["EquipColor2"] = color;
+                        break;
+                }
+            }
+        }
+    }
+
+    private object BuildEffectiveStatusPacket(
+        long accountId,
+        long dbid,
+        SGO.Server.Domain.Assets.CharacterAssets assets)
+    {
+        var character = _store.GetCharacter(accountId, dbid);
+        if (character is null)
+            return new { Type = "PlayerStatusSync" };
+
+        return CharacterStatCalculator.ToPlayerStatusPacket(
+            character,
+            assets);
+    }
+
+    private object BuildAppearancePacket(
+        long accountId,
+        long dbid,
+        SGO.Server.Domain.Assets.CharacterAssets assets)
+    {
+        var character = _store.GetCharacter(accountId, dbid);
+        if (character is null)
+            return new
+            {
+                Type = "UpdateAppearance",
+                EntityID = dbid
+            };
+
+        ApplyAssetsToCharacterBootstrap(character, assets);
+
+        var packet = new Dictionary<string, object>(character)
+        {
+            ["Type"] = "UpdateAppearance",
+            ["EntityID"] = dbid
+        };
+
+        return packet;
+    }
+
+    private static void ApplyEffectiveStats(
+        Dictionary<string, object> character,
+        SGO.Server.Domain.Assets.CharacterAssets assets)
+    {
+        var stats = CharacterStatCalculator.Calculate(
+            character,
+            assets);
+
+        character["Attack"] = stats.Attack;
+        character["Defense"] = stats.Defense;
+        character["MagicAttack"] = stats.MagicAttack;
+        character["MagicDefense"] = stats.MagicDefense;
+        character["Hit"] = stats.Hit;
+        character["Dodge"] = stats.Dodge;
+        character["Lucky"] = stats.Lucky;
+        character["AttackSpeed"] = stats.AttackSpeed;
+        character["AttackRange"] = stats.AttackRange;
+        character["MoveSpeed"] = stats.MoveSpeed;
+        character["CritRate"] = stats.CritRate;
+        character["CritDamage"] = stats.CritDamage;
     }
 
     private static object? GetCharacterData(
