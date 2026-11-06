@@ -717,6 +717,86 @@ public sealed class SqliteGameStore : IGameStore
         return cmd.ExecuteNonQuery() == 1;
     }
 
+    public Dictionary<string, object>? ChargeHorse(
+        long accountId,
+        long dbid,
+        long horseUid,
+        long itemUid,
+        int energyAmount)
+    {
+        if (energyAmount <= 0)
+            return null;
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return null;
+
+        using (var item = db.CreateCommand())
+        {
+            item.Transaction = tx;
+            item.CommandText = """
+                SELECT count
+                  FROM inventory_items
+                 WHERE uid=$uid AND character_id=$id
+                   AND in_bank=0 AND in_shop=0
+                """;
+            Arg(item, "$uid", itemUid);
+            Arg(item, "$id", dbid);
+
+            var rawCount = item.ExecuteScalar();
+            if (rawCount is null || Convert.ToInt32(rawCount) <= 0)
+                return null;
+        }
+
+        using (var horse = db.CreateCommand())
+        {
+            horse.Transaction = tx;
+            horse.CommandText = """
+                UPDATE horses
+                   SET energy_left = energy_left + $energy
+                 WHERE uid=$horse AND character_id=$id
+                """;
+            Arg(horse, "$energy", energyAmount);
+            Arg(horse, "$horse", horseUid);
+            Arg(horse, "$id", dbid);
+
+            if (horse.ExecuteNonQuery() != 1)
+                return null;
+        }
+
+        using (var consume = db.CreateCommand())
+        {
+            consume.Transaction = tx;
+            consume.CommandText = """
+                UPDATE inventory_items
+                   SET count = count - 1
+                 WHERE uid=$uid AND character_id=$id
+                """;
+            Arg(consume, "$uid", itemUid);
+            Arg(consume, "$id", dbid);
+            consume.ExecuteNonQuery();
+        }
+
+        using (var cleanup = db.CreateCommand())
+        {
+            cleanup.Transaction = tx;
+            cleanup.CommandText = """
+                DELETE FROM inventory_items
+                 WHERE uid=$uid AND character_id=$id AND count <= 0
+                """;
+            Arg(cleanup, "$uid", itemUid);
+            Arg(cleanup, "$id", dbid);
+            cleanup.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+
+        return GetCharacterAssets(accountId, dbid).Horses
+            .FirstOrDefault(x => Convert.ToInt64(x["HorseUID"]) == horseUid);
+    }
+
     public bool EquipHorseItem(long accountId, long dbid, long equipUid, long horseUid)
     {
         using var db = Open();
