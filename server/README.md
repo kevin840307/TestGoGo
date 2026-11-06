@@ -42,14 +42,14 @@ dotnet publish server/SGO.Server.csproj -c Release -r win-x64 --self-contained t
 CI builds on Windows via GitHub Actions. No end-to-end Godot gameplay tests have been run.
 
 
-## Legacy world data
+## Game world data
 
-The server now reads the uploaded legacy server data under `Old/服務端/Dat`:
+The server now reads the uploaded game data under `Old/服務端/Dat`:
 
 - `Map/MapXX/NPC.dat`: NPC / portal id, coordinates, Lua quest script and Big5 display name.
-- `Map/MapXX/Enemy.dat`: binary enemy spawn records (variable-length enemy-id string, X/Y, fixed legacy payload).
+- `Map/MapXX/Enemy.dat`: binary enemy spawn records (variable-length enemy-id string, X/Y, fixed source payload).
 - `Enemy/Enemy_Data.csv`: enemy name, level, sprite and base HP lookup.
-- `Quest/*.txt`: legacy Lua scripts executed through MoonSharp.
+- `Quest/*.txt`: Lua scripts executed through MoonSharp.
 
 Map15 is explicitly treated as the main city: NPC/portal spawns are loaded, but combat Enemy.dat records are not spawned there. A portal script can issue `MovePlayer(x,y,mapId)`; the destination is persisted to SQLite and destination entities are spawned only after the first `SyncPosition` from the newly loaded client map.
 
@@ -64,7 +64,7 @@ See `ARCHITECTURE.md`. The server is now split into:
 - `Domain/`: session/domain state.
 - `Protocol/`: recovered-client AES/Base64/JSON compatibility.
 - `Transport/WebSockets/`: WebSocket framing and connection lifecycle.
-- `Infrastructure/Legacy/`: old NPC/Enemy/Lua compatibility, split into Data/Quest/World.
+- `Infrastructure/GameData/, Infrastructure/Quest/, Infrastructure/World/`: old NPC/Enemy/Lua compatibility, split into Data/Quest/World.
 - `Infrastructure/Persistence/`: database providers.
 
 `PacketRouter` depends on `IGameStore`, not SQLite. Database selection is configuration-driven:
@@ -80,4 +80,4 @@ See `ARCHITECTURE.md`. The server is now split into:
 
 To add MySQL later, implement `MySqlGameStore : IGameStore` under `Infrastructure/Persistence/MySql/` and register the provider. No game-flow, WebSocket, map or Lua code should need changes.
 
-Legacy dialog presentation prefixes such as `n`, `n1`, `p7`, and `s` are stripped before sending dialog text to the recovered client.
+Dialog presentation prefixes such as `n`, `n1`, `p7`, and `s` are stripped before sending dialog text to the recovered client.
