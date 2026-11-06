@@ -90,7 +90,7 @@ public sealed class WorldDataService
                 Level = def.Level,
                 MaxHp = def.MaxHp,
                 CurrentHp = def.MaxHp,
-                LegacyFlags = spawn.LegacyFlags
+                SourceFlags = spawn.SourceFlags
             });
         }
 
@@ -108,7 +108,7 @@ public sealed class WorldDataService
 
         packets.AddRange(GetNpcs(mapId).Select(BuildNpcSpawnPacket));
 
-        // Map15 is the main city. Its legacy Enemy.dat contains special records,
+        // Map15 is the main city. Its Enemy.dat contains special records,
         // but normal combat monsters are intentionally not spawned there.
         if (!CityMaps.Contains(mapId))
         {
@@ -142,7 +142,7 @@ public sealed class WorldDataService
                 Script = npc.Script,
                 IsPortal = npc.IsPortal,
                 IsMerchant = npc.IsMerchant,
-                NpcSpawnRecordTypeID = npc.NpcTypeId
+                NpcTypeID = npc.NpcTypeId
             }
         };
 
@@ -225,7 +225,7 @@ public sealed class WorldEnemy
     public int EntityId { get; init; }
     public int MapId { get; init; }
     public int EnemyId { get; init; }
-    public int LegacyFlags { get; init; }
+    public int SourceFlags { get; init; }
     public int X { get; init; }
     public int Y { get; init; }
     public string Name { get; init; } = "";
