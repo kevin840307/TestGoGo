@@ -1,0 +1,6 @@
+--- a/scripts/network_manager.gd
++++ b/scripts/network_manager.gd
+@@
+-var USE_DDNS: bool = true
++var USE_DDNS: bool = false
+ var SERVER_URL = "ws://127.0.0.1:5678"
