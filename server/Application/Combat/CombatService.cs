@@ -141,8 +141,8 @@ public sealed class CombatService
 
                 if (homeDistance > 1.0)
                 {
-                    var moveDx = monster.SpawnX - monster.X;
-                    var moveDy = monster.SpawnY - monster.Y;
+                    var returnMoveDx = monster.SpawnX - monster.X;
+                    var returnMoveDy = monster.SpawnY - monster.Y;
                     monster.X = monster.SpawnX;
                     monster.Y = monster.SpawnY;
                     packets.Add(BuildMovePacket(
@@ -150,8 +150,8 @@ public sealed class CombatService
                         monster.X,
                         monster.Y,
                         0.6,
-                        moveDx,
-                        moveDy));
+                        returnMoveDx,
+                        returnMoveDy));
                 }
 
                 continue;
