@@ -2,8 +2,8 @@ using System.Text.Json;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Combat;
 using SGO.Server.Domain.Sessions;
-using SGO.Server.Infrastructure.Legacy.Quest;
-using SGO.Server.Infrastructure.Legacy.World;
+using SGO.Server.Infrastructure.Quest;
+using SGO.Server.Infrastructure.World;
 using SGO.Server.Protocol;
 
 namespace SGO.Server.Application;
@@ -13,15 +13,15 @@ public sealed class PacketRouter
     private const int NpcInteractRange = 500;
 
     private readonly IGameStore _store;
-    private readonly LegacyWorldService _world;
-    private readonly LegacyQuestRuntime _quests;
+    private readonly WorldDataService _world;
+    private readonly QuestRuntime _quests;
     private readonly CombatService _combat;
     private readonly ILogger<PacketRouter> _log;
 
     public PacketRouter(
         IGameStore store,
-        LegacyWorldService world,
-        LegacyQuestRuntime quests,
+        WorldDataService world,
+        QuestRuntime quests,
         CombatService combat,
         ILogger<PacketRouter> log)
     {
@@ -646,7 +646,7 @@ public sealed class PacketRouter
     private IReadOnlyList<object> ExecuteQuest(
         ClientSession state,
         long accountId,
-        LegacyWorldNpc npc,
+        WorldNpc npc,
         string function,
         int? choice,
         Dictionary<string, object> character)
@@ -659,7 +659,7 @@ public sealed class PacketRouter
                 npc.EntityId,
                 npc.Name,
                 choice,
-                name => GetLegacyCharacterData(character, name));
+                name => GetCharacterData(character, name));
 
             if (result.RebornMapId.HasValue &&
                 result.RebornX.HasValue &&
@@ -750,7 +750,7 @@ public sealed class PacketRouter
         }
     }
 
-    private static object? GetLegacyCharacterData(
+    private static object? GetCharacterData(
         Dictionary<string, object> character,
         string name)
     {
