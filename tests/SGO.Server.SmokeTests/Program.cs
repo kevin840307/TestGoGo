@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using SGO.Server.Application;
+using SGO.Server.Application.Combat;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Infrastructure.Legacy.Data;
 using SGO.Server.Infrastructure.Legacy.Quest;
@@ -116,10 +117,12 @@ Directory.CreateDirectory(temp);
 try
 {
     var store = new SqliteGameStore(Path.Combine(temp, "game.db"));
+    var combat = new CombatService(store, world);
     var router = new PacketRouter(
         store,
         world,
         quests,
+        combat,
         NullLogger<PacketRouter>.Instance);
     var session = new ClientSession();
 
