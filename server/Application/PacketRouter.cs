@@ -1,5 +1,6 @@
 using System.Text.Json;
 using SGO.Server.Application.Abstractions;
+using SGO.Server.Application.Combat;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Infrastructure.Legacy.Quest;
 using SGO.Server.Infrastructure.Legacy.World;
@@ -14,17 +15,20 @@ public sealed class PacketRouter
     private readonly IGameStore _store;
     private readonly LegacyWorldService _world;
     private readonly LegacyQuestRuntime _quests;
+    private readonly CombatService _combat;
     private readonly ILogger<PacketRouter> _log;
 
     public PacketRouter(
         IGameStore store,
         LegacyWorldService world,
         LegacyQuestRuntime quests,
+        CombatService combat,
         ILogger<PacketRouter> log)
     {
         _store = store;
         _world = world;
         _quests = quests;
+        _combat = combat;
         _log = log;
     }
 
@@ -156,12 +160,29 @@ public sealed class PacketRouter
                 var y = req.Int("Y");
                 _store.UpdatePosition(accountId, state.CharacterId.Value, x, y);
 
-                if (!state.PendingMapSpawn)
-                    return [];
+                var packets = new List<object>();
+                packets.AddRange(_combat.TickRespawns(
+                    state,
+                    DateTimeOffset.UtcNow));
 
-                state.PendingMapSpawn = false;
-                return _world.BuildMapSpawnPackets(state.CurrentMapId);
+                if (state.PendingMapSpawn)
+                {
+                    state.PendingMapSpawn = false;
+                    packets.AddRange(
+                        _combat.EnterMap(
+                            state,
+                            state.CurrentMapId));
+                }
+
+                return packets;
             }
+
+            case "AttackEntity":
+                return _combat.Attack(
+                    state,
+                    accountId,
+                    req.Int("TargetEntityID"),
+                    req.Int("TargetType", 1));
 
             case "SyncState":
                 if (state.CharacterId.HasValue)
@@ -235,6 +256,7 @@ public sealed class PacketRouter
                 state.CharacterId = null;
                 state.CurrentMapId = 0;
                 state.PendingMapSpawn = false;
+                state.Monsters.Clear();
                 state.CloseRequested = true;
 
                 return [new
