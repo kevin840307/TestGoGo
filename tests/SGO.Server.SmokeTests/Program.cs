@@ -561,6 +561,32 @@ try
             "Map15 spawn gate clears after first position sync");
     }
 
+    using (var summonForFollow = Json(JsonSerializer.Serialize(new
+    {
+        Type = "PetAction",
+        Action = "Summon",
+        PetUID = petUid
+    })))
+    {
+        router.Handle(summonForFollow.RootElement, session);
+    }
+
+    session.LastPetFollowTick = DateTimeOffset.MinValue;
+    using (var followMove = Json(JsonSerializer.Serialize(new
+    {
+        Type = "SyncPosition",
+        X = 5000,
+        Y = 7800
+    })))
+    {
+        var responses = router.Handle(followMove.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("\"Type\":\"MoveEntity\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    $"\"EntityID\":{4_000_000L + petUid}")),
+            "summoned pet follows player movement");
+    }
+
     var selected = store.GetCharacter(account.Value, id);
     Check(Convert.ToInt32(Convert.ToDouble(selected!["LocX"])) == 4932 &&
           Convert.ToInt32(Convert.ToDouble(selected["LocY"])) == 7783,
@@ -682,6 +708,24 @@ try
         "monster map initializes per-session combat entities");
 
     var monster = session.Monsters.Values.First();
+
+    store.SetPetState(account.Value, id, petUid, 1);
+    var hpBeforePetAttack = monster.CurrentHp;
+
+    using (var petAttack = Json(JsonSerializer.Serialize(new
+    {
+        Type = "PetAction",
+        Action = "CommandAttack",
+        TargetEntityID = monster.EntityId
+    })))
+    {
+        var responses = router.Handle(petAttack.RootElement, session);
+        Check(monster.CurrentHp < hpBeforePetAttack &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"Type\":\"EntityDamage\"")),
+            "CommandAttack makes summoned pet damage monster");
+    }
 
     var aiPackets = combat.TickAi(
         session,
