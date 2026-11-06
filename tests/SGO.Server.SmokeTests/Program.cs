@@ -693,8 +693,15 @@ try
         var responses = router.Handle(map16Ready.RootElement, session);
         Check(!session.PendingMapSpawn,
             "Map16 spawn gate clears after new map is ready");
-        Check(responses.Count == world.GetNpcs(16).Count,
+        Check(responses.Count >= world.GetNpcs(16).Count &&
+              responses.Count(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"EntityType\":2")) == world.GetNpcs(16).Count,
             "Map16 NPCs spawn after map load");
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"EntityType\":4")),
+            "summoned pet respawns after map transition");
     }
 
     // Combat runtime: use a monster map directly so this test is independent
