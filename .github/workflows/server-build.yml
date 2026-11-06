@@ -1,0 +1,15 @@
+name: Server build
+on:
+  push:
+    paths: ['server/**', '.github/workflows/server-build.yml']
+  pull_request:
+    paths: ['server/**', '.github/workflows/server-build.yml']
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet build server/SGO.Server.csproj -c Release
