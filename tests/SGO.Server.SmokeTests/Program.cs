@@ -167,6 +167,32 @@ try
             x.TryGetValue("NAME", out var n) &&
             n?.ToString() == "TestCharacter")["DBID"]);
 
+    var itemUid = store.AddInventoryItem(
+        account.Value, id, 10046, 5);
+    var equipUid = store.AddEquipment(
+        account.Value, id, 6101, 255, 0, 2);
+    var petUid = store.AddPet(
+        account.Value, id, 1, "TestPet");
+    var horseUid = store.AddHorse(
+        account.Value, id, 6001, "TestMecha", "MS", 3600);
+    var horseEquipUid = store.AddHorseEquipment(
+        account.Value, id, 6201, -1, 3, 0, 1);
+
+    Check(itemUid > 0 &&
+          equipUid > 0 &&
+          petUid > 0 &&
+          horseUid > 0 &&
+          horseEquipUid > 0,
+        "seed persistent inventory equipment pet and mecha assets");
+
+    var seededAssets = store.GetCharacterAssets(account.Value, id);
+    Check(seededAssets.Inventory.Count == 1 &&
+          seededAssets.Equips.Count == 1 &&
+          seededAssets.Pets.Count == 1 &&
+          seededAssets.Horses.Count == 1 &&
+          seededAssets.HorseEquips.Count == 1,
+        "character assets round-trip from SQLite");
+
     using (var login = Json(
         """{"Type":"LoginRequest","User":"offline","Pass":"test-password"}"""))
     {
@@ -186,11 +212,106 @@ try
         Check(responses.Count == 9,
             "enter world emits bootstrap sync packets only");
 
+        Check(JsonSerializer.Serialize(responses[1]).Contains("\"ItemIndex\":10046"),
+            "InventorySync loads persisted item");
+        Check(JsonSerializer.Serialize(responses[2]).Contains("\"ItemIdx\":6101"),
+            "EquipSync loads persisted equipment");
+        Check(JsonSerializer.Serialize(responses[3]).Contains("\"PETID\":1"),
+            "PetSync loads persisted pet");
+        Check(JsonSerializer.Serialize(responses[4]).Contains("\"HorseIdx\":6001") &&
+              JsonSerializer.Serialize(responses[4]).Contains("\"EquipIdx\":6201"),
+            "HorseSync loads persisted mecha card and mecha equipment");
+
         using var first = Json(JsonSerializer.Serialize(responses[0]));
         Check(first.RootElement.Str("Type") == "EnterWorldSuccess",
             "first select response enters world");
         Check(first.RootElement.Int("MapID") == 15,
             "enter world includes Map15");
+    }
+
+    using (var equip = Json(
+        $"""{"Type":"EquipRequest","ItemUID":{{equipUid}},"TargetSlot":5}"""))
+    {
+        var responses = router.Handle(equip.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"EquipResponse\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Success\":true")),
+            "EquipRequest succeeds");
+        Check(store.GetCharacterAssets(account.Value, id).Equips
+                .Any(x => Convert.ToInt64(x["ItemID"]) == equipUid &&
+                          Convert.ToInt32(x["Part"]) == 5),
+            "equipped slot persists");
+    }
+
+    using (var unequip = Json(
+        """{"Type":"UnequipRequest","TargetSlot":5}"""))
+    {
+        var responses = router.Handle(unequip.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"EquipResponse\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Success\":true")),
+            "UnequipRequest succeeds");
+        Check(store.GetCharacterAssets(account.Value, id).Equips
+                .Any(x => Convert.ToInt64(x["ItemID"]) == equipUid &&
+                          Convert.ToInt32(x["Part"]) == 255),
+            "unequipped slot persists");
+    }
+
+    using (var drive = Json(
+        $"""{"Type":"DriveMechaRequest","HorseUID":{{horseUid}}}"""))
+    {
+        var responses = router.Handle(drive.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"DriveMechaResponse\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Success\":true")),
+            "DriveMechaRequest succeeds");
+        Check(Convert.ToInt64(
+                  store.GetCharacter(account.Value, id)!["SummonedHorseUID"]) == horseUid,
+            "summoned mecha persists on character");
+    }
+
+    using (var horseEquip = Json(
+        $"""{"Type":"HorseEquipRequest","EquipUID":{{horseEquipUid}},"HorseUID":{{horseUid}}}"""))
+    {
+        var responses = router.Handle(horseEquip.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"HorseSync\"")),
+            "HorseEquipRequest refreshes HorseSync");
+        Check(store.GetCharacterAssets(account.Value, id).HorseEquips
+                .Any(x => Convert.ToInt64(x["EquipUID"]) == horseEquipUid &&
+                          Convert.ToInt64(x["HorseUID"]) == horseUid),
+            "mecha equipment assignment persists");
+    }
+
+    using (var petSummon = Json(
+        $"""{"Type":"PetAction","Action":"Summon","PetUID":{{petUid}}}"""))
+    {
+        var responses = router.Handle(petSummon.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PetSync\"")),
+            "PetAction Summon refreshes PetSync");
+        Check(store.GetCharacterAssets(account.Value, id).Pets
+                .Any(x => Convert.ToInt64(x["UID"]) == petUid &&
+                          Convert.ToInt32(x["State"]) == 1),
+            "pet summon state persists");
+    }
+
+    using (var petRecall = Json(
+        $"""{"Type":"PetAction","Action":"Recall","PetUID":{{petUid}}}"""))
+    {
+        router.Handle(petRecall.RootElement, session);
+        Check(store.GetCharacterAssets(account.Value, id).Pets
+                .Any(x => Convert.ToInt64(x["UID"]) == petUid &&
+                          Convert.ToInt32(x["State"]) == 0),
+            "pet recall state persists");
     }
 
     // The first position packet arrives after the client map scene is ready.
