@@ -91,6 +91,19 @@ try
             "local chat echoes as ChatBroadcast");
     }
 
+    using (var logout = Json("""{"Type":"LogoutRequest","IsBackToLogin":true}"""))
+    {
+        var responses = router.Handle(logout.RootElement, session);
+        Check(responses.Count == 1 && session.CloseRequested,
+            "logout requests websocket close after response");
+        Check(session.AccountId is null && session.CharacterId is null,
+            "logout clears authenticated session");
+    }
+
+    session.AccountId = account;
+    session.CharacterId = id;
+    session.CloseRequested = false;
+
     Check(!store.Delete(account.Value, id, "wrong"),
         "reject wrong character password");
     Check(store.Delete(account.Value, id, "1234"),
