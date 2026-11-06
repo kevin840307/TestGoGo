@@ -1,4 +1,5 @@
 using SGO.Server.Application.Abstractions;
+using SGO.Server.Application.Assets;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
 using SGO.Server.Infrastructure.World;
@@ -171,9 +172,13 @@ public sealed class CombatService
                 if (character is not null &&
                     Convert.ToInt32(character["HP"]) > 0)
                 {
-                    var defense = Math.Max(
-                        0,
-                        Convert.ToInt32(character["Defense"]));
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        session.CharacterId.Value);
+                    var effective = CharacterStatCalculator.Calculate(
+                        character,
+                        assets);
+                    var defense = Math.Max(0, effective.Defense);
 
                     var rawDamage = Math.Max(
                         1,
@@ -289,9 +294,16 @@ public sealed class CombatService
 
         var playerX = Convert.ToDouble(character["LocX"]);
         var playerY = Convert.ToDouble(character["LocY"]);
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            session.CharacterId.Value);
+        var effective = CharacterStatCalculator.Calculate(
+            character,
+            assets);
+
         var attackRange = Math.Max(
             80,
-            Convert.ToInt32(character["AttackRange"]));
+            effective.AttackRange);
 
         var dx = playerX - monster.X;
         var dy = playerY - monster.Y;
@@ -309,7 +321,7 @@ public sealed class CombatService
 
         var damage = Math.Max(
             1,
-            Convert.ToInt32(character["Attack"]));
+            effective.Attack);
 
         monster.CurrentHp = Math.Max(
             0,
