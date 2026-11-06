@@ -18,11 +18,11 @@ public sealed class QuestExecutionResult
 public sealed class QuestRuntime
 {
     private readonly string _questRoot;
-    private readonly NpcShopCatalog _shops;
+    private readonly ShopCatalog _shops;
 
     public QuestRuntime(
         string questRoot,
-        NpcShopCatalog shops)
+        ShopCatalog shops)
     {
         _questRoot = questRoot;
         _shops = shops;
@@ -204,7 +204,17 @@ public sealed class QuestRuntime
                 ShopID = shopId,
                 ShopName = speaker,
                 PriceRate = priceRate,
-                Items = _shops.BuildClientItems(shopId, priceRate)
+                Items = _shops.GetShopItems(shopId)
+                    .Select(item => (object)new
+                    {
+                        ItemIndex = item.ItemIndex,
+                        Price = Math.Max(
+                            1,
+                            checked(item.Price * Math.Clamp(priceRate, 1, 1000) / 100)),
+                        TabType = item.TabType,
+                        Name = item.Name
+                    })
+                    .ToArray()
             });
             return DynValue.Nil;
         });
