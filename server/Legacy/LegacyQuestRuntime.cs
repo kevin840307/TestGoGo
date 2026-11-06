@@ -30,6 +30,20 @@ public sealed class LegacyQuestRuntime
         Func<string, object?> getData)
     {
         var result = new LegacyQuestResult();
+
+        if (functionName.Equals("End", StringComparison.OrdinalIgnoreCase) ||
+            functionName.Equals("QuestEnd", StringComparison.OrdinalIgnoreCase))
+        {
+            result.Packets.Add(new
+            {
+                Type = "NpcDialogResponse",
+                EntityID = entityId,
+                ScriptName = scriptName,
+                DialogType = "Close"
+            });
+            return result;
+        }
+
         var path = Path.Combine(_questRoot, scriptName);
         if (!File.Exists(path))
         {
