@@ -160,10 +160,11 @@ public sealed class PacketRouter
                 var y = req.Int("Y");
                 _store.UpdatePosition(accountId, state.CharacterId.Value, x, y);
 
+                var now = DateTimeOffset.UtcNow;
                 var packets = new List<object>();
                 packets.AddRange(_combat.TickRespawns(
                     state,
-                    DateTimeOffset.UtcNow));
+                    now));
 
                 if (state.PendingMapSpawn)
                 {
@@ -172,6 +173,15 @@ public sealed class PacketRouter
                         _combat.EnterMap(
                             state,
                             state.CurrentMapId));
+                }
+                else
+                {
+                    packets.AddRange(
+                        _combat.TickAi(
+                            state,
+                            x,
+                            y,
+                            now));
                 }
 
                 return packets;
