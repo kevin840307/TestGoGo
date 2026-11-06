@@ -25,6 +25,7 @@ public sealed class PacketRouter
     private readonly HorseBatteryCatalog _horseBatteries;
     private readonly RecoveryItemCatalog _recoveryItems;
     private readonly HorseCardCatalog _horseCards;
+    private readonly CurrentClientDataCatalog _current;
     private readonly ILogger<PacketRouter> _log;
 
     public PacketRouter(
@@ -37,6 +38,7 @@ public sealed class PacketRouter
         HorseBatteryCatalog horseBatteries,
         RecoveryItemCatalog recoveryItems,
         HorseCardCatalog horseCards,
+        CurrentClientDataCatalog current,
         ILogger<PacketRouter> log)
     {
         _store = store;
@@ -48,6 +50,7 @@ public sealed class PacketRouter
         _horseBatteries = horseBatteries;
         _recoveryItems = recoveryItems;
         _horseCards = horseCards;
+        _current = current;
         _log = log;
     }
 
@@ -1294,7 +1297,8 @@ public sealed class PacketRouter
 
         return CharacterStatCalculator.ToPlayerStatusPacket(
             character,
-            assets);
+            assets,
+            _current);
     }
 
     private object BuildAppearancePacket(
@@ -1327,7 +1331,8 @@ public sealed class PacketRouter
     {
         var stats = CharacterStatCalculator.Calculate(
             character,
-            assets);
+            assets,
+            _current);
 
         character["Attack"] = stats.Attack;
         character["Defense"] = stats.Defense;
