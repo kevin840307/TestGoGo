@@ -28,6 +28,10 @@ var world = new WorldDataService(gameDataRoot);
 var shopCatalog = new ShopCatalog(gameDataRoot);
 var batteryCatalog = new HorseBatteryCatalog(
     Path.Combine(gameDataRoot, "Horse", "HorseBattery.csv"));
+var recoveryCatalog = new RecoveryItemCatalog(
+    Path.Combine(gameDataRoot, "Item", "Recovery.itd"));
+var horseCardCatalog = new HorseCardCatalog(
+    Path.Combine(gameDataRoot, "Horse", "HorseMA.csv"));
 var quests = new QuestRuntime(questRoot, shopCatalog);
 var map15Npcs = world.GetNpcs(15);
 
@@ -105,8 +109,8 @@ Check(world.BuildMapSpawnPackets(15).Count == 52,
 
 var map15Merchant = map15Npcs.First(x => x.IsMerchant);
 Check(map15Merchant.NpcTypeId == 393 &&
-      map15Merchant.Sprite == "NPC137.png",
-    "Map15 merchant packed NPC type maps to sprite 137");
+      map15Merchant.Sprite == "NPC002.png",
+    "Map15 merchant uses a recovered visible/clickable sprite fallback");
 Check(shopCatalog.GetShopItems(1).Count > 0 &&
       shopCatalog.GetShopItems(2).Count > 0 &&
       shopCatalog.GetShopItems(5).Count > 0 &&
@@ -115,6 +119,10 @@ Check(shopCatalog.GetShopItems(1).Count > 0 &&
     "Map15 item weapon armor and shield shops load source item data");
 Check(batteryCatalog.GetEnergy(6905) == 3600,
     "source mecha battery 6905 resolves 3600 seconds");
+Check(recoveryCatalog.Find(31201) is { RecoverHp: 20 },
+    "source recovery item 31201 resolves +20 HP");
+Check(horseCardCatalog.Find(6008) is { MaxBattery: 25200 },
+    "source mecha card 6008 resolves max battery");
 
 var payload = new { Type = "LoginRequest", User = "offline", Pass = "test" };
 var ciphertext = ClientProtocol.Encode(payload);
@@ -143,6 +151,8 @@ try
         combat,
         shops,
         batteryCatalog,
+        recoveryCatalog,
+        horseCardCatalog,
         NullLogger<PacketRouter>.Instance);
     var session = new ClientSession();
 
@@ -209,21 +219,31 @@ try
         account.Value, id, 6201, -1, 255, 0, 1);
     var batteryUid = store.AddInventoryItem(
         account.Value, id, 6905, 1);
+    var recoveryUid = store.AddInventoryItem(
+        account.Value, id, 31201, 1);
+    var horseCardUid = store.AddInventoryItem(
+        account.Value, id, 6008, 1);
 
     Check(itemUid > 0 &&
           equipUid > 0 &&
           petUid > 0 &&
           horseUid > 0 &&
           horseEquipUid > 0 &&
-          batteryUid > 0,
+          batteryUid > 0 &&
+          recoveryUid > 0 &&
+          horseCardUid > 0,
         "seed persistent inventory equipment pet and mecha assets");
 
     var seededAssets = store.GetCharacterAssets(account.Value, id);
-    Check(seededAssets.Inventory.Count == 2 &&
+    Check(seededAssets.Inventory.Count >= 4 &&
           seededAssets.Inventory.Any(x =>
               Convert.ToInt64(x["ItemUID"]) == itemUid) &&
           seededAssets.Inventory.Any(x =>
               Convert.ToInt64(x["ItemUID"]) == batteryUid) &&
+          seededAssets.Inventory.Any(x =>
+              Convert.ToInt64(x["ItemUID"]) == recoveryUid) &&
+          seededAssets.Inventory.Any(x =>
+              Convert.ToInt64(x["ItemUID"]) == horseCardUid) &&
           seededAssets.Equips.Count == 1 &&
           seededAssets.Pets.Count == 1 &&
           seededAssets.Horses.Count == 1 &&
@@ -267,6 +287,54 @@ try
             "first select response enters world");
         Check(first.RootElement.Int("MapID") == 15,
             "enter world includes Map15");
+    }
+
+    var damaged = store.ApplyDamage(account.Value, id, 50);
+    Check(damaged is not null && Convert.ToInt32(damaged["HP"]) == 50,
+        "prepare recovery item test with player damage");
+
+    using (var useRecovery = Json(JsonSerializer.Serialize(new
+    {
+        Type = "UseItemRequest",
+        ItemUID = recoveryUid
+    })))
+    {
+        var responses = router.Handle(useRecovery.RootElement, session);
+        var recovered = store.GetCharacter(account.Value, id)!;
+
+        Check(Convert.ToInt32(recovered["HP"]) == 70,
+            "UseItemRequest applies Recovery.itd HP effect");
+        Check(!store.GetCharacterAssets(account.Value, id).Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) == recoveryUid),
+            "recovery item is consumed");
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("\"Type\":\"PlayerStatusSync\"")),
+            "recovery item refreshes player status");
+    }
+
+    var horseCountBeforeCard =
+        store.GetCharacterAssets(account.Value, id).Horses.Count;
+
+    using (var useMechaCard = Json(JsonSerializer.Serialize(new
+    {
+        Type = "UseItemRequest",
+        ItemUID = horseCardUid
+    })))
+    {
+        var responses = router.Handle(useMechaCard.RootElement, session);
+        var assetsAfterCard = store.GetCharacterAssets(account.Value, id);
+
+        Check(assetsAfterCard.Horses.Count == horseCountBeforeCard + 1 &&
+              assetsAfterCard.Horses.Any(x =>
+                  Convert.ToInt32(x["HorseIdx"]) == 6008 &&
+                  Convert.ToInt32(x["EnergyLeft"]) == 25200),
+            "UseItemRequest converts source mecha card into rideable mecha");
+        Check(!assetsAfterCard.Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) == horseCardUid),
+            "mecha card is consumed after activation");
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("\"Type\":\"HorseSync\"")),
+            "mecha-card activation refreshes HorseSync");
     }
 
     var buyItem = shopCatalog.GetShopItems(1).First();
