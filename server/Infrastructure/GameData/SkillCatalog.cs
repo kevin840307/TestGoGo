@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace SGO.Server.Infrastructure.GameData;
 
 public sealed record SkillDefinition(
@@ -11,27 +9,16 @@ public sealed class SkillCatalog
 {
     private readonly Dictionary<int, SkillDefinition> _skills = new();
 
-    public SkillCatalog(string path)
+    public SkillCatalog(CurrentClientDataCatalog current)
     {
-        if (!File.Exists(path))
-            return;
-
-        foreach (var raw in File.ReadLines(path, Encoding.UTF8))
+        foreach (var skill in current.Skills)
         {
-            if (string.IsNullOrWhiteSpace(raw))
-                continue;
-
-            var cols = raw.Split(',');
-            if (cols.Length < 2 ||
-                !int.TryParse(cols[0].Trim(), out var skillId))
-                continue;
-
-            _skills.TryAdd(
-                skillId,
-                new SkillDefinition(
-                    skillId,
-                    cols[1].Trim(),
-                    cols.Length > 2 ? cols[2].Trim() : string.Empty));
+            _skills[skill.SkillId] = new SkillDefinition(
+                skill.SkillId,
+                string.IsNullOrWhiteSpace(skill.Name)
+                    ? $"Skill {skill.SkillId}"
+                    : skill.Name,
+                string.Empty);
         }
     }
 
