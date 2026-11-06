@@ -3,7 +3,7 @@ namespace SGO.Server.Domain.World;
 public sealed class MonsterRuntimeState
 {
     public int EntityId { get; init; }
-    public int LegacyEnemyId { get; init; }
+    public int EnemyId { get; init; }
     public int MapId { get; init; }
     public string Name { get; init; } = "";
     public string Sprite { get; init; } = "";
