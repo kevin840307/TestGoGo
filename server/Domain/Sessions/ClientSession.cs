@@ -9,6 +9,7 @@ public sealed class ClientSession
     public int CurrentMapId { get; set; }
     public bool PendingMapSpawn { get; set; }
     public bool CloseRequested { get; set; }
+    public DateTimeOffset LastMonsterAiTick { get; set; } = DateTimeOffset.MinValue;
 
     // Runtime entities are intentionally per session for now.
     // This prevents one local player's combat from mutating cached legacy definitions.
