@@ -21,6 +21,8 @@ public sealed class PacketRouter
     private readonly CombatService _combat;
     private readonly ShopService _shopService;
     private readonly HorseBatteryCatalog _horseBatteries;
+    private readonly RecoveryItemCatalog _recoveryItems;
+    private readonly HorseCardCatalog _horseCards;
     private readonly ILogger<PacketRouter> _log;
 
     public PacketRouter(
@@ -30,6 +32,8 @@ public sealed class PacketRouter
         CombatService combat,
         ShopService shopService,
         HorseBatteryCatalog horseBatteries,
+        RecoveryItemCatalog recoveryItems,
+        HorseCardCatalog horseCards,
         ILogger<PacketRouter> log)
     {
         _store = store;
@@ -38,6 +42,8 @@ public sealed class PacketRouter
         _combat = combat;
         _shopService = shopService;
         _horseBatteries = horseBatteries;
+        _recoveryItems = recoveryItems;
+        _horseCards = horseCards;
         _log = log;
     }
 
@@ -214,6 +220,121 @@ public sealed class PacketRouter
                 }
 
                 return packets;
+            }
+
+            case "UseItemRequest":
+            {
+                if (!state.CharacterId.HasValue) return [];
+
+                var itemUid = req.Int("ItemUID");
+                var assetsBefore = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                var inventoryItem = assetsBefore.Inventory.FirstOrDefault(x =>
+                    Convert.ToInt64(x["ItemUID"]) == itemUid);
+
+                if (inventoryItem is null)
+                    return [new { Type = "SystemMessageFlash", Message = "找不到物品" }];
+
+                var itemIndex = Convert.ToInt32(
+                    inventoryItem["ItemIndex"]);
+
+                var recovery = _recoveryItems.Find(itemIndex);
+                if (recovery is not null)
+                {
+                    var character = _store.UseRecoveryItem(
+                        accountId,
+                        state.CharacterId.Value,
+                        itemUid,
+                        recovery.RecoverHp,
+                        recovery.RecoverMp,
+                        recovery.RecoverSp);
+
+                    if (character is null)
+                        return [new { Type = "SystemMessageFlash", Message = "無法使用此恢復物品" }];
+
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "PlayerStatusSync",
+                            HP = character["HP"],
+                            MP = character["MP"],
+                            SP = character["SP"],
+                            MaxHP = character["MaxHP"],
+                            MaxMP = character["MaxMP"],
+                            MaxSP = character["MaxSP"]
+                        },
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        new
+                        {
+                            Type = "PlayItemEffect",
+                            EntityID = state.CharacterId.Value,
+                            ItemIndex = itemIndex
+                        }
+                    ];
+                }
+
+                var horseCard = _horseCards.Find(itemIndex);
+                if (horseCard is not null)
+                {
+                    var horse = _store.ActivateHorseCard(
+                        accountId,
+                        state.CharacterId.Value,
+                        itemUid,
+                        horseCard.ItemIndex,
+                        horseCard.Name,
+                        horseCard.HorseType,
+                        horseCard.MaxBattery);
+
+                    if (horse is null)
+                        return [new { Type = "SystemMessageFlash", Message = "機甲卡啟用失敗" }];
+
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        new
+                        {
+                            Type = "HorseSync",
+                            Horses = assets.Horses,
+                            HorseEquips = assets.HorseEquips,
+                            MaxHorseEquipSize = assets.HorseEquipMaxSize
+                        },
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = $"已啟用機甲：{horseCard.Name}"
+                        }
+                    ];
+                }
+
+                return
+                [
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = "此物品的使用效果尚未支援"
+                    }
+                ];
             }
 
             case "EquipRequest":
