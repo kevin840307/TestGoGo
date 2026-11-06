@@ -2,9 +2,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using SGO.Server.Application;
 using SGO.Server.Application.Combat;
 using SGO.Server.Domain.Sessions;
-using SGO.Server.Infrastructure.Legacy.Data;
-using SGO.Server.Infrastructure.Legacy.Quest;
-using SGO.Server.Infrastructure.Legacy.World;
+using SGO.Server.Infrastructure.GameData;
+using SGO.Server.Infrastructure.Quest;
+using SGO.Server.Infrastructure.World;
 using SGO.Server.Infrastructure.Persistence.Sqlite;
 using SGO.Server.Protocol;
 using System.Text.Json;
@@ -18,84 +18,84 @@ static void Check(bool ok, string msg)
 static JsonDocument Json(string value) => JsonDocument.Parse(value);
 
 var repoRoot = Directory.GetCurrentDirectory();
-var legacyDataRoot = Path.Combine(repoRoot, "Old", "服務端", "Dat");
-var questRoot = Path.Combine(legacyDataRoot, "Quest");
+var gameDataRoot = Path.Combine(repoRoot, "Old", "服務端", "Dat");
+var questRoot = Path.Combine(gameDataRoot, "Quest");
 
-Check(Directory.Exists(legacyDataRoot), "legacy server data directory exists");
+Check(Directory.Exists(gameDataRoot), "server data directory exists");
 
-var world = new LegacyWorldService(legacyDataRoot);
-var quests = new LegacyQuestRuntime(questRoot);
+var world = new WorldDataService(gameDataRoot);
+var quests = new QuestRuntime(questRoot);
 var map15Npcs = world.GetNpcs(15);
 
-Check(map15Npcs.Count == 52, "Map15 legacy NPC.dat contains 52 NPC records");
+Check(map15Npcs.Count == 52, "Map15 NPC.dat contains 52 NPC records");
 Check(map15Npcs[0].Script == "KingCity(P06)_to_KingCity(P08).txt",
     "Map15 first portal script parsed");
 Check(map15Npcs[0].X == 4932 && map15Npcs[0].Y == 7783,
     "Map15 first portal coordinates parsed");
 
-Check(LegacyDialogFormatter.CleanText("n要進入尼尼亞皇城嗎？") == "要進入尼尼亞皇城嗎？" &&
-      LegacyDialogFormatter.CleanText("n1你好") == "你好" &&
-      LegacyDialogFormatter.CleanText("p7取得道具") == "取得道具",
-    "legacy dialog formatter strips presentation prefixes");
+Check(DialogFormatter.CleanText("n要進入尼尼亞皇城嗎？") == "要進入尼尼亞皇城嗎？" &&
+      DialogFormatter.CleanText("n1你好") == "你好" &&
+      DialogFormatter.CleanText("p7取得道具") == "取得道具",
+    "dialog formatter strips presentation prefixes");
 
 var bankResult = quests.Execute(
     "Bank.txt", "start", 1, "銀行", null, _ => 0);
 Check(bankResult.Packets.Any(x =>
         JsonSerializer.Serialize(x).Contains("\"Type\":\"OpenBankWindow\"")),
-    "legacy OpenBank emits client OpenBankWindow");
+    "OpenBank emits client OpenBankWindow");
 
 var repairResult = quests.Execute(
     "Repair.txt", "start", 2, "修理店", null, _ => 0);
 Check(repairResult.Packets.Any(x =>
         JsonSerializer.Serialize(x).Contains("\"Type\":\"OpenRepairWindow\"") &&
         JsonSerializer.Serialize(x).Contains("\"RepairType\":10")),
-    "legacy OpenRepair emits repair window and type");
+    "OpenRepair emits repair window and type");
 
 var shopStart = quests.Execute(
     "shop_e3.txt", "start", 3, "商店", null, _ => 0);
 Check(shopStart.Packets.Any(x =>
         JsonSerializer.Serialize(x).Contains("\"Type\":\"NpcDialogResponse\"")),
-    "legacy shop start opens choice dialog");
+    "shop start opens choice dialog");
 
 var shopBuy = quests.Execute(
     "shop_e3.txt", "reply", 3, "商店", 0, _ => 0);
 Check(shopBuy.Packets.Any(x =>
         JsonSerializer.Serialize(x).Contains("\"Type\":\"NpcShopViewResponse\"") &&
         JsonSerializer.Serialize(x).Contains("\"ShopID\":7")),
-    "legacy OpenShop emits client NPC shop response");
+    "OpenShop emits client NPC shop response");
 
 var ranking = quests.Execute(
     "Ranking.txt", "Check", 4, "排行", 0, _ => 0);
 Check(ranking.Packets.Any(x =>
         JsonSerializer.Serialize(x).Contains("\"Type\":\"OpenRankWindow\"") &&
         JsonSerializer.Serialize(x).Contains("\"RankType\":1")),
-    "legacy RankQuery emits OpenRankWindow");
+    "RankQuery emits OpenRankWindow");
 
 var reborn = quests.Execute(
     "King_RebornSeting.txt", "set", 5, "復活點", 0, _ => 0);
 Check(reborn.RebornMapId == 15 &&
       reborn.RebornX == 9408 &&
       reborn.RebornY == 10336,
-    "legacy SetRebornLocation captured");
+    "SetRebornLocation captured");
 
 var tsPortal = quests.Execute(
     "TS_KINGTD_KING.txt", "start", 6, "傳送點", null, _ => 0);
 Check(tsPortal.Packets.Any(x =>
         JsonSerializer.Serialize(x).Contains("\"Type\":\"NpcDialogResponse\"")),
-    "legacy #include TS_Common parses and opens dialog");
+    "#include TS_Common parses and opens dialog");
 
 var careerNpc = quests.Execute(
     "K27001_A.txt", "start", 7, "皇家侍衛", null,
     key => key == "Level" ? 1 : 0);
 Check(careerNpc.Packets.Any(x =>
         JsonSerializer.Serialize(x).Contains("\"Type\":\"NpcDialogResponse\"")),
-    "legacy nonstandard smart-quote escapes are normalized");
+    "nonstandard smart-quote escapes are normalized");
 
 var map15Enemies = world.GetEnemies(15);
 Check(map15Enemies.Count == 4,
-    "Map15 Enemy.dat binary parser reads four legacy records");
+    "Map15 Enemy.dat binary parser reads four records");
 Check(map15Enemies.All(x => x.EnemyId == 245),
-    "Map15 legacy enemy records resolve EnemyID 245");
+    "Map15 enemy records resolve EnemyID 245");
 Check(world.BuildMapSpawnPackets(15).Count == 52,
     "Map15 city suppresses combat enemy spawns");
 
@@ -350,11 +350,11 @@ try
     {
         var responses = router.Handle(move.RootElement, session);
         Check(responses.Count == 52,
-            "first Map15 position sync spawns all legacy NPCs");
+            "first Map15 position sync spawns all NPCs");
         Check(responses.All(x =>
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"SpawnEntity\"")),
-            "Map15 legacy NPCs use SpawnEntity packets");
+            "Map15 NPCs use SpawnEntity packets");
         Check(!session.PendingMapSpawn,
             "Map15 spawn gate clears after first position sync");
     }
@@ -373,9 +373,9 @@ try
         Check(responses.Count >= 1 &&
               JsonSerializer.Serialize(responses[0]).Contains(
                   "\"Type\":\"NpcDialogResponse\""),
-            "Map15 portal executes legacy Lua start()");
+            "Map15 portal executes Lua start()");
         Check(JsonSerializer.Serialize(responses[0]).Contains("Check#0"),
-            "legacy Ask options encode GetChoice target");
+            "Ask options encode GetChoice target");
     }
 
     using (var option = Json(
@@ -404,7 +404,7 @@ try
         Check(!session.PendingMapSpawn,
             "Map16 spawn gate clears after new map is ready");
         Check(responses.Count == world.GetNpcs(16).Count,
-            "Map16 legacy NPCs spawn after map load");
+            "Map16 NPCs spawn after map load");
     }
 
     // Combat runtime: use a monster map directly so this test is independent
