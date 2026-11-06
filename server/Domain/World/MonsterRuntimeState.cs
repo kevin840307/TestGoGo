@@ -17,6 +17,7 @@ public sealed class MonsterRuntimeState
     public double Y { get; set; }
 
     public bool HasTarget { get; set; }
+    public DateTimeOffset LastAttackAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset? RespawnAt { get; set; }
 
     public bool IsAlive => CurrentHp > 0 && RespawnAt is null;
