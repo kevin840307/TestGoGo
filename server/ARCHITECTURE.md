@@ -19,16 +19,16 @@ server/
 │  └─ WebSockets/
 │     └─ WebSocketEndpoint.cs
 └─ Infrastructure/
-   ├─ Legacy/
+   ├─ source/
    │  ├─ Data/
-   │  │  ├─ LegacyEnemyCatalog.cs
-   │  │  ├─ LegacyEnemyDatReader.cs
-   │  │  └─ LegacyNpcDatReader.cs
+   │  │  ├─ EnemyCatalog.cs
+   │  │  ├─ EnemyDatReader.cs
+   │  │  └─ NpcDatReader.cs
    │  ├─ Quest/
-   │  │  ├─ LegacyDialogFormatter.cs
-   │  │  └─ LegacyQuestRuntime.cs
+   │  │  ├─ DialogFormatter.cs
+   │  │  └─ QuestRuntime.cs
    │  └─ World/
-   │     └─ LegacyWorldService.cs
+   │     └─ WorldDataService.cs
    └─ Persistence/
       ├─ PersistenceServiceCollectionExtensions.cs
       └─ Sqlite/
@@ -41,7 +41,7 @@ server/
 - **Protocol** handles recovered-client encryption and JSON helpers.
 - **Application** contains request/game flow and depends on abstractions.
 - **Domain** contains in-memory session/domain state.
-- **Infrastructure.Legacy** adapts original map, enemy and Lua quest data.
+- **Infrastructure.GameData / Infrastructure.Quest / Infrastructure.World** adapts original map, enemy and Lua quest data.
 - **Infrastructure.Persistence** owns provider-specific SQL.
 
 Application code must not reference `Microsoft.Data.Sqlite` or provider SQL.
@@ -85,7 +85,7 @@ The following should remain unchanged when changing DB providers:
 
 - SQL belongs only under `Infrastructure/Persistence/<Provider>/`.
 - Client packet details belong under `Protocol/` or Transport, not persistence.
-- Old server binary/data compatibility belongs under `Infrastructure/Legacy/`.
+- Old server binary/data compatibility belongs under `Infrastructure/`.
 - New gameplay systems should be added under Application/Domain rather than growing Program.cs.
 
 
@@ -100,7 +100,7 @@ Database/
 ├─ Sqlite/
 │  ├─ 001_schema.sql
 │  ├─ 002_indexes.sql
-│  └─ 003_legacy_character_columns.sql
+│  └─ 003_character_columns.sql
 └─ MySql/
    └─ 001_schema.sql
 ```
