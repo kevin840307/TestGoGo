@@ -6,6 +6,7 @@ public sealed class ClientSession
 {
     public long? AccountId { get; set; }
     public long? CharacterId { get; set; }
+    public bool CloseRequested { get; set; }
 }
 
 public sealed class PacketRouter
@@ -190,6 +191,7 @@ public sealed class PacketRouter
             case "LogoutRequest":
                 state.AccountId = null;
                 state.CharacterId = null;
+                state.CloseRequested = true;
                 return [new
                 {
                     Type = "LogoutResponse",
