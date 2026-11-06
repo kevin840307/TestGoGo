@@ -1290,6 +1290,14 @@ public sealed class SqliteGameStore : IGameStore
         return cmd.ExecuteNonQuery() == 1;
     }
 
+    private static int ResolveHorseEquipPart(int equipIndex)
+    {
+        if (equipIndex is >= 6100 and < 6200) return 0;
+        if (equipIndex is >= 6200 and < 6300) return 1;
+        if (equipIndex is >= 6300 and < 6400) return 2;
+        return 3;
+    }
+
     private static bool OwnsCharacter(
         SqliteConnection db,
         long accountId,
