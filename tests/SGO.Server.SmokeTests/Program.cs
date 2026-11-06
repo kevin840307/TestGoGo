@@ -27,6 +27,32 @@ Check(map15Npcs[0].Script == "KingCity(P06)_to_KingCity(P08).txt",
 Check(map15Npcs[0].X == 4932 && map15Npcs[0].Y == 7783,
     "Map15 first portal coordinates parsed");
 
+var bankResult = quests.Execute(
+    "Bank.txt", "start", 1, "銀行", null, _ => 0);
+Check(bankResult.Packets.Any(x =>
+        JsonSerializer.Serialize(x).Contains("\"Type\":\"OpenBankWindow\"")),
+    "legacy OpenBank emits client OpenBankWindow");
+
+var repairResult = quests.Execute(
+    "Repair.txt", "start", 2, "修理店", null, _ => 0);
+Check(repairResult.Packets.Any(x =>
+        JsonSerializer.Serialize(x).Contains("\"Type\":\"OpenRepairWindow\"") &&
+        JsonSerializer.Serialize(x).Contains("\"RepairType\":10")),
+    "legacy OpenRepair emits repair window and type");
+
+var shopStart = quests.Execute(
+    "shop_e3.txt", "start", 3, "商店", null, _ => 0);
+Check(shopStart.Packets.Any(x =>
+        JsonSerializer.Serialize(x).Contains("\"Type\":\"NpcDialogResponse\"")),
+    "legacy shop start opens choice dialog");
+
+var shopBuy = quests.Execute(
+    "shop_e3.txt", "reply", 3, "商店", 0, _ => 0);
+Check(shopBuy.Packets.Any(x =>
+        JsonSerializer.Serialize(x).Contains("\"Type\":\"NpcShopViewResponse\"") &&
+        JsonSerializer.Serialize(x).Contains("\"ShopID\":7")),
+    "legacy OpenShop emits client NPC shop response");
+
 var map15Enemies = world.GetEnemies(15);
 Check(map15Enemies.Count == 4,
     "Map15 Enemy.dat binary parser reads four legacy records");
