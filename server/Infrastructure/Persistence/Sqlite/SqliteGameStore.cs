@@ -918,6 +918,7 @@ public sealed class SqliteGameStore : IGameStore
             check.CommandText = """
                 SELECT count(*) FROM horses
                  WHERE uid=$horse AND character_id=$id
+                   AND energy_left > 0
                 """;
             Arg(check, "$horse", horseUid);
             Arg(check, "$id", dbid);
@@ -1010,9 +1011,24 @@ public sealed class SqliteGameStore : IGameStore
     public bool SetPetState(long accountId, long dbid, long petUid, int state)
     {
         using var db = Open();
-        if (!OwnsCharacter(db, accountId, dbid)) return false;
+        using var tx = db.BeginTransaction();
+        if (!OwnsCharacter(db, accountId, dbid, tx)) return false;
+
+        if (state == 1)
+        {
+            using var recall = db.CreateCommand();
+            recall.Transaction = tx;
+            recall.CommandText = """
+                UPDATE pets
+                   SET state=0
+                 WHERE character_id=$id
+                """;
+            Arg(recall, "$id", dbid);
+            recall.ExecuteNonQuery();
+        }
 
         using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
         cmd.CommandText = """
             UPDATE pets
                SET state=$state
@@ -1020,6 +1036,99 @@ public sealed class SqliteGameStore : IGameStore
             """;
         Arg(cmd, "$state", state);
         Arg(cmd, "$uid", petUid);
+        Arg(cmd, "$id", dbid);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return false;
+
+        tx.Commit();
+        return true;
+    }
+
+    public bool RenamePet(long accountId, long dbid, long petUid, string name)
+    {
+        var clean = (name ?? "").Trim();
+        if (clean.Length is < 1 or > 8)
+            return false;
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid)) return false;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE pets
+               SET name=$name
+             WHERE uid=$uid AND character_id=$id
+            """;
+        Arg(cmd, "$name", clean);
+        Arg(cmd, "$uid", petUid);
+        Arg(cmd, "$id", dbid);
+        return cmd.ExecuteNonQuery() == 1;
+    }
+
+    public bool EquipPetItem(long accountId, long dbid, long petUid, long itemUid, int targetSlot)
+    {
+        if (targetSlot is < 0 or > 2) return false;
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+        if (!OwnsCharacter(db, accountId, dbid, tx)) return false;
+
+        using (var item = db.CreateCommand())
+        {
+            item.Transaction = tx;
+            item.CommandText = """
+                SELECT count(*)
+                  FROM equipment_items
+                 WHERE uid=$uid AND character_id=$id
+                   AND in_bank=0 AND in_shop=0 AND part=255
+                """;
+            Arg(item, "$uid", itemUid);
+            Arg(item, "$id", dbid);
+            if (Convert.ToInt32(item.ExecuteScalar()) != 1)
+                return false;
+        }
+
+        var column = targetSlot switch
+        {
+            0 => "equip0",
+            1 => "equip1",
+            _ => "equip2"
+        };
+
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText =
+            $"UPDATE pets SET {column}=$item WHERE uid=$pet AND character_id=$id";
+        Arg(cmd, "$item", itemUid);
+        Arg(cmd, "$pet", petUid);
+        Arg(cmd, "$id", dbid);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return false;
+
+        tx.Commit();
+        return true;
+    }
+
+    public bool UnequipPetItem(long accountId, long dbid, long petUid, int targetSlot)
+    {
+        if (targetSlot is < 0 or > 2) return false;
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid)) return false;
+
+        var column = targetSlot switch
+        {
+            0 => "equip0",
+            1 => "equip1",
+            _ => "equip2"
+        };
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText =
+            $"UPDATE pets SET {column}=0 WHERE uid=$pet AND character_id=$id";
+        Arg(cmd, "$pet", petUid);
         Arg(cmd, "$id", dbid);
         return cmd.ExecuteNonQuery() == 1;
     }
