@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using SGO.Server.Application;
 using SGO.Server.Domain.Sessions;
-using SGO.Server.Infrastructure.Legacy;
+using SGO.Server.Infrastructure.Legacy.Data;
+using SGO.Server.Infrastructure.Legacy.Quest;
+using SGO.Server.Infrastructure.Legacy.World;
 using SGO.Server.Infrastructure.Persistence.Sqlite;
 using SGO.Server.Protocol;
 using System.Text.Json;
