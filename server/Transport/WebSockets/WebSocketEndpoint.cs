@@ -150,11 +150,48 @@ public static class WebSocketEndpoint
                         using var packet = ClientProtocol.Decode(encoded);
 
                         IReadOnlyList<object> responses;
-                        lock (state)
+                        var packetType =
+                            packet.RootElement.TryGetProperty(
+                                "Type",
+                                out var typeElement)
+                            ? typeElement.GetString() ?? "<empty>"
+                            : "<missing>";
+                        var rawPayload =
+                            packet.RootElement.GetRawText();
+
+                        try
                         {
-                            responses = router.Handle(
-                                packet.RootElement,
-                                state);
+                            lock (state)
+                            {
+                                responses = router.Handle(
+                                    packet.RootElement,
+                                    state);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            log.LogError(
+                                ex,
+                                "[PACKET_HANDLER_FAILED] Type={Type} Payload={Payload}",
+                                packetType,
+                                rawPayload.Length <= 1200
+                                    ? rawPayload
+                                    : rawPayload[..1200] + "...<truncated>");
+                            continue;
+                        }
+
+                        if (responses.Count == 0 &&
+                            packetType is not (
+                                "Pong" or
+                                "SyncPosition" or
+                                "SyncState"))
+                        {
+                            log.LogWarning(
+                                "[NO_RESPONSE] Type={Type} Payload={Payload}",
+                                packetType,
+                                rawPayload.Length <= 1200
+                                    ? rawPayload
+                                    : rawPayload[..1200] + "...<truncated>");
                         }
 
                         await SendPacketsAsync(
