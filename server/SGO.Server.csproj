@@ -19,6 +19,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="../Old/ClientData/Interface/skill_cht.dat">
+      <Link>ClientData/Interface/skill_cht.dat</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="../Old/服務端/Dat/**/*">
       <Link>GameData/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
