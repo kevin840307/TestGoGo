@@ -59,14 +59,23 @@ public sealed class ShopService
         if (count <= 0 || count > (item.TabType == 0 ? 9999 : 1))
             return Failure("購買數量無效");
 
-        var totalPrice = checked(item.Price * count);
-        var result = _store.BuyShopItem(
+        var kind = item.TabType switch
+        {
+            0 => AssetPurchaseKind.General,
+            1 => AssetPurchaseKind.Equipment,
+            3 => AssetPurchaseKind.HorseEquipment,
+            4 => AssetPurchaseKind.HorseEquipment,
+            5 => AssetPurchaseKind.HorseBattery,
+            _ => AssetPurchaseKind.General
+        };
+
+        var result = _store.BuyAsset(
             accountId,
             characterId,
+            kind,
             item.ItemIndex,
-            item.TabType,
             count,
-            totalPrice);
+            item.Price);
 
         if (!result.Success)
             return Failure(result.Message);
@@ -105,28 +114,29 @@ public sealed class ShopService
             return Failure("此物品無法出售");
 
         var unitPrice = Math.Max(1, item.Price / 2);
-        var result = _store.SellShopItem(
+        var success = _store.SellAsset(
             accountId,
             characterId,
             uid,
             tabType,
             count,
-            unitPrice);
+            unitPrice,
+            out var money);
 
-        if (!result.Success)
-            return Failure(result.Message);
+        if (!success)
+            return Failure("出售失敗");
 
         return BuildAssetRefreshPackets(
             accountId,
             characterId,
-            result.Money,
-            result.Message);
+            money,
+            "出售成功");
     }
 
     private IReadOnlyList<object> BuildAssetRefreshPackets(
         long accountId,
         long characterId,
-        int money,
+        long money,
         string message)
     {
         var assets = _store.GetCharacterAssets(
