@@ -35,8 +35,9 @@ try
     Check(account.HasValue, "login with correct password");
 
     var slots = store.Characters(account!.Value);
-    Check(slots.Count == 1 && Convert.ToInt64(slots[0]["DBID"]) == 0,
-        "empty character placeholder");
+    Check(slots.Count == 3 &&
+          slots.All(x => Convert.ToInt64(x["DBID"]) == 0),
+        "stable three empty character slots");
 
     using var create = Json("""
         {"Name":"TestCharacter","Password":"1234","Race":1,"Hair":2,"HairColor":3,"Str":4,"Dex":5,"Con":6,"Wis":7}
@@ -44,8 +45,10 @@ try
     Check(store.Create(account.Value, create.RootElement).Success, "create character");
 
     slots = store.Characters(account.Value);
-    Check(slots.Count == 1 && slots[0]["NAME"].ToString() == "TestCharacter",
-        "list first character");
+    Check(slots.Count == 3 &&
+          slots.Count(x => Convert.ToInt64(x["DBID"]) > 0) == 1 &&
+          slots.Any(x => x.TryGetValue("NAME", out var n) && n?.ToString() == "TestCharacter"),
+        "list first character in three-slot response");
 
     using var character2 = Json("""
         {"Name":"SecondCharacter","Password":"5678","Race":0,"Hair":1,"HairColor":2,"Str":7,"Dex":6,"Con":5,"Wis":4}
@@ -53,12 +56,14 @@ try
     Check(store.Create(account.Value, character2.RootElement).Success,
         "create second character");
     slots = store.Characters(account.Value);
-    Check(slots.Count == 2, "two characters remain in same account");
-    Check(slots.Any(x => x["NAME"].ToString() == "TestCharacter") &&
-          slots.Any(x => x["NAME"].ToString() == "SecondCharacter"),
+    Check(slots.Count == 3 &&
+          slots.Count(x => Convert.ToInt64(x["DBID"]) > 0) == 2,
+        "two characters remain in stable three-slot response");
+    Check(slots.Any(x => x.TryGetValue("NAME", out var n) && n?.ToString() == "TestCharacter") &&
+          slots.Any(x => x.TryGetValue("NAME", out var n) && n?.ToString() == "SecondCharacter"),
         "creating second character does not replace first");
 
-    var id = Convert.ToInt64(slots.First(x => x["NAME"].ToString() == "TestCharacter")["DBID"]);
+    var id = Convert.ToInt64(slots.First(x => x.TryGetValue("NAME", out var n) && n?.ToString() == "TestCharacter")["DBID"]);
     var selected = store.GetCharacter(account.Value, id);
     Check(selected is not null, "select owned character");
     Check(Convert.ToInt32(selected!["HP"]) == 100 &&
@@ -130,14 +135,17 @@ try
     Check(store.Delete(account.Value, id, "1234"),
         "delete first character");
     slots = store.Characters(account.Value);
-    Check(slots.Count == 1 && slots[0]["NAME"].ToString() == "SecondCharacter",
+    Check(slots.Count == 3 &&
+          slots.Count(x => Convert.ToInt64(x["DBID"]) > 0) == 1 &&
+          slots.Any(x => x.TryGetValue("NAME", out var n) && n?.ToString() == "SecondCharacter"),
         "second character remains after deleting first");
 
-    var secondId = Convert.ToInt64(slots[0]["DBID"]);
+    var secondId = Convert.ToInt64(slots.First(x => x.TryGetValue("NAME", out var n) && n?.ToString() == "SecondCharacter")["DBID"]);
     Check(store.Delete(account.Value, secondId, "5678"),
         "delete second character");
-    Check(Convert.ToInt64(store.Characters(account.Value)[0]["DBID"]) == 0,
-        "empty slots after deleting all characters");
+    slots = store.Characters(account.Value);
+    Check(slots.Count == 3 && slots.All(x => Convert.ToInt64(x["DBID"]) == 0),
+        "three empty slots after deleting all characters");
 }
 finally
 {
