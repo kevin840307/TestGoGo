@@ -143,6 +143,8 @@ public sealed class PacketRouter
 
                 state.CharacterId = dbid;
                 state.CurrentMapId = Convert.ToInt32(character["MapID"]);
+                state.LastX = Convert.ToDouble(character["LocX"]);
+                state.LastY = Convert.ToDouble(character["LocY"]);
                 state.PendingMapSpawn = true;
                 character["Type"] = "EnterWorldSuccess";
 
@@ -192,48 +194,17 @@ public sealed class PacketRouter
 
                 var x = req.Int("X");
                 var y = req.Int("Y");
-                _store.UpdatePosition(accountId, state.CharacterId.Value, x, y);
+                state.LastX = x;
+                state.LastY = y;
+                _store.UpdatePosition(
+                    accountId,
+                    state.CharacterId.Value,
+                    x,
+                    y);
 
-                var now = DateTimeOffset.UtcNow;
-                var packets = new List<object>();
-                packets.AddRange(_combat.TickRespawns(
-                    state,
-                    now));
-
-                if (state.PendingMapSpawn)
-                {
-                    state.PendingMapSpawn = false;
-                    packets.AddRange(
-                        _combat.EnterMap(
-                            state,
-                            state.CurrentMapId));
-                    packets.AddRange(
-                        BuildActivePetSpawnPackets(
-                            accountId,
-                            state.CharacterId.Value,
-                            x,
-                            y));
-                }
-                else
-                {
-                    packets.AddRange(
-                        _combat.TickAi(
-                            state,
-                            accountId,
-                            x,
-                            y,
-                            now));
-                    packets.AddRange(
-                        BuildPetFollowPackets(
-                            state,
-                            accountId,
-                            state.CharacterId.Value,
-                            x,
-                            y,
-                            now));
-                }
-
-                return packets;
+                // World spawn/AI is driven by the server tick. Position packets
+                // now only update authoritative player coordinates.
+                return [];
             }
 
             case "UseItemRequest":
@@ -888,6 +859,58 @@ public sealed class PacketRouter
                 _log.LogDebug("Unimplemented client packet: {Type}", type);
                 return [];
         }
+    }
+
+    public IReadOnlyList<object> Tick(
+        ClientSession state,
+        DateTimeOffset now)
+    {
+        if (!state.AccountId.HasValue ||
+            !state.CharacterId.HasValue ||
+            state.CurrentMapId <= 0)
+            return [];
+
+        var accountId = state.AccountId.Value;
+        var dbid = state.CharacterId.Value;
+        var packets = new List<object>();
+
+        packets.AddRange(
+            _combat.TickRespawns(state, now));
+
+        if (state.PendingMapSpawn)
+        {
+            state.PendingMapSpawn = false;
+            packets.AddRange(
+                _combat.EnterMap(
+                    state,
+                    state.CurrentMapId));
+            packets.AddRange(
+                BuildActivePetSpawnPackets(
+                    accountId,
+                    dbid,
+                    state.LastX,
+                    state.LastY));
+        }
+        else
+        {
+            packets.AddRange(
+                _combat.TickAi(
+                    state,
+                    accountId,
+                    state.LastX,
+                    state.LastY,
+                    now));
+            packets.AddRange(
+                BuildPetFollowPackets(
+                    state,
+                    accountId,
+                    dbid,
+                    state.LastX,
+                    state.LastY,
+                    now));
+        }
+
+        return packets;
     }
 
     private IReadOnlyList<object> HandleInteract(
