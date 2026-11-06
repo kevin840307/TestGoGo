@@ -63,6 +63,21 @@ public sealed class LegacyQuestRuntime
         script.Globals["GetChoice"] = (Func<int>)(() => choiceIndex ?? 0);
         script.Globals["GetData"] = (Func<string, object?>)(name => getData(name));
 
+        // Common legacy quest APIs. State-changing calls that are not yet wired
+        // to persistence are safe compatibility shims instead of nil globals.
+        script.Globals["GetFlag"] = (Func<string,int>)(_ => 0);
+        script.Globals["SetFlag"] = (Action<string,int>)((_, _) => { });
+        script.Globals["GetName"] = (Func<string>)(() =>
+            Convert.ToString(getData("NAME")) ?? "");
+        script.Globals["Color"] = DynValue.NewCallback((ctx, args) =>
+            DynValue.NewString(""));
+        script.Globals["HasTitle"] = (Func<int,int>)(_ => 0);
+        script.Globals["AddTitle"] = (Action<int>)(_ => { });
+        script.Globals["SetData"] = DynValue.NewCallback((ctx, args) => DynValue.Nil);
+        script.Globals["SetCareer"] = DynValue.NewCallback((ctx, args) => DynValue.Nil);
+        script.Globals["RemoveItem"] = DynValue.NewCallback((ctx, args) => DynValue.Nil);
+        script.Globals["AddItem"] = DynValue.NewCallback((ctx, args) => DynValue.Nil);
+
         script.Globals["RankQuery"] = (Action<int>)(rankType =>
         {
             // Legacy 0=level, 1=money. Recovered client uses 1=level, 2=money.
