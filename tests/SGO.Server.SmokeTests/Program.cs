@@ -370,6 +370,34 @@ try
             "driving mecha refreshes effective combat stats");
     }
 
+    var energyBeforeCharge = Convert.ToInt32(
+        store.GetCharacterAssets(account.Value, id).Horses
+            .First(x => Convert.ToInt64(x["HorseUID"]) == horseUid)["EnergyLeft"]);
+
+    using (var charge = Json(JsonSerializer.Serialize(new
+    {
+        Type = "HorseChargeRequest",
+        HorseUID = horseUid,
+        ItemUID = batteryUid
+    })))
+    {
+        var responses = router.Handle(charge.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("\"Type\":\"SyncMechaEnergy\"")),
+            "HorseChargeRequest emits mecha energy sync");
+
+        var assetsAfterCharge = store.GetCharacterAssets(account.Value, id);
+        var horseAfterCharge = assetsAfterCharge.Horses
+            .First(x => Convert.ToInt64(x["HorseUID"]) == horseUid);
+
+        Check(Convert.ToInt32(horseAfterCharge["EnergyLeft"]) ==
+                  energyBeforeCharge + 3600,
+            "source battery adds expected mecha energy");
+        Check(!assetsAfterCharge.Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) == batteryUid),
+            "mecha battery is consumed");
+    }
+
     using (var horseEquip = Json(JsonSerializer.Serialize(new { Type = "HorseEquipRequest", EquipUID = horseEquipUid, HorseUID = horseUid })))
     {
         var responses = router.Handle(horseEquip.RootElement, session);
