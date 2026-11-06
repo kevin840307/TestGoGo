@@ -120,7 +120,8 @@ public sealed class LegacyQuestRuntime
 
         script.Globals["Say"] = DynValue.NewCallback((ctx, args) =>
         {
-            var text = args.Count > 0 ? args[0].CastToString() : "";
+            var text = LegacyDialogFormatter.CleanText(
+                args.Count > 0 ? args[0].CastToString() : "");
             var next = args.Count > 1 ? args[1].CastToString() : "";
             result.Packets.Add(new {
                 Type = "NpcDialogResponse",
@@ -139,7 +140,7 @@ public sealed class LegacyQuestRuntime
         {
             if (args.Count < 2) return DynValue.Nil;
 
-            var text = args[0].CastToString();
+            var text = LegacyDialogFormatter.CleanText(args[0].CastToString());
             var target = args[args.Count - 1].CastToString();
             var options = new List<object>();
 
