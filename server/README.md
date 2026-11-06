@@ -40,3 +40,17 @@ dotnet publish server/SGO.Server.csproj -c Release -r win-x64 --self-contained t
 ```
 
 CI builds on Windows via GitHub Actions. No end-to-end Godot gameplay tests have been run.
+
+
+## Legacy world data
+
+The server now reads the uploaded legacy server data under `Old/服務端/Dat`:
+
+- `Map/MapXX/NPC.dat`: NPC / portal id, coordinates, Lua quest script and Big5 display name.
+- `Map/MapXX/Enemy.dat`: binary enemy spawn records (variable-length enemy-id string, X/Y, fixed legacy payload).
+- `Enemy/Enemy_Data.csv`: enemy name, level, sprite and base HP lookup.
+- `Quest/*.txt`: legacy Lua scripts executed through MoonSharp.
+
+Map15 is explicitly treated as the main city: NPC/portal spawns are loaded, but combat Enemy.dat records are not spawned there. A portal script can issue `MovePlayer(x,y,mapId)`; the destination is persisted to SQLite and destination entities are spawned only after the first `SyncPosition` from the newly loaded client map.
+
+Implemented Lua compatibility calls: `Say`, `Ask`, `GetChoice`, `GetData`, `MovePlayer`, `QuestEnd`. `OpenShop` is currently a compatibility stub.
