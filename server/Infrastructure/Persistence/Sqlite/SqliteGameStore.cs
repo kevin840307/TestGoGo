@@ -579,6 +579,468 @@ public sealed class SqliteGameStore : IGameStore
         return cmd.ExecuteNonQuery() == 1;
     }
 
+    public CharacterAssets GetCharacterAssets(long accountId, long dbid)
+    {
+        var assets = new CharacterAssets();
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return assets;
+
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandText = """
+                SELECT uid,item_index,count,in_bank,in_shop
+                  FROM inventory_items
+                 WHERE character_id=$id
+                 ORDER BY uid
+                """;
+            Arg(cmd, "$id", dbid);
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                assets.Inventory.Add(new Dictionary<string, object>
+                {
+                    ["ItemUID"] = r.GetInt64(0),
+                    ["ItemIndex"] = r.GetInt32(1),
+                    ["Count"] = r.GetInt32(2),
+                    ["InBank"] = r.GetInt32(3),
+                    ["InShop"] = r.GetInt32(4)
+                });
+            }
+        }
+
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandText = """
+                SELECT uid,item_index,damage,color,part,in_bank,in_shop
+                  FROM equipment_items
+                 WHERE character_id=$id
+                 ORDER BY uid
+                """;
+            Arg(cmd, "$id", dbid);
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                assets.Equips.Add(new Dictionary<string, object>
+                {
+                    ["ItemID"] = r.GetInt64(0),
+                    ["ItemIdx"] = r.GetInt32(1),
+                    ["Damage"] = r.GetInt32(2),
+                    ["Color"] = r.GetInt32(3),
+                    ["Part"] = r.GetInt32(4),
+                    ["InBank"] = r.GetInt32(5),
+                    ["InShop"] = r.GetInt32(6)
+                });
+            }
+        }
+
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandText = """
+                SELECT uid,pet_id,name,hp,max_hp,mp,max_mp,attack,defense,
+                       magic_attack,magic_defense,hit,dodge,con,str,wis,dex,
+                       extra_str,extra_dex,extra_con,extra_wis,life_count,
+                       recovery_count,summon_wait_count,exp,max_exp,level,
+                       use_exp,feed_exp_limit,evol_id,equip0,equip1,equip2,
+                       feed_value,state,main_skill_id,in_shop,shop_price
+                  FROM pets
+                 WHERE character_id=$id
+                 ORDER BY uid
+                """;
+            Arg(cmd, "$id", dbid);
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                assets.Pets.Add(new Dictionary<string, object>
+                {
+                    ["UID"] = r.GetInt64(0),
+                    ["PETID"] = r.GetInt32(1),
+                    ["Name"] = r.GetString(2),
+                    ["HP"] = r.GetInt32(3),
+                    ["MaxHP"] = r.GetInt32(4),
+                    ["MP"] = r.GetInt32(5),
+                    ["MaxMP"] = r.GetInt32(6),
+                    ["Attack"] = r.GetInt32(7),
+                    ["Defense"] = r.GetInt32(8),
+                    ["MagicAttack"] = r.GetInt32(9),
+                    ["MagicDefense"] = r.GetInt32(10),
+                    ["Hit"] = r.GetInt32(11),
+                    ["Dodge"] = r.GetInt32(12),
+                    ["CON"] = r.GetInt32(13),
+                    ["STR"] = r.GetInt32(14),
+                    ["WIS"] = r.GetInt32(15),
+                    ["DEX"] = r.GetInt32(16),
+                    ["ExtraSTR"] = r.GetInt32(17),
+                    ["ExtraDEX"] = r.GetInt32(18),
+                    ["ExtraCON"] = r.GetInt32(19),
+                    ["ExtraWIS"] = r.GetInt32(20),
+                    ["LifeCount"] = r.GetInt32(21),
+                    ["RecoveryCount"] = r.GetInt32(22),
+                    ["SummonWaitCount"] = r.GetInt32(23),
+                    ["Exp"] = r.GetInt32(24),
+                    ["MaxExp"] = r.GetInt32(25),
+                    ["Level"] = r.GetInt32(26),
+                    ["UseExp"] = r.GetInt32(27),
+                    ["FeedExpLimit"] = r.GetInt32(28),
+                    ["EvolID"] = r.GetInt32(29),
+                    ["Equip0"] = r.GetInt64(30),
+                    ["Equip1"] = r.GetInt64(31),
+                    ["Equip2"] = r.GetInt64(32),
+                    ["FeedValue"] = r.GetInt32(33),
+                    ["State"] = r.GetInt32(34),
+                    ["MainSkillID"] = r.GetInt32(35),
+                    ["InShop"] = r.GetInt32(36),
+                    ["ShopPrice"] = r.GetInt32(37)
+                });
+            }
+        }
+
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandText = """
+                SELECT uid,horse_index,exp,max_exp,energy_left,level,name,
+                       horse_type,equip_color0,equip_color1,equip_color2,
+                       equip_color3,angry
+                  FROM horses
+                 WHERE character_id=$id
+                 ORDER BY uid
+                """;
+            Arg(cmd, "$id", dbid);
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                assets.Horses.Add(new Dictionary<string, object>
+                {
+                    ["HorseUID"] = r.GetInt64(0),
+                    ["HorseIdx"] = r.GetInt32(1),
+                    ["Exp"] = r.GetInt32(2),
+                    ["MaxExp"] = r.GetInt32(3),
+                    ["EnergyLeft"] = r.GetInt32(4),
+                    ["Level"] = r.GetInt32(5),
+                    ["Name"] = r.GetString(6),
+                    ["HorseType"] = r.GetString(7),
+                    ["EquipColor0"] = r.GetInt32(8),
+                    ["EquipColor1"] = r.GetInt32(9),
+                    ["EquipColor2"] = r.GetInt32(10),
+                    ["EquipColor3"] = r.GetInt32(11),
+                    ["Angry"] = r.GetInt32(12)
+                });
+            }
+        }
+
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandText = """
+                SELECT uid,equip_index,damage,color,horse_uid,part,in_bank,in_shop
+                  FROM horse_equipment
+                 WHERE character_id=$id
+                 ORDER BY uid
+                """;
+            Arg(cmd, "$id", dbid);
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                assets.HorseEquips.Add(new Dictionary<string, object>
+                {
+                    ["EquipUID"] = r.GetInt64(0),
+                    ["EquipIdx"] = r.GetInt32(1),
+                    ["Damage"] = r.GetInt32(2),
+                    ["Color"] = r.GetInt32(3),
+                    ["HorseUID"] = r.GetInt64(4),
+                    ["Part"] = r.GetInt32(5),
+                    ["InBank"] = r.GetInt32(6),
+                    ["InShop"] = r.GetInt32(7)
+                });
+            }
+        }
+
+        return assets;
+    }
+
+    public long AddInventoryItem(long accountId, long dbid, int itemIndex, int count)
+    {
+        if (count <= 0) return 0;
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid)) return 0;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO inventory_items(character_id,item_index,count)
+            VALUES($id,$idx,$count);
+            SELECT last_insert_rowid();
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$idx", itemIndex);
+        Arg(cmd, "$count", count);
+        return Convert.ToInt64(cmd.ExecuteScalar());
+    }
+
+    public long AddEquipment(long accountId, long dbid, int itemIndex, int part = 255, int damage = 0, int color = 0)
+    {
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid)) return 0;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO equipment_items(character_id,item_index,damage,color,part)
+            VALUES($id,$idx,$damage,$color,$part);
+            SELECT last_insert_rowid();
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$idx", itemIndex);
+        Arg(cmd, "$damage", Math.Max(0, damage));
+        Arg(cmd, "$color", Math.Max(0, color));
+        Arg(cmd, "$part", part);
+        return Convert.ToInt64(cmd.ExecuteScalar());
+    }
+
+    public long AddPet(long accountId, long dbid, int petId, string name)
+    {
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid)) return 0;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO pets(character_id,pet_id,name)
+            VALUES($id,$pet,$name);
+            SELECT last_insert_rowid();
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$pet", petId);
+        Arg(cmd, "$name", name ?? "");
+        return Convert.ToInt64(cmd.ExecuteScalar());
+    }
+
+    public long AddHorse(long accountId, long dbid, int horseIndex, string name, string horseType = "MS", int energyLeft = 0)
+    {
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid)) return 0;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO horses(character_id,horse_index,name,horse_type,energy_left)
+            VALUES($id,$idx,$name,$type,$energy);
+            SELECT last_insert_rowid();
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$idx", horseIndex);
+        Arg(cmd, "$name", name ?? "");
+        Arg(cmd, "$type", string.IsNullOrWhiteSpace(horseType) ? "MS" : horseType);
+        Arg(cmd, "$energy", Math.Max(0, energyLeft));
+        return Convert.ToInt64(cmd.ExecuteScalar());
+    }
+
+    public long AddHorseEquipment(long accountId, long dbid, int equipIndex, long horseUid = -1, int part = 255, int damage = 0, int color = 0)
+    {
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid)) return 0;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO horse_equipment(character_id,equip_index,horse_uid,damage,color,part)
+            VALUES($id,$idx,$horse,$damage,$color,$part);
+            SELECT last_insert_rowid();
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$idx", equipIndex);
+        Arg(cmd, "$horse", horseUid);
+        Arg(cmd, "$damage", Math.Max(0, damage));
+        Arg(cmd, "$color", Math.Max(0, color));
+        Arg(cmd, "$part", part);
+        return Convert.ToInt64(cmd.ExecuteScalar());
+    }
+
+    public bool EquipItem(long accountId, long dbid, long itemUid, int targetSlot)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return false;
+
+        using (var clear = db.CreateCommand())
+        {
+            clear.Transaction = tx;
+            clear.CommandText = """
+                UPDATE equipment_items
+                   SET part=255
+                 WHERE character_id=$id AND part=$part
+                """;
+            Arg(clear, "$id", dbid);
+            Arg(clear, "$part", targetSlot);
+            clear.ExecuteNonQuery();
+        }
+
+        using var set = db.CreateCommand();
+        set.Transaction = tx;
+        set.CommandText = """
+            UPDATE equipment_items
+               SET part=$part
+             WHERE uid=$uid AND character_id=$id
+               AND in_bank=0 AND in_shop=0
+            """;
+        Arg(set, "$part", targetSlot);
+        Arg(set, "$uid", itemUid);
+        Arg(set, "$id", dbid);
+
+        if (set.ExecuteNonQuery() != 1)
+            return false;
+
+        tx.Commit();
+        return true;
+    }
+
+    public bool UnequipItem(long accountId, long dbid, int targetSlot)
+    {
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid)) return false;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE equipment_items
+               SET part=255
+             WHERE character_id=$id AND part=$part
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$part", targetSlot);
+        cmd.ExecuteNonQuery();
+        return true;
+    }
+
+    public bool SetSummonedHorse(long accountId, long dbid, long horseUid)
+    {
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid)) return false;
+
+        if (horseUid != -1)
+        {
+            using var check = db.CreateCommand();
+            check.CommandText = """
+                SELECT count(*) FROM horses
+                 WHERE uid=$horse AND character_id=$id
+                """;
+            Arg(check, "$horse", horseUid);
+            Arg(check, "$id", dbid);
+            if (Convert.ToInt32(check.ExecuteScalar()) != 1)
+                return false;
+        }
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET summoned_horse_uid=$horse
+             WHERE id=$id AND account_id=$a
+            """;
+        Arg(cmd, "$horse", horseUid);
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+        return cmd.ExecuteNonQuery() == 1;
+    }
+
+    public bool EquipHorseItem(long accountId, long dbid, long equipUid, long horseUid)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+        if (!OwnsCharacter(db, accountId, dbid, tx)) return false;
+
+        int part;
+        using (var get = db.CreateCommand())
+        {
+            get.Transaction = tx;
+            get.CommandText = """
+                SELECT part FROM horse_equipment
+                 WHERE uid=$uid AND character_id=$id
+                """;
+            Arg(get, "$uid", equipUid);
+            Arg(get, "$id", dbid);
+            var raw = get.ExecuteScalar();
+            if (raw is null) return false;
+            part = Convert.ToInt32(raw);
+        }
+
+        if (part is < 0 or > 254) part = 3;
+
+        using (var clear = db.CreateCommand())
+        {
+            clear.Transaction = tx;
+            clear.CommandText = """
+                UPDATE horse_equipment
+                   SET horse_uid=-1
+                 WHERE character_id=$id AND horse_uid=$horse AND part=$part
+                """;
+            Arg(clear, "$id", dbid);
+            Arg(clear, "$horse", horseUid);
+            Arg(clear, "$part", part);
+            clear.ExecuteNonQuery();
+        }
+
+        using var set = db.CreateCommand();
+        set.Transaction = tx;
+        set.CommandText = """
+            UPDATE horse_equipment
+               SET horse_uid=$horse
+             WHERE uid=$uid AND character_id=$id
+            """;
+        Arg(set, "$horse", horseUid);
+        Arg(set, "$uid", equipUid);
+        Arg(set, "$id", dbid);
+        if (set.ExecuteNonQuery() != 1) return false;
+
+        tx.Commit();
+        return true;
+    }
+
+    public bool UnequipHorseItem(long accountId, long dbid, long equipUid, long horseUid)
+    {
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid)) return false;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE horse_equipment
+               SET horse_uid=-1
+             WHERE uid=$uid AND character_id=$id AND horse_uid=$horse
+            """;
+        Arg(cmd, "$uid", equipUid);
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$horse", horseUid);
+        return cmd.ExecuteNonQuery() == 1;
+    }
+
+    public bool SetPetState(long accountId, long dbid, long petUid, int state)
+    {
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid)) return false;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE pets
+               SET state=$state
+             WHERE uid=$uid AND character_id=$id
+            """;
+        Arg(cmd, "$state", state);
+        Arg(cmd, "$uid", petUid);
+        Arg(cmd, "$id", dbid);
+        return cmd.ExecuteNonQuery() == 1;
+    }
+
+    private static bool OwnsCharacter(
+        SqliteConnection db,
+        long accountId,
+        long dbid,
+        SqliteTransaction? tx = null)
+    {
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            SELECT count(*) FROM characters
+             WHERE id=$id AND account_id=$a
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+        return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+    }
+
     public Dictionary<string, object>? ApplyDamage(
         long accountId,
         long dbid,
