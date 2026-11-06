@@ -232,8 +232,7 @@ try
             "enter world includes Map15");
     }
 
-    using (var equip = Json(
-        $$"""{"Type":"EquipRequest","ItemUID":{{equipUid}},"TargetSlot":5}"""))
+    using (var equip = Json(JsonSerializer.Serialize(new { Type = "EquipRequest", ItemUID = equipUid, TargetSlot = 5 })))
     {
         var responses = router.Handle(equip.RootElement, session);
         Check(responses.Any(x =>
@@ -264,8 +263,7 @@ try
             "unequipped slot persists");
     }
 
-    using (var drive = Json(
-        $$"""{"Type":"DriveMechaRequest","HorseUID":{{horseUid}}}"""))
+    using (var drive = Json(JsonSerializer.Serialize(new { Type = "DriveMechaRequest", HorseUID = horseUid })))
     {
         var responses = router.Handle(drive.RootElement, session);
         Check(responses.Any(x =>
@@ -279,8 +277,7 @@ try
             "summoned mecha persists on character");
     }
 
-    using (var horseEquip = Json(
-        $$"""{"Type":"HorseEquipRequest","EquipUID":{{horseEquipUid}},"HorseUID":{{horseUid}}}"""))
+    using (var horseEquip = Json(JsonSerializer.Serialize(new { Type = "HorseEquipRequest", EquipUID = horseEquipUid, HorseUID = horseUid })))
     {
         var responses = router.Handle(horseEquip.RootElement, session);
         Check(responses.Any(x =>
@@ -293,8 +290,7 @@ try
             "mecha equipment assignment persists");
     }
 
-    using (var petSummon = Json(
-        $$"""{"Type":"PetAction","Action":"Summon","PetUID":{{petUid}}}"""))
+    using (var petSummon = Json(JsonSerializer.Serialize(new { Type = "PetAction", Action = "Summon", PetUID = petUid })))
     {
         var responses = router.Handle(petSummon.RootElement, session);
         Check(responses.Any(x =>
@@ -307,8 +303,7 @@ try
             "pet summon state persists");
     }
 
-    using (var petRename = Json(
-        $$"""{"Type":"PetAction","Action":"Rename","PetUID":{{petUid}},"NewName":"Momo"}"""))
+    using (var petRename = Json(JsonSerializer.Serialize(new { Type = "PetAction", Action = "Rename", PetUID = petUid, NewName = "Momo" })))
     {
         router.Handle(petRename.RootElement, session);
         Check(store.GetCharacterAssets(account.Value, id).Pets
@@ -317,8 +312,7 @@ try
             "pet rename persists");
     }
 
-    using (var petEquip = Json(
-        $$"""{"Type":"PetAction","Action":"Equip","PetUID":{{petUid}},"ItemUID":{{equipUid}},"TargetSlot":0}"""))
+    using (var petEquip = Json(JsonSerializer.Serialize(new { Type = "PetAction", Action = "Equip", PetUID = petUid, ItemUID = equipUid, TargetSlot = 0 })))
     {
         router.Handle(petEquip.RootElement, session);
         Check(store.GetCharacterAssets(account.Value, id).Pets
@@ -327,8 +321,7 @@ try
             "pet equipment assignment persists");
     }
 
-    using (var petUnequip = Json(
-        $$"""{"Type":"PetAction","Action":"Unequip","PetUID":{{petUid}},"TargetSlot":0}"""))
+    using (var petUnequip = Json(JsonSerializer.Serialize(new { Type = "PetAction", Action = "Unequip", PetUID = petUid, TargetSlot = 0 })))
     {
         router.Handle(petUnequip.RootElement, session);
         Check(store.GetCharacterAssets(account.Value, id).Pets
@@ -337,8 +330,7 @@ try
             "pet equipment removal persists");
     }
 
-    using (var petRecall = Json(
-        $$"""{"Type":"PetAction","Action":"Recall","PetUID":{{petUid}}}"""))
+    using (var petRecall = Json(JsonSerializer.Serialize(new { Type = "PetAction", Action = "Recall", PetUID = petUid })))
     {
         router.Handle(petRecall.RootElement, session);
         Check(store.GetCharacterAssets(account.Value, id).Pets
