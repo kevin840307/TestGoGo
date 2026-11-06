@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_8jvy6"]
+
+[resource]
+script = ExtResource("1_8jvy6")
+id = 2671
+item_name = "生肖石『龍』"
+description = "新年節慶遊戲的專用物品。"
+can_trade = 1
+can_sell = 1
+price = 1
+icon_id = 585
+item_type_category = "General"

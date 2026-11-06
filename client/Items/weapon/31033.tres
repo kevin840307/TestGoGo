@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_a55iy"]
+
+[resource]
+script = ExtResource("1_a55iy")
+attack_range = 100
+tick_count = 1
+note_1 = "Hit_Effect07"
+note_2 = "Normal03"
+note_3 = "Esc-Receiver"
+note_4 = "Dagger"
+special_effect = "無"
+can_repair = 1
+req_str = 18
+req_wis = 18
+max_hp_bonus = 1832
+max_mp_bonus = 950
+atk = 590
+matk = 516
+durability = 50
+equip_slot = 5
+spr_id = 10
+req_level = 70
+req_job = "無"
+req_race = "無"
+id = 31033
+item_name = "刺龍者匕首+18"
+description = "利用稀有藍圖製作出來的武器。可使用特級武器強化卡強化，大大增強能力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 272979
+icon_id = 573
+color_index = 6
+item_type_category = "Weapon"

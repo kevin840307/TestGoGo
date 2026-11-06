@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_vfgbt"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_hsveo"]
+
+[sub_resource type="Resource" id="Resource_bkvyt"]
+script = ExtResource("1_vfgbt")
+cooldown = 1
+
+[resource]
+script = ExtResource("2_hsveo")
+id = 31109
+skill_name = "材料製造"
+description = "合成各類型的高級材料。"
+skill_type = 6
+icon_id = 79
+fx_extra = "0"
+levels = Array[ExtResource("1_vfgbt")]([SubResource("Resource_bkvyt")])

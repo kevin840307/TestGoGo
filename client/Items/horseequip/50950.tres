@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_eeiu8"]
+
+[resource]
+script = ExtResource("1_eeiu8")
+bullet_id = 99
+note_1 = "0"
+note_2 = "0"
+note_3 = "0"
+note_4 = "0"
+horse_type = "MS"
+max_hp_bonus = 98
+max_mp_bonus = 57
+atk = 5
+def = 3
+matk = 5
+mdef = 3
+hit = 22
+flee = 22
+durability = 50
+equip_slot = 3
+spr_id = 315
+req_level = 22
+id = 50950
+item_name = "神秘水藍立普卡"
+description = "稀有度 ★★★★★"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 500
+icon_id = 365
+item_type_category = "HorseEquip"

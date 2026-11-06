@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_g7xv0"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_w77ns"]
+
+[sub_resource type="Resource" id="Resource_q6grm"]
+script = ExtResource("1_g7xv0")
+cast_range = 250
+cost_mp = 72
+base_damage = 180
+damage_multiplier = 140
+cooldown = 2
+tick_count = 4
+
+[sub_resource type="Resource" id="Resource_84u44"]
+script = ExtResource("1_g7xv0")
+level = 2
+cast_range = 250
+cost_mp = 90
+base_damage = 260
+damage_multiplier = 155
+cooldown = 2
+tick_count = 4
+
+[sub_resource type="Resource" id="Resource_qxgvj"]
+script = ExtResource("1_g7xv0")
+level = 3
+cast_range = 300
+cost_mp = 112
+base_damage = 350
+damage_multiplier = 170
+cooldown = 2
+tick_count = 4
+
+[sub_resource type="Resource" id="Resource_55v23"]
+script = ExtResource("1_g7xv0")
+level = 4
+cast_range = 300
+cost_mp = 135
+base_damage = 450
+damage_multiplier = 185
+cooldown = 2
+tick_count = 4
+
+[sub_resource type="Resource" id="Resource_m7jj1"]
+script = ExtResource("1_g7xv0")
+level = 5
+cast_range = 350
+cost_mp = 162
+base_damage = 560
+damage_multiplier = 205
+cooldown = 2
+tick_count = 4
+
+[resource]
+script = ExtResource("2_w77ns")
+id = 29107
+skill_name = "爆雷追擊"
+description = "在敵人的身旁集合電力球繼而爆發，向敵人施展連續攻擊。"
+icon_id = 60
+fx_use = "Skill_Use_04"
+fx_hit = "Skill_Hit_33"
+fx_extra = "Hit_Effect01"
+levels = Array[ExtResource("1_g7xv0")]([SubResource("Resource_q6grm"), SubResource("Resource_84u44"), SubResource("Resource_qxgvj"), SubResource("Resource_55v23"), SubResource("Resource_m7jj1")])

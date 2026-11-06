@@ -1,0 +1,152 @@
+{
+  "part_name": "R-Body",
+  "texture_size": {
+    "w": 1145,
+    "h": 100
+  },
+  "frames": {
+    "death_2_frame0002": {
+      "x": 0,
+      "y": 0,
+      "w": 74,
+      "h": 100,
+      "offset_x": 36,
+      "offset_y": 86
+    },
+    "death_2_frame0001": {
+      "x": 74,
+      "y": 0,
+      "w": 74,
+      "h": 99,
+      "offset_x": 36,
+      "offset_y": 85
+    },
+    "death_2_frame0003": {
+      "x": 148,
+      "y": 0,
+      "w": 74,
+      "h": 97,
+      "offset_x": 36,
+      "offset_y": 83
+    },
+    "death_2_frame0000": {
+      "x": 222,
+      "y": 0,
+      "w": 74,
+      "h": 95,
+      "offset_x": 36,
+      "offset_y": 81
+    },
+    "death_1_frame0002": {
+      "x": 296,
+      "y": 0,
+      "w": 72,
+      "h": 94,
+      "offset_x": 34,
+      "offset_y": 80
+    },
+    "death_2_frame0004": {
+      "x": 368,
+      "y": 0,
+      "w": 74,
+      "h": 94,
+      "offset_x": 36,
+      "offset_y": 80
+    },
+    "death_1_frame0001": {
+      "x": 442,
+      "y": 0,
+      "w": 72,
+      "h": 93,
+      "offset_x": 34,
+      "offset_y": 79
+    },
+    "death_3_frame0001": {
+      "x": 514,
+      "y": 0,
+      "w": 83,
+      "h": 93,
+      "offset_x": 43,
+      "offset_y": 79
+    },
+    "death_3_frame0002": {
+      "x": 597,
+      "y": 0,
+      "w": 83,
+      "h": 93,
+      "offset_x": 43,
+      "offset_y": 80
+    },
+    "death_1_frame0004": {
+      "x": 680,
+      "y": 0,
+      "w": 72,
+      "h": 92,
+      "offset_x": 34,
+      "offset_y": 78
+    },
+    "death_3_frame0003": {
+      "x": 752,
+      "y": 0,
+      "w": 83,
+      "h": 92,
+      "offset_x": 43,
+      "offset_y": 78
+    },
+    "death_1_frame0000": {
+      "x": 835,
+      "y": 0,
+      "w": 72,
+      "h": 91,
+      "offset_x": 34,
+      "offset_y": 77
+    },
+    "death_1_frame0003": {
+      "x": 907,
+      "y": 0,
+      "w": 72,
+      "h": 91,
+      "offset_x": 34,
+      "offset_y": 77
+    },
+    "death_3_frame0000": {
+      "x": 979,
+      "y": 0,
+      "w": 83,
+      "h": 89,
+      "offset_x": 43,
+      "offset_y": 76
+    },
+    "death_3_frame0004": {
+      "x": 1062,
+      "y": 0,
+      "w": 83,
+      "h": 88,
+      "offset_x": 43,
+      "offset_y": 75
+    }
+  },
+  "animations": {
+    "death_2": [
+      "death_2_frame0000",
+      "death_2_frame0001",
+      "death_2_frame0002",
+      "death_2_frame0003",
+      "death_2_frame0004"
+    ],
+    "death_1": [
+      "death_1_frame0000",
+      "death_1_frame0001",
+      "death_1_frame0002",
+      "death_1_frame0003",
+      "death_1_frame0004"
+    ],
+    "death_3": [
+      "death_3_frame0000",
+      "death_3_frame0001",
+      "death_3_frame0002",
+      "death_3_frame0003",
+      "death_3_frame0004"
+    ]
+  }
+}

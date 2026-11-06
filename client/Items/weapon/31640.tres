@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_nr0o2"]
+
+[resource]
+script = ExtResource("1_nr0o2")
+no_shield = 1
+bullet_id = 4103
+attack_range = 350
+tick_count = 2
+note_1 = "Hit_Effect02"
+note_2 = "Normal04"
+note_3 = "Esc-Receiver"
+note_4 = "TwinGun"
+special_effect = "無"
+can_repair = 1
+durability = 99999
+equip_slot = 5
+spr_id = 5
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 31640
+item_name = "雙銃式燈籠兵器"
+description = "擁有燈籠外觀的雙銃武裝。"
+can_store = 1
+icon_id = 645
+item_type_category = "Weapon"

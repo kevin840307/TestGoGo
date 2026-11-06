@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_u7i26"]
+
+[resource]
+script = ExtResource("1_u7i26")
+script_name = "地獄火咒文"
+id = 2790
+item_name = "地獄火咒文"
+description = "持刀者...千萬不要閱讀咒文，否則後果自負。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 180
+item_type_category = "General"

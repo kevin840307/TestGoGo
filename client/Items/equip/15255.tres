@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_ktotu"]
+
+[resource]
+script = ExtResource("1_ktotu")
+special_effect = "無"
+can_repair = 1
+flee = 1020
+durability = 50
+equip_slot = 7
+spr_id = 50
+req_level = 130
+req_job = "無"
+req_race = "無"
+id = 15255
+item_name = "仿赤日蒼鷹背甲"
+description = "赤日蒼鷹梅比斯所使用的鷹翼形背甲的仿製品，不過能力絕對不遜於本人的真品喔。"
+can_store = 1
+price = 1
+icon_id = 818
+color_index = 5
+item_type_category = "Equip"

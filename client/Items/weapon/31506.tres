@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_spen4"]
+
+[resource]
+script = ExtResource("1_spen4")
+no_shield = 1
+bullet_id = 4103
+attack_range = 450
+tick_count = 2
+note_1 = "Hit_Effect05"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "Spear"
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 2000
+max_mp_bonus = 1500
+atk = 1050
+matk = 220
+hit = 120
+flee = 50
+durability = 50
+equip_slot = 5
+spr_id = 7
+req_level = 75
+req_job = "銃戰士"
+req_race = "無"
+id = 31506
+item_name = "地峰之槍"
+description = "持有者可吸收魔力當作子彈發射的古代長槍。"
+can_store = 1
+price = 10000
+icon_id = 576
+color_index = 2
+item_type_category = "Weapon"

@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_ov5xh"]
+
+[resource]
+script = ExtResource("1_ov5xh")
+bullet_id = 99
+note_1 = "0"
+note_2 = "0"
+note_3 = "0"
+note_4 = "0"
+horse_type = "MS"
+max_hp_bonus = 37
+max_mp_bonus = 27
+atk = 2
+def = 1
+matk = 2
+mdef = 1
+hit = 11
+flee = 11
+durability = 50
+equip_slot = 3
+spr_id = 315
+req_level = 11
+id = 50920
+item_name = "神秘機動偶卡"
+description = "稀有度 ★★★★★"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 500
+icon_id = 365
+item_type_category = "HorseEquip"

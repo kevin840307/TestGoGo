@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_hgbi8"]
+
+[resource]
+script = ExtResource("1_hgbi8")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 124
+max_mp_bonus = 60
+max_sp_bonus = 27
+def = 2
+mdef = 4
+hit = 29
+flee = 29
+durability = 50
+equip_slot = 7
+spr_id = 22
+req_level = 10
+req_job = "無"
+req_race = "無"
+id = 18030
+item_name = "真．惡魔之翼（魅）"
+description = "傳說是屬於暗地惡魔兵團的真．惡魔之翼，比起由德爾莫亞魔法學園仿製的小惡魔之翼擁有強大數十倍的威力！"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 611
+color_index = 2
+item_type_category = "Equip"

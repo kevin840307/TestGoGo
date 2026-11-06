@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_a2d5w"]
+
+[resource]
+script = ExtResource("1_a2d5w")
+no_shield = 1
+bullet_id = 4112
+attack_range = 350
+tick_count = 1
+note_1 = "Hit_Effect02"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "Gun"
+special_effect = "無"
+can_repair = 1
+matk = 426
+mdef = 166
+hit = 40
+flee = 20
+durability = 50
+equip_slot = 5
+spr_id = 11
+req_level = 55
+req_job = "無"
+req_race = "無"
+id = 30217
+item_name = "獸月魔銃"
+description = "以野獸領主．米諾陶遺骸上剝取的素材來製造的單銃。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 791
+item_type_category = "Weapon"

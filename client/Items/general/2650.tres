@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_sboth"]
+
+[resource]
+script = ExtResource("1_sboth")
+id = 2650
+item_name = "龍魂之牙"
+description = "龍族的牙，利用此打造出來的裝備都能得到龍族的力量。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 277
+color_index = 2
+item_type_category = "General"

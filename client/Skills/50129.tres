@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_l0ysa"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_ksldh"]
+
+[sub_resource type="Resource" id="Resource_gfk6r"]
+script = ExtResource("1_l0ysa")
+
+[resource]
+script = ExtResource("2_ksldh")
+id = 50129
+skill_name = "怪物特殊技能．狂暴"
+description = "怪物特殊技能．狂暴"
+fx_use = "Skill_Use_00"
+fx_extra = "0"
+levels = Array[ExtResource("1_l0ysa")]([SubResource("Resource_gfk6r")])

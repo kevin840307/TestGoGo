@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_11l6p"]
+
+[resource]
+script = ExtResource("1_11l6p")
+attack_range = 50
+bullet_id = 99
+note_1 = "Hit_Effect07"
+note_2 = "Normal00"
+note_3 = "Esc-Receiver"
+note_4 = "Stick"
+horse_type = "MS"
+atk = 175
+matk = 350
+durability = 50
+equip_slot = 1
+spr_id = 6
+req_level = 44
+id = 50269
+item_name = "星擊號武裝"
+description = "機甲近距離攻擊武裝。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 100
+icon_id = 504
+item_type_category = "HorseEquip"

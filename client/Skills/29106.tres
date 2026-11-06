@@ -1,0 +1,115 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_d6jlc"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_732va"]
+
+[sub_resource type="Resource" id="Resource_e0mxn"]
+script = ExtResource("1_d6jlc")
+cost_mp = 55
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 50
+matk_bonus = -50
+
+[sub_resource type="Resource" id="Resource_vrh06"]
+script = ExtResource("1_d6jlc")
+level = 2
+cost_mp = 72
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 80
+matk_bonus = -80
+
+[sub_resource type="Resource" id="Resource_kdi5f"]
+script = ExtResource("1_d6jlc")
+level = 3
+cost_mp = 90
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 110
+matk_bonus = -110
+
+[sub_resource type="Resource" id="Resource_3sikt"]
+script = ExtResource("1_d6jlc")
+level = 4
+cost_mp = 112
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 140
+matk_bonus = -140
+
+[sub_resource type="Resource" id="Resource_o2lfn"]
+script = ExtResource("1_d6jlc")
+level = 5
+cost_mp = 135
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 170
+matk_bonus = -170
+
+[sub_resource type="Resource" id="Resource_ww6k8"]
+script = ExtResource("1_d6jlc")
+level = 6
+cost_mp = 159
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 200
+matk_bonus = -200
+
+[sub_resource type="Resource" id="Resource_ordnh"]
+script = ExtResource("1_d6jlc")
+level = 7
+cost_mp = 184
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 230
+matk_bonus = -230
+
+[sub_resource type="Resource" id="Resource_8bked"]
+script = ExtResource("1_d6jlc")
+level = 8
+cost_mp = 210
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 260
+matk_bonus = -260
+
+[sub_resource type="Resource" id="Resource_i0m7j"]
+script = ExtResource("1_d6jlc")
+level = 9
+cost_mp = 237
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 290
+matk_bonus = -290
+
+[sub_resource type="Resource" id="Resource_qbs64"]
+script = ExtResource("1_d6jlc")
+level = 10
+cost_mp = 265
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 320
+matk_bonus = -320
+
+[resource]
+script = ExtResource("2_732va")
+id = 29106
+skill_name = "雷之閃影"
+description = "暫時犧牲魔法攻擊力，來提升攻擊力。"
+skill_type = 4
+icon_id = 59
+fx_use = "Skill_Use_04"
+fx_hit = "Skill_Hit_34"
+fx_extra = "0"
+levels = Array[ExtResource("1_d6jlc")]([SubResource("Resource_e0mxn"), SubResource("Resource_vrh06"), SubResource("Resource_kdi5f"), SubResource("Resource_3sikt"), SubResource("Resource_o2lfn"), SubResource("Resource_ww6k8"), SubResource("Resource_ordnh"), SubResource("Resource_8bked"), SubResource("Resource_i0m7j"), SubResource("Resource_qbs64")])

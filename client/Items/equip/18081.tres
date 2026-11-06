@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_a3iav"]
+
+[resource]
+script = ExtResource("1_a3iav")
+special_effect = "無"
+can_repair = 1
+def = 30
+mdef = 80
+luk = 2
+durability = 50
+equip_slot = 7
+spr_id = 13
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 18081
+item_name = "黃金巨蟹座背飾"
+description = "巨蟹座喜歡盡在不言中，也喜歡若即若離的態度，認為得不到的愛情較得到的更好。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 602
+item_type_category = "Equip"

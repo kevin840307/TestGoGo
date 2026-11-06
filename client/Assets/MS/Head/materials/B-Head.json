@@ -1,0 +1,66 @@
+{
+  "part_name": "B-Head",
+  "texture_size": {
+    "w": 115,
+    "h": 26
+  },
+  "frames": {
+    "idle_1_frame0000": {
+      "x": 0,
+      "y": 0,
+      "w": 22,
+      "h": 26,
+      "offset_x": 9,
+      "offset_y": 20
+    },
+    "idle_8_frame0000": {
+      "x": 22,
+      "y": 0,
+      "w": 24,
+      "h": 26,
+      "offset_x": 12,
+      "offset_y": 20
+    },
+    "idle_2_frame0000": {
+      "x": 46,
+      "y": 0,
+      "w": 23,
+      "h": 24,
+      "offset_x": 10,
+      "offset_y": 19
+    },
+    "idle_3_frame0000": {
+      "x": 69,
+      "y": 0,
+      "w": 22,
+      "h": 24,
+      "offset_x": 10,
+      "offset_y": 18
+    },
+    "idle_4_frame0000": {
+      "x": 91,
+      "y": 0,
+      "w": 24,
+      "h": 24,
+      "offset_x": 11,
+      "offset_y": 17
+    }
+  },
+  "animations": {
+    "idle_1": [
+      "idle_1_frame0000"
+    ],
+    "idle_8": [
+      "idle_8_frame0000"
+    ],
+    "idle_2": [
+      "idle_2_frame0000"
+    ],
+    "idle_3": [
+      "idle_3_frame0000"
+    ],
+    "idle_4": [
+      "idle_4_frame0000"
+    ]
+  }
+}

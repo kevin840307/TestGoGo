@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_jfppy"]
+
+[resource]
+script = ExtResource("1_jfppy")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 79
+max_mp_bonus = 335
+def = 61
+matk = 10
+mdef = 102
+flee = 4
+durability = 50
+equip_slot = 4
+spr_id = 10
+req_level = 40
+req_job = "無"
+req_race = "無"
+id = 18564
+item_name = "血焰靈下裝"
+description = "下身裝備。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 8974
+icon_id = 121
+color_index = 1
+item_type_category = "Equip"

@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_17k0q"]
+
+[resource]
+script = ExtResource("1_17k0q")
+no_shield = 1
+bullet_id = 4103
+attack_range = 350
+tick_count = 2
+note_1 = "Hit_Effect00"
+note_2 = "Normal02"
+note_3 = "Esc-Receiver"
+note_4 = "TwinGun"
+special_effect = "無"
+can_repair = 1
+atk = 150
+matk = 90
+hit = 10
+flee = 5
+durability = 50
+equip_slot = 5
+spr_id = 2
+req_level = 20
+req_job = "無"
+req_race = "無"
+id = 31404
+item_name = "奪命雙銃"
+description = "完成星之鑰任務的獎勵。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 2000
+icon_id = 80
+color_index = 5
+item_type_category = "Weapon"

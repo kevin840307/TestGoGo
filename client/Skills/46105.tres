@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_yn0mf"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_7hiu8"]
+
+[sub_resource type="Resource" id="Resource_qxevl"]
+script = ExtResource("1_yn0mf")
+
+[resource]
+script = ExtResource("2_7hiu8")
+id = 46105
+skill_name = "戰團刻紋-迴避"
+description = "提升迴避15分鐘，效果根據學會技能研發等級。"
+skill_type = 4
+icon_id = 55
+fx_use = "Skill_Use_01"
+fx_hit = "Normal_Effect11"
+fx_extra = "0"
+levels = Array[ExtResource("1_yn0mf")]([SubResource("Resource_qxevl")])

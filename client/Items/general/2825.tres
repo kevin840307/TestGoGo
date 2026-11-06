@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_880o7"]
+
+[resource]
+script = ExtResource("1_880o7")
+script_name = "戀之水晶"
+id = 2825
+item_name = "戀之水晶"
+description = "只要開啟戀之水晶，便會有額外的神秘禮物。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+icon_id = 513
+item_type_category = "General"

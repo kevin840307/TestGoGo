@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_tc7wq"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_nr02s"]
+
+[sub_resource type="Resource" id="Resource_10bi8"]
+script = ExtResource("1_tc7wq")
+cast_range = 400
+
+[resource]
+script = ExtResource("2_nr02s")
+id = 50164
+skill_name = "絕對領域"
+description = "無視防禦直接造成10000點傷害，如果裝備希格羅套裝，則可免疫。"
+fx_use = "Skill_Use_03"
+fx_hit = "Skill_Hit_12"
+fx_extra = "0"
+levels = Array[ExtResource("1_tc7wq")]([SubResource("Resource_10bi8")])

@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_vtc80"]
+
+[resource]
+script = ExtResource("1_vtc80")
+attack_range = 140
+tick_count = 1
+note_1 = "Hit_Effect00"
+note_2 = "Normal00"
+note_3 = "Esc-Receiver"
+note_4 = "Spear"
+special_effect = "無"
+can_repair = 1
+req_str = 3
+req_wis = 3
+atk = 50
+matk = 45
+flee = 5
+durability = 50
+equip_slot = 5
+spr_id = 1
+req_level = 10
+req_job = "無"
+req_race = "無"
+id = 30598
+item_name = "戰士長矛+3"
+description = "利用稀有藍圖製作出來的武器。可使用初級武器強化卡強化，大大增強能力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 390
+icon_id = 59
+item_type_category = "Weapon"

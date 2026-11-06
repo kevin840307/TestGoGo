@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_5e7la"]
+
+[resource]
+script = ExtResource("1_5e7la")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 1000
+max_mp_bonus = 1000
+atk = 233
+def = 822
+matk = 233
+mdef = 822
+flee = 400
+luk = 20
+durability = 50
+equip_slot = 7
+spr_id = 44
+req_level = 90
+req_job = "無"
+req_race = "無"
+id = 15175
+item_name = "蒼穹之翼"
+description = "烏卡．比克參考星神白帝防具而設計的背部裝備，並用上尼路亞星最堅硬最罕有的金屬製造。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 781
+item_type_category = "Equip"

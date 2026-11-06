@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_tmuwo"]
+
+[resource]
+script = ExtResource("1_tmuwo")
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 429
+max_sp_bonus = 200
+def = 165
+mdef = 329
+flee = 100
+durability = 50
+equip_slot = 7
+spr_id = 37
+req_level = 80
+req_job = "無"
+req_race = "無"
+id = 18121
+item_name = "熔火之翼．紫炎幻焰"
+description = "與依加魯之核融合後得到新的力量。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 721
+color_index = 7
+item_type_category = "Equip"

@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_joxxm"]
+
+[resource]
+script = ExtResource("1_joxxm")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 700
+max_mp_bonus = 300
+atk = 150
+def = 20
+matk = 180
+mdef = 20
+hit = 250
+durability = 50
+spr_id = 105
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 19122
+item_name = "荒野之帽"
+description = "某熱帶地方民俗的風，有細長圓角模樣具有遮陽功能的帽子。給人一種彷彿可以看到荒漠沙塵的感覺。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 637
+item_type_category = "Equip"

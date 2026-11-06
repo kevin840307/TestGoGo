@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_jhub1"]
+
+[resource]
+script = ExtResource("1_jhub1")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 100
+max_mp_bonus = 100
+atk = 12
+def = 24
+matk = 12
+mdef = 25
+hit = 12
+flee = 26
+luk = 10
+durability = 50
+spr_id = 140
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 18138
+item_name = "聖誕鹿角"
+description = "聖誕節的特別禮物，馴鹿鹿角形頭飾。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 785
+item_type_category = "Equip"

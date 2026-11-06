@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_rmstq"]
+
+[resource]
+script = ExtResource("1_rmstq")
+attack_range = 20
+bullet_id = 99
+note_1 = "0"
+note_2 = "0"
+note_3 = "0"
+note_4 = "0"
+horse_type = "MS"
+max_hp_bonus = 468
+max_mp_bonus = 242
+atk = 24
+def = 12
+matk = 24
+mdef = 12
+hit = 52
+flee = 52
+durability = 50
+equip_slot = 3
+spr_id = 315
+req_level = 52
+id = 51025
+item_name = "神秘黑森魔獸卡"
+description = "稀有度 ★★★★★"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 500
+icon_id = 365
+item_type_category = "HorseEquip"

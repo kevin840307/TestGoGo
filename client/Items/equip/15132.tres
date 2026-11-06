@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_a1gq7"]
+
+[resource]
+script = ExtResource("1_a1gq7")
+special_effect = "無"
+can_repair = 1
+def = 1360
+mdef = 680
+durability = 50
+equip_slot = 4
+spr_id = 34
+req_level = 90
+req_job = "無"
+req_race = "無"
+id = 15132
+item_name = "泰坦巨人脛甲"
+description = "以絕對防禦為目標製造的裝備。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 796
+item_type_category = "Equip"

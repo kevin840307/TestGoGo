@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_kminj"]
+
+[resource]
+script = ExtResource("1_kminj")
+id = 2621
+item_name = "星之元件"
+description = "遍佈尼路亞的星之能源，結集起來能夠作成具價值的東西。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 372
+item_type_category = "General"

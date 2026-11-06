@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_88kfm"]
+
+[resource]
+script = ExtResource("1_88kfm")
+attack_range = 150
+tick_count = 1
+note_1 = "Hit_Effect02"
+note_2 = "Normal00"
+note_3 = "Esc-Receiver"
+note_4 = "Axe"
+special_effect = "無"
+can_repair = 1
+atk = 5
+matk = 5
+hit = 5
+flee = 5
+luk = 5
+durability = 50
+equip_slot = 5
+spr_id = 8
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 31638
+item_name = "中秋花燈．紅色"
+description = "中秋節的必備隨身物品。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+icon_id = 645
+color_index = 7
+item_type_category = "Weapon"

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_w7bsk"]
+
+[resource]
+script = ExtResource("1_w7bsk")
+script_name = "野性之心．戰狼"
+id = 2455
+item_name = "野性之心．戰狼"
+description = "遠古植物，能夠淨化獸王薩曼之血，淨化後的血能用作進化攻擊類武器。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 434
+color_index = 2
+item_type_category = "General"

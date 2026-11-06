@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_dxwnj"]
+
+[resource]
+script = ExtResource("1_dxwnj")
+script_name = "熊爪娃娃"
+id = 2131
+item_name = "熊爪娃娃"
+description = "娃娃會獻上以下其中一項物品：殺人熊之券、殺人熊之爪。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 610
+color_index = 4
+item_type_category = "General"

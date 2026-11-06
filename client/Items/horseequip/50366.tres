@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_hgfgt"]
+
+[resource]
+script = ExtResource("1_hgfgt")
+attack_range = 350
+note_1 = "Hit_Effect07"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "Gun"
+horse_type = "MS"
+atk = 28
+matk = 28
+durability = 50
+equip_slot = 1
+spr_id = 1
+req_level = 20
+id = 50366
+item_name = "捍衛者重裝炮"
+description = "捍衛者機甲遠距離攻擊武裝。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 500
+icon_id = 351
+color_index = 4
+item_type_category = "HorseEquip"

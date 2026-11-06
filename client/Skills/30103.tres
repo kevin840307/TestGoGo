@@ -1,0 +1,65 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_byo8h"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_mlvhe"]
+
+[sub_resource type="Resource" id="Resource_xbuq6"]
+script = ExtResource("1_byo8h")
+cast_range = 250
+cost_sp = 14
+base_damage = 140
+damage_multiplier = 125
+cooldown = 2
+tick_count = 2
+
+[sub_resource type="Resource" id="Resource_4vcr1"]
+script = ExtResource("1_byo8h")
+level = 2
+cast_range = 250
+cost_sp = 17
+base_damage = 200
+damage_multiplier = 140
+cooldown = 2
+tick_count = 2
+
+[sub_resource type="Resource" id="Resource_hrq1q"]
+script = ExtResource("1_byo8h")
+level = 3
+cast_range = 300
+cost_sp = 19
+base_damage = 270
+damage_multiplier = 155
+cooldown = 2
+tick_count = 2
+
+[sub_resource type="Resource" id="Resource_n4cr4"]
+script = ExtResource("1_byo8h")
+level = 4
+cast_range = 300
+cost_sp = 23
+base_damage = 350
+damage_multiplier = 170
+cooldown = 2
+tick_count = 2
+
+[sub_resource type="Resource" id="Resource_u4fho"]
+script = ExtResource("1_byo8h")
+level = 5
+cast_range = 350
+cost_sp = 26
+base_damage = 440
+damage_multiplier = 190
+cooldown = 2
+tick_count = 2
+
+[resource]
+script = ExtResource("2_mlvhe")
+id = 30103
+skill_name = "魂彈擊"
+description = "召喚出幽魂利用契約，把它們困在子彈內向敵人發射。"
+damage_type = 1
+icon_id = 65
+fx_use = "Skill_Use_00"
+fx_hit = "Skill_Hit_15"
+fx_extra = "Hit_Effect03"
+levels = Array[ExtResource("1_byo8h")]([SubResource("Resource_xbuq6"), SubResource("Resource_4vcr1"), SubResource("Resource_hrq1q"), SubResource("Resource_n4cr4"), SubResource("Resource_u4fho")])

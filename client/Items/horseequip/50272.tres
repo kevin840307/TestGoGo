@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_mg1oo"]
+
+[resource]
+script = ExtResource("1_mg1oo")
+attack_range = 300
+note_1 = "Hit_Effect07"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "Gun"
+horse_type = "MS"
+atk = 456
+durability = 50
+equip_slot = 1
+spr_id = 5
+req_level = 46
+id = 50272
+item_name = "重星號重裝炮"
+description = "機甲遠距離攻擊武裝。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 100
+icon_id = 501
+item_type_category = "HorseEquip"

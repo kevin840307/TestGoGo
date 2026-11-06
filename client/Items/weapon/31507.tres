@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_exkfl"]
+
+[resource]
+script = ExtResource("1_exkfl")
+no_shield = 1
+bullet_id = 4112
+attack_range = 450
+tick_count = 1
+note_1 = "Hit_Effect05"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "Stick"
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 1500
+max_mp_bonus = 2000
+atk = 100
+matk = 1050
+hit = 120
+flee = 50
+durability = 50
+equip_slot = 5
+spr_id = 11
+req_level = 75
+req_job = "魔銃使"
+req_race = "無"
+id = 31507
+item_name = "天嵐之槍"
+description = "能將魔力壓縮成子彈發射的古代長槍。"
+can_store = 1
+price = 10000
+icon_id = 561
+color_index = 5
+item_type_category = "Weapon"

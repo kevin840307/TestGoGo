@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_qaxmq"]
+
+[resource]
+script = ExtResource("1_qaxmq")
+attack_range = 20
+bullet_id = 99
+note_1 = "0"
+note_2 = "0"
+note_3 = "0"
+note_4 = "0"
+horse_type = "MS"
+max_hp_bonus = 113
+max_mp_bonus = 65
+def = 3
+mdef = 3
+hit = 24
+flee = 24
+durability = 50
+equip_slot = 3
+spr_id = 313
+req_level = 24
+id = 50953
+item_name = "白銀星光鳥卡"
+description = "稀有度 ★★★"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 300
+icon_id = 363
+item_type_category = "HorseEquip"

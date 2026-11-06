@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_j4e1g"]
+
+[resource]
+script = ExtResource("1_j4e1g")
+script_name = "魔光動斧藍圖"
+id = 3142
+item_name = "魔光動斧藍圖"
+description = "合成魔光動斧材料：魔光動斧藍圖、鐵礦、木頭、晶石碎片、魔靈草。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 500
+icon_id = 176
+color_index = 5
+item_type_category = "General"

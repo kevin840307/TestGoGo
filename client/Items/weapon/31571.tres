@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_7s1y1"]
+
+[resource]
+script = ExtResource("1_7s1y1")
+attack_range = 60
+tick_count = 1
+note_1 = "Hit_Effect00"
+note_2 = "Normal00"
+note_3 = "Esc-Receiver"
+note_4 = "Dagger"
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 14
+atk = 13
+def = 1
+matk = 13
+durability = 50
+equip_slot = 5
+spr_id = 1
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 31571
+item_name = "旁身小刀"
+description = "基本的防二身武器。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 50
+icon_id = 67
+item_type_category = "Weapon"

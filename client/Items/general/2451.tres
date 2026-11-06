@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_g0v1g"]
+
+[resource]
+script = ExtResource("1_g0v1g")
+id = 2451
+item_name = "殺人熊之券"
+description = "這是一張印有熊掌標記的換領券。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 96
+item_type_category = "General"

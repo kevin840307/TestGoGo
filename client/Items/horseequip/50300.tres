@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_0wto6"]
+
+[resource]
+script = ExtResource("1_0wto6")
+bullet_id = 99
+note_1 = "0"
+note_2 = "0"
+note_3 = "0"
+note_4 = "0"
+horse_type = "MS"
+max_hp_bonus = 300
+def = 32
+mdef = 32
+durability = 50
+spr_id = 6
+req_level = 40
+id = 50300
+item_name = "格靈先驅者機甲"
+description = "功勳機甲裝備。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 2000
+icon_id = 503
+item_type_category = "HorseEquip"

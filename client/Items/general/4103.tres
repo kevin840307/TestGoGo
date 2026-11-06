@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_7cotb"]
+
+[resource]
+script = ExtResource("1_7cotb")
+id = 4103
+item_name = "合金彈"
+description = "雙銃武器專用的子彈。"
+can_store = 1
+price = 1
+icon_id = 381
+item_type_category = "General"

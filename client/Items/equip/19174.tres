@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_k4br3"]
+
+[resource]
+script = ExtResource("1_k4br3")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 500
+max_mp_bonus = 500
+atk = 100
+def = 200
+matk = 90
+mdef = 150
+hit = 110
+flee = 110
+luk = 40
+durability = 50
+spr_id = 114
+req_level = 30
+req_job = "無"
+req_race = "無"
+id = 19174
+item_name = "戰魂貝雷帽"
+description = "紀念決戰之星的出現而製作，擁有決死戰意之人才有資格戴上的軍帽。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 650
+color_index = 1
+item_type_category = "Equip"

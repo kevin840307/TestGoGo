@@ -1,0 +1,55 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://b3nw7otaw4sds"]
+
+[ext_resource type="Texture2D" uid="uid://blccb1eagxble" path="res://Assets/Effects/RawData/Normal_Effect/New_Miss_Red.spr.0000.png" id="1_3ecby"]
+[ext_resource type="Texture2D" uid="uid://dekijkihdjkkb" path="res://Assets/Effects/RawData/Normal_Effect/New_Miss_Red.spr.0001.png" id="2_qn532"]
+[ext_resource type="Texture2D" uid="uid://do7ait8mc0l55" path="res://Assets/Effects/RawData/Normal_Effect/New_Miss_Red.spr.0002.png" id="3_0sbq4"]
+[ext_resource type="Texture2D" uid="uid://cgv5gpev8n8q6" path="res://Assets/Effects/RawData/Normal_Effect/New_Miss_Red.spr.0003.png" id="4_0u0ka"]
+[ext_resource type="Texture2D" uid="uid://driaf1v1fo6gh" path="res://Assets/Effects/RawData/Normal_Effect/New_Miss_Red.spr.0004.png" id="5_q6mfu"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3ecby"]
+atlas = ExtResource("1_3ecby")
+region = Rect2(0, 0, 14, 22)
+metadata/old_offset = Vector2(28, 12)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_qn532"]
+atlas = ExtResource("2_qn532")
+region = Rect2(0, 0, 42, 23)
+metadata/old_offset = Vector2(28, 12)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0sbq4"]
+atlas = ExtResource("3_0sbq4")
+region = Rect2(0, 0, 56, 23)
+metadata/old_offset = Vector2(29, 10)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0u0ka"]
+atlas = ExtResource("4_0u0ka")
+region = Rect2(0, 0, 56, 23)
+metadata/old_offset = Vector2(29, 11)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_q6mfu"]
+atlas = ExtResource("5_q6mfu")
+region = Rect2(0, 0, 56, 23)
+metadata/old_offset = Vector2(27, 11)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3ecby")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_qn532")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0sbq4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0u0ka")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_q6mfu")
+}],
+"loop": false,
+"name": &"default",
+"speed": 15.0
+}]

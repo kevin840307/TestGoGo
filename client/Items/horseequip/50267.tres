@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_47ofk"]
+
+[resource]
+script = ExtResource("1_47ofk")
+bullet_id = 99
+note_1 = "0"
+note_2 = "0"
+note_3 = "0"
+note_4 = "0"
+horse_type = "MA"
+def = 2
+mdef = 2
+move_speed = 50
+durability = 50
+equip_slot = 2
+spr_id = 2
+req_level = 1
+id = 50267
+item_name = "發條龍加速器"
+description = "特殊機甲引擎。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 100
+icon_id = 219
+color_index = 5
+item_type_category = "HorseEquip"

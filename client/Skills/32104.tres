@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_qc6fd"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_wm47g"]
+
+[sub_resource type="Resource" id="Resource_ddx5h"]
+script = ExtResource("1_qc6fd")
+cast_range = 250
+cost_hp = 51
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_5fo3k"]
+script = ExtResource("1_qc6fd")
+level = 2
+cast_range = 250
+cost_hp = 69
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_74eri"]
+script = ExtResource("1_qc6fd")
+level = 3
+cast_range = 300
+cost_hp = 102
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_3q4il"]
+script = ExtResource("1_qc6fd")
+level = 4
+cast_range = 300
+cost_hp = 123
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_vtx4q"]
+script = ExtResource("1_qc6fd")
+level = 5
+cast_range = 350
+cost_hp = 159
+tick_count = 1
+
+[resource]
+script = ExtResource("2_wm47g")
+id = 32104
+skill_name = "精靈轉換"
+description = "使用自身的體力，回復戰鬥精靈的魔法力。"
+icon_id = 86
+fx_use = "Skill_Use_00"
+fx_hit = "Normal_Effect03"
+fx_extra = "0"
+levels = Array[ExtResource("1_qc6fd")]([SubResource("Resource_ddx5h"), SubResource("Resource_5fo3k"), SubResource("Resource_74eri"), SubResource("Resource_3q4il"), SubResource("Resource_vtx4q")])

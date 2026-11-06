@@ -1,0 +1,236 @@
+[gd_scene format=3 uid="uid://da2rvtatb3ymu"]
+
+[ext_resource type="Script" uid="uid://dtqsxe1gvumlt" path="res://scripts/mall_window.gd" id="1_wjyvr"]
+[ext_resource type="Texture2D" uid="uid://dm7lx3ho16pu" path="res://ui/CLOSESCREEN.png" id="1_xypcf"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6wjfy"]
+bg_color = Color(0.05882353, 0.11764706, 0.20392157, 0.9019608)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.78431374, 0.78431374, 0.78431374, 0.7058824)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_withdrawal"]
+bg_color = Color(0.078431375, 0.14509805, 0.23921569, 0.82)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3529412, 0.5529412, 0.7607843, 0.8)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="MallWindow" type="Panel" unique_id=56914137]
+offset_right = 800.0
+offset_bottom = 600.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_6wjfy")
+script = ExtResource("1_wjyvr")
+
+[node name="TitleLabel" type="Label" parent="." unique_id=62253530]
+layout_mode = 0
+offset_left = 17.0
+offset_top = 8.0
+offset_right = 88.0
+offset_bottom = 36.0
+theme_override_font_sizes/font_size = 20
+text = "商城"
+vertical_alignment = 1
+
+[node name="PointsLabel" type="Label" parent="." unique_id=243046091]
+layout_mode = 0
+offset_left = 239.0
+offset_top = 8.0
+offset_right = 758.0
+offset_bottom = 36.0
+theme_override_font_sizes/font_size = 20
+text = "剩餘點數：0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PayPalDonateButton" type="Button" parent="." unique_id=497201507]
+layout_mode = 0
+offset_left = 104.0
+offset_top = 6.0
+offset_right = 228.0
+offset_bottom = 40.0
+mouse_default_cursor_shape = 2
+text = "PayPal贊助"
+
+[node name="CloseButton" type="TextureButton" parent="." unique_id=317967198]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -35.0
+offset_top = 11.0
+offset_right = -13.0
+offset_bottom = 33.0
+grow_horizontal = 0
+texture_normal = ExtResource("1_xypcf")
+stretch_mode = 5
+
+[node name="CategoryVBox" type="VBoxContainer" parent="." unique_id=1242905420]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 53.0
+offset_right = 140.0
+offset_bottom = 581.0
+
+[node name="ScrollArea" type="ScrollContainer" parent="." unique_id=461638]
+layout_mode = 0
+offset_left = 154.0
+offset_top = 53.0
+offset_right = 781.0
+offset_bottom = 582.0
+
+[node name="ItemGrid" type="GridContainer" parent="ScrollArea" unique_id=230555231]
+layout_mode = 2
+columns = 3
+
+[node name="WithdrawalPanel" type="Panel" parent="." unique_id=1329944596]
+visible = false
+layout_mode = 0
+offset_left = 154.0
+offset_top = 53.0
+offset_right = 781.0
+offset_bottom = 582.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_withdrawal")
+
+[node name="HeadingLabel" type="Label" parent="WithdrawalPanel" unique_id=1478567535]
+layout_mode = 0
+offset_left = 28.0
+offset_top = 24.0
+offset_right = 599.0
+offset_bottom = 55.0
+theme_override_font_sizes/font_size = 22
+text = "『樂園』點數提領"
+horizontal_alignment = 1
+
+[node name="DescriptionLabel" type="Label" parent="WithdrawalPanel" unique_id=1086399524]
+layout_mode = 0
+offset_left = 42.0
+offset_top = 68.0
+offset_right = 585.0
+offset_bottom = 116.0
+text = "輸入『樂園』遊戲帳號與密碼後，先查詢餘額，再選擇要提領的點數餘額。"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="LegacyAccountLabel" type="Label" parent="WithdrawalPanel" unique_id=688149631]
+layout_mode = 0
+offset_left = 84.0
+offset_top = 139.0
+offset_right = 174.0
+offset_bottom = 170.0
+text = "遊戲帳號"
+vertical_alignment = 1
+
+[node name="LegacyAccountInput" type="LineEdit" parent="WithdrawalPanel" unique_id=505011886]
+layout_mode = 0
+offset_left = 184.0
+offset_top = 138.0
+offset_right = 456.0
+offset_bottom = 172.0
+placeholder_text = "請輸入『樂園』遊戲帳號"
+alignment = 1
+max_length = 50
+
+[node name="LegacyPasswordLabel" type="Label" parent="WithdrawalPanel" unique_id=1481557425]
+layout_mode = 0
+offset_left = 84.0
+offset_top = 187.0
+offset_right = 174.0
+offset_bottom = 218.0
+text = "遊戲密碼"
+vertical_alignment = 1
+
+[node name="LegacyPasswordInput" type="LineEdit" parent="WithdrawalPanel" unique_id=1057312418]
+layout_mode = 0
+offset_left = 184.0
+offset_top = 186.0
+offset_right = 456.0
+offset_bottom = 220.0
+placeholder_text = "請輸入『樂園』遊戲密碼"
+alignment = 1
+max_length = 255
+secret = true
+
+[node name="QueryButton" type="Button" parent="WithdrawalPanel" unique_id=1883484096]
+layout_mode = 0
+offset_left = 468.0
+offset_top = 138.0
+offset_right = 548.0
+offset_bottom = 220.0
+mouse_default_cursor_shape = 2
+text = "查詢"
+
+[node name="LegacyBalanceLabel" type="Label" parent="WithdrawalPanel" unique_id=196655232]
+layout_mode = 0
+offset_left = 84.0
+offset_top = 249.0
+offset_right = 548.0
+offset_bottom = 287.0
+theme_override_font_sizes/font_size = 18
+text = "『樂園』點數餘額：尚未查詢"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="WithdrawalAmountLabel" type="Label" parent="WithdrawalPanel" unique_id=1733986719]
+layout_mode = 0
+offset_left = 84.0
+offset_top = 310.0
+offset_right = 174.0
+offset_bottom = 344.0
+text = "提領點數"
+vertical_alignment = 1
+
+[node name="WithdrawalAmountInput" type="SpinBox" parent="WithdrawalPanel" unique_id=4746003]
+layout_mode = 0
+offset_left = 184.0
+offset_top = 310.0
+offset_right = 354.0
+offset_bottom = 344.0
+min_value = 1.0
+max_value = 1.0
+value = 1.0
+alignment = 1
+
+[node name="WithdrawButton" type="Button" parent="WithdrawalPanel" unique_id=322639974]
+layout_mode = 0
+offset_left = 366.0
+offset_top = 308.0
+offset_right = 548.0
+offset_bottom = 346.0
+mouse_default_cursor_shape = 2
+disabled = true
+text = "確認提領"
+
+[node name="StatusLabel" type="Label" parent="WithdrawalPanel" unique_id=1556006725]
+layout_mode = 0
+offset_left = 56.0
+offset_top = 377.0
+offset_right = 571.0
+offset_bottom = 449.0
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="SafetyLabel" type="Label" parent="WithdrawalPanel" unique_id=284068210]
+layout_mode = 0
+offset_left = 56.0
+offset_top = 435.0
+offset_right = 571.0
+offset_bottom = 479.0
+theme_override_colors/font_color = Color(0.7411765, 0.8039216, 0.8901961, 1)
+text = "為保障帳號安全，關閉商城或提領成功後會清除密碼。"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2

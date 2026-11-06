@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_0c3pg"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_0kwdy"]
+
+[sub_resource type="Resource" id="Resource_omqsw"]
+script = ExtResource("1_0c3pg")
+
+[resource]
+script = ExtResource("2_0kwdy")
+id = 50127
+skill_name = "怪物特殊技能．分裂"
+description = "怪物特殊技能．分裂"
+fx_use = "Skill_Use_00"
+fx_extra = "0"
+levels = Array[ExtResource("1_0c3pg")]([SubResource("Resource_omqsw")])

@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_8lh1g"]
+
+[resource]
+script = ExtResource("1_8lh1g")
+special_effect = "無"
+can_repair = 1
+req_wis = 18
+max_mp_bonus = 134
+def = 80
+mdef = 182
+durability = 50
+equip_slot = 3
+spr_id = 11
+req_level = 55
+req_job = "無"
+req_race = "無"
+id = 16696
+item_name = "魔導士上衣+6"
+description = "上身法衣裝備。可使用高級防具強化卡強化，大大增強能力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 41020
+icon_id = 90
+color_index = 3
+item_type_category = "Equip"

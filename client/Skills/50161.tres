@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_t2fyt"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_73n0q"]
+
+[sub_resource type="Resource" id="Resource_quvir"]
+script = ExtResource("1_t2fyt")
+cast_range = 400
+
+[resource]
+script = ExtResource("2_73n0q")
+id = 50161
+skill_name = "勇氣重擊"
+description = "將在場所有玩家的攻擊力降至0，持續30秒。"
+fx_use = "Skill_Use_06"
+fx_hit = "Skill_Hit_37"
+fx_extra = "0"
+levels = Array[ExtResource("1_t2fyt")]([SubResource("Resource_quvir")])

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_f7oj5"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_emn5s"]
+
+[sub_resource type="Resource" id="Resource_iw50y"]
+script = ExtResource("1_f7oj5")
+cooldown = 1800
+tick_count = 1
+
+[resource]
+script = ExtResource("2_emn5s")
+id = 25109
+skill_name = "魔力聖印"
+description = "自身魔力全回復。"
+skill_type = 7
+icon_id = 98
+fx_use = "Skill_Use_00"
+fx_hit = "Normal_Effect02"
+fx_extra = "0"
+special_skill = "魔力聖印"
+levels = Array[ExtResource("1_f7oj5")]([SubResource("Resource_iw50y")])

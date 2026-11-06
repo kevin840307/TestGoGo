@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_rvrq3"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_hpogx"]
+
+[sub_resource type="Resource" id="Resource_op58h"]
+script = ExtResource("1_rvrq3")
+cast_range = 200
+cost_mp = 70
+base_damage = 150
+damage_multiplier = 130
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_5x736"]
+script = ExtResource("1_rvrq3")
+level = 2
+cast_range = 225
+cost_mp = 87
+base_damage = 220
+damage_multiplier = 145
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_frej6"]
+script = ExtResource("1_rvrq3")
+level = 3
+cast_range = 225
+cost_mp = 110
+base_damage = 290
+damage_multiplier = 160
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_gckdo"]
+script = ExtResource("1_rvrq3")
+level = 4
+cast_range = 250
+cost_mp = 133
+base_damage = 370
+damage_multiplier = 175
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_pswve"]
+script = ExtResource("1_rvrq3")
+level = 5
+cast_range = 275
+cost_mp = 190
+base_damage = 460
+damage_multiplier = 190
+cooldown = 2
+tick_count = 1
+
+[resource]
+script = ExtResource("2_hpogx")
+id = 33005
+skill_name = "狂刃斬"
+description = "利用武器本身與魔力的共鳴，向敵人施展猛烈的攻擊。"
+icon_id = 50
+fx_use = "Skill_Use_06"
+fx_hit = "Skill_Hit_33"
+fx_extra = "Hit_Effect05"
+levels = Array[ExtResource("1_rvrq3")]([SubResource("Resource_op58h"), SubResource("Resource_5x736"), SubResource("Resource_frej6"), SubResource("Resource_gckdo"), SubResource("Resource_pswve")])

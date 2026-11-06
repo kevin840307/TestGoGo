@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="RecoveryData" format=3]
+
+[ext_resource type="Script" uid="uid://ck1fehhmvo5cj" path="res://scripts/recovery_data.gd" id="1_ai6wp"]
+
+[resource]
+script = ExtResource("1_ai6wp")
+use_range = 100
+note_1 = "Normal_Effect12"
+note_2 = "Normal_Effect22"
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 1019
+item_name = "花火．紫羅蘭"
+description = "使用後，出現美麗的煙火。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 10
+icon_id = 424
+color_index = 5
+item_type_category = "Recovery"

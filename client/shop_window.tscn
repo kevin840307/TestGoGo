@@ -1,0 +1,189 @@
+[gd_scene format=3 uid="uid://bdy4mhaskl8e0"]
+
+[ext_resource type="Script" uid="uid://dumhley4g4xx5" path="res://scripts/shop_window.gd" id="1_dy12l"]
+[ext_resource type="Texture2D" uid="uid://80022ec76kim" path="res://ui/BG_SHOP_L.png" id="2_xqio3"]
+[ext_resource type="PackedScene" uid="uid://yvcqruofkvub" path="res://shared_inventory_panel.tscn" id="4_egta6"]
+[ext_resource type="Texture2D" uid="uid://dm7lx3ho16pu" path="res://ui/CLOSESCREEN.png" id="6_xqio3"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ihjhd"]
+bg_color = Color(1, 0.5882353, 0, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_unai3"]
+bg_color = Color(1, 0.6666667, 0, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[node name="ShopWindow" type="Control" unique_id=866465144]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_dy12l")
+
+[node name="PanelLeft" type="Control" parent="." unique_id=270525962]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -329.0
+offset_top = -287.5
+offset_right = -97.0
+offset_bottom = 199.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Background" type="TextureRect" parent="PanelLeft" unique_id=2088552082]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_xqio3")
+
+[node name="LblShopName" type="Label" parent="PanelLeft" unique_id=778692968]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -9.0
+offset_top = -201.5
+offset_right = 99.0
+offset_bottom = -181.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 14
+text = "1232132"
+horizontal_alignment = 1
+
+[node name="BtnAction" type="Button" parent="PanelLeft" unique_id=229931412]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 27.0
+offset_top = 208.0
+offset_right = 109.0
+offset_bottom = 234.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxFlat_ihjhd")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_unai3")
+theme_override_styles/hover = SubResource("StyleBoxFlat_unai3")
+text = "開始營業
+"
+
+[node name="BtnCancel" type="TextureButton" parent="PanelLeft" unique_id=1110451759]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -24.0
+offset_top = 4.0
+offset_right = -8.0
+offset_bottom = 20.0
+grow_horizontal = 0
+texture_normal = ExtResource("6_xqio3")
+stretch_mode = 0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="PanelLeft" unique_id=229728765]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 116.5
+offset_right = 218.0
+offset_bottom = 438.5
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 2
+
+[node name="ListShopItems" type="VBoxContainer" parent="PanelLeft/ScrollContainer" unique_id=1543435358]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+
+[node name="LblItemCount2" type="Label" parent="PanelLeft" unique_id=1817211208]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -101.0
+offset_top = -161.5
+offset_right = 104.0
+offset_bottom = -139.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 15
+text = "出售商品"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label2" type="Label" parent="PanelLeft" unique_id=1806873452]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -107.0
+offset_top = -202.0
+offset_right = -19.0
+offset_bottom = -181.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 14
+text = "名稱"
+horizontal_alignment = 1
+
+[node name="LabelTitle2" type="Label" parent="PanelLeft" unique_id=1175677937]
+layout_mode = 0
+offset_left = 9.0
+offset_top = 1.0
+offset_right = 72.0
+offset_bottom = 23.0
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 15
+text = "小商店"
+vertical_alignment = 1
+
+[node name="PanelRight" parent="." unique_id=1757622877 instance=ExtResource("4_egta6")]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 137.0
+offset_top = -286.5
+offset_right = 396.0
+offset_bottom = 218.5
+grow_horizontal = 2

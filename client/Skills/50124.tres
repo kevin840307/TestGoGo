@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_4whm1"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_yfusu"]
+
+[sub_resource type="Resource" id="Resource_kdtei"]
+script = ExtResource("1_4whm1")
+
+[resource]
+script = ExtResource("2_yfusu")
+id = 50124
+skill_name = "護衛龍召喚"
+description = "護衛龍召喚"
+fx_extra = "0"
+levels = Array[ExtResource("1_4whm1")]([SubResource("Resource_kdtei")])

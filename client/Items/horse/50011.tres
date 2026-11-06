@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="HorseData" format=3]
+
+[ext_resource type="Script" uid="uid://hk1vvj5cprdj" path="res://scripts/horse_data.gd" id="1_hxinp"]
+
+[resource]
+script = ExtResource("1_hxinp")
+body_id = 50311
+weapon_id = 50319
+engine_id = 50335
+max_battery = 25200
+horse_type = "MA"
+req_level = 10
+id = 50011
+item_name = "重裝黃蜂戰鬥機"
+description = "皇家特殊製造，因適應不同環境而製造的機甲。"
+icon_id = 546
+item_type_category = "Horse"

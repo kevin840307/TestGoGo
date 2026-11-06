@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_el5dd"]
+
+[resource]
+script = ExtResource("1_el5dd")
+special_effect = "無"
+can_repair = 1
+def = 100
+hit = 60
+luk = 20
+durability = 50
+spr_id = 133
+req_level = 80
+req_job = "無"
+req_race = "無"
+id = 15050
+item_name = "特飾頭飾．80"
+description = "特「飾」設計比賽的冠軍所設計的頭飾。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 709
+color_index = 2
+item_type_category = "Equip"

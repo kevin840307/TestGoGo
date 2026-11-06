@@ -1,0 +1,55 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_h7w2y"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_eiiiq"]
+
+[sub_resource type="Resource" id="Resource_kx424"]
+script = ExtResource("1_h7w2y")
+cost_mp = 48
+cost_sp = 23
+cooldown = 1800
+duration = 300
+
+[sub_resource type="Resource" id="Resource_k3mbw"]
+script = ExtResource("1_h7w2y")
+level = 2
+cost_mp = 93
+cost_sp = 31
+cooldown = 1800
+duration = 300
+
+[sub_resource type="Resource" id="Resource_ewjrt"]
+script = ExtResource("1_h7w2y")
+level = 3
+cost_mp = 156
+cost_sp = 41
+cooldown = 1800
+duration = 300
+
+[sub_resource type="Resource" id="Resource_aqsdy"]
+script = ExtResource("1_h7w2y")
+level = 4
+cost_mp = 208
+cost_sp = 52
+cooldown = 1800
+duration = 300
+
+[sub_resource type="Resource" id="Resource_3rq5n"]
+script = ExtResource("1_h7w2y")
+level = 5
+cost_mp = 268
+cost_sp = 66
+cooldown = 1800
+duration = 300
+
+[resource]
+script = ExtResource("2_eiiiq")
+id = 33004
+skill_name = "戰鬥刻紋—惡魔形態"
+description = "噬魂使的特殊形態，持續5分鐘及持續減少MP。能增加物理攻擊力及使影牙連刃、狂刃斬、逆流衝擊、黑暗之牙的傷害增加。"
+skill_type = 6
+icon_id = 31
+fx_use = "Skill_Use_09"
+fx_hit = "Skill_Hit_99"
+fx_extra = "0"
+levels = Array[ExtResource("1_h7w2y")]([SubResource("Resource_kx424"), SubResource("Resource_k3mbw"), SubResource("Resource_ewjrt"), SubResource("Resource_aqsdy"), SubResource("Resource_3rq5n")])

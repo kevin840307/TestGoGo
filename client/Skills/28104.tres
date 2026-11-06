@@ -1,0 +1,55 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_34f1g"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_og3wr"]
+
+[sub_resource type="Resource" id="Resource_60vwx"]
+script = ExtResource("1_34f1g")
+cost_mp = 84
+damage_multiplier = 10
+cooldown = 1
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_jtvue"]
+script = ExtResource("1_34f1g")
+level = 2
+cost_mp = 135
+damage_multiplier = 20
+cooldown = 1
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_58coo"]
+script = ExtResource("1_34f1g")
+level = 3
+cost_mp = 204
+damage_multiplier = 30
+cooldown = 1
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_5h372"]
+script = ExtResource("1_34f1g")
+level = 4
+cost_mp = 285
+damage_multiplier = 40
+cooldown = 1
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_vgbav"]
+script = ExtResource("1_34f1g")
+level = 5
+cost_mp = 384
+damage_multiplier = 50
+cooldown = 1
+tick_count = 1
+
+[resource]
+script = ExtResource("2_og3wr")
+id = 28104
+skill_name = "天使之光"
+description = "回復團隊成員的體力。"
+skill_type = 3
+icon_id = 48
+fx_use = "Skill_Use_00"
+fx_hit = "Normal_Effect05"
+fx_extra = "0"
+levels = Array[ExtResource("1_34f1g")]([SubResource("Resource_60vwx"), SubResource("Resource_jtvue"), SubResource("Resource_58coo"), SubResource("Resource_5h372"), SubResource("Resource_vgbav")])

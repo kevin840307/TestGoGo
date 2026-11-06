@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_kohvk"]
+
+[resource]
+script = ExtResource("1_kohvk")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 200
+max_mp_bonus = 200
+max_sp_bonus = 100
+def = 117
+mdef = 137
+hit = 100
+flee = 100
+durability = 50
+spr_id = 135
+req_level = 40
+req_job = "無"
+req_race = "無"
+id = 19164
+item_name = "鬼霧面罩．40"
+description = "配戴後像鬼霧般一樣神秘。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 720
+item_type_category = "Equip"

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_r63df"]
+
+[resource]
+script = ExtResource("1_r63df")
+id = 2762
+item_name = "小雪球"
+description = "小小的雪球，拿給在城中的Winter她便會和你一起堆雪人。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+icon_id = 595
+color_index = 2
+item_type_category = "General"

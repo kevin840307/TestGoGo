@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_a3qux"]
+
+[resource]
+script = ExtResource("1_a3qux")
+no_shield = 1
+attack_range = 150
+tick_count = 1
+note_1 = "Hit_Effect05"
+note_2 = "Fire01"
+note_3 = "Esc-Receiver"
+note_4 = "Stick"
+special_effect = "無"
+can_repair = 1
+req_wis = 45
+max_hp_bonus = 1050
+max_mp_bonus = 1200
+atk = 110
+matk = 1200
+mdef = 200
+hit = 60
+flee = 20
+durability = 50
+equip_slot = 5
+spr_id = 13
+req_level = 85
+req_job = "無"
+req_race = "無"
+id = 30134
+item_name = "火靈魔杖"
+description = "經過龍族力量強化的武器，使用回復技能時，增加10%治療量。被技能攻擊時，減少4%傷害。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 60000
+icon_id = 660
+color_index = 7
+item_type_category = "Weapon"

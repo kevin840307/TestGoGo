@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_058f8"]
+
+[resource]
+script = ExtResource("1_058f8")
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 165
+def = 39
+matk = 19
+mdef = 64
+flee = 4
+durability = 50
+equip_slot = 4
+spr_id = 12
+req_level = 37
+req_job = "無"
+req_race = "無"
+id = 18560
+item_name = "神獸靈下裝"
+description = "下身裝備。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 7056
+icon_id = 123
+color_index = 4
+item_type_category = "Equip"

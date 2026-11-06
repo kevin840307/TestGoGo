@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_x5q1c"]
+
+[resource]
+script = ExtResource("1_x5q1c")
+id = 2635
+item_name = "支配者之牙"
+description = "擁有強大魔力的生物勾玉。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 268
+color_index = 7
+item_type_category = "General"

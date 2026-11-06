@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_21hk7"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_1qaly"]
+
+[sub_resource type="Resource" id="Resource_chdmq"]
+script = ExtResource("1_21hk7")
+cast_range = 150
+cost_mp = 168
+tick_count = 1
+
+[resource]
+script = ExtResource("2_1qaly")
+id = 50158
+skill_name = "維柏德之吻"
+description = "範圍性的法術，所有在場的人都會被炸傷。"
+icon_id = 9
+fx_use = "Skill_Use_05"
+fx_hit = "Skill_Hit_36"
+fx_extra = "Hit_Effect03"
+levels = Array[ExtResource("1_21hk7")]([SubResource("Resource_chdmq")])

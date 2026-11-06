@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_0u0qw"]
+
+[resource]
+script = ExtResource("1_0u0qw")
+no_shield = 1
+bullet_id = 4112
+attack_range = 350
+tick_count = 1
+note_1 = "Hit_Effect00"
+note_2 = "Normal02"
+note_3 = "Esc-Receiver"
+note_4 = "Gun"
+special_effect = "無"
+can_repair = 1
+matk = 995
+mdef = 480
+hit = 55
+flee = 35
+durability = 50
+equip_slot = 5
+spr_id = 10
+req_level = 100
+req_job = "無"
+req_race = "無"
+id = 31435
+item_name = "烙痕"
+description = "完成星之鑰任務的獎勵。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 10000
+icon_id = 663
+color_index = 4
+item_type_category = "Weapon"

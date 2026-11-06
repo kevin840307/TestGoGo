@@ -1,0 +1,115 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_48fy5"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_4belt"]
+
+[sub_resource type="Resource" id="Resource_mti0h"]
+script = ExtResource("1_48fy5")
+cost_mp = 28
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -50
+matk_bonus = 50
+
+[sub_resource type="Resource" id="Resource_gud5c"]
+script = ExtResource("1_48fy5")
+level = 2
+cost_mp = 45
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -80
+matk_bonus = 80
+
+[sub_resource type="Resource" id="Resource_08s1i"]
+script = ExtResource("1_48fy5")
+level = 3
+cost_mp = 68
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -110
+matk_bonus = 110
+
+[sub_resource type="Resource" id="Resource_4x6ml"]
+script = ExtResource("1_48fy5")
+level = 4
+cost_mp = 95
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -140
+matk_bonus = 140
+
+[sub_resource type="Resource" id="Resource_km3tv"]
+script = ExtResource("1_48fy5")
+level = 5
+cost_mp = 128
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -170
+matk_bonus = 170
+
+[sub_resource type="Resource" id="Resource_ygekd"]
+script = ExtResource("1_48fy5")
+level = 6
+cost_mp = 167
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -200
+matk_bonus = 200
+
+[sub_resource type="Resource" id="Resource_gpybd"]
+script = ExtResource("1_48fy5")
+level = 7
+cost_mp = 212
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -230
+matk_bonus = 230
+
+[sub_resource type="Resource" id="Resource_vbnpa"]
+script = ExtResource("1_48fy5")
+level = 8
+cost_mp = 263
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -260
+matk_bonus = 260
+
+[sub_resource type="Resource" id="Resource_18wlc"]
+script = ExtResource("1_48fy5")
+level = 9
+cost_mp = 320
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -290
+matk_bonus = 290
+
+[sub_resource type="Resource" id="Resource_16nkx"]
+script = ExtResource("1_48fy5")
+level = 10
+cost_mp = 383
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -320
+matk_bonus = 320
+
+[resource]
+script = ExtResource("2_4belt")
+id = 30105
+skill_name = "閃電符文"
+description = "暫時犧牲攻擊力，來提魔法攻擊力。"
+skill_type = 4
+icon_id = 67
+fx_use = "Skill_Use_00"
+fx_hit = "Skill_Hit_23"
+fx_extra = "0"
+levels = Array[ExtResource("1_48fy5")]([SubResource("Resource_mti0h"), SubResource("Resource_gud5c"), SubResource("Resource_08s1i"), SubResource("Resource_4x6ml"), SubResource("Resource_km3tv"), SubResource("Resource_ygekd"), SubResource("Resource_gpybd"), SubResource("Resource_vbnpa"), SubResource("Resource_18wlc"), SubResource("Resource_16nkx")])

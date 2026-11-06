@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_wpa6u"]
+
+[resource]
+script = ExtResource("1_wpa6u")
+special_effect = "無"
+can_repair = 1
+atk = 6
+matk = 6
+durability = 50
+spr_id = 11
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 19085
+item_name = "遊俠之帽．初號"
+description = "由魔法之都．古尼爾著名的金杖級魔法師柏菲花了10年時間創造出來的「遊俠之帽」，具有非凡的能力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 30
+icon_id = 134
+item_type_category = "Equip"

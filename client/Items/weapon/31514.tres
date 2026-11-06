@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_66cme"]
+
+[resource]
+script = ExtResource("1_66cme")
+no_shield = 1
+attack_range = 150
+tick_count = 1
+note_1 = "Hit_Effect02"
+note_2 = "Fire00"
+note_3 = "Esc-Receiver"
+note_4 = "Stick"
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 1500
+atk = 250
+matk = 920
+mdef = 10
+hit = 22
+flee = 5
+durability = 50
+equip_slot = 5
+spr_id = 7
+req_level = 75
+req_job = "無"
+req_race = "無"
+id = 31514
+item_name = "皇家外交使節之杖"
+description = "偉大魔法使用者才有資格擁有的法杖。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 10000
+icon_id = 64
+color_index = 2
+item_type_category = "Weapon"

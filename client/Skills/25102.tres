@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_635mx"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_tqal4"]
+
+[sub_resource type="Resource" id="Resource_8evsc"]
+script = ExtResource("1_635mx")
+cast_range = 200
+cost_mp = 28
+base_damage = 110
+damage_multiplier = 110
+cooldown = 2
+tick_count = 2
+
+[sub_resource type="Resource" id="Resource_aspxi"]
+script = ExtResource("1_635mx")
+level = 2
+cast_range = 225
+cost_mp = 34
+base_damage = 170
+damage_multiplier = 125
+cooldown = 2
+tick_count = 2
+
+[sub_resource type="Resource" id="Resource_oqsbt"]
+script = ExtResource("1_635mx")
+level = 3
+cast_range = 225
+cost_mp = 40
+base_damage = 240
+damage_multiplier = 140
+cooldown = 2
+tick_count = 2
+
+[sub_resource type="Resource" id="Resource_850cu"]
+script = ExtResource("1_635mx")
+level = 4
+cast_range = 250
+cost_mp = 46
+base_damage = 320
+damage_multiplier = 155
+cooldown = 2
+tick_count = 2
+
+[sub_resource type="Resource" id="Resource_vy1av"]
+script = ExtResource("1_635mx")
+level = 5
+cast_range = 275
+cost_mp = 52
+base_damage = 410
+damage_multiplier = 175
+cooldown = 2
+tick_count = 2
+
+[resource]
+script = ExtResource("2_tqal4")
+id = 25102
+skill_name = "暴風閃劍"
+description = "以暴風的力量向敵人攻擊。"
+icon_id = 22
+fx_use = "Skill_Use_00"
+fx_hit = "Skill_Hit_10"
+fx_extra = "Hit_Effect04"
+levels = Array[ExtResource("1_635mx")]([SubResource("Resource_8evsc"), SubResource("Resource_aspxi"), SubResource("Resource_oqsbt"), SubResource("Resource_850cu"), SubResource("Resource_vy1av")])

@@ -1,0 +1,67 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_7a33m"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_nioui"]
+
+[sub_resource type="Resource" id="Resource_7tbpt"]
+script = ExtResource("1_7a33m")
+cast_range = 250
+cost_mp = 225
+base_damage = 400
+damage_multiplier = 180
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_geos7"]
+script = ExtResource("1_7a33m")
+level = 2
+cast_range = 250
+cost_mp = 270
+base_damage = 560
+damage_multiplier = 210
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_lkngi"]
+script = ExtResource("1_7a33m")
+level = 3
+cast_range = 275
+cost_mp = 354
+base_damage = 740
+damage_multiplier = 240
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_74kn3"]
+script = ExtResource("1_7a33m")
+level = 4
+cast_range = 275
+cost_mp = 462
+base_damage = 940
+damage_multiplier = 270
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_ywt3w"]
+script = ExtResource("1_7a33m")
+level = 5
+cast_range = 300
+cost_mp = 550
+base_damage = 1160
+damage_multiplier = 300
+cooldown = 2
+tick_count = 1
+
+[resource]
+script = ExtResource("2_nioui")
+id = 33013
+skill_name = "霜龍召喚"
+description = "凝聚魔法召喚異次元的霜龍，能對敵人造成極大的傷害同時降低對手的魔法防禦力及移動速度。需要在魔機形態下才可使用。"
+skill_type = 7
+damage_type = 1
+icon_id = 94
+fx_use = "Skill_Use_06"
+fx_hit = "Skill_Hit_53"
+fx_extra = "Hit_Effect03"
+special_skill = "霜龍召喚"
+levels = Array[ExtResource("1_7a33m")]([SubResource("Resource_7tbpt"), SubResource("Resource_geos7"), SubResource("Resource_lkngi"), SubResource("Resource_74kn3"), SubResource("Resource_ywt3w")])

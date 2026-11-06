@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_mpwna"]
+
+[resource]
+script = ExtResource("1_mpwna")
+attack_range = 50
+note_1 = "Hit_Effect07"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "Stick"
+horse_type = "MS"
+max_hp_bonus = 33
+max_mp_bonus = 33
+atk = 52
+matk = 52
+durability = 50
+equip_slot = 1
+spr_id = 2
+req_level = 40
+id = 50343
+item_name = "艾瑞爾機甲武裝"
+description = "功勳機甲裝備。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1000
+icon_id = 425
+color_index = 3
+item_type_category = "HorseEquip"

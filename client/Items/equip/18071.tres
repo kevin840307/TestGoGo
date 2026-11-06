@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_f2h52"]
+
+[resource]
+script = ExtResource("1_f2h52")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 60
+luk = 15
+durability = 50
+spr_id = 75
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 18071
+item_name = "神秘處女座"
+description = "處女座的人追求完美，挑剔和神經緊張，吹毛求疪正是他們的特性。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 200
+icon_id = 562
+color_index = 4
+item_type_category = "Equip"

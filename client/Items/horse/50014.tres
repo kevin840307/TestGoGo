@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="HorseData" format=3]
+
+[ext_resource type="Script" uid="uid://hk1vvj5cprdj" path="res://scripts/horse_data.gd" id="1_087wy"]
+
+[resource]
+script = ExtResource("1_087wy")
+body_id = 50347
+weapon_id = 50348
+engine_id = 50349
+max_battery = 25200
+horse_type = "MA"
+req_level = 1
+id = 50014
+item_name = "塔巴克戰騎"
+description = "擁有鋒利獨角的塔巴克戰騎，能抵禦強大的攻擊。"
+icon_id = 760
+item_type_category = "Horse"

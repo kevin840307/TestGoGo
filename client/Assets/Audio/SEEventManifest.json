@@ -1,0 +1,6440 @@
+{
+  "candidate_selection": "random_one",
+  "controller_entries": [
+    {
+      "actions": {
+        "attack_na": {
+          "3": [
+            "SE0016"
+          ]
+        }
+      },
+      "controller": "ma:MA04",
+      "source_act": "MA/MA04.ACT"
+    },
+    {
+      "actions": {
+        "attack_na": {
+          "4": [
+            "SE0016"
+          ]
+        }
+      },
+      "controller": "ma:MA05",
+      "source_act": "MA/MA05.ACT"
+    },
+    {
+      "actions": {
+        "attack_na": {
+          "4": [
+            "SE0016"
+          ]
+        }
+      },
+      "controller": "ma:MA06",
+      "source_act": "MA/MA06.ACT"
+    },
+    {
+      "actions": {
+        "attack_na": {
+          "4": [
+            "SE0018"
+          ]
+        }
+      },
+      "controller": "ma:MA07",
+      "source_act": "MA/MA07.ACT"
+    },
+    {
+      "actions": {
+        "attack_na": {
+          "1": [
+            "SE0003"
+          ],
+          "4": [
+            "SE0004"
+          ]
+        },
+        "attack_nb": {
+          "1": [
+            "SE0022"
+          ]
+        },
+        "walk": {
+          "1": [
+            "SE0001"
+          ],
+          "5": [
+            "SE0001"
+          ]
+        }
+      },
+      "controller": "mecha:MS",
+      "source_act": "MS/MS.ACT"
+    },
+    {
+      "actions": {
+        "walk": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "controller": "player:A",
+      "source_act": "Player/A/Alien.ACT"
+    },
+    {
+      "actions": {
+        "walk": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "controller": "player:B",
+      "source_act": "Player/B/Boy.ACT"
+    },
+    {
+      "actions": {
+        "walk": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "controller": "player:G",
+      "source_act": "Player/G/Girl.ACT"
+    },
+    {
+      "actions": {
+        "walk": {
+          "1": [
+            "SE0001"
+          ],
+          "3": [
+            "SE0001"
+          ]
+        }
+      },
+      "controller": "player:R",
+      "source_act": "Player/R/Robot.ACT"
+    }
+  ],
+  "counts": {
+    "audio_cues": 755,
+    "controller_audio_cues": 17,
+    "controller_entries": 9,
+    "resources": 377,
+    "skipped_unavailable_cues": 6,
+    "skipped_unresolved_resources": 36,
+    "source_audio_cues": 822
+  },
+  "entries": [
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0009",
+            "SE0010",
+            "SE0011",
+            "SE0012"
+          ],
+          "1": [
+            "SE0013",
+            "SE0014"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Hit_Effect/Hit_Effect00.tres",
+      "source_act": "Effect/Hit_Effect/Hit_Effect00.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0025",
+            "SE0026"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Hit_Effect/Hit_Effect01.tres",
+      "source_act": "Effect/Hit_Effect/Hit_Effect01.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0083",
+            "SE0084"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Hit_Effect/Hit_Effect02.tres",
+      "source_act": "Effect/Hit_Effect/Hit_Effect02.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0027",
+            "SE0028"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Hit_Effect/Hit_Effect03.tres",
+      "source_act": "Effect/Hit_Effect/Hit_Effect03.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0085",
+            "SE0086"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Hit_Effect/Hit_Effect04.tres",
+      "source_act": "Effect/Hit_Effect/Hit_Effect04.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0087"
+          ],
+          "1": [
+            "SE0028"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Hit_Effect/Hit_Effect05.tres",
+      "source_act": "Effect/Hit_Effect/Hit_Effect05.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0024",
+            "SE0027",
+            "SE0028"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Hit_Effect/Hit_Effect06.tres",
+      "source_act": "Effect/Hit_Effect/Hit_Effect06.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0015",
+            "SE0016",
+            "SE0017",
+            "SE0018",
+            "SE0019"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Hit_Effect/Hit_Effect07.tres",
+      "source_act": "Effect/Hit_Effect/Hit_Effect07.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "1": [
+            "SE0032"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/B-Die_Effect.tres",
+      "source_act": "Effect/Normal_Effect/B-Die_Effect.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0067"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect00.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect00.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0068"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect01.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect01.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0067"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect02.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect02.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0068"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect03.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect03.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0066"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect04.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect04.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0071"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect05.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect05.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0072"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect06.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect06.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0073"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect07.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect07.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0076"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect08.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect08.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0073"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect09.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect09.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0074"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect10.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect10.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0075"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect11.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect11.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0066"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect12.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect12.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0088"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect13.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect13.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0089"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect14.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect14.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0090"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/Normal_Effect15.tres",
+      "source_act": "Effect/Normal_Effect/Normal_Effect15.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0033"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Normal_Effect/R-Die_Effect.tres",
+      "source_act": "Effect/Normal_Effect/R-Die_Effect.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0099"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/A_Skill_Use_00.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_00.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0149"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/A_Skill_Use_01.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_01.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0150"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/A_Skill_Use_02.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_02.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0151"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/A_Skill_Use_03.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_03.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0151"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/A_Skill_Use_04.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_04.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0099"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/B_Skill_Use_00.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_00.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0149"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/B_Skill_Use_01.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_01.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0150"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/B_Skill_Use_02.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_02.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0151"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/B_Skill_Use_03.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_03.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0151"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/B_Skill_Use_04.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_04.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0099"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/R_Skill_Use_00.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_00.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0149"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/R_Skill_Use_01.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_01.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0150"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/R_Skill_Use_02.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_02.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0151"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/R_Skill_Use_03.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_03.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0151"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/R_Skill_Use_04.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Use_04.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "6": [
+            "SE0098"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_00.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_00.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0100"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_01.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_01.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0101"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_02.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_02.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0102"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_03.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_03.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0103"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_04.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_04.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0104"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_05.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_05.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0105"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_06.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_06.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0106"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_07.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_07.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0107"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_08.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_08.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0104"
+          ],
+          "4": [
+            "SE0024"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_09.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_09.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0030"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_10.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_10.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0056"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_11.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_11.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0142"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_12.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_12.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "1": [
+            "SE0100"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_13.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_13.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0104"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_14.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_14.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0143"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_15.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_15.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0144"
+          ],
+          "6": [
+            "SE0064"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_16.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_16.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "1": [
+            "SE0064"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_17.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_17.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0145"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_18.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_18.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0146"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_19.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_19.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0147"
+          ],
+          "9": [
+            "SE0146"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_20.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_20.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0072"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_21.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_21.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0043"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_22.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_22.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0148"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_23.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_23.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "1": [
+            "SE0152"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_24.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_24.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0103"
+          ],
+          "5": [
+            "SE0126"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_25.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_25.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0032"
+          ],
+          "5": [
+            "SE0055"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_26.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_26.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0058"
+          ],
+          "3": [
+            "SE0027"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_27.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_27.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0151"
+          ],
+          "7": [
+            "SE0146"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_28.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_28.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "1": [
+            "SE0152"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_29.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_29.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0132"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_30.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_30.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0144"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_31.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_31.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "1": [
+            "SE0144"
+          ],
+          "11": [
+            "SE0146"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_32.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_32.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "1": [
+            "SE0151"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_33.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_33.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0153"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_34.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_34.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "1": [
+            "SE0154"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_35.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_35.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0155"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_36.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_36.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0151"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_37.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_37.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0156"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_38.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_38.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0157"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_39.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_39.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0151"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_40.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_40.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0154"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_41.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_41.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "1": [
+            "SE0151"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_42.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_42.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0144"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_43.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_43.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0158"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_44.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_44.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0153"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_45.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_45.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0144"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_46.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_46.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0153"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_47.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_47.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0162"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_48.tres",
+      "source_act": "Effect/Skill_Effect/Skill_Hit_48.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0008",
+            "SE0006",
+            "SE0007"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Dark00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Dark00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Dark00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Dark00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Dark00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Dark00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "1": [
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Fire00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Fire00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Fire00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Fire00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0078"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Fire00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Fire00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0079",
+            "SE0080"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Fire01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Fire01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0081",
+            "SE0082"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Fire01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Fire01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal01_GA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal01_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal01_GB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal01_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal02_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal02_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal02_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal02_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal02_GA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal02_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal02_GB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal02_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal03_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal03_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal03_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal03_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal03_GA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal03_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal03_GB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal03_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal04_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal04_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal04_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal04_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal04_GA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal04_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Normal04_GB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Normal04_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0008",
+            "SE0006",
+            "SE0007"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Poison00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Poison00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0008",
+            "SE0006",
+            "SE0007"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Poison00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Poison00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Poison00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Poison00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Poison00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Poison00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Soil00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Soil00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Soil00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Soil00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Soil00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Soil00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Soil00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Soil00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0079",
+            "SE0080"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Soil01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Soil01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0081",
+            "SE0082"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Soil01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Soil01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Water00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Water00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Water00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Water00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Water00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Water00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Water00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Water00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0079",
+            "SE0080"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Water01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Water01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0081",
+            "SE0082"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Water01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Water01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Wind00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Wind00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Wind00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Wind00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Wind00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Wind00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Wind00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Wind00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0079",
+            "SE0080"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Wind01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/A-Wind01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0081",
+            "SE0082"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/A-Wind01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/A-Wind01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0008",
+            "SE0006",
+            "SE0007"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Dark00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Dark00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Dark00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Dark00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Dark00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Dark00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "1": [
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Fire00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Fire00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Fire00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Fire00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0078"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Fire00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Fire00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0079",
+            "SE0080"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Fire01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Fire01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0081",
+            "SE0082"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Fire01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Fire01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal01_GA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal01_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal01_GB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal01_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal02_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal02_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal02_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal02_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal02_GA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal02_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal02_GB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal02_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal03_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal03_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal03_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal03_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal03_GA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal03_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal03_GB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal03_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal04_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal04_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal04_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal04_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal04_GA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal04_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Normal04_GB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Normal04_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0008",
+            "SE0006",
+            "SE0007"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Poison00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Poison00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0008",
+            "SE0006",
+            "SE0007"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Poison00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Poison00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Poison00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Poison00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Poison00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Poison00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Soil00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Soil00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Soil00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Soil00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Soil00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Soil00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Soil00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Soil00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0079",
+            "SE0080"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Soil01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Soil01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0081",
+            "SE0082"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Soil01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Soil01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Water00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Water00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Water00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Water00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Water00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Water00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Water00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Water00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0079",
+            "SE0080"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Water01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Water01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0081",
+            "SE0082"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Water01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Water01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Wind00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Wind00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Wind00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Wind00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Wind00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Wind00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Wind00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Wind00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0079",
+            "SE0080"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Wind01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/B-Wind01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0081",
+            "SE0082"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/B-Wind01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/B-Wind01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0008",
+            "SE0006",
+            "SE0007"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Dark00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Dark00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Dark00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Dark00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Dark00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Dark00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "1": [
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Fire00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Fire00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Fire00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Fire00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0078"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Fire00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Fire00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0079",
+            "SE0080"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Fire01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Fire01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0081",
+            "SE0082"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Fire01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Fire01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal01_GA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal01_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal01_GB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal01_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal02_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal02_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal02_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal02_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal02_GA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal02_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal02_GB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal02_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal03_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal03_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal03_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal03_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal03_GA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal03_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal03_GB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal03_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0002",
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal04_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal04_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "4": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal04_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal04_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0021"
+          ],
+          "4": [
+            "SE0020"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal04_GA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal04_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0022"
+          ],
+          "4": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Normal04_GB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Normal04_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0008",
+            "SE0006",
+            "SE0007"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Poison00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Poison00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0008",
+            "SE0006",
+            "SE0007"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Poison00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Poison00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Poison00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Poison00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Poison00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Poison00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Soil00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Soil00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Soil00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Soil00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Soil00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Soil00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Soil00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Soil00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0079",
+            "SE0080"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Soil01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Soil01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0081",
+            "SE0082"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Soil01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Soil01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Water00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Water00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Water00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Water00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Water00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Water00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Water00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Water00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0079",
+            "SE0080"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Water01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Water01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0081",
+            "SE0082"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Water01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Water01_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Wind00_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Wind00_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Wind00_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Wind00_AB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Wind00_GA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Wind00_GA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0077"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Wind00_GB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Wind00_GB.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "2": [
+            "SE0079",
+            "SE0080"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Wind01_AA.tres",
+      "source_act": "Effect/Weapon_Effect/R-Wind01_AA.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "3": [
+            "SE0081",
+            "SE0082"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Weapon_Effect/R-Wind01_AB.tres",
+      "source_act": "Effect/Weapon_Effect/R-Wind01_AB.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0034",
+            "SE0035"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "3": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN004A.json",
+      "source_act": "Enemy/EN004A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0003"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0048"
+          ]
+        },
+        "W": {
+          "0": [
+            "EN0049"
+          ],
+          "2": [
+            "EN0049"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN005A.json",
+      "source_act": "Enemy/EN005A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0003"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0048"
+          ]
+        },
+        "W": {
+          "0": [
+            "EN0049"
+          ],
+          "2": [
+            "EN0049"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN005B.json",
+      "source_act": "Enemy/EN005B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0003"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0048"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "3": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN006A.json",
+      "source_act": "Enemy/EN006A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0002"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0049"
+          ]
+        },
+        "W": {
+          "2": [
+            "SE0039"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN007A.json",
+      "source_act": "Enemy/EN007A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0002"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0049"
+          ]
+        },
+        "W": {
+          "2": [
+            "SE0039"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN008A.json",
+      "source_act": "Enemy/EN008A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0002"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0049"
+          ]
+        },
+        "W": {
+          "2": [
+            "SE0039"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN008B.json",
+      "source_act": "Enemy/EN008B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0002"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0049"
+          ]
+        },
+        "W": {
+          "2": [
+            "SE0039"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN009A.json",
+      "source_act": "Enemy/EN009A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ],
+          "2": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0091"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0037"
+          ],
+          "3": [
+            "SE0037"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN010A.json",
+      "source_act": "Enemy/En010A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ],
+          "2": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0091"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0037"
+          ],
+          "3": [
+            "SE0037"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN010B.json",
+      "source_act": "Enemy/En010B.ACT"
+    },
+    {
+      "actions": {
+        "D": {
+          "0": [
+            "SE0051"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0050"
+          ],
+          "3": [
+            "SE0050"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN011A.json",
+      "source_act": "Enemy/En011A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0031"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0051"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0050"
+          ],
+          "2": [
+            "SE0050"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN012A.json",
+      "source_act": "Enemy/En012A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0042"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0053"
+          ],
+          "3": [
+            "SE0039"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "3": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN013A.json",
+      "source_act": "Enemy/En013A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0042"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0053"
+          ],
+          "3": [
+            "SE0039"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "3": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN013B.json",
+      "source_act": "Enemy/En013B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0052"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0053"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0036"
+          ],
+          "3": [
+            "SE0036"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN014A.json",
+      "source_act": "Enemy/En014A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0054"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0053"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0037"
+          ],
+          "3": [
+            "SE0037"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN015A.json",
+      "source_act": "Enemy/En015A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0055"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0053"
+          ]
+        },
+        "S": {
+          "1": [
+            "SE0050",
+            "SE0055"
+          ],
+          "3": [
+            "SE0050",
+            "SE0055"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0036",
+            "SE0037"
+          ],
+          "3": [
+            "SE0036",
+            "SE0037"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN016A.json",
+      "source_act": "Enemy/En016A.ACT"
+    },
+    {
+      "actions": {
+        "D": {
+          "0": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "EN0049",
+            "SE0000"
+          ],
+          "3": [
+            "EN0049"
+          ],
+          "4": [
+            "EN0049",
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN017A.json",
+      "source_act": "Enemy/En017A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0030"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "4": [
+            "SE0031",
+            "SE0042"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN018A.json",
+      "source_act": "Enemy/En018A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "0": [
+            "EN0049",
+            "SE0000"
+          ],
+          "2": [
+            "EN0049",
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN019A.json",
+      "source_act": "Enemy/En019A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0006",
+            "SE0008"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "2": [
+            "EN0049"
+          ],
+          "4": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN020A.json",
+      "source_act": "Enemy/En020A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0002",
+            "SE0003"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0057"
+          ],
+          "3": [
+            "SE0057"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN021A.json",
+      "source_act": "Enemy/En021A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0031"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0058"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0030"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN022A.json",
+      "source_act": "Enemy/En022A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "7": [
+            "SE0014"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0118"
+          ]
+        },
+        "W": {
+          "3": [
+            "SE0057"
+          ],
+          "9": [
+            "SE0057"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN023A.json",
+      "source_act": "Enemy/EN023A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0002",
+            "SE0003"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0091"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN024A.json",
+      "source_act": "Enemy/En024A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0002",
+            "SE0003"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0091"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN024B.json",
+      "source_act": "Enemy/En024B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0003",
+            "SE0004",
+            "SE0005"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0092"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN025A.json",
+      "source_act": "Enemy/En025A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0004",
+            "SE0005"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0091"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0057"
+          ],
+          "2": [
+            "SE0057"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN026A.json",
+      "source_act": "Enemy/En026A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0036",
+            "SE0037"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0094"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0050"
+          ],
+          "2": [
+            "SE0050"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN027A.json",
+      "source_act": "Enemy/En027A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0036",
+            "SE0037"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0094"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0038"
+          ],
+          "2": [
+            "SE0038"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN028A.json",
+      "source_act": "Enemy/En028A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0095"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0038"
+          ],
+          "2": [
+            "SE0038"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN029A.json",
+      "source_act": "Enemy/En029A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0006",
+            "SE0007",
+            "SE0008"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0095"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0038"
+          ],
+          "2": [
+            "SE0038"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN029B.json",
+      "source_act": "Enemy/En029B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0036"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0040",
+            "SE0041"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN030A.json",
+      "source_act": "Enemy/En030A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0037"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0040",
+            "SE0041"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0059"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN031A.json",
+      "source_act": "Enemy/En031A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0037"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0040",
+            "SE0041"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0059"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN032A.json",
+      "source_act": "Enemy/En032A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0037"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0040",
+            "SE0041"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0059"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN032B.json",
+      "source_act": "Enemy/En032B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0060"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0061"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0038"
+          ],
+          "4": [
+            "SE0038"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN033A.json",
+      "source_act": "Enemy/En033A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0060"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0061"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0038"
+          ],
+          "4": [
+            "SE0038"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN034A.json",
+      "source_act": "Enemy/En034A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0060"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0061"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0038"
+          ],
+          "4": [
+            "SE0038"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN035A.json",
+      "source_act": "Enemy/En035A.ACT"
+    },
+    {
+      "actions": {
+        "D": {
+          "0": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0057"
+          ],
+          "3": [
+            "SE0057"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN036A.json",
+      "source_act": "Enemy/En036A.ACT"
+    },
+    {
+      "actions": {
+        "D": {
+          "0": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0057"
+          ],
+          "2": [
+            "SE0057"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN037A.json",
+      "source_act": "Enemy/En037A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0008",
+            "SE0009",
+            "SE0010"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0036",
+            "SE0037"
+          ],
+          "3": [
+            "SE0036",
+            "SE0037"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN038A.json",
+      "source_act": "Enemy/En038A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0042"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0061"
+          ]
+        },
+        "S": {
+          "2": [
+            "SE0063"
+          ]
+        },
+        "W": {
+          "2": [
+            "SE0062"
+          ],
+          "4": [
+            "SE0062"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN042A.json",
+      "source_act": "Enemy/En042A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0002",
+            "SE0003",
+            "SE0004"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0093"
+          ]
+        },
+        "W": {
+          "2": [
+            "SE0057"
+          ],
+          "4": [
+            "SE0057"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN043A.json",
+      "source_act": "Enemy/En043A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0002",
+            "SE0003"
+          ],
+          "3": [
+            "SE0004",
+            "SE0005"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0058"
+          ]
+        },
+        "W": {
+          "2": [
+            "SE0062"
+          ],
+          "4": [
+            "SE0062"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN044A.json",
+      "source_act": "Enemy/En044A.ACT"
+    },
+    {
+      "actions": {
+        "D": {
+          "1": [
+            "SE0059"
+          ],
+          "3": [
+            "SE0048"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0050"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN045A.json",
+      "source_act": "Enemy/En045A.ACT"
+    },
+    {
+      "actions": {
+        "D": {
+          "1": [
+            "SE0059"
+          ],
+          "3": [
+            "SE0048"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0050"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN045B.json",
+      "source_act": "Enemy/En045B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0013"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0123"
+          ]
+        },
+        "W": {
+          "3": [
+            "SE0122"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN046A.json",
+      "source_act": "Enemy/EN046A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0013"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0123"
+          ]
+        },
+        "W": {
+          "3": [
+            "SE0122"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN046B.json",
+      "source_act": "Enemy/EN046B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0008"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0051"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN047A.json",
+      "source_act": "Enemy/En047A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0112"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0109"
+          ],
+          "3": [
+            "SE0110"
+          ]
+        },
+        "S": {
+          "2": [
+            "SE0038"
+          ],
+          "4": [
+            "SE0038"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0108"
+          ],
+          "3": [
+            "SE0108"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN049A.json",
+      "source_act": "Enemy/EN049A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0112"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0109"
+          ],
+          "3": [
+            "SE0110"
+          ]
+        },
+        "S": {
+          "2": [
+            "SE0038"
+          ],
+          "4": [
+            "SE0038"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0108"
+          ],
+          "3": [
+            "SE0108"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN049B.json",
+      "source_act": "Enemy/EN049B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0112"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0109"
+          ],
+          "3": [
+            "SE0110"
+          ]
+        },
+        "S": {
+          "2": [
+            "SE0038"
+          ],
+          "4": [
+            "SE0038"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0108"
+          ],
+          "3": [
+            "SE0108"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN050A.json",
+      "source_act": "Enemy/EN050A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0112"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0109"
+          ],
+          "3": [
+            "SE0110"
+          ]
+        },
+        "S": {
+          "2": [
+            "SE0038"
+          ],
+          "4": [
+            "SE0038"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0108"
+          ],
+          "3": [
+            "SE0108"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN050B.json",
+      "source_act": "Enemy/EN050B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0112"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN050C.json",
+      "source_act": "Enemy/EN050C.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0019"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0121"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0119"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN051A.json",
+      "source_act": "Enemy/EN051A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "3": [
+            "SE0110"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0118"
+          ]
+        },
+        "W": {
+          "4": [
+            "SE0059"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN052A.json",
+      "source_act": "Enemy/EN052A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0117"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0048"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN053A.json",
+      "source_act": "Enemy/EN053A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0014"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0124"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0125"
+          ],
+          "1": [
+            "SE0125"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN054A.json",
+      "source_act": "Enemy/EN054A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0014"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0124"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0125"
+          ],
+          "1": [
+            "SE0125"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN054B.json",
+      "source_act": "Enemy/EN054B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0113"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0103"
+          ]
+        },
+        "W": {
+          "3": [
+            "SE0116"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN055A.json",
+      "source_act": "Enemy/EN055A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0113"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0103"
+          ]
+        },
+        "W": {
+          "3": [
+            "SE0116"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN055B.json",
+      "source_act": "Enemy/EN055B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0113"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0117"
+          ]
+        },
+        "W": {
+          "3": [
+            "SE0059"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN056A.json",
+      "source_act": "Enemy/EN056A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0113"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0117"
+          ]
+        },
+        "W": {
+          "3": [
+            "SE0059"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN056B.json",
+      "source_act": "Enemy/EN056B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0114"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0113"
+          ]
+        },
+        "W": {
+          "4": [
+            "SE0115"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN057A.json",
+      "source_act": "Enemy/EN057A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0110"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "3": [
+            "SE0039"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN058A.json",
+      "source_act": "Enemy/EN058A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0110"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "3": [
+            "SE0039"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN058B.json",
+      "source_act": "Enemy/EN058B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0110"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "3": [
+            "SE0039"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN058C.json",
+      "source_act": "Enemy/EN058C.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0126"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0000"
+          ],
+          "3": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN059A.json",
+      "source_act": "Enemy/EN059A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0050"
+          ],
+          "5": [
+            "SE0023"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0127"
+          ],
+          "2": [
+            "SE0127"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN060A.json",
+      "source_act": "Enemy/EN060A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0128"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0127"
+          ],
+          "2": [
+            "SE0127"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN061A.json",
+      "source_act": "Enemy/EN061A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0112"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0109"
+          ],
+          "3": [
+            "SE0110"
+          ]
+        },
+        "S": {
+          "2": [
+            "SE0038"
+          ],
+          "4": [
+            "SE0038"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0108"
+          ],
+          "3": [
+            "SE0108"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN062A.json",
+      "source_act": "Enemy/EN062A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0112"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0109"
+          ],
+          "3": [
+            "SE0110"
+          ]
+        },
+        "S": {
+          "2": [
+            "SE0038"
+          ],
+          "4": [
+            "SE0038"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0108"
+          ],
+          "3": [
+            "SE0108"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN062B.json",
+      "source_act": "Enemy/EN062B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0112"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0109"
+          ],
+          "3": [
+            "SE0110"
+          ]
+        },
+        "S": {
+          "2": [
+            "SE0038"
+          ],
+          "4": [
+            "SE0038"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0108"
+          ],
+          "3": [
+            "SE0108"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN063A.json",
+      "source_act": "Enemy/EN063A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0112"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0109"
+          ],
+          "3": [
+            "SE0110"
+          ]
+        },
+        "S": {
+          "2": [
+            "SE0038"
+          ],
+          "4": [
+            "SE0038"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0108"
+          ],
+          "3": [
+            "SE0108"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN063B.json",
+      "source_act": "Enemy/EN063B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0112"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0109"
+          ],
+          "3": [
+            "SE0110"
+          ]
+        },
+        "S": {
+          "2": [
+            "SE0038"
+          ],
+          "4": [
+            "SE0038"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0108"
+          ],
+          "3": [
+            "SE0108"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN064A.json",
+      "source_act": "Enemy/EN064A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0112"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0109"
+          ],
+          "3": [
+            "SE0110"
+          ]
+        },
+        "S": {
+          "2": [
+            "SE0038"
+          ],
+          "4": [
+            "SE0038"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0108"
+          ],
+          "3": [
+            "SE0108"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN064B.json",
+      "source_act": "Enemy/EN064B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0131"
+          ],
+          "3": [
+            "SE0131"
+          ],
+          "4": [
+            "SE0131"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0020"
+          ],
+          "1": [
+            "SE0021"
+          ],
+          "2": [
+            "SE0021"
+          ],
+          "3": [
+            "SE0021"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0130"
+          ],
+          "3": [
+            "SE0130"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN065A.json",
+      "source_act": "Enemy/EN065A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0132"
+          ],
+          "2": [
+            "SE0132"
+          ]
+        },
+        "D": {
+          "1": [
+            "SE0033"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0039"
+          ],
+          "2": [
+            "SE0039"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN066A.json",
+      "source_act": "Enemy/EN066A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0029"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0014"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0039"
+          ],
+          "2": [
+            "SE0039"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN067A.json",
+      "source_act": "Enemy/EN067A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0002",
+            "SE0003",
+            "SE0004"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0045"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0057"
+          ],
+          "2": [
+            "SE0057"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN068A.json",
+      "source_act": "Enemy/EN068A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0002"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0054"
+          ]
+        },
+        "S": {
+          "0": [
+            "SE0133"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0031"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN069A.json",
+      "source_act": "Enemy/EN069A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0113"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0114"
+          ]
+        },
+        "W": {
+          "4": [
+            "SE0109"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN070A.json",
+      "source_act": "Enemy/EN070A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0113"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN071A.json",
+      "source_act": "Enemy/EN071A.ACT"
+    },
+    {
+      "actions": {
+        "D": {
+          "0": [
+            "SE0159"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN072A.json",
+      "source_act": "Enemy/EN072A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0021"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0118"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0160"
+          ],
+          "2": [
+            "SE0160"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN073A.json",
+      "source_act": "Enemy/EN073A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0106"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0159"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0161"
+          ],
+          "3": [
+            "SE0161"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN074A.json",
+      "source_act": "Enemy/EN074A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0082",
+            "SE0081"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0118"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0160"
+          ],
+          "3": [
+            "SE0160"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN075A.json",
+      "source_act": "Enemy/EN075A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0031"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0022"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN077A.json",
+      "source_act": "Enemy/EN077A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "6": [
+            "SE0055"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0156"
+          ]
+        },
+        "S": {
+          "2": [
+            "SE0100"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0042"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN078A.json",
+      "source_act": "Enemy/EN078A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0013"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0123"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0122"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN079A.json",
+      "source_act": "Enemy/EN079A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0013"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0123"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0122"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN080A.json",
+      "source_act": "Enemy/EN080A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0106"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0159"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0161"
+          ],
+          "3": [
+            "SE0161"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN081A.json",
+      "source_act": "Enemy/EN081A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "1": [
+            "SE0004",
+            "SE0005"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0091"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0057"
+          ],
+          "2": [
+            "SE0057"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN083A.json",
+      "source_act": "Enemy/EN083A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "4": [
+            "SE0018"
+          ],
+          "8": [
+            "SE0018"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0054"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN084A.json",
+      "source_act": "Enemy/EN084A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN085A.json",
+      "source_act": "Enemy/EN085A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN086A.json",
+      "source_act": "Enemy/EN086A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN087A.json",
+      "source_act": "Enemy/EN087A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN088A.json",
+      "source_act": "Enemy/EN088A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0106"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0159"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0161"
+          ],
+          "3": [
+            "SE0161"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN089A.json",
+      "source_act": "Enemy/EN089A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0014"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0031"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN090A.json",
+      "source_act": "Enemy/EN090A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "0": [
+            "SE0004",
+            "SE0005"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0091"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0057"
+          ],
+          "1": [
+            "SE0057"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN091A.json",
+      "source_act": "Enemy/EN091A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN092A.json",
+      "source_act": "Enemy/EN092A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN093A.json",
+      "source_act": "Enemy/EN093A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN094A.json",
+      "source_act": "Enemy/EN094A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN095A.json",
+      "source_act": "Enemy/EN095A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN096A.json",
+      "source_act": "Enemy/EN096A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN097A.json",
+      "source_act": "Enemy/EN097A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN098A.json",
+      "source_act": "Enemy/EN098A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN099A.json",
+      "source_act": "Enemy/EN099A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN100A.json",
+      "source_act": "Enemy/EN100A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN101A.json",
+      "source_act": "Enemy/EN101A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN102A.json",
+      "source_act": "Enemy/EN102A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN103A.json",
+      "source_act": "Enemy/EN103A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN104A.json",
+      "source_act": "Enemy/EN104A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN105A.json",
+      "source_act": "Enemy/EN105A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN106A.json",
+      "source_act": "Enemy/EN106A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0017"
+          ]
+        },
+        "D": {
+          "0": [
+            "SE0156"
+          ]
+        },
+        "W": {
+          "2": [
+            "SE0057"
+          ],
+          "5": [
+            "SE0057"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN107A.json",
+      "source_act": "Enemy/EN107A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN108A.json",
+      "source_act": "Enemy/EN108A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN109A.json",
+      "source_act": "Enemy/EN109A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN110A.json",
+      "source_act": "Enemy/EN110A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN111A.json",
+      "source_act": "Enemy/EN111A.ACT"
+    },
+    {
+      "actions": {
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN112A.json",
+      "source_act": "Enemy/EN112A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "6": [
+            "SE0006",
+            "SE0007"
+          ]
+        },
+        "W": {
+          "4": [
+            "SE0037"
+          ],
+          "6": [
+            "SE0037"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN113A.json",
+      "source_act": "Enemy/EN113A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "5": [
+            "SE0014",
+            "SE0017"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0057"
+          ],
+          "5": [
+            "SE0057"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN114A.json",
+      "source_act": "Enemy/EN114A.ACT"
+    },
+    {
+      "actions": {
+        "D": {
+          "0": [
+            "SE0056"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0000"
+          ],
+          "2": [
+            "EN0049",
+            "SE0000"
+          ],
+          "3": [
+            "EN0049"
+          ],
+          "4": [
+            "EN0049",
+            "SE0000"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN115A.json",
+      "source_act": "Enemy/EN115A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0029"
+          ]
+        },
+        "W": {
+          "2": [
+            "SE0161"
+          ],
+          "4": [
+            "SE0161"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN116A.json",
+      "source_act": "Enemy/EN116A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0016"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0161"
+          ],
+          "2": [
+            "SE0161"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN117A.json",
+      "source_act": "Enemy/EN117A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "3": [
+            "SE0039"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN117B.json",
+      "source_act": "Enemy/EN117B.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0014"
+          ]
+        },
+        "W": {
+          "0": [
+            "SE0039"
+          ],
+          "3": [
+            "SE0039"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN118A.json",
+      "source_act": "Enemy/EN118A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0014"
+          ]
+        },
+        "W": {
+          "2": [
+            "SE0007"
+          ],
+          "5": [
+            "SE0007"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN119A.json",
+      "source_act": "Enemy/EN119A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "5": [
+            "SE0017"
+          ]
+        },
+        "W": {
+          "5": [
+            "SE0031"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN120A.json",
+      "source_act": "Enemy/EN120A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "7": [
+            "SE0024"
+          ]
+        },
+        "W": {
+          "1": [
+            "SE0030"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN121A.json",
+      "source_act": "Enemy/EN121A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0029"
+          ]
+        },
+        "W": {
+          "2": [
+            "SE0119"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN122A.json",
+      "source_act": "Enemy/EN122A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "3": [
+            "SE0026"
+          ],
+          "7": [
+            "SE0026"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN123A.json",
+      "source_act": "Enemy/EN123A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "2": [
+            "SE0042"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN124A.json",
+      "source_act": "Enemy/EN124A.ACT"
+    },
+    {
+      "actions": {
+        "A": {
+          "3": [
+            "SE0031"
+          ]
+        }
+      },
+      "category": "enemy",
+      "resource": "res://Assets/Monsters/EN125A.json",
+      "source_act": "Enemy/EN125A.ACT"
+    }
+  ],
+  "format_version": 1,
+  "loop_replay": {
+    "idle": "each_animation_loop",
+    "other": "once_per_animation_sequence",
+    "walk": "each_animation_loop"
+  }
+}

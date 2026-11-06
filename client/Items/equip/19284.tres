@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_nn6e4"]
+
+[resource]
+script = ExtResource("1_nn6e4")
+special_effect = "無"
+can_repair = 1
+durability = 50
+equip_slot = 2
+spr_id = 31
+req_level = 50
+req_job = "無"
+req_race = "人族男、亞斯人"
+id = 19284
+item_name = "忍服右袖"
+description = "以古代男性忍者服飾設計，輕巧而靈活。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 216
+item_type_category = "Equip"

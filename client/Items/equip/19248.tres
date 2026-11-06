@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_ux6cb"]
+
+[resource]
+script = ExtResource("1_ux6cb")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 2500
+def = 450
+mdef = 320
+durability = 50
+equip_slot = 6
+spr_id = 19
+req_level = 92
+req_job = "無"
+req_race = "無"
+id = 19248
+item_name = "殺人熊紋章護手"
+description = "被魔力源引發出更強大能力的護手，似乎還沒有完全展現其力量。"
+can_sell = 1
+can_store = 1
+price = 10
+icon_id = 708
+color_index = 7
+item_type_category = "Equip"

@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_qf6fb"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_t3fb6"]
+
+[sub_resource type="Resource" id="Resource_5bohl"]
+script = ExtResource("1_qf6fb")
+cast_range = 200
+cost_sp = 39
+base_damage = 180
+damage_multiplier = 130
+cooldown = 2
+tick_count = 2
+
+[sub_resource type="Resource" id="Resource_3es81"]
+script = ExtResource("1_qf6fb")
+level = 2
+cast_range = 225
+cost_sp = 52
+base_damage = 260
+damage_multiplier = 150
+cooldown = 2
+tick_count = 2
+
+[sub_resource type="Resource" id="Resource_ses18"]
+script = ExtResource("1_qf6fb")
+level = 3
+cast_range = 225
+cost_sp = 72
+base_damage = 350
+damage_multiplier = 170
+cooldown = 2
+tick_count = 2
+
+[sub_resource type="Resource" id="Resource_8iqul"]
+script = ExtResource("1_qf6fb")
+level = 4
+cast_range = 250
+cost_sp = 88
+base_damage = 460
+damage_multiplier = 195
+cooldown = 2
+tick_count = 2
+
+[sub_resource type="Resource" id="Resource_f238b"]
+script = ExtResource("1_qf6fb")
+level = 5
+cast_range = 275
+cost_sp = 111
+base_damage = 580
+damage_multiplier = 225
+cooldown = 2
+tick_count = 2
+
+[resource]
+script = ExtResource("2_t3fb6")
+id = 23106
+skill_name = "火神召喚"
+description = "借助火神的力量，向敵人展開猛烈攻擊。"
+icon_id = 12
+fx_use = "Skill_Use_01"
+fx_hit = "Skill_Hit_26"
+fx_extra = "Hit_Effect02"
+levels = Array[ExtResource("1_qf6fb")]([SubResource("Resource_5bohl"), SubResource("Resource_3es81"), SubResource("Resource_ses18"), SubResource("Resource_8iqul"), SubResource("Resource_f238b")])

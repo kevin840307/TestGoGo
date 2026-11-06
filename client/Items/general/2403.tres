@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_rlyfx"]
+
+[resource]
+script = ExtResource("1_rlyfx")
+script_name = "重裝黃蜂機甲．展翼型"
+id = 2403
+item_name = "重裝黃蜂機甲．展翼型"
+description = "重裝展翼型黃蜂機甲，內有30級機甲主體、重裝光能加強器和離子引擎。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 546
+color_index = 6
+item_type_category = "General"

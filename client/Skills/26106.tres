@@ -1,0 +1,65 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_8qx6j"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_qv42c"]
+
+[sub_resource type="Resource" id="Resource_bu225"]
+script = ExtResource("1_8qx6j")
+cast_range = 250
+cost_mp = 54
+base_damage = 140
+damage_multiplier = 135
+cooldown = 2
+tick_count = 4
+
+[sub_resource type="Resource" id="Resource_2e41i"]
+script = ExtResource("1_8qx6j")
+level = 2
+cast_range = 250
+cost_mp = 67
+base_damage = 210
+damage_multiplier = 150
+cooldown = 2
+tick_count = 4
+
+[sub_resource type="Resource" id="Resource_ggq2k"]
+script = ExtResource("1_8qx6j")
+level = 3
+cast_range = 275
+cost_mp = 84
+base_damage = 290
+damage_multiplier = 165
+cooldown = 2
+tick_count = 4
+
+[sub_resource type="Resource" id="Resource_hbmn0"]
+script = ExtResource("1_8qx6j")
+level = 4
+cast_range = 275
+cost_mp = 102
+base_damage = 380
+damage_multiplier = 180
+cooldown = 2
+tick_count = 4
+
+[sub_resource type="Resource" id="Resource_hfwnp"]
+script = ExtResource("1_8qx6j")
+level = 5
+cast_range = 300
+cost_mp = 145
+base_damage = 480
+damage_multiplier = 200
+cooldown = 2
+tick_count = 4
+
+[resource]
+script = ExtResource("2_qv42c")
+id = 26106
+skill_name = "血色月蝕"
+description = "以闇黑依加魯力量，向敵人施展連續攻擊。"
+damage_type = 1
+icon_id = 33
+fx_use = "Skill_Use_05"
+fx_hit = "Skill_Hit_36"
+fx_extra = "Hit_Effect03"
+levels = Array[ExtResource("1_8qx6j")]([SubResource("Resource_bu225"), SubResource("Resource_2e41i"), SubResource("Resource_ggq2k"), SubResource("Resource_hbmn0"), SubResource("Resource_hfwnp")])

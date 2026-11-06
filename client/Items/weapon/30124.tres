@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_utgrt"]
+
+[resource]
+script = ExtResource("1_utgrt")
+no_shield = 1
+bullet_id = 4112
+attack_range = 420
+tick_count = 1
+note_1 = "Hit_Effect05"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "Gun"
+special_effect = "無"
+can_repair = 1
+req_dex = 40
+req_wis = 10
+max_hp_bonus = 1000
+max_mp_bonus = 2200
+atk = 240
+matk = 1270
+hit = 120
+flee = 60
+durability = 50
+equip_slot = 5
+spr_id = 10
+req_level = 85
+req_job = "無"
+req_race = "無"
+id = 30124
+item_name = "夜星之銃"
+description = "經過龍族力量強化的武器，增加200點攻擊技能傷害。使用技能時獲得100點生命。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 60000
+icon_id = 663
+color_index = 4
+item_type_category = "Weapon"

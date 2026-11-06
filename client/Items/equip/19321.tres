@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_21o8w"]
+
+[resource]
+script = ExtResource("1_21o8w")
+special_effect = "無"
+can_repair = 1
+durability = 50
+spr_id = 97
+req_level = 1
+req_job = "無"
+req_race = "機動靈"
+id = 19321
+item_name = "機動靈女裝禮服頭飾"
+description = "漂亮的禮服。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 539
+item_type_category = "Equip"

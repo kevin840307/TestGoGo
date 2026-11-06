@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_1rgq1"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_o5yxq"]
+
+[sub_resource type="Resource" id="Resource_poebn"]
+script = ExtResource("1_1rgq1")
+cast_range = 300
+aoe_radius = 400
+cost_mp = 225
+base_damage = 340
+damage_multiplier = 155
+cooldown = 2
+tick_count = 1
+
+[resource]
+script = ExtResource("2_o5yxq")
+id = 12105
+skill_name = "火鳳焚天陣"
+description = "召喚浴火之鳳翱翔而過，以烈焰灼燒範圍內的敵人。"
+skill_type = 1
+icon_id = 11
+fx_use = "Skill_Use_00"
+fx_hit = "Skill_Hit_60"
+fx_extra = "Hit_Effect12"
+levels = Array[ExtResource("1_1rgq1")]([SubResource("Resource_poebn")])

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_k2ow5"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_f3yam"]
+
+[sub_resource type="Resource" id="Resource_t1ja0"]
+script = ExtResource("1_k2ow5")
+cost_mp = 100
+tick_count = 1
+
+[resource]
+script = ExtResource("2_f3yam")
+id = 20108
+skill_name = "協助術．精靈之加持"
+description = "將與自身定立契約的戰鬥精靈的能力注入自己的體內，戰鬥精靈的能力越高效果越明顯。"
+skill_type = 6
+fx_use = "Skill_Use_00"
+fx_hit = "Skill_Hit_20"
+fx_extra = "0"
+levels = Array[ExtResource("1_k2ow5")]([SubResource("Resource_t1ja0")])

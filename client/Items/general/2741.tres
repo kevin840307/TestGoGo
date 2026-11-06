@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_nfu22"]
+
+[resource]
+script = ExtResource("1_nfu22")
+id = 2741
+item_name = "亞斯大軍的護腕"
+description = "亞斯大軍配戴著的護腕。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+icon_id = 703
+item_type_category = "General"

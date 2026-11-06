@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_6pjnw"]
+
+[resource]
+script = ExtResource("1_6pjnw")
+script_name = "高貴的寶箱"
+id = 2123
+item_name = "高貴的寶箱"
+description = "需要對應的鑰匙才能打開的寶箱。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+icon_id = 220
+item_type_category = "General"

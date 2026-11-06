@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_pdokq"]
+
+[resource]
+script = ExtResource("1_pdokq")
+no_shield = 1
+bullet_id = 4103
+attack_range = 350
+tick_count = 1
+note_1 = "Hit_Effect07"
+note_2 = "Normal00"
+note_3 = "Esc-Receiver"
+note_4 = "TwinGun"
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 100
+atk = 124
+matk = 67
+durability = 50
+equip_slot = 5
+spr_id = 1
+req_level = 25
+req_job = "無"
+req_race = "無"
+id = 31566
+item_name = "王國制式戰銃"
+description = "尼尼亞王國軍統一制式戰銃。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 5604
+icon_id = 76
+color_index = 4
+item_type_category = "Weapon"

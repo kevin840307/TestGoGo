@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_o7io2"]
+
+[resource]
+script = ExtResource("1_o7io2")
+attack_range = 60
+tick_count = 1
+note_1 = "Hit_Effect07"
+note_2 = "Normal00"
+note_3 = "Esc-Receiver"
+note_4 = "Dagger"
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 27
+atk = 60
+def = 1
+matk = 60
+durability = 50
+equip_slot = 5
+spr_id = 5
+req_level = 10
+req_job = "無"
+req_race = "無"
+id = 31577
+item_name = "熱光小刀"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 330
+icon_id = 71
+item_type_category = "Weapon"

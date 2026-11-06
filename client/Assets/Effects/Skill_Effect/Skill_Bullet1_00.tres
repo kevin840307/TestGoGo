@@ -1,0 +1,37 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://c3r8yl540tlrw"]
+
+[ext_resource type="Texture2D" uid="uid://r6hqyc5tqgo8" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Bullet1_00.spr.0000.png" id="1_p5qa5"]
+[ext_resource type="Texture2D" uid="uid://ta0xxwedvx8d" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Bullet1_00.spr.0001.png" id="2_rva81"]
+[ext_resource type="Texture2D" uid="uid://dujtqtm8f1biw" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Bullet1_00.spr.0002.png" id="3_3u3if"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_p5qa5"]
+atlas = ExtResource("1_p5qa5")
+region = Rect2(0, 0, 71, 52)
+metadata/old_offset = Vector2(34, 28)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rva81"]
+atlas = ExtResource("2_rva81")
+region = Rect2(0, 0, 76, 51)
+metadata/old_offset = Vector2(34, 27)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3u3if"]
+atlas = ExtResource("3_3u3if")
+region = Rect2(0, 0, 74, 54)
+metadata/old_offset = Vector2(34, 32)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_p5qa5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_rva81")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3u3if")
+}],
+"loop": false,
+"name": &"default",
+"speed": 12.0
+}]

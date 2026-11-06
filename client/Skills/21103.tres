@@ -1,0 +1,56 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_3s05l"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_xv4xr"]
+
+[sub_resource type="Resource" id="Resource_1x5c5"]
+script = ExtResource("1_3s05l")
+aoe_radius = 150
+cost_mp = 20
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_5t8ca"]
+script = ExtResource("1_3s05l")
+level = 2
+aoe_radius = 200
+cost_mp = 20
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_sdtsi"]
+script = ExtResource("1_3s05l")
+level = 3
+aoe_radius = 250
+cost_mp = 20
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_c4rdb"]
+script = ExtResource("1_3s05l")
+level = 4
+aoe_radius = 300
+cost_mp = 20
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_nqc5p"]
+script = ExtResource("1_3s05l")
+level = 5
+aoe_radius = 350
+cost_mp = 20
+cooldown = 2
+tick_count = 1
+
+[resource]
+script = ExtResource("2_xv4xr")
+id = 21103
+skill_name = "挑撥"
+description = "吸引範圍內的怪物向自己攻擊。"
+skill_type = 7
+icon_id = 4
+fx_use = "Skill_Use_00"
+fx_hit = "Normal_Effect12"
+fx_extra = "0"
+special_skill = "挑撥"
+levels = Array[ExtResource("1_3s05l")]([SubResource("Resource_1x5c5"), SubResource("Resource_5t8ca"), SubResource("Resource_sdtsi"), SubResource("Resource_c4rdb"), SubResource("Resource_nqc5p")])

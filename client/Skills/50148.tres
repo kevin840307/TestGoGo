@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_p5716"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_83a8w"]
+
+[sub_resource type="Resource" id="Resource_upagr"]
+script = ExtResource("1_p5716")
+
+[resource]
+script = ExtResource("2_83a8w")
+id = 50148
+skill_name = "強取冬雪熊怪甲皮"
+description = "強取玩家身上的冬雪熊怪甲皮。"
+fx_extra = "0"
+levels = Array[ExtResource("1_p5716")]([SubResource("Resource_upagr")])

@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_lfa2a"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_xcjba"]
+
+[sub_resource type="Resource" id="Resource_x2dbv"]
+script = ExtResource("1_lfa2a")
+cast_range = 250
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_hp84k"]
+script = ExtResource("1_lfa2a")
+level = 2
+cast_range = 250
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_0hmkt"]
+script = ExtResource("1_lfa2a")
+level = 3
+cast_range = 300
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_emvx2"]
+script = ExtResource("1_lfa2a")
+level = 4
+cast_range = 300
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_8efem"]
+script = ExtResource("1_lfa2a")
+level = 5
+cast_range = 350
+tick_count = 1
+
+[resource]
+script = ExtResource("2_xcjba")
+id = 32109
+skill_name = "神聖之盾"
+description = "暫時提升戰鬥精靈防禦力及魔法防禦力，但會使其攻擊力及魔法攻擊力下降。"
+icon_id = 91
+fx_use = "Skill_Use_02"
+fx_hit = "Normal_Effect01"
+fx_extra = "0"
+levels = Array[ExtResource("1_lfa2a")]([SubResource("Resource_x2dbv"), SubResource("Resource_hp84k"), SubResource("Resource_0hmkt"), SubResource("Resource_emvx2"), SubResource("Resource_8efem")])

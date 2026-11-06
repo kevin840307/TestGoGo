@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_52wea"]
+
+[resource]
+script = ExtResource("1_52wea")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 700
+max_mp_bonus = 700
+atk = 225
+def = 270
+matk = 225
+mdef = 270
+hit = 60
+flee = 120
+durability = 50
+spr_id = 139
+req_level = 70
+req_job = "無"
+req_race = "無"
+id = 15110
+item_name = "聖殿天鷹戰盔．復仇"
+description = "聖殿騎士的御用裝備。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 780
+color_index = 6
+item_type_category = "Equip"

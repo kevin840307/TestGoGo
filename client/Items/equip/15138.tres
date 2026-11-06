@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_l7cf3"]
+
+[resource]
+script = ExtResource("1_l7cf3")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 800
+max_mp_bonus = 800
+atk = 621
+matk = 621
+hit = 50
+durability = 50
+spr_id = 136
+req_level = 90
+req_job = "無"
+req_race = "無"
+id = 15138
+item_name = "野性之心頭盔．90"
+description = "自然使者．柏特利用獸王薩曼之血所製成的頭盔。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 731
+item_type_category = "Equip"

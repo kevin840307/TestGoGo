@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_xaqeh"]
+
+[resource]
+script = ExtResource("1_xaqeh")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 3
+def = 2
+luk = 1
+durability = 50
+spr_id = 55
+req_level = 10
+req_job = "無"
+req_race = "無"
+id = 19075
+item_name = "同慶絲帶"
+description = "恭喜Summer勝出的漂亮絲帶，大家一起分享她的榮耀！"
+can_sell = 1
+can_store = 1
+price = 10
+icon_id = 321
+color_index = 5
+item_type_category = "Equip"

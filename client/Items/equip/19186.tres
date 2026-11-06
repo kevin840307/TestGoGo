@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_hdyke"]
+
+[resource]
+script = ExtResource("1_hdyke")
+special_effect = "無"
+can_repair = 1
+flee = 20
+durability = 50
+equip_slot = 4
+spr_id = 1
+req_level = 5
+req_job = "無"
+req_race = "人族男、人族女、米古族、亞斯人"
+id = 19186
+item_name = "玻璃鞋"
+description = "是灰姑娘的玻璃鞋嗎？"
+can_sell = 1
+can_store = 1
+price = 25
+icon_id = 114
+item_type_category = "Equip"

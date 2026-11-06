@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_y84xb"]
+
+[resource]
+script = ExtResource("1_y84xb")
+special_effect = "無"
+can_repair = 1
+matk = 6
+luk = 15
+durability = 50
+spr_id = 78
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 18074
+item_name = "神秘天蠍座"
+description = "天蠍座有神秘的特質，令人變得殘酷，但又給人一種精力旺盛、熱情、佔有慾強特質。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 200
+icon_id = 565
+color_index = 7
+item_type_category = "Equip"

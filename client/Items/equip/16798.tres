@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_incoh"]
+
+[resource]
+script = ExtResource("1_incoh")
+special_effect = "無"
+can_repair = 1
+req_str = 8
+max_hp_bonus = 54
+def = 92
+mdef = 26
+durability = 50
+equip_slot = 4
+spr_id = 5
+req_level = 25
+req_job = "無"
+req_race = "無"
+id = 16798
+item_name = "太空脛甲+3"
+description = "下身脛甲裝備。可使用初級防具強化卡強化，大大增強能力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1868
+icon_id = 118
+color_index = 4
+item_type_category = "Equip"

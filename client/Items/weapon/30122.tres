@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_pvweo"]
+
+[resource]
+script = ExtResource("1_pvweo")
+no_shield = 1
+bullet_id = 4112
+attack_range = 420
+tick_count = 1
+note_1 = "Hit_Effect05"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "Gun"
+special_effect = "無"
+can_repair = 1
+req_dex = 30
+req_wis = 10
+max_hp_bonus = 1500
+max_mp_bonus = 1600
+atk = 350
+matk = 1090
+hit = 145
+flee = 120
+durability = 50
+equip_slot = 5
+spr_id = 10
+req_level = 85
+req_job = "無"
+req_race = "無"
+id = 30122
+item_name = "風刃之銃"
+description = "經過龍族力量強化的武器，增加200點攻擊技能傷害。使用攻擊技能時，10%機會造成125%傷害。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 60000
+icon_id = 663
+item_type_category = "Weapon"

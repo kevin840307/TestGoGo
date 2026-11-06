@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_glm3y"]
+
+[resource]
+script = ExtResource("1_glm3y")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 600
+max_mp_bonus = 700
+max_sp_bonus = 200
+atk = 175
+def = 242
+matk = 233
+mdef = 355
+hit = 125
+flee = 150
+luk = 30
+durability = 50
+equip_slot = 7
+spr_id = 51
+req_level = 50
+req_job = "無"
+req_race = "無"
+id = 18136
+item_name = "女巫之帚"
+description = "為了對抗邪惡的吸血鬼而製造的武裝，看來部分的能力被封印了．．．。"
+can_store = 1
+price = 1
+icon_id = 823
+item_type_category = "Equip"

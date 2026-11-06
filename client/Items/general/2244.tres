@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_51akl"]
+
+[resource]
+script = ExtResource("1_51akl")
+script_name = "赤煉御炎使脛甲裝備箱"
+id = 2244
+item_name = "赤煉御炎使脛甲裝備箱"
+description = "打開後得到『赤煉御炎使脛甲』。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 218
+color_index = 3
+item_type_category = "General"

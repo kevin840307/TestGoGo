@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_w1nvk"]
+
+[resource]
+script = ExtResource("1_w1nvk")
+special_effect = "無"
+can_repair = 1
+def = 12
+mdef = 5
+durability = 50
+spr_id = 52
+req_level = 20
+req_job = "無"
+req_race = "人族男、人族女、米古族、亞斯人"
+id = 19046
+item_name = "幸福鳥之帽"
+description = "頭飾裝備。"
+can_sell = 1
+price = 1
+icon_id = 318
+color_index = 2
+item_type_category = "Equip"

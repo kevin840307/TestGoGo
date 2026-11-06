@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_3y0f7"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_kfu0v"]
+
+[sub_resource type="Resource" id="Resource_owehr"]
+script = ExtResource("1_3y0f7")
+cost_mp = 20
+cooldown = 1
+
+[resource]
+script = ExtResource("2_kfu0v")
+id = 31101
+skill_name = "藥水合成"
+description = "合成各類型藥水的必要技術。"
+skill_type = 6
+icon_id = 71
+fx_extra = "0"
+levels = Array[ExtResource("1_3y0f7")]([SubResource("Resource_owehr")])

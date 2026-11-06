@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_6h68e"]
+
+[resource]
+script = ExtResource("1_6h68e")
+bullet_id = 99
+note_1 = "0"
+note_2 = "0"
+note_3 = "0"
+note_4 = "0"
+horse_type = "MA"
+hit = 10
+flee = 10
+move_speed = 50
+durability = 50
+equip_slot = 2
+spr_id = 1
+req_level = 10
+id = 50335
+item_name = "試驗型離子引擎"
+description = "特殊機甲引擎。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1000
+icon_id = 548
+color_index = 3
+item_type_category = "HorseEquip"

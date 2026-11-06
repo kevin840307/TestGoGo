@@ -1,0 +1,182 @@
+{
+  "format_version": 1,
+  "part_name": "SR_TransformOut",
+  "texture_size": {
+    "w": 1997,
+    "h": 1191
+  },
+  "frames": {
+    "default_frame0000": {
+      "x": 0,
+      "y": 450,
+      "w": 365,
+      "h": 401,
+      "offset_x": 140,
+      "offset_y": 201,
+      "source_frame": 0,
+      "source_action": "Effect"
+    },
+    "default_frame0001": {
+      "x": 687,
+      "y": 0,
+      "w": 447,
+      "h": 446,
+      "offset_x": 172,
+      "offset_y": 210,
+      "source_frame": 1,
+      "source_action": "Effect"
+    },
+    "default_frame0002": {
+      "x": 1134,
+      "y": 0,
+      "w": 434,
+      "h": 439,
+      "offset_x": 159,
+      "offset_y": 208,
+      "source_frame": 2,
+      "source_action": "Effect"
+    },
+    "default_frame0003": {
+      "x": 237,
+      "y": 0,
+      "w": 450,
+      "h": 448,
+      "offset_x": 175,
+      "offset_y": 208,
+      "source_frame": 3,
+      "source_action": "Effect"
+    },
+    "default_frame0004": {
+      "x": 1568,
+      "y": 0,
+      "w": 429,
+      "h": 410,
+      "offset_x": 164,
+      "offset_y": 184,
+      "source_frame": 4,
+      "source_action": "Effect"
+    },
+    "default_frame0005": {
+      "x": 752,
+      "y": 450,
+      "w": 358,
+      "h": 364,
+      "offset_x": 130,
+      "offset_y": 168,
+      "source_frame": 5,
+      "source_action": "Effect"
+    },
+    "default_frame0006": {
+      "x": 1110,
+      "y": 450,
+      "w": 341,
+      "h": 352,
+      "offset_x": 140,
+      "offset_y": 199,
+      "source_frame": 6,
+      "source_action": "Effect"
+    },
+    "default_frame0007": {
+      "x": 365,
+      "y": 450,
+      "w": 387,
+      "h": 374,
+      "offset_x": 154,
+      "offset_y": 210,
+      "source_frame": 7,
+      "source_action": "Effect"
+    },
+    "default_frame0008": {
+      "x": 0,
+      "y": 851,
+      "w": 355,
+      "h": 340,
+      "offset_x": 112,
+      "offset_y": 177,
+      "source_frame": 8,
+      "source_action": "Effect"
+    },
+    "default_frame0009": {
+      "x": 355,
+      "y": 851,
+      "w": 388,
+      "h": 307,
+      "offset_x": 175,
+      "offset_y": 137,
+      "source_frame": 9,
+      "source_action": "Effect"
+    },
+    "default_frame0010": {
+      "x": 1451,
+      "y": 450,
+      "w": 378,
+      "h": 352,
+      "offset_x": 104,
+      "offset_y": 150,
+      "source_frame": 10,
+      "source_action": "Effect"
+    },
+    "default_frame0011": {
+      "x": 0,
+      "y": 0,
+      "w": 237,
+      "h": 450,
+      "offset_x": 101,
+      "offset_y": 210,
+      "source_frame": 11,
+      "source_action": "Effect"
+    },
+    "default_frame0012": {
+      "x": 743,
+      "y": 851,
+      "w": 159,
+      "h": 260,
+      "offset_x": 38,
+      "offset_y": 205,
+      "source_frame": 12,
+      "source_action": "Effect"
+    },
+    "default_frame0013": {
+      "x": 902,
+      "y": 851,
+      "w": 94,
+      "h": 235,
+      "offset_x": 1,
+      "offset_y": 210,
+      "source_frame": 13,
+      "source_action": "Effect"
+    },
+    "default_frame0014": {
+      "x": 996,
+      "y": 851,
+      "w": 1,
+      "h": 1,
+      "offset_x": 175,
+      "offset_y": 210,
+      "source_frame": 14,
+      "source_action": "Effect"
+    }
+  },
+  "animations": {
+    "default": [
+      "default_frame0000",
+      "default_frame0001",
+      "default_frame0002",
+      "default_frame0003",
+      "default_frame0004",
+      "default_frame0005",
+      "default_frame0006",
+      "default_frame0007",
+      "default_frame0008",
+      "default_frame0009",
+      "default_frame0010",
+      "default_frame0011",
+      "default_frame0012",
+      "default_frame0013",
+      "default_frame0014"
+    ]
+  },
+  "source_actions": {
+    "default": "Effect"
+  }
+}

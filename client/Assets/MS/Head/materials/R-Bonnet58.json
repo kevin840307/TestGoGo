@@ -1,0 +1,66 @@
+{
+  "part_name": "R-Bonnet58",
+  "texture_size": {
+    "w": 186,
+    "h": 61
+  },
+  "frames": {
+    "idle_1_frame0000": {
+      "x": 0,
+      "y": 0,
+      "w": 36,
+      "h": 61,
+      "offset_x": 16,
+      "offset_y": 50
+    },
+    "idle_2_frame0000": {
+      "x": 36,
+      "y": 0,
+      "w": 36,
+      "h": 59,
+      "offset_x": 15,
+      "offset_y": 50
+    },
+    "idle_8_frame0000": {
+      "x": 72,
+      "y": 0,
+      "w": 39,
+      "h": 59,
+      "offset_x": 19,
+      "offset_y": 45
+    },
+    "idle_3_frame0000": {
+      "x": 111,
+      "y": 0,
+      "w": 36,
+      "h": 58,
+      "offset_x": 14,
+      "offset_y": 47
+    },
+    "idle_4_frame0000": {
+      "x": 147,
+      "y": 0,
+      "w": 39,
+      "h": 53,
+      "offset_x": 18,
+      "offset_y": 40
+    }
+  },
+  "animations": {
+    "idle_1": [
+      "idle_1_frame0000"
+    ],
+    "idle_2": [
+      "idle_2_frame0000"
+    ],
+    "idle_8": [
+      "idle_8_frame0000"
+    ],
+    "idle_3": [
+      "idle_3_frame0000"
+    ],
+    "idle_4": [
+      "idle_4_frame0000"
+    ]
+  }
+}

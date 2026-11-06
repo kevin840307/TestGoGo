@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_dnqc4"]
+
+[resource]
+script = ExtResource("1_dnqc4")
+special_effect = "無"
+can_repair = 1
+atk = 1730
+durability = 50
+equip_slot = 2
+spr_id = 53
+req_level = 130
+req_job = "無"
+req_race = "無"
+id = 15241
+item_name = "古赤日蒼鷹臂甲(右)"
+description = "赤日蒼鷹梅比斯的部下所使用的右手護甲，集合了強大的氣力。"
+can_store = 1
+price = 1
+icon_id = 820
+color_index = 4
+item_type_category = "Equip"

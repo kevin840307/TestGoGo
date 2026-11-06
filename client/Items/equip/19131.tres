@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_gx6gc"]
+
+[resource]
+script = ExtResource("1_gx6gc")
+special_effect = "無"
+can_repair = 1
+max_sp_bonus = 70
+atk = 30
+def = 50
+matk = 30
+mdef = 110
+hit = 60
+luk = 5
+durability = 50
+spr_id = 129
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 19131
+item_name = "外星生物頭飾"
+description = "某位設計師幻想外星生物造型而製作的頭飾。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 682
+item_type_category = "Equip"

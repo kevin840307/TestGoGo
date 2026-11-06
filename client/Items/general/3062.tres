@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_8560r"]
+
+[resource]
+script = ExtResource("1_8560r")
+script_name = "硬金屬戰甲電腦卡"
+id = 3062
+item_name = "硬金屬戰甲電腦卡"
+description = "合成硬金屬戰甲材料：硬金屬戰甲電腦卡、皮革、白羽毛、晶石、鐵塊。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 2000
+icon_id = 227
+color_index = 3
+item_type_category = "General"

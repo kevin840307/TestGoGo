@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_a88pr"]
+
+[resource]
+script = ExtResource("1_a88pr")
+no_shield = 1
+bullet_id = 4103
+attack_range = 350
+tick_count = 2
+note_1 = "Hit_Effect00"
+note_2 = "Normal02"
+note_3 = "Esc-Receiver"
+note_4 = "TwinGun"
+special_effect = "無"
+can_repair = 1
+req_str = 10
+atk = 128
+matk = 75
+hit = 10
+durability = 50
+equip_slot = 5
+spr_id = 1
+req_level = 20
+req_job = "無"
+req_race = "無"
+id = 31214
+item_name = "戰士雙銃+10"
+description = "利用稀有藍圖製作出來的武器。可使用初級武器強化卡強化，大大增強能力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 2627
+icon_id = 79
+color_index = 4
+item_type_category = "Weapon"

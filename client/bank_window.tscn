@@ -1,0 +1,35 @@
+[gd_scene format=3 uid="uid://8qdo0uyeuhvj"]
+
+[ext_resource type="Script" uid="uid://bhkvq4fxiqnha" path="res://scripts/bank_window.gd" id="1_bwfb2"]
+[ext_resource type="PackedScene" uid="uid://yvcqruofkvub" path="res://shared_inventory_panel.tscn" id="2_l2jfe"]
+
+[node name="BankWindow" type="Control" unique_id=365864101]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_bwfb2")
+
+[node name="PanelBankLeft" parent="." unique_id=1757622877 instance=ExtResource("2_l2jfe")]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -399.0
+offset_top = -287.5
+offset_right = -140.0
+offset_bottom = 217.5
+grow_horizontal = 2
+
+[node name="PanelBagRight" parent="." unique_id=1746544949 instance=ExtResource("2_l2jfe")]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 155.0
+offset_top = -287.5
+offset_right = 414.0
+offset_bottom = 217.5
+grow_horizontal = 2

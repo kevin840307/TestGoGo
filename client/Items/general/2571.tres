@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_4gidw"]
+
+[resource]
+script = ExtResource("1_4gidw")
+id = 2571
+item_name = "古代脛甲"
+description = "考古學家常收集的考古物品。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 10
+icon_id = 115
+item_type_category = "General"

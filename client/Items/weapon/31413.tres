@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_h6tcb"]
+
+[resource]
+script = ExtResource("1_h6tcb")
+attack_range = 120
+tick_count = 1
+note_1 = "Hit_Effect00"
+note_2 = "Normal02"
+note_3 = "Esc-Receiver"
+note_4 = "Sword"
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 350
+atk = 464
+hit = 30
+durability = 50
+equip_slot = 5
+spr_id = 8
+req_level = 50
+req_job = "無"
+req_race = "無"
+id = 31413
+item_name = "肆虐者"
+description = "完成星之鑰任務的獎勵。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 5000
+icon_id = 252
+color_index = 5
+item_type_category = "Weapon"

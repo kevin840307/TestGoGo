@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_w338x"]
+
+[resource]
+script = ExtResource("1_w338x")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 1456
+max_mp_bonus = 1712
+max_sp_bonus = 300
+def = 225
+mdef = 225
+hit = 70
+flee = 68
+durability = 50
+equip_slot = 7
+spr_id = 21
+req_level = 70
+req_job = "無"
+req_race = "無"
+id = 18028
+item_name = "聖．天使之翼（熾）"
+description = "以守護星河為己任的天使，在離開星河前留下的羽翼。可說是神聖力量的最高象徵。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 612
+item_type_category = "Equip"

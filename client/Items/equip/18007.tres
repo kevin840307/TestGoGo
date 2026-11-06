@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_xos2h"]
+
+[resource]
+script = ExtResource("1_xos2h")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 2200
+max_mp_bonus = 950
+max_sp_bonus = 300
+atk = 136
+def = 360
+matk = 136
+mdef = 320
+hit = 132
+flee = 112
+durability = 50
+equip_slot = 7
+spr_id = 34
+req_level = 80
+req_job = "無"
+req_race = "無"
+id = 18007
+item_name = "漢彌亞之翼"
+description = "受到地之加持的龍之翼。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 685
+color_index = 4
+item_type_category = "Equip"

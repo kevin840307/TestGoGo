@@ -1,0 +1,147 @@
+[gd_scene format=3 uid="uid://dr6itpwa7vume"]
+
+[ext_resource type="Script" uid="uid://1ybsd5tsjsl" path="res://entry_manager.gd" id="1_vw1st"]
+[ext_resource type="PackedScene" uid="uid://up2wsogbtjhw" path="res://LoginScreen.tscn" id="2_qcu7r"]
+[ext_resource type="PackedScene" uid="uid://bbyywqosexgyt" path="res://character_select.tscn" id="3_da4uh"]
+[ext_resource type="Texture2D" uid="uid://cmdeoenkg40uh" path="res://ui/BG_LOADING.png" id="4_da4uh"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1n7w4"]
+bg_color = Color(0.7490196, 0.8039216, 0.9843137, 0.5882353)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_da4uh"]
+bg_color = Color(0.05882353, 0.11764706, 0.20392157, 0.78431374)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.78431374, 0.78431374, 0.78431374, 0.7058824)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_g1bce"]
+bg_color = Color(0, 0.8980392, 0.827451, 0.27450982)
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xbuo3"]
+bg_color = Color(9.048581e-06, 0.9759037, 0.8995485, 0.39215687)
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_13bws"]
+bg_color = Color(0, 0.8980392, 0.827451, 0.39215687)
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[node name="EntryManager" type="Control" unique_id=2075497775]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_vw1st")
+
+[node name="LoginScreen" parent="." unique_id=1694084688 instance=ExtResource("2_qcu7r")]
+layout_mode = 1
+
+[node name="CharacterSelectLayer" parent="." unique_id=1268632609 instance=ExtResource("3_da4uh")]
+visible = false
+
+[node name="LoadingOverlay" type="CanvasLayer" parent="." unique_id=2120118666]
+unique_name_in_owner = true
+visible = false
+
+[node name="Background" type="TextureRect" parent="LoadingOverlay" unique_id=737534054]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -29.5
+offset_right = 300.0
+offset_bottom = 29.5
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("4_da4uh")
+
+[node name="LoadingBar" type="ProgressBar" parent="LoadingOverlay" unique_id=1289806519]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -290.0
+offset_top = -20.0
+offset_right = 290.0
+offset_bottom = 22.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 20
+theme_override_styles/fill = SubResource("StyleBoxFlat_1n7w4")
+
+[node name="ErrorDialog" type="Panel" parent="." unique_id=811950560]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -102.5
+offset_right = 200.0
+offset_bottom = 102.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_da4uh")
+
+[node name="MessageLabel" type="Label" parent="ErrorDialog" unique_id=1448577157]
+layout_mode = 0
+offset_left = 19.0
+offset_top = 17.5
+offset_right = 380.0
+offset_bottom = 149.5
+theme_override_font_sizes/font_size = 17
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="ConfirmButton" type="Button" parent="ErrorDialog" unique_id=1289513695]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -43.0
+offset_top = -44.5
+offset_right = 43.0
+offset_bottom = -11.5
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_g1bce")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_xbuo3")
+theme_override_styles/hover = SubResource("StyleBoxFlat_13bws")
+text = "確定"

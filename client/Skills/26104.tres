@@ -1,0 +1,71 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_rtehn"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_oofqn"]
+
+[sub_resource type="Resource" id="Resource_kiglf"]
+script = ExtResource("1_rtehn")
+cast_range = 200
+aoe_radius = 200
+cost_mp = 49
+base_damage = 90
+damage_multiplier = 95
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_gpwdv"]
+script = ExtResource("1_rtehn")
+level = 2
+cast_range = 220
+aoe_radius = 220
+cost_mp = 63
+base_damage = 140
+damage_multiplier = 110
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_8nvqe"]
+script = ExtResource("1_rtehn")
+level = 3
+cast_range = 240
+aoe_radius = 240
+cost_mp = 81
+base_damage = 200
+damage_multiplier = 125
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_oj6ug"]
+script = ExtResource("1_rtehn")
+level = 4
+cast_range = 260
+aoe_radius = 260
+cost_mp = 103
+base_damage = 270
+damage_multiplier = 140
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_whgn0"]
+script = ExtResource("1_rtehn")
+level = 5
+cast_range = 280
+aoe_radius = 280
+cost_mp = 126
+base_damage = 350
+damage_multiplier = 155
+cooldown = 2
+tick_count = 1
+
+[resource]
+script = ExtResource("2_oofqn")
+id = 26104
+skill_name = "魔影術"
+description = "以魔影攻擊大範圍的敵人。"
+skill_type = 1
+damage_type = 1
+icon_id = 31
+fx_use = "Skill_Use_00"
+fx_hit = "Skill_Hit_12"
+fx_extra = "Hit_Effect03"
+levels = Array[ExtResource("1_rtehn")]([SubResource("Resource_kiglf"), SubResource("Resource_gpwdv"), SubResource("Resource_8nvqe"), SubResource("Resource_oj6ug"), SubResource("Resource_whgn0")])

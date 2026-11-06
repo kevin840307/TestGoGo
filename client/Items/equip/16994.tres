@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_ycnae"]
+
+[resource]
+script = ExtResource("1_ycnae")
+special_effect = "無"
+can_repair = 1
+req_wis = 21
+max_mp_bonus = 183
+def = 111
+mdef = 228
+durability = 50
+equip_slot = 4
+spr_id = 12
+req_level = 65
+req_job = "無"
+req_race = "無"
+id = 16994
+item_name = "神之符紋下衣+10"
+description = "下身法衣裝備。可使用高級防具強化卡強化，大大增強能力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 57558
+icon_id = 123
+item_type_category = "Equip"

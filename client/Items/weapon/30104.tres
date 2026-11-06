@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_842pk"]
+
+[resource]
+script = ExtResource("1_842pk")
+attack_range = 200
+tick_count = 1
+note_1 = "Hit_Effect05"
+note_2 = "Fire01"
+note_3 = "Esc-Receiver"
+note_4 = "Sword"
+special_effect = "無"
+can_repair = 1
+req_str = 40
+max_hp_bonus = 2500
+max_mp_bonus = 850
+atk = 1580
+def = 70
+matk = 1050
+hit = 110
+flee = 30
+durability = 50
+equip_slot = 5
+spr_id = 16
+req_level = 85
+req_job = "無"
+req_race = "無"
+id = 30104
+item_name = "灼炎之劍"
+description = "經過龍族力量強化的武器，增加200點攻擊技能傷害。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 60000
+icon_id = 657
+item_type_category = "Weapon"

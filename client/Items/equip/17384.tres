@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_naiao"]
+
+[resource]
+script = ExtResource("1_naiao")
+special_effect = "無"
+can_repair = 1
+req_str = 15
+atk = 27
+def = 74
+mdef = 27
+durability = 50
+equip_slot = 2
+spr_id = 6
+req_level = 45
+req_job = "無"
+req_race = "無"
+id = 17384
+item_name = "鬥士右腕+1"
+description = "右手護腕裝備。可使用中級防具強化卡強化，大大增強能力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 4056
+icon_id = 103
+color_index = 6
+item_type_category = "Equip"

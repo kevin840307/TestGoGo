@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_oo70x"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_djcnn"]
+
+[sub_resource type="Resource" id="Resource_nr604"]
+script = ExtResource("1_oo70x")
+
+[resource]
+script = ExtResource("2_djcnn")
+id = 50126
+skill_name = "驅逐"
+description = "將未使用變身卷軸的玩家強制傳送離開"
+fx_use = "Skill_Use_00"
+fx_hit = "Normal_Effect01"
+fx_extra = "0"
+levels = Array[ExtResource("1_oo70x")]([SubResource("Resource_nr604")])

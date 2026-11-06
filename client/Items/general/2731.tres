@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_g82jn"]
+
+[resource]
+script = ExtResource("1_g82jn")
+id = 2731
+item_name = "詛咒碎片"
+description = "能使人得到強大的能量，不過同樣會使人墮落。"
+price = 1
+icon_id = 129
+color_index = 3
+item_type_category = "General"

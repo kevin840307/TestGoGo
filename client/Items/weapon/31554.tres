@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_v642r"]
+
+[resource]
+script = ExtResource("1_v642r")
+no_shield = 1
+attack_range = 100
+tick_count = 1
+note_1 = "Hit_Effect00"
+note_2 = "Normal00"
+note_3 = "Esc-Receiver"
+note_4 = "Axe"
+special_effect = "無"
+can_repair = 1
+atk = 130
+matk = 48
+durability = 50
+equip_slot = 5
+spr_id = 3
+req_level = 20
+req_job = "無"
+req_race = "無"
+id = 31554
+item_name = "火山巨斧"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 2427
+icon_id = 256
+item_type_category = "Weapon"

@@ -1,0 +1,1920 @@
+{
+  "45001": {
+    "pet_id": 45001,
+    "name": "波奇鳥獸",
+    "evolutions": {
+      "0": {
+        "sub_name": "初生型",
+        "outlook": "EN050A",
+        "color": 0,
+        "description": "請主人小心照顧這小蛋子，他仍然在幼兒期呢。",
+        "attack_range": 80,
+        "skills": [
+		],
+        "requirements": {
+          "level": 0,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          1, 8, 15
+        ]
+      },
+      "1": {
+        "sub_name": "基本防禦型",
+        "outlook": "EN010A",
+        "color": 0,
+        "description": "波奇鳥獸的初生型，頭上長有蛋殼的小鳥。",
+        "attack_range": 80,
+        "skills": [],
+        "requirements": {
+          "level": 5,
+          "stats": {
+            "con": 4,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          2
+        ]
+      },
+      "2": {
+        "sub_name": "防禦強化型",
+        "outlook": "EN011A",
+        "color": 0,
+        "description": "完全成長的波奇鳥獸，外表雖然帶著傻氣，可是能力卻比之前更強悍，可使出更強力的強力衝擊。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 20102,
+            "level": 3
+          }
+        ],
+        "requirements": {
+          "level": 10,
+          "stats": {
+            "con": 10,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          3
+        ]
+      },
+      "3": {
+        "sub_name": "防禦強化型",
+        "outlook": "EN012A",
+        "color": 0,
+        "description": "完全成長的波奇鳥獸，外表比之前強悍，可使出更強力的技能。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 20102,
+            "level": 3
+          },
+		  {
+            "skill_id": 29105,
+            "level": 3
+          }
+        ],
+        "requirements": {
+          "level": 17,
+          "stats": {
+            "con": 20,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          4
+        ]
+      },
+      "4": {
+        "sub_name": "防禦強化型",
+        "outlook": "EN015A",
+        "color": 0,
+        "description": "成年期的波奇鳥樣子怪怪的，又不知道牠心裡想什麼。但牠抗敵卻毫不手軟。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 20102,
+            "level": 3
+          },
+		  {
+            "skill_id": 29105,
+            "level": 4
+          }
+        ],
+        "requirements": {
+          "level": 30,
+          "stats": {
+            "con": 30,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          5
+        ]
+      },
+      "5": {
+        "sub_name": "防禦強化型",
+        "outlook": "EN016A",
+        "color": 2,
+        "description": "波奇鳥能力越是強大，外貌便越古怪。雖然主人總猜不透牠的行動，但牠也不會令主人失望。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 20102,
+            "level": 3
+          },
+		  {
+            "skill_id": 23105,
+            "level": 3
+          },
+		  {
+            "skill_id": 29105,
+            "level": 5
+          }
+        ],
+        "requirements": {
+          "level": 45,
+          "stats": {
+            "con": 50,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          6
+        ]
+      },
+      "6": {
+        "sub_name": "防禦強化型",
+        "outlook": "EN016A",
+        "color": 0,
+        "description": "最後的成長是最難突破的，主人不要掉以輕心。而寵物本身也緊張得外貌沒有改變，但膚色卻不同了。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 20102,
+            "level": 4
+          },
+		  {
+            "skill_id": 23105,
+            "level": 4
+          },
+		  {
+            "skill_id": 29105,
+            "level": 5
+          }
+        ],
+        "requirements": {
+          "level": 60,
+          "stats": {
+            "con": 65,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          7
+        ]
+      },
+      "7": {
+        "sub_name": "終極防禦型",
+        "outlook": "EN013B",
+        "color": 0,
+        "description": "要將小小波奇蛋進化成最後形態，主人一定下了很多苦心，思想成熟的牠會處處保護主人了。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 20102,
+            "level": 4
+          },
+		  {
+            "skill_id": 23105,
+            "level": 5
+          },
+		  {
+            "skill_id": 29105,
+            "level": 5
+          }
+        ],
+        "requirements": {
+          "level": 75,
+          "stats": {
+            "con": 95,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": []
+      },
+      "8": {
+        "sub_name": "基本攻擊型",
+        "outlook": "EN010A",
+        "color": 2,
+        "description": "藍色的怪鳥，是中了毒嗎？",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 23103,
+            "level": 2
+          }
+        ],
+        "requirements": {
+          "level": 15,
+          "stats": {
+            "con": 0,
+            "str": 10,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          9
+        ]
+      },
+      "9": {
+        "sub_name": "攻擊強化型",
+        "outlook": "EN010A",
+        "color": 5,
+        "description": "為什麼這波奇鳥的顏色這麼古怪呢？有沒有獸醫可以救救牠啊。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 23103,
+            "level": 3
+          }
+        ],
+        "requirements": {
+          "level": 20,
+          "stats": {
+            "con": 0,
+            "str": 20,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          10
+        ]
+      },
+      "10": {
+        "sub_name": "攻擊強化型",
+        "outlook": "EN011A",
+        "color": 5,
+        "description": "看來波奇鳥已經定了顏色，這種怪怪的藍色，主人會不會因此受不了牠呢。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 23103,
+            "level": 4
+          },
+		  {
+            "skill_id": 23105,
+            "level": 2
+          }
+        ],
+        "requirements": {
+          "level": 25,
+          "stats": {
+            "con": 0,
+            "str": 30,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          11
+        ]
+      },
+      "11": {
+        "sub_name": "攻擊強化型",
+        "outlook": "EN012A",
+        "color": 5,
+        "description": "經過藍藍波奇鳥的努力，終於也練成了最強的赤星爆炸技能，牠日後的成長還會怎樣呢？",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 23103,
+            "level": 4
+          },
+		  {
+            "skill_id": 23105,
+            "level": 3
+          }
+        ],
+        "requirements": {
+          "level": 35,
+          "stats": {
+            "con": 0,
+            "str": 40,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          12
+        ]
+      },
+      "12": {
+        "sub_name": "攻擊強化型",
+        "outlook": "EN014A",
+        "color": 4,
+        "description": "怎樣也想不到這只可愛竟然懂得自學新技能，學懂了飛石破碎後會否更強呢？",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 23103,
+            "level": 4
+          },
+		  {
+            "skill_id": 23105,
+            "level": 4
+          },
+		  {
+            "skill_id": 24105,
+            "level": 3
+          }
+        ],
+        "requirements": {
+          "level": 50,
+          "stats": {
+            "con": 0,
+            "str": 60,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          13
+        ]
+      },
+      "13": {
+        "sub_name": "攻擊強化型",
+        "outlook": "EN014A",
+        "color": 0,
+        "description": "可以擔保你永遠也猜不到牠下一次成長的外貌，但也不妨想像一下。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 23103,
+            "level": 4
+          },
+		  {
+            "skill_id": 23105,
+            "level": 5
+          },
+		  {
+            "skill_id": 24105,
+            "level": 4
+          }
+        ],
+        "requirements": {
+          "level": 65,
+          "stats": {
+            "con": 0,
+            "str": 75,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          14
+        ]
+      },
+      "14": {
+        "sub_name": "最終攻擊型",
+        "outlook": "EN022A",
+        "color": 0,
+        "description": "波奇小娃娃竟然可以成長得如此漂亮，主人的功勞自然是最大。記得要小心照料牠啊。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 23103,
+            "level": 4
+          },
+		  {
+            "skill_id": 23105,
+            "level": 5
+          },
+		  {
+            "skill_id": 24105,
+            "level": 5
+          }
+        ],
+        "requirements": {
+          "level": 83,
+          "stats": {
+            "con": 0,
+            "str": 95,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": []
+      },
+      "15": {
+        "sub_name": "基本智慧型",
+        "outlook": "EN010A",
+        "color": 7,
+        "description": "思想特別的小波奇，竟然利用小小智慧來研究法術。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 26104,
+            "level": 2
+          }
+        ],
+        "requirements": {
+          "level": 13,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 10
+          }
+        },
+        "next_evol_ids": [
+          16
+        ]
+      },
+      "16": {
+        "sub_name": "智慧強化型",
+        "outlook": "EN010A",
+        "color": 3,
+        "description": "在波奇鳥努力研究下，已經將魔影術升至等級四，隨時比人類還要強。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 26104,
+            "level": 4
+          }
+        ],
+        "requirements": {
+          "level": 18,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 20
+          }
+        },
+        "next_evol_ids": [
+          17
+        ]
+      },
+      "17": {
+        "sub_name": "智慧強化型",
+        "outlook": "EN011A",
+        "color": 3,
+        "description": "雖然進化了，可是外表仍是呆呆的。不過牠已經將魔影術練成頂尖，還創出新技能血色月蝕。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 26104,
+            "level": 5
+          },
+		  {
+            "skill_id": 26106,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 23,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 30
+          }
+        },
+        "next_evol_ids": [
+          18
+        ]
+      },
+      "18": {
+        "sub_name": "智慧強化型",
+        "outlook": "EN012A",
+        "color": 3,
+        "description": "其實技能血色月蝕中的魔力是否便是指波奇鳥自己呢？這個想法很恐怖。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 26104,
+            "level": 5
+          },
+		  {
+            "skill_id": 26106,
+            "level": 2
+          }
+        ],
+        "requirements": {
+          "level": 30,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 40
+          }
+        },
+        "next_evol_ids": [
+          19
+        ]
+      },
+      "19": {
+        "sub_name": "智慧強化型",
+        "outlook": "EN013A",
+        "color": 7,
+        "description": "火紅色的鳥兒，牠使出的魔法也絕不含糊，有傳聞用火燒牠可以引發牠的潛能，但太殘忍了。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 26104,
+            "level": 5
+          },
+		  {
+            "skill_id": 26106,
+            "level": 3
+          },
+		  {
+            "skill_id": 30104,
+            "level": 3
+          }
+        ],
+        "requirements": {
+          "level": 45,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 50
+          }
+        },
+        "next_evol_ids": [
+          20
+        ]
+      },
+      "20": {
+        "sub_name": "智慧強化型",
+        "outlook": "EN013A",
+        "color": 0,
+        "description": "太厲害了，牠又再創出了新技能，這一招烈日光輝真的不可忽視．．．",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 26104,
+            "level": 5
+          },
+		  {
+            "skill_id": 26106,
+            "level": 4
+          },
+		  {
+            "skill_id": 30104,
+            "level": 4
+          }
+        ],
+        "requirements": {
+          "level": 60,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 80
+          }
+        },
+        "next_evol_ids": [
+          21
+        ]
+      },
+      "21": {
+        "sub_name": "極品智慧型",
+        "outlook": "EN018A",
+        "color": 0,
+        "description": "實在太漂亮了，智慧型的波奇鳥外形十分完美，而且使用的技能也操縱自如。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 26104,
+            "level": 5
+          },
+		  {
+            "skill_id": 26106,
+            "level": 5
+          },
+		  {
+            "skill_id": 30104,
+            "level": 5
+          }
+        ],
+        "requirements": {
+          "level": 75,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 88
+          }
+        },
+        "next_evol_ids": []
+      }
+    }
+  },
+  "45002": {
+    "pet_id": 45002,
+    "name": "鋼之機械偶",
+    "evolutions": {
+      "0": {
+        "sub_name": "初生型",
+        "outlook": "EN030A",
+        "color": 0,
+        "description": "由機械製造的精靈，牠可十分怕水呢。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 9999,
+            "level": 1
+          }
+		],
+        "requirements": {
+          "level": 0,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          1, 6
+        ]
+      },
+      "1": {
+        "sub_name": "基本型",
+        "outlook": "EN030A",
+        "color": 4,
+        "description": "機械偶是不是在脫皮呢？顏色好像怪怪的，但是速度卻不錯。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+		],
+        "requirements": {
+          "level": 5,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 4,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          2
+        ]
+      },
+      "2": {
+        "sub_name": "速度強化型",
+        "outlook": "EN031A",
+        "color": 4,
+        "description": "原來早前脫皮是為了進化，速度正是牠的王道！",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 23105,
+            "level": 2
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 10,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 10,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          3
+        ]
+      },
+	  "3": {
+        "sub_name": "速度強化型",
+        "outlook": "EN031A",
+        "color": 7,
+        "description": "機械偶，別跑得太快，主人都跟不上了。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 23105,
+            "level": 3
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 30,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 35,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          4
+        ]
+      },
+	  "4": {
+        "sub_name": "速度強化型",
+        "outlook": "EN032A",
+        "color": 0,
+        "description": "成長為古捷山區的機械偶，有小翅膀但不能高飛。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 23105,
+            "level": 4
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 55,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 60,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          5
+        ]
+      },
+	  "5": {
+        "sub_name": "終極速度型",
+        "outlook": "EN032A",
+        "color": 4,
+        "description": "這只綠綠的機械偶有資格參加頭文字的比賽，牠隨時使出飄移表演一番。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 23105,
+            "level": 5
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 70,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 70,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": []
+      },
+	  "6": {
+        "sub_name": "基本型",
+        "outlook": "EN033A",
+        "color": 4,
+        "description": "金黃色的機械偶，把牠融掉可以賺很多錢。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+		],
+        "requirements": {
+          "level": 5,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 4
+          }
+        },
+        "next_evol_ids": [
+          7
+        ]
+      },
+      "7": {
+        "sub_name": "智慧強化型",
+        "outlook": "EN033A",
+        "color": 0,
+        "description": "可能是怕被殺害吧，紅紅的機械偶會使出魔法保護自己。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 30104,
+            "level": 1
+          },
+		  {
+            "skill_id": 26104,
+            "level": 1
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 15,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 15
+          }
+        },
+        "next_evol_ids": [
+          8
+        ]
+      },
+	  "8": {
+        "sub_name": "智慧強化型",
+        "outlook": "EN033A",
+        "color": 2,
+        "description": "能冷冷的進攻敵人弱點，為了防止爆炸，內置了一部空調降溫。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 30104,
+            "level": 3
+          },
+		  {
+            "skill_id": 26104,
+            "level": 2
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 30,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 25
+          }
+        },
+        "next_evol_ids": [
+          9
+        ]
+      },
+	  "9": {
+        "sub_name": "智慧強化型",
+        "outlook": "EN034A",
+        "color": 2,
+        "description": "帶點陰森的機械偶，是夏天的好伴侶。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 30104,
+            "level": 5
+          },
+		  {
+            "skill_id": 26104,
+            "level": 3
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 55,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 60
+          }
+        },
+        "next_evol_ids": [
+          10
+        ]
+      },
+	  "10": {
+        "sub_name": "智慧強化型",
+        "outlook": "EN034A",
+        "color": 3,
+        "description": "可怕的魔法，就是由南北兩極發出。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 30104,
+            "level": 5
+          },
+		  {
+            "skill_id": 26104,
+            "level": 4
+          },
+		  {
+            "skill_id": 30106,
+            "level": 2
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 70,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 70
+          }
+        },
+        "next_evol_ids": [
+          11
+        ]
+      },
+	  "11": {
+        "sub_name": "終極智慧型",
+        "outlook": "EN035A",
+        "color": 2,
+        "description": "怎樣由小彊屍變成太空人？不知道！但那個太空頭盔是可以減低魔法對自身的影響。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 30104,
+            "level": 5
+          },
+		  {
+            "skill_id": 26104,
+            "level": 5
+          },
+		  {
+            "skill_id": 30106,
+            "level": 4
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 90,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 80
+          }
+        },
+        "next_evol_ids": []
+      }
+    }
+  },
+  "45003": {
+    "pet_id": 45003,
+    "name": "小賊王",
+    "evolutions": {
+      "0": {
+        "sub_name": "戰斧型",
+        "outlook": "EN067A",
+        "color": 0,
+        "description": "有賊呀！要小心門戶。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+		],
+        "requirements": {
+          "level": 0,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          1
+        ]
+      },
+      "1": {
+        "sub_name": "冰斧型",
+        "outlook": "EN067A",
+        "color": 2,
+        "description": "賊王已變得冷血無情，主人要小心。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          },
+		  {
+            "skill_id": 31107,
+            "level": 1
+          }
+		],
+        "requirements": {
+          "level": 10,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          2
+        ]
+      },
+      "2": {
+        "sub_name": "機關槍型",
+        "outlook": "EN065A",
+        "color": 0,
+        "description": "由於長期匿跡，賊王身體變得細小了，但最恐怖的是他手中的機關槍。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          },
+		  {
+            "skill_id": 31107,
+            "level": 2
+          }
+		],
+        "requirements": {
+          "level": 18,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          3
+        ]
+      },
+	  "3": {
+        "sub_name": "迷彩戰槍型",
+        "outlook": "EN065A",
+        "color": 1,
+        "description": "繼身體變小，外貌也化妝為綠色，想找他也難。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          },
+		  {
+            "skill_id": 31107,
+            "level": 3
+          }
+		],
+        "requirements": {
+          "level": 28,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          4
+        ]
+      },
+	  "4": {
+        "sub_name": "火箭炮型",
+        "outlook": "EN066A",
+        "color": 0,
+        "description": "機關槍變成火箭炮，究竟武器從何而來？",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          },
+		  {
+            "skill_id": 31107,
+            "level": 4
+          }
+		],
+        "requirements": {
+          "level": 38,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          5
+        ]
+      },
+	  "5": {
+        "sub_name": "鋼炮型",
+        "outlook": "EN066A",
+        "color": 2,
+        "description": "最終型的鋼炮，而賊王身上的衣服也金光閃閃，為什麼偏偏主人分不到錢呢？",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          },
+		  {
+            "skill_id": 31107,
+            "level": 5
+          }
+		],
+        "requirements": {
+          "level": 58,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": []
+      }
+    }
+  },
+  "45004": {
+    "pet_id": 45004,
+    "name": "棉棉兔",
+    "evolutions": {
+      "0": {
+        "sub_name": "初生型",
+        "outlook": "EN045A",
+        "color": 0,
+        "description": "別看牠可愛的樣子，但牠卻是力量的信徒，要令牠成長，就是靠力量。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+		],
+        "requirements": {
+          "level": 0,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          1
+        ]
+      },
+      "1": {
+        "sub_name": "基本攻擊型",
+        "outlook": "EN045A",
+        "color": 3,
+        "description": "已成長了的小兔子，越來越力大無窮了。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+		],
+        "requirements": {
+          "level": 5,
+          "stats": {
+            "con": 0,
+            "str": 4,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          2
+        ]
+      },
+      "2": {
+        "sub_name": "攻擊強化型",
+        "outlook": "EN045A",
+        "color": 2,
+        "description": "最終成長的小兔子，不是太多人能發掘牠的最後潛力吧。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          },
+		  {
+            "skill_id": 23103,
+            "level": 3
+          }
+		],
+        "requirements": {
+          "level": 35,
+          "stats": {
+            "con": 0,
+            "str": 40,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": []
+      }
+    }
+  },
+  "45005": {
+    "pet_id": 45005,
+    "name": "機械女管家-小瞳",
+    "evolutions": {
+      "0": {
+        "sub_name": "初生管家型",
+        "outlook": "EN060A",
+        "color": 0,
+        "description": "小瞳是維護星夢世界和平的女管家妹妹，她會以力量去死守保護心愛的人。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+		],
+        "requirements": {
+          "level": 0,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          1
+        ]
+      },
+      "1": {
+        "sub_name": "基本管家型",
+        "outlook": "EN060A",
+        "color": 4,
+        "description": "成就不弱的小瞳，能力上隱隱帶著姐姐們的影子，用力量捍衛珍惜的人。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 26101,
+            "level": 1
+          },
+		  {
+            "skill_id": 23103,
+            "level": 1
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 33,
+          "stats": {
+            "con": 0,
+            "str": 40,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          2
+        ]
+      },
+	  "2": {
+        "sub_name": "強力管家型",
+        "outlook": "EN060A",
+        "color": 7,
+        "description": "已經和小純姐姐同級了，那一個女管家較強？還是別唆使她們決鬥好了。",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 26101,
+            "level": 4
+          },
+		  {
+            "skill_id": 23103,
+            "level": 3
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 60,
+          "stats": {
+            "con": 0,
+            "str": 60,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          3
+        ]
+      },
+      "3": {
+        "sub_name": "終極管家型",
+        "outlook": "EN060A",
+        "color": 3,
+        "description": "最終進化的小瞳，擁有愛和勇氣！是新一代的美少女戰士！",
+        "attack_range": 80,
+        "skills": [
+          {
+            "skill_id": 26101,
+            "level": 5
+          },
+		  {
+            "skill_id": 23103,
+            "level": 5
+          },
+		  {
+            "skill_id": 29107,
+            "level": 3
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 88,
+          "stats": {
+            "con": 0,
+            "str": 90,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": []
+      }
+    }
+  },
+  "45006": {
+    "pet_id": 45006,
+    "name": "馴鹿",
+    "evolutions": {
+      "0": {
+        "sub_name": "初生型",
+        "outlook": "EN115A",
+        "color": 0,
+        "description": "外表俊逸的馴鹿啊，不知道可否叫牠拉雪橇呢？",
+        "attack_range": 80,
+        "skills": [
+		],
+        "requirements": {
+          "level": 0,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+        ]
+      }
+    }
+  },
+  "45007": {
+    "pet_id": 45007,
+    "name": "戰士馴鹿",
+    "evolutions": {
+      "0": {
+        "sub_name": "初生型",
+        "outlook": "EN115A",
+        "color": 7,
+        "description": "能夠被叫作戰士馴鹿，實力自然比一般馴鹿高啊！",
+        "attack_range": 80,
+        "skills": [
+		],
+        "requirements": {
+          "level": 0,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          1
+        ]
+      },
+      "1": {
+        "sub_name": "兇猛型",
+        "outlook": "EN115A",
+        "color": 1,
+        "description": "已進化為兇猛的戰士啊！希望牠不要攻擊我好了。",
+        "attack_range": 80,
+        "skills": [
+        ],
+        "requirements": {
+          "level": 30,
+          "stats": {
+            "con": 0,
+            "str": 40,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+        ]
+      }
+    }
+  },
+  "45008": {
+    "pet_id": 45008,
+    "name": "凱撒馴鹿",
+    "evolutions": {
+      "0": {
+        "sub_name": "初生型",
+        "outlook": "EN115A",
+        "color": 4,
+        "description": "君臨天下的大帝馴鹿，金光閃閃的姿態實在叫人著迷啊！",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+		],
+        "requirements": {
+          "level": 0,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          1
+        ]
+      },
+      "1": {
+        "sub_name": "兇猛型",
+        "outlook": "EN115A",
+        "color": 2,
+        "description": "凱撒馴鹿變得兇猛呢，會嚇得其他動物四處逃竄吧！",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          },
+		  {
+            "skill_id": 23103,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 30,
+          "stats": {
+            "con": 0,
+            "str": 40,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          2
+        ]
+      },
+	  "2": {
+        "sub_name": "狂暴型",
+        "outlook": "EN115A",
+        "color": 6,
+        "description": "能夠馴服暴君凱撒的人更教人害怕啊！",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          },
+		  {
+            "skill_id": 23103,
+            "level": 3
+          }
+        ],
+        "requirements": {
+          "level": 60,
+          "stats": {
+            "con": 0,
+            "str": 60,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          3
+        ]
+      },
+      "3": {
+        "sub_name": "黑暗狂暴型",
+        "outlook": "EN115A",
+        "color": 3,
+        "description": "隱藏的黑暗暴君凱撒馴鹿，性格變得更邪惡，這是獲得力量需要付出的代價嗎？",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          },
+		  {
+            "skill_id": 23103,
+            "level": 5
+          }
+        ],
+        "requirements": {
+          "level": 90,
+          "stats": {
+            "con": 0,
+            "str": 90,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": []
+      }
+    }
+  },
+  "45009": {
+    "pet_id": 45009,
+    "name": "幼龍",
+    "evolutions": {
+      "0": {
+        "sub_name": "初生型",
+        "outlook": "EN077A",
+        "color": 0,
+        "description": "傳說中的神聖生物，非常稀有，傳說成長後可化身為神聖武器。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          },
+		  {
+            "skill_id": 23103,
+            "level": 1
+          }
+		],
+        "requirements": {
+          "level": 0,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          1
+        ]
+      },
+      "1": {
+        "sub_name": "戰鬥型",
+        "outlook": "EN077A",
+        "color": 0,
+        "description": "傳說中的神聖生物，非常稀有，傳說成長後可化身為神聖武器。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          },
+		  {
+            "skill_id": 23103,
+            "level": 3
+          }
+        ],
+        "requirements": {
+          "level": 70,
+          "stats": {
+            "con": 0,
+            "str": 75,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          2
+        ]
+      },
+	  "2": {
+        "sub_name": "強力戰鬥型",
+        "outlook": "EN078A",
+        "color": 0,
+        "description": "傳說中的神聖生物，非常稀有，傳說成長後可化身為神聖武器。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 9999,
+            "level": 1
+          },
+		  {
+            "skill_id": 23103,
+            "level": 5
+          }
+        ],
+        "requirements": {
+          "level": 80,
+          "stats": {
+            "con": 0,
+            "str": 85,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+        ]
+      }
+    }
+  },
+  "45010": {
+    "pet_id": 45010,
+    "name": "古羅斯僕從",
+    "evolutions": {
+      "0": {
+        "sub_name": "初生型態",
+        "outlook": "EN085A",
+        "color": 0,
+        "description": "從古羅斯流放出來的亞斯人，擁有強悍的戰鬥力。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 26101,
+            "level": 1
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+		],
+        "requirements": {
+          "level": 0,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          1
+        ]
+      },
+      "1": {
+        "sub_name": "進化型態",
+        "outlook": "EN086A",
+        "color": 0,
+        "description": "經過長時間戰鬥的亞斯人，戰鬥力增強了。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 26101,
+            "level": 3
+          },
+		  {
+            "skill_id": 29105,
+            "level": 3
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 40,
+          "stats": {
+            "con": 20,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          2, 3
+        ]
+      },
+	  "2": {
+        "sub_name": "狂暴型態(物理攻擊)",
+        "outlook": "EN087A",
+        "color": 0,
+        "description": "戰鬥力增強至一定程度就會進入狂暴型態(物理攻擊)。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 26101,
+            "level": 5
+          },
+		  {
+            "skill_id": 29105,
+            "level": 5
+          },
+		  {
+            "skill_id": 23103,
+            "level": 5
+          },
+		  {
+            "skill_id": 23105,
+            "level": 5
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 60,
+          "stats": {
+            "con": 20,
+            "str": 80,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+        ]
+      },
+	  "3": {
+        "sub_name": "狂暴型態(魔法攻擊)",
+        "outlook": "EN088A",
+        "color": 0,
+        "description": "戰鬥力增強至一定程度就會進入狂暴型態(魔法攻擊)。",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 26101,
+            "level": 5
+          },
+		  {
+            "skill_id": 29105,
+            "level": 5
+          },
+		  {
+            "skill_id": 26104,
+            "level": 5
+          },
+		  {
+            "skill_id": 26106,
+            "level": 5
+          },
+		  {
+            "skill_id": 9999,
+            "level": 1
+          }
+        ],
+        "requirements": {
+          "level": 60,
+          "stats": {
+            "con": 20,
+            "str": 0,
+            "dex": 0,
+            "wis": 80
+          }
+        },
+        "next_evol_ids": [
+        ]
+      }
+    }
+  },
+  "45011": {
+    "pet_id": 45011,
+    "name": "聖誕雪人",
+    "evolutions": {
+      "0": {
+        "sub_name": "聖誕型",
+        "outlook": "EN070A",
+        "color": 0,
+        "description": "白色的球形生物 ，聖誕節的吉祥物，各方面的能力值也不高。是一隻不會進化，而能力上限低的玩耍用戰鬥精靈。",
+        "attack_range": 80,
+        "skills": [
+		],
+        "requirements": {
+          "level": 0,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+        ]
+      }
+    }
+  },
+  "45012": {
+    "pet_id": 45012,
+    "name": "復活蛋",
+    "evolutions": {
+      "0": {
+        "sub_name": "初生型",
+        "outlook": "EN050C",
+        "color": 0,
+        "description": "蛋殼上帶有復活蛋花紋的波奇蛋，復活節快樂！",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 23101,
+            "level": 1
+          },
+		  {
+            "skill_id": 23104,
+            "level": 1
+          },
+		  {
+            "skill_id": 28101,
+            "level": 1
+          }
+		],
+        "requirements": {
+          "level": 0,
+          "stats": {
+            "con": 0,
+            "str": 0,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+          1
+        ]
+      },
+	  "1": {
+        "sub_name": "復活型",
+        "outlook": "EN050C",
+        "color": 0,
+        "description": "蛋殼上帶有復活蛋花紋的波奇蛋，好像變得更強了呢，復活節快樂！",
+        "attack_range": 80,
+        "skills": [
+		  {
+            "skill_id": 23101,
+            "level": 5
+          },
+		  {
+            "skill_id": 23104,
+            "level": 5
+          },
+		  {
+            "skill_id": 28101,
+            "level": 5
+          }
+        ],
+        "requirements": {
+          "level": 80,
+          "stats": {
+            "con": 50,
+            "str": 50,
+            "dex": 0,
+            "wis": 0
+          }
+        },
+        "next_evol_ids": [
+        ]
+      }
+	}
+  }
+}

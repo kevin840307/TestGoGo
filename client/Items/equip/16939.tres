@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_2h55k"]
+
+[resource]
+script = ExtResource("1_2h55k")
+special_effect = "無"
+can_repair = 1
+req_str = 18
+max_hp_bonus = 294
+def = 238
+mdef = 136
+durability = 50
+equip_slot = 4
+spr_id = 10
+req_level = 55
+req_job = "無"
+req_race = "無"
+id = 16939
+item_name = "勇氣脛甲+18"
+description = "下身脛甲裝備。可使用高級防具強化卡強化，大大增強能力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 27347
+icon_id = 121
+color_index = 3
+item_type_category = "Equip"

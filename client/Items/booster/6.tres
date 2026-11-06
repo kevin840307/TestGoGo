@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="BoosterData" format=3]
+
+[ext_resource type="Script" uid="uid://dwvouin6yj07q" path="res://scripts/booster_data.gd" id="1_4ncyr"]
+
+[resource]
+script = ExtResource("1_4ncyr")
+def_bonus = 750
+note_1 = "Normal_Effect12"
+note_2 = "Normal_Effect01"
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 6
+item_name = "狂戰士之血[50號]"
+description = "暫時提升防禦力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 8000
+icon_id = 415
+color_index = 3
+item_type_category = "Booster"

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_o7vu3"]
+
+[resource]
+script = ExtResource("1_o7vu3")
+script_name = "見習生鎧甲設計圖"
+id = 3246
+item_name = "見習生鎧甲設計圖"
+description = "合成見習生鎧甲材料：甲殼片、皮革、羽毛、星果。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 50
+icon_id = 177
+item_type_category = "General"

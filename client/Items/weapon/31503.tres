@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_cgfge"]
+
+[resource]
+script = ExtResource("1_cgfge")
+no_shield = 1
+attack_range = 200
+tick_count = 1
+note_1 = "Hit_Effect05"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "Axe"
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 4000
+atk = 1400
+hit = 20
+durability = 50
+equip_slot = 5
+spr_id = 7
+req_level = 75
+req_job = "道具使"
+req_race = "無"
+id = 31503
+item_name = "漢彌亞之怒"
+description = "染有龍血的巨型戰斧。"
+can_store = 1
+price = 10000
+icon_id = 572
+color_index = 5
+item_type_category = "Weapon"

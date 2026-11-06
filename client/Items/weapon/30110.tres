@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_sj0dx"]
+
+[resource]
+script = ExtResource("1_sj0dx")
+attack_range = 150
+tick_count = 1
+note_1 = "Hit_Effect05"
+note_2 = "Fire01"
+note_3 = "Esc-Receiver"
+note_4 = "Dagger"
+special_effect = "無"
+can_repair = 1
+req_dex = 20
+req_wis = 10
+max_hp_bonus = 1600
+max_mp_bonus = 1400
+atk = 1210
+matk = 650
+hit = 80
+flee = 80
+durability = 50
+equip_slot = 5
+spr_id = 11
+req_level = 85
+req_job = "無"
+req_race = "無"
+id = 30110
+item_name = "火羽"
+description = "經過龍族力量強化的武器，使用攻擊技能時，10%機會造成125%傷害。增加200點攻擊技能傷害。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 60000
+icon_id = 658
+color_index = 7
+item_type_category = "Weapon"

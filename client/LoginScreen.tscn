@@ -1,0 +1,307 @@
+[gd_scene format=3 uid="uid://up2wsogbtjhw"]
+
+[ext_resource type="Script" uid="uid://bvni6r8mh0ptu" path="res://login_screen.gd" id="1_aidc3"]
+[ext_resource type="VideoStream" uid="uid://du7i1g1prccs0" path="res://2.ogv" id="2_gbykt"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0tk5f"]
+bg_color = Color(0.05882353, 0.11764706, 0.20392157, 0.50980395)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ybgl5"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2985229, 0.93491757, 0.8971144, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_p8x2n"]
+bg_color = Color(0, 0.8980392, 0.827451, 0.27450982)
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yx6ay"]
+bg_color = Color(9.048581e-06, 0.9759037, 0.8995485, 0.39215687)
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6hyr3"]
+bg_color = Color(0, 0.8980392, 0.827451, 0.39215687)
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gbykt"]
+bg_color = Color(9.048581e-06, 0.9759037, 0.8995485, 0.39215687)
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ryyu4"]
+bg_color = Color(0, 0.8980392, 0.827451, 0.39215687)
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[node name="LoginScreen" type="Control" unique_id=1694084688]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_aidc3")
+
+[node name="IntroVideoWrapper" type="ColorRect" parent="." unique_id=360405993]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 1)
+
+[node name="AspectRatioContainer" type="AspectRatioContainer" parent="IntroVideoWrapper" unique_id=934162714]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+ratio = 1.7778
+
+[node name="BackgroundVideo" type="VideoStreamPlayer" parent="IntroVideoWrapper/AspectRatioContainer" unique_id=1801962313]
+layout_mode = 2
+stream = ExtResource("2_gbykt")
+volume_db = -80.0
+expand = true
+loop = true
+
+[node name="LoginPanel" type="Panel" parent="." unique_id=714317654]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -160.0
+offset_right = 140.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_0tk5f")
+
+[node name="AccountInput" type="LineEdit" parent="LoginPanel" unique_id=1519516553]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -115.0
+offset_top = 31.0
+offset_right = 115.0
+offset_bottom = 81.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_ybgl5")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ybgl5")
+placeholder_text = "請輸入帳號"
+alignment = 1
+max_length = 20
+
+[node name="PasswordInput" type="LineEdit" parent="LoginPanel" unique_id=2077278045]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -115.0
+offset_top = 99.0
+offset_right = 115.0
+offset_bottom = 149.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_ybgl5")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ybgl5")
+placeholder_text = "請輸入密碼"
+alignment = 1
+max_length = 20
+secret = true
+
+[node name="LoginButton" type="Button" parent="LoginPanel" unique_id=852698711]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -62.5
+offset_top = -144.0
+offset_right = 62.5
+offset_bottom = -99.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_p8x2n")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_yx6ay")
+theme_override_styles/hover = SubResource("StyleBoxFlat_6hyr3")
+text = "登入
+"
+
+[node name="GoRegisterButton" type="Button" parent="LoginPanel" unique_id=163044927]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -62.5
+offset_top = -78.0
+offset_right = 62.5
+offset_bottom = -33.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_p8x2n")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_yx6ay")
+theme_override_styles/hover = SubResource("StyleBoxFlat_6hyr3")
+text = "註冊帳號"
+
+[node name="AccountSuggestions" type="ItemList" parent="LoginPanel"]
+visible = false
+z_index = 10
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -115.0
+offset_top = 81.0
+offset_right = 115.0
+offset_bottom = 191.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+allow_reselect = true
+
+[node name="RegisterPanel" type="Panel" parent="." unique_id=36280190]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -155.0
+offset_top = -160.0
+offset_right = 155.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_0tk5f")
+
+[node name="RegAccountInput" type="LineEdit" parent="RegisterPanel" unique_id=187688180]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -125.0
+offset_top = 28.0
+offset_right = 125.0
+offset_bottom = 78.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_ybgl5")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ybgl5")
+placeholder_text = "請輸入帳號"
+alignment = 1
+max_length = 20
+
+[node name="RegPasswordInput" type="LineEdit" parent="RegisterPanel" unique_id=143633351]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -125.0
+offset_top = 98.0
+offset_right = 125.0
+offset_bottom = 148.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_ybgl5")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ybgl5")
+placeholder_text = "請輸入密碼"
+alignment = 1
+max_length = 20
+secret = true
+
+[node name="RegEmailInput" type="LineEdit" parent="RegisterPanel" unique_id=2086810117]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -125.0
+offset_top = 167.0
+offset_right = 125.0
+offset_bottom = 217.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_ybgl5")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ybgl5")
+placeholder_text = "請輸入Email"
+alignment = 1
+max_length = 50
+
+[node name="RegisterButton" type="Button" parent="RegisterPanel" unique_id=611873702]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -125.0
+offset_top = -73.0
+offset_right = -10.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_p8x2n")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_gbykt")
+theme_override_styles/hover = SubResource("StyleBoxFlat_ryyu4")
+text = "註冊"
+
+[node name="BackToLoginButton" type="Button" parent="RegisterPanel" unique_id=2009287510]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 7.5
+offset_top = -73.0
+offset_right = 122.5
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_p8x2n")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_gbykt")
+theme_override_styles/hover = SubResource("StyleBoxFlat_6hyr3")
+text = "返回"

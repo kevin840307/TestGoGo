@@ -1,0 +1,1101 @@
+[gd_scene format=3 uid="uid://c5yditwr4byo0"]
+
+[ext_resource type="Texture2D" uid="uid://8lerrmdwfjob" path="res://ui/BG_ELFIN_INFO.png" id="1_b6dsd"]
+[ext_resource type="Script" uid="uid://c1hlatbn7hfxv" path="res://scripts/pet_window.gd" id="1_pft72"]
+[ext_resource type="PackedScene" path="res://ui/resource_bar.tscn" id="64_resource_bar"]
+[ext_resource type="Texture2D" uid="uid://pknkv4numc33" path="res://ui/B_ELFIN_FEED0.png" id="2_b6dsd"]
+[ext_resource type="Texture2D" uid="uid://dewdejtu5anax" path="res://ui/ADD_POINT.png" id="2_grsmv"]
+[ext_resource type="Texture2D" uid="uid://cwjuhypc1gpbn" path="res://ui/B_ELFIN_FEED1.png" id="3_cy0t6"]
+[ext_resource type="Texture2D" uid="uid://536gwshc88rk" path="res://ui/B_ELFIN_EQUIP0.png" id="4_eajiu"]
+[ext_resource type="Texture2D" uid="uid://w24xb3y0dwmf" path="res://ui/B_ELFIN_EQUIP1.png" id="5_odyf0"]
+[ext_resource type="Texture2D" uid="uid://di5eytabm7kbi" path="res://ui/B_ELFIN_SUMMON0.png" id="6_sq5i3"]
+[ext_resource type="Texture2D" uid="uid://dmjqp6rpcpp1y" path="res://ui/B_ELFIN_SUMMON1.png" id="7_f7ss4"]
+[ext_resource type="Texture2D" uid="uid://ctgaeq86ckgol" path="res://ui/B_ELFIN_UNSUMMON0.png" id="8_bm05o"]
+[ext_resource type="Texture2D" uid="uid://4f3neu4im28y" path="res://ui/B_ELFIN_UNSUMMON1.png" id="9_q07gm"]
+[ext_resource type="Texture2D" uid="uid://dm7lx3ho16pu" path="res://ui/CLOSESCREEN.png" id="20_58rjx"]
+[ext_resource type="Texture2D" uid="uid://pmiyyo4rq66t" path="res://ui/BG_ELFIN_FEED.png" id="61_4d6ij"]
+[ext_resource type="Texture2D" uid="uid://ch2cgw424as7i" path="res://ui/BG_ELFIN_EQUIP.png" id="62_4jk7p"]
+[ext_resource type="Texture2D" uid="uid://crfia1a1redjh" path="res://ui/B_EQUIP_CHANGE1.png" id="63_8um3j"]
+
+
+
+
+
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pft72"]
+bg_color = Color(1, 0.5882353, 0, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4d6ij"]
+bg_color = Color(1, 0.6666667, 0, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[node name="PetWindow" type="Control" unique_id=149595155]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -328.0
+offset_top = -228.5
+offset_right = 328.0
+offset_bottom = 228.5
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_pft72")
+
+[node name="Background" type="TextureRect" parent="." unique_id=1203613176]
+modulate = Color(1, 1, 1, 0.9019608)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+texture = ExtResource("1_b6dsd")
+
+[node name="Label" type="Label" parent="Background" unique_id=2019978897]
+layout_mode = 0
+offset_left = 10.5
+offset_top = 43.0
+offset_right = 58.5
+offset_bottom = 62.0
+theme_override_font_sizes/font_size = 13
+text = "名稱"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label2" type="Label" parent="Background" unique_id=1129251643]
+layout_mode = 0
+offset_left = 10.5
+offset_top = 63.0
+offset_right = 58.5
+offset_bottom = 82.0
+theme_override_font_sizes/font_size = 13
+text = "品種"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label3" type="Label" parent="Background" unique_id=834459070]
+layout_mode = 0
+offset_left = 10.5
+offset_top = 84.0
+offset_right = 58.5
+offset_bottom = 103.0
+theme_override_font_sizes/font_size = 13
+text = "型態"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label4" type="Label" parent="Background" unique_id=586529771]
+layout_mode = 0
+offset_left = 10.5
+offset_top = 125.0
+offset_right = 58.5
+offset_bottom = 144.0
+theme_override_font_sizes/font_size = 13
+text = "力量"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label12" type="Label" parent="Background" unique_id=565550861]
+layout_mode = 0
+offset_left = 193.0
+offset_top = 259.5
+offset_right = 241.0
+offset_bottom = 278.5
+theme_override_font_sizes/font_size = 13
+text = "總攻擊"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label13" type="Label" parent="Background" unique_id=1618000607]
+layout_mode = 0
+offset_left = 193.0
+offset_top = 281.5
+offset_right = 241.0
+offset_bottom = 300.5
+theme_override_font_sizes/font_size = 13
+text = "總防禦"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label25" type="Label" parent="Background" unique_id=890913901]
+layout_mode = 0
+offset_left = 364.5
+offset_top = 32.0
+offset_right = 468.0
+offset_bottom = 51.0
+theme_override_font_sizes/font_size = 13
+text = "寵物技能"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label28" type="Label" parent="Background" unique_id=1299696947]
+layout_mode = 0
+offset_left = 11.5
+offset_top = 1.0
+offset_right = 87.5
+offset_bottom = 25.0
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 17
+text = "寵物"
+vertical_alignment = 1
+
+[node name="Label23" type="Label" parent="Background" unique_id=1079845396]
+layout_mode = 0
+offset_left = 10.5
+offset_top = 178.0
+offset_right = 58.5
+offset_bottom = 197.0
+theme_override_font_sizes/font_size = 13
+text = "體質"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label24" type="Label" parent="Background" unique_id=1141638520]
+layout_mode = 0
+offset_left = 10.5
+offset_top = 151.0
+offset_right = 58.5
+offset_bottom = 170.0
+theme_override_font_sizes/font_size = 13
+text = "速度"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label5" type="Label" parent="Background" unique_id=1943767852]
+layout_mode = 0
+offset_left = 193.0
+offset_top = 123.5
+offset_right = 241.0
+offset_bottom = 142.5
+theme_override_font_sizes/font_size = 13
+text = "攻擊"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label6" type="Label" parent="Background" unique_id=1214290927]
+layout_mode = 0
+offset_left = 193.0
+offset_top = 144.5
+offset_right = 241.0
+offset_bottom = 163.5
+theme_override_font_sizes/font_size = 13
+text = "防禦"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label7" type="Label" parent="Background" unique_id=214685563]
+layout_mode = 0
+offset_left = 193.0
+offset_top = 166.5
+offset_right = 241.0
+offset_bottom = 185.5
+theme_override_font_sizes/font_size = 13
+text = "魔攻"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label8" type="Label" parent="Background" unique_id=1255584260]
+layout_mode = 0
+offset_left = 193.0
+offset_top = 188.5
+offset_right = 241.0
+offset_bottom = 207.5
+theme_override_font_sizes/font_size = 13
+text = "魔防"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label9" type="Label" parent="Background" unique_id=764580965]
+layout_mode = 0
+offset_left = 193.0
+offset_top = 209.5
+offset_right = 241.0
+offset_bottom = 228.5
+theme_override_font_sizes/font_size = 13
+text = "命中"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label10" type="Label" parent="Background" unique_id=212226772]
+layout_mode = 0
+offset_left = 193.0
+offset_top = 231.5
+offset_right = 241.0
+offset_bottom = 250.5
+theme_override_font_sizes/font_size = 13
+text = "迴避"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label26" type="Label" parent="Background" unique_id=754391013]
+layout_mode = 0
+offset_left = 10.5
+offset_top = 204.0
+offset_right = 58.5
+offset_bottom = 223.0
+theme_override_font_sizes/font_size = 13
+text = "智慧"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label11" type="Label" parent="Background" unique_id=2138349741]
+layout_mode = 0
+offset_left = 255.0
+offset_top = 83.5
+offset_right = 290.0
+offset_bottom = 102.5
+theme_override_font_sizes/font_size = 13
+text = "等級"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label14" type="Label" parent="Background" unique_id=1368431750]
+layout_mode = 0
+offset_left = 5.0
+offset_top = 286.5
+offset_right = 34.0
+offset_bottom = 305.5
+theme_override_font_sizes/font_size = 13
+text = "生命"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label15" type="Label" parent="Background" unique_id=56786796]
+layout_mode = 0
+offset_left = 5.0
+offset_top = 307.5
+offset_right = 34.0
+offset_bottom = 326.5
+theme_override_font_sizes/font_size = 13
+text = "魔力"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label16" type="Label" parent="Background" unique_id=600141963]
+layout_mode = 0
+offset_left = 5.0
+offset_top = 329.5
+offset_right = 34.0
+offset_bottom = 348.5
+theme_override_font_sizes/font_size = 13
+text = "經驗"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label17" type="Label" parent="Background" unique_id=967648072]
+layout_mode = 0
+offset_left = 193.0
+offset_top = 326.5
+offset_right = 241.0
+offset_bottom = 345.5
+theme_override_font_sizes/font_size = 13
+text = "壽命"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BtnFeed" type="TextureButton" parent="." unique_id=409132710]
+layout_mode = 0
+offset_left = 453.0
+offset_top = 297.5
+offset_right = 648.0
+offset_bottom = 325.5
+texture_normal = ExtResource("2_b6dsd")
+texture_disabled = ExtResource("3_cy0t6")
+stretch_mode = 0
+
+[node name="Lbl1" type="Label" parent="BtnFeed" unique_id=891481905]
+layout_mode = 0
+offset_left = 118.0
+offset_top = 2.0
+offset_right = 193.0
+offset_bottom = 19.0
+theme_override_font_sizes/font_size = 12
+text = "飼養"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BtnEquip" type="TextureButton" parent="." unique_id=1313635145]
+layout_mode = 0
+offset_left = 476.0
+offset_top = 337.5
+offset_right = 648.0
+offset_bottom = 365.5
+texture_normal = ExtResource("4_eajiu")
+texture_disabled = ExtResource("5_odyf0")
+stretch_mode = 0
+
+[node name="Lbl1" type="Label" parent="BtnEquip" unique_id=82250153]
+layout_mode = 0
+offset_left = 95.0
+offset_top = 4.0
+offset_right = 170.0
+offset_bottom = 21.0
+theme_override_font_sizes/font_size = 12
+text = "裝備"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BtnSummon" type="TextureButton" parent="." unique_id=1971186199]
+layout_mode = 0
+offset_left = 499.0
+offset_top = 377.5
+offset_right = 648.0
+offset_bottom = 405.5
+texture_normal = ExtResource("6_sq5i3")
+texture_disabled = ExtResource("7_f7ss4")
+stretch_mode = 0
+
+[node name="Lbl1" type="Label" parent="BtnSummon" unique_id=60368942]
+layout_mode = 0
+offset_left = 72.0
+offset_top = 4.0
+offset_right = 147.0
+offset_bottom = 21.0
+theme_override_font_sizes/font_size = 12
+text = "召喚"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BtnUnsummon" type="TextureButton" parent="." unique_id=920496954]
+layout_mode = 0
+offset_left = 522.0
+offset_top = 417.5
+offset_right = 648.0
+offset_bottom = 445.5
+texture_normal = ExtResource("8_bm05o")
+texture_disabled = ExtResource("9_q07gm")
+stretch_mode = 0
+
+[node name="Lbl1" type="Label" parent="BtnUnsummon" unique_id=42300313]
+layout_mode = 0
+offset_left = 49.0
+offset_top = 4.0
+offset_right = 124.0
+offset_bottom = 21.0
+theme_override_font_sizes/font_size = 12
+text = "反召喚"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BtnClose" type="TextureButton" parent="." unique_id=182342244]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -28.0
+offset_top = 3.0
+offset_right = -6.0
+offset_bottom = 23.0
+grow_horizontal = 0
+texture_normal = ExtResource("20_58rjx")
+stretch_mode = 5
+
+[node name="LblPetName" type="Label" parent="." unique_id=836857645]
+layout_mode = 0
+offset_left = 70.5
+offset_top = 43.0
+offset_right = 220.5
+offset_bottom = 62.0
+theme_override_font_sizes/font_size = 13
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblType" type="Label" parent="." unique_id=1038295380]
+layout_mode = 0
+offset_left = 70.5
+offset_top = 64.0
+offset_right = 220.5
+offset_bottom = 83.0
+theme_override_font_sizes/font_size = 13
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblEvo" type="Label" parent="." unique_id=1185250433]
+layout_mode = 0
+offset_left = 70.5
+offset_top = 84.0
+offset_right = 220.5
+offset_bottom = 103.0
+theme_override_font_sizes/font_size = 13
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblLevel" type="Label" parent="." unique_id=771261486]
+layout_mode = 0
+offset_left = 296.0
+offset_top = 83.5
+offset_right = 338.0
+offset_bottom = 101.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblAtk" type="Label" parent="." unique_id=1380786134]
+layout_mode = 0
+offset_left = 249.0
+offset_top = 124.5
+offset_right = 329.0
+offset_bottom = 142.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblDef" type="Label" parent="." unique_id=1005053263]
+layout_mode = 0
+offset_left = 249.0
+offset_top = 145.5
+offset_right = 329.0
+offset_bottom = 163.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblMAtk" type="Label" parent="." unique_id=434223072]
+layout_mode = 0
+offset_left = 249.0
+offset_top = 167.5
+offset_right = 329.0
+offset_bottom = 185.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblMDef" type="Label" parent="." unique_id=281663985]
+layout_mode = 0
+offset_left = 249.0
+offset_top = 188.5
+offset_right = 329.0
+offset_bottom = 206.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblHit" type="Label" parent="." unique_id=1212702674]
+layout_mode = 0
+offset_left = 249.0
+offset_top = 210.5
+offset_right = 329.0
+offset_bottom = 228.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblDodge" type="Label" parent="." unique_id=910528711]
+layout_mode = 0
+offset_left = 249.0
+offset_top = 232.5
+offset_right = 329.0
+offset_bottom = 250.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblTotalAtk" type="Label" parent="." unique_id=327964010]
+layout_mode = 0
+offset_left = 249.0
+offset_top = 260.5
+offset_right = 329.0
+offset_bottom = 278.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblTotalDef" type="Label" parent="." unique_id=151623283]
+layout_mode = 0
+offset_left = 249.0
+offset_top = 282.5
+offset_right = 329.0
+offset_bottom = 300.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblStr" type="Label" parent="." unique_id=1004912977]
+layout_mode = 0
+offset_left = 57.0
+offset_top = 125.5
+offset_right = 87.0
+offset_bottom = 143.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblDex" type="Label" parent="." unique_id=1756233562]
+layout_mode = 0
+offset_left = 57.0
+offset_top = 151.5
+offset_right = 87.0
+offset_bottom = 169.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblCon" type="Label" parent="." unique_id=1694094320]
+layout_mode = 0
+offset_left = 57.0
+offset_top = 178.5
+offset_right = 87.0
+offset_bottom = 196.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblWis" type="Label" parent="." unique_id=987088860]
+layout_mode = 0
+offset_left = 57.0
+offset_top = 204.5
+offset_right = 87.0
+offset_bottom = 222.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblExtraStr" type="Label" parent="." unique_id=1493865598]
+layout_mode = 0
+offset_left = 84.0
+offset_top = 125.5
+offset_right = 119.0
+offset_bottom = 143.5
+theme_override_colors/font_color = Color(0.29803923, 0.93333334, 0.8980392, 1)
+theme_override_font_sizes/font_size = 13
+text = "+0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblExtraDex" type="Label" parent="." unique_id=27109906]
+layout_mode = 0
+offset_left = 84.0
+offset_top = 151.5
+offset_right = 119.0
+offset_bottom = 169.5
+theme_override_colors/font_color = Color(0.29803923, 0.93333334, 0.8980392, 1)
+theme_override_font_sizes/font_size = 13
+text = "+0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblExtraCon" type="Label" parent="." unique_id=142454536]
+layout_mode = 0
+offset_left = 84.0
+offset_top = 178.5
+offset_right = 119.0
+offset_bottom = 196.5
+theme_override_colors/font_color = Color(0.29803923, 0.93333334, 0.8980392, 1)
+theme_override_font_sizes/font_size = 13
+text = "+0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblExtraWis" type="Label" parent="." unique_id=1940728197]
+layout_mode = 0
+offset_left = 84.0
+offset_top = 204.5
+offset_right = 119.0
+offset_bottom = 222.5
+theme_override_colors/font_color = Color(0.29803923, 0.93333334, 0.8980392, 1)
+theme_override_font_sizes/font_size = 13
+text = "+0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblLife" type="Label" parent="." unique_id=1759790480]
+layout_mode = 0
+offset_left = 249.0
+offset_top = 326.5
+offset_right = 329.0
+offset_bottom = 344.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ButtonAddStr" type="TextureButton" parent="." unique_id=1933150024]
+layout_mode = 0
+offset_left = 122.0
+offset_top = 126.75
+offset_right = 138.0
+offset_bottom = 142.75
+texture_normal = ExtResource("2_grsmv")
+
+[node name="ButtonAddDex" type="TextureButton" parent="." unique_id=735660216]
+layout_mode = 0
+offset_left = 122.0
+offset_top = 152.75
+offset_right = 138.0
+offset_bottom = 168.75
+texture_normal = ExtResource("2_grsmv")
+
+[node name="ButtonAddCon" type="TextureButton" parent="." unique_id=1432693441]
+layout_mode = 0
+offset_left = 122.0
+offset_top = 178.75
+offset_right = 138.0
+offset_bottom = 194.75
+texture_normal = ExtResource("2_grsmv")
+
+[node name="ButtonAddWis" type="TextureButton" parent="." unique_id=1210182982]
+layout_mode = 0
+offset_left = 122.0
+offset_top = 205.75
+offset_right = 138.0
+offset_bottom = 221.75
+texture_normal = ExtResource("2_grsmv")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=684031015]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 40.0
+offset_top = -167.0
+offset_right = 315.0
+offset_bottom = 33.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 0
+
+[node name="ListSkill" type="VBoxContainer" parent="ScrollContainer" unique_id=375893918]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="BarHP" parent="." unique_id=443461828 instance=ExtResource("64_resource_bar")]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 41.0
+offset_top = 289.5
+offset_right = 161.0
+offset_bottom = 304.5
+value = 100.0
+bar_type = 0
+
+[node name="BarMP" parent="." unique_id=1847478754 instance=ExtResource("64_resource_bar")]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 41.0
+offset_top = 312.0
+offset_right = 161.0
+offset_bottom = 326.5
+value = 100.0
+bar_type = 1
+
+[node name="BarExp" parent="." unique_id=781439849 instance=ExtResource("64_resource_bar")]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 41.0
+offset_top = 331.5
+offset_right = 161.0
+offset_bottom = 347.5
+value = 100.0
+bar_type = 3
+
+[node name="LblHP" type="Label" parent="." unique_id=1558321934]
+layout_mode = 0
+offset_left = 42.0
+offset_top = 289.0
+offset_right = 160.0
+offset_bottom = 306.0
+theme_override_font_sizes/font_size = 12
+text = "0 / 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblMP" type="Label" parent="." unique_id=2056657248]
+layout_mode = 0
+offset_left = 42.0
+offset_top = 311.0
+offset_right = 160.0
+offset_bottom = 328.0
+theme_override_font_sizes/font_size = 12
+text = "0 / 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblExp" type="Label" parent="." unique_id=1802644196]
+layout_mode = 0
+offset_left = 42.0
+offset_top = 330.5
+offset_right = 160.0
+offset_bottom = 347.5
+theme_override_font_sizes/font_size = 12
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BtnEditName" type="Button" parent="." unique_id=103260037]
+layout_mode = 0
+offset_left = 251.0
+offset_top = 39.5
+offset_right = 342.0
+offset_bottom = 62.5
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_pft72")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_4d6ij")
+theme_override_styles/hover = SubResource("StyleBoxFlat_4d6ij")
+text = "變更名稱"
+
+[node name="DollContainer" type="Control" parent="." unique_id=1921902219]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 11.0
+offset_top = -97.0
+offset_right = 94.0
+offset_bottom = -17.0
+grow_vertical = 0
+
+[node name="LblDescription" type="RichTextLabel" parent="." unique_id=1499355067]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 99.0
+offset_top = -96.5
+offset_right = 332.0
+offset_bottom = -17.5
+grow_vertical = 0
+theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/normal_font_size = 13
+bbcode_enabled = true
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ButtonAddLife" type="TextureButton" parent="." unique_id=474893612]
+layout_mode = 0
+offset_left = 318.0
+offset_top = 326.5
+offset_right = 334.0
+offset_bottom = 342.5
+texture_normal = ExtResource("2_grsmv")
+
+[node name="BtnResetAttr" type="Button" parent="." unique_id=278146664]
+layout_mode = 0
+offset_left = 59.0
+offset_top = 230.5
+offset_right = 150.0
+offset_bottom = 253.5
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_pft72")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_4d6ij")
+theme_override_styles/hover = SubResource("StyleBoxFlat_4d6ij")
+text = "重置配點"
+
+[node name="FeedWindow" type="TextureRect" parent="." unique_id=1831715712]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -138.0
+offset_top = -155.0
+offset_right = 138.0
+offset_bottom = 155.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("61_4d6ij")
+
+[node name="BarFeed" parent="FeedWindow" unique_id=635715085 instance=ExtResource("64_resource_bar")]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -188.0
+offset_top = 45.0
+offset_right = -20.0
+offset_bottom = 61.0
+grow_horizontal = 0
+value = 100.0
+bar_type = 5
+
+[node name="Label" type="Label" parent="FeedWindow" unique_id=238700808]
+layout_mode = 0
+offset_left = 4.0
+offset_top = 43.5
+offset_right = 83.0
+offset_bottom = 62.5
+theme_override_font_sizes/font_size = 13
+text = "飽食度"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label28" type="Label" parent="FeedWindow" unique_id=1816038047]
+layout_mode = 0
+offset_left = 12.5
+offset_top = 2.0
+offset_right = 88.5
+offset_bottom = 26.0
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 17
+text = "飼養"
+vertical_alignment = 1
+
+[node name="LblFeed" type="Label" parent="FeedWindow" unique_id=1030893487]
+layout_mode = 0
+offset_left = 88.0
+offset_top = 43.5
+offset_right = 255.0
+offset_bottom = 61.5
+theme_override_font_sizes/font_size = 13
+text = "0 / 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="FeedWindow" unique_id=1077667707]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 86.0
+offset_right = 222.0
+offset_bottom = 300.0
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 2
+
+[node name="ListRecovery" type="VBoxContainer" parent="FeedWindow/ScrollContainer" unique_id=630824094]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="BtnClose" type="TextureButton" parent="FeedWindow" unique_id=868537656]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -28.0
+offset_top = 4.0
+offset_right = -6.0
+offset_bottom = 24.0
+grow_horizontal = 0
+texture_normal = ExtResource("20_58rjx")
+stretch_mode = 5
+
+[node name="EquipWindow" type="TextureRect" parent="." unique_id=2102623523]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -115.5
+offset_top = -300.0
+offset_right = 115.5
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("62_4jk7p")
+
+[node name="BtnClose" type="TextureButton" parent="EquipWindow" unique_id=921077231]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -28.0
+offset_top = 4.0
+offset_right = -6.0
+offset_bottom = 24.0
+grow_horizontal = 0
+texture_normal = ExtResource("20_58rjx")
+stretch_mode = 5
+
+[node name="LblCapacity" type="Label" parent="EquipWindow" unique_id=852153585]
+layout_mode = 0
+offset_left = 77.0
+offset_top = 42.5
+offset_right = 125.5
+offset_bottom = 60.5
+theme_override_font_sizes/font_size = 13
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblWeapon" type="Label" parent="EquipWindow" unique_id=820830609]
+layout_mode = 0
+offset_left = 45.5
+offset_top = 90.0
+offset_right = 191.5
+offset_bottom = 109.0
+theme_override_colors/font_color = Color(1, 0.9411765, 0.1764706, 1)
+theme_override_font_sizes/font_size = 13
+vertical_alignment = 1
+
+[node name="LblShield" type="Label" parent="EquipWindow" unique_id=1032666018]
+layout_mode = 0
+offset_left = 45.5
+offset_top = 123.0
+offset_right = 191.5
+offset_bottom = 142.0
+theme_override_colors/font_color = Color(1, 0.9411765, 0.1764706, 1)
+theme_override_font_sizes/font_size = 13
+vertical_alignment = 1
+
+[node name="LblAmulet" type="Label" parent="EquipWindow" unique_id=1079588579]
+layout_mode = 0
+offset_left = 45.5
+offset_top = 157.0
+offset_right = 191.5
+offset_bottom = 175.0
+theme_override_colors/font_color = Color(1, 0.9411765, 0.1764706, 1)
+theme_override_font_sizes/font_size = 13
+vertical_alignment = 1
+
+[node name="BtnWeapon" type="TextureButton" parent="EquipWindow" unique_id=1589612353]
+layout_mode = 0
+offset_left = 11.0
+offset_top = 81.0
+offset_right = 35.0
+offset_bottom = 105.0
+focus_mode = 0
+
+[node name="BtnShield" type="TextureButton" parent="EquipWindow" unique_id=796235423]
+layout_mode = 0
+offset_left = 11.0
+offset_top = 114.0
+offset_right = 35.0
+offset_bottom = 138.0
+focus_mode = 0
+
+[node name="BtnAmulet" type="TextureButton" parent="EquipWindow" unique_id=380459463]
+layout_mode = 0
+offset_left = 11.0
+offset_top = 147.0
+offset_right = 35.0
+offset_bottom = 171.0
+focus_mode = 0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="EquipWindow" unique_id=561460672]
+layout_mode = 0
+offset_left = 7.5
+offset_top = 190.0
+offset_right = 221.5
+offset_bottom = 592.0
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 2
+
+[node name="ListEquip" type="VBoxContainer" parent="EquipWindow/ScrollContainer" unique_id=661721605]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="Label" type="Label" parent="EquipWindow" unique_id=377857213]
+layout_mode = 0
+offset_left = 4.0
+offset_top = 41.5
+offset_right = 71.5
+offset_bottom = 60.5
+theme_override_font_sizes/font_size = 13
+text = "剩餘空間"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label28" type="Label" parent="EquipWindow" unique_id=1349315967]
+layout_mode = 0
+offset_left = 12.5
+offset_top = 2.0
+offset_right = 88.5
+offset_bottom = 26.0
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 17
+text = "裝備"
+vertical_alignment = 1
+
+[node name="Label2" type="Label" parent="EquipWindow" unique_id=1186937376]
+layout_mode = 0
+offset_left = 61.5
+offset_top = 74.0
+offset_right = 144.5
+offset_bottom = 93.0
+theme_override_font_sizes/font_size = 13
+text = "武器"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label3" type="Label" parent="EquipWindow" unique_id=1641260276]
+layout_mode = 0
+offset_left = 61.5
+offset_top = 108.0
+offset_right = 144.5
+offset_bottom = 127.0
+theme_override_font_sizes/font_size = 13
+text = "盾牌"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label4" type="Label" parent="EquipWindow" unique_id=631987511]
+layout_mode = 0
+offset_left = 61.5
+offset_top = 141.0
+offset_right = 144.5
+offset_bottom = 160.0
+theme_override_font_sizes/font_size = 13
+text = "護符"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BtnFilterWeapon" type="TextureButton" parent="EquipWindow" unique_id=920307164]
+layout_mode = 0
+offset_left = 199.5
+offset_top = 85.0
+offset_right = 219.5
+offset_bottom = 105.0
+focus_mode = 0
+texture_normal = ExtResource("63_8um3j")
+stretch_mode = 5
+
+[node name="BtnFilterShield" type="TextureButton" parent="EquipWindow" unique_id=1921199561]
+layout_mode = 0
+offset_left = 199.5
+offset_top = 118.0
+offset_right = 219.5
+offset_bottom = 139.0
+focus_mode = 0
+texture_normal = ExtResource("63_8um3j")
+stretch_mode = 5
+
+[node name="BtnFilterAmulet" type="TextureButton" parent="EquipWindow" unique_id=1052344476]
+layout_mode = 0
+offset_left = 199.5
+offset_top = 152.0
+offset_right = 219.5
+offset_bottom = 172.0
+focus_mode = 0
+texture_normal = ExtResource("63_8um3j")
+stretch_mode = 5

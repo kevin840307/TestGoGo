@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_01bfg"]
+
+[resource]
+script = ExtResource("1_01bfg")
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 450
+def = 200
+mdef = 450
+hit = 50
+flee = 400
+durability = 50
+equip_slot = 7
+spr_id = 38
+req_level = 90
+req_job = "無"
+req_race = "無"
+id = 18103
+item_name = "持刀者的終極詛咒"
+description = "跟咒文融合後，獲得了地獄火的洗煉。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 722
+item_type_category = "Equip"

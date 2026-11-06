@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_jt5gf"]
+
+[resource]
+script = ExtResource("1_jt5gf")
+special_effect = "無"
+can_repair = 1
+atk = 18
+def = 135
+mdef = 81
+durability = 50
+equip_slot = 3
+spr_id = 6
+req_level = 41
+req_job = "無"
+req_race = "無"
+id = 18519
+item_name = "月之保護服上衣"
+description = "上身裝備。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 44280
+icon_id = 87
+color_index = 5
+item_type_category = "Equip"

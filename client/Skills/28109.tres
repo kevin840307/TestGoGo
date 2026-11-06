@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_g3yxt"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_nomkq"]
+
+[sub_resource type="Resource" id="Resource_tu73w"]
+script = ExtResource("1_g3yxt")
+cast_range = 250
+cost_mp = 50
+cooldown = 1
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_2c1fb"]
+script = ExtResource("1_g3yxt")
+level = 2
+cast_range = 300
+cost_mp = 150
+cooldown = 1
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_4s4el"]
+script = ExtResource("1_g3yxt")
+level = 3
+cast_range = 350
+cost_mp = 320
+cooldown = 1
+tick_count = 1
+
+[resource]
+script = ExtResource("2_nomkq")
+id = 28109
+skill_name = "天使的祝福"
+description = "借助天使的力量使死亡的角色重生，且減少是次死亡時所得的一定數量的死亡經驗值。"
+skill_type = 6
+icon_id = 53
+fx_use = "Skill_Use_03"
+fx_hit = "Skill_Hit_32"
+fx_extra = "Hit_Effect06"
+levels = Array[ExtResource("1_g3yxt")]([SubResource("Resource_tu73w"), SubResource("Resource_2c1fb"), SubResource("Resource_4s4el")])

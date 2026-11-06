@@ -1,0 +1,66 @@
+{
+  "part_name": "B-Bonnet103",
+  "texture_size": {
+    "w": 131,
+    "h": 28
+  },
+  "frames": {
+    "idle_3_frame0000": {
+      "x": 0,
+      "y": 0,
+      "w": 26,
+      "h": 28,
+      "offset_x": 12,
+      "offset_y": 37
+    },
+    "idle_4_frame0000": {
+      "x": 26,
+      "y": 0,
+      "w": 29,
+      "h": 27,
+      "offset_x": 13,
+      "offset_y": 42
+    },
+    "idle_1_frame0000": {
+      "x": 55,
+      "y": 0,
+      "w": 26,
+      "h": 26,
+      "offset_x": 13,
+      "offset_y": 38
+    },
+    "idle_2_frame0000": {
+      "x": 81,
+      "y": 0,
+      "w": 21,
+      "h": 26,
+      "offset_x": 17,
+      "offset_y": 35
+    },
+    "idle_8_frame0000": {
+      "x": 102,
+      "y": 0,
+      "w": 29,
+      "h": 22,
+      "offset_x": 14,
+      "offset_y": 29
+    }
+  },
+  "animations": {
+    "idle_3": [
+      "idle_3_frame0000"
+    ],
+    "idle_4": [
+      "idle_4_frame0000"
+    ],
+    "idle_1": [
+      "idle_1_frame0000"
+    ],
+    "idle_2": [
+      "idle_2_frame0000"
+    ],
+    "idle_8": [
+      "idle_8_frame0000"
+    ]
+  }
+}

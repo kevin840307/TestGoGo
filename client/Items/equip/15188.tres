@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_rrrlq"]
+
+[resource]
+script = ExtResource("1_rrrlq")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 600
+max_mp_bonus = 600
+atk = 440
+matk = 440
+hit = 50
+durability = 50
+equip_slot = 2
+spr_id = 27
+req_level = 105
+req_job = "無"
+req_race = "無"
+id = 15188
+item_name = "艾格斯幻土右腕"
+description = "艾格斯軍營的御用裝備，由一位傳說戰士所設計。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 778
+item_type_category = "Equip"

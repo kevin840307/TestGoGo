@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_syrj5"]
+
+[resource]
+script = ExtResource("1_syrj5")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 1000
+max_mp_bonus = 1000
+max_sp_bonus = 1000
+atk = 200
+def = 350
+matk = 220
+mdef = 320
+hit = 180
+flee = 180
+durability = 50
+spr_id = 127
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 19156
+item_name = "創世之翼盔"
+description = "世上僅存的神器原型。傳說是眾神創造世界的神器之一，只有被選中的人才能持有，羽殼之盔就是仿照它而製成的。"
+can_store = 1
+price = 1
+icon_id = 680
+color_index = 5
+item_type_category = "Equip"

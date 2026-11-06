@@ -1,0 +1,237 @@
+[gd_scene format=3 uid="uid://cqebupa31dd01"]
+
+[ext_resource type="Texture2D" uid="uid://53rcuxawqbp2" path="res://ui/BG_TRADE.png" id="1_i81l7"]
+[ext_resource type="Script" uid="uid://covapki6e1h3g" path="res://scripts/trade_window.gd" id="1_obu38"]
+[ext_resource type="Texture2D" uid="uid://dm7lx3ho16pu" path="res://ui/CLOSESCREEN.png" id="2_8xmit"]
+[ext_resource type="PackedScene" uid="uid://yvcqruofkvub" path="res://shared_inventory_panel.tscn" id="4_pso8l"]
+[ext_resource type="Texture2D" uid="uid://de8juttweox8b" path="res://ui/B_OK0.png" id="4_t74km"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fy3hq"]
+bg_color = Color(1, 0.5882353, 0, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pso8l"]
+bg_color = Color(1, 0.6666667, 0, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[node name="TradeWindow" type="Control" unique_id=492236952]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_obu38")
+
+[node name="Background" type="TextureRect" parent="." unique_id=1723636232]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -385.0
+offset_top = -253.0
+offset_right = -29.0
+offset_bottom = 110.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("1_i81l7")
+
+[node name="LabelTitle2" type="Label" parent="Background" unique_id=1656071695]
+layout_mode = 0
+offset_left = 9.0
+offset_right = 72.0
+offset_bottom = 22.0
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 15
+text = "交易欄"
+vertical_alignment = 1
+
+[node name="LabelMyName" type="Label" parent="." unique_id=2076434510]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -157.0
+offset_top = -221.0
+offset_right = -41.0
+offset_bottom = -201.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LabelOtherName" type="Label" parent="." unique_id=680901968]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -374.0
+offset_top = -221.0
+offset_right = -258.0
+offset_bottom = -201.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BtnLock" type="Button" parent="." unique_id=31951625]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -248.0
+offset_top = 75.0
+offset_right = -167.0
+offset_bottom = 103.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_fy3hq")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pso8l")
+theme_override_styles/hover = SubResource("StyleBoxFlat_pso8l")
+text = "確定交易
+"
+
+[node name="BtnCancel" type="TextureButton" parent="." unique_id=464036682]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -57.0
+offset_top = -252.0
+offset_right = -37.0
+offset_bottom = -232.0
+grow_horizontal = 2
+grow_vertical = 2
+texture_normal = ExtResource("2_8xmit")
+stretch_mode = 0
+
+[node name="PanelLeft" type="Control" parent="." unique_id=69029011]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -380.0
+offset_top = -194.0
+offset_right = -34.0
+offset_bottom = 52.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ScrollContainer_Other" type="ScrollContainer" parent="PanelLeft" unique_id=485568082]
+layout_mode = 0
+offset_left = 2.0
+offset_top = 1.0
+offset_right = 169.0
+offset_bottom = 221.0
+horizontal_scroll_mode = 3
+
+[node name="ListOtherItems" type="VBoxContainer" parent="PanelLeft/ScrollContainer_Other" unique_id=499966091]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ScrollContainer_MyTrade" type="ScrollContainer" parent="PanelLeft" unique_id=1476147619]
+layout_mode = 0
+offset_left = 178.0
+offset_top = 1.0
+offset_right = 345.0
+offset_bottom = 221.0
+horizontal_scroll_mode = 3
+
+[node name="ListMyItems" type="VBoxContainer" parent="PanelLeft/ScrollContainer_MyTrade" unique_id=1324613598]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LblOtherMoney" type="Label" parent="PanelLeft" unique_id=1160314329]
+layout_mode = 0
+offset_left = 21.0
+offset_top = 223.0
+offset_right = 111.0
+offset_bottom = 243.0
+theme_override_font_sizes/font_size = 14
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LblMyMoney" type="Label" parent="PanelLeft" unique_id=1320311991]
+layout_mode = 0
+offset_left = 197.0
+offset_top = 223.0
+offset_right = 287.0
+offset_bottom = 243.0
+theme_override_font_sizes/font_size = 14
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BgReadyOther" type="TextureRect" parent="PanelLeft" unique_id=1577947816]
+layout_mode = 0
+offset_left = 142.0
+offset_top = 223.0
+offset_right = 165.0
+offset_bottom = 242.0
+texture = ExtResource("4_t74km")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BgReadyMe" type="TextureRect" parent="PanelLeft" unique_id=1302819518]
+layout_mode = 0
+offset_left = 318.0
+offset_top = 223.0
+offset_right = 341.0
+offset_bottom = 242.0
+texture = ExtResource("4_t74km")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BtnEditMoney" type="Button" parent="." unique_id=1517698375]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -161.0
+offset_top = 53.0
+offset_right = -89.0
+offset_bottom = 76.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_fy3hq")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pso8l")
+theme_override_styles/hover = SubResource("StyleBoxFlat_pso8l")
+text = "輸入金額"
+
+[node name="PanelRight" parent="." unique_id=1757622877 instance=ExtResource("4_pso8l")]
+layout_mode = 1

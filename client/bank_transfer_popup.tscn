@@ -1,0 +1,163 @@
+[gd_scene format=3 uid="uid://ldn3nh5wcfev"]
+
+[ext_resource type="Script" uid="uid://bl4v31y0f11gg" path="res://scripts/bank_transfer_popup.gd" id="1_c5084"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yokhd"]
+bg_color = Color(0.05882353, 0.11764706, 0.20392157, 0.9019608)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.78431374, 0.78431374, 0.78431374, 0.7058824)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6c08d"]
+bg_color = Color(0, 0.8980392, 0.827451, 0.27450982)
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pwdyk"]
+bg_color = Color(9.048581e-06, 0.9759037, 0.8995485, 0.39215687)
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_n81pk"]
+bg_color = Color(0, 0.8980392, 0.827451, 0.39215687)
+border_color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[node name="BankTransferPopup" type="Control" unique_id=143384785]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_c5084")
+
+[node name="PopupPanel" type="Panel" parent="." unique_id=1243541882]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -123.5
+offset_top = -85.75
+offset_right = 123.5
+offset_bottom = 85.75
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_yokhd")
+
+[node name="LblDirection" type="Label" parent="PopupPanel" unique_id=2073834968]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 4.0
+offset_right = 87.0
+offset_bottom = 27.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 16
+text = "存放"
+vertical_alignment = 1
+
+[node name="ItemRowContainer" type="VBoxContainer" parent="PopupPanel" unique_id=688539310]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -105.5
+offset_top = -46.5
+offset_right = 105.5
+offset_bottom = -13.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LblInputAmount" type="Label" parent="PopupPanel" unique_id=1859293800]
+layout_mode = 0
+offset_left = 18.5
+offset_top = 86.0
+offset_right = 118.0
+offset_bottom = 109.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 16
+text = "請輸入數量"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="BtnConfirm" type="Button" parent="PopupPanel" unique_id=735154548]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -89.5
+offset_top = 40.75
+offset_right = -14.5
+offset_bottom = 70.75
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_6c08d")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pwdyk")
+theme_override_styles/hover = SubResource("StyleBoxFlat_n81pk")
+text = "確定"
+
+[node name="BtnCancel" type="Button" parent="PopupPanel" unique_id=720085194]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 12.5
+offset_top = 40.75
+offset_right = 87.5
+offset_bottom = 70.75
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_6c08d")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pwdyk")
+theme_override_styles/hover = SubResource("StyleBoxFlat_n81pk")
+text = "取消
+
+"
+
+[node name="AmountSpinBox" type="SpinBox" parent="PopupPanel" unique_id=440951402]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 6.0
+offset_top = -4.0
+offset_right = 103.5
+offset_bottom = 27.0
+grow_horizontal = 2
+grow_vertical = 2
+min_value = 1.0
+max_value = 9999.0
+value = 1.0
+rounded = true
+alignment = 1

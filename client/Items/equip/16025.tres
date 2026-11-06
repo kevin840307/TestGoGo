@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_1yi7y"]
+
+[resource]
+script = ExtResource("1_1yi7y")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 50
+max_mp_bonus = 50
+max_sp_bonus = 10
+atk = 39
+def = 10
+matk = 39
+mdef = 10
+hit = 30
+flee = 10
+luk = 10
+durability = 50
+equip_slot = 4
+spr_id = 20
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 16025
+item_name = "玉兔奔月腿"
+description = "把可愛的奔月腿配戴上，與月神一同歡度中秋。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 714
+item_type_category = "Equip"

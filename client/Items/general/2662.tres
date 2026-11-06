@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_sq2oa"]
+
+[resource]
+script = ExtResource("1_sq2oa")
+id = 2662
+item_name = "人情巧克力"
+description = "一般朋友間互相贈送的巧克力，沒有特別的意思，別會錯意。收集指定數量可以兌換獎勵。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 518
+color_index = 7
+item_type_category = "General"

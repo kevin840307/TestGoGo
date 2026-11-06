@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_skfac"]
+
+[resource]
+script = ExtResource("1_skfac")
+no_shield = 1
+attack_range = 140
+tick_count = 1
+note_1 = "Hit_Effect07"
+note_2 = "Normal01"
+note_3 = "Esc-Receiver"
+note_4 = "Stick"
+special_effect = "無"
+can_repair = 1
+req_wis = 30
+max_mp_bonus = 356
+atk = 189
+matk = 508
+durability = 50
+equip_slot = 5
+spr_id = 11
+req_level = 60
+req_job = "無"
+req_race = "無"
+id = 30852
+item_name = "永恆法杖+5"
+description = "利用稀有藍圖製作出來的武器。可使用高級武器強化卡強化，大大增強能力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 111199
+icon_id = 561
+color_index = 4
+item_type_category = "Weapon"

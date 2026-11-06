@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_up0sl"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_ne185"]
+
+[sub_resource type="Resource" id="Resource_h2eks"]
+script = ExtResource("1_up0sl")
+cost_mp = 100
+cooldown = 900
+duration = 60
+
+[resource]
+script = ExtResource("2_ne185")
+id = 45116
+skill_name = "念力覺醒"
+description = "精通法術的奧秘，集中全身能量於一點。"
+skill_type = 7
+icon_id = 93
+fx_use = "Skill_Use_02"
+fx_hit = "Skill_Hit_28"
+fx_extra = "0"
+special_skill = "念力覺醒"
+levels = Array[ExtResource("1_up0sl")]([SubResource("Resource_h2eks")])

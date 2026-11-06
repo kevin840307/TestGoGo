@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_fkj85"]
+
+[resource]
+script = ExtResource("1_fkj85")
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 200
+atk = 44
+def = 43
+matk = 42
+mdef = 41
+hit = 44
+flee = 44
+durability = 50
+equip_slot = 7
+spr_id = 25
+req_level = 40
+req_job = "無"
+req_race = "無"
+id = 18040
+item_name = "惡魔斗蓬—暗影"
+description = "是惡魔從黑暗空間到尼路亞星時為免受到衝擊所用的斗蓬，保護穿戴者抵禦強大的衝擊力及魔法攻擊。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 617
+color_index = 5
+item_type_category = "Equip"

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_hou45"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_eidfi"]
+
+[sub_resource type="Resource" id="Resource_3f6rg"]
+script = ExtResource("1_hou45")
+cast_range = 400
+tick_count = 1
+
+[resource]
+script = ExtResource("2_eidfi")
+id = 50133
+skill_name = "星雷之刃"
+description = "無視防禦傷害3000，角色使用殺人熊之爪時，傷害會減少至500點。"
+fx_use = "Skill_Use_00"
+fx_hit = "Skill_Hit_37"
+fx_extra = "0"
+levels = Array[ExtResource("1_hou45")]([SubResource("Resource_3f6rg")])

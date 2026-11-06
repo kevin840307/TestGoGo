@@ -1,0 +1,55 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://bmklcqv55qc51"]
+
+[ext_resource type="Texture2D" uid="uid://bsy2xtukf0noy" path="res://Assets/Effects/RawData/Normal_Effect/New_Miss_Orange.spr.0000.png" id="1_82uyi"]
+[ext_resource type="Texture2D" uid="uid://bit6r0bbab4dr" path="res://Assets/Effects/RawData/Normal_Effect/New_Miss_Orange.spr.0001.png" id="2_mei3q"]
+[ext_resource type="Texture2D" uid="uid://bpqdtf0gxxo3t" path="res://Assets/Effects/RawData/Normal_Effect/New_Miss_Orange.spr.0002.png" id="3_0ycwj"]
+[ext_resource type="Texture2D" uid="uid://bn7hp2w4tawvn" path="res://Assets/Effects/RawData/Normal_Effect/New_Miss_Orange.spr.0003.png" id="4_mtixu"]
+[ext_resource type="Texture2D" uid="uid://k7oqgqisyrfs" path="res://Assets/Effects/RawData/Normal_Effect/New_Miss_Orange.spr.0004.png" id="5_086rr"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_82uyi"]
+atlas = ExtResource("1_82uyi")
+region = Rect2(0, 0, 14, 22)
+metadata/old_offset = Vector2(28, 12)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mei3q"]
+atlas = ExtResource("2_mei3q")
+region = Rect2(0, 0, 42, 23)
+metadata/old_offset = Vector2(28, 12)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0ycwj"]
+atlas = ExtResource("3_0ycwj")
+region = Rect2(0, 0, 56, 23)
+metadata/old_offset = Vector2(29, 10)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mtixu"]
+atlas = ExtResource("4_mtixu")
+region = Rect2(0, 0, 56, 23)
+metadata/old_offset = Vector2(29, 11)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_086rr"]
+atlas = ExtResource("5_086rr")
+region = Rect2(0, 0, 56, 23)
+metadata/old_offset = Vector2(27, 11)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_82uyi")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_mei3q")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0ycwj")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_mtixu")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_086rr")
+}],
+"loop": false,
+"name": &"default",
+"speed": 15.0
+}]

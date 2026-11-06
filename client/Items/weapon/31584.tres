@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_4mbcv"]
+
+[resource]
+script = ExtResource("1_4mbcv")
+attack_range = 60
+tick_count = 1
+note_1 = "Hit_Effect07"
+note_2 = "Normal00"
+note_3 = "Esc-Receiver"
+note_4 = "Dagger"
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 36
+atk = 106
+def = 2
+matk = 86
+durability = 50
+equip_slot = 5
+spr_id = 4
+req_level = 17
+req_job = "無"
+req_race = "無"
+id = 31584
+item_name = "魔光動刃"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1647
+icon_id = 70
+item_type_category = "Weapon"

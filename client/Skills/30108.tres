@@ -1,0 +1,115 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_wcefs"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_pseyq"]
+
+[sub_resource type="Resource" id="Resource_nwgoe"]
+script = ExtResource("1_wcefs")
+cost_mp = 56
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -150
+hit_bonus = 100
+
+[sub_resource type="Resource" id="Resource_6scrr"]
+script = ExtResource("1_wcefs")
+level = 2
+cost_mp = 68
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -180
+hit_bonus = 120
+
+[sub_resource type="Resource" id="Resource_v6uwd"]
+script = ExtResource("1_wcefs")
+level = 3
+cost_mp = 81
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -210
+hit_bonus = 140
+
+[sub_resource type="Resource" id="Resource_wkipp"]
+script = ExtResource("1_wcefs")
+level = 4
+cost_mp = 95
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -240
+hit_bonus = 160
+
+[sub_resource type="Resource" id="Resource_wbhb1"]
+script = ExtResource("1_wcefs")
+level = 5
+cost_mp = 111
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -270
+hit_bonus = 180
+
+[sub_resource type="Resource" id="Resource_05rpe"]
+script = ExtResource("1_wcefs")
+level = 6
+cost_mp = 129
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -300
+hit_bonus = 200
+
+[sub_resource type="Resource" id="Resource_w7cic"]
+script = ExtResource("1_wcefs")
+level = 7
+cost_mp = 149
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -330
+hit_bonus = 220
+
+[sub_resource type="Resource" id="Resource_r422y"]
+script = ExtResource("1_wcefs")
+level = 8
+cost_mp = 171
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -360
+hit_bonus = 240
+
+[sub_resource type="Resource" id="Resource_4oxdl"]
+script = ExtResource("1_wcefs")
+level = 9
+cost_mp = 195
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -390
+hit_bonus = 260
+
+[sub_resource type="Resource" id="Resource_5jb68"]
+script = ExtResource("1_wcefs")
+level = 10
+cost_mp = 221
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -420
+hit_bonus = 280
+
+[resource]
+script = ExtResource("2_pseyq")
+id = 30108
+skill_name = "魔影"
+description = "暫時犧牲魔法攻擊力，來提升命中率。"
+skill_type = 4
+icon_id = 70
+fx_use = "Skill_Use_00"
+fx_hit = "Normal_Effect11"
+fx_extra = "0"
+levels = Array[ExtResource("1_wcefs")]([SubResource("Resource_nwgoe"), SubResource("Resource_6scrr"), SubResource("Resource_v6uwd"), SubResource("Resource_wkipp"), SubResource("Resource_wbhb1"), SubResource("Resource_05rpe"), SubResource("Resource_w7cic"), SubResource("Resource_r422y"), SubResource("Resource_4oxdl"), SubResource("Resource_5jb68")])

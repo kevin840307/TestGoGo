@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_7k34f"]
+
+[resource]
+script = ExtResource("1_7k34f")
+id = 2655
+item_name = "冰靈鋼甲"
+description = "製造冰冷人偶的原材料，從冰靈騎士中掉落。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+icon_id = 159
+color_index = 2
+item_type_category = "General"

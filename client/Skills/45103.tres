@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_ooh31"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_udo0n"]
+
+[sub_resource type="Resource" id="Resource_uaybi"]
+script = ExtResource("1_ooh31")
+
+[resource]
+script = ExtResource("2_udo0n")
+id = 45103
+skill_name = "生命分流"
+description = "藉由星辰的力量以術者的生命回復他人生命的刻紋，施法後術者會得到短暫的星辰守護，得到對物理及魔法強大的防衛。"
+skill_type = 7
+fx_use = "Skill_Use_04"
+fx_hit = "Skill_Hit_18"
+fx_extra = "0"
+special_skill = "生命分流"
+levels = Array[ExtResource("1_ooh31")]([SubResource("Resource_uaybi")])

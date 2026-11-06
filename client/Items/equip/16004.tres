@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_4n548"]
+
+[resource]
+script = ExtResource("1_4n548")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 88
+max_mp_bonus = 88
+atk = 8
+def = 8
+matk = 8
+mdef = 8
+hit = 18
+flee = 18
+luk = 8
+durability = 50
+equip_slot = 1
+spr_id = 10
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 16004
+item_name = "福神左袖"
+description = "受到福神賜福，會為持有者帶來好運氣的裝備。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 105
+item_type_category = "Equip"

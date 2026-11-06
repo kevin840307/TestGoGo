@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_shkox"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_02a6g"]
+
+[sub_resource type="Resource" id="Resource_1fr4v"]
+script = ExtResource("1_shkox")
+cast_range = 250
+cost_mp = 50
+cooldown = 1
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_k8byr"]
+script = ExtResource("1_shkox")
+level = 2
+cast_range = 300
+cost_mp = 150
+cooldown = 1
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_3t1ga"]
+script = ExtResource("1_shkox")
+level = 3
+cast_range = 350
+cost_mp = 320
+cooldown = 1
+tick_count = 1
+
+[resource]
+script = ExtResource("2_02a6g")
+id = 27104
+skill_name = "生命之源"
+description = "可使死亡的角色重生，且減少是次死亡時所得的一定數量的死亡經驗值。"
+skill_type = 6
+icon_id = 39
+fx_use = "Skill_Use_00"
+fx_hit = "Skill_Hit_48"
+fx_extra = "0"
+levels = Array[ExtResource("1_shkox")]([SubResource("Resource_1fr4v"), SubResource("Resource_k8byr"), SubResource("Resource_3t1ga")])

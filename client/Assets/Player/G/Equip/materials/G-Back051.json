@@ -1,0 +1,692 @@
+{
+  "part_name": "G-Back51",
+  "texture_size": {
+    "w": 2048,
+    "h": 308
+  },
+  "frames": {
+    "emote_k_8_frame0004": {
+      "x": 0,
+      "y": 0,
+      "w": 89,
+      "h": 99,
+      "offset_x": 31,
+      "offset_y": 86
+    },
+    "emote_k_8_frame0005": {
+      "x": 89,
+      "y": 0,
+      "w": 90,
+      "h": 97,
+      "offset_x": 35,
+      "offset_y": 93
+    },
+    "emote_k_8_frame0003": {
+      "x": 179,
+      "y": 0,
+      "w": 92,
+      "h": 93,
+      "offset_x": 39,
+      "offset_y": 94
+    },
+    "emote_k_8_frame0006": {
+      "x": 271,
+      "y": 0,
+      "w": 93,
+      "h": 89,
+      "offset_x": 40,
+      "offset_y": 88
+    },
+    "emote_f_8_frame0000": {
+      "x": 364,
+      "y": 0,
+      "w": 90,
+      "h": 88,
+      "offset_x": 40,
+      "offset_y": 107
+    },
+    "emote_f_8_frame0004": {
+      "x": 454,
+      "y": 0,
+      "w": 90,
+      "h": 88,
+      "offset_x": 40,
+      "offset_y": 107
+    },
+    "emote_f_8_frame0001": {
+      "x": 544,
+      "y": 0,
+      "w": 92,
+      "h": 86,
+      "offset_x": 42,
+      "offset_y": 106
+    },
+    "emote_f_8_frame0002": {
+      "x": 636,
+      "y": 0,
+      "w": 92,
+      "h": 86,
+      "offset_x": 42,
+      "offset_y": 106
+    },
+    "emote_f_8_frame0003": {
+      "x": 728,
+      "y": 0,
+      "w": 91,
+      "h": 86,
+      "offset_x": 41,
+      "offset_y": 106
+    },
+    "emote_k_8_frame0002": {
+      "x": 819,
+      "y": 0,
+      "w": 93,
+      "h": 86,
+      "offset_x": 42,
+      "offset_y": 82
+    },
+    "emote_b_8_frame0002": {
+      "x": 912,
+      "y": 0,
+      "w": 95,
+      "h": 84,
+      "offset_x": 44,
+      "offset_y": 105
+    },
+    "emote_b_8_frame0004": {
+      "x": 1007,
+      "y": 0,
+      "w": 95,
+      "h": 84,
+      "offset_x": 44,
+      "offset_y": 105
+    },
+    "emote_c_8_frame0002": {
+      "x": 1102,
+      "y": 0,
+      "w": 95,
+      "h": 84,
+      "offset_x": 44,
+      "offset_y": 105
+    },
+    "emote_k_8_frame0007": {
+      "x": 1197,
+      "y": 0,
+      "w": 92,
+      "h": 84,
+      "offset_x": 42,
+      "offset_y": 85
+    },
+    "emote_b_8_frame0000": {
+      "x": 1289,
+      "y": 0,
+      "w": 95,
+      "h": 83,
+      "offset_x": 44,
+      "offset_y": 105
+    },
+    "emote_b_8_frame0001": {
+      "x": 1384,
+      "y": 0,
+      "w": 95,
+      "h": 83,
+      "offset_x": 44,
+      "offset_y": 105
+    },
+    "emote_b_8_frame0003": {
+      "x": 1479,
+      "y": 0,
+      "w": 95,
+      "h": 83,
+      "offset_x": 44,
+      "offset_y": 104
+    },
+    "emote_c_8_frame0000": {
+      "x": 1574,
+      "y": 0,
+      "w": 95,
+      "h": 83,
+      "offset_x": 44,
+      "offset_y": 104
+    },
+    "emote_c_8_frame0001": {
+      "x": 1669,
+      "y": 0,
+      "w": 95,
+      "h": 83,
+      "offset_x": 44,
+      "offset_y": 104
+    },
+    "emote_c_8_frame0003": {
+      "x": 1764,
+      "y": 0,
+      "w": 95,
+      "h": 83,
+      "offset_x": 44,
+      "offset_y": 104
+    },
+    "emote_c_8_frame0004": {
+      "x": 1859,
+      "y": 0,
+      "w": 95,
+      "h": 83,
+      "offset_x": 44,
+      "offset_y": 104
+    },
+    "emote_g_8_frame0003": {
+      "x": 1954,
+      "y": 0,
+      "w": 84,
+      "h": 83,
+      "offset_x": 47,
+      "offset_y": 101
+    },
+    "emote_g_8_frame0004": {
+      "x": 0,
+      "y": 99,
+      "w": 88,
+      "h": 80,
+      "offset_x": 50,
+      "offset_y": 103
+    },
+    "emote_l_8_frame0002": {
+      "x": 88,
+      "y": 99,
+      "w": 87,
+      "h": 80,
+      "offset_x": 42,
+      "offset_y": 103
+    },
+    "emote_l_8_frame0003": {
+      "x": 175,
+      "y": 99,
+      "w": 87,
+      "h": 80,
+      "offset_x": 46,
+      "offset_y": 104
+    },
+    "emote_k_8_frame0001": {
+      "x": 262,
+      "y": 99,
+      "w": 92,
+      "h": 78,
+      "offset_x": 44,
+      "offset_y": 87
+    },
+    "emote_g_8_frame0005": {
+      "x": 354,
+      "y": 99,
+      "w": 92,
+      "h": 75,
+      "offset_x": 52,
+      "offset_y": 100
+    },
+    "emote_h_8_frame0000": {
+      "x": 446,
+      "y": 99,
+      "w": 94,
+      "h": 75,
+      "offset_x": 45,
+      "offset_y": 79
+    },
+    "emote_h_8_frame0002": {
+      "x": 540,
+      "y": 99,
+      "w": 94,
+      "h": 75,
+      "offset_x": 45,
+      "offset_y": 79
+    },
+    "emote_j_8_frame0000": {
+      "x": 634,
+      "y": 99,
+      "w": 93,
+      "h": 75,
+      "offset_x": 43,
+      "offset_y": 103
+    },
+    "emote_j_8_frame0001": {
+      "x": 727,
+      "y": 99,
+      "w": 93,
+      "h": 75,
+      "offset_x": 43,
+      "offset_y": 104
+    },
+    "emote_j_8_frame0004": {
+      "x": 820,
+      "y": 99,
+      "w": 93,
+      "h": 75,
+      "offset_x": 43,
+      "offset_y": 102
+    },
+    "emote_h_8_frame0001": {
+      "x": 913,
+      "y": 99,
+      "w": 94,
+      "h": 74,
+      "offset_x": 45,
+      "offset_y": 79
+    },
+    "emote_h_8_frame0003": {
+      "x": 1007,
+      "y": 99,
+      "w": 94,
+      "h": 74,
+      "offset_x": 45,
+      "offset_y": 79
+    },
+    "emote_h_8_frame0004": {
+      "x": 1101,
+      "y": 99,
+      "w": 94,
+      "h": 74,
+      "offset_x": 45,
+      "offset_y": 79
+    },
+    "emote_h_8_frame0005": {
+      "x": 1195,
+      "y": 99,
+      "w": 94,
+      "h": 74,
+      "offset_x": 45,
+      "offset_y": 79
+    },
+    "emote_h_8_frame0006": {
+      "x": 1289,
+      "y": 99,
+      "w": 94,
+      "h": 74,
+      "offset_x": 45,
+      "offset_y": 79
+    },
+    "emote_h_8_frame0007": {
+      "x": 1383,
+      "y": 99,
+      "w": 94,
+      "h": 74,
+      "offset_x": 45,
+      "offset_y": 79
+    },
+    "emote_g_8_frame0006": {
+      "x": 1477,
+      "y": 99,
+      "w": 98,
+      "h": 73,
+      "offset_x": 55,
+      "offset_y": 97
+    },
+    "emote_j_8_frame0002": {
+      "x": 1575,
+      "y": 99,
+      "w": 93,
+      "h": 72,
+      "offset_x": 43,
+      "offset_y": 103
+    },
+    "emote_j_8_frame0003": {
+      "x": 1668,
+      "y": 99,
+      "w": 93,
+      "h": 71,
+      "offset_x": 43,
+      "offset_y": 102
+    },
+    "emote_g_8_frame0002": {
+      "x": 1761,
+      "y": 99,
+      "w": 77,
+      "h": 70,
+      "offset_x": 42,
+      "offset_y": 95
+    },
+    "emote_k_8_frame0008": {
+      "x": 1838,
+      "y": 99,
+      "w": 90,
+      "h": 70,
+      "offset_x": 48,
+      "offset_y": 77
+    },
+    "emote_d_8_frame0001": {
+      "x": 1928,
+      "y": 99,
+      "w": 91,
+      "h": 69,
+      "offset_x": 49,
+      "offset_y": 114
+    },
+    "emote_d_8_frame0003": {
+      "x": 0,
+      "y": 179,
+      "w": 91,
+      "h": 69,
+      "offset_x": 49,
+      "offset_y": 113
+    },
+    "emote_g_8_frame0007": {
+      "x": 91,
+      "y": 179,
+      "w": 101,
+      "h": 69,
+      "offset_x": 55,
+      "offset_y": 93
+    },
+    "emote_l_8_frame0001": {
+      "x": 192,
+      "y": 179,
+      "w": 95,
+      "h": 69,
+      "offset_x": 46,
+      "offset_y": 96
+    },
+    "emote_l_8_frame0004": {
+      "x": 287,
+      "y": 179,
+      "w": 96,
+      "h": 69,
+      "offset_x": 50,
+      "offset_y": 97
+    },
+    "emote_g_8_frame0000": {
+      "x": 383,
+      "y": 179,
+      "w": 85,
+      "h": 67,
+      "offset_x": 41,
+      "offset_y": 96
+    },
+    "emote_d_8_frame0000": {
+      "x": 468,
+      "y": 179,
+      "w": 88,
+      "h": 66,
+      "offset_x": 46,
+      "offset_y": 98
+    },
+    "emote_d_8_frame0004": {
+      "x": 556,
+      "y": 179,
+      "w": 88,
+      "h": 66,
+      "offset_x": 46,
+      "offset_y": 103
+    },
+    "emote_e_8_frame0002": {
+      "x": 644,
+      "y": 179,
+      "w": 101,
+      "h": 66,
+      "offset_x": 52,
+      "offset_y": 97
+    },
+    "emote_k_8_frame0000": {
+      "x": 745,
+      "y": 179,
+      "w": 89,
+      "h": 66,
+      "offset_x": 48,
+      "offset_y": 73
+    },
+    "emote_e_8_frame0001": {
+      "x": 834,
+      "y": 179,
+      "w": 101,
+      "h": 65,
+      "offset_x": 52,
+      "offset_y": 96
+    },
+    "emote_e_8_frame0003": {
+      "x": 935,
+      "y": 179,
+      "w": 101,
+      "h": 65,
+      "offset_x": 52,
+      "offset_y": 96
+    },
+    "emote_g_8_frame0001": {
+      "x": 1036,
+      "y": 179,
+      "w": 78,
+      "h": 64,
+      "offset_x": 40,
+      "offset_y": 93
+    },
+    "emote_a_8_frame0000": {
+      "x": 1114,
+      "y": 179,
+      "w": 99,
+      "h": 63,
+      "offset_x": 53,
+      "offset_y": 95
+    },
+    "emote_a_8_frame0001": {
+      "x": 1213,
+      "y": 179,
+      "w": 100,
+      "h": 63,
+      "offset_x": 53,
+      "offset_y": 95
+    },
+    "emote_a_8_frame0002": {
+      "x": 1313,
+      "y": 179,
+      "w": 99,
+      "h": 63,
+      "offset_x": 53,
+      "offset_y": 95
+    },
+    "emote_a_8_frame0003": {
+      "x": 1412,
+      "y": 179,
+      "w": 100,
+      "h": 63,
+      "offset_x": 53,
+      "offset_y": 95
+    },
+    "emote_a_8_frame0004": {
+      "x": 1512,
+      "y": 179,
+      "w": 99,
+      "h": 63,
+      "offset_x": 53,
+      "offset_y": 95
+    },
+    "emote_e_8_frame0000": {
+      "x": 1611,
+      "y": 179,
+      "w": 100,
+      "h": 63,
+      "offset_x": 53,
+      "offset_y": 95
+    },
+    "emote_e_8_frame0004": {
+      "x": 1711,
+      "y": 179,
+      "w": 100,
+      "h": 63,
+      "offset_x": 53,
+      "offset_y": 95
+    },
+    "emote_l_8_frame0000": {
+      "x": 1811,
+      "y": 179,
+      "w": 100,
+      "h": 62,
+      "offset_x": 50,
+      "offset_y": 92
+    },
+    "emote_d_8_frame0002": {
+      "x": 1911,
+      "y": 179,
+      "w": 93,
+      "h": 61,
+      "offset_x": 50,
+      "offset_y": 113
+    },
+    "emote_g_8_frame0010": {
+      "x": 0,
+      "y": 248,
+      "w": 89,
+      "h": 60,
+      "offset_x": 44,
+      "offset_y": 92
+    },
+    "emote_g_8_frame0008": {
+      "x": 89,
+      "y": 248,
+      "w": 100,
+      "h": 50,
+      "offset_x": 55,
+      "offset_y": 81
+    },
+    "emote_g_8_frame0009": {
+      "x": 189,
+      "y": 248,
+      "w": 93,
+      "h": 46,
+      "offset_x": 50,
+      "offset_y": 81
+    },
+    "emote_i_8_frame0000": {
+      "x": 282,
+      "y": 248,
+      "w": 118,
+      "h": 42,
+      "offset_x": 52,
+      "offset_y": 33
+    },
+    "emote_i_8_frame0001": {
+      "x": 400,
+      "y": 248,
+      "w": 118,
+      "h": 42,
+      "offset_x": 52,
+      "offset_y": 33
+    },
+    "emote_i_8_frame0002": {
+      "x": 518,
+      "y": 248,
+      "w": 118,
+      "h": 42,
+      "offset_x": 52,
+      "offset_y": 33
+    },
+    "emote_i_8_frame0003": {
+      "x": 636,
+      "y": 248,
+      "w": 118,
+      "h": 42,
+      "offset_x": 52,
+      "offset_y": 33
+    },
+    "emote_i_8_frame0004": {
+      "x": 754,
+      "y": 248,
+      "w": 118,
+      "h": 42,
+      "offset_x": 52,
+      "offset_y": 33
+    }
+  },
+  "animations": {
+    "emote_k_8": [
+      "emote_k_8_frame0000",
+      "emote_k_8_frame0001",
+      "emote_k_8_frame0002",
+      "emote_k_8_frame0003",
+      "emote_k_8_frame0004",
+      "emote_k_8_frame0005",
+      "emote_k_8_frame0006",
+      "emote_k_8_frame0007",
+      "emote_k_8_frame0008"
+    ],
+    "emote_f_8": [
+      "emote_f_8_frame0000",
+      "emote_f_8_frame0001",
+      "emote_f_8_frame0002",
+      "emote_f_8_frame0003",
+      "emote_f_8_frame0004"
+    ],
+    "emote_b_8": [
+      "emote_b_8_frame0000",
+      "emote_b_8_frame0001",
+      "emote_b_8_frame0002",
+      "emote_b_8_frame0003",
+      "emote_b_8_frame0004"
+    ],
+    "emote_c_8": [
+      "emote_c_8_frame0000",
+      "emote_c_8_frame0001",
+      "emote_c_8_frame0002",
+      "emote_c_8_frame0003",
+      "emote_c_8_frame0004"
+    ],
+    "emote_g_8": [
+      "emote_g_8_frame0000",
+      "emote_g_8_frame0001",
+      "emote_g_8_frame0002",
+      "emote_g_8_frame0003",
+      "emote_g_8_frame0004",
+      "emote_g_8_frame0005",
+      "emote_g_8_frame0006",
+      "emote_g_8_frame0007",
+      "emote_g_8_frame0008",
+      "emote_g_8_frame0009",
+      "emote_g_8_frame0010"
+    ],
+    "emote_l_8": [
+      "emote_l_8_frame0000",
+      "emote_l_8_frame0001",
+      "emote_l_8_frame0002",
+      "emote_l_8_frame0003",
+      "emote_l_8_frame0004"
+    ],
+    "emote_h_8": [
+      "emote_h_8_frame0000",
+      "emote_h_8_frame0001",
+      "emote_h_8_frame0002",
+      "emote_h_8_frame0003",
+      "emote_h_8_frame0004",
+      "emote_h_8_frame0005",
+      "emote_h_8_frame0006",
+      "emote_h_8_frame0007"
+    ],
+    "emote_j_8": [
+      "emote_j_8_frame0000",
+      "emote_j_8_frame0001",
+      "emote_j_8_frame0002",
+      "emote_j_8_frame0003",
+      "emote_j_8_frame0004"
+    ],
+    "emote_d_8": [
+      "emote_d_8_frame0000",
+      "emote_d_8_frame0001",
+      "emote_d_8_frame0002",
+      "emote_d_8_frame0003",
+      "emote_d_8_frame0004"
+    ],
+    "emote_e_8": [
+      "emote_e_8_frame0000",
+      "emote_e_8_frame0001",
+      "emote_e_8_frame0002",
+      "emote_e_8_frame0003",
+      "emote_e_8_frame0004"
+    ],
+    "emote_a_8": [
+      "emote_a_8_frame0000",
+      "emote_a_8_frame0001",
+      "emote_a_8_frame0002",
+      "emote_a_8_frame0003",
+      "emote_a_8_frame0004"
+    ],
+    "emote_i_8": [
+      "emote_i_8_frame0000",
+      "emote_i_8_frame0001",
+      "emote_i_8_frame0002",
+      "emote_i_8_frame0003",
+      "emote_i_8_frame0004"
+    ]
+  }
+}

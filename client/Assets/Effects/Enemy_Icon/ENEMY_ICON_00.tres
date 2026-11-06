@@ -1,0 +1,37 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://c5tay5xg4gvip"]
+
+[ext_resource type="Texture2D" uid="uid://dik43s3lddb0b" path="res://Assets/Effects/RawData/Enemy_Icon/ENEMY_ICON_00.spr.0000.png" id="1_m6065"]
+[ext_resource type="Texture2D" uid="uid://bx5cninm4uaih" path="res://Assets/Effects/RawData/Enemy_Icon/ENEMY_ICON_00.spr.0001.png" id="2_kkp1l"]
+[ext_resource type="Texture2D" uid="uid://dqot76ld7uug6" path="res://Assets/Effects/RawData/Enemy_Icon/ENEMY_ICON_00.spr.0002.png" id="3_dd2sv"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_m6065"]
+atlas = ExtResource("1_m6065")
+region = Rect2(0, 0, 27, 39)
+metadata/old_offset = Vector2(13, 19)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kkp1l"]
+atlas = ExtResource("2_kkp1l")
+region = Rect2(0, 0, 32, 35)
+metadata/old_offset = Vector2(15, 19)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_dd2sv"]
+atlas = ExtResource("3_dd2sv")
+region = Rect2(0, 0, 32, 35)
+metadata/old_offset = Vector2(15, 19)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_m6065")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kkp1l")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_dd2sv")
+}],
+"loop": true,
+"name": &"default",
+"speed": 8.0
+}]

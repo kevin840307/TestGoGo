@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_qxqns"]
+
+[resource]
+script = ExtResource("1_qxqns")
+script_name = "見習生上衣圖樣"
+id = 3250
+item_name = "見習生上衣圖樣"
+description = "合成見習生上衣材料：甲殼、毛皮、白羽毛、星果片。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 50
+icon_id = 180
+item_type_category = "General"

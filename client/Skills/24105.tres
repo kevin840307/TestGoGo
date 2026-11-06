@@ -1,0 +1,69 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_lxibk"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_6m05v"]
+
+[sub_resource type="Resource" id="Resource_7ljib"]
+script = ExtResource("1_lxibk")
+cast_range = 200
+cost_hp = 100
+cost_mp = 40
+base_damage = 80
+damage_multiplier = 105
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_2g0jg"]
+script = ExtResource("1_lxibk")
+level = 2
+cast_range = 225
+cost_hp = 150
+cost_mp = 51
+base_damage = 130
+damage_multiplier = 115
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_7ommm"]
+script = ExtResource("1_lxibk")
+level = 3
+cast_range = 225
+cost_hp = 200
+cost_mp = 64
+base_damage = 190
+damage_multiplier = 125
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_ybtdu"]
+script = ExtResource("1_lxibk")
+level = 4
+cast_range = 250
+cost_hp = 250
+cost_mp = 76
+base_damage = 260
+damage_multiplier = 135
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_1qdcu"]
+script = ExtResource("1_lxibk")
+level = 5
+cast_range = 275
+cost_hp = 300
+cost_mp = 92
+base_damage = 340
+damage_multiplier = 145
+cooldown = 2
+tick_count = 1
+
+[resource]
+script = ExtResource("2_6m05v")
+id = 24105
+skill_name = "飛石破碎"
+description = "儲蓄依加魯力量，再以地上的石塊向敵人攻擊。"
+icon_id = 18
+fx_use = "Skill_Use_02"
+fx_hit = "Skill_Hit_27"
+fx_extra = "Hit_Effect05"
+levels = Array[ExtResource("1_lxibk")]([SubResource("Resource_7ljib"), SubResource("Resource_2g0jg"), SubResource("Resource_7ommm"), SubResource("Resource_ybtdu"), SubResource("Resource_1qdcu")])

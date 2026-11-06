@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_hdsep"]
+
+[resource]
+script = ExtResource("1_hdsep")
+bullet_id = 99
+note_1 = "0"
+note_2 = "0"
+note_3 = "0"
+note_4 = "0"
+horse_type = "MA"
+max_hp_bonus = 2000
+max_mp_bonus = 2000
+move_speed = 100
+durability = 50
+equip_slot = 2
+spr_id = 1
+req_level = 10
+id = 50370
+item_name = "魔龍戰騎引擎"
+description = "提供魔龍戰騎的加速力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 100
+icon_id = 218
+color_index = 7
+item_type_category = "HorseEquip"

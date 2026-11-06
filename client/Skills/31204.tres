@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_3cl3s"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_tl1g6"]
+
+[sub_resource type="Resource" id="Resource_v6qrw"]
+script = ExtResource("1_3cl3s")
+cast_range = 350
+cost_hp = 1500
+cooldown = 1
+tick_count = 1
+
+[resource]
+script = ExtResource("2_tl1g6")
+id = 31204
+skill_name = "武器製造"
+description = "武器製造。"
+skill_type = 6
+icon_id = 74
+fx_use = "Skill_Use_03"
+fx_hit = "Skill_Hit_25"
+levels = Array[ExtResource("1_3cl3s")]([SubResource("Resource_v6qrw")])

@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_shmfo"]
+
+[resource]
+script = ExtResource("1_shmfo")
+no_shield = 1
+attack_range = 120
+tick_count = 1
+note_1 = "Hit_Effect00"
+note_2 = "Normal03"
+note_3 = "Esc-Receiver"
+note_4 = "Axe"
+special_effect = "無"
+can_repair = 1
+req_str = 25
+atk = 552
+matk = 201
+durability = 50
+equip_slot = 5
+spr_id = 3
+req_level = 50
+req_job = "無"
+req_race = "無"
+id = 30550
+item_name = "雙刃電光斧+18"
+description = "利用稀有藍圖製作出來的武器。可使用高級武器強化卡強化，大大增強能力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 57240
+icon_id = 256
+color_index = 7
+item_type_category = "Weapon"

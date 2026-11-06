@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_pydrl"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_em0in"]
+
+[sub_resource type="Resource" id="Resource_o7ttn"]
+script = ExtResource("1_pydrl")
+cast_range = 400
+tick_count = 1
+
+[resource]
+script = ExtResource("2_em0in")
+id = 50139
+skill_name = "星之傷痕"
+description = "令對手的攻擊力、防禦力、魔法攻擊力及魔防減少200(15sec)及無視防禦傷害2000，利用殺人熊護手可以令傷害減少至300及得到防禦力及魔防100點的提升"
+fx_use = "Skill_Use_00"
+fx_hit = "Skill_Hit_04"
+fx_extra = "0"
+levels = Array[ExtResource("1_pydrl")]([SubResource("Resource_o7ttn")])

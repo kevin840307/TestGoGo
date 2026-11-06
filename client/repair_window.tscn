@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://dajyi2spqb6v4"]
+
+[ext_resource type="Script" uid="uid://bfu145qu2sdap" path="res://scripts/repair_window.gd" id="1_8cpv6"]
+[ext_resource type="PackedScene" uid="uid://yvcqruofkvub" path="res://shared_inventory_panel.tscn" id="2_oh7bb"]
+
+[node name="RepairWindow" type="Control" unique_id=2010867117]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_8cpv6")
+
+[node name="SharedInventoryPanel" parent="." unique_id=1757622877 instance=ExtResource("2_oh7bb")]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -129.5
+offset_top = -285.5
+offset_right = 129.5
+offset_bottom = 219.5
+grow_horizontal = 2

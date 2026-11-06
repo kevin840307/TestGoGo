@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_ec3go"]
+
+[resource]
+script = ExtResource("1_ec3go")
+special_effect = "無"
+can_repair = 1
+flee = 10
+move_speed = 50
+durability = 50
+equip_slot = 4
+spr_id = 7
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 19188
+item_name = "音速跑鞋"
+description = "可以令穿著者跑得比較快。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 628
+color_index = 6
+item_type_category = "Equip"

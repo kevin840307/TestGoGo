@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_nw1yw"]
+
+[resource]
+script = ExtResource("1_nw1yw")
+attack_range = 60
+tick_count = 1
+note_1 = "Hit_Effect07"
+note_2 = "Soil01"
+note_3 = "Esc-Receiver"
+note_4 = "Dagger"
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 208
+atk = 257
+def = 8
+matk = 257
+durability = 50
+equip_slot = 5
+spr_id = 6
+req_level = 54
+req_job = "無"
+req_race = "無"
+id = 31619
+item_name = "屠龍虎刃"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 76590
+icon_id = 72
+color_index = 2
+item_type_category = "Weapon"

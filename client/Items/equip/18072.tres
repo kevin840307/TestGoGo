@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_3qb35"]
+
+[resource]
+script = ExtResource("1_3qb35")
+special_effect = "無"
+can_repair = 1
+atk = 6
+luk = 15
+durability = 50
+spr_id = 76
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 18072
+item_name = "神秘獅子座"
+description = "身上處處見陽光、熱情、自信、大方都是獅子座的特質。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 200
+icon_id = 563
+color_index = 7
+item_type_category = "Equip"

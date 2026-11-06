@@ -1,0 +1,115 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_frosc"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_dg05y"]
+
+[sub_resource type="Resource" id="Resource_4cxwj"]
+script = ExtResource("1_frosc")
+cost_mp = 56
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -150
+hit_bonus = 100
+
+[sub_resource type="Resource" id="Resource_b7ybg"]
+script = ExtResource("1_frosc")
+level = 2
+cost_mp = 68
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -180
+hit_bonus = 120
+
+[sub_resource type="Resource" id="Resource_g0wdo"]
+script = ExtResource("1_frosc")
+level = 3
+cost_mp = 81
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -210
+hit_bonus = 140
+
+[sub_resource type="Resource" id="Resource_wuo53"]
+script = ExtResource("1_frosc")
+level = 4
+cost_mp = 95
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -240
+hit_bonus = 160
+
+[sub_resource type="Resource" id="Resource_1ru5g"]
+script = ExtResource("1_frosc")
+level = 5
+cost_mp = 111
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -270
+hit_bonus = 180
+
+[sub_resource type="Resource" id="Resource_q87p4"]
+script = ExtResource("1_frosc")
+level = 6
+cost_mp = 129
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -300
+hit_bonus = 200
+
+[sub_resource type="Resource" id="Resource_f8mwb"]
+script = ExtResource("1_frosc")
+level = 7
+cost_mp = 149
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -330
+hit_bonus = 220
+
+[sub_resource type="Resource" id="Resource_s7gy5"]
+script = ExtResource("1_frosc")
+level = 8
+cost_mp = 171
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -360
+hit_bonus = 240
+
+[sub_resource type="Resource" id="Resource_71t54"]
+script = ExtResource("1_frosc")
+level = 9
+cost_mp = 194
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -390
+hit_bonus = 260
+
+[sub_resource type="Resource" id="Resource_g7cdn"]
+script = ExtResource("1_frosc")
+level = 10
+cost_mp = 219
+cooldown = 1
+duration = 900
+tick_count = 1
+matk_bonus = -420
+hit_bonus = 280
+
+[resource]
+script = ExtResource("2_dg05y")
+id = 26108
+skill_name = "目標引導"
+description = "暫時犧牲魔法攻擊力，來提升命中率。"
+skill_type = 4
+icon_id = 35
+fx_use = "Skill_Use_00"
+fx_hit = "Normal_Effect11"
+fx_extra = "0"
+levels = Array[ExtResource("1_frosc")]([SubResource("Resource_4cxwj"), SubResource("Resource_b7ybg"), SubResource("Resource_g0wdo"), SubResource("Resource_wuo53"), SubResource("Resource_1ru5g"), SubResource("Resource_q87p4"), SubResource("Resource_f8mwb"), SubResource("Resource_s7gy5"), SubResource("Resource_71t54"), SubResource("Resource_g7cdn")])

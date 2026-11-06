@@ -1,0 +1,46 @@
+[gd_scene format=3 uid="uid://b7eutqi6uqml4"]
+
+[ext_resource type="Script" uid="uid://brqfeuno4ekjo" path="res://scripts/npc_entity.gd" id="1_k3nwa"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_k3nwa"]
+font_color = Color(0.60160035, 0.32489702, 0.66223425, 1)
+outline_size = 4
+
+[node name="NpcEntity" type="Area2D" unique_id=480633644]
+y_sort_enabled = true
+script = ExtResource("1_k3nwa")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1799547149]
+y_sort_enabled = true
+centered = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=732245433]
+
+[node name="VisualCenter" type="Control" parent="." unique_id=928085657]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="NameLabel" type="Label" parent="VisualCenter" unique_id=159696775]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 28.0
+label_settings = SubResource("LabelSettings_k3nwa")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ChatBubbleBG" type="NinePatchRect" parent="VisualCenter" unique_id=600444405]
+visible = false
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="ChatBubbleLabel" type="Label" parent="VisualCenter/ChatBubbleBG" unique_id=862360336]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3

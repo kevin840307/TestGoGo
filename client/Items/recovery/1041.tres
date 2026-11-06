@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="RecoveryData" format=3]
+
+[ext_resource type="Script" uid="uid://ck1fehhmvo5cj" path="res://scripts/recovery_data.gd" id="1_nrscf"]
+
+[resource]
+script = ExtResource("1_nrscf")
+use_range = 100
+recover_hp = 100
+recover_mp = 100
+note_1 = "Normal_Effect12"
+note_2 = "Normal_Effect01"
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 1041
+item_name = "紅蘿蔔南瓜蛋糕"
+description = "很香的蛋糕，好像很好吃唷！"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 216
+item_type_category = "Recovery"

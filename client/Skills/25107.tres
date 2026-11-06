@@ -1,0 +1,115 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_8pltk"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_5mequ"]
+
+[sub_resource type="Resource" id="Resource_3jqcu"]
+script = ExtResource("1_8pltk")
+cost_mp = 112
+cooldown = 1
+duration = 900
+tick_count = 1
+max_mp_bonus = 200
+mdef_bonus = 40
+
+[sub_resource type="Resource" id="Resource_qva3k"]
+script = ExtResource("1_8pltk")
+level = 2
+cost_mp = 135
+cooldown = 1
+duration = 900
+tick_count = 1
+max_mp_bonus = 400
+mdef_bonus = 50
+
+[sub_resource type="Resource" id="Resource_42bkf"]
+script = ExtResource("1_8pltk")
+level = 3
+cost_mp = 162
+cooldown = 1
+duration = 900
+tick_count = 1
+max_mp_bonus = 600
+mdef_bonus = 60
+
+[sub_resource type="Resource" id="Resource_iijnv"]
+script = ExtResource("1_8pltk")
+level = 4
+cost_mp = 190
+cooldown = 1
+duration = 900
+tick_count = 1
+max_mp_bonus = 800
+mdef_bonus = 70
+
+[sub_resource type="Resource" id="Resource_rpyix"]
+script = ExtResource("1_8pltk")
+level = 5
+cost_mp = 222
+cooldown = 1
+duration = 900
+tick_count = 1
+max_mp_bonus = 1000
+mdef_bonus = 80
+
+[sub_resource type="Resource" id="Resource_xvtjv"]
+script = ExtResource("1_8pltk")
+level = 6
+cost_mp = 258
+cooldown = 1
+duration = 900
+tick_count = 1
+max_mp_bonus = 1200
+mdef_bonus = 90
+
+[sub_resource type="Resource" id="Resource_ifs4q"]
+script = ExtResource("1_8pltk")
+level = 7
+cost_mp = 298
+cooldown = 1
+duration = 900
+tick_count = 1
+max_mp_bonus = 1400
+mdef_bonus = 100
+
+[sub_resource type="Resource" id="Resource_1fvgx"]
+script = ExtResource("1_8pltk")
+level = 8
+cost_mp = 342
+cooldown = 1
+duration = 900
+tick_count = 1
+max_mp_bonus = 1600
+mdef_bonus = 110
+
+[sub_resource type="Resource" id="Resource_g53th"]
+script = ExtResource("1_8pltk")
+level = 9
+cost_mp = 390
+cooldown = 1
+duration = 900
+tick_count = 1
+max_mp_bonus = 1800
+mdef_bonus = 120
+
+[sub_resource type="Resource" id="Resource_73xvn"]
+script = ExtResource("1_8pltk")
+level = 10
+cost_mp = 442
+cooldown = 1
+duration = 900
+tick_count = 1
+max_mp_bonus = 2000
+mdef_bonus = 130
+
+[resource]
+script = ExtResource("2_5mequ")
+id = 25107
+skill_name = "大氣之翼"
+description = "暫時提升魔力上限及魔法防禦力。"
+skill_type = 4
+icon_id = 27
+fx_use = "Skill_Use_03"
+fx_hit = "Skill_Hit_31"
+fx_extra = "0"
+levels = Array[ExtResource("1_8pltk")]([SubResource("Resource_3jqcu"), SubResource("Resource_qva3k"), SubResource("Resource_42bkf"), SubResource("Resource_iijnv"), SubResource("Resource_rpyix"), SubResource("Resource_xvtjv"), SubResource("Resource_ifs4q"), SubResource("Resource_1fvgx"), SubResource("Resource_g53th"), SubResource("Resource_73xvn")])

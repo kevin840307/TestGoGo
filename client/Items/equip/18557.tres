@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_vi1cc"]
+
+[resource]
+script = ExtResource("1_vi1cc")
+special_effect = "無"
+can_repair = 1
+def = 62
+mdef = 37
+flee = 2
+durability = 50
+equip_slot = 4
+spr_id = 11
+req_level = 38
+req_job = "無"
+req_race = "無"
+id = 18557
+item_name = "星塵保護下衣"
+description = "下身裝備。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 7679
+icon_id = 122
+color_index = 6
+item_type_category = "Equip"

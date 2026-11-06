@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_hl2dc"]
+
+[resource]
+script = ExtResource("1_hl2dc")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 111
+max_mp_bonus = 111
+max_sp_bonus = 11
+atk = 11
+def = 11
+matk = 11
+mdef = 11
+hit = 11
+flee = 11
+luk = 1
+durability = 50
+spr_id = 96
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 19136
+item_name = "兩週年派對帽(綠黃)"
+description = "慶祝樂園一週年紀念而製作的週年派對帽子。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 621
+color_index = 4
+item_type_category = "Equip"

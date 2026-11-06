@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_cylef"]
+
+[resource]
+script = ExtResource("1_cylef")
+id = 2654
+item_name = "奈洛印記"
+description = "仿真度很高的奈洛印記，能打開封印並能召喚出奈洛。"
+can_sell = 1
+icon_id = 232
+item_type_category = "General"

@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_b15w5"]
+
+[resource]
+script = ExtResource("1_b15w5")
+special_effect = "無"
+can_repair = 1
+def = 293
+mdef = 293
+hit = 100
+flee = 100
+durability = 50
+spr_id = 137
+req_level = 90
+req_job = "無"
+req_race = "無"
+id = 16069
+item_name = "紫蝶的平安祝福．90"
+description = "冬節爺爺送給太陽聖戰軍的聖誕禮物。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 739
+item_type_category = "Equip"

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="HorseData" format=3]
+
+[ext_resource type="Script" uid="uid://hk1vvj5cprdj" path="res://scripts/horse_data.gd" id="1_pdek6"]
+
+[resource]
+script = ExtResource("1_pdek6")
+body_id = 50310
+weapon_id = 50266
+engine_id = 50267
+max_battery = 3600
+horse_type = "MA"
+req_level = 1
+id = 50010
+item_name = "發條龍．地"
+description = "綠色的私人發條龍配合自然樸實的你，極速700km/h的發條龍，伴你馳騁於於尼尼亞大陸，感受成為風之子的不停站樂趣！"
+icon_id = 346
+item_type_category = "Horse"

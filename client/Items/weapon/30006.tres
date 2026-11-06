@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_fyq55"]
+
+[resource]
+script = ExtResource("1_fyq55")
+attack_range = 120
+tick_count = 1
+note_1 = "Hit_Effect05"
+note_2 = "Wind01"
+note_3 = "Esc-Receiver"
+note_4 = "Sword"
+special_effect = "無"
+atk = 3012
+matk = 3012
+hit = 300
+durability = 50
+equip_slot = 5
+spr_id = 23
+req_level = 100
+req_job = "無"
+req_race = "無"
+id = 30006
+item_name = "星劍烈空．100"
+description = "由神所製造的武器，擁有破碎虛空的力量。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 768
+item_type_category = "Weapon"

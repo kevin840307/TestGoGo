@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_nrltl"]
+
+[resource]
+script = ExtResource("1_nrltl")
+attack_range = 120
+tick_count = 1
+note_1 = "Hit_Effect00"
+note_2 = "Normal02"
+note_3 = "Esc-Receiver"
+note_4 = "Sword"
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 550
+atk = 895
+hit = 60
+durability = 50
+equip_slot = 5
+spr_id = 11
+req_level = 90
+req_job = "無"
+req_race = "無"
+id = 31429
+item_name = "命運"
+description = "完成星之鑰任務的獎勵。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 9000
+icon_id = 344
+item_type_category = "Weapon"

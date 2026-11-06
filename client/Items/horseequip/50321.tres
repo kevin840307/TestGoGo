@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_u81wi"]
+
+[resource]
+script = ExtResource("1_u81wi")
+attack_range = 300
+note_1 = "Hit_Effect07"
+note_2 = "Normal00"
+note_3 = "Esc-Receiver"
+note_4 = "Stick"
+horse_type = "MA"
+atk = 210
+durability = 50
+equip_slot = 1
+spr_id = 1
+req_level = 20
+id = 50321
+item_name = "重裝刺針型光能加強器"
+description = "特殊機甲攻擊加強武裝。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 2000
+icon_id = 547
+color_index = 5
+item_type_category = "HorseEquip"

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_f1wl5"]
+
+[resource]
+script = ExtResource("1_f1wl5")
+script_name = "狩獵箱"
+id = 2822
+item_name = "狩獵箱"
+description = "「大獵祭」狩獵者大賽的必需品。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+icon_id = 216
+item_type_category = "General"

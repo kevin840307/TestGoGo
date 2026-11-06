@@ -1,0 +1,321 @@
+{
+  "part_name": "R-Gun006",
+  "texture_size": {
+    "w": 703,
+    "h": 45
+  },
+  "frames": {
+    "hit_weapon_gun_1_frame0000": {
+      "x": 0,
+      "y": 0,
+      "w": 18,
+      "h": 45,
+      "offset_x": -20,
+      "offset_y": 45
+    },
+    "hit_weapon_gun_3_frame0000": {
+      "x": 18,
+      "y": 0,
+      "w": 23,
+      "h": 45,
+      "offset_x": 37,
+      "offset_y": 43
+    },
+    "idle_weapon_gun_8_frame0001": {
+      "x": 41,
+      "y": 0,
+      "w": 12,
+      "h": 45,
+      "offset_x": -11,
+      "offset_y": 113
+    },
+    "idle_weapon_gun_8_frame0003": {
+      "x": 53,
+      "y": 0,
+      "w": 12,
+      "h": 45,
+      "offset_x": -11,
+      "offset_y": 114
+    },
+    "hit_weapon_gun_2_frame0000": {
+      "x": 65,
+      "y": 0,
+      "w": 18,
+      "h": 44,
+      "offset_x": 7,
+      "offset_y": 36
+    },
+    "idle_weapon_gun_8_frame0000": {
+      "x": 83,
+      "y": 0,
+      "w": 12,
+      "h": 44,
+      "offset_x": -11,
+      "offset_y": 114
+    },
+    "idle_weapon_gun_8_frame0002": {
+      "x": 95,
+      "y": 0,
+      "w": 12,
+      "h": 44,
+      "offset_x": -11,
+      "offset_y": 112
+    },
+    "idle_weapon_gun_1_frame0000": {
+      "x": 107,
+      "y": 0,
+      "w": 10,
+      "h": 43,
+      "offset_x": -18,
+      "offset_y": 104
+    },
+    "idle_weapon_gun_1_frame0001": {
+      "x": 117,
+      "y": 0,
+      "w": 10,
+      "h": 43,
+      "offset_x": -18,
+      "offset_y": 103
+    },
+    "idle_weapon_gun_1_frame0002": {
+      "x": 127,
+      "y": 0,
+      "w": 10,
+      "h": 43,
+      "offset_x": -17,
+      "offset_y": 103
+    },
+    "idle_weapon_gun_1_frame0003": {
+      "x": 137,
+      "y": 0,
+      "w": 10,
+      "h": 43,
+      "offset_x": -18,
+      "offset_y": 104
+    },
+    "attack_ga_3_frame0001": {
+      "x": 147,
+      "y": 0,
+      "w": 31,
+      "h": 40,
+      "offset_x": 44,
+      "offset_y": 98
+    },
+    "attack_ga_3_frame0002": {
+      "x": 178,
+      "y": 0,
+      "w": 31,
+      "h": 40,
+      "offset_x": 50,
+      "offset_y": 99
+    },
+    "idle_weapon_gun_2_frame0000": {
+      "x": 209,
+      "y": 0,
+      "w": 21,
+      "h": 40,
+      "offset_x": -4,
+      "offset_y": 94
+    },
+    "idle_weapon_gun_2_frame0002": {
+      "x": 230,
+      "y": 0,
+      "w": 21,
+      "h": 40,
+      "offset_x": -3,
+      "offset_y": 92
+    },
+    "idle_weapon_gun_2_frame0003": {
+      "x": 251,
+      "y": 0,
+      "w": 21,
+      "h": 40,
+      "offset_x": -4,
+      "offset_y": 93
+    },
+    "idle_weapon_gun_2_frame0001": {
+      "x": 272,
+      "y": 0,
+      "w": 21,
+      "h": 39,
+      "offset_x": -4,
+      "offset_y": 92
+    },
+    "idle_weapon_gun_3_frame0001": {
+      "x": 293,
+      "y": 0,
+      "w": 22,
+      "h": 39,
+      "offset_x": 14,
+      "offset_y": 89
+    },
+    "idle_weapon_gun_4_frame0000": {
+      "x": 315,
+      "y": 0,
+      "w": 13,
+      "h": 39,
+      "offset_x": 24,
+      "offset_y": 94
+    },
+    "idle_weapon_gun_4_frame0002": {
+      "x": 328,
+      "y": 0,
+      "w": 13,
+      "h": 39,
+      "offset_x": 24,
+      "offset_y": 93
+    },
+    "idle_weapon_gun_4_frame0003": {
+      "x": 341,
+      "y": 0,
+      "w": 13,
+      "h": 39,
+      "offset_x": 24,
+      "offset_y": 94
+    },
+    "idle_weapon_gun_3_frame0000": {
+      "x": 354,
+      "y": 0,
+      "w": 22,
+      "h": 38,
+      "offset_x": 13,
+      "offset_y": 89
+    },
+    "idle_weapon_gun_3_frame0002": {
+      "x": 376,
+      "y": 0,
+      "w": 22,
+      "h": 38,
+      "offset_x": 14,
+      "offset_y": 88
+    },
+    "idle_weapon_gun_3_frame0003": {
+      "x": 398,
+      "y": 0,
+      "w": 22,
+      "h": 38,
+      "offset_x": 14,
+      "offset_y": 89
+    },
+    "idle_weapon_gun_4_frame0001": {
+      "x": 420,
+      "y": 0,
+      "w": 13,
+      "h": 38,
+      "offset_x": 24,
+      "offset_y": 93
+    },
+    "attack_ga_1_frame0000": {
+      "x": 433,
+      "y": 0,
+      "w": 34,
+      "h": 31,
+      "offset_x": 44,
+      "offset_y": 55
+    },
+    "attack_ga_2_frame0001": {
+      "x": 467,
+      "y": 0,
+      "w": 43,
+      "h": 29,
+      "offset_x": 46,
+      "offset_y": 79
+    },
+    "attack_ga_2_frame0002": {
+      "x": 510,
+      "y": 0,
+      "w": 44,
+      "h": 27,
+      "offset_x": 54,
+      "offset_y": 76
+    },
+    "attack_ga_3_frame0000": {
+      "x": 554,
+      "y": 0,
+      "w": 34,
+      "h": 26,
+      "offset_x": 66,
+      "offset_y": 94
+    },
+    "attack_ga_1_frame0001": {
+      "x": 588,
+      "y": 0,
+      "w": 34,
+      "h": 20,
+      "offset_x": 23,
+      "offset_y": 68
+    },
+    "attack_ga_1_frame0002": {
+      "x": 622,
+      "y": 0,
+      "w": 35,
+      "h": 18,
+      "offset_x": 27,
+      "offset_y": 63
+    },
+    "attack_ga_2_frame0000": {
+      "x": 657,
+      "y": 0,
+      "w": 46,
+      "h": 17,
+      "offset_x": 77,
+      "offset_y": 68
+    }
+  },
+  "animations": {
+    "hit_weapon_gun_1": [
+      "hit_weapon_gun_1_frame0000"
+    ],
+    "hit_weapon_gun_3": [
+      "hit_weapon_gun_3_frame0000"
+    ],
+    "idle_weapon_gun_8": [
+      "idle_weapon_gun_8_frame0000",
+      "idle_weapon_gun_8_frame0001",
+      "idle_weapon_gun_8_frame0002",
+      "idle_weapon_gun_8_frame0003"
+    ],
+    "hit_weapon_gun_2": [
+      "hit_weapon_gun_2_frame0000"
+    ],
+    "idle_weapon_gun_1": [
+      "idle_weapon_gun_1_frame0000",
+      "idle_weapon_gun_1_frame0001",
+      "idle_weapon_gun_1_frame0002",
+      "idle_weapon_gun_1_frame0003"
+    ],
+    "attack_ga_3": [
+      "attack_ga_3_frame0000",
+      "attack_ga_3_frame0001",
+      "attack_ga_3_frame0002"
+    ],
+    "idle_weapon_gun_2": [
+      "idle_weapon_gun_2_frame0000",
+      "idle_weapon_gun_2_frame0001",
+      "idle_weapon_gun_2_frame0002",
+      "idle_weapon_gun_2_frame0003"
+    ],
+    "idle_weapon_gun_3": [
+      "idle_weapon_gun_3_frame0000",
+      "idle_weapon_gun_3_frame0001",
+      "idle_weapon_gun_3_frame0002",
+      "idle_weapon_gun_3_frame0003"
+    ],
+    "idle_weapon_gun_4": [
+      "idle_weapon_gun_4_frame0000",
+      "idle_weapon_gun_4_frame0001",
+      "idle_weapon_gun_4_frame0002",
+      "idle_weapon_gun_4_frame0003"
+    ],
+    "attack_ga_1": [
+      "attack_ga_1_frame0000",
+      "attack_ga_1_frame0001",
+      "attack_ga_1_frame0002"
+    ],
+    "attack_ga_2": [
+      "attack_ga_2_frame0000",
+      "attack_ga_2_frame0001",
+      "attack_ga_2_frame0002"
+    ]
+  }
+}

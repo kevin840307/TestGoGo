@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_spixy"]
+
+[resource]
+script = ExtResource("1_spixy")
+script_name = "被遺忘的封印武裝"
+id = 2204
+item_name = "被遺忘的封印武裝"
+description = "能為使用者帶來強大力量的裝備，因難於控制而被封印在艾瑞爾，是第一次星之戰爭中留下的類神器。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 217
+color_index = 4
+item_type_category = "General"

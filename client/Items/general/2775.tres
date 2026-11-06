@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_tle4x"]
+
+[resource]
+script = ExtResource("1_tle4x")
+script_name = "回禮的糖果盒"
+id = 2775
+item_name = "回禮的糖果盒"
+description = "白色情人節回禮必備物品。"
+can_trade = 1
+can_sell = 1
+icon_id = 218
+item_type_category = "General"

@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_n4l56"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_4r11c"]
+
+[sub_resource type="Resource" id="Resource_7c7gi"]
+script = ExtResource("1_n4l56")
+cast_range = 200
+cost_sp = 69
+base_damage = 60
+damage_multiplier = 90
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_3wv0t"]
+script = ExtResource("1_n4l56")
+level = 2
+cast_range = 225
+cost_sp = 90
+base_damage = 110
+damage_multiplier = 100
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_qo31t"]
+script = ExtResource("1_n4l56")
+level = 3
+cast_range = 225
+cost_sp = 112
+base_damage = 170
+damage_multiplier = 110
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_3j4vn"]
+script = ExtResource("1_n4l56")
+level = 4
+cast_range = 250
+cost_sp = 126
+base_damage = 240
+damage_multiplier = 120
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_ykwou"]
+script = ExtResource("1_n4l56")
+level = 5
+cast_range = 275
+cost_sp = 135
+base_damage = 320
+damage_multiplier = 135
+cooldown = 2
+tick_count = 1
+
+[resource]
+script = ExtResource("2_4r11c")
+id = 25104
+skill_name = "生命吸收"
+description = "吸收敵人生命力，恢復自身的體力。"
+skill_type = 7
+icon_id = 24
+fx_use = "Skill_Use_00"
+fx_hit = "Skill_Hit_02"
+fx_extra = "Hit_Effect01"
+special_skill = "生命吸收"
+levels = Array[ExtResource("1_n4l56")]([SubResource("Resource_7c7gi"), SubResource("Resource_3wv0t"), SubResource("Resource_qo31t"), SubResource("Resource_3j4vn"), SubResource("Resource_ykwou")])

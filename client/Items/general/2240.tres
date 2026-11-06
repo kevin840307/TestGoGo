@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_uuavl"]
+
+[resource]
+script = ExtResource("1_uuavl")
+script_name = "海盜頭飾寶盒"
+id = 2240
+item_name = "海盜頭飾寶盒"
+description = "打開後得到90級可裝備的『霸者海盜帽』。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 216
+color_index = 2
+item_type_category = "General"

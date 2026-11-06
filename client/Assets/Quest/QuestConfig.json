@@ -1,0 +1,5195 @@
+{
+  "1001": {
+    "QuestID": 1001,
+    "Title": "見習轉職考驗",
+    "Category": 0,
+    "MinLevel": 10,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_RoyalGuard",
+    "EndNpc": "Npc_RoyalGuard",
+    "RequiredRace": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "RequiredCareer": [
+      0
+    ],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往首都．尼尼亞皇城尋找「皇家侍衛」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往星之湖尋找「古尼達博士」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "收集星果立普、冰藍立普、森林立普的羽毛各一根",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "帶著「就職認可書」回皇城向「皇家侍衛」報到",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 2000,
+      "Money": 1000,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "見習職業",
+        "見習稱號"
+      ],
+      "SelectableItemGroups": [
+        {
+          "SelectCount": 1,
+          "Items": [
+            { "ItemID": 31526, "Count": 1 },
+            { "ItemID": 31527, "Count": 1 },
+            { "ItemID": 31528, "Count": 1 },
+            { "ItemID": 31532, "Count": 1 },
+            { "ItemID": 31529, "Count": 1 },
+            { "ItemID": 31530, "Count": 1 },
+            { "ItemID": 31531, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1002": {
+    "QuestID": 1002,
+    "Title": "咪咪的收集 (可重複)",
+    "Category": 1,
+    "MinLevel": 1,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Mimi",
+    "EndNpc": "Npc_Mimi",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往首都．尼尼亞皇城尋找「奇異飾品店．咪咪」",
+        "TargetType": 0,
+        "TargetID": "Npc_Mimi",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "收集 300 個「甲殼」",
+        "TargetType": 2,
+        "TargetID": "4075",
+        "TargetCount": 300,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "將 300 個甲殼交給「奇異飾品店．咪咪」",
+        "TargetType": 0,
+        "TargetID": "Npc_Mimi",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [],
+      "RandomItemGroups": [
+        {
+          "RollCount": 1,
+          "Items": [
+            { "ItemID": 19043, "Count": 1 },
+            { "ItemID": 19044, "Count": 1 },
+            { "ItemID": 19039, "Count": 1 },
+            { "ItemID": 19040, "Count": 1 },
+            { "ItemID": 19041, "Count": 1 },
+            { "ItemID": 19042, "Count": 1 },
+            { "ItemID": 19001, "Count": 1 },
+            { "ItemID": 19033, "Count": 1 },
+            { "ItemID": 19034, "Count": 1 },
+            { "ItemID": 19035, "Count": 1 },
+            { "ItemID": 19036, "Count": 1 },
+            { "ItemID": 19037, "Count": 1 },
+            { "ItemID": 19038, "Count": 1 },
+            { "ItemID": 19032, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1003": {
+    "QuestID": 1003,
+    "Title": "鐵諾的戒指",
+    "Category": 1,
+    "MinLevel": 1,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Tieno",
+    "EndNpc": "Npc_Tieno",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往尼尼亞皇城尋找「鐵匠．鐵諾」接取任務",
+        "TargetType": 0,
+        "TargetID": "Npc_Tieno",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往尼西亞台地尋找「獵人．卡夫特」",
+        "TargetType": 99,
+        "TargetID": "Npc_Kaft",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "收集 50 個「機動偶零件」",
+        "TargetType": 99,
+        "TargetID": "2610",
+        "TargetCount": 50,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "將機動偶零件交給「獵人．卡夫特」並進入山洞",
+        "TargetType": 99,
+        "TargetID": "Npc_Kaft",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "在山洞中擊殺古可暴族，尋找「盟誓戒指」",
+        "TargetType": 2,
+        "TargetID": "2614",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 5000,
+      "Money": 2000,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [],
+      "RandomItemGroups": [
+        {
+          "RollCount": 1,
+          "Items": [
+            { "ItemID": 31556, "Count": 1 },
+            { "ItemID": 31557, "Count": 1 },
+            { "ItemID": 31558, "Count": 1 },
+            { "ItemID": 31559, "Count": 1 },
+            { "ItemID": 31560, "Count": 1 },
+            { "ItemID": 31561, "Count": 1 },
+            { "ItemID": 31562, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1004": {
+    "QuestID": 1004,
+    "Title": "見習轉職考驗",
+    "Category": 0,
+    "MinLevel": 10,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Eionil",
+    "EndNpc": "Npc_Eionil",
+    "RequiredRace": [
+      4
+    ],
+    "RequiredCareer": [
+      0
+    ],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往遺忘者之鎮尋找「噬魂使．艾昂尼爾」接取任務",
+        "TargetType": 0,
+        "TargetID": "Npc_Eionil",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "擊殺 20 隻「虛空怪偶」",
+        "TargetType": 1,
+        "TargetID": "虛空怪偶",
+        "TargetCount": 20,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "向「噬魂使．艾昂尼爾」回報",
+        "TargetType": 0,
+        "TargetID": "Npc_Eionil",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "擊殺「噬魂之影」證明實力",
+        "TargetType": 1,
+        "TargetID": "噬魂之影",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "向「噬魂使．艾昂尼爾」回報並完成轉職",
+        "TargetType": 0,
+        "TargetID": "Npc_Eionil",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 2000,
+      "Money": 1000,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 10,
+      "SetFlags": {},
+      "CustomTexts": [
+        "見習職業",
+        "見習稱號"
+      ]
+    }
+  },
+  "1005": {
+    "QuestID": 1005,
+    "Title": "正式轉職考驗",
+    "Category": 0,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Ednis",
+    "EndNpc": "Npc_Ednis",
+    "RequiredRace": [
+      4
+    ],
+    "RequiredCareer": [
+      10
+    ],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往遺忘者之鎮尋找「噬魂使之長．艾德尼斯」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往擊殺 10 隻「暗影追隨者」",
+        "TargetType": 1,
+        "TargetID": "暗影追隨者",
+        "TargetCount": 10,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "回遺忘者之鎮向「噬魂使之長．艾德尼斯」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "前往擊殺「首領．奈阿洛」",
+        "TargetType": 1,
+        "TargetID": "首領．奈阿洛",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "帶著勝利的消息向「噬魂使之長‧艾德尼斯」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 5000,
+      "Money": 2000,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "噬魂使職業",
+        "噬魂使稱號"
+      ]
+    }
+  },
+  "1006": {
+    "QuestID": 1006,
+    "Title": "正式轉職考驗",
+    "Category": 0,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Monaga",
+    "EndNpc": "Npc_Monaga",
+    "RequiredRace": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "RequiredCareer": [
+      1
+    ],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往機械之城．絲蘭尋找「莫拿加」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往尼尼亞皇城尋找「盧杜」詢問灰紅色聖水的詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "前往流星之河．下游擊殺「淡火貓咪」取得「灰紅之石」，並去找尼西亞台地的「芬娜」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "收集「白羽毛」與「星果片」各一個，連同「灰紅之石」交給「芬娜」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "將「灰紅色聖水」交給機械之城．絲蘭的「莫拿加」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 5000,
+      "Money": 2000,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "靈鬥士職業",
+        "靈鬥士稱號"
+      ]
+    }
+  },
+  "1007": {
+    "QuestID": 1007,
+    "Title": "正式轉職考驗",
+    "Category": 0,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Shaka",
+    "EndNpc": "Npc_Shaka",
+    "RequiredRace": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "RequiredCareer": [
+      2
+    ],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往騎士之城．格靈尋找「沙加」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往尼尼亞皇城尋找「盧杜」詢問灰紅色聖水的詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "前往流星之河．下游擊殺「淡火貓咪」取得「灰紅之石」，並去找尼西亞台地的「芬娜」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "收集「白羽毛」與「星果片」各一個，連同「灰紅之石」交給「芬娜」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "將「灰紅色聖水」交給騎士之城．格靈的「沙加」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 5000,
+      "Money": 2000,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "守護劍士職業",
+        "守護劍士稱號"
+      ]
+    }
+  },
+  "1008": {
+    "QuestID": 1008,
+    "Title": "正式轉職考驗",
+    "Category": 0,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Xieli",
+    "EndNpc": "Npc_Xieli",
+    "RequiredRace": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "RequiredCareer": [
+      5
+    ],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往機械之城．絲蘭尋找「謝利」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往尼尼亞皇城尋找「波垣」詢問詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "前往尼西亞台地從魔物柏古身上取得「魔物之血」",
+        "TargetType": 2,
+        "TargetID": "2504",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "帶著魔物之血，向尼尼亞皇城的「波垣」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "前往廢水處理廠，從蘊藏魔力的石頭上取得「暗之光」",
+        "TargetType": 2,
+        "TargetID": "2503",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "帶著魔物之血與暗之光，回機械之城．絲蘭向「謝利」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 5000,
+      "Money": 2000,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 15,
+      "SetFlags": {},
+      "CustomTexts": [
+        "魔動使職業",
+        "魔動使稱號"
+      ]
+    }
+  },
+  "1009": {
+    "QuestID": 1009,
+    "Title": "正式轉職考驗",
+    "Category": 0,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Pami",
+    "EndNpc": "Npc_Pami",
+    "RequiredRace": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "RequiredCareer": [
+      6
+    ],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往騎士之城．格靈尋找「帕米」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往尼尼亞皇城尋找「波垣」詢問詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "前往尼西亞台地從魔物柏古身上取得「魔物之血」",
+        "TargetType": 2,
+        "TargetID": "2504",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "帶著魔物之血，向尼尼亞皇城的「波垣」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "前往廢水處理廠，從蘊藏魔力的石頭上取得「暗之光」",
+        "TargetType": 2,
+        "TargetID": "2503",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "帶著魔物之血與暗之光，回騎士之城．格靈向「帕米」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 5000,
+      "Money": 2000,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 16,
+      "SetFlags": {},
+      "CustomTexts": [
+        "守護使職業",
+        "守護使稱號"
+      ]
+    }
+  },
+  "1010": {
+    "QuestID": 1010,
+    "Title": "正式轉職考驗",
+    "Category": 0,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_AiWen",
+    "EndNpc": "Npc_AiWen",
+    "RequiredRace": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "RequiredCareer": [
+      7
+    ],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往魔法之都．古尼爾尋找「艾文」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往尼尼亞皇城尋找「瑚玲」詢問詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "前往流星之河．下游從靈金獸身上取得「靈金彈」",
+        "TargetType": 2,
+        "TargetID": "2512",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "帶著靈金彈，回魔法之都．古尼爾向「艾文」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 5000,
+      "Money": 2000,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 17,
+      "SetFlags": {},
+      "CustomTexts": [
+        "聖靈使職業",
+        "聖靈使稱號"
+      ]
+    }
+  },
+  "1011": {
+    "QuestID": 1011,
+    "Title": "正式轉職考驗",
+    "Category": 0,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Youli",
+    "EndNpc": "Npc_Youli",
+    "RequiredRace": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "RequiredCareer": [
+      8
+    ],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往騎士之城．格靈尋找「尤梨」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往尼尼亞皇城尋找「瑚玲」詢問詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "前往流星之河．下游從靈金獸身上取得「靈金彈」",
+        "TargetType": 2,
+        "TargetID": "2512",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "帶著靈金彈，回騎士之城．格靈向「尤梨」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 5000,
+      "Money": 2000,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 18,
+      "SetFlags": {},
+      "CustomTexts": [
+        "魔銃使職業",
+        "魔銃使稱號"
+      ]
+    }
+  },
+  "1012": {
+    "QuestID": 1012,
+    "Title": "正式轉職考驗",
+    "Category": 0,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Chate",
+    "EndNpc": "Npc_Chate",
+    "RequiredRace": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "RequiredCareer": [
+      3
+    ],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往魔法之都．古尼爾尋找「查特」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往魔法之都．古尼爾尋找「沙姬」詢問風速彈的詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "收集 10 個「治療藥水」",
+        "TargetType": 99,
+        "TargetID": "1002",
+        "TargetCount": 10,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "帶著「治療藥水」回魔法之都．古尼爾找「沙姬」交換火藥",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "帶著「風速火藥」前往星之湖找「子彈商人．尼珍」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "收集「魔靈葉」與「晶石」各一個，交給「子彈商人．尼珍」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "帶著「風速彈」回去向「查特」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 5000,
+      "Money": 2000,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 13,
+      "SetFlags": {},
+      "CustomTexts": [
+        "聖劍士職業",
+        "聖劍士稱號"
+      ]
+    }
+  },
+  "1013": {
+    "QuestID": 1013,
+    "Title": "正式轉職考驗",
+    "Category": 0,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Lusi",
+    "EndNpc": "Npc_Lusi",
+    "RequiredRace": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "RequiredCareer": [
+      4
+    ],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往首都．尼尼亞皇城尋找「路絲」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往魔法之都．古尼爾尋找「沙姬」詢問風速彈的詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "收集 10 個「治療藥水」",
+        "TargetType": 99,
+        "TargetID": "1002",
+        "TargetCount": 10,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "帶著「治療藥水」回魔法之都．古尼爾找「沙姬」交換火藥",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "帶著「風速火藥」前往星之湖找「子彈商人．尼珍」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "收集「魔靈葉」與「晶石」各一個，交給「子彈商人．尼珍」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "帶著「風速彈」回去向「路絲」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 5000,
+      "Money": 2000,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 14,
+      "SetFlags": {},
+      "CustomTexts": [
+        "銃戰士職業",
+        "銃戰士稱號"
+      ]
+    }
+  },
+  "1014": {
+    "QuestID": 1014,
+    "Title": "正式轉職考驗",
+    "Category": 0,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Xifa",
+    "EndNpc": "Npc_Xifa",
+    "RequiredRace": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "RequiredCareer": [
+      10
+    ],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往首都．尼尼亞皇城尋找「西法」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往廢水處理廠尋找「帕絲」詢問詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "收集「晶石」與「魔靈葉」各一個，交給「帕絲」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "帶著「奇怪的藥水」回尼尼亞皇城向「西法」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "藥水似乎搞錯了！再次前往廢水處理廠找「帕絲」確認",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "收集一個「星果片」交給「帕絲」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "將「透明藥劑」交給尼尼亞皇城的「西法」完成考驗",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 5000,
+      "Money": 2000,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 19,
+      "SetFlags": {},
+      "CustomTexts": [
+        "道具使職業",
+        "道具使稱號"
+      ]
+    }
+  },
+  "1015": {
+    "QuestID": 1015,
+    "Title": "機甲坐騎牌照",
+    "Category": 1,
+    "MinLevel": 20,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Muranka",
+    "EndNpc": "Npc_Muranka",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往機械之城．絲蘭找「穆蘭卡博士」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往絲蘭森林找「艾伯博士」幫忙重新製作晶片",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "收集甲殼(20)、晶石碎片(20)、羽毛(20)交給「艾伯博士」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "將「水晶晶片」交回給機械之城．絲蘭的「穆蘭卡博士」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [
+        {
+          "ItemID": 50001,
+          "Count": 1
+        }
+      ],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": []
+    }
+  },
+  "1016": {
+    "QuestID": 1016,
+    "Title": "天晴機甲裝備 (可重複)",
+    "Category": 1,
+    "MinLevel": 20,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_MechaDoctor",
+    "EndNpc": "Npc_MechaDoctor",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往機械之城．絲蘭找「機甲博士」接取任務",
+        "TargetType": 0,
+        "TargetID": "Npc_MechaDoctor",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "尋找「小螺」或「小齒」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "擊殺 40 隻「紫晶龜獸」",
+        "TargetType": 1,
+        "TargetID": "紫晶龜獸",
+        "TargetCount": 40,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "向「小螺」領取螺絲",
+        "TargetType": 99,
+        "TargetID": "Npc_XiaoLuo",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "擊殺 40 隻「星湖草貓」",
+        "TargetType": 1,
+        "TargetID": "星湖草貓",
+        "TargetCount": 40,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "向「小齒」領取齒輪",
+        "TargetType": 99,
+        "TargetID": "Npc_XiaoChi",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "準備機動偶零件(10)、鐵礦(30)與指定材料回報「機甲博士」",
+        "TargetType": 0,
+        "TargetID": "Npc_MechaDoctor",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [],
+      "SelectableItemGroups": [
+        {
+          "SelectCount": 1,
+          "Items": [
+            { "ItemID": 50294, "Count": 1 },
+            { "ItemID": 50295, "Count": 1 },
+            { "ItemID": 50296, "Count": 1 },
+            { "ItemID": 50298, "Count": 1 },
+            { "ItemID": 50299, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1017": {
+    "QuestID": 1017,
+    "Title": "星之鑰 - 第一章",
+    "Category": 0,
+    "MinLevel": 11,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Markle",
+    "EndNpc": "Npc_QiuAnna",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "在尼尼亞皇城尋找「馬克列」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "在尼尼亞皇城尋找「梅亞麗」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "尋找各自種族的導師 (人族/亞斯：秋安納，米古：夫亞斯，機動靈：霍爾．金)",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "前往尼尼亞盆地蘑菇山洞，點擊魔法石柱召喚出「卡羅東曼」並擊殺",
+        "TargetType": 1,
+        "TargetID": "卡羅東曼",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "再次點擊魔法石柱，取得星之鑰部件",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "帶著部件回去向導師回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "前往尼尼亞皇城尋找「考古學家．福澳」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 7,
+        "StepDesc": "收集 10 個「星之元件」",
+        "TargetType": 2,
+        "TargetID": "2621",
+        "TargetCount": 10,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 8,
+        "StepDesc": "將星之元件交給「考古學家．福澳」解除封印",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 9,
+        "StepDesc": "帶著解封的部件回去找導師領取獎勵",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "170000經驗 (總獎勵)"
+      ],
+      "SelectableItemGroups": [
+        {
+          "SelectCount": 1,
+          "Items": [
+            { "ItemID": 31401, "Count": 1 },
+            { "ItemID": 31402, "Count": 1 },
+            { "ItemID": 31403, "Count": 1 },
+            { "ItemID": 31404, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1018": {
+    "QuestID": 1018,
+    "Title": "星之鑰 - 第二章",
+    "Category": 0,
+    "MinLevel": 21,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_MiaoLuo",
+    "EndNpc": "Npc_MiaoLuo",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1017
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往首都．尼尼亞皇城尋找「苗洛」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "在尼尼亞皇城尋找「塔加洛坦」了解詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "前往廢水處理廠，點擊封印石碑召喚「柏羅汀」並擊殺",
+        "TargetType": 1,
+        "TargetID": "柏羅汀",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "再次點擊封印石碑獲得「破損的星之鑰部件二」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "帶著「破損的星之鑰部件二」回皇城向「苗洛」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "前往尼尼亞皇城尋找「簡多普」修理部件",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "收集 50 個「酸梅飯糰」，連同破損部件交給「簡多普」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 7,
+        "StepDesc": "帶著修好的星之鑰部件二回報「苗洛」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "71000經驗 (總獎勵)"
+      ],
+      "SelectableItemGroups": [
+        {
+          "SelectCount": 1,
+          "Items": [
+            { "ItemID": 31405, "Count": 1 },
+            { "ItemID": 31406, "Count": 1 },
+            { "ItemID": 31407, "Count": 1 },
+            { "ItemID": 31408, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1019": {
+    "QuestID": 1019,
+    "Title": "星之鑰 - 第三章",
+    "Category": 0,
+    "MinLevel": 31,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Fadu",
+    "EndNpc": "Npc_Fadu",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1018
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往首都．尼尼亞皇城尋找「法度」接取任務",
+        "TargetType": 99,
+        "TargetID": "Npc_Fadu",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往櫻花之城尋找「潔諾拉」了解詳情",
+        "TargetType": 99,
+        "TargetID": "Npc_Jianola",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "收集 30 個「星之元件」",
+        "TargetType": 2,
+        "TargetID": "2621",
+        "TargetCount": 30,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "將 30 個「星之元件」交給櫻花之城的「潔諾拉」",
+        "TargetType": 99,
+        "TargetID": "Npc_Jianola",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "前往饑餓荒地點擊「索爾蘭斯結界石」召喚並擊殺「索爾蘭斯」",
+        "TargetType": 1,
+        "TargetID": "索爾蘭斯",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "再次點擊「索爾蘭斯結界石」取得星之鑰部件三．上半部",
+        "TargetType": 99,
+        "TargetID": "Npc_SolLanceStone",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "前往戰爭平原點擊「索爾道菲結界石」召喚並擊殺「索爾道菲」",
+        "TargetType": 1,
+        "TargetID": "索爾道菲",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 7,
+        "StepDesc": "再次點擊「索爾道菲結界石」取得星之鑰部件三．下半部",
+        "TargetType": 99,
+        "TargetID": "Npc_SolDolfiStone",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 8,
+        "StepDesc": "帶著上下半部部件回去櫻花之城找「潔諾拉」合成",
+        "TargetType": 99,
+        "TargetID": "Npc_Jianola",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 9,
+        "StepDesc": "帶著星之鑰部件三回首都．尼尼亞皇城向「法度」回報",
+        "TargetType": 99,
+        "TargetID": "Npc_Fadu",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "100000經驗 (總獎勵)"
+      ],
+      "SelectableItemGroups": [
+        {
+          "SelectCount": 1,
+          "Items": [
+            { "ItemID": 31409, "Count": 1 },
+            { "ItemID": 31410, "Count": 1 },
+            { "ItemID": 31411, "Count": 1 },
+            { "ItemID": 31412, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1020": {
+    "QuestID": 1020,
+    "Title": "星之鑰 - 第四章",
+    "Category": 0,
+    "MinLevel": 41,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Cervantes",
+    "EndNpc": "Npc_Cervantes",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1019
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "到首都．尼尼亞皇城找「塞樊堤斯」領取任務",
+        "TargetType": 99,
+        "TargetID": "Npc_Cervantes",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往首都．尼尼亞皇城找「薩克」了解詳情",
+        "TargetType": 99,
+        "TargetID": "Npc_Sake",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "前往冰花山谷找「健吾」",
+        "TargetType": 99,
+        "TargetID": "Npc_Kengo",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "收集 5 個「星之元件」",
+        "TargetType": 2,
+        "TargetID": "2621",
+        "TargetCount": 5,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "將 5 個星之元件交給冰花山谷的「健吾」",
+        "TargetType": 99,
+        "TargetID": "Npc_Kengo",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "點擊冰花山谷的「長相怪異的花」召喚並擊殺「阿奇蒙爾」",
+        "TargetType": 1,
+        "TargetID": "阿奇蒙爾",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "再次點擊「長相怪異的花」取得星之鑰部件四",
+        "TargetType": 99,
+        "TargetID": "Npc_WeirdFlower",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 7,
+        "StepDesc": "帶著星之鑰部件四回去尼尼亞皇城找「薩克」回報",
+        "TargetType": 99,
+        "TargetID": "Npc_Sake",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 8,
+        "StepDesc": "向首都．尼尼亞皇城的「塞樊堤斯」回報",
+        "TargetType": 99,
+        "TargetID": "Npc_Cervantes",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "340000經驗 (總獎勵)"
+      ],
+      "SelectableItemGroups": [
+        {
+          "SelectCount": 1,
+          "Items": [
+            { "ItemID": 31413, "Count": 1 },
+            { "ItemID": 31414, "Count": 1 },
+            { "ItemID": 31415, "Count": 1 },
+            { "ItemID": 31416, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1021": {
+    "QuestID": 1021,
+    "Title": "星之鑰 - 第五章",
+    "Category": 0,
+    "MinLevel": 51,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Liuyi",
+    "EndNpc": "Npc_Liuyi",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1020
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往首都．尼尼亞皇城尋找「琉依」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往櫻花之城尋找「城主管家」了解詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "前往飢餓荒地擊殺 10 隻「古捷機動偶」",
+        "TargetType": 1,
+        "TargetID": "古捷機動偶",
+        "TargetCount": 10,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "回櫻花之城向「城主管家」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "前往戰爭平原擊殺 10 隻「古捷魔爪獸」",
+        "TargetType": 1,
+        "TargetID": "古捷魔爪獸",
+        "TargetCount": 10,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "回櫻花之城向「城主管家」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "前往冰花山谷幫助「櫻花城村民」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 7,
+        "StepDesc": "收集 15 個「和果子」與 15 個「三文魚壽司」交給「櫻花城村民」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 8,
+        "StepDesc": "回櫻花之城向「城主管家」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 9,
+        "StepDesc": "在櫻花之城尋找「凱羚」了解詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 10,
+        "StepDesc": "給凱羚 5 個「星之元件」，並擊殺召喚出來的「暴走囝囝」",
+        "TargetType": 1,
+        "TargetID": "暴走囝囝",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 11,
+        "StepDesc": "再次與「凱羚」對話取得「星之鑰部件五」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 12,
+        "StepDesc": "帶著星之鑰部件向「城主管家」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 13,
+        "StepDesc": "帶著部件回首都．尼尼亞皇城向「琉依」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "250000經驗 (總獎勵)"
+      ],
+      "SelectableItemGroups": [
+        {
+          "SelectCount": 1,
+          "Items": [
+            { "ItemID": 31417, "Count": 1 },
+            { "ItemID": 31418, "Count": 1 },
+            { "ItemID": 31419, "Count": 1 },
+            { "ItemID": 31420, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1022": {
+    "QuestID": 1022,
+    "Title": "星之鑰 - 第六章",
+    "Category": 0,
+    "MinLevel": 61,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Yakezi",
+    "EndNpc": "Npc_Yakezi",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1021
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往首都．尼尼亞皇城尋找「亞克茲」接取任務",
+        "TargetType": 99,
+        "TargetID": "Npc_Yakezi",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往櫻花之城尋找「卡魯治」了解詳情",
+        "TargetType": 99,
+        "TargetID": "Npc_KaluZhi",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "收集 50 個「星之元件」",
+        "TargetType": 2,
+        "TargetID": "2621",
+        "TargetCount": 50,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "將 50 個「星之元件」交給櫻花之城的「卡魯治」",
+        "TargetType": 99,
+        "TargetID": "Npc_KaluZhi",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "前往獅鷟山點擊「奈洛的封印」召喚並擊殺「奈洛」",
+        "TargetType": 1,
+        "TargetID": "奈洛",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "再次點擊「奈洛的封印」取得星之鑰部件六",
+        "TargetType": 99,
+        "TargetID": "Npc_NailuoSeal",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "帶著星之鑰部件六回櫻花之城向「卡魯治」回報",
+        "TargetType": 99,
+        "TargetID": "Npc_KaluZhi",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 7,
+        "StepDesc": "帶著星之鑰部件六回首都．尼尼亞皇城向「亞克茲」回報",
+        "TargetType": 99,
+        "TargetID": "Npc_Yakezi",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "1600000經驗 (總獎勵)"
+      ],
+      "SelectableItemGroups": [
+        {
+          "SelectCount": 1,
+          "Items": [
+            { "ItemID": 31421, "Count": 1 },
+            { "ItemID": 31422, "Count": 1 },
+            { "ItemID": 31423, "Count": 1 },
+            { "ItemID": 31424, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1023": {
+    "QuestID": 1023,
+    "Title": "星之鑰 - 第七章",
+    "Category": 0,
+    "MinLevel": 71,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Zuola",
+    "EndNpc": "Npc_Zuola",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1022
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "到首都．尼尼亞皇城找「左拉」領取任務",
+        "TargetType": 99,
+        "TargetID": "Npc_Zuola",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "去神團聖殿找「馬丹提」了解星之鑰的詳情",
+        "TargetType": 99,
+        "TargetID": "Npc_Madanti",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "去孤寂山區找「圖騰師．故萊」詢問解開圖騰的方法",
+        "TargetType": 99,
+        "TargetID": "Npc_Gulai",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "收集精靈火石(5)、冰靈鋼甲(5)、星之元件(60)交給「圖騰師．故萊」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "點擊灼熱圖騰召喚並擊殺「炎魔女僕人」",
+        "TargetType": 1,
+        "TargetID": "炎魔女僕人",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "點擊冰冷圖騰召喚並擊殺「冰霜女僕人」",
+        "TargetType": 1,
+        "TargetID": "冰霜女僕人",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "點擊琪莉亞圖騰召喚並擊殺「魔女琪莉亞」",
+        "TargetType": 1,
+        "TargetID": "魔女琪莉亞",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 7,
+        "StepDesc": "再次點擊「琪莉亞圖騰」取得星之鑰部件七",
+        "TargetType": 99,
+        "TargetID": "Npc_QiliaTotem",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 8,
+        "StepDesc": "帶著星之鑰部件七回去神團聖殿找「馬丹提」",
+        "TargetType": 99,
+        "TargetID": "Npc_Madanti",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 9,
+        "StepDesc": "回首都．尼尼亞皇城向「左拉」回報",
+        "TargetType": 99,
+        "TargetID": "Npc_Zuola",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "4100000經驗 (總獎勵)"
+      ],
+      "SelectableItemGroups": [
+        {
+          "SelectCount": 1,
+          "Items": [
+            { "ItemID": 31425, "Count": 1 },
+            { "ItemID": 31426, "Count": 1 },
+            { "ItemID": 31427, "Count": 1 },
+            { "ItemID": 31428, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1024": {
+    "QuestID": 1024,
+    "Title": "星之鑰 - 第八章",
+    "Category": 0,
+    "MinLevel": 81,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Gerima",
+    "EndNpc": "Npc_Gerima",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1023
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往首都．尼尼亞皇城找「葛瑞瑪」領取任務",
+        "TargetType": 99,
+        "TargetID": "Npc_Gerima",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往神團聖殿找「比歐迪」了解星之鑰詳情",
+        "TargetType": 99,
+        "TargetID": "Npc_Biodi",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "前往黑暗森林尋找「卡格恩」",
+        "TargetType": 99,
+        "TargetID": "Npc_Kagen",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "擊殺 10 隻「黑森魔獸」",
+        "TargetType": 1,
+        "TargetID": "黑森魔獸",
+        "TargetCount": 10,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "擊殺 10 隻「地神龍鳥」",
+        "TargetType": 1,
+        "TargetID": "地神龍鳥",
+        "TargetCount": 10,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "回去黑暗森林找「卡格恩」回報",
+        "TargetType": 99,
+        "TargetID": "Npc_Kagen",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "收集 30 個「星之元件」",
+        "TargetType": 2,
+        "TargetID": "2621",
+        "TargetCount": 30,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 7,
+        "StepDesc": "將 30 個星之元件交給「卡格恩」",
+        "TargetType": 99,
+        "TargetID": "Npc_Kagen",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 8,
+        "StepDesc": "點擊右方的米賽爾蟲巢穴，召喚並擊殺「米賽爾蟲」",
+        "TargetType": 1,
+        "TargetID": "米賽爾蟲",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 9,
+        "StepDesc": "再次點擊右方的米賽爾蟲巢穴，取得「星之鑰部件八．上半部」",
+        "TargetType": 99,
+        "TargetID": "Npc_MiselNestA",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 10,
+        "StepDesc": "點擊左方的米賽爾蟲巢穴，召喚並擊殺「米賽爾蟲」",
+        "TargetType": 1,
+        "TargetID": "米賽爾蟲",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 11,
+        "StepDesc": "再次點擊左方的米賽爾蟲巢穴，取得「星之鑰部件八．下半部」",
+        "TargetType": 99,
+        "TargetID": "Npc_MiselNestB",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 12,
+        "StepDesc": "帶著上下半部部件回去黑暗森林找「卡格恩」合成",
+        "TargetType": 99,
+        "TargetID": "Npc_Kagen",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 13,
+        "StepDesc": "帶著星之鑰部件八去神團聖殿向「比歐迪」回報",
+        "TargetType": 99,
+        "TargetID": "Npc_Biodi",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 14,
+        "StepDesc": "回首都．尼尼亞皇城向「葛瑞瑪」回報並完成任務",
+        "TargetType": 99,
+        "TargetID": "Npc_Gerima",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "8400000經驗 (總獎勵)"
+      ],
+      "SelectableItemGroups": [
+        {
+          "SelectCount": 1,
+          "Items": [
+            { "ItemID": 31429, "Count": 1 },
+            { "ItemID": 31430, "Count": 1 },
+            { "ItemID": 31431, "Count": 1 },
+            { "ItemID": 31432, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1025": {
+    "QuestID": 1025,
+    "Title": "星之鑰 - 第九章",
+    "Category": 0,
+    "MinLevel": 91,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_WukaBike",
+    "EndNpc": "Npc_NiniaOfficial",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1024
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往皇宮大殿尋找「烏卡．比克」接取任務",
+        "TargetType": 99,
+        "TargetID": "Npc_WukaBike",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往星之道尋找「祖加尼．馬奇」了解詳情",
+        "TargetType": 99,
+        "TargetID": "Npc_Zujani",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "收集 60 個「星之元件」與 15 個「異界物質」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "將材料交給星之道的「祖加尼．馬奇」",
+        "TargetType": 99,
+        "TargetID": "Npc_Zujani",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "點擊次元結界召喚「來歷不明的敵人」並擊殺",
+        "TargetType": 1,
+        "TargetID": "來歷不明的敵人",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "再次點擊次元結界取得星之鑰部件九",
+        "TargetType": 99,
+        "TargetID": "Npc_DimensionalBarrier",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "將部件九帶回給星之道的「祖加尼．馬奇」確認",
+        "TargetType": 99,
+        "TargetID": "Npc_Zujani",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 7,
+        "StepDesc": "帶著所有部件回皇宮大殿向「烏卡．比克」回報",
+        "TargetType": 99,
+        "TargetID": "Npc_WukaBike",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 8,
+        "StepDesc": "前往佳雅聖城向「尼尼亞皇國事務官」報到領取獎勵",
+        "TargetType": 99,
+        "TargetID": "Npc_NiniaOfficial",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "18000000經驗 (總獎勵)"
+      ],
+      "SelectableItemGroups": [
+        {
+          "SelectCount": 1,
+          "Items": [
+            { "ItemID": 31433, "Count": 1 },
+            { "ItemID": 31434, "Count": 1 },
+            { "ItemID": 31435, "Count": 1 },
+            { "ItemID": 31436, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1026": {
+    "QuestID": 1026,
+    "Title": "櫻花之烙印",
+    "Category": 0,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_UncleMatsushita",
+    "EndNpc": "Npc_UncleMatsushita",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往星之眼尋找「松下大叔」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "收集「勇氣晶石」",
+        "TargetType": 2,
+        "TargetID": "2586",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "收集「智慧晶石」",
+        "TargetType": 2,
+        "TargetID": "2587",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "收集「仁義晶石」",
+        "TargetType": 2,
+        "TargetID": "2588",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "帶著三種晶石回報「松下大叔」",
+        "TargetType": 0,
+        "TargetID": "Npc_UncleMatsushita",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "櫻花之城通行資格"
+      ]
+    }
+  },
+  "1027": {
+    "QuestID": 1027,
+    "Title": "饑餓荒地",
+    "Category": 0,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_WastelandRelief",
+    "EndNpc": "Npc_WastelandRelief",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1026
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "到櫻花之城找「荒地救濟隊」領取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "到絲蘭森林找「牧童」取得牛奶",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "到尼尼亞盆地找「慈善農夫」購買小麥粉",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "帶著牛奶和小麥粉回去櫻花之城找「荒地救濟隊」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {
+        "AllowHungerWasteland": 1
+      },
+      "CustomTexts": [
+        "飢餓荒地通行資格"
+      ]
+    }
+  },
+  "1028": {
+    "QuestID": 1028,
+    "Title": "戰爭平原",
+    "Category": 0,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_HealingCaptain",
+    "EndNpc": "Npc_HealingCaptain",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1026
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往櫻花之城尋找「療傷隊隊長」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往騎士之城．格靈尋找「依比研究長」求救",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "取得「氧氣」",
+        "TargetType": 2,
+        "TargetID": "2585",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "將氧氣交給櫻花之城的「療傷隊隊長」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "戰爭平原通行資格"
+      ]
+    }
+  },
+  "1029": {
+    "QuestID": 1029,
+    "Title": "冰花山谷",
+    "Category": 0,
+    "MinLevel": 40,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_HealthMinister",
+    "EndNpc": "Npc_HealthMinister",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1026
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往櫻花之城尋找「國民健康長」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往機械之城．絲蘭找「軍火研究員」取得「燃燒彈」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "帶著藥丸與燃燒彈找「科學院醫生」製作「小火球」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "帶著「小火球」回櫻花之城找「國民健康長」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "冰花山谷通行資格"
+      ]
+    }
+  },
+  "1030": {
+    "QuestID": 1030,
+    "Title": "考古學家的委託 (可重複)",
+    "Category": 1,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_GuGuLu",
+    "EndNpc": "Npc_GuGuLu",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1026
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "收集「古代頭盔」",
+        "TargetType": 2,
+        "TargetID": "2569",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "收集「古代胸甲」",
+        "TargetType": 2,
+        "TargetID": "2570",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "收集「古代脛甲」",
+        "TargetType": 2,
+        "TargetID": "2571",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "收集「古代護手」",
+        "TargetType": 2,
+        "TargetID": "2572",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "收集「古代戰靴」",
+        "TargetType": 2,
+        "TargetID": "2573",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "將古代防具套組交給「考古學家．古古魯」",
+        "TargetType": 0,
+        "TargetID": "Npc_GuGuLu",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 250,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": []
+    }
+  },
+  "1031": {
+    "QuestID": 1031,
+    "Title": "喵喵的收集 (可重複)",
+    "Category": 1,
+    "MinLevel": 30,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_MiaoMiao",
+    "EndNpc": "Npc_MiaoMiao",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1026
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往櫻花之城尋找「喵喵」接取任務",
+        "TargetType": 0,
+        "TargetID": "Npc_MiaoMiao",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "收集 100 個「冰花的花瓣」",
+        "TargetType": 2,
+        "TargetID": "2574",
+        "TargetCount": 100,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "將 100 個冰花的花瓣交給「喵喵」",
+        "TargetType": 0,
+        "TargetID": "Npc_MiaoMiao",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [],
+      "RandomItemGroups": [
+        {
+          "RollCount": 1,
+          "Items": [
+            { "ItemID": 19070, "Count": 1 },
+            { "ItemID": 19069, "Count": 1 },
+            { "ItemID": 19053, "Count": 1 },
+            { "ItemID": 19052, "Count": 1 },
+            { "ItemID": 19015, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1032": {
+    "QuestID": 1032,
+    "Title": "死亡峽谷",
+    "Category": 0,
+    "MinLevel": 70,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Delia",
+    "EndNpc": "Npc_Delia",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往遺忘者森林找「德律亞」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往死亡峽谷尋找「殘存的軍人」打聽消息",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "回遺忘者森林向「德律亞」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "在死亡峽谷擊殺墮落的戰士，收集 10 個「詛咒碎片」",
+        "TargetType": 2,
+        "TargetID": "2731",
+        "TargetCount": 10,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "將 10 個詛咒碎片交給「德律亞」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "前往死亡峽谷擊殺 20 隻「墮落的戰士」",
+        "TargetType": 1,
+        "TargetID": "墮落的戰士",
+        "TargetCount": 20,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "接著在死亡峽谷擊殺 1 隻「莫瑞伊」",
+        "TargetType": 1,
+        "TargetID": "莫瑞伊",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 7,
+        "StepDesc": "回遺忘者森林向「德律亞」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 8,
+        "StepDesc": "前往死亡峽谷尋找「異界生物．吐魯曼」了解詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 9,
+        "StepDesc": "擊殺 20 隻「異界古尼」",
+        "TargetType": 1,
+        "TargetID": "異界古尼",
+        "TargetCount": 20,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 10,
+        "StepDesc": "擊殺 20 隻「異界惡魔」",
+        "TargetType": 1,
+        "TargetID": "異界惡魔",
+        "TargetCount": 20,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 11,
+        "StepDesc": "回遺忘者森林向「德律亞」回報完成任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "2000000經驗值 (總獎勵)"
+      ]
+    }
+  },
+  "1033": {
+    "QuestID": 1033,
+    "Title": "海寧前置",
+    "Category": 0,
+    "MinLevel": 50,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Daniel",
+    "EndNpc": "Npc_Daniel",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往星之湖找「丹尼爾」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "收集 5 瓶「治療聖水」",
+        "TargetType": 2,
+        "TargetID": "1005",
+        "TargetCount": 5,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "將5瓶治療聖水交給星之湖的「丹尼爾」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {
+        "Unlock_Haining": 1
+      },
+      "CustomTexts": [
+        "星震之遺跡．海寧通行資格"
+      ]
+    }
+  },
+  "1034": {
+    "QuestID": 1034,
+    "Title": "新手任務",
+    "Category": 0,
+    "MinLevel": 1,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_NewbieGuide",
+    "EndNpc": "Npc_NewbieGuide",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "到初心者之間找「新手指導員」領取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "購買一個「基質盾牌」，向「新手指導員」回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "收集 2 個「甲殼」",
+        "TargetType": 2,
+        "TargetID": "4075",
+        "TargetCount": 2,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "將 2 個甲殼交給「新手指導員」",
+        "TargetType": 0,
+        "TargetID": "Npc_NewbieGuide",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 100,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "AdditionalDisplayItems": [
+        {
+          "ItemID": 31548,
+          "Count": 1
+        }
+      ],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": []
+    }
+  },
+  "1035": {
+    "QuestID": 1035,
+    "Title": "地下神殿 - 1F (可重複)",
+    "Category": 1,
+    "MinLevel": 45,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Ept",
+    "EndNpc": "Npc_Ept",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "在灼熱沙漠找「依普特」接取任務",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "找「流沙領主．佛克斯」傳送進入地下神殿1F",
+        "TargetType": 0,
+        "TargetID": "Npc_Fox",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "在地下神殿內擊殺怪物，收集 50 個「靈柩的碎片」",
+        "TargetType": 2,
+        "TargetID": "2633",
+        "TargetCount": 50,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "擊殺「墓穴守護者．巴拉卡」",
+        "TargetType": 1,
+        "TargetID": "墓穴守護者．巴拉卡",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "回灼熱沙漠向「依普特」回報",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [
+        {
+          "ItemID": 2634,
+          "Count": 1
+        }
+      ],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "靈魂錠x1"
+      ]
+    }
+  },
+  "1036": {
+    "QuestID": 1036,
+    "Title": "地下神殿 - 2F (可重複)",
+    "Category": 1,
+    "MinLevel": 50,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Ept",
+    "EndNpc": "Npc_Ept",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "在灼熱沙漠找「依普特」接取任務",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "找「流沙領主．佛克斯」傳送進入地下神殿2F",
+        "TargetType": 0,
+        "TargetID": "Npc_Fox",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "擊殺「魔獸領主．混沌」",
+        "TargetType": 1,
+        "TargetID": "魔獸領主．混沌",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "回灼熱沙漠向「依普特」回報",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [
+        {
+          "ItemID": 2635,
+          "Count": 1
+        }
+      ],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "支配者之牙x1"
+      ]
+    }
+  },
+  "1037": {
+    "QuestID": 1037,
+    "Title": "地下神殿 - 3F (可重複)",
+    "Category": 1,
+    "MinLevel": 55,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Ept",
+    "EndNpc": "Npc_Ept",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "在灼熱沙漠找「依普特」接取任務",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "找「流沙領主．佛克斯」傳送進入地下神殿3F",
+        "TargetType": 0,
+        "TargetID": "Npc_Fox",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "擊殺「雙子鳥獸．紅」",
+        "TargetType": 1,
+        "TargetID": "雙子鳥獸．紅",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "擊殺「雙子鳥獸．藍」",
+        "TargetType": 1,
+        "TargetID": "雙子鳥獸．藍",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "擊殺「鷟之王．薩多」",
+        "TargetType": 1,
+        "TargetID": "鷟之王．薩多",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "回灼熱沙漠向「依普特」回報",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [],
+      "RandomItemGroups": [
+        {
+          "RollCount": 1,
+          "Items": [
+            { "ItemID": 2636, "Count": 1 },
+            { "ItemID": 2637, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1038": {
+    "QuestID": 1038,
+    "Title": "地下神殿 - 4F (可重複)",
+    "Category": 1,
+    "MinLevel": 60,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Ept",
+    "EndNpc": "Npc_Ept",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1037
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "在灼熱沙漠找「依普特」接取任務",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "找「流沙領主．佛克斯」傳送進入地下神殿 4F",
+        "TargetType": 0,
+        "TargetID": "Npc_Fox",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "在地下神殿內擊殺怪物，收集 40 個「魔力元素」",
+        "TargetType": 2,
+        "TargetID": "2638",
+        "TargetCount": 40,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "擊殺「精靈．哈利」",
+        "TargetType": 1,
+        "TargetID": "精靈．哈利",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "擊殺「精靈王．哈利」",
+        "TargetType": 1,
+        "TargetID": "精靈王．哈利",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "回灼熱沙漠向「依普特」回報",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [],
+      "RandomItemGroups": [
+        {
+          "RollCount": 1,
+          "Items": [
+            { "ItemID": 2641, "Count": 1 },
+            { "ItemID": 2640, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1039": {
+    "QuestID": 1039,
+    "Title": "地下神殿 - 5F (可重複)",
+    "Category": 1,
+    "MinLevel": 65,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Ept",
+    "EndNpc": "Npc_Ept",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1038
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "在灼熱沙漠找「依普特」接取任務",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "找「流沙領主．佛克斯」傳送進入地下神殿 5F",
+        "TargetType": 0,
+        "TargetID": "Npc_Fox",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "擊殺 20 隻「守護靈．立普」",
+        "TargetType": 1,
+        "TargetID": "守護靈．立普",
+        "TargetCount": 20,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "擊殺「機動三女神．拉西絲」",
+        "TargetType": 1,
+        "TargetID": "機動三女神．拉西絲",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "擊殺「機動三女神．克若拉」",
+        "TargetType": 1,
+        "TargetID": "機動三女神．克若拉",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "擊殺「機動三女神．菲特洛」",
+        "TargetType": 1,
+        "TargetID": "機動三女神．菲特洛",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "回灼熱沙漠向「依普特」回報",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [],
+      "RandomItemGroups": [
+        {
+          "RollCount": 1,
+          "Items": [
+            { "ItemID": 2644, "Count": 1 },
+            { "ItemID": 2645, "Count": 1 },
+            { "ItemID": 2646, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1040": {
+    "QuestID": 1040,
+    "Title": "地下神殿 - 6F (可重複)",
+    "Category": 1,
+    "MinLevel": 70,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Ept",
+    "EndNpc": "Npc_Ept",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1039
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "在灼熱沙漠找「依普特」接取任務",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "找「流沙領主．佛克斯」傳送進入地下神殿 6F",
+        "TargetType": 0,
+        "TargetID": "Npc_Fox",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "擊殺「古尼爾之使魔」",
+        "TargetType": 1,
+        "TargetID": "古尼爾之使魔",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "擊殺「封印之使．古尼爾」",
+        "TargetType": 1,
+        "TargetID": "封印之使．古尼爾",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "回灼熱沙漠向「依普特」回報",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [
+        {
+          "ItemID": 2648,
+          "Count": 1
+        }
+      ],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "七曜石之粉末x1"
+      ]
+    }
+  },
+  "1041": {
+    "QuestID": 1041,
+    "Title": "地下神殿 - 7F",
+    "Category": 0,
+    "MinLevel": 75,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Ept",
+    "EndNpc": "Npc_Ept",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1040
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "在灼熱沙漠找「依普特」接取任務",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "找「流沙領主．佛克斯」傳送進入地下神殿 7F",
+        "TargetType": 0,
+        "TargetID": "Npc_Fox",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "擊殺「王之英靈」",
+        "TargetType": 1,
+        "TargetID": "王之英靈",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "擊殺「王座機動使．奧菲」",
+        "TargetType": 1,
+        "TargetID": "王座機動使．奧菲",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "回灼熱沙漠向「依普特」回報",
+        "TargetType": 0,
+        "TargetID": "Npc_Ept",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [
+        {
+          "ItemID": 2650,
+          "Count": 1
+        }
+      ],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "龍魂之牙x1"
+      ]
+    }
+  },
+  "1042": {
+    "QuestID": 1042,
+    "Title": "龍之武裝",
+    "Category": 0,
+    "MinLevel": 75,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Black",
+    "EndNpc": "Npc_Black",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "到灼熱沙漠找「地龍代行者．布拉克」接取任務",
+        "TargetType": 0,
+        "TargetID": "Npc_Black",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往地下神殿6F，收集 5 個「七曜指輪」",
+        "TargetType": 2,
+        "TargetID": "2647",
+        "TargetCount": 5,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "前往地下神殿7F，收集 1 個「龍魂之牙」",
+        "TargetType": 2,
+        "TargetID": "2650",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "帶著材料回灼熱沙漠向「地龍代行者．布拉克」回報",
+        "TargetType": 0,
+        "TargetID": "Npc_Black",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [
+        {
+          "ItemID": 2231,
+          "Count": 1
+        }
+      ],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "龍之武裝x1"
+      ]
+    }
+  },
+  "1044": {
+    "QuestID": 1044,
+    "Title": "未被啟發的聖物",
+    "Category": 0,
+    "MinLevel": 80,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Livenel",
+    "EndNpc": "Npc_Livenel",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往神團聖殿找「神官．利芬兒」接取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往星刃廢墟擊殺 30 隻「星刃機動偶」",
+        "TargetType": 1,
+        "TargetID": "星刃機動偶",
+        "TargetCount": 30,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "擊敗 1 隻「機械守護者」奪回星跡之刃",
+        "TargetType": 1,
+        "TargetID": "機械守護者",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "帶著星跡之刃回神團聖殿向「神官．利芬兒」回報",
+        "TargetType": 0,
+        "TargetID": "Npc_Livenel",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 8000000,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 24,
+      "SetFlags": {},
+      "CustomTexts": [
+        "稱號「蒼之引導者」"
+      ]
+    }
+  },
+  "1045": {
+    "QuestID": 1045,
+    "Title": "艾瑞爾之門",
+    "Category": 0,
+    "MinLevel": 85,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_Rifenel",
+    "EndNpc": "Npc_Senness",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1044
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "到神團聖殿找「神官．利芬兒」領取任務",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "帶著守護者密函，前往尼尼亞皇城交給「駐紮軍長官．艾迪蘭」",
+        "TargetType": 99,
+        "TargetID": "Npc_Edilan",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "尋找尼尼亞皇城的「建築工匠．剛德」",
+        "TargetType": 99,
+        "TargetID": "Npc_Gand",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "回去找「駐紮軍長官．艾迪蘭」打聽必要物品的資訊",
+        "TargetType": 99,
+        "TargetID": "Npc_Edilan",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "到星湖迷宮找「法拉」了解詳情",
+        "TargetType": 99,
+        "TargetID": "Npc_Farah",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "在迷宮深處擊殺「遠古獅鷲之王」",
+        "TargetType": 1,
+        "TargetID": "遠古獅鷲之王",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 6,
+        "StepDesc": "帶著勝利的消息回去找「法拉」回報",
+        "TargetType": 99,
+        "TargetID": "Npc_Farah",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 7,
+        "StepDesc": "回尼尼亞皇城找「駐紮軍副官．森奈斯」回報",
+        "TargetType": 99,
+        "TargetID": "Npc_Senness",
+        "TargetCount": 1,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 13000000,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+        "神聖武裝之魔力源",
+        "神聖護手之魔力源"
+      ]
+    }
+  },
+  "1046": {
+    "QuestID": 1046,
+    "Title": "天空探索者之認證",
+    "Category": 0,
+    "MinLevel": 70,
+    "MaxLevel": 200,
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往神團聖殿尋找神官．巴諾姆。",
+        "TargetType": 0,
+        "TargetID": "Npc_Banom",
+        "TargetCount": 1
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "前往獅鷲山洞擊殺冰地魔獸，蒐集封印符文．闇暗、御雷、冰雨各一個，帶回給神官．巴諾姆。",
+        "TargetType": 3,
+        "TargetID": "9999",
+        "TargetCount": 1,
+        "TargetMapID": 9999,
+        "TargetX": 0,
+        "TargetY": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "帶著神團許可證，前往尼尼亞皇城尋找傑洛。",
+        "TargetType": 0,
+        "TargetID": "Npc_Jero",
+        "TargetCount": 1
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "前往機械之城尋找機械工程師．庫曼改裝機甲。",
+        "TargetType": 0,
+        "TargetID": "Npc_Kuman",
+        "TargetCount": 1
+      },
+      {
+        "StepIndex": 4,
+        "StepDesc": "蒐集100個精靈石．9級，交給機械工程師．庫曼。",
+        "TargetType": 3,
+        "TargetID": "9999",
+        "TargetCount": 1,
+        "TargetMapID": 9999,
+        "TargetX": 0,
+        "TargetY": 0
+      },
+      {
+        "StepIndex": 5,
+        "StepDesc": "機甲改裝完畢，回尼尼亞皇城向傑洛回報。",
+        "TargetType": 0,
+        "TargetID": "Npc_Jero",
+        "TargetCount": 1
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [
+        {
+          "ItemID": 2813,
+          "Count": 1
+        }
+      ],
+      "TitleID": 0,
+      "SetFlags": {
+        "CanEnterSkyIsland": 1
+      },
+      "CustomTexts": ["天空島通行資格"]
+    }
+  },
+  "1047": {
+    "QuestID": 1047,
+    "Title": "甦醒之巨龍",
+    "Category": 0,
+    "MinLevel": 50,
+    "MaxLevel": 200,
+    "StartNpc": "Npc_ShadowKnight_Desert",
+    "EndNpc": "Npc_ShadowKnight_Hall",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "前往灼熱沙漠尋找「影子騎士」，擊殺影子地龍，取回「詛咒圖騰」",
+        "TargetType": 2,
+        "TargetID": "2692",
+        "TargetCount": 1,
+        "TargetMapID": 34,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "帶著詛咒圖騰，回報灼熱沙漠的「影子騎士」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "在灼熱沙漠尋找「地龍．德拉克」詢問圖騰詳情",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "前往龍息之殿，尋找大殿內的「影子騎士」",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "CustomTexts": [
+      ]
+    }
+  },
+  "1048": {
+    "QuestID": 1048,
+    "Title": "火龍凡亞",
+    "Category": 3,
+    "MinLevel": 50,
+    "MaxLevel": 200,
+    "StartNpc": "炎龍法師",
+    "EndNpc": "炎龍法師",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [1047],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "擊殺火之幼龍取得「燃燒的鑰匙」，並啟動傳送陣",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 66,
+        "TargetX": 3924,
+        "TargetY": 3293,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "團隊合力擊殺10隻「炎魔」，啟動火之靈柩，與隊員一同前往御龍者所在區域",
+        "TargetType": 1,
+        "TargetID": "炎魔",
+        "TargetCount": 10,
+        "TargetMapID": 66,
+        "TargetX": 3292,
+        "TargetY": 4570,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "團隊合力擊殺「御龍者」，在時限內啟動「火之魔法陣」返回獅鷲山，再向炎龍法師回報",
+        "TargetType": 1,
+        "TargetID": "御龍者",
+        "TargetCount": 1,
+        "TargetMapID": 66,
+        "TargetX": 3631,
+        "TargetY": 6583,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [
+        {
+          "ItemID": 2697,
+          "Count": 1
+        }
+      ],
+      "TitleID": 0,
+      "SetFlags": {},
+      "AddFlags": {
+        "FireDragonRep": 200
+      },
+      "CustomTexts": [
+        "火龍聲望+200"
+      ]
+    }
+  },
+  "1049": {
+    "QuestID": 1049,
+    "Title": "冰龍艾斯",
+    "Category": 3,
+    "MinLevel": 50,
+    "MaxLevel": 200,
+    "StartNpc": "水龍法師",
+    "EndNpc": "水龍法師",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1047
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "限時五分鐘：團隊合力擊殺30隻「水之幼龍」",
+        "TargetType": 1,
+        "TargetID": "水之幼龍",
+        "TargetCount": 30,
+        "TargetMapID": 11,
+        "TargetX": 6075,
+        "TargetY": 9688,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "啟動「魔法塔」，與隊員一同前往御龍者所在區域",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 11,
+        "TargetX": 6075,
+        "TargetY": 9688,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "團隊合力擊殺「御龍者」",
+        "TargetType": 1,
+        "TargetID": "御龍者",
+        "TargetCount": 1,
+        "TargetMapID": 11,
+        "TargetX": 7493,
+        "TargetY": 11320,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "在時限內啟動「水之魔法陣」返回獅鷲山，再向水龍法師回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 11,
+        "TargetX": 7493,
+        "TargetY": 11320,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [
+        {
+          "ItemID": 2700,
+          "Count": 1
+        }
+      ],
+      "TitleID": 0,
+      "SetFlags": {},
+      "AddFlags": {
+        "IceDragonRep": 200
+      },
+      "CustomTexts": [
+        "冰龍聲望+200"
+      ]
+    }
+  },
+  "1050": {
+    "QuestID": 1050,
+    "Title": "地龍漢彌亞",
+    "Category": 3,
+    "MinLevel": 50,
+    "MaxLevel": 200,
+    "StartNpc": "地龍．德拉克",
+    "EndNpc": "地龍．德拉克",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [
+      1047
+    ],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "限時五分鐘：團隊合力擊殺30隻「受詛咒的龍族」",
+        "TargetType": 1,
+        "TargetID": "受詛咒的龍族",
+        "TargetCount": 30,
+        "TargetMapID": 35,
+        "TargetX": 5571,
+        "TargetY": 5492,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "啟動「龍之靈柩」，與隊員一同前往御龍者所在區域",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 35,
+        "TargetX": 5571,
+        "TargetY": 5492,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 2,
+        "StepDesc": "團隊合力擊殺「御龍者」",
+        "TargetType": 1,
+        "TargetID": "御龍者",
+        "TargetCount": 1,
+        "TargetMapID": 35,
+        "TargetX": 7806,
+        "TargetY": 7130,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 3,
+        "StepDesc": "在時限內啟動「地之魔法陣」返回灼熱沙漠，再向地龍．德拉克回報",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 35,
+        "TargetX": 7806,
+        "TargetY": 7130,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [
+        {
+          "ItemID": 2703,
+          "Count": 1
+        }
+      ],
+      "TitleID": 0,
+      "SetFlags": {},
+      "AddFlags": {
+        "EarthDragonRep": 200
+      },
+      "CustomTexts": [
+        "地龍聲望+200"
+      ]
+    }
+  },
+  "1051": {
+    "QuestID": 1051,
+    "Title": "星空快遞",
+    "Category": 1,
+    "MinLevel": 1,
+    "MaxLevel": 200,
+    "StartNpc": "星空快遞",
+    "EndNpc": "星空快遞",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "將隨機取得的急件交給指定城市的族群首領",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      },
+      {
+        "StepIndex": 1,
+        "StepDesc": "將確認回條交回尼尼亞皇城的星空快遞",
+        "TargetType": 99,
+        "TargetID": "",
+        "TargetCount": 0,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "AddFlags": {},
+      "CustomTexts": [
+        "隨機獲得功勳1～3點、星幣200～400元"
+      ]
+    }
+  },
+  "1052": {
+    "QuestID": 1052,
+    "Title": "狩獵挑戰",
+    "Category": 1,
+    "MinLevel": 1,
+    "MaxLevel": 200,
+    "StartNpc": "Winter_大獵祭",
+    "EndNpc": "Winter_大獵祭",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "擊殺15隻圓龜獸",
+        "TargetType": 1,
+        "TargetID": "圓龜獸",
+        "TargetCount": 15,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "AddFlags": {},
+      "CustomTexts": [],
+      "RandomItemGroups": [
+        {
+          "RollCount": 1,
+          "Items": [
+            { "ItemID": 2658, "Count": 1 },
+            { "ItemID": 2659, "Count": 1 },
+            { "ItemID": 2660, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1053": {
+    "QuestID": 1053,
+    "Title": "狩獵挑戰",
+    "Category": 1,
+    "MinLevel": 1,
+    "MaxLevel": 200,
+    "StartNpc": "Winter_大獵祭",
+    "EndNpc": "Winter_大獵祭",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "擊殺15隻釘釘球",
+        "TargetType": 1,
+        "TargetID": "釘釘球",
+        "TargetCount": 15,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "AddFlags": {},
+      "CustomTexts": [],
+      "RandomItemGroups": [
+        {
+          "RollCount": 1,
+          "Items": [
+            { "ItemID": 2658, "Count": 1 },
+            { "ItemID": 2659, "Count": 1 },
+            { "ItemID": 2660, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "1054": {
+    "QuestID": 1054,
+    "Title": "狩獵挑戰",
+    "Category": 1,
+    "MinLevel": 1,
+    "MaxLevel": 200,
+    "StartNpc": "Winter_大獵祭",
+    "EndNpc": "Winter_大獵祭",
+    "RequiredRace": [],
+    "RequiredCareer": [],
+    "PreQuestIDs": [],
+    "RequiredFlags": {},
+    "ResetType": 0,
+    "Steps": [
+      {
+        "StepIndex": 0,
+        "StepDesc": "擊殺15隻油燈幽靈",
+        "TargetType": 1,
+        "TargetID": "油燈幽靈",
+        "TargetCount": 15,
+        "TargetMapID": 0,
+        "TargetX": 0,
+        "TargetY": 0,
+        "TargetRadius": 0
+      }
+    ],
+    "Rewards": {
+      "Exp": 0,
+      "Money": 0,
+      "ClubExp": 0,
+      "ClubDonation": 0,
+      "Items": [],
+      "TitleID": 0,
+      "SetFlags": {},
+      "AddFlags": {},
+      "CustomTexts": [],
+      "RandomItemGroups": [
+        {
+          "RollCount": 1,
+          "Items": [
+            { "ItemID": 2658, "Count": 1 },
+            { "ItemID": 2659, "Count": 1 },
+            { "ItemID": 2660, "Count": 1 }
+          ]
+        }
+      ]
+    }
+  }
+}

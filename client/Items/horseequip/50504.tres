@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_rn26q"]
+
+[resource]
+script = ExtResource("1_rn26q")
+attack_range = 350
+note_1 = "Hit_Effect07"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "Gun"
+horse_type = "MS"
+atk = 560
+matk = 840
+durability = 50
+equip_slot = 1
+spr_id = 5
+req_level = 45
+id = 50504
+item_name = "先驅者魔導武裝"
+description = "先驅者魔導武裝。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 2000
+icon_id = 501
+item_type_category = "HorseEquip"

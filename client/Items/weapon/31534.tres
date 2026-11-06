@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_4pa32"]
+
+[resource]
+script = ExtResource("1_4pa32")
+attack_range = 120
+tick_count = 1
+note_1 = "Hit_Effect05"
+note_2 = "Soil01"
+note_3 = "Esc-Receiver"
+note_4 = "Spear"
+special_effect = "無"
+can_repair = 1
+atk = 180
+matk = 152
+durability = 50
+equip_slot = 5
+spr_id = 4
+req_level = 32
+req_job = "無"
+req_race = "無"
+id = 31534
+item_name = "影牙長槍"
+description = "附有特殊水晶的長槍。"
+can_store = 1
+price = 1
+icon_id = 337
+item_type_category = "Weapon"

@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_ciy72"]
+
+[resource]
+script = ExtResource("1_ciy72")
+special_effect = "無"
+can_repair = 1
+req_con = 35
+max_hp_bonus = 2600
+def = 380
+mdef = 300
+durability = 50
+equip_slot = 6
+spr_id = 18
+req_level = 85
+req_job = "無"
+req_race = "無"
+id = 19245
+item_name = "岩之盾"
+description = "經過龍族力量強化的防具，被技能攻擊時，減少4%傷害及20%機會減少30%技能傷害。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 60000
+icon_id = 662
+color_index = 4
+item_type_category = "Equip"

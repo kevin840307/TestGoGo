@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_xicv4"]
+
+[resource]
+script = ExtResource("1_xicv4")
+bullet_id = 99
+note_1 = "0"
+note_2 = "0"
+note_3 = "0"
+note_4 = "0"
+horse_type = "MS"
+max_hp_bonus = 3600
+max_mp_bonus = 2000
+def = 140
+mdef = 140
+durability = 50
+spr_id = 9
+req_level = 65
+id = 50705
+item_name = "靈式主體"
+description = "通靈者的結晶機械主體。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 5000
+icon_id = 632
+color_index = 4
+item_type_category = "HorseEquip"

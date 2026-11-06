@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_7f8c4"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_auxtn"]
+
+[sub_resource type="Resource" id="Resource_6u65e"]
+script = ExtResource("1_7f8c4")
+cast_range = 200
+cost_mp = 222
+base_damage = 250
+damage_multiplier = 150
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_bx01y"]
+script = ExtResource("1_7f8c4")
+level = 2
+cast_range = 225
+cost_mp = 255
+base_damage = 340
+damage_multiplier = 165
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_51x6o"]
+script = ExtResource("1_7f8c4")
+level = 3
+cast_range = 225
+cost_mp = 292
+base_damage = 440
+damage_multiplier = 180
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_1im5g"]
+script = ExtResource("1_7f8c4")
+level = 4
+cast_range = 250
+cost_mp = 330
+base_damage = 550
+damage_multiplier = 195
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_0hy5r"]
+script = ExtResource("1_7f8c4")
+level = 5
+cast_range = 275
+cost_mp = 372
+base_damage = 680
+damage_multiplier = 210
+cooldown = 2
+tick_count = 1
+
+[resource]
+script = ExtResource("2_auxtn")
+id = 33007
+skill_name = "逆流衝擊"
+description = "能同時對敵人造成生命及魔法能量傷害的暗殺法術。"
+icon_id = 93
+fx_use = "Skill_Use_06"
+fx_hit = "Skill_Hit_42"
+fx_extra = "Hit_Effect05"
+levels = Array[ExtResource("1_7f8c4")]([SubResource("Resource_6u65e"), SubResource("Resource_bx01y"), SubResource("Resource_51x6o"), SubResource("Resource_1im5g"), SubResource("Resource_0hy5r")])

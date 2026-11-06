@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_3vjb2"]
+
+[resource]
+script = ExtResource("1_3vjb2")
+id = 2713
+item_name = "灌魔粉末"
+description = "從能強化的65級防具分解出來的合成材料。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 6000
+icon_id = 437
+item_type_category = "General"

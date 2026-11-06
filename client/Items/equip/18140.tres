@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_5xki8"]
+
+[resource]
+script = ExtResource("1_5xki8")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 400
+max_mp_bonus = 400
+atk = 256
+def = 312
+matk = 256
+mdef = 312
+durability = 50
+spr_id = 142
+req_level = 50
+req_job = "無"
+req_race = "無"
+id = 18140
+item_name = "流行豬頭飾"
+description = "現時流行的強大豬頭飾，流行散佈速度極快。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 806
+item_type_category = "Equip"

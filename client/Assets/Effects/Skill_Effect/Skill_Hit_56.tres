@@ -1,0 +1,130 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" uid="uid://3njyt25e2dli" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0000.png" id="tex_00"]
+[ext_resource type="Texture2D" uid="uid://bk8k14ptgup3g" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0001.png" id="tex_01"]
+[ext_resource type="Texture2D" uid="uid://bopn5bpegdbso" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0002.png" id="tex_02"]
+[ext_resource type="Texture2D" uid="uid://bv1mna8m2utlx" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0003.png" id="tex_03"]
+[ext_resource type="Texture2D" uid="uid://d2av4y0ve107a" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0004.png" id="tex_04"]
+[ext_resource type="Texture2D" uid="uid://bprca7uhyq4ba" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0005.png" id="tex_05"]
+[ext_resource type="Texture2D" uid="uid://dtt8uw6lqjci3" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0006.png" id="tex_06"]
+[ext_resource type="Texture2D" uid="uid://el4crtl162b8" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0007.png" id="tex_07"]
+[ext_resource type="Texture2D" uid="uid://7cwbdmnw35dl" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0008.png" id="tex_08"]
+[ext_resource type="Texture2D" uid="uid://h20edyf7s63t" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0009.png" id="tex_09"]
+[ext_resource type="Texture2D" uid="uid://dokcsiakehf4a" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0010.png" id="tex_10"]
+[ext_resource type="Texture2D" uid="uid://x6new6bieav7" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0011.png" id="tex_11"]
+[ext_resource type="Texture2D" uid="uid://bqmwyvruusry1" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0012.png" id="tex_12"]
+[ext_resource type="Texture2D" uid="uid://mlj6rjnenr2w" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0013.png" id="tex_13"]
+[ext_resource type="Texture2D" uid="uid://dhnl8jmxyc1pd" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0014.png" id="tex_14"]
+[ext_resource type="Texture2D" uid="uid://bceedjbilk5f" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0015.png" id="tex_15"]
+[ext_resource type="Texture2D" uid="uid://dejyvgc84sxet" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Hit8_56.spr.0016.png" id="tex_16"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_00"]
+atlas = ExtResource("tex_00")
+region = Rect2(0, 0, 1, 1)
+metadata/old_offset = Vector2(175, 210)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_01"]
+atlas = ExtResource("tex_01")
+region = Rect2(0, 0, 1, 1)
+metadata/old_offset = Vector2(175, 210)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_02"]
+atlas = ExtResource("tex_02")
+region = Rect2(0, 0, 137, 125)
+metadata/old_offset = Vector2(65, 203)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_03"]
+atlas = ExtResource("tex_03")
+region = Rect2(0, 0, 201, 94)
+metadata/old_offset = Vector2(100, 147)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_04"]
+atlas = ExtResource("tex_04")
+region = Rect2(0, 0, 209, 97)
+metadata/old_offset = Vector2(97, 117)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_05"]
+atlas = ExtResource("tex_05")
+region = Rect2(0, 0, 300, 79)
+metadata/old_offset = Vector2(150, 168)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_06"]
+atlas = ExtResource("tex_06")
+region = Rect2(0, 0, 224, 131)
+metadata/old_offset = Vector2(138, 183)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_07"]
+atlas = ExtResource("tex_07")
+region = Rect2(0, 0, 75, 77)
+metadata/old_offset = Vector2(75, 167)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_08"]
+atlas = ExtResource("tex_08")
+region = Rect2(0, 0, 88, 96)
+metadata/old_offset = Vector2(80, 172)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_09"]
+atlas = ExtResource("tex_09")
+region = Rect2(0, 0, 99, 129)
+metadata/old_offset = Vector2(85, 195)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_10"]
+atlas = ExtResource("tex_10")
+region = Rect2(0, 0, 98, 114)
+metadata/old_offset = Vector2(86, 197)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_11"]
+atlas = ExtResource("tex_11")
+region = Rect2(0, 0, 112, 132)
+metadata/old_offset = Vector2(97, 158)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_12"]
+atlas = ExtResource("tex_12")
+region = Rect2(0, 0, 214, 223)
+metadata/old_offset = Vector2(112, 92)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_13"]
+atlas = ExtResource("tex_13")
+region = Rect2(0, 0, 247, 320)
+metadata/old_offset = Vector2(127, 210)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_14"]
+atlas = ExtResource("tex_14")
+region = Rect2(0, 0, 139, 294)
+metadata/old_offset = Vector2(70, 210)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_15"]
+atlas = ExtResource("tex_15")
+region = Rect2(0, 0, 62, 213)
+metadata/old_offset = Vector2(32, 148)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_16"]
+atlas = ExtResource("tex_16")
+region = Rect2(0, 0, 39, 139)
+metadata/old_offset = Vector2(18, 102)
+
+[resource]
+animations = [{
+"frames": [
+{"duration": 1.0, "texture": SubResource("AtlasTexture_00")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_01")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_02")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_03")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_04")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_05")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_06")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_07")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_08")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_09")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_10")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_11")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_12")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_13")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_14")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_15")},
+{"duration": 1.0, "texture": SubResource("AtlasTexture_16")}
+],
+"loop": false,
+"name": &"default",
+"speed": 12.0
+}]

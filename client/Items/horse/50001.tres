@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="HorseData" format=3]
+
+[ext_resource type="Script" uid="uid://hk1vvj5cprdj" path="res://scripts/horse_data.gd" id="1_du4ug"]
+
+[resource]
+script = ExtResource("1_du4ug")
+body_id = 50292
+weapon_id = 50293
+engine_id = 50297
+max_battery = 25200
+horse_type = "MS"
+req_level = 20
+id = 50001
+item_name = "機甲卡"
+description = "皇家開發用來迎接幻之日的機甲。"
+icon_id = 346
+item_type_category = "Horse"

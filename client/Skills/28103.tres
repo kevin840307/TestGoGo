@@ -1,0 +1,60 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_7gpa4"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_72vfm"]
+
+[sub_resource type="Resource" id="Resource_1ij6u"]
+script = ExtResource("1_7gpa4")
+cast_range = 250
+cost_sp = 17
+damage_multiplier = 10
+cooldown = 1
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_35aoa"]
+script = ExtResource("1_7gpa4")
+level = 2
+cast_range = 250
+cost_sp = 21
+damage_multiplier = 20
+cooldown = 1
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_oande"]
+script = ExtResource("1_7gpa4")
+level = 3
+cast_range = 300
+cost_sp = 31
+damage_multiplier = 30
+cooldown = 1
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_4axa8"]
+script = ExtResource("1_7gpa4")
+level = 4
+cast_range = 300
+cost_sp = 41
+damage_multiplier = 40
+cooldown = 1
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_vk2fx"]
+script = ExtResource("1_7gpa4")
+level = 5
+cast_range = 350
+cost_sp = 52
+damage_multiplier = 50
+cooldown = 1
+tick_count = 1
+
+[resource]
+script = ExtResource("2_72vfm")
+id = 28103
+skill_name = "靈魂轉換"
+description = "使用自身的意志，回復目標或自身的魔法力。"
+skill_type = 2
+icon_id = 47
+fx_use = "Skill_Use_00"
+fx_hit = "Normal_Effect02"
+fx_extra = "0"
+levels = Array[ExtResource("1_7gpa4")]([SubResource("Resource_1ij6u"), SubResource("Resource_35aoa"), SubResource("Resource_oande"), SubResource("Resource_4axa8"), SubResource("Resource_vk2fx")])

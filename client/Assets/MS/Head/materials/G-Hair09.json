@@ -1,0 +1,66 @@
+{
+  "part_name": "G-Hair09",
+  "texture_size": {
+    "w": 166,
+    "h": 41
+  },
+  "frames": {
+    "idle_3_frame0000": {
+      "x": 0,
+      "y": 0,
+      "w": 33,
+      "h": 41,
+      "offset_x": 14,
+      "offset_y": 33
+    },
+    "idle_2_frame0000": {
+      "x": 33,
+      "y": 0,
+      "w": 28,
+      "h": 40,
+      "offset_x": 12,
+      "offset_y": 33
+    },
+    "idle_4_frame0000": {
+      "x": 61,
+      "y": 0,
+      "w": 34,
+      "h": 37,
+      "offset_x": 16,
+      "offset_y": 31
+    },
+    "idle_1_frame0000": {
+      "x": 95,
+      "y": 0,
+      "w": 37,
+      "h": 35,
+      "offset_x": 15,
+      "offset_y": 30
+    },
+    "idle_8_frame0000": {
+      "x": 132,
+      "y": 0,
+      "w": 34,
+      "h": 31,
+      "offset_x": 17,
+      "offset_y": 29
+    }
+  },
+  "animations": {
+    "idle_3": [
+      "idle_3_frame0000"
+    ],
+    "idle_2": [
+      "idle_2_frame0000"
+    ],
+    "idle_4": [
+      "idle_4_frame0000"
+    ],
+    "idle_1": [
+      "idle_1_frame0000"
+    ],
+    "idle_8": [
+      "idle_8_frame0000"
+    ]
+  }
+}

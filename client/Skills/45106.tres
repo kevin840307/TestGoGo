@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_7e2ho"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_ek22j"]
+
+[sub_resource type="Resource" id="Resource_hg8qs"]
+script = ExtResource("1_7e2ho")
+cost_hp = 2000
+cost_mp = 800
+cost_sp = 80
+
+[resource]
+script = ExtResource("2_ek22j")
+id = 45106
+skill_name = "血之契約"
+description = "能賦予施術者短暫獲得強大力量的惡魔刻紋。在契約失效後，會出現生命反噬的副作用。不竟這此終不是一般人能駕馭的力量。"
+skill_type = 7
+fx_use = "Skill_Use_03"
+fx_hit = "Skill_Hit_12"
+fx_extra = "0"
+special_skill = "血之契約"
+levels = Array[ExtResource("1_7e2ho")]([SubResource("Resource_hg8qs")])

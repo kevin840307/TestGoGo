@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_kyiug"]
+
+[resource]
+script = ExtResource("1_kyiug")
+script_name = "魔瓶魅"
+id = 2420
+item_name = "魔瓶魅"
+description = "據說是由德爾莫亞魔法學園的精英們製作出來，打開後可以獲得魔魅掃帚機甲卡。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 413
+color_index = 2
+item_type_category = "General"

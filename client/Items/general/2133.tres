@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_1xdpt"]
+
+[resource]
+script = ExtResource("1_1xdpt")
+script_name = "情人娃娃"
+id = 2133
+item_name = "情人娃娃"
+description = "情人娃娃會隨機送你可使用30次的禮服變身器外，還會送你戀愛的心，只要配戴戀愛的心開啟感恩巧克力，便會有額外的神秘禮物。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 610
+color_index = 4
+item_type_category = "General"

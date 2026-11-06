@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_kk2bu"]
+
+[resource]
+script = ExtResource("1_kk2bu")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 3500
+def = 738
+mdef = 526
+durability = 50
+equip_slot = 6
+spr_id = 24
+req_level = 110
+req_job = "無"
+req_race = "無"
+id = 18129
+item_name = "玄武冰盾"
+description = "以冰晶輝獸身上取得的素材打造出來的強大盾牌。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 792
+item_type_category = "Equip"

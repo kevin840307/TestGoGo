@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_dis7v"]
+
+[resource]
+script = ExtResource("1_dis7v")
+script_name = "米古族婚紗頭飾變身器"
+id = 2019
+item_name = "米古族婚紗頭飾變身器"
+description = "米古族婚紗頭飾變身器，只有米古族才可使用。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 521
+item_type_category = "General"

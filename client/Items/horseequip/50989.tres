@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_ml7h7"]
+
+[resource]
+script = ExtResource("1_ml7h7")
+attack_range = 20
+bullet_id = 99
+note_1 = "0"
+note_2 = "0"
+note_3 = "0"
+note_4 = "0"
+horse_type = "MS"
+max_hp_bonus = 258
+max_mp_bonus = 137
+def = 7
+mdef = 7
+hit = 38
+flee = 38
+durability = 50
+equip_slot = 3
+spr_id = 314
+req_level = 38
+id = 50989
+item_name = "黃金冰地魔獸卡"
+description = "稀有度 ★★★★"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 400
+icon_id = 364
+item_type_category = "HorseEquip"

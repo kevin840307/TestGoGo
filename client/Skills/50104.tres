@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_0h7w1"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_aam5s"]
+
+[sub_resource type="Resource" id="Resource_wpd5w"]
+script = ExtResource("1_0h7w1")
+tick_count = 5
+
+[resource]
+script = ExtResource("2_aam5s")
+id = 50104
+skill_name = "雪兔家族招換"
+description = "雪兔家族招換"
+fx_extra = "0"
+levels = Array[ExtResource("1_0h7w1")]([SubResource("Resource_wpd5w")])

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_o8rvx"]
+
+[resource]
+script = ExtResource("1_o8rvx")
+script_name = "魔步槍藍圖"
+id = 3232
+item_name = "魔步槍藍圖"
+description = "合成魔步槍材料：魔步槍藍圖、鐵礦、晶石碎片、魔靈草、木頭。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 200
+icon_id = 176
+color_index = 5
+item_type_category = "General"

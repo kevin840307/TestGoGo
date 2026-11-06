@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_4ghqj"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_bxr27"]
+
+[sub_resource type="Resource" id="Resource_713tv"]
+script = ExtResource("1_4ghqj")
+
+[resource]
+script = ExtResource("2_bxr27")
+id = 50125
+skill_name = "抗性變換"
+description = "每隔10%轉換隨機抗性一次，它會對某種屬性特別虛弱，其餘則是大幅提高抵抗力。"
+fx_use = "Skill_Use_01"
+fx_hit = "Skill_Hit_22"
+fx_extra = "0"
+levels = Array[ExtResource("1_4ghqj")]([SubResource("Resource_713tv")])

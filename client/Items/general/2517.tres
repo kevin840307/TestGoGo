@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_hd735"]
+
+[resource]
+script = ExtResource("1_hd735")
+id = 2517
+item_name = "奇怪的藥水"
+description = "不是透明的藥水，感覺完全和老師說的有很大分別，帕絲學姐她沒有騙我吧...？"
+can_store = 1
+price = 1
+icon_id = 210
+item_type_category = "General"

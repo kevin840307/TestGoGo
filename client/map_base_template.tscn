@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://padrqbatoloi"]
+
+[ext_resource type="TileSet" uid="uid://bygp8a04e0k0i" path="res://map_tileset.tres" id="1_cp0ag"]
+
+[node name="MapBase" type="Node2D" unique_id=992906812]
+y_sort_enabled = true
+
+[node name="TerrainLayer" type="TileMapLayer" parent="." unique_id=1272614546]
+tile_set = ExtResource("1_cp0ag")
+
+[node name="ObjectContainer" type="Node2D" parent="." unique_id=1145246830]
+y_sort_enabled = true
+
+[node name="CollisionContainer" type="TileMapLayer" parent="." unique_id=1569658478]
+modulate = Color(1.353256, 0.31679213, 0.3063228, 0.39215687)
+tile_set = ExtResource("1_cp0ag")

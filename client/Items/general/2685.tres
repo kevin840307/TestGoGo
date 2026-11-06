@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_0fjqh"]
+
+[resource]
+script = ExtResource("1_0fjqh")
+id = 2685
+item_name = "祝福的獅鷲之鱗"
+description = "附上了魔力的獅鷲的鱗片，比一般的獅鷲之鱗更加能抵禦物理性的沖擊。"
+can_trade = 1
+can_sell = 1
+price = 1
+icon_id = 433
+color_index = 2
+item_type_category = "General"

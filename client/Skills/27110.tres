@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_eoudb"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_me0og"]
+
+[sub_resource type="Resource" id="Resource_27ka4"]
+script = ExtResource("1_eoudb")
+cooldown = 1800
+tick_count = 1
+
+[resource]
+script = ExtResource("2_me0og")
+id = 27110
+skill_name = "平安之祝"
+description = "自身及團隊成員馬上回到出生點或復活點。"
+skill_type = 7
+icon_id = 101
+fx_use = "Skill_Use_00"
+fx_hit = "Normal_Effect01"
+fx_extra = "0"
+special_skill = "平安之祝"
+levels = Array[ExtResource("1_eoudb")]([SubResource("Resource_27ka4")])

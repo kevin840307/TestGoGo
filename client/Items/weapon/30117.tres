@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_h62xw"]
+
+[resource]
+script = ExtResource("1_h62xw")
+no_shield = 1
+bullet_id = 4103
+attack_range = 420
+tick_count = 2
+note_1 = "Hit_Effect05"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "TwinGun"
+special_effect = "無"
+can_repair = 1
+req_dex = 50
+max_hp_bonus = 1800
+max_mp_bonus = 700
+atk = 1380
+matk = 420
+hit = 140
+flee = 100
+durability = 50
+equip_slot = 5
+spr_id = 7
+req_level = 85
+req_job = "無"
+req_race = "無"
+id = 30117
+item_name = "火素雙銃"
+description = "經過龍族力量強化的武器，增加200點攻擊技能傷害。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 60000
+icon_id = 665
+color_index = 7
+item_type_category = "Weapon"

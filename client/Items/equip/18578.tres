@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_mxgmh"]
+
+[resource]
+script = ExtResource("1_mxgmh")
+special_effect = "無"
+can_repair = 1
+def = 8
+mdef = 6
+durability = 50
+equip_slot = 1
+spr_id = 1
+req_level = 14
+req_job = "無"
+req_race = "無"
+id = 18578
+item_name = "厚棉左護手"
+description = "左手裝備。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 100
+icon_id = 98
+item_type_category = "Equip"

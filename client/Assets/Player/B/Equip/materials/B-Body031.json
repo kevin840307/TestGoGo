@@ -1,0 +1,2100 @@
+{
+  "part_name": "B-Body31",
+  "texture_size": {
+    "w": 2048,
+    "h": 181
+  },
+  "frames": {
+    "attack_ab_3_frame0002": {
+      "x": 0,
+      "y": 0,
+      "w": 28,
+      "h": 64,
+      "offset_x": 18,
+      "offset_y": 56
+    },
+    "attack_ab_3_frame0003": {
+      "x": 28,
+      "y": 0,
+      "w": 25,
+      "h": 64,
+      "offset_x": 24,
+      "offset_y": 57
+    },
+    "hit_weapon_melee_3_frame0000": {
+      "x": 53,
+      "y": 0,
+      "w": 26,
+      "h": 64,
+      "offset_x": 1,
+      "offset_y": 54
+    },
+    "hit_weapon_gun_3_frame0000": {
+      "x": 79,
+      "y": 0,
+      "w": 26,
+      "h": 64,
+      "offset_x": 1,
+      "offset_y": 54
+    },
+    "buff_3_frame0003": {
+      "x": 105,
+      "y": 0,
+      "w": 26,
+      "h": 64,
+      "offset_x": 8,
+      "offset_y": 49
+    },
+    "crouch_3_frame0000": {
+      "x": 131,
+      "y": 0,
+      "w": 24,
+      "h": 63,
+      "offset_x": 13,
+      "offset_y": 42
+    },
+    "crouch_4_frame0000": {
+      "x": 155,
+      "y": 0,
+      "w": 24,
+      "h": 63,
+      "offset_x": 14,
+      "offset_y": 42
+    },
+    "buff_4_frame0002": {
+      "x": 179,
+      "y": 0,
+      "w": 24,
+      "h": 63,
+      "offset_x": 14,
+      "offset_y": 43
+    },
+    "attack_aa_3_frame0002": {
+      "x": 203,
+      "y": 0,
+      "w": 29,
+      "h": 62,
+      "offset_x": 22,
+      "offset_y": 57
+    },
+    "walk_4_frame0002": {
+      "x": 232,
+      "y": 0,
+      "w": 24,
+      "h": 62,
+      "offset_x": 14,
+      "offset_y": 62
+    },
+    "attack_aa_3_frame0003": {
+      "x": 256,
+      "y": 0,
+      "w": 32,
+      "h": 61,
+      "offset_x": 22,
+      "offset_y": 57
+    },
+    "attack_ga_3_frame0001": {
+      "x": 288,
+      "y": 0,
+      "w": 26,
+      "h": 61,
+      "offset_x": 12,
+      "offset_y": 49
+    },
+    "walk_3_frame0003": {
+      "x": 314,
+      "y": 0,
+      "w": 32,
+      "h": 61,
+      "offset_x": 18,
+      "offset_y": 63
+    },
+    "walk_4_frame0000": {
+      "x": 346,
+      "y": 0,
+      "w": 26,
+      "h": 61,
+      "offset_x": 16,
+      "offset_y": 61
+    },
+    "walk_4_frame0001": {
+      "x": 372,
+      "y": 0,
+      "w": 24,
+      "h": 61,
+      "offset_x": 14,
+      "offset_y": 64
+    },
+    "buff_4_frame0003": {
+      "x": 396,
+      "y": 0,
+      "w": 25,
+      "h": 61,
+      "offset_x": 15,
+      "offset_y": 46
+    },
+    "attack_ab_3_frame0004": {
+      "x": 421,
+      "y": 0,
+      "w": 31,
+      "h": 60,
+      "offset_x": 21,
+      "offset_y": 54
+    },
+    "attack_ga_3_frame0000": {
+      "x": 452,
+      "y": 0,
+      "w": 30,
+      "h": 60,
+      "offset_x": 17,
+      "offset_y": 53
+    },
+    "attack_ga_3_frame0002": {
+      "x": 482,
+      "y": 0,
+      "w": 29,
+      "h": 60,
+      "offset_x": 15,
+      "offset_y": 51
+    },
+    "walk_3_frame0000": {
+      "x": 511,
+      "y": 0,
+      "w": 32,
+      "h": 60,
+      "offset_x": 18,
+      "offset_y": 60
+    },
+    "walk_4_frame0003": {
+      "x": 543,
+      "y": 0,
+      "w": 26,
+      "h": 60,
+      "offset_x": 16,
+      "offset_y": 63
+    },
+    "buff_3_frame0002": {
+      "x": 569,
+      "y": 0,
+      "w": 31,
+      "h": 60,
+      "offset_x": 3,
+      "offset_y": 45
+    },
+    "buff_4_frame0001": {
+      "x": 600,
+      "y": 0,
+      "w": 26,
+      "h": 60,
+      "offset_x": 15,
+      "offset_y": 43
+    },
+    "attack_aa_3_frame0004": {
+      "x": 626,
+      "y": 0,
+      "w": 38,
+      "h": 59,
+      "offset_x": 20,
+      "offset_y": 56
+    },
+    "attack_gb_3_frame0000": {
+      "x": 664,
+      "y": 0,
+      "w": 30,
+      "h": 59,
+      "offset_x": 12,
+      "offset_y": 51
+    },
+    "attack_gb_3_frame0001": {
+      "x": 694,
+      "y": 0,
+      "w": 30,
+      "h": 59,
+      "offset_x": 12,
+      "offset_y": 51
+    },
+    "attack_gb_3_frame0002": {
+      "x": 724,
+      "y": 0,
+      "w": 30,
+      "h": 59,
+      "offset_x": 12,
+      "offset_y": 51
+    },
+    "attack_aa_3_frame0001": {
+      "x": 754,
+      "y": 0,
+      "w": 36,
+      "h": 58,
+      "offset_x": 11,
+      "offset_y": 50
+    },
+    "walk_3_frame0001": {
+      "x": 790,
+      "y": 0,
+      "w": 40,
+      "h": 58,
+      "offset_x": 18,
+      "offset_y": 64
+    },
+    "walk_3_frame0002": {
+      "x": 830,
+      "y": 0,
+      "w": 40,
+      "h": 58,
+      "offset_x": 18,
+      "offset_y": 61
+    },
+    "idle_4_frame0000": {
+      "x": 870,
+      "y": 0,
+      "w": 25,
+      "h": 58,
+      "offset_x": 15,
+      "offset_y": 61
+    },
+    "idle_4_frame0001": {
+      "x": 895,
+      "y": 0,
+      "w": 25,
+      "h": 58,
+      "offset_x": 15,
+      "offset_y": 61
+    },
+    "idle_4_frame0002": {
+      "x": 920,
+      "y": 0,
+      "w": 25,
+      "h": 58,
+      "offset_x": 15,
+      "offset_y": 61
+    },
+    "idle_4_frame0003": {
+      "x": 945,
+      "y": 0,
+      "w": 25,
+      "h": 58,
+      "offset_x": 15,
+      "offset_y": 61
+    },
+    "attack_aa_3_frame0000": {
+      "x": 970,
+      "y": 0,
+      "w": 38,
+      "h": 57,
+      "offset_x": 9,
+      "offset_y": 52
+    },
+    "idle_weapon_gun_3_frame0000": {
+      "x": 1008,
+      "y": 0,
+      "w": 42,
+      "h": 57,
+      "offset_x": 15,
+      "offset_y": 57
+    },
+    "idle_weapon_gun_3_frame0003": {
+      "x": 1050,
+      "y": 0,
+      "w": 42,
+      "h": 57,
+      "offset_x": 15,
+      "offset_y": 57
+    },
+    "buff_4_frame0000": {
+      "x": 1092,
+      "y": 0,
+      "w": 24,
+      "h": 57,
+      "offset_x": 14,
+      "offset_y": 59
+    },
+    "attack_ab_2_frame0003": {
+      "x": 1116,
+      "y": 0,
+      "w": 42,
+      "h": 56,
+      "offset_x": 29,
+      "offset_y": 51
+    },
+    "attack_ab_3_frame0000": {
+      "x": 1158,
+      "y": 0,
+      "w": 43,
+      "h": 56,
+      "offset_x": 14,
+      "offset_y": 55
+    },
+    "guard_3_frame0000": {
+      "x": 1201,
+      "y": 0,
+      "w": 42,
+      "h": 56,
+      "offset_x": 8,
+      "offset_y": 49
+    },
+    "idle_weapon_gun_3_frame0001": {
+      "x": 1243,
+      "y": 0,
+      "w": 42,
+      "h": 56,
+      "offset_x": 15,
+      "offset_y": 56
+    },
+    "idle_weapon_gun_3_frame0002": {
+      "x": 1285,
+      "y": 0,
+      "w": 42,
+      "h": 56,
+      "offset_x": 15,
+      "offset_y": 56
+    },
+    "crouch_2_frame0000": {
+      "x": 1327,
+      "y": 0,
+      "w": 32,
+      "h": 56,
+      "offset_x": 9,
+      "offset_y": 42
+    },
+    "buff_2_frame0003": {
+      "x": 1359,
+      "y": 0,
+      "w": 41,
+      "h": 56,
+      "offset_x": 3,
+      "offset_y": 53
+    },
+    "buff_3_frame0000": {
+      "x": 1400,
+      "y": 0,
+      "w": 37,
+      "h": 56,
+      "offset_x": 20,
+      "offset_y": 59
+    },
+    "attack_ga_2_frame0001": {
+      "x": 1437,
+      "y": 0,
+      "w": 39,
+      "h": 55,
+      "offset_x": 8,
+      "offset_y": 53
+    },
+    "idle_3_frame0002": {
+      "x": 1476,
+      "y": 0,
+      "w": 42,
+      "h": 55,
+      "offset_x": 22,
+      "offset_y": 61
+    },
+    "idle_3_frame0003": {
+      "x": 1518,
+      "y": 0,
+      "w": 42,
+      "h": 55,
+      "offset_x": 22,
+      "offset_y": 61
+    },
+    "buff_3_frame0001": {
+      "x": 1560,
+      "y": 0,
+      "w": 39,
+      "h": 55,
+      "offset_x": 3,
+      "offset_y": 48
+    },
+    "attack_ab_3_frame0001": {
+      "x": 1599,
+      "y": 0,
+      "w": 44,
+      "h": 54,
+      "offset_x": 9,
+      "offset_y": 51
+    },
+    "hit_weapon_melee_2_frame0000": {
+      "x": 1643,
+      "y": 0,
+      "w": 41,
+      "h": 54,
+      "offset_x": -7,
+      "offset_y": 61
+    },
+    "idle_weapon_melee_3_frame0000": {
+      "x": 1684,
+      "y": 0,
+      "w": 44,
+      "h": 54,
+      "offset_x": 15,
+      "offset_y": 57
+    },
+    "idle_weapon_melee_3_frame0001": {
+      "x": 1728,
+      "y": 0,
+      "w": 44,
+      "h": 54,
+      "offset_x": 15,
+      "offset_y": 56
+    },
+    "idle_weapon_melee_3_frame0002": {
+      "x": 1772,
+      "y": 0,
+      "w": 44,
+      "h": 54,
+      "offset_x": 15,
+      "offset_y": 56
+    },
+    "idle_weapon_melee_3_frame0003": {
+      "x": 1816,
+      "y": 0,
+      "w": 44,
+      "h": 54,
+      "offset_x": 15,
+      "offset_y": 57
+    },
+    "hit_weapon_gun_2_frame0000": {
+      "x": 1860,
+      "y": 0,
+      "w": 41,
+      "h": 54,
+      "offset_x": -7,
+      "offset_y": 61
+    },
+    "idle_3_frame0000": {
+      "x": 1901,
+      "y": 0,
+      "w": 42,
+      "h": 54,
+      "offset_x": 22,
+      "offset_y": 61
+    },
+    "idle_3_frame0001": {
+      "x": 1943,
+      "y": 0,
+      "w": 42,
+      "h": 54,
+      "offset_x": 22,
+      "offset_y": 61
+    },
+    "attack_ab_2_frame0002": {
+      "x": 1985,
+      "y": 0,
+      "w": 44,
+      "h": 53,
+      "offset_x": 17,
+      "offset_y": 53
+    },
+    "attack_gb_2_frame0002": {
+      "x": 0,
+      "y": 64,
+      "w": 44,
+      "h": 53,
+      "offset_x": 11,
+      "offset_y": 56
+    },
+    "attack_ab_2_frame0004": {
+      "x": 44,
+      "y": 64,
+      "w": 45,
+      "h": 52,
+      "offset_x": 21,
+      "offset_y": 53
+    },
+    "attack_ga_2_frame0002": {
+      "x": 89,
+      "y": 64,
+      "w": 42,
+      "h": 52,
+      "offset_x": 12,
+      "offset_y": 53
+    },
+    "attack_gb_2_frame0000": {
+      "x": 131,
+      "y": 64,
+      "w": 44,
+      "h": 52,
+      "offset_x": 11,
+      "offset_y": 55
+    },
+    "attack_gb_2_frame0001": {
+      "x": 175,
+      "y": 64,
+      "w": 44,
+      "h": 52,
+      "offset_x": 11,
+      "offset_y": 55
+    },
+    "buff_2_frame0002": {
+      "x": 219,
+      "y": 64,
+      "w": 41,
+      "h": 52,
+      "offset_x": -6,
+      "offset_y": 54
+    },
+    "attack_ga_2_frame0000": {
+      "x": 260,
+      "y": 64,
+      "w": 45,
+      "h": 51,
+      "offset_x": 15,
+      "offset_y": 53
+    },
+    "attack_aa_2_frame0002": {
+      "x": 305,
+      "y": 64,
+      "w": 50,
+      "h": 50,
+      "offset_x": 24,
+      "offset_y": 52
+    },
+    "attack_aa_2_frame0001": {
+      "x": 355,
+      "y": 64,
+      "w": 40,
+      "h": 49,
+      "offset_x": 3,
+      "offset_y": 55
+    },
+    "attack_aa_2_frame0003": {
+      "x": 395,
+      "y": 64,
+      "w": 50,
+      "h": 49,
+      "offset_x": 23,
+      "offset_y": 53
+    },
+    "walk_2_frame0000": {
+      "x": 445,
+      "y": 64,
+      "w": 51,
+      "h": 49,
+      "offset_x": 18,
+      "offset_y": 59
+    },
+    "attack_aa_2_frame0004": {
+      "x": 496,
+      "y": 64,
+      "w": 47,
+      "h": 48,
+      "offset_x": 16,
+      "offset_y": 56
+    },
+    "walk_2_frame0003": {
+      "x": 543,
+      "y": 64,
+      "w": 51,
+      "h": 48,
+      "offset_x": 18,
+      "offset_y": 61
+    },
+    "attack_aa_2_frame0000": {
+      "x": 594,
+      "y": 64,
+      "w": 38,
+      "h": 47,
+      "offset_x": 1,
+      "offset_y": 57
+    },
+    "buff_2_frame0000": {
+      "x": 632,
+      "y": 64,
+      "w": 50,
+      "h": 47,
+      "offset_x": 18,
+      "offset_y": 61
+    },
+    "buff_2_frame0001": {
+      "x": 682,
+      "y": 64,
+      "w": 38,
+      "h": 46,
+      "offset_x": -8,
+      "offset_y": 57
+    },
+    "crouch_1_frame0000": {
+      "x": 720,
+      "y": 64,
+      "w": 32,
+      "h": 45,
+      "offset_x": 8,
+      "offset_y": 41
+    },
+    "attack_ab_1_frame0003": {
+      "x": 752,
+      "y": 64,
+      "w": 41,
+      "h": 44,
+      "offset_x": 18,
+      "offset_y": 47
+    },
+    "attack_ab_2_frame0000": {
+      "x": 793,
+      "y": 64,
+      "w": 41,
+      "h": 44,
+      "offset_x": 5,
+      "offset_y": 58
+    },
+    "idle_weapon_gun_2_frame0000": {
+      "x": 834,
+      "y": 64,
+      "w": 41,
+      "h": 44,
+      "offset_x": 8,
+      "offset_y": 58
+    },
+    "idle_weapon_gun_2_frame0001": {
+      "x": 875,
+      "y": 64,
+      "w": 41,
+      "h": 44,
+      "offset_x": 8,
+      "offset_y": 57
+    },
+    "idle_weapon_gun_2_frame0002": {
+      "x": 916,
+      "y": 64,
+      "w": 41,
+      "h": 44,
+      "offset_x": 8,
+      "offset_y": 57
+    },
+    "idle_weapon_gun_2_frame0003": {
+      "x": 957,
+      "y": 64,
+      "w": 41,
+      "h": 44,
+      "offset_x": 8,
+      "offset_y": 58
+    },
+    "guard_2_frame0000": {
+      "x": 998,
+      "y": 64,
+      "w": 41,
+      "h": 43,
+      "offset_x": 1,
+      "offset_y": 53
+    },
+    "attack_ga_1_frame0001": {
+      "x": 1039,
+      "y": 64,
+      "w": 35,
+      "h": 43,
+      "offset_x": 6,
+      "offset_y": 55
+    },
+    "walk_2_frame0001": {
+      "x": 1074,
+      "y": 64,
+      "w": 52,
+      "h": 43,
+      "offset_x": 15,
+      "offset_y": 63
+    },
+    "walk_2_frame0002": {
+      "x": 1126,
+      "y": 64,
+      "w": 52,
+      "h": 43,
+      "offset_x": 15,
+      "offset_y": 60
+    },
+    "idle_2_frame0000": {
+      "x": 1178,
+      "y": 64,
+      "w": 48,
+      "h": 43,
+      "offset_x": 18,
+      "offset_y": 61
+    },
+    "idle_2_frame0001": {
+      "x": 1226,
+      "y": 64,
+      "w": 48,
+      "h": 43,
+      "offset_x": 18,
+      "offset_y": 61
+    },
+    "idle_2_frame0002": {
+      "x": 1274,
+      "y": 64,
+      "w": 48,
+      "h": 43,
+      "offset_x": 18,
+      "offset_y": 61
+    },
+    "idle_2_frame0003": {
+      "x": 1322,
+      "y": 64,
+      "w": 48,
+      "h": 43,
+      "offset_x": 18,
+      "offset_y": 61
+    },
+    "attack_ab_2_frame0001": {
+      "x": 1370,
+      "y": 64,
+      "w": 41,
+      "h": 42,
+      "offset_x": 0,
+      "offset_y": 56
+    },
+    "buff_1_frame0003": {
+      "x": 1411,
+      "y": 64,
+      "w": 38,
+      "h": 42,
+      "offset_x": 1,
+      "offset_y": 57
+    },
+    "idle_weapon_melee_2_frame0000": {
+      "x": 1449,
+      "y": 64,
+      "w": 40,
+      "h": 41,
+      "offset_x": 8,
+      "offset_y": 57
+    },
+    "idle_weapon_melee_2_frame0001": {
+      "x": 1489,
+      "y": 64,
+      "w": 40,
+      "h": 41,
+      "offset_x": 8,
+      "offset_y": 56
+    },
+    "idle_weapon_melee_2_frame0002": {
+      "x": 1529,
+      "y": 64,
+      "w": 40,
+      "h": 41,
+      "offset_x": 8,
+      "offset_y": 56
+    },
+    "idle_weapon_melee_2_frame0003": {
+      "x": 1569,
+      "y": 64,
+      "w": 40,
+      "h": 41,
+      "offset_x": 8,
+      "offset_y": 57
+    },
+    "attack_ga_1_frame0002": {
+      "x": 1609,
+      "y": 64,
+      "w": 38,
+      "h": 41,
+      "offset_x": 8,
+      "offset_y": 55
+    },
+    "attack_ga_1_frame0000": {
+      "x": 1647,
+      "y": 64,
+      "w": 40,
+      "h": 40,
+      "offset_x": 10,
+      "offset_y": 55
+    },
+    "attack_gb_1_frame0001": {
+      "x": 1687,
+      "y": 64,
+      "w": 39,
+      "h": 40,
+      "offset_x": 9,
+      "offset_y": 58
+    },
+    "attack_gb_1_frame0002": {
+      "x": 1726,
+      "y": 64,
+      "w": 39,
+      "h": 40,
+      "offset_x": 9,
+      "offset_y": 58
+    },
+    "buff_1_frame0002": {
+      "x": 1765,
+      "y": 64,
+      "w": 36,
+      "h": 40,
+      "offset_x": -3,
+      "offset_y": 61
+    },
+    "attack_ab_1_frame0004": {
+      "x": 1801,
+      "y": 64,
+      "w": 39,
+      "h": 39,
+      "offset_x": 14,
+      "offset_y": 51
+    },
+    "hit_weapon_melee_1_frame0000": {
+      "x": 1840,
+      "y": 64,
+      "w": 40,
+      "h": 39,
+      "offset_x": -4,
+      "offset_y": 67
+    },
+    "attack_gb_1_frame0000": {
+      "x": 1880,
+      "y": 64,
+      "w": 39,
+      "h": 39,
+      "offset_x": 9,
+      "offset_y": 57
+    },
+    "hit_weapon_gun_1_frame0000": {
+      "x": 1919,
+      "y": 64,
+      "w": 40,
+      "h": 39,
+      "offset_x": -4,
+      "offset_y": 67
+    },
+    "attack_ab_1_frame0002": {
+      "x": 1959,
+      "y": 64,
+      "w": 42,
+      "h": 38,
+      "offset_x": 12,
+      "offset_y": 51
+    },
+    "attack_aa_1_frame0000": {
+      "x": 2001,
+      "y": 64,
+      "w": 28,
+      "h": 37,
+      "offset_x": 4,
+      "offset_y": 61
+    },
+    "attack_aa_1_frame0001": {
+      "x": 0,
+      "y": 117,
+      "w": 33,
+      "h": 36,
+      "offset_x": 5,
+      "offset_y": 57
+    },
+    "crouch_8_frame0000": {
+      "x": 33,
+      "y": 117,
+      "w": 23,
+      "h": 36,
+      "offset_x": 10,
+      "offset_y": 40
+    },
+    "buff_1_frame0001": {
+      "x": 56,
+      "y": 117,
+      "w": 27,
+      "h": 36,
+      "offset_x": -3,
+      "offset_y": 65
+    },
+    "attack_aa_1_frame0002": {
+      "x": 83,
+      "y": 117,
+      "w": 45,
+      "h": 34,
+      "offset_x": 15,
+      "offset_y": 48
+    },
+    "idle_weapon_melee_1_frame0000": {
+      "x": 128,
+      "y": 117,
+      "w": 32,
+      "h": 34,
+      "offset_x": 9,
+      "offset_y": 58
+    },
+    "idle_weapon_melee_1_frame0003": {
+      "x": 160,
+      "y": 117,
+      "w": 32,
+      "h": 34,
+      "offset_x": 9,
+      "offset_y": 58
+    },
+    "attack_aa_1_frame0003": {
+      "x": 192,
+      "y": 117,
+      "w": 43,
+      "h": 33,
+      "offset_x": 14,
+      "offset_y": 50
+    },
+    "attack_aa_1_frame0004": {
+      "x": 235,
+      "y": 117,
+      "w": 38,
+      "h": 33,
+      "offset_x": 11,
+      "offset_y": 54
+    },
+    "attack_ab_1_frame0000": {
+      "x": 273,
+      "y": 117,
+      "w": 30,
+      "h": 33,
+      "offset_x": 7,
+      "offset_y": 60
+    },
+    "idle_weapon_melee_1_frame0001": {
+      "x": 303,
+      "y": 117,
+      "w": 32,
+      "h": 33,
+      "offset_x": 9,
+      "offset_y": 57
+    },
+    "idle_weapon_melee_1_frame0002": {
+      "x": 335,
+      "y": 117,
+      "w": 32,
+      "h": 33,
+      "offset_x": 9,
+      "offset_y": 57
+    },
+    "buff_1_frame0000": {
+      "x": 367,
+      "y": 117,
+      "w": 42,
+      "h": 33,
+      "offset_x": 12,
+      "offset_y": 61
+    },
+    "attack_ab_1_frame0001": {
+      "x": 409,
+      "y": 117,
+      "w": 28,
+      "h": 32,
+      "offset_x": 3,
+      "offset_y": 61
+    },
+    "idle_weapon_gun_1_frame0000": {
+      "x": 437,
+      "y": 117,
+      "w": 30,
+      "h": 32,
+      "offset_x": 9,
+      "offset_y": 58
+    },
+    "idle_weapon_gun_1_frame0001": {
+      "x": 467,
+      "y": 117,
+      "w": 30,
+      "h": 32,
+      "offset_x": 9,
+      "offset_y": 57
+    },
+    "idle_weapon_gun_1_frame0002": {
+      "x": 497,
+      "y": 117,
+      "w": 30,
+      "h": 32,
+      "offset_x": 9,
+      "offset_y": 57
+    },
+    "idle_weapon_gun_1_frame0003": {
+      "x": 527,
+      "y": 117,
+      "w": 30,
+      "h": 32,
+      "offset_x": 9,
+      "offset_y": 58
+    },
+    "buff_8_frame0001": {
+      "x": 557,
+      "y": 117,
+      "w": 25,
+      "h": 32,
+      "offset_x": 10,
+      "offset_y": 67
+    },
+    "emote_f_8_frame0001": {
+      "x": 582,
+      "y": 117,
+      "w": 23,
+      "h": 32,
+      "offset_x": 10,
+      "offset_y": 63
+    },
+    "emote_f_8_frame0002": {
+      "x": 605,
+      "y": 117,
+      "w": 23,
+      "h": 32,
+      "offset_x": 10,
+      "offset_y": 63
+    },
+    "emote_f_8_frame0004": {
+      "x": 628,
+      "y": 117,
+      "w": 23,
+      "h": 32,
+      "offset_x": 10,
+      "offset_y": 63
+    },
+    "emote_g_8_frame0001": {
+      "x": 651,
+      "y": 117,
+      "w": 29,
+      "h": 32,
+      "offset_x": 5,
+      "offset_y": 62
+    },
+    "emote_g_8_frame0002": {
+      "x": 680,
+      "y": 117,
+      "w": 30,
+      "h": 32,
+      "offset_x": 14,
+      "offset_y": 60
+    },
+    "idle_1_frame0000": {
+      "x": 710,
+      "y": 117,
+      "w": 37,
+      "h": 31,
+      "offset_x": 13,
+      "offset_y": 60
+    },
+    "idle_1_frame0001": {
+      "x": 747,
+      "y": 117,
+      "w": 37,
+      "h": 31,
+      "offset_x": 13,
+      "offset_y": 60
+    },
+    "idle_1_frame0002": {
+      "x": 784,
+      "y": 117,
+      "w": 37,
+      "h": 31,
+      "offset_x": 13,
+      "offset_y": 60
+    },
+    "idle_1_frame0003": {
+      "x": 821,
+      "y": 117,
+      "w": 37,
+      "h": 31,
+      "offset_x": 13,
+      "offset_y": 60
+    },
+    "buff_8_frame0002": {
+      "x": 858,
+      "y": 117,
+      "w": 24,
+      "h": 31,
+      "offset_x": 10,
+      "offset_y": 63
+    },
+    "buff_8_frame0003": {
+      "x": 882,
+      "y": 117,
+      "w": 25,
+      "h": 31,
+      "offset_x": 10,
+      "offset_y": 57
+    },
+    "emote_b_8_frame0000": {
+      "x": 907,
+      "y": 117,
+      "w": 23,
+      "h": 31,
+      "offset_x": 11,
+      "offset_y": 63
+    },
+    "emote_c_8_frame0001": {
+      "x": 930,
+      "y": 117,
+      "w": 23,
+      "h": 31,
+      "offset_x": 11,
+      "offset_y": 62
+    },
+    "emote_c_8_frame0003": {
+      "x": 953,
+      "y": 117,
+      "w": 23,
+      "h": 31,
+      "offset_x": 11,
+      "offset_y": 62
+    },
+    "emote_f_8_frame0000": {
+      "x": 976,
+      "y": 117,
+      "w": 23,
+      "h": 31,
+      "offset_x": 10,
+      "offset_y": 63
+    },
+    "emote_f_8_frame0003": {
+      "x": 999,
+      "y": 117,
+      "w": 23,
+      "h": 31,
+      "offset_x": 10,
+      "offset_y": 63
+    },
+    "emote_g_8_frame0000": {
+      "x": 1022,
+      "y": 117,
+      "w": 24,
+      "h": 31,
+      "offset_x": 4,
+      "offset_y": 62
+    },
+    "emote_g_8_frame0003": {
+      "x": 1046,
+      "y": 117,
+      "w": 23,
+      "h": 31,
+      "offset_x": 22,
+      "offset_y": 57
+    },
+    "emote_g_8_frame0004": {
+      "x": 1069,
+      "y": 117,
+      "w": 22,
+      "h": 31,
+      "offset_x": 20,
+      "offset_y": 61
+    },
+    "walk_1_frame0000": {
+      "x": 1091,
+      "y": 117,
+      "w": 44,
+      "h": 30,
+      "offset_x": 10,
+      "offset_y": 55
+    },
+    "walk_1_frame0003": {
+      "x": 1135,
+      "y": 117,
+      "w": 44,
+      "h": 30,
+      "offset_x": 10,
+      "offset_y": 58
+    },
+    "emote_a_8_frame0000": {
+      "x": 1179,
+      "y": 117,
+      "w": 24,
+      "h": 30,
+      "offset_x": 9,
+      "offset_y": 63
+    },
+    "emote_a_8_frame0001": {
+      "x": 1203,
+      "y": 117,
+      "w": 24,
+      "h": 30,
+      "offset_x": 9,
+      "offset_y": 63
+    },
+    "emote_a_8_frame0002": {
+      "x": 1227,
+      "y": 117,
+      "w": 24,
+      "h": 30,
+      "offset_x": 9,
+      "offset_y": 63
+    },
+    "emote_a_8_frame0003": {
+      "x": 1251,
+      "y": 117,
+      "w": 24,
+      "h": 30,
+      "offset_x": 9,
+      "offset_y": 63
+    },
+    "emote_a_8_frame0004": {
+      "x": 1275,
+      "y": 117,
+      "w": 24,
+      "h": 30,
+      "offset_x": 9,
+      "offset_y": 63
+    },
+    "emote_b_8_frame0001": {
+      "x": 1299,
+      "y": 117,
+      "w": 23,
+      "h": 30,
+      "offset_x": 11,
+      "offset_y": 62
+    },
+    "emote_b_8_frame0002": {
+      "x": 1322,
+      "y": 117,
+      "w": 23,
+      "h": 30,
+      "offset_x": 11,
+      "offset_y": 62
+    },
+    "emote_b_8_frame0003": {
+      "x": 1345,
+      "y": 117,
+      "w": 23,
+      "h": 30,
+      "offset_x": 11,
+      "offset_y": 62
+    },
+    "emote_b_8_frame0004": {
+      "x": 1368,
+      "y": 117,
+      "w": 23,
+      "h": 30,
+      "offset_x": 11,
+      "offset_y": 62
+    },
+    "emote_c_8_frame0000": {
+      "x": 1391,
+      "y": 117,
+      "w": 23,
+      "h": 30,
+      "offset_x": 11,
+      "offset_y": 62
+    },
+    "emote_c_8_frame0002": {
+      "x": 1414,
+      "y": 117,
+      "w": 23,
+      "h": 30,
+      "offset_x": 11,
+      "offset_y": 62
+    },
+    "emote_c_8_frame0004": {
+      "x": 1437,
+      "y": 117,
+      "w": 23,
+      "h": 30,
+      "offset_x": 11,
+      "offset_y": 62
+    },
+    "emote_e_8_frame0000": {
+      "x": 1460,
+      "y": 117,
+      "w": 24,
+      "h": 30,
+      "offset_x": 10,
+      "offset_y": 64
+    },
+    "emote_e_8_frame0001": {
+      "x": 1484,
+      "y": 117,
+      "w": 24,
+      "h": 30,
+      "offset_x": 10,
+      "offset_y": 64
+    },
+    "emote_e_8_frame0002": {
+      "x": 1508,
+      "y": 117,
+      "w": 24,
+      "h": 30,
+      "offset_x": 10,
+      "offset_y": 64
+    },
+    "emote_e_8_frame0003": {
+      "x": 1532,
+      "y": 117,
+      "w": 24,
+      "h": 30,
+      "offset_x": 10,
+      "offset_y": 64
+    },
+    "emote_e_8_frame0004": {
+      "x": 1556,
+      "y": 117,
+      "w": 24,
+      "h": 30,
+      "offset_x": 10,
+      "offset_y": 64
+    },
+    "emote_g_8_frame0005": {
+      "x": 1580,
+      "y": 117,
+      "w": 24,
+      "h": 30,
+      "offset_x": 16,
+      "offset_y": 61
+    },
+    "emote_g_8_frame0006": {
+      "x": 1604,
+      "y": 117,
+      "w": 30,
+      "h": 30,
+      "offset_x": 16,
+      "offset_y": 62
+    },
+    "guard_1_frame0000": {
+      "x": 1634,
+      "y": 117,
+      "w": 30,
+      "h": 29,
+      "offset_x": 6,
+      "offset_y": 54
+    },
+    "emote_k_8_frame0002": {
+      "x": 1664,
+      "y": 117,
+      "w": 23,
+      "h": 29,
+      "offset_x": 9,
+      "offset_y": 39
+    },
+    "emote_k_8_frame0003": {
+      "x": 1687,
+      "y": 117,
+      "w": 22,
+      "h": 29,
+      "offset_x": 12,
+      "offset_y": 48
+    },
+    "emote_k_8_frame0004": {
+      "x": 1709,
+      "y": 117,
+      "w": 26,
+      "h": 29,
+      "offset_x": 10,
+      "offset_y": 37
+    },
+    "emote_k_8_frame0005": {
+      "x": 1735,
+      "y": 117,
+      "w": 24,
+      "h": 29,
+      "offset_x": 11,
+      "offset_y": 45
+    },
+    "emote_k_8_frame0006": {
+      "x": 1759,
+      "y": 117,
+      "w": 23,
+      "h": 29,
+      "offset_x": 10,
+      "offset_y": 44
+    },
+    "walk_1_frame0002": {
+      "x": 1782,
+      "y": 117,
+      "w": 41,
+      "h": 28,
+      "offset_x": 11,
+      "offset_y": 58
+    },
+    "buff_8_frame0000": {
+      "x": 1823,
+      "y": 117,
+      "w": 23,
+      "h": 28,
+      "offset_x": 10,
+      "offset_y": 61
+    },
+    "emote_h_8_frame0000": {
+      "x": 1846,
+      "y": 117,
+      "w": 23,
+      "h": 28,
+      "offset_x": 14,
+      "offset_y": 41
+    },
+    "emote_h_8_frame0001": {
+      "x": 1869,
+      "y": 117,
+      "w": 23,
+      "h": 28,
+      "offset_x": 14,
+      "offset_y": 41
+    },
+    "emote_h_8_frame0002": {
+      "x": 1892,
+      "y": 117,
+      "w": 23,
+      "h": 28,
+      "offset_x": 14,
+      "offset_y": 41
+    },
+    "emote_h_8_frame0003": {
+      "x": 1915,
+      "y": 117,
+      "w": 23,
+      "h": 28,
+      "offset_x": 14,
+      "offset_y": 41
+    },
+    "emote_h_8_frame0004": {
+      "x": 1938,
+      "y": 117,
+      "w": 23,
+      "h": 28,
+      "offset_x": 14,
+      "offset_y": 41
+    },
+    "emote_h_8_frame0005": {
+      "x": 1961,
+      "y": 117,
+      "w": 23,
+      "h": 28,
+      "offset_x": 14,
+      "offset_y": 41
+    },
+    "emote_h_8_frame0006": {
+      "x": 1984,
+      "y": 117,
+      "w": 23,
+      "h": 28,
+      "offset_x": 14,
+      "offset_y": 41
+    },
+    "emote_h_8_frame0007": {
+      "x": 2007,
+      "y": 117,
+      "w": 23,
+      "h": 28,
+      "offset_x": 14,
+      "offset_y": 41
+    },
+    "emote_j_8_frame0004": {
+      "x": 0,
+      "y": 153,
+      "w": 23,
+      "h": 28,
+      "offset_x": 10,
+      "offset_y": 61
+    },
+    "emote_k_8_frame0001": {
+      "x": 23,
+      "y": 153,
+      "w": 24,
+      "h": 28,
+      "offset_x": 8,
+      "offset_y": 48
+    },
+    "emote_k_8_frame0007": {
+      "x": 47,
+      "y": 153,
+      "w": 24,
+      "h": 28,
+      "offset_x": 9,
+      "offset_y": 43
+    },
+    "walk_1_frame0001": {
+      "x": 71,
+      "y": 153,
+      "w": 41,
+      "h": 27,
+      "offset_x": 11,
+      "offset_y": 60
+    },
+    "idle_8_frame0000": {
+      "x": 112,
+      "y": 153,
+      "w": 25,
+      "h": 27,
+      "offset_x": 10,
+      "offset_y": 59
+    },
+    "idle_8_frame0001": {
+      "x": 137,
+      "y": 153,
+      "w": 25,
+      "h": 27,
+      "offset_x": 10,
+      "offset_y": 59
+    },
+    "idle_8_frame0002": {
+      "x": 162,
+      "y": 153,
+      "w": 25,
+      "h": 27,
+      "offset_x": 10,
+      "offset_y": 59
+    },
+    "idle_8_frame0003": {
+      "x": 187,
+      "y": 153,
+      "w": 25,
+      "h": 27,
+      "offset_x": 10,
+      "offset_y": 59
+    },
+    "emote_d_8_frame0000": {
+      "x": 212,
+      "y": 153,
+      "w": 24,
+      "h": 27,
+      "offset_x": 11,
+      "offset_y": 59
+    },
+    "emote_d_8_frame0001": {
+      "x": 236,
+      "y": 153,
+      "w": 24,
+      "h": 27,
+      "offset_x": 11,
+      "offset_y": 59
+    },
+    "emote_d_8_frame0002": {
+      "x": 260,
+      "y": 153,
+      "w": 24,
+      "h": 27,
+      "offset_x": 11,
+      "offset_y": 58
+    },
+    "emote_d_8_frame0004": {
+      "x": 284,
+      "y": 153,
+      "w": 24,
+      "h": 27,
+      "offset_x": 11,
+      "offset_y": 59
+    },
+    "emote_g_8_frame0007": {
+      "x": 308,
+      "y": 153,
+      "w": 39,
+      "h": 27,
+      "offset_x": 15,
+      "offset_y": 61
+    },
+    "emote_g_8_frame0010": {
+      "x": 347,
+      "y": 153,
+      "w": 24,
+      "h": 27,
+      "offset_x": 2,
+      "offset_y": 61
+    },
+    "emote_i_8_frame0000": {
+      "x": 371,
+      "y": 153,
+      "w": 50,
+      "h": 27,
+      "offset_x": 26,
+      "offset_y": 19
+    },
+    "emote_i_8_frame0001": {
+      "x": 421,
+      "y": 153,
+      "w": 50,
+      "h": 27,
+      "offset_x": 26,
+      "offset_y": 19
+    },
+    "emote_i_8_frame0002": {
+      "x": 471,
+      "y": 153,
+      "w": 50,
+      "h": 27,
+      "offset_x": 26,
+      "offset_y": 19
+    },
+    "emote_i_8_frame0003": {
+      "x": 521,
+      "y": 153,
+      "w": 50,
+      "h": 27,
+      "offset_x": 26,
+      "offset_y": 19
+    },
+    "emote_i_8_frame0004": {
+      "x": 571,
+      "y": 153,
+      "w": 50,
+      "h": 27,
+      "offset_x": 26,
+      "offset_y": 19
+    },
+    "emote_j_8_frame0000": {
+      "x": 621,
+      "y": 153,
+      "w": 23,
+      "h": 27,
+      "offset_x": 10,
+      "offset_y": 60
+    },
+    "emote_k_8_frame0000": {
+      "x": 644,
+      "y": 153,
+      "w": 24,
+      "h": 27,
+      "offset_x": 8,
+      "offset_y": 40
+    },
+    "emote_k_8_frame0008": {
+      "x": 668,
+      "y": 153,
+      "w": 24,
+      "h": 27,
+      "offset_x": 9,
+      "offset_y": 42
+    },
+    "emote_d_8_frame0003": {
+      "x": 692,
+      "y": 153,
+      "w": 24,
+      "h": 26,
+      "offset_x": 11,
+      "offset_y": 59
+    },
+    "emote_g_8_frame0008": {
+      "x": 716,
+      "y": 153,
+      "w": 33,
+      "h": 25,
+      "offset_x": 2,
+      "offset_y": 58
+    },
+    "emote_g_8_frame0009": {
+      "x": 749,
+      "y": 153,
+      "w": 25,
+      "h": 25,
+      "offset_x": -3,
+      "offset_y": 58
+    },
+    "emote_j_8_frame0003": {
+      "x": 774,
+      "y": 153,
+      "w": 23,
+      "h": 25,
+      "offset_x": 10,
+      "offset_y": 59
+    },
+    "emote_l_8_frame0000": {
+      "x": 797,
+      "y": 153,
+      "w": 24,
+      "h": 25,
+      "offset_x": 9,
+      "offset_y": 56
+    },
+    "emote_l_8_frame0001": {
+      "x": 821,
+      "y": 153,
+      "w": 24,
+      "h": 25,
+      "offset_x": 7,
+      "offset_y": 56
+    },
+    "emote_l_8_frame0002": {
+      "x": 845,
+      "y": 153,
+      "w": 24,
+      "h": 25,
+      "offset_x": 8,
+      "offset_y": 58
+    },
+    "emote_l_8_frame0003": {
+      "x": 869,
+      "y": 153,
+      "w": 24,
+      "h": 25,
+      "offset_x": 12,
+      "offset_y": 59
+    },
+    "emote_l_8_frame0004": {
+      "x": 893,
+      "y": 153,
+      "w": 24,
+      "h": 25,
+      "offset_x": 11,
+      "offset_y": 57
+    },
+    "walk_8_frame0000": {
+      "x": 917,
+      "y": 153,
+      "w": 26,
+      "h": 24,
+      "offset_x": 10,
+      "offset_y": 54
+    },
+    "walk_8_frame0003": {
+      "x": 943,
+      "y": 153,
+      "w": 26,
+      "h": 24,
+      "offset_x": 10,
+      "offset_y": 57
+    },
+    "emote_j_8_frame0001": {
+      "x": 969,
+      "y": 153,
+      "w": 23,
+      "h": 24,
+      "offset_x": 10,
+      "offset_y": 59
+    },
+    "emote_j_8_frame0002": {
+      "x": 992,
+      "y": 153,
+      "w": 23,
+      "h": 23,
+      "offset_x": 10,
+      "offset_y": 58
+    },
+    "walk_8_frame0001": {
+      "x": 1015,
+      "y": 153,
+      "w": 24,
+      "h": 22,
+      "offset_x": 10,
+      "offset_y": 58
+    },
+    "walk_8_frame0002": {
+      "x": 1039,
+      "y": 153,
+      "w": 24,
+      "h": 22,
+      "offset_x": 10,
+      "offset_y": 55
+    }
+  },
+  "animations": {
+    "attack_ab_3": [
+      "attack_ab_3_frame0000",
+      "attack_ab_3_frame0001",
+      "attack_ab_3_frame0002",
+      "attack_ab_3_frame0003",
+      "attack_ab_3_frame0004"
+    ],
+    "hit_weapon_melee_3": [
+      "hit_weapon_melee_3_frame0000"
+    ],
+    "hit_weapon_gun_3": [
+      "hit_weapon_gun_3_frame0000"
+    ],
+    "buff_3": [
+      "buff_3_frame0000",
+      "buff_3_frame0001",
+      "buff_3_frame0002",
+      "buff_3_frame0003"
+    ],
+    "crouch_3": [
+      "crouch_3_frame0000"
+    ],
+    "crouch_4": [
+      "crouch_4_frame0000"
+    ],
+    "buff_4": [
+      "buff_4_frame0000",
+      "buff_4_frame0001",
+      "buff_4_frame0002",
+      "buff_4_frame0003"
+    ],
+    "attack_aa_3": [
+      "attack_aa_3_frame0000",
+      "attack_aa_3_frame0001",
+      "attack_aa_3_frame0002",
+      "attack_aa_3_frame0003",
+      "attack_aa_3_frame0004"
+    ],
+    "walk_4": [
+      "walk_4_frame0000",
+      "walk_4_frame0001",
+      "walk_4_frame0002",
+      "walk_4_frame0003"
+    ],
+    "attack_ga_3": [
+      "attack_ga_3_frame0000",
+      "attack_ga_3_frame0001",
+      "attack_ga_3_frame0002"
+    ],
+    "walk_3": [
+      "walk_3_frame0000",
+      "walk_3_frame0001",
+      "walk_3_frame0002",
+      "walk_3_frame0003"
+    ],
+    "attack_gb_3": [
+      "attack_gb_3_frame0000",
+      "attack_gb_3_frame0001",
+      "attack_gb_3_frame0002"
+    ],
+    "idle_4": [
+      "idle_4_frame0000",
+      "idle_4_frame0001",
+      "idle_4_frame0002",
+      "idle_4_frame0003"
+    ],
+    "idle_weapon_gun_3": [
+      "idle_weapon_gun_3_frame0000",
+      "idle_weapon_gun_3_frame0001",
+      "idle_weapon_gun_3_frame0002",
+      "idle_weapon_gun_3_frame0003"
+    ],
+    "attack_ab_2": [
+      "attack_ab_2_frame0000",
+      "attack_ab_2_frame0001",
+      "attack_ab_2_frame0002",
+      "attack_ab_2_frame0003",
+      "attack_ab_2_frame0004"
+    ],
+    "guard_3": [
+      "guard_3_frame0000"
+    ],
+    "crouch_2": [
+      "crouch_2_frame0000"
+    ],
+    "buff_2": [
+      "buff_2_frame0000",
+      "buff_2_frame0001",
+      "buff_2_frame0002",
+      "buff_2_frame0003"
+    ],
+    "attack_ga_2": [
+      "attack_ga_2_frame0000",
+      "attack_ga_2_frame0001",
+      "attack_ga_2_frame0002"
+    ],
+    "idle_3": [
+      "idle_3_frame0000",
+      "idle_3_frame0001",
+      "idle_3_frame0002",
+      "idle_3_frame0003"
+    ],
+    "hit_weapon_melee_2": [
+      "hit_weapon_melee_2_frame0000"
+    ],
+    "idle_weapon_melee_3": [
+      "idle_weapon_melee_3_frame0000",
+      "idle_weapon_melee_3_frame0001",
+      "idle_weapon_melee_3_frame0002",
+      "idle_weapon_melee_3_frame0003"
+    ],
+    "hit_weapon_gun_2": [
+      "hit_weapon_gun_2_frame0000"
+    ],
+    "attack_gb_2": [
+      "attack_gb_2_frame0000",
+      "attack_gb_2_frame0001",
+      "attack_gb_2_frame0002"
+    ],
+    "attack_aa_2": [
+      "attack_aa_2_frame0000",
+      "attack_aa_2_frame0001",
+      "attack_aa_2_frame0002",
+      "attack_aa_2_frame0003",
+      "attack_aa_2_frame0004"
+    ],
+    "walk_2": [
+      "walk_2_frame0000",
+      "walk_2_frame0001",
+      "walk_2_frame0002",
+      "walk_2_frame0003"
+    ],
+    "crouch_1": [
+      "crouch_1_frame0000"
+    ],
+    "attack_ab_1": [
+      "attack_ab_1_frame0000",
+      "attack_ab_1_frame0001",
+      "attack_ab_1_frame0002",
+      "attack_ab_1_frame0003",
+      "attack_ab_1_frame0004"
+    ],
+    "idle_weapon_gun_2": [
+      "idle_weapon_gun_2_frame0000",
+      "idle_weapon_gun_2_frame0001",
+      "idle_weapon_gun_2_frame0002",
+      "idle_weapon_gun_2_frame0003"
+    ],
+    "guard_2": [
+      "guard_2_frame0000"
+    ],
+    "attack_ga_1": [
+      "attack_ga_1_frame0000",
+      "attack_ga_1_frame0001",
+      "attack_ga_1_frame0002"
+    ],
+    "idle_2": [
+      "idle_2_frame0000",
+      "idle_2_frame0001",
+      "idle_2_frame0002",
+      "idle_2_frame0003"
+    ],
+    "buff_1": [
+      "buff_1_frame0000",
+      "buff_1_frame0001",
+      "buff_1_frame0002",
+      "buff_1_frame0003"
+    ],
+    "idle_weapon_melee_2": [
+      "idle_weapon_melee_2_frame0000",
+      "idle_weapon_melee_2_frame0001",
+      "idle_weapon_melee_2_frame0002",
+      "idle_weapon_melee_2_frame0003"
+    ],
+    "attack_gb_1": [
+      "attack_gb_1_frame0000",
+      "attack_gb_1_frame0001",
+      "attack_gb_1_frame0002"
+    ],
+    "hit_weapon_melee_1": [
+      "hit_weapon_melee_1_frame0000"
+    ],
+    "hit_weapon_gun_1": [
+      "hit_weapon_gun_1_frame0000"
+    ],
+    "attack_aa_1": [
+      "attack_aa_1_frame0000",
+      "attack_aa_1_frame0001",
+      "attack_aa_1_frame0002",
+      "attack_aa_1_frame0003",
+      "attack_aa_1_frame0004"
+    ],
+    "crouch_8": [
+      "crouch_8_frame0000"
+    ],
+    "idle_weapon_melee_1": [
+      "idle_weapon_melee_1_frame0000",
+      "idle_weapon_melee_1_frame0001",
+      "idle_weapon_melee_1_frame0002",
+      "idle_weapon_melee_1_frame0003"
+    ],
+    "idle_weapon_gun_1": [
+      "idle_weapon_gun_1_frame0000",
+      "idle_weapon_gun_1_frame0001",
+      "idle_weapon_gun_1_frame0002",
+      "idle_weapon_gun_1_frame0003"
+    ],
+    "buff_8": [
+      "buff_8_frame0000",
+      "buff_8_frame0001",
+      "buff_8_frame0002",
+      "buff_8_frame0003"
+    ],
+    "emote_f_8": [
+      "emote_f_8_frame0000",
+      "emote_f_8_frame0001",
+      "emote_f_8_frame0002",
+      "emote_f_8_frame0003",
+      "emote_f_8_frame0004"
+    ],
+    "emote_g_8": [
+      "emote_g_8_frame0000",
+      "emote_g_8_frame0001",
+      "emote_g_8_frame0002",
+      "emote_g_8_frame0003",
+      "emote_g_8_frame0004",
+      "emote_g_8_frame0005",
+      "emote_g_8_frame0006",
+      "emote_g_8_frame0007",
+      "emote_g_8_frame0008",
+      "emote_g_8_frame0009",
+      "emote_g_8_frame0010"
+    ],
+    "idle_1": [
+      "idle_1_frame0000",
+      "idle_1_frame0001",
+      "idle_1_frame0002",
+      "idle_1_frame0003"
+    ],
+    "emote_b_8": [
+      "emote_b_8_frame0000",
+      "emote_b_8_frame0001",
+      "emote_b_8_frame0002",
+      "emote_b_8_frame0003",
+      "emote_b_8_frame0004"
+    ],
+    "emote_c_8": [
+      "emote_c_8_frame0000",
+      "emote_c_8_frame0001",
+      "emote_c_8_frame0002",
+      "emote_c_8_frame0003",
+      "emote_c_8_frame0004"
+    ],
+    "walk_1": [
+      "walk_1_frame0000",
+      "walk_1_frame0001",
+      "walk_1_frame0002",
+      "walk_1_frame0003"
+    ],
+    "emote_a_8": [
+      "emote_a_8_frame0000",
+      "emote_a_8_frame0001",
+      "emote_a_8_frame0002",
+      "emote_a_8_frame0003",
+      "emote_a_8_frame0004"
+    ],
+    "emote_e_8": [
+      "emote_e_8_frame0000",
+      "emote_e_8_frame0001",
+      "emote_e_8_frame0002",
+      "emote_e_8_frame0003",
+      "emote_e_8_frame0004"
+    ],
+    "guard_1": [
+      "guard_1_frame0000"
+    ],
+    "emote_k_8": [
+      "emote_k_8_frame0000",
+      "emote_k_8_frame0001",
+      "emote_k_8_frame0002",
+      "emote_k_8_frame0003",
+      "emote_k_8_frame0004",
+      "emote_k_8_frame0005",
+      "emote_k_8_frame0006",
+      "emote_k_8_frame0007",
+      "emote_k_8_frame0008"
+    ],
+    "emote_h_8": [
+      "emote_h_8_frame0000",
+      "emote_h_8_frame0001",
+      "emote_h_8_frame0002",
+      "emote_h_8_frame0003",
+      "emote_h_8_frame0004",
+      "emote_h_8_frame0005",
+      "emote_h_8_frame0006",
+      "emote_h_8_frame0007"
+    ],
+    "emote_j_8": [
+      "emote_j_8_frame0000",
+      "emote_j_8_frame0001",
+      "emote_j_8_frame0002",
+      "emote_j_8_frame0003",
+      "emote_j_8_frame0004"
+    ],
+    "idle_8": [
+      "idle_8_frame0000",
+      "idle_8_frame0001",
+      "idle_8_frame0002",
+      "idle_8_frame0003"
+    ],
+    "emote_d_8": [
+      "emote_d_8_frame0000",
+      "emote_d_8_frame0001",
+      "emote_d_8_frame0002",
+      "emote_d_8_frame0003",
+      "emote_d_8_frame0004"
+    ],
+    "emote_i_8": [
+      "emote_i_8_frame0000",
+      "emote_i_8_frame0001",
+      "emote_i_8_frame0002",
+      "emote_i_8_frame0003",
+      "emote_i_8_frame0004"
+    ],
+    "emote_l_8": [
+      "emote_l_8_frame0000",
+      "emote_l_8_frame0001",
+      "emote_l_8_frame0002",
+      "emote_l_8_frame0003",
+      "emote_l_8_frame0004"
+    ],
+    "walk_8": [
+      "walk_8_frame0000",
+      "walk_8_frame0001",
+      "walk_8_frame0002",
+      "walk_8_frame0003"
+    ]
+  }
+}

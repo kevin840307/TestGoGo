@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="HorseData" format=3]
+
+[ext_resource type="Script" uid="uid://hk1vvj5cprdj" path="res://scripts/horse_data.gd" id="1_7bkw6"]
+
+[resource]
+script = ExtResource("1_7bkw6")
+body_id = 50309
+weapon_id = 50266
+engine_id = 50267
+max_battery = 3600
+horse_type = "MA"
+req_level = 1
+id = 50009
+item_name = "發條龍．雷"
+description = "黃色的私人發條龍使你走在潮流的尖端，極速700km/h的發條龍，伴你馳騁於於尼尼亞大陸，感受成為風之子的不停站樂趣！"
+icon_id = 346
+item_type_category = "Horse"

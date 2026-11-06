@@ -1,0 +1,81 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/minimap_npc_overlay.gd" id="1_minimap_overlay"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tooltip"]
+bg_color = Color(0.025, 0.035, 0.05, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.72, 0.64, 0.42, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[node name="MinimapNpcOverlay" type="Control"]
+custom_minimum_size = Vector2(147, 101)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 147.0
+offset_bottom = 101.0
+mouse_filter = 2
+script = ExtResource("1_minimap_overlay")
+
+[node name="MarkerLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TooltipLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="NpcTooltip" type="Panel" parent="TooltipLayer"]
+visible = false
+custom_minimum_size = Vector2(250, 112)
+layout_mode = 0
+offset_right = 250.0
+offset_bottom = 112.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_tooltip")
+
+[node name="Portrait" type="TextureRect" parent="TooltipLayer/NpcTooltip"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 96.0
+offset_bottom = 104.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="TooltipLayer/NpcTooltip"]
+layout_mode = 0
+offset_left = 106.0
+offset_top = 14.0
+offset_right = 240.0
+offset_bottom = 42.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 16
+text = "未知NPC"
+text_overrun_behavior = 3
+
+[node name="CoordsLabel" type="Label" parent="TooltipLayer/NpcTooltip"]
+layout_mode = 0
+offset_left = 106.0
+offset_top = 50.0
+offset_right = 240.0
+offset_bottom = 98.0
+mouse_filter = 2
+text = "X：--\nY：--"

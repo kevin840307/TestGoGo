@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_utwat"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_4kv6v"]
+
+[sub_resource type="Resource" id="Resource_3ba4q"]
+script = ExtResource("1_utwat")
+cost_hp = 200
+cost_mp = 135
+
+[resource]
+script = ExtResource("2_4kv6v")
+id = 45112
+skill_name = "詭異之力"
+description = "一個糊里糊塗的魔法，能強化使用者某一項的能力，不過相對地會減低某一項能力的魔法。"
+skill_type = 7
+fx_use = "Skill_Use_03"
+fx_hit = "Skill_Hit_21"
+fx_extra = "0"
+special_skill = "詭異之力"
+levels = Array[ExtResource("1_utwat")]([SubResource("Resource_3ba4q")])

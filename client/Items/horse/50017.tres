@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="HorseData" format=3]
+
+[ext_resource type="Script" uid="uid://hk1vvj5cprdj" path="res://scripts/horse_data.gd" id="1_g6vgv"]
+
+[resource]
+script = ExtResource("1_g6vgv")
+body_id = 50371
+weapon_id = 50372
+engine_id = 50373
+max_battery = 25200
+horse_type = "MA"
+req_level = 80
+id = 50017
+item_name = "魔炎龍騎"
+description = "用朱雀的羽毛強化了的魔龍，攻擊力及防禦力都有大幅度的提升。"
+icon_id = 808
+item_type_category = "Horse"

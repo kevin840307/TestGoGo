@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_0cfa7"]
+
+[resource]
+script = ExtResource("1_0cfa7")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 2000
+max_mp_bonus = 2000
+atk = 512
+def = 589
+matk = 512
+mdef = 589
+hit = 170
+flee = 170
+durability = 50
+spr_id = 143
+req_level = 90
+req_job = "無"
+req_race = "無"
+id = 18141
+item_name = "火雲頭飾"
+description = "火神神殿中的秘寶，在神炎中誕生的頭飾，永久帶有炎的力量。"
+can_store = 1
+price = 1
+icon_id = 810
+item_type_category = "Equip"

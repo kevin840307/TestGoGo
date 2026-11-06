@@ -1,0 +1,3113 @@
+{
+  "1": {
+    "MapName": "黑暗森林",
+    "Spawners": [
+      {
+        "ZoneName": "古捷怪貓1區",
+        "MonsterName": "古捷怪貓",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2152, "Y1": 1311, "X2": 3391, "Y2": 2134 }
+      },
+	  {
+        "ZoneName": "古捷怪貓2區",
+        "MonsterName": "古捷怪貓",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 1630, "Y1": 861, "X2": 2803, "Y2": 1847 }
+      },
+	  {
+        "ZoneName": "古捷怪貓3區",
+        "MonsterName": "古捷怪貓",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2048, "Y1": 1101, "X2": 3972, "Y2": 1654 }
+      },
+	  {
+        "ZoneName": "黑森魔獸1區",
+        "MonsterName": "黑森魔獸",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4421, "Y1": 1395, "X2": 6536, "Y2": 3318 }
+      },
+	  {
+        "ZoneName": "黑森魔獸2區",
+        "MonsterName": "黑森魔獸",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3309, "Y1": 1896, "X2": 6403, "Y2": 3071 }
+      },
+	  {
+        "ZoneName": "黑森魔獸3區",
+        "MonsterName": "黑森魔獸",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5643, "Y1": 867, "X2": 7128, "Y2": 2686 }
+      },
+	  {
+        "ZoneName": "磁力怪偶1區",
+        "MonsterName": "磁力怪偶",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7432, "Y1": 1578, "X2": 9680, "Y2": 2884 }
+      },
+	  {
+        "ZoneName": "磁力怪偶2區",
+        "MonsterName": "磁力怪偶",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6775, "Y1": 995, "X2": 8613, "Y2": 2342 }
+      },
+	  {
+        "ZoneName": "磁力怪偶3區",
+        "MonsterName": "磁力怪偶",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5080, "Y1": 1915, "X2": 8112, "Y2": 2722 }
+      },
+	  {
+        "ZoneName": "地神龍鳥1區",
+        "MonsterName": "地神龍鳥",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8423, "Y1": 1776, "X2": 10592, "Y2": 3968 }
+      },
+	  {
+        "ZoneName": "地神龍鳥2區",
+        "MonsterName": "地神龍鳥",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7798, "Y1": 1734, "X2": 10184, "Y2": 3629 }
+      },
+	  {
+        "ZoneName": "地神龍鳥3區",
+        "MonsterName": "地神龍鳥",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7470, "Y1": 1596, "X2": 10051, "Y2": 2958 }
+      },
+	  {
+        "ZoneName": "黑森龍甲獸1區",
+        "MonsterName": "黑森龍甲獸",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9418, "Y1": 5359, "X2": 11794, "Y2": 7428 }
+      },
+	  {
+        "ZoneName": "黑森龍甲獸2區",
+        "MonsterName": "黑森龍甲獸",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6881, "Y1": 4936, "X2": 10270, "Y2": 6055 }
+      },
+	  {
+        "ZoneName": "黑森龍甲獸3區",
+        "MonsterName": "黑森龍甲獸",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6930, "Y1": 4629, "X2": 9481, "Y2": 5926 }
+      },
+	  {
+        "ZoneName": "蘇拿鳥獸1區",
+        "MonsterName": "蘇拿鳥獸",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9908, "Y1": 5215, "X2": 12988, "Y2": 7455 }
+      },
+	  {
+        "ZoneName": "蘇拿鳥獸2區",
+        "MonsterName": "蘇拿鳥獸",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 10624, "Y1": 5414, "X2": 13336, "Y2": 6972 }
+      },
+	  {
+        "ZoneName": "蘇拿鳥獸3區",
+        "MonsterName": "蘇拿鳥獸",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 11839, "Y1": 5050, "X2": 13452, "Y2": 6969 }
+      }
+    ]
+  },
+  "2": {
+    "MapName": "星刃廢墟",
+    "Spawners": [
+	  {
+        "ZoneName": "星刃機動偶1區",
+        "MonsterName": "星刃機動偶",
+        "MaxCount": 36,
+        "RespawnTime": 10,
+        "Rect": { "X1": 1981, "Y1": 2071, "X2": 7826, "Y2": 5850 }
+      },
+	  {
+        "ZoneName": "機械守護者1區",
+        "MonsterName": "機械守護者",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4127, "Y1": 3439, "X2": 5094, "Y2": 4302 }
+      }
+    ]
+  },
+  "4": {
+    "MapName": "神團聖殿",
+    "Spawners": [
+    ]
+  },
+  "7": {
+    "MapName": "古尼爾森林",
+    "Spawners": [
+	  {
+        "ZoneName": "星夢女管家．小純1區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 7652, "Y1": 2739, "X2": 8636, "Y2": 3356 }
+      },
+	  {
+        "ZoneName": "星夢女管家．小純2區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 2478, "Y1": 4757, "X2": 3510, "Y2": 5320 }
+      },
+      {
+        "ZoneName": "波奇鳥1區",
+        "MonsterName": "波奇鳥",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7715, "Y1": 2605, "X2": 8814, "Y2": 3989 }
+      },
+	  {
+        "ZoneName": "波奇鳥2區",
+        "MonsterName": "波奇鳥",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6606, "Y1": 2893, "X2": 8487, "Y2": 3852 }
+      },
+	  {
+        "ZoneName": "波奇蛋1區",
+        "MonsterName": "波奇蛋",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7715, "Y1": 2605, "X2": 8814, "Y2": 3989 }
+      },
+	  {
+        "ZoneName": "波奇蛋2區",
+        "MonsterName": "波奇蛋",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6606, "Y1": 2893, "X2": 8487, "Y2": 3852 }
+      },
+	  {
+        "ZoneName": "袋子金魚1區",
+        "MonsterName": "袋子金魚",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6349, "Y1": 3510, "X2": 8484, "Y2": 5093 }
+      },
+	  {
+        "ZoneName": "袋子金魚2區",
+        "MonsterName": "袋子金魚",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4869, "Y1": 3523, "X2": 6866, "Y2": 5153 }
+      },
+	  {
+        "ZoneName": "藍花怪1區",
+        "MonsterName": "藍花怪",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4869, "Y1": 3523, "X2": 6866, "Y2": 5153 }
+      },
+	  {
+        "ZoneName": "藍花怪2區",
+        "MonsterName": "藍花怪",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4776, "Y1": 5093, "X2": 8177, "Y2": 6710 }
+      },
+	  {
+        "ZoneName": "索爾魔怪1區",
+        "MonsterName": "索爾魔怪",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4776, "Y1": 5093, "X2": 8177, "Y2": 6710 }
+      },
+	  {
+        "ZoneName": "索爾魔怪2區",
+        "MonsterName": "索爾魔怪",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3026, "Y1": 4256, "X2": 5000, "Y2": 6450 }
+      },
+	  {
+        "ZoneName": "嗜血機動偶1區",
+        "MonsterName": "嗜血機動偶",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3026, "Y1": 4256, "X2": 5000, "Y2": 6450 }
+      },
+	  {
+        "ZoneName": "巨毛蟲1區",
+        "MonsterName": "巨毛蟲",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4259, "Y1": 1767, "X2": 7383, "Y2": 2853 }
+      },
+	  {
+        "ZoneName": "花花立普1區",
+        "MonsterName": "花花立普",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3200, "Y1": 1770, "X2": 5488, "Y2": 3437 }
+      },
+	  {
+        "ZoneName": "滾滾豬1區",
+        "MonsterName": "滾滾豬",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 1753, "Y1": 3730, "X2": 4803, "Y2": 5982 }
+      }
+    ]
+  },
+  "9": {
+    "MapName": "魔法之都．古尼爾",
+    "Spawners": [
+      {
+        "ZoneName": "星夢女管家．小葵1區",
+        "MonsterName": "星夢女管家．小葵",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 1004, "Y1": 3749, "X2": 1569, "Y2": 4280 }
+      }
+    ]
+  },
+  "11": {
+    "MapName": "獅鷲山洞",
+    "Spawners": [
+	  {
+        "ZoneName": "冰靈雪人1區",
+        "MonsterName": "冰靈雪人",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2906, "Y1": 1686, "X2": 5893, "Y2": 4298 }
+      },
+	  {
+        "ZoneName": "冰靈雪人2區",
+        "MonsterName": "冰靈雪人",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2797, "Y1": 1760, "X2": 6525, "Y2": 3906 }
+      },
+	  {
+        "ZoneName": "突擊雪兔1區",
+        "MonsterName": "突擊雪兔",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2797, "Y1": 1760, "X2": 6525, "Y2": 3906 }
+      },
+	  {
+        "ZoneName": "突擊雪兔2區",
+        "MonsterName": "突擊雪兔",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6588, "Y1": 3832, "X2": 8927, "Y2": 6234 }
+      },
+	  {
+        "ZoneName": "冰機動偶1區",
+        "MonsterName": "冰機動偶",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5237, "Y1": 4404, "X2": 9002, "Y2": 6030 }
+      },
+	  {
+        "ZoneName": "冰機動偶2區",
+        "MonsterName": "冰機動偶",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3488, "Y1": 5370, "X2": 9313, "Y2": 7060 }
+      },
+	  {
+        "ZoneName": "冰地魔獸1區",
+        "MonsterName": "冰地魔獸",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3420, "Y1": 6196, "X2": 7014, "Y2": 8587 }
+      },
+	  {
+        "ZoneName": "冰地魔獸2區",
+        "MonsterName": "冰地魔獸",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3412, "Y1": 6244, "X2": 8113, "Y2": 8268 }
+      },
+	  {
+        "ZoneName": "水之幼龍1區",
+        "MonsterName": "水之幼龍",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4515, "Y1": 8790, "X2": 8436, "Y2": 10520 }
+      },
+	  {
+        "ZoneName": "御龍者1區",
+        "MonsterName": "御龍者",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7389, "Y1": 10859, "X2": 8430, "Y2": 11444 }
+      }
+    ]
+  },
+  "12": {
+    "MapName": "獅鷲山",
+    "Spawners": [
+      {
+        "ZoneName": "冰菇蟲1區",
+        "MonsterName": "冰菇蟲",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3724, "Y1": 5375, "X2": 8206, "Y2": 7016 }
+      },
+	  {
+        "ZoneName": "冰菇蟲2區",
+        "MonsterName": "冰菇蟲",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6667, "Y1": 4099, "X2": 8210, "Y2": 5961 }
+      },
+	  {
+        "ZoneName": "冰盜1區",
+        "MonsterName": "冰盜",
+        "MaxCount": 33,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5077, "Y1": 2783, "X2": 7872, "Y2": 5420 }
+      },
+	  {
+        "ZoneName": "冰靈騎士1區",
+        "MonsterName": "冰靈騎士",
+        "MaxCount": 33,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4042, "Y1": 3065, "X2": 6557, "Y2": 5163 }
+      },
+	  {
+        "ZoneName": "冰地鳥獸1區",
+        "MonsterName": "冰地鳥獸",
+        "MaxCount": 33,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3240, "Y1": 2475, "X2": 7376, "Y2": 3782 }
+      }
+    ]
+  },
+  "13": {
+    "MapName": "尼西亞台地",
+    "Spawners": [
+	  {
+        "ZoneName": "星夢女管家．小純1區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 2366, "Y1": 2750, "X2": 3311, "Y2": 3271 }
+      },
+	  {
+        "ZoneName": "星夢女管家．小純2區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 6141, "Y1": 4525, "X2": 7308, "Y2": 5141 }
+      },
+      {
+        "ZoneName": "魔物柏古1區",
+        "MonsterName": "魔物柏古",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2805, "Y1": 3002, "X2": 3832, "Y2": 3811 }
+      },
+      {
+        "ZoneName": "釘釘球1區",
+        "MonsterName": "釘釘球",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2381, "Y1": 2198, "X2": 3824, "Y2": 3476 }
+      },
+	  {
+        "ZoneName": "月光原素1區",
+        "MonsterName": "月光原素",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3866, "Y1": 2070, "X2": 4592, "Y2": 2851 }
+      },
+	  {
+        "ZoneName": "月光原素2區",
+        "MonsterName": "月光原素",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4215, "Y1": 1973, "X2": 6061, "Y2": 2647 }
+      },
+	  {
+        "ZoneName": "月光原素3區",
+        "MonsterName": "月光原素",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4894, "Y1": 2942, "X2": 7040, "Y2": 3715 }
+      },
+	  {
+        "ZoneName": "月光原素4區",
+        "MonsterName": "月光原素",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6155, "Y1": 4237, "X2": 7409, "Y2": 5244 }
+      },
+	  {
+        "ZoneName": "大眼立普1區",
+        "MonsterName": "大眼立普",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5259, "Y1": 1939, "X2": 6839, "Y2": 3625 }
+      },
+	  {
+        "ZoneName": "大眼立普2區",
+        "MonsterName": "大眼立普",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4311, "Y1": 1863, "X2": 6113, "Y2": 2641 }
+      },
+	  {
+        "ZoneName": "油燈幽靈1區",
+        "MonsterName": "油燈幽靈",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4664, "Y1": 3842, "X2": 5585, "Y2": 5145 }
+      },
+	  {
+        "ZoneName": "油燈幽靈2區",
+        "MonsterName": "油燈幽靈",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3410, "Y1": 4481, "X2": 5587, "Y2": 5084 }
+      },
+	  {
+        "ZoneName": "油燈幽靈3區",
+        "MonsterName": "油燈幽靈",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2654, "Y1": 3453, "X2": 4396, "Y2": 3809 }
+      },
+	  {
+        "ZoneName": "油燈幽靈4區",
+        "MonsterName": "油燈幽靈",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6155, "Y1": 4237, "X2": 7409, "Y2": 5244 }
+      },
+	  {
+        "ZoneName": "水柏古獸1區",
+        "MonsterName": "水柏古獸",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2819, "Y1": 3123, "X2": 3551, "Y2": 4292 }
+      },
+	  {
+        "ZoneName": "水柏古獸2區",
+        "MonsterName": "水柏古獸",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2600, "Y1": 3123, "X2": 3863, "Y2": 3804 }
+      },
+	  {
+        "ZoneName": "水柏古獸3區",
+        "MonsterName": "水柏古獸",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3417, "Y1": 4488, "X2": 5685, "Y2": 5011 }
+      }
+    ]
+  },
+  "14": {
+    "MapName": "廢水處理廠",
+    "Spawners": [
+      {
+        "ZoneName": "紫晶龜獸1區",
+        "MonsterName": "紫晶龜獸",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3103, "Y1": 2073, "X2": 4790, "Y2": 2942 }
+      },
+	  {
+        "ZoneName": "紫晶龜獸2區",
+        "MonsterName": "紫晶龜獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2723, "Y1": 2228, "X2": 3080, "Y2": 2831 }
+      },
+	  {
+        "ZoneName": "星光原素1區",
+        "MonsterName": "星光原素",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2917, "Y1": 2641, "X2": 5505, "Y2": 3402 }
+      },
+	  {
+        "ZoneName": "星光原素2區",
+        "MonsterName": "星光原素",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3181, "Y1": 3421, "X2": 4838, "Y2": 4056 }
+      },
+	  {
+        "ZoneName": "大福立普1區",
+        "MonsterName": "大福立普",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4679, "Y1": 3130, "X2": 6990, "Y2": 4453 }
+      },
+	  {
+        "ZoneName": "大福立普2區",
+        "MonsterName": "大福立普",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5681, "Y1": 2563, "X2": 7365, "Y2": 4100 }
+      },
+	  {
+        "ZoneName": "古可暴族1區",
+        "MonsterName": "古可暴族",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3153, "Y1": 6371, "X2": 6232, "Y2": 8348 }
+      }
+    ]
+  },
+  "15": {
+    "MapName": "首都．尼尼亞皇城",
+    "Spawners": [
+      {
+        "ZoneName": "星夢女管家．小葵1區",
+        "MonsterName": "星夢女管家．小葵",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4474, "Y1": 9806, "X2": 5418, "Y2": 10345 }
+      },
+	  {
+        "ZoneName": "星夢女管家．小葵2區",
+        "MonsterName": "星夢女管家．小葵",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7389, "Y1": 10994, "X2": 8309, "Y2": 11506 }
+      },
+	  {
+        "ZoneName": "星夢女管家．小葵3區",
+        "MonsterName": "星夢女管家．小葵",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 13338, "Y1": 11977, "X2": 14059, "Y2": 12527 }
+      },
+	  {
+        "ZoneName": "星夢女管家．小葵4區",
+        "MonsterName": "星夢女管家．小葵",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 12494, "Y1": 8348, "X2": 13229, "Y2": 8821 }
+      }
+    ]
+  },
+  "17": {
+    "MapName": "機械之城．絲蘭",
+    "Spawners": [
+      {
+        "ZoneName": "星夢女管家．小葵1區",
+        "MonsterName": "星夢女管家．小葵",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 14602, "Y1": 7657, "X2": 15344, "Y2": 8203 }
+      }
+    ]
+  },
+  "19": {
+    "MapName": "尼尼亞盆地",
+    "Spawners": [
+	  {
+        "ZoneName": "星夢女管家．小純1區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 6192, "Y1": 4161, "X2": 7181, "Y2": 4733 }
+      },
+	  {
+        "ZoneName": "星夢女管家．小純2區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 4479, "Y1": 1847, "X2": 5412, "Y2": 2428 }
+      },
+      {
+        "ZoneName": "森林立普1區",
+        "MonsterName": "森林立普",
+        "MaxCount": 2,
+        "RespawnTime": 60,
+        "Rect": { "X1": 4299, "Y1": 3830, "X2": 5740, "Y2": 4778 }
+      },
+	  {
+        "ZoneName": "草色鳥1區",
+        "MonsterName": "草色鳥",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3530, "Y1": 2010, "X2": 5960, "Y2": 2473 }
+      },
+	  {
+        "ZoneName": "草色鳥2區",
+        "MonsterName": "草色鳥",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4037, "Y1": 1589, "X2": 4554, "Y2": 2029 }
+      },
+	  {
+        "ZoneName": "草色鳥3區",
+        "MonsterName": "草色鳥",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3413, "Y1": 2286, "X2": 5585, "Y2": 2943 }
+      },
+	  {
+        "ZoneName": "機動偶1區",
+        "MonsterName": "機動偶",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3730, "Y1": 1861, "X2": 5344, "Y2": 3092 }
+      },
+	  {
+        "ZoneName": "機動偶2區",
+        "MonsterName": "機動偶",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3131, "Y1": 2372, "X2": 5609, "Y2": 2634 }
+      },
+	  {
+        "ZoneName": "古尼獸1區",
+        "MonsterName": "古尼獸",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3396, "Y1": 2732, "X2": 5010, "Y2": 3754 }
+      },
+	  {
+        "ZoneName": "古尼獸2區",
+        "MonsterName": "古尼獸",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3400, "Y1": 2663, "X2": 5847, "Y2": 2842 }
+      },
+	  {
+        "ZoneName": "蘑菇蟲1區",
+        "MonsterName": "蘑菇蟲",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4563, "Y1": 3625, "X2": 5368, "Y2": 4984 }
+      },
+	  {
+        "ZoneName": "蘑菇蟲2區",
+        "MonsterName": "蘑菇蟲",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3939, "Y1": 3329, "X2": 4623, "Y2": 4685 }
+      },
+	  {
+        "ZoneName": "蘑菇蟲3區",
+        "MonsterName": "蘑菇蟲",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3593, "Y1": 3391, "X2": 3943, "Y2": 3432 }
+      },
+	  {
+        "ZoneName": "鳥爪獸1區",
+        "MonsterName": "鳥爪獸",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4242, "Y1": 4205, "X2": 6918, "Y2": 4751 }
+      },
+	  {
+        "ZoneName": "鳥爪獸2區",
+        "MonsterName": "鳥爪獸",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3823, "Y1": 3860, "X2": 5782, "Y2": 4848 }
+      },
+	  {
+        "ZoneName": "圓龜獸1區",
+        "MonsterName": "圓龜獸",
+        "MaxCount": 2,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5288, "Y1": 3146, "X2": 5676, "Y2": 3344 }
+      },
+	  {
+        "ZoneName": "圓龜獸2區",
+        "MonsterName": "圓龜獸",
+        "MaxCount": 2,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5890, "Y1": 2816, "X2": 6197, "Y2": 2950 }
+      },
+	  {
+        "ZoneName": "圓龜獸3區",
+        "MonsterName": "圓龜獸",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5667, "Y1": 2973, "X2": 5878, "Y2": 3086 }
+      },
+	  {
+        "ZoneName": "圓龜獸4區",
+        "MonsterName": "圓龜獸",
+        "MaxCount": 2,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6088, "Y1": 3567, "X2": 6426, "Y2": 3820 }
+      },
+	  {
+        "ZoneName": "圓龜獸5區",
+        "MonsterName": "圓龜獸",
+        "MaxCount": 2,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6451, "Y1": 3734, "X2": 6791, "Y2": 3932 }
+      },
+	  {
+        "ZoneName": "圓龜獸6區",
+        "MonsterName": "圓龜獸",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4687, "Y1": 3730, "X2": 6834, "Y2": 4500 }
+      }
+    ]
+  },
+  "20": {
+    "MapName": "蘑菇山洞",
+    "Spawners": [
+      {
+        "ZoneName": "月光原素1區",
+        "MonsterName": "月光原素",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3562, "Y1": 2876, "X2": 5802, "Y2": 3395 }
+      },
+	  {
+        "ZoneName": "月光原素2區",
+        "MonsterName": "月光原素",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4948, "Y1": 2455, "X2": 5633, "Y2": 3684 }
+      },
+	  {
+        "ZoneName": "月光原素3區",
+        "MonsterName": "月光原素",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4963, "Y1": 2772, "X2": 6070, "Y2": 3104 }
+      },{
+        "ZoneName": "月光原素4區",
+        "MonsterName": "月光原素",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3289, "Y1": 3063, "X2": 4500, "Y2": 3486 }
+      },
+	  {
+        "ZoneName": "油燈幽靈1區",
+        "MonsterName": "油燈幽靈",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4211, "Y1": 3256, "X2": 5789, "Y2": 3634 }
+      },
+	  {
+        "ZoneName": "油燈幽靈2區",
+        "MonsterName": "油燈幽靈",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4920, "Y1": 3399, "X2": 6200, "Y2": 4445 }
+      },
+	  {
+        "ZoneName": "油燈幽靈3區",
+        "MonsterName": "油燈幽靈",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3643, "Y1": 3986, "X2": 4295, "Y2": 4518 }
+      },
+	  {
+        "ZoneName": "紫晶龜獸1區",
+        "MonsterName": "紫晶龜獸",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4750, "Y1": 2876, "X2": 5791, "Y2": 4279 }
+      },
+	  {
+        "ZoneName": "紫晶龜獸2區",
+        "MonsterName": "紫晶龜獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4729, "Y1": 3567, "X2": 6458, "Y2": 3948 }
+      },
+	  {
+        "ZoneName": "紫晶龜獸3區",
+        "MonsterName": "紫晶龜獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3648, "Y1": 4003, "X2": 6249, "Y2": 4382 }
+      }
+    ]
+  },
+  "22": {
+    "MapName": "騎士之城．格靈",
+    "Spawners": [
+      {
+        "ZoneName": "星夢女管家．小葵1區",
+        "MonsterName": "星夢女管家．小葵",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2902, "Y1": 10364, "X2": 3644, "Y2": 10881 }
+      }
+    ]
+  },
+  "25": {
+    "MapName": "格靈森林",
+    "Spawners": [
+	  {
+        "ZoneName": "星夢女管家．小純1區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 5075, "Y1": 4943, "X2": 6155, "Y2": 5581 }
+      },
+	  {
+        "ZoneName": "星夢女管家．小純2區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 4193, "Y1": 2462, "X2": 5248, "Y2": 3039 }
+      },
+      {
+        "ZoneName": "波奇鳥1區",
+        "MonsterName": "波奇鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6659, "Y1": 4807, "X2": 7223, "Y2": 5336 }
+      },
+      {
+        "ZoneName": "波奇鳥2區",
+        "MonsterName": "波奇鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6121, "Y1": 4788, "X2": 6637, "Y2": 5378 }
+      },
+      {
+        "ZoneName": "波奇鳥3區",
+        "MonsterName": "波奇鳥",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4991, "Y1": 5529, "X2": 5717, "Y2": 5655 }
+      },
+      {
+        "ZoneName": "波奇鳥4區",
+        "MonsterName": "波奇鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4285, "Y1": 5082, "X2": 4978, "Y2": 5532 }
+      },
+      {
+        "ZoneName": "波奇蛋1區",
+        "MonsterName": "波奇蛋",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3620, "Y1": 4992, "X2": 4300, "Y2": 5489 }
+      },
+      {
+        "ZoneName": "波奇蛋2區",
+        "MonsterName": "波奇蛋",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2532, "Y1": 4396, "X2": 3007, "Y2": 5251 }
+      },
+      {
+        "ZoneName": "波奇蛋3區",
+        "MonsterName": "波奇蛋",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3050, "Y1": 4760, "X2": 3382, "Y2": 5351 }
+      },
+      {
+        "ZoneName": "波奇蛋4區",
+        "MonsterName": "波奇蛋",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3058, "Y1": 4152, "X2": 3350, "Y2": 4333 }
+      },
+      {
+        "ZoneName": "波奇蛋5區",
+        "MonsterName": "波奇蛋",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2620, "Y1": 5068, "X2": 5142, "Y2": 5286 }
+      },
+      {
+        "ZoneName": "袋子金魚1區",
+        "MonsterName": "袋子金魚",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3555, "Y1": 3644, "X2": 5224, "Y2": 4817 }
+      },
+      {
+        "ZoneName": "袋子金魚2區",
+        "MonsterName": "袋子金魚",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5238, "Y1": 3892, "X2": 6165, "Y2": 4728 }
+      },
+      {
+        "ZoneName": "藍花怪1區",
+        "MonsterName": "藍花怪",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2393, "Y1": 2889, "X2": 5617, "Y2": 4050 }
+      },
+      {
+        "ZoneName": "藍花怪2區",
+        "MonsterName": "藍花怪",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2574, "Y1": 2424, "X2": 4082, "Y2": 2812 }
+      },
+      {
+        "ZoneName": "索爾魔怪1區",
+        "MonsterName": "索爾魔怪",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5056, "Y1": 3550, "X2": 7408, "Y2": 4130 }
+      },
+      {
+        "ZoneName": "索爾魔怪2區",
+        "MonsterName": "索爾魔怪",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4468, "Y1": 3271, "X2": 6834, "Y2": 3556 }
+      },
+      {
+        "ZoneName": "嗜血機動偶1區",
+        "MonsterName": "嗜血機動偶",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4380, "Y1": 3274, "X2": 6805, "Y2": 4617 }
+      },
+	  {
+        "ZoneName": "花花立普1區",
+        "MonsterName": "花花立普",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3276, "Y1": 2947, "X2": 6186, "Y2": 4069 }
+      },
+      {
+        "ZoneName": "滾滾豬1區",
+        "MonsterName": "滾滾豬",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4740, "Y1": 1942, "X2": 5630, "Y2": 2684 }
+      },
+      {
+        "ZoneName": "滾滾豬2區",
+        "MonsterName": "滾滾豬",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3481, "Y1": 2512, "X2": 5420, "Y2": 3734 }
+      }
+    ]
+  },
+  "27": {
+    "MapName": "流星之河．上游",
+    "Spawners": [
+	  {
+        "ZoneName": "星夢女管家．小純1區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 3570, "Y1": 4131, "X2": 4474, "Y2": 4688 }
+      },
+	  {
+        "ZoneName": "星夢女管家．小純2區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 6535, "Y1": 2150, "X2": 7399, "Y2": 2694 }
+      },
+	  {
+        "ZoneName": "星果立普1區",
+        "MonsterName": "星果立普",
+        "MaxCount": 2,
+        "RespawnTime": 60,
+        "Rect": { "X1": 4664, "Y1": 4238, "X2": 6224, "Y2": 4877 }
+      },
+      {
+        "ZoneName": "草色鳥1區",
+        "MonsterName": "草色鳥",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3571, "Y1": 4138, "X2": 5362, "Y2": 4675 }
+      },
+      {
+        "ZoneName": "草色鳥2區",
+        "MonsterName": "草色鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4472, "Y1": 4158, "X2": 5032, "Y2": 4912 }
+      },
+      {
+        "ZoneName": "蘑菇蟲1區",
+        "MonsterName": "蘑菇蟲",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4939, "Y1": 4016, "X2": 6275, "Y2": 4869 }
+      },
+      {
+        "ZoneName": "蘑菇蟲2區",
+        "MonsterName": "蘑菇蟲",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5170, "Y1": 3795, "X2": 5554, "Y2": 4049 }
+      },
+      {
+        "ZoneName": "鳥爪獸1區",
+        "MonsterName": "鳥爪獸",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3184, "Y1": 2308, "X2": 4339, "Y2": 3312 }
+      },
+      {
+        "ZoneName": "鳥爪獸2區",
+        "MonsterName": "鳥爪獸",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2100, "Y1": 2451, "X2": 3164, "Y2": 3145 }
+      },
+      {
+        "ZoneName": "鳥爪獸3區",
+        "MonsterName": "鳥爪獸",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4294, "Y1": 2098, "X2": 5592, "Y2": 3151 }
+      },
+      {
+        "ZoneName": "圓龜獸1區",
+        "MonsterName": "圓龜獸",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4980, "Y1": 2224, "X2": 6829, "Y2": 3123 }
+      },
+      {
+        "ZoneName": "圓龜獸2區",
+        "MonsterName": "圓龜獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6850, "Y1": 2022, "X2": 7700, "Y2": 2485 }
+      }
+    ]
+  },
+  "28": {
+    "MapName": "星河地洞",
+    "Spawners": [
+      {
+        "ZoneName": "星果怪球根1區",
+        "MonsterName": "星果怪球根",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2663, "Y1": 2039, "X2": 4724, "Y2": 3284 }
+      },
+	  {
+        "ZoneName": "鳥獸人1區",
+        "MonsterName": "鳥獸人",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3705, "Y1": 2615, "X2": 5381, "Y2": 3518 }
+      },
+	  {
+        "ZoneName": "鬼燈幽靈1區",
+        "MonsterName": "鬼燈幽靈",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4507, "Y1": 3048, "X2": 6397, "Y2": 4133 }
+      },
+	  {
+        "ZoneName": "品格之蛋1區",
+        "MonsterName": "品格之蛋",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3755, "Y1": 2294, "X2": 4679, "Y2": 2953 }
+      }
+    ]
+  },
+  "29": {
+    "MapName": "流星之河．下游",
+    "Spawners": [
+	  {
+        "ZoneName": "星夢女管家．小純1區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 5533, "Y1": 2867, "X2": 6302, "Y2": 3404 }
+      },
+	  {
+        "ZoneName": "星夢女管家．小純2區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 2763, "Y1": 4411, "X2": 3693, "Y2": 5000 }
+      },
+      {
+        "ZoneName": "冰藍立普1區",
+        "MonsterName": "冰藍立普",
+        "MaxCount": 2,
+        "RespawnTime": 60,
+        "Rect": { "X1": 3825, "Y1": 2435, "X2": 5294, "Y2": 3145 }
+      },
+	  {
+        "ZoneName": "淡火貓咪1區",
+        "MonsterName": "淡火貓咪",
+        "MaxCount": 1,
+        "RespawnTime": 60,
+        "Rect": { "X1": 5034, "Y1": 3063, "X2": 6522, "Y2": 3400 }
+      },
+	  {
+        "ZoneName": "靈金獸1區",
+        "MonsterName": "靈金獸",
+        "MaxCount": 1,
+        "RespawnTime": 60,
+        "Rect": { "X1": 3785, "Y1": 3977, "X2": 5074, "Y2": 4255 }
+      },
+	  {
+        "ZoneName": "機動偶1區",
+        "MonsterName": "機動偶",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5083, "Y1": 3186, "X2": 6715, "Y2": 3386 }
+      },
+	  {
+        "ZoneName": "機動偶2區",
+        "MonsterName": "機動偶",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4814, "Y1": 2942, "X2": 6511, "Y2": 3136 }
+      },
+	  {
+        "ZoneName": "機動偶3區",
+        "MonsterName": "機動偶",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4755, "Y1": 2785, "X2": 5948, "Y2": 3405 }
+      },
+	  {
+        "ZoneName": "古尼獸1區",
+        "MonsterName": "古尼獸",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3184, "Y1": 2368, "X2": 5502, "Y2": 3158 }
+      },
+	  {
+        "ZoneName": "古尼獸2區",
+        "MonsterName": "古尼獸",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4344, "Y1": 2251, "X2": 5026, "Y2": 3750 }
+      },
+	  {
+        "ZoneName": "古尼獸3區",
+        "MonsterName": "古尼獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3877, "Y1": 3190, "X2": 4915, "Y2": 3792 }
+      },
+	  {
+        "ZoneName": "蘑菇蟲1區",
+        "MonsterName": "蘑菇蟲",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3436, "Y1": 3232, "X2": 3950, "Y2": 3607 }
+      },
+	  {
+        "ZoneName": "蘑菇蟲2區",
+        "MonsterName": "蘑菇蟲",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2594, "Y1": 3479, "X2": 3675, "Y2": 4025 }
+      },
+	  {
+        "ZoneName": "蘑菇蟲3區",
+        "MonsterName": "蘑菇蟲",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3410, "Y1": 3835, "X2": 4068, "Y2": 4148 }
+      },
+	  {
+        "ZoneName": "蘑菇蟲4區",
+        "MonsterName": "蘑菇蟲",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3019, "Y1": 3983, "X2": 5642, "Y2": 5074 }
+      },
+	  {
+        "ZoneName": "鳥爪獸1區",
+        "MonsterName": "鳥爪獸",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5771, "Y1": 3521, "X2": 6496, "Y2": 4313 }
+      },
+	  {
+        "ZoneName": "鳥爪獸2區",
+        "MonsterName": "鳥爪獸",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3019, "Y1": 3983, "X2": 5642, "Y2": 5074 }
+      },
+	  {
+        "ZoneName": "鳥爪獸3區",
+        "MonsterName": "鳥爪獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5689, "Y1": 3640, "X2": 5881, "Y2": 4834 }
+      },
+	  {
+        "ZoneName": "圓龜獸1區",
+        "MonsterName": "圓龜獸",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2580, "Y1": 4261, "X2": 3503, "Y2": 4990 }
+      },
+	  {
+        "ZoneName": "圓龜獸2區",
+        "MonsterName": "圓龜獸",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3019, "Y1": 3983, "X2": 5642, "Y2": 5074 }
+      },
+	  {
+        "ZoneName": "圓龜獸3區",
+        "MonsterName": "圓龜獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3558, "Y1": 3953, "X2": 5490, "Y2": 4189 }
+      }
+    ]
+  },
+  "31": {
+    "MapName": "星之湖",
+    "Spawners": [
+	  {
+        "ZoneName": "星夢女管家．小純1區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 3536, "Y1": 1801, "X2": 4605, "Y2": 2578 }
+      },
+	  {
+        "ZoneName": "星夢女管家．小純2區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 8924, "Y1": 4390, "X2": 9590, "Y2": 5036 }
+      },
+	  {
+        "ZoneName": "星夢女管家．小純3區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 6474, "Y1": 4860, "X2": 6961, "Y2": 5345 }
+      },
+      {
+        "ZoneName": "星湖草貓1區",
+        "MonsterName": "星湖草貓",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 1537, "Y1": 1679, "X2": 5140, "Y2": 3224 }
+      },
+	  {
+        "ZoneName": "星湖草貓2區",
+        "MonsterName": "星湖草貓",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 1079, "Y1": 3044, "X2": 3661, "Y2": 5892 }
+      },
+	  {
+        "ZoneName": "星湖怪貓1區",
+        "MonsterName": "星湖怪貓",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3117, "Y1": 6272, "X2": 6438, "Y2": 7661 }
+      },
+	  {
+        "ZoneName": "星湖怪偶1區",
+        "MonsterName": "星湖怪偶",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7273, "Y1": 4762, "X2": 10806, "Y2": 7026 }
+      },
+	  {
+        "ZoneName": "星湖怪偶2區",
+        "MonsterName": "星湖怪偶",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8456, "Y1": 3069, "X2": 11123, "Y2": 4850 }
+      },
+	  {
+        "ZoneName": "星光原素1區",
+        "MonsterName": "星光原素",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5849, "Y1": 954, "X2": 9623, "Y2": 3112 }
+      },
+	  {
+        "ZoneName": "星光鳥1區",
+        "MonsterName": "星光鳥",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5806, "Y1": 4251, "X2": 6975, "Y2": 5349 }
+      },
+	  {
+        "ZoneName": "星光鳥2區",
+        "MonsterName": "星光鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6043, "Y1": 4286, "X2": 7376, "Y2": 4593 }
+      },
+	  {
+        "ZoneName": "土色鳥人1區",
+        "MonsterName": "土色鳥人",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5247, "Y1": 4621, "X2": 6721, "Y2": 5613 }
+      },
+	  {
+        "ZoneName": "土色鳥人2區",
+        "MonsterName": "土色鳥人",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4973, "Y1": 4522, "X2": 5733, "Y2": 5409 }
+      },
+	  {
+        "ZoneName": "河童波波1區",
+        "MonsterName": "河童波波",
+        "MaxCount": 27,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4738, "Y1": 3558, "X2": 7066, "Y2": 4790 }
+      },
+	  {
+        "ZoneName": "星靈騎士1區",
+        "MonsterName": "星靈騎士",
+        "MaxCount": 27,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4488, "Y1": 3393, "X2": 6643, "Y2": 4586 }
+      }
+    ]
+  },
+  "32": {
+    "MapName": "星湖迷宮",
+    "Spawners": [
+      {
+        "ZoneName": "古代星靈1區",
+        "MonsterName": "古代星靈",
+        "MaxCount": 39,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2222, "Y1": 2222, "X2": 7690, "Y2": 4609 }
+      },
+	  {
+        "ZoneName": "遠古人偶1區",
+        "MonsterName": "遠古人偶",
+        "MaxCount": 39,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2232, "Y1": 3618, "X2": 6869, "Y2": 5857 }
+      },
+	  {
+        "ZoneName": "遠古幽靈1區",
+        "MonsterName": "遠古幽靈",
+        "MaxCount": 39,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2105, "Y1": 4350, "X2": 8052, "Y2": 6904 }
+      },
+	  {
+        "ZoneName": "遠古獅鷲之王1區",
+        "MonsterName": "遠古獅鷲之王",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 5895, "Y1": 9865, "X2": 7021, "Y2": 10708 }
+      }
+    ]
+  },
+  "33": {
+    "MapName": "地下神殿",
+    "Spawners": [
+      {
+        "ZoneName": "守靈刺客1區",
+        "MonsterName": "守靈刺客",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3297, "Y1": 3221, "X2": 5435, "Y2": 4939 }
+      },
+	  {
+        "ZoneName": "守靈狙擊者1區",
+        "MonsterName": "守靈狙擊者",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4737, "Y1": 3009, "X2": 6796, "Y2": 4278 }
+      }
+	  ,
+	  {
+        "ZoneName": "守靈刃者1區",
+        "MonsterName": "守靈刃者",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4589, "Y1": 3720, "X2": 7118, "Y2": 4970 }
+      },
+	  {
+        "ZoneName": "墓穴守護者．巴拉卡1區",
+        "MonsterName": "墓穴守護者．巴拉卡",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5953, "Y1": 4204, "X2": 7028, "Y2": 4777 }
+      },
+	  {
+        "ZoneName": "混沌之神獸1區",
+        "MonsterName": "混沌之神獸",
+        "MaxCount": 33,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2203, "Y1": 6337, "X2": 6063, "Y2": 8515 }
+      },
+	  {
+        "ZoneName": "魔獸領主．混沌1區",
+        "MonsterName": "魔獸領主．混沌",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2682, "Y1": 7761, "X2": 3604, "Y2": 8298 }
+      },
+	  {
+        "ZoneName": "守護靈．索爾1區",
+        "MonsterName": "守護靈．索爾",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2304, "Y1": 9365, "X2": 4749, "Y2": 10864 }
+      },
+	  {
+        "ZoneName": "守護靈．索爾2區",
+        "MonsterName": "守護靈．索爾",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5815, "Y1": 9349, "X2": 7247, "Y2": 10666 }
+      },
+	  {
+        "ZoneName": "雙子鳥獸．紅1區",
+        "MonsterName": "雙子鳥獸．紅",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6872, "Y1": 9331, "X2": 8267, "Y2": 10544 }
+      },
+	  {
+        "ZoneName": "雙子鳥獸．藍1區",
+        "MonsterName": "雙子鳥獸．藍",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6872, "Y1": 9331, "X2": 8267, "Y2": 10544 }
+      },
+	  {
+        "ZoneName": "鷟之王．薩多1區",
+        "MonsterName": "鷟之王．薩多",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7274, "Y1": 9405, "X2": 8048, "Y2": 10015 }
+      },
+	  {
+        "ZoneName": "深淵精靈1區",
+        "MonsterName": "深淵精靈",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7295, "Y1": 11508, "X2": 9003, "Y2": 12857 }
+      },
+	  {
+        "ZoneName": "深淵精靈2區",
+        "MonsterName": "深淵精靈",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6285, "Y1": 11978, "X2": 7676, "Y2": 12809 }
+      },
+	  {
+        "ZoneName": "精靈．哈利1區",
+        "MonsterName": "精靈．哈利",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8155, "Y1": 11825, "X2": 8680, "Y2": 12253 }
+      },
+	  {
+        "ZoneName": "精靈王．哈利1區",
+        "MonsterName": "精靈王．哈利",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7000, "Y1": 12355, "X2": 7583, "Y2": 12861 }
+      },
+	  {
+        "ZoneName": "守護靈．立普1區",
+        "MonsterName": "守護靈．立普",
+        "MaxCount": 24,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7930, "Y1": 2471, "X2": 10338, "Y2": 3846 }
+      },
+	  {
+        "ZoneName": "機動三女神．拉西絲1區",
+        "MonsterName": "機動三女神．拉西絲",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 11390, "Y1": 3997, "X2": 12062, "Y2": 4515 }
+      },
+	  {
+        "ZoneName": "機動三女神．菲特洛1區",
+        "MonsterName": "機動三女神．菲特洛",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 11390, "Y1": 3997, "X2": 12062, "Y2": 4515 }
+      },
+	  {
+        "ZoneName": "機動三女神．克若拉1區",
+        "MonsterName": "機動三女神．克若拉",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 11390, "Y1": 3997, "X2": 12062, "Y2": 4515 }
+      },
+	  {
+        "ZoneName": "古尼爾之使魔1區",
+        "MonsterName": "古尼爾之使魔",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 11598, "Y1": 6383, "X2": 12385, "Y2": 6651 }
+      },
+	  {
+        "ZoneName": "封印之使．古尼爾1區",
+        "MonsterName": "封印之使．古尼爾",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 12033, "Y1": 6197, "X2": 12363, "Y2": 6408 }
+      },
+	  {
+        "ZoneName": "王之英靈1區",
+        "MonsterName": "王之英靈",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 16349, "Y1": 10786, "X2": 18552, "Y2": 12302 }
+      },
+	  {
+        "ZoneName": "王座機動使．奧菲1區",
+        "MonsterName": "王座機動使．奧菲",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 16349, "Y1": 10786, "X2": 18552, "Y2": 12302 }
+      }
+    ]
+  },
+  "34": {
+    "MapName": "灼熱沙漠",
+    "Spawners": [
+	  {
+        "ZoneName": "影子地龍1區",
+        "MonsterName": "影子地龍",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8901, "Y1": 5680, "X2": 9113, "Y2": 5870 }
+      },
+      {
+        "ZoneName": "流沙騎士1區",
+        "MonsterName": "流沙騎士",
+        "MaxCount": 51,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7653, "Y1": 2641, "X2": 12560, "Y2": 5467 }
+      },
+	  {
+        "ZoneName": "沙盜氏族1區",
+        "MonsterName": "沙盜氏族",
+        "MaxCount": 51,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6064, "Y1": 1890, "X2": 10805, "Y2": 5514 }
+      },
+	  {
+        "ZoneName": "荒漠地龍1區",
+        "MonsterName": "荒漠地龍",
+        "MaxCount": 51,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3497, "Y1": 1837, "X2": 9089, "Y2": 5374 }
+      }
+    ]
+  },
+  "35": {
+    "MapName": "龍息之殿",
+    "Spawners": [
+      {
+        "ZoneName": "幼年地龍1區",
+        "MonsterName": "幼年地龍",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2806, "Y1": 2671, "X2": 5931, "Y2": 4687 }
+      },
+	  {
+        "ZoneName": "受詛咒的龍族1區",
+        "MonsterName": "受詛咒的龍族",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3802, "Y1": 4861, "X2": 7222, "Y2": 6392 }
+      },
+	  {
+        "ZoneName": "御龍者1區",
+        "MonsterName": "御龍者",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6970, "Y1": 6776, "X2": 8306, "Y2": 7488 }
+      }
+    ]
+  },
+  "38": {
+    "MapName": "絲蘭森林",
+    "Spawners": [
+	  {
+        "ZoneName": "星夢女管家．小純1區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 5680, "Y1": 1918, "X2": 6598, "Y2": 2663 }
+      },
+	  {
+        "ZoneName": "星夢女管家．小純2區",
+        "MonsterName": "星夢女管家．小純",
+        "MaxCount": 1,
+        "RespawnTime": 30,
+        "Rect": { "X1": 2811, "Y1": 3753, "X2": 4015, "Y2": 4486 }
+      },
+      {
+        "ZoneName": "波奇鳥1區",
+        "MonsterName": "波奇鳥",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5674, "Y1": 1924, "X2": 6593, "Y2": 2629 }
+      },
+	  {
+        "ZoneName": "波奇鳥2區",
+        "MonsterName": "波奇鳥",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6637, "Y1": 2064, "X2": 6887, "Y2": 2802 }
+      },
+	  {
+        "ZoneName": "波奇鳥3區",
+        "MonsterName": "波奇鳥",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6917, "Y1": 2122, "X2": 7537, "Y2": 2627 }
+      },
+	  {
+        "ZoneName": "波奇蛋1區",
+        "MonsterName": "波奇蛋",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5501, "Y1": 2151, "X2": 7340, "Y2": 2756 }
+      },
+	  {
+        "ZoneName": "袋子金魚1區",
+        "MonsterName": "袋子金魚",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4879, "Y1": 2273, "X2": 7100, "Y2": 3107 }
+      },
+	  {
+        "ZoneName": "藍花怪1區",
+        "MonsterName": "藍花怪",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4381, "Y1": 2383, "X2": 4845, "Y2": 3469 }
+      },
+	  {
+        "ZoneName": "藍花怪2區",
+        "MonsterName": "藍花怪",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3731, "Y1": 2515, "X2": 4453, "Y2": 3600 }
+      },
+	  {
+        "ZoneName": "索爾魔怪1區",
+        "MonsterName": "索爾魔怪",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7076, "Y1": 2971, "X2": 7571, "Y2": 4447 }
+      },
+	  {
+        "ZoneName": "索爾魔怪2區",
+        "MonsterName": "索爾魔怪",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7560, "Y1": 3482, "X2": 8109, "Y2": 4299 }
+      },
+	  {
+        "ZoneName": "索爾魔怪3區",
+        "MonsterName": "索爾魔怪",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8145, "Y1": 3782, "X2": 8635, "Y2": 4375 }
+      },
+	  {
+        "ZoneName": "嗜血機動偶1區",
+        "MonsterName": "嗜血機動偶",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4477, "Y1": 4215, "X2": 7206, "Y2": 5500 }
+      },
+	  {
+        "ZoneName": "嗜血機動偶2區",
+        "MonsterName": "嗜血機動偶",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4688, "Y1": 5506, "X2": 6045, "Y2": 5875 }
+      },
+	  {
+        "ZoneName": "嗜血機動偶3區",
+        "MonsterName": "嗜血機動偶",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8145, "Y1": 3782, "X2": 8635, "Y2": 4375 }
+      },
+	  {
+        "ZoneName": "巨毛蟲1區",
+        "MonsterName": "巨毛蟲",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6915, "Y1": 4840, "X2": 8898, "Y2": 5560 }
+      },
+	  {
+        "ZoneName": "巨毛蟲2區",
+        "MonsterName": "巨毛蟲",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4591, "Y1": 4166, "X2": 6956, "Y2": 5505 }
+      },
+	  {
+        "ZoneName": "花花立普1區",
+        "MonsterName": "花花立普",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3939, "Y1": 3347, "X2": 4992, "Y2": 4962 }
+      },
+	  {
+        "ZoneName": "花花立普2區",
+        "MonsterName": "花花立普",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3142, "Y1": 2824, "X2": 4044, "Y2": 3565 }
+      },
+	  {
+        "ZoneName": "滾滾豬1區",
+        "MonsterName": "滾滾豬",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2736, "Y1": 3774, "X2": 5536, "Y2": 4528 }
+      },
+	  {
+        "ZoneName": "滾滾豬2區",
+        "MonsterName": "滾滾豬",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3945, "Y1": 2938, "X2": 4478, "Y2": 4965 }
+      }
+    ]
+  },
+  "39": {
+    "MapName": "櫻花之城．白雲",
+    "Spawners": []
+  },
+  "40": {
+    "MapName": "初心者之間",
+    "Spawners": []
+  },
+  "42": {
+    "MapName": "孤寂山區",
+    "Spawners": [
+      {
+        "ZoneName": "地精靈火箭兵1區",
+        "MonsterName": "地精靈火箭兵",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2483, "Y1": 6748, "X2": 4955, "Y2": 7549 }
+      },
+	  {
+        "ZoneName": "地精靈火箭兵2區",
+        "MonsterName": "地精靈火箭兵",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3458, "Y1": 6900, "X2": 5400, "Y2": 8262 }
+      },
+	  {
+        "ZoneName": "冰靈騎士1區",
+        "MonsterName": "冰靈騎士",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3764, "Y1": 7033, "X2": 6680, "Y2": 8272 }
+      },
+	  {
+        "ZoneName": "冰靈騎士2區",
+        "MonsterName": "冰靈騎士",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3855, "Y1": 6636, "X2": 6147, "Y2": 8327 }
+      },
+	  {
+        "ZoneName": "精靈哈密1區",
+        "MonsterName": "精靈哈密",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4066, "Y1": 5739, "X2": 5577, "Y2": 6360 }
+      },
+	  {
+        "ZoneName": "精靈哈密2區",
+        "MonsterName": "精靈哈密",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2891, "Y1": 6051, "X2": 4069, "Y2": 6679 }
+      },
+	  {
+        "ZoneName": "精靈哈密3區",
+        "MonsterName": "精靈哈密",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5458, "Y1": 5813, "X2": 6561, "Y2": 6679 }
+      },
+	  {
+        "ZoneName": "冰地鳥獸1區",
+        "MonsterName": "冰地鳥獸",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4736, "Y1": 3944, "X2": 8264, "Y2": 5615 }
+      },
+	  {
+        "ZoneName": "冰地鳥獸2區",
+        "MonsterName": "冰地鳥獸",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6186, "Y1": 3506, "X2": 7307, "Y2": 6056 }
+      },
+	  {
+        "ZoneName": "冰地鳥獸3區",
+        "MonsterName": "冰地鳥獸",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4383, "Y1": 4226, "X2": 7381, "Y2": 5262 }
+      },
+	  {
+        "ZoneName": "冰鬼1區",
+        "MonsterName": "冰鬼",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6967, "Y1": 6571, "X2": 8689, "Y2": 8531 }
+      },
+	  {
+        "ZoneName": "冰鬼2區",
+        "MonsterName": "冰鬼",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7107, "Y1": 7760, "X2": 10044, "Y2": 8416 }
+      },
+	  {
+        "ZoneName": "冰鬼3區",
+        "MonsterName": "冰鬼",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7470, "Y1": 7458, "X2": 9419, "Y2": 8888 }
+      },
+	  {
+        "ZoneName": "冰柏古獸1區",
+        "MonsterName": "冰柏古獸",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6967, "Y1": 6571, "X2": 8689, "Y2": 8531 }
+      },
+	  {
+        "ZoneName": "冰柏古獸2區",
+        "MonsterName": "冰柏古獸",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7107, "Y1": 7760, "X2": 10044, "Y2": 8416 }
+      },
+	  {
+        "ZoneName": "冰柏古獸3區",
+        "MonsterName": "冰柏古獸",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7470, "Y1": 7458, "X2": 9419, "Y2": 8888 }
+      },
+	  {
+        "ZoneName": "紫冰龍甲獸1區",
+        "MonsterName": "紫冰龍甲獸",
+        "MaxCount": 24,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7480, "Y1": 4134, "X2": 10346, "Y2": 6206 }
+      },
+	  {
+        "ZoneName": "紫冰龍甲獸2區",
+        "MonsterName": "紫冰龍甲獸",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8499, "Y1": 4304, "X2": 10305, "Y2": 6920 }
+      },
+	  {
+        "ZoneName": "紫冰龍甲獸3區",
+        "MonsterName": "紫冰龍甲獸",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8282, "Y1": 5470, "X2": 11365, "Y2": 6733 }
+      },
+	  {
+        "ZoneName": "古捷怪貓1區",
+        "MonsterName": "古捷怪貓",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 11375, "Y1": 5105, "X2": 14770, "Y2": 6433 }
+      },
+	  {
+        "ZoneName": "古捷怪貓2區",
+        "MonsterName": "古捷怪貓",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9273, "Y1": 4450, "X2": 12275, "Y2": 6473 }
+      }
+    ]
+  },
+  "43": {
+    "MapName": "戰爭平原",
+    "Spawners": [
+      {
+        "ZoneName": "龜背鳥1區",
+        "MonsterName": "龜背鳥",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 14077, "Y1": 2748, "X2": 16334, "Y2": 3608 }
+      },
+	  {
+        "ZoneName": "龜背鳥2區",
+        "MonsterName": "龜背鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 13213, "Y1": 3026, "X2": 14322, "Y2": 3699 }
+      },
+	  {
+        "ZoneName": "龜背鳥3區",
+        "MonsterName": "龜背鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 13814, "Y1": 2884, "X2": 16084, "Y2": 3588 }
+      },
+	  {
+        "ZoneName": "龜背鳥4區",
+        "MonsterName": "龜背鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 12171, "Y1": 2976, "X2": 12991, "Y2": 3407 }
+      },
+	  {
+        "ZoneName": "龜背鳥5區",
+        "MonsterName": "龜背鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 11413, "Y1": 2561, "X2": 12194, "Y2": 3089 }
+      },
+	  {
+        "ZoneName": "龜背鳥6區",
+        "MonsterName": "龜背鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 10552, "Y1": 2157, "X2": 11440, "Y2": 2703 }
+      },
+	  {
+        "ZoneName": "龜背鳥7區",
+        "MonsterName": "龜背鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 11087, "Y1": 2446, "X2": 11982, "Y2": 2979 }
+      },
+	  {
+        "ZoneName": "龜背鳥8區",
+        "MonsterName": "龜背鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 12721, "Y1": 3014, "X2": 14776, "Y2": 3664 }
+      },
+	  {
+        "ZoneName": "藍爪鳥1區",
+        "MonsterName": "藍爪鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9834, "Y1": 1930, "X2": 11440, "Y2": 2703 }
+      },
+	  {
+        "ZoneName": "藍爪鳥2區",
+        "MonsterName": "藍爪鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9564, "Y1": 2083, "X2": 10476, "Y2": 2729 }
+      },
+	  {
+        "ZoneName": "藍爪鳥3區",
+        "MonsterName": "藍爪鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9147, "Y1": 2295, "X2": 10154, "Y2": 2866 }
+      },
+	  {
+        "ZoneName": "藍爪鳥4區",
+        "MonsterName": "藍爪鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8706, "Y1": 2527, "X2": 9756, "Y2": 3094 }
+      },
+	  {
+        "ZoneName": "藍爪鳥5區",
+        "MonsterName": "藍爪鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8047, "Y1": 2744, "X2": 9350, "Y2": 3245 }
+      },
+	  {
+        "ZoneName": "藍爪鳥6區",
+        "MonsterName": "藍爪鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7611, "Y1": 2922, "X2": 8712, "Y2": 3617 }
+      },
+	  {
+        "ZoneName": "藍爪鳥7區",
+        "MonsterName": "藍爪鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7100, "Y1": 3231, "X2": 8146, "Y2": 4053 }
+      },
+	  {
+        "ZoneName": "藍爪鳥8區",
+        "MonsterName": "藍爪鳥",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6566, "Y1": 3517, "X2": 8157, "Y2": 5089 }
+      },
+	  {
+        "ZoneName": "藍爪鳥9區",
+        "MonsterName": "藍爪鳥",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6965, "Y1": 4162, "X2": 8789, "Y2": 5805 }
+      },
+	  {
+        "ZoneName": "藍爪鳥10區",
+        "MonsterName": "藍爪鳥",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6681, "Y1": 4487, "X2": 9451, "Y2": 5539 }
+      },
+	  {
+        "ZoneName": "藍爪鳥11區",
+        "MonsterName": "藍爪鳥",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7992, "Y1": 4719, "X2": 9936, "Y2": 5331 }
+      },
+	  {
+        "ZoneName": "毒蘑菇1區",
+        "MonsterName": "毒蘑菇",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5498, "Y1": 4054, "X2": 7355, "Y2": 6528 }
+      },
+	  {
+        "ZoneName": "毒蘑菇2區",
+        "MonsterName": "毒蘑菇",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4559, "Y1": 4522, "X2": 6848, "Y2": 6759 }
+      },
+	  {
+        "ZoneName": "毒蘑菇3區",
+        "MonsterName": "毒蘑菇",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4565, "Y1": 4511, "X2": 6374, "Y2": 7043 }
+      },
+	  {
+        "ZoneName": "毒蘑菇4區",
+        "MonsterName": "毒蘑菇",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3858, "Y1": 4866, "X2": 5935, "Y2": 6650 }
+      },
+	  {
+        "ZoneName": "毒蘑菇5區",
+        "MonsterName": "毒蘑菇",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3404, "Y1": 5102, "X2": 7618, "Y2": 6362 }
+      },
+	  {
+        "ZoneName": "冰花立普1區",
+        "MonsterName": "冰花立普",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9572, "Y1": 3129, "X2": 11417, "Y2": 4208 }
+      },
+	  {
+        "ZoneName": "冰花立普2區",
+        "MonsterName": "冰花立普",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9649, "Y1": 3063, "X2": 11022, "Y2": 4575 }
+      },
+	  {
+        "ZoneName": "冰花立普3區",
+        "MonsterName": "冰花立普",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8929, "Y1": 3447, "X2": 11383, "Y2": 4237 }
+      },
+	  {
+        "ZoneName": "冰花立普4區",
+        "MonsterName": "冰花立普",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 10259, "Y1": 2795, "X2": 10809, "Y2": 3738 }
+      },
+	  {
+        "ZoneName": "古捷魔爪獸1區",
+        "MonsterName": "古捷魔爪獸",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 13730, "Y1": 5050, "X2": 15254, "Y2": 6156 }
+      },
+	  {
+        "ZoneName": "古捷魔爪獸2區",
+        "MonsterName": "古捷魔爪獸",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 13128, "Y1": 5316, "X2": 15697, "Y2": 6149 }
+      },
+	  {
+        "ZoneName": "古捷魔爪獸3區",
+        "MonsterName": "古捷魔爪獸",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 13062, "Y1": 5381, "X2": 14263, "Y2": 6583 }
+      },
+	  {
+        "ZoneName": "古捷魔爪獸4區",
+        "MonsterName": "古捷魔爪獸",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 12818, "Y1": 5608, "X2": 14927, "Y2": 6398 }
+      },
+	  {
+        "ZoneName": "古捷魔爪獸5區",
+        "MonsterName": "古捷魔爪獸",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 13794, "Y1": 5037, "X2": 14933, "Y2": 6377 }
+      }
+    ]
+  },
+  "44": {
+    "MapName": "飢餓荒地",
+    "Spawners": [
+      {
+        "ZoneName": "小沙蟲1區",
+        "MonsterName": "小沙蟲",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4488, "Y1": 5769, "X2": 6607, "Y2": 7151 }
+      },
+	  {
+        "ZoneName": "小沙蟲2區",
+        "MonsterName": "小沙蟲",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3563, "Y1": 6118, "X2": 5506, "Y2": 6804 }
+      },
+	  {
+        "ZoneName": "小沙蟲3區",
+        "MonsterName": "小沙蟲",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5363, "Y1": 5361, "X2": 5840, "Y2": 6478 }
+      },
+	  {
+        "ZoneName": "小沙蟲4區",
+        "MonsterName": "小沙蟲",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5155, "Y1": 6612, "X2": 8284, "Y2": 7100 }
+      },
+	  {
+        "ZoneName": "小沙蟲5區",
+        "MonsterName": "小沙蟲",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5156, "Y1": 6266, "X2": 7390, "Y2": 7552 }
+      },
+	  {
+        "ZoneName": "古捷機動偶1區",
+        "MonsterName": "古捷機動偶",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5451, "Y1": 7583, "X2": 6867, "Y2": 7816 }
+      },
+	  {
+        "ZoneName": "古捷機動偶2區",
+        "MonsterName": "古捷機動偶",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5137, "Y1": 7982, "X2": 6416, "Y2": 9148 }
+      },
+	  {
+        "ZoneName": "古捷機動偶3區",
+        "MonsterName": "古捷機動偶",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4507, "Y1": 8375, "X2": 6720, "Y2": 8833 }
+      },
+	  {
+        "ZoneName": "古捷機動偶4區",
+        "MonsterName": "古捷機動偶",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5787, "Y1": 8596, "X2": 7178, "Y2": 9435 }
+      },
+	  {
+        "ZoneName": "山賊1區",
+        "MonsterName": "山賊",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6488, "Y1": 9617, "X2": 7501, "Y2": 10140 }
+      },
+	  {
+        "ZoneName": "山賊2區",
+        "MonsterName": "山賊",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7034, "Y1": 9305, "X2": 8164, "Y2": 9633 }
+      },
+	  {
+        "ZoneName": "山賊3區",
+        "MonsterName": "山賊",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7740, "Y1": 8960, "X2": 8874, "Y2": 9319 }
+      },
+	  {
+        "ZoneName": "山賊4區",
+        "MonsterName": "山賊",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6608, "Y1": 8820, "X2": 8540, "Y2": 9518 }
+      },
+	  {
+        "ZoneName": "紅火怪鳥1區",
+        "MonsterName": "紅火怪鳥",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9276, "Y1": 7789, "X2": 10650, "Y2": 8677 }
+      },
+	  {
+        "ZoneName": "紅火怪鳥2區",
+        "MonsterName": "紅火怪鳥",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8346, "Y1": 7626, "X2": 10357, "Y2": 7781 }
+      },
+	  {
+        "ZoneName": "紅火怪鳥3區",
+        "MonsterName": "紅火怪鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8781, "Y1": 7426, "X2": 9911, "Y2": 7736 }
+      },
+	  {
+        "ZoneName": "紅火怪鳥4區",
+        "MonsterName": "紅火怪鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9289, "Y1": 7252, "X2": 9597, "Y2": 7957 }
+      },
+	  {
+        "ZoneName": "紅火怪鳥5區",
+        "MonsterName": "紅火怪鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8180, "Y1": 7720, "X2": 9254, "Y2": 8433 }
+      },
+	  {
+        "ZoneName": "紅火怪鳥6區",
+        "MonsterName": "紅火怪鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7366, "Y1": 8112, "X2": 8362, "Y2": 8660 }
+      },
+	  {
+        "ZoneName": "紅火怪鳥7區",
+        "MonsterName": "紅火怪鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7111, "Y1": 8275, "X2": 8668, "Y2": 8486 }
+      },
+	  {
+        "ZoneName": "紅火怪鳥8區",
+        "MonsterName": "紅火怪鳥",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9318, "Y1": 7581, "X2": 10270, "Y2": 8733 }
+      }
+    ]
+  },
+  "45": {
+    "MapName": "冰花山谷",
+    "Spawners": [
+      {
+        "ZoneName": "毒蘑菇1區",
+        "MonsterName": "毒蘑菇",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 15887, "Y1": 7771, "X2": 16640, "Y2": 7995 }
+      },
+	  {
+        "ZoneName": "毒蘑菇2區",
+        "MonsterName": "毒蘑菇",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 15771, "Y1": 7591, "X2": 16370, "Y2": 7940 }
+      },
+	  {
+        "ZoneName": "毒蘑菇3區",
+        "MonsterName": "毒蘑菇",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 15143, "Y1": 7235, "X2": 15803, "Y2": 7725 }
+      },
+	  {
+        "ZoneName": "毒蘑菇4區",
+        "MonsterName": "毒蘑菇",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 14725, "Y1": 7033, "X2": 15293, "Y2": 7512 }
+      },
+	  {
+        "ZoneName": "毒蘑菇5區",
+        "MonsterName": "毒蘑菇",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 14216, "Y1": 6801, "X2": 14686, "Y2": 7246 }
+      },
+	  {
+        "ZoneName": "毒蘑菇6區",
+        "MonsterName": "毒蘑菇",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 13483, "Y1": 6531, "X2": 14089, "Y2": 6836 }
+      },
+	  {
+        "ZoneName": "毒蘑菇7區",
+        "MonsterName": "毒蘑菇",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 12953, "Y1": 6186, "X2": 13614, "Y2": 6623 }
+      },
+	  {
+        "ZoneName": "毒蘑菇7區",
+        "MonsterName": "毒蘑菇",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 12411, "Y1": 6035, "X2": 12955, "Y2": 6406 }
+      },
+	  {
+        "ZoneName": "幸運球1區",
+        "MonsterName": "幸運球",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 11665, "Y1": 6353, "X2": 12475, "Y2": 7032 }
+      },
+	  {
+        "ZoneName": "幸運球2區",
+        "MonsterName": "幸運球",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 11437, "Y1": 6632, "X2": 11891, "Y2": 7097 }
+      },
+	  {
+        "ZoneName": "幸運球3區",
+        "MonsterName": "幸運球",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 12241, "Y1": 6716, "X2": 12891, "Y2": 7144 }
+      },
+	  {
+        "ZoneName": "幸運球4區",
+        "MonsterName": "幸運球",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 12744, "Y1": 6954, "X2": 13364, "Y2": 7596 }
+      },
+	  {
+        "ZoneName": "幸運球5區",
+        "MonsterName": "幸運球",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 13257, "Y1": 7202, "X2": 13883, "Y2": 7668 }
+      },
+	  {
+        "ZoneName": "幸運球6區",
+        "MonsterName": "幸運球",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 13605, "Y1": 7661, "X2": 14299, "Y2": 7973 }
+      },
+	  {
+        "ZoneName": "幸運球7區",
+        "MonsterName": "幸運球",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 13923, "Y1": 7859, "X2": 15176, "Y2": 8458 }
+      },
+	  {
+        "ZoneName": "沙黃鳥1區",
+        "MonsterName": "沙黃鳥",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 15201, "Y1": 8366, "X2": 16439, "Y2": 8983 }
+      },
+	  {
+        "ZoneName": "沙黃鳥2區",
+        "MonsterName": "沙黃鳥",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 15294, "Y1": 8305, "X2": 16183, "Y2": 9143 }
+      },
+	  {
+        "ZoneName": "沙黃鳥3區",
+        "MonsterName": "沙黃鳥",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 14343, "Y1": 8085, "X2": 15632, "Y2": 8865 }
+      },
+	  {
+        "ZoneName": "沙黃鳥4區",
+        "MonsterName": "沙黃鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 14355, "Y1": 7855, "X2": 15102, "Y2": 8889 }
+      },
+	  {
+        "ZoneName": "沙黃鳥5區",
+        "MonsterName": "沙黃鳥",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 14944, "Y1": 8303, "X2": 16305, "Y2": 8944 }
+      },
+	  {
+        "ZoneName": "沙黃鳥6區",
+        "MonsterName": "沙黃鳥",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 12689, "Y1": 8385, "X2": 16057, "Y2": 10427 }
+      },
+	  {
+        "ZoneName": "冰釘球1區",
+        "MonsterName": "冰釘球",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 12908, "Y1": 9385, "X2": 15061, "Y2": 9724 }
+      },
+	  {
+        "ZoneName": "冰釘球2區",
+        "MonsterName": "冰釘球",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 13175, "Y1": 9087, "X2": 14536, "Y2": 9734 }
+      },
+	  {
+        "ZoneName": "冰釘球3區",
+        "MonsterName": "冰釘球",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 13263, "Y1": 8894, "X2": 14073, "Y2": 9937 }
+      },
+	  {
+        "ZoneName": "冰釘球4區",
+        "MonsterName": "冰釘球",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 11717, "Y1": 9753, "X2": 13262, "Y2": 10221 }
+      },
+	  {
+        "ZoneName": "冰釘球5區",
+        "MonsterName": "冰釘球",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 12887, "Y1": 8344, "X2": 13604, "Y2": 8851 }
+      },
+	  {
+        "ZoneName": "冰釘球6區",
+        "MonsterName": "冰釘球",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 10980, "Y1": 8687, "X2": 11867, "Y2": 9413 }
+      },
+	  {
+        "ZoneName": "水藍立普1區",
+        "MonsterName": "水藍立普",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9679, "Y1": 8127, "X2": 10816, "Y2": 8940 }
+      },
+	  {
+        "ZoneName": "水藍立普2區",
+        "MonsterName": "水藍立普",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 10311, "Y1": 7822, "X2": 12626, "Y2": 8358 }
+      },
+	  {
+        "ZoneName": "水藍立普3區",
+        "MonsterName": "水藍立普",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 10587, "Y1": 8676, "X2": 11610, "Y2": 9258 }
+      },
+	  {
+        "ZoneName": "水藍立普4區",
+        "MonsterName": "水藍立普",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9178, "Y1": 7600, "X2": 9691, "Y2": 8206 }
+      },
+	  {
+        "ZoneName": "水藍立普5區",
+        "MonsterName": "水藍立普",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 10018, "Y1": 7185, "X2": 11000, "Y2": 7740 }
+      },
+	  {
+        "ZoneName": "水藍立普6區",
+        "MonsterName": "水藍立普",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 11245, "Y1": 7304, "X2": 12354, "Y2": 7663 }
+      },
+	  {
+        "ZoneName": "水藍立普7區",
+        "MonsterName": "水藍立普",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 10341, "Y1": 7033, "X2": 10990, "Y2": 8374 }
+      },
+	  {
+        "ZoneName": "倒霉圓龜1區",
+        "MonsterName": "倒霉圓龜",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8807, "Y1": 7048, "X2": 11354, "Y2": 8480 }
+      },
+	  {
+        "ZoneName": "倒霉圓龜2區",
+        "MonsterName": "倒霉圓龜",
+        "MaxCount": 27,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8486, "Y1": 5764, "X2": 11120, "Y2": 6667 }
+      },
+	  {
+        "ZoneName": "倒霉圓龜3區",
+        "MonsterName": "倒霉圓龜",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9633, "Y1": 6074, "X2": 10853, "Y2": 7162 }
+      },
+	  {
+        "ZoneName": "藍晶球1區",
+        "MonsterName": "藍晶球",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7600, "Y1": 4486, "X2": 9051, "Y2": 5658 }
+      },
+	  {
+        "ZoneName": "藍晶球2區",
+        "MonsterName": "藍晶球",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7600, "Y1": 4486, "X2": 9051, "Y2": 5658 }
+      },
+	  {
+        "ZoneName": "藍晶球3區",
+        "MonsterName": "藍晶球",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7962, "Y1": 5066, "X2": 9404, "Y2": 5799 }
+      },
+	  {
+        "ZoneName": "藍晶球4區",
+        "MonsterName": "藍晶球",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7244, "Y1": 4811, "X2": 9083, "Y2": 5336 }
+      },
+	  {
+        "ZoneName": "藍晶球5區",
+        "MonsterName": "藍晶球",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7610, "Y1": 4481, "X2": 8982, "Y2": 5620 }
+      }
+    ]
+  },
+  "46": {
+    "MapName": "火山島基地",
+    "Spawners": [
+    ]
+  },
+  "47": {
+    "MapName": "尼尼亞火車站",
+    "Spawners": [
+    ]
+  },
+  "49": {
+    "MapName": "天空島",
+    "Spawners": [
+      {
+        "ZoneName": "疾風麒麟獸1區",
+        "MonsterName": "疾風麒麟獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9155, "Y1": 3142, "X2": 10111, "Y2": 3750 }
+      },
+	  {
+        "ZoneName": "疾風麒麟獸2區",
+        "MonsterName": "疾風麒麟獸",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8327, "Y1": 3298, "X2": 9945, "Y2": 4713 }
+      },
+	  {
+        "ZoneName": "疾風麒麟獸3區",
+        "MonsterName": "疾風麒麟獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7857, "Y1": 3517, "X2": 9931, "Y2": 4179 }
+      },
+	  {
+        "ZoneName": "疾風麒麟獸4區",
+        "MonsterName": "疾風麒麟獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8270, "Y1": 4081, "X2": 10452, "Y2": 4528 }
+      },
+	  {
+        "ZoneName": "疾風麒麟獸5區",
+        "MonsterName": "疾風麒麟獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8675, "Y1": 5170, "X2": 10582, "Y2": 5763 }
+      },
+	  {
+        "ZoneName": "疾風麒麟獸6區",
+        "MonsterName": "疾風麒麟獸",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9016, "Y1": 4951, "X2": 9675, "Y2": 7619 }
+      },
+	  {
+        "ZoneName": "疾風麒麟獸7區",
+        "MonsterName": "疾風麒麟獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7115, "Y1": 5419, "X2": 9128, "Y2": 6039 }
+      },
+	  {
+        "ZoneName": "黃金鳳凰獸1區",
+        "MonsterName": "黃金鳳凰獸",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8659, "Y1": 5087, "X2": 10388, "Y2": 5807 }
+      },
+	  {
+        "ZoneName": "黃金鳳凰獸2區",
+        "MonsterName": "黃金鳳凰獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7115, "Y1": 5419, "X2": 9128, "Y2": 6039 }
+      },
+	  {
+        "ZoneName": "黃金鳳凰獸3區",
+        "MonsterName": "黃金鳳凰獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 9058, "Y1": 6379, "X2": 9938, "Y2": 7458 }
+      },
+	  {
+        "ZoneName": "黃金鳳凰獸4區",
+        "MonsterName": "黃金鳳凰獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5969, "Y1": 6549, "X2": 6893, "Y2": 7156 }
+      },
+	  {
+        "ZoneName": "黃金鳳凰獸5區",
+        "MonsterName": "黃金鳳凰獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7235, "Y1": 7288, "X2": 7853, "Y2": 8445 }
+      },
+	  {
+        "ZoneName": "黃金鳳凰獸6區",
+        "MonsterName": "黃金鳳凰獸",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6700, "Y1": 7410, "X2": 7828, "Y2": 7798 }
+      },
+	  {
+        "ZoneName": "聖天鳳凰獸1區",
+        "MonsterName": "聖天鳳凰獸",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6468, "Y1": 10302, "X2": 9267, "Y2": 11239 }
+      },
+	  {
+        "ZoneName": "聖天鳳凰獸2區",
+        "MonsterName": "聖天鳳凰獸",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7455, "Y1": 10160, "X2": 8229, "Y2": 12711 }
+      },
+	  {
+        "ZoneName": "聖天鳳凰獸3區",
+        "MonsterName": "聖天鳳凰獸",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5869, "Y1": 10686, "X2": 8261, "Y2": 12744 }
+      },
+	  {
+        "ZoneName": "聖天鳳凰獸4區",
+        "MonsterName": "聖天鳳凰獸",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5165, "Y1": 11649, "X2": 7219, "Y2": 12887 }
+      }
+    ]
+  },
+  "51": {
+    "MapName": "艾瑞爾森林",
+    "Spawners": [
+      {
+        "ZoneName": "受影響的波奇蛋1區",
+        "MonsterName": "受影響的波奇蛋",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5800, "Y1": 4220, "X2": 9876, "Y2": 5364 }
+      },
+	  {
+        "ZoneName": "受影響的波奇蛋2區",
+        "MonsterName": "受影響的波奇蛋",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6652, "Y1": 4000, "X2": 9055, "Y2": 6133 }
+      },
+	  {
+        "ZoneName": "精靈哈魯1區",
+        "MonsterName": "精靈哈魯",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5635, "Y1": 2823, "X2": 8813, "Y2": 4071 }
+      },
+	  {
+        "ZoneName": "精靈哈魯2區",
+        "MonsterName": "精靈哈魯",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4688, "Y1": 3539, "X2": 8345, "Y2": 5052 }
+      },
+	  {
+        "ZoneName": "精靈哈魯3區",
+        "MonsterName": "精靈哈魯",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4398, "Y1": 2106, "X2": 6397, "Y2": 4798 }
+      },
+	  {
+        "ZoneName": "墮落的亞斯人1區",
+        "MonsterName": "墮落的亞斯人",
+        "MaxCount": 18,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2087, "Y1": 1869, "X2": 6103, "Y2": 4584 }
+      },
+	  {
+        "ZoneName": "墮落的亞斯人2區",
+        "MonsterName": "墮落的亞斯人",
+        "MaxCount": 12,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2272, "Y1": 2811, "X2": 6871, "Y2": 3943 }
+      },
+	  {
+        "ZoneName": "虛空怪偶1區",
+        "MonsterName": "虛空怪偶",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6983, "Y1": 4726, "X2": 8926, "Y2": 5809 }
+      },
+	  {
+        "ZoneName": "噬魂之影1區",
+        "MonsterName": "噬魂之影",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4480, "Y1": 3863, "X2": 5407, "Y2": 4585 }
+      },
+	  {
+        "ZoneName": "暗影追隨者1區",
+        "MonsterName": "暗影追隨者",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4175, "Y1": 2125, "X2": 5714, "Y2": 3244 }
+      },
+	  {
+        "ZoneName": "首領．奈阿洛1區",
+        "MonsterName": "首領．奈阿洛",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4572, "Y1": 3932, "X2": 5438, "Y2": 4706 }
+      }
+    ]
+  },
+  "52": {
+    "MapName": "死亡峽谷",
+    "Spawners": [
+	  {
+        "ZoneName": "墮落的士兵1區",
+        "MonsterName": "墮落的士兵",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3728, "Y1": 2966, "X2": 5238, "Y2": 4053 }
+      },
+	  {
+        "ZoneName": "墮落的士兵2區",
+        "MonsterName": "墮落的士兵",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3044, "Y1": 2717, "X2": 4940, "Y2": 3710 }
+      },
+	  {
+        "ZoneName": "墮落的戰士1區",
+        "MonsterName": "墮落的戰士",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2887, "Y1": 2989, "X2": 5115, "Y2": 3661 }
+      },
+	  {
+        "ZoneName": "墮落的戰士2區",
+        "MonsterName": "墮落的戰士",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3282, "Y1": 2125, "X2": 4583, "Y2": 3953 }
+      },
+	  {
+        "ZoneName": "墮落的戰士長1區",
+        "MonsterName": "墮落的戰士長",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3639, "Y1": 2937, "X2": 5796, "Y2": 3721 }
+      },
+	  {
+        "ZoneName": "墮落的戰士長2區",
+        "MonsterName": "墮落的戰士長",
+        "MaxCount": 15,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3919, "Y1": 2534, "X2": 5478, "Y2": 3784 }
+      },
+	  {
+        "ZoneName": "異界惡魔1區",
+        "MonsterName": "異界惡魔",
+        "MaxCount": 30,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6842, "Y1": 2857, "X2": 8449, "Y2": 3973 }
+      },
+      {
+        "ZoneName": "異界古尼1區",
+        "MonsterName": "異界古尼",
+        "MaxCount": 30,
+        "RespawnTime": 10,
+        "Rect": { "X1": 6745, "Y1": 2823, "X2": 8484, "Y2": 3987 }
+      },
+      {
+        "ZoneName": "莫瑞伊1區",
+        "MonsterName": "莫瑞伊",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5356, "Y1": 3223, "X2": 6714, "Y2": 3635 }
+      }
+    ]
+  },
+  "53": {
+    "MapName": "遺忘者之鎮．艾瑞爾",
+    "Spawners": [
+    ]
+  },
+  "65": {
+    "MapName": "死寂仙境",
+    "Spawners": [
+    ]
+  },
+  "66": {
+    "MapName": "龍之洞",
+    "Spawners": [
+      {
+        "ZoneName": "火之幼龍1區",
+        "MonsterName": "火之幼龍",
+        "MaxCount": 21,
+        "RespawnTime": 10,
+        "Rect": { "X1": 2952, "Y1": 2188, "X2": 4599, "Y2": 4177 }
+      },
+	  {
+        "ZoneName": "炎魔1區",
+        "MonsterName": "炎魔",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4173, "Y1": 4253, "X2": 6201, "Y2": 4806 }
+      },
+	  {
+        "ZoneName": "炎魔2區",
+        "MonsterName": "炎魔",
+        "MaxCount": 3,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5669, "Y1": 3793, "X2": 6519, "Y2": 4775 }
+      },
+	  {
+        "ZoneName": "御龍者1區",
+        "MonsterName": "御龍者",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4230, "Y1": 6490, "X2": 5109, "Y2": 7293 }
+      }
+    ]
+  },
+  "68": {
+    "MapName": "星之道",
+    "Spawners": [
+    ]
+  },
+  "73": {
+    "MapName": "星震之遺跡—海寧",
+    "Spawners": [
+	  {
+        "ZoneName": "罪之鎧1區",
+        "MonsterName": "罪之鎧",
+        "MaxCount": 1,
+        "RespawnTime": 1800,
+        "Rect": { "X1": 4255, "Y1": 2936, "X2": 5338, "Y2": 3705 }
+      },
+      {
+        "ZoneName": "極地小惡魔1區",
+        "MonsterName": "極地小惡魔",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3665, "Y1": 1889, "X2": 5585, "Y2": 3844 }
+      },
+      {
+        "ZoneName": "神僕騎士1區",
+        "MonsterName": "神僕騎士",
+        "MaxCount": 9,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4019, "Y1": 2624, "X2": 5482, "Y2": 4111 }
+      }
+    ]
+  },
+  "75": {
+    "MapName": "佳雅聖城",
+    "Spawners": [
+    ]
+  },
+  "76": {
+    "MapName": "星之門",
+    "Spawners": [
+    ]
+  },
+  "77": {
+    "MapName": "地下城．奧哈瑪",
+    "Spawners": [
+      {
+        "ZoneName": "傴僂步兵1區",
+        "MonsterName": "傴僂步兵",
+        "MaxCount": 45,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4686, "Y1": 3264, "X2": 8630, "Y2": 5094 }
+      },
+	  {
+        "ZoneName": "傴僂守衛1區",
+        "MonsterName": "傴僂守衛",
+        "MaxCount": 45,
+        "RespawnTime": 10,
+        "Rect": { "X1": 8103, "Y1": 5098, "X2": 11152, "Y2": 7950 }
+      },
+	  {
+        "ZoneName": "傴僂戰士1區",
+        "MonsterName": "傴僂戰士",
+        "MaxCount": 42,
+        "RespawnTime": 10,
+        "Rect": { "X1": 5182, "Y1": 8223, "X2": 11204, "Y2": 10476 }
+      },
+	  {
+        "ZoneName": "傴僂戰士2區",
+        "MonsterName": "傴僂戰士",
+        "MaxCount": 6,
+        "RespawnTime": 10,
+        "Rect": { "X1": 4176, "Y1": 8870, "X2": 6744, "Y2": 9752 }
+      },
+	  {
+        "ZoneName": "沙魯夫1區",
+        "MonsterName": "沙魯夫",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 7762, "Y1": 4354, "X2": 8689, "Y2": 5037 }
+      },
+	  {
+        "ZoneName": "希格羅1區",
+        "MonsterName": "希格羅",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 10052, "Y1": 7173, "X2": 11140, "Y2": 8010 }
+      },
+	  {
+        "ZoneName": "維柏德元帥1區",
+        "MonsterName": "維柏德元帥",
+        "MaxCount": 1,
+        "RespawnTime": 10,
+        "Rect": { "X1": 3524, "Y1": 8065, "X2": 4666, "Y2": 8753 }
+      }
+    ]
+  },
+  "78": {
+    "MapName": "荒塚之地",
+    "Spawners": [
+    ]
+  },
+  "79": {
+    "MapName": "詛咒丘陵",
+    "Spawners": [
+    ]
+  },
+  "86": {
+    "MapName": "絕望崖",
+    "Spawners": [
+    ]
+  },
+  "93": {
+    "MapName": "幻境之城",
+    "Spawners": [
+    ]
+  },
+  "94": {
+    "MapName": "淨靈公園",
+    "Spawners": [
+    ]
+  },
+  "99": {
+    "MapName": "逆寒沙漠",
+    "Spawners": [
+    ]
+  },
+  "100": {
+    "MapName": "地下城．艾格斯",
+    "Spawners": [
+    ]
+  }
+}

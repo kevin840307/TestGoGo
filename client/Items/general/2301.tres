@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_xhpcb"]
+
+[resource]
+script = ExtResource("1_xhpcb")
+script_name = "寵物擴充卡"
+id = 2301
+item_name = "寵物擴充卡"
+description = "使用後可以永久增加一個召喚寵物的空間，最多可額外增加兩個。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 378
+item_type_category = "General"

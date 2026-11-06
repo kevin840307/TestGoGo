@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_7gt0e"]
+
+[resource]
+script = ExtResource("1_7gt0e")
+attack_range = 350
+bullet_id = 1
+note_1 = "Hit_Effect07"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "Gun"
+horse_type = "MS"
+atk = 180
+matk = 730
+durability = 50
+equip_slot = 1
+spr_id = 10
+req_level = 100
+id = 50604
+item_name = "聖機兵魔導武裝"
+description = "聖機兵遠距離魔法攻擊武裝。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 2000
+icon_id = 800
+item_type_category = "HorseEquip"

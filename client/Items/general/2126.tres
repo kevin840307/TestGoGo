@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_fm3xd"]
+
+[resource]
+script = ExtResource("1_fm3xd")
+script_name = "幸福娃娃"
+id = 2126
+item_name = "幸福娃娃"
+description = "娃娃集合了幸運及大福的力量，它會變出星夢百貨或更多神秘禮物給您作禮物！"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 724
+item_type_category = "General"

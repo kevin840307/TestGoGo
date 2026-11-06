@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_1fdfh"]
+
+[resource]
+script = ExtResource("1_1fdfh")
+id = 2821
+item_name = "真．龍族之石"
+description = "身上帶著此石再使用『變身卷軸』，即可化身『飛龍』一小時，並獲得大幅度能力加成。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+icon_id = 203
+item_type_category = "General"

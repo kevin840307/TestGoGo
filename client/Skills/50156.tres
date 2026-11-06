@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_dlvcb"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_gv56f"]
+
+[sub_resource type="Resource" id="Resource_o5q5v"]
+script = ExtResource("1_dlvcb")
+tick_count = 1
+
+[resource]
+script = ExtResource("2_gv56f")
+id = 50156
+skill_name = "虛空毀滅"
+description = "把玩家的HP變成10。"
+fx_use = "Skill_Use_06"
+fx_hit = "Skill_Hit_37"
+fx_extra = "0"
+levels = Array[ExtResource("1_dlvcb")]([SubResource("Resource_o5q5v")])

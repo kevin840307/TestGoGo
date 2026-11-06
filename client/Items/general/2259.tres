@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_qb8oc"]
+
+[resource]
+script = ExtResource("1_qb8oc")
+script_name = "殉難者的祝禱"
+id = 2259
+item_name = "殉難者的祝禱"
+description = "為殉難神團成員致敬，祝禱後會呼喚出神鎚「雷霆之怒」。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 174
+color_index = 4
+item_type_category = "General"

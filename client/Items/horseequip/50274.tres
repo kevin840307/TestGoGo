@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_jjeyv"]
+
+[resource]
+script = ExtResource("1_jjeyv")
+bullet_id = 99
+note_1 = "0"
+note_2 = "0"
+note_3 = "0"
+note_4 = "0"
+horse_type = "MS"
+max_hp_bonus = 3000
+atk = 5
+def = 22
+mdef = 22
+move_speed = -100
+durability = 50
+spr_id = 7
+req_level = 40
+id = 50274
+item_name = "神劍機甲"
+description = "機甲主體機件。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1000
+icon_id = 506
+item_type_category = "HorseEquip"

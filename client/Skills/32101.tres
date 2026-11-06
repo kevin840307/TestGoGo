@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_ds8pv"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_sxcgp"]
+
+[sub_resource type="Resource" id="Resource_on01o"]
+script = ExtResource("1_ds8pv")
+cast_range = 250
+cost_mp = 8
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_1i3tb"]
+script = ExtResource("1_ds8pv")
+level = 2
+cast_range = 250
+cost_mp = 15
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_5s5vl"]
+script = ExtResource("1_ds8pv")
+level = 3
+cast_range = 300
+cost_mp = 28
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_0bqeg"]
+script = ExtResource("1_ds8pv")
+level = 4
+cast_range = 300
+cost_mp = 45
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_4b7rc"]
+script = ExtResource("1_ds8pv")
+level = 5
+cast_range = 350
+cost_mp = 68
+tick_count = 1
+
+[resource]
+script = ExtResource("2_sxcgp")
+id = 32101
+skill_name = "精靈治療術"
+description = "回復目標戰鬥精靈的體力"
+icon_id = 45
+fx_use = "Skill_Use_00"
+fx_hit = "Normal_Effect01"
+fx_extra = "0"
+levels = Array[ExtResource("1_ds8pv")]([SubResource("Resource_on01o"), SubResource("Resource_1i3tb"), SubResource("Resource_5s5vl"), SubResource("Resource_0bqeg"), SubResource("Resource_4b7rc")])

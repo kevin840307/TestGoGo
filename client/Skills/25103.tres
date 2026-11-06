@@ -1,0 +1,115 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_7t7te"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_psu06"]
+
+[sub_resource type="Resource" id="Resource_6itd5"]
+script = ExtResource("1_7t7te")
+cost_mp = 42
+cooldown = 1
+duration = 900
+tick_count = 1
+hit_bonus = 30
+flee_bonus = -30
+
+[sub_resource type="Resource" id="Resource_3glsu"]
+script = ExtResource("1_7t7te")
+level = 2
+cost_mp = 55
+cooldown = 1
+duration = 900
+tick_count = 1
+hit_bonus = 40
+flee_bonus = -40
+
+[sub_resource type="Resource" id="Resource_fwpxp"]
+script = ExtResource("1_7t7te")
+level = 3
+cost_mp = 72
+cooldown = 1
+duration = 900
+tick_count = 1
+hit_bonus = 50
+flee_bonus = -50
+
+[sub_resource type="Resource" id="Resource_ho2xc"]
+script = ExtResource("1_7t7te")
+level = 4
+cost_mp = 90
+cooldown = 1
+duration = 900
+tick_count = 1
+hit_bonus = 60
+flee_bonus = -60
+
+[sub_resource type="Resource" id="Resource_8072h"]
+script = ExtResource("1_7t7te")
+level = 5
+cost_mp = 112
+cooldown = 1
+duration = 900
+tick_count = 1
+hit_bonus = 70
+flee_bonus = -70
+
+[sub_resource type="Resource" id="Resource_gnpa5"]
+script = ExtResource("1_7t7te")
+level = 6
+cost_mp = 138
+cooldown = 1
+duration = 900
+tick_count = 1
+hit_bonus = 80
+flee_bonus = -80
+
+[sub_resource type="Resource" id="Resource_48ysp"]
+script = ExtResource("1_7t7te")
+level = 7
+cost_mp = 168
+cooldown = 1
+duration = 900
+tick_count = 1
+hit_bonus = 90
+flee_bonus = -90
+
+[sub_resource type="Resource" id="Resource_htnse"]
+script = ExtResource("1_7t7te")
+level = 8
+cost_mp = 202
+cooldown = 1
+duration = 900
+tick_count = 1
+hit_bonus = 100
+flee_bonus = -100
+
+[sub_resource type="Resource" id="Resource_i5siq"]
+script = ExtResource("1_7t7te")
+level = 9
+cost_mp = 240
+cooldown = 1
+duration = 900
+tick_count = 1
+hit_bonus = 110
+flee_bonus = -110
+
+[sub_resource type="Resource" id="Resource_or51m"]
+script = ExtResource("1_7t7te")
+level = 10
+cost_mp = 282
+cooldown = 1
+duration = 900
+tick_count = 1
+hit_bonus = 120
+flee_bonus = -120
+
+[resource]
+script = ExtResource("2_psu06")
+id = 25103
+skill_name = "追蹤目標"
+description = "暫時犧牲迴避力，來提升命中率。"
+skill_type = 4
+icon_id = 23
+fx_use = "Skill_Use_00"
+fx_hit = "Normal_Effect11"
+fx_extra = "0"
+levels = Array[ExtResource("1_7t7te")]([SubResource("Resource_6itd5"), SubResource("Resource_3glsu"), SubResource("Resource_fwpxp"), SubResource("Resource_ho2xc"), SubResource("Resource_8072h"), SubResource("Resource_gnpa5"), SubResource("Resource_48ysp"), SubResource("Resource_htnse"), SubResource("Resource_i5siq"), SubResource("Resource_or51m")])

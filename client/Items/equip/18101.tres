@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_qoycd"]
+
+[resource]
+script = ExtResource("1_qoycd")
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 444
+def = 14
+mdef = 44
+hit = 40
+flee = 40
+durability = 50
+equip_slot = 7
+spr_id = 27
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 18101
+item_name = "持刀者的詛咒"
+description = "與其說是裝備，不如說是被詛咒的鐮刀纏身更為恰當。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 647
+item_type_category = "Equip"

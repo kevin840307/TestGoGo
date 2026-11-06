@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_tl4hd"]
+
+[resource]
+script = ExtResource("1_tl4hd")
+id = 2516
+item_name = "風速火藥"
+description = "和普通的火藥沒什麼兩樣，我不會給人騙了吧？"
+can_store = 1
+price = 1
+icon_id = 217
+item_type_category = "General"

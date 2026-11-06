@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_6uqy0"]
+
+[resource]
+script = ExtResource("1_6uqy0")
+script_name = "暗星力武裝下衣晶片"
+id = 3079
+item_name = "暗星力武裝下衣晶片"
+description = "合成暗星力武裝下衣材料：暗星力武裝下衣晶片、硬皮革、白羽毛、晶石、甲殼片。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 2000
+icon_id = 353
+color_index = 4
+item_type_category = "General"

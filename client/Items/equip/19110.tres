@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_2vuob"]
+
+[resource]
+script = ExtResource("1_2vuob")
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 100
+def = 10
+matk = 8
+mdef = 20
+luk = 8
+durability = 50
+spr_id = 95
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 19110
+item_name = "魔術師之帽"
+description = "一頂被認證為正式魔法師的專用帽子，聽說內藏很多魔術用的道具。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+icon_id = 620
+item_type_category = "Equip"

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_nv241"]
+
+[resource]
+script = ExtResource("1_nv241")
+attack_range = 300
+note_1 = "Hit_Effect07"
+note_2 = "Normal00"
+note_3 = "Esc-Receiver"
+note_4 = "Stick"
+horse_type = "MA"
+matk = 1120
+durability = 50
+equip_slot = 1
+spr_id = 1
+req_level = 80
+id = 50334
+item_name = "魔裝迅雷型光能加強器"
+description = "特殊機甲攻擊加強武裝。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 8000
+icon_id = 547
+item_type_category = "HorseEquip"

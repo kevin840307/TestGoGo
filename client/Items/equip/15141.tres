@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_dp5mh"]
+
+[resource]
+script = ExtResource("1_dp5mh")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 800
+max_mp_bonus = 800
+atk = 200
+def = 405
+mdef = 379
+flee = 200
+durability = 50
+spr_id = 138
+req_level = 85
+req_job = "無"
+req_race = "無"
+id = 15141
+item_name = "大地騎兵之盔．85"
+description = "佳雅聖城昔日軍隊「大地騎兵」的御用裝備。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 761
+color_index = 3
+item_type_category = "Equip"

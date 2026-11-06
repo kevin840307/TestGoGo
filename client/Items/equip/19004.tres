@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_yqvo3"]
+
+[resource]
+script = ExtResource("1_yqvo3")
+special_effect = "無"
+can_repair = 1
+def = 6
+mdef = 6
+luk = 12
+durability = 50
+spr_id = 53
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 19004
+item_name = "紫天使光環"
+description = "配合小天使之翼，天使的造型叫人讚嘆不已！ 各種族人類、米古及機動靈也可以配戴。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 319
+color_index = 6
+item_type_category = "Equip"

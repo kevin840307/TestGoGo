@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_kpvbm"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_bmwgk"]
+
+[sub_resource type="Resource" id="Resource_m77ia"]
+script = ExtResource("1_kpvbm")
+cast_range = 300
+cost_mp = 300
+cooldown = 5
+tick_count = 1
+
+[resource]
+script = ExtResource("2_bmwgk")
+id = 45110
+skill_name = "天使之淚"
+description = "一個攻守兼備的神聖刻紋，除了能回復一定的生命外，還可以對敵人做成一定程度傷害。"
+skill_type = 7
+fx_use = "Skill_Use_01"
+fx_hit = "Skill_Hit_48"
+fx_extra = "0"
+special_skill = "天使之淚"
+levels = Array[ExtResource("1_kpvbm")]([SubResource("Resource_m77ia")])

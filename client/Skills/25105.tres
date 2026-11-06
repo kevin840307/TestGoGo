@@ -1,0 +1,105 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_8g0vt"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_q5kue"]
+
+[sub_resource type="Resource" id="Resource_alo4h"]
+script = ExtResource("1_8g0vt")
+cost_mp = 72
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 30
+
+[sub_resource type="Resource" id="Resource_t15cq"]
+script = ExtResource("1_8g0vt")
+level = 2
+cost_mp = 90
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 40
+
+[sub_resource type="Resource" id="Resource_0rm15"]
+script = ExtResource("1_8g0vt")
+level = 3
+cost_mp = 112
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 50
+
+[sub_resource type="Resource" id="Resource_7ngit"]
+script = ExtResource("1_8g0vt")
+level = 4
+cost_mp = 135
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 60
+
+[sub_resource type="Resource" id="Resource_x12ub"]
+script = ExtResource("1_8g0vt")
+level = 5
+cost_mp = 162
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 70
+
+[sub_resource type="Resource" id="Resource_2k8eg"]
+script = ExtResource("1_8g0vt")
+level = 6
+cost_mp = 193
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 80
+
+[sub_resource type="Resource" id="Resource_cja3y"]
+script = ExtResource("1_8g0vt")
+level = 7
+cost_mp = 228
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 90
+
+[sub_resource type="Resource" id="Resource_1nkgk"]
+script = ExtResource("1_8g0vt")
+level = 8
+cost_mp = 267
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 100
+
+[sub_resource type="Resource" id="Resource_lq8ap"]
+script = ExtResource("1_8g0vt")
+level = 9
+cost_mp = 310
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 110
+
+[sub_resource type="Resource" id="Resource_mrx0x"]
+script = ExtResource("1_8g0vt")
+level = 10
+cost_mp = 357
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = 120
+
+[resource]
+script = ExtResource("2_q5kue")
+id = 25105
+skill_name = "藍氣流"
+description = "暫時提升攻擊力。"
+skill_type = 4
+icon_id = 25
+fx_use = "Skill_Use_00"
+fx_hit = "Skill_Hit_18"
+fx_extra = "0"
+levels = Array[ExtResource("1_8g0vt")]([SubResource("Resource_alo4h"), SubResource("Resource_t15cq"), SubResource("Resource_0rm15"), SubResource("Resource_7ngit"), SubResource("Resource_x12ub"), SubResource("Resource_2k8eg"), SubResource("Resource_cja3y"), SubResource("Resource_1nkgk"), SubResource("Resource_lq8ap"), SubResource("Resource_mrx0x")])

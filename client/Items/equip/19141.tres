@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_nuw7g"]
+
+[resource]
+script = ExtResource("1_nuw7g")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 400
+max_mp_bonus = 300
+max_sp_bonus = 200
+atk = 90
+def = 100
+matk = 120
+mdef = 140
+hit = 130
+flee = 70
+luk = 5
+durability = 50
+spr_id = 129
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 19141
+item_name = "青之外星生物頭飾"
+description = "使用了生物激素強化的外星生物頭飾，不過放心它不會真的變成外星生物的。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 682
+color_index = 1
+item_type_category = "Equip"

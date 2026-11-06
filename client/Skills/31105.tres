@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_mx5d4"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_3xs1y"]
+
+[sub_resource type="Resource" id="Resource_gv63w"]
+script = ExtResource("1_mx5d4")
+cast_range = 250
+cost_mp = 20
+base_damage = 300
+damage_multiplier = 100
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_v4tr2"]
+script = ExtResource("1_mx5d4")
+level = 2
+cast_range = 250
+cost_mp = 28
+base_damage = 410
+damage_multiplier = 110
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_dwtm2"]
+script = ExtResource("1_mx5d4")
+level = 3
+cast_range = 300
+cost_mp = 37
+base_damage = 530
+damage_multiplier = 120
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_8kgx3"]
+script = ExtResource("1_mx5d4")
+level = 4
+cast_range = 300
+cost_mp = 48
+base_damage = 660
+damage_multiplier = 130
+cooldown = 2
+tick_count = 1
+
+[sub_resource type="Resource" id="Resource_itl00"]
+script = ExtResource("1_mx5d4")
+level = 5
+cast_range = 350
+cost_mp = 60
+base_damage = 800
+damage_multiplier = 145
+cooldown = 2
+tick_count = 1
+
+[resource]
+script = ExtResource("2_3xs1y")
+id = 31105
+skill_name = "金錢投擲"
+description = "使用金錢向敵人攻擊。"
+icon_id = 75
+fx_use = "Skill_Use_00"
+fx_hit = "Skill_Hit_06"
+fx_extra = "Skill_Hit_06"
+levels = Array[ExtResource("1_mx5d4")]([SubResource("Resource_gv63w"), SubResource("Resource_v4tr2"), SubResource("Resource_dwtm2"), SubResource("Resource_8kgx3"), SubResource("Resource_itl00")])

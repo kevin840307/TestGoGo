@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_tm7kf"]
+
+[resource]
+script = ExtResource("1_tm7kf")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 1000
+max_mp_bonus = 1000
+atk = 120
+def = 240
+matk = 120
+mdef = 250
+hit = 120
+flee = 260
+luk = 30
+durability = 50
+spr_id = 140
+req_level = 50
+req_job = "無"
+req_race = "無"
+id = 18139
+item_name = "強化聖誕鹿角"
+description = "聖誕節的特別禮物，馴鹿鹿角形頭飾，不止可愛，能力亦強大。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 785
+color_index = 4
+item_type_category = "Equip"

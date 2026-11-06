@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_wr7p3"]
+
+[resource]
+script = ExtResource("1_wr7p3")
+attack_range = 60
+tick_count = 1
+note_1 = "Hit_Effect07"
+note_2 = "Fire00"
+note_3 = "Esc-Receiver"
+note_4 = "Dagger"
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 389
+atk = 411
+def = 15
+matk = 411
+durability = 50
+equip_slot = 5
+spr_id = 3
+req_level = 57
+req_job = "無"
+req_race = "無"
+id = 31633
+item_name = "星空虎刃"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 279723
+icon_id = 69
+color_index = 7
+item_type_category = "Weapon"

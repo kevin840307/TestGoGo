@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_fqut7"]
+
+[resource]
+script = ExtResource("1_fqut7")
+no_shield = 1
+bullet_id = 4103
+attack_range = 400
+tick_count = 2
+note_1 = "Hit_Effect05"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "TwinGun"
+special_effect = "無"
+can_repair = 1
+req_dex = 30
+req_wis = 10
+max_hp_bonus = 1300
+max_mp_bonus = 600
+atk = 1050
+matk = 220
+hit = 80
+flee = 60
+durability = 50
+equip_slot = 5
+spr_id = 7
+req_level = 85
+req_job = "無"
+req_race = "無"
+id = 30114
+item_name = "迅擊雙銃．魂"
+description = "附加了特殊能力的迅擊雙銃，增加200點攻擊技能傷害。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 30000
+icon_id = 665
+color_index = 3
+item_type_category = "Weapon"

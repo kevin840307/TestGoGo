@@ -1,0 +1,65 @@
+[gd_scene format=3 uid="uid://bw83gldcutlso"]
+
+[ext_resource type="Script" uid="uid://iayxla46acwb" path="res://scripts/shared_tooltip.gd" id="1_18u3r"]
+
+[node name="SharedTooltip" type="PanelContainer" unique_id=1326769210]
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_18u3r")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=256541857]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1068359800]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="CenterContainer" type="CenterContainer" parent="MarginContainer/VBoxContainer" unique_id=256129437]
+layout_mode = 2
+
+[node name="TooltipIcon" type="TextureRect" parent="MarginContainer/VBoxContainer/CenterContainer" unique_id=892452611]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer" unique_id=1979394205]
+layout_mode = 2
+
+[node name="TooltipNameDesc" type="RichTextLabel" parent="MarginContainer/VBoxContainer" unique_id=601684278]
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/normal_font_size = 13
+theme_override_font_sizes/bold_font_size = 13
+theme_override_font_sizes/bold_italics_font_size = 13
+theme_override_font_sizes/italics_font_size = 13
+theme_override_font_sizes/mono_font_size = 13
+bbcode_enabled = true
+fit_content = true
+
+[node name="TooltipStats" type="RichTextLabel" parent="MarginContainer/VBoxContainer" unique_id=403012227]
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/normal_font_size = 13
+theme_override_font_sizes/bold_font_size = 13
+theme_override_font_sizes/bold_italics_font_size = 13
+theme_override_font_sizes/italics_font_size = 13
+theme_override_font_sizes/mono_font_size = 13
+bbcode_enabled = true
+fit_content = true
+
+[node name="HSeparator2" type="HSeparator" parent="MarginContainer/VBoxContainer" unique_id=2018484593]
+layout_mode = 2
+
+[node name="TooltipLogo" type="Label" parent="MarginContainer/VBoxContainer" unique_id=78086112]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9411765, 0.1764706, 1)
+theme_override_font_sizes/font_size = 13
+text = "⭐⭐ 星夢Online：拾光 ⭐⭐"
+horizontal_alignment = 1
+vertical_alignment = 1

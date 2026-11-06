@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_u4os4"]
+
+[resource]
+script = ExtResource("1_u4os4")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 100
+max_mp_bonus = 10
+atk = 5
+def = 5
+matk = 5
+mdef = 5
+durability = 50
+spr_id = 54
+req_level = 10
+req_job = "無"
+req_race = "無"
+id = 19056
+item_name = "功勳大皇冠"
+description = "頭部裝備。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 320
+color_index = 6
+item_type_category = "Equip"

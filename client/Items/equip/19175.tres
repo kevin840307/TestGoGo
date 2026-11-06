@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_w8s45"]
+
+[resource]
+script = ExtResource("1_w8s45")
+special_effect = "無"
+can_repair = 1
+max_sp_bonus = 413
+def = 99
+mdef = 99
+hit = 100
+flee = 50
+durability = 50
+spr_id = 115
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 19175
+item_name = "雨傘帽"
+description = "雖然名為雨傘帽，可是能擋雨水的只有頭頂一小部份……。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 639
+item_type_category = "Equip"

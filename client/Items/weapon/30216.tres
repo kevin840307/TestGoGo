@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_ksnkn"]
+
+[resource]
+script = ExtResource("1_ksnkn")
+attack_range = 140
+tick_count = 1
+note_1 = "Hit_Effect01"
+note_2 = "Poison00"
+note_3 = "Esc-Receiver"
+note_4 = "Spear"
+special_effect = "無"
+can_repair = 1
+atk = 289
+matk = 248
+durability = 50
+equip_slot = 5
+spr_id = 9
+req_level = 45
+req_job = "無"
+req_race = "無"
+id = 30216
+item_name = "蔓藤戰矛"
+description = "以植物領主．弗朗泰勒遺骸上剝取的素材來製造的長矛。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 790
+item_type_category = "Weapon"

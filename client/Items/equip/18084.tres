@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_kxd2s"]
+
+[resource]
+script = ExtResource("1_kxd2s")
+special_effect = "無"
+can_repair = 1
+atk = 3
+def = 20
+mdef = 80
+luk = 2
+durability = 50
+equip_slot = 7
+spr_id = 16
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 18084
+item_name = "黃金獅子座背飾"
+description = "獅子座喜歡循序漸進的愛情，基本上是那種享受浪漫多於真正墮入愛河的人，不喜歡受束縛。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 605
+item_type_category = "Equip"

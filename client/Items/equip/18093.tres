@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_nhl21"]
+
+[resource]
+script = ExtResource("1_nhl21")
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 10
+mdef = 7
+luk = 10
+durability = 50
+spr_id = 85
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 18093
+item_name = "龍"
+description = "神秘的巨龍，是十二生肖頭飾系列之一。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 30
+icon_id = 585
+item_type_category = "Equip"

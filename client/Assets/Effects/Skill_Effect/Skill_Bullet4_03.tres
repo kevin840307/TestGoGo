@@ -1,0 +1,37 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://cbo277v0ion1r"]
+
+[ext_resource type="Texture2D" uid="uid://dd1f5wp62tmxd" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Bullet4_03.spr.0000.png" id="1_duex1"]
+[ext_resource type="Texture2D" uid="uid://c1rl8p816peu5" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Bullet4_03.spr.0001.png" id="2_7l1lw"]
+[ext_resource type="Texture2D" uid="uid://bvbqsic26pxg1" path="res://Assets/Effects/RawData/Skill_Effect/Skill_Bullet4_03.spr.0002.png" id="3_ksggt"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_duex1"]
+atlas = ExtResource("1_duex1")
+region = Rect2(0, 0, 57, 80)
+metadata/old_offset = Vector2(35, 33)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7l1lw"]
+atlas = ExtResource("2_7l1lw")
+region = Rect2(0, 0, 66, 75)
+metadata/old_offset = Vector2(39, 33)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ksggt"]
+atlas = ExtResource("3_ksggt")
+region = Rect2(0, 0, 59, 81)
+metadata/old_offset = Vector2(27, 33)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_duex1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_7l1lw")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ksggt")
+}],
+"loop": false,
+"name": &"default",
+"speed": 12.0
+}]

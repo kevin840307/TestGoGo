@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://vt10pehge801"]
+
+[ext_resource type="Script" uid="uid://ckigcxjh75jy6" path="res://network_player.gd" id="1_5nebm"]
+[ext_resource type="PackedScene" uid="uid://bcdtxl4r645pj" path="res://paper_doll_engine.tscn" id="2_j6rbc"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_onrkg"]
+radius = 8.0
+height = 40.0
+
+[node name="Player" type="CharacterBody2D" unique_id=808469471]
+y_sort_enabled = true
+collision_layer = 2
+collision_mask = 5
+script = ExtResource("1_5nebm")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=822824303]
+rotation = 1.5707964
+shape = SubResource("CapsuleShape2D_onrkg")
+
+[node name="DollContainer" parent="." unique_id=1372204366 instance=ExtResource("2_j6rbc")]
+
+[node name="UIContainer" type="Node2D" parent="." unique_id=1020456322]
+
+[node name="NameLabel" type="Label" parent="UIContainer" unique_id=1768984964]
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = -130.0
+offset_right = 1.0
+offset_bottom = -107.0
+grow_horizontal = 2
+horizontal_alignment = 1
+vertical_alignment = 1

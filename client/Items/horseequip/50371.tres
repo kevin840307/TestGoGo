@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_jgwo8"]
+
+[resource]
+script = ExtResource("1_jgwo8")
+note_1 = "Hit_Effect07"
+note_2 = "Soil00"
+note_3 = "Esc-Receiver"
+note_4 = "Stick"
+horse_type = "MA"
+def = 1229
+mdef = 1229
+flee = 150
+durability = 50
+spr_id = 7
+req_level = 80
+id = 50371
+item_name = "炎龍機獸主體"
+description = "提供魔炎龍騎的防禦力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 100
+icon_id = 231
+item_type_category = "HorseEquip"

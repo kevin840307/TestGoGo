@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_b55jq"]
+
+[resource]
+script = ExtResource("1_b55jq")
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 32
+def = 3
+matk = 1
+mdef = 4
+flee = 4
+durability = 50
+equip_slot = 3
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 18505
+item_name = "小綠初心戰衣"
+description = "上身裝備。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 81
+color_index = 1
+item_type_category = "Equip"

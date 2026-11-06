@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_1yjky"]
+
+[resource]
+script = ExtResource("1_1yjky")
+script_name = "淨化之書"
+id = 2457
+item_name = "淨化之書"
+description = "一本能淨化使用者身心的書本，擁有減少使用者30%所持有的死亡經驗值的力量。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 172
+color_index = 2
+item_type_category = "General"

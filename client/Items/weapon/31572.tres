@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_4sxst"]
+
+[resource]
+script = ExtResource("1_4sxst")
+attack_range = 60
+tick_count = 1
+note_1 = "Hit_Effect00"
+note_2 = "Normal00"
+note_3 = "Esc-Receiver"
+note_4 = "Dagger"
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 18
+atk = 29
+def = 1
+matk = 29
+durability = 50
+equip_slot = 5
+spr_id = 2
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 31572
+item_name = "破柴刀"
+description = "獵人的防物武器。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 50
+icon_id = 68
+item_type_category = "Weapon"

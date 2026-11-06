@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_gxop3"]
+
+[resource]
+script = ExtResource("1_gxop3")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 350
+max_mp_bonus = 350
+max_sp_bonus = 100
+atk = 30
+def = 147
+matk = 30
+mdef = 147
+hit = 75
+flee = 100
+durability = 50
+equip_slot = 4
+spr_id = 4
+req_level = 80
+req_job = "無"
+req_race = "無"
+id = 16046
+item_name = "龍影之翼"
+description = "龍族傳授的編織技術製作出來的咒法裝備。"
+can_store = 1
+icon_id = 117
+color_index = 2
+item_type_category = "Equip"

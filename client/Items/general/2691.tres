@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GeneralData" format=3]
+
+[ext_resource type="Script" uid="uid://cp44q5pnmng8w" path="res://scripts/general_data.gd" id="1_k0cxk"]
+
+[resource]
+script = ExtResource("1_k0cxk")
+id = 2691
+item_name = "月光之淚"
+description = "對即將誕生的精靈而言是珍貴的飼料。"
+can_trade = 1
+can_sell = 1
+price = 1
+icon_id = 188
+item_type_category = "General"

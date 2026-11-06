@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="RecoveryData" format=3]
+
+[ext_resource type="Script" uid="uid://ck1fehhmvo5cj" path="res://scripts/recovery_data.gd" id="1_s36pe"]
+
+[resource]
+script = ExtResource("1_s36pe")
+use_range = 100
+recover_mp = 1900
+note_1 = "Normal_Effect12"
+note_2 = "Normal_Effect02"
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 1009
+item_name = "魔法神水"
+description = "強化的魔法藥水。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 240
+icon_id = 211
+item_type_category = "Recovery"

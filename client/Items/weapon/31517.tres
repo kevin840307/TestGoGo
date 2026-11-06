@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" uid="uid://dt5p6pepentt1" path="res://scripts/weapon_data.gd" id="1_ruymf"]
+
+[resource]
+script = ExtResource("1_ruymf")
+attack_range = 150
+tick_count = 1
+note_1 = "Hit_Effect00"
+note_2 = "Water00"
+note_3 = "Esc-Receiver"
+note_4 = "Sword"
+special_effect = "無"
+can_repair = 1
+atk = 360
+def = 20
+matk = 100
+luk = 3
+durability = 50
+equip_slot = 5
+spr_id = 13
+req_level = 40
+req_job = "無"
+req_race = "無"
+id = 31517
+item_name = "龍銀大劍"
+description = "被龍精靈依附著的劍，為了保持戰力，非使用時會寄居在卡片中。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 500
+icon_id = 376
+item_type_category = "Weapon"

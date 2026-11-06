@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_5mfdm"]
+
+[resource]
+script = ExtResource("1_5mfdm")
+special_effect = "無"
+can_repair = 1
+max_mp_bonus = 335
+def = 61
+matk = 24
+mdef = 102
+flee = 4
+durability = 50
+equip_slot = 4
+spr_id = 12
+req_level = 40
+req_job = "無"
+req_race = "無"
+id = 18561
+item_name = "魔龍下裝"
+description = "下身裝備。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 8974
+icon_id = 123
+color_index = 6
+item_type_category = "Equip"

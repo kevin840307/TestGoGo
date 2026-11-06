@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_0uhhq"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_4atv8"]
+
+[sub_resource type="Resource" id="Resource_q22be"]
+script = ExtResource("1_0uhhq")
+cast_range = 300
+tick_count = 1
+
+[resource]
+script = ExtResource("2_4atv8")
+id = 50154
+skill_name = "法力爆破"
+description = "降低玩家的魔防1000點，持續10秒。"
+fx_use = "Skill_Use_06"
+fx_hit = "Skill_Hit_37"
+fx_extra = "0"
+levels = Array[ExtResource("1_0uhhq")]([SubResource("Resource_q22be")])

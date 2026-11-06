@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_nnjmr"]
+
+[resource]
+script = ExtResource("1_nnjmr")
+attack_range = 50
+bullet_id = 99
+note_1 = "0"
+note_2 = "0"
+note_3 = "0"
+note_4 = "0"
+horse_type = "MA"
+atk = 35
+matk = 35
+hit = 10
+durability = 50
+equip_slot = 1
+spr_id = 1
+req_level = 1
+id = 50345
+item_name = "魔力加持寶石"
+description = "提供魔魅掃帚的攻擊力。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 100
+icon_id = 513
+item_type_category = "HorseEquip"

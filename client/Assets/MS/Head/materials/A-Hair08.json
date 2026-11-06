@@ -1,0 +1,66 @@
+{
+  "part_name": "A-Hair08",
+  "texture_size": {
+    "w": 135,
+    "h": 28
+  },
+  "frames": {
+    "idle_3_frame0000": {
+      "x": 0,
+      "y": 0,
+      "w": 27,
+      "h": 28,
+      "offset_x": 13,
+      "offset_y": 20
+    },
+    "idle_8_frame0000": {
+      "x": 27,
+      "y": 0,
+      "w": 27,
+      "h": 28,
+      "offset_x": 14,
+      "offset_y": 22
+    },
+    "idle_1_frame0000": {
+      "x": 54,
+      "y": 0,
+      "w": 27,
+      "h": 27,
+      "offset_x": 12,
+      "offset_y": 22
+    },
+    "idle_2_frame0000": {
+      "x": 81,
+      "y": 0,
+      "w": 27,
+      "h": 27,
+      "offset_x": 10,
+      "offset_y": 21
+    },
+    "idle_4_frame0000": {
+      "x": 108,
+      "y": 0,
+      "w": 27,
+      "h": 27,
+      "offset_x": 12,
+      "offset_y": 20
+    }
+  },
+  "animations": {
+    "idle_3": [
+      "idle_3_frame0000"
+    ],
+    "idle_8": [
+      "idle_8_frame0000"
+    ],
+    "idle_1": [
+      "idle_1_frame0000"
+    ],
+    "idle_2": [
+      "idle_2_frame0000"
+    ],
+    "idle_4": [
+      "idle_4_frame0000"
+    ]
+  }
+}

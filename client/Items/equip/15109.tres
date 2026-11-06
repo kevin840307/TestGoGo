@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_3ufa5"]
+
+[resource]
+script = ExtResource("1_3ufa5")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 1000
+max_mp_bonus = 1000
+atk = 338
+def = 405
+matk = 338
+mdef = 405
+hit = 80
+flee = 160
+durability = 50
+spr_id = 139
+req_level = 95
+req_job = "無"
+req_race = "無"
+id = 15109
+item_name = "聖殿天鷹戰盔．懲戒"
+description = "聖殿騎士的御用裝備。"
+can_sell = 1
+can_store = 1
+price = 1
+icon_id = 780
+item_type_category = "Equip"

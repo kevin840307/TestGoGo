@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_xpx13"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_e1j26"]
+
+[sub_resource type="Resource" id="Resource_i321b"]
+script = ExtResource("1_xpx13")
+cast_range = 300
+cost_mp = 100
+tick_count = 1
+
+[resource]
+script = ExtResource("2_e1j26")
+id = 45118
+skill_name = "反擊之華光"
+description = "以無比決心和堅定意志，面對強敵的絕地一擊，術者生命力越低威力就越高，還可以短暫提升自身物理及魔法防禦力。"
+skill_type = 7
+fx_use = "Skill_Use_07"
+fx_hit = "Skill_Hit_40"
+fx_extra = "0"
+special_skill = "反擊之華光"
+levels = Array[ExtResource("1_xpx13")]([SubResource("Resource_i321b")])

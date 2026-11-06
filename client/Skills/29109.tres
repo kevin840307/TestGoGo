@@ -1,0 +1,115 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_kvumy"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_30w6s"]
+
+[sub_resource type="Resource" id="Resource_h503w"]
+script = ExtResource("1_kvumy")
+cost_mp = 112
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -150
+hit_bonus = 100
+
+[sub_resource type="Resource" id="Resource_1882k"]
+script = ExtResource("1_kvumy")
+level = 2
+cost_mp = 135
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -180
+hit_bonus = 120
+
+[sub_resource type="Resource" id="Resource_xnfbe"]
+script = ExtResource("1_kvumy")
+level = 3
+cost_mp = 162
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -210
+hit_bonus = 140
+
+[sub_resource type="Resource" id="Resource_0cmck"]
+script = ExtResource("1_kvumy")
+level = 4
+cost_mp = 190
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -240
+hit_bonus = 160
+
+[sub_resource type="Resource" id="Resource_auxuh"]
+script = ExtResource("1_kvumy")
+level = 5
+cost_mp = 222
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -270
+hit_bonus = 180
+
+[sub_resource type="Resource" id="Resource_ctlwx"]
+script = ExtResource("1_kvumy")
+level = 6
+cost_mp = 258
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -300
+hit_bonus = 200
+
+[sub_resource type="Resource" id="Resource_hrtx8"]
+script = ExtResource("1_kvumy")
+level = 7
+cost_mp = 298
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -330
+hit_bonus = 220
+
+[sub_resource type="Resource" id="Resource_tyxas"]
+script = ExtResource("1_kvumy")
+level = 8
+cost_mp = 342
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -360
+hit_bonus = 240
+
+[sub_resource type="Resource" id="Resource_yq772"]
+script = ExtResource("1_kvumy")
+level = 9
+cost_mp = 390
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -390
+hit_bonus = 260
+
+[sub_resource type="Resource" id="Resource_cvwks"]
+script = ExtResource("1_kvumy")
+level = 10
+cost_mp = 442
+cooldown = 1
+duration = 900
+tick_count = 1
+atk_bonus = -420
+hit_bonus = 280
+
+[resource]
+script = ExtResource("2_30w6s")
+id = 29109
+skill_name = "集中精神"
+description = "暫時犧牲攻擊力，來提升命中率。"
+skill_type = 4
+icon_id = 62
+fx_use = "Skill_Use_07"
+fx_hit = "Skill_Hit_43"
+fx_extra = "0"
+levels = Array[ExtResource("1_kvumy")]([SubResource("Resource_h503w"), SubResource("Resource_1882k"), SubResource("Resource_xnfbe"), SubResource("Resource_0cmck"), SubResource("Resource_auxuh"), SubResource("Resource_ctlwx"), SubResource("Resource_hrtx8"), SubResource("Resource_tyxas"), SubResource("Resource_yq772"), SubResource("Resource_cvwks")])

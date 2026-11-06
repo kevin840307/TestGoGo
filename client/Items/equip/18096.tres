@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_lwwow"]
+
+[resource]
+script = ExtResource("1_lwwow")
+special_effect = "無"
+can_repair = 1
+max_hp_bonus = 15
+max_mp_bonus = 15
+mdef = 5
+luk = 10
+durability = 50
+spr_id = 88
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 18096
+item_name = "羊"
+description = "純樸的羊，是十二生肖頭飾系列之一。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 30
+icon_id = 588
+item_type_category = "Equip"

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="HorseEquipData" format=3]
+
+[ext_resource type="Script" uid="uid://dpsttpy075bmp" path="res://scripts/horse_equip_data.gd" id="1_7done"]
+
+[resource]
+script = ExtResource("1_7done")
+bullet_id = 99
+note_1 = "0"
+note_2 = "0"
+note_3 = "0"
+note_4 = "0"
+horse_type = "MS"
+max_hp_bonus = 17
+max_mp_bonus = 17
+def = 1
+mdef = 1
+hit = 1
+flee = 1
+durability = 50
+equip_slot = 3
+spr_id = 314
+req_level = 1
+id = 50904
+item_name = "黃金波奇鳥卡"
+description = "稀有度 ★★★★"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 400
+icon_id = 364
+item_type_category = "HorseEquip"

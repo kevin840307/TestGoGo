@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EquipBaseData" format=3]
+
+[ext_resource type="Script" uid="uid://d28mkjxr447gx" path="res://scripts/equip_base_data.gd" id="1_p2ko2"]
+
+[resource]
+script = ExtResource("1_p2ko2")
+special_effect = "無"
+can_repair = 1
+flee = 6
+luk = 15
+durability = 50
+spr_id = 68
+req_level = 1
+req_job = "無"
+req_race = "無"
+id = 18066
+item_name = "神秘雙魚座"
+description = "如果天蠍座是最記仇的星座，那麼雙魚座可算是最記「愁」的星座。"
+can_trade = 1
+can_sell = 1
+can_store = 1
+price = 200
+icon_id = 93
+color_index = 5
+item_type_category = "Equip"

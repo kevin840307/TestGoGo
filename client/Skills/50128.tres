@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" uid="uid://dsegau1jwhqbf" path="res://scripts/skill_level_data.gd" id="1_gc02x"]
+[ext_resource type="Script" uid="uid://dyw8x4sgllvgj" path="res://scripts/skill_data.gd" id="2_ms6br"]
+
+[sub_resource type="Resource" id="Resource_mdrlw"]
+script = ExtResource("1_gc02x")
+
+[resource]
+script = ExtResource("2_ms6br")
+id = 50128
+skill_name = "怪物特殊技能．再生"
+description = "怪物特殊技能．再生"
+fx_use = "Skill_Use_00"
+fx_extra = "0"
+levels = Array[ExtResource("1_gc02x")]([SubResource("Resource_mdrlw")])
