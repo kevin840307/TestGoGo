@@ -24,6 +24,9 @@ builder.Services.AddSingleton(
 
 builder.Services.AddSingleton(
     new ShopCatalog(gameDataRoot));
+builder.Services.AddSingleton(
+    new HorseBatteryCatalog(
+        Path.Combine(gameDataRoot, "Horse", "HorseBattery.csv")));
 builder.Services.AddSingleton(sp =>
     new QuestRuntime(
         Path.Combine(gameDataRoot, "Quest"),
