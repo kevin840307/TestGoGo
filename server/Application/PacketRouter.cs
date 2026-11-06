@@ -207,6 +207,12 @@ public sealed class PacketRouter
                         _combat.EnterMap(
                             state,
                             state.CurrentMapId));
+                    packets.AddRange(
+                        BuildActivePetSpawnPackets(
+                            accountId,
+                            state.CharacterId.Value,
+                            x,
+                            y));
                 }
                 else
                 {
@@ -214,6 +220,14 @@ public sealed class PacketRouter
                         _combat.TickAi(
                             state,
                             accountId,
+                            x,
+                            y,
+                            now));
+                    packets.AddRange(
+                        BuildPetFollowPackets(
+                            state,
+                            accountId,
+                            state.CharacterId.Value,
                             x,
                             y,
                             now));
@@ -506,7 +520,56 @@ public sealed class PacketRouter
                 if (!state.CharacterId.HasValue) return [];
 
                 var action = req.Str("Action");
+
+                if (action == "SetCombatMode")
+                {
+                    state.PetCombatMode = Math.Clamp(
+                        req.Int("CombatMode"),
+                        0,
+                        3);
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "寵物戰鬥模式已更新"
+                        }
+                    ];
+                }
+
+                if (action == "CommandAttack")
+                {
+                    var assetsForAttack = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+                    var activePet = assetsForAttack.Pets.FirstOrDefault(x =>
+                        Convert.ToInt32(x["State"]) == 1);
+
+                    if (activePet is null)
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "目前沒有召喚中的寵物"
+                            }
+                        ];
+
+                    return _combat.PetAttack(
+                        state,
+                        Convert.ToInt64(activePet["UID"]),
+                        Math.Max(1, Convert.ToInt32(activePet["Attack"])),
+                        req.Int("TargetEntityID"));
+                }
+
                 var petUid = req.Int("PetUID");
+                var previouslyActivePets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value).Pets
+                    .Where(x => Convert.ToInt32(x["State"]) == 1)
+                    .Select(x => Convert.ToInt64(x["UID"]))
+                    .ToArray();
+
                 bool success;
 
                 switch (action)
@@ -590,6 +653,16 @@ public sealed class PacketRouter
 
                 if (success && action == "Summon")
                 {
+                    foreach (var oldPetUid in previouslyActivePets)
+                    {
+                        if (oldPetUid == petUid) continue;
+                        responses.Add(new
+                        {
+                            Type = "DespawnEntity",
+                            EntityID = 4_000_000L + oldPetUid
+                        });
+                    }
+
                     var pet = assets.Pets.FirstOrDefault(x =>
                         Convert.ToInt64(x["UID"]) == petUid);
                     var character = _store.GetCharacter(
@@ -597,24 +670,11 @@ public sealed class PacketRouter
                         state.CharacterId.Value);
                     if (pet is not null && character is not null)
                     {
-                        responses.Add(new
-                        {
-                            Type = "SpawnEntity",
-                            EntityID = 4_000_000L + petUid,
-                            EntityType = 4,
-                            Name = pet["Name"],
-                            LocX = Convert.ToDouble(character["LocX"]) + 40,
-                            LocY = Convert.ToDouble(character["LocY"]) + 20,
-                            ExtraData = new
-                            {
-                                OwnerID = state.CharacterId.Value,
-                                Sprite = "EN010A",
-                                Level = pet["Level"],
-                                MaxHP = pet["MaxHP"],
-                                CurrentHP = pet["HP"],
-                                ColorIndex = 0
-                            }
-                        });
+                        responses.Add(BuildPetSpawnPacket(
+                            state.CharacterId.Value,
+                            pet,
+                            Convert.ToDouble(character["LocX"]) + 40,
+                            Convert.ToDouble(character["LocY"]) + 20));
                     }
                 }
                 else if (success && action == "Recall")
@@ -1071,6 +1131,88 @@ public sealed class PacketRouter
             }
         }
     }
+
+    private IReadOnlyList<object> BuildActivePetSpawnPackets(
+        long accountId,
+        long dbid,
+        double playerX,
+        double playerY)
+    {
+        var assets = _store.GetCharacterAssets(accountId, dbid);
+        var packets = new List<object>();
+
+        foreach (var pet in assets.Pets.Where(x =>
+                     Convert.ToInt32(x["State"]) == 1))
+        {
+            packets.Add(BuildPetSpawnPacket(
+                dbid,
+                pet,
+                playerX + 40,
+                playerY + 20));
+        }
+
+        return packets;
+    }
+
+    private IReadOnlyList<object> BuildPetFollowPackets(
+        ClientSession state,
+        long accountId,
+        long dbid,
+        double playerX,
+        double playerY,
+        DateTimeOffset now)
+    {
+        if (now - state.LastPetFollowTick <
+            TimeSpan.FromMilliseconds(400))
+            return [];
+
+        state.LastPetFollowTick = now;
+
+        var assets = _store.GetCharacterAssets(accountId, dbid);
+        var packets = new List<object>();
+
+        foreach (var pet in assets.Pets.Where(x =>
+                     Convert.ToInt32(x["State"]) == 1))
+        {
+            packets.Add(new
+            {
+                Type = "MoveEntity",
+                EntityID = 4_000_000L + Convert.ToInt64(pet["UID"]),
+                X = playerX + 42,
+                Y = playerY + 24,
+                Dir = "6",
+                SpeedTime = 0.35
+            });
+        }
+
+        return packets;
+    }
+
+    private static object BuildPetSpawnPacket(
+        long ownerId,
+        Dictionary<string, object> pet,
+        double x,
+        double y)
+        => new
+        {
+            Type = "SpawnEntity",
+            EntityID = 4_000_000L + Convert.ToInt64(pet["UID"]),
+            EntityType = 4,
+            Name = pet["Name"],
+            LocX = x,
+            LocY = y,
+            ExtraData = new
+            {
+                OwnerID = ownerId,
+                // Pet appearance mapping will be replaced with source pet.ITD
+                // lookup; EN010A is a recovered MonsterLoader-safe fallback.
+                Sprite = "EN010A",
+                Level = pet["Level"],
+                MaxHP = pet["MaxHP"],
+                CurrentHP = pet["HP"],
+                ColorIndex = 0
+            }
+        };
 
     private object BuildEffectiveStatusPacket(
         long accountId,
