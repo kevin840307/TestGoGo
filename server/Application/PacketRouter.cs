@@ -1,7 +1,9 @@
 using System.Text.Json;
 using SGO.Server.Application.Abstractions;
+using SGO.Server.Application.Assets;
 using SGO.Server.Application.Combat;
 using SGO.Server.Domain.Sessions;
+using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Infrastructure.Quest;
 using SGO.Server.Infrastructure.World;
 using SGO.Server.Protocol;
@@ -16,6 +18,7 @@ public sealed class PacketRouter
     private readonly WorldDataService _world;
     private readonly QuestRuntime _quests;
     private readonly CombatService _combat;
+    private readonly NpcShopCatalog _shops;
     private readonly ILogger<PacketRouter> _log;
 
     public PacketRouter(
@@ -23,12 +26,14 @@ public sealed class PacketRouter
         WorldDataService world,
         QuestRuntime quests,
         CombatService combat,
+        NpcShopCatalog shops,
         ILogger<PacketRouter> log)
     {
         _store = store;
         _world = world;
         _quests = quests;
         _combat = combat;
+        _shops = shops;
         _log = log;
     }
 
@@ -133,6 +138,7 @@ public sealed class PacketRouter
 
                 var assets = _store.GetCharacterAssets(accountId, dbid);
                 ApplyAssetsToCharacterBootstrap(character, assets);
+                ApplyEffectiveStats(character, assets);
 
                 return
                 [
@@ -232,7 +238,9 @@ public sealed class PacketRouter
                         Type = "EquipSync",
                         Equips = assets.Equips,
                         MaxSize = assets.EquipMaxSize
-                    }
+                    },
+                    BuildEffectiveStatusPacket(accountId, state.CharacterId.Value, assets),
+                    BuildAppearancePacket(accountId, state.CharacterId.Value, assets)
                 ];
             }
 
@@ -261,7 +269,9 @@ public sealed class PacketRouter
                         Type = "EquipSync",
                         Equips = assets.Equips,
                         MaxSize = assets.EquipMaxSize
-                    }
+                    },
+                    BuildEffectiveStatusPacket(accountId, state.CharacterId.Value, assets),
+                    BuildAppearancePacket(accountId, state.CharacterId.Value, assets)
                 ];
             }
 
@@ -274,8 +284,12 @@ public sealed class PacketRouter
                     state.CharacterId.Value,
                     horseUid);
 
-                return
-                [
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                var response = new List<object>
+                {
                     new
                     {
                         Type = "DriveMechaResponse",
@@ -285,7 +299,21 @@ public sealed class PacketRouter
                             ? (horseUid == -1 ? "已解除駕駛" : "開始駕駛")
                             : "無法駕駛此機甲"
                     }
-                ];
+                };
+
+                if (success)
+                {
+                    response.Add(BuildEffectiveStatusPacket(
+                        accountId,
+                        state.CharacterId.Value,
+                        assets));
+                    response.Add(BuildAppearancePacket(
+                        accountId,
+                        state.CharacterId.Value,
+                        assets));
+                }
+
+                return response;
             }
 
             case "HorseEquipRequest":
@@ -410,8 +438,8 @@ public sealed class PacketRouter
                     accountId,
                     state.CharacterId.Value);
 
-                return
-                [
+                var responses = new List<object>
+                {
                     new
                     {
                         Type = "PetSync",
@@ -433,7 +461,115 @@ public sealed class PacketRouter
                             }
                             : "寵物操作失敗"
                     }
-                ];
+                };
+
+                if (success && action == "Summon")
+                {
+                    var pet = assets.Pets.FirstOrDefault(x =>
+                        Convert.ToInt64(x["UID"]) == petUid);
+                    var character = _store.GetCharacter(
+                        accountId,
+                        state.CharacterId.Value);
+                    if (pet is not null && character is not null)
+                    {
+                        responses.Add(new
+                        {
+                            Type = "SpawnEntity",
+                            EntityID = 4_000_000L + petUid,
+                            EntityType = 4,
+                            Name = pet["Name"],
+                            LocX = Convert.ToDouble(character["LocX"]) + 40,
+                            LocY = Convert.ToDouble(character["LocY"]) + 20,
+                            ExtraData = new
+                            {
+                                OwnerID = state.CharacterId.Value,
+                                Sprite = "EN010A",
+                                Level = pet["Level"],
+                                MaxHP = pet["MaxHP"],
+                                CurrentHP = pet["HP"],
+                                ColorIndex = 0
+                            }
+                        });
+                    }
+                }
+                else if (success && action == "Recall")
+                {
+                    responses.Add(new
+                    {
+                        Type = "DespawnEntity",
+                        EntityID = 4_000_000L + petUid
+                    });
+                }
+
+                return responses;
+            }
+
+            case "ShopAction":
+            {
+                if (!state.CharacterId.HasValue) return [];
+
+                var action = req.Str("Action");
+                var character = _store.GetCharacter(
+                    accountId,
+                    state.CharacterId.Value);
+                if (character is null) return [];
+
+                if (action == "BuyNpcItem")
+                {
+                    var shopId = req.Int("ShopID");
+                    var itemIndex = req.Int("ItemIndex");
+                    var count = Math.Clamp(req.Int("Count", 1), 1, 9999);
+                    var item = _shops.Find(shopId, itemIndex);
+                    if (item is null)
+                        return [new { Type = "SystemMessageFlash", Message = "此商店沒有這個商品" }];
+
+                    var priceRate = Convert.ToInt32(character["Career"]) == 9 ? 80 : 100;
+                    var unitPrice = Math.Max(1, item.Price * priceRate / 100);
+                    var result = _store.BuyAsset(
+                        accountId,
+                        state.CharacterId.Value,
+                        (SGO.Server.Domain.Assets.AssetPurchaseKind)(int)item.Kind,
+                        item.ItemIndex,
+                        count,
+                        unitPrice);
+
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    return BuildAssetSyncPackets(
+                        result.Success,
+                        result.Message,
+                        result.Money,
+                        assets);
+                }
+
+                if (action == "SellNpcItem")
+                {
+                    var uid = req.Int("UID");
+                    var tabType = req.Int("TabType");
+                    var count = Math.Clamp(req.Int("Count", 1), 1, 9999);
+                    var success = _store.SellAsset(
+                        accountId,
+                        state.CharacterId.Value,
+                        uid,
+                        tabType,
+                        count,
+                        25,
+                        out var money);
+
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    return BuildAssetSyncPackets(
+                        success,
+                        success ? "出售成功" : "出售失敗",
+                        money,
+                        assets);
+                }
+
+                return [];
             }
 
             case "AttackEntity":
