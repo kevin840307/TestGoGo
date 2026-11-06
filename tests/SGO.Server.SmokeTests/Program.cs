@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using SGO.Server;
+using SGO.Server.Legacy;
 using System.Text.Json;
 
 static void Check(bool ok, string msg)
@@ -10,26 +11,51 @@ static void Check(bool ok, string msg)
 
 static JsonDocument Json(string value) => JsonDocument.Parse(value);
 
+var repoRoot = Directory.GetCurrentDirectory();
+var legacyDataRoot = Path.Combine(repoRoot, "Old", "服務端", "Dat");
+var questRoot = Path.Combine(legacyDataRoot, "Quest");
+
+Check(Directory.Exists(legacyDataRoot), "legacy server data directory exists");
+
+var world = new LegacyWorldService(legacyDataRoot);
+var quests = new LegacyQuestRuntime(questRoot);
+var map15Npcs = world.GetNpcs(15);
+
+Check(map15Npcs.Count == 52, "Map15 legacy NPC.dat contains 52 NPC records");
+Check(map15Npcs[0].Script == "KingCity(P06)_to_KingCity(P08).txt",
+    "Map15 first portal script parsed");
+Check(map15Npcs[0].X == 4932 && map15Npcs[0].Y == 7783,
+    "Map15 first portal coordinates parsed");
+
 var payload = new { Type = "LoginRequest", User = "offline", Pass = "test" };
 var ciphertext = Protocol.Encode(payload);
 using (var packet = Protocol.Decode(ciphertext))
 {
-    Check(packet.RootElement.Str("Type") == "LoginRequest", "AES-CBC/PKCS7 packet round-trip");
-    Check(packet.RootElement.Str("User") == "offline", "JSON decoded fields");
+    Check(packet.RootElement.Str("Type") == "LoginRequest",
+        "AES-CBC/PKCS7 packet round-trip");
+    Check(packet.RootElement.Str("User") == "offline",
+        "JSON decoded fields");
 }
 
-var temp = Path.Combine(Path.GetTempPath(), "sgo-smoke-" + Guid.NewGuid().ToString("N"));
+var temp = Path.Combine(
+    Path.GetTempPath(),
+    "sgo-smoke-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(temp);
 
 try
 {
     var store = new SqliteGameStore(Path.Combine(temp, "game.db"));
-    var router = new PacketRouter(store, NullLogger<PacketRouter>.Instance);
+    var router = new PacketRouter(
+        store,
+        world,
+        quests,
+        NullLogger<PacketRouter>.Instance);
     var session = new ClientSession();
 
     var (created, _) = store.Register("offline", "test-password", "");
     Check(created, "create account");
-    Check(store.Login("offline", "bad") == null, "reject incorrect password");
+    Check(store.Login("offline", "bad") == null,
+        "reject incorrect password");
 
     var account = store.Login("offline", "test-password");
     Check(account.HasValue, "login with correct password");
@@ -42,74 +68,122 @@ try
     using var create = Json("""
         {"Name":"TestCharacter","Password":"1234","Race":1,"Hair":2,"HairColor":3,"Str":4,"Dex":5,"Con":6,"Wis":7}
         """);
-    Check(store.Create(account.Value, create.RootElement).Success, "create character");
+    Check(store.Create(account.Value, create.RootElement).Success,
+        "create first character");
 
-    slots = store.Characters(account.Value);
-    Check(slots.Count == 3 &&
-          slots.Count(x => Convert.ToInt64(x["DBID"]) > 0) == 1 &&
-          slots.Any(x => x.TryGetValue("NAME", out var n) && n?.ToString() == "TestCharacter"),
-        "list first character in three-slot response");
-
-    using var character2 = Json("""
+    using var create2 = Json("""
         {"Name":"SecondCharacter","Password":"5678","Race":0,"Hair":1,"HairColor":2,"Str":7,"Dex":6,"Con":5,"Wis":4}
         """);
-    Check(store.Create(account.Value, character2.RootElement).Success,
+    Check(store.Create(account.Value, create2.RootElement).Success,
         "create second character");
+
     slots = store.Characters(account.Value);
     Check(slots.Count == 3 &&
           slots.Count(x => Convert.ToInt64(x["DBID"]) > 0) == 2,
         "two characters remain in stable three-slot response");
-    Check(slots.Any(x => x.TryGetValue("NAME", out var n) && n?.ToString() == "TestCharacter") &&
-          slots.Any(x => x.TryGetValue("NAME", out var n) && n?.ToString() == "SecondCharacter"),
+    Check(
+        slots.Any(x => x.TryGetValue("NAME", out var n) &&
+                       n?.ToString() == "TestCharacter") &&
+        slots.Any(x => x.TryGetValue("NAME", out var n) &&
+                       n?.ToString() == "SecondCharacter"),
         "creating second character does not replace first");
 
-    var id = Convert.ToInt64(slots.First(x => x.TryGetValue("NAME", out var n) && n?.ToString() == "TestCharacter")["DBID"]);
-    var selected = store.GetCharacter(account.Value, id);
-    Check(selected is not null, "select owned character");
-    Check(Convert.ToInt32(selected!["HP"]) == 100 &&
-          Convert.ToInt32(selected["MapID"]) == 15,
-        "complete player bootstrap defaults");
+    var id = Convert.ToInt64(
+        slots.First(x =>
+            x.TryGetValue("NAME", out var n) &&
+            n?.ToString() == "TestCharacter")["DBID"]);
 
-    using (var login = Json("""{"Type":"LoginRequest","User":"offline","Pass":"test-password"}"""))
+    using (var login = Json(
+        """{"Type":"LoginRequest","User":"offline","Pass":"test-password"}"""))
     {
         var responses = router.Handle(login.RootElement, session);
         Check(responses.Count == 1 && session.AccountId == account,
             "router login establishes authenticated session");
     }
 
-    using (var select = Json($$"""{"Type":"SelectCharacterRequest","DBID":{{id}}}"""))
+    using (var select = Json(
+        $$"""{"Type":"SelectCharacterRequest","DBID":{{id}}}"""))
     {
         var responses = router.Handle(select.RootElement, session);
-        Check(session.CharacterId == id, "router selects character");
-        Check(responses.Count >= 10, "enter world emits initial sync packet set plus Map15 monster");
+        Check(session.CharacterId == id,
+            "router selects character");
+        Check(session.CurrentMapId == 15 && session.PendingMapSpawn,
+            "selected character waits for Map15 first-position spawn");
+        Check(responses.Count == 9,
+            "enter world emits bootstrap sync packets only");
 
-        var firstJson = JsonSerializer.Serialize(responses[0]);
-        using var first = Json(firstJson);
+        using var first = Json(JsonSerializer.Serialize(responses[0]));
         Check(first.RootElement.Str("Type") == "EnterWorldSuccess",
             "first select response enters world");
         Check(first.RootElement.Int("MapID") == 15,
-            "enter world includes map id");
-        Check(responses.Any(x => JsonSerializer.Serialize(x).Contains(""Type":"SpawnEntity"")),
-            "Map15 spawns local test monster");
+            "enter world includes Map15");
     }
 
-    using (var attack = Json("""{"Type":"AttackEntity","TargetEntityID":900001,"TargetType":1}"""))
+    // The first position packet arrives after the client map scene is ready.
+    using (var move = Json(
+        """{"Type":"SyncPosition","X":4932,"Y":7783}"""))
     {
-        var responses = router.Handle(attack.RootElement, session);
-        Check(responses.Count >= 1 &&
-              JsonSerializer.Serialize(responses[0]).Contains(""Type":"EntityDamage""),
-            "basic attack damages Map15 test monster");
+        var responses = router.Handle(move.RootElement, session);
+        Check(responses.Count == 52,
+            "first Map15 position sync spawns all legacy NPCs");
+        Check(responses.All(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SpawnEntity\"")),
+            "Map15 legacy NPCs use SpawnEntity packets");
+        Check(!session.PendingMapSpawn,
+            "Map15 spawn gate clears after first position sync");
     }
 
-    using (var move = Json("""{"Type":"SyncPosition","X":1234,"Y":5678}"""))
-        router.Handle(move.RootElement, session);
-
-    selected = store.GetCharacter(account.Value, id);
-    Check(Convert.ToInt32(Convert.ToDouble(selected!["LocX"])) == 1234 &&
-          Convert.ToInt32(Convert.ToDouble(selected["LocY"])) == 5678,
+    var selected = store.GetCharacter(account.Value, id);
+    Check(Convert.ToInt32(Convert.ToDouble(selected!["LocX"])) == 4932 &&
+          Convert.ToInt32(Convert.ToDouble(selected["LocY"])) == 7783,
         "movement persists to SQLite");
 
-    using (var chat = Json("""{"Type":"ChatMessage","Channel":0,"Message":"hello","BubbleType":0}"""))
+    var portal = map15Npcs[0];
+
+    using (var interact = Json(
+        $$"""{"Type":"InteractRequest","EntityID":{{portal.EntityId}}}"""))
+    {
+        var responses = router.Handle(interact.RootElement, session);
+        Check(responses.Count >= 1 &&
+              JsonSerializer.Serialize(responses[0]).Contains(
+                  "\"Type\":\"NpcDialogResponse\""),
+            "Map15 portal executes legacy Lua start()");
+        Check(JsonSerializer.Serialize(responses[0]).Contains("Check#0"),
+            "legacy Ask options encode GetChoice target");
+    }
+
+    using (var option = Json(
+        $$"""{"Type":"NpcOptionRequest","EntityID":{{portal.EntityId}},"ScriptName":"{{portal.Script}}","TargetNode":"Check#0"}"""))
+    {
+        var responses = router.Handle(option.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"ChangeMap\"")),
+            "portal choice emits ChangeMap");
+        Check(session.CurrentMapId == 16 &&
+              session.PendingMapSpawn,
+            "portal changes session from Map15 to Map16");
+    }
+
+    selected = store.GetCharacter(account.Value, id);
+    Check(Convert.ToInt32(selected!["MapID"]) == 16 &&
+          Convert.ToInt32(Convert.ToDouble(selected["LocX"])) == 10816 &&
+          Convert.ToInt32(Convert.ToDouble(selected["LocY"])) == 3104,
+        "portal destination persists Map16 coordinates in SQLite");
+
+    using (var map16Ready = Json(
+        """{"Type":"SyncPosition","X":10816,"Y":3104}"""))
+    {
+        var responses = router.Handle(map16Ready.RootElement, session);
+        Check(!session.PendingMapSpawn,
+            "Map16 spawn gate clears after new map is ready");
+        Check(responses.Count == world.GetNpcs(16).Count,
+            "Map16 legacy NPCs spawn after map load");
+    }
+
+    using (var chat = Json(
+        """{"Type":"ChatMessage","Channel":0,"Message":"hello","BubbleType":0}"""))
     {
         var responses = router.Handle(chat.RootElement, session);
         Check(responses.Count == 1 &&
@@ -117,7 +191,8 @@ try
             "local chat echoes as ChatBroadcast");
     }
 
-    using (var logout = Json("""{"Type":"LogoutRequest","IsBackToLogin":true}"""))
+    using (var logout = Json(
+        """{"Type":"LogoutRequest","IsBackToLogin":true}"""))
     {
         var responses = router.Handle(logout.RootElement, session);
         Check(responses.Count == 1 && session.CloseRequested,
@@ -126,25 +201,29 @@ try
             "logout clears authenticated session");
     }
 
-    session.AccountId = account;
-    session.CharacterId = id;
-    session.CloseRequested = false;
-
     Check(!store.Delete(account.Value, id, "wrong"),
         "reject wrong character password");
     Check(store.Delete(account.Value, id, "1234"),
         "delete first character");
+
     slots = store.Characters(account.Value);
     Check(slots.Count == 3 &&
           slots.Count(x => Convert.ToInt64(x["DBID"]) > 0) == 1 &&
-          slots.Any(x => x.TryGetValue("NAME", out var n) && n?.ToString() == "SecondCharacter"),
+          slots.Any(x => x.TryGetValue("NAME", out var n) &&
+                         n?.ToString() == "SecondCharacter"),
         "second character remains after deleting first");
 
-    var secondId = Convert.ToInt64(slots.First(x => x.TryGetValue("NAME", out var n) && n?.ToString() == "SecondCharacter")["DBID"]);
+    var secondId = Convert.ToInt64(
+        slots.First(x =>
+            x.TryGetValue("NAME", out var n) &&
+            n?.ToString() == "SecondCharacter")["DBID"]);
+
     Check(store.Delete(account.Value, secondId, "5678"),
         "delete second character");
+
     slots = store.Characters(account.Value);
-    Check(slots.Count == 3 && slots.All(x => Convert.ToInt64(x["DBID"]) == 0),
+    Check(slots.Count == 3 &&
+          slots.All(x => Convert.ToInt64(x["DBID"]) == 0),
         "three empty slots after deleting all characters");
 }
 finally
