@@ -10,7 +10,9 @@ using SGO.Server.Infrastructure.Persistence;
 using SGO.Server.Protocol;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.UseUrls("http://127.0.0.1:5678");
+builder.WebHost.UseUrls(
+    builder.Configuration["Game:ListenUrl"]
+    ?? "http://127.0.0.1:5678");
 
 builder.Services.AddGamePersistence(builder.Configuration);
 
