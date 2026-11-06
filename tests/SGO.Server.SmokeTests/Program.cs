@@ -279,6 +279,22 @@ try
         "monster map initializes per-session combat entities");
 
     var monster = session.Monsters.Values.First();
+
+    var aiPackets = combat.TickAi(
+        session,
+        monster.X + 200,
+        monster.Y,
+        DateTimeOffset.UtcNow.AddSeconds(1));
+
+    Check(monster.HasTarget &&
+          aiPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"MonsterTarget\"")) &&
+          aiPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"MoveEntity\"")),
+        "monster enters aggro and emits chase movement");
+
     var sawDeath = false;
 
     for (var i = 0; i < 100 && !sawDeath; i++)
