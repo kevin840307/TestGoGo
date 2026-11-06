@@ -35,6 +35,23 @@ public interface IGameStore
     bool EquipPetItem(long accountId, long dbid, long petUid, long itemUid, int targetSlot);
     bool UnequipPetItem(long accountId, long dbid, long petUid, int targetSlot);
 
+    Dictionary<string, object>? UseRecoveryItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int recoverHp,
+        int recoverMp,
+        int recoverSp);
+
+    Dictionary<string, object>? ActivateHorseCard(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int horseIndex,
+        string name,
+        string horseType,
+        int initialEnergy);
+
     AssetPurchaseResult BuyAsset(
         long accountId,
         long dbid,
