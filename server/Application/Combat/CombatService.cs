@@ -68,6 +68,23 @@ public sealed class CombatService
         return packets;
     }
 
+    public IReadOnlyList<object> BuildCurrentMapSnapshot(
+        ClientSession session)
+    {
+        var packets = new List<object>();
+        packets.AddRange(
+            _world.BuildNpcSpawnPackets(
+                session.CurrentMapId));
+
+        foreach (var monster in session.Monsters.Values)
+        {
+            if (monster.IsAlive)
+                packets.Add(BuildMonsterSpawnPacket(monster));
+        }
+
+        return packets;
+    }
+
     public IReadOnlyList<object> TickRespawns(
         ClientSession session,
         DateTimeOffset now)
