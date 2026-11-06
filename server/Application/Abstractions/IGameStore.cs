@@ -20,4 +20,10 @@ public interface IGameStore
     bool UpdateState(long accountId, long dbid, string state);
 
     Dictionary<string, object>? Revive(long accountId, long dbid);
+
+    Dictionary<string, object>? AddRewards(
+        long accountId,
+        long dbid,
+        int exp,
+        int money);
 }
