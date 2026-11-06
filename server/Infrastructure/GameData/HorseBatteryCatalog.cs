@@ -19,7 +19,7 @@ public sealed class HorseBatteryCatalog
             if (cols.Length < 2) continue;
             if (!int.TryParse(cols[0].Trim(), out var itemIndex)) continue;
 
-            // Legacy HorseBattery.csv stores usable battery duration in the
+            // HorseBattery.csv stores usable battery duration in the
             // final numeric column (seconds).
             var energy = 0;
             for (var i = cols.Length - 1; i >= 1; i--)
