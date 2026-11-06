@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using System.Security.Cryptography;
 using System.Text.Json;
 using SGO.Server.Application.Abstractions;
+using SGO.Server.Protocol;
 
 namespace SGO.Server.Infrastructure.Persistence.Sqlite;
 
