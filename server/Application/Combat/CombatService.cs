@@ -403,7 +403,7 @@ public sealed class CombatService
                 Scale = 1.0,
                 RequireCtrlToAttack = false,
                 IsWorldBoss = false,
-                LegacyEnemyID = monster.EnemyId
+                EnemyID = monster.EnemyId
             }
         };
 }
