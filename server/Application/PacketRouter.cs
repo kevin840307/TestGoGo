@@ -179,6 +179,7 @@ public sealed class PacketRouter
                     packets.AddRange(
                         _combat.TickAi(
                             state,
+                            accountId,
                             x,
                             y,
                             now));
@@ -238,12 +239,26 @@ public sealed class PacketRouter
                 var character = _store.Revive(accountId, state.CharacterId.Value);
                 if (character is null) return [];
 
+                var rebornMapId = Convert.ToInt32(character["RebornMapID"]);
+                var rebornX = Convert.ToInt32(Convert.ToDouble(character["RebornX"]));
+                var rebornY = Convert.ToInt32(Convert.ToDouble(character["RebornY"]));
+
+                _store.UpdateLocation(
+                    accountId,
+                    state.CharacterId.Value,
+                    rebornMapId,
+                    rebornX,
+                    rebornY);
+
+                state.CurrentMapId = rebornMapId;
+                state.PendingMapSpawn = true;
+                state.Monsters.Clear();
+
                 return
                 [
                     new
                     {
-                        Type = "SyncStatus",
-                        EntityID = state.CharacterId.Value,
+                        Type = "PlayerStatusSync",
                         HP = character["HP"],
                         MP = character["MP"],
                         SP = character["SP"],
@@ -253,10 +268,10 @@ public sealed class PacketRouter
                     },
                     new
                     {
-                        Type = "PlayerStatusSync",
-                        HP = character["HP"],
-                        MP = character["MP"],
-                        SP = character["SP"]
+                        Type = "ChangeMap",
+                        MapID = rebornMapId,
+                        X = rebornX,
+                        Y = rebornY
                     }
                 ];
             }
