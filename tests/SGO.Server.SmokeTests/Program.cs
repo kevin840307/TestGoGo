@@ -272,9 +272,11 @@ try
         Check(responses.Count == 9,
             "enter world emits bootstrap sync packets only");
 
-        Check(JsonSerializer.Serialize(responses[1]).Contains("\"ItemIndex\":10046"),
+        Check(JsonSerializer.Serialize(responses[1]).Contains(
+                $"\"ItemIndex\":{generalShopItem.ItemIndex}"),
             "InventorySync loads persisted item");
-        Check(JsonSerializer.Serialize(responses[2]).Contains("\"ItemIdx\":6101"),
+        Check(JsonSerializer.Serialize(responses[2]).Contains(
+                $"\"ItemIdx\":{weaponShopItem.ItemIndex}"),
             "EquipSync loads persisted equipment");
         Check(JsonSerializer.Serialize(responses[3]).Contains("\"PETID\":1"),
             "PetSync loads persisted pet");
