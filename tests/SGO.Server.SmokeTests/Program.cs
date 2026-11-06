@@ -265,6 +265,9 @@ try
             "BuyNpcItem deducts money");
     }
 
+    var baseAttackBeforeEquip = Convert.ToInt32(
+        store.GetCharacter(account.Value, id)!["Attack"]);
+
     using (var equip = Json(JsonSerializer.Serialize(new { Type = "EquipRequest", ItemUID = equipUid, TargetSlot = 5 })))
     {
         var responses = router.Handle(equip.RootElement, session);
@@ -278,6 +281,10 @@ try
                 .Any(x => Convert.ToInt64(x["ItemID"]) == equipUid &&
                           Convert.ToInt32(x["Part"]) == 5),
             "equipped slot persists");
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("\"Type\":\"PlayerStatusSync\"") &&
+                JsonSerializer.Serialize(x).Contains($"\"Attack\":{baseAttackBeforeEquip + 20}")),
+            "equipping weapon increases effective attack");
     }
 
     using (var unequip = Json(
@@ -308,6 +315,9 @@ try
         Check(Convert.ToInt64(
                   store.GetCharacter(account.Value, id)!["SummonedHorseUID"]) == horseUid,
             "summoned mecha persists on character");
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("\"Type\":\"PlayerStatusSync\"")),
+            "driving mecha refreshes effective combat stats");
     }
 
     using (var horseEquip = Json(JsonSerializer.Serialize(new { Type = "HorseEquipRequest", EquipUID = horseEquipUid, HorseUID = horseUid })))
@@ -319,8 +329,9 @@ try
             "HorseEquipRequest refreshes HorseSync");
         Check(store.GetCharacterAssets(account.Value, id).HorseEquips
                 .Any(x => Convert.ToInt64(x["EquipUID"]) == horseEquipUid &&
-                          Convert.ToInt64(x["HorseUID"]) == horseUid),
-            "mecha equipment assignment persists");
+                          Convert.ToInt64(x["HorseUID"]) == horseUid &&
+                          Convert.ToInt32(x["Part"]) == 1),
+            "mecha equipment assignment and part persist");
     }
 
     using (var petSummon = Json(JsonSerializer.Serialize(new { Type = "PetAction", Action = "Summon", PetUID = petUid })))
@@ -330,6 +341,12 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"PetSync\"")),
             "PetAction Summon refreshes PetSync");
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SpawnEntity\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"EntityType\":4")),
+            "PetAction Summon spawns pet entity");
         Check(store.GetCharacterAssets(account.Value, id).Pets
                 .Any(x => Convert.ToInt64(x["UID"]) == petUid &&
                           Convert.ToInt32(x["State"]) == 1),
@@ -365,7 +382,11 @@ try
 
     using (var petRecall = Json(JsonSerializer.Serialize(new { Type = "PetAction", Action = "Recall", PetUID = petUid })))
     {
-        router.Handle(petRecall.RootElement, session);
+        var responses = router.Handle(petRecall.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"DespawnEntity\"")),
+            "PetAction Recall despawns pet entity");
         Check(store.GetCharacterAssets(account.Value, id).Pets
                 .Any(x => Convert.ToInt64(x["UID"]) == petUid &&
                           Convert.ToInt32(x["State"]) == 0),
