@@ -626,7 +626,9 @@ public sealed class SqliteGameStore : IGameStore
         Arg(cmd, "$horse", horseUid);
         Arg(cmd, "$damage", Math.Max(0, damage));
         Arg(cmd, "$color", Math.Max(0, color));
-        Arg(cmd, "$part", part);
+        Arg(cmd, "$part", part is >= 0 and <= 3
+            ? part
+            : ResolveHorseEquipPart(equipIndex));
         return Convert.ToInt64(cmd.ExecuteScalar());
     }
 
@@ -1114,7 +1116,19 @@ public sealed class SqliteGameStore : IGameStore
             part = Convert.ToInt32(raw);
         }
 
-        if (part is < 0 or > 254) part = 3;
+        if (part is < 0 or > 3)
+        {
+            using var getIndex = db.CreateCommand();
+            getIndex.Transaction = tx;
+            getIndex.CommandText = """
+                SELECT equip_index FROM horse_equipment
+                 WHERE uid=$uid AND character_id=$id
+                """;
+            Arg(getIndex, "$uid", equipUid);
+            Arg(getIndex, "$id", dbid);
+            part = ResolveHorseEquipPart(
+                Convert.ToInt32(getIndex.ExecuteScalar()));
+        }
 
         using (var clear = db.CreateCommand())
         {
