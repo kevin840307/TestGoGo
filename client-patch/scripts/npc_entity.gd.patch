@@ -1,0 +1,62 @@
+--- a/scripts/npc_entity.gd
++++ b/scripts/npc_entity.gd
+@@
+ func initialize_npc(data: Dictionary) -> void :
+ 	entity_id = int(data.get("EntityID", 0))
+ 	npc_name = str(data.get("Name", "未知NPC"))
+ 	name_label.text = npc_name
+ 
+ 	var extra = data.get("ExtraData", {})
+ 	var sprite_name = str(extra.get("Sprite", ""))
++	var legacy_npc_type_id = int(extra.get("LegacyNpcTypeID", 0))
++	var is_merchant = bool(extra.get("IsMerchant", false))
+ 	npc_script_name = str(extra.get("Script", ""))
+ 	is_portal = bool(extra.get("IsPortal", npc_script_name.begins_with("Portal_")))
+ 
+-	_load_visuals(sprite_name)
++	_load_visuals_compatible(sprite_name, legacy_npc_type_id, is_merchant)
++
++func _load_visuals_compatible(sprite_name: String, legacy_npc_type_id: int, is_merchant: bool) -> void:
++	var candidates: Array[String] = []
++	if sprite_name != "":
++		candidates.append(sprite_name)
++
++	if legacy_npc_type_id > 0:
++		for candidate in [
++			"NPC%03d.png" % legacy_npc_type_id,
++			"NPC%04d.png" % legacy_npc_type_id,
++			"NPC_%03d.png" % legacy_npc_type_id,
++			"%03d.png" % legacy_npc_type_id,
++			"%04d.png" % legacy_npc_type_id
++		]:
++			if candidate not in candidates:
++				candidates.append(candidate)
++
++	for candidate in candidates:
++		if ResourceLoader.exists("res://Assets/NPC/" + candidate):
++			_load_visuals(candidate)
++			return
++
++	# Keep functional NPCs clickable/visible even when the recovered asset
++	# uses a legacy filename we have not mapped yet.
++	if is_merchant:
++		for fallback in ["NPC002.png", "NPC001.png"]:
++			if ResourceLoader.exists("res://Assets/NPC/" + fallback):
++				_load_visuals(fallback)
++				return
++
++	# Last-resort visual marker: collision + name remain usable.
++	var placeholder = GradientTexture2D.new()
++	placeholder.width = 32
++	placeholder.height = 48
++	var gradient = Gradient.new()
++	gradient.colors = PackedColorArray([Color(0.85, 0.75, 0.25), Color(0.55, 0.35, 0.1)])
++	placeholder.gradient = gradient
++	sprite.texture = placeholder
++	sprite.centered = true
++	sprite.position = Vector2(0, -24)
++	var rect = RectangleShape2D.new()
++	rect.size = Vector2(32, 48)
++	collision.shape = rect
++	collision.position = Vector2(0, -24)
++	visual_center.position = Vector2(0, -58)
