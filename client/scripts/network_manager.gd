@@ -1,7 +1,7 @@
 
 extends Node
 
-var USE_DDNS: bool = true
+var USE_DDNS: bool = false
 var SERVER_URL = "ws://127.0.0.1:5678"
 var socket = WebSocketPeer.new()
 var is_connected_to_server = false
