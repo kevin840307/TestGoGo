@@ -1,5 +1,6 @@
 using System.Text.Json;
 using SGO.Server.Domain.Assets;
+using SGO.Server.Domain.Shops;
 
 namespace SGO.Server.Application.Abstractions;
 
