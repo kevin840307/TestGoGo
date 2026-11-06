@@ -204,12 +204,15 @@ try
         account.Value, id, 6001, "TestMecha", "MS", 3600);
     var horseEquipUid = store.AddHorseEquipment(
         account.Value, id, 6201, -1, 3, 0, 1);
+    var batteryUid = store.AddInventoryItem(
+        account.Value, id, 6905, 1);
 
     Check(itemUid > 0 &&
           equipUid > 0 &&
           petUid > 0 &&
           horseUid > 0 &&
-          horseEquipUid > 0,
+          horseEquipUid > 0 &&
+          batteryUid > 0,
         "seed persistent inventory equipment pet and mecha assets");
 
     var seededAssets = store.GetCharacterAssets(account.Value, id);
