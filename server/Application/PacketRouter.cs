@@ -2,6 +2,7 @@ using System.Text.Json;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Combat;
+using SGO.Server.Application.Gm;
 using SGO.Server.Application.Shops;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Infrastructure.GameData;
@@ -20,6 +21,7 @@ public sealed class PacketRouter
     private readonly QuestRuntime _quests;
     private readonly CombatService _combat;
     private readonly ShopService _shopService;
+    private readonly GmCommandService _gm;
     private readonly HorseBatteryCatalog _horseBatteries;
     private readonly RecoveryItemCatalog _recoveryItems;
     private readonly HorseCardCatalog _horseCards;
@@ -31,6 +33,7 @@ public sealed class PacketRouter
         QuestRuntime quests,
         CombatService combat,
         ShopService shopService,
+        GmCommandService gm,
         HorseBatteryCatalog horseBatteries,
         RecoveryItemCatalog recoveryItems,
         HorseCardCatalog horseCards,
@@ -41,6 +44,7 @@ public sealed class PacketRouter
         _quests = quests;
         _combat = combat;
         _shopService = shopService;
+        _gm = gm;
         _horseBatteries = horseBatteries;
         _recoveryItems = recoveryItems;
         _horseCards = horseCards;
@@ -180,7 +184,11 @@ public sealed class PacketRouter
                         HorseEquips = assets.HorseEquips,
                         MaxHorseEquipSize = assets.HorseEquipMaxSize
                     },
-                    new { Type = "SkillSync", Skills = Array.Empty<object>() },
+                    new
+                    {
+                        Type = "SkillSync",
+                        Skills = _store.GetSkills(accountId, dbid)
+                    },
                     new { Type = "SyncBuffs", Buffs = Array.Empty<object>() },
                     new { Type = "QuestSync", Quests = Array.Empty<object>() },
                     new { Type = "FestivalThemeSync", Theme = "normal", Festival = "" }
@@ -780,6 +788,13 @@ public sealed class PacketRouter
                 var message = req.Str("Message");
                 if (message.Length > 200)
                     message = message[..200];
+
+                if (message.StartsWith(
+                        "/gm",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return _gm.Execute(message, state);
+                }
 
                 return [new
                 {
