@@ -130,14 +130,40 @@ public sealed class LegacyQuestRuntime
             return DynValue.Nil;
         });
 
-        // Compatibility stubs. These keep simple legacy scripts running while
-        // unsupported systems are implemented incrementally.
+        script.Globals["OpenBank"] = (Action)(() =>
+        {
+            result.Packets.Add(new
+            {
+                Type = "OpenBankWindow"
+            });
+        });
+
+        script.Globals["OpenRepair"] = DynValue.NewCallback((ctx, args) =>
+        {
+            var repairType = args.Count > 0 ? (int)args[0].Number : 1;
+            result.Packets.Add(new
+            {
+                Type = "OpenRepairWindow",
+                RepairType = repairType
+            });
+            return DynValue.Nil;
+        });
+
         script.Globals["OpenShop"] = DynValue.NewCallback((ctx, args) =>
         {
             var shopId = args.Count > 0 ? (int)args[0].Number : 0;
-            result.Packets.Add(new {
-                Type = "SystemMessageChat",
-                Message = $"NPC 商店 {shopId} 尚未實作"
+            var priceRate = args.Count > 1 ? (int)args[1].Number : 100;
+
+            // The client has a dedicated NPC shop UI. Item population is wired
+            // separately from legacy item/shop data; returning an empty list here
+            // is still a valid functional OpenShop packet and avoids Lua failure.
+            result.Packets.Add(new
+            {
+                Type = "NpcShopViewResponse",
+                ShopID = shopId,
+                ShopName = speaker,
+                PriceRate = priceRate,
+                Items = Array.Empty<object>()
             });
             return DynValue.Nil;
         });
