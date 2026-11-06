@@ -10,8 +10,13 @@ public sealed class MonsterRuntimeState
     public int Level { get; init; }
     public int MaxHp { get; init; }
     public int CurrentHp { get; set; }
-    public int X { get; init; }
-    public int Y { get; init; }
+
+    public double SpawnX { get; init; }
+    public double SpawnY { get; init; }
+    public double X { get; set; }
+    public double Y { get; set; }
+
+    public bool HasTarget { get; set; }
     public DateTimeOffset? RespawnAt { get; set; }
 
     public bool IsAlive => CurrentHp > 0 && RespawnAt is null;
