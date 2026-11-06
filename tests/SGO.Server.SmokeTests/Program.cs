@@ -1,6 +1,9 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using SGO.Server;
-using SGO.Server.Legacy;
+using SGO.Server.Application;
+using SGO.Server.Domain.Sessions;
+using SGO.Server.Infrastructure.Legacy;
+using SGO.Server.Infrastructure.Persistence.Sqlite;
+using SGO.Server.Protocol;
 using System.Text.Json;
 
 static void Check(bool ok, string msg)
@@ -26,6 +29,11 @@ Check(map15Npcs[0].Script == "KingCity(P06)_to_KingCity(P08).txt",
     "Map15 first portal script parsed");
 Check(map15Npcs[0].X == 4932 && map15Npcs[0].Y == 7783,
     "Map15 first portal coordinates parsed");
+
+Check(LegacyDialogFormatter.CleanText("n要進入尼尼亞皇城嗎？") == "要進入尼尼亞皇城嗎？" &&
+      LegacyDialogFormatter.CleanText("n1你好") == "你好" &&
+      LegacyDialogFormatter.CleanText("p7取得道具") == "取得道具",
+    "legacy dialog formatter strips presentation prefixes");
 
 var bankResult = quests.Execute(
     "Bank.txt", "start", 1, "銀行", null, _ => 0);
@@ -89,8 +97,8 @@ Check(world.BuildMapSpawnPackets(15).Count == 52,
     "Map15 city suppresses combat enemy spawns");
 
 var payload = new { Type = "LoginRequest", User = "offline", Pass = "test" };
-var ciphertext = Protocol.Encode(payload);
-using (var packet = Protocol.Decode(ciphertext))
+var ciphertext = ClientProtocol.Encode(payload);
+using (var packet = ClientProtocol.Decode(ciphertext))
 {
     Check(packet.RootElement.Str("Type") == "LoginRequest",
         "AES-CBC/PKCS7 packet round-trip");
