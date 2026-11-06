@@ -304,6 +304,36 @@ try
             "pet summon state persists");
     }
 
+    using (var petRename = Json(
+        $"""{"Type":"PetAction","Action":"Rename","PetUID":{{petUid}},"NewName":"Momo"}"""))
+    {
+        router.Handle(petRename.RootElement, session);
+        Check(store.GetCharacterAssets(account.Value, id).Pets
+                .Any(x => Convert.ToInt64(x["UID"]) == petUid &&
+                          x["Name"].ToString() == "Momo"),
+            "pet rename persists");
+    }
+
+    using (var petEquip = Json(
+        $"""{"Type":"PetAction","Action":"Equip","PetUID":{{petUid}},"ItemUID":{{equipUid}},"TargetSlot":0}"""))
+    {
+        router.Handle(petEquip.RootElement, session);
+        Check(store.GetCharacterAssets(account.Value, id).Pets
+                .Any(x => Convert.ToInt64(x["UID"]) == petUid &&
+                          Convert.ToInt64(x["Equip0"]) == equipUid),
+            "pet equipment assignment persists");
+    }
+
+    using (var petUnequip = Json(
+        $"""{"Type":"PetAction","Action":"Unequip","PetUID":{{petUid}},"TargetSlot":0}"""))
+    {
+        router.Handle(petUnequip.RootElement, session);
+        Check(store.GetCharacterAssets(account.Value, id).Pets
+                .Any(x => Convert.ToInt64(x["UID"]) == petUid &&
+                          Convert.ToInt64(x["Equip0"]) == 0),
+            "pet equipment removal persists");
+    }
+
     using (var petRecall = Json(
         $"""{"Type":"PetAction","Action":"Recall","PetUID":{{petUid}}}"""))
     {
