@@ -374,6 +374,31 @@ public sealed class PacketRouter
                             0);
                         break;
 
+                    case "Rename":
+                        success = _store.RenamePet(
+                            accountId,
+                            state.CharacterId.Value,
+                            petUid,
+                            req.Str("NewName"));
+                        break;
+
+                    case "Equip":
+                        success = _store.EquipPetItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            petUid,
+                            req.Int("ItemUID"),
+                            req.Int("TargetSlot", -1));
+                        break;
+
+                    case "Unequip":
+                        success = _store.UnequipPetItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            petUid,
+                            req.Int("TargetSlot", -1));
+                        break;
+
                     default:
                         _log.LogDebug(
                             "Unimplemented PetAction: {Action}",
@@ -397,7 +422,15 @@ public sealed class PacketRouter
                     {
                         Type = "SystemMessageFlash",
                         Message = success
-                            ? (action == "Summon" ? "寵物已召喚" : "寵物已收回")
+                            ? action switch
+                            {
+                                "Summon" => "寵物已召喚",
+                                "Recall" => "寵物已收回",
+                                "Rename" => "寵物名稱已更新",
+                                "Equip" => "寵物裝備成功",
+                                "Unequip" => "寵物裝備已卸下",
+                                _ => "寵物操作成功"
+                            }
                             : "寵物操作失敗"
                     }
                 ];
