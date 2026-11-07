@@ -1,6 +1,7 @@
 using System.Text.Json;
 using SGO.Server.Domain.Assets;
 using SGO.Server.Domain.Shops;
+using SGO.Server.Domain.World;
 
 namespace SGO.Server.Application.Abstractions;
 
@@ -284,6 +285,27 @@ public interface IItemDiscardStore : ICharacterAssetReader
         long uid,
         int tabType,
         int count);
+}
+
+public interface IWorldGroundItemStore
+{
+    GroundItemRuntime? DropAssetToGround(
+        long accountId,
+        long dbid,
+        long uid,
+        int tabType,
+        int count,
+        int mapId,
+        double x,
+        double y);
+
+    IReadOnlyList<GroundItemRuntime> GetGroundItems(int mapId);
+
+    (bool Success, string Message, GroundItemRuntime? Item)
+        PickUpGroundItem(
+            long accountId,
+            long dbid,
+            long groundItemId);
 }
 
 public interface IShopStore : ICharacterAssetReader
