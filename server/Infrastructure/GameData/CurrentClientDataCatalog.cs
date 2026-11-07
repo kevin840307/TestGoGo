@@ -110,7 +110,9 @@ public sealed class CurrentClientDataCatalog
     public CurrentClientDataCatalog(
         IEnumerable<CurrentItemDefinition> items,
         IEnumerable<CurrentSkillDefinition> skills,
-        IEnumerable<CurrentPetDefinition>? pets = null)
+        IEnumerable<CurrentPetDefinition>? pets = null,
+        IEnumerable<CurrentSkillLevelDefinition>? skillLevels = null,
+        IEnumerable<CurrentHorsePreset>? horsePresets = null)
     {
         Root = "<in-memory>";
 
@@ -130,6 +132,18 @@ public sealed class CurrentClientDataCatalog
         {
             foreach (var pet in pets)
                 _pets[pet.PetId] = pet;
+        }
+
+        if (skillLevels is not null)
+        {
+            foreach (var skillLevel in skillLevels)
+                _skillLevels[(skillLevel.SkillId, skillLevel.Level)] = skillLevel;
+        }
+
+        if (horsePresets is not null)
+        {
+            foreach (var preset in horsePresets)
+                _horsePresets[preset.HorseId] = preset;
         }
     }
 
