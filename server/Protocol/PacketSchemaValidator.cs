@@ -15,6 +15,17 @@ public static class PacketSchemaValidator
     private static readonly IReadOnlyDictionary<string, Field[]> Rules =
         new Dictionary<string, Field[]>(StringComparer.Ordinal)
         {
+            ["LoginRequest"] =
+            [
+                new("User", FieldType.NonEmptyText),
+                new("Pass", FieldType.Text)
+            ],
+            ["RegisterAccountRequest"] =
+            [
+                new("LoginName", FieldType.NonEmptyText),
+                new("Password", FieldType.Text),
+                new("EMAIL", FieldType.Text)
+            ],
             ["WorldReady"] = [new("MapID", FieldType.Integer)],
             ["SyncPosition"] = [new("X", FieldType.Integer), new("Y", FieldType.Integer)],
             ["UseItemRequest"] = [new("ItemUID", FieldType.Integer)],
