@@ -1,9 +1,9 @@
 name: Server build
 on:
   push:
-    paths: ['server/**', 'tests/SGO.Server.SmokeTests/**', '.github/workflows/server-build.yml']
+    paths: ['server/**', 'client/**/*.gd', 'tests/SGO.Server.SmokeTests/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', '.github/workflows/server-build.yml']
   pull_request:
-    paths: ['server/**', 'tests/SGO.Server.SmokeTests/**', '.github/workflows/server-build.yml']
+    paths: ['server/**', 'client/**/*.gd', 'tests/SGO.Server.SmokeTests/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', '.github/workflows/server-build.yml']
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,6 +12,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Packet contract audit
+        run: |
+          python3 -m unittest discover -s tests -p 'test_packet_contract_audit.py' -v
+          python3 tests/packet_contract_audit.py --strict --output packet-contract-report.json
       - name: Build server
         run: |
           set -o pipefail
@@ -28,4 +32,5 @@ jobs:
           path: |
             build.log
             smoke.log
+            packet-contract-report.json
           if-no-files-found: ignore
