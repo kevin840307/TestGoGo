@@ -2836,6 +2836,86 @@ public sealed class SqliteGameStore : IGameStore
         };
     }
 
+    public RepairAssetResult RepairAsset(
+        long accountId,
+        long dbid,
+        long uid,
+        bool isMechaEquipment,
+        int repairedDurability,
+        long cost)
+    {
+        if (uid <= 0 || repairedDurability <= 0 || cost < 0)
+            return new(false, "維修資料無效", 0);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在", 0);
+
+        long money;
+        using (var getMoney = db.CreateCommand())
+        {
+            getMoney.Transaction = tx;
+            getMoney.CommandText = """
+                SELECT money
+                  FROM characters
+                 WHERE id=$id AND account_id=$a
+                """;
+            Arg(getMoney, "$id", dbid);
+            Arg(getMoney, "$a", accountId);
+            var raw = getMoney.ExecuteScalar();
+            if (raw is null || raw == DBNull.Value)
+                return new(false, "角色不存在", 0);
+            money = Convert.ToInt64(raw);
+        }
+
+        if (money < cost)
+            return new(false, "金錢不足", money);
+
+        var table = isMechaEquipment
+            ? "horse_equipment"
+            : "equipment_items";
+
+        using (var updateItem = db.CreateCommand())
+        {
+            updateItem.Transaction = tx;
+            updateItem.CommandText = $"""
+                UPDATE {table}
+                   SET damage=$damage
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND in_bank=0
+                   AND in_shop=0
+                """;
+            Arg(updateItem, "$damage", repairedDurability);
+            Arg(updateItem, "$uid", uid);
+            Arg(updateItem, "$id", dbid);
+
+            if (updateItem.ExecuteNonQuery() != 1)
+                return new(false, "找不到可維修的裝備", money);
+        }
+
+        var newMoney = money - cost;
+        using (var updateMoney = db.CreateCommand())
+        {
+            updateMoney.Transaction = tx;
+            updateMoney.CommandText = """
+                UPDATE characters
+                   SET money=$money
+                 WHERE id=$id AND account_id=$a
+                """;
+            Arg(updateMoney, "$money", newMoney);
+            Arg(updateMoney, "$id", dbid);
+            Arg(updateMoney, "$a", accountId);
+            if (updateMoney.ExecuteNonQuery() != 1)
+                return new(false, "扣款失敗", money);
+        }
+
+        tx.Commit();
+        return new(true, "維修完成", newMoney);
+    }
+
     public (bool Success, string Message) DiscardAsset(
         long accountId,
         long dbid,
