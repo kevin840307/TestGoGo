@@ -677,7 +677,7 @@ public sealed class CombatService
                 return [Flash("目前僅支援自身治療/增益")];
             }
 
-            targetEntityId = session.CharacterId.Value;
+            targetEntityId = checked((int)session.CharacterId.Value);
             centerX = Convert.ToDouble(character["LocX"]);
             centerY = Convert.ToDouble(character["LocY"]);
         }
