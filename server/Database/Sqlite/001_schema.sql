@@ -172,3 +172,18 @@ CREATE TABLE IF NOT EXISTS character_shortcuts (
     PRIMARY KEY(character_id, slot_index),
     FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS ground_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    map_id INTEGER NOT NULL,
+    owner_dbid INTEGER NOT NULL DEFAULT 0,
+    tab_type INTEGER NOT NULL,
+    item_index INTEGER NOT NULL,
+    count INTEGER NOT NULL DEFAULT 1,
+    damage INTEGER NOT NULL DEFAULT 0,
+    color INTEGER NOT NULL DEFAULT 0,
+    part INTEGER NOT NULL DEFAULT 255,
+    x REAL NOT NULL,
+    y REAL NOT NULL
+);
+
