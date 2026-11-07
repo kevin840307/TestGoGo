@@ -71,7 +71,9 @@ public static class GameDataServiceCollectionExtensions
             new QuestRuntime(
                 Path.Combine(gameDataRoot, "Quest"),
                 sp.GetRequiredService<ShopCatalog>(),
-                sp.GetRequiredService<EnemyDropCatalog>()));
+                sp.GetRequiredService<EnemyDropCatalog>(),
+                sp.GetRequiredService<LegacyClientDataCatalog>(),
+                sp.GetRequiredService<CurrentClientDataCatalog>()));
 
         return services;
     }
