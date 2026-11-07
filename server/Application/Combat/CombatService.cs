@@ -1343,8 +1343,8 @@ public sealed class CombatService
             centerX = primaryMonster.X;
             centerY = primaryMonster.Y;
 
-            var playerX = Convert.ToDouble(character["LocX"]);
-            var playerY = Convert.ToDouble(character["LocY"]);
+            var playerX = session.LastX;
+            var playerY = session.LastY;
             var castDx = centerX - playerX;
             var castDy = centerY - playerY;
             var castRange = Math.Max(0, levelData.CastRange) + 120;
@@ -1385,10 +1385,10 @@ public sealed class CombatService
 
             var castDx =
                 Convert.ToDouble(reviveTargetCharacter["LocX"]) -
-                Convert.ToDouble(character["LocX"]);
+                session.LastX;
             var castDy =
                 Convert.ToDouble(reviveTargetCharacter["LocY"]) -
-                Convert.ToDouble(character["LocY"]);
+                session.LastY;
             var castRange = Math.Max(0, levelData.CastRange) + 120;
 
             if (castDx * castDx + castDy * castDy >
@@ -1437,10 +1437,10 @@ public sealed class CombatService
 
                 var castDx =
                     Convert.ToDouble(healTargetCharacter["LocX"]) -
-                    Convert.ToDouble(character["LocX"]);
+                    session.LastX;
                 var castDy =
                     Convert.ToDouble(healTargetCharacter["LocY"]) -
-                    Convert.ToDouble(character["LocY"]);
+                    session.LastY;
                 var castRange =
                     Math.Max(0, levelData.CastRange) + 120;
 
@@ -1509,8 +1509,8 @@ public sealed class CombatService
         {
             targetEntityId =
                 checked((int)session.CharacterId.Value);
-            centerX = Convert.ToDouble(character["LocX"]);
-            centerY = Convert.ToDouble(character["LocY"]);
+            centerX = session.LastX;
+            centerY = session.LastY;
         }
         else if (isScout)
         {
@@ -1538,10 +1538,10 @@ public sealed class CombatService
 
             var castDx =
                 Convert.ToDouble(scoutTargetCharacter["LocX"]) -
-                Convert.ToDouble(character["LocX"]);
+                session.LastX;
             var castDy =
                 Convert.ToDouble(scoutTargetCharacter["LocY"]) -
-                Convert.ToDouble(character["LocY"]);
+                session.LastY;
             var castRange =
                 Math.Max(0, levelData.CastRange) + 120;
 
@@ -1567,8 +1567,8 @@ public sealed class CombatService
             }
 
             targetEntityId = checked((int)session.CharacterId.Value);
-            centerX = Convert.ToDouble(character["LocX"]);
-            centerY = Convert.ToDouble(character["LocY"]);
+            centerX = session.LastX;
+            centerY = session.LastY;
         }
 
         if (hasCreateItemSpecial)
@@ -1587,8 +1587,8 @@ public sealed class CombatService
 
             targetEntityId =
                 checked((int)session.CharacterId.Value);
-            centerX = Convert.ToDouble(character["LocX"]);
-            centerY = Convert.ToDouble(character["LocY"]);
+            centerX = session.LastX;
+            centerY = session.LastY;
         }
 
         var updated = _store.SpendSkillResources(
@@ -2598,8 +2598,8 @@ public sealed class CombatService
         if (character is null)
             return [Flash("角色資料不存在")];
 
-        var playerX = Convert.ToDouble(character["LocX"]);
-        var playerY = Convert.ToDouble(character["LocY"]);
+        var playerX = session.LastX;
+        var playerY = session.LastY;
         var assets = _store.GetCharacterAssets(
             accountId,
             session.CharacterId.Value);
