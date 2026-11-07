@@ -89,10 +89,27 @@ public sealed class SqliteGameStore : IGameStore
         return r.Read() && Verify(password, r.GetString(1)) ? r.GetInt64(0) : null;
     }
 
+    private static void RepairOversizedCharacterExperience(SqliteConnection db, long accountId)
+    {
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET exp_acc = 0
+             WHERE account_id = $a
+               AND (exp_acc > $maxInt OR exp_acc < 0)
+            """;
+        Arg(cmd, "$a", accountId);
+        Arg(cmd, "$maxInt", int.MaxValue);
+        var repaired = cmd.ExecuteNonQuery();
+        if (repaired > 0)
+            Console.Error.WriteLine($"[CHARACTER_EXP_REPAIRED] AccountID={accountId} Rows={repaired} ExpAccReset=0");
+    }
+
     public List<Dictionary<string, object>> Characters(long accountId)
     {
         var list = new List<Dictionary<string, object>>();
         using var db = Open();
+        RepairOversizedCharacterExperience(db, accountId);
         using var cmd = CharacterQuery(db);
         cmd.CommandText += " WHERE account_id=$a ORDER BY id LIMIT 3";
         Arg(cmd, "$a", accountId);
@@ -121,6 +138,7 @@ public sealed class SqliteGameStore : IGameStore
     public Dictionary<string, object>? GetCharacter(long accountId, long dbid)
     {
         using var db = Open();
+        RepairOversizedCharacterExperience(db, accountId);
         using var cmd = CharacterQuery(db);
         cmd.CommandText += " WHERE account_id=$a AND id=$id LIMIT 1";
         Arg(cmd, "$a", accountId);
@@ -8590,11 +8608,12 @@ public sealed class SqliteGameStore : IGameStore
         cmd.Transaction = tx;
         cmd.CommandText = """
             UPDATE characters
-               SET exp_acc = exp_acc + $exp,
+               SET exp_acc = MIN($maxInt, MAX(0, exp_acc) + $exp),
                    money = money + $money
              WHERE id=$id AND account_id=$a
             """;
         Arg(cmd, "$exp", Math.Max(0, exp));
+        Arg(cmd, "$maxInt", int.MaxValue);
         Arg(cmd, "$money", Math.Max(0, money));
         Arg(cmd, "$id", dbid);
         Arg(cmd, "$a", accountId);
@@ -8681,7 +8700,9 @@ public sealed class SqliteGameStore : IGameStore
                        WHEN $level > level THEN ($level - level) * 2
                        ELSE 0
                    END,
-                   level=$level
+                   level=$level,
+                   exp_acc=0,
+                   exp_death=0
              WHERE id=$id AND account_id=$a
             """;
         Arg(cmd, "$level", level);
