@@ -30,7 +30,8 @@ public sealed record CurrentItemDefinition(
     int RecoverSp,
     int MaxBattery,
     int Battery,
-    string HorseType);
+    string HorseType,
+    int ReqLevel = 0);
 
 public sealed record CurrentSkillDefinition(
     int SkillId,
@@ -292,7 +293,8 @@ public sealed class CurrentClientDataCatalog
                     ReadInt(text, "recover_sp"),
                     ReadInt(text, "max_battery"),
                     ReadInt(text, "battery"),
-                    ReadString(text, "horse_type"));
+                    ReadString(text, "horse_type"),
+                    ReadInt(text, "req_level"));
 
                 _items[id] = item;
                 AddByName(_itemsByName, item.Name, item);
