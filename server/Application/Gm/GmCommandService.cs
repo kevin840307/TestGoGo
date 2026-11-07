@@ -80,6 +80,8 @@ public sealed class GmCommandService
                     => Mecha(parts, accountId, dbid),
                 "mechacard"
                     => MechaCard(parts, accountId, dbid),
+                "mechaequip"
+                    => MechaEquip(parts, accountId, dbid),
                 "pet" => Pet(parts, accountId, dbid),
                 "skill" => Skill(parts, accountId, dbid),
                 "skills" => SkillList(accountId, dbid),
@@ -529,6 +531,68 @@ public sealed class GmCommandService
         ];
     }
 
+    private IReadOnlyList<object> MechaEquip(
+        string[] parts,
+        long accountId,
+        long dbid)
+    {
+        if (parts.Length < 3 ||
+            !int.TryParse(parts[2], out var itemIndex))
+            return [Chat("用法：/gm mechaequip <EquipID> [HorseUID]")];
+
+        var item = _current.FindItem(itemIndex);
+        if (item is null ||
+            !item.Category.Equals(
+                "horseequip",
+                StringComparison.OrdinalIgnoreCase))
+            return [Chat($"新版 GameData 找不到機甲裝備 ItemIndex={itemIndex}")];
+
+        var horseUid = -1L;
+        if (parts.Length > 3 &&
+            long.TryParse(parts[3], out var parsedHorseUid))
+            horseUid = parsedHorseUid;
+
+        var uid = _store.AddHorseEquipment(
+            accountId,
+            dbid,
+            itemIndex,
+            horseUid,
+            item.EquipSlot);
+
+        if (uid <= 0)
+            return [Chat("給機甲裝備失敗")];
+
+        var assets = _store.GetCharacterAssets(accountId, dbid);
+        var responses = new List<object>
+        {
+            new
+            {
+                Type = "HorseSync",
+                Horses = assets.Horses,
+                HorseEquips = assets.HorseEquips,
+                MaxHorseEquipSize = assets.HorseEquipMaxSize
+            }
+        };
+
+        if (horseUid > 0)
+        {
+            var ch = _store.GetCharacter(accountId, dbid);
+            if (ch is not null)
+                responses.Add(
+                    CharacterStatCalculator.ToPlayerStatusPacket(
+                        ch,
+                        assets,
+                        _current));
+        }
+
+        responses.Add(Chat(
+            horseUid > 0
+                ? $"已建立並裝上機甲裝備 {item.Name} ({itemIndex})"
+                : $"已建立機甲裝備 {item.Name} ({itemIndex})"));
+
+        return responses;
+    }
+
     private IReadOnlyList<object> Pet(
         string[] parts,
         long accountId,
@@ -747,7 +811,7 @@ public sealed class GmCommandService
     private static string HelpText()
         => "GM: help | pos | map <id> [x] [y] | heal | level <n> | " +
            "maxstats | money <n> | item <id> [count] | equip <id> | " +
-           "mecha <cardId> | mechacard <cardId> | pet <petId> [name] | " +
+           "mecha <cardId> | mechacard <cardId> | mechaequip <id> [horseUid] | pet <petId> [name] | " +
            "skill <id|all> [lv] | skills | clearskills | " +
            "spawn <enemyId> [x] [y] | killall";
 }
