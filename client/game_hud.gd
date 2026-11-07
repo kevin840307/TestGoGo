@@ -1157,8 +1157,17 @@ func update_pet_status_panel() -> void :
 	for i in range(used_rows, existing_rows.size()):
 		existing_rows[i].queue_free()
 
+var _cursor_scan_elapsed: float = 0.0
+var _last_cursor_scan_position: Vector2 = Vector2(-99999.0, -99999.0)
+const CURSOR_SCAN_IDLE_INTERVAL: float = 0.10
+
 func _process(delta: float) -> void :
-	_update_game_window_cursor_override()
+	_cursor_scan_elapsed += delta
+	var mouse_position := get_viewport().get_mouse_position()
+	if mouse_position != _last_cursor_scan_position or _cursor_scan_elapsed >= CURSOR_SCAN_IDLE_INTERVAL:
+		_last_cursor_scan_position = mouse_position
+		_cursor_scan_elapsed = 0.0
+		_update_game_window_cursor_override()
 
 	_minimap_update_elapsed += delta
 	if _minimap_update_elapsed >= MINIMAP_UPDATE_INTERVAL:
