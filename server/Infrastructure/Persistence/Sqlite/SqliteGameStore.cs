@@ -651,36 +651,85 @@ public sealed class SqliteGameStore : IGameStore
     {
         limit = Math.Clamp(limit, 1, 100);
 
-        var orderBy = rankType switch
-        {
-            1 => "level DESC, exp_acc DESC, id ASC",
-            2 => "money DESC, level DESC, id ASC",
-            _ => null
-        };
-
-        if (orderBy is null)
-            return Array.Empty<RankEntry>();
-
         using var db = Open();
         using var cmd = db.CreateCommand();
-        cmd.CommandText = $"""
-            SELECT id, account_id, name,
-                   {(rankType == 1 ? "level" : "money")} AS value
-              FROM characters
-             ORDER BY {orderBy}
-             LIMIT $limit
-            """;
+
+        switch (rankType)
+        {
+            case 1:
+                cmd.CommandText = """
+                    SELECT id,account_id,name,level
+                      FROM characters
+                     ORDER BY level DESC,
+                              exp_acc DESC,
+                              id ASC
+                     LIMIT $limit
+                    """;
+                break;
+
+            case 2:
+                cmd.CommandText = """
+                    SELECT id,account_id,name,money
+                      FROM characters
+                     ORDER BY money DESC,
+                              level DESC,
+                              id ASC
+                     LIMIT $limit
+                    """;
+                break;
+
+            case 3:
+                cmd.CommandText = """
+                    SELECT club.id,
+                           leader.account_id,
+                           club.name,
+                           club.level,
+                           leader.id
+                      FROM clubs club
+                      JOIN club_members member
+                        ON member.club_id=club.id
+                       AND member.position=3
+                      JOIN characters leader
+                        ON leader.id=member.character_id
+                     ORDER BY club.level DESC,
+                              club.exp DESC,
+                              club.id ASC
+                     LIMIT $limit
+                    """;
+                break;
+
+            default:
+                return Array.Empty<RankEntry>();
+        }
+
         Arg(cmd, "$limit", limit);
 
         var result = new List<RankEntry>();
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            result.Add(new RankEntry(
-                reader.GetInt64(0),
-                reader.GetInt64(1),
-                reader.GetString(2),
-                reader.GetInt64(3)));
+            if (rankType == 3)
+            {
+                var leaderDbId = reader.GetInt64(4);
+                result.Add(new RankEntry(
+                    reader.GetInt64(0),
+                    reader.GetInt64(1),
+                    reader.GetString(2),
+                    reader.GetInt64(3),
+                    leaderDbId,
+                    leaderDbId));
+            }
+            else
+            {
+                var dbid = reader.GetInt64(0);
+                result.Add(new RankEntry(
+                    dbid,
+                    reader.GetInt64(1),
+                    reader.GetString(2),
+                    reader.GetInt64(3),
+                    dbid,
+                    dbid));
+            }
         }
 
         return result;
@@ -712,7 +761,7 @@ public sealed class SqliteGameStore : IGameStore
         int rankType,
         string message)
     {
-        if (rankType is not (1 or 2 or 4) ||
+        if (rankType is not (1 or 2 or 3 or 4) ||
             message.Length > 20)
             return false;
 
