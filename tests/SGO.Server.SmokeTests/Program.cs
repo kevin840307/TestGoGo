@@ -231,6 +231,7 @@ var currentCatalog = new CurrentClientDataCatalog(
     {
         new CurrentSkillDefinition(20101, "Current Skill 20101"),
         new CurrentSkillDefinition(20102, "Current Skill 20102"),
+        new CurrentSkillDefinition(27104, "生命之源"),
         new CurrentSkillDefinition(26104, "魔影術"),
         new CurrentSkillDefinition(45111, "月神審判")
     },
@@ -250,6 +251,16 @@ var currentCatalog = new CurrentClientDataCatalog(
     },
     new[]
     {
+        new CurrentSkillLevelDefinition(
+            27104, 1, 6, 0,
+            250, 0,
+            0, 50, 0,
+            0, 0, 1,
+            0, 1,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0,
+            0, 0, 0, 0),
         new CurrentSkillLevelDefinition(
             26104, 5, 1, 1,
             280, 280,
@@ -409,6 +420,9 @@ Check(recoveryCatalog.Find(1001) is { RecoverHp: 140 },
     "current recovery item 1001 resolves +140 HP");
 Check(horseCardCatalog.Find(50001) is { MaxBattery: 25200 },
     "current mecha card 50001 resolves max battery");
+Check(currentCatalog.FindSkillLevel(27104, 1) is
+      { SkillType: 6, CostMp: 50, CastRange: 250 },
+    "current 生命之源 resolves revive-skill cast data");
 Check(currentCatalog.FindSkillLevel(26104, 5) is
       { CostMp: 126, CastRange: 280, AoeRadius: 280 },
     "current 魔影術 Lv5 resolves server-side cast data");
@@ -2315,6 +2329,76 @@ try
     while (peerRegistration.Queue.TryDequeue(out _)) { }
 
     router.SyncPresence(peerSession);
+
+    store.SetSkill(
+        account.Value,
+        id,
+        27104,
+        1);
+    store.Revive(account.Value, id);
+    store.ApplyDamage(
+        account.Value,
+        secondCharacterId,
+        999_999);
+
+    store.UpdateLocation(
+        account.Value,
+        id,
+        combatMapId,
+        combatEnemy.X,
+        combatEnemy.Y);
+    store.UpdateLocation(
+        account.Value,
+        secondCharacterId,
+        combatMapId,
+        combatEnemy.X + 40,
+        combatEnemy.Y);
+
+    session.LastX = combatEnemy.X;
+    session.LastY = combatEnemy.Y;
+    peerSession.LastX = combatEnemy.X + 40;
+    peerSession.LastY = combatEnemy.Y;
+
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    var reviveCast = combat.UseSkill(
+        session,
+        account.Value,
+        27104,
+        checked((int)secondCharacterId),
+        0,
+        combatEnemy.X + 40,
+        combatEnemy.Y,
+        DateTimeOffset.UtcNow);
+
+    Check(
+        reviveCast.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"SkillCast\"")) &&
+        peerRegistration.Queue.ToArray().Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"RevivePrompt\"")),
+        "revive skill sends a targeted RevivePrompt to dead same-map player");
+
+    var reviveAccepted = combat.AcceptRevive(
+        peerSession,
+        account.Value,
+        27104,
+        1,
+        DateTimeOffset.UtcNow.AddSeconds(1));
+
+    var revivedCharacter = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+
+    Check(
+        Convert.ToInt32(revivedCharacter["HP"]) > 0 &&
+        Convert.ToInt32(revivedCharacter["HP"]) <=
+            Convert.ToInt32(revivedCharacter["MaxHP"]) &&
+        reviveAccepted.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EntityHeal\"")),
+        "accepted revive invitation restores target and emits EntityHeal");
 
     Check(
         broadcastRegistration.Queue.TryDequeue(
