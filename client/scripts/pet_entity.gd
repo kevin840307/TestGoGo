@@ -374,7 +374,13 @@ func _on_animation_finished() -> void :
 
 func update_hp(new_hp: int, hit_delay: float = 0.3, is_miss: bool = false) -> void :
 	if hit_delay > 0:
-		await get_tree().create_timer(hit_delay).timeout
+		if not is_instance_valid(self) or not is_inside_tree():
+			return
+		var tree := get_tree()
+		if tree == null:
+			return
+		var timer := tree.create_timer(hit_delay)
+		await timer.timeout
 
 	if not is_instance_valid(self) or not is_inside_tree():
 		return
