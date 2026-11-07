@@ -36,6 +36,8 @@ public sealed class PacketRouter
         TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan LocationReconcileInterval =
         TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan AutoSaintActionInterval =
+        TimeSpan.FromMilliseconds(750);
 
     private sealed record TrainTravelSpec(
         string Continuation,
@@ -2879,7 +2881,6 @@ public sealed class PacketRouter
                         out var isOn) &&
                     isOn.ValueKind == JsonValueKind.True;
 
-                state.AutoSaintEnabled = enabled;
                 state.AutoSaintMpThreshold = Math.Clamp(
                     req.Int("MpThreshold", 30),
                     0,
@@ -2891,9 +2892,48 @@ public sealed class PacketRouter
 
                 if (enabled)
                 {
+                    var learnedSkills = _store.GetSkills(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    if (!HasLearnedSkill(
+                            learnedSkills,
+                            28107) ||
+                        !HasLearnedSkill(
+                            learnedSkills,
+                            28102))
+                    {
+                        state.AutoSaintEnabled = false;
+                        state.LastAutoSaintActionAt =
+                            DateTimeOffset.MinValue;
+
+                        return
+                        [
+                            new
+                            {
+                                Type = "ToggleAutoSaintResponse",
+                                IsOn = false,
+                                MpThreshold =
+                                    state.AutoSaintMpThreshold,
+                                SpThreshold =
+                                    state.AutoSaintSpThreshold
+                            },
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message =
+                                    "自動聖靈需要先學會治療風暴與心靈轉換"
+                            }
+                        ];
+                    }
+
+                    state.AutoSaintEnabled = true;
+                    state.LastAutoSaintActionAt =
+                        DateTimeOffset.MinValue;
                     state.PetTargets.Clear();
 
-                    foreach (var monster in state.Monsters.Values)
+                    foreach (var monster in
+                             state.Monsters.Values)
                     {
                         if (monster.TargetCharacterId !=
                             state.CharacterId.Value)
@@ -2902,6 +2942,12 @@ public sealed class PacketRouter
                         monster.HasTarget = false;
                         monster.TargetCharacterId = 0;
                     }
+                }
+                else
+                {
+                    state.AutoSaintEnabled = false;
+                    state.LastAutoSaintActionAt =
+                        DateTimeOffset.MinValue;
                 }
 
                 return
@@ -2914,6 +2960,13 @@ public sealed class PacketRouter
                             state.AutoSaintMpThreshold,
                         SpThreshold =
                             state.AutoSaintSpThreshold
+                    },
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = state.AutoSaintEnabled
+                            ? "自動聖靈已啟動"
+                            : "自動聖靈已關閉"
                     }
                 ];
             }
@@ -3660,6 +3713,8 @@ public sealed class PacketRouter
                 state.AutoSaintEnabled = false;
                 state.AutoSaintMpThreshold = 30;
                 state.AutoSaintSpThreshold = 30;
+                state.LastAutoSaintActionAt =
+                    DateTimeOffset.MinValue;
                 ClearPendingTrainTravel(state);
                 state.CloseRequested = true;
 
@@ -3789,6 +3844,12 @@ public sealed class PacketRouter
             _resourceRecovery.Tick(state, now));
         packets.AddRange(
             _combat.TickBuffs(state, now));
+        packets.AddRange(
+            TickAutoSaint(
+                state,
+                accountId,
+                dbid,
+                now));
         if (!state.SharedAiManaged)
             packets.AddRange(_combat.TickRespawns(state, now));
 
@@ -5081,6 +5142,298 @@ public sealed class PacketRouter
                 dbid,
                 DateTimeOffset.UtcNow)
         };
+
+    private IReadOnlyList<object> TickAutoSaint(
+        ClientSession state,
+        long accountId,
+        long dbid,
+        DateTimeOffset now)
+    {
+        if (!state.AutoSaintEnabled ||
+            !state.WorldReady ||
+            now - state.LastAutoSaintActionAt <
+                AutoSaintActionInterval)
+        {
+            return [];
+        }
+
+        state.LastAutoSaintActionAt = now;
+
+        var learnedSkills = _store.GetSkills(
+            accountId,
+            dbid);
+
+        var healLevel = GetLearnedSkillLevel(
+            learnedSkills,
+            28107);
+        var convertLevel = GetLearnedSkillLevel(
+            learnedSkills,
+            28102);
+
+        if (healLevel <= 0 ||
+            convertLevel <= 0)
+        {
+            state.AutoSaintEnabled = false;
+            return
+            [
+                new
+                {
+                    Type = "ToggleAutoSaintResponse",
+                    IsOn = false,
+                    MpThreshold =
+                        state.AutoSaintMpThreshold,
+                    SpThreshold =
+                        state.AutoSaintSpThreshold
+                },
+                new
+                {
+                    Type = "SystemMessageFlash",
+                    Message =
+                        "自動聖靈已停止：治療風暴或心靈轉換不可用"
+                }
+            ];
+        }
+
+        var self = _store.GetCharacter(
+            accountId,
+            dbid);
+        if (self is null ||
+            Convert.ToInt32(self["HP"]) <= 0)
+        {
+            return [];
+        }
+
+        var healData = _current.FindSkillLevel(
+            28107,
+            healLevel);
+        var convertData = _current.FindSkillLevel(
+            28102,
+            convertLevel);
+
+        if (healData is null ||
+            convertData is null)
+        {
+            state.AutoSaintEnabled = false;
+            return
+            [
+                new
+                {
+                    Type = "ToggleAutoSaintResponse",
+                    IsOn = false,
+                    MpThreshold =
+                        state.AutoSaintMpThreshold,
+                    SpThreshold =
+                        state.AutoSaintSpThreshold
+                },
+                new
+                {
+                    Type = "SystemMessageFlash",
+                    Message =
+                        "自動聖靈已停止：技能等級資料不存在"
+                }
+            ];
+        }
+
+        var partyMembers = _party.GetMembers(dbid);
+        if (partyMembers.Count == 0)
+        {
+            partyMembers =
+            [
+                (accountId, dbid)
+            ];
+        }
+
+        var nearby = new List<(
+            long AccountId,
+            long CharacterId,
+            Dictionary<string, object> Character,
+            double DistanceSquared)>();
+
+        foreach (var member in partyMembers)
+        {
+            double distanceSquared;
+
+            if (member.CharacterId == dbid)
+            {
+                distanceSquared = 0;
+            }
+            else
+            {
+                var presence = _broadcasts.FindCharacter(
+                    member.CharacterId);
+
+                if (presence is null ||
+                    presence.MapId != state.CurrentMapId)
+                {
+                    continue;
+                }
+
+                var dx = presence.X - state.LastX;
+                var dy = presence.Y - state.LastY;
+                distanceSquared = dx * dx + dy * dy;
+            }
+
+            var character = _store.GetCharacter(
+                member.AccountId,
+                member.CharacterId);
+
+            if (character is null ||
+                Convert.ToInt32(character["HP"]) <= 0)
+            {
+                continue;
+            }
+
+            nearby.Add((
+                member.AccountId,
+                member.CharacterId,
+                character,
+                distanceSquared));
+        }
+
+        if (nearby.Count == 0)
+            return [];
+
+        static double Percent(
+            int current,
+            int maximum)
+            => maximum <= 0
+                ? 100.0
+                : current * 100.0 / maximum;
+
+        var recoveryThreshold =
+            state.AutoSaintMpThreshold;
+        var groupRadiusSquared =
+            400.0 * 400.0;
+
+        var needsGroupRecovery = nearby.Any(x =>
+            x.DistanceSquared <= groupRadiusSquared &&
+            (Percent(
+                 Convert.ToInt32(x.Character["HP"]),
+                 Convert.ToInt32(x.Character["MaxHP"])) <=
+                 recoveryThreshold ||
+             Percent(
+                 Convert.ToInt32(x.Character["MP"]),
+                 Convert.ToInt32(x.Character["MaxMP"])) <=
+                 recoveryThreshold));
+
+        var selfSp = Convert.ToInt32(self["SP"]);
+        var selfMp = Convert.ToInt32(self["MP"]);
+
+        var healReady =
+            !state.SkillReadyAt.TryGetValue(
+                28107,
+                out var healReadyAt) ||
+            now >= healReadyAt;
+
+        if (needsGroupRecovery &&
+            healReady &&
+            selfMp >= healData.CostMp &&
+            selfSp >= healData.CostSp &&
+            Convert.ToInt32(self["HP"]) >=
+                healData.CostHp)
+        {
+            return _combat.UseSkill(
+                state,
+                accountId,
+                28107,
+                checked((int)dbid),
+                0,
+                checked((int)Math.Round(state.LastX)),
+                checked((int)Math.Round(state.LastY)),
+                now);
+        }
+
+        var convertRange =
+            Math.Max(0, convertData.CastRange) + 120.0;
+        var convertRangeSquared =
+            convertRange * convertRange;
+
+        var spTarget = nearby
+            .Where(x =>
+                x.DistanceSquared <= convertRangeSquared &&
+                Percent(
+                    Convert.ToInt32(x.Character["SP"]),
+                    Convert.ToInt32(x.Character["MaxSP"])) <=
+                    state.AutoSaintSpThreshold)
+            .OrderBy(x => Percent(
+                Convert.ToInt32(x.Character["SP"]),
+                Convert.ToInt32(x.Character["MaxSP"])))
+            .FirstOrDefault();
+
+        if (spTarget.Character is null)
+            return [];
+
+        var convertReady =
+            !state.SkillReadyAt.TryGetValue(
+                28102,
+                out var convertReadyAt) ||
+            now >= convertReadyAt;
+
+        if (!convertReady ||
+            selfMp < convertData.CostMp ||
+            selfSp < convertData.CostSp ||
+            Convert.ToInt32(self["HP"]) <
+                convertData.CostHp)
+        {
+            return [];
+        }
+
+        return _combat.UseSkill(
+            state,
+            accountId,
+            28102,
+            checked((int)spTarget.CharacterId),
+            0,
+            checked((int)Math.Round(state.LastX)),
+            checked((int)Math.Round(state.LastY)),
+            now);
+    }
+
+    private static bool HasLearnedSkill(
+        IReadOnlyList<Dictionary<string, object>> skills,
+        int skillId)
+        => GetLearnedSkillLevel(
+            skills,
+            skillId) > 0;
+
+    private static int GetLearnedSkillLevel(
+        IReadOnlyList<Dictionary<string, object>> skills,
+        int skillId)
+    {
+        foreach (var skill in skills)
+        {
+            var id = skill.TryGetValue(
+                    "SkillID",
+                    out var upperId)
+                ? Convert.ToInt32(upperId)
+                : skill.TryGetValue(
+                    "skill_id",
+                    out var lowerId)
+                    ? Convert.ToInt32(lowerId)
+                    : 0;
+
+            if (id != skillId)
+                continue;
+
+            return Math.Max(
+                1,
+                skill.TryGetValue(
+                    "Level",
+                    out var upperLevel)
+                    ? Convert.ToInt32(upperLevel)
+                    : skill.TryGetValue(
+                        "level",
+                        out var lowerLevel)
+                        ? Convert.ToInt32(lowerLevel)
+                        : skill.TryGetValue(
+                            "SkillLevel",
+                            out var clientLevel)
+                            ? Convert.ToInt32(clientLevel)
+                            : 1);
+        }
+
+        return 0;
+    }
 
     private static bool ResolveSpecialTerrainCapability(
         Dictionary<string, object> character,
