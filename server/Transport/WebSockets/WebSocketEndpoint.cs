@@ -241,9 +241,11 @@ public static class WebSocketEndpoint
 
                         IReadOnlyList<object> responses;
                         var packetType =
+                            packet.RootElement.ValueKind == JsonValueKind.Object &&
                             packet.RootElement.TryGetProperty(
                                 "Type",
-                                out var typeElement)
+                                out var typeElement) &&
+                            typeElement.ValueKind == JsonValueKind.String
                             ? typeElement.GetString() ?? "<empty>"
                             : "<missing>";
                         var rawPayload =
