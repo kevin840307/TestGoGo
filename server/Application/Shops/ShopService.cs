@@ -8,13 +8,16 @@ public sealed class ShopService
 {
     private readonly IGameStore _store;
     private readonly ShopCatalog _catalog;
+    private readonly CurrentClientDataCatalog _current;
 
     public ShopService(
         IGameStore store,
-        ShopCatalog catalog)
+        ShopCatalog catalog,
+        CurrentClientDataCatalog current)
     {
         _store = store;
         _catalog = catalog;
+        _current = current;
     }
 
     public object BuildOpenShopPacket(
@@ -59,13 +62,23 @@ public sealed class ShopService
         if (count <= 0 || count > (item.TabType == 0 ? 9999 : 1))
             return Failure("購買數量無效");
 
-        var kind = item.TabType switch
+        var currentItem = _current.FindItem(item.ItemIndex);
+        if (currentItem is null)
+            return Failure(
+                $"新版 GameData 找不到 ItemIndex={item.ItemIndex}");
+
+        var kind = currentItem.Category.ToLowerInvariant() switch
         {
-            0 => AssetPurchaseKind.General,
-            1 => AssetPurchaseKind.Equipment,
-            3 => AssetPurchaseKind.HorseEquipment,
-            4 => AssetPurchaseKind.HorseEquipment,
-            5 => AssetPurchaseKind.HorseBattery,
+            "booster" or "general" or "recovery"
+                => AssetPurchaseKind.General,
+            "equip" or "weapon"
+                => AssetPurchaseKind.Equipment,
+            "horse"
+                => AssetPurchaseKind.Horse,
+            "horseequip"
+                => AssetPurchaseKind.HorseEquipment,
+            "horsebattery"
+                => AssetPurchaseKind.HorseBattery,
             _ => AssetPurchaseKind.General
         };
 
