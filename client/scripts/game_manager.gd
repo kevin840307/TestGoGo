@@ -369,8 +369,41 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	var add_child_started_usec: int = Time.get_ticks_usec()
 	_report_initial_loading_progress(progress_callback, 82.0, "初始化地圖")
 	await get_tree().process_frame
-	set_frame_gap_stage("initial_map_add_child")
+
+	# Attach the map root separately from its direct children. Large TileMapLayer
+	# and object containers can do substantial SceneTree registration work; doing
+	# all of them in one add_child() creates a single long frame. Preserve the
+	# original child order but attach one direct child per frame and measure each
+	# stage so later optimization can target the real offender.
+	var initial_map_children: Array[Node] = current_map_node.get_children()
+	for child: Node in initial_map_children:
+		current_map_node.remove_child(child)
+
+	set_frame_gap_stage("initial_map_add_root")
+	var root_add_started_usec: int = Time.get_ticks_usec()
 	get_tree().root.add_child(current_map_node)
+	var root_add_ms: float = float(Time.get_ticks_usec() - root_add_started_usec) / 1000.0
+	print("[MAP_CHILD_INIT] name=<root> class=%s add_ms=%.2f" % [
+		current_map_node.get_class(),
+		root_add_ms,
+	])
+	await get_tree().process_frame
+
+	for child: Node in initial_map_children:
+		if not is_instance_valid(child):
+			continue
+		set_frame_gap_stage("initial_map_child_%s" % child.name)
+		var child_add_started_usec: int = Time.get_ticks_usec()
+		current_map_node.add_child(child)
+		var child_add_ms: float = float(Time.get_ticks_usec() - child_add_started_usec) / 1000.0
+		print("[MAP_CHILD_INIT] name=%s class=%s add_ms=%.2f children=%d" % [
+			str(child.name),
+			child.get_class(),
+			child_add_ms,
+			child.get_child_count(),
+		])
+		await get_tree().process_frame
+
 	var add_child_ms: float = float(Time.get_ticks_usec() - add_child_started_usec) / 1000.0
 	_trace_map_change("initial_map_added", 0, target_map_id, {
 		"instantiate_ms": instantiate_ms,
