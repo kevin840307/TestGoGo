@@ -16,21 +16,39 @@ Server: `ws://127.0.0.1:5678`; health endpoint: `http://127.0.0.1:5678/health`. 
 
 In the recovered project's `scripts/network_manager.gd`, set `USE_DDNS` from `true` to `false`; see `client-patch/scripts/network_manager.gd.patch`. The existing localhost URL will then be used. DDNS code is left intact for future use. The original shipped EXE is not modified.
 
-## Implemented
+## Current status
 
-- WebSocket + AES-256-CBC Base64-encoded JSON compatible with existing client wire format.
-- Account registration/login, role create/list/delete/password change, preliminary role selection.
-- SQLite persistence and PBKDF2 account password hashing.\n- Character bootstrap fields required by `PlayerData.load_from_json()`.\n- Local movement/state persistence, local chat echo, revive status sync.\n- Logout handshake closes WebSocket to match the recovered client's return-to-login flow.
-- Three-character limit, authenticated session checks, 2 MiB packet bound.
+For the detailed implementation baseline, data-alignment rules, known gaps, regression coverage, and recommended next work, see [STATUS.md](STATUS.md).
 
-## Known gaps
+Implemented at a high level:
 
-- `EnterWorldSuccess` now contains complete safe defaults plus empty inventory/equipment/pet/horse/skill/buff/quest sync; **still unverified** against live Godot runtime.
-- No monster AI, NPC logic, quests, combat, movement or save-position handling yet.
-- The recovered client's static AES key/IV provide **no authenticated transport security**. Listener is deliberately loopback only.
-- Client character password verification expects a password field in character list; prototype stores that specific character password as plaintext for protocol compatibility. Do not reuse real passwords.
-- The recovered entry manager expects `character_list[0].ACCID` even for new accounts; an empty placeholder slot is sent to support first character creation.
-- Actual map scenes must still be present in Godot project; recovery tools do not ensure buildability.
+- WebSocket + AES-256-CBC/Base64 JSON protocol compatibility.
+- Account/character lifecycle, persistence, movement/state/revive.
+- Server-driven world tick: NPCs, monsters and pet AI no longer depend on player movement packets.
+- Old map/NPC/enemy/Lua data compatibility.
+- NPC interaction, portals, bank/repair/rank/shop flows.
+- Current-client-first GameData alignment for items, skills, pets and mecha.
+- Legacy shop ID/name remapping to current client ItemIDs.
+- NPC shop buy/sell with the correct current asset type.
+- Inventory/equipment/current stat calculation.
+- Recovery items.
+- Mecha riding/equipment/battery.
+- Pets: summon/recall/follow/equipment/command attack/auto attack.
+- Monster wandering/aggro/chase/attack/death/respawn.
+- Persistent skills and server-side GM commands.
+- Unknown/no-response/failed packet diagnostics in server logs.
+- SQLite behind `IGameStore` so a MySQL provider can be added later.
+
+Important current gaps:
+
+- Full `UseSkill` casting/damage/effect/cooldown implementation.
+- Complete legacy-name -> current-ID coverage for every item/shop.
+- Complete original drops/EXP/level-up/stat-point formulas.
+- Exact current NPC visual mapping for every NPC.
+- Remaining Lua host functions and full quest persistence.
+- True shared multi-client world state.
+- MySQL provider implementation.
+- Automated Godot-client E2E tests.
 
 ## Build and publish
 
@@ -51,9 +69,9 @@ The server now reads the uploaded game data under `Old/服務端/Dat`:
 - `Enemy/Enemy_Data.csv`: enemy name, level, sprite and base HP lookup.
 - `Quest/*.txt`: Lua scripts executed through MoonSharp.
 
-Map15 is explicitly treated as the main city: NPC/portal spawns are loaded, but combat Enemy.dat records are not spawned there. A portal script can issue `MovePlayer(x,y,mapId)`; the destination is persisted to SQLite and destination entities are spawned only after the first `SyncPosition` from the newly loaded client map.
+Map15 is explicitly treated as the main city: NPC/portal spawns are loaded, but combat Enemy.dat records are not spawned there. A portal script can issue `MovePlayer(x,y,mapId)`; the destination is persisted to SQLite. Destination entities are now spawned by the server world tick and retried after map load, so the player does not need to move first.
 
-Implemented Lua compatibility calls: `Say`, `Ask`, `GetChoice`, `GetData`, `MovePlayer`, `QuestEnd`. `OpenShop` is currently a compatibility stub.
+Implemented Lua compatibility includes `Say`, `Ask`, `GetChoice`, `GetData`, `MovePlayer`, `QuestEnd`, `OpenShop`, and the bank/repair/rank flows currently covered by smoke tests.
 
 
 ## Code layout
@@ -97,8 +115,10 @@ Runtime data is current-client first:
 Useful log markers:
 
 - `[LEGACY_ID_COLLISION]`
-- `[LEGACY_NAME_UNCONFIRMED]`
-- `[CURRENT_ITEM_NOT_FOUND]`
+- `[NAME_REMAP]`
+- `[SAFE_SAME_ID]`
+- `[SKIPPED][CURRENT_ITEM_NOT_FOUND]`
+- `[SKIPPED][OLD_NAME_MISSING]`
 - `[UNHANDLED_PACKET]`
 - `[NO_RESPONSE]`
 - `[PACKET_HANDLER_FAILED]`
