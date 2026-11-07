@@ -9,6 +9,7 @@ using SGO.Server.Application.Items;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Party;
+using SGO.Server.Application.Rank;
 using SGO.Server.Application.Shops;
 using SGO.Server.Application.Trade;
 using SGO.Server.Domain.Sessions;
@@ -42,6 +43,7 @@ public sealed class PacketRouter
     private readonly LegacyPlayerGrowthCatalog _growth;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly PartyService _party;
+    private readonly RankService _rank;
     private readonly TradeService _trade;
     private readonly ILogger<PacketRouter> _log;
 
@@ -64,6 +66,7 @@ public sealed class PacketRouter
         LegacyPlayerGrowthCatalog growth,
         ServerBroadcastHub broadcasts,
         PartyService party,
+        RankService rank,
         TradeService trade,
         ILogger<PacketRouter> log)
     {
@@ -87,6 +90,7 @@ public sealed class PacketRouter
         _growth = growth;
         _broadcasts = broadcasts;
         _party = party;
+        _rank = rank;
         _trade = trade;
         _log = log;
     }
@@ -253,6 +257,29 @@ public sealed class PacketRouter
 
         switch (type)
         {
+            case "RankDataRequest":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                return _rank.GetRankData(
+                    accountId,
+                    state.CharacterId.Value,
+                    req.Int("RankType", 1));
+            }
+
+            case "UpdateRankMessage":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                return _rank.UpdateMessage(
+                    accountId,
+                    state.CharacterId.Value,
+                    req.Int("RankType", 1),
+                    req.Str("Message"));
+            }
+
             case "CreateCharacterRequest":
             {
                 var (ok, msg) = _store.Create(accountId, req);
