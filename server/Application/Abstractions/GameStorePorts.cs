@@ -226,6 +226,11 @@ public sealed record CapacityExpansionResult(
     int PetMaxSize,
     int HorseEquipMaxSize);
 
+public sealed record CharacterStatResetResult(
+    bool Success,
+    string Message,
+    Dictionary<string, object>? Character);
+
 public interface IInventoryStore : ICharacterAssetReader
 {
     long AddInventoryItem(
@@ -243,6 +248,27 @@ public interface IInventoryStore : ICharacterAssetReader
         int equipDelta = 0,
         int petDelta = 0,
         int horseEquipDelta = 0);
+
+    CharacterStatResetResult ResetCharacterStatsFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        int str,
+        int dex,
+        int con,
+        int wis,
+        int expUse,
+        int maxHp,
+        int maxMp,
+        int maxSp,
+        int attack,
+        int defense,
+        int magicAttack,
+        int magicDefense,
+        int hit,
+        int dodge,
+        int moveSpeed);
     (bool Success, string Message, long RewardUid) OpenDoll(
         long accountId,
         long dbid,
