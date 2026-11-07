@@ -1384,7 +1384,7 @@ public sealed class SqliteGameStore : IGameStore
             part = Convert.ToInt32(raw);
         }
 
-        if (part is < 0 or > 3)
+        if (part is < 0 or > 6)
         {
             using var getIndex = db.CreateCommand();
             getIndex.Transaction = tx;
@@ -1396,6 +1396,35 @@ public sealed class SqliteGameStore : IGameStore
             Arg(getIndex, "$id", dbid);
             part = ResolveHorseEquipPart(
                 Convert.ToInt32(getIndex.ExecuteScalar()));
+        }
+
+        // Reinforcement cards are defined as slot 3 in GameData, but the
+        // recovered client exposes three independent card slots: 3, 4, 5.
+        // Pick the first free card slot instead of replacing card #1.
+        if (part == 3)
+        {
+            var occupied = new HashSet<int>();
+            using var slots = db.CreateCommand();
+            slots.Transaction = tx;
+            slots.CommandText = """
+                SELECT part
+                  FROM horse_equipment
+                 WHERE character_id=$id
+                   AND horse_uid=$horse
+                   AND part IN (3,4,5)
+                """;
+            Arg(slots, "$id", dbid);
+            Arg(slots, "$horse", horseUid);
+
+            using var r = slots.ExecuteReader();
+            while (r.Read())
+                occupied.Add(r.GetInt32(0));
+
+            part = new[] { 3, 4, 5 }
+                .FirstOrDefault(x => !occupied.Contains(x), -1);
+
+            if (part < 0)
+                return false;
         }
 
         using (var clear = db.CreateCommand())
