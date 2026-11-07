@@ -337,8 +337,8 @@ Check(world.BuildMapSpawnPackets(15).Count == 52,
 
 var map15Merchant = map15Npcs.First(x => x.IsMerchant);
 Check(map15Merchant.NpcTypeId == 393 &&
-      map15Merchant.Sprite == "NPC002.png",
-    "Map15 merchant uses a recovered visible/clickable sprite fallback");
+      map15Merchant.Sprite == "NPC137.png",
+    "Map15 merchant uses low-byte NPC sprite fallback when legacy visual mapping is unavailable");
 Check(shopCatalog.GetShopItems(7).Any(x => x.ItemIndex == 4103) &&
       shopCatalog.GetShopItems(7).Any(x => x.ItemIndex == 4112),
     "Map15 Shop7 maps old bullet names to current client IDs");
