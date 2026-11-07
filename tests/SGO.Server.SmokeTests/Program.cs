@@ -835,6 +835,21 @@ try
         ConnectionId = broadcastRegistration.ConnectionId
     };
 
+    using (var announcementRequest = Json(
+        """{"Type":"AnnouncementListRequest"}"""))
+    {
+        var responses = router.Handle(
+            announcementRequest.RootElement,
+            session);
+
+        var json = JsonSerializer.Serialize(responses);
+        Check(json.Contains(
+                  "\"Type\":\"AnnouncementListResponse\"") &&
+              json.Contains("\"Success\":true") &&
+              json.Contains("\"Announcements\":[]"),
+            "announcement list returns a successful empty response when no announcements are configured");
+    }
+
     var (created, _) = store.Register("offline", "test-password", "");
     Check(created, "create account");
     Check(store.Login("offline", "bad") == null,
