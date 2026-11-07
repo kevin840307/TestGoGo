@@ -244,6 +244,59 @@ using (var missingPetAttackTarget = Json(
         "pet attack command requires target ID");
 }
 
+using (var invalidClubDonation = Json(
+    """{"Type":"ClubAction","Action":"DonateMoney","Amount":"500"}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              invalidClubDonation.RootElement, "ClubAction", out var error) &&
+          error.Contains("Amount"),
+        "club donation rejects string amount before any asset mutation");
+}
+using (var largeClubDonation = Json(
+    """{"Type":"ClubAction","Action":"DonateExp","Amount":4294967296}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              largeClubDonation.RootElement, "ClubAction", out _),
+        "club donation wire preserves valid Int64 amounts");
+}
+using (var clearClubMessage = Json(
+    """{"Type":"ClubAction","Action":"UpdateMessage","ClubMsg":""}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              clearClubMessage.RootElement, "ClubAction", out _),
+        "club announcement clearing remains compatible with empty text");
+}
+using (var incompleteMallBuy = Json(
+    """{"Type":"MallAction","Action":"BuyItem","MallID":17}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              incompleteMallBuy.RootElement, "MallAction", out var error) &&
+          error.Contains("Count"),
+        "mall purchase requires quantity even while no catalog is configured");
+}
+using (var validMallDonate = Json(
+    """{"Type":"MallAction","Action":"CreatePayPalDonation","Amount":500}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              validMallDonate.RootElement, "MallAction", out _),
+        "PayPal request wire schema remains valid without enabling payments");
+}
+using (var wrongLegacyPassword = Json(
+    """{"Type":"MallAction","Action":"QueryLegacyPoints","LoginName":"old","Password":42}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              wrongLegacyPassword.RootElement, "MallAction", out var error) &&
+          error.Contains("Password"),
+        "legacy points request requires text credentials without enabling transfer");
+}
+using (var openMall = Json(
+    """{"Type":"MallAction","Action":"OpenMall"}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              openMall.RootElement, "MallAction", out _),
+        "mall opening remains valid without purchase-only fields");
+}
+
 var repoRoot = Directory.GetCurrentDirectory();
 var gameDataRoot = Path.Combine(repoRoot, "Old", "服務端", "Dat");
 var questRoot = Path.Combine(gameDataRoot, "Quest");
