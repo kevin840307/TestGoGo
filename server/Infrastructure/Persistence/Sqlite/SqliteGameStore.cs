@@ -41,7 +41,8 @@ public sealed class SqliteGameStore : IGameStore
         int Inventory,
         int Equip,
         int Pet,
-        int HorseEquip) ReadCharacterCapacities(
+        int HorseEquip,
+        int PetSummon) ReadCharacterCapacities(
         SqliteConnection db,
         long dbid,
         SqliteTransaction? tx = null)
@@ -52,7 +53,8 @@ public sealed class SqliteGameStore : IGameStore
             SELECT inventory_capacity,
                    equip_capacity,
                    pet_capacity,
-                   horse_equip_capacity
+                   horse_equip_capacity,
+                   pet_summon_capacity
               FROM characters
              WHERE id=$id
              LIMIT 1
@@ -61,13 +63,14 @@ public sealed class SqliteGameStore : IGameStore
 
         using var reader = cmd.ExecuteReader();
         if (!reader.Read())
-            return (200, 200, 50, 100);
+            return (200, 200, 50, 100, 1);
 
         return (
             Math.Max(1, reader.GetInt32(0)),
             Math.Max(1, reader.GetInt32(1)),
             Math.Max(1, reader.GetInt32(2)),
-            Math.Max(1, reader.GetInt32(3)));
+            Math.Max(1, reader.GetInt32(3)),
+            Math.Clamp(reader.GetInt32(4), 1, 3));
     }
 
     private static string Hash(string password)
@@ -639,6 +642,7 @@ public sealed class SqliteGameStore : IGameStore
             InventoryMaxSize = capacities.Inventory,
             EquipMaxSize = capacities.Equip,
             PetMaxSize = capacities.Pet,
+            PetSummonMax = capacities.PetSummon,
             HorseEquipMaxSize = capacities.HorseEquip
         };
 
@@ -4204,6 +4208,139 @@ public sealed class SqliteGameStore : IGameStore
             capacities.HorseEquip);
     }
 
+    public PetSummonExpansionResult ExpandPetSummonCapacityFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在", 0);
+
+        var capacities = ReadCharacterCapacities(
+            db,
+            dbid,
+            tx);
+
+        if (capacities.PetSummon >= 3)
+        {
+            return new(
+                false,
+                "同時召喚寵物空間已達上限（3）",
+                capacities.PetSummon);
+        }
+
+        int sourceCount;
+        using (var source = db.CreateCommand())
+        {
+            source.Transaction = tx;
+            source.CommandText = """
+                SELECT count
+                  FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND item_index=$item
+                   AND in_bank=0
+                   AND in_shop=0
+                 LIMIT 1
+                """;
+            Arg(source, "$uid", itemUid);
+            Arg(source, "$id", dbid);
+            Arg(source, "$item", itemIndex);
+
+            var raw = source.ExecuteScalar();
+            if (raw is null)
+            {
+                return new(
+                    false,
+                    "找不到可使用的寵物擴充卡",
+                    capacities.PetSummon);
+            }
+
+            sourceCount = Convert.ToInt32(raw);
+            if (sourceCount <= 0)
+            {
+                return new(
+                    false,
+                    "寵物擴充卡數量不足",
+                    capacities.PetSummon);
+            }
+        }
+
+        using (var expand = db.CreateCommand())
+        {
+            expand.Transaction = tx;
+            expand.CommandText = """
+                UPDATE characters
+                   SET pet_summon_capacity =
+                       MIN(3, pet_summon_capacity + 1)
+                 WHERE id=$id
+                   AND account_id=$account
+                   AND pet_summon_capacity < 3
+                """;
+            Arg(expand, "$id", dbid);
+            Arg(expand, "$account", accountId);
+
+            if (expand.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "寵物召喚空間擴充失敗",
+                    capacities.PetSummon);
+            }
+        }
+
+        using (var consume = db.CreateCommand())
+        {
+            consume.Transaction = tx;
+            consume.CommandText = sourceCount == 1
+                ? """
+                  DELETE FROM inventory_items
+                   WHERE uid=$uid
+                     AND character_id=$id
+                     AND item_index=$item
+                     AND in_bank=0
+                     AND in_shop=0
+                  """
+                : """
+                  UPDATE inventory_items
+                     SET count=count-1
+                   WHERE uid=$uid
+                     AND character_id=$id
+                     AND item_index=$item
+                     AND count > 1
+                     AND in_bank=0
+                     AND in_shop=0
+                  """;
+            Arg(consume, "$uid", itemUid);
+            Arg(consume, "$id", dbid);
+            Arg(consume, "$item", itemIndex);
+
+            if (consume.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "寵物擴充卡消耗失敗",
+                    capacities.PetSummon);
+            }
+        }
+
+        var updated = ReadCharacterCapacities(
+            db,
+            dbid,
+            tx);
+
+        tx.Commit();
+
+        return new(
+            true,
+            $"同時召喚寵物空間已增加至 {updated.PetSummon}",
+            updated.PetSummon);
+    }
+
     public CharacterStatResetResult ResetCharacterStatsFromItem(
         long accountId,
         long dbid,
@@ -5690,21 +5827,63 @@ public sealed class SqliteGameStore : IGameStore
 
     public bool SetPetState(long accountId, long dbid, long petUid, int state)
     {
+        state = state == 1 ? 1 : 0;
+
         using var db = Open();
         using var tx = db.BeginTransaction();
-        if (!OwnsCharacter(db, accountId, dbid, tx)) return false;
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return false;
 
-        if (state == 1)
+        int currentState;
+        using (var current = db.CreateCommand())
         {
-            using var recall = db.CreateCommand();
-            recall.Transaction = tx;
-            recall.CommandText = """
-                UPDATE pets
-                   SET state=0
-                 WHERE character_id=$id
+            current.Transaction = tx;
+            current.CommandText = """
+                SELECT state
+                  FROM pets
+                 WHERE uid=$uid
+                   AND character_id=$id
+                 LIMIT 1
                 """;
-            Arg(recall, "$id", dbid);
-            recall.ExecuteNonQuery();
+            Arg(current, "$uid", petUid);
+            Arg(current, "$id", dbid);
+
+            var raw = current.ExecuteScalar();
+            if (raw is null)
+                return false;
+
+            currentState = Convert.ToInt32(raw);
+        }
+
+        if (state == 1 &&
+            currentState != 1)
+        {
+            var maxSummon = ReadCharacterCapacities(
+                db,
+                dbid,
+                tx).PetSummon;
+
+            using var active = db.CreateCommand();
+            active.Transaction = tx;
+            active.CommandText = """
+                SELECT COUNT(*)
+                  FROM pets
+                 WHERE character_id=$id
+                   AND state=1
+                """;
+            Arg(active, "$id", dbid);
+
+            if (Convert.ToInt32(
+                    active.ExecuteScalar()) >= maxSummon)
+            {
+                return false;
+            }
+        }
+
+        if (currentState == state)
+        {
+            tx.Commit();
+            return true;
         }
 
         using var cmd = db.CreateCommand();
@@ -5712,7 +5891,8 @@ public sealed class SqliteGameStore : IGameStore
         cmd.CommandText = """
             UPDATE pets
                SET state=$state
-             WHERE uid=$uid AND character_id=$id
+             WHERE uid=$uid
+               AND character_id=$id
             """;
         Arg(cmd, "$state", state);
         Arg(cmd, "$uid", petUid);
