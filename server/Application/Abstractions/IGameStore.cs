@@ -10,6 +10,7 @@ public interface IGameStore :
     IEquipmentStore,
     IPetStore,
     IMechaStore,
+    ICompanionRuntimeStore,
     ISkillStore,
     IQuestStore,
     ITitleStore,
