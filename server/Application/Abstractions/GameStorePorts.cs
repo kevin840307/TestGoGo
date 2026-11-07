@@ -247,6 +247,12 @@ public interface IPetStore : ICharacterAssetReader
         long petUid,
         int exp);
 
+    Dictionary<string, object>? SetPetEvolution(
+        long accountId,
+        long dbid,
+        long petUid,
+        int evolId);
+
     PetMutationResult FeedPet(
         long accountId,
         long dbid,
