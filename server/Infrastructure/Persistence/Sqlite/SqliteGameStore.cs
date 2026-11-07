@@ -155,6 +155,24 @@ public sealed class SqliteGameStore : IGameStore
         return cmd;
     }
 
+    private static int GetInt32Safe(SqliteDataReader r, int ordinal, string fieldName)
+    {
+        var value = r.GetInt64(ordinal);
+        if (value > int.MaxValue)
+        {
+            Console.Error.WriteLine($"[CHARACTER_INT_OVERFLOW] Field={fieldName} Value={value} Clamped={int.MaxValue}");
+            return int.MaxValue;
+        }
+
+        if (value < int.MinValue)
+        {
+            Console.Error.WriteLine($"[CHARACTER_INT_OVERFLOW] Field={fieldName} Value={value} Clamped={int.MinValue}");
+            return int.MinValue;
+        }
+
+        return (int)value;
+    }
+
     private static Dictionary<string, object> ReadCharacter(SqliteDataReader r)
     {
         return new Dictionary<string, object>
@@ -163,47 +181,47 @@ public sealed class SqliteGameStore : IGameStore
             ["ACCID"] = r.GetInt64(1),
             ["NAME"] = r.GetString(2),
             ["CharacterPwd"] = r.GetString(3),
-            ["Race"] = r.GetInt32(4),
-            ["Hair"] = r.GetInt32(5),
-            ["HairColor"] = r.GetInt32(6),
-            ["Str"] = r.GetInt32(7),
-            ["Dex"] = r.GetInt32(8),
-            ["Con"] = r.GetInt32(9),
-            ["Wis"] = r.GetInt32(10),
-            ["Level"] = r.GetInt32(11),
-            ["MapID"] = r.GetInt32(12),
-            ["LastMapID"] = r.GetInt32(12),
+            ["Race"] = GetInt32Safe(r, 4, "Race"),
+            ["Hair"] = GetInt32Safe(r, 5, "Hair"),
+            ["HairColor"] = GetInt32Safe(r, 6, "HairColor"),
+            ["Str"] = GetInt32Safe(r, 7, "Str"),
+            ["Dex"] = GetInt32Safe(r, 8, "Dex"),
+            ["Con"] = GetInt32Safe(r, 9, "Con"),
+            ["Wis"] = GetInt32Safe(r, 10, "Wis"),
+            ["Level"] = GetInt32Safe(r, 11, "Level"),
+            ["MapID"] = GetInt32Safe(r, 12, "MapID"),
+            ["LastMapID"] = GetInt32Safe(r, 12, "MapID"),
             ["LocX"] = r.GetDouble(13),
             ["LocY"] = r.GetDouble(14),
             ["LastLocX"] = r.GetDouble(13),
             ["LastLocY"] = r.GetDouble(14),
-            ["HP"] = r.GetInt32(15),
-            ["MaxHP"] = r.GetInt32(16),
-            ["MP"] = r.GetInt32(17),
-            ["MaxMP"] = r.GetInt32(18),
-            ["SP"] = r.GetInt32(19),
-            ["MaxSP"] = r.GetInt32(20),
+            ["HP"] = GetInt32Safe(r, 15, "HP"),
+            ["MaxHP"] = GetInt32Safe(r, 16, "MaxHP"),
+            ["MP"] = GetInt32Safe(r, 17, "MP"),
+            ["MaxMP"] = GetInt32Safe(r, 18, "MaxMP"),
+            ["SP"] = GetInt32Safe(r, 19, "SP"),
+            ["MaxSP"] = GetInt32Safe(r, 20, "MaxSP"),
             ["Money"] = r.GetInt64(21),
-            ["ExpUse"] = r.GetInt32(22),
-            ["ExpAcc"] = r.GetInt32(23),
-            ["ExpDeath"] = r.GetInt32(24),
-            ["MaxExp"] = r.GetInt32(25),
-            ["Career"] = r.GetInt32(26),
-            ["Job"] = r.GetInt32(27),
-            ["Attack"] = r.GetInt32(28),
-            ["Defense"] = r.GetInt32(29),
-            ["MagicAttack"] = r.GetInt32(30),
-            ["MagicDefense"] = r.GetInt32(31),
-            ["Hit"] = r.GetInt32(32),
-            ["Dodge"] = r.GetInt32(33),
-            ["Lucky"] = r.GetInt32(34),
-            ["MoveSpeed"] = r.GetInt32(35),
-            ["AttackSpeed"] = r.GetInt32(36),
-            ["AttackRange"] = r.GetInt32(37),
-            ["CritRate"] = r.GetInt32(38),
-            ["CritDamage"] = r.GetInt32(39),
+            ["ExpUse"] = GetInt32Safe(r, 22, "ExpUse"),
+            ["ExpAcc"] = GetInt32Safe(r, 23, "ExpAcc"),
+            ["ExpDeath"] = GetInt32Safe(r, 24, "ExpDeath"),
+            ["MaxExp"] = GetInt32Safe(r, 25, "MaxExp"),
+            ["Career"] = GetInt32Safe(r, 26, "Career"),
+            ["Job"] = GetInt32Safe(r, 27, "Job"),
+            ["Attack"] = GetInt32Safe(r, 28, "Attack"),
+            ["Defense"] = GetInt32Safe(r, 29, "Defense"),
+            ["MagicAttack"] = GetInt32Safe(r, 30, "MagicAttack"),
+            ["MagicDefense"] = GetInt32Safe(r, 31, "MagicDefense"),
+            ["Hit"] = GetInt32Safe(r, 32, "Hit"),
+            ["Dodge"] = GetInt32Safe(r, 33, "Dodge"),
+            ["Lucky"] = GetInt32Safe(r, 34, "Lucky"),
+            ["MoveSpeed"] = GetInt32Safe(r, 35, "MoveSpeed"),
+            ["AttackSpeed"] = GetInt32Safe(r, 36, "AttackSpeed"),
+            ["AttackRange"] = GetInt32Safe(r, 37, "AttackRange"),
+            ["CritRate"] = GetInt32Safe(r, 38, "CritRate"),
+            ["CritDamage"] = GetInt32Safe(r, 39, "CritDamage"),
             ["State"] = r.GetString(40),
-            ["RebornMapID"] = r.GetInt32(41),
+            ["RebornMapID"] = GetInt32Safe(r, 41, "RebornMapID"),
             ["RebornX"] = r.GetDouble(42),
             ["RebornY"] = r.GetDouble(43),
             ["SummonedHorseUID"] = r.GetInt64(44),
@@ -218,7 +236,7 @@ public sealed class SqliteGameStore : IGameStore
             ["ClubPosition"] = 0,
             ["ClubDonation"] = 0,
             ["ClubName"] = "",
-            ["Bonnet"] = r.GetInt32(4) == 3 ? -1 : 0,
+            ["Bonnet"] = GetInt32Safe(r, 4, "Race") == 3 ? -1 : 0,
             ["EquipColor0"] = 0,
             ["Left_hand"] = 0,
             ["Right_hand"] = 0,
@@ -511,7 +529,7 @@ public sealed class SqliteGameStore : IGameStore
                     ["ItemIndex"] = r.GetInt32(1),
                     ["Count"] = r.GetInt32(2),
                     ["InBank"] = r.GetInt32(3),
-                    ["InShop"] = r.GetInt32(4)
+                    ["InShop"] = GetInt32Safe(r, 4, "Race")
                 });
             }
         }
@@ -534,9 +552,9 @@ public sealed class SqliteGameStore : IGameStore
                     ["ItemIdx"] = r.GetInt32(1),
                     ["Damage"] = r.GetInt32(2),
                     ["Color"] = r.GetInt32(3),
-                    ["Part"] = r.GetInt32(4),
-                    ["InBank"] = r.GetInt32(5),
-                    ["InShop"] = r.GetInt32(6)
+                    ["Part"] = GetInt32Safe(r, 4, "Race"),
+                    ["InBank"] = GetInt32Safe(r, 5, "Hair"),
+                    ["InShop"] = GetInt32Safe(r, 6, "HairColor")
                 });
             }
         }
@@ -564,40 +582,40 @@ public sealed class SqliteGameStore : IGameStore
                     ["PETID"] = r.GetInt32(1),
                     ["Name"] = r.GetString(2),
                     ["HP"] = r.GetInt32(3),
-                    ["MaxHP"] = r.GetInt32(4),
-                    ["MP"] = r.GetInt32(5),
-                    ["MaxMP"] = r.GetInt32(6),
-                    ["Attack"] = r.GetInt32(7),
-                    ["Defense"] = r.GetInt32(8),
-                    ["MagicAttack"] = r.GetInt32(9),
-                    ["MagicDefense"] = r.GetInt32(10),
-                    ["Hit"] = r.GetInt32(11),
-                    ["Dodge"] = r.GetInt32(12),
+                    ["MaxHP"] = GetInt32Safe(r, 4, "Race"),
+                    ["MP"] = GetInt32Safe(r, 5, "Hair"),
+                    ["MaxMP"] = GetInt32Safe(r, 6, "HairColor"),
+                    ["Attack"] = GetInt32Safe(r, 7, "Str"),
+                    ["Defense"] = GetInt32Safe(r, 8, "Dex"),
+                    ["MagicAttack"] = GetInt32Safe(r, 9, "Con"),
+                    ["MagicDefense"] = GetInt32Safe(r, 10, "Wis"),
+                    ["Hit"] = GetInt32Safe(r, 11, "Level"),
+                    ["Dodge"] = GetInt32Safe(r, 12, "MapID"),
                     ["CON"] = r.GetInt32(13),
                     ["STR"] = r.GetInt32(14),
-                    ["WIS"] = r.GetInt32(15),
-                    ["DEX"] = r.GetInt32(16),
-                    ["ExtraSTR"] = r.GetInt32(17),
-                    ["ExtraDEX"] = r.GetInt32(18),
-                    ["ExtraCON"] = r.GetInt32(19),
-                    ["ExtraWIS"] = r.GetInt32(20),
+                    ["WIS"] = GetInt32Safe(r, 15, "HP"),
+                    ["DEX"] = GetInt32Safe(r, 16, "MaxHP"),
+                    ["ExtraSTR"] = GetInt32Safe(r, 17, "MP"),
+                    ["ExtraDEX"] = GetInt32Safe(r, 18, "MaxMP"),
+                    ["ExtraCON"] = GetInt32Safe(r, 19, "SP"),
+                    ["ExtraWIS"] = GetInt32Safe(r, 20, "MaxSP"),
                     ["LifeCount"] = r.GetInt32(21),
-                    ["RecoveryCount"] = r.GetInt32(22),
-                    ["SummonWaitCount"] = r.GetInt32(23),
-                    ["Exp"] = r.GetInt32(24),
-                    ["MaxExp"] = r.GetInt32(25),
-                    ["Level"] = r.GetInt32(26),
-                    ["UseExp"] = r.GetInt32(27),
-                    ["FeedExpLimit"] = r.GetInt32(28),
-                    ["EvolID"] = r.GetInt32(29),
+                    ["RecoveryCount"] = GetInt32Safe(r, 22, "ExpUse"),
+                    ["SummonWaitCount"] = GetInt32Safe(r, 23, "ExpAcc"),
+                    ["Exp"] = GetInt32Safe(r, 24, "ExpDeath"),
+                    ["MaxExp"] = GetInt32Safe(r, 25, "MaxExp"),
+                    ["Level"] = GetInt32Safe(r, 26, "Career"),
+                    ["UseExp"] = GetInt32Safe(r, 27, "Job"),
+                    ["FeedExpLimit"] = GetInt32Safe(r, 28, "Attack"),
+                    ["EvolID"] = GetInt32Safe(r, 29, "Defense"),
                     ["Equip0"] = r.GetInt64(30),
                     ["Equip1"] = r.GetInt64(31),
                     ["Equip2"] = r.GetInt64(32),
-                    ["FeedValue"] = r.GetInt32(33),
-                    ["State"] = r.GetInt32(34),
-                    ["MainSkillID"] = r.GetInt32(35),
-                    ["InShop"] = r.GetInt32(36),
-                    ["ShopPrice"] = r.GetInt32(37)
+                    ["FeedValue"] = GetInt32Safe(r, 33, "Dodge"),
+                    ["State"] = GetInt32Safe(r, 34, "Lucky"),
+                    ["MainSkillID"] = GetInt32Safe(r, 35, "MoveSpeed"),
+                    ["InShop"] = GetInt32Safe(r, 36, "AttackSpeed"),
+                    ["ShopPrice"] = GetInt32Safe(r, 37, "AttackRange")
                 });
             }
         }
@@ -622,15 +640,15 @@ public sealed class SqliteGameStore : IGameStore
                     ["HorseIdx"] = r.GetInt32(1),
                     ["Exp"] = r.GetInt32(2),
                     ["MaxExp"] = r.GetInt32(3),
-                    ["EnergyLeft"] = r.GetInt32(4),
-                    ["Level"] = r.GetInt32(5),
+                    ["EnergyLeft"] = GetInt32Safe(r, 4, "Race"),
+                    ["Level"] = GetInt32Safe(r, 5, "Hair"),
                     ["Name"] = r.GetString(6),
                     ["HorseType"] = r.GetString(7),
-                    ["EquipColor0"] = r.GetInt32(8),
-                    ["EquipColor1"] = r.GetInt32(9),
-                    ["EquipColor2"] = r.GetInt32(10),
-                    ["EquipColor3"] = r.GetInt32(11),
-                    ["Angry"] = r.GetInt32(12)
+                    ["EquipColor0"] = GetInt32Safe(r, 8, "Dex"),
+                    ["EquipColor1"] = GetInt32Safe(r, 9, "Con"),
+                    ["EquipColor2"] = GetInt32Safe(r, 10, "Wis"),
+                    ["EquipColor3"] = GetInt32Safe(r, 11, "Level"),
+                    ["Angry"] = GetInt32Safe(r, 12, "MapID")
                 });
             }
         }
@@ -654,9 +672,9 @@ public sealed class SqliteGameStore : IGameStore
                     ["Damage"] = r.GetInt32(2),
                     ["Color"] = r.GetInt32(3),
                     ["HorseUID"] = r.GetInt64(4),
-                    ["Part"] = r.GetInt32(5),
-                    ["InBank"] = r.GetInt32(6),
-                    ["InShop"] = r.GetInt32(7)
+                    ["Part"] = GetInt32Safe(r, 5, "Hair"),
+                    ["InBank"] = GetInt32Safe(r, 6, "HairColor"),
+                    ["InShop"] = GetInt32Safe(r, 7, "Str")
                 });
             }
         }
@@ -1306,7 +1324,7 @@ public sealed class SqliteGameStore : IGameStore
             clubExp = reader.GetInt64(2);
             clubSaving = reader.GetInt64(3);
             clubMessage = reader.GetString(4);
-            activeResearchId = reader.GetInt32(5);
+            activeResearchId = readeGetInt32Safe(r, 5, "Hair");
             activeResearchEndUtcMs = reader.GetInt64(6);
         }
 
@@ -1407,8 +1425,8 @@ public sealed class SqliteGameStore : IGameStore
                     reader.GetString(1),
                     reader.GetInt32(2),
                     reader.GetInt32(3),
-                    reader.GetInt32(4),
-                    reader.GetInt32(5),
+                    readeGetInt32Safe(r, 4, "Race"),
+                    readeGetInt32Safe(r, 5, "Hair"),
                     reader.GetInt64(6)));
             }
         }
@@ -6929,11 +6947,11 @@ public sealed class SqliteGameStore : IGameStore
             MapId = reader.GetInt32(1),
             OwnerDbid = reader.GetInt64(2),
             TabType = reader.GetInt32(3),
-            ItemIndex = reader.GetInt32(4),
-            Count = reader.GetInt32(5),
-            Damage = reader.GetInt32(6),
-            Color = reader.GetInt32(7),
-            Part = reader.GetInt32(8),
+            ItemIndex = readeGetInt32Safe(r, 4, "Race"),
+            Count = readeGetInt32Safe(r, 5, "Hair"),
+            Damage = readeGetInt32Safe(r, 6, "HairColor"),
+            Color = readeGetInt32Safe(r, 7, "Str"),
+            Part = readeGetInt32Safe(r, 8, "Dex"),
             X = reader.GetDouble(9),
             Y = reader.GetDouble(10),
             CreatedAt = createdMs > 0
