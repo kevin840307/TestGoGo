@@ -25,6 +25,9 @@ ACTION_CALL = re.compile(
     r"""send_(trade|shop|mall)_action\s*\(\s*['"]([A-Za-z][A-Za-z0-9_]*)['"]\s*,\s*(\{[^{}]*\})""",
     re.S
 )
+PARTY_CALL = re.compile(
+    r"""send_party_action\s*\(\s*['"]([A-Za-z][A-Za-z0-9_]*)['"]"""
+)
 PET_CALL = re.compile(
     r"""send_pet_action\s*\(\s*['"]([A-Za-z][A-Za-z0-9_]*)['"]\s*,\s*[^,()\n]+(?:\s*,\s*(\{[^{}]*\}))?""",
     re.S
@@ -90,9 +93,15 @@ def scan(root: Path) -> dict:
         source = path.read_text(encoding="utf-8-sig")
         if not any(name in source for name in (
             "send_secure_packet", "send_trade_action", "send_shop_action",
-            "send_pet_action", "send_mall_action"
+            "send_pet_action", "send_mall_action", "send_party_action"
         )):
             continue
+        for name in PARTY_CALL.findall(source):
+            # The helper always writes TargetDBID (default -1 for no target).
+            action_samples.setdefault("PartyAction:" + name, []).append({
+                "path": path.relative_to(root).as_posix(),
+                "fields": {"TargetDBID"}
+            })
         for name, payload in PET_CALL.findall(source):
             # send_pet_action constructs PetAction with PetUID, then
             # merges these literal extra fields.
