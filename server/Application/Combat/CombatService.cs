@@ -41,6 +41,7 @@ public sealed class CombatService
         int mapId)
     {
         session.Monsters.Clear();
+        session.LastMonsterAiTick = DateTimeOffset.MinValue;
 
         var packets = new List<object>();
         packets.AddRange(_world.BuildNpcSpawnPackets(mapId));
