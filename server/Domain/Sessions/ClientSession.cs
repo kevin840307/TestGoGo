@@ -24,4 +24,5 @@ public sealed class ClientSession
     // state so leaving and re-entering does not reset positions/HP.
     public Dictionary<int, MonsterRuntimeState> Monsters { get; } = new();
     public Dictionary<int, Dictionary<int, MonsterRuntimeState>> MonstersByMap { get; } = new();
+    public int LoadedMonsterMapId { get; set; }
 }
