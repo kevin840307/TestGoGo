@@ -14,6 +14,8 @@ public sealed class ClientSession
     public double LastY { get; set; }
     public bool PendingMapSpawn { get; set; }
     public bool WorldReady { get; set; }
+    // Production map AI runs in the shared map scheduler, not each socket tick.
+    public bool SharedAiManaged { get; set; }
     public int WorldSnapshotRetriesRemaining { get; set; }
     public DateTimeOffset NextWorldSnapshotAt { get; set; } = DateTimeOffset.MinValue;
     public bool CloseRequested { get; set; }
