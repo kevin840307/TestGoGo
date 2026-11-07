@@ -135,6 +135,7 @@ var equip_max_size: int = 200
 var equip_list: Array = []
 
 var pet_max_size: int = 50
+var pet_summon_max: int = 1
 var pet_list: Array = []
 
 var horse_max_size: int = 10
@@ -277,6 +278,7 @@ func load_from_json(json_dict: Dictionary) -> void :
 
 	update_inventory(json_dict.get("Inventory", []), json_dict.get("InventoryMaxSize", 200))
 	update_equips(json_dict.get("EquipList", []), json_dict.get("EquipMaxSize", 200))
+	pet_summon_max = int(json_dict.get("PetSummonMax", 1))
 	update_pets(json_dict.get("PetList", []), json_dict.get("PetMaxSize", 50))
 	update_horses(json_dict.get("HorseList", []), json_dict.get("HorseEquipList", []), json_dict.get("HorseEquipMaxSize", 100))
 	update_skills(json_dict.get("SkillList", []))
