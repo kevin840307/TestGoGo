@@ -95,7 +95,8 @@ public sealed class ShopService
             kind,
             item.ItemIndex,
             count,
-            unitPrice);
+            unitPrice,
+            currentItem.EquipSlot);
 
         if (!result.Success)
             return Failure(result.Message);
