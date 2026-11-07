@@ -39,7 +39,7 @@ class PacketContractAuditTests(unittest.TestCase):
         )
         self.write(
             "server/Application/Shops/PlayerShopService.cs",
-            'return action switch { "OpenShop" => Open(), _ => [] };\n',
+            'return action switch {\n  "OpenShop" => Open(),\n  _ => [] };\n',
         )
         self.write(
             "server/Application/Mall/MallService.cs",
