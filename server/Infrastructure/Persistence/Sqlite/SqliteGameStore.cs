@@ -692,6 +692,115 @@ public sealed class SqliteGameStore : IGameStore
         return GetCharacter(accountId, dbid);
     }
 
+    public Dictionary<string, object>? SetPrimaryStats(
+        long accountId,
+        long dbid,
+        int str,
+        int dex,
+        int con,
+        int wis,
+        int expUse)
+    {
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET str=$str,
+                   dex=$dex,
+                   con=$con,
+                   wis=$wis,
+                   exp_use=$exp
+             WHERE id=$id AND account_id=$a
+            """;
+        Arg(cmd, "$str", Math.Clamp(str, 0, 100));
+        Arg(cmd, "$dex", Math.Clamp(dex, 0, 100));
+        Arg(cmd, "$con", Math.Clamp(con, 0, 100));
+        Arg(cmd, "$wis", Math.Clamp(wis, 0, 100));
+        Arg(cmd, "$exp", Math.Max(0, expUse));
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return null;
+
+        return GetCharacter(accountId, dbid);
+    }
+
+    public Dictionary<string, object>? ApplyGrowthStats(
+        long accountId,
+        long dbid,
+        int maxHp,
+        int maxMp,
+        int maxSp,
+        int attack,
+        int defense,
+        int magicAttack,
+        int magicDefense,
+        int hit,
+        int dodge,
+        int moveSpeed)
+    {
+        using var db = Open();
+
+        var before = GetCharacter(accountId, dbid);
+        if (before is null)
+            return null;
+
+        var oldMaxHp = Convert.ToInt32(before["MaxHP"]);
+        var oldMaxMp = Convert.ToInt32(before["MaxMP"]);
+        var oldMaxSp = Convert.ToInt32(before["MaxSP"]);
+        var oldHp = Convert.ToInt32(before["HP"]);
+        var oldMp = Convert.ToInt32(before["MP"]);
+        var oldSp = Convert.ToInt32(before["SP"]);
+
+        maxHp = Math.Max(1, maxHp);
+        maxMp = Math.Max(0, maxMp);
+        maxSp = Math.Max(0, maxSp);
+
+        var newHp = Math.Min(maxHp, Math.Max(0, oldHp + Math.Max(0, maxHp - oldMaxHp)));
+        var newMp = Math.Min(maxMp, Math.Max(0, oldMp + Math.Max(0, maxMp - oldMaxMp)));
+        var newSp = Math.Min(maxSp, Math.Max(0, oldSp + Math.Max(0, maxSp - oldMaxSp)));
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET hp=$hp,
+                   max_hp=$maxHp,
+                   mp=$mp,
+                   max_mp=$maxMp,
+                   sp=$sp,
+                   max_sp=$maxSp,
+                   attack=$atk,
+                   defense=$def,
+                   magic_attack=$matk,
+                   magic_defense=$mdef,
+                   hit=$hit,
+                   dodge=$dodge,
+                   move_speed=$move
+             WHERE id=$id AND account_id=$a
+            """;
+        Arg(cmd, "$hp", newHp);
+        Arg(cmd, "$maxHp", maxHp);
+        Arg(cmd, "$mp", newMp);
+        Arg(cmd, "$maxMp", maxMp);
+        Arg(cmd, "$sp", newSp);
+        Arg(cmd, "$maxSp", maxSp);
+        Arg(cmd, "$atk", Math.Max(0, attack));
+        Arg(cmd, "$def", Math.Max(0, defense));
+        Arg(cmd, "$matk", Math.Max(0, magicAttack));
+        Arg(cmd, "$mdef", Math.Max(0, magicDefense));
+        Arg(cmd, "$hit", Math.Max(0, hit));
+        Arg(cmd, "$dodge", Math.Max(0, dodge));
+        Arg(cmd, "$move", Math.Max(1, moveSpeed));
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return null;
+
+        return GetCharacter(accountId, dbid);
+    }
+
     public long AddInventoryItem(long accountId, long dbid, int itemIndex, int count)
     {
         if (count <= 0) return 0;
@@ -2008,7 +2117,7 @@ public sealed class SqliteGameStore : IGameStore
             UPDATE characters
                SET exp_use = exp_use +
                    CASE
-                       WHEN $level > level THEN $level - level
+                       WHEN $level > level THEN ($level - level) * 2
                        ELSE 0
                    END,
                    level=$level
