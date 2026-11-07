@@ -92,8 +92,17 @@ func _ready() -> void :
 	mouse_exited.connect(_on_mouse_exited)
 
 func _process(delta: float) -> void :
-	if not network_move_active or current_hp <= 0:
+	if current_hp <= 0:
 		return
+
+	if not network_move_active:
+		if current_state == "walk":
+			var idle_elapsed_ms := Time.get_ticks_msec() - last_move_packet_ms
+			if idle_elapsed_ms >= int(MOVE_IDLE_GRACE_SECONDS * 1000.0):
+				current_state = "idle"
+				sync_animation()
+		return
+
 	if current_state in ["attack", "hit", "death", "die"]:
 		network_move_active = false
 		return
@@ -102,11 +111,6 @@ func _process(delta: float) -> void :
 	if remaining <= NETWORK_MOVE_SNAP_EPSILON:
 		global_position = network_move_target
 		network_move_active = false
-		if current_state == "walk":
-			var elapsed_ms := Time.get_ticks_msec() - last_move_packet_ms
-			if elapsed_ms >= int(MOVE_IDLE_GRACE_SECONDS * 1000.0):
-				current_state = "idle"
-				sync_animation()
 		return
 
 	var step := network_move_speed * delta
