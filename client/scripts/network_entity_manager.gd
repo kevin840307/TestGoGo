@@ -7,6 +7,7 @@ const NPC_SCENE = preload("res://npc_entity.tscn")
 const GROUND_ITEM_SCENE = preload("res://ground_item_entity.tscn")
 const PET_SCENE = preload("res://pet_entity.tscn")
 const DYNAMIC_ENTITY_VISIBILITY_LAYER: = 1 << 1
+const DEBUG_MONSTER_NETWORK_LOGS: bool = false
 
 var active_entities: Dictionary = {}
 var _last_skill_casts: Dictionary = {}
@@ -234,7 +235,7 @@ func _on_entity_moved(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
 	var target_node = get_active_entity(entity_id)
 	if target_node:
-		if int(_active_entity_types.get(entity_id, -1)) == 1:
+		if DEBUG_MONSTER_NETWORK_LOGS and int(_active_entity_types.get(entity_id, -1)) == 1:
 			print("[MONSTER_NET_MOVE] id=", entity_id,
 				" x=", data.get("X", 0),
 				" y=", data.get("Y", 0),
@@ -256,7 +257,7 @@ func _on_entity_moved(data: Dictionary) -> void :
 func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String) -> void :
 	var target_node = get_active_entity(entity_id)
 	if target_node:
-		if int(_active_entity_types.get(entity_id, -1)) == 1:
+		if DEBUG_MONSTER_NETWORK_LOGS and int(_active_entity_types.get(entity_id, -1)) == 1:
 			print("[MONSTER_NET_STATE] id=", entity_id,
 				" state=", new_state,
 				" dir=", new_dir)
@@ -296,7 +297,7 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 	var skill_id = int(data.get("SkillID", 0))
 
 	var attacker_id = int(data.get("AttackerID", 0))
-	if int(_active_entity_types.get(attacker_id, -1)) == 1:
+	if DEBUG_MONSTER_NETWORK_LOGS and int(_active_entity_types.get(attacker_id, -1)) == 1:
 		print("[MONSTER_NET_DAMAGE] attacker=", attacker_id,
 			" target=", target_id,
 			" target_type=", target_type,
