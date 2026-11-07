@@ -1700,6 +1700,31 @@ public sealed class CombatService
             }
         };
 
+        // Crash isolation mode for the custom screen AOE skill:
+        // prove whether the crash happens before any monster HP/death/reward work.
+        if (isScreenAreaAttack)
+        {
+            var refreshedAssets = _store.GetCharacterAssets(
+                accountId,
+                session.CharacterId.Value);
+            var refreshedStats = ApplyActiveSkillBuffs(
+                CharacterStatCalculator.Calculate(
+                    updated,
+                    refreshedAssets,
+                    _current),
+                session,
+                now);
+
+            packets.Add(BuildPlayerStatusPacket(
+                updated,
+                refreshedStats));
+
+            session.SkillReadyAt[skillId] = now;
+
+            BroadcastWorldPackets(session, packets);
+            return packets;
+        }
+
         if (isPortableRepair)
         {
             packets.Add(new
