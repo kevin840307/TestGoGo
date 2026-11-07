@@ -455,7 +455,12 @@ public interface IQuestStore
         int questId);
 }
 
-public interface IMallStore
+public sealed record MallPurchaseResult(
+    bool Success,
+    string Message,
+    long NewBalance);
+
+public interface IMallStore : ICharacterAssetReader
 {
     long GetMallPoints(long accountId);
 
@@ -463,6 +468,19 @@ public interface IMallStore
         long accountId,
         long delta,
         out long newBalance);
+
+    MallPurchaseResult PurchaseMallAsset(
+        long accountId,
+        long dbid,
+        AssetPurchaseKind kind,
+        int itemIndex,
+        int assetCount,
+        long totalPrice,
+        string assetName = "",
+        string horseType = "MS",
+        int initialEnergy = 0,
+        int itemPart = 255,
+        int itemDamage = 0);
 }
 
 public sealed record ClubMemberData(
