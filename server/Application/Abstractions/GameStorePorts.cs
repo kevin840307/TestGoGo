@@ -22,6 +22,25 @@ public interface IAccountStore
     long? Login(string username, string password);
 }
 
+public sealed record CharacterTransformState(
+    int TransformType,
+    string TransformId,
+    int ColorIndex,
+    int SourceItemId,
+    long StartedUtcMs,
+    long ExpiresUtcMs,
+    int AttackBonus,
+    int DefenseBonus,
+    int MagicAttackBonus,
+    int MagicDefenseBonus,
+    int HitBonus,
+    int DodgeBonus);
+
+public sealed record CharacterTransformMutationResult(
+    bool Success,
+    string Message,
+    CharacterTransformState? State);
+
 public interface ICharacterStore
 {
     List<Dictionary<string, object>> Characters(long accountId);
@@ -143,6 +162,19 @@ public interface ICharacterStore
         int hit,
         int dodge,
         int moveSpeed);
+
+    CharacterTransformMutationResult ActivateTransformFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        CharacterTransformState state);
+
+    CharacterTransformMutationResult ClearTransformFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex);
 }
 
 public sealed record TimedEffectActivationResult(
