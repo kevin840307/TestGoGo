@@ -22,6 +22,10 @@ public sealed class CombatService
     private const double LoseTargetRadius = 700.0;
     private const double AttackRange = 100.0;
     private const double EngageDistance = 90.0;
+    // Distance is calculated from normalized double coordinates. Values that
+    // should be exactly 90 can become 90.0000000000001, which previously
+    // entered Chase with a sub-epsilon step and left the monster stuck.
+    private const double EngageDistanceTolerance = 0.01;
     private const double MoveStep = 35.0;
     // Keep the movement packet duration aligned with the 250 ms world cadence.
     // The client now interpolates continuously toward the latest authoritative
@@ -560,7 +564,7 @@ public sealed class CombatService
                     continue;
                 }
 
-                if (distance <= EngageDistance)
+                if (distance <= EngageDistance + EngageDistanceTolerance)
                 {
                     var enteredAttackRange =
                         monster.AiState != MonsterAiState.Attack;
