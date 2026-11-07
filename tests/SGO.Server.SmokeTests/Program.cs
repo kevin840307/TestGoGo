@@ -599,7 +599,8 @@ try
         battle,
         enemyDrops,
         worldRuntime,
-        broadcastHub);
+        broadcastHub,
+        party);
     var shops = new ShopService(
         store,
         store,
