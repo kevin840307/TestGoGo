@@ -488,8 +488,8 @@ public sealed class PacketRouter
                     accountId,
                     state.CharacterId.Value);
 
-                return
-                [
+                var response = new List<object>
+                {
                     new
                     {
                         Type = "HorseSync",
@@ -502,7 +502,15 @@ public sealed class PacketRouter
                         Type = "SystemMessageFlash",
                         Message = success ? "已卸下機甲裝備" : "無法卸下機甲裝備"
                     }
-                ];
+                };
+
+                if (success)
+                    response.Add(BuildEffectiveStatusPacket(
+                        accountId,
+                        state.CharacterId.Value,
+                        assets));
+
+                return response;
             }
 
             case "PetAction":
