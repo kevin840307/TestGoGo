@@ -17,7 +17,7 @@ var is_interacting_with_npc: bool = false
 var is_mouse_holding: bool = false
 
 var stuck_frames: int = 0
-const MAX_STUCK_FRAMES: int = 5
+const MAX_STUCK_FRAMES: int = 30
 var action_lock_timer: float = 0.0
 var death_timer: float = 0.0
 var _last_death_display_second: int = -1
@@ -610,24 +610,55 @@ func _handle_action_lock(delta: float) -> void :
 		sync_animation()
 
 func _handle_movement(delta: float) -> void :
-	var dir_vector = (target_position - global_position)
-	var distance = dir_vector.length()
-	var current_real_speed = get_real_move_speed()
-	var step_distance = current_real_speed * delta
-	var stop_threshold = max(4.0, step_distance)
+	var dir_vector: Vector2 = target_position - global_position
+	var distance: float = dir_vector.length()
+	var current_real_speed: float = get_real_move_speed()
+	var step_distance: float = current_real_speed * delta
+	var stop_threshold: float = max(4.0, step_distance)
 
 	if distance <= stop_threshold:
 		_stop_movement()
-	else:
-		velocity = dir_vector.normalized() * current_real_speed
-		update_direction_8way(velocity)
-		var old_position = global_position
-		move_and_slide()
+		return
 
-		if old_position.distance_to(global_position) < 1.5 and get_slide_collision_count() > 0:
-			stuck_frames += 1
-			if stuck_frames >= MAX_STUCK_FRAMES: _stop_movement()
-		else: stuck_frames = 0
+	var desired_dir: Vector2 = dir_vector.normalized()
+	velocity = desired_dir * current_real_speed
+	update_direction_8way(velocity)
+
+	var old_position: Vector2 = global_position
+	move_and_slide()
+	var moved_distance: float = old_position.distance_to(global_position)
+
+	if moved_distance >= 1.5:
+		stuck_frames = 0
+		return
+
+	if get_slide_collision_count() <= 0:
+		stuck_frames += 1
+		if stuck_frames >= MAX_STUCK_FRAMES:
+			_stop_movement()
+		return
+
+	# The legacy client searches around blocking cells instead of giving up
+	# when the direct line is blocked. Godot already supplies the collision
+	# normal, so use the equivalent local behaviour: choose the wall tangent
+	# that still makes the most progress toward the requested destination.
+	var collision: KinematicCollision2D = get_slide_collision(0)
+	var normal: Vector2 = collision.get_normal()
+	var tangent_a: Vector2 = Vector2(-normal.y, normal.x)
+	var tangent_b: Vector2 = -tangent_a
+	var detour_dir: Vector2 = tangent_a if tangent_a.dot(desired_dir) >= tangent_b.dot(desired_dir) else tangent_b
+
+	velocity = detour_dir.normalized() * current_real_speed
+	update_direction_8way(velocity)
+	var detour_start: Vector2 = global_position
+	move_and_slide()
+
+	if detour_start.distance_to(global_position) >= 1.0:
+		stuck_frames = 0
+	else:
+		stuck_frames += 1
+		if stuck_frames >= MAX_STUCK_FRAMES:
+			_stop_movement()
 
 func _handle_network_sync(delta: float) -> void :
 	if current_state == "walk":
