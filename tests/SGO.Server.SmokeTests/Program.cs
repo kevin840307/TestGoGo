@@ -1672,12 +1672,18 @@ try
 
     Check(
         hpAfterFarAttack == hpBeforeFarAttack &&
+        monster.AiState == MonsterAiState.Chase &&
+        farAttackPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"MoveEntity\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                $"\"EntityID\":{monster.EntityId}")) &&
         !farAttackPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"EntityDamage\"") &&
             JsonSerializer.Serialize(x).Contains(
                 $"\"AttackerID\":{monster.EntityId}")),
-        "monster in attack hysteresis range cannot deal damage beyond 130px");
+        "monster beyond 130px keeps chasing and cannot deal melee damage");
 
     var sawDeath = false;
 
