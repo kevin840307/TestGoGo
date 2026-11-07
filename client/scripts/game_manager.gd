@@ -345,6 +345,17 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	await get_tree().process_frame
 	set_frame_gap_stage("initial_map_instantiate")
 	current_map_node = map_resource.instantiate()
+
+	# Blocking.dat is the authoritative navigation/collision source. Older map
+	# scenes may still contain a huge legacy CollisionContainer TileMapLayer.
+	# Remove it before the map enters SceneTree so Godot does not register/build
+	# thousands of unused collision cells during initial add_child().
+	var legacy_collision := current_map_node.get_node_or_null("CollisionContainer")
+	if is_instance_valid(legacy_collision):
+		current_map_node.remove_child(legacy_collision)
+		legacy_collision.free()
+		print("[MAP_INIT_OPT] removed_legacy_collision=true")
+
 	# Keep the first world completely hidden while its nodes initialize.
 	# The entry loading overlay remains the only visible surface until the
 	# readiness gate at the end of this function has completed.
