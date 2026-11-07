@@ -4383,6 +4383,82 @@ try
               store.GetCharacter(account.Value, id)!["Money"]) > moneyBeforeSell,
         "NPC shop sell removes equipment and adds money");
 
+    var npcSellHorseEquipUid = store.AddHorseEquipment(
+        account.Value,
+        id,
+        50293,
+        -1,
+        1,
+        0,
+        0);
+    var moneyBeforeHorseEquipSell = Convert.ToInt64(
+        store.GetCharacter(account.Value, id)!["Money"]);
+
+    using (var sellHorseEquip = Json(JsonSerializer.Serialize(new
+    {
+        Type = "ShopAction",
+        Action = "SellNpcItem",
+        UID = npcSellHorseEquipUid,
+        // Godot SharedInventoryPanel exposes all mecha assets as Tab 3.
+        TabType = 3,
+        Count = 1
+    })))
+    {
+        var responses = router.Handle(
+            sellHorseEquip.RootElement,
+            session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("出售成功")) &&
+              !store.GetCharacterAssets(account.Value, id).HorseEquips.Any(x =>
+                  Convert.ToInt64(x["EquipUID"]) == npcSellHorseEquipUid) &&
+              Convert.ToInt64(
+                  store.GetCharacter(account.Value, id)!["Money"]) >
+                  moneyBeforeHorseEquipSell,
+            "NPC shop sells Godot MECHA-tab horse equipment instead of misreading it as a horse body");
+    }
+
+    var npcSellBatteryUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        50102,
+        2);
+    var batteryCountBeforeSell = store.GetCharacterAssets(
+            account.Value,
+            id)
+        .Inventory
+        .Where(x =>
+            Convert.ToInt64(x["ItemUID"]) == npcSellBatteryUid)
+        .Select(x => Convert.ToInt32(x["Count"]))
+        .First();
+
+    using (var sellBattery = Json(JsonSerializer.Serialize(new
+    {
+        Type = "ShopAction",
+        Action = "SellNpcItem",
+        UID = npcSellBatteryUid,
+        // Batteries are displayed in the normal inventory list.
+        TabType = 0,
+        Count = 1
+    })))
+    {
+        var responses = router.Handle(
+            sellBattery.RootElement,
+            session);
+        var remainingBattery = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Inventory
+            .FirstOrDefault(x =>
+                Convert.ToInt64(x["ItemUID"]) == npcSellBatteryUid);
+
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("出售成功")) &&
+              remainingBattery is not null &&
+              Convert.ToInt32(remainingBattery["Count"]) ==
+                  batteryCountBeforeSell - 1,
+            "NPC shop sells horse batteries from Godot GENERAL tab as stackable inventory");
+    }
+
     var baseAttackBeforeEquip = Convert.ToInt32(
         store.GetCharacter(account.Value, id)!["Attack"]);
 
