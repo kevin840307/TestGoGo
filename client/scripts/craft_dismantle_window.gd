@@ -74,7 +74,11 @@ func prepare_initial_async() -> void :
 	])
 
 func prepare_dismantle_background_async() -> void :
-	if _dismantle_prepared or _dismantle_preparing:
+	if _dismantle_prepared:
+		return
+	if _dismantle_preparing:
+		while _dismantle_preparing and is_inside_tree():
+			await get_tree().process_frame
 		return
 	_dismantle_preparing = true
 	var started_usec: int = Time.get_ticks_usec()
