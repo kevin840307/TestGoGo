@@ -2263,6 +2263,61 @@ public sealed class SqliteGameStore : IGameStore
         return true;
     }
 
+    public GroundItemRuntime? CreateGroundItem(
+        long ownerDbid,
+        int tabType,
+        int itemIndex,
+        int count,
+        int mapId,
+        double x,
+        double y,
+        int damage = 0,
+        int color = 0,
+        int part = 255)
+    {
+        if (itemIndex <= 0 || count <= 0)
+            return null;
+
+        using var db = Open();
+        using var add = db.CreateCommand();
+        add.CommandText = """
+            INSERT INTO ground_items(
+                map_id,owner_dbid,tab_type,item_index,count,
+                damage,color,part,x,y)
+            VALUES(
+                $map,$owner,$tab,$item,$count,
+                $damage,$color,$part,$x,$y);
+            SELECT last_insert_rowid();
+            """;
+        Arg(add, "$map", mapId);
+        Arg(add, "$owner", ownerDbid);
+        Arg(add, "$tab", tabType);
+        Arg(add, "$item", itemIndex);
+        Arg(add, "$count", count);
+        Arg(add, "$damage", damage);
+        Arg(add, "$color", color);
+        Arg(add, "$part", part);
+        Arg(add, "$x", x);
+        Arg(add, "$y", y);
+
+        var groundId = Convert.ToInt64(add.ExecuteScalar());
+        return new GroundItemRuntime
+        {
+            GroundItemId = groundId,
+            EntityId = checked(6_000_000 + (int)groundId),
+            MapId = mapId,
+            TabType = tabType,
+            ItemIndex = itemIndex,
+            Count = count,
+            Damage = damage,
+            Color = color,
+            Part = part,
+            X = x,
+            Y = y,
+            OwnerDbid = ownerDbid
+        };
+    }
+
     public GroundItemRuntime? DropAssetToGround(
         long accountId,
         long dbid,
