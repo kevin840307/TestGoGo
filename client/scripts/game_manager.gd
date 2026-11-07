@@ -238,45 +238,6 @@ func _apply_current_festival_theme() -> Dictionary:
 		print("[INIT_TIMING] festival_theme_ms=%.2f" % elapsed_ms)
 	return result
 
-func _build_blocking_collision(map_id: int) -> bool:
-	if not is_instance_valid(current_map_node):
-		return false
-
-	var collision_layer: TileMapLayer = current_map_node.find_child(
-		"CollisionContainer",
-		true,
-		false
-	) as TileMapLayer
-
-	if collision_layer == null:
-		printerr("[BlockingCollision] CollisionContainer not found for Map%02d" % map_id)
-		return false
-
-	set_frame_gap_stage("blocking_collision")
-	var started_usec: int = Time.get_ticks_usec()
-	var result: Dictionary = await LegacyPathfinder.build_collision_layer(
-		map_id,
-		collision_layer
-	)
-	var elapsed_ms: float = float(Time.get_ticks_usec() - started_usec) / 1000.0
-
-	if not bool(result.get("success", false)):
-		printerr("[BlockingCollision] Failed for Map%02d: %s" % [
-			map_id,
-			str(result.get("reason", "unknown"))
-		])
-		return false
-
-	print("[BlockingCollision] Map%02d cells=%d size=%dx%d build_ms=%.2f" % [
-		map_id,
-		int(result.get("blocked_cells", 0)),
-		int(result.get("width", 0)),
-		int(result.get("height", 0)),
-		elapsed_ms
-	])
-	return true
-
-
 func _init_buildings_with_diagnostics(source_map_id: int, target_map_id: int) -> void :
 	if not BuildingManager:
 		return
@@ -365,9 +326,10 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		"add_child_ms": add_child_ms,
 	})
 
-	_report_initial_loading_progress(progress_callback, 84.0, "建立地圖碰撞")
-	if not await _build_blocking_collision(target_map_id):
-		return false
+	# Blocking.dat is authoritative for navigation. Do not rebuild a huge
+	# TileMapLayer collision grid here; the player runtime collision mask does
+	# not use those map collision layers.
+	_report_initial_loading_progress(progress_callback, 84.0, "準備角色")
 	await get_tree().process_frame
 
 	_report_initial_loading_progress(progress_callback, 86.0, "建立角色")
@@ -888,15 +850,6 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 		"instantiate_ms": instantiate_ms, 
 		"add_child_ms": add_child_ms, 
 	})
-
-	if not await _build_blocking_collision(target_map_id):
-		_trace_map_change("blocking_collision_failed", source_map_id, target_map_id)
-		is_changing_map = false
-		if is_instance_valid(current_player):
-			current_player.set_physics_process(true)
-		if is_instance_valid(current_hud) and current_hud.has_method("hide_map_loading"):
-			current_hud.hide_map_loading()
-		return
 
 	if is_instance_valid(current_hud) and current_hud.loading_bar:
 		current_hud.loading_bar.value = MAP_LOADING_FINALIZE_PROGRESS
