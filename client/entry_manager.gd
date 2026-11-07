@@ -28,12 +28,10 @@ func _ready() -> void :
 
 	_connect_character_select_signals()
 
-	# Prewarm heavy HUD scenes while the player is still on login / character
-	# selection screens. This keeps first in-world window opening free of disk
-	# and dependency loading stalls.
-	call_deferred("_prewarm_game_hud_resources")
-
-	_start_game_entry_flow()
+	# Keep the login form hidden until all heavy startup prewarm work is done.
+	# This intentionally pays the cost behind the initial black/loading screen so
+	# typing account/password is never competing with large UI/tree builds.
+	call_deferred("_bootstrap_before_login")
 
 const GAME_HUD_INSTANCE_PREWARM: Dictionary = {
 	"craft": "res://craft_dismantle_window.tscn",
@@ -109,6 +107,19 @@ func _prewarm_game_hud_resources() -> void :
 		var elapsed_ms: float = float(Time.get_ticks_usec() - started_usec) / 1000.0
 		print("[LOGIN_HUD_PREWARM] kind=%s total_ms=%.2f" % [kind, elapsed_ms])
 		await get_tree().process_frame
+
+func _bootstrap_before_login() -> void :
+	var overlay = get_node_or_null("%LoadingOverlay")
+	if overlay:
+		overlay.visible = true
+	if login_screen:
+		login_screen.visible = false
+	if character_select_layer:
+		character_select_layer.visible = false
+	await get_tree().process_frame
+	await _prewarm_game_hud_resources()
+	await get_tree().process_frame
+	_start_game_entry_flow()
 
 func _start_game_entry_flow() -> void :
 	hide_loading_overlay()
