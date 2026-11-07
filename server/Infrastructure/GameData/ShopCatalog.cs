@@ -257,56 +257,80 @@ public sealed class ShopCatalog
                         legacyItemIndex,
                         legacy.SourceCategory);
 
-                CurrentItemDefinition? current = null;
+                var sourceName =
+                    !string.IsNullOrWhiteSpace(confirmedLegacyName)
+                        ? confirmedLegacyName
+                        : HasUsableLegacyServerName(legacy)
+                            ? legacy.Name
+                            : null;
 
-                if (!string.IsNullOrWhiteSpace(confirmedLegacyName))
+                var sourceNameKind =
+                    !string.IsNullOrWhiteSpace(confirmedLegacyName)
+                        ? "OldClient"
+                        : sourceName is not null
+                            ? "OldServer"
+                            : "Unknown";
+
+                CurrentItemDefinition? current = null;
+                var sameId = _current.FindItem(legacyItemIndex);
+
+                if (!string.IsNullOrWhiteSpace(sourceName))
                 {
-                    var sameId = _current.FindItem(legacyItemIndex);
+                    // ID is only accepted when the current item still has the
+                    // same meaning. If the same ID now points at another name,
+                    // treat it as an ID collision and remap by name.
                     if (sameId is not null &&
                         CategoryCompatible(
                             sameId.Category,
                             legacy.SourceCategory) &&
                         SameName(
                             sameId.Name,
-                            confirmedLegacyName))
+                            sourceName))
                     {
                         current = sameId;
+                        _mappingInfo.Add(
+                            $"[SAFE_SAME_ID] Shop={shopId} LegacyItemID={legacyItemIndex} Name={sourceName} Source={sourceNameKind}");
+                    }
+                    else if (sameId is not null)
+                    {
+                        _mappingWarnings.Add(
+                            $"[LEGACY_ID_COLLISION] Shop={shopId} LegacyItemID={legacyItemIndex} LegacyName={sourceName} CurrentName={sameId.Name}");
                     }
 
                     current ??= _current.FindItemByName(
-                        confirmedLegacyName,
+                        sourceName,
                         PreferredCurrentCategory(legacy));
 
                     if (current is null)
                     {
                         _mappingWarnings.Add(
-                            $"[SKIPPED][CURRENT_ITEM_NOT_FOUND] Shop={shopId} LegacyItemID={legacyItemIndex} OldClientName={confirmedLegacyName} Category={legacy.SourceCategory}");
+                            $"[SKIPPED][CURRENT_ITEM_NOT_FOUND] Shop={shopId} LegacyItemID={legacyItemIndex} LegacyName={sourceName} Source={sourceNameKind} Category={legacy.SourceCategory}");
                         continue;
                     }
 
-                    _mappingInfo.Add(
-                        $"[NAME_MATCH] Shop={shopId} LegacyItemID={legacyItemIndex} OldClientName={confirmedLegacyName} CurrentItemID={current.ItemId} CurrentName={current.Name}");
+                    if (current.ItemId != legacyItemIndex)
+                    {
+                        _mappingInfo.Add(
+                            $"[NAME_REMAP] Shop={shopId} LegacyItemID={legacyItemIndex} LegacyName={sourceName} -> CurrentItemID={current.ItemId} CurrentName={current.Name} Source={sourceNameKind}");
+                    }
                 }
                 else
                 {
-                    // Old ClientData Item*.itd may be empty in the recovered
-                    // source. In that case do not perform cross-ID guessing.
-                    // Only keep an identical current ID when the category is
-                    // compatible; otherwise the legacy entry is skipped.
-                    var sameId = _current.FindItem(legacyItemIndex);
+                    // No reliable old name exists. Only identical current ID
+                    // with compatible category is safe enough to expose.
                     if (sameId is null ||
                         !CategoryCompatible(
                             sameId.Category,
                             legacy.SourceCategory))
                     {
                         _mappingWarnings.Add(
-                            $"[SKIPPED][OLD_CLIENT_NAME_MISSING] Shop={shopId} LegacyItemID={legacyItemIndex} Category={legacy.SourceCategory}");
+                            $"[SKIPPED][OLD_NAME_MISSING] Shop={shopId} LegacyItemID={legacyItemIndex} Category={legacy.SourceCategory}");
                         continue;
                     }
 
                     current = sameId;
                     _mappingInfo.Add(
-                        $"[SAFE_SAME_ID] Shop={shopId} ItemID={legacyItemIndex} Category={legacy.SourceCategory} CurrentName={current.Name}");
+                        $"[SAFE_SAME_ID_NO_NAME] Shop={shopId} ItemID={legacyItemIndex} Category={legacy.SourceCategory} CurrentName={current.Name}");
                 }
 
                 Add(new ShopItemDefinition(
