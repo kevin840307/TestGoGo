@@ -8742,6 +8742,31 @@ try
             "unsupported client packet receives a typed PacketError instead of silence");
     }
 
+    session.AccountId = account.Value;
+    session.CharacterId = id;
+    session.CurrentMapId = combatMapId;
+
+    using (var rejectedActiveDelete = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "DeleteCharacterRequest",
+            DBID = id,
+            Password = "wrong",
+            CharSlot = 0
+        })))
+    {
+        var responses = router.Handle(
+            rejectedActiveDelete.RootElement,
+            session);
+
+        Check(
+            session.CharacterId == id &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Success\":false")),
+            "rejected active-character deletion keeps the authenticated character session");
+    }
+
     using (var logout = Json(
         """{"Type":"LogoutRequest","IsBackToLogin":true}"""))
     {
