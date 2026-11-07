@@ -6455,15 +6455,15 @@ try
             runtimeHorseUid),
         "prepare one-second pet hunger and mecha energy runtime");
 
-    state.PetPositions[runtimePetUid] = (
-        state.LastX + 40,
-        state.LastY + 20);
+    session.PetPositions[runtimePetUid] = (
+        session.LastX + 40,
+        session.LastY + 20);
 
     var runtimeTickNow =
         DateTimeOffset.UtcNow;
-    state.LastCompanionRuntimeAt =
+    session.LastCompanionRuntimeAt =
         runtimeTickNow.AddSeconds(-2);
-    state.LastCompanionClientSyncAt =
+    session.LastCompanionClientSyncAt =
         runtimeTickNow;
 
     var runtimeDrainPackets = router.Tick(
@@ -6491,7 +6491,7 @@ try
         Convert.ToInt32(runtimeHorse["EnergyLeft"]) == 0 &&
         Convert.ToInt64(
             runtimeCharacter["SummonedHorseUID"]) == -1 &&
-        !state.PetPositions.ContainsKey(runtimePetUid) &&
+        !session.PetPositions.ContainsKey(runtimePetUid) &&
         runtimeJson.Contains(
             "\"Type\":\"DriveMechaResponse\"") &&
         runtimeJson.Contains(
