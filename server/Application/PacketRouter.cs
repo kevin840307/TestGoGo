@@ -3231,7 +3231,16 @@ public sealed class PacketRouter
                     "[UNHANDLED_PACKET] Type={Type} Payload={Payload}",
                     type,
                     TruncatePayload(req.GetRawText()));
-                return [];
+                return
+                [
+                    new
+                    {
+                        Type = "PacketError",
+                        RequestType = type,
+                        Code = "UNHANDLED_PACKET",
+                        Message = "伺服器不支援此操作"
+                    }
+                ];
         }
     }
 
