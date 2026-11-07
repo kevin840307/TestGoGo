@@ -460,7 +460,12 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 		if attacker_node == local_player:
 			pass
 		else:
-			if is_instance_valid(target_node):
+			# Monster attack facing is authoritative from the server SyncState.
+			# Do not recalculate it from interpolated client positions here:
+			# the rendered monster can still be a few pixels behind the server
+			# waypoint and occasionally fall into a different 8-way sector.
+			var server_controls_facing := attacker_node is MonsterEntity
+			if not server_controls_facing and is_instance_valid(target_node):
 				if attacker_node.has_method("update_direction_8way"):
 					attacker_node.update_direction_8way(target_node.global_position - attacker_node.global_position)
 				elif "current_dir" in attacker_node:
