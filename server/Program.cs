@@ -30,10 +30,21 @@ var configuredClientRoot =
 var currentClientData =
     new CurrentClientDataCatalog(configuredClientRoot);
 
+var configuredLegacyClientRoot =
+    builder.Configuration["Game:LegacyClientDataRoot"]
+    ?? Environment.GetEnvironmentVariable("SGO_LEGACY_CLIENT_ROOT")
+    ?? @"C:\SGO\Recovered\Old\ClientData";
+
+var legacyClientData =
+    new LegacyClientDataCatalog(configuredLegacyClientRoot);
+
 builder.Services.AddSingleton(currentClientData);
+builder.Services.AddSingleton(legacyClientData);
+
 var shopCatalog = new ShopCatalog(
     gameDataRoot,
-    currentClientData);
+    currentClientData,
+    legacyClientData);
 
 builder.Services.AddSingleton(shopCatalog);
 builder.Services.AddSingleton(
