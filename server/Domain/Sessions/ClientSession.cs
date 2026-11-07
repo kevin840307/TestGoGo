@@ -18,6 +18,7 @@ public sealed class ClientSession
     public int PetCombatMode { get; set; } = 0;
     public Dictionary<long, (double X, double Y)> PetPositions { get; } = new();
     public Dictionary<long, DateTimeOffset> PetLastAttackAt { get; } = new();
+    public Dictionary<int, DateTimeOffset> SkillReadyAt { get; } = new();
 
     // Runtime entities are intentionally per session for now.
     // This prevents one local player's combat from mutating cached legacy definitions.
