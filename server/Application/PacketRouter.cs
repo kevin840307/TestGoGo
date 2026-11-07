@@ -970,12 +970,6 @@ public sealed class PacketRouter
                     return [];
 
                 var tabType = req.Int("TabType");
-                var uid = req.Int("ItemUID");
-                var requestedCount = Math.Max(1, req.Int("Count", 1));
-
-                // Pet and whole-mecha discard are intentionally not treated as
-                // ground loot yet because restoring their full runtime state
-                // requires a richer persistence payload.
                 if (tabType is 2 or 4)
                 {
                     return
@@ -990,121 +984,36 @@ public sealed class PacketRouter
                     ];
                 }
 
-                var assetsBefore = _store.GetCharacterAssets(
-                    accountId,
-                    state.CharacterId.Value);
-
-                Dictionary<string, object>? source = tabType switch
-                {
-                    0 or 5 => assetsBefore.Inventory.FirstOrDefault(x =>
-                        Convert.ToInt64(x["ItemUID"]) == uid),
-                    1 => assetsBefore.Equips.FirstOrDefault(x =>
-                        Convert.ToInt64(x["ItemID"]) == uid),
-                    3 => assetsBefore.HorseEquips.FirstOrDefault(x =>
-                        Convert.ToInt64(x["EquipUID"]) == uid),
-                    _ => null
-                };
-
-                if (source is null)
-                {
-                    return
-                    [
-                        new
-                        {
-                            Type = "SystemMessageFlash",
-                            Message = "找不到可丟棄的物品"
-                        }
-                    ];
-                }
-
-                var itemIndex = tabType switch
-                {
-                    0 or 5 => Convert.ToInt32(source["ItemIndex"]),
-                    1 => Convert.ToInt32(source["ItemIdx"]),
-                    3 => Convert.ToInt32(source["EquipIdx"]),
-                    _ => 0
-                };
-
-                var actualCount = tabType is 0 or 5
-                    ? Math.Min(
-                        requestedCount,
-                        Convert.ToInt32(source["Count"]))
-                    : 1;
-
-                var damage = source.TryGetValue("Damage", out var damageValue)
-                    ? Convert.ToInt32(damageValue)
-                    : 0;
-                var color = source.TryGetValue("Color", out var colorValue)
-                    ? Convert.ToInt32(colorValue)
-                    : 0;
-                var part = source.TryGetValue("Part", out var partValue)
-                    ? Convert.ToInt32(partValue)
-                    : 255;
-
-                var (discarded, discardMessage) = _store.DiscardAsset(
+                var ground = _store.DropAssetToGround(
                     accountId,
                     state.CharacterId.Value,
-                    uid,
+                    req.Int("ItemUID"),
                     tabType,
-                    actualCount);
+                    Math.Max(1, req.Int("Count", 1)),
+                    state.CurrentMapId,
+                    req.Int("DropX", (int)state.LastX),
+                    req.Int("DropY", (int)state.LastY));
 
-                if (!discarded)
+                if (ground is null)
                 {
                     return
                     [
                         new
                         {
                             Type = "SystemMessageFlash",
-                            Message = discardMessage
+                            Message = "物品無法丟棄"
                         }
                     ];
                 }
 
-                var entityId = state.NextGroundItemEntityId++;
-                var dropX = req.Int("DropX", (int)state.LastX);
-                var dropY = req.Int("DropY", (int)state.LastY);
-
-                var ground = new GroundItemRuntime
-                {
-                    EntityId = entityId,
-                    MapId = state.CurrentMapId,
-                    TabType = tabType,
-                    ItemIndex = itemIndex,
-                    Count = actualCount,
-                    Damage = damage,
-                    Color = color,
-                    Part = part,
-                    X = dropX,
-                    Y = dropY,
-                    OwnerDbid = state.CharacterId.Value
-                };
-
-                state.GroundItems[entityId] = ground;
-                var itemName =
-                    _current.FindItem(itemIndex)?.Name ?? $"Item {itemIndex}";
+                state.GroundItems[ground.EntityId] = ground;
                 var assets = _store.GetCharacterAssets(
                     accountId,
                     state.CharacterId.Value);
 
                 return
                 [
-                    new
-                    {
-                        Type = "SpawnEntity",
-                        EntityID = entityId,
-                        EntityType = 3,
-                        Name = itemName,
-                        LocX = dropX,
-                        LocY = dropY,
-                        ExtraData = new
-                        {
-                            ItemIndex = itemIndex,
-                            Count = actualCount,
-                            RemainingTime = 60,
-                            OwnerDBID = state.CharacterId.Value,
-                            ProtectTimeSeconds = 5
-                        }
-                    },
+                    BuildGroundItemSpawnPacket(ground),
                     new
                     {
                         Type = "InventorySync",
@@ -1160,47 +1069,21 @@ public sealed class PacketRouter
                     ];
                 }
 
-                switch (ground.TabType)
+                var (picked, message, _) = _store.PickUpGroundItem(
+                    accountId,
+                    state.CharacterId.Value,
+                    ground.GroundItemId);
+
+                if (!picked)
                 {
-                    case 0:
-                    case 5:
-                        _store.AddInventoryItem(
-                            accountId,
-                            state.CharacterId.Value,
-                            ground.ItemIndex,
-                            ground.Count);
-                        break;
-
-                    case 1:
-                        _store.AddEquipment(
-                            accountId,
-                            state.CharacterId.Value,
-                            ground.ItemIndex,
-                            ground.Part,
-                            ground.Damage,
-                            ground.Color);
-                        break;
-
-                    case 3:
-                        _store.AddHorseEquipment(
-                            accountId,
-                            state.CharacterId.Value,
-                            ground.ItemIndex,
-                            -1,
-                            ground.Part,
-                            ground.Damage,
-                            ground.Color);
-                        break;
-
-                    default:
-                        return
-                        [
-                            new
-                            {
-                                Type = "SystemMessageFlash",
-                                Message = "此類物品目前無法撿回"
-                            }
-                        ];
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = message
+                        }
+                    ];
                 }
 
                 state.GroundItems.Remove(entityId);
