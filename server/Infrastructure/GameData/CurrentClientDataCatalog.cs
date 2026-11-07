@@ -35,7 +35,14 @@ public sealed record CurrentItemDefinition(
     int ReqLevel = 0,
     int Durability = 0,
     int CanRepair = 1,
-    int CanTrade = 1);
+    int CanTrade = 1,
+    string ScriptName = "");
+
+public sealed record CurrentSkillBookDefinition(
+    int ItemId,
+    int SkillId,
+    int SkillLevel,
+    string SkillName);
 
 public sealed record CurrentSkillDefinition(
     int SkillId,
@@ -246,6 +253,32 @@ public sealed class CurrentClientDataCatalog
         return matches.Count == 1 ? matches[0] : null;
     }
 
+    public CurrentSkillBookDefinition? ResolveSkillBook(
+        int itemId)
+    {
+        var item = FindItem(itemId);
+        if (item is null ||
+            !item.Category.Equals(
+                "general",
+                StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(item.ScriptName))
+            return null;
+
+        var (skillName, level) =
+            ParseSkillBookName(item.ScriptName);
+
+        var skill = FindSkillByName(skillName);
+        if (skill is null ||
+            FindSkillLevel(skill.SkillId, level) is null)
+            return null;
+
+        return new CurrentSkillBookDefinition(
+            item.ItemId,
+            skill.SkillId,
+            level,
+            skill.Name);
+    }
+
     public CurrentPetDefinition? FindPet(int petId)
         => _pets.TryGetValue(petId, out var pet) ? pet : null;
 
@@ -384,7 +417,8 @@ public sealed class CurrentClientDataCatalog
                     ReadInt(text, "req_level"),
                     ReadInt(text, "durability"),
                     ReadInt(text, "can_repair", 1),
-                    ReadInt(text, "can_trade", 1));
+                    ReadInt(text, "can_trade", 1),
+                    ReadString(text, "script_name"));
 
                 _items[id] = item;
                 AddByName(_itemsByName, item.Name, item);
@@ -811,6 +845,40 @@ public sealed class CurrentClientDataCatalog
             map[key] = list = [];
 
         list.Add(value);
+    }
+
+    private static (string SkillName, int Level)
+        ParseSkillBookName(string scriptName)
+    {
+        var value = scriptName.Trim();
+        var suffixes =
+            new (string Suffix, int Level)[]
+            {
+                ("．一級", 1),
+                ("．二級", 2),
+                ("．三級", 3),
+                ("．四級", 4),
+                ("．五級", 5),
+                ("·一級", 1),
+                ("·二級", 2),
+                ("·三級", 3),
+                ("·四級", 4),
+                ("·五級", 5)
+            };
+
+        foreach (var suffix in suffixes)
+        {
+            if (!value.EndsWith(
+                    suffix.Suffix,
+                    StringComparison.Ordinal))
+                continue;
+
+            return (
+                value[..^suffix.Suffix.Length].Trim(),
+                suffix.Level);
+        }
+
+        return (value, 1);
     }
 
     public static string NormalizeName(string value)
