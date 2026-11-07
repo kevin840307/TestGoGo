@@ -160,6 +160,7 @@ public sealed class PacketRouter
 
                 var assets = _store.GetCharacterAssets(accountId, dbid);
                 ApplyAssetsToCharacterBootstrap(character, assets);
+                character["Shortcuts"] = _store.GetShortcuts(accountId, dbid);
                 ApplyEffectiveStats(character, assets);
 
                 return
@@ -218,6 +219,33 @@ public sealed class PacketRouter
 
                 // World spawn/AI is driven by the server tick. Position packets
                 // now only update authoritative player coordinates.
+                return [];
+            }
+
+            case "UpdateShortcut":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var ok = _store.UpdateShortcut(
+                    accountId,
+                    state.CharacterId.Value,
+                    req.Int("SlotIndex", -1),
+                    req.Int("ShortcutType"),
+                    req.Int("TargetID"));
+
+                if (!ok)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "快速鍵儲存失敗"
+                        }
+                    ];
+                }
+
                 return [];
             }
 
