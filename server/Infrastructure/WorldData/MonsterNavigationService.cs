@@ -91,10 +91,12 @@ public sealed class MonsterNavigationService
             return true;
         }
 
-        var start = ((int)Math.Floor(fromX / Cell),
-                     (int)Math.Floor(fromY / Cell));
-        var goal = ((int)Math.Floor(targetX / Cell),
-                    (int)Math.Floor(targetY / Cell));
+        (int X, int Y) start = (
+            (int)Math.Floor(fromX / Cell),
+            (int)Math.Floor(fromY / Cell));
+        (int X, int Y) goal = (
+            (int)Math.Floor(targetX / Cell),
+            (int)Math.Floor(targetY / Cell));
 
         if (!Walkable(mapId, start.Item1, start.Item2) ||
             !Walkable(mapId, goal.Item1, goal.Item2) ||
