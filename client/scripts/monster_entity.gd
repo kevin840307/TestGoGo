@@ -481,9 +481,9 @@ func apply_network_move_direction(new_dir: String) -> void :
 
 
 func apply_attack_visual_direction(target_pos: Vector2) -> void :
-	# Combat authority stays on the server, but facing is visual. Use the
-	# positions currently rendered on this client so an already-moving target
-	# is not shown in a different 8-way sector than the last server position.
+	# Attack facing is visual only. After the initial walk -> attack transition
+	# has preserved the known-good chase direction, later attacks may need to
+	# turn as the target moves around the stationary monster.
 	var dir_vec := target_pos - global_position
 	if dir_vec.length_squared() <= 0.000001:
 		return
@@ -495,13 +495,23 @@ func apply_attack_visual_direction(target_pos: Vector2) -> void :
 	if visual_dir == current_dir:
 		return
 
+	# Keep the current sector near a boundary so tiny rendered-position jitter
+	# does not make ATTACK_x flip every hit. Only turn once the target is
+	# clearly inside the neighbouring 45-degree sector.
+	var dirs := GameConstants.DIR_STRINGS
+	var current_index: int = dirs.find(current_dir)
+	if current_index >= 0:
+		var current_center := float(current_index) * 45.0
+		var diff := absf(angle_deg - current_center)
+		diff = minf(diff, 360.0 - diff)
+		if diff <= 28.0:
+			return
+
 	current_dir = visual_dir
 	pending_move_dir = ""
 	pending_move_dir_count = 0
 	last_move_dir_change_ms = Time.get_ticks_msec()
 
-	# If the attack animation has already started from SyncState, switching
-	# direction here immediately selects the matching ATTACK_x/flip frame.
 	if current_state == "attack":
 		sync_animation()
 
@@ -515,9 +525,9 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 	var now_ms := Time.get_ticks_msec()
 	var preserve_recent_move_facing := (
 		new_state == "attack" and
-		previous_state == "walk" and
+		previous_state != "attack" and
 		last_visual_move_dir != "" and
-		now_ms - last_visual_move_dir_ms <= 800
+		now_ms - last_visual_move_dir_ms <= 1500
 	)
 
 	if new_state != "walk":
