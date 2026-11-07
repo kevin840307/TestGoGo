@@ -119,6 +119,12 @@ public static class CharacterStatCalculator
         return new
         {
             Type = "PlayerStatusSync",
+            Level = character["Level"],
+            ExpUse = character["ExpUse"],
+            Str = character["Str"],
+            Dex = character["Dex"],
+            Con = character["Con"],
+            Wis = character["Wis"],
             HP = character["HP"],
             MP = character["MP"],
             SP = character["SP"],
