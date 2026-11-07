@@ -1341,10 +1341,14 @@ try
 
     store.SetSkill(account.Value, id, 26104, 5);
     store.Revive(account.Value, id);
+    session.CurrentMapId = combatMapId;
+    session.PendingMapSpawn = false;
+    combat.EnterMap(session, combatMapId);
     var skillTarget = session.Monsters.Values.First(x => x.IsAlive);
-    store.UpdatePosition(
+    store.UpdateLocation(
         account.Value,
         id,
+        combatMapId,
         Convert.ToInt32(skillTarget.X),
         Convert.ToInt32(skillTarget.Y));
     session.LastX = skillTarget.X;
