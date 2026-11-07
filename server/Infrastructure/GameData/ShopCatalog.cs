@@ -9,13 +9,17 @@ public sealed class ShopCatalog
     private readonly Dictionary<int, List<ShopItemDefinition>> _shops = new();
     private readonly Dictionary<int, ShopItemDefinition> _items = new();
     private readonly CurrentClientDataCatalog _current;
+    private readonly LegacyClientDataCatalog _legacyClient;
     private readonly List<string> _mappingWarnings = [];
+    private readonly List<string> _mappingInfo = [];
 
     public ShopCatalog(
         string dataRoot,
-        CurrentClientDataCatalog current)
+        CurrentClientDataCatalog current,
+        LegacyClientDataCatalog legacyClient)
     {
         _current = current;
+        _legacyClient = legacyClient;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
         LoadRecovery(Path.Combine(dataRoot, "Item", "Recovery.itd"));
@@ -55,6 +59,7 @@ public sealed class ShopCatalog
         => _items.TryGetValue(itemIndex, out var value) ? value : null;
 
     public IReadOnlyList<string> MappingWarnings => _mappingWarnings;
+    public IReadOnlyList<string> MappingInfo => _mappingInfo;
 
     private void LoadRecovery(string path)
     {
@@ -243,40 +248,65 @@ public sealed class ShopCatalog
                 if (!legacyItems.TryGetValue(legacyItemIndex, out var legacy))
                 {
                     _mappingWarnings.Add(
-                        $"[LEGACY_ITEM_UNKNOWN] Shop={shopId} LegacyItemID={legacyItemIndex}");
+                        $"[SKIPPED][LEGACY_ITEM_UNKNOWN] Shop={shopId} LegacyItemID={legacyItemIndex}");
                     continue;
                 }
 
-                if (!HasReliableLegacyName(legacy))
-                {
-                    _mappingWarnings.Add(
-                        $"[LEGACY_NAME_UNCONFIRMED] Shop={shopId} LegacyItemID={legacyItemIndex} Category={legacy.SourceCategory}");
-                    continue;
-                }
+                var confirmedLegacyName =
+                    _legacyClient.FindItemName(
+                        legacyItemIndex,
+                        legacy.SourceCategory);
 
                 CurrentItemDefinition? current = null;
 
-                var sameId = _current.FindItem(legacyItemIndex);
-                if (sameId is not null &&
-                    SameName(sameId.Name, legacy.Name))
+                if (!string.IsNullOrWhiteSpace(confirmedLegacyName))
                 {
+                    var sameId = _current.FindItem(legacyItemIndex);
+                    if (sameId is not null &&
+                        CategoryCompatible(
+                            sameId.Category,
+                            legacy.SourceCategory) &&
+                        SameName(
+                            sameId.Name,
+                            confirmedLegacyName))
+                    {
+                        current = sameId;
+                    }
+
+                    current ??= _current.FindItemByName(
+                        confirmedLegacyName,
+                        PreferredCurrentCategory(legacy));
+
+                    if (current is null)
+                    {
+                        _mappingWarnings.Add(
+                            $"[SKIPPED][CURRENT_ITEM_NOT_FOUND] Shop={shopId} LegacyItemID={legacyItemIndex} OldClientName={confirmedLegacyName} Category={legacy.SourceCategory}");
+                        continue;
+                    }
+
+                    _mappingInfo.Add(
+                        $"[NAME_MATCH] Shop={shopId} LegacyItemID={legacyItemIndex} OldClientName={confirmedLegacyName} CurrentItemID={current.ItemId} CurrentName={current.Name}");
+                }
+                else
+                {
+                    // Old ClientData Item*.itd may be empty in the recovered
+                    // source. In that case do not perform cross-ID guessing.
+                    // Only keep an identical current ID when the category is
+                    // compatible; otherwise the legacy entry is skipped.
+                    var sameId = _current.FindItem(legacyItemIndex);
+                    if (sameId is null ||
+                        !CategoryCompatible(
+                            sameId.Category,
+                            legacy.SourceCategory))
+                    {
+                        _mappingWarnings.Add(
+                            $"[SKIPPED][OLD_CLIENT_NAME_MISSING] Shop={shopId} LegacyItemID={legacyItemIndex} Category={legacy.SourceCategory}");
+                        continue;
+                    }
+
                     current = sameId;
-                }
-                else if (sameId is not null)
-                {
-                    _mappingWarnings.Add(
-                        $"[LEGACY_ID_COLLISION] Shop={shopId} LegacyItemID={legacyItemIndex} LegacyName={legacy.Name} CurrentName={sameId.Name}");
-                }
-
-                current ??= _current.FindItemByName(
-                    legacy.Name,
-                    PreferredCurrentCategory(legacy));
-
-                if (current is null)
-                {
-                    _mappingWarnings.Add(
-                        $"[CURRENT_ITEM_NOT_FOUND] Shop={shopId} LegacyItemID={legacyItemIndex} LegacyName={legacy.Name}");
-                    continue;
+                    _mappingInfo.Add(
+                        $"[SAFE_SAME_ID] Shop={shopId} ItemID={legacyItemIndex} Category={legacy.SourceCategory} CurrentName={current.Name}");
                 }
 
                 Add(new ShopItemDefinition(
@@ -299,12 +329,28 @@ public sealed class ShopCatalog
             ? null
             : legacy.SourceCategory;
 
-    private static bool HasReliableLegacyName(
-        ShopItemDefinition legacy)
-        => !string.IsNullOrWhiteSpace(legacy.Name) &&
-           !legacy.Name.StartsWith(
-               "Item ",
-               StringComparison.OrdinalIgnoreCase);
+    private static bool CategoryCompatible(
+        string currentCategory,
+        string legacyCategory)
+    {
+        var current = currentCategory.Trim().ToLowerInvariant();
+        var legacy = legacyCategory.Trim().ToLowerInvariant();
+
+        if (current == legacy)
+            return true;
+
+        return legacy switch
+        {
+            "general" => current is "general" or "booster",
+            "equip" => current == "equip",
+            "weapon" => current == "weapon",
+            "recovery" => current == "recovery",
+            "horse" => current == "horse",
+            "horseequip" => current == "horseequip",
+            "horsebattery" => current == "horsebattery",
+            _ => false
+        };
+    }
 
     private static bool SameName(string a, string b)
         => CurrentClientDataCatalog.NormalizeName(a) ==
