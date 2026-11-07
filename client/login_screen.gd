@@ -204,16 +204,21 @@ func _on_register_account_response(success: bool, msg: String) -> void :
 
 func _start_loading_animation() -> void :
 	is_submitting = true
-	if loading_overlay:
+	# Loading progress is authoritative in EntryManager. Do not run a fake
+	# 0->95 looping tween here; it races every real loading stage and was the
+	# reason the bar repeatedly appeared stuck at 95%.
+	var main_entry = get_tree().current_scene
+	if main_entry and main_entry.has_method("_begin_login_select_loading_session"):
+		main_entry._begin_login_select_loading_session()
+	elif loading_overlay:
 		loading_overlay.visible = true
-		loading_bar.value = 0
-		loading_tween = create_tween()
-		loading_tween.set_loops()
-		loading_tween.tween_property(loading_bar, "value", 95.0, 2.0).set_trans(Tween.TRANS_LINEAR)
+		if loading_bar:
+			loading_bar.value = 0.0
 
 func _stop_loading_animation() -> void :
 	if loading_tween and loading_tween.is_valid():
 		loading_tween.kill()
+	loading_tween = null
 	if loading_overlay:
 		loading_overlay.visible = false
 	is_submitting = false
