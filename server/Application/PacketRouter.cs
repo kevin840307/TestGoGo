@@ -1307,6 +1307,275 @@ public sealed class PacketRouter
                 ];
             }
 
+            case "DirectTransfer":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var targetDbid = req.Long("TargetDBID");
+                var amount = req.Long("Amount");
+
+                if (targetDbid <= 0 ||
+                    amount <= 0)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "轉帳資料無效"
+                        }
+                    ];
+                }
+
+                if (!_broadcasts.IsCharacterInMap(
+                        targetDbid,
+                        state.CurrentMapId))
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "目標玩家不在附近或已離線"
+                        }
+                    ];
+                }
+
+                var transfer = _store.TransferMoney(
+                    accountId,
+                    state.CharacterId.Value,
+                    targetDbid,
+                    amount);
+
+                if (!transfer.Success)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = transfer.Message
+                        }
+                    ];
+                }
+
+                var sender = _store.GetCharacter(
+                    accountId,
+                    state.CharacterId.Value);
+                var target = _store.GetCharacter(
+                    transfer.TargetAccountId,
+                    targetDbid);
+
+                _broadcasts.PublishToCharacter(
+                    targetDbid,
+                    new
+                    {
+                        Type = "SyncMoney",
+                        Money = transfer.TargetMoney
+                    });
+                _broadcasts.PublishToCharacter(
+                    targetDbid,
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message =
+                            $"{sender?.GetValueOrDefault("NAME") ?? "玩家"} 轉給你 {amount} 金錢"
+                    });
+
+                return
+                [
+                    new
+                    {
+                        Type = "SyncMoney",
+                        Money = transfer.SenderMoney
+                    },
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message =
+                            $"已轉給 {target?.GetValueOrDefault("NAME") ?? "玩家"} {amount} 金錢"
+                    }
+                ];
+            }
+
+            case "RepairItemRequest":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var uid = req.Long("UID");
+                var itemType = req.Str("ItemType");
+                var isMechaEquipment = itemType.Equals(
+                    "HorseEquip",
+                    StringComparison.OrdinalIgnoreCase);
+
+                if (uid <= 0 ||
+                    (!isMechaEquipment &&
+                     !itemType.Equals(
+                         "Equip",
+                         StringComparison.OrdinalIgnoreCase)))
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "修理資料無效"
+                        }
+                    ];
+                }
+
+                var assetsBefore = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                Dictionary<string, object>? asset;
+                int itemIndex;
+                int currentDurability;
+
+                if (isMechaEquipment)
+                {
+                    asset = assetsBefore.HorseEquips.FirstOrDefault(x =>
+                        Convert.ToInt64(x["EquipUID"]) == uid);
+
+                    if (asset is null)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "找不到機甲裝備"
+                            }
+                        ];
+                    }
+
+                    itemIndex =
+                        Convert.ToInt32(asset["EquipIdx"]);
+                    currentDurability =
+                        Convert.ToInt32(asset["Damage"]);
+                }
+                else
+                {
+                    asset = assetsBefore.Equips.FirstOrDefault(x =>
+                        Convert.ToInt64(x["ItemID"]) == uid);
+
+                    if (asset is null)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "找不到裝備"
+                            }
+                        ];
+                    }
+
+                    itemIndex =
+                        Convert.ToInt32(asset["ItemIdx"]);
+                    currentDurability =
+                        Convert.ToInt32(asset["Damage"]);
+                }
+
+                var item = _current.FindItem(itemIndex);
+                if (item is null ||
+                    item.Durability <= 0 ||
+                    item.CanRepair != 1)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "此裝備無法修理"
+                        }
+                    ];
+                }
+
+                if (currentDurability >= item.Durability)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "此裝備和新的一樣，不需要修理"
+                        }
+                    ];
+                }
+
+                var used = item.Durability -
+                           Math.Max(0, currentDurability);
+                var cost = Math.Max(
+                    1L,
+                    (long)Math.Floor(
+                        (double)used /
+                        item.Durability *
+                        Math.Max(0, item.Price)));
+
+                var repaired = _store.RepairAsset(
+                    accountId,
+                    state.CharacterId.Value,
+                    uid,
+                    isMechaEquipment,
+                    item.Durability,
+                    cost);
+
+                if (!repaired.Success)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = repaired.Message
+                        }
+                    ];
+                }
+
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+                var response = new List<object>
+                {
+                    new
+                    {
+                        Type = "SyncMoney",
+                        Money = repaired.Money
+                    },
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = $"修理完成，花費 {cost} 金錢"
+                    }
+                };
+
+                if (isMechaEquipment)
+                {
+                    response.Add(new
+                    {
+                        Type = "HorseSync",
+                        Horses = assets.Horses,
+                        HorseEquips = assets.HorseEquips,
+                        MaxHorseEquipSize =
+                            assets.HorseEquipMaxSize
+                    });
+                }
+                else
+                {
+                    response.Add(new
+                    {
+                        Type = "EquipSync",
+                        Equips = assets.Equips,
+                        MaxSize = assets.EquipMaxSize
+                    });
+                }
+
+                return response;
+            }
+
             case "ShopAction":
             {
                 if (!state.CharacterId.HasValue) return [];
