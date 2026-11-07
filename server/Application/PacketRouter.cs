@@ -64,6 +64,7 @@ public sealed class PacketRouter
     private readonly PetEvolutionService _petEvolution;
     private readonly MallService _mall;
     private readonly ServerBroadcastHub _broadcasts;
+    private readonly AccountSessionRegistry _sessions;
     private readonly PartyService _party;
     private readonly RankService _rank;
     private readonly QuestProgressService _questProgress;
@@ -95,6 +96,7 @@ public sealed class PacketRouter
         PetEvolutionService petEvolution,
         MallService mall,
         ServerBroadcastHub broadcasts,
+        AccountSessionRegistry sessions,
         PartyService party,
         RankService rank,
         QuestProgressService questProgress,
@@ -127,6 +129,7 @@ public sealed class PacketRouter
         _petEvolution = petEvolution;
         _mall = mall;
         _broadcasts = broadcasts;
+        _sessions = sessions;
         _party = party;
         _rank = rank;
         _questProgress = questProgress;
@@ -235,6 +238,7 @@ public sealed class PacketRouter
     public void DisconnectPresence(ClientSession state)
     {
         PersistPendingPosition(state);
+        _sessions.Unregister(state.ConnectionId);
 
         var characterId =
             state.PublishedCharacterId > 0
@@ -285,12 +289,38 @@ public sealed class PacketRouter
 
         if (type == "LoginRequest")
         {
+            _sessions.Unregister(state.ConnectionId);
+
             var id = _store.Login(req.Str("User"), req.Str("Pass"));
             state.AccountId = id;
             state.CharacterId = null;
             state.CurrentMapId = 0;
             state.PendingMapSpawn = false;
+            state.LastPongAt = DateTimeOffset.UtcNow;
+            state.LastPingAt = DateTimeOffset.MinValue;
             ClearPendingTrainTravel(state);
+
+            if (id.HasValue)
+            {
+                var replacedConnection =
+                    _sessions.Register(
+                        id.Value,
+                        state.ConnectionId);
+
+                if (replacedConnection.HasValue &&
+                    replacedConnection.Value !=
+                        state.ConnectionId)
+                {
+                    _broadcasts.PublishToConnection(
+                        replacedConnection.Value,
+                        new
+                        {
+                            Type = "ForceLogout",
+                            Message =
+                                "您的帳號已在其他地方登入！"
+                        });
+                }
+            }
 
             return [new
             {
@@ -321,6 +351,18 @@ public sealed class PacketRouter
         }
 
         var accountId = state.AccountId.Value;
+
+        if (!_sessions.IsCurrent(
+                accountId,
+                state.ConnectionId))
+        {
+            state.CloseRequested = true;
+            return [new
+            {
+                Type = "ForceLogout",
+                Message = "您的帳號已在其他地方登入！"
+            }];
+        }
 
         if (_packetHandlers.TryGetValue(type, out var moduleHandler))
             return moduleHandler.Handle(req, state, accountId);
@@ -3133,6 +3175,7 @@ public sealed class PacketRouter
 
             case "LogoutRequest":
                 PersistPendingPosition(state);
+                _sessions.Unregister(state.ConnectionId);
                 state.AccountId = null;
                 state.CharacterId = null;
                 state.CurrentMapId = 0;
@@ -3157,6 +3200,7 @@ public sealed class PacketRouter
                 }];
 
             case "Pong":
+                state.LastPongAt = DateTimeOffset.UtcNow;
                 return [];
 
             default:
