@@ -51,6 +51,9 @@ public static class GameDataServiceCollectionExtensions
                     gameDataRoot,
                     "Recipe.json")));
 
+        services.AddSingleton(
+            new BlockingMapService(gameDataRoot));
+
         services.AddSingleton(sp =>
             new WorldDataService(
                 gameDataRoot,
