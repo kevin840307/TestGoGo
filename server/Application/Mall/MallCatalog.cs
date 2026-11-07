@@ -75,9 +75,9 @@ public static class MallCatalog
                 continue;
             }
 
-            if (kind is AssetPurchaseKind.Equipment
+            if ((kind is AssetPurchaseKind.Equipment
                     or AssetPurchaseKind.Horse
-                    or AssetPurchaseKind.HorseEquipment &&
+                    or AssetPurchaseKind.HorseEquipment) &&
                 count != 1)
             {
                 continue;
