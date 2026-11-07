@@ -305,7 +305,8 @@ public interface IMechaStore : ICharacterAssetReader
         long dbid,
         long horseUid,
         long itemUid,
-        int energyAmount);
+        int energyAmount,
+        int maxEnergy);
     bool EquipHorseItem(
         long accountId,
         long dbid,
