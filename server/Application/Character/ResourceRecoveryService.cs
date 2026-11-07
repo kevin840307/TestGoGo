@@ -1,3 +1,5 @@
+using SGO.Server.Application.Assets;
+using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Domain.Sessions;
 
@@ -6,13 +8,19 @@ namespace SGO.Server.Application.Character;
 public sealed class ResourceRecoveryService
 {
     private readonly ICharacterStore _characters;
+    private readonly ICharacterAssetReader _assets;
+    private readonly CurrentClientDataCatalog _current;
     private readonly IConfiguration _config;
 
     public ResourceRecoveryService(
         ICharacterStore characters,
+        ICharacterAssetReader assets,
+        CurrentClientDataCatalog current,
         IConfiguration config)
     {
         _characters = characters;
+        _assets = assets;
+        _current = current;
         _config = config;
     }
 
@@ -96,18 +104,16 @@ public sealed class ResourceRecoveryService
             Convert.ToInt32(updated["MP"]) == mp)
             return [];
 
+        var effectiveAssets = _assets.GetCharacterAssets(
+            session.AccountId.Value,
+            session.CharacterId.Value);
+
         return
         [
-            new
-            {
-                Type = "PlayerStatusSync",
-                HP = updated["HP"],
-                MP = updated["MP"],
-                SP = updated["SP"],
-                MaxHP = updated["MaxHP"],
-                MaxMP = updated["MaxMP"],
-                MaxSP = updated["MaxSP"]
-            }
+            CharacterStatCalculator.ToPlayerStatusPacket(
+                updated,
+                effectiveAssets,
+                _current)
         ];
     }
 
