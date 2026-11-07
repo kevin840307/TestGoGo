@@ -303,4 +303,7 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 
 		overlay.visible = false
 
+	if NetworkManager and NetworkManager.has_method("send_world_ready"):
+		NetworkManager.send_world_ready(int(server_full_data.get("MapID", 0)))
+
 	queue_free()
