@@ -3905,6 +3905,51 @@ try
     Check(!session.PetTargets.ContainsKey(petUid),
         "hard owner return clears the pet combat target");
 
+    // A monster may retain a target whose websocket presence is still on the
+    // map even though that character is already far outside aggro range. It
+    // must release that stale owner and acquire the nearby player in the same
+    // tick instead of standing beside the nearby player indefinitely.
+    store.Revive(account.Value, secondCharacterId);
+    store.UpdateLocation(
+        account.Value,
+        secondCharacterId,
+        combatMapId,
+        Convert.ToInt32(monster.X + 2000),
+        Convert.ToInt32(monster.Y));
+
+    monster.HasTarget = true;
+    monster.TargetCharacterId = secondCharacterId;
+    monster.AiState = MonsterAiState.Attack;
+    monster.LastAttackAt = DateTimeOffset.MinValue;
+
+    var staleTargetPackets = combat.TickAi(
+        session,
+        account.Value,
+        monster.X + 80,
+        monster.Y,
+        session.LastMonsterAiTick.AddSeconds(1));
+
+    Check(
+        monster.HasTarget &&
+        monster.TargetCharacterId == id &&
+        monster.AiState == MonsterAiState.Attack &&
+        staleTargetPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"HasTarget\":false")) &&
+        staleTargetPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                $"\"TargetID\":{id}")) &&
+        staleTargetPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EntityDamage\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                $"\"AttackerID\":{monster.EntityId}")),
+        "monster releases stale foreign target and attacks nearby player in same tick");
+
+    monster.HasTarget = false;
+    monster.TargetCharacterId = 0;
+    monster.HoldingAttackRange = false;
+
     monster.HasTarget = false;
     monster.HoldingAttackRange = false;
 
