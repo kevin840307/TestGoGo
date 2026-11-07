@@ -3354,11 +3354,16 @@ try
             "HorseSync loads persisted mecha card and mecha equipment");
 
         Check(responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "\"Type\":\"FestivalThemeSync\"") &&
-                JsonSerializer.Serialize(x).Contains(
-                    "\"Theme\":\"normal\"")),
-            "enter world sends the default festival theme baseline");
+        {
+            var json = JsonSerializer.Serialize(x);
+            return json.Contains(
+                       "\"Type\":\"FestivalThemeSync\"") &&
+                   json.Contains(
+                       "\"Theme\":\"easter\"") &&
+                   json.Contains(
+                       "\"Festival\":\"easter\"");
+        }),
+            "enter world sends configured validated festival theme and activity");
 
         using var first = Json(JsonSerializer.Serialize(responses[0]));
         Check(first.RootElement.Str("Type") == "EnterWorldSuccess",
