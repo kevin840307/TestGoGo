@@ -288,11 +288,14 @@ public sealed class PacketRouter
                 }];
 
             case "ReviveAccept":
-                return [new
-                {
-                    Type = "SystemMessageFlash",
-                    Message = "目前沒有等待中的復活技能邀請"
-                }];
+            {
+                return _combat.AcceptRevive(
+                    state,
+                    accountId,
+                    req.Int("SkillID"),
+                    req.Int("SkillLevel", 1),
+                    DateTimeOffset.UtcNow);
+            }
 
             case "AbandonQuest":
             {
