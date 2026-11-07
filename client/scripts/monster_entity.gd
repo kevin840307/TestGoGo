@@ -47,6 +47,9 @@ const NETWORK_MOVE_MAX_SPEED: float = 205.0
 const NETWORK_MOVE_SNAP_EPSILON: float = 1.0
 const MOVE_DIR_CONFIRM_COUNT: int = 2
 const MOVE_DIR_MAX_HOLD_MS: int = 450
+const VISIBILITY_RECT: Rect2 = Rect2(-180.0, -260.0, 360.0, 420.0)
+var _is_on_screen: bool = true
+var _screen_notifier: VisibleOnScreenNotifier2D = null
 
 const PALETTE_SHADER = preload("res://palette_swap.gdshader")
 const COLOR_INDEX_TO_DEGREES = {
@@ -117,8 +120,19 @@ func _ready() -> void :
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
 
+	_screen_notifier = VisibleOnScreenNotifier2D.new()
+	_screen_notifier.rect = VISIBILITY_RECT
+	add_child(_screen_notifier)
+	_screen_notifier.screen_entered.connect(_on_screen_entered)
+	_screen_notifier.screen_exited.connect(_on_screen_exited)
+
+	# Most monsters spend the majority of their lifetime idle. Do not keep a
+	# per-frame callback alive until movement/combat actually needs it.
+	set_process(false)
+
 func _process(delta: float) -> void :
 	if current_hp <= 0:
+		set_process(false)
 		return
 
 	if current_state in ["attack", "hit"] and action_state_started_ms > 0:
@@ -132,6 +146,7 @@ func _process(delta: float) -> void :
 			if idle_elapsed_ms >= int(MOVE_IDLE_GRACE_SECONDS * 1000.0):
 				current_state = "idle"
 				sync_animation()
+				set_process(false)
 		return
 
 	if current_state in ["attack", "hit", "death", "die"]:
@@ -142,6 +157,8 @@ func _process(delta: float) -> void :
 	if remaining <= NETWORK_MOVE_SNAP_EPSILON:
 		global_position = network_move_target
 		network_move_active = false
+		# Keep processing briefly while state is still WALK so the existing idle
+		# grace logic can settle the animation, then it disables itself.
 		return
 
 	var step := network_move_speed * delta
@@ -153,6 +170,17 @@ func _process(delta: float) -> void :
 		current_state = "walk"
 		sync_animation()
 
+
+func _on_screen_entered() -> void :
+	_is_on_screen = true
+	if is_instance_valid(sprite):
+		if not sprite.is_playing():
+			sprite.play()
+
+func _on_screen_exited() -> void :
+	_is_on_screen = false
+	if is_instance_valid(sprite) and sprite.is_playing():
+		sprite.pause()
 
 func _exit_tree() -> void :
 
@@ -597,8 +625,11 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 	current_state = new_state
 	if new_state in ["attack", "hit"]:
 		action_state_started_ms = now_ms
+		set_process(true)
 	else:
 		action_state_started_ms = 0
+		if new_state in ["idle", "death", "die"]:
+			set_process(false)
 
 	if new_state == "attack" and new_dir != "":
 		# Server computes attack facing from monster -> current target.
@@ -669,6 +700,7 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 		return
 
 	network_move_active = true
+	set_process(true)
 	if current_state != "walk":
 		current_state = "walk"
 		sync_animation()
@@ -748,9 +780,11 @@ func _release_combat_action_state() -> void :
 	if has_recent_move:
 		network_move_active = true
 		current_state = "walk"
+		set_process(true)
 	else:
 		network_move_active = false
 		current_state = "idle"
+		set_process(false)
 	sync_animation()
 
 
