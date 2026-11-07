@@ -6,7 +6,9 @@
 
 ```bash
 python3 -m unittest discover -s tests -p 'test_packet_contract_audit.py' -v
+python3 -m unittest discover -s tests -p 'test_packet_schema_audit.py' -v
 python3 tests/packet_contract_audit.py --strict --output packet-contract-report.json
+python3 tests/packet_schema_audit.py --strict --output packet-schema-report.json
 dotnet build server/SGO.Server.csproj -c Release
 dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release
 ```
@@ -20,6 +22,16 @@ GitHub Actions `Server build` 工作流程已納入前兩項檢查，且會上�
 3. **動態 Action**：檢查 `send_trade_action`、`send_shop_action`、`send_pet_action`、`send_mall_action`、`send_party_action` 的固定 Action 字串有無實際路由。
 4. **錯誤回應**：未知 `Type` 回傳 `PacketError(Code=UNHANDLED_PACKET)`；未登入操作回傳 `PacketError(Code=AUTH_REQUIRED)`；Handler 拋出例外時回傳 `PacketError(Code=HANDLER_FAILED)`，不暴露內部堆疊。
 5. **Client 診斷**：收到 `PacketError` 顯示訊息；收到未知 Server Type 留下 `[UNHANDLED_SERVER_PACKET]`，單一 Type 只警告一次。
+
+## 新增：必要欄位與 JSON 型別驗證
+
+- `server/Protocol/PacketSchemaValidator.cs` 在已登入且通過目前連線驗證後，先驗證常用可修改資料的請求，再交給 Handler。
+- 目前定義了 **17 種**請求的最低必要欄位，包括 `UseSkill`、`SyncPosition`、`BankTransfer`、`TradeReply`、`ShopAction`、`PetAction`、`UpdateShortcut` 等。
+- 整數不接受字串、布林值不接受 `"true"` 等字串；必要欄位缺失會回傳 `PacketError(Code=INVALID_PACKET)`，不呼叫修改角色或資產的 Handler。
+- `tests/packet_schema_audit.py` 從 C# 規則擷取每種必要欄位，檢查 Godot 發送的**固定格式 Dictionary** 是否提供相同欄位；報告包含每個 Type 的 `MATCHED`／`FIELD_MISMATCH`／`NOT_FOUND` 與範例檔案。
+- 預留舊 Client 的非必要欄位（例如沒有目標的技能）為可省略，不強制新協定覆蓋舊協定。
+- Python 靜態檢查**只比對必要欄位存在**，實際欄位的數值型別由 Server 執行時驗證與 C# SmokeTests 測試。未涵蓋的封包與 Server → Client 事件欄位還需要擴充。
+- CI 的報告 `packet-schema-report.json` 將與 `packet-contract-report.json` 一同上傳；若 GitHub Actions 尚未能啟動 Runner，需另外在本機執行上述命令，不能宣稱 CI 已通過。
 
 ## 此工具不能證明的事項
 
