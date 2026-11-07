@@ -537,6 +537,83 @@ public sealed class SqliteGameStore : IGameStore
         return assets;
     }
 
+    public List<Dictionary<string, object>> GetShortcuts(
+        long accountId,
+        long dbid)
+    {
+        var result = new List<Dictionary<string, object>>();
+        using var db = Open();
+
+        if (!OwnsCharacter(db, accountId, dbid))
+            return result;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT slot_index,shortcut_type,target_id
+              FROM character_shortcuts
+             WHERE character_id=$id
+             ORDER BY slot_index
+            """;
+        Arg(cmd, "$id", dbid);
+
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+        {
+            result.Add(new Dictionary<string, object>
+            {
+                ["SlotIndex"] = r.GetInt32(0),
+                ["ShortcutType"] = r.GetInt32(1),
+                ["TargetID"] = r.GetInt32(2)
+            });
+        }
+
+        return result;
+    }
+
+    public bool UpdateShortcut(
+        long accountId,
+        long dbid,
+        int slotIndex,
+        int shortcutType,
+        int targetId)
+    {
+        if (slotIndex < 0 || slotIndex > 255)
+            return false;
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return false;
+
+        if (shortcutType <= 0)
+        {
+            using var del = db.CreateCommand();
+            del.CommandText = """
+                DELETE FROM character_shortcuts
+                 WHERE character_id=$id AND slot_index=$slot
+                """;
+            Arg(del, "$id", dbid);
+            Arg(del, "$slot", slotIndex);
+            del.ExecuteNonQuery();
+            return true;
+        }
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO character_shortcuts(
+                character_id,slot_index,shortcut_type,target_id)
+            VALUES($id,$slot,$type,$target)
+            ON CONFLICT(character_id,slot_index)
+            DO UPDATE SET
+                shortcut_type=excluded.shortcut_type,
+                target_id=excluded.target_id
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$slot", slotIndex);
+        Arg(cmd, "$type", Math.Clamp(shortcutType, 1, 99));
+        Arg(cmd, "$target", targetId);
+        return cmd.ExecuteNonQuery() == 1;
+    }
+
     public List<Dictionary<string, object>> GetSkills(
         long accountId,
         long dbid)
