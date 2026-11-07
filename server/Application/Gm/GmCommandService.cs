@@ -73,6 +73,8 @@ public sealed class GmCommandService
                 "equip" => Equipment(parts, accountId, dbid),
                 "mecha" or "horse"
                     => Mecha(parts, accountId, dbid),
+                "mechacard"
+                    => MechaCard(parts, accountId, dbid),
                 "pet" => Pet(parts, accountId, dbid),
                 "skill" => Skill(parts, accountId, dbid),
                 "skills" => SkillList(accountId, dbid),
@@ -395,6 +397,44 @@ public sealed class GmCommandService
         return responses;
     }
 
+    private IReadOnlyList<object> MechaCard(
+        string[] parts,
+        long accountId,
+        long dbid)
+    {
+        if (parts.Length < 3 ||
+            !int.TryParse(parts[2], out var itemIndex))
+            return [Chat("用法：/gm mechacard <CardID>")];
+
+        var item = _current.FindItem(itemIndex);
+        if (item is null ||
+            !item.Category.Equals(
+                "horse",
+                StringComparison.OrdinalIgnoreCase))
+            return [Chat($"新版 GameData 找不到機甲卡 ItemIndex={itemIndex}")];
+
+        var uid = _store.AddInventoryItem(
+            accountId,
+            dbid,
+            itemIndex,
+            1);
+
+        if (uid <= 0)
+            return [Chat("給機甲卡失敗")];
+
+        var assets = _store.GetCharacterAssets(accountId, dbid);
+        return
+        [
+            new
+            {
+                Type = "InventorySync",
+                Items = assets.Inventory,
+                MaxSize = assets.InventoryMaxSize
+            },
+            Chat($"已給機甲卡 {item.Name} ({itemIndex})")
+        ];
+    }
+
     private IReadOnlyList<object> Pet(
         string[] parts,
         long accountId,
@@ -613,7 +653,7 @@ public sealed class GmCommandService
     private static string HelpText()
         => "GM: help | pos | map <id> [x] [y] | heal | level <n> | " +
            "money <n> | item <id> [count] | equip <id> | " +
-           "mecha <cardId> | pet <petId> [name] | " +
+           "mecha <cardId> | mechacard <cardId> | pet <petId> [name] | " +
            "skill <id|all> [lv] | skills | clearskills | " +
            "spawn <enemyId> [x] [y] | killall";
 }
