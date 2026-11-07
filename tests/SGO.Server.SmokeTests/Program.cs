@@ -3702,8 +3702,13 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"PartySync\"") &&
                 JsonSerializer.Serialize(x).Contains(
-                    firstPartyId)),
-            "Party Invite/Accept synchronizes the same party to both online players");
+                    firstPartyId)) &&
+            broadcastRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"UpdateNameColor\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    $"\"PartyID\":\"{firstPartyId}\"")),
+            "Party Invite/Accept synchronizes party state and name-color PartyID to map peers");
     }
 
     var casterBeforeIceTouch = store.GetCharacter(
