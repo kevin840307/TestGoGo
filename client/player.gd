@@ -221,6 +221,10 @@ func _on_change_map_received(_map_id: int, _target_x: float, _target_y: float) -
 	is_moving = false
 	_movement_state_reported = false
 	is_mouse_holding = false
+	move_path = PackedVector2Array()
+	move_path_index = 0
+	move_destination = global_position
+	target_position = global_position
 	velocity = Vector2.ZERO
 	combat_target = null
 
