@@ -265,7 +265,7 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 	)
 
 
-	var load_success = GameManager.enter_game_world(server_full_data, map_id, spawn_pos)
+	var load_success = await GameManager.enter_game_world(server_full_data, map_id, spawn_pos)
 
 	if not load_success:
 		show_error_popup("遊戲地圖資源遺失，無法切換場景！")
