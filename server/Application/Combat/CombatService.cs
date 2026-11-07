@@ -439,6 +439,49 @@ public sealed class CombatService
 
                 if (!monster.HasTarget)
                 {
+                    var nearPlayerDx = playerX - monster.X;
+                    var nearPlayerDy = playerY - monster.Y;
+                    var nearPlayerDistance = Math.Sqrt(
+                        nearPlayerDx * nearPlayerDx +
+                        nearPlayerDy * nearPlayerDy);
+
+                    var nearPetDistance = double.MaxValue;
+                    if (petAlive)
+                    {
+                        var nearPetDx =
+                            activePetPosition.X - monster.X;
+                        var nearPetDy =
+                            activePetPosition.Y - monster.Y;
+                        nearPetDistance = Math.Sqrt(
+                            nearPetDx * nearPetDx +
+                            nearPetDy * nearPetDy);
+                    }
+
+                    if ((playerAlive &&
+                         nearPlayerDistance <= AggroRadius) ||
+                        (petAlive &&
+                         nearPetDistance <= AggroRadius))
+                    {
+                        if (monster.LastStallLogAt == DateTimeOffset.MinValue ||
+                            now - monster.LastStallLogAt >=
+                            TimeSpan.FromSeconds(2))
+                        {
+                            monster.LastStallLogAt = now;
+                            _log.LogWarning(
+                                "[MONSTER_AI_NO_TARGET_NEARBY] EntityID={EntityID} State={State} Monster=({MonsterX:F1},{MonsterY:F1}) PlayerDistance={PlayerDistance:F1} PetDistance={PetDistance:F1} PlayerAlive={PlayerAlive} PetAlive={PetAlive} LastAiAt={LastAiAt:o} LastActionAt={LastActionAt:o}",
+                                monster.EntityId,
+                                monster.AiState,
+                                monster.X,
+                                monster.Y,
+                                nearPlayerDistance,
+                                nearPetDistance,
+                                playerAlive,
+                                petAlive,
+                                monster.LastAiAt,
+                                monster.LastActionAt);
+                        }
+                    }
+
                     if (monster.LastAiAt == DateTimeOffset.MinValue ||
                         now - monster.LastAiAt >=
                         TimeSpan.FromMilliseconds(200))
