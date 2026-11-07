@@ -274,6 +274,29 @@ public interface IQuestStore
         int value);
 }
 
+public sealed record RankEntry(
+    long DbId,
+    long AccountId,
+    string Name,
+    long Value);
+
+public interface IRankStore
+{
+    IReadOnlyList<RankEntry> GetRankEntries(
+        int rankType,
+        int limit);
+
+    string GetRankMessage(
+        int rankType,
+        long dbid);
+
+    bool SetRankMessage(
+        long accountId,
+        long dbid,
+        int rankType,
+        string message);
+}
+
 public interface IShortcutStore
 {
     List<Dictionary<string, object>> GetShortcuts(
