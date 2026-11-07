@@ -163,6 +163,148 @@ public sealed class ClubService
         }
     }
 
+    public IReadOnlyList<object>? TryHandleChatCommand(
+        long accountId,
+        long dbid,
+        string message)
+    {
+        message = message.Trim();
+        if (message.Length == 0 || message[0] != '/')
+            return null;
+
+        var args = message.Split(
+            ' ',
+            StringSplitOptions.RemoveEmptyEntries);
+
+        if (args.Length == 0)
+            return null;
+
+        var command = args[0].ToLowerInvariant();
+        if (command is not (
+                "/poweron" or
+                "/fire" or
+                "/quit" or
+                "/dismiss"))
+            return null;
+
+        var beforeMembers = CaptureClubMemberIds(
+            accountId,
+            dbid);
+
+        ClubMutationResult result;
+
+        switch (command)
+        {
+            case "/poweron":
+            {
+                if (args.Length < 3 ||
+                    !int.TryParse(args[1], out var position))
+                {
+                    return [Flash(
+                        "用法：/poweron 職位代號 玩家名稱")];
+                }
+
+                var targetName =
+                    string.Join(' ', args.Skip(2));
+
+                result = _store.SetClubMemberPosition(
+                    accountId,
+                    dbid,
+                    targetName,
+                    position);
+                break;
+            }
+
+            case "/fire":
+            {
+                if (args.Length < 2)
+                {
+                    return [Flash(
+                        "用法：/fire 玩家名稱")];
+                }
+
+                var targetName =
+                    string.Join(' ', args.Skip(1));
+
+                result = _store.KickClubMember(
+                    accountId,
+                    dbid,
+                    targetName);
+                break;
+            }
+
+            case "/quit":
+                result = _store.LeaveClub(
+                    accountId,
+                    dbid);
+                break;
+
+            case "/dismiss":
+                result = _store.DisbandClub(
+                    accountId,
+                    dbid);
+                break;
+
+            default:
+                return null;
+        }
+
+        if (result.Success)
+        {
+            PublishClubSyncToMembers(
+                beforeMembers,
+                dbid);
+        }
+
+        var packets = new List<object>
+        {
+            Flash(result.Message)
+        };
+
+        if (result.Success)
+            packets.Add(BuildSync(accountId, dbid));
+
+        return packets;
+    }
+
+    private IReadOnlyList<long> CaptureClubMemberIds(
+        long accountId,
+        long dbid)
+    {
+        var snapshot = _store.GetClubSnapshot(
+            accountId,
+            dbid,
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+        return snapshot?.Members
+                   .Select(x => x.DbId)
+                   .ToArray()
+               ?? Array.Empty<long>();
+    }
+
+    private void PublishClubSyncToMembers(
+        IEnumerable<long> memberIds,
+        long exceptDbid = 0)
+    {
+        foreach (var memberId in memberIds.Distinct())
+        {
+            if (memberId == exceptDbid)
+                continue;
+
+            var presence =
+                _broadcasts.FindCharacter(memberId);
+
+            if (presence is null)
+                continue;
+
+            _broadcasts.PublishToCharacter(
+                memberId,
+                BuildSync(
+                    presence.AccountId,
+                    memberId));
+        }
+    }
+
     public object BuildSync(
         long accountId,
         long dbid)
@@ -362,6 +504,13 @@ public sealed class ClubService
             dbid,
             result);
     }
+
+    private static object Flash(string message)
+        => new
+        {
+            Type = "SystemMessageFlash",
+            Message = message
+        };
 
     private IReadOnlyList<object> BuildMutationResponse(
         long accountId,
