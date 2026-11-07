@@ -73,13 +73,18 @@ public static class WebSocketEndpoint
             {
                 try
                 {
-                    while (!worldTickToken.IsCancellationRequested &&
-                           socket.State == WebSocketState.Open)
-                    {
-                        await Task.Delay(
-                            TimeSpan.FromMilliseconds(250),
-                            worldTickToken);
+                    // Keep world ticks on a wall-clock 250 ms cadence.
+                    // Task.Delay(250) after processing/sending made the real
+                    // interval 250 ms + work time + socket backpressure,
+                    // producing irregular monster movement.
+                    using var worldTimer =
+                        new PeriodicTimer(TimeSpan.FromMilliseconds(250));
 
+                    while (!worldTickToken.IsCancellationRequested &&
+                           socket.State == WebSocketState.Open &&
+                           await worldTimer.WaitForNextTickAsync(
+                               worldTickToken))
+                    {
                         IReadOnlyList<object> packets;
                         lock (state)
                         {
