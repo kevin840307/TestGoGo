@@ -1582,6 +1582,8 @@ try
         "monster AI does not double-throttle a near-250ms world tick and keeps advancing");
 
     monster.IsMoving = true;
+    monster.AiState = MonsterAiState.Chase;
+    monster.LastAttackAt = session.LastMonsterAiTick.AddMilliseconds(900);
     var closeRangePackets = combat.TickAi(
         session,
         account.Value,
@@ -1594,16 +1596,17 @@ try
           closeRangePackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"SyncState\"") &&
-              (JsonSerializer.Serialize(x).Contains(
-                   "\"State\":\"attack\"") ||
-               JsonSerializer.Serialize(x).Contains(
-                   "\"State\":\"idle\""))) &&
+              JsonSerializer.Serialize(x).Contains(
+                  "\"State\":\"attack\"")) &&
+          closeRangePackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"EntityDamage\"")) &&
           !closeRangePackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"MoveEntity\"") &&
               JsonSerializer.Serialize(x).Contains(
                   $"\"EntityID\":{monster.EntityId}")),
-        "monster stops movement and never emits MoveEntity inside melee attack range");
+        "monster entering melee range attacks immediately instead of standing through an old cooldown");
 
     var sawDeath = false;
 
