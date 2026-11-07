@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using SGO.Server.Application;
 using SGO.Server.Application.Messaging;
+using SGO.Server.Application.World;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Protocol;
 
@@ -23,6 +24,7 @@ public static class WebSocketEndpoint
             PacketRouter router,
             ServerBroadcastHub broadcasts,
             AccountSessionRegistry sessions,
+            SharedMapAiTicker mapAi,
             ILoggerFactory loggerFactory) =>
         {
             var log = loggerFactory.CreateLogger("SGO.WebSocket");
@@ -43,6 +45,7 @@ public static class WebSocketEndpoint
             var broadcastQueue = broadcastRegistration.Queue;
             state.ConnectionId = broadcastConnectionId;
             router.SyncPresence(state);
+            mapAi.Register(state);
             using var worldTickCts =
                 CancellationTokenSource.CreateLinkedTokenSource(
                     ctx.RequestAborted);
@@ -326,6 +329,7 @@ public static class WebSocketEndpoint
             {
                 lock (state)
                 {
+                    mapAi.Unregister(state);
                     router.DisconnectPresence(state);
                 }
 
