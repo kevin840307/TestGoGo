@@ -161,12 +161,13 @@ public sealed class TradeService
 
             if (!_invites.TryGetValue(
                     selfDbid,
-                    out invite!) ||
-                invite.RequesterDbid != requesterDbid)
+                    out var foundInvite) ||
+                foundInvite.RequesterDbid != requesterDbid)
             {
                 return [Flash("交易邀請已失效")];
             }
 
+            invite = foundInvite;
             _invites.Remove(selfDbid);
         }
 
@@ -272,11 +273,12 @@ public sealed class TradeService
                     out var sessionId) ||
                 !_sessions.TryGetValue(
                     sessionId,
-                    out trade!))
+                    out var foundTrade))
             {
                 return [Flash("目前沒有進行中的交易")];
             }
 
+            trade = foundTrade;
             self = trade.Find(selfDbid)!;
             other = trade.Other(selfDbid);
         }
