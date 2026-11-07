@@ -3053,7 +3053,7 @@ public sealed class CombatService
                 monster.Y + offsetY,
                 damage: _current.FindItem(drop.ItemId)?.Durability ?? 0,
                 protectSeconds: _drops.OwnerProtectionSeconds,
-                lifetimeSeconds: 60);
+                lifetimeSeconds: 0);
 
             if (ground is null)
                 continue;
