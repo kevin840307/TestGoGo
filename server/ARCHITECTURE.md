@@ -1,5 +1,7 @@
 # Server Architecture
 
+Current implementation baseline and next priorities: see [STATUS.md](STATUS.md).
+
 The server is layered so gameplay and protocol code do not depend on SQLite.
 
 ```text
@@ -8,6 +10,9 @@ server/
 ├─ appsettings.json
 ├─ Application/
 │  ├─ PacketRouter.cs                 # request/game flow
+│  ├─ Combat/                         # monster/pet/player combat services
+│  ├─ Gm/                             # server-side GM chat commands
+│  ├─ Shops/                          # NPC shop buy/sell application flow
 │  └─ Abstractions/
 │     └─ IGameStore.cs                # database-neutral contract
 ├─ Domain/
@@ -19,6 +24,7 @@ server/
 │  └─ WebSockets/
 │     └─ WebSocketEndpoint.cs
 └─ Infrastructure/
+   ├─ GameData/                       # current-client + legacy reference catalogs
    ├─ source/
    │  ├─ Data/
    │  │  ├─ EnemyCatalog.cs
