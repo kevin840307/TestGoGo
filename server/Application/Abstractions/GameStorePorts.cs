@@ -493,6 +493,25 @@ public interface IClubStore
         long dbid,
         int researchId,
         long nowUtcMs);
+
+    ClubMutationResult SetClubMemberPosition(
+        long accountId,
+        long callerDbid,
+        string targetName,
+        int position);
+
+    ClubMutationResult KickClubMember(
+        long accountId,
+        long callerDbid,
+        string targetName);
+
+    ClubMutationResult LeaveClub(
+        long accountId,
+        long dbid);
+
+    ClubMutationResult DisbandClub(
+        long accountId,
+        long dbid);
 }
 
 public sealed record RankEntry(
