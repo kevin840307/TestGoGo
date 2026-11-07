@@ -24,6 +24,8 @@ public static class GameFeatureServiceCollectionExtensions
         IConfiguration configuration)
     {
         services.AddSingleton<WorldRuntimeService>();
+        services.AddSingleton<SharedMapAiTicker>();
+        services.AddHostedService(sp => sp.GetRequiredService<SharedMapAiTicker>());
         services.AddSingleton<PetEvolutionService>();
         services.AddSingleton<CombatService>();
         services.AddSingleton<CraftingService>();
