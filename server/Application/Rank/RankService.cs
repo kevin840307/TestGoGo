@@ -34,19 +34,28 @@ public sealed class RankService
         if (rows.Count > 0)
         {
             var top = rows[0];
+            var messageOwnerDbId =
+                top.MessageOwnerDbId > 0
+                    ? top.MessageOwnerDbId
+                    : top.DbId;
+            var appearanceDbId =
+                top.AppearanceDbId > 0
+                    ? top.AppearanceDbId
+                    : top.DbId;
+
             top1Message = _store.GetRankMessage(
                 rankType,
-                top.DbId);
+                messageOwnerDbId);
 
             var character = _store.GetCharacter(
                 top.AccountId,
-                top.DbId);
+                appearanceDbId);
 
             if (character is not null)
             {
                 var assets = _store.GetCharacterAssets(
                     top.AccountId,
-                    top.DbId);
+                    appearanceDbId);
 
                 top1Equips = BuildPaperDoll(
                     character,
@@ -86,7 +95,11 @@ public sealed class RankService
             rankType,
             1).FirstOrDefault();
 
-        if (top is null || top.DbId != dbid)
+        var ownerDbId = top?.MessageOwnerDbId > 0
+            ? top.MessageOwnerDbId
+            : top?.DbId ?? 0;
+
+        if (top is null || ownerDbId != dbid)
         {
             return [new
             {
