@@ -2,10 +2,17 @@ using System.Collections.Concurrent;
 
 namespace SGO.Server.Application.Messaging;
 
+public sealed record OnlinePlayerPresence(
+    Guid ConnectionId,
+    long AccountId,
+    long CharacterId,
+    int MapId);
+
 public sealed class ServerBroadcastHub
 {
     private sealed record Presence(
         int MapId,
+        long AccountId,
         long CharacterId);
 
     private readonly ConcurrentDictionary<Guid, ConcurrentQueue<object>>
@@ -19,14 +26,15 @@ public sealed class ServerBroadcastHub
         var id = Guid.NewGuid();
         var queue = new ConcurrentQueue<object>();
         _queues[id] = queue;
-        _presence[id] = new Presence(0, 0);
+        _presence[id] = new Presence(0, 0, 0);
         return (id, queue);
     }
 
     public void UpdatePresence(
         Guid connectionId,
         int mapId,
-        long? characterId)
+        long? characterId,
+        long? accountId = null)
     {
         if (connectionId == Guid.Empty ||
             !_queues.ContainsKey(connectionId))
@@ -34,6 +42,7 @@ public sealed class ServerBroadcastHub
 
         _presence[connectionId] = new Presence(
             Math.Max(0, mapId),
+            Math.Max(0, accountId ?? 0),
             Math.Max(0, characterId ?? 0));
     }
 
@@ -44,6 +53,22 @@ public sealed class ServerBroadcastHub
            _presence.Values.Any(x =>
                x.CharacterId == characterId &&
                x.MapId == mapId);
+
+    public IReadOnlyList<OnlinePlayerPresence> PlayersInMap(
+        int mapId,
+        Guid exceptConnectionId = default)
+        => _presence
+            .Where(x =>
+                x.Key != exceptConnectionId &&
+                x.Value.MapId == mapId &&
+                x.Value.AccountId > 0 &&
+                x.Value.CharacterId > 0)
+            .Select(x => new OnlinePlayerPresence(
+                x.Key,
+                x.Value.AccountId,
+                x.Value.CharacterId,
+                x.Value.MapId))
+            .ToArray();
 
     public void Unregister(Guid connectionId)
     {
