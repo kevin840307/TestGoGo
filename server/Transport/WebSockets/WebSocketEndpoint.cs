@@ -40,6 +40,11 @@ public static class WebSocketEndpoint
             var broadcastRegistration = broadcasts.Register();
             var broadcastConnectionId = broadcastRegistration.ConnectionId;
             var broadcastQueue = broadcastRegistration.Queue;
+            state.ConnectionId = broadcastConnectionId;
+            broadcasts.UpdatePresence(
+                broadcastConnectionId,
+                state.CurrentMapId,
+                state.CharacterId);
             using var worldTickCts =
                 CancellationTokenSource.CreateLinkedTokenSource(
                     ctx.RequestAborted);
@@ -93,6 +98,11 @@ public static class WebSocketEndpoint
                         IReadOnlyList<object> packets;
                         lock (state)
                         {
+                            broadcasts.UpdatePresence(
+                                broadcastConnectionId,
+                                state.CurrentMapId,
+                                state.CharacterId);
+
                             packets = router.Tick(
                                 state,
                                 DateTimeOffset.UtcNow);
@@ -187,6 +197,11 @@ public static class WebSocketEndpoint
                                 responses = router.Handle(
                                     packet.RootElement,
                                     state);
+
+                                broadcasts.UpdatePresence(
+                                    broadcastConnectionId,
+                                    state.CurrentMapId,
+                                    state.CharacterId);
                             }
                         }
                         catch (Exception ex)
