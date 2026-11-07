@@ -619,6 +619,79 @@ public sealed class SqliteGameStore : IGameStore
         return true;
     }
 
+    public Dictionary<string, object>? SpendSkillResources(
+        long accountId,
+        long dbid,
+        int hpCost,
+        int mpCost,
+        int spCost)
+    {
+        hpCost = Math.Max(0, hpCost);
+        mpCost = Math.Max(0, mpCost);
+        spCost = Math.Max(0, spCost);
+
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET hp = hp - $hp,
+                   mp = mp - $mp,
+                   sp = sp - $sp
+             WHERE id=$id
+               AND account_id=$a
+               AND hp >= $hp
+               AND mp >= $mp
+               AND sp >= $sp
+            """;
+        Arg(cmd, "$hp", hpCost);
+        Arg(cmd, "$mp", mpCost);
+        Arg(cmd, "$sp", spCost);
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return null;
+
+        return GetCharacter(accountId, dbid);
+    }
+
+    public Dictionary<string, object>? AllocateStat(
+        long accountId,
+        long dbid,
+        string statType)
+    {
+        var column = statType.Trim().ToUpperInvariant() switch
+        {
+            "STR" => "str",
+            "DEX" => "dex",
+            "CON" => "con",
+            "WIS" => "wis",
+            _ => null
+        };
+
+        if (column is null)
+            return null;
+
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = $"""
+            UPDATE characters
+               SET [{column}] = [{column}] + 1,
+                   exp_use = exp_use - 1
+             WHERE id=$id
+               AND account_id=$a
+               AND exp_use > 0
+               AND [{column}] < 100
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return null;
+
+        return GetCharacter(accountId, dbid);
+    }
+
     public long AddInventoryItem(long accountId, long dbid, int itemIndex, int count)
     {
         if (count <= 0) return 0;
@@ -1933,7 +2006,12 @@ public sealed class SqliteGameStore : IGameStore
         using var cmd = db.CreateCommand();
         cmd.CommandText = """
             UPDATE characters
-               SET level=$level
+               SET exp_use = exp_use +
+                   CASE
+                       WHEN $level > level THEN $level - level
+                       ELSE 0
+                   END,
+                   level=$level
              WHERE id=$id AND account_id=$a
             """;
         Arg(cmd, "$level", level);
