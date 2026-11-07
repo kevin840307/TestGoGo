@@ -246,6 +246,14 @@ var currentCatalog = new CurrentClientDataCatalog(
             27110,
             "平安之祝",
             "平安之祝"),
+        new CurrentSkillDefinition(
+            21103,
+            "挑撥",
+            "挑撥"),
+        new CurrentSkillDefinition(
+            20103,
+            "偵察",
+            "偵察"),
         new CurrentSkillDefinition(26104, "魔影術"),
         new CurrentSkillDefinition(45111, "月神審判")
     },
@@ -271,6 +279,26 @@ var currentCatalog = new CurrentClientDataCatalog(
             0, 20, 0,
             0, 0, 1,
             0, 0,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0,
+            0, 0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            21103, 1, 7, 0,
+            0, 150,
+            0, 20, 0,
+            0, 0, 2,
+            0, 1,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0,
+            0, 0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            20103, 1, 7, 0,
+            350, 0,
+            0, 10, 0,
+            0, 0, 0,
+            0, 1,
             0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0,
@@ -499,6 +527,12 @@ Check(currentCatalog.FindSkill(29101) is
 Check(currentCatalog.FindSkillLevel(25108, 1) is
       { SkillType: 7, CooldownSeconds: 1800 },
     "current 生命聖印 resolves full-HP special skill data");
+Check(currentCatalog.FindSkillLevel(21103, 1) is
+      { SkillType: 7, AoeRadius: 150, CostMp: 20 },
+    "current 挑撥 resolves monster-aggro radius data");
+Check(currentCatalog.FindSkillLevel(20103, 1) is
+      { SkillType: 7, CastRange: 350, CostMp: 10 },
+    "current 偵察 resolves player-target range data");
 Check(currentCatalog.FindSkillLevel(26104, 5) is
       { CostMp: 126, CastRange: 280, AoeRadius: 280 },
     "current 魔影術 Lv5 resolves server-side cast data");
@@ -2605,6 +2639,68 @@ try
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"PlayerStatusSync\"")),
         "心靈轉換 restores another same-map player's SP and syncs status");
+
+    store.SetSkill(
+        account.Value,
+        id,
+        20103,
+        1);
+    store.Revive(account.Value, id);
+
+    var scoutPackets = combat.UseSkill(
+        session,
+        account.Value,
+        20103,
+        checked((int)secondCharacterId),
+        0,
+        combatEnemy.X + 40,
+        combatEnemy.Y,
+        DateTimeOffset.UtcNow.AddSeconds(4));
+
+    var scoutJson = JsonSerializer.Serialize(
+        scoutPackets);
+
+    Check(
+        scoutJson.Contains("[偵察]") &&
+        scoutJson.Contains("SecondCharacter") &&
+        !scoutJson.Contains("CharacterPwd") &&
+        !scoutJson.Contains("\"ACCID\""),
+        "偵察 returns public target status without account/password fields");
+
+    store.SetSkill(
+        account.Value,
+        id,
+        21103,
+        1);
+    store.Revive(account.Value, id);
+
+    monster.X = combatEnemy.X + 30;
+    monster.Y = combatEnemy.Y;
+    monster.HasTarget = false;
+    monster.TargetCharacterId = 0;
+
+    var tauntPackets = combat.UseSkill(
+        session,
+        account.Value,
+        21103,
+        0,
+        0,
+        combatEnemy.X,
+        combatEnemy.Y,
+        DateTimeOffset.UtcNow.AddSeconds(5));
+
+    Check(
+        monster.HasTarget &&
+        monster.TargetCharacterId == id &&
+        tauntPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"MonsterTarget\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                $"\"TargetID\":{id}")),
+        "挑撥 redirects nearby monster aggro to the caster");
+
+    monster.HasTarget = false;
+    monster.TargetCharacterId = 0;
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
     while (peerRegistration.Queue.TryDequeue(out _)) { }
