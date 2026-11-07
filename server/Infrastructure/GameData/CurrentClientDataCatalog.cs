@@ -93,7 +93,13 @@ public sealed record CurrentPetEvolution(
     int EvolId,
     string Outlook,
     int Color,
-    int AttackRange);
+    int AttackRange,
+    int MinLevel = 0,
+    int RequiredCon = 0,
+    int RequiredStr = 0,
+    int RequiredDex = 0,
+    int RequiredWis = 0,
+    IReadOnlyList<int>? NextEvolIds = null);
 
 public sealed record CurrentPetDefinition(
     int PetId,
@@ -253,6 +259,48 @@ public sealed class CurrentClientDataCatalog
             ? evolution
             : null;
 
+    public CurrentPetEvolution? ResolveNextPetEvolution(
+        int petId,
+        int currentEvolId,
+        int level,
+        int con,
+        int str,
+        int dex,
+        int wis)
+    {
+        var pet = FindPet(petId);
+        if (pet is null ||
+            !pet.Evolutions.TryGetValue(
+                currentEvolId,
+                out var current) ||
+            current.NextEvolIds is null ||
+            current.NextEvolIds.Count == 0)
+        {
+            return null;
+        }
+
+        return current.NextEvolIds
+            .Select(id =>
+                pet.Evolutions.TryGetValue(id, out var candidate)
+                    ? candidate
+                    : null)
+            .Where(x =>
+                x is not null &&
+                level >= x.MinLevel &&
+                con >= x.RequiredCon &&
+                str >= x.RequiredStr &&
+                dex >= x.RequiredDex &&
+                wis >= x.RequiredWis)
+            .OrderByDescending(x => x!.MinLevel)
+            .ThenByDescending(x =>
+                x!.RequiredCon +
+                x.RequiredStr +
+                x.RequiredDex +
+                x.RequiredWis)
+            .ThenBy(x => x!.EvolId)
+            .FirstOrDefault();
+    }
+
     public IReadOnlyCollection<CurrentItemDefinition> Items => _items.Values;
     public IReadOnlyCollection<CurrentSkillDefinition> Skills => _skills.Values;
     public IReadOnlyCollection<CurrentPetDefinition> Pets => _pets.Values;
@@ -404,6 +452,72 @@ public sealed class CurrentClientDataCatalog
                         continue;
 
                     var evol = evolProperty.Value;
+                    var minLevel = 0;
+                    var requiredCon = 0;
+                    var requiredStr = 0;
+                    var requiredDex = 0;
+                    var requiredWis = 0;
+
+                    if (evol.TryGetProperty(
+                            "requirements",
+                            out var requirements) &&
+                        requirements.ValueKind ==
+                            JsonValueKind.Object)
+                    {
+                        minLevel = requirements.TryGetProperty(
+                                "level",
+                                out var levelElement)
+                            ? Math.Max(0, levelElement.GetInt32())
+                            : 0;
+
+                        if (requirements.TryGetProperty(
+                                "stats",
+                                out var statsElement) &&
+                            statsElement.ValueKind ==
+                                JsonValueKind.Object)
+                        {
+                            requiredCon = statsElement.TryGetProperty(
+                                    "con",
+                                    out var conElement)
+                                ? Math.Max(0, conElement.GetInt32())
+                                : 0;
+                            requiredStr = statsElement.TryGetProperty(
+                                    "str",
+                                    out var strElement)
+                                ? Math.Max(0, strElement.GetInt32())
+                                : 0;
+                            requiredDex = statsElement.TryGetProperty(
+                                    "dex",
+                                    out var dexElement)
+                                ? Math.Max(0, dexElement.GetInt32())
+                                : 0;
+                            requiredWis = statsElement.TryGetProperty(
+                                    "wis",
+                                    out var wisElement)
+                                ? Math.Max(0, wisElement.GetInt32())
+                                : 0;
+                        }
+                    }
+
+                    var nextEvolIds = new List<int>();
+                    if (evol.TryGetProperty(
+                            "next_evol_ids",
+                            out var nextElement) &&
+                        nextElement.ValueKind ==
+                            JsonValueKind.Array)
+                    {
+                        foreach (var next in
+                                 nextElement.EnumerateArray())
+                        {
+                            if (next.TryGetInt32(
+                                    out var nextId) &&
+                                nextId >= 0)
+                            {
+                                nextEvolIds.Add(nextId);
+                            }
+                        }
+                    }
+
                     evolutions[evolId] = new CurrentPetEvolution(
                         evolId,
                         evol.TryGetProperty("outlook", out var outlook)
@@ -414,7 +528,13 @@ public sealed class CurrentClientDataCatalog
                             : 0,
                         evol.TryGetProperty("attack_range", out var range)
                             ? range.GetInt32()
-                            : 80);
+                            : 80,
+                        minLevel,
+                        requiredCon,
+                        requiredStr,
+                        requiredDex,
+                        requiredWis,
+                        nextEvolIds);
                 }
             }
 
