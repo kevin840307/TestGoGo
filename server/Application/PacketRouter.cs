@@ -249,6 +249,66 @@ public sealed class PacketRouter
                 return [];
             }
 
+            case "BankTransfer":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var tabType = req.Int("TabType");
+                var result = _store.BankTransfer(
+                    accountId,
+                    state.CharacterId.Value,
+                    req.Int("UID"),
+                    tabType,
+                    req.Int("Amount", 1),
+                    req.TryGetProperty("ToBank", out var toBank) &&
+                    toBank.ValueKind == JsonValueKind.True);
+
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                var packets = new List<object>
+                {
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = result.Message
+                    }
+                };
+
+                if (tabType == 0)
+                {
+                    packets.Add(new
+                    {
+                        Type = "InventorySync",
+                        Items = assets.Inventory,
+                        MaxSize = assets.InventoryMaxSize
+                    });
+                }
+                else if (tabType == 1)
+                {
+                    packets.Add(new
+                    {
+                        Type = "EquipSync",
+                        Equips = assets.Equips,
+                        MaxSize = assets.EquipMaxSize
+                    });
+                }
+                else if (tabType == 3)
+                {
+                    packets.Add(new
+                    {
+                        Type = "HorseSync",
+                        Horses = assets.Horses,
+                        HorseEquips = assets.HorseEquips,
+                        MaxHorseEquipSize = assets.HorseEquipMaxSize
+                    });
+                }
+
+                return packets;
+            }
+
             case "UseItemRequest":
             {
                 if (!state.CharacterId.HasValue) return [];
