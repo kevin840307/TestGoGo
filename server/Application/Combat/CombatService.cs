@@ -525,12 +525,28 @@ public sealed class CombatService
             }
         };
 
+        // A pet is the owner's combat extension. Until pet HP/damage is backed
+        // by the persistence port, a successful pet hit pulls aggro onto the
+        // owner instead of creating a half-persistent monster->pet target.
+        if (monster.CurrentHp > 0 && !monster.HasTarget)
+        {
+            monster.HasTarget = true;
+            monster.HoldingAttackRange = false;
+            packets.Add(new
+            {
+                Type = "MonsterTarget",
+                EntityID = monster.EntityId,
+                HasTarget = true
+            });
+        }
+
         if (monster.CurrentHp == 0)
         {
             monster.RespawnAt =
                 DateTimeOffset.UtcNow + RespawnDelay;
             monster.HasTarget = false;
             monster.IsMoving = false;
+            monster.HoldingAttackRange = false;
 
             packets.Add(new
             {
