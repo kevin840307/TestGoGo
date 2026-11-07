@@ -362,6 +362,14 @@ func send_secure_packet(data_dict: Dictionary) -> void :
 func send_announcement_list_request() -> void :
 	send_secure_packet({"Type": "AnnouncementListRequest"})
 
+func send_world_ready(map_id: int) -> void :
+	if map_id <= 0:
+		return
+	send_secure_packet({
+		"Type": "WorldReady",
+		"MapID": map_id,
+	})
+
 func send_login_request(user: String, pass_str: String) -> void :
 	var connected = await connect_to_server()
 	if not connected:
