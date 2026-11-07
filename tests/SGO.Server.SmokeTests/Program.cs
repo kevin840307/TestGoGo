@@ -10,7 +10,7 @@ using SGO.Server.Application.Shops;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Infrastructure.Quest;
-using SGO.Server.Infrastructure.World;
+using SGO.Server.Infrastructure.WorldData;
 using SGO.Server.Infrastructure.Persistence.Sqlite;
 using SGO.Server.Protocol;
 using System.Text.Json;
