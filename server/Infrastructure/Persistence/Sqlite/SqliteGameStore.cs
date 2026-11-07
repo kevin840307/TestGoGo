@@ -2088,6 +2088,164 @@ public sealed class SqliteGameStore : IGameStore
         return new(true, "購買成功", uid, currentMoney - total);
     }
 
+    public (bool Success, string Message) DiscardAsset(
+        long accountId,
+        long dbid,
+        long uid,
+        int tabType,
+        int count)
+    {
+        count = Math.Max(1, count);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return (false, "角色不存在");
+
+        bool removed;
+
+        switch (tabType)
+        {
+            case 0:
+            case 5:
+            {
+                using var get = db.CreateCommand();
+                get.Transaction = tx;
+                get.CommandText = """
+                    SELECT count FROM inventory_items
+                     WHERE uid=$uid AND character_id=$id
+                       AND in_bank=0 AND in_shop=0
+                    """;
+                Arg(get, "$uid", uid);
+                Arg(get, "$id", dbid);
+
+                var raw = get.ExecuteScalar();
+                if (raw is null)
+                    return (false, "找不到可丟棄的物品");
+
+                var owned = Convert.ToInt32(raw);
+                var dropCount = Math.Min(count, owned);
+
+                using var change = db.CreateCommand();
+                change.Transaction = tx;
+                if (dropCount >= owned)
+                {
+                    change.CommandText = """
+                        DELETE FROM inventory_items
+                         WHERE uid=$uid AND character_id=$id
+                        """;
+                }
+                else
+                {
+                    change.CommandText = """
+                        UPDATE inventory_items
+                           SET count=count-$count
+                         WHERE uid=$uid AND character_id=$id
+                        """;
+                    Arg(change, "$count", dropCount);
+                }
+
+                Arg(change, "$uid", uid);
+                Arg(change, "$id", dbid);
+                removed = change.ExecuteNonQuery() == 1;
+                break;
+            }
+
+            case 1:
+            {
+                using var del = db.CreateCommand();
+                del.Transaction = tx;
+                del.CommandText = """
+                    DELETE FROM equipment_items
+                     WHERE uid=$uid AND character_id=$id
+                       AND part=255 AND in_bank=0 AND in_shop=0
+                    """;
+                Arg(del, "$uid", uid);
+                Arg(del, "$id", dbid);
+                removed = del.ExecuteNonQuery() == 1;
+                break;
+            }
+
+            case 2:
+            {
+                using var del = db.CreateCommand();
+                del.Transaction = tx;
+                del.CommandText = """
+                    DELETE FROM pets
+                     WHERE uid=$uid AND character_id=$id
+                       AND state=0 AND in_shop=0
+                    """;
+                Arg(del, "$uid", uid);
+                Arg(del, "$id", dbid);
+                removed = del.ExecuteNonQuery() == 1;
+                break;
+            }
+
+            case 3:
+            {
+                using var del = db.CreateCommand();
+                del.Transaction = tx;
+                del.CommandText = """
+                    DELETE FROM horse_equipment
+                     WHERE uid=$uid AND character_id=$id
+                       AND horse_uid=-1 AND in_bank=0 AND in_shop=0
+                    """;
+                Arg(del, "$uid", uid);
+                Arg(del, "$id", dbid);
+                removed = del.ExecuteNonQuery() == 1;
+                break;
+            }
+
+            case 4:
+            {
+                using var summoned = db.CreateCommand();
+                summoned.Transaction = tx;
+                summoned.CommandText = """
+                    SELECT count(*) FROM characters
+                     WHERE id=$id AND account_id=$a
+                       AND summoned_horse_uid=$uid
+                    """;
+                Arg(summoned, "$id", dbid);
+                Arg(summoned, "$a", accountId);
+                Arg(summoned, "$uid", uid);
+                if (Convert.ToInt32(summoned.ExecuteScalar()) != 0)
+                    return (false, "駕駛中的機甲無法丟棄");
+
+                using var attached = db.CreateCommand();
+                attached.Transaction = tx;
+                attached.CommandText = """
+                    SELECT count(*) FROM horse_equipment
+                     WHERE character_id=$id AND horse_uid=$uid
+                    """;
+                Arg(attached, "$id", dbid);
+                Arg(attached, "$uid", uid);
+                if (Convert.ToInt32(attached.ExecuteScalar()) != 0)
+                    return (false, "請先卸下機甲裝備");
+
+                using var del = db.CreateCommand();
+                del.Transaction = tx;
+                del.CommandText = """
+                    DELETE FROM horses
+                     WHERE uid=$uid AND character_id=$id
+                    """;
+                Arg(del, "$uid", uid);
+                Arg(del, "$id", dbid);
+                removed = del.ExecuteNonQuery() == 1;
+                break;
+            }
+
+            default:
+                return (false, "不支援的物品類型");
+        }
+
+        if (!removed)
+            return (false, "物品無法丟棄");
+
+        tx.Commit();
+        return (true, "物品已丟棄");
+    }
+
     public bool SellAsset(
         long accountId,
         long dbid,
