@@ -184,6 +184,9 @@ CREATE TABLE IF NOT EXISTS ground_items (
     color INTEGER NOT NULL DEFAULT 0,
     part INTEGER NOT NULL DEFAULT 255,
     x REAL NOT NULL,
-    y REAL NOT NULL
+    y REAL NOT NULL,
+    created_utc_ms INTEGER NOT NULL DEFAULT 0,
+    protect_until_utc_ms INTEGER NOT NULL DEFAULT 0,
+    expires_utc_ms INTEGER NOT NULL DEFAULT 0
 );
 
