@@ -33,8 +33,9 @@ public sealed class CombatService
     // The client now interpolates continuously toward the latest authoritative
     // waypoint, so this value represents movement speed rather than tween timing.
     private const double MoveTweenSeconds = 0.25;
-    private const double WanderRadius = 180.0;
-    private const double WanderStep = 85.0;
+    private const double WanderRadius = 260.0;
+    private const double WanderMinStep = 95.0;
+    private const double WanderMaxStep = 175.0;
 
     private readonly IGameStore _store;
     private readonly WorldDataService _world;
@@ -3635,8 +3636,21 @@ public sealed class CombatService
             monster.WanderSequence * 12345);
         var angle = ((uint)seed % 360) * Math.PI / 180.0;
 
-        var desiredX = monster.X + Math.Cos(angle) * WanderStep;
-        var desiredY = monster.Y + Math.Sin(angle) * WanderStep;
+        // Give each wander a different travel distance so idle monsters do
+        // not all move in equal-sized hops. Keep it deterministic per
+        // monster/sequence so tests and replays remain stable.
+        var stepSeed = unchecked(
+            monster.EntityId * 214013 +
+            monster.WanderSequence * 2531011 +
+            97);
+        var stepRatio =
+            ((uint)stepSeed % 10_001) / 10_000.0;
+        var wanderStep =
+            WanderMinStep +
+            (WanderMaxStep - WanderMinStep) * stepRatio;
+
+        var desiredX = monster.X + Math.Cos(angle) * wanderStep;
+        var desiredY = monster.Y + Math.Sin(angle) * wanderStep;
 
         var fromCenterX = desiredX - monster.WanderCenterX;
         var fromCenterY = desiredY - monster.WanderCenterY;
@@ -3654,7 +3668,7 @@ public sealed class CombatService
 
             if (centerDistance > 1.0)
             {
-                var step = Math.Min(WanderStep, centerDistance);
+                var step = Math.Min(wanderStep, centerDistance);
                 desiredX = monster.X + centerDx / centerDistance * step;
                 desiredY = monster.Y + centerDy / centerDistance * step;
             }
