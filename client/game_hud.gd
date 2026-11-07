@@ -907,6 +907,10 @@ func _toggle_lazy_window(kind: String) -> void :
 			await window.prepare_initial_async()
 	_toggle_window(window)
 
+func start_post_reveal_background_prewarm() -> void :
+	if is_instance_valid(craft_dismantle_window) and craft_dismantle_window.has_method("prepare_dismantle_background_async"):
+		craft_dismantle_window.call_deferred("prepare_dismantle_background_async")
+
 func _setup_header_button_hover_signals() -> void :
 	for button in [btn_announcement, btn_game_info, btn_craft_dismantle]:
 		if button:
