@@ -65,7 +65,8 @@ public static class GameDataServiceCollectionExtensions
         services.AddSingleton(sp =>
             new QuestRuntime(
                 Path.Combine(gameDataRoot, "Quest"),
-                sp.GetRequiredService<ShopCatalog>()));
+                sp.GetRequiredService<ShopCatalog>(),
+                sp.GetRequiredService<EnemyDropCatalog>()));
 
         return services;
     }
