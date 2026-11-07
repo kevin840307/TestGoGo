@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using SGO.Server.Application;
+using SGO.Server.Application.Messaging;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Protocol;
 
@@ -20,6 +21,7 @@ public static class WebSocketEndpoint
         app.Map("/", async (
             HttpContext ctx,
             PacketRouter router,
+            ServerBroadcastHub broadcasts,
             ILoggerFactory loggerFactory) =>
         {
             var log = loggerFactory.CreateLogger("SGO.WebSocket");
@@ -35,6 +37,9 @@ public static class WebSocketEndpoint
             var buffer = new byte[64 * 1024];
             using var message = new MemoryStream();
             using var sendGate = new SemaphoreSlim(1, 1);
+            var broadcastRegistration = broadcasts.Register();
+            var broadcastConnectionId = broadcastRegistration.ConnectionId;
+            var broadcastQueue = broadcastRegistration.Queue;
             using var worldTickCts =
                 CancellationTokenSource.CreateLinkedTokenSource(
                     ctx.RequestAborted);
@@ -96,6 +101,17 @@ public static class WebSocketEndpoint
                         await SendPacketsAsync(
                             packets,
                             worldTickToken);
+
+                        if (!broadcastQueue.IsEmpty)
+                        {
+                            var broadcastPackets = new List<object>();
+                            while (broadcastQueue.TryDequeue(out var packet))
+                                broadcastPackets.Add(packet);
+
+                            await SendPacketsAsync(
+                                broadcastPackets,
+                                worldTickToken);
+                        }
                     }
                 }
                 catch (OperationCanceledException)
@@ -240,6 +256,7 @@ public static class WebSocketEndpoint
             }
             finally
             {
+                broadcasts.Unregister(broadcastConnectionId);
                 worldTickCts.Cancel();
 
                 try
