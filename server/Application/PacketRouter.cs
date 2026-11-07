@@ -169,6 +169,45 @@ public sealed class PacketRouter
                 if (character is null)
                     return [new { Type = "SystemMessageFlash", Message = "角色不存在" }];
 
+                var storedLevel = Math.Clamp(
+                    Convert.ToInt32(character["Level"]),
+                    1,
+                    255);
+                var resolvedLevel = _growth.ResolveLevel(
+                    storedLevel,
+                    Convert.ToInt32(character["ExpAcc"]));
+                var gainedPoints = _growth.AbilityPointsGained(
+                    storedLevel,
+                    resolvedLevel);
+
+                character = _store.SetExperienceProgress(
+                                accountId,
+                                dbid,
+                                resolvedLevel,
+                                _growth.ExperienceThresholdForLevel(
+                                    resolvedLevel),
+                                gainedPoints)
+                            ?? character;
+
+                if (resolvedLevel > storedLevel)
+                {
+                    var growth = _growth.Calculate(character);
+                    character = _store.ApplyGrowthStats(
+                                    accountId,
+                                    dbid,
+                                    growth.MaxHP,
+                                    growth.MaxMP,
+                                    growth.MaxSP,
+                                    growth.Attack,
+                                    growth.Defense,
+                                    growth.MagicAttack,
+                                    growth.MagicDefense,
+                                    growth.Hit,
+                                    growth.Dodge,
+                                    growth.MoveSpeed)
+                                ?? character;
+                }
+
                 state.CharacterId = dbid;
                 state.CurrentMapId = Convert.ToInt32(character["MapID"]);
                 state.LastX = Convert.ToDouble(character["LocX"]);
