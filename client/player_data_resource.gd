@@ -354,7 +354,7 @@ func update_pets(pets: Array, max_size: int = 50) -> void :
 			"shop_price": int(pet.get("ShopPrice", pet.get("shop_price", 0)))
 		})
 
-func update_horses(horses: Array, equips: Array, max_horse_eq_size: int = 20) -> void :
+func update_horses(horses: Array, equips: Array, max_horse_eq_size: int = 100) -> void :
 	horse_equip_max_size = max_horse_eq_size
 	horse_list.clear()
 	for horse in horses:
