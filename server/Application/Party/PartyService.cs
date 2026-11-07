@@ -241,6 +241,8 @@ public sealed class PartyService
                     selfDbid);
             }
 
+            party = foundParty;
+
             if (party.Members.Count >= MaxMembers)
                 return [Flash("隊伍已滿")];
 
@@ -465,10 +467,12 @@ public sealed class PartyService
                     out var partyId) ||
                 !_parties.TryGetValue(
                     partyId,
-                    out party!))
+                    out var foundParty))
             {
                 return [Flash("你目前沒有隊伍")];
             }
+
+            party = foundParty;
 
             if (party.LeaderDbid != selfDbid)
                 return [Flash("只有隊長可以踢除成員")];
