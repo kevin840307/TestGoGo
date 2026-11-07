@@ -887,8 +887,7 @@ public sealed class GmCommandService
                 {
                     Type = "DespawnEntity",
                     EntityID = entityId
-                },
-                null);
+                });
         }
 
         return
