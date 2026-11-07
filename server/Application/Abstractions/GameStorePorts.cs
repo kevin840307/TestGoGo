@@ -276,6 +276,16 @@ public interface IBankStore : ICharacterAssetReader
         bool toBank);
 }
 
+public interface IItemDiscardStore : ICharacterAssetReader
+{
+    (bool Success, string Message) DiscardAsset(
+        long accountId,
+        long dbid,
+        long uid,
+        int tabType,
+        int count);
+}
+
 public interface IShopStore : ICharacterAssetReader
 {
     AssetPurchaseResult BuyAsset(
