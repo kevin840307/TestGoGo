@@ -3737,6 +3737,48 @@ try
         peerRegistration.Queue.IsEmpty,
         "joining player broadcasts SpawnEntity to existing map peers only");
 
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var publicStatusEquip = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "EquipRequest",
+            ItemUID = equipUid,
+            TargetSlot = 5
+        })))
+    {
+        var responses = router.Handle(
+            publicStatusEquip.RootElement,
+            session);
+
+        var peerStatusPackets =
+            peerRegistration.Queue.ToArray();
+        var publicStatusJson =
+            JsonSerializer.Serialize(peerStatusPackets);
+
+        Check(
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PlayerStatusSync\"")) &&
+            publicStatusJson.Contains(
+                "\"Type\":\"SyncStatus\"") &&
+            publicStatusJson.Contains(
+                $"\"EntityID\":{id}") &&
+            !publicStatusJson.Contains("\"Money\"") &&
+            !publicStatusJson.Contains("\"ExpAcc\""),
+            "effective status changes return private PlayerStatusSync and broadcast public SyncStatus only");
+    }
+
+    using (var publicStatusUnequip = Json(
+        """{"Type":"UnequipRequest","TargetSlot":5}"""))
+    {
+        router.Handle(
+            publicStatusUnequip.RootElement,
+            session);
+    }
+
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
     store.SetSkill(
         account.Value,
         id,
