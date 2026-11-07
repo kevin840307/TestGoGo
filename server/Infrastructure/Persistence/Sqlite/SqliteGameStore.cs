@@ -6738,9 +6738,22 @@ public sealed class SqliteGameStore : IGameStore
         long accountId,
         long dbid,
         int hpAmount,
+        int mpAmount)
+        => RecoverResources(
+            accountId,
+            dbid,
+            hpAmount,
+            mpAmount,
+            int.MaxValue,
+            int.MaxValue);
+
+    public Dictionary<string, object>? RecoverResources(
+        long accountId,
+        long dbid,
+        int hpAmount,
         int mpAmount,
-        int? effectiveMaxHp = null,
-        int? effectiveMaxMp = null)
+        int effectiveMaxHp,
+        int effectiveMaxMp)
     {
         hpAmount = Math.Max(0, hpAmount);
         mpAmount = Math.Max(0, mpAmount);
@@ -6749,8 +6762,8 @@ public sealed class SqliteGameStore : IGameStore
         using var cmd = db.CreateCommand();
         cmd.CommandText = """
             UPDATE characters
-               SET hp = MIN(COALESCE($maxHp, max_hp), hp + $hp),
-                   mp = MIN(COALESCE($maxMp, max_mp), mp + $mp)
+               SET hp = MIN(CASE WHEN $maxHp = 2147483647 THEN max_hp ELSE $maxHp END, hp + $hp),
+                   mp = MIN(CASE WHEN $maxMp = 2147483647 THEN max_mp ELSE $maxMp END, mp + $mp)
              WHERE id=$id
                AND account_id=$a
                AND hp > 0
@@ -6773,10 +6786,26 @@ public sealed class SqliteGameStore : IGameStore
         long dbid,
         int hpAmount,
         int mpAmount,
+        int spAmount)
+        => RecoverResources(
+            accountId,
+            dbid,
+            hpAmount,
+            mpAmount,
+            spAmount,
+            int.MaxValue,
+            int.MaxValue,
+            int.MaxValue);
+
+    public Dictionary<string, object>? RecoverResources(
+        long accountId,
+        long dbid,
+        int hpAmount,
+        int mpAmount,
         int spAmount,
-        int? effectiveMaxHp = null,
-        int? effectiveMaxMp = null,
-        int? effectiveMaxSp = null)
+        int effectiveMaxHp,
+        int effectiveMaxMp,
+        int effectiveMaxSp)
     {
         hpAmount = Math.Max(0, hpAmount);
         mpAmount = Math.Max(0, mpAmount);
@@ -6786,9 +6815,9 @@ public sealed class SqliteGameStore : IGameStore
         using var cmd = db.CreateCommand();
         cmd.CommandText = """
             UPDATE characters
-               SET hp = MIN(COALESCE($maxHp, max_hp), hp + $hp),
-                   mp = MIN(COALESCE($maxMp, max_mp), mp + $mp),
-                   sp = MIN(COALESCE($maxSp, max_sp), sp + $sp)
+               SET hp = MIN(CASE WHEN $maxHp = 2147483647 THEN max_hp ELSE $maxHp END, hp + $hp),
+                   mp = MIN(CASE WHEN $maxMp = 2147483647 THEN max_mp ELSE $maxMp END, mp + $mp),
+                   sp = MIN(CASE WHEN $maxSp = 2147483647 THEN max_sp ELSE $maxSp END, sp + $sp)
              WHERE id=$id
                AND account_id=$a
                AND hp > 0
