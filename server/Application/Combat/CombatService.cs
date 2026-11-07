@@ -154,260 +154,304 @@ public sealed class CombatService
     {
         session.LastMonsterAiTick = now;
 
-        var packets = new List<object>();
-        Dictionary<string, object>? character = null;
+        if (!session.CharacterId.HasValue ||
+            session.CurrentMapId <= 0)
+            return [];
 
-        if (session.CharacterId.HasValue)
-        {
-            character = _store.GetCharacter(
-                accountId,
-                session.CharacterId.Value);
-        }
-
+        var currentCharacterId = session.CharacterId.Value;
+        var character = _store.GetCharacter(
+            accountId,
+            currentCharacterId);
         var playerAlive =
             character is not null &&
             Convert.ToInt32(character["HP"]) > 0;
 
-        foreach (var monster in session.Monsters.Values)
+        var runtime = SyncSessionMonsters(session);
+        var packets = new List<object>();
+
+        lock (runtime.SyncRoot)
         {
-            if (!monster.IsAlive)
+            foreach (var monster in runtime.Monsters.Values)
             {
-                SetAiState(monster, MonsterAiState.Dead);
-                continue;
-            }
-
-            if (!playerAlive)
-            {
-                if (monster.HasTarget)
+                if (!monster.IsAlive)
                 {
-                    monster.HasTarget = false;
-                    SetAiState(monster, MonsterAiState.Idle);
-                    monster.WanderCenterX = monster.X;
-                    monster.WanderCenterY = monster.Y;
-                    monster.NextWanderAt = now + NextWanderDelay(
-                        monster.EntityId,
-                        monster.WanderSequence);
+                    SetAiState(monster, MonsterAiState.Dead);
+                    continue;
+                }
 
+                // A targeted monster is driven only by the target player's
+                // connection. Other sockets share the same object but do not
+                // advance its AI a second time.
+                if (monster.HasTarget &&
+                    monster.TargetCharacterId > 0 &&
+                    monster.TargetCharacterId != currentCharacterId)
+                {
+                    if (_broadcasts.IsCharacterInMap(
+                            monster.TargetCharacterId,
+                            session.CurrentMapId))
+                    {
+                        continue;
+                    }
+
+                    DropMonsterTarget(monster, now);
                     packets.Add(new
                     {
                         Type = "MonsterTarget",
                         EntityID = monster.EntityId,
                         HasTarget = false
                     });
+                }
+
+                if (!playerAlive)
+                {
+                    if (monster.HasTarget &&
+                        monster.TargetCharacterId == currentCharacterId)
+                    {
+                        DropMonsterTarget(monster, now);
+                        packets.Add(new
+                        {
+                            Type = "MonsterTarget",
+                            EntityID = monster.EntityId,
+                            HasTarget = false
+                        });
+                        continue;
+                    }
+
+                    if (!monster.HasTarget &&
+                        (monster.LastAiAt == DateTimeOffset.MinValue ||
+                         now - monster.LastAiAt >=
+                         TimeSpan.FromMilliseconds(200)))
+                    {
+                        monster.LastAiAt = now;
+                        TryWander(monster, now, packets);
+                    }
 
                     continue;
                 }
 
-                TryWander(monster, now, packets);
-                continue;
-            }
+                var dx = playerX - monster.X;
+                var dy = playerY - monster.Y;
+                var distance = Math.Sqrt(dx * dx + dy * dy);
 
-            var dx = playerX - monster.X;
-            var dy = playerY - monster.Y;
-            var distance = Math.Sqrt(dx * dx + dy * dy);
-
-            if (!monster.HasTarget && distance <= AggroRadius)
-            {
-                monster.HasTarget = true;
-                SetAiState(monster, MonsterAiState.Chase);
-                packets.Add(new
+                // Every nearby player may compete to acquire an idle monster.
+                // The map lock makes this decision atomic; after acquisition
+                // only the winning TargetCharacterId drives the monster.
+                if (!monster.HasTarget &&
+                    distance <= AggroRadius)
                 {
-                    Type = "MonsterTarget",
-                    EntityID = monster.EntityId,
-                    HasTarget = true
-                });
-            }
-
-            if (monster.HasTarget && distance > LoseTargetRadius)
-            {
-                DropMonsterTarget(monster, now);
-                packets.Add(new
-                {
-                    Type = "MonsterTarget",
-                    EntityID = monster.EntityId,
-                    HasTarget = false
-                });
-                continue;
-            }
-
-            if (!monster.HasTarget)
-            {
-                TryWander(monster, now, packets);
-                continue;
-            }
-
-            // Melee monsters must keep chasing until they are truly
-            // inside damage range. Keeping Attack state out to 160 px made
-            // them stop at 130-160 px while damage was correctly forbidden.
-            var shouldAttack =
-                distance <= EngageDistance;
-
-            if (shouldAttack)
-            {
-                var enteredAttackRange =
-                    monster.AiState != MonsterAiState.Attack;
-
-                var wasMoving = monster.AiState is
-                    MonsterAiState.Chase or
-                    MonsterAiState.Wander;
-
-                var stableDir = StableDirectionFromDelta(
-                    dx,
-                    dy,
-                    monster.CurrentDir);
-
-                var directionChanged =
-                    !string.Equals(
-                        stableDir,
-                        monster.CurrentDir,
-                        StringComparison.Ordinal);
-
-                monster.CurrentDir = stableDir;
-                SetAiState(monster, MonsterAiState.Attack);
-
-                // Entering melee range is an immediate attack opportunity.
-                // Cooldown only governs repeated attacks while the monster stays
-                // in range; it must not make a newly-arrived monster stand idle.
-                var withinDamageRange =
-                    distance <= AttackRange;
-
-                var cooldownElapsed =
-                    monster.LastAttackAt > now ||
-                    now - monster.LastAttackAt >= MonsterAttackCooldown;
-
-                var attackReady =
-                    session.CharacterId.HasValue &&
-                    withinDamageRange &&
-                    (enteredAttackRange || cooldownElapsed);
-
-                if (attackReady &&
-                    character is not null &&
-                    Convert.ToInt32(character["HP"]) > 0)
-                {
-                    var assets = _store.GetCharacterAssets(
-                        accountId,
-                        session.CharacterId!.Value);
-
-                    var effective = ApplyActiveSkillBuffs(
-                        CharacterStatCalculator.Calculate(
-                            character,
-                            assets,
-                            _current),
-                        session,
-                        now);
-
-                    var defense = Math.Max(0, effective.Defense);
-                    var rawDamage = Math.Max(1, monster.Level * 2);
-                    var damage = Math.Max(
-                        1,
-                        rawDamage - defense / 5);
-
-                    var updated = _store.ApplyDamage(
-                        accountId,
-                        session.CharacterId.Value,
-                        damage);
-
-                    if (updated is not null)
+                    monster.HasTarget = true;
+                    monster.TargetCharacterId = currentCharacterId;
+                    monster.LastAiAt = now;
+                    SetAiState(monster, MonsterAiState.Chase);
+                    packets.Add(new
                     {
-                        monster.LastAttackAt = now;
-                        character = updated;
+                        Type = "MonsterTarget",
+                        EntityID = monster.EntityId,
+                        HasTarget = true,
+                        TargetID = currentCharacterId
+                    });
+                }
 
-                        var currentHp = Convert.ToInt32(updated["HP"]);
-                        var maxHp = Convert.ToInt32(updated["MaxHP"]);
+                if (!monster.HasTarget)
+                {
+                    if (monster.LastAiAt == DateTimeOffset.MinValue ||
+                        now - monster.LastAiAt >=
+                        TimeSpan.FromMilliseconds(200))
+                    {
+                        monster.LastAiAt = now;
+                        TryWander(monster, now, packets);
+                    }
 
+                    continue;
+                }
+
+                if (monster.TargetCharacterId != currentCharacterId)
+                    continue;
+
+                monster.LastAiAt = now;
+
+                if (distance > LoseTargetRadius)
+                {
+                    DropMonsterTarget(monster, now);
+                    packets.Add(new
+                    {
+                        Type = "MonsterTarget",
+                        EntityID = monster.EntityId,
+                        HasTarget = false
+                    });
+                    continue;
+                }
+
+                var shouldAttack =
+                    distance <= EngageDistance;
+
+                if (shouldAttack)
+                {
+                    var enteredAttackRange =
+                        monster.AiState != MonsterAiState.Attack;
+
+                    var wasMoving = monster.AiState is
+                        MonsterAiState.Chase or
+                        MonsterAiState.Wander;
+
+                    var stableDir = StableDirectionFromDelta(
+                        dx,
+                        dy,
+                        monster.CurrentDir);
+
+                    var directionChanged =
+                        !string.Equals(
+                            stableDir,
+                            monster.CurrentDir,
+                            StringComparison.Ordinal);
+
+                    monster.CurrentDir = stableDir;
+                    SetAiState(monster, MonsterAiState.Attack);
+
+                    var withinDamageRange =
+                        distance <= AttackRange;
+
+                    var cooldownElapsed =
+                        monster.LastAttackAt > now ||
+                        now - monster.LastAttackAt >=
+                        MonsterAttackCooldown;
+
+                    var attackReady =
+                        withinDamageRange &&
+                        (enteredAttackRange || cooldownElapsed);
+
+                    if (attackReady &&
+                        character is not null &&
+                        Convert.ToInt32(character["HP"]) > 0)
+                    {
+                        var assets = _store.GetCharacterAssets(
+                            accountId,
+                            currentCharacterId);
+
+                        var effective = ApplyActiveSkillBuffs(
+                            CharacterStatCalculator.Calculate(
+                                character,
+                                assets,
+                                _current),
+                            session,
+                            now);
+
+                        var defense = Math.Max(0, effective.Defense);
+                        var rawDamage = Math.Max(1, monster.Level * 2);
+                        var damage = Math.Max(
+                            1,
+                            rawDamage - defense / 5);
+
+                        var updated = _store.ApplyDamage(
+                            accountId,
+                            currentCharacterId,
+                            damage);
+
+                        if (updated is not null)
+                        {
+                            monster.LastAttackAt = now;
+                            character = updated;
+
+                            var currentHp =
+                                Convert.ToInt32(updated["HP"]);
+                            var maxHp =
+                                Convert.ToInt32(updated["MaxHP"]);
+
+                            packets.Add(new
+                            {
+                                Type = "SyncState",
+                                EntityID = monster.EntityId,
+                                State = "attack",
+                                Dir = monster.CurrentDir
+                            });
+
+                            packets.Add(new
+                            {
+                                Type = "EntityDamage",
+                                TargetID = currentCharacterId,
+                                TargetType = 0,
+                                Damage = damage,
+                                CurrentHP = currentHp,
+                                MaxHP = maxHp,
+                                IsCrit = false,
+                                SkillID = 0,
+                                SkillLevel = 1,
+                                AttackerID = monster.EntityId
+                            });
+
+                            packets.Add(new
+                            {
+                                Type = "PlayerStatusSync",
+                                HP = currentHp,
+                                MP = updated["MP"],
+                                SP = updated["SP"],
+                                MaxHP = maxHp,
+                                MaxMP = updated["MaxMP"],
+                                MaxSP = updated["MaxSP"]
+                            });
+
+                            if (currentHp <= 0)
+                            {
+                                packets.Add(new
+                                {
+                                    Type = "EntityDeath",
+                                    EntityID = currentCharacterId,
+                                    EntityType = 0,
+                                    KillerID = monster.EntityId
+                                });
+
+                                DropMonsterTarget(
+                                    monster,
+                                    now,
+                                    scheduleWander: false);
+                            }
+                        }
+                    }
+                    else if (wasMoving || directionChanged)
+                    {
                         packets.Add(new
                         {
                             Type = "SyncState",
                             EntityID = monster.EntityId,
-                            State = "attack",
+                            State = "idle",
                             Dir = monster.CurrentDir
                         });
-
-                        packets.Add(new
-                        {
-                            Type = "EntityDamage",
-                            TargetID = session.CharacterId.Value,
-                            TargetType = 0,
-                            Damage = damage,
-                            CurrentHP = currentHp,
-                            MaxHP = maxHp,
-                            IsCrit = false,
-                            SkillID = 0,
-                            SkillLevel = 1,
-                            AttackerID = monster.EntityId
-                        });
-
-                        packets.Add(new
-                        {
-                            Type = "PlayerStatusSync",
-                            HP = currentHp,
-                            MP = updated["MP"],
-                            SP = updated["SP"],
-                            MaxHP = maxHp,
-                            MaxMP = updated["MaxMP"],
-                            MaxSP = updated["MaxSP"]
-                        });
-
-                        if (currentHp <= 0)
-                        {
-                            packets.Add(new
-                            {
-                                Type = "EntityDeath",
-                                EntityID = session.CharacterId.Value,
-                                EntityType = 0,
-                                KillerID = monster.EntityId
-                            });
-
-                            DropMonsterTarget(
-                                monster,
-                                now,
-                                scheduleWander: false);
-                        }
                     }
+
+                    continue;
                 }
-                else if (wasMoving || directionChanged)
+
+                SetAiState(monster, MonsterAiState.Chase);
+
+                var step = Math.Min(
+                    MoveStep,
+                    Math.Max(0.0, distance - EngageDistance));
+
+                if (step <= 0.0)
                 {
-                    packets.Add(new
-                    {
-                        Type = "SyncState",
-                        EntityID = monster.EntityId,
-                        State = "idle",
-                        Dir = monster.CurrentDir
-                    });
+                    SetAiState(monster, MonsterAiState.Attack);
+                    continue;
                 }
 
-                continue;
+                var nx = monster.X + dx / distance * step;
+                var ny = monster.Y + dy / distance * step;
+                var moveDx = nx - monster.X;
+                var moveDy = ny - monster.Y;
+
+                monster.X = nx;
+                monster.Y = ny;
+
+                packets.Add(BuildMovePacket(
+                    monster,
+                    nx,
+                    ny,
+                    MoveTweenSeconds,
+                    moveDx,
+                    moveDy));
             }
-
-            SetAiState(monster, MonsterAiState.Chase);
-
-            var step = Math.Min(
-                MoveStep,
-                Math.Max(0.0, distance - EngageDistance));
-
-            if (step <= 0.0)
-            {
-                SetAiState(monster, MonsterAiState.Attack);
-                continue;
-            }
-
-            var nx = monster.X + dx / distance * step;
-            var ny = monster.Y + dy / distance * step;
-            var moveDx = nx - monster.X;
-            var moveDy = ny - monster.Y;
-
-            monster.X = nx;
-            monster.Y = ny;
-
-            packets.Add(BuildMovePacket(
-                monster,
-                nx,
-                ny,
-                MoveTweenSeconds,
-                moveDx,
-                moveDy));
         }
 
+        BroadcastWorldPackets(session, packets);
         return packets;
     }
 
@@ -477,6 +521,7 @@ public sealed class CombatService
         bool scheduleWander = true)
     {
         monster.HasTarget = false;
+        monster.TargetCharacterId = 0;
         SetAiState(monster, MonsterAiState.Idle);
         monster.WanderCenterX = monster.X;
         monster.WanderCenterY = monster.Y;
