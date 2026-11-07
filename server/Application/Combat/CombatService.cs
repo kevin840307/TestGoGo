@@ -45,6 +45,7 @@ public sealed class CombatService
     private readonly LegacyBattleRulesCatalog _battle;
     private readonly EnemyDropCatalog _drops;
     private readonly WorldRuntimeService _runtime;
+    private readonly MonsterNavigationService _navigation;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly PartyService _party;
     private readonly PetEvolutionService _petEvolution;
@@ -77,6 +78,7 @@ public sealed class CombatService
     public CombatService(
         IGameStore store,
         WorldDataService world,
+        BlockingMapService blocking,
         CurrentClientDataCatalog current,
         LegacyPlayerGrowthCatalog growth,
         LegacyBattleRulesCatalog battle,
@@ -90,6 +92,7 @@ public sealed class CombatService
     {
         _store = store;
         _world = world;
+        _navigation = new MonsterNavigationService(blocking);
         _current = current;
         _growth = growth;
         _battle = battle;
@@ -575,7 +578,13 @@ public sealed class CombatService
                     continue;
                 }
 
-                if (distance <= EngageDistance + EngageDistanceTolerance)
+                // Being geometrically close is not sufficient if a wall
+                // separates the target from the monster.
+                var hasClearAttackPath = _navigation.IsDirectClear(
+                    monster.MapId, monster.X, monster.Y, targetX, targetY);
+
+                if (distance <= EngageDistance + EngageDistanceTolerance &&
+                    hasClearAttackPath)
                 {
                     var enteredAttackRange =
                         monster.AiState != MonsterAiState.Attack;
@@ -863,11 +872,9 @@ public sealed class CombatService
                     monster,
                     MonsterAiState.Chase);
 
-                var step = Math.Min(
-                    MoveStep,
-                    Math.Max(
-                        0.0,
-                        distance - EngageDistance));
+                var step = hasClearAttackPath
+                    ? Math.Min(MoveStep, Math.Max(0.0, distance - EngageDistance))
+                    : MoveStep;
 
                 if (step <= 0.0)
                 {
@@ -877,10 +884,31 @@ public sealed class CombatService
                     continue;
                 }
 
-                var nx =
-                    monster.X + dx / distance * step;
-                var ny =
-                    monster.Y + dy / distance * step;
+                if (!_navigation.TryNextStep(
+                        monster.MapId,
+                        monster.X,
+                        monster.Y,
+                        targetX,
+                        targetY,
+                        step,
+                        out var nx,
+                        out var ny))
+                {
+                    // A blocked route must not advance authoritative position.
+                    if (monster.AiState != MonsterAiState.Idle)
+                    {
+                        SetAiState(monster, MonsterAiState.Idle);
+                        packets.Add(new
+                        {
+                            Type = "SyncState",
+                            EntityID = monster.EntityId,
+                            State = "idle",
+                            Dir = monster.CurrentDir
+                        });
+                    }
+                    continue;
+                }
+
                 var moveDx = nx - monster.X;
                 var moveDy = ny - monster.Y;
 
@@ -3909,6 +3937,38 @@ public sealed class CombatService
                 monster.NextWanderAt = now + NextWanderDelay(
                     monster.EntityId,
                     monster.WanderSequence);
+                return;
+            }
+        }
+
+        // Choose another deterministic heading when the preferred wander
+        // segment crosses blocked terrain. Never teleport through a wall.
+        if (!_navigation.IsDirectClear(
+                monster.MapId, monster.X, monster.Y, desiredX, desiredY))
+        {
+            var found = false;
+            for (var attempt = 1; attempt <= 8; attempt++)
+            {
+                var alternateAngle = angle + attempt * Math.PI / 4.0;
+                var candidateX = monster.X + Math.Cos(alternateAngle) * wanderStep;
+                var candidateY = monster.Y + Math.Sin(alternateAngle) * wanderStep;
+                var centerDx = candidateX - monster.WanderCenterX;
+                var centerDy = candidateY - monster.WanderCenterY;
+                if (centerDx * centerDx + centerDy * centerDy >
+                    WanderRadius * WanderRadius)
+                    continue;
+                if (!_navigation.IsDirectClear(
+                        monster.MapId, monster.X, monster.Y, candidateX, candidateY))
+                    continue;
+                desiredX = candidateX;
+                desiredY = candidateY;
+                found = true;
+                break;
+            }
+            if (!found)
+            {
+                monster.NextWanderAt = now + NextWanderDelay(
+                    monster.EntityId, monster.WanderSequence);
                 return;
             }
         }
