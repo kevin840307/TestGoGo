@@ -6536,7 +6536,10 @@ public sealed class SqliteGameStore : IGameStore
         long itemUid,
         int recoverHp,
         int recoverMp,
-        int recoverSp)
+        int recoverSp,
+        int? effectiveMaxHp = null,
+        int? effectiveMaxMp = null,
+        int? effectiveMaxSp = null)
     {
         using var db = Open();
         using var tx = db.BeginTransaction();
@@ -6564,15 +6567,18 @@ public sealed class SqliteGameStore : IGameStore
             update.Transaction = tx;
             update.CommandText = """
                 UPDATE characters
-                   SET hp = MIN(max_hp, hp + $hp),
-                       mp = MIN(max_mp, mp + $mp),
-                       sp = MIN(max_sp, sp + $sp)
+                   SET hp = MIN(COALESCE($maxHp, max_hp), hp + $hp),
+                       mp = MIN(COALESCE($maxMp, max_mp), mp + $mp),
+                       sp = MIN(COALESCE($maxSp, max_sp), sp + $sp)
                  WHERE id=$id AND account_id=$a
                    AND state <> 'death'
                 """;
             Arg(update, "$hp", Math.Max(0, recoverHp));
             Arg(update, "$mp", Math.Max(0, recoverMp));
             Arg(update, "$sp", Math.Max(0, recoverSp));
+            Arg(update, "$maxHp", effectiveMaxHp);
+            Arg(update, "$maxMp", effectiveMaxMp);
+            Arg(update, "$maxSp", effectiveMaxSp);
             Arg(update, "$id", dbid);
             Arg(update, "$a", accountId);
 
@@ -6732,7 +6738,9 @@ public sealed class SqliteGameStore : IGameStore
         long accountId,
         long dbid,
         int hpAmount,
-        int mpAmount)
+        int mpAmount,
+        int? effectiveMaxHp = null,
+        int? effectiveMaxMp = null)
     {
         hpAmount = Math.Max(0, hpAmount);
         mpAmount = Math.Max(0, mpAmount);
@@ -6741,14 +6749,16 @@ public sealed class SqliteGameStore : IGameStore
         using var cmd = db.CreateCommand();
         cmd.CommandText = """
             UPDATE characters
-               SET hp = MIN(max_hp, hp + $hp),
-                   mp = MIN(max_mp, mp + $mp)
+               SET hp = MIN(COALESCE($maxHp, max_hp), hp + $hp),
+                   mp = MIN(COALESCE($maxMp, max_mp), mp + $mp)
              WHERE id=$id
                AND account_id=$a
                AND hp > 0
             """;
         Arg(cmd, "$hp", hpAmount);
         Arg(cmd, "$mp", mpAmount);
+        Arg(cmd, "$maxHp", effectiveMaxHp);
+        Arg(cmd, "$maxMp", effectiveMaxMp);
         Arg(cmd, "$id", dbid);
         Arg(cmd, "$a", accountId);
 
@@ -6763,7 +6773,10 @@ public sealed class SqliteGameStore : IGameStore
         long dbid,
         int hpAmount,
         int mpAmount,
-        int spAmount)
+        int spAmount,
+        int? effectiveMaxHp = null,
+        int? effectiveMaxMp = null,
+        int? effectiveMaxSp = null)
     {
         hpAmount = Math.Max(0, hpAmount);
         mpAmount = Math.Max(0, mpAmount);
@@ -6773,9 +6786,9 @@ public sealed class SqliteGameStore : IGameStore
         using var cmd = db.CreateCommand();
         cmd.CommandText = """
             UPDATE characters
-               SET hp = MIN(max_hp, hp + $hp),
-                   mp = MIN(max_mp, mp + $mp),
-                   sp = MIN(max_sp, sp + $sp)
+               SET hp = MIN(COALESCE($maxHp, max_hp), hp + $hp),
+                   mp = MIN(COALESCE($maxMp, max_mp), mp + $mp),
+                   sp = MIN(COALESCE($maxSp, max_sp), sp + $sp)
              WHERE id=$id
                AND account_id=$a
                AND hp > 0
@@ -6783,6 +6796,9 @@ public sealed class SqliteGameStore : IGameStore
         Arg(cmd, "$hp", hpAmount);
         Arg(cmd, "$mp", mpAmount);
         Arg(cmd, "$sp", spAmount);
+        Arg(cmd, "$maxHp", effectiveMaxHp);
+        Arg(cmd, "$maxMp", effectiveMaxMp);
+        Arg(cmd, "$maxSp", effectiveMaxSp);
         Arg(cmd, "$id", dbid);
         Arg(cmd, "$a", accountId);
 
