@@ -412,6 +412,28 @@ public interface IRankStore
         string message);
 }
 
+public interface ITitleStore
+{
+    IReadOnlyList<int> GetUnlockedTitles(
+        long accountId,
+        long dbid);
+
+    bool HasTitle(
+        long accountId,
+        long dbid,
+        int titleId);
+
+    bool UnlockTitle(
+        long accountId,
+        long dbid,
+        int titleId);
+
+    bool SetCurrentTitle(
+        long accountId,
+        long dbid,
+        int titleId);
+}
+
 public interface IShortcutStore
 {
     List<Dictionary<string, object>> GetShortcuts(
