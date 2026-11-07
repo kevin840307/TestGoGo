@@ -148,6 +148,13 @@ func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: 
 
 	if not is_instance_valid(target) or not target.is_inside_tree(): return
 
+	# Skill 99001 can kill dozens of monsters in the same packet batch.
+	# Spawn its number immediately while the target node still exists; queued
+	# numbers would otherwise be discarded after EntityDeath removes the node.
+	if skill_id == 99001:
+		_spawn_bouncing_number(target, damage, is_crit, 0.0, false)
+		return
+
 	if split_count > 1 and damage > 1:
 		var remain_dmg = damage
 		var parts = []
