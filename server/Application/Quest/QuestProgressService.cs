@@ -185,28 +185,159 @@ public sealed class QuestProgressService
                 }
 
                 stepIndex = nextStep.StepIndex;
+                var nextIsFinal =
+                    definition.Steps.All(x =>
+                        x.StepIndex <= nextStep.StepIndex);
+                var nextStatus =
+                    nextIsFinal &&
+                    nextStep.TargetType == 0
+                        ? 2
+                        : 1;
 
                 if (!_quests.UpsertQuest(
                         accountId,
                         dbid,
                         questId,
-                        1,
+                        nextStatus,
                         stepIndex,
                         0))
                     break;
 
                 packets.Add(BuildUpdate(
                     questId,
-                    1,
+                    nextStatus,
                     stepIndex,
                     0));
 
-                if (nextStep.TargetType != 2)
+                if (nextStatus == 2 ||
+                    nextStep.TargetType != 2)
                     break;
             }
         }
 
         return packets;
+    }
+
+    public IReadOnlyList<object> OnLegacyFlagChanged(
+        long accountId,
+        long dbid,
+        string flagName,
+        int value)
+    {
+        if (dbid <= 0 ||
+            string.IsNullOrWhiteSpace(flagName))
+            return [];
+
+        if (flagName.Equals(
+                "K27001_Task",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return value switch
+            {
+                1 => UpsertTracker(
+                    accountId, dbid, 1001, 1, 1, 0),
+                2 => UpsertTracker(
+                    accountId, dbid, 1001, 1, 2, 0),
+                3 => UpsertTracker(
+                    accountId, dbid, 1001, 2, 3, 0),
+                4 => UpsertTracker(
+                    accountId, dbid, 1001, 2, 3, 0),
+                _ => []
+            };
+        }
+
+        if (flagName.Equals(
+                "K27001_END",
+                StringComparison.OrdinalIgnoreCase) &&
+            value == 1)
+        {
+            return UpsertTracker(
+                accountId,
+                dbid,
+                1001,
+                3,
+                3,
+                0);
+        }
+
+        if (flagName.Equals(
+                "K27002A_Task",
+                StringComparison.OrdinalIgnoreCase) &&
+            value == 1)
+        {
+            return UpsertTracker(
+                accountId,
+                dbid,
+                1002,
+                1,
+                1,
+                0);
+        }
+
+        return [];
+    }
+
+    public IReadOnlyList<object> OnLegacyInteractionCompleted(
+        long accountId,
+        long dbid,
+        string scriptName,
+        string functionName,
+        int? choiceIndex,
+        bool assetsChanged)
+    {
+        if (dbid <= 0 ||
+            !assetsChanged ||
+            choiceIndex != 0 ||
+            !scriptName.Equals(
+                "K27002_A.txt",
+                StringComparison.OrdinalIgnoreCase) ||
+            !functionName.Equals(
+                "response1",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return [];
+        }
+
+        var packets = new List<object>();
+        packets.AddRange(
+            UpsertTracker(
+                accountId,
+                dbid,
+                1002,
+                1,
+                1,
+                0));
+        packets.AddRange(
+            RefreshCollectedItems(
+                accountId,
+                dbid,
+                4075));
+
+        return packets;
+    }
+
+    private IReadOnlyList<object> UpsertTracker(
+        long accountId,
+        long dbid,
+        int questId,
+        int status,
+        int currentStep,
+        int stepProgress)
+    {
+        if (!_quests.UpsertQuest(
+                accountId,
+                dbid,
+                questId,
+                status,
+                currentStep,
+                stepProgress))
+            return [];
+
+        return [BuildUpdate(
+            questId,
+            status,
+            currentStep,
+            stepProgress)];
     }
 
     private IReadOnlyList<object> CompleteCurrentStep(
@@ -241,18 +372,27 @@ public sealed class QuestProgressService
                 completedProgress)];
         }
 
+        var nextIsFinal =
+            definition.Steps.All(x =>
+                x.StepIndex <= nextStep.StepIndex);
+        var nextStatus =
+            nextIsFinal &&
+            nextStep.TargetType == 0
+                ? 2
+                : 1;
+
         if (!_quests.UpsertQuest(
                 accountId,
                 dbid,
                 questId,
-                1,
+                nextStatus,
                 nextStep.StepIndex,
                 0))
             return [];
 
         return [BuildUpdate(
             questId,
-            1,
+            nextStatus,
             nextStep.StepIndex,
             0)];
     }
