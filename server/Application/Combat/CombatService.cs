@@ -1729,6 +1729,21 @@ public sealed class CombatService
                     .Take(32)
                     .ToArray();
 
+                packets[0] = new
+                {
+                    Type = "SkillCast",
+                    CasterID = session.CharacterId.Value,
+                    CasterType = 0,
+                    SkillID = skillId,
+                    SkillLevel = skillLevel,
+                    TargetID = checked((int)session.CharacterId.Value),
+                    TargetX = Convert.ToInt32(session.LastX),
+                    TargetY = Convert.ToInt32(session.LastY),
+                    AoeTargets = targets
+                        .Select(x => new { ID = x.EntityId })
+                        .ToArray()
+                };
+
                 var screenDamageBase =
                     100_000_000L +
                     (long)effective.Attack * 50_000L +
