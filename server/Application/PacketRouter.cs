@@ -1,6 +1,7 @@
 using System.Text.Json;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
+using SGO.Server.Application.Bank;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Shops;
@@ -21,6 +22,7 @@ public sealed class PacketRouter
     private readonly QuestRuntime _quests;
     private readonly CombatService _combat;
     private readonly ShopService _shopService;
+    private readonly BankService _bankService;
     private readonly GmCommandService _gm;
     private readonly HorseBatteryCatalog _horseBatteries;
     private readonly RecoveryItemCatalog _recoveryItems;
@@ -35,6 +37,7 @@ public sealed class PacketRouter
         QuestRuntime quests,
         CombatService combat,
         ShopService shopService,
+        BankService bankService,
         GmCommandService gm,
         HorseBatteryCatalog horseBatteries,
         RecoveryItemCatalog recoveryItems,
@@ -48,6 +51,7 @@ public sealed class PacketRouter
         _quests = quests;
         _combat = combat;
         _shopService = shopService;
+        _bankService = bankService;
         _gm = gm;
         _horseBatteries = horseBatteries;
         _recoveryItems = recoveryItems;
@@ -254,59 +258,14 @@ public sealed class PacketRouter
                 if (!state.CharacterId.HasValue)
                     return [];
 
-                var tabType = req.Int("TabType");
-                var result = _store.BankTransfer(
+                return _bankService.Transfer(
                     accountId,
                     state.CharacterId.Value,
                     req.Int("UID"),
-                    tabType,
+                    req.Int("TabType"),
                     req.Int("Amount", 1),
                     req.TryGetProperty("ToBank", out var toBank) &&
                     toBank.ValueKind == JsonValueKind.True);
-
-                var assets = _store.GetCharacterAssets(
-                    accountId,
-                    state.CharacterId.Value);
-
-                var packets = new List<object>
-                {
-                    new
-                    {
-                        Type = "SystemMessageFlash",
-                        Message = result.Message
-                    }
-                };
-
-                if (tabType == 0)
-                {
-                    packets.Add(new
-                    {
-                        Type = "InventorySync",
-                        Items = assets.Inventory,
-                        MaxSize = assets.InventoryMaxSize
-                    });
-                }
-                else if (tabType == 1)
-                {
-                    packets.Add(new
-                    {
-                        Type = "EquipSync",
-                        Equips = assets.Equips,
-                        MaxSize = assets.EquipMaxSize
-                    });
-                }
-                else if (tabType == 3)
-                {
-                    packets.Add(new
-                    {
-                        Type = "HorseSync",
-                        Horses = assets.Horses,
-                        HorseEquips = assets.HorseEquips,
-                        MaxHorseEquipSize = assets.HorseEquipMaxSize
-                    });
-                }
-
-                return packets;
             }
 
             case "UseItemRequest":
