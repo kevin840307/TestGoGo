@@ -1212,35 +1212,165 @@ public sealed class CombatService
             }
         }
 
-        if (isHeal)
+        if (isHeal && healTargetCharacter is not null)
         {
-            var healAmount = Math.Max(
-                1,
-                levelData.BaseDamage +
-                effective.MagicAttack *
-                Math.Max(1, levelData.DamageMultiplier) / 100);
+            var targetAccountId =
+                healTargetPresence?.AccountId ?? accountId;
+            var targetDbId =
+                healTargetPresence?.CharacterId ??
+                session.CharacterId.Value;
 
-            var healed = _store.ApplyHeal(
-                accountId,
-                session.CharacterId.Value,
-                healAmount);
+            var healed = ApplyRecoverySkill(
+                targetAccountId,
+                targetDbId,
+                skillId,
+                levelData,
+                effective,
+                healTargetCharacter,
+                out var hpRecovered);
 
             if (healed is not null)
             {
-                packets.Add(new
+                if (hpRecovered > 0)
                 {
-                    Type = "EntityHeal",
-                    TargetID = session.CharacterId.Value,
-                    TargetType = 0,
-                    Amount = healAmount,
-                    CurrentHP = healed["HP"],
-                    MaxHP = healed["MaxHP"],
-                    SkillID = skillId,
-                    SkillLevel = skillLevel,
-                    HealerID = session.CharacterId.Value
-                });
-                updated = healed;
+                    packets.Add(new
+                    {
+                        Type = "EntityHeal",
+                        TargetID = targetDbId,
+                        TargetType = 0,
+                        Amount = hpRecovered,
+                        CurrentHP = healed["HP"],
+                        MaxHP = healed["MaxHP"],
+                        SkillID = skillId,
+                        SkillLevel = skillLevel,
+                        HealerID = session.CharacterId.Value
+                    });
+                }
+
+                if (targetDbId == session.CharacterId.Value)
+                {
+                    updated = healed;
+                }
+                else
+                {
+                    _broadcasts.PublishToCharacter(
+                        targetDbId,
+                        CharacterStatCalculator.ToPlayerStatusPacket(
+                            healed,
+                            _store.GetCharacterAssets(
+                                targetAccountId,
+                                targetDbId),
+                            _current));
+                }
+
+                _party.PublishStat(
+                    targetAccountId,
+                    targetDbId);
             }
+        }
+
+        if (isGroupHeal)
+        {
+            var partyMembers = _party.GetMembers(
+                session.CharacterId.Value);
+
+            if (partyMembers.Count == 0)
+            {
+                partyMembers =
+                [
+                    (accountId, session.CharacterId.Value)
+                ];
+            }
+
+            var affected = new List<object>();
+
+            foreach (var member in partyMembers)
+            {
+                if (member.CharacterId != session.CharacterId.Value)
+                {
+                    var presence =
+                        _broadcasts.FindCharacter(member.CharacterId);
+
+                    if (presence is null ||
+                        presence.MapId != session.CurrentMapId)
+                        continue;
+                }
+
+                var before = _store.GetCharacter(
+                    member.AccountId,
+                    member.CharacterId);
+
+                if (before is null ||
+                    Convert.ToInt32(before["HP"]) <= 0)
+                    continue;
+
+                var healed = ApplyRecoverySkill(
+                    member.AccountId,
+                    member.CharacterId,
+                    skillId,
+                    levelData,
+                    effective,
+                    before,
+                    out var hpRecovered);
+
+                if (healed is null)
+                    continue;
+
+                affected.Add(new
+                {
+                    ID = member.CharacterId
+                });
+
+                if (hpRecovered > 0)
+                {
+                    packets.Add(new
+                    {
+                        Type = "EntityHeal",
+                        TargetID = member.CharacterId,
+                        TargetType = 0,
+                        Amount = hpRecovered,
+                        CurrentHP = healed["HP"],
+                        MaxHP = healed["MaxHP"],
+                        SkillID = skillId,
+                        SkillLevel = skillLevel,
+                        HealerID = session.CharacterId.Value
+                    });
+                }
+
+                if (member.CharacterId ==
+                    session.CharacterId.Value)
+                {
+                    updated = healed;
+                }
+                else
+                {
+                    _broadcasts.PublishToCharacter(
+                        member.CharacterId,
+                        CharacterStatCalculator.ToPlayerStatusPacket(
+                            healed,
+                            _store.GetCharacterAssets(
+                                member.AccountId,
+                                member.CharacterId),
+                            _current));
+                }
+
+                _party.PublishStat(
+                    member.AccountId,
+                    member.CharacterId);
+            }
+
+            packets[0] = new
+            {
+                Type = "SkillCast",
+                CasterID = session.CharacterId.Value,
+                CasterType = 0,
+                SkillID = skillId,
+                SkillLevel = skillLevel,
+                TargetID = session.CharacterId.Value,
+                TargetX = Convert.ToInt32(centerX),
+                TargetY = Convert.ToInt32(centerY),
+                AoeTargets = affected.ToArray()
+            };
         }
 
         if (isBuff && HasGenericStatBonus(levelData))
@@ -1809,6 +1939,73 @@ public sealed class CombatService
             session.ActiveSkillBuffs.Remove(skillId);
 
         return expired.Length > 0;
+    }
+
+    private Dictionary<string, object>? ApplyRecoverySkill(
+        long accountId,
+        long dbid,
+        int skillId,
+        CurrentSkillLevelDefinition levelData,
+        EffectiveCharacterStats casterStats,
+        Dictionary<string, object> before,
+        out int hpRecovered)
+    {
+        var amount = Math.Max(
+            1,
+            levelData.BaseDamage +
+            casterStats.MagicAttack *
+            Math.Max(1, levelData.DamageMultiplier) / 100);
+
+        var hpAmount = 0;
+        var mpAmount = 0;
+        var spAmount = 0;
+
+        switch (skillId)
+        {
+            case 28102: // 心靈轉換 -> 意志(SP)
+                spAmount = amount;
+                break;
+
+            case 28103: // 靈魂轉換 -> 魔力(MP)
+                mpAmount = amount;
+                break;
+
+            case 28107: // 治療風暴 -> HP + MP
+                hpAmount = amount;
+                mpAmount = amount;
+                break;
+
+            case 28108: // 祝福之光 -> 全 HP
+            case 28110: // 神聖大十字 -> 全 HP
+                hpAmount = int.MaxValue;
+                break;
+
+            case 28111: // 心靈大十字 -> 全意志(SP)
+                spAmount = int.MaxValue;
+                break;
+
+            default:
+                // 治療術(28101)、天使之光(28104)與其他明確
+                // healing 類技能依目前技能倍率回復 HP。
+                hpAmount = amount;
+                break;
+        }
+
+        var healed = _store.RecoverResources(
+            accountId,
+            dbid,
+            hpAmount,
+            mpAmount,
+            spAmount);
+
+        hpRecovered = healed is null
+            ? 0
+            : Math.Max(
+                0,
+                Convert.ToInt32(healed["HP"]) -
+                Convert.ToInt32(before["HP"]));
+
+        return healed;
     }
 
     private static bool HasGenericStatBonus(
