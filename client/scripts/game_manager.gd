@@ -488,6 +488,11 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		current_hud.visible = true
 	await get_tree().process_frame
 
+	# Optional heavy reference UI is no longer part of time-to-world. Warm it in
+	# small batches only after the player can already see and control the world.
+	if is_instance_valid(current_hud) and current_hud.has_method("start_post_reveal_background_prewarm"):
+		current_hud.start_post_reveal_background_prewarm()
+
 	set_frame_gap_stage("world_ready")
 	_trace_map_change("initial_enter_completed", 0, target_map_id, {
 		"total_ms": float(Time.get_ticks_usec() - initial_started_usec) / 1000.0,
