@@ -84,6 +84,12 @@ Check(realCurrentCatalog.ResolveSkillBook(3797) is
 Check(realCurrentCatalog.ResolveSkillBook(3239) is null,
     "crafting blueprint is not misclassified as a skill book");
 
+Check(realCurrentCatalog.ResolveExperienceCard(2460) is
+      { MultiplierPercent: 200, DurationSeconds: 3600 } &&
+      realCurrentCatalog.ResolveExperienceCard(2461) is
+      { MultiplierPercent: 200, DurationSeconds: 10800 },
+    "double-EXP cards resolve 2x multiplier and original 1h/3h durations");
+
 CurrentItemDefinition CurrentItem(
     int id,
     string name,
@@ -166,6 +172,13 @@ var currentCatalog = new CurrentClientDataCatalog(
             "大聲公",
             "general",
             price: 1),
+
+        CurrentItem(
+            2460,
+            "雙倍經驗值卡(1小時)",
+            "general",
+            price: 1,
+            scriptName: "雙倍經驗值卡(1小時)"),
 
         CurrentItem(
             3701,
@@ -6984,6 +6997,88 @@ try
         runtimeJson.Contains(
             $"\"EntityID\":{4_000_000L + runtimePetUid}"),
         "server runtime drains one unit per second and immediately dismounts/recalls depleted companions");
+
+    var expCardUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        2460,
+        2);
+
+    using (var useExpCard = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "UseItemRequest",
+            ItemUID = expCardUid
+        })))
+    {
+        var responses = router.Handle(
+            useExpCard.RootElement,
+            session);
+
+        var remainingCards =
+            store.GetCharacterAssets(
+                    account.Value,
+                    id)
+                .Inventory
+                .Where(x =>
+                    Convert.ToInt64(x["ItemUID"]) ==
+                        expCardUid)
+                .Sum(x =>
+                    Convert.ToInt32(x["Count"]));
+
+        Check(
+            remainingCards == 1 &&
+            store.GetTimedEffectValue(
+                account.Value,
+                id,
+                "exp_multiplier_percent",
+                DateTimeOffset.UtcNow
+                    .ToUnixTimeMilliseconds()) == 200 &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "雙倍經驗值已啟動 1 小時")),
+            "UseItemRequest consumes one 1h EXP card and persists a 200% timed effect");
+    }
+
+    using (var reuseExpCard = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "UseItemRequest",
+            ItemUID = expCardUid
+        })))
+    {
+        var responses = router.Handle(
+            reuseExpCard.RootElement,
+            session);
+
+        var remainingCards =
+            store.GetCharacterAssets(
+                    account.Value,
+                    id)
+                .Inventory
+                .Where(x =>
+                    Convert.ToInt64(x["ItemUID"]) ==
+                        expCardUid)
+                .Sum(x =>
+                    Convert.ToInt32(x["Count"]));
+
+        Check(
+            remainingCards == 1 &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "相同效果仍在持續中")),
+            "active double-EXP effect rejects reuse without consuming another card");
+    }
+
+    Check(
+        store.GetTimedEffectValue(
+            account.Value,
+            id,
+            "exp_multiplier_percent",
+            DateTimeOffset.UtcNow
+                .AddHours(2)
+                .ToUnixTimeMilliseconds()) == 0,
+        "expired double-EXP timed effect is removed from persistence");
 
     using (var logout = Json(
         """{"Type":"LogoutRequest","IsBackToLogin":true}"""))
