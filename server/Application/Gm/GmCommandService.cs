@@ -10,17 +10,20 @@ public sealed class GmCommandService
     private readonly IGameStore _store;
     private readonly SkillCatalog _skills;
     private readonly HorseCardCatalog _horseCards;
+    private readonly CurrentClientDataCatalog _current;
     private readonly IConfiguration _config;
 
     public GmCommandService(
         IGameStore store,
         SkillCatalog skills,
         HorseCardCatalog horseCards,
+        CurrentClientDataCatalog current,
         IConfiguration config)
     {
         _store = store;
         _skills = skills;
         _horseCards = horseCards;
+        _current = current;
         _config = config;
     }
 
@@ -57,6 +60,7 @@ public sealed class GmCommandService
                 "map" or "warp" or "teleport"
                     => Teleport(parts, accountId, dbid, session),
                 "heal" => Heal(accountId, dbid),
+                "level" => Level(parts, accountId, dbid),
                 "money" => Money(parts, accountId, dbid),
                 "item" => Item(parts, accountId, dbid),
                 "equip" => Equipment(parts, accountId, dbid),
@@ -155,6 +159,40 @@ public sealed class GmCommandService
         ];
     }
 
+    private IReadOnlyList<object> Level(
+        string[] parts,
+        long accountId,
+        long dbid)
+    {
+        if (parts.Length < 3 ||
+            !int.TryParse(parts[2], out var level))
+            return [Chat("用法：/gm level <1-255>")];
+
+        var ch = _store.SetLevel(
+            accountId,
+            dbid,
+            level);
+
+        if (ch is null)
+            return [Chat("修改等級失敗")];
+
+        return
+        [
+            new
+            {
+                Type = "PlayerStatusSync",
+                Level = ch["Level"],
+                HP = ch["HP"],
+                MP = ch["MP"],
+                SP = ch["SP"],
+                MaxHP = ch["MaxHP"],
+                MaxMP = ch["MaxMP"],
+                MaxSP = ch["MaxSP"]
+            },
+            Chat($"角色等級已設為 {ch["Level"]}")
+        ];
+    }
+
     private IReadOnlyList<object> Money(
         string[] parts,
         long accountId,
@@ -182,6 +220,15 @@ public sealed class GmCommandService
         if (parts.Length < 3 ||
             !int.TryParse(parts[2], out var itemIndex))
             return [Chat("用法：/gm item <ItemIndex> [Count]")];
+
+        var currentItem = _current.FindItem(itemIndex);
+        if (currentItem is null)
+            return [Chat($"新版 GameData 找不到 ItemIndex={itemIndex}")];
+
+        if (currentItem.Category is not (
+                "general" or "recovery" or "booster" or "horsebattery"))
+            return [Chat(
+                $"ItemIndex={itemIndex} 類型為 {currentItem.Category}，請使用對應 GM 指令")];
 
         var count = parts.Length > 3 &&
                     int.TryParse(parts[3], out var parsedCount)
@@ -218,6 +265,11 @@ public sealed class GmCommandService
             !int.TryParse(parts[2], out var itemIndex))
             return [Chat("用法：/gm equip <ItemIndex>")];
 
+        var currentItem = _current.FindItem(itemIndex);
+        if (currentItem is null ||
+            currentItem.Category is not ("equip" or "weapon"))
+            return [Chat($"新版 GameData 找不到可穿戴裝備 ItemIndex={itemIndex}")];
+
         var uid = _store.AddEquipment(
             accountId,
             dbid,
@@ -246,6 +298,13 @@ public sealed class GmCommandService
         if (parts.Length < 3 ||
             !int.TryParse(parts[2], out var itemIndex))
             return [Chat("用法：/gm mecha <CardID>")];
+
+        var currentItem = _current.FindItem(itemIndex);
+        if (currentItem is null ||
+            !currentItem.Category.Equals(
+                "horse",
+                StringComparison.OrdinalIgnoreCase))
+            return [Chat($"新版 GameData 找不到機甲 ItemIndex={itemIndex}")];
 
         var card = _horseCards.Find(itemIndex);
         var uid = _store.AddHorse(
@@ -423,7 +482,7 @@ public sealed class GmCommandService
         };
 
     private static string HelpText()
-        => "GM: help | pos | map <id> [x] [y] | heal | " +
+        => "GM: help | pos | map <id> [x] [y] | heal | level <n> | " +
            "money <n> | item <id> [count] | equip <id> | " +
            "mecha <cardId> | pet <petId> [name] | " +
            "skill <id|all> [lv] | skills | clearskills | killall";
