@@ -404,6 +404,38 @@ public interface IWorldGroundItemStore
             long groundItemId);
 }
 
+public sealed record PlayerShopPurchaseResult(
+    bool Success,
+    string Message,
+    long BuyerMoney,
+    long SellerMoney,
+    bool SoldOut);
+
+public interface IPlayerShopStore : ICharacterAssetReader
+{
+    bool SetPlayerShopAssetState(
+        long accountId,
+        long dbid,
+        long uid,
+        int tabType,
+        int count,
+        bool inShop);
+
+    void ClearPlayerShopAssets(
+        long accountId,
+        long dbid);
+
+    PlayerShopPurchaseResult BuyPlayerShopAsset(
+        long buyerAccountId,
+        long buyerDbid,
+        long sellerAccountId,
+        long sellerDbid,
+        long uid,
+        int tabType,
+        int count,
+        long unitPrice);
+}
+
 public interface IShopStore : ICharacterAssetReader
 {
     AssetPurchaseResult BuyAsset(
