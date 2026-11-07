@@ -284,11 +284,14 @@ public sealed class CombatService
                 var withinDamageRange =
                     distance <= AttackRange;
 
+                var cooldownElapsed =
+                    monster.LastAttackAt > now ||
+                    now - monster.LastAttackAt >= MonsterAttackCooldown;
+
                 var attackReady =
                     session.CharacterId.HasValue &&
                     withinDamageRange &&
-                    (enteredAttackRange ||
-                     now - monster.LastAttackAt >= MonsterAttackCooldown);
+                    (enteredAttackRange || cooldownElapsed);
 
                 if (attackReady &&
                     character is not null &&
