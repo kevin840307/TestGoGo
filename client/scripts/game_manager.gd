@@ -303,7 +303,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		NetworkEntityManager.set_spawn_queue_paused(true)
 
 	_trace_map_change("initial_enter_started", 0, target_map_id)
-	_report_initial_loading_progress(progress_callback, 50.0, "準備載入地圖")
+	_report_initial_loading_progress(progress_callback, 10.0, "準備載入地圖")
 	await get_tree().process_frame
 
 	if not ResourceLoader.exists(map_path):
@@ -326,7 +326,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		var status: int = ResourceLoader.load_threaded_get_status(map_path, progress)
 		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			var threaded_progress := float(progress[0]) if not progress.is_empty() else 0.0
-			_report_initial_loading_progress(progress_callback, 50.0 + threaded_progress * 18.0, "載入地圖資源")
+			_report_initial_loading_progress(progress_callback, 10.0 + threaded_progress * 25.0, "載入地圖資源")
 			await get_tree().process_frame
 			continue
 		if status == ResourceLoader.THREAD_LOAD_LOADED:
@@ -335,7 +335,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 			_trace_map_change("initial_load_completed", 0, target_map_id, {
 				"load_get_ms": float(Time.get_ticks_usec() - load_get_started_usec) / 1000.0,
 			})
-			_report_initial_loading_progress(progress_callback, 68.0, "地圖資源載入完成")
+			_report_initial_loading_progress(progress_callback, 35.0, "地圖資源載入完成")
 			await get_tree().process_frame
 			break
 		_trace_map_change("initial_load_failed", 0, target_map_id, {"status": status})
@@ -351,7 +351,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 
 	await get_tree().process_frame
 	var instantiate_started_usec: int = Time.get_ticks_usec()
-	_report_initial_loading_progress(progress_callback, 70.0, "建立地圖")
+	_report_initial_loading_progress(progress_callback, 40.0, "建立地圖")
 	await get_tree().process_frame
 	set_frame_gap_stage("initial_map_instantiate")
 	current_map_node = map_resource.instantiate()
@@ -381,7 +381,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 
 	await get_tree().process_frame
 	var add_child_started_usec: int = Time.get_ticks_usec()
-	_report_initial_loading_progress(progress_callback, 73.0, "初始化地圖")
+	_report_initial_loading_progress(progress_callback, 48.0, "初始化地圖")
 	await get_tree().process_frame
 
 	set_frame_gap_stage("initial_map_add_child")
@@ -397,10 +397,10 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	# Blocking.dat is authoritative for navigation. Do not rebuild a huge
 	# TileMapLayer collision grid here; the player runtime collision mask does
 	# not use those map collision layers.
-	_report_initial_loading_progress(progress_callback, 75.0, "準備角色")
+	_report_initial_loading_progress(progress_callback, 52.0, "準備角色")
 	await get_tree().process_frame
 
-	_report_initial_loading_progress(progress_callback, 77.0, "建立角色")
+	_report_initial_loading_progress(progress_callback, 56.0, "建立角色")
 	await get_tree().process_frame
 	var player_scene = ResourceLoader.load("res://player.tscn")
 	set_frame_gap_stage("player_instantiate")
@@ -420,7 +420,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	if "target_position" in current_player:
 		current_player.target_position = spawn_position
 
-	_report_initial_loading_progress(progress_callback, 80.0, "初始化角色")
+	_report_initial_loading_progress(progress_callback, 62.0, "初始化角色")
 	await get_tree().process_frame
 	set_frame_gap_stage("player_add_child")
 	if current_map_node.has_node("Entities"):
@@ -437,17 +437,17 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	_ensure_day_night_overlay()
 	set_world_enhancement_enabled(_load_world_enhancement_setting())
 
-	_report_initial_loading_progress(progress_callback, 83.0, "載入介面")
+	_report_initial_loading_progress(progress_callback, 68.0, "載入介面")
 	await get_tree().process_frame
 	var hud_scene = ResourceLoader.load("res://game_hud.tscn")
 	set_frame_gap_stage("hud_instantiate")
 	current_hud = hud_scene.instantiate()
 	current_hud.visible = false
-	_report_initial_loading_progress(progress_callback, 86.0, "建立遊戲介面")
+	_report_initial_loading_progress(progress_callback, 73.0, "建立遊戲介面")
 	await get_tree().process_frame
 	set_frame_gap_stage("hud_add_child")
 	get_tree().root.add_child(current_hud)
-	_report_initial_loading_progress(progress_callback, 88.0, "初始化遊戲介面")
+	_report_initial_loading_progress(progress_callback, 77.0, "初始化遊戲介面")
 	await get_tree().process_frame
 	set_frame_gap_stage("hud_initialize")
 	current_hud.initialize_hud(current_player)
@@ -458,11 +458,11 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	# Do not reveal the first world until every deferred/queued initialization
 	# task is really complete. The entry loading overlay stays visible while
 	# this readiness gate is running.
-	_report_initial_loading_progress(progress_callback, 90.0, "載入角色外觀")
+	_report_initial_loading_progress(progress_callback, 82.0, "載入角色外觀")
 	while is_instance_valid(current_player) and current_player.has_method("is_initial_visual_ready") and not current_player.is_initial_visual_ready():
 		await get_tree().process_frame
 
-	_report_initial_loading_progress(progress_callback, 92.0, "初始化遊戲資料")
+	_report_initial_loading_progress(progress_callback, 86.0, "初始化遊戲資料")
 	while is_instance_valid(current_hud) and current_hud.has_method("is_initial_hud_ready") and not current_hud.is_initial_hud_ready():
 		await get_tree().process_frame
 
@@ -471,20 +471,20 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	# login/character-select screens, so first user opening is only a visibility
 	# toggle instead of a first-load hitch.
 	if is_instance_valid(current_hud) and current_hud.has_method("prepare_lazy_windows_before_reveal"):
-		_report_initial_loading_progress(progress_callback, 93.5, "預先準備遊戲視窗")
+		_report_initial_loading_progress(progress_callback, 89.0, "預先準備遊戲視窗")
 		await current_hud.prepare_lazy_windows_before_reveal()
 
-	_report_initial_loading_progress(progress_callback, 94.5, "套用地圖環境")
+	_report_initial_loading_progress(progress_callback, 91.0, "套用地圖環境")
 	await get_tree().process_frame
 	_apply_current_festival_theme()
 	await get_tree().process_frame
 
-	_report_initial_loading_progress(progress_callback, 95.5, "初始化地圖物件")
+	_report_initial_loading_progress(progress_callback, 93.0, "初始化地圖物件")
 	if BuildingManager:
 		await _init_buildings_with_diagnostics(0, target_map_id)
 	await get_tree().process_frame
 
-	_report_initial_loading_progress(progress_callback, 96.5, "同步地圖角色")
+	_report_initial_loading_progress(progress_callback, 95.0, "同步地圖角色")
 	if NetworkEntityManager:
 		if NetworkEntityManager.has_method("set_initial_spawn_boost"):
 			NetworkEntityManager.set_initial_spawn_boost(true)
@@ -499,7 +499,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	# Warm the first rendered world frame while EntryManager's loading overlay
 	# still covers the screen. Setting these visible only at the final reveal
 	# concentrated CanvasItem/render registration into a 200-260 ms hitch.
-	_report_initial_loading_progress(progress_callback, 98.0, "預熱畫面")
+	_report_initial_loading_progress(progress_callback, 97.0, "預熱畫面")
 	set_frame_gap_stage("world_render_warmup")
 	if is_instance_valid(current_map_node):
 		current_map_node.visible = true
