@@ -20,6 +20,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="GameData/pet_idle_speech.json">
+      <Link>GameData/pet_idle_speech.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="../client/Assets/Pets/Config.json">
       <Link>GameData/Pets/Config.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
