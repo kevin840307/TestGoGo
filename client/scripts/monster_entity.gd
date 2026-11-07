@@ -37,6 +37,8 @@ var last_move_packet_ms: int = 0
 var pending_move_dir: String = ""
 var pending_move_dir_count: int = 0
 var last_move_dir_change_ms: int = 0
+var last_visual_move_dir: String = ""
+var last_visual_move_dir_ms: int = 0
 var fallback_action_generation: int = 0
 var action_state_started_ms: int = 0
 const MOVE_IDLE_GRACE_SECONDS: float = 0.12
@@ -440,7 +442,14 @@ func apply_network_move_direction(new_dir: String) -> void :
 		pending_move_dir_count = 0
 		return
 
-	if new_dir == "" or new_dir == current_dir:
+	if new_dir == "":
+		pending_move_dir = ""
+		pending_move_dir_count = 0
+		return
+
+	if new_dir == current_dir:
+		last_visual_move_dir = current_dir
+		last_visual_move_dir_ms = Time.get_ticks_msec()
 		pending_move_dir = ""
 		pending_move_dir_count = 0
 		return
@@ -462,6 +471,8 @@ func apply_network_move_direction(new_dir: String) -> void :
 	# while MOVE_DIR_MAX_HOLD_MS still lets a real turn appear promptly.
 	if pending_move_dir_count >= MOVE_DIR_CONFIRM_COUNT or held_too_long:
 		current_dir = new_dir
+		last_visual_move_dir = new_dir
+		last_visual_move_dir_ms = now_ms
 		last_move_dir_change_ms = now_ms
 		pending_move_dir = ""
 		pending_move_dir_count = 0
@@ -496,9 +507,19 @@ func apply_attack_visual_direction(target_pos: Vector2) -> void :
 
 
 func apply_network_state(new_state: String, new_dir: String) -> void :
-	# Server combat state is authoritative over an older movement waypoint.
-	# Once the monster can attack (or is told to idle/hit/die), no previous
-	# MoveEntity tween/grace callback may keep it visually walking.
+	# Server combat state is authoritative over movement/state, but the last
+	# rendered WALK direction is the best visual truth when the monster has
+	# just reached its target. Preserve it on the walk -> attack transition so
+	# an attack packet cannot flip a visually-correct chase direction.
+	var previous_state := current_state
+	var now_ms := Time.get_ticks_msec()
+	var preserve_recent_move_facing := (
+		new_state == "attack" and
+		previous_state == "walk" and
+		last_visual_move_dir != "" and
+		now_ms - last_visual_move_dir_ms <= 800
+	)
+
 	if new_state != "walk":
 		move_idle_generation += 1
 		network_move_active = false
@@ -509,14 +530,19 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 
 	current_state = new_state
 	if new_state in ["attack", "hit"]:
-		action_state_started_ms = Time.get_ticks_msec()
+		action_state_started_ms = now_ms
 	else:
 		action_state_started_ms = 0
-	if new_dir != "":
+
+	if preserve_recent_move_facing:
+		current_dir = last_visual_move_dir
+	elif new_dir != "":
 		current_dir = new_dir
+
+	if new_dir != "" or preserve_recent_move_facing:
 		pending_move_dir = ""
 		pending_move_dir_count = 0
-		last_move_dir_change_ms = Time.get_ticks_msec()
+		last_move_dir_change_ms = now_ms
 	sync_animation()
 
 
