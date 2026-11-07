@@ -132,6 +132,28 @@ public sealed class ServerBroadcastHub
             queue.Enqueue(packet);
     }
 
+    public void PublishToAllExcept(
+        Guid exceptConnectionId,
+        object packet)
+    {
+        foreach (var pair in _queues)
+        {
+            if (pair.Key == exceptConnectionId)
+                continue;
+
+            if (!_presence.TryGetValue(
+                    pair.Key,
+                    out var presence) ||
+                presence.AccountId <= 0 ||
+                presence.CharacterId <= 0)
+            {
+                continue;
+            }
+
+            pair.Value.Enqueue(packet);
+        }
+    }
+
     public bool PublishToConnection(
         Guid connectionId,
         object packet)
