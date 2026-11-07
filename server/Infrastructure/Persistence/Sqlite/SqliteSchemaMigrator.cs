@@ -54,6 +54,10 @@ internal static class SqliteSchemaMigrator
         ExecuteSqlFile(
             db,
             ResolveSqlPath("012_mall_gift_claims.sql"));
+
+        ExecuteSqlFile(
+            db,
+            ResolveSqlPath("013_character_transform.sql"));
     }
 
     private static void ExecuteSqlFile(
