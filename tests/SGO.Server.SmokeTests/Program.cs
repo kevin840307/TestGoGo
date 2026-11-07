@@ -1525,7 +1525,7 @@ try
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"MoveEntity\"") &&
             JsonSerializer.Serialize(x).Contains(
-                $\"\"EntityID\":{4_000_000L + petUid}\") &&
+                $"\"EntityID\":{4_000_000L + petUid}") &&
             JsonSerializer.Serialize(x).Contains(
                 "\"SpeedTime\":0.01")) &&
         !session.PetOutOfRangeSince.ContainsKey(petUid) &&
@@ -1533,7 +1533,7 @@ try
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"EntityDamage\"") &&
             JsonSerializer.Serialize(x).Contains(
-                $\"\"AttackerID\":{4_000_000L + petUid}\")),
+                $"\"AttackerID\":{4_000_000L + petUid}")),
         "pet teleports back only after remaining beyond 900px for three seconds");
 
     Check(!session.PetTargets.ContainsKey(petUid),
@@ -1550,6 +1550,7 @@ try
         session.LastMonsterAiTick.AddSeconds(1));
 
     Check(monster.HasTarget &&
+          monster.AiState == MonsterAiState.Chase &&
           aiPackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"MonsterTarget\"")) &&
@@ -1588,6 +1589,7 @@ try
         session.LastMonsterAiTick.AddSeconds(1));
 
     Check(!monster.IsMoving &&
+          monster.AiState == MonsterAiState.Attack &&
           closeRangePackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"SyncState\"") &&
@@ -1599,7 +1601,7 @@ try
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"MoveEntity\"") &&
               JsonSerializer.Serialize(x).Contains(
-                  $\"\"EntityID\":{monster.EntityId}\")),
+                  $"\"EntityID\":{monster.EntityId}")),
         "monster stops movement and never emits MoveEntity inside melee attack range");
 
     var sawDeath = false;
@@ -1632,6 +1634,7 @@ try
 
     Check(monster.CurrentHp == monster.MaxHp &&
           monster.RespawnAt is null &&
+          monster.AiState == MonsterAiState.Idle &&
           respawnPackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"SpawnEntity\"")),
@@ -1665,7 +1668,7 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"MoveEntity\"") &&
                 JsonSerializer.Serialize(x).Contains(
-                    $\"\"EntityID\":{monster.EntityId}\")),
+                    $"\"EntityID\":{monster.EntityId}")),
             "monster attack tick never emits movement for the attacking monster");
 
         playerDeathSeen = monsterAttackPackets.Any(x =>
@@ -1735,8 +1738,10 @@ try
                   "\"Type\":\"MoveEntity\"") &&
               JsonSerializer.Serialize(x).Contains(
                   $"\"EntityID\":{monster.EntityId}")) &&
-          deadWanderDistance <= 180.001,
-        "monster resumes local random wandering after player death without returning to spawn");
+          deadWanderDistance > 45.0 &&
+          deadWanderDistance <= 180.001 &&
+          monster.AiState == MonsterAiState.Wander,
+        "monster resumes longer local random wandering after player death without returning to spawn");
 
     using (var revive = Json(
         """{"Type":"ReviveRequest"}"""))
