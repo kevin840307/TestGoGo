@@ -2860,6 +2860,60 @@ try
     store.SetSkill(
         account.Value,
         id,
+        23108,
+        1);
+    store.Revive(account.Value, id);
+
+    var berserkerBefore = store.GetCharacter(
+        account.Value,
+        id)!;
+    var berserkerBase = CharacterStatCalculator.Calculate(
+        berserkerBefore,
+        store.GetCharacterAssets(
+            account.Value,
+            id),
+        currentCatalog);
+    var berserkerAt =
+        DateTimeOffset.UtcNow.AddSeconds(1);
+
+    var berserkerPackets = combat.UseSkill(
+        session,
+        account.Value,
+        23108,
+        0,
+        0,
+        combatEnemy.X,
+        combatEnemy.Y,
+        berserkerAt);
+
+    var expectedBerserkerAttack =
+        berserkerBase.Attack +
+        berserkerBase.Attack * 50 / 100;
+    var berserkerJson =
+        JsonSerializer.Serialize(
+            berserkerPackets);
+
+    Check(
+        berserkerJson.Contains("狂戰士體") &&
+        berserkerJson.Contains(
+            $"\"Attack\":{expectedBerserkerAttack}"),
+        "狂戰士體 +50% attack is applied to effective combat stats");
+
+    var berserkerExpired = JsonSerializer.Serialize(
+        combat.TickBuffs(
+            session,
+            berserkerAt.AddSeconds(61)));
+
+    Check(
+        berserkerExpired.Contains(
+            "\"Buffs\":[]") &&
+        berserkerExpired.Contains(
+            $"\"Attack\":{berserkerBase.Attack}"),
+        "percentage attack buff expiry restores original effective attack");
+
+    store.SetSkill(
+        account.Value,
+        id,
         25104,
         1);
     store.Revive(account.Value, id);
