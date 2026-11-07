@@ -4193,6 +4193,48 @@ public sealed class CombatService
         return DirectionFromDelta(dx, dy);
     }
 
+    private (double X, double Y) ResolveRespawnPosition(
+        MonsterRuntimeState monster)
+    {
+        for (var attempt = 0; attempt < 12; attempt++)
+        {
+            var angle =
+                Random.Shared.NextDouble() *
+                Math.PI * 2.0;
+            var radius =
+                24.0 +
+                Random.Shared.NextDouble() *
+                (RespawnRandomRadius - 24.0);
+
+            var x =
+                monster.SpawnX +
+                Math.Cos(angle) * radius;
+            var y =
+                monster.SpawnY +
+                Math.Sin(angle) * radius;
+
+            if (_blocking.GetFlags(
+                    monster.MapId,
+                    x,
+                    y) != 0)
+            {
+                continue;
+            }
+
+            if (_navigation.IsDirectClear(
+                    monster.MapId,
+                    monster.SpawnX,
+                    monster.SpawnY,
+                    x,
+                    y))
+            {
+                return (x, y);
+            }
+        }
+
+        return (monster.SpawnX, monster.SpawnY);
+    }
+
     private static object BuildMonsterSpawnPacket(
         MonsterRuntimeState monster)
         => new
