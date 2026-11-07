@@ -190,6 +190,20 @@ public interface IEquipmentStore : ICharacterAssetReader
         int targetSlot);
 }
 
+public sealed record PetStatAdjustment(
+    int MaxHp = 0,
+    int MaxMp = 0,
+    int Attack = 0,
+    int MagicAttack = 0,
+    int Hit = 0,
+    int Dodge = 0);
+
+public sealed record PetMutationResult(
+    bool Success,
+    string Message,
+    Dictionary<string, object>? Pet,
+    bool InventoryChanged = false);
+
 public interface IPetStore : ICharacterAssetReader
 {
     long AddPet(
@@ -228,6 +242,41 @@ public interface IPetStore : ICharacterAssetReader
         long dbid,
         long petUid,
         int exp);
+
+    PetMutationResult FeedPet(
+        long accountId,
+        long dbid,
+        long petUid,
+        long itemUid,
+        int itemId,
+        int feedAmount);
+
+    PetMutationResult SetPetMainSkill(
+        long accountId,
+        long dbid,
+        long petUid,
+        int skillId);
+
+    PetMutationResult AllocatePetStat(
+        long accountId,
+        long dbid,
+        long petUid,
+        string statType,
+        PetStatAdjustment adjustment);
+
+    PetMutationResult AddPetLife(
+        long accountId,
+        long dbid,
+        long petUid,
+        int itemId,
+        int maxLife);
+
+    PetMutationResult ResetPetStats(
+        long accountId,
+        long dbid,
+        long petUid,
+        int itemId,
+        PetStatAdjustment adjustment);
 }
 
 public interface IMechaStore : ICharacterAssetReader
