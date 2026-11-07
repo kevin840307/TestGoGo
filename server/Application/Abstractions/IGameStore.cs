@@ -19,6 +19,7 @@ public interface IGameStore :
     ITradeStore,
     IItemDiscardStore,
     IWorldGroundItemStore,
+    IPlayerShopStore,
     IShopStore
 {
 }
