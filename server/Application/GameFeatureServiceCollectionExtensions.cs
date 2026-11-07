@@ -10,6 +10,7 @@ using SGO.Server.Application.Mall;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Party;
 using SGO.Server.Application.Rank;
+using SGO.Server.Application.Quest;
 using SGO.Server.Application.Shops;
 using SGO.Server.Application.Trade;
 using SGO.Server.Application.World;
@@ -31,6 +32,7 @@ public static class GameFeatureServiceCollectionExtensions
         services.AddSingleton<MallService>();
         services.AddSingleton<PartyService>();
         services.AddSingleton<RankService>();
+        services.AddSingleton<QuestProgressService>();
         services.AddSingleton<TradeService>();
         services.AddSingleton<DollService>();
         services.AddSingleton<ShopService>();
