@@ -571,12 +571,26 @@ try
                 RemoveItem(31262, 1)
             end
         end
+
+        function team()
+            caller = GetCallerPtr()
+            hasmember, member = GetTeamList_First()
+            if hasmember == 1 then
+                SetTargetFlag(member, "TEAM_FLAG", 9)
+                member_map = GetTargetData(member, "MapID")
+                member_x, member_y = GetTargetXY(member)
+                member_emotion = GetTargetEmotion(member)
+            end
+            hasnext, nextmember = GetTeamList_Next()
+        end
         """);
 
     var runtimeFlag = 0;
     var runtimeItemCount = 0;
     var runtimeMappedItemId = 0;
     var runtimeMappedTab = -1;
+    long runtimeTeamTarget = 0;
+    var runtimeTeamFlag = 0;
 
     var questApiRuntime = new QuestRuntime(
         questApiRoot,
@@ -623,6 +637,43 @@ try
           runtimeMappedTab == 1 &&
           runtimeItemCount == 1,
         "legacy quest CheckItem/AddItem/RemoveItem safely remap old item IDs");
+
+    var teamResult = questApiRuntime.Execute(
+        "QuestApi.txt",
+        "team",
+        999,
+        "Quest Team API Test",
+        null,
+        _ => 0,
+        new QuestRuntimeBindings
+        {
+            CallerDbid = 101,
+            GetTeamMemberIds = () => new long[] { 202 },
+            SetTargetFlag = (target, _, value) =>
+            {
+                runtimeTeamTarget = target;
+                runtimeTeamFlag = value;
+            },
+            GetTargetData = (target, key) =>
+                target == 202 && key == "MapID"
+                    ? 15
+                    : 0,
+            GetTargetXY = target =>
+                target == 202
+                    ? (123.0, 456.0)
+                    : (0.0, 0.0),
+            GetTargetEmotion = target =>
+                target == 202 ? 3 : -1
+        });
+
+    Check(runtimeTeamTarget == 202 &&
+          runtimeTeamFlag == 9,
+        "legacy SetTargetFlag targets the current party member");
+
+    Check(!teamResult.Packets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "NPC 腳本執行失敗")),
+        "legacy team iterator/data/position/emotion APIs execute without Lua errors");
 }
 finally
 {
