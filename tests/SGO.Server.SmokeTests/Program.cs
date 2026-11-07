@@ -2171,6 +2171,219 @@ try
             "leaving a two-player party dissolves it for both players");
     }
 
+    var firstTradeItemCountBefore = store.GetCharacterAssets(
+            account.Value,
+            id)
+        .Inventory
+        .Where(x =>
+            Convert.ToInt32(x["ItemIndex"]) ==
+                generalShopItem.ItemIndex &&
+            Convert.ToInt32(x["InBank"]) == 0 &&
+            Convert.ToInt32(x["InShop"]) == 0)
+        .Sum(x => Convert.ToInt32(x["Count"]));
+
+    var secondTradeItemCountBefore = store.GetCharacterAssets(
+            account.Value,
+            secondCharacterId)
+        .Inventory
+        .Where(x =>
+            Convert.ToInt32(x["ItemIndex"]) ==
+                generalShopItem.ItemIndex &&
+            Convert.ToInt32(x["InBank"]) == 0 &&
+            Convert.ToInt32(x["InShop"]) == 0)
+        .Sum(x => Convert.ToInt32(x["Count"]));
+
+    var firstTradeMoneyBefore = Convert.ToInt64(
+        store.GetCharacter(account.Value, id)!["Money"]);
+    var secondTradeMoneyBefore = Convert.ToInt64(
+        store.GetCharacter(
+            account.Value,
+            secondCharacterId)!["Money"]);
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var tradeRequest = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "TradeRequest",
+            TargetEntityID = secondCharacterId
+        })))
+    {
+        router.Handle(
+            tradeRequest.RootElement,
+            session);
+
+        Check(
+            peerRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"TradeInvite\"")),
+            "TradeRequest sends invite to target player");
+    }
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var tradeReply = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "TradeReply",
+            RequesterDBID = id,
+            Accept = true
+        })))
+    {
+        router.Handle(
+            tradeReply.RootElement,
+            peerSession);
+
+        Check(
+            broadcastRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"TradeStart\"")) &&
+            peerRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"TradeStart\"")),
+            "TradeReply starts one shared trade session for both players");
+    }
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var addTradeItem = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "TradeAddItem",
+            TabType = 0,
+            UID = itemUid,
+            ItemIndex = generalShopItem.ItemIndex,
+            Count = 2
+        })))
+    {
+        router.Handle(
+            addTradeItem.RootElement,
+            session);
+    }
+
+    using (var setFirstMoney = Json(
+        """
+        {"Type":"TradeSetMoney","Money":100}
+        """))
+    {
+        router.Handle(
+            setFirstMoney.RootElement,
+            session);
+    }
+
+    using (var setSecondMoney = Json(
+        """
+        {"Type":"TradeSetMoney","Money":50}
+        """))
+    {
+        router.Handle(
+            setSecondMoney.RootElement,
+            peerSession);
+    }
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var firstLock = Json(
+        """{"Type":"TradeLock"}"""))
+    {
+        router.Handle(
+            firstLock.RootElement,
+            session);
+    }
+
+    using (var secondLock = Json(
+        """{"Type":"TradeLock"}"""))
+    {
+        router.Handle(
+            secondLock.RootElement,
+            peerSession);
+    }
+
+    Check(
+        broadcastRegistration.Queue.ToArray().Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"TradeFinalConfirmReq\"")) &&
+        peerRegistration.Queue.ToArray().Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"TradeFinalConfirmReq\"")),
+        "both locked traders receive final confirmation request");
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var firstConfirm = Json(
+        """{"Type":"TradeFinalConfirm"}"""))
+    {
+        router.Handle(
+            firstConfirm.RootElement,
+            session);
+    }
+
+    using (var secondConfirm = Json(
+        """{"Type":"TradeFinalConfirm"}"""))
+    {
+        router.Handle(
+            secondConfirm.RootElement,
+            peerSession);
+    }
+
+    var firstTradeItemCountAfter = store.GetCharacterAssets(
+            account.Value,
+            id)
+        .Inventory
+        .Where(x =>
+            Convert.ToInt32(x["ItemIndex"]) ==
+                generalShopItem.ItemIndex &&
+            Convert.ToInt32(x["InBank"]) == 0 &&
+            Convert.ToInt32(x["InShop"]) == 0)
+        .Sum(x => Convert.ToInt32(x["Count"]));
+
+    var secondTradeItemCountAfter = store.GetCharacterAssets(
+            account.Value,
+            secondCharacterId)
+        .Inventory
+        .Where(x =>
+            Convert.ToInt32(x["ItemIndex"]) ==
+                generalShopItem.ItemIndex &&
+            Convert.ToInt32(x["InBank"]) == 0 &&
+            Convert.ToInt32(x["InShop"]) == 0)
+        .Sum(x => Convert.ToInt32(x["Count"]));
+
+    Check(
+        firstTradeItemCountAfter ==
+            firstTradeItemCountBefore - 2 &&
+        secondTradeItemCountAfter ==
+            secondTradeItemCountBefore + 2 &&
+        Convert.ToInt64(
+            store.GetCharacter(
+                account.Value,
+                id)!["Money"]) ==
+            firstTradeMoneyBefore - 50 &&
+        Convert.ToInt64(
+            store.GetCharacter(
+                account.Value,
+                secondCharacterId)!["Money"]) ==
+            secondTradeMoneyBefore + 50 &&
+        broadcastRegistration.Queue.ToArray().Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"TradeSuccess\"")) &&
+        peerRegistration.Queue.ToArray().Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"TradeSuccess\"")) &&
+        broadcastRegistration.Queue.ToArray().Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"InventorySync\"")) &&
+        peerRegistration.Queue.ToArray().Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"InventorySync\"")),
+        "two-phase trade atomically exchanges money and item stacks");
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
     Check(peerSession.Monsters.TryGetValue(
               monster.EntityId,
               out var peerMonster) &&
