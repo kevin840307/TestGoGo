@@ -7,8 +7,10 @@
 ```bash
 python3 -m unittest discover -s tests -p 'test_packet_contract_audit.py' -v
 python3 -m unittest discover -s tests -p 'test_packet_schema_audit.py' -v
+python3 -m unittest discover -s tests -p 'test_packet_response_audit.py' -v
 python3 tests/packet_contract_audit.py --strict --output packet-contract-report.json
 python3 tests/packet_schema_audit.py --strict --output packet-schema-report.json
+python3 tests/packet_response_audit.py --strict --output packet-response-report.json
 dotnet build server/SGO.Server.csproj -c Release
 dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release
 # 在另一個終端機啟動 server：dotnet run --project server/SGO.Server.csproj -c Release
@@ -46,6 +48,18 @@ GitHub Actions `Server build` 工作流程已納入前兩項檢查，且會上�
 - 測試已補整數溢位、分解 UID 型別、缺少交易金額與商店數量、錯誤賣價等回歸案例。
 
 這仍只是**最低必要欄位驗證**。所有 Server → Client 回傳欄位、數值業務約束、真正 Godot UI E2E、多人競態與商城／舊服外部資料源均未宣稱完成；CI 必須實際執行並通過才能宣稱測試 PASS。
+
+## 新增：Server → Client 回應欄位與寵物 Action 契約
+
+- `tests/packet_response_audit.py` 檢查 **16 種重要 Server 回應 Type**，逐一檢查所有固定格式的 C# 匿名回應宣告都包含最低必要欄位，並確認 Godot `network_manager.gd` 有接收分支。包含登入／註冊、錯誤回應、WorldReady、快速鍵、背包／裝備／寵物／機甲／技能同步、SkillCast、EntityDamage／EntityHeal／EntityDeath／DespawnEntity。
+- `tests/test_packet_response_audit.py` 覆蓋固定回應缺欄位、Client 分支遺漏、Server 封包宣告遺漏等情況。
+- `PetAction` 新增 **12 種 Action 專屬欄位規則**（Summon、Recall、AddLife、ResetStat、Rename、Equip、Unequip、Feed、SetMainSkill、AllocateStat、SetCombatMode、CommandAttack）；前 10 種透過 `send_pet_action` 傳 PetUID，後 2 種為不同封包格式。
+- `packet_schema_audit.py` 也比對 `send_pet_action` 的額外欄位與直接 `PetAction` Dictionary。動態商店、寵物加總共有 **18 種 Action 規則**。
+- 寵物操作的 PetUID 和寵物裝備 ItemUID 在 Server 改用 `Int64`，防止持久化識別值超過 Int32 時被錯誤解析。
+- `ClientProtocol.Int/Long/Str` 在不合法 JSON 欄位（包括非數字、非物件）時安全使用 fallback，避免非必要欄位型別錯誤直接拋出例外。
+- CI 現會執行新增的回應稽核、Python 單元測試，並上傳 `packet-response-report.json`。WebSocket smoke 的管線已加入 `pipefail`，避免 `tee` 掩蓋失敗。
+
+這是**靜態來源與必要欄位檢查**，不等於所有回傳欄位或業務邏輯的完整型別測試，也不是 Godot 實機端到端測試。
 
 ## 真正的網路封包整合測試
 
