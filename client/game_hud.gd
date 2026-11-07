@@ -908,8 +908,16 @@ func _toggle_lazy_window(kind: String) -> void :
 	_toggle_window(window)
 
 func start_post_reveal_background_prewarm() -> void :
+	call_deferred("_delayed_post_reveal_background_prewarm")
+
+func _delayed_post_reveal_background_prewarm() -> void :
+	# Give the freshly revealed world a short quiet window before optional heavy
+	# UI prewarm starts. This avoids a visible FPS dip immediately after login.
+	await get_tree().create_timer(1.5).timeout
+	if not is_inside_tree():
+		return
 	if is_instance_valid(craft_dismantle_window) and craft_dismantle_window.has_method("prepare_dismantle_background_async"):
-		craft_dismantle_window.call_deferred("prepare_dismantle_background_async")
+		await craft_dismantle_window.prepare_dismantle_background_async()
 
 func _setup_header_button_hover_signals() -> void :
 	for button in [btn_announcement, btn_game_info, btn_craft_dismantle]:
