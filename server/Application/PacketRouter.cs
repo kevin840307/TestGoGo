@@ -964,6 +964,279 @@ public sealed class PacketRouter
                 ];
             }
 
+            case "DropItemRequest":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var tabType = req.Int("TabType");
+                var uid = req.Int("ItemUID");
+                var requestedCount = Math.Max(1, req.Int("Count", 1));
+
+                // Pet and whole-mecha discard are intentionally not treated as
+                // ground loot yet because restoring their full runtime state
+                // requires a richer persistence payload.
+                if (tabType is 2 or 4)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = tabType == 2
+                                ? "寵物丟棄尚未開放"
+                                : "整台機甲丟棄尚未開放"
+                        }
+                    ];
+                }
+
+                var assetsBefore = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                Dictionary<string, object>? source = tabType switch
+                {
+                    0 or 5 => assetsBefore.Inventory.FirstOrDefault(x =>
+                        Convert.ToInt64(x["ItemUID"]) == uid),
+                    1 => assetsBefore.Equips.FirstOrDefault(x =>
+                        Convert.ToInt64(x["ItemID"]) == uid),
+                    3 => assetsBefore.HorseEquips.FirstOrDefault(x =>
+                        Convert.ToInt64(x["EquipUID"]) == uid),
+                    _ => null
+                };
+
+                if (source is null)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "找不到可丟棄的物品"
+                        }
+                    ];
+                }
+
+                var itemIndex = tabType switch
+                {
+                    0 or 5 => Convert.ToInt32(source["ItemIndex"]),
+                    1 => Convert.ToInt32(source["ItemIdx"]),
+                    3 => Convert.ToInt32(source["EquipIdx"]),
+                    _ => 0
+                };
+
+                var actualCount = tabType is 0 or 5
+                    ? Math.Min(
+                        requestedCount,
+                        Convert.ToInt32(source["Count"]))
+                    : 1;
+
+                var damage = source.TryGetValue("Damage", out var damageValue)
+                    ? Convert.ToInt32(damageValue)
+                    : 0;
+                var color = source.TryGetValue("Color", out var colorValue)
+                    ? Convert.ToInt32(colorValue)
+                    : 0;
+                var part = source.TryGetValue("Part", out var partValue)
+                    ? Convert.ToInt32(partValue)
+                    : 255;
+
+                var (discarded, discardMessage) = _store.DiscardAsset(
+                    accountId,
+                    state.CharacterId.Value,
+                    uid,
+                    tabType,
+                    actualCount);
+
+                if (!discarded)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = discardMessage
+                        }
+                    ];
+                }
+
+                var entityId = state.NextGroundItemEntityId++;
+                var dropX = req.Int("DropX", (int)state.LastX);
+                var dropY = req.Int("DropY", (int)state.LastY);
+
+                var ground = new GroundItemRuntime
+                {
+                    EntityId = entityId,
+                    MapId = state.CurrentMapId,
+                    TabType = tabType,
+                    ItemIndex = itemIndex,
+                    Count = actualCount,
+                    Damage = damage,
+                    Color = color,
+                    Part = part,
+                    X = dropX,
+                    Y = dropY,
+                    OwnerDbid = state.CharacterId.Value
+                };
+
+                state.GroundItems[entityId] = ground;
+                var itemName =
+                    _current.FindItem(itemIndex)?.Name ?? $"Item {itemIndex}";
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                return
+                [
+                    new
+                    {
+                        Type = "SpawnEntity",
+                        EntityID = entityId,
+                        EntityType = 3,
+                        Name = itemName,
+                        LocX = dropX,
+                        LocY = dropY,
+                        ExtraData = new
+                        {
+                            ItemIndex = itemIndex,
+                            Count = actualCount,
+                            RemainingTime = 60,
+                            OwnerDBID = state.CharacterId.Value,
+                            ProtectTimeSeconds = 5
+                        }
+                    },
+                    new
+                    {
+                        Type = "InventorySync",
+                        Items = assets.Inventory,
+                        MaxSize = assets.InventoryMaxSize
+                    },
+                    new
+                    {
+                        Type = "EquipSync",
+                        Equips = assets.Equips,
+                        MaxSize = assets.EquipMaxSize
+                    },
+                    new
+                    {
+                        Type = "HorseSync",
+                        Horses = assets.Horses,
+                        HorseEquips = assets.HorseEquips,
+                        MaxHorseEquipSize = assets.HorseEquipMaxSize
+                    }
+                ];
+            }
+
+            case "PickUpItemRequest":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var entityId = req.Int("EntityID");
+                if (!state.GroundItems.TryGetValue(entityId, out var ground) ||
+                    ground.MapId != state.CurrentMapId)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "物品已不存在"
+                        }
+                    ];
+                }
+
+                var dx = ground.X - state.LastX;
+                var dy = ground.Y - state.LastY;
+                if (dx * dx + dy * dy > 100.0 * 100.0)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "距離物品太遠"
+                        }
+                    ];
+                }
+
+                switch (ground.TabType)
+                {
+                    case 0:
+                    case 5:
+                        _store.AddInventoryItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            ground.ItemIndex,
+                            ground.Count);
+                        break;
+
+                    case 1:
+                        _store.AddEquipment(
+                            accountId,
+                            state.CharacterId.Value,
+                            ground.ItemIndex,
+                            ground.Part,
+                            ground.Damage,
+                            ground.Color);
+                        break;
+
+                    case 3:
+                        _store.AddHorseEquipment(
+                            accountId,
+                            state.CharacterId.Value,
+                            ground.ItemIndex,
+                            -1,
+                            ground.Part,
+                            ground.Damage,
+                            ground.Color);
+                        break;
+
+                    default:
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "此類物品目前無法撿回"
+                            }
+                        ];
+                }
+
+                state.GroundItems.Remove(entityId);
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                return
+                [
+                    new
+                    {
+                        Type = "DespawnEntity",
+                        EntityID = entityId
+                    },
+                    new
+                    {
+                        Type = "InventorySync",
+                        Items = assets.Inventory,
+                        MaxSize = assets.InventoryMaxSize
+                    },
+                    new
+                    {
+                        Type = "EquipSync",
+                        Equips = assets.Equips,
+                        MaxSize = assets.EquipMaxSize
+                    },
+                    new
+                    {
+                        Type = "HorseSync",
+                        Horses = assets.Horses,
+                        HorseEquips = assets.HorseEquips,
+                        MaxHorseEquipSize = assets.HorseEquipMaxSize
+                    }
+                ];
+            }
+
             case "ShopAction":
             {
                 if (!state.CharacterId.HasValue) return [];
