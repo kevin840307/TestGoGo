@@ -56,6 +56,11 @@ public interface ICharacterStore
         long accountId,
         long dbid,
         int attackSpeed);
+    Dictionary<string, object>? SetCareer(
+        long accountId,
+        long dbid,
+        int career,
+        int job);
     Dictionary<string, object>? Revive(long accountId, long dbid);
     Dictionary<string, object>? ReviveBySkill(
         long accountId,
