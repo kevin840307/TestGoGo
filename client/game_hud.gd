@@ -1002,6 +1002,7 @@ func _on_unequip_requested(target_slot: int) -> void :
 			NetworkManager.send_secure_packet({"Type": "UnequipRequest", "TargetSlot": target_slot})
 
 func initialize_hud(player: CharacterBody2D) -> void :
+	var hud_started_usec := Time.get_ticks_usec()
 	target_player = player
 	_last_displayed_coords = null
 	if character_window and character_window.has_method("setup"): character_window.setup(player)
@@ -1026,14 +1027,34 @@ func initialize_hud(player: CharacterBody2D) -> void :
 		update_map_info(map_id, raw_node_name)
 
 	update_status_panel()
+
+	# Shortcut restoration may synchronously load skill .tres resources. Keep it
+	# outside the initial world-entry critical path and let the first frame render.
+	call_deferred("_initialize_hud_deferred")
+
+	var hud_sync_ms := float(Time.get_ticks_usec() - hud_started_usec) / 1000.0
+	if hud_sync_ms >= 25.0:
+		print("[HUD_INIT_TIMING] synchronous_ms=%.2f" % hud_sync_ms)
+
+func _initialize_hud_deferred() -> void :
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+
+	var shortcuts_started_usec := Time.get_ticks_usec()
 	_load_shortcuts_from_data()
+	var shortcuts_ms := float(Time.get_ticks_usec() - shortcuts_started_usec) / 1000.0
+	if shortcuts_ms >= 25.0:
+		print("[HUD_INIT_TIMING] shortcuts_ms=%.2f" % shortcuts_ms)
 
 	if NetworkManager and NetworkManager.has_method("send_set_global_pet_mode"):
 		NetworkManager.send_set_global_pet_mode(current_pet_combat_mode)
 
-	_open_window(announcement_window)
-	announcement_window.call("set_loading")
-	NetworkManager.send_announcement_list_request()
+	if is_instance_valid(announcement_window):
+		_open_window(announcement_window)
+		announcement_window.call("set_loading")
+	if NetworkManager:
+		NetworkManager.send_announcement_list_request()
 
 func update_map_info(map_id: int, raw_node_name: String) -> void :
 	_last_displayed_coords = null
