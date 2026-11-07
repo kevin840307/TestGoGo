@@ -36,6 +36,8 @@ public sealed class MonsterRuntimeState
     public DateTimeOffset LastAiAt { get; set; }
     public DateTimeOffset LastActionAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastStallLogAt { get; set; } = DateTimeOffset.MinValue;
+    public double? LastMovePacketX { get; set; }
+    public double? LastMovePacketY { get; set; }
     public MonsterAiState AiState { get; set; } = MonsterAiState.Idle;
 
     // Compatibility mirrors while older tests/features migrate to AiState.
