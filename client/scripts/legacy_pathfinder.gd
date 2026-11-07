@@ -164,6 +164,62 @@ func validate_world_path(
 	return true
 
 
+func _normal_heap_push(heap: Array[Vector3i], cell: Vector2i, priority: int) -> void:
+	var node := Vector3i(cell.x, cell.y, priority)
+	heap.append(node)
+	var index: int = heap.size() - 1
+	while index > 0:
+		var parent: int = (index - 1) / 2
+		if heap[parent].z <= heap[index].z:
+			break
+		var tmp: Vector3i = heap[parent]
+		heap[parent] = heap[index]
+		heap[index] = tmp
+		index = parent
+
+
+func _normal_heap_pop(heap: Array[Vector3i]) -> Vector3i:
+	var root: Vector3i = heap[0]
+	var last: Vector3i = heap.pop_back()
+	if heap.is_empty():
+		return root
+	heap[0] = last
+	var index: int = 0
+	while true:
+		var left: int = index * 2 + 1
+		if left >= heap.size():
+			break
+		var right: int = left + 1
+		var smallest: int = left
+		if right < heap.size() and heap[right].z < heap[left].z:
+			smallest = right
+		if heap[index].z <= heap[smallest].z:
+			break
+		var tmp: Vector3i = heap[index]
+		heap[index] = heap[smallest]
+		heap[smallest] = tmp
+		index = smallest
+	return root
+
+
+func _validate_cell_path(grid: Dictionary, path: Array[Vector2i]) -> bool:
+	if path.size() <= 1:
+		return true
+	for i: int in range(1, path.size()):
+		var previous: Vector2i = path[i - 1]
+		var current: Vector2i = path[i]
+		var dx: int = absi(current.x - previous.x)
+		var dy: int = absi(current.y - previous.y)
+		if dx > 1 or dy > 1 or (dx == 0 and dy == 0):
+			return false
+		if _is_blocked(grid, current):
+			return false
+		if dx == 1 and dy == 1:
+			if _is_blocked(grid, Vector2i(previous.x, current.y)) or _is_blocked(grid, Vector2i(current.x, previous.y)):
+				return false
+	return true
+
+
 func _fallback_heap_push(heap: Array[Vector3i], cell: Vector2i, priority: int) -> void:
 	var node := Vector3i(cell.x, cell.y, priority)
 	heap.append(node)
@@ -638,17 +694,17 @@ func _find_path_with_limits(
 	if goal.x < min_x or goal.x > max_x or goal.y < min_y or goal.y > max_y:
 		return []
 
-	var open: Array[Vector2i] = [start]
-	# Membership checks were previously Array.has(next), which is O(n) for
-	# every expanded neighbor. Keep the existing stable ordering, but track
-	# membership separately in O(1) without changing route selection.
-	var open_set: Dictionary = {start: true}
+	# The old normal A* scanned the whole open Array to find the minimum
+	# f-score on every expansion. That is the dominant CPU cost for ordinary
+	# obstacle clicks. A binary min-heap makes selection O(log n).
+	var open_heap: Array[Vector3i] = []
+	_normal_heap_push(open_heap, start, _heuristic(start, goal))
 	var closed: Dictionary = {}
 	var came_from: Dictionary = {}
 	var g_score: Dictionary = {start: 0}
 
 	var expanded_since_budget_check: int = 0
-	while not open.is_empty():
+	while not open_heap.is_empty():
 		_path_query_expanded_cells += 1
 		expanded_since_budget_check += 1
 		if expanded_since_budget_check >= PATH_BUDGET_CHECK_INTERVAL:
@@ -656,22 +712,17 @@ func _find_path_with_limits(
 			if Time.get_ticks_usec() >= _path_query_deadline_usec:
 				return []
 
-		var best_index: int = 0
-		var best_score: int = 2147483647
-		for i: int in range(open.size()):
-			var candidate: Vector2i = open[i]
-			var candidate_g: int = int(g_score.get(candidate, 2147483647))
-			var candidate_f: int = candidate_g + _heuristic(candidate, goal)
-			if candidate_f < best_score:
-				best_score = candidate_f
-				best_index = i
-
-		var current: Vector2i = open[best_index]
-		open.remove_at(best_index)
-		open_set.erase(current)
+		var entry: Vector3i = _normal_heap_pop(open_heap)
+		var current := Vector2i(entry.x, entry.y)
+		if closed.has(current):
+			continue
 
 		if current == goal:
-			return _reconstruct_path(came_from, start, goal)
+			var reconstructed: Array[Vector2i] = _reconstruct_path(came_from, start, goal)
+			if _validate_cell_path(grid, reconstructed):
+				return reconstructed
+			push_warning("[LegacyPathfinder] Rejected invalid heap A* path before movement")
+			return []
 
 		closed[current] = true
 
@@ -692,9 +743,13 @@ func _find_path_with_limits(
 
 			came_from[next] = current
 			g_score[next] = new_g
-			if not open_set.has(next):
-				open.append(next)
-				open_set[next] = true
+			# Duplicate heap entries avoid an O(n) decrease-key search. Stale
+			# entries are discarded by the closed set when popped.
+			_normal_heap_push(
+				open_heap,
+				next,
+				new_g + _heuristic(next, goal)
+			)
 
 	return []
 
