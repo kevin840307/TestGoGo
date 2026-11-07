@@ -29,15 +29,18 @@ public sealed class CombatService
     private readonly IGameStore _store;
     private readonly WorldDataService _world;
     private readonly CurrentClientDataCatalog _current;
+    private readonly LegacyPlayerGrowthCatalog _growth;
 
     public CombatService(
         IGameStore store,
         WorldDataService world,
-        CurrentClientDataCatalog current)
+        CurrentClientDataCatalog current,
+        LegacyPlayerGrowthCatalog growth)
     {
         _store = store;
         _world = world;
         _current = current;
+        _growth = growth;
     }
 
     public IReadOnlyList<object> EnterMap(
@@ -825,6 +828,12 @@ public sealed class CombatService
                         KillerID = session.CharacterId.Value
                     });
 
+                    AddCharacterKillRewards(
+                        session,
+                        accountId,
+                        monster,
+                        packets);
+
                     AddMechaKillExperience(
                         session,
                         accountId,
@@ -1010,6 +1019,12 @@ public sealed class CombatService
                 KillerID = session.CharacterId.Value
             });
 
+            AddCharacterKillRewards(
+                session,
+                accountId,
+                monster,
+                packets);
+
             AddMechaKillExperience(
                 session,
                 accountId,
@@ -1018,6 +1033,102 @@ public sealed class CombatService
         }
 
         return packets;
+    }
+
+    private void AddCharacterKillRewards(
+        ClientSession session,
+        long accountId,
+        MonsterRuntimeState monster,
+        List<object> packets)
+    {
+        if (!session.CharacterId.HasValue)
+            return;
+
+        var dbid = session.CharacterId.Value;
+        var before = _store.GetCharacter(accountId, dbid);
+        if (before is null)
+            return;
+
+        // Enemy_Data.csv contains original drop information, but the exact
+        // legacy character EXP/money columns are not yet identified safely.
+        // Keep this small fallback isolated so recovered values can replace it
+        // later without changing combat or persistence flow.
+        var gainedExp = Math.Max(1, monster.Level * 2);
+        var gainedMoney = Math.Max(1, monster.Level);
+
+        var rewarded = _store.AddRewards(
+            accountId,
+            dbid,
+            gainedExp,
+            gainedMoney);
+
+        if (rewarded is null)
+            return;
+
+        var oldLevel = Math.Clamp(
+            Convert.ToInt32(before["Level"]),
+            1,
+            255);
+        var accumulatedExp = Math.Max(
+            0,
+            Convert.ToInt32(rewarded["ExpAcc"]));
+        var newLevel = _growth.ResolveLevel(
+            oldLevel,
+            accumulatedExp);
+        var abilityPoints = _growth.AbilityPointsGained(
+            oldLevel,
+            newLevel);
+        var maxExp = _growth.ExperienceThresholdForLevel(
+            newLevel);
+
+        rewarded = _store.SetExperienceProgress(
+                       accountId,
+                       dbid,
+                       newLevel,
+                       maxExp,
+                       abilityPoints)
+                   ?? rewarded;
+
+        if (newLevel > oldLevel)
+        {
+            var growth = _growth.Calculate(rewarded);
+            rewarded = _store.ApplyGrowthStats(
+                           accountId,
+                           dbid,
+                           growth.MaxHP,
+                           growth.MaxMP,
+                           growth.MaxSP,
+                           growth.Attack,
+                           growth.Defense,
+                           growth.MagicAttack,
+                           growth.MagicDefense,
+                           growth.Hit,
+                           growth.Dodge,
+                           growth.MoveSpeed)
+                       ?? rewarded;
+
+            packets.Add(new
+            {
+                Type = "SystemMessageFlash",
+                Message = $"升級！Lv.{newLevel}"
+            });
+        }
+
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            dbid);
+
+        packets.Add(
+            CharacterStatCalculator.ToPlayerStatusPacket(
+                rewarded,
+                assets,
+                _current));
+
+        packets.Add(new
+        {
+            Type = "SyncMoney",
+            Money = rewarded["Money"]
+        });
     }
 
     private void AddMechaKillExperience(
