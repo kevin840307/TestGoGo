@@ -6,16 +6,19 @@ namespace SGO.Server.Application.Shops;
 
 public sealed class ShopService
 {
-    private readonly IGameStore _store;
+    private readonly IShopStore _shopStore;
+    private readonly ICharacterStore _characters;
     private readonly ShopCatalog _catalog;
     private readonly CurrentClientDataCatalog _current;
 
     public ShopService(
-        IGameStore store,
+        IShopStore shopStore,
+        ICharacterStore characters,
         ShopCatalog catalog,
         CurrentClientDataCatalog current)
     {
-        _store = store;
+        _shopStore = shopStore;
+        _characters = characters;
         _catalog = catalog;
         _current = current;
     }
@@ -95,14 +98,14 @@ public sealed class ShopService
             _ => AssetPurchaseKind.General
         };
 
-        var character = _store.GetCharacter(accountId, characterId);
+        var character = _characters.GetCharacter(accountId, characterId);
         if (character is null)
             return Failure("角色不存在");
 
         var rate = Convert.ToInt32(character["Career"]) == 9 ? 80 : 100;
         var unitPrice = Math.Max(1, item.Price * rate / 100);
 
-        var result = _store.BuyAsset(
+        var result = _shopStore.BuyAsset(
             accountId,
             characterId,
             kind,
@@ -131,7 +134,7 @@ public sealed class ShopService
         if (uid <= 0 || count <= 0)
             return Failure("出售資料無效");
 
-        var assets = _store.GetCharacterAssets(
+        var assets = _shopStore.GetCharacterAssets(
             accountId,
             characterId);
 
@@ -168,7 +171,7 @@ public sealed class ShopService
         };
 
         var unitPrice = Math.Max(1, item.Price / 2);
-        var success = _store.SellAsset(
+        var success = _shopStore.SellAsset(
             accountId,
             characterId,
             uid,
@@ -193,7 +196,7 @@ public sealed class ShopService
         long money,
         string message)
     {
-        var assets = _store.GetCharacterAssets(
+        var assets = _shopStore.GetCharacterAssets(
             accountId,
             characterId);
 
