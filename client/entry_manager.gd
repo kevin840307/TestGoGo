@@ -380,6 +380,13 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 		var bar = overlay.get_node_or_null("LoadingBar") as ProgressBar
 		if bar: bar.value = 100.0
 
+	# The map and entity containers are fully ready at this point. Tell the
+	# server now, while the loading overlay is still covering the world, so the
+	# authoritative ground-item snapshot can arrive and instantiate before the
+	# player sees the map.
+	if NetworkManager and NetworkManager.has_method("send_world_ready"):
+		NetworkManager.send_world_ready(int(server_full_data.get("MapID", 0)))
+	await get_tree().process_frame
 
 	var fade_world_tween = create_tween()
 	fade_world_tween.set_parallel(true)
@@ -395,8 +402,5 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 			await fade_world_tween.finished
 
 		overlay.visible = false
-
-	if NetworkManager and NetworkManager.has_method("send_world_ready"):
-		NetworkManager.send_world_ready(int(server_full_data.get("MapID", 0)))
 
 	queue_free()
