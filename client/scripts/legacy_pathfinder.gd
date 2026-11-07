@@ -12,7 +12,7 @@ const COLLISION_TILESET: TileSet = preload("res://collision_marker.tres")
 var _map_cache: Dictionary = {}
 var _query_can_cross_special_terrain: bool = false
 
-func get_path(
+func find_path(
 	map_id: int,
 	start_world: Vector2,
 	target_world: Vector2,
