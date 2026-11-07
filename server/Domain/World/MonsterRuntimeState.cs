@@ -33,7 +33,9 @@ public sealed class MonsterRuntimeState
     // means it targets that character's summoned pet while ownership stays
     // bound to TargetCharacterId for multiplayer tick arbitration.
     public long TargetPetUid { get; set; }
-    public DateTimeOffset LastAiAt { get; set; } = DateTimeOffset.MinValue;
+    public DateTimeOffset LastAiAt { get; set; }
+    public DateTimeOffset LastActionAt { get; set; } = DateTimeOffset.MinValue;
+    public DateTimeOffset LastStallLogAt { get; set; } = DateTimeOffset.MinValue; = DateTimeOffset.MinValue;
     public MonsterAiState AiState { get; set; } = MonsterAiState.Idle;
 
     // Compatibility mirrors while older tests/features migrate to AiState.
