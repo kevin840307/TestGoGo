@@ -33,6 +33,9 @@ public sealed class ClientSession
     public Dictionary<int, DateTimeOffset> SkillReadyAt { get; } = new();
     public Dictionary<int, SkillBuffRuntime> ActiveSkillBuffs { get; } = new();
 
+    public Dictionary<int, GroundItemRuntime> GroundItems { get; } = new();
+    public int NextGroundItemEntityId { get; set; } = 6_000_000;
+
     // Runtime entities are per session. Each visited map retains its monster
     // state so leaving and re-entering does not reset positions/HP.
     public Dictionary<int, MonsterRuntimeState> Monsters { get; } = new();
