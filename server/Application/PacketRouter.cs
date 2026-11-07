@@ -3193,6 +3193,8 @@ public sealed class PacketRouter
             var skillsChanged = false;
             var careerChanged = false;
             var appearanceChanged = false;
+            var questTrackerPackets =
+                new List<object>();
             var dbid = state.CharacterId ?? 0;
             var questTeamMembers = dbid > 0
                 ? _party.GetMembers(dbid)
@@ -3237,6 +3239,13 @@ public sealed class PacketRouter
                             throw new InvalidOperationException(
                                 $"Unable to persist quest flag {name}");
                         }
+
+                        questTrackerPackets.AddRange(
+                            _questProgress.OnLegacyFlagChanged(
+                                accountId,
+                                dbid,
+                                name,
+                                value));
                     },
                     GetItemCount = (itemId, tabType) =>
                         dbid > 0
@@ -3415,6 +3424,18 @@ public sealed class PacketRouter
                         return success;
                     }
                 });
+
+            result.Packets.AddRange(
+                questTrackerPackets);
+
+            result.Packets.AddRange(
+                _questProgress.OnLegacyInteractionCompleted(
+                    accountId,
+                    dbid,
+                    npc.Script,
+                    function,
+                    choice,
+                    assetsChanged));
 
             if (result.RebornMapId.HasValue &&
                 result.RebornX.HasValue &&
