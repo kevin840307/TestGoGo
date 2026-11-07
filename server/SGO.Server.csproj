@@ -12,6 +12,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="../client/Assets/Pets/Config.json">
+      <Link>GameData/Pets/Config.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="../client/Assets/Recipe.json">
       <Link>GameData/Recipe.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
