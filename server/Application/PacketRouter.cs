@@ -278,10 +278,26 @@ public sealed class PacketRouter
 
     public IReadOnlyList<object> Handle(JsonElement req, ClientSession state)
     {
+        if (req.ValueKind != JsonValueKind.Object)
+            return [new
+            {
+                Type = "PacketError",
+                RequestType = "",
+                Code = "INVALID_PACKET",
+                Message = "封包必須是 JSON 物件"
+            }];
+
         var type = req.Str("Type");
 
         if (type == "RegisterAccountRequest")
         {
+            if (!PacketSchemaValidator.TryValidate(req, type, out var schemaError))
+                return [new
+                {
+                    Type = "RegisterAccountResponse",
+                    Success = false,
+                    Message = schemaError
+                }];
             var (ok, msg) = _store.Register(
                 req.Str("LoginName"), req.Str("Password"), req.Str("EMAIL"));
             return [new { Type = "RegisterAccountResponse", Success = ok, Message = msg }];
@@ -289,6 +305,14 @@ public sealed class PacketRouter
 
         if (type == "LoginRequest")
         {
+            if (!PacketSchemaValidator.TryValidate(req, type, out var schemaError))
+                return [new
+                {
+                    Type = "LoginResponse",
+                    Success = false,
+                    Message = schemaError,
+                    Characters = Array.Empty<object>()
+                }];
             _sessions.Unregister(state.ConnectionId);
 
             var id = _store.Login(req.Str("User"), req.Str("Pass"));
