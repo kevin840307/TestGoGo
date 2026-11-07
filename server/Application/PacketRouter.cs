@@ -32,6 +32,8 @@ public sealed class PacketRouter
         TimeSpan.FromSeconds(3);
     private static readonly TimeSpan PositionBroadcastInterval =
         TimeSpan.FromMilliseconds(100);
+    private static readonly TimeSpan LocationReconcileInterval =
+        TimeSpan.FromMilliseconds(500);
 
     private sealed record TrainTravelSpec(
         string Continuation,
@@ -141,8 +143,8 @@ public sealed class PacketRouter
         _store.UpdatePosition(
             state.AccountId.Value,
             state.CharacterId.Value,
-            state.LastX,
-            state.LastY);
+            (int)Math.Round(state.LastX),
+            (int)Math.Round(state.LastY));
         state.PositionDirty = false;
         state.LastPositionPersistAt = DateTimeOffset.UtcNow;
     }
@@ -3168,34 +3170,38 @@ public sealed class PacketRouter
         var dbid = state.CharacterId.Value;
         var packets = new List<object>();
 
-        // Server-initiated travel (for example a party-return skill) updates
-        // persistence first and sends ChangeMap directly to the target socket.
-        // Reconcile this connection's runtime state from the authoritative DB
-        // on its next world tick.
-        var persistedCharacter = _store.GetCharacter(
-            accountId,
-            dbid);
-
-        if (persistedCharacter is not null)
+        // Server-initiated travel may update persistence outside this
+        // connection. Reconcile periodically instead of hitting SQLite on
+        // every world tick.
+        if (now - state.LastLocationReconcileAt >=
+            LocationReconcileInterval)
         {
-            var persistedMapId = Convert.ToInt32(
-                persistedCharacter["MapID"]);
+            state.LastLocationReconcileAt = now;
+            var persistedCharacter = _store.GetCharacter(
+                accountId,
+                dbid);
 
-            if (persistedMapId > 0 &&
-                persistedMapId != state.CurrentMapId)
+            if (persistedCharacter is not null)
             {
-                state.CurrentMapId = persistedMapId;
-                state.LastX = Convert.ToDouble(
-                    persistedCharacter["LocX"]);
-                state.LastY = Convert.ToDouble(
-                    persistedCharacter["LocY"]);
-                state.PositionDirty = false;
-                state.LastPositionPersistAt = now;
-                state.PendingMapSpawn = true;
-                state.LoadedMonsterMapId = 0;
-                state.WorldSnapshotRetriesRemaining = 0;
-                state.PetTargets.Clear();
-                state.PetOutOfRangeSince.Clear();
+                var persistedMapId = Convert.ToInt32(
+                    persistedCharacter["MapID"]);
+
+                if (persistedMapId > 0 &&
+                    persistedMapId != state.CurrentMapId)
+                {
+                    state.CurrentMapId = persistedMapId;
+                    state.LastX = Convert.ToDouble(
+                        persistedCharacter["LocX"]);
+                    state.LastY = Convert.ToDouble(
+                        persistedCharacter["LocY"]);
+                    state.PositionDirty = false;
+                    state.LastPositionPersistAt = now;
+                    state.PendingMapSpawn = true;
+                    state.LoadedMonsterMapId = 0;
+                    state.WorldSnapshotRetriesRemaining = 0;
+                    state.PetTargets.Clear();
+                    state.PetOutOfRangeSince.Clear();
+                }
             }
         }
 
