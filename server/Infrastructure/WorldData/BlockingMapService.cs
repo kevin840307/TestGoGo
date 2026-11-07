@@ -37,10 +37,63 @@ public sealed class BlockingMapService
         if (grid is null)
             return false;
 
+        var fromCellX = (int)Math.Floor(fromX / CellSize);
+        var fromCellY = (int)Math.Floor(fromY / CellSize);
+        var toCellX = (int)Math.Floor(toX / CellSize);
+        var toCellY = (int)Math.Floor(toY / CellSize);
+
+        if (!grid.IsWalkable(
+                fromCellX,
+                fromCellY,
+                canCrossSpecialTerrain) ||
+            !grid.IsWalkable(
+                toCellX,
+                toCellY,
+                canCrossSpecialTerrain))
+        {
+            return false;
+        }
+
+        if (IsStraightSegmentWalkable(
+                grid,
+                fromX,
+                fromY,
+                toX,
+                toY,
+                canCrossSpecialTerrain))
+        {
+            return true;
+        }
+
+        // Client movement follows Blocking.dat waypoints. Around a corner,
+        // two consecutive network samples can form a chord that intersects
+        // a blocked cell even though the real travelled polyline was legal.
+        // Validate local grid connectivity instead of requiring that chord
+        // itself to be clear. The bounded search keeps this inexpensive and
+        // still rejects true wall tunnelling.
+        return HasShortLocalRoute(
+            grid,
+            fromCellX,
+            fromCellY,
+            toCellX,
+            toCellY,
+            canCrossSpecialTerrain);
+    }
+
+    private static bool IsStraightSegmentWalkable(
+        BlockingGrid grid,
+        double fromX,
+        double fromY,
+        double toX,
+        double toY,
+        bool canCrossSpecialTerrain)
+    {
         var dx = toX - fromX;
         var dy = toY - fromY;
         var distance = Math.Sqrt(dx * dx + dy * dy);
-        var samples = Math.Max(1, (int)Math.Ceiling(distance / SampleStep));
+        var samples = Math.Max(
+            1,
+            (int)Math.Ceiling(distance / SampleStep));
 
         for (var i = 0; i <= samples; i++)
         {
@@ -61,6 +114,95 @@ public sealed class BlockingMapService
         }
 
         return true;
+    }
+
+    private static bool HasShortLocalRoute(
+        BlockingGrid grid,
+        int startX,
+        int startY,
+        int goalX,
+        int goalY,
+        bool canCrossSpecialTerrain)
+    {
+        if (startX == goalX && startY == goalY)
+            return true;
+
+        const int margin = 2;
+        const int maxExpandedCells = 64;
+
+        var minX = Math.Min(startX, goalX) - margin;
+        var maxX = Math.Max(startX, goalX) + margin;
+        var minY = Math.Min(startY, goalY) - margin;
+        var maxY = Math.Max(startY, goalY) + margin;
+
+        var queue = new Queue<(int X, int Y)>();
+        var visited = new HashSet<(int X, int Y)>();
+
+        queue.Enqueue((startX, startY));
+        visited.Add((startX, startY));
+
+        var expanded = 0;
+        var directions = new (int X, int Y)[]
+        {
+            (1, 0), (-1, 0), (0, 1), (0, -1),
+            (1, 1), (1, -1), (-1, 1), (-1, -1)
+        };
+
+        while (queue.Count > 0 &&
+               expanded < maxExpandedCells)
+        {
+            var current = queue.Dequeue();
+            expanded++;
+
+            foreach (var direction in directions)
+            {
+                var nextX = current.X + direction.X;
+                var nextY = current.Y + direction.Y;
+
+                if (nextX < minX ||
+                    nextX > maxX ||
+                    nextY < minY ||
+                    nextY > maxY)
+                {
+                    continue;
+                }
+
+                if (!grid.IsWalkable(
+                        nextX,
+                        nextY,
+                        canCrossSpecialTerrain))
+                {
+                    continue;
+                }
+
+                // Match the client pathfinder: diagonal movement cannot cut
+                // through the corner between two orthogonally blocked cells.
+                if (direction.X != 0 &&
+                    direction.Y != 0 &&
+                    (!grid.IsWalkable(
+                         current.X + direction.X,
+                         current.Y,
+                         canCrossSpecialTerrain) ||
+                     !grid.IsWalkable(
+                         current.X,
+                         current.Y + direction.Y,
+                         canCrossSpecialTerrain)))
+                {
+                    continue;
+                }
+
+                if (nextX == goalX &&
+                    nextY == goalY)
+                {
+                    return true;
+                }
+
+                if (visited.Add((nextX, nextY)))
+                    queue.Enqueue((nextX, nextY));
+            }
+        }
+
+        return false;
     }
 
     public byte GetFlags(int mapId, double worldX, double worldY)
