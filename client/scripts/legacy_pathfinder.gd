@@ -17,6 +17,12 @@ const ADAPTIVE_SEARCH_SPECS: Array[Vector2i] = [
 	Vector2i(16, 112),
 	Vector2i(24, 144),
 ]
+const PATH_NEIGHBORS: Array[Vector3i] = [
+	Vector3i(1, 0, 10), Vector3i(-1, 0, 10),
+	Vector3i(0, 1, 10), Vector3i(0, -1, 10),
+	Vector3i(1, 1, 14), Vector3i(1, -1, 14),
+	Vector3i(-1, 1, 14), Vector3i(-1, -1, 14),
+]
 
 var _map_cache: Dictionary = {}
 var _query_can_cross_special_terrain: bool = false
@@ -251,13 +257,6 @@ func find_large_detour_path_async(
 	var expanded: int = 0
 	var frame_started_usec: int = Time.get_ticks_usec()
 
-	var neighbors: Array[Vector3i] = [
-		Vector3i(1, 0, 10), Vector3i(-1, 0, 10),
-		Vector3i(0, 1, 10), Vector3i(0, -1, 10),
-		Vector3i(1, 1, 14), Vector3i(1, -1, 14),
-		Vector3i(-1, 1, 14), Vector3i(-1, -1, 14),
-	]
-
 	while not open_heap.is_empty() and expanded < max_expanded_cells:
 		if Time.get_ticks_usec() - frame_started_usec >= frame_budget_usec:
 			await get_tree().process_frame
@@ -322,7 +321,7 @@ func find_large_detour_path_async(
 		closed[current] = true
 		expanded += 1
 
-		for spec: Vector3i in neighbors:
+		for spec: Vector3i in PATH_NEIGHBORS:
 			var next := Vector2i(current.x + spec.x, current.y + spec.y)
 			if closed.has(next) or _is_blocked_for_query(
 				grid,
@@ -640,16 +639,13 @@ func _find_path_with_limits(
 		return []
 
 	var open: Array[Vector2i] = [start]
+	# Membership checks were previously Array.has(next), which is O(n) for
+	# every expanded neighbor. Keep the existing stable ordering, but track
+	# membership separately in O(1) without changing route selection.
+	var open_set: Dictionary = {start: true}
 	var closed: Dictionary = {}
 	var came_from: Dictionary = {}
 	var g_score: Dictionary = {start: 0}
-
-	var neighbors: Array[Vector3i] = [
-		Vector3i(1, 0, 10), Vector3i(-1, 0, 10),
-		Vector3i(0, 1, 10), Vector3i(0, -1, 10),
-		Vector3i(1, 1, 14), Vector3i(1, -1, 14),
-		Vector3i(-1, 1, 14), Vector3i(-1, -1, 14),
-	]
 
 	var expanded_since_budget_check: int = 0
 	while not open.is_empty():
@@ -672,13 +668,14 @@ func _find_path_with_limits(
 
 		var current: Vector2i = open[best_index]
 		open.remove_at(best_index)
+		open_set.erase(current)
 
 		if current == goal:
 			return _reconstruct_path(came_from, start, goal)
 
 		closed[current] = true
 
-		for spec: Vector3i in neighbors:
+		for spec: Vector3i in PATH_NEIGHBORS:
 			var next := Vector2i(current.x + spec.x, current.y + spec.y)
 			if next.x < min_x or next.x > max_x or next.y < min_y or next.y > max_y:
 				continue
@@ -695,8 +692,9 @@ func _find_path_with_limits(
 
 			came_from[next] = current
 			g_score[next] = new_g
-			if not open.has(next):
+			if not open_set.has(next):
 				open.append(next)
+				open_set[next] = true
 
 	return []
 
