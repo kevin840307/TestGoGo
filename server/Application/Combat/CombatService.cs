@@ -1700,9 +1700,9 @@ public sealed class CombatService
             }
         };
 
-        // Crash isolation mode for the custom screen AOE skill:
-        // kill up to four nearby monsters and aggregate character rewards once.
-        // Drops, quests, pet EXP and mecha EXP remain disabled.
+        // Custom screen AOE: hit up to 32 nearby monsters with a high
+        // real damage value. Death/rewards are based on remaining HP instead
+        // of forcing every target to zero.
         if (isScreenAreaAttack)
         {
             var runtime = SyncSessionMonsters(session);
@@ -1714,7 +1714,7 @@ public sealed class CombatService
                     0,
                     levelData.AoeRadius);
 
-                var probeTargets = runtime.Monsters.Values
+                var targets = runtime.Monsters.Values
                     .Where(x =>
                         x.IsAlive &&
                         x.MapId == session.CurrentMapId &&
@@ -1727,44 +1727,77 @@ public sealed class CombatService
                     .Take(32)
                     .ToArray();
 
-                foreach (var probeTarget in probeTargets)
-                {
-                    var lethalDamage = Math.Max(
-                        1,
-                        probeTarget.CurrentHp);
+                var screenDamage = (int)Math.Clamp(
+                    100_000L +
+                    (long)effective.Attack * 50L +
+                    (long)effective.MagicAttack * 50L,
+                    1L,
+                    int.MaxValue);
 
-                    probeTarget.CurrentHp = 0;
-                    probeTarget.RespawnAt =
-                        now + RespawnDelay;
-                    probeTarget.HasTarget = false;
-                    probeTarget.TargetCharacterId = 0;
-                    SetAiState(
-                        probeTarget,
-                        MonsterAiState.Dead);
+                foreach (var target in targets)
+                {
+                    var appliedDamage = Math.Min(
+                        screenDamage,
+                        Math.Max(1, target.CurrentHp));
+
+                    target.CurrentHp = Math.Max(
+                        0,
+                        target.CurrentHp - screenDamage);
 
                     packets.Add(new
                     {
                         Type = "EntityDamage",
-                        TargetID = probeTarget.EntityId,
+                        TargetID = target.EntityId,
                         TargetType = 1,
-                        Damage = lethalDamage,
-                        CurrentHP = 0,
-                        MaxHP = probeTarget.MaxHp,
+                        Damage = appliedDamage,
+                        CurrentHP = target.CurrentHp,
+                        MaxHP = target.MaxHp,
                         IsCrit = false,
                         SkillID = skillId,
                         SkillLevel = skillLevel,
                         AttackerID = session.CharacterId.Value
                     });
 
+                    if (target.CurrentHp > 0)
+                    {
+                        if (!target.HasTarget)
+                        {
+                            target.HasTarget = true;
+                            target.TargetCharacterId =
+                                session.CharacterId.Value;
+                            SetAiState(
+                                target,
+                                MonsterAiState.Chase);
+
+                            packets.Add(new
+                            {
+                                Type = "MonsterTarget",
+                                EntityID = target.EntityId,
+                                HasTarget = true,
+                                TargetID = session.CharacterId.Value
+                            });
+                        }
+
+                        continue;
+                    }
+
+                    target.RespawnAt =
+                        now + RespawnDelay;
+                    target.HasTarget = false;
+                    target.TargetCharacterId = 0;
+                    SetAiState(
+                        target,
+                        MonsterAiState.Dead);
+
                     packets.Add(new
                     {
                         Type = "EntityDeath",
-                        EntityID = probeTarget.EntityId,
+                        EntityID = target.EntityId,
                         EntityType = 1,
                         KillerID = session.CharacterId.Value
                     });
 
-                    killedMonsters.Add(probeTarget);
+                    killedMonsters.Add(target);
                 }
             }
 
