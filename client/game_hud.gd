@@ -762,6 +762,8 @@ func _ensure_lazy_window(kind: String) -> Control:
 	if is_instance_valid(existing):
 		return existing
 
+	var total_started_usec: int = Time.get_ticks_usec()
+	var load_started_usec: int = total_started_usec
 	var path: String = str(LAZY_WINDOW_PATHS.get(kind, ""))
 	if path.is_empty():
 		return null
@@ -796,12 +798,32 @@ func _ensure_lazy_window(kind: String) -> Control:
 		_lazy_window_scenes[kind] = scene
 		_lazy_window_requests.erase(kind)
 
+	var load_ms: float = float(Time.get_ticks_usec() - load_started_usec) / 1000.0
+	var instantiate_started_usec: int = Time.get_ticks_usec()
 	var window := scene.instantiate() as Control
+	var instantiate_ms: float = float(Time.get_ticks_usec() - instantiate_started_usec) / 1000.0
 	if window == null or not is_instance_valid(windows_container):
 		return null
+
+	var add_child_started_usec: int = Time.get_ticks_usec()
 	windows_container.add_child(window)
+	var add_child_ms: float = float(Time.get_ticks_usec() - add_child_started_usec) / 1000.0
+
 	_assign_lazy_window(kind, window)
+
+	var setup_started_usec: int = Time.get_ticks_usec()
 	_configure_lazy_window(kind, window)
+	var setup_ms: float = float(Time.get_ticks_usec() - setup_started_usec) / 1000.0
+	var total_ms: float = float(Time.get_ticks_usec() - total_started_usec) / 1000.0
+
+	print("[HUD_WINDOW_INIT] kind=%s load_ms=%.2f instantiate_ms=%.2f add_child_ms=%.2f setup_ms=%.2f total_ms=%.2f" % [
+		kind,
+		load_ms,
+		instantiate_ms,
+		add_child_ms,
+		setup_ms,
+		total_ms,
+	])
 	return window
 
 func prepare_lazy_windows_before_reveal(progress_callback: Callable = Callable()) -> void :
@@ -1140,7 +1162,11 @@ func initialize_hud(player: CharacterBody2D) -> void :
 	_last_displayed_coords = null
 	if character_window and character_window.has_method("setup"): character_window.setup(player)
 	if inventory_window and inventory_window.has_method("setup"): inventory_window.setup(player)
-	if skill_window and skill_window.has_method("setup"): skill_window.setup(player)
+	if skill_window and skill_window.has_method("setup"):
+		var skill_setup_started_usec: int = Time.get_ticks_usec()
+		skill_window.setup(player)
+		var skill_setup_ms: float = float(Time.get_ticks_usec() - skill_setup_started_usec) / 1000.0
+		print("[HUD_SKILL_INIT] setup_ms=%.2f" % skill_setup_ms)
 	if clan_window and clan_window.has_method("setup"): clan_window.setup(player)
 	if quest_tracker_panel and quest_tracker_panel.has_method("setup"): quest_tracker_panel.setup(player)
 
