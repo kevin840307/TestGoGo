@@ -162,3 +162,13 @@ CREATE TABLE IF NOT EXISTS character_skills (
     PRIMARY KEY(character_id, skill_id),
     FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
 );
+
+
+CREATE TABLE IF NOT EXISTS character_shortcuts (
+    character_id INTEGER NOT NULL,
+    slot_index INTEGER NOT NULL,
+    shortcut_type INTEGER NOT NULL DEFAULT 0,
+    target_id INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(character_id, slot_index),
+    FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
+);
