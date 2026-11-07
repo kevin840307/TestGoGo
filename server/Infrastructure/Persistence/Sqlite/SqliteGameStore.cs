@@ -704,6 +704,702 @@ public sealed class SqliteGameStore : IGameStore
         return ok;
     }
 
+    public ClubSnapshot? GetClubSnapshot(
+        long accountId,
+        long dbid,
+        long nowUtcMs)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return null;
+
+        long clubId;
+        int myPosition;
+        long myDonation;
+
+        using (var membership = db.CreateCommand())
+        {
+            membership.Transaction = tx;
+            membership.CommandText = """
+                SELECT club_id, position, donation
+                  FROM club_members
+                 WHERE character_id=$id
+                 LIMIT 1
+                """;
+            Arg(membership, "$id", dbid);
+
+            using var reader = membership.ExecuteReader();
+            if (!reader.Read())
+                return null;
+
+            clubId = reader.GetInt64(0);
+            myPosition = reader.GetInt32(1);
+            myDonation = reader.GetInt64(2);
+        }
+
+        string clubName;
+        int clubLevel;
+        long clubExp;
+        long clubSaving;
+        string clubMessage;
+        int activeResearchId;
+        long activeResearchEndUtcMs;
+
+        using (var club = db.CreateCommand())
+        {
+            club.Transaction = tx;
+            club.CommandText = """
+                SELECT name,level,exp,saving,message,
+                       active_research_id,
+                       active_research_end_utc_ms
+                  FROM clubs
+                 WHERE id=$club
+                 LIMIT 1
+                """;
+            Arg(club, "$club", clubId);
+
+            using var reader = club.ExecuteReader();
+            if (!reader.Read())
+                return null;
+
+            clubName = reader.GetString(0);
+            clubLevel = reader.GetInt32(1);
+            clubExp = reader.GetInt64(2);
+            clubSaving = reader.GetInt64(3);
+            clubMessage = reader.GetString(4);
+            activeResearchId = reader.GetInt32(5);
+            activeResearchEndUtcMs = reader.GetInt64(6);
+        }
+
+        if (activeResearchId > 0 &&
+            activeResearchEndUtcMs > 0 &&
+            activeResearchEndUtcMs <= nowUtcMs)
+        {
+            var currentLevel = activeResearchId == 1
+                ? clubLevel
+                : 0;
+
+            if (activeResearchId != 1)
+            {
+                using var current = db.CreateCommand();
+                current.Transaction = tx;
+                current.CommandText = """
+                    SELECT level
+                      FROM club_research
+                     WHERE club_id=$club
+                       AND research_id=$research
+                     LIMIT 1
+                    """;
+                Arg(current, "$club", clubId);
+                Arg(current, "$research", activeResearchId);
+                currentLevel = Convert.ToInt32(
+                    current.ExecuteScalar() ?? 0);
+            }
+
+            var nextLevel = Math.Min(5, currentLevel + 1);
+
+            using (var upsert = db.CreateCommand())
+            {
+                upsert.Transaction = tx;
+                upsert.CommandText = """
+                    INSERT INTO club_research(
+                        club_id,research_id,level)
+                    VALUES($club,$research,$level)
+                    ON CONFLICT(club_id,research_id)
+                    DO UPDATE SET level=excluded.level
+                    """;
+                Arg(upsert, "$club", clubId);
+                Arg(upsert, "$research", activeResearchId);
+                Arg(upsert, "$level", nextLevel);
+                upsert.ExecuteNonQuery();
+            }
+
+            using (var finish = db.CreateCommand())
+            {
+                finish.Transaction = tx;
+                finish.CommandText = activeResearchId == 1
+                    ? """
+                        UPDATE clubs
+                           SET level=$level,
+                               active_research_id=0,
+                               active_research_end_utc_ms=0
+                         WHERE id=$club
+                        """
+                    : """
+                        UPDATE clubs
+                           SET active_research_id=0,
+                               active_research_end_utc_ms=0
+                         WHERE id=$club
+                        """;
+                Arg(finish, "$club", clubId);
+                if (activeResearchId == 1)
+                    Arg(finish, "$level", nextLevel);
+                finish.ExecuteNonQuery();
+            }
+
+            if (activeResearchId == 1)
+                clubLevel = nextLevel;
+
+            activeResearchId = 0;
+            activeResearchEndUtcMs = 0;
+        }
+
+        var members = new List<ClubMemberData>();
+        using (var memberCmd = db.CreateCommand())
+        {
+            memberCmd.Transaction = tx;
+            memberCmd.CommandText = """
+                SELECT c.id,c.name,c.level,c.career,c.job,
+                       m.position,m.donation
+                  FROM club_members m
+                  JOIN characters c ON c.id=m.character_id
+                 WHERE m.club_id=$club
+                 ORDER BY m.position DESC,
+                          c.level DESC,
+                          c.id ASC
+                """;
+            Arg(memberCmd, "$club", clubId);
+
+            using var reader = memberCmd.ExecuteReader();
+            while (reader.Read())
+            {
+                members.Add(new ClubMemberData(
+                    reader.GetInt64(0),
+                    reader.GetString(1),
+                    reader.GetInt32(2),
+                    reader.GetInt32(3),
+                    reader.GetInt32(4),
+                    reader.GetInt32(5),
+                    reader.GetInt64(6)));
+            }
+        }
+
+        var researches = new List<ClubResearchData>();
+        using (var researchCmd = db.CreateCommand())
+        {
+            researchCmd.Transaction = tx;
+            researchCmd.CommandText = """
+                SELECT research_id,level
+                  FROM club_research
+                 WHERE club_id=$club
+                 ORDER BY research_id
+                """;
+            Arg(researchCmd, "$club", clubId);
+
+            using var reader = researchCmd.ExecuteReader();
+            while (reader.Read())
+            {
+                researches.Add(new ClubResearchData(
+                    reader.GetInt32(0),
+                    reader.GetInt32(1)));
+            }
+        }
+
+        if (!researches.Any(x => x.ResearchId == 1))
+            researches.Insert(0, new ClubResearchData(1, clubLevel));
+
+        tx.Commit();
+
+        return new ClubSnapshot(
+            clubId,
+            clubName,
+            clubLevel,
+            clubExp,
+            clubSaving,
+            clubMessage,
+            activeResearchId,
+            activeResearchEndUtcMs,
+            myPosition,
+            myDonation,
+            members,
+            researches);
+    }
+
+    public long GetClubIdForCharacter(long dbid)
+    {
+        if (dbid <= 0)
+            return 0;
+
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT club_id
+              FROM club_members
+             WHERE character_id=$id
+             LIMIT 1
+            """;
+        Arg(cmd, "$id", dbid);
+        return Convert.ToInt64(cmd.ExecuteScalar() ?? 0L);
+    }
+
+    public ClubMutationResult CreateClub(
+        long accountId,
+        long dbid,
+        string clubName,
+        long nowUtcMs)
+    {
+        clubName = clubName.Trim();
+        if (clubName.Length is < 1 or > 8)
+            return new(false, "戰團名稱需為 1 到 8 個字");
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在");
+
+        using (var existing = db.CreateCommand())
+        {
+            existing.Transaction = tx;
+            existing.CommandText = """
+                SELECT count(*)
+                  FROM club_members
+                 WHERE character_id=$id
+                """;
+            Arg(existing, "$id", dbid);
+            if (Convert.ToInt32(existing.ExecuteScalar()) > 0)
+                return new(false, "你已經加入戰團");
+        }
+
+        long clubId;
+        try
+        {
+            using var insert = db.CreateCommand();
+            insert.Transaction = tx;
+            insert.CommandText = """
+                INSERT INTO clubs(
+                    name,created_utc_ms)
+                VALUES($name,$created);
+                SELECT last_insert_rowid();
+                """;
+            Arg(insert, "$name", clubName);
+            Arg(insert, "$created", nowUtcMs);
+            clubId = Convert.ToInt64(insert.ExecuteScalar());
+        }
+        catch (SqliteException e) when (e.SqliteErrorCode == 19)
+        {
+            return new(false, "戰團名稱已被使用");
+        }
+
+        using (var member = db.CreateCommand())
+        {
+            member.Transaction = tx;
+            member.CommandText = """
+                INSERT INTO club_members(
+                    club_id,character_id,position,donation,joined_utc_ms)
+                VALUES($club,$id,3,0,$joined)
+                """;
+            Arg(member, "$club", clubId);
+            Arg(member, "$id", dbid);
+            Arg(member, "$joined", nowUtcMs);
+            member.ExecuteNonQuery();
+        }
+
+        using (var research = db.CreateCommand())
+        {
+            research.Transaction = tx;
+            research.CommandText = """
+                INSERT INTO club_research(
+                    club_id,research_id,level)
+                VALUES($club,1,1)
+                """;
+            Arg(research, "$club", clubId);
+            research.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+        return new(true, "戰團建立成功");
+    }
+
+    public ClubMutationResult JoinClub(
+        long accountId,
+        long dbid,
+        long clubId,
+        long nowUtcMs)
+    {
+        if (clubId <= 0)
+            return new(false, "戰團不存在");
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在");
+
+        using (var existing = db.CreateCommand())
+        {
+            existing.Transaction = tx;
+            existing.CommandText = """
+                SELECT count(*)
+                  FROM club_members
+                 WHERE character_id=$id
+                """;
+            Arg(existing, "$id", dbid);
+            if (Convert.ToInt32(existing.ExecuteScalar()) > 0)
+                return new(false, "你已經加入戰團");
+        }
+
+        using (var capacity = db.CreateCommand())
+        {
+            capacity.Transaction = tx;
+            capacity.CommandText = """
+                SELECT
+                    CASE
+                        WHEN EXISTS(
+                            SELECT 1 FROM clubs WHERE id=$club)
+                        THEN (
+                            SELECT count(*)
+                              FROM club_members
+                             WHERE club_id=$club)
+                        ELSE -1
+                    END
+                """;
+            Arg(capacity, "$club", clubId);
+            var count = Convert.ToInt32(capacity.ExecuteScalar());
+            if (count < 0)
+                return new(false, "戰團不存在");
+            if (count >= 50)
+                return new(false, "戰團人數已滿");
+        }
+
+        using var insert = db.CreateCommand();
+        insert.Transaction = tx;
+        insert.CommandText = """
+            INSERT INTO club_members(
+                club_id,character_id,position,donation,joined_utc_ms)
+            VALUES($club,$id,0,0,$joined)
+            """;
+        Arg(insert, "$club", clubId);
+        Arg(insert, "$id", dbid);
+        Arg(insert, "$joined", nowUtcMs);
+
+        try
+        {
+            insert.ExecuteNonQuery();
+        }
+        catch (SqliteException e) when (e.SqliteErrorCode == 19)
+        {
+            return new(false, "無法加入戰團");
+        }
+
+        tx.Commit();
+        return new(true, "已加入戰團");
+    }
+
+    public ClubMutationResult UpdateClubMessage(
+        long accountId,
+        long dbid,
+        string message)
+    {
+        message = message.Trim();
+        if (message.Length > 100)
+            return new(false, "戰團公告最多 100 個字");
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在");
+
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            UPDATE clubs
+               SET message=$message
+             WHERE id=(
+                 SELECT club_id
+                   FROM club_members
+                  WHERE character_id=$id
+                    AND position=3
+                  LIMIT 1)
+            """;
+        Arg(cmd, "$message", message);
+        Arg(cmd, "$id", dbid);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return new(false, "只有團長可以修改戰團公告");
+
+        tx.Commit();
+        return new(true, "戰團公告已更新");
+    }
+
+    public ClubMutationResult DonateClubMoney(
+        long accountId,
+        long dbid,
+        long amount)
+    {
+        if (amount <= 0)
+            return new(false, "捐獻金額必須大於 0");
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在");
+
+        var clubId = ReadClubId(db, tx, dbid);
+        if (clubId <= 0)
+            return new(false, "你尚未加入戰團");
+
+        using (var deduct = db.CreateCommand())
+        {
+            deduct.Transaction = tx;
+            deduct.CommandText = """
+                UPDATE characters
+                   SET money=money-$amount
+                 WHERE id=$id
+                   AND account_id=$account
+                   AND money >= $amount
+                """;
+            Arg(deduct, "$amount", amount);
+            Arg(deduct, "$id", dbid);
+            Arg(deduct, "$account", accountId);
+            if (deduct.ExecuteNonQuery() != 1)
+                return new(false, "星幣不足");
+        }
+
+        using (var club = db.CreateCommand())
+        {
+            club.Transaction = tx;
+            club.CommandText = """
+                UPDATE clubs
+                   SET saving=saving+$amount
+                 WHERE id=$club
+                """;
+            Arg(club, "$amount", amount);
+            Arg(club, "$club", clubId);
+            club.ExecuteNonQuery();
+        }
+
+        using (var member = db.CreateCommand())
+        {
+            member.Transaction = tx;
+            member.CommandText = """
+                UPDATE club_members
+                   SET donation=donation+$amount
+                 WHERE club_id=$club
+                   AND character_id=$id
+                """;
+            Arg(member, "$amount", amount);
+            Arg(member, "$club", clubId);
+            Arg(member, "$id", dbid);
+            member.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+        return new(true, "戰團星幣捐獻成功");
+    }
+
+    public ClubMutationResult DonateClubExp(
+        long accountId,
+        long dbid,
+        long amount)
+    {
+        if (amount <= 0 || amount > int.MaxValue)
+            return new(false, "捐獻經驗值無效");
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在");
+
+        var clubId = ReadClubId(db, tx, dbid);
+        if (clubId <= 0)
+            return new(false, "你尚未加入戰團");
+
+        using (var deduct = db.CreateCommand())
+        {
+            deduct.Transaction = tx;
+            deduct.CommandText = """
+                UPDATE characters
+                   SET exp_acc=exp_acc-$amount
+                 WHERE id=$id
+                   AND account_id=$account
+                   AND exp_acc >= $amount
+                """;
+            Arg(deduct, "$amount", amount);
+            Arg(deduct, "$id", dbid);
+            Arg(deduct, "$account", accountId);
+            if (deduct.ExecuteNonQuery() != 1)
+                return new(false, "角色經驗值不足");
+        }
+
+        using (var club = db.CreateCommand())
+        {
+            club.Transaction = tx;
+            club.CommandText = """
+                UPDATE clubs
+                   SET exp=exp+$amount
+                 WHERE id=$club
+                """;
+            Arg(club, "$amount", amount);
+            Arg(club, "$club", clubId);
+            club.ExecuteNonQuery();
+        }
+
+        using (var member = db.CreateCommand())
+        {
+            member.Transaction = tx;
+            member.CommandText = """
+                UPDATE club_members
+                   SET donation=donation+$amount
+                 WHERE club_id=$club
+                   AND character_id=$id
+                """;
+            Arg(member, "$amount", amount);
+            Arg(member, "$club", clubId);
+            Arg(member, "$id", dbid);
+            member.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+        return new(true, "戰團經驗捐獻成功");
+    }
+
+    public ClubMutationResult StartClubResearch(
+        long accountId,
+        long dbid,
+        int researchId,
+        long nowUtcMs)
+    {
+        if (researchId is < 1 or > 11)
+            return new(false, "未知戰團科技");
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在");
+
+        long clubId;
+        using (var member = db.CreateCommand())
+        {
+            member.Transaction = tx;
+            member.CommandText = """
+                SELECT club_id
+                  FROM club_members
+                 WHERE character_id=$id
+                   AND position=3
+                 LIMIT 1
+                """;
+            Arg(member, "$id", dbid);
+            clubId = Convert.ToInt64(
+                member.ExecuteScalar() ?? 0L);
+        }
+
+        if (clubId <= 0)
+            return new(false, "只有團長可以研發科技");
+
+        int clubLevel;
+        long clubSaving;
+        long clubExp;
+        int activeResearchId;
+        using (var club = db.CreateCommand())
+        {
+            club.Transaction = tx;
+            club.CommandText = """
+                SELECT level,saving,exp,active_research_id
+                  FROM clubs
+                 WHERE id=$club
+                 LIMIT 1
+                """;
+            Arg(club, "$club", clubId);
+            using var reader = club.ExecuteReader();
+            if (!reader.Read())
+                return new(false, "戰團不存在");
+
+            clubLevel = reader.GetInt32(0);
+            clubSaving = reader.GetInt64(1);
+            clubExp = reader.GetInt64(2);
+            activeResearchId = reader.GetInt32(3);
+        }
+
+        if (activeResearchId > 0)
+            return new(false, "目前已有科技正在研發");
+
+        var currentLevel = researchId == 1
+            ? clubLevel
+            : 0;
+
+        if (researchId != 1)
+        {
+            using var current = db.CreateCommand();
+            current.Transaction = tx;
+            current.CommandText = """
+                SELECT level
+                  FROM club_research
+                 WHERE club_id=$club
+                   AND research_id=$research
+                 LIMIT 1
+                """;
+            Arg(current, "$club", clubId);
+            Arg(current, "$research", researchId);
+            currentLevel = Convert.ToInt32(
+                current.ExecuteScalar() ?? 0);
+        }
+
+        if (currentLevel >= 5)
+            return new(false, "此科技已達最高等級");
+
+        var nextLevel = currentLevel + 1;
+        var moneyCost = 500_000L * nextLevel;
+        var expCost = 1_000_000L * nextLevel;
+        var researchHours = 6L * nextLevel;
+
+        if (clubSaving < moneyCost ||
+            clubExp < expCost)
+            return new(false, "戰團資金或經驗不足");
+
+        var endUtcMs = nowUtcMs +
+                       researchHours * 60L * 60L * 1000L;
+
+        using var update = db.CreateCommand();
+        update.Transaction = tx;
+        update.CommandText = """
+            UPDATE clubs
+               SET saving=saving-$money,
+                   exp=exp-$exp,
+                   active_research_id=$research,
+                   active_research_end_utc_ms=$end
+             WHERE id=$club
+               AND active_research_id=0
+            """;
+        Arg(update, "$money", moneyCost);
+        Arg(update, "$exp", expCost);
+        Arg(update, "$research", researchId);
+        Arg(update, "$end", endUtcMs);
+        Arg(update, "$club", clubId);
+
+        if (update.ExecuteNonQuery() != 1)
+            return new(false, "科技研發狀態已變更，請重試");
+
+        tx.Commit();
+        return new(
+            true,
+            $"已開始研發科技 Lv.{nextLevel}");
+    }
+
+    private static long ReadClubId(
+        SqliteConnection db,
+        SqliteTransaction tx,
+        long dbid)
+    {
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            SELECT club_id
+              FROM club_members
+             WHERE character_id=$id
+             LIMIT 1
+            """;
+        Arg(cmd, "$id", dbid);
+        return Convert.ToInt64(
+            cmd.ExecuteScalar() ?? 0L);
+    }
+
     public List<Dictionary<string, object>> GetShortcuts(
         long accountId,
         long dbid)
