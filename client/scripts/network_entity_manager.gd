@@ -12,6 +12,14 @@ var active_entities: Dictionary = {}
 var _last_skill_casts: Dictionary = {}
 var _active_entity_types: Dictionary = {}
 
+# Initial map sync can deliver dozens of entities back-to-back. Instantiating
+# every scene immediately makes all _ready()/texture/animation work land in the
+# same frame, causing a visible multi-second stall.
+const SPAWN_BATCH_PER_FRAME: int = 3
+const SPAWN_FRAME_BUDGET_USEC: int = 3500
+var _spawn_queue: Array[Dictionary] = []
+var _queued_spawn_ids: Dictionary = {}
+
 func get_active_entity(entity_id: int) -> Node2D:
 	var entity = active_entities.get(entity_id)
 	if not is_instance_valid(entity) or not entity.is_inside_tree() or entity.is_queued_for_deletion():
@@ -34,6 +42,8 @@ func clear_map_entities() -> Dictionary:
 	active_entities.clear()
 	_active_entity_types.clear()
 	_last_skill_casts.clear()
+	_spawn_queue.clear()
+	_queued_spawn_ids.clear()
 	return {"total": cleared_total, "by_type": cleared_by_type}
 
 func _ready() -> void :
@@ -61,12 +71,50 @@ func _unhandled_input(event: InputEvent) -> void :
 				GameManager.current_hud.request_next_dialog_sentence()
 
 func _on_entity_spawned(data: Dictionary) -> void :
+	var entity_id := int(data.get("EntityID", 0))
+	if entity_id <= 0:
+		return
+	if get_active_entity(entity_id) or _queued_spawn_ids.has(entity_id):
+		return
+	_queued_spawn_ids[entity_id] = true
+	_spawn_queue.append(data.duplicate(true))
+
+func _process(_delta: float) -> void :
+	if _spawn_queue.is_empty():
+		return
+	if not is_instance_valid(GameManager.current_map_node) or GameManager.current_map_node.is_queued_for_deletion():
+		_spawn_queue.clear()
+		_queued_spawn_ids.clear()
+		return
+
+	var frame_started_usec := Time.get_ticks_usec()
+	var spawned_count := 0
+	while not _spawn_queue.is_empty() and spawned_count < SPAWN_BATCH_PER_FRAME:
+		if spawned_count > 0 and Time.get_ticks_usec() - frame_started_usec >= SPAWN_FRAME_BUDGET_USEC:
+			break
+		var data: Dictionary = _spawn_queue.pop_front()
+		var entity_id := int(data.get("EntityID", 0))
+		_queued_spawn_ids.erase(entity_id)
+		_spawn_entity_now(data)
+		spawned_count += 1
+
+	var elapsed_usec := Time.get_ticks_usec() - frame_started_usec
+	if elapsed_usec >= 10000:
+		print("[ENTITY_SPAWN_TIMING] count=%d elapsed_ms=%.2f remaining=%d" % [
+			spawned_count,
+			float(elapsed_usec) / 1000.0,
+			_spawn_queue.size()
+		])
+
+func _spawn_entity_now(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
 	var entity_type = int(data.get("EntityType", 0))
 
-	if get_active_entity(entity_id): return
+	if get_active_entity(entity_id):
+		return
 	active_entities.erase(entity_id)
-	if not is_instance_valid(GameManager.current_map_node) or GameManager.current_map_node.is_queued_for_deletion(): return
+	if not is_instance_valid(GameManager.current_map_node) or GameManager.current_map_node.is_queued_for_deletion():
+		return
 
 	var spawn_pos = Vector2(float(data.get("LocX", 0)), float(data.get("LocY", 0)))
 	var new_entity: Node2D = null
