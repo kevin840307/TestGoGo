@@ -31,6 +31,8 @@ public sealed class ClientSession
     public DateTimeOffset LastPositionPersistAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastPositionBroadcastAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastLocationReconcileAt { get; set; } = DateTimeOffset.MinValue;
+    public DateTimeOffset LastPingAt { get; set; } = DateTimeOffset.MinValue;
+    public DateTimeOffset LastPongAt { get; set; } = DateTimeOffset.UtcNow;
     public int AutoSaintMpThreshold { get; set; } = 30;
     public int AutoSaintSpThreshold { get; set; } = 30;
 
