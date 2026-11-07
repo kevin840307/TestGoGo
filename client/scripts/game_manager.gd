@@ -140,7 +140,7 @@ func _print_render_stats() -> void :
 			match entity_type:
 				0: visible_players += 1
 				1: visible_monsters += 1
-				3: visible_pets += 1
+				4: visible_pets += 1
 			if "doll_engine" in entity and is_instance_valid(entity.doll_engine):
 				paper_doll_layers += entity.doll_engine.doll_sprites.size()
 
