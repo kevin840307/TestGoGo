@@ -191,7 +191,14 @@ func _on_entity_spawned(data: Dictionary) -> void :
 	if get_active_entity(entity_id) or _queued_spawn_ids.has(entity_id):
 		return
 	_queued_spawn_ids[entity_id] = true
-	_spawn_queue.append(data.duplicate(true))
+	var queued_data: Dictionary = data.duplicate(true)
+	# Existing drops should be visible as soon as a revisited map is revealed.
+	# Put ground items ahead of bulk monster/player snapshot work so they do not
+	# wait behind hundreds of entity instantiations.
+	if entity_type == 3:
+		_spawn_queue.push_front(queued_data)
+	else:
+		_spawn_queue.append(queued_data)
 	_last_spawn_enqueue_usec = Time.get_ticks_usec()
 
 func set_spawn_queue_paused(paused: bool) -> void :
