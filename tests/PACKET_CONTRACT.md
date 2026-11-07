@@ -28,7 +28,7 @@ GitHub Actions `Server build` 工作流程已納入前兩項檢查，且會上�
 ## 新增：必要欄位與 JSON 型別驗證
 
 - `server/Protocol/PacketSchemaValidator.cs` 在已登入且通過目前連線驗證後，先驗證常用可修改資料的請求，再交給 Handler。
-- 目前定義了 **19 種**請求的最低必要欄位，包括 `UseSkill`、`SyncPosition`、`BankTransfer`、`TradeReply`、`ShopAction`、`PetAction`、`UpdateShortcut` 等。
+- 目前定義了 **37 種**請求的最低必要欄位，包括 `UseSkill`、`SyncPosition`、`BankTransfer`、`TradeReply`、`ShopAction`、`PetAction`、`UpdateShortcut` 等。
 - 整數不接受字串、布林值不接受 `"true"` 等字串；必要欄位缺失會回傳 `PacketError(Code=INVALID_PACKET)`，不呼叫修改角色或資產的 Handler。
 - `tests/packet_schema_audit.py` 從 C# 規則擷取每種必要欄位，檢查 Godot 發送的**固定格式 Dictionary** 是否提供相同欄位；報告包含每個 Type 的 `MATCHED`／`FIELD_MISMATCH`／`NOT_FOUND` 與範例檔案。
 - 預留舊 Client 的非必要欄位（例如沒有目標的技能）為可省略，不強制新協定覆蓋舊協定。
