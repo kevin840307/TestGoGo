@@ -6,6 +6,7 @@ extends BaseEntity
 var sync_timer: float = 0.0
 const SYNC_RATE: float = 0.05
 var _movement_state_reported: bool = false
+var _initial_visual_ready: bool = false
 const DEFAULT_COLLISION_MASK: int = 21
 const SPECIAL_MECHA_COLLISION_MASK: int = 5
 
@@ -78,16 +79,30 @@ func _ready() -> void :
 	click_area.mouse_exited.connect(_on_mouse_exited)
 
 func _initialize_player_paper_doll() -> void :
-	if not is_inside_tree() or not is_instance_valid(doll_engine) or not doll_engine.doll_sprites.is_empty():
+	if not is_inside_tree() or not is_instance_valid(doll_engine):
+		_initial_visual_ready = true
+		return
+	if not doll_engine.doll_sprites.is_empty():
+		_initial_visual_ready = true
 		return
 	await get_tree().process_frame
-	if not is_inside_tree() or not is_instance_valid(doll_engine) or not doll_engine.doll_sprites.is_empty():
+	if not is_inside_tree() or not is_instance_valid(doll_engine):
+		_initial_visual_ready = true
 		return
+	if not doll_engine.doll_sprites.is_empty():
+		_initial_visual_ready = true
+		return
+	if GameManager:
+		GameManager.set_frame_gap_stage("player_paper_doll")
 	var started_usec := Time.get_ticks_usec()
 	setup_layered_paper_dolls()
 	var elapsed_ms := float(Time.get_ticks_usec() - started_usec) / 1000.0
+	_initial_visual_ready = true
 	if elapsed_ms >= 50.0:
 		print("[PLAYER_INIT_TIMING] paper_doll_ms=%.2f" % elapsed_ms)
+
+func is_initial_visual_ready() -> bool:
+	return _initial_visual_ready
 
 func _exit_tree() -> void :
 	if CursorManager:
