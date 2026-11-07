@@ -24,16 +24,12 @@
 [ext_resource type="Script" uid="uid://bi6fx43fy1ypt" path="res://scripts/npc_dialog_panel.gd" id="105_ikehs"]
 [ext_resource type="Texture2D" uid="uid://gnsdg20mifn0" path="res://ui/BG_NPC_MESSAGE.png" id="105_vcy0k"]
 [ext_resource type="Texture2D" uid="uid://cmdeoenkg40uh" path="res://ui/BG_LOADING.png" id="107_mot27"]
-[ext_resource type="PackedScene" uid="uid://dfjddbh86te0i" path="res://quest_window.tscn" id="110_hhfau"]
 [ext_resource type="Texture2D" uid="uid://guvnfd7jjglr" path="res://ui/OK_BUTTON.png" id="110_lihbo"]
-[ext_resource type="PackedScene" uid="uid://da2rvtatb3ymu" path="res://mall_window.tscn" id="111_5rq5p"]
 [ext_resource type="Texture2D" uid="uid://dm7lx3ho16pu" path="res://ui/CLOSESCREEN.png" id="111_qcerj"]
 [ext_resource type="Script" uid="uid://ccmih0pb00sfy" path="res://scripts/quest_tracker_panel.gd" id="111_rauce"]
-[ext_resource type="PackedScene" uid="uid://0hnlpad6dst5" path="res://announcement_window.tscn" id="112_announcement"]
 [ext_resource type="Texture2D" uid="uid://b6iclvevuex11" path="res://ui/bg_i.png" id="113_announcement_icon"]
 [ext_resource type="Texture2D" uid="uid://6mdqrex8sqvb" path="res://ui/bg_i3.png" id="113_craft_dismantle_icon"]
 [ext_resource type="Texture2D" uid="uid://bqyrfehi4bgxb" path="res://ui/bg_i2.png" id="113_game_info_icon"]
-[ext_resource type="PackedScene" uid="uid://da30wj2ee4ah6" path="res://game_info_window.tscn" id="113_game_info_window"]
 [ext_resource type="Texture2D" uid="uid://qkagrjecj221" path="res://ui/BH_HOTKEY.png" id="114_wyqnl"]
 [ext_resource type="PackedScene" uid="uid://bw83gldcutlso" path="res://shared_tooltip.tscn" id="119_188en"]
 [ext_resource type="PackedScene" path="res://ui/resource_bar.tscn" id="120_resource_bar"]
@@ -3912,10 +3908,6 @@ modulate = Color(1, 1, 1, 0.8627451)
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="QuestWindow" parent="WindowsContainer" unique_id=458362973 instance=ExtResource("110_hhfau")]
-visible = false
-layout_mode = 1
-
 [node name="QuestTrackerPanel" type="Panel" parent="WindowsContainer" unique_id=512950833]
 modulate = Color(1, 1, 1, 0.9019608)
 layout_mode = 1
@@ -3974,29 +3966,6 @@ horizontal_scroll_mode = 0
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
-
-[node name="MallWindow" parent="WindowsContainer" unique_id=56914137 instance=ExtResource("111_5rq5p")]
-visible = false
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -400.0
-offset_top = -361.0
-offset_right = 400.0
-offset_bottom = 239.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="AnnouncementWindow" parent="WindowsContainer" unique_id=892704680 instance=ExtResource("112_announcement")]
-visible = false
-layout_mode = 1
-
-[node name="GameInfoWindow" parent="WindowsContainer" unique_id=806043964 instance=ExtResource("113_game_info_window")]
-visible = false
-layout_mode = 1
 
 [node name="SysMsgScrollBox" type="ScrollContainer" parent="." unique_id=701368035]
 anchors_preset = 2
