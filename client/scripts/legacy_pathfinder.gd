@@ -4,7 +4,13 @@ const CELL_SIZE: int = 16
 const BLOCK_MASK: int = 0x07
 const SEARCH_WINDOW_CELLS: int = 50
 const HALF_SEARCH_WINDOW_CELLS: int = 25
-const MAX_GOAL_SEARCH_RADIUS: int = 8
+const MAX_GOAL_SEARCH_RADIUS: int = 16
+const ADAPTIVE_SEARCH_SPECS: Array[Vector2i] = [
+	Vector2i(3, 50),
+	Vector2i(8, 80),
+	Vector2i(16, 112),
+	Vector2i(24, 144),
+]
 
 var _map_cache: Dictionary = {}
 var _query_can_cross_special_terrain: bool = false
@@ -210,7 +216,7 @@ func _find_segmented_path(grid: Dictionary, start: Vector2i, goal: Vector2i) -> 
 					return []
 				segment_goal = nearest
 
-		var part: Array[Vector2i] = _find_path(grid, current, segment_goal)
+		var part: Array[Vector2i] = _find_path_adaptive(grid, current, segment_goal)
 		if part.size() < 2:
 			return []
 
@@ -225,26 +231,54 @@ func _find_segmented_path(grid: Dictionary, start: Vector2i, goal: Vector2i) -> 
 	return complete if current == goal else []
 
 
-func _find_path(grid: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
+func _find_path_adaptive(grid: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
 	if start == goal:
 		return [start]
 
-	var min_x: int = maxi(0, mini(start.x, goal.x) - 3)
-	var min_y: int = maxi(0, mini(start.y, goal.y) - 3)
-	var max_x: int = mini(int(grid.get("width", 0)) - 1, maxi(start.x, goal.x) + 3)
-	var max_y: int = mini(int(grid.get("height", 0)) - 1, maxi(start.y, goal.y) + 3)
+	for spec: Vector2i in ADAPTIVE_SEARCH_SPECS:
+		var path: Array[Vector2i] = _find_path_with_limits(
+			grid,
+			start,
+			goal,
+			spec.x,
+			spec.y
+		)
+		if path.size() >= 2:
+			return path
 
-	if max_x - min_x + 1 > SEARCH_WINDOW_CELLS:
+	return []
+
+
+func _find_path_with_limits(
+	grid: Dictionary,
+	start: Vector2i,
+	goal: Vector2i,
+	margin: int,
+	window_cells: int
+) -> Array[Vector2i]:
+	if start == goal:
+		return [start]
+
+	var grid_width: int = int(grid.get("width", 0))
+	var grid_height: int = int(grid.get("height", 0))
+	var min_x: int = maxi(0, mini(start.x, goal.x) - margin)
+	var min_y: int = maxi(0, mini(start.y, goal.y) - margin)
+	var max_x: int = mini(grid_width - 1, maxi(start.x, goal.x) + margin)
+	var max_y: int = mini(grid_height - 1, maxi(start.y, goal.y) + margin)
+
+	if max_x - min_x + 1 > window_cells:
 		var center_x: int = floori(float(start.x + goal.x) / 2.0)
-		min_x = maxi(0, center_x - HALF_SEARCH_WINDOW_CELLS)
-		max_x = mini(int(grid.get("width", 0)) - 1, min_x + SEARCH_WINDOW_CELLS - 1)
-		min_x = maxi(0, max_x - SEARCH_WINDOW_CELLS + 1)
+		var half_window: int = window_cells / 2
+		min_x = maxi(0, center_x - half_window)
+		max_x = mini(grid_width - 1, min_x + window_cells - 1)
+		min_x = maxi(0, max_x - window_cells + 1)
 
-	if max_y - min_y + 1 > SEARCH_WINDOW_CELLS:
+	if max_y - min_y + 1 > window_cells:
 		var center_y: int = floori(float(start.y + goal.y) / 2.0)
-		min_y = maxi(0, center_y - HALF_SEARCH_WINDOW_CELLS)
-		max_y = mini(int(grid.get("height", 0)) - 1, min_y + SEARCH_WINDOW_CELLS - 1)
-		min_y = maxi(0, max_y - SEARCH_WINDOW_CELLS + 1)
+		var half_window: int = window_cells / 2
+		min_y = maxi(0, center_y - half_window)
+		max_y = mini(grid_height - 1, min_y + window_cells - 1)
+		min_y = maxi(0, max_y - window_cells + 1)
 
 	if goal.x < min_x or goal.x > max_x or goal.y < min_y or goal.y > max_y:
 		return []
