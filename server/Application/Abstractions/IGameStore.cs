@@ -85,6 +85,13 @@ public interface IGameStore
     bool RenamePet(long accountId, long dbid, long petUid, string name);
     bool EquipPetItem(long accountId, long dbid, long petUid, long itemUid, int targetSlot);
     bool UnequipPetItem(long accountId, long dbid, long petUid, int targetSlot);
+    (bool Success, string Message) BankTransfer(
+        long accountId,
+        long dbid,
+        long uid,
+        int tabType,
+        int amount,
+        bool toBank);
 
     Dictionary<string, object>? UseRecoveryItem(
         long accountId,
