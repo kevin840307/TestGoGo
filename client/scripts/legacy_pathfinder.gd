@@ -158,6 +158,45 @@ func validate_world_path(
 	return true
 
 
+func _fallback_heap_push(heap: Array[Vector3i], cell: Vector2i, priority: int) -> void:
+	var node := Vector3i(cell.x, cell.y, priority)
+	heap.append(node)
+	var index: int = heap.size() - 1
+	while index > 0:
+		var parent: int = (index - 1) / 2
+		if heap[parent].z <= heap[index].z:
+			break
+		var tmp: Vector3i = heap[parent]
+		heap[parent] = heap[index]
+		heap[index] = tmp
+		index = parent
+
+
+func _fallback_heap_pop(heap: Array[Vector3i]) -> Vector3i:
+	var root: Vector3i = heap[0]
+	var last: Vector3i = heap.pop_back()
+	if heap.is_empty():
+		return root
+
+	heap[0] = last
+	var index: int = 0
+	while true:
+		var left: int = index * 2 + 1
+		if left >= heap.size():
+			break
+		var right: int = left + 1
+		var smallest: int = left
+		if right < heap.size() and heap[right].z < heap[left].z:
+			smallest = right
+		if heap[index].z <= heap[smallest].z:
+			break
+		var tmp: Vector3i = heap[index]
+		heap[index] = heap[smallest]
+		heap[smallest] = tmp
+		index = smallest
+	return root
+
+
 func find_large_detour_path_async(
 	map_id: int,
 	start_world: Vector2,
@@ -204,8 +243,8 @@ func find_large_detour_path_async(
 
 	# Large-detour fallback is deliberately isolated from the normal fast path.
 	# It expands incrementally and yields once its per-frame CPU budget is used.
-	var open: Array[Vector2i] = [start]
-	var open_set: Dictionary = {start: true}
+	var open_heap: Array[Vector3i] = []
+	_fallback_heap_push(open_heap, start, _heuristic(start, goal))
 	var closed: Dictionary = {}
 	var came_from: Dictionary = {}
 	var g_score: Dictionary = {start: 0}
@@ -219,23 +258,13 @@ func find_large_detour_path_async(
 		Vector3i(-1, 1, 14), Vector3i(-1, -1, 14),
 	]
 
-	while not open.is_empty() and expanded < max_expanded_cells:
+	while not open_heap.is_empty() and expanded < max_expanded_cells:
 		if Time.get_ticks_usec() - frame_started_usec >= frame_budget_usec:
 			await get_tree().process_frame
 			frame_started_usec = Time.get_ticks_usec()
 
-		var best_index: int = 0
-		var best_score: int = 2147483647
-		for index: int in range(open.size()):
-			var candidate: Vector2i = open[index]
-			var candidate_score: int = int(g_score.get(candidate, 2147483647)) + _heuristic(candidate, goal)
-			if candidate_score < best_score:
-				best_score = candidate_score
-				best_index = index
-
-		var current: Vector2i = open[best_index]
-		open.remove_at(best_index)
-		open_set.erase(current)
+		var entry: Vector3i = _fallback_heap_pop(open_heap)
+		var current := Vector2i(entry.x, entry.y)
 		if closed.has(current):
 			continue
 		if current == goal:
@@ -319,9 +348,14 @@ func find_large_detour_path_async(
 				continue
 			came_from[next] = current
 			g_score[next] = new_g
-			if not open_set.has(next):
-				open.append(next)
-				open_set[next] = true
+			# Duplicate heap entries are intentional. If a cheaper path is found,
+			# push a new priority and let the closed-set discard stale entries.
+			# This avoids a costly decrease-key search and keeps the fallback O(log n).
+			_fallback_heap_push(
+				open_heap,
+				next,
+				new_g + _heuristic(next, goal)
+			)
 
 	print("[PATHFIND_FALLBACK] map=%d from=(%.0f,%.0f) to=(%.0f,%.0f) found=false expanded=%d" % [
 		map_id,
