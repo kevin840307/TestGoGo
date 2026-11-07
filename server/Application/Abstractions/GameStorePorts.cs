@@ -289,6 +289,20 @@ public interface IPetStore : ICharacterAssetReader
         PetStatAdjustment adjustment);
 }
 
+public sealed record CompanionRuntimeDrainResult(
+    Dictionary<string, object>? Horse,
+    bool MechaDismounted,
+    IReadOnlyList<Dictionary<string, object>> Pets,
+    IReadOnlyList<long> RecalledPetUids);
+
+public interface ICompanionRuntimeStore : ICharacterAssetReader
+{
+    CompanionRuntimeDrainResult DrainCompanionRuntime(
+        long accountId,
+        long dbid,
+        int elapsedSeconds);
+}
+
 public interface IMechaStore : ICharacterAssetReader
 {
     long AddHorse(
