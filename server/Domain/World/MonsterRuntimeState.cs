@@ -1,5 +1,14 @@
 namespace SGO.Server.Domain.World;
 
+public enum MonsterAiState
+{
+    Idle,
+    Wander,
+    Chase,
+    Attack,
+    Dead
+}
+
 public sealed class MonsterRuntimeState
 {
     public int EntityId { get; init; }
@@ -19,6 +28,10 @@ public sealed class MonsterRuntimeState
     public double WanderCenterY { get; set; }
 
     public bool HasTarget { get; set; }
+    public MonsterAiState AiState { get; set; } = MonsterAiState.Idle;
+
+    // Compatibility mirrors while older tests/features migrate to AiState.
+    // CombatService keeps these synchronized through SetAiState().
     public bool IsMoving { get; set; }
     public bool HoldingAttackRange { get; set; }
     public string CurrentDir { get; set; } = "1";
