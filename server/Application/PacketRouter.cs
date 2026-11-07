@@ -2742,6 +2742,20 @@ public sealed class PacketRouter
         {
             var assetsChanged = false;
             var dbid = state.CharacterId ?? 0;
+            var questTeamMembers = dbid > 0
+                ? _party.GetMembers(dbid)
+                : Array.Empty<(long AccountId, long CharacterId)>();
+
+            long ResolveQuestTargetAccount(long targetDbid)
+            {
+                if (targetDbid == dbid)
+                    return accountId;
+
+                var member = questTeamMembers.FirstOrDefault(x =>
+                    x.CharacterId == targetDbid);
+
+                return member.AccountId;
+            }
 
             var result = _quests.Execute(
                 npc.Script,
@@ -2814,6 +2828,78 @@ public sealed class PacketRouter
                             count);
                         assetsChanged |= success;
                         return success;
+                    },
+                    CallerDbid = dbid,
+                    GetTeamMemberIds = () =>
+                        questTeamMembers
+                            .Where(x =>
+                                x.CharacterId != dbid)
+                            .Select(x => x.CharacterId)
+                            .ToArray(),
+                    SetTargetFlag = (targetDbid, flag, value) =>
+                    {
+                        var targetAccountId =
+                            ResolveQuestTargetAccount(targetDbid);
+
+                        if (targetAccountId <= 0 ||
+                            !_store.SetQuestFlag(
+                                targetAccountId,
+                                targetDbid,
+                                flag,
+                                value))
+                        {
+                            throw new InvalidOperationException(
+                                $"Unable to persist team quest flag {flag} for {targetDbid}");
+                        }
+                    },
+                    GetTargetData = (targetDbid, key) =>
+                    {
+                        var targetAccountId =
+                            ResolveQuestTargetAccount(targetDbid);
+
+                        if (targetAccountId <= 0)
+                            return 0;
+
+                        var targetCharacter =
+                            _store.GetCharacter(
+                                targetAccountId,
+                                targetDbid);
+
+                        return targetCharacter is null
+                            ? 0
+                            : GetCharacterData(
+                                targetCharacter,
+                                key);
+                    },
+                    GetTargetXY = targetDbid =>
+                    {
+                        var targetAccountId =
+                            ResolveQuestTargetAccount(targetDbid);
+
+                        if (targetAccountId <= 0)
+                            return (0.0, 0.0);
+
+                        var targetCharacter =
+                            _store.GetCharacter(
+                                targetAccountId,
+                                targetDbid);
+
+                        return targetCharacter is null
+                            ? (0.0, 0.0)
+                            : (
+                                Convert.ToDouble(
+                                    targetCharacter["LocX"]),
+                                Convert.ToDouble(
+                                    targetCharacter["LocY"]));
+                    },
+                    GetTargetEmotion = targetDbid =>
+                    {
+                        // The recovered client does not currently persist an
+                        // emote state. Keep the old API deterministic until a
+                        // real client emote packet is available.
+                        return ResolveQuestTargetAccount(targetDbid) > 0
+                            ? 0
+                            : -1;
                     }
                 });
 
