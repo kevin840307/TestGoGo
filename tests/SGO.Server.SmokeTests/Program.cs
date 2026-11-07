@@ -53,18 +53,18 @@ CurrentItemDefinition CurrentItem(
         canSell,
         atk,
         def,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
+        0, // MAtk
+        0, // MDef
+        0, // Hit
+        0, // Flee
+        0, // Luk
+        0, // Aspd
         moveSpeed,
-        0,
-        0,
+        0, // CritRate
+        0, // CritDamage
+        0, // MaxHpBonus
+        0, // MaxMpBonus
+        0, // MaxSpBonus
         equipSlot,
         attackRange,
         recoverHp,
