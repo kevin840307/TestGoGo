@@ -361,6 +361,12 @@ public interface IMechaStore : ICharacterAssetReader
         int initialEnergy);
 }
 
+public sealed record SkillBookUseResult(
+    bool Success,
+    string Message,
+    int SkillId,
+    int SkillLevel);
+
 public interface ISkillStore
 {
     List<Dictionary<string, object>> GetSkills(
@@ -372,6 +378,13 @@ public interface ISkillStore
         int skillId,
         int level);
     bool ClearSkills(long accountId, long dbid);
+    SkillBookUseResult LearnSkillFromBook(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        int skillId,
+        int targetLevel);
     Dictionary<string, object>? SpendSkillResources(
         long accountId,
         long dbid,
