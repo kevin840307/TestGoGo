@@ -62,7 +62,7 @@ region = Rect2(0, 0, 256, 256)
 metadata/old_offset = Vector2(128, 128)
 
 [resource]
-metadata/effect_scale = Vector2(1.9, 1.9)
+metadata/effect_scale = Vector2(3.0, 3.0)
 animations = [{
 "frames": [{
 "duration": 1.0,
