@@ -1578,8 +1578,13 @@ try
               (JsonSerializer.Serialize(x).Contains(
                    "\"State\":\"attack\"") ||
                JsonSerializer.Serialize(x).Contains(
-                   "\"State\":\"idle\""))),
-        "monster stops walk animation and switches to attack/idle inside melee stop distance");
+                   "\"State\":\"idle\""))) &&
+          !closeRangePackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"MoveEntity\"") &&
+              JsonSerializer.Serialize(x).Contains(
+                  $\"\"EntityID\":{monster.EntityId}\")),
+        "monster stops movement and never emits MoveEntity inside melee attack range");
 
     var sawDeath = false;
 
@@ -1639,6 +1644,13 @@ try
                 "\"State\":\"attack\"") &&
             JsonSerializer.Serialize(x).Contains(
                 $"\"EntityID\":{monster.EntityId}"));
+
+        Check(!monsterAttackPackets.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"MoveEntity\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    $\"\"EntityID\":{monster.EntityId}\")),
+            "monster attack tick never emits movement for the attacking monster");
 
         playerDeathSeen = monsterAttackPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
