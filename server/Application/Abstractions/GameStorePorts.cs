@@ -64,6 +64,11 @@ public interface ICharacterStore
         long accountId,
         long dbid,
         int amount);
+    Dictionary<string, object>? RecoverResources(
+        long accountId,
+        long dbid,
+        int hpAmount,
+        int mpAmount);
     Dictionary<string, object>? AddRewards(
         long accountId,
         long dbid,
