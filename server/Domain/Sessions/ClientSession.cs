@@ -31,6 +31,8 @@ public sealed class ClientSession
     public bool AutoSaintEnabled { get; set; }
     public bool IsResting { get; set; }
     public bool CanCrossSpecialTerrain { get; set; }
+    public DateTimeOffset ActiveTransformExpiresAt { get; set; } =
+        DateTimeOffset.MinValue;
     public bool PositionDirty { get; set; }
     public DateTimeOffset LastPositionPersistAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastPositionBroadcastAt { get; set; } = DateTimeOffset.MinValue;
