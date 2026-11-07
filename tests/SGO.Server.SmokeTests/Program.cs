@@ -576,6 +576,11 @@ try
         store,
         shopCatalog,
         currentCatalog);
+    var playerShop = new PlayerShopService(
+        store,
+        store,
+        currentCatalog,
+        broadcastHub);
     var config = new ConfigurationManager();
     config["Game:GmCommandsEnabled"] = "true";
     config["Gameplay:ResourceRecovery:Enabled"] = "true";
@@ -617,6 +622,7 @@ try
         combat,
         recovery,
         shops,
+        playerShop,
         packetHandlers,
         gm,
         dolls,
@@ -2383,6 +2389,226 @@ try
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
     while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    var shopItemUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        generalShopItem.ItemIndex,
+        5);
+
+    var sellerShopItemBefore = store.GetCharacterAssets(
+            account.Value,
+            id)
+        .Inventory
+        .Where(x =>
+            Convert.ToInt32(x["ItemIndex"]) ==
+                generalShopItem.ItemIndex)
+        .Sum(x => Convert.ToInt32(x["Count"]));
+
+    var buyerShopItemBefore = store.GetCharacterAssets(
+            account.Value,
+            secondCharacterId)
+        .Inventory
+        .Where(x =>
+            Convert.ToInt32(x["ItemIndex"]) ==
+                generalShopItem.ItemIndex)
+        .Sum(x => Convert.ToInt32(x["Count"]));
+
+    long reservedShopUid;
+
+    using (var addShopItem = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "ShopAction",
+            Action = "AddItem",
+            UID = shopItemUid,
+            Count = 4,
+            Price = 10,
+            TabType = 0
+        })))
+    {
+        var responses = router.Handle(
+            addShopItem.RootElement,
+            session);
+
+        var sync = responses.First(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"ShopSync\""));
+
+        using var syncJson = Json(
+            JsonSerializer.Serialize(sync));
+
+        reservedShopUid = syncJson.RootElement
+            .GetProperty("Items")[0]
+            .GetProperty("UID")
+            .GetInt64();
+
+        var listed = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Inventory
+            .FirstOrDefault(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    reservedShopUid &&
+                Convert.ToInt32(x["InShop"]) == 1);
+
+        Check(
+            reservedShopUid > 0 &&
+            reservedShopUid != shopItemUid &&
+            listed is not null &&
+            Convert.ToInt32(listed["Count"]) == 4,
+            "player shop partial listing reserves a server-side stack");
+    }
+
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var openShop = Json(
+        """
+        {"Type":"ShopAction","Action":"OpenShop","ShopName":"測試商店"}
+        """))
+    {
+        var responses = router.Handle(
+            openShop.RootElement,
+            session);
+
+        Check(
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SyncShopBoard\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"IsOpen\":true")) &&
+            peerRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SyncShopBoard\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "測試商店")),
+            "opening player shop broadcasts the shop board to map peers");
+    }
+
+    using (var viewShop = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "ShopAction",
+            Action = "ViewShop",
+            TargetDBID = id
+        })))
+    {
+        var responses = router.Handle(
+            viewShop.RootElement,
+            peerSession);
+
+        Check(
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"ShopViewResponse\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    $"\"OwnerDBID\":{id}") &&
+                JsonSerializer.Serialize(x).Contains(
+                    $"\"UID\":{reservedShopUid}") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Count\":4")),
+            "ViewShop returns shared server listings to another player");
+    }
+
+    var sellerShopMoneyBefore = Convert.ToInt64(
+        store.GetCharacter(account.Value, id)!["Money"]);
+    var buyerShopMoneyBefore = Convert.ToInt64(
+        store.GetCharacter(
+            account.Value,
+            secondCharacterId)!["Money"]);
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var buyShopItem = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "ShopAction",
+            Action = "BuyItem",
+            TargetDBID = id,
+            UID = reservedShopUid,
+            Count = 2
+        })))
+    {
+        var responses = router.Handle(
+            buyShopItem.RootElement,
+            peerSession);
+
+        var sellerAfter = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Inventory
+            .Where(x =>
+                Convert.ToInt32(x["ItemIndex"]) ==
+                    generalShopItem.ItemIndex)
+            .Sum(x => Convert.ToInt32(x["Count"]));
+
+        var buyerAfter = store.GetCharacterAssets(
+                account.Value,
+                secondCharacterId)
+            .Inventory
+            .Where(x =>
+                Convert.ToInt32(x["ItemIndex"]) ==
+                    generalShopItem.ItemIndex)
+            .Sum(x => Convert.ToInt32(x["Count"]));
+
+        var remainingListed = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Inventory
+            .FirstOrDefault(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    reservedShopUid);
+
+        Check(
+            sellerAfter == sellerShopItemBefore - 2 &&
+            buyerAfter == buyerShopItemBefore + 2 &&
+            Convert.ToInt64(
+                store.GetCharacter(
+                    account.Value,
+                    id)!["Money"]) ==
+                sellerShopMoneyBefore + 20 &&
+            Convert.ToInt64(
+                store.GetCharacter(
+                    account.Value,
+                    secondCharacterId)!["Money"]) ==
+                buyerShopMoneyBefore - 20 &&
+            remainingListed is not null &&
+            Convert.ToInt32(
+                remainingListed["Count"]) == 2 &&
+            Convert.ToInt32(
+                remainingListed["InShop"]) == 1 &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"InventorySync\"")) &&
+            broadcastRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SyncMoney\"")) &&
+            broadcastRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"ShopSync\"")),
+            "BuyItem atomically transfers player-shop item and money");
+    }
+
+    using (var closeShop = Json(
+        """{"Type":"ShopAction","Action":"CloseShop"}"""))
+    {
+        router.Handle(
+            closeShop.RootElement,
+            session);
+
+        Check(
+            store.GetCharacterAssets(
+                    account.Value,
+                    id)
+                .Inventory
+                .Where(x =>
+                    Convert.ToInt32(x["ItemIndex"]) ==
+                        generalShopItem.ItemIndex)
+                .All(x =>
+                    Convert.ToInt32(x["InShop"]) == 0) &&
+            !playerShop.GetPublicState(id).IsOpen,
+            "closing player shop releases all reserved assets");
+    }
 
     Check(peerSession.Monsters.TryGetValue(
               monster.EntityId,
