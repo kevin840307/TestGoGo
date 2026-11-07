@@ -90,7 +90,10 @@ public sealed class ShopService
             "equip" or "weapon"
                 => AssetPurchaseKind.Equipment,
             "horse"
-                => AssetPurchaseKind.Horse,
+                // Current client 'horse' resources are activation cards.
+                // NPC shops must buy/sell the card as inventory; UseItemRequest
+                // is the only path that creates the actual mecha + preset gear.
+                => AssetPurchaseKind.General,
             "horseequip"
                 => AssetPurchaseKind.HorseEquipment,
             "horsebattery"
@@ -162,7 +165,10 @@ public sealed class ShopService
             "equip" or "weapon"
                 => AssetPurchaseKind.Equipment,
             "horse"
-                => AssetPurchaseKind.Horse,
+                // Current client 'horse' resources are activation cards.
+                // NPC shops must buy/sell the card as inventory; UseItemRequest
+                // is the only path that creates the actual mecha + preset gear.
+                => AssetPurchaseKind.General,
             "horseequip"
                 => AssetPurchaseKind.HorseEquipment,
             "horsebattery"
