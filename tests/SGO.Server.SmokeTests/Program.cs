@@ -4819,6 +4819,34 @@ try
                   $"\"EntityID\":{monster.EntityId}")),
         "monster entering melee range attacks immediately instead of standing through an old cooldown");
 
+    // Attack facing must use the exact target direction rather than movement
+    // hysteresis. At about 26 degrees, movement may intentionally keep dir 6,
+    // while an attack must face the adjacent sector (dir 7).
+    monster.HasTarget = true;
+    monster.TargetCharacterId = id;
+    monster.AiState = MonsterAiState.Attack;
+    monster.CurrentDir = "6";
+    monster.LastAttackAt = DateTimeOffset.MinValue;
+
+    var attackAngleRadians = 26.0 * Math.PI / 180.0;
+    var attackDirectionPackets = combat.TickAi(
+        session,
+        account.Value,
+        monster.X + Math.Cos(attackAngleRadians) * 80.0,
+        monster.Y + Math.Sin(attackAngleRadians) * 80.0,
+        session.LastMonsterAiTick.AddMilliseconds(125));
+
+    Check(
+        monster.CurrentDir == "7" &&
+        attackDirectionPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"SyncState\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"State\":\"attack\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"Dir\":\"7\"")),
+        "monster attack direction faces the current target instead of retaining movement hysteresis");
+
     // Regression: vector math can produce 90.0000000000001 for a target that
     // is logically exactly at the 90px engage boundary. That must not enter
     // Chase with an effectively zero movement step.
