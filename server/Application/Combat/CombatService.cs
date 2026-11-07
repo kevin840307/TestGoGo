@@ -397,13 +397,23 @@ public sealed class CombatService
         ClientSession session,
         long petUid,
         int petAttack,
-        int targetEntityId)
+        int targetEntityId,
+        double petX,
+        double petY)
     {
         if (!session.Monsters.TryGetValue(
                 targetEntityId,
                 out var monster) ||
             !monster.IsAlive ||
             monster.MapId != session.CurrentMapId)
+            return [];
+
+        var dx = monster.X - petX;
+        var dy = monster.Y - petY;
+        var distanceSquared = dx * dx + dy * dy;
+        const double petAttackRange = 130.0;
+
+        if (distanceSquared > petAttackRange * petAttackRange)
             return [];
 
         var petEntityId = 4_000_000L + petUid;
@@ -417,12 +427,10 @@ public sealed class CombatService
         {
             new
             {
-                Type = "MoveEntity",
+                Type = "SyncState",
                 EntityID = petEntityId,
-                X = monster.X - 30,
-                Y = monster.Y + 10,
-                Dir = "6",
-                SpeedTime = 0.25
+                State = "attack",
+                Dir = DirectionFromDelta(dx, dy)
             },
             new
             {
@@ -444,6 +452,7 @@ public sealed class CombatService
             monster.RespawnAt =
                 DateTimeOffset.UtcNow + RespawnDelay;
             monster.HasTarget = false;
+            monster.IsMoving = false;
 
             packets.Add(new
             {
