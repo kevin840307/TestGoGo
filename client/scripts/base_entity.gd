@@ -37,6 +37,9 @@ var shop_owner_label: Label = null
 
 
 var current_state: String = "idle"
+var _render_visible: bool = true
+var _render_notifier: VisibleOnScreenNotifier2D = null
+const RENDER_VISIBILITY_RECT: Rect2 = Rect2(-220.0, -280.0, 440.0, 500.0)
 var current_dir: String = "1"
 var hp_update_seq: int = 0
 var normal_attack_visual_started_msec: int = -1
@@ -105,6 +108,40 @@ func _ready() -> void :
 		NetworkManager.sync_shop_board_received.connect(_on_sync_shop_board)
 		NetworkManager.entity_name_color_updated.connect(_on_entity_name_color_updated)
 		NetworkManager.party_sync_received.connect(_on_party_sync_received)
+
+	_render_notifier = VisibleOnScreenNotifier2D.new()
+	_render_notifier.rect = RENDER_VISIBILITY_RECT
+	add_child(_render_notifier)
+	_render_notifier.screen_entered.connect(_on_render_screen_entered)
+	_render_notifier.screen_exited.connect(_on_render_screen_exited)
+
+func _set_render_animation_paused(paused: bool) -> void :
+	if is_instance_valid(doll_engine):
+		for sprite_node in doll_engine.doll_sprites.values():
+			if not is_instance_valid(sprite_node):
+				continue
+			if paused:
+				sprite_node.pause()
+			elif sprite_node.visible and not sprite_node.is_playing():
+				sprite_node.play()
+	if is_instance_valid(transform_sprite):
+		if paused:
+			transform_sprite.pause()
+		elif transform_sprite.visible and not transform_sprite.is_playing():
+			transform_sprite.play()
+	if is_instance_valid(ui_container):
+		ui_container.visible = not paused
+
+func _on_render_screen_entered() -> void :
+	_render_visible = true
+	_set_render_animation_paused(false)
+
+func _on_render_screen_exited() -> void :
+	_render_visible = false
+	_set_render_animation_paused(true)
+
+func is_render_visible() -> bool:
+	return _render_visible
 
 func is_entity_moving() -> bool:
 	return false
