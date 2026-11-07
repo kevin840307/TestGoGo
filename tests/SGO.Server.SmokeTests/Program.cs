@@ -7984,8 +7984,15 @@ try
                     .ToUnixTimeMilliseconds()) == 200 &&
             responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains(
-                    "雙倍經驗值已啟動 1 小時")),
-            "UseItemRequest consumes one 1h EXP card and persists a 200% timed effect");
+                    "雙倍經驗值已啟動 1 小時")) &&
+            responses.Any(x =>
+            {
+                var json = JsonSerializer.Serialize(x);
+                return json.Contains("\"Type\":\"SyncBuffs\"") &&
+                       json.Contains("ExperienceBoost_200") &&
+                       json.Contains("\"Value\":2460");
+            }),
+            "UseItemRequest consumes one 1h EXP card, persists it and immediately syncs HUD buff");
     }
 
     var activeExpEffects =
