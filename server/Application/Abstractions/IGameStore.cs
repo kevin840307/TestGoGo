@@ -14,6 +14,8 @@ public interface IGameStore :
     IQuestStore,
     IShortcutStore,
     IBankStore,
+    IDirectTransferStore,
+    IRepairStore,
     IItemDiscardStore,
     IWorldGroundItemStore,
     IShopStore
