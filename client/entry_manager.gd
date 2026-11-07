@@ -359,7 +359,7 @@ func _on_character_verified_and_enter_game(char_data: Dictionary, _map_id: Strin
 	await get_tree().process_frame
 
 
-	_set_loading_progress(5.0)
+	_set_loading_progress(3.0)
 	var char_dbid: int = int(float(char_data.get("DBID", 0)))
 	NetworkManager.send_select_character_request(char_dbid)
 
@@ -369,7 +369,7 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 	if character_select_layer: character_select_layer.visible = false
 
 	var overlay = get_node_or_null("%LoadingOverlay")
-	_set_loading_progress(50.0)
+	_set_loading_progress(8.0)
 
 
 	var default_map_int = GameConstants.DEFAULT_MAP_ID.replace("map", "").to_int()
