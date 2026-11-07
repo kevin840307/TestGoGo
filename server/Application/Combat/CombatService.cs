@@ -260,7 +260,7 @@ public sealed class CombatService
                                 now - monster.LastStallLogAt >= TimeSpan.FromSeconds(2))
                             {
                                 monster.LastStallLogAt = now;
-                                _log.LogWarning(
+                                _log.LogDebug(
                                     "[MONSTER_AI_FOREIGN_PET_OWNER] EntityID={EntityID} TargetCharacterID={TargetCharacterID} TargetPetUID={TargetPetUID} MapID={MapID}",
                                     monster.EntityId,
                                     monster.TargetCharacterId,
@@ -293,7 +293,7 @@ public sealed class CombatService
                                     now - monster.LastStallLogAt >= TimeSpan.FromSeconds(2))
                                 {
                                     monster.LastStallLogAt = now;
-                                    _log.LogWarning(
+                                    _log.LogDebug(
                                         "[MONSTER_AI_FOREIGN_OWNER] EntityID={EntityID} State={State} TargetCharacterID={TargetCharacterID} TargetPetUID={TargetPetUID} Monster=({MonsterX:F1},{MonsterY:F1}) ForeignTarget=({TargetX:F1},{TargetY:F1}) Distance={Distance:F1} MapID={MapID}",
                                         monster.EntityId,
                                         monster.AiState,
@@ -477,7 +477,7 @@ public sealed class CombatService
                             TimeSpan.FromSeconds(2))
                         {
                             monster.LastStallLogAt = now;
-                            _log.LogWarning(
+                            _log.LogDebug(
                                 "[MONSTER_AI_NO_TARGET_NEARBY] EntityID={EntityID} State={State} Monster=({MonsterX:F1},{MonsterY:F1}) PlayerDistance={PlayerDistance:F1} PetDistance={PetDistance:F1} PlayerAlive={PlayerAlive} PetAlive={PetAlive} LastAiAt={LastAiAt:o} LastActionAt={LastActionAt:o}",
                                 monster.EntityId,
                                 monster.AiState,
@@ -576,17 +576,20 @@ public sealed class CombatService
                         MonsterAiState.Chase or
                         MonsterAiState.Wander;
 
-                    var stableDir = StableDirectionFromDelta(
+                    // Movement uses hysteresis to avoid visual direction
+                    // jitter, but attack facing must always point at the
+                    // current target. Reusing the stable movement direction
+                    // could keep the previous sector for up to 30 degrees.
+                    var attackDir = DirectionFromDelta(
                         dx,
-                        dy,
-                        monster.CurrentDir);
+                        dy);
                     var directionChanged =
                         !string.Equals(
-                            stableDir,
+                            attackDir,
                             monster.CurrentDir,
                             StringComparison.Ordinal);
 
-                    monster.CurrentDir = stableDir;
+                    monster.CurrentDir = attackDir;
                     SetAiState(
                         monster,
                         MonsterAiState.Attack);
@@ -830,7 +833,7 @@ public sealed class CombatService
                          now - monster.LastStallLogAt >= TimeSpan.FromSeconds(2)))
                     {
                         monster.LastStallLogAt = now;
-                        _log.LogWarning(
+                        _log.LogDebug(
                             "[MONSTER_AI_STALL] EntityID={EntityID} State={State} HasTarget={HasTarget} TargetCharacterID={TargetCharacterID} TargetPetUID={TargetPetUID} Monster=({MonsterX:F1},{MonsterY:F1}) Target=({TargetX:F1},{TargetY:F1}) Distance={Distance:F1} LastAttackAt={LastAttackAt:o} LastActionAt={LastActionAt:o}",
                             monster.EntityId,
                             monster.AiState,
@@ -3529,7 +3532,7 @@ public sealed class CombatService
                 now - monster.LastStallLogAt >= TimeSpan.FromSeconds(2))
             {
                 monster.LastStallLogAt = now;
-                _log.LogWarning(
+                _log.LogDebug(
                     "[MONSTER_AI_ZERO_MOVE] EntityID={EntityID} State={State} HasTarget={HasTarget} TargetCharacterID={TargetCharacterID} TargetPetUID={TargetPetUID} Old=({OldX:F2},{OldY:F2}) New=({NewX:F2},{NewY:F2}) LastPacket=({LastPacketX},{LastPacketY}) Target=({TargetX},{TargetY}) Distance={Distance}",
                     monster.EntityId,
                     monster.AiState,
