@@ -11,6 +11,7 @@ public sealed class GmCommandService
     private readonly SkillCatalog _skills;
     private readonly HorseCardCatalog _horseCards;
     private readonly CurrentClientDataCatalog _current;
+    private readonly CombatService _combat;
     private readonly IConfiguration _config;
 
     public GmCommandService(
@@ -18,12 +19,14 @@ public sealed class GmCommandService
         SkillCatalog skills,
         HorseCardCatalog horseCards,
         CurrentClientDataCatalog current,
+        CombatService combat,
         IConfiguration config)
     {
         _store = store;
         _skills = skills;
         _horseCards = horseCards;
         _current = current;
+        _combat = combat;
         _config = config;
     }
 
@@ -70,6 +73,7 @@ public sealed class GmCommandService
                 "skill" => Skill(parts, accountId, dbid),
                 "skills" => SkillList(accountId, dbid),
                 "clearskills" => ClearSkills(accountId, dbid),
+                "spawn" => Spawn(parts, session),
                 "killall" => KillAll(session),
                 _ => [Chat($"未知 GM 指令：{command}。使用 /gm help")]
             };
@@ -445,6 +449,46 @@ public sealed class GmCommandService
         ];
     }
 
+    private IReadOnlyList<object> Spawn(
+        string[] parts,
+        ClientSession session)
+    {
+        if (parts.Length < 3 ||
+            !int.TryParse(parts[2], out var enemyId))
+            return [Chat("用法：/gm spawn <EnemyID> [X] [Y]")];
+
+        var x = parts.Length > 3 &&
+                double.TryParse(parts[3], out var parsedX)
+            ? parsedX
+            : session.LastX + 120;
+
+        var y = parts.Length > 4 &&
+                double.TryParse(parts[4], out var parsedY)
+            ? parsedY
+            : session.LastY;
+
+        var packets = _combat.SpawnLegacyEnemy(
+            session,
+            enemyId,
+            x,
+            y);
+
+        if (packets.Count == 0)
+            return
+            [
+                Chat(
+                    $"目前 Map{session.CurrentMapId} 找不到 EnemyID={enemyId}")
+            ];
+
+        return packets
+            .Concat(new[]
+            {
+                Chat(
+                    $"已生成 EnemyID={enemyId} 於 ({x:0},{y:0})")
+            })
+            .ToArray();
+    }
+
     private static IReadOnlyList<object> KillAll(
         ClientSession session)
     {
@@ -489,5 +533,6 @@ public sealed class GmCommandService
         => "GM: help | pos | map <id> [x] [y] | heal | level <n> | " +
            "money <n> | item <id> [count] | equip <id> | " +
            "mecha <cardId> | pet <petId> [name] | " +
-           "skill <id|all> [lv] | skills | clearskills | killall";
+           "skill <id|all> [lv] | skills | clearskills | " +
+           "spawn <enemyId> [x] [y] | killall";
 }
