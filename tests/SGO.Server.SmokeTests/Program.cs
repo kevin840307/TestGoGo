@@ -108,6 +108,12 @@ var currentCatalog = new CurrentClientDataCatalog(
             "general",
             price: 1),
 
+        CurrentItem(
+            2803,
+            "大聲公",
+            "general",
+            price: 1),
+
         // Legacy Shop2 item 31078 is 淺藍色初心褲子.
         // Current client moved it to 18538.
         CurrentItem(
@@ -838,6 +844,159 @@ try
             "first select response enters world");
         Check(first.RootElement.Int("MapID") == 15,
             "enter world includes Map15");
+    }
+
+    var megaphoneUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        2803,
+        2);
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var openMegaphone = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "UseItemRequest",
+            ItemUID = megaphoneUid
+        })))
+    {
+        var beforeCount = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Inventory
+            .Where(x =>
+                Convert.ToInt64(x["ItemUID"]) == megaphoneUid)
+            .Sum(x => Convert.ToInt32(x["Count"]));
+
+        var responses = router.Handle(
+            openMegaphone.RootElement,
+            session);
+
+        var afterCount = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Inventory
+            .Where(x =>
+                Convert.ToInt64(x["ItemUID"]) == megaphoneUid)
+            .Sum(x => Convert.ToInt32(x["Count"]));
+
+        Check(
+            beforeCount == 2 &&
+            afterCount == 2 &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"OpenMegaphoneWindow\"")),
+            "UseItemRequest opens megaphone input without consuming the item");
+    }
+
+    using (var megaphoneMessage = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "MegaphoneMessage",
+            ItemUID = megaphoneUid,
+            Message = "全服測試訊息"
+        })))
+    {
+        var responses = router.Handle(
+            megaphoneMessage.RootElement,
+            session);
+
+        var remaining = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Inventory
+            .Where(x =>
+                Convert.ToInt64(x["ItemUID"]) == megaphoneUid)
+            .Sum(x => Convert.ToInt32(x["Count"]));
+
+        Check(
+            remaining == 1 &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"InventorySync\"")) &&
+            broadcastRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SystemMessageBroadcast\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "TestCharacter") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "全服測試訊息")),
+            "MegaphoneMessage consumes one item and publishes global announcement");
+    }
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+
+    var autoSaintStartX = session.LastX;
+    var autoSaintStartY = session.LastY;
+
+    using (var autoSaintOn = Json(
+        """
+        {"Type":"ToggleAutoSaint","IsOn":true,"MpThreshold":25,"SpThreshold":35}
+        """))
+    {
+        var responses = router.Handle(
+            autoSaintOn.RootElement,
+            session);
+
+        Check(
+            state: session.AutoSaintEnabled &&
+            session.AutoSaintMpThreshold == 25 &&
+            session.AutoSaintSpThreshold == 35 &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"ToggleAutoSaintResponse\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"IsOn\":true")),
+            msg: "ToggleAutoSaint persists server-authoritative state and thresholds");
+    }
+
+    using (var blockedMove = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "SyncPosition",
+            X = (int)autoSaintStartX + 999,
+            Y = (int)autoSaintStartY + 999
+        })))
+    {
+        router.Handle(
+            blockedMove.RootElement,
+            session);
+
+        Check(
+            Math.Abs(session.LastX - autoSaintStartX) < 0.001 &&
+            Math.Abs(session.LastY - autoSaintStartY) < 0.001,
+            "AutoSaint blocks authoritative player movement while enabled");
+    }
+
+    using (var blockedAttack = Json(
+        """
+        {"Type":"AttackEntity","TargetEntityID":1,"TargetType":1}
+        """))
+    {
+        var responses = router.Handle(
+            blockedAttack.RootElement,
+            session);
+
+        Check(
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "自動聖靈啟動中")),
+            "AutoSaint blocks manual combat on the server");
+    }
+
+    using (var autoSaintOff = Json(
+        """
+        {"Type":"ToggleAutoSaint","IsOn":false,"MpThreshold":30,"SpThreshold":30}
+        """))
+    {
+        router.Handle(
+            autoSaintOff.RootElement,
+            session);
+
+        Check(
+            !session.AutoSaintEnabled,
+            "AutoSaint can be disabled without reconnecting");
     }
 
     var moneyBeforeRepair = Convert.ToInt64(
