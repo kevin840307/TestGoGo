@@ -240,12 +240,19 @@ func set_spawn_queue_paused(paused: bool) -> void :
 func is_spawn_queue_paused() -> bool:
 	return _spawn_queue_paused
 
-func is_initial_spawn_queue_idle(quiet_usec: int = 300000) -> bool:
+func get_initial_spawn_settle_progress(quiet_usec: int = 300000) -> float:
 	if not _spawn_queue.is_empty() or not _queued_spawn_ids.is_empty():
-		return false
+		return 0.0
 	if _last_spawn_enqueue_usec <= 0:
-		return true
-	return Time.get_ticks_usec() - _last_spawn_enqueue_usec >= quiet_usec
+		return 1.0
+	return clampf(
+		float(Time.get_ticks_usec() - _last_spawn_enqueue_usec) / float(quiet_usec),
+		0.0,
+		1.0
+	)
+
+func is_initial_spawn_queue_idle(quiet_usec: int = 300000) -> bool:
+	return get_initial_spawn_settle_progress(quiet_usec) >= 1.0
 
 func _process(delta: float) -> void :
 	if not is_instance_valid(GameManager.current_map_node) or GameManager.current_map_node.is_queued_for_deletion():
