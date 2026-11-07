@@ -366,40 +366,32 @@ public sealed class ClubService
 
     private void BroadcastClubSync(long memberDbid)
     {
-        var clubId = _store.GetClubIdForCharacter(memberDbid);
-        if (clubId <= 0)
+        var origin = _broadcasts.FindCharacter(memberDbid);
+        if (origin is null)
             return;
 
-        // Presence contains account IDs for online characters, so each member
-        // receives a ClubSync with their own MyPosition/MyDonation values.
-        foreach (var presence in Enumerable.Range(0, 1)
-                     .SelectMany(_ => GetOnlineClubMembers(clubId)))
+        var snapshot = _store.GetClubSnapshot(
+            origin.AccountId,
+            origin.CharacterId,
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+        if (snapshot is null)
+            return;
+
+        foreach (var member in snapshot.Members)
         {
+            if (member.DbId == memberDbid)
+                continue;
+
+            var presence = _broadcasts.FindCharacter(member.DbId);
+            if (presence is null)
+                continue;
+
             _broadcasts.PublishToCharacter(
                 presence.CharacterId,
                 BuildSync(
                     presence.AccountId,
                     presence.CharacterId));
         }
-    }
-
-    private IEnumerable<OnlinePlayerPresence> GetOnlineClubMembers(
-        long clubId)
-    {
-        // Iterate the known member IDs from any online member snapshot.
-        // This avoids exposing broadcast-hub internals and keeps persistence
-        // authoritative for membership.
-        var seen = new HashSet<long>();
-
-        // The caller is always an online member. Find every online character by
-        // checking the club id of map presences reachable through known members.
-        // A direct global presence query is intentionally not required.
-        for (var characterId = 1L; characterId <= 0; characterId++)
-            yield break;
-
-        // Fallback path is populated below by probing members from a snapshot
-        // using the first online member discovered by the hub in Invite/GetInfo.
-        // This method is replaced by BroadcastSnapshotToMembers when available.
-        yield break;
     }
 }
