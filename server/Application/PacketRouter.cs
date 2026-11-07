@@ -6094,13 +6094,20 @@ public sealed class PacketRouter
     {
         var assets = _store.GetCharacterAssets(accountId, dbid);
         var packets = new List<object>();
+        var activePets = assets.Pets
+            .Where(x =>
+                Convert.ToInt32(x["State"]) == 1)
+            .OrderBy(x =>
+                Convert.ToInt64(x["UID"]))
+            .ToArray();
 
-        foreach (var pet in assets.Pets.Where(x =>
-                     Convert.ToInt32(x["State"]) == 1))
+        for (var i = 0; i < activePets.Length; i++)
         {
+            var pet = activePets[i];
             var petUid = Convert.ToInt64(pet["UID"]);
-            var spawnX = playerX + 40;
-            var spawnY = playerY + 20;
+            var formation = PetFormationOffset(i);
+            var spawnX = playerX + formation.X;
+            var spawnY = playerY + formation.Y;
 
             state.PetPositions[petUid] = (spawnX, spawnY);
             state.PetLastAttackAt.Remove(petUid);
@@ -6124,19 +6131,26 @@ public sealed class PacketRouter
     {
         var assets = _store.GetCharacterAssets(accountId, dbid);
         var packets = new List<object>();
+        var activePets = assets.Pets
+            .Where(x =>
+                Convert.ToInt32(x["State"]) == 1)
+            .OrderBy(x =>
+                Convert.ToInt64(x["UID"]))
+            .ToArray();
 
-        foreach (var pet in assets.Pets.Where(x =>
-                     Convert.ToInt32(x["State"]) == 1))
+        for (var i = 0; i < activePets.Length; i++)
         {
+            var pet = activePets[i];
             var petUid = Convert.ToInt64(pet["UID"]);
 
             if (!state.PetPositions.TryGetValue(
                     petUid,
                     out var position))
             {
+                var formation = PetFormationOffset(i);
                 position = (
-                    X: playerX + 40,
-                    Y: playerY + 20);
+                    X: playerX + formation.X,
+                    Y: playerY + formation.Y);
                 state.PetPositions[petUid] = position;
             }
 
@@ -6168,10 +6182,20 @@ public sealed class PacketRouter
         var playerAlive = character is not null &&
                           Convert.ToInt32(character["HP"]) > 0;
         var packets = new List<object>();
+        var activePets = assets.Pets
+            .Where(x =>
+                Convert.ToInt32(x["State"]) == 1)
+            .OrderBy(x =>
+                Convert.ToInt64(x["UID"]))
+            .ToArray();
 
-        foreach (var pet in assets.Pets.Where(x =>
-                     Convert.ToInt32(x["State"]) == 1))
+        for (var petIndex = 0;
+             petIndex < activePets.Length;
+             petIndex++)
         {
+            var pet = activePets[petIndex];
+            var formation =
+                PetFormationOffset(petIndex);
             var petUid = Convert.ToInt64(pet["UID"]);
             var petEntityId = 4_000_000L + petUid;
             var petSpeechSequence =
@@ -6191,7 +6215,9 @@ public sealed class PacketRouter
                     petUid,
                     out var petPosition))
             {
-                petPosition = (playerX + 40, playerY + 20);
+                petPosition = (
+                    playerX + formation.X,
+                    playerY + formation.Y);
                 state.PetPositions[petUid] = petPosition;
                 packets.Add(BuildPetSpawnPacket(
                     dbid,
@@ -6204,8 +6230,10 @@ public sealed class PacketRouter
             // stays roughly beyond a full-screen distance for several seconds.
             // The server does not know the exact client viewport, so 900 px is
             // used as a conservative "off-screen" leash approximation.
-            var ownerFollowX = playerX + 42;
-            var ownerFollowY = playerY + 24;
+            var ownerFollowX =
+                playerX + formation.X;
+            var ownerFollowY =
+                playerY + formation.Y;
             var ownerDx = ownerFollowX - petPosition.X;
             var ownerDy = ownerFollowY - petPosition.Y;
             var ownerDistanceSquared =
@@ -6364,8 +6392,10 @@ public sealed class PacketRouter
                 continue;
             }
 
-            var followX = playerX + 42;
-            var followY = playerY + 24;
+            var followX =
+                playerX + formation.X;
+            var followY =
+                playerY + formation.Y;
             var followDx = followX - petPosition.X;
             var followDy = followY - petPosition.Y;
             var followDistance = Math.Sqrt(
@@ -6429,6 +6459,16 @@ public sealed class PacketRouter
 
         return packets;
     }
+
+    private static (double X, double Y) PetFormationOffset(
+        int index)
+        => index switch
+        {
+            0 => (42.0, 24.0),
+            1 => (-42.0, 24.0),
+            2 => (0.0, -52.0),
+            _ => (42.0, 24.0)
+        };
 
     private static TimeSpan NextPetIdleSpeechDelay(
         long petUid,
