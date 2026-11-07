@@ -147,7 +147,15 @@ func _print_render_stats() -> void :
 	if is_instance_valid(current_player) and "doll_engine" in current_player and is_instance_valid(current_player.doll_engine):
 		paper_doll_layers += current_player.doll_engine.doll_sprites.size()
 
-	print("[RENDER_STATS] fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d visible_players=%d visible_pets=%d paper_doll_layers=%d" % [
+	var aoi_active_monsters: int = 0
+	var aoi_deferred_monsters: int = 0
+	if NetworkEntityManager:
+		if NetworkEntityManager.has_method("get_aoi_active_monster_count"):
+			aoi_active_monsters = int(NetworkEntityManager.get_aoi_active_monster_count())
+		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
+			aoi_deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
+
+	print("[RENDER_STATS] fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d visible_pets=%d paper_doll_layers=%d" % [
 		int(Performance.get_monitor(Performance.TIME_FPS)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
@@ -156,6 +164,8 @@ func _print_render_stats() -> void :
 		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
 		float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
 		visible_monsters,
+		aoi_active_monsters,
+		aoi_deferred_monsters,
 		visible_players,
 		visible_pets,
 		paper_doll_layers,
