@@ -1451,6 +1451,9 @@ public sealed class PacketRouter
                         BuildAndBroadcastItemEffect(
                             state,
                             itemIndex),
+                        BuildTimedEffectSync(
+                            accountId,
+                            state.CharacterId.Value),
                         new
                         {
                             Type = "SystemMessageFlash",
