@@ -203,6 +203,9 @@ public sealed class QuestRuntime
 
         script.Globals["AddTitle"] = (Action<int>)(titleId =>
         {
+            if (bindings?.HasTitle?.Invoke(titleId) == true)
+                return;
+
             if (bindings?.UnlockTitle?.Invoke(titleId) != true)
                 return;
 
