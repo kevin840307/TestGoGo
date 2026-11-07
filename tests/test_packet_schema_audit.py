@@ -193,6 +193,38 @@ class PacketSchemaAuditTests(unittest.TestCase):
         self.assertEqual("FIELD_MISMATCH", issue["status"])
         self.assertEqual(["Count"], issue["missing_fields"])
 
+    def test_party_action_helper_supplies_target_dbid(self):
+        with (self.root / "server/Protocol/PacketSchemaValidator.cs").open(
+            "a", encoding="utf-8"
+        ) as stream:
+            stream.write(
+                """
+                ["PartyAction"] = [
+                    new("Action", FieldType.NonEmptyText)
+                ],
+                ["PartyAction:Invite"] = [
+                    new("TargetDBID", FieldType.LongInteger)
+                ],
+                """
+            )
+        with (self.root / "client/scripts/network_manager.gd").open(
+            "a", encoding="utf-8"
+        ) as stream:
+            stream.write(
+                '\nfunc send_party_action(action, target_dbid):\n'
+                '    send_secure_packet({'
+                '"Type":"PartyAction","Action":action,'
+                '"TargetDBID":target_dbid})\n'
+            )
+        self.write(
+            "client/scripts/player_context_menu.gd",
+            'NetworkManager.send_party_action("Invite", dbid)\n',
+        )
+        result = scan(self.root)
+        self.assertEqual(3, result["matched_count"])
+        self.assertEqual(1, result["action_matched_count"])
+        self.assertEqual([], result["issues"])
+
     def test_literal_parser_skips_quoted_braces_and_comments(self):
         source = (
             'var note = "{not a dictionary}"\n'
