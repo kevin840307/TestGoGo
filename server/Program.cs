@@ -1,8 +1,4 @@
 using SGO.Server.Application;
-using SGO.Server.Application.Bank;
-using SGO.Server.Application.Combat;
-using SGO.Server.Application.Gm;
-using SGO.Server.Application.Shops;
 using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Infrastructure.Quest;
 using SGO.Server.Infrastructure.World;
@@ -68,11 +64,7 @@ builder.Services.AddSingleton(sp =>
         Path.Combine(gameDataRoot, "Quest"),
         sp.GetRequiredService<ShopCatalog>()));
 
-builder.Services.AddSingleton<CombatService>();
-builder.Services.AddSingleton<ShopService>();
-builder.Services.AddSingleton<BankService>();
-builder.Services.AddSingleton<GmCommandService>();
-builder.Services.AddSingleton<PacketRouter>();
+builder.Services.AddGameFeatures(builder.Configuration);
 
 var app = builder.Build();
 
