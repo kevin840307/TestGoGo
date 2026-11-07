@@ -56,6 +56,18 @@ public static class PacketSchemaValidator
                 new("RequesterDBID", FieldType.LongInteger),
                 new("Accept", FieldType.Boolean)
             ],
+            ["TradeAddItem"] =
+            [
+                new("UID", FieldType.LongInteger),
+                new("TabType", FieldType.Integer),
+                new("Count", FieldType.Integer)
+            ],
+            ["TradeRemoveItem"] =
+            [
+                new("UID", FieldType.LongInteger),
+                new("TabType", FieldType.Integer)
+            ],
+            ["TradeSetMoney"] = [new("Money", FieldType.LongInteger)],
             ["ShopAction"] = [new("Action", FieldType.NonEmptyText)],
             ["MallAction"] = [new("Action", FieldType.NonEmptyText)],
             ["PetAction"] = [new("Action", FieldType.NonEmptyText)],
@@ -130,6 +142,46 @@ public static class PacketSchemaValidator
             ["AbandonQuest"] = [new("QuestID", FieldType.Integer)]
         };
 
+    // Action-dependent fields are not mandatory for every ShopAction.
+    // Keep these separate from the shared Type-level rules so CloseShop
+    // and SyncMyShop remain backward compatible with the recovered client.
+    private static readonly IReadOnlyDictionary<string, Field[]> ActionRules =
+        new Dictionary<string, Field[]>(StringComparer.Ordinal)
+        {
+            ["ShopAction:BuyNpcItem"] =
+            [
+                new("ShopID", FieldType.Integer),
+                new("ItemIndex", FieldType.Integer),
+                new("Count", FieldType.Integer)
+            ],
+            ["ShopAction:SellNpcItem"] =
+            [
+                new("UID", FieldType.LongInteger),
+                new("TabType", FieldType.Integer),
+                new("Count", FieldType.Integer)
+            ],
+            ["ShopAction:AddItem"] =
+            [
+                new("UID", FieldType.LongInteger),
+                new("Count", FieldType.Integer),
+                new("Price", FieldType.LongInteger),
+                new("TabType", FieldType.Integer)
+            ],
+            ["ShopAction:RemoveItem"] =
+            [
+                new("UID", FieldType.LongInteger),
+                new("TabType", FieldType.Integer)
+            ],
+            ["ShopAction:BuyItem"] =
+            [
+                new("TargetDBID", FieldType.LongInteger),
+                new("UID", FieldType.LongInteger),
+                new("Count", FieldType.Integer)
+            ],
+            ["ShopAction:ViewShop"] =
+                [new("TargetDBID", FieldType.LongInteger)]
+        };
+
     public static bool TryValidate(
         JsonElement packet,
         string packetType,
@@ -142,10 +194,14 @@ public static class PacketSchemaValidator
             return false;
         }
 
-        if (!Rules.TryGetValue(packetType, out var fields))
-            return true;
+        Rules.TryGetValue(packetType, out var fields);
+        Field[]? actionFields = null;
+        if (packet.TryGetProperty("Action", out var action) &&
+            action.ValueKind == JsonValueKind.String)
+            ActionRules.TryGetValue(
+                packetType + ":" + action.GetString(), out actionFields);
 
-        foreach (var field in fields)
+        foreach (var field in (fields ?? []).Concat(actionFields ?? []))
         {
             if (!packet.TryGetProperty(field.Name, out var value))
             {
