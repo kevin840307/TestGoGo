@@ -2035,12 +2035,12 @@ public sealed class CombatService
             (primaryMonster is not null || isScreenAreaAttack))
         {
             var damage = isScreenAreaAttack
-                ? Math.Max(
-                    1,
-                    checked(
-                        1_000_000 +
-                        effective.Attack * 100 +
-                        effective.MagicAttack * 100))
+                ? (int)Math.Clamp(
+                    1_000_000L +
+                    (long)effective.Attack * 100L +
+                    (long)effective.MagicAttack * 100L,
+                    1L,
+                    int.MaxValue)
                 : Math.Max(
                     1,
                     levelData.BaseDamage +
@@ -2068,7 +2068,7 @@ public sealed class CombatService
                     0,
                     levelData.AoeRadius);
 
-                var targets = runtime.Monsters.Values
+                var targetQuery = runtime.Monsters.Values
                     .Where(x =>
                         x.IsAlive &&
                         x.MapId == session.CurrentMapId &&
@@ -2077,8 +2077,16 @@ public sealed class CombatService
                               x.EntityId == primaryMonster.EntityId
                             : Math.Pow(x.X - centerX, 2) +
                               Math.Pow(x.Y - centerY, 2) <=
-                              radius * radius))
-                    .ToArray();
+                              radius * radius));
+
+                var targets = isScreenAreaAttack
+                    ? targetQuery
+                        .OrderBy(x =>
+                            Math.Pow(x.X - centerX, 2) +
+                            Math.Pow(x.Y - centerY, 2))
+                        .Take(24)
+                        .ToArray()
+                    : targetQuery.ToArray();
 
                 packets[0] = new
                 {
