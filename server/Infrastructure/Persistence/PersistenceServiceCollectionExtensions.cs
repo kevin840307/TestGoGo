@@ -68,6 +68,8 @@ public static class PersistenceServiceCollectionExtensions
             sp.GetRequiredService<TStore>());
         services.AddSingleton<IBankStore>(sp =>
             sp.GetRequiredService<TStore>());
+        services.AddSingleton<IRepairStore>(sp =>
+            sp.GetRequiredService<TStore>());
         services.AddSingleton<IItemDiscardStore>(sp =>
             sp.GetRequiredService<TStore>());
         services.AddSingleton<IShopStore>(sp =>
