@@ -43,6 +43,11 @@ public static class GameDataServiceCollectionExtensions
                 sp.GetRequiredService<LegacyClientDataCatalog>()));
 
         services.AddSingleton(sp =>
+            new EnemyDropCatalog(
+                gameDataRoot,
+                sp.GetRequiredService<CurrentClientDataCatalog>()));
+
+        services.AddSingleton(sp =>
             new HorseBatteryCatalog(
                 sp.GetRequiredService<CurrentClientDataCatalog>()));
         services.AddSingleton(sp =>
