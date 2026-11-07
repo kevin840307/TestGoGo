@@ -191,8 +191,12 @@ func _on_entity_moved(data: Dictionary) -> void :
 		var new_dir = str(data.get("Dir", ""))
 		var speed_time = float(data.get("SpeedTime", 1.0))
 
-		if new_dir != "" and "current_dir" in target_node:
-			target_node.current_dir = new_dir
+		if new_dir != "":
+			if target_node.has_method("apply_network_move_direction"):
+				target_node.apply_network_move_direction(new_dir)
+			elif "current_dir" in target_node:
+				target_node.current_dir = new_dir
+
 		if target_node.has_method("network_move_to"):
 			target_node.network_move_to(Vector2(target_x, target_y), speed_time)
 
