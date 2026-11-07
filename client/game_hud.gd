@@ -63,9 +63,9 @@ var _emotion_tween: Tween
 @onready var option_volume_effect: Control = $WindowsContainer / SettingsWindow / OptionVolumeEffect
 @onready var option_auto_saint: Control = $WindowsContainer / SettingsWindow / OptionAutoSaint
 @onready var option_quality_enhancement: Control = $WindowsContainer / SettingsWindow / OptionQualityEnhancement
-@onready var mall_window: Control = $WindowsContainer / MallWindow
-@onready var announcement_window: Control = $WindowsContainer / AnnouncementWindow
-@onready var game_info_window: Control = $WindowsContainer / GameInfoWindow
+var mall_window: Control = null
+var announcement_window: Control = null
+var game_info_window: Control = null
 
 
 @onready var npc_dialog_panel: Control = $WindowsContainer / NpcDialogPanel
@@ -130,7 +130,7 @@ const PET_STATUS_ROW_SCENE = preload("res://pet_status_row.tscn")
 @onready var spin_input_box_btn_confirm: BaseButton = $SpinInputBox / BtnConfirm
 @onready var spin_input_box_btn_cancel: BaseButton = $SpinInputBox / BtnCancel
 
-@onready var quest_window: Control = $WindowsContainer / QuestWindow
+var quest_window: Control = null
 @onready var quest_tracker_panel: Panel = $WindowsContainer / QuestTrackerPanel
 
 var _invite_time_left: float = 0.0
@@ -165,13 +165,21 @@ var current_pet_window: Control = null
 const RANK_WINDOW_SCENE = preload("res://rank_window.tscn")
 var current_rank_window: Control = null
 
-const CRAFT_DISMANTLE_WINDOW_SCENE = preload("res://craft_dismantle_window.tscn")
 var craft_dismantle_window: Control = null
-
-const BIG_MAP_WINDOW_SCENE = preload("res://big_map_window.tscn")
 var big_map_window: Control = null
-const WORLD_MAP_WINDOW_SCENE = preload("res://world_map_window.tscn")
 var world_map_window: Control = null
+
+const LAZY_WINDOW_PATHS: Dictionary = {
+	"quest": "res://quest_window.tscn",
+	"mall": "res://mall_window.tscn",
+	"announcement": "res://announcement_window.tscn",
+	"game_info": "res://game_info_window.tscn",
+	"craft": "res://craft_dismantle_window.tscn",
+	"big_map": "res://big_map_window.tscn",
+	"world_map": "res://world_map_window.tscn",
+}
+var _lazy_window_scenes: Dictionary = {}
+var _lazy_window_requests: Dictionary = {}
 
 const BUBBLE_TEXT_MARGINS = {
 	0: {"left": 10, "top": 8, "right": 10, "bottom": 23}, 
@@ -573,10 +581,12 @@ func _setup_window_manager() -> void :
 		windows_container.modulate.a = 1.0
 
 	_window_map = {
-		btn_character: character_window, btn_inventory: inventory_window, btn_skill: skill_window, 
-		btn_party: party_window, btn_clan: clan_window, btn_quest: quest_window, 
-		btn_settings: settings_window, btn_mall: mall_window, btn_announcement: announcement_window, 
-		btn_game_info: game_info_window
+		btn_character: character_window,
+		btn_inventory: inventory_window,
+		btn_skill: skill_window,
+		btn_party: party_window,
+		btn_clan: clan_window,
+		btn_settings: settings_window,
 	}
 
 	for btn in _window_map.keys():
@@ -600,11 +610,7 @@ func _setup_window_manager() -> void :
 		skill_window, 
 		party_window, 
 		clan_window, 
-		settings_window, 
-		quest_window, 
-		mall_window, 
-		announcement_window, 
-		game_info_window
+		settings_window
 	]:
 		_register_draggable_window(draggable_window)
 
@@ -698,34 +704,130 @@ func _setup_window_manager() -> void :
 			if not option_quality_enhancement.gui_input.is_connected(_on_option_gui_input):
 				option_quality_enhancement.gui_input.connect(_on_option_gui_input.bind(option_quality_enhancement))
 
-	if is_instance_valid(windows_container):
-		craft_dismantle_window = CRAFT_DISMANTLE_WINDOW_SCENE.instantiate()
-		windows_container.add_child(craft_dismantle_window)
-		craft_dismantle_window.visible = false
-		craft_dismantle_window.modulate.a = 0.0
-		btn_craft_dismantle.pressed.connect(_toggle_window.bind(craft_dismantle_window))
-		btn_craft_dismantle.focus_mode = Control.FOCUS_NONE
+	if btn_quest and not btn_quest.pressed.is_connected(_toggle_lazy_window.bind("quest")):
+		btn_quest.pressed.connect(_toggle_lazy_window.bind("quest"))
+	if btn_announcement and not btn_announcement.pressed.is_connected(_toggle_lazy_window.bind("announcement")):
+		btn_announcement.pressed.connect(_toggle_lazy_window.bind("announcement"))
+	if btn_game_info and not btn_game_info.pressed.is_connected(_toggle_lazy_window.bind("game_info")):
+		btn_game_info.pressed.connect(_toggle_lazy_window.bind("game_info"))
+	if btn_craft_dismantle and not btn_craft_dismantle.pressed.is_connected(_toggle_lazy_window.bind("craft")):
+		btn_craft_dismantle.pressed.connect(_toggle_lazy_window.bind("craft"))
+	if btn_mall:
+		btn_mall.focus_mode = Control.FOCUS_NONE
 
+func _assign_lazy_window(kind: String, window: Control) -> void :
+	match kind:
+		"quest": quest_window = window
+		"mall": mall_window = window
+		"announcement": announcement_window = window
+		"game_info": game_info_window = window
+		"craft": craft_dismantle_window = window
+		"big_map": big_map_window = window
+		"world_map": world_map_window = window
 
-		craft_dismantle_window.gui_input.connect(_on_window_gui_input.bind(craft_dismantle_window))
+func _get_lazy_window(kind: String) -> Control:
+	match kind:
+		"quest": return quest_window
+		"mall": return mall_window
+		"announcement": return announcement_window
+		"game_info": return game_info_window
+		"craft": return craft_dismantle_window
+		"big_map": return big_map_window
+		"world_map": return world_map_window
+	return null
 
-		big_map_window = BIG_MAP_WINDOW_SCENE.instantiate()
-		windows_container.add_child(big_map_window)
-		_register_draggable_window(big_map_window)
-		big_map_window.visible = false
-		big_map_window.modulate.a = 0.0
-		big_map_window.gui_input.connect(_on_window_gui_input.bind(big_map_window))
-		if big_map_window.has_signal("close_requested"):
-			big_map_window.close_requested.connect(_close_window.bind(big_map_window))
+func _configure_lazy_window(kind: String, window: Control) -> void :
+	window.visible = false
+	window.modulate.a = 0.0
+	_register_draggable_window(window)
+	window.gui_input.connect(_on_window_gui_input.bind(window))
 
-		world_map_window = WORLD_MAP_WINDOW_SCENE.instantiate()
-		windows_container.add_child(world_map_window)
-		_register_draggable_window(world_map_window)
-		world_map_window.visible = false
-		world_map_window.modulate.a = 0.0
-		world_map_window.gui_input.connect(_on_window_gui_input.bind(world_map_window))
-		if world_map_window.has_signal("close_requested"):
-			world_map_window.close_requested.connect(_close_window.bind(world_map_window))
+	var close_btn := window.get_node_or_null("BtnClose")
+	if close_btn is BaseButton:
+		close_btn.pressed.connect(_close_window.bind(window))
+		close_btn.focus_mode = Control.FOCUS_NONE
+
+	if is_instance_valid(target_player) and window.has_method("setup"):
+		window.call("setup", target_player)
+
+	if kind == "big_map":
+		if window.has_signal("close_requested"):
+			window.close_requested.connect(_close_window.bind(window))
+	elif kind == "world_map":
+		if window.has_signal("close_requested"):
+			window.close_requested.connect(_close_window.bind(window))
+
+func _ensure_lazy_window(kind: String) -> Control:
+	var existing := _get_lazy_window(kind)
+	if is_instance_valid(existing):
+		return existing
+
+	var path: String = str(LAZY_WINDOW_PATHS.get(kind, ""))
+	if path.is_empty():
+		return null
+
+	var scene: PackedScene = _lazy_window_scenes.get(kind, null) as PackedScene
+	if scene == null:
+		if not _lazy_window_requests.has(kind):
+			var request_error: int = ResourceLoader.load_threaded_request(path)
+			if request_error != OK:
+				push_error("[HUD] lazy window load request failed: %s" % path)
+				return null
+			_lazy_window_requests[kind] = true
+
+		while true:
+			var progress: Array = []
+			var status: int = ResourceLoader.load_threaded_get_status(path, progress)
+			if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+				await get_tree().process_frame
+				continue
+			if status == ResourceLoader.THREAD_LOAD_LOADED:
+				scene = ResourceLoader.load_threaded_get(path) as PackedScene
+				break
+			push_error("[HUD] lazy window threaded load failed: %s" % path)
+			_lazy_window_requests.erase(kind)
+			return null
+
+		_lazy_window_scenes[kind] = scene
+		_lazy_window_requests.erase(kind)
+
+	var window := scene.instantiate() as Control
+	if window == null or not is_instance_valid(windows_container):
+		return null
+	windows_container.add_child(window)
+	_assign_lazy_window(kind, window)
+	_configure_lazy_window(kind, window)
+	return window
+
+func _prewarm_lazy_window_scenes() -> void :
+	for kind_value in LAZY_WINDOW_PATHS.keys():
+		var kind: String = str(kind_value)
+		if _lazy_window_scenes.has(kind) or _lazy_window_requests.has(kind):
+			continue
+		var path: String = str(LAZY_WINDOW_PATHS[kind])
+		var request_error: int = ResourceLoader.load_threaded_request(path)
+		if request_error == OK:
+			_lazy_window_requests[kind] = true
+
+	while not _lazy_window_requests.is_empty():
+		for kind_value in _lazy_window_requests.keys().duplicate():
+			var kind: String = str(kind_value)
+			var path: String = str(LAZY_WINDOW_PATHS[kind])
+			var status: int = ResourceLoader.load_threaded_get_status(path)
+			if status == ResourceLoader.THREAD_LOAD_LOADED:
+				var scene := ResourceLoader.load_threaded_get(path) as PackedScene
+				if scene != null:
+					_lazy_window_scenes[kind] = scene
+				_lazy_window_requests.erase(kind)
+			elif status == ResourceLoader.THREAD_LOAD_FAILED or status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+				_lazy_window_requests.erase(kind)
+		await get_tree().process_frame
+
+func _toggle_lazy_window(kind: String) -> void :
+	var window := await _ensure_lazy_window(kind)
+	if not is_instance_valid(window):
+		return
+	_toggle_window(window)
 
 func _setup_header_button_hover_signals() -> void :
 	for button in [btn_announcement, btn_game_info, btn_craft_dismantle]:
@@ -1011,9 +1113,7 @@ func initialize_hud(player: CharacterBody2D) -> void :
 	if character_window and character_window.has_method("setup"): character_window.setup(player)
 	if inventory_window and inventory_window.has_method("setup"): inventory_window.setup(player)
 	if skill_window and skill_window.has_method("setup"): skill_window.setup(player)
-	if game_info_window and game_info_window.has_method("setup"): game_info_window.call("setup", player)
 	if clan_window and clan_window.has_method("setup"): clan_window.setup(player)
-	if quest_window and quest_window.has_method("setup"): quest_window.setup(player)
 	if quest_tracker_panel and quest_tracker_panel.has_method("setup"): quest_tracker_panel.setup(player)
 
 	if minimap_viewport and get_tree().root.is_node_ready():
@@ -1053,12 +1153,22 @@ func _initialize_hud_deferred() -> void :
 	if NetworkManager and NetworkManager.has_method("send_set_global_pet_mode"):
 		NetworkManager.send_set_global_pet_mode(current_pet_combat_mode)
 
-	if is_instance_valid(announcement_window):
-		_open_window(announcement_window)
-		announcement_window.call("set_loading")
+	_initial_hud_ready = true
+	call_deferred("_prewarm_lazy_window_scenes")
+	call_deferred("_open_initial_announcement_lazy")
+
+func _open_initial_announcement_lazy() -> void :
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	var window := await _ensure_lazy_window("announcement")
+	if not is_instance_valid(window):
+		return
+	_open_window(window)
+	if window.has_method("set_loading"):
+		window.call("set_loading")
 	if NetworkManager:
 		NetworkManager.send_announcement_list_request()
-	_initial_hud_ready = true
 
 func is_initial_hud_ready() -> bool:
 	return _initial_hud_ready
@@ -1253,15 +1363,17 @@ func _unhandled_input(event: InputEvent) -> void :
 				KEY_W: if inventory_window: _toggle_window(inventory_window)
 				KEY_S: if skill_window: _toggle_window(skill_window)
 				KEY_D: if party_window: _toggle_window(party_window)
-				KEY_J: if quest_window: _toggle_window(quest_window)
+				KEY_J: _toggle_lazy_window("quest")
 				KEY_Q: if settings_window: _toggle_window(settings_window)
-				KEY_G: if is_instance_valid(craft_dismantle_window): _toggle_window(craft_dismantle_window)
+				KEY_G: _toggle_lazy_window("craft")
 				KEY_F:
 					toggle_fullscreen()
 					get_viewport().set_input_as_handled()
 					return
 
 func _toggle_big_map() -> void :
+	if not is_instance_valid(big_map_window):
+		big_map_window = await _ensure_lazy_window("big_map")
 	if not is_instance_valid(big_map_window):
 		return
 
@@ -1274,6 +1386,8 @@ func _toggle_big_map() -> void :
 	_open_window(big_map_window)
 
 func _toggle_world_map() -> void :
+	if not is_instance_valid(world_map_window):
+		world_map_window = await _ensure_lazy_window("world_map")
 	if not is_instance_valid(world_map_window):
 		return
 
@@ -2396,10 +2510,13 @@ func _on_open_megaphone_window_received(item_uid: int) -> void :
 func _on_btn_mall_pressed() -> void :
 	if is_instance_valid(mall_window) and mall_window.visible and mall_window.modulate.a > 0.1:
 		_close_window(mall_window)
-	else:
+		return
 
-		if NetworkManager and NetworkManager.has_method("send_mall_action"):
-			NetworkManager.send_mall_action("OpenMall")
+	mall_window = await _ensure_lazy_window("mall")
+	if not is_instance_valid(mall_window):
+		return
+	if NetworkManager and NetworkManager.has_method("send_mall_action"):
+		NetworkManager.send_mall_action("OpenMall")
 
 func _on_mall_list_received(points: int, items: Array, gifts: Array) -> void :
 	if is_instance_valid(mall_window):
