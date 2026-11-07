@@ -16,17 +16,20 @@ public sealed class SharedMapAiTicker : BackgroundService
     private static readonly TimeSpan Interval = TimeSpan.FromMilliseconds(250);
     private readonly ConcurrentDictionary<Guid, ClientSession> _sessions = new();
     private readonly CombatService _combat;
+    private readonly WorldRuntimeService _world;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly AccountSessionRegistry _accounts;
     private readonly ILogger<SharedMapAiTicker> _log;
 
     public SharedMapAiTicker(
         CombatService combat,
+        WorldRuntimeService world,
         ServerBroadcastHub broadcasts,
         AccountSessionRegistry accounts,
         ILogger<SharedMapAiTicker> log)
     {
         _combat = combat;
+        _world = world;
         _broadcasts = broadcasts;
         _accounts = accounts;
         _log = log;
@@ -58,6 +61,13 @@ public sealed class SharedMapAiTicker : BackgroundService
     /// by its target owner's session, preserving pet and buff behavior.
     /// The map's pass is serialized here rather than driven by N sockets.
     /// </summary>
+    private sealed record PlayerContext(
+        ClientSession Session,
+        long CharacterId,
+        double X,
+        double Y,
+        (double X, double Y)[] PetPositions);
+
     public int TickOnce(DateTimeOffset now)
     {
         var activeByMap = _sessions.Values
@@ -71,13 +81,120 @@ public sealed class SharedMapAiTicker : BackgroundService
         var tickedMaps = 0;
         foreach (var group in activeByMap)
         {
-            var didRespawn = false;
-            var mapProcessed = false;
-            foreach (var session in group.OrderBy(s => s.CharacterId.GetValueOrDefault()))
+            var players = new List<PlayerContext>();
+            foreach (var session in group)
             {
                 lock (session)
                 {
-                    if (!session.WorldReady ||
+                    if (!session.SharedAiManaged ||
+                        !session.WorldReady ||
+                        session.CurrentMapId != group.Key ||
+                        !session.AccountId.HasValue ||
+                        !session.CharacterId.HasValue ||
+                        !_accounts.IsCurrent(
+                            session.AccountId.Value, session.ConnectionId))
+                        continue;
+
+                    players.Add(new PlayerContext(
+                        session, session.CharacterId.Value,
+                        session.LastX, session.LastY,
+                        session.PetPositions.Values.ToArray()));
+                }
+            }
+
+            if (players.Count == 0)
+                continue;
+
+            players.Sort((a, b) => a.CharacterId.CompareTo(b.CharacterId));
+
+            // Respawn once per map, before distributing newly alive monsters.
+            var respawnOwner = players[0].Session;
+            lock (respawnOwner)
+            {
+                if (respawnOwner.WorldReady &&
+                    respawnOwner.CurrentMapId == group.Key)
+                {
+                    try
+                    {
+                        foreach (var packet in _combat.TickRespawns(
+                                     respawnOwner, now))
+                            _broadcasts.PublishToConnection(
+                                respawnOwner.ConnectionId, packet);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.LogError(ex,
+                            "[MAP_AI_RESPAWN_FAILED] Map={MapID}", group.Key);
+                    }
+                }
+            }
+
+            var assignments = players.ToDictionary(
+                p => p.Session.ConnectionId,
+                _ => new List<int>());
+            var map = _world.GetMap(group.Key);
+
+            lock (map.SyncRoot)
+            {
+                foreach (var monster in map.Monsters.Values)
+                {
+                    var owner = monster.HasTarget
+                        ? players.FirstOrDefault(p =>
+                            p.CharacterId == monster.TargetCharacterId)
+                        : null;
+
+                    if (owner is null && monster.HasTarget)
+                    {
+                        // Stale or disconnected target: let an active player
+                        // clear the target so wandering can resume.
+                        owner = players[0];
+                    }
+
+                    if (owner is null)
+                    {
+                        // Assign an idle monster once, using the nearest
+                        // player or their currently tracked pet position.
+                        // This prevents N players from each scanning/updating
+                        // all idle monsters on one map.
+                        var bestDistance = double.MaxValue;
+                        foreach (var player in players)
+                        {
+                            var dx = player.X - monster.X;
+                            var dy = player.Y - monster.Y;
+                            var distance = dx * dx + dy * dy;
+                            foreach (var pet in player.PetPositions)
+                            {
+                                var petDx = pet.X - monster.X;
+                                var petDy = pet.Y - monster.Y;
+                                distance = Math.Min(
+                                    distance, petDx * petDx + petDy * petDy);
+                            }
+
+                            if (distance < bestDistance)
+                            {
+                                bestDistance = distance;
+                                owner = player;
+                            }
+                        }
+                    }
+
+                    if (owner is not null)
+                        assignments[owner.Session.ConnectionId].Add(
+                            monster.EntityId);
+                }
+            }
+
+            foreach (var player in players)
+            {
+                var assigned = assignments[player.Session.ConnectionId];
+                if (assigned.Count == 0)
+                    continue;
+
+                var session = player.Session;
+                lock (session)
+                {
+                    if (!session.SharedAiManaged ||
+                        !session.WorldReady ||
                         session.CurrentMapId != group.Key ||
                         !session.AccountId.HasValue ||
                         !session.CharacterId.HasValue ||
@@ -87,29 +204,19 @@ public sealed class SharedMapAiTicker : BackgroundService
 
                     try
                     {
-                        // Only the first active session handles this map's
-                        // respawns. CombatService broadcasts the map events.
-                        var packets = new List<object>();
-                        if (!didRespawn)
-                        {
-                            packets.AddRange(_combat.TickRespawns(session, now));
-                            didRespawn = true;
-                        }
-
-                        packets.AddRange(_combat.TickAi(
+                        var packets = _combat.TickAi(
                             session,
                             session.AccountId.Value,
                             session.LastX,
                             session.LastY,
-                            now));
+                            now,
+                            assigned);
 
-                        // TickAi already broadcasts events to other sessions
-                        // on this map; return the same events to the owner.
+                        // The combat service broadcasts to map peers; enqueue
+                        // the return packets only to the actor's own socket.
                         foreach (var packet in packets)
                             _broadcasts.PublishToConnection(
                                 session.ConnectionId, packet);
-
-                        mapProcessed = true;
                     }
                     catch (Exception ex)
                     {
@@ -120,8 +227,7 @@ public sealed class SharedMapAiTicker : BackgroundService
                 }
             }
 
-            if (mapProcessed)
-                tickedMaps++;
+            tickedMaps++;
         }
 
         return tickedMaps;
