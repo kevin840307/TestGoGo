@@ -784,7 +784,8 @@ public sealed class PacketRouter
                     {
                         Type = "PetSync",
                         Pets = assets.Pets,
-                        MaxSize = assets.PetMaxSize
+                        MaxSize = assets.PetMaxSize,
+                        MaxSummon = assets.PetSummonMax
                     },
                     new
                     {
@@ -1231,6 +1232,57 @@ public sealed class PacketRouter
                         state.CharacterId.Value,
                         itemUid,
                         itemIndex);
+                }
+
+                if (itemIndex == 2301)
+                {
+                    var expanded =
+                        _store.ExpandPetSummonCapacityFromItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            itemIndex);
+
+                    if (!expanded.Success)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = expanded.Message
+                            }
+                        ];
+                    }
+
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        new
+                        {
+                            Type = "PetSync",
+                            Pets = assets.Pets,
+                            MaxSize = assets.PetMaxSize,
+                            MaxSummon = assets.PetSummonMax
+                        },
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = expanded.Message
+                        }
+                    ];
                 }
 
                 if (itemIndex == 2000)
@@ -2250,10 +2302,14 @@ public sealed class PacketRouter
                     var assetsForAttack = _store.GetCharacterAssets(
                         accountId,
                         state.CharacterId.Value);
-                    var activePet = assetsForAttack.Pets.FirstOrDefault(x =>
-                        Convert.ToInt32(x["State"]) == 1);
+                    var activePets = assetsForAttack.Pets
+                        .Where(x =>
+                            Convert.ToInt32(x["State"]) == 1)
+                        .OrderBy(x =>
+                            Convert.ToInt64(x["UID"]))
+                        .ToArray();
 
-                    if (activePet is null)
+                    if (activePets.Length == 0)
                         return
                         [
                             new
@@ -2263,34 +2319,72 @@ public sealed class PacketRouter
                             }
                         ];
 
-                    var activePetUid = Convert.ToInt64(activePet["UID"]);
-                    var targetEntityId = req.Int("TargetEntityID");
-                    if (state.Monsters.TryGetValue(
+                    var targetEntityId =
+                        req.Int("TargetEntityID");
+                    if (!state.Monsters.TryGetValue(
                             targetEntityId,
-                            out var commandTarget) &&
-                        commandTarget.IsAlive &&
-                        commandTarget.MapId == state.CurrentMapId)
+                            out var commandTarget) ||
+                        !commandTarget.IsAlive ||
+                        commandTarget.MapId !=
+                            state.CurrentMapId)
                     {
-                        state.PetTargets[activePetUid] = targetEntityId;
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "攻擊目標不存在或已離開目前地圖"
+                            }
+                        ];
                     }
 
-                    var activePetPosition =
-                        state.PetPositions.TryGetValue(
-                            activePetUid,
-                            out var runtimePosition)
-                            ? runtimePosition
-                            : (
-                                X: state.LastX + 40,
-                                Y: state.LastY + 20);
+                    var packets = new List<object>();
 
-                    return _combat.PetAttack(
-                        state,
-                        accountId,
-                        activePetUid,
-                        Math.Max(1, Convert.ToInt32(activePet["Attack"])),
-                        targetEntityId,
-                        activePetPosition.X,
-                        activePetPosition.Y);
+                    for (var i = 0;
+                         i < activePets.Length;
+                         i++)
+                    {
+                        if (!commandTarget.IsAlive)
+                            break;
+
+                        var activePet = activePets[i];
+                        var activePetUid =
+                            Convert.ToInt64(
+                                activePet["UID"]);
+                        state.PetTargets[activePetUid] =
+                            targetEntityId;
+
+                        var formation =
+                            PetFormationOffset(i);
+                        var activePetPosition =
+                            state.PetPositions.TryGetValue(
+                                activePetUid,
+                                out var runtimePosition)
+                                ? runtimePosition
+                                : (
+                                    X: state.LastX +
+                                       formation.X,
+                                    Y: state.LastY +
+                                       formation.Y);
+
+                        state.PetPositions[activePetUid] =
+                            activePetPosition;
+
+                        packets.AddRange(
+                            _combat.PetAttack(
+                                state,
+                                accountId,
+                                activePetUid,
+                                Math.Max(
+                                    1,
+                                    Convert.ToInt32(
+                                        activePet["Attack"])),
+                                targetEntityId,
+                                activePetPosition.X,
+                                activePetPosition.Y));
+                    }
+
+                    return packets;
                 }
 
                 var petUid = req.Long("PetUID");
@@ -2318,6 +2412,26 @@ public sealed class PacketRouter
                             state.CharacterId.Value);
                         var nowMs = DateTimeOffset.UtcNow
                             .ToUnixTimeMilliseconds();
+
+                        var alreadyActive =
+                            selectedPetBefore is not null &&
+                            Convert.ToInt32(
+                                selectedPetBefore["State"]) == 1;
+                        var hasSummonSlot =
+                            alreadyActive ||
+                            previouslyActivePets.Length <
+                                assetsBeforePetAction
+                                    .PetSummonMax;
+
+                        if (!hasSummonSlot)
+                        {
+                            mutation = new(
+                                false,
+                                $"召喚寵物空間已滿（{assetsBeforePetAction.PetSummonMax}）",
+                                null);
+                            success = false;
+                            break;
+                        }
 
                         var canSummon =
                             selectedPetBefore is not null &&
@@ -2586,7 +2700,8 @@ public sealed class PacketRouter
                     {
                         Type = "PetSync",
                         Pets = assets.Pets,
-                        MaxSize = assets.PetMaxSize
+                        MaxSize = assets.PetMaxSize,
+                        MaxSummon = assets.PetSummonMax
                     },
                     new
                     {
@@ -2660,30 +2775,49 @@ public sealed class PacketRouter
 
                 if (success && action == "Summon")
                 {
-                    foreach (var oldPetUid in previouslyActivePets)
-                    {
-                        if (oldPetUid == petUid) continue;
-                        state.PetPositions.Remove(oldPetUid);
-                        state.PetLastAttackAt.Remove(oldPetUid);
-                        state.PetTargets.Remove(oldPetUid);
-                        state.PetOutOfRangeSince.Remove(oldPetUid);
-                        responses.Add(new
-                        {
-                            Type = "DespawnEntity",
-                            EntityID = 4_000_000L + oldPetUid
-                        });
-                    }
-
+                    var wasAlreadyActive =
+                        previouslyActivePets.Contains(
+                            petUid);
                     var pet = assets.Pets.FirstOrDefault(x =>
                         Convert.ToInt64(x["UID"]) == petUid);
                     var character = _store.GetCharacter(
                         accountId,
                         state.CharacterId.Value);
-                    if (pet is not null && character is not null)
+
+                    if (!wasAlreadyActive &&
+                        pet is not null &&
+                        character is not null)
                     {
-                        var spawnX = Convert.ToDouble(character["LocX"]) + 40;
-                        var spawnY = Convert.ToDouble(character["LocY"]) + 20;
-                        state.PetPositions[petUid] = (spawnX, spawnY);
+                        var activeOrder = assets.Pets
+                            .Where(x =>
+                                Convert.ToInt32(
+                                    x["State"]) == 1)
+                            .OrderBy(x =>
+                                Convert.ToInt64(
+                                    x["UID"]))
+                            .Select(x =>
+                                Convert.ToInt64(
+                                    x["UID"]))
+                            .ToArray();
+                        var slotIndex = Math.Max(
+                            0,
+                            Array.IndexOf(
+                                activeOrder,
+                                petUid));
+                        var formation =
+                            PetFormationOffset(
+                                slotIndex);
+                        var spawnX =
+                            Convert.ToDouble(
+                                character["LocX"]) +
+                            formation.X;
+                        var spawnY =
+                            Convert.ToDouble(
+                                character["LocY"]) +
+                            formation.Y;
+
+                        state.PetPositions[petUid] =
+                            (spawnX, spawnY);
                         responses.Add(BuildPetSpawnPacket(
                             state.CharacterId.Value,
                             pet,
@@ -5877,6 +6011,7 @@ public sealed class PacketRouter
         character["EquipMaxSize"] = assets.EquipMaxSize;
         character["PetList"] = assets.Pets;
         character["PetMaxSize"] = assets.PetMaxSize;
+        character["PetSummonMax"] = assets.PetSummonMax;
         character["HorseList"] = assets.Horses;
         character["HorseEquipList"] = assets.HorseEquips;
         character["HorseEquipMaxSize"] = assets.HorseEquipMaxSize;
