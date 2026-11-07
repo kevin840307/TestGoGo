@@ -1602,9 +1602,18 @@ public sealed class PacketRouter
             TimeSpan.FromSeconds(1))
         {
             state.LastGroundItemCleanupAt = now;
-            foreach (var entityId in _store.RemoveExpiredGroundItems(
-                         state.CurrentMapId,
-                         now))
+
+            var expiredEntityIds = state.GroundItems.Values
+                .Where(x => x.IsExpired(now))
+                .Select(x => x.EntityId)
+                .ToHashSet();
+
+            expiredEntityIds.UnionWith(
+                _store.RemoveExpiredGroundItems(
+                    state.CurrentMapId,
+                    now));
+
+            foreach (var entityId in expiredEntityIds)
             {
                 state.GroundItems.Remove(entityId);
                 packets.Add(new
