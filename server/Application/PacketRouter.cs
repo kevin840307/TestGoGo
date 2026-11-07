@@ -291,12 +291,12 @@ public sealed class PacketRouter
 
         if (type == "RegisterAccountRequest")
         {
-            if (!PacketSchemaValidator.TryValidate(req, type, out var schemaError))
+            if (!PacketSchemaValidator.TryValidate(req, type, out var registerSchemaError))
                 return [new
                 {
                     Type = "RegisterAccountResponse",
                     Success = false,
-                    Message = schemaError
+                    Message = registerSchemaError
                 }];
             var (ok, msg) = _store.Register(
                 req.Str("LoginName"), req.Str("Password"), req.Str("EMAIL"));
@@ -305,12 +305,12 @@ public sealed class PacketRouter
 
         if (type == "LoginRequest")
         {
-            if (!PacketSchemaValidator.TryValidate(req, type, out var schemaError))
+            if (!PacketSchemaValidator.TryValidate(req, type, out var loginSchemaError))
                 return [new
                 {
                     Type = "LoginResponse",
                     Success = false,
-                    Message = schemaError,
+                    Message = loginSchemaError,
                     Characters = Array.Empty<object>()
                 }];
             _sessions.Unregister(state.ConnectionId);
