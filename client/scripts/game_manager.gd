@@ -514,24 +514,35 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		if NetworkEntityManager.has_method("get_spawn_queue_remaining_count"):
 			remaining_spawns = int(NetworkEntityManager.get_spawn_queue_remaining_count())
 			initial_spawn_total = maxi(initial_spawn_total, remaining_spawns)
-		var spawn_progress: float = 0.0
-		if initial_spawn_total > 0:
-			spawn_progress = 1.0 - float(remaining_spawns) / float(initial_spawn_total)
-		_report_initial_loading_progress(
-			progress_callback,
-			84.0 + clampf(spawn_progress, 0.0, 1.0) * 12.0,
-			"同步地圖角色"
-		)
+
+		if remaining_spawns > 0:
+			var spawn_progress: float = 0.0
+			if initial_spawn_total > 0:
+				spawn_progress = 1.0 - float(remaining_spawns) / float(initial_spawn_total)
+			_report_initial_loading_progress(
+				progress_callback,
+				84.0 + clampf(spawn_progress, 0.0, 1.0) * 10.0,
+				"同步地圖角色"
+			)
+		else:
+			var settle_progress: float = 0.0
+			if NetworkEntityManager.has_method("get_initial_spawn_settle_progress"):
+				settle_progress = float(NetworkEntityManager.get_initial_spawn_settle_progress())
+			_report_initial_loading_progress(
+				progress_callback,
+				94.0 + clampf(settle_progress, 0.0, 1.0) * 3.0,
+				"確認地圖同步"
+			)
 		await get_tree().process_frame
 
-	_report_initial_loading_progress(progress_callback, 96.0, "地圖角色同步完成")
+	_report_initial_loading_progress(progress_callback, 97.0, "地圖角色同步完成")
 	if NetworkEntityManager and NetworkEntityManager.has_method("set_initial_spawn_boost"):
 		NetworkEntityManager.set_initial_spawn_boost(false)
 
 	# Warm the first rendered world frame while EntryManager's loading overlay
 	# still covers the screen. Setting these visible only at the final reveal
 	# concentrated CanvasItem/render registration into a 200-260 ms hitch.
-	_report_initial_loading_progress(progress_callback, 97.0, "預熱畫面")
+	_report_initial_loading_progress(progress_callback, 98.0, "預熱畫面")
 	set_frame_gap_stage("world_render_warmup")
 	if is_instance_valid(current_map_node):
 		current_map_node.visible = true
