@@ -258,7 +258,6 @@ public interface IInventoryStore : ICharacterAssetReader
         int dex,
         int con,
         int wis,
-        int expUse,
         int maxHp,
         int maxMp,
         int maxSp,
