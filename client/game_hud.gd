@@ -767,6 +767,11 @@ func _ensure_lazy_window(kind: String) -> Control:
 		return null
 
 	var scene: PackedScene = _lazy_window_scenes.get(kind, null) as PackedScene
+	if scene == null and ResourceLoader.has_cached(path):
+		scene = ResourceLoader.load(path) as PackedScene
+		if scene != null:
+			_lazy_window_scenes[kind] = scene
+
 	if scene == null:
 		if not _lazy_window_requests.has(kind):
 			var request_error: int = ResourceLoader.load_threaded_request(path)
@@ -798,6 +803,29 @@ func _ensure_lazy_window(kind: String) -> Control:
 	_assign_lazy_window(kind, window)
 	_configure_lazy_window(kind, window)
 	return window
+
+func prepare_lazy_windows_before_reveal(progress_callback: Callable = Callable()) -> void :
+	var kinds: Array[String] = [
+		"quest",
+		"mall",
+		"announcement",
+		"game_info",
+		"craft",
+		"big_map",
+		"world_map",
+	]
+	var total: int = kinds.size()
+	for index: int in range(total):
+		if not is_inside_tree():
+			return
+		var kind: String = kinds[index]
+		var window := await _ensure_lazy_window(kind)
+		if is_instance_valid(window):
+			window.visible = false
+			window.modulate.a = 0.0
+		if progress_callback.is_valid():
+			progress_callback.call(index + 1, total, kind)
+		await get_tree().process_frame
 
 func _prewarm_lazy_window_scenes() -> void :
 	for kind_value in LAZY_WINDOW_PATHS.keys():
@@ -1154,7 +1182,6 @@ func _initialize_hud_deferred() -> void :
 		NetworkManager.send_set_global_pet_mode(current_pet_combat_mode)
 
 	_initial_hud_ready = true
-	call_deferred("_prewarm_lazy_window_scenes")
 	call_deferred("_open_initial_announcement_lazy")
 
 func _open_initial_announcement_lazy() -> void :
