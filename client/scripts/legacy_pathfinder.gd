@@ -163,13 +163,13 @@ func _find_path(grid: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vect
 
 	if max_x - min_x + 1 > SEARCH_WINDOW_CELLS:
 		var center_x: int = floori(float(start.x + goal.x) / 2.0)
-		min_x = maxi(0, center_x - SEARCH_WINDOW_CELLS / 2)
+		min_x = maxi(0, center_x - SEARCH_WINDOW_CELLS >> 1)
 		max_x = mini(int(grid.get("width", 0)) - 1, min_x + SEARCH_WINDOW_CELLS - 1)
 		min_x = maxi(0, max_x - SEARCH_WINDOW_CELLS + 1)
 
 	if max_y - min_y + 1 > SEARCH_WINDOW_CELLS:
 		var center_y: int = floori(float(start.y + goal.y) / 2.0)
-		min_y = maxi(0, center_y - SEARCH_WINDOW_CELLS / 2)
+		min_y = maxi(0, center_y - SEARCH_WINDOW_CELLS >> 1)
 		max_y = mini(int(grid.get("height", 0)) - 1, min_y + SEARCH_WINDOW_CELLS - 1)
 		min_y = maxi(0, max_y - SEARCH_WINDOW_CELLS + 1)
 
