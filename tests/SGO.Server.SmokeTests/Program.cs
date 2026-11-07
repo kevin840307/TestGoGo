@@ -7823,6 +7823,32 @@ try
         id,
         DateTimeOffset.UtcNow.AddSeconds(1));
 
+    broadcastHub.UpdatePresence(
+        returnPeerRegistration.ConnectionId,
+        16,
+        secondCharacterId,
+        account.Value);
+    while (returnPeerRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var partyChat = Json(
+        """{"Type":"ChatMessage","Message":"party-cross-map","Channel":3,"BubbleType":5}"""))
+    {
+        var responses = router.Handle(
+            partyChat.RootElement,
+            session);
+
+        Check(responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"Channel\":3")) &&
+              returnPeerRegistration.Queue.ToArray().Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "party-cross-map")),
+            "party chat reaches online party members across maps");
+    }
+
+    // Restore the peer's real map before the following same-map party skill.
+    router.SyncPresence(returnPeerSession);
+
     store.SetSkill(
         account.Value,
         id,
