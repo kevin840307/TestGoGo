@@ -49,7 +49,23 @@ public sealed record CurrentSkillLevelDefinition(
     int CostSp,
     int BaseDamage,
     int DamageMultiplier,
-    int CooldownSeconds);
+    int CooldownSeconds,
+    int DurationSeconds,
+    int TickCount,
+    int MaxHpBonus,
+    int MaxMpBonus,
+    int MaxSpBonus,
+    int AtkBonus,
+    int DefBonus,
+    int MAtkBonus,
+    int MDefBonus,
+    int HitBonus,
+    int FleeBonus,
+    int LukBonus,
+    int AspdBonus,
+    int MoveSpeedBonus,
+    int CritRateBonus,
+    int CritDamageBonus);
 
 public sealed record CurrentPetEvolution(
     int EvolId,
@@ -439,7 +455,23 @@ public sealed class CurrentClientDataCatalog
                     ReadInt(block, "cost_sp"),
                     ReadInt(block, "base_damage"),
                     ReadInt(block, "damage_multiplier"),
-                    ReadInt(block, "cooldown"));
+                    ReadInt(block, "cooldown"),
+                    ReadInt(block, "duration"),
+                    ReadInt(block, "tick_count"),
+                    ReadInt(block, "max_hp_bonus"),
+                    ReadInt(block, "max_mp_bonus"),
+                    ReadInt(block, "max_sp_bonus"),
+                    ReadInt(block, "atk_bonus"),
+                    ReadInt(block, "def_bonus"),
+                    ReadInt(block, "matk_bonus"),
+                    ReadInt(block, "mdef_bonus"),
+                    ReadInt(block, "hit_bonus"),
+                    ReadInt(block, "flee_bonus"),
+                    ReadInt(block, "luk_bonus"),
+                    ReadInt(block, "aspd_bonus"),
+                    ReadInt(block, "move_speed_bonus"),
+                    ReadInt(block, "crit_rate_bonus"),
+                    ReadInt(block, "crit_damage_bonus"));
             }
         }
     }
