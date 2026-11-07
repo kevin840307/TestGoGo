@@ -3,6 +3,7 @@ using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Crafting;
+using SGO.Server.Application.Club;
 using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
@@ -31,6 +32,7 @@ public sealed class PacketRouter
     private readonly CombatService _combat;
     private readonly ResourceRecoveryService _resourceRecovery;
     private readonly CraftingService _crafting;
+    private readonly ClubService _club;
     private readonly ShopService _shopService;
     private readonly PlayerShopService _playerShop;
     private readonly IReadOnlyDictionary<string, IClientPacketHandler> _packetHandlers;
@@ -54,6 +56,7 @@ public sealed class PacketRouter
         CombatService combat,
         ResourceRecoveryService resourceRecovery,
         CraftingService crafting,
+        ClubService club,
         ShopService shopService,
         PlayerShopService playerShop,
         IEnumerable<IClientPacketHandler> packetHandlers,
@@ -76,6 +79,7 @@ public sealed class PacketRouter
         _combat = combat;
         _resourceRecovery = resourceRecovery;
         _crafting = crafting;
+        _club = club;
         _shopService = shopService;
         _playerShop = playerShop;
         _packetHandlers = packetHandlers.ToDictionary(
@@ -257,6 +261,37 @@ public sealed class PacketRouter
 
         switch (type)
         {
+            case "ClubAction":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var action = req.Str("Action");
+                var packets = _club.Handle(
+                        accountId,
+                        state.CharacterId.Value,
+                        action,
+                        req.Int("TargetDBID"),
+                        req.Str("ClubName"),
+                        req.Str("ClubMsg"),
+                        req.Int("Amount"),
+                        req.Int("ResearchID"))
+                    .ToList();
+
+                if (action is "DonateMoney" or "DonateExp")
+                {
+                    packets.Add(
+                        BuildEffectiveStatusPacket(
+                            accountId,
+                            state.CharacterId.Value,
+                            _store.GetCharacterAssets(
+                                accountId,
+                                state.CharacterId.Value)));
+                }
+
+                return packets;
+            }
+
             case "RankDataRequest":
             {
                 if (!state.CharacterId.HasValue)
@@ -416,6 +451,7 @@ public sealed class PacketRouter
                         Type = "SkillSync",
                         Skills = _store.GetSkills(accountId, dbid)
                     },
+                    _club.BuildSync(accountId, dbid),
                     new { Type = "SyncBuffs", Buffs = Array.Empty<object>() },
                     new { Type = "QuestSync", Quests = Array.Empty<object>() },
                     new { Type = "FestivalThemeSync", Theme = "normal", Festival = "" }
