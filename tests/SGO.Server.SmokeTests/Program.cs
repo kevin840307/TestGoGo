@@ -1551,7 +1551,7 @@ try
         account.Value,
         monster.X + 260,
         monster.Y + 20,
-        session.LastMonsterAiTick.AddSeconds(1));
+        session.LastMonsterAiTick.AddMilliseconds(249));
 
     var chaseMoved = Math.Sqrt(
         Math.Pow(monster.X - chaseStartX, 2) +
@@ -1561,7 +1561,7 @@ try
           chaseTick2.Any(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"MoveEntity\"")),
-        "consecutive monster chase ticks keep advancing instead of emitting a run-in-place waypoint");
+        "monster AI does not double-throttle a near-250ms world tick and keeps advancing");
 
     monster.IsMoving = true;
     var closeRangePackets = combat.TickAi(
