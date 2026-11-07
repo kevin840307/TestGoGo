@@ -6719,6 +6719,46 @@ public sealed class SqliteGameStore : IGameStore
         return result;
     }
 
+    public IReadOnlyList<int> ClearGroundItems(int mapId)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        var entityIds = new List<int>();
+        using (var select = db.CreateCommand())
+        {
+            select.Transaction = tx;
+            select.CommandText = """
+                SELECT id
+                  FROM ground_items
+                 WHERE map_id=$map
+                 ORDER BY id
+                """;
+            Arg(select, "$map", mapId);
+
+            using var reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                var groundId = reader.GetInt64(0);
+                entityIds.Add(
+                    checked(6_000_000 + (int)groundId));
+            }
+        }
+
+        if (entityIds.Count > 0)
+        {
+            using var delete = db.CreateCommand();
+            delete.Transaction = tx;
+            delete.CommandText =
+                "DELETE FROM ground_items WHERE map_id=$map";
+            Arg(delete, "$map", mapId);
+            delete.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+        return entityIds;
+    }
+
     public IReadOnlyList<int> RemoveExpiredGroundItems(
         int mapId,
         DateTimeOffset now)
