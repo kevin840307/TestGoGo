@@ -42,6 +42,10 @@ internal static class SqliteSchemaMigrator
         ExecuteSqlFile(
             db,
             ResolveSqlPath("009_titles.sql"));
+
+        ExecuteSqlFile(
+            db,
+            ResolveSqlPath("010_timed_effects.sql"));
     }
 
     private static void ExecuteSqlFile(
