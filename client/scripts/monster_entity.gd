@@ -30,7 +30,12 @@ var collision_shape: CollisionShape2D = null
 
 var move_tween: Tween
 var move_idle_generation: int = 0
+var pending_move_dir: String = ""
+var pending_move_dir_count: int = 0
+var last_move_dir_change_ms: int = 0
 const MOVE_IDLE_GRACE_SECONDS: float = 0.12
+const MOVE_DIR_CONFIRM_COUNT: int = 2
+const MOVE_DIR_MAX_HOLD_MS: int = 450
 
 const PALETTE_SHADER = preload("res://palette_swap.gdshader")
 const COLOR_INDEX_TO_DEGREES = {
@@ -377,8 +382,59 @@ func _update_sprite_offset() -> void :
 			var actual_offset_x = frame_texture.get_width() - offset.x if sprite.flip_h else offset.x
 			sprite.offset = Vector2( - actual_offset_x, - offset.y)
 
+func apply_network_move_direction(new_dir: String) -> void :
+	if new_dir == "" or new_dir == current_dir:
+		pending_move_dir = ""
+		pending_move_dir_count = 0
+		return
+
+	if pending_move_dir == new_dir:
+		pending_move_dir_count += 1
+	else:
+		pending_move_dir = new_dir
+		pending_move_dir_count = 1
+
+	var now_ms := Time.get_ticks_msec()
+	var held_too_long := (
+		last_move_dir_change_ms <= 0 or
+		now_ms - last_move_dir_change_ms >= MOVE_DIR_MAX_HOLD_MS
+	)
+
+	# Movement packets arrive about every 250 ms. Requiring confirmation keeps
+	# small waypoint angle changes from restarting WALK_1/WALK_8 every packet,
+	# while MOVE_DIR_MAX_HOLD_MS still lets a real turn appear promptly.
+	if pending_move_dir_count >= MOVE_DIR_CONFIRM_COUNT or held_too_long:
+		current_dir = new_dir
+		last_move_dir_change_ms = now_ms
+		pending_move_dir = ""
+		pending_move_dir_count = 0
+		if current_state == "walk":
+			sync_animation()
+
+
+func apply_network_state(new_state: String, new_dir: String) -> void :
+	# Server combat state is authoritative over an older movement waypoint.
+	# Once the monster can attack (or is told to idle/hit/die), no previous
+	# MoveEntity tween/grace callback may keep it visually walking.
+	if new_state != "walk":
+		move_idle_generation += 1
+		if move_tween and move_tween.is_valid():
+			move_tween.kill()
+		move_tween = null
+
+	current_state = new_state
+	if new_dir != "":
+		current_dir = new_dir
+		pending_move_dir = ""
+		pending_move_dir_count = 0
+		last_move_dir_change_ms = Time.get_ticks_msec()
+	sync_animation()
+
+
 func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	if current_hp <= 0: return
+	if current_state in ["attack", "hit", "death", "die"]:
+		return
 
 	move_idle_generation += 1
 	var generation := move_idle_generation
