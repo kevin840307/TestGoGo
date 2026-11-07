@@ -265,11 +265,17 @@ var shopCatalog = new ShopCatalog(
     gameDataRoot,
     currentCatalog,
     legacyClientCatalog);
+var enemyDrops = new EnemyDropCatalog(
+    gameDataRoot,
+    currentCatalog);
 var batteryCatalog = new HorseBatteryCatalog(currentCatalog);
 var recoveryCatalog = new RecoveryItemCatalog(currentCatalog);
 var horseCardCatalog = new HorseCardCatalog(currentCatalog);
 var skillCatalog = new SkillCatalog(currentCatalog);
-var quests = new QuestRuntime(questRoot, shopCatalog);
+var quests = new QuestRuntime(
+    questRoot,
+    shopCatalog,
+    enemyDrops);
 var map15Npcs = world.GetNpcs(15);
 
 Check(map15Npcs.Count == 52, "Map15 NPC.dat contains 52 NPC records");
@@ -400,6 +406,82 @@ using (var packet = ClientProtocol.Decode(ciphertext))
         "JSON decoded fields");
 }
 
+var questApiRoot = Path.Combine(
+    Path.GetTempPath(),
+    "sgo-quest-api-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(questApiRoot);
+try
+{
+    File.WriteAllText(
+        Path.Combine(questApiRoot, "QuestApi.txt"),
+        """
+        function start()
+            SetFlag("TEST_FLAG", GetFlag("TEST_FLAG") + 1)
+            if CheckItem(31262) == 0 then
+                AddItem(31262, 2)
+            end
+            if CheckItem(31262) == 1 then
+                RemoveItem(31262, 1)
+            end
+        end
+        """);
+
+    var runtimeFlag = 0;
+    var runtimeItemCount = 0;
+    var runtimeMappedItemId = 0;
+    var runtimeMappedTab = -1;
+
+    var questApiRuntime = new QuestRuntime(
+        questApiRoot,
+        shopCatalog,
+        enemyDrops);
+
+    questApiRuntime.Execute(
+        "QuestApi.txt",
+        "start",
+        999,
+        "Quest API Test",
+        null,
+        _ => 0,
+        new QuestRuntimeBindings
+        {
+            GetFlag = _ => runtimeFlag,
+            SetFlag = (_, value) => runtimeFlag = value,
+            GetItemCount = (itemId, tabType) =>
+            {
+                runtimeMappedItemId = itemId;
+                runtimeMappedTab = tabType;
+                return runtimeItemCount;
+            },
+            ItemListCountLeft = _ => 100,
+            AddItem = (itemId, tabType, count) =>
+            {
+                runtimeMappedItemId = itemId;
+                runtimeMappedTab = tabType;
+                runtimeItemCount += count;
+                return true;
+            },
+            RemoveItem = (itemId, tabType, count) =>
+            {
+                runtimeMappedItemId = itemId;
+                runtimeMappedTab = tabType;
+                runtimeItemCount -= count;
+                return true;
+            }
+        });
+
+    Check(runtimeFlag == 1,
+        "legacy quest GetFlag/SetFlag are routed through runtime bindings");
+    Check(runtimeMappedItemId == 49962 &&
+          runtimeMappedTab == 1 &&
+          runtimeItemCount == 1,
+        "legacy quest CheckItem/AddItem/RemoveItem safely remap old item IDs");
+}
+finally
+{
+    try { Directory.Delete(questApiRoot, true); } catch { }
+}
+
 var temp = Path.Combine(
     Path.GetTempPath(),
     "sgo-smoke-" + Guid.NewGuid().ToString("N"));
@@ -423,10 +505,6 @@ try
           battle.ExperienceRatio(29, 20) == 10 &&
           battle.ExperienceRatio(30, 20) == 0,
         "legacy battle.cfg drives ExpX and level-difference EXP ratios");
-
-    var enemyDrops = new EnemyDropCatalog(
-        gameDataRoot,
-        currentCatalog);
 
     var mappedEnemyDrops = Enumerable.Range(1, 300)
         .SelectMany(enemyDrops.GetDrops)
@@ -561,6 +639,27 @@ try
         slots.First(x =>
             x.TryGetValue("NAME", out var n) &&
             n?.ToString() == "SecondCharacter")["DBID"]);
+
+    Check(store.GetQuestFlag(
+              account.Value,
+              id,
+              "SMOKE_FLAG") == 0,
+        "missing quest flags default to zero");
+
+    Check(store.SetQuestFlag(
+              account.Value,
+              id,
+              "SMOKE_FLAG",
+              7) &&
+          store.GetQuestFlag(
+              account.Value,
+              id,
+              "SMOKE_FLAG") == 7 &&
+          store.GetQuestFlag(
+              account.Value,
+              secondCharacterId,
+              "SMOKE_FLAG") == 0,
+        "quest flags persist per character and do not leak across characters");
 
     var protectedGround = store.CreateGroundItem(
         id,
