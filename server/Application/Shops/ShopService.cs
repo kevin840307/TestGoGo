@@ -146,14 +146,13 @@ public sealed class ShopService
         if (itemIndex <= 0)
             return Failure("找不到要出售的物品");
 
-        var item = _catalog.FindItem(itemIndex);
-        if (item is null || !item.CanSell)
-            return Failure("此物品無法出售");
-
         var currentItem = _current.FindItem(itemIndex);
         if (currentItem is null)
             return Failure(
                 $"新版 GameData 找不到 ItemIndex={itemIndex}");
+
+        if (currentItem.CanSell != 1)
+            return Failure("此物品無法出售");
 
         var kind = currentItem.Category.ToLowerInvariant() switch
         {
@@ -170,7 +169,7 @@ public sealed class ShopService
             _ => AssetPurchaseKind.General
         };
 
-        var unitPrice = Math.Max(1, item.Price / 2);
+        var unitPrice = Math.Max(1, currentItem.Price / 2);
         var success = _shopStore.SellAsset(
             accountId,
             characterId,
