@@ -21,11 +21,14 @@ var _active_entity_types: Dictionary = {}
 # same frame, causing a visible multi-second stall.
 const SPAWN_BATCH_PER_FRAME: int = 3
 const SPAWN_FRAME_BUDGET_USEC: int = 3500
+const INITIAL_SPAWN_BATCH_PER_FRAME: int = 10
+const INITIAL_SPAWN_FRAME_BUDGET_USEC: int = 9000
 var _spawn_queue: Array[Dictionary] = []
 var _queued_spawn_ids: Dictionary = {}
 var _last_spawn_enqueue_usec: int = 0
 var _runtime_monster_ids: Dictionary = {}
 var _spawn_queue_paused: bool = false
+var _initial_spawn_boost: bool = false
 var _monster_spawn_templates: Dictionary = {}
 var _deferred_monster_spawns: Dictionary = {}
 var _monster_aoi_elapsed: float = 0.0
@@ -127,6 +130,35 @@ func _remove_queued_spawn(entity_id: int) -> void :
 		if int(_spawn_queue[index].get("EntityID", 0)) == entity_id:
 			_spawn_queue.remove_at(index)
 
+func _spawn_priority(data: Dictionary) -> float:
+	var entity_type: int = int(data.get("EntityType", -1))
+	# Ground items are authoritative interactables and should appear first.
+	if entity_type == 3:
+		return -1000000000.0
+	# Players/pets/NPCs are more important than distant monsters.
+	if entity_type == 0 or entity_type == 4:
+		return -500000000.0
+	if entity_type == 2:
+		return -250000000.0
+	if entity_type != 1:
+		return 0.0
+	var player_pos = _get_local_player_position()
+	if player_pos == null:
+		return 0.0
+	return (player_pos as Vector2).distance_squared_to(_monster_packet_position(data))
+
+func _enqueue_spawn_by_priority(data: Dictionary) -> void :
+	var priority: float = _spawn_priority(data)
+	var insert_index: int = _spawn_queue.size()
+	for index: int in range(_spawn_queue.size()):
+		if priority < _spawn_priority(_spawn_queue[index]):
+			insert_index = index
+			break
+	_spawn_queue.insert(insert_index, data)
+
+func set_initial_spawn_boost(enabled: bool) -> void :
+	_initial_spawn_boost = enabled
+
 func _queue_cached_monster_spawn(entity_id: int) -> void :
 	if get_active_entity(entity_id) or _queued_spawn_ids.has(entity_id):
 		return
@@ -135,7 +167,7 @@ func _queue_cached_monster_spawn(entity_id: int) -> void :
 		return
 	_deferred_monster_spawns.erase(entity_id)
 	_queued_spawn_ids[entity_id] = true
-	_spawn_queue.append((cached as Dictionary).duplicate(true))
+	_enqueue_spawn_by_priority((cached as Dictionary).duplicate(true))
 	_last_spawn_enqueue_usec = Time.get_ticks_usec()
 
 func _unload_monster_for_aoi(entity_id: int, monster: Node2D) -> void :
@@ -192,13 +224,10 @@ func _on_entity_spawned(data: Dictionary) -> void :
 		return
 	_queued_spawn_ids[entity_id] = true
 	var queued_data: Dictionary = data.duplicate(true)
-	# Existing drops should be visible as soon as a revisited map is revealed.
-	# Put ground items ahead of bulk monster/player snapshot work so they do not
-	# wait behind hundreds of entity instantiations.
-	if entity_type == 3:
-		_spawn_queue.push_front(queued_data)
-	else:
-		_spawn_queue.append(queued_data)
+	# Prioritize interactables and nearest monsters instead of FIFO. During
+	# teleport/login snapshots the closest threats should be the first Nodes
+	# instantiated, while far monsters stay deferred by AOI.
+	_enqueue_spawn_by_priority(queued_data)
 	_last_spawn_enqueue_usec = Time.get_ticks_usec()
 
 func set_spawn_queue_paused(paused: bool) -> void :
@@ -228,8 +257,10 @@ func _process(delta: float) -> void :
 	if not _spawn_queue_paused and not _spawn_queue.is_empty():
 		var frame_started_usec := Time.get_ticks_usec()
 		var spawned_count := 0
-		while not _spawn_queue.is_empty() and spawned_count < SPAWN_BATCH_PER_FRAME:
-			if spawned_count > 0 and Time.get_ticks_usec() - frame_started_usec >= SPAWN_FRAME_BUDGET_USEC:
+		var batch_limit: int = INITIAL_SPAWN_BATCH_PER_FRAME if _initial_spawn_boost else SPAWN_BATCH_PER_FRAME
+		var frame_budget_usec: int = INITIAL_SPAWN_FRAME_BUDGET_USEC if _initial_spawn_boost else SPAWN_FRAME_BUDGET_USEC
+		while not _spawn_queue.is_empty() and spawned_count < batch_limit:
+			if spawned_count > 0 and Time.get_ticks_usec() - frame_started_usec >= frame_budget_usec:
 				break
 			var data: Dictionary = _spawn_queue.pop_front()
 			var entity_id := int(data.get("EntityID", 0))
