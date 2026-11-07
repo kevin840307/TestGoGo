@@ -340,9 +340,13 @@ public sealed class GmCommandService
             !int.TryParse(parts[2], out var petId))
             return [Chat("用法：/gm pet <PetID> [Name]")];
 
+        var petDefinition = _current.FindPet(petId);
+        if (petDefinition is null)
+            return [Chat($"新版 GameData 找不到 PetID={petId}")];
+
         var name = parts.Length > 3
             ? string.Join(' ', parts.Skip(3))
-            : $"Pet {petId}";
+            : petDefinition.Name;
 
         var uid = _store.AddPet(
             accountId,
