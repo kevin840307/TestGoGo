@@ -380,6 +380,23 @@ public sealed class PacketRouter
             }];
         }
 
+        if (!PacketSchemaValidator.TryValidate(req, type, out var schemaError))
+        {
+            _log.LogWarning(
+                "[INVALID_PACKET] Type={Type} Reason={Reason}",
+                type, schemaError);
+            return
+            [
+                new
+                {
+                    Type = "PacketError",
+                    RequestType = type,
+                    Code = "INVALID_PACKET",
+                    Message = schemaError
+                }
+            ];
+        }
+
         if (_packetHandlers.TryGetValue(type, out var moduleHandler))
             return moduleHandler.Handle(req, state, accountId);
 
