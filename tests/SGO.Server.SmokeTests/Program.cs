@@ -1483,9 +1483,9 @@ try
                   "\"Type\":\"EntityDamage\"")),
         "summoned pet automatically acquires, sticks to and attacks nearby monster");
 
-    // Owner leash must beat combat acquisition. Even if a monster is
-    // near the pet, being >250 px from the owner teleports it back first.
-    session.LastX = monster.X - 500;
+    // Owner leash uses a grace period. Falling far behind should not
+    // immediately teleport the pet; only sustained off-screen distance does.
+    session.LastX = monster.X - 1200;
     session.LastY = monster.Y;
     session.PetPositions[petUid] =
         (monster.X - 20, monster.Y);
@@ -1494,9 +1494,24 @@ try
     session.LastPetFollowTick =
         DateTimeOffset.MinValue;
 
+    var leashStart = DateTimeOffset.UtcNow.AddSeconds(6);
+    var gracePackets = router.Tick(
+        session,
+        leashStart);
+
+    Check(
+        session.PetOutOfRangeSince.ContainsKey(petUid) &&
+        !gracePackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"SpeedTime\":0.01")),
+        "pet beyond 900px starts owner-leash grace instead of teleporting immediately");
+
+    session.LastPetFollowTick =
+        DateTimeOffset.MinValue;
+
     var leashPackets = router.Tick(
         session,
-        DateTimeOffset.UtcNow.AddSeconds(6));
+        leashStart.AddSeconds(3.1));
 
     var expectedPetX = session.LastX + 42;
     var expectedPetY = session.LastY + 24;
@@ -1510,18 +1525,19 @@ try
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"MoveEntity\"") &&
             JsonSerializer.Serialize(x).Contains(
-                $"\"EntityID\":{4_000_000L + petUid}") &&
+                $\"\"EntityID\":{4_000_000L + petUid}\") &&
             JsonSerializer.Serialize(x).Contains(
                 "\"SpeedTime\":0.01")) &&
+        !session.PetOutOfRangeSince.ContainsKey(petUid) &&
         !leashPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"EntityDamage\"") &&
             JsonSerializer.Serialize(x).Contains(
-                $"\"AttackerID\":{4_000_000L + petUid}")),
-        "pet teleports back to owner beyond 250 range before chasing/attacking monsters");
+                $\"\"AttackerID\":{4_000_000L + petUid}\")),
+        "pet teleports back only after remaining beyond 900px for three seconds");
 
     Check(!session.PetTargets.ContainsKey(petUid),
-        "owner leash clears the pet combat target instead of immediately running back to a stale monster");
+        "hard owner return clears the pet combat target");
 
     monster.HasTarget = false;
     monster.HoldingAttackRange = false;
