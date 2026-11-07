@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Messaging;
+using SGO.Server.Application.Party;
 using SGO.Server.Application.World;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
@@ -37,6 +38,7 @@ public sealed class CombatService
     private readonly EnemyDropCatalog _drops;
     private readonly WorldRuntimeService _runtime;
     private readonly ServerBroadcastHub _broadcasts;
+    private readonly PartyService _party;
 
     private sealed record PendingRevive(
         long TargetAccountId,
@@ -61,7 +63,8 @@ public sealed class CombatService
         LegacyBattleRulesCatalog battle,
         EnemyDropCatalog drops,
         WorldRuntimeService runtime,
-        ServerBroadcastHub broadcasts)
+        ServerBroadcastHub broadcasts,
+        PartyService party)
     {
         _store = store;
         _world = world;
@@ -71,6 +74,7 @@ public sealed class CombatService
         _drops = drops;
         _runtime = runtime;
         _broadcasts = broadcasts;
+        _party = party;
     }
 
     public IReadOnlyList<object> EnterMap(
