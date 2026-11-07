@@ -41,6 +41,11 @@ public static class GameDataServiceCollectionExtensions
                     "Pets",
                     "Config.json")));
         services.AddSingleton(
+            new PetIdleSpeechCatalog(
+                Path.Combine(
+                    gameDataRoot,
+                    "pet_idle_speech.json")));
+        services.AddSingleton(
             new QuestTrackingCatalog(
                 Path.Combine(
                     gameDataRoot,
