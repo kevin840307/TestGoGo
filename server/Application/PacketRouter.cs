@@ -1515,6 +1515,7 @@ public sealed class PacketRouter
                 state.MonstersByMap.Clear();
                 state.LoadedMonsterMapId = 0;
                 state.ActiveSkillBuffs.Clear();
+                state.GroundItems.Clear();
                 state.CloseRequested = true;
 
                 return [new
@@ -1567,6 +1568,8 @@ public sealed class PacketRouter
                     state,
                     state.CurrentMapId));
             packets.AddRange(
+                BuildGroundItemSnapshotPackets(state));
+            packets.AddRange(
                 BuildActivePetSpawnPackets(
                     state,
                     accountId,
@@ -1589,6 +1592,8 @@ public sealed class PacketRouter
             {
                 packets.AddRange(
                     _combat.BuildCurrentMapSnapshot(state));
+                packets.AddRange(
+                    BuildGroundItemSnapshotPackets(state));
                 packets.AddRange(
                     BuildActivePetSnapshotPackets(
                         state,
@@ -1625,6 +1630,42 @@ public sealed class PacketRouter
         return packets;
     }
 
+    private IReadOnlyList<object> BuildGroundItemSnapshotPackets(
+        ClientSession state)
+    {
+        var packets = new List<object>();
+        state.GroundItems.Clear();
+
+        foreach (var ground in _store.GetGroundItems(state.CurrentMapId))
+        {
+            state.GroundItems[ground.EntityId] = ground;
+            packets.Add(BuildGroundItemSpawnPacket(ground));
+        }
+
+        return packets;
+    }
+
+    private object BuildGroundItemSpawnPacket(
+        GroundItemRuntime ground)
+        => new
+        {
+            Type = "SpawnEntity",
+            EntityID = ground.EntityId,
+            EntityType = 3,
+            Name = _current.FindItem(ground.ItemIndex)?.Name
+                ?? $"Item {ground.ItemIndex}",
+            LocX = ground.X,
+            LocY = ground.Y,
+            ExtraData = new
+            {
+                ItemIndex = ground.ItemIndex,
+                Count = ground.Count,
+                RemainingTime = 0,
+                OwnerDBID = ground.OwnerDbid,
+                ProtectTimeSeconds = 0
+            }
+        };
+
     private List<object> EnsureCurrentCombatMapLoaded(
         ClientSession state,
         long accountId)
@@ -1644,6 +1685,9 @@ public sealed class PacketRouter
             _combat.EnterMap(
                 state,
                 state.CurrentMapId));
+
+        packets.AddRange(
+            BuildGroundItemSnapshotPackets(state));
 
         packets.AddRange(
             BuildActivePetSpawnPackets(
