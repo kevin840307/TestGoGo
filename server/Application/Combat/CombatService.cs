@@ -1363,6 +1363,12 @@ public sealed class CombatService
               levelData.BaseDamage != 0 ||
               levelData.DamageMultiplier != 0));
 
+        // All damaging AOE skills share one batch settlement pipeline.
+        // Skill-specific behavior stays in data/formulas, not a second flow.
+        var isAreaAttack =
+            isAttack &&
+            levelData.AoeRadius > 0;
+
         if (!isAttack &&
             !isHeal &&
             !isGroupHeal &&
@@ -1702,164 +1708,6 @@ public sealed class CombatService
             }
         };
 
-        // Custom screen AOE: hit up to 32 nearby monsters with a high
-        // real damage value. Death/rewards are based on remaining HP instead
-        // of forcing every target to zero.
-        if (isScreenAreaAttack)
-        {
-            var runtime = SyncSessionMonsters(session);
-            var killedMonsters = new List<MonsterRuntimeState>();
-
-            lock (runtime.SyncRoot)
-            {
-                var radius = Math.Max(
-                    0,
-                    levelData.AoeRadius);
-
-                var targets = runtime.Monsters.Values
-                    .Where(x =>
-                        x.IsAlive &&
-                        x.MapId == session.CurrentMapId &&
-                        Math.Pow(x.X - session.LastX, 2) +
-                        Math.Pow(x.Y - session.LastY, 2) <=
-                        radius * radius)
-                    .OrderBy(x =>
-                        Math.Pow(x.X - session.LastX, 2) +
-                        Math.Pow(x.Y - session.LastY, 2))
-                    .Take(32)
-                    .ToArray();
-
-                packets[0] = new
-                {
-                    Type = "SkillCast",
-                    CasterID = session.CharacterId.Value,
-                    CasterType = 0,
-                    SkillID = skillId,
-                    SkillLevel = skillLevel,
-                    TargetID = checked((int)session.CharacterId.Value),
-                    TargetX = Convert.ToInt32(session.LastX),
-                    TargetY = Convert.ToInt32(session.LastY),
-                    AoeTargets = targets
-                        .Select(x => new { ID = x.EntityId })
-                        .ToArray()
-                };
-
-                var screenDamageBase =
-                    100_000_000L +
-                    (long)effective.Attack * 50_000L +
-                    (long)effective.MagicAttack * 50_000L;
-
-                foreach (var target in targets)
-                {
-                    // Match the legacy combat feel: each target gets its own
-                    // independent damage roll instead of every monster showing
-                    // the exact same number. Range is 90%..110% of the base.
-                    var variancePercent = Random.Shared.Next(
-                        -10,
-                        11);
-                    var rolledDamage = (int)Math.Clamp(
-                        screenDamageBase +
-                        screenDamageBase * variancePercent / 100L,
-                        1L,
-                        int.MaxValue);
-
-                    target.CurrentHp = Math.Max(
-                        0,
-                        target.CurrentHp - rolledDamage);
-
-                    packets.Add(new
-                    {
-                        Type = "EntityDamage",
-                        TargetID = target.EntityId,
-                        TargetType = 1,
-                        Damage = rolledDamage,
-                        CurrentHP = target.CurrentHp,
-                        MaxHP = target.MaxHp,
-                        IsCrit = false,
-                        SkillID = skillId,
-                        SkillLevel = skillLevel,
-                        AttackerID = session.CharacterId.Value
-                    });
-
-                    if (target.CurrentHp > 0)
-                    {
-                        if (!target.HasTarget)
-                        {
-                            target.HasTarget = true;
-                            target.TargetCharacterId =
-                                session.CharacterId.Value;
-                            SetAiState(
-                                target,
-                                MonsterAiState.Chase);
-
-                            packets.Add(new
-                            {
-                                Type = "MonsterTarget",
-                                EntityID = target.EntityId,
-                                HasTarget = true,
-                                TargetID = session.CharacterId.Value
-                            });
-                        }
-
-                        continue;
-                    }
-
-                    target.RespawnAt =
-                        now + GetRespawnDelay(target.MapId);
-                    target.HasTarget = false;
-                    target.TargetCharacterId = 0;
-                    SetAiState(
-                        target,
-                        MonsterAiState.Dead);
-
-                    packets.Add(new
-                    {
-                        Type = "EntityDeath",
-                        EntityID = target.EntityId,
-                        EntityType = 1,
-                        KillerID = session.CharacterId.Value
-                    });
-
-                    killedMonsters.Add(target);
-                }
-            }
-
-            if (killedMonsters.Count > 0)
-            {
-                AddScreenAreaKillRewards(
-                    session,
-                    accountId,
-                    killedMonsters,
-                    packets);
-
-                AddScreenAreaBatchExtras(
-                    session,
-                    accountId,
-                    killedMonsters,
-                    packets);
-            }
-
-            var isolationAssets = _store.GetCharacterAssets(
-                accountId,
-                session.CharacterId.Value);
-            var isolationStats = ApplyActiveSkillBuffs(
-                CharacterStatCalculator.Calculate(
-                    updated,
-                    isolationAssets,
-                    _current),
-                session,
-                now);
-
-            packets.Add(BuildPlayerStatusPacket(
-                updated,
-                isolationStats));
-
-            session.SkillReadyAt[skillId] = now;
-
-            BroadcastWorldPackets(session, packets);
-            return packets;
-        }
-
         if (isPortableRepair)
         {
             packets.Add(new
@@ -2194,20 +2042,13 @@ public sealed class CombatService
         if (isAttack &&
             (primaryMonster is not null || isScreenAreaAttack))
         {
-            var damage = isScreenAreaAttack
-                ? (int)Math.Clamp(
-                    1_000L +
-                    (long)effective.Attack +
-                    (long)effective.MagicAttack,
-                    1L,
-                    int.MaxValue)
-                : Math.Max(
-                    1,
-                    levelData.BaseDamage +
-                    (levelData.DamageType == 1
-                        ? effective.MagicAttack
-                        : effective.Attack) *
-                    Math.Max(0, levelData.DamageMultiplier) / 100);
+            var damage = Math.Max(
+                1,
+                levelData.BaseDamage +
+                (levelData.DamageType == 1
+                    ? effective.MagicAttack
+                    : effective.Attack) *
+                Math.Max(0, levelData.DamageMultiplier) / 100);
 
             if (levelData.SkillType == 7 &&
                 levelData.BaseDamage == 0 &&
@@ -2221,8 +2062,7 @@ public sealed class CombatService
             var runtime = _runtime.GetMap(
                 session.CurrentMapId);
             var totalDamageDealt = 0;
-            var screenAoeResults = new List<object>();
-            var screenAoeKills = new List<MonsterRuntimeState>();
+            var areaKills = new List<MonsterRuntimeState>();
 
             lock (runtime.SyncRoot)
             {
@@ -2241,12 +2081,14 @@ public sealed class CombatService
                               Math.Pow(x.Y - centerY, 2) <=
                               radius * radius));
 
+                // Stellar Shock keeps its gameplay cap, but uses the exact
+                // same AOE execution and settlement pipeline as other skills.
                 var targets = isScreenAreaAttack
                     ? targetQuery
                         .OrderBy(x =>
                             Math.Pow(x.X - centerX, 2) +
                             Math.Pow(x.Y - centerY, 2))
-                        .Take(8)
+                        .Take(32)
                         .ToArray()
                     : targetQuery.ToArray();
 
@@ -2267,43 +2109,47 @@ public sealed class CombatService
                         .ToArray()
                 };
 
+                var screenDamageBase =
+                    100_000_000L +
+                    (long)effective.Attack * 50_000L +
+                    (long)effective.MagicAttack * 50_000L;
+
                 foreach (var monster in targets)
                 {
+                    var appliedDamage = damage;
+                    if (isScreenAreaAttack)
+                    {
+                        var variancePercent = Random.Shared.Next(
+                            -10,
+                            11);
+                        appliedDamage = (int)Math.Clamp(
+                            screenDamageBase +
+                            screenDamageBase * variancePercent / 100L,
+                            1L,
+                            int.MaxValue);
+                    }
+
                     var hpBeforeDamage = monster.CurrentHp;
                     monster.CurrentHp = Math.Max(
                         0,
-                        monster.CurrentHp - damage);
+                        monster.CurrentHp - appliedDamage);
                     totalDamageDealt += Math.Max(
                         0,
                         hpBeforeDamage - monster.CurrentHp);
 
-                    if (isScreenAreaAttack)
+                    packets.Add(new
                     {
-                        screenAoeResults.Add(new
-                        {
-                            EntityID = monster.EntityId,
-                            Damage = damage,
-                            CurrentHP = monster.CurrentHp,
-                            MaxHP = monster.MaxHp,
-                            Died = monster.CurrentHp == 0
-                        });
-                    }
-                    else
-                    {
-                        packets.Add(new
-                        {
-                            Type = "EntityDamage",
-                            TargetID = monster.EntityId,
-                            TargetType = 1,
-                            Damage = damage,
-                            CurrentHP = monster.CurrentHp,
-                            MaxHP = monster.MaxHp,
-                            IsCrit = false,
-                            SkillID = skillId,
-                            SkillLevel = skillLevel,
-                            AttackerID = session.CharacterId.Value
-                        });
-                    }
+                        Type = "EntityDamage",
+                        TargetID = monster.EntityId,
+                        TargetType = 1,
+                        Damage = appliedDamage,
+                        CurrentHP = monster.CurrentHp,
+                        MaxHP = monster.MaxHp,
+                        IsCrit = false,
+                        SkillID = skillId,
+                        SkillLevel = skillLevel,
+                        AttackerID = session.CharacterId.Value
+                    });
 
                     if (monster.CurrentHp > 0 &&
                         !monster.HasTarget)
@@ -2335,20 +2181,20 @@ public sealed class CombatService
                         monster,
                         MonsterAiState.Dead);
 
-                    if (isScreenAreaAttack)
+                    packets.Add(new
                     {
-                        screenAoeKills.Add(monster);
+                        Type = "EntityDeath",
+                        EntityID = monster.EntityId,
+                        EntityType = 1,
+                        KillerID = session.CharacterId.Value
+                    });
+
+                    if (isAreaAttack)
+                    {
+                        areaKills.Add(monster);
                     }
                     else
                     {
-                        packets.Add(new
-                        {
-                            Type = "EntityDeath",
-                            EntityID = monster.EntityId,
-                            EntityType = 1,
-                            KillerID = session.CharacterId.Value
-                        });
-
                         AddCharacterKillRewards(
                             session,
                             accountId,
@@ -2376,25 +2222,20 @@ public sealed class CombatService
                 }
             }
 
-            if (isScreenAreaAttack)
+            if (isAreaAttack &&
+                areaKills.Count > 0)
             {
-                packets.Add(new
-                {
-                    Type = "ScreenAoeResult",
-                    SkillID = skillId,
-                    SkillLevel = skillLevel,
-                    AttackerID = session.CharacterId.Value,
-                    Results = screenAoeResults.ToArray()
-                });
+                AddAreaKillRewards(
+                    session,
+                    accountId,
+                    areaKills,
+                    packets);
 
-                if (screenAoeKills.Count > 0)
-                {
-                    AddScreenAreaKillRewards(
-                        session,
-                        accountId,
-                        screenAoeKills,
-                        packets);
-                }
+                AddAreaBatchExtras(
+                    session,
+                    accountId,
+                    areaKills,
+                    packets);
             }
 
             if (skillId == 25104 &&
@@ -3131,7 +2972,7 @@ public sealed class CombatService
         }
     }
 
-    private void AddScreenAreaKillRewards(
+    private void AddAreaKillRewards(
         ClientSession session,
         long accountId,
         IReadOnlyList<MonsterRuntimeState> monsters,
@@ -3251,7 +3092,7 @@ public sealed class CombatService
         {
             Type = "ItemPickupFeedback",
             Message =
-                $"範圍擊倒 {monsters.Count} 隻，獲得經驗值 {expToAdd:N0}",
+                $"獲得經驗值 {expToAdd:N0}",
             PlaySound = false
         });
 
@@ -3282,7 +3123,7 @@ public sealed class CombatService
         });
     }
 
-    private void AddScreenAreaBatchExtras(
+    private void AddAreaBatchExtras(
         ClientSession session,
         long accountId,
         IReadOnlyList<MonsterRuntimeState> monsters,
