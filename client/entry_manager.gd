@@ -9,11 +9,20 @@ extends Control
 @onready var message_label: Label = %ErrorDialog / MessageLabel
 @onready var confirm_button: Button = %ErrorDialog / ConfirmButton
 
+func _set_loading_progress(value: float) -> void :
+	var overlay = get_node_or_null("%LoadingOverlay")
+	if not overlay:
+		return
+	var bar = overlay.get_node_or_null("LoadingBar") as ProgressBar
+	if bar:
+		bar.value = clampf(value, 0.0, 100.0)
+
 func _ready() -> void :
 
 	if login_screen: login_screen.visible = false
 	if character_select_layer: character_select_layer.visible = false
 	if error_dialog: error_dialog.visible = false
+	_set_loading_progress(2.0)
 
 	if confirm_button: confirm_button.pressed.connect(_on_error_confirm_pressed)
 
@@ -23,8 +32,11 @@ func _ready() -> void :
 	if NetworkManager.has_signal("enter_world_success"): NetworkManager.enter_world_success.connect(_on_server_enter_world_success)
 
 	if ItemLoader: ItemLoader.preload_all_item_data()
+	_set_loading_progress(5.0)
 	if SkillLoader: SkillLoader.preload_all_skill_data()
+	_set_loading_progress(8.0)
 	if PetLoader: PetLoader.preload_all_pet_data()
+	_set_loading_progress(10.0)
 
 	_connect_character_select_signals()
 
@@ -62,6 +74,7 @@ func _prewarm_game_hud_resources() -> void :
 	# load_threaded_get once LOADED places the PackedScene and dependencies in
 	# ResourceLoader's cache for GameHUD to reuse later.
 	var pending: Array[String] = GAME_HUD_PREWARM_PATHS.duplicate()
+	var total_resources: int = pending.size()
 	while not pending.is_empty() and is_inside_tree():
 		for index: int in range(pending.size() - 1, -1, -1):
 			var path: String = pending[index]
@@ -74,8 +87,12 @@ func _prewarm_game_hud_resources() -> void :
 				pending.remove_at(index)
 			elif status == ResourceLoader.THREAD_LOAD_FAILED or status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 				pending.remove_at(index)
+		var completed_resources: int = total_resources - pending.size()
+		if total_resources > 0:
+			_set_loading_progress(10.0 + (float(completed_resources) / float(total_resources)) * 12.0)
 		await get_tree().process_frame
 
+	_set_loading_progress(22.0)
 	# Resource preloading alone is not enough for the two expensive windows:
 	# their first SceneTree entry/layout is the real hitch. Pay that cost here,
 	# while the player is still on login/character selection, and keep the same
@@ -104,7 +121,11 @@ func _prewarm_game_hud_resources() -> void :
 		# login/character-select screens; in-world initialization only refreshes
 		# player-specific availability and dismantle ownership.
 		if kind == "craft" and window.has_method("prepare_static_async"):
+			_set_loading_progress(24.0)
 			await window.prepare_static_async()
+			_set_loading_progress(34.0)
+		elif kind == "game_info":
+			_set_loading_progress(38.0)
 
 		var elapsed_ms: float = float(Time.get_ticks_usec() - started_usec) / 1000.0
 		print("[LOGIN_HUD_PREWARM] kind=%s total_ms=%.2f" % [kind, elapsed_ms])
@@ -120,6 +141,7 @@ func _bootstrap_before_login() -> void :
 		character_select_layer.visible = false
 	await get_tree().process_frame
 	await _prewarm_game_hud_resources()
+	_set_loading_progress(40.0)
 	await get_tree().process_frame
 	_start_game_entry_flow()
 
@@ -166,6 +188,7 @@ func _on_global_login_finished(success: bool, _msg: String) -> void :
 	if success:
 		var overlay = get_node_or_null("%LoadingOverlay")
 		if overlay: overlay.visible = true
+		_set_loading_progress(42.0)
 
 		var tween = create_tween()
 		if login_screen:
@@ -315,8 +338,7 @@ func _on_character_verified_and_enter_game(char_data: Dictionary, _map_id: Strin
 		for child in overlay.get_children():
 			if "modulate" in child:
 				child.modulate.a = 0.0
-		var bar = overlay.get_node_or_null("LoadingBar") as ProgressBar
-		if bar: bar.value = 10.0
+		_set_loading_progress(46.0)
 
 
 	var tween = create_tween()
@@ -336,6 +358,7 @@ func _on_character_verified_and_enter_game(char_data: Dictionary, _map_id: Strin
 	await get_tree().process_frame
 
 
+	_set_loading_progress(48.0)
 	var char_dbid: int = int(float(char_data.get("DBID", 0)))
 	NetworkManager.send_select_character_request(char_dbid)
 
@@ -345,9 +368,7 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 	if character_select_layer: character_select_layer.visible = false
 
 	var overlay = get_node_or_null("%LoadingOverlay")
-	if overlay:
-		var bar = overlay.get_node_or_null("LoadingBar") as ProgressBar
-		if bar: bar.value = 50.0
+	_set_loading_progress(50.0)
 
 
 	var default_map_int = GameConstants.DEFAULT_MAP_ID.replace("map", "").to_int()
