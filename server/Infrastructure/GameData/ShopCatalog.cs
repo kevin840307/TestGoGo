@@ -23,11 +23,21 @@ public sealed class ShopCatalog
         LoadEquip(Path.Combine(dataRoot, "Item", "Equip.itd"));
         LoadWeapons(Path.Combine(dataRoot, "Item", "Weapon.itd"));
 
-        // The item files define metadata; the source Shop.csv is authoritative
-        // for which ItemIndex belongs to each NPC shop. This prevents heuristic
-        // misclassification that produced strange items in the recovered client.
+        // Freeze the legacy definitions before producing current-client shop
+        // entries. Legacy and current IDs can collide with different meanings,
+        // so they must never share the same dictionary while mapping.
+        var legacyItems = _items.ToDictionary(
+            x => x.Key,
+            x => x.Value);
+
+        _items.Clear();
         _shops.Clear();
-        LoadShopMap(Path.Combine(dataRoot, "Shop", "Shop.csv"));
+
+        // Shop.csv is authoritative only for legacy shop membership. Every
+        // legacy entry is resolved to a current-client ItemID before exposure.
+        LoadShopMap(
+            Path.Combine(dataRoot, "Shop", "Shop.csv"),
+            legacyItems);
 
         foreach (var list in _shops.Values)
             list.Sort((a, b) => a.ItemIndex.CompareTo(b.ItemIndex));
@@ -203,7 +213,9 @@ public sealed class ShopCatalog
         }
     }
 
-    private void LoadShopMap(string path)
+    private void LoadShopMap(
+        string path,
+        IReadOnlyDictionary<int, ShopItemDefinition> legacyItems)
     {
         if (!File.Exists(path)) return;
 
@@ -228,7 +240,7 @@ public sealed class ShopCatalog
 
             foreach (var legacyItemIndex in itemIds)
             {
-                if (!_items.TryGetValue(legacyItemIndex, out var legacy))
+                if (!legacyItems.TryGetValue(legacyItemIndex, out var legacy))
                 {
                     _mappingWarnings.Add(
                         $"[LEGACY_ITEM_UNKNOWN] Shop={shopId} LegacyItemID={legacyItemIndex}");
