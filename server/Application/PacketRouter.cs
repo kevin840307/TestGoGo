@@ -29,6 +29,7 @@ public sealed class PacketRouter
     private readonly CombatService _combat;
     private readonly ResourceRecoveryService _resourceRecovery;
     private readonly ShopService _shopService;
+    private readonly PlayerShopService _playerShop;
     private readonly IReadOnlyDictionary<string, IClientPacketHandler> _packetHandlers;
     private readonly GmCommandService _gm;
     private readonly DollService _dolls;
@@ -49,6 +50,7 @@ public sealed class PacketRouter
         CombatService combat,
         ResourceRecoveryService resourceRecovery,
         ShopService shopService,
+        PlayerShopService playerShop,
         IEnumerable<IClientPacketHandler> packetHandlers,
         GmCommandService gm,
         DollService dolls,
@@ -68,6 +70,7 @@ public sealed class PacketRouter
         _combat = combat;
         _resourceRecovery = resourceRecovery;
         _shopService = shopService;
+        _playerShop = playerShop;
         _packetHandlers = packetHandlers.ToDictionary(
             x => x.PacketType,
             StringComparer.Ordinal);
@@ -101,6 +104,17 @@ public sealed class PacketRouter
         var changed =
             state.PublishedMapId != nextMapId ||
             state.PublishedCharacterId != nextCharacterId;
+
+        if (state.PublishedCharacterId > 0 &&
+            (state.PublishedCharacterId != nextCharacterId ||
+             state.PublishedMapId != nextMapId))
+        {
+            _playerShop.Disconnect(
+                state.ConnectionId,
+                state.PublishedMapId,
+                state.AccountId ?? 0,
+                state.PublishedCharacterId);
+        }
 
         if (state.PublishedCharacterId > 0 &&
             state.PublishedCharacterId != nextCharacterId)
@@ -1743,7 +1757,8 @@ public sealed class PacketRouter
 
             case "ShopAction":
             {
-                if (!state.CharacterId.HasValue) return [];
+                if (!state.CharacterId.HasValue)
+                    return [];
 
                 var action = req.Str("Action");
 
@@ -1767,109 +1782,16 @@ public sealed class PacketRouter
                         req.Int("Count", 1));
                 }
 
-                if (action == "SyncMyShop")
-                {
-                    return
-                    [
-                        new
-                        {
-                            Type = "ShopSync",
-                            Items = state.PlayerShopItems
-                        }
-                    ];
-                }
-
-                if (action == "AddItem")
-                {
-                    var uid = req.Int("UID");
-                    var tabType = req.Int("TabType");
-                    var count = Math.Max(1, req.Int("Count", 1));
-                    var price = Math.Max(1, req.Int("Price", 1));
-
-                    state.PlayerShopItems.RemoveAll(x =>
-                        Convert.ToInt64(x["UID"]) == uid &&
-                        Convert.ToInt32(x["TabType"]) == tabType);
-
-                    state.PlayerShopItems.Add(new Dictionary<string, object>
-                    {
-                        ["UID"] = uid,
-                        ["Count"] = count,
-                        ["Price"] = price,
-                        ["TabType"] = tabType
-                    });
-
-                    return
-                    [
-                        new
-                        {
-                            Type = "ShopSync",
-                            Items = state.PlayerShopItems
-                        }
-                    ];
-                }
-
-                if (action == "RemoveItem")
-                {
-                    var uid = req.Int("UID");
-                    var tabType = req.Int("TabType");
-
-                    state.PlayerShopItems.RemoveAll(x =>
-                        Convert.ToInt64(x["UID"]) == uid &&
-                        Convert.ToInt32(x["TabType"]) == tabType);
-
-                    return
-                    [
-                        new
-                        {
-                            Type = "ShopSync",
-                            Items = state.PlayerShopItems
-                        }
-                    ];
-                }
-
-                if (action == "OpenShop")
-                {
-                    state.IsPlayerShopOpen = true;
-                    state.PlayerShopName = req.Str(
-                        "ShopName",
-                        "我的商店");
-
-                    return
-                    [
-                        new
-                        {
-                            Type = "SyncShopBoard",
-                            EntityID = state.CharacterId.Value,
-                            IsOpen = true,
-                            ShopName = state.PlayerShopName
-                        }
-                    ];
-                }
-
-                if (action == "CloseShop")
-                {
-                    state.IsPlayerShopOpen = false;
-
-                    return
-                    [
-                        new
-                        {
-                            Type = "SyncShopBoard",
-                            EntityID = state.CharacterId.Value,
-                            IsOpen = false,
-                            ShopName = state.PlayerShopName
-                        }
-                    ];
-                }
-
-                return
-                [
-                    new
-                    {
-                        Type = "SystemMessageFlash",
-                        Message = $"玩家商店操作尚未支援：{action}"
-                    }
-                ];
+                return _playerShop.Handle(
+                    state,
+                    accountId,
+                    action,
+                    req.Long("UID"),
+                    req.Int("TabType", -1),
+                    Math.Max(1, req.Int("Count", 1)),
+                    Math.Max(1L, req.Long("Price", 1)),
+                    req.Long("TargetDBID", -1),
+                    req.Str("ShopName", "我的商店"));
             }
 
             case "HorseChargeRequest":
@@ -2383,6 +2305,9 @@ public sealed class PacketRouter
             character,
             assets);
 
+        var shopState =
+            _playerShop.GetPublicState(dbid);
+
         var extra = new Dictionary<string, object>(
             character)
         {
@@ -2391,7 +2316,9 @@ public sealed class PacketRouter
                     "State",
                     "idle"),
             ["Dir"] = "1",
-            ["PartyID"] = _party.GetPartyId(dbid)
+            ["PartyID"] = _party.GetPartyId(dbid),
+            ["IsShopOpen"] = shopState.IsOpen,
+            ["ShopName"] = shopState.ShopName
         };
 
         return new
