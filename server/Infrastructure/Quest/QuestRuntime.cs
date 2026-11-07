@@ -38,6 +38,8 @@ public sealed class QuestRuntimeBindings
     public Func<int, bool>? AddSkill { get; init; }
     public Func<int, int, bool>? SetCareer { get; init; }
     public Func<string, int, bool>? SetData { get; init; }
+    public Func<string, int, bool>? ModifyData { get; init; }
+    public bool SuppressLegacyMediaDialogs { get; init; }
 }
 
 public sealed class QuestRuntime
@@ -102,6 +104,8 @@ public sealed class QuestRuntime
 
         script.Globals["GetChoice"] = (Func<int>)(() => choiceIndex ?? 0);
         script.Globals["GetData"] = (Func<string, object?>)(name => getData(name));
+        script.Globals["floor"] =
+            (Func<double,double>)(value => Math.Floor(value));
         script.Globals["random"] = DynValue.NewCallback((ctx, args) =>
         {
             if (args.Count < 1)
@@ -271,6 +275,30 @@ public sealed class QuestRuntime
             {
                 throw new ScriptRuntimeException(
                     $"SetData failed: {key}={value}");
+            }
+
+            return DynValue.NewBoolean(true);
+        });
+
+        script.Globals["ModifyData"] = DynValue.NewCallback((ctx, args) =>
+        {
+            if (args.Count < 2)
+                return DynValue.NewBoolean(false);
+
+            var key = args[0].CastToString();
+            var delta = (int)args[1].Number;
+
+            if (!key.Equals(
+                    "Money",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return DynValue.NewBoolean(false);
+            }
+
+            if (bindings?.ModifyData?.Invoke(key, delta) != true)
+            {
+                throw new ScriptRuntimeException(
+                    $"ModifyData failed: {key} delta={delta}");
             }
 
             return DynValue.NewBoolean(true);
@@ -526,8 +554,20 @@ public sealed class QuestRuntime
 
         script.Globals["Say"] = DynValue.NewCallback((ctx, args) =>
         {
-            var text = DialogFormatter.CleanText(
-                args.Count > 0 ? args[0].CastToString() : "");
+            var rawText =
+                args.Count > 0
+                    ? args[0].CastToString()
+                    : "";
+
+            if (bindings?.SuppressLegacyMediaDialogs == true &&
+                rawText.StartsWith(
+                    "m#",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return DynValue.Nil;
+            }
+
+            var text = DialogFormatter.CleanText(rawText);
             var next = args.Count > 1 ? args[1].CastToString() : "";
             result.Packets.Add(new {
                 Type = "NpcDialogResponse",
