@@ -795,7 +795,11 @@ func _toggle_window(target_window: Control) -> void :
 
 		if target_window == clan_window:
 			if is_instance_valid(target_player) and "data_model" in target_player and target_player.data_model.club_id <= 0:
-				show_rejection_message_box("你尚未加入任何戰團！")
+				if NetworkManager and NetworkManager.has_method("send_secure_packet"):
+					NetworkManager.send_secure_packet({
+						"Type": "ClubAction",
+						"Action": "OpenCreate"
+					})
 				return
 
 		if target_window.has_method("update_ui"): target_window.update_ui()
