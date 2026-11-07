@@ -2946,6 +2946,269 @@ public sealed class SqliteGameStore : IGameStore
         return (true, "已丟棄物品");
     }
 
+    public DirectTransferResult TransferMoney(
+        long accountId,
+        long dbid,
+        long targetDbid,
+        long amount)
+    {
+        if (amount <= 0)
+        {
+            return new(
+                false,
+                "轉帳金額必須大於 0",
+                0,
+                0,
+                0);
+        }
+
+        if (dbid == targetDbid)
+        {
+            return new(
+                false,
+                "不能轉帳給自己",
+                0,
+                0,
+                0);
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        long senderMoney;
+        using (var sender = db.CreateCommand())
+        {
+            sender.Transaction = tx;
+            sender.CommandText = """
+                SELECT money
+                  FROM characters
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(sender, "$id", dbid);
+            Arg(sender, "$account", accountId);
+
+            var raw = sender.ExecuteScalar();
+            if (raw is null || raw == DBNull.Value)
+            {
+                return new(
+                    false,
+                    "角色不存在",
+                    0,
+                    0,
+                    0);
+            }
+
+            senderMoney = Convert.ToInt64(raw);
+        }
+
+        long targetAccountId;
+        long targetMoney;
+        using (var target = db.CreateCommand())
+        {
+            target.Transaction = tx;
+            target.CommandText = """
+                SELECT account_id,money
+                  FROM characters
+                 WHERE id=$id
+                """;
+            Arg(target, "$id", targetDbid);
+
+            using var reader = target.ExecuteReader();
+            if (!reader.Read())
+            {
+                return new(
+                    false,
+                    "找不到目標角色",
+                    senderMoney,
+                    0,
+                    0);
+            }
+
+            targetAccountId = reader.GetInt64(0);
+            targetMoney = reader.GetInt64(1);
+        }
+
+        if (senderMoney < amount)
+        {
+            return new(
+                false,
+                "金錢不足",
+                senderMoney,
+                targetMoney,
+                targetAccountId);
+        }
+
+        using (var debit = db.CreateCommand())
+        {
+            debit.Transaction = tx;
+            debit.CommandText = """
+                UPDATE characters
+                   SET money=money-$amount
+                 WHERE id=$id
+                   AND account_id=$account
+                   AND money >= $amount
+                """;
+            Arg(debit, "$amount", amount);
+            Arg(debit, "$id", dbid);
+            Arg(debit, "$account", accountId);
+
+            if (debit.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "轉帳失敗",
+                    senderMoney,
+                    targetMoney,
+                    targetAccountId);
+            }
+        }
+
+        using (var credit = db.CreateCommand())
+        {
+            credit.Transaction = tx;
+            credit.CommandText = """
+                UPDATE characters
+                   SET money=money+$amount
+                 WHERE id=$id
+                """;
+            Arg(credit, "$amount", amount);
+            Arg(credit, "$id", targetDbid);
+
+            if (credit.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "轉帳失敗",
+                    senderMoney,
+                    targetMoney,
+                    targetAccountId);
+            }
+        }
+
+        tx.Commit();
+
+        return new(
+            true,
+            "轉帳成功",
+            senderMoney - amount,
+            targetMoney + amount,
+            targetAccountId);
+    }
+
+    public RepairAssetResult RepairAsset(
+        long accountId,
+        long dbid,
+        long uid,
+        bool isMechaEquipment,
+        int repairedDurability,
+        long cost)
+    {
+        repairedDurability = Math.Max(
+            1,
+            repairedDurability);
+        cost = Math.Max(0, cost);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        long money;
+        using (var character = db.CreateCommand())
+        {
+            character.Transaction = tx;
+            character.CommandText = """
+                SELECT money
+                  FROM characters
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(character, "$id", dbid);
+            Arg(character, "$account", accountId);
+
+            var raw = character.ExecuteScalar();
+            if (raw is null || raw == DBNull.Value)
+                return new(false, "角色不存在", 0);
+
+            money = Convert.ToInt64(raw);
+        }
+
+        if (money < cost)
+            return new(false, "金錢不足", money);
+
+        var table = isMechaEquipment
+            ? "horse_equipment"
+            : "equipment_items";
+
+        int currentDurability;
+        using (var item = db.CreateCommand())
+        {
+            item.Transaction = tx;
+            item.CommandText = $"""
+                SELECT damage
+                  FROM {table}
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND in_bank=0
+                   AND in_shop=0
+                """;
+            Arg(item, "$uid", uid);
+            Arg(item, "$id", dbid);
+
+            var raw = item.ExecuteScalar();
+            if (raw is null || raw == DBNull.Value)
+                return new(false, "找不到可修理的裝備", money);
+
+            currentDurability = Convert.ToInt32(raw);
+        }
+
+        if (currentDurability >= repairedDurability)
+            return new(false, "此裝備不需要修理", money);
+
+        using (var repair = db.CreateCommand())
+        {
+            repair.Transaction = tx;
+            repair.CommandText = $"""
+                UPDATE {table}
+                   SET damage=$durability
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND in_bank=0
+                   AND in_shop=0
+                """;
+            Arg(repair, "$durability", repairedDurability);
+            Arg(repair, "$uid", uid);
+            Arg(repair, "$id", dbid);
+
+            if (repair.ExecuteNonQuery() != 1)
+                return new(false, "修理失敗", money);
+        }
+
+        if (cost > 0)
+        {
+            using var pay = db.CreateCommand();
+            pay.Transaction = tx;
+            pay.CommandText = """
+                UPDATE characters
+                   SET money=money-$cost
+                 WHERE id=$id
+                   AND account_id=$account
+                   AND money >= $cost
+                """;
+            Arg(pay, "$cost", cost);
+            Arg(pay, "$id", dbid);
+            Arg(pay, "$account", accountId);
+
+            if (pay.ExecuteNonQuery() != 1)
+                return new(false, "金錢不足", money);
+        }
+
+        tx.Commit();
+        return new(
+            true,
+            "修理完成",
+            money - cost);
+    }
+
     public (bool Success, string Message) BankTransfer(
         long accountId,
         long dbid,
