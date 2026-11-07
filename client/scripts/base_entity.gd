@@ -1680,35 +1680,134 @@ func execute_skill_visuals(skill_id: int, skill_level: int, target_node: Node2D 
 
 
 func play_screen_aoe_visual(radius: float = 900.0) -> void :
-	# Dedicated lightweight visual for skill 99001.
+	# Dedicated lightweight visual for skill 99001. Keep everything generated
+	# from Line2D/Polygon2D so the stress skill never enters the legacy effect
+	# loader path that previously caused large multi-target spikes.
 	if not is_inside_tree():
 		return
 
 	var visual_radius: float = clamp(radius, 240.0, 900.0)
 
+	# Bright core detonation.
+	var core := Polygon2D.new()
+	core.name = "ScreenAoeCore"
+	core.z_index = 94
+	var core_points := PackedVector2Array()
+	for i in range(32):
+		var angle := TAU * float(i) / 32.0
+		var spike := 1.0 if i % 2 == 0 else 0.58
+		core_points.append(
+			Vector2(cos(angle), sin(angle)) * 62.0 * spike
+		)
+	core.polygon = core_points
+	core.color = Color(0.92, 0.98, 1.0, 0.95)
+	add_child(core)
+	core.scale = Vector2(0.18, 0.18)
+
+	var core_tween := create_tween()
+	core_tween.tween_property(
+		core,
+		"scale",
+		Vector2(2.2, 2.2),
+		0.16
+	).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	core_tween.parallel().tween_property(
+		core,
+		"rotation",
+		0.9,
+		0.20
+	)
+	core_tween.parallel().tween_property(
+		core,
+		"modulate:a",
+		0.0,
+		0.26
+	)
+	core_tween.tween_callback(core.queue_free)
+
+	# A soft expanding flash fills the center before the shockwaves.
 	var flash := Polygon2D.new()
 	flash.name = "ScreenAoeFlash"
 	flash.z_index = 88
 	var flash_points := PackedVector2Array()
-	var flash_segments := 48
+	var flash_segments := 64
 	for i in range(flash_segments):
 		var angle := TAU * float(i) / float(flash_segments)
-		flash_points.append(Vector2(cos(angle), sin(angle)) * 70.0)
+		flash_points.append(Vector2(cos(angle), sin(angle)) * 72.0)
 	flash.polygon = flash_points
-	flash.color = Color(0.65, 0.88, 1.0, 0.28)
+	flash.color = Color(0.48, 0.78, 1.0, 0.32)
 	add_child(flash)
-	flash.scale = Vector2(0.6, 0.6)
+	flash.scale = Vector2(0.45, 0.45)
 
 	var flash_tween := create_tween()
-	flash_tween.tween_property(flash, "scale", Vector2(3.2, 3.2), 0.18)
-	flash_tween.parallel().tween_property(flash, "modulate:a", 0.0, 0.22)
+	flash_tween.tween_property(
+		flash,
+		"scale",
+		Vector2(4.2, 4.2),
+		0.26
+	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	flash_tween.parallel().tween_property(
+		flash,
+		"modulate:a",
+		0.0,
+		0.30
+	)
 	flash_tween.tween_callback(flash.queue_free)
 
+	# Rotating star halos make the cast feel like a large magic seal.
+	for halo_index in range(2):
+		var halo := Line2D.new()
+		halo.name = "ScreenAoeHalo"
+		halo.z_index = 92
+		halo.width = 3.0 if halo_index == 0 else 2.0
+		halo.default_color = (
+			Color(0.80, 0.95, 1.0, 0.95)
+			if halo_index == 0
+			else Color(0.45, 0.72, 1.0, 0.72)
+		)
+		halo.closed = true
+		halo.antialiased = true
+
+		var points := 24
+		for i in range(points):
+			var angle := TAU * float(i) / float(points)
+			var radius_mul := 1.0 if i % 2 == 0 else 0.72
+			halo.add_point(
+				Vector2(cos(angle), sin(angle)) *
+				95.0 * radius_mul
+			)
+
+		add_child(halo)
+		halo.scale = Vector2(0.45, 0.45)
+
+		var halo_tween := create_tween()
+		halo_tween.tween_property(
+			halo,
+			"scale",
+			Vector2(2.1, 2.1),
+			0.34
+		).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		halo_tween.parallel().tween_property(
+			halo,
+			"rotation",
+			1.35 if halo_index == 0 else -1.15,
+			0.42
+		)
+		halo_tween.parallel().tween_property(
+			halo,
+			"modulate:a",
+			0.0,
+			0.48
+		)
+		halo_tween.tween_callback(halo.queue_free)
+
+	# Multi-layer shockwaves travel across the visible combat area.
 	var ring_specs = [
-		{"delay": 0.00, "width": 8.0, "alpha": 1.00, "spin": 0.45},
-		{"delay": 0.06, "width": 5.0, "alpha": 0.75, "spin": -0.35},
-		{"delay": 0.12, "width": 4.0, "alpha": 0.55, "spin": 0.25},
-		{"delay": 0.18, "width": 3.0, "alpha": 0.38, "spin": -0.20}
+		{"delay": 0.00, "width": 10.0, "alpha": 1.00, "spin": 0.55},
+		{"delay": 0.05, "width": 7.0, "alpha": 0.82, "spin": -0.42},
+		{"delay": 0.10, "width": 5.0, "alpha": 0.66, "spin": 0.34},
+		{"delay": 0.16, "width": 4.0, "alpha": 0.48, "spin": -0.26},
+		{"delay": 0.23, "width": 3.0, "alpha": 0.32, "spin": 0.18}
 	]
 
 	for spec in ring_specs:
@@ -1716,22 +1815,33 @@ func play_screen_aoe_visual(radius: float = 900.0) -> void :
 		ring.name = "ScreenAoeRing"
 		ring.z_index = 90
 		ring.width = float(spec["width"])
-		ring.default_color = Color(0.48, 0.83, 1.0, float(spec["alpha"]))
+		ring.default_color = Color(
+			0.48,
+			0.84,
+			1.0,
+			float(spec["alpha"])
+		)
 		ring.closed = true
 		ring.antialiased = true
 
-		var segments := 72
+		var segments := 80
 		for i in range(segments):
 			var angle := TAU * float(i) / float(segments)
-			var wobble := 1.0 + 0.035 * sin(angle * 8.0)
-			ring.add_point(Vector2(cos(angle), sin(angle)) * 46.0 * wobble)
+			var wobble := (
+				1.0 +
+				0.045 * sin(angle * 8.0) +
+				0.020 * sin(angle * 16.0)
+			)
+			ring.add_point(
+				Vector2(cos(angle), sin(angle)) * 44.0 * wobble
+			)
 
 		add_child(ring)
-		ring.scale = Vector2(0.28, 0.28)
+		ring.scale = Vector2(0.20, 0.20)
 		ring.modulate.a = 0.0
 
 		var delay := float(spec["delay"])
-		var target_scale := visual_radius / 46.0
+		var target_scale := visual_radius / 44.0
 		var tween := create_tween()
 		if delay > 0.0:
 			tween.tween_interval(delay)
@@ -1740,40 +1850,57 @@ func play_screen_aoe_visual(radius: float = 900.0) -> void :
 			ring,
 			"scale",
 			Vector2(target_scale, target_scale),
-			0.48
+			0.50
 		).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		tween.parallel().tween_property(
 			ring,
 			"rotation",
 			float(spec["spin"]),
-			0.48
+			0.50
 		)
-		tween.tween_property(ring, "modulate:a", 0.0, 0.18)
+		tween.tween_property(ring, "modulate:a", 0.0, 0.16)
 		tween.tween_callback(ring.queue_free)
 
-	# Four short energy spokes make the cast read as an actual blast rather
-	# than only concentric circles.
-	for spoke_index in range(4):
-		var spoke := Line2D.new()
-		spoke.name = "ScreenAoeSpoke"
-		spoke.z_index = 91
-		spoke.width = 4.0
-		spoke.default_color = Color(0.85, 0.95, 1.0, 0.85)
-		var angle := PI * 0.5 * float(spoke_index)
-		spoke.add_point(Vector2.ZERO)
-		spoke.add_point(Vector2(cos(angle), sin(angle)) * 110.0)
-		add_child(spoke)
-		spoke.scale = Vector2(0.35, 0.35)
-
-		var spoke_tween := create_tween()
-		spoke_tween.tween_property(
-			spoke,
-			"scale",
-			Vector2(visual_radius / 110.0, visual_radius / 110.0),
-			0.34
+	# Twelve narrow rays create the "screen wipe" blast without expensive
+	# particle systems.
+	for ray_index in range(12):
+		var ray := Line2D.new()
+		ray.name = "ScreenAoeRay"
+		ray.z_index = 93
+		ray.width = 3.0 if ray_index % 3 != 0 else 5.0
+		ray.default_color = Color(
+			0.82,
+			0.95,
+			1.0,
+			0.90 if ray_index % 3 == 0 else 0.65
 		)
-		spoke_tween.parallel().tween_property(spoke, "modulate:a", 0.0, 0.34)
-		spoke_tween.tween_callback(spoke.queue_free)
+		var angle := TAU * float(ray_index) / 12.0
+		ray.add_point(
+			Vector2(cos(angle), sin(angle)) * 28.0
+		)
+		ray.add_point(
+			Vector2(cos(angle), sin(angle)) * 150.0
+		)
+		add_child(ray)
+		ray.scale = Vector2(0.28, 0.28)
+
+		var ray_tween := create_tween()
+		ray_tween.tween_property(
+			ray,
+			"scale",
+			Vector2(
+				visual_radius / 150.0,
+				visual_radius / 150.0
+			),
+			0.38
+		).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		ray_tween.parallel().tween_property(
+			ray,
+			"modulate:a",
+			0.0,
+			0.42
+		)
+		ray_tween.tween_callback(ray.queue_free)
 
 
 func _play_skill_hit(fx_hit: String, is_self_cast_effect: bool = false) -> void :
