@@ -1491,15 +1491,6 @@ public sealed class CombatService
             centerY = Convert.ToDouble(character["LocY"]);
         }
 
-        if (isPortableRepair)
-        {
-            packets.Add(new
-            {
-                Type = "OpenRepairWindow",
-                RepairType = 10
-            });
-        }
-
         if (hasCreateItemSpecial)
         {
             var item = _current.FindItem(createItemId);
@@ -2438,6 +2429,15 @@ public sealed class CombatService
             effective.AttackRange);
 
         var packets = new List<object>();
+        if (isPortableRepair)
+        {
+            packets.Add(new
+            {
+                Type = "OpenRepairWindow",
+                RepairType = 10
+            });
+        }
+
 
         lock (runtime.SyncRoot)
         {
