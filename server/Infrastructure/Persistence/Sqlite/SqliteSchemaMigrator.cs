@@ -58,6 +58,10 @@ internal static class SqliteSchemaMigrator
         ExecuteSqlFile(
             db,
             ResolveSqlPath("013_character_transform.sql"));
+
+        ApplyEnsureColumnDirectives(
+            db,
+            ResolveSqlPath("014_character_capacity.sql"));
     }
 
     private static void ExecuteSqlFile(
