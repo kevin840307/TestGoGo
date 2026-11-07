@@ -169,6 +169,24 @@ func advance_network_runtime(delta: float) -> bool:
 
 	return true
 
+func is_runtime_visible() -> bool:
+	return _is_on_screen
+
+func apply_offscreen_network_move(target_pos: Vector2, new_dir: String = "") -> void :
+	if current_hp <= 0:
+		return
+	last_move_packet_ms = Time.get_ticks_msec()
+	network_move_target = target_pos
+	network_move_speed = 0.0
+	network_move_active = false
+	if current_state not in ["attack", "hit", "death", "die"]:
+		_apply_network_target_direction(target_pos)
+		if new_dir != "":
+			pending_move_dir = ""
+			pending_move_dir_count = 0
+		global_position = target_pos
+		current_state = "idle"
+
 func _on_screen_entered() -> void :
 	_is_on_screen = true
 	if is_instance_valid(sprite):
