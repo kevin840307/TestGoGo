@@ -172,19 +172,25 @@ func request_pickup() -> void :
 		if dist > 50.0:
 			player.combat_target = null
 			player.is_emoting = false
-			player.target_position = global_position
-			player.is_moving = true
+
+			if player.has_method("_set_navigation_target"):
+				player._set_navigation_target(global_position)
+			else:
+				player.target_position = global_position
+				player.is_moving = true
+
+			if not player.is_moving:
+				set_meta("is_requesting", false)
+				return
 
 			if player.current_state != "walk":
 				player.current_state = "walk"
 				if player.has_method("sync_animation"):
 					player.sync_animation()
 
-
 			while is_instance_valid(self) and is_instance_valid(player):
 				dist = global_position.distance_to(player.global_position)
 				if dist <= 50.0:
-
 					if player.has_method("_stop_movement"):
 						player._stop_movement()
 					else:
@@ -192,11 +198,9 @@ func request_pickup() -> void :
 						player.target_position = player.global_position
 					break
 
-
-				if player.target_position.distance_to(global_position) > 10.0 or ( not player.is_moving and dist > 50.0):
+				if not player.is_moving:
 					set_meta("is_requesting", false)
 					return
-
 
 				await get_tree().process_frame
 
