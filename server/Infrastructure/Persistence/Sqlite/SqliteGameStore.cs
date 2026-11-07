@@ -1229,7 +1229,9 @@ public sealed class SqliteGameStore : IGameStore
         string effectKey,
         int effectValue,
         int durationSeconds,
-        long nowUtcMs)
+        long nowUtcMs,
+        int sourceType = 0,
+        int sourceValue = 0)
     {
         if (itemUid <= 0 ||
             itemIndex <= 0 ||
@@ -1329,17 +1331,28 @@ public sealed class SqliteGameStore : IGameStore
             upsert.Transaction = tx;
             upsert.CommandText = """
                 INSERT INTO character_timed_effects(
-                    character_id,effect_key,effect_value,expires_utc_ms)
-                VALUES($id,$key,$value,$expires)
+                    character_id,effect_key,effect_value,expires_utc_ms,
+                    source_type,source_value,started_utc_ms,duration_seconds)
+                VALUES(
+                    $id,$key,$value,$expires,
+                    $sourceType,$sourceValue,$started,$duration)
                 ON CONFLICT(character_id,effect_key)
                 DO UPDATE SET
                     effect_value=excluded.effect_value,
-                    expires_utc_ms=excluded.expires_utc_ms
+                    expires_utc_ms=excluded.expires_utc_ms,
+                    source_type=excluded.source_type,
+                    source_value=excluded.source_value,
+                    started_utc_ms=excluded.started_utc_ms,
+                    duration_seconds=excluded.duration_seconds
                 """;
             Arg(upsert, "$id", dbid);
             Arg(upsert, "$key", effectKey.Trim());
             Arg(upsert, "$value", effectValue);
             Arg(upsert, "$expires", expiresUtcMs);
+            Arg(upsert, "$sourceType", Math.Max(0, sourceType));
+            Arg(upsert, "$sourceValue", Math.Max(0, sourceValue));
+            Arg(upsert, "$started", nowUtcMs);
+            Arg(upsert, "$duration", durationSeconds);
 
             if (upsert.ExecuteNonQuery() != 1)
             {
@@ -1411,6 +1424,60 @@ public sealed class SqliteGameStore : IGameStore
 
         return Convert.ToInt32(
             cmd.ExecuteScalar() ?? 0);
+    }
+
+    public IReadOnlyList<ActiveTimedEffect> GetActiveTimedEffects(
+        long accountId,
+        long dbid,
+        long nowUtcMs)
+    {
+        if (accountId <= 0 || dbid <= 0)
+            return [];
+
+        using var db = Open();
+
+        if (!OwnsCharacter(db, accountId, dbid))
+            return [];
+
+        using (var cleanup = db.CreateCommand())
+        {
+            cleanup.CommandText = """
+                DELETE FROM character_timed_effects
+                 WHERE character_id=$id
+                   AND expires_utc_ms <= $now
+                """;
+            Arg(cleanup, "$id", dbid);
+            Arg(cleanup, "$now", nowUtcMs);
+            cleanup.ExecuteNonQuery();
+        }
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT effect_key,effect_value,expires_utc_ms,
+                   source_type,source_value,started_utc_ms,duration_seconds
+              FROM character_timed_effects
+             WHERE character_id=$id
+               AND expires_utc_ms > $now
+             ORDER BY expires_utc_ms,effect_key
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$now", nowUtcMs);
+
+        var effects = new List<ActiveTimedEffect>();
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            effects.Add(new ActiveTimedEffect(
+                reader.GetString(0),
+                reader.GetInt32(1),
+                reader.GetInt64(2),
+                reader.GetInt32(3),
+                reader.GetInt32(4),
+                reader.GetInt64(5),
+                reader.GetInt32(6)));
+        }
+
+        return effects;
     }
 
     public IReadOnlyList<RankEntry> GetRankEntries(
