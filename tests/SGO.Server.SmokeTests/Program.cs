@@ -36,6 +36,55 @@ static void Check(bool ok, string msg)
 
 static JsonDocument Json(string value) => JsonDocument.Parse(value);
 
+// Request payload validation rejects incompatible JSON shapes without
+// invoking any persistence or mutation handler.
+using (var invalidNumber = Json(
+    """{"Type":"BankTransfer","UID":"123","TabType":0,"Amount":1,"ToBank":true}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              invalidNumber.RootElement,
+              "BankTransfer",
+              out var invalidNumberReason) &&
+          invalidNumberReason.Contains("UID"),
+        "packet schema rejects numeric fields sent as strings");
+}
+using (var invalidBoolean = Json(
+    """{"Type":"TradeReply","RequesterDBID":123,"Accept":"true"}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              invalidBoolean.RootElement,
+              "TradeReply",
+              out var invalidBoolReason) &&
+          invalidBoolReason.Contains("Accept"),
+        "packet schema rejects boolean fields sent as strings");
+}
+using (var missingRequired = Json(
+    """{"Type":"UseSkill","TargetID":42}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              missingRequired.RootElement,
+              "UseSkill",
+              out var missingReason) &&
+          missingReason.Contains("SkillID"),
+        "packet schema rejects missing required skill field");
+}
+using (var validBankPacket = Json(
+    """{"Type":"BankTransfer","UID":9,"TabType":0,"Amount":1,"ToBank":false}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              validBankPacket.RootElement,
+              "BankTransfer", out _),
+        "packet schema accepts recovered client bank payload");
+}
+using (var optionalSkillTarget = Json(
+    """{"Type":"UseSkill","SkillID":26104}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              optionalSkillTarget.RootElement,
+              "UseSkill", out _),
+        "packet schema permits optional no-target skill fields");
+}
+
 var repoRoot = Directory.GetCurrentDirectory();
 var gameDataRoot = Path.Combine(repoRoot, "Old", "服務端", "Dat");
 var questRoot = Path.Combine(gameDataRoot, "Quest");
@@ -3266,6 +3315,17 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"SyncMoney\"")),
             "RepairItemRequest repairs mecha equipment and syncs money/mecha data");
+    }
+
+    // Verify malformed requests do not enter module handlers or mutate assets.
+    using (var malformedBank = Json(
+        """{"Type":"BankTransfer","UID":"1","TabType":0,"Amount":1,"ToBank":true}"""))
+    {
+        var response = router.Handle(malformedBank.RootElement, session);
+        Check(response.Count == 1 &&
+              JsonSerializer.Serialize(response[0]).Contains(
+                  "\\"Code\\":\\"INVALID_PACKET\\""),
+            "malformed bank transfer returns typed INVALID_PACKET instead of modifying assets");
     }
 
     // BankTransfer: general items support partial stack deposit/withdraw.
