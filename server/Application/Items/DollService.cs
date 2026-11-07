@@ -126,12 +126,24 @@ public sealed class DollService
             });
         }
 
-        packets.Add(new
+        var effectPacket = new
         {
             Type = "PlayItemEffect",
             EntityID = characterId,
             ItemIndex = dollItemIndex
-        });
+        };
+        packets.Add(effectPacket);
+
+        var presence =
+            _broadcasts.FindCharacter(characterId);
+        if (presence is not null &&
+            presence.MapId > 0)
+        {
+            _broadcasts.PublishToMap(
+                presence.MapId,
+                effectPacket,
+                presence.ConnectionId);
+        }
 
         packets.Add(Flash(
             $"幸福娃娃送給你：{reward.Name}"));
