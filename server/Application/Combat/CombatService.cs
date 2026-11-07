@@ -3504,8 +3504,7 @@ public sealed class CombatService
             Math.Abs(
                 newY - monster.LastMovePacketY.Value) <= epsilon;
 
-        if (actualDistanceSquared <= epsilon * epsilon ||
-            repeatsLastPacket)
+        if (actualDistanceSquared <= epsilon * epsilon)
         {
             if (monster.LastStallLogAt == DateTimeOffset.MinValue ||
                 now - monster.LastStallLogAt >= TimeSpan.FromSeconds(2))
