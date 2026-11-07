@@ -4,6 +4,8 @@ extends BaseEntity
 @export var move_speed: float = 200.0
 
 var sync_timer: float = 0.0
+var last_walkable_sync_position: Vector2 = Vector2.ZERO
+var has_last_walkable_sync_position: bool = false
 const SYNC_RATE: float = 0.05
 var _movement_state_reported: bool = false
 var _initial_visual_ready: bool = false
@@ -718,12 +720,29 @@ func _handle_movement(delta: float) -> void :
 		_stop_movement()
 
 func _handle_network_sync(delta: float) -> void :
-	if current_state == "walk":
-		sync_timer += delta
-		if sync_timer >= SYNC_RATE:
-			sync_timer = 0.0
-			if NetworkManager.is_connected_to_server:
-				NetworkManager.send_sync_position(int(global_position.x), int(global_position.y))
+	if current_state != "walk":
+		return
+
+	sync_timer += delta
+	if sync_timer < SYNC_RATE:
+		return
+	sync_timer = 0.0
+
+	if not NetworkManager.is_connected_to_server:
+		return
+
+	var map_id: int = int(data_model.map_id) if data_model else 0
+	if LegacyPathfinder.is_walkable(
+		map_id,
+		global_position,
+		can_cross_special_terrain
+	):
+		last_walkable_sync_position = global_position
+		has_last_walkable_sync_position = true
+		NetworkManager.send_sync_position(
+			int(global_position.x),
+			int(global_position.y)
+		)
 
 func _set_navigation_target(destination: Vector2) -> void :
 	move_destination = destination
@@ -749,6 +768,8 @@ func _set_navigation_target(destination: Vector2) -> void :
 
 func apply_position_correction(corrected_position: Vector2) -> void :
 	global_position = corrected_position
+	last_walkable_sync_position = corrected_position
+	has_last_walkable_sync_position = true
 	velocity = Vector2.ZERO
 	is_moving = false
 	is_mouse_holding = false
@@ -773,7 +794,22 @@ func _stop_movement() -> void :
 	current_state = "idle"
 	stuck_frames = 0
 	if NetworkManager.is_connected_to_server:
-		NetworkManager.send_sync_position(int(global_position.x), int(global_position.y))
+		var map_id: int = int(data_model.map_id) if data_model else 0
+		var sync_position := global_position
+		if LegacyPathfinder.is_walkable(
+			map_id,
+			global_position,
+			can_cross_special_terrain
+		):
+			last_walkable_sync_position = global_position
+			has_last_walkable_sync_position = true
+		elif has_last_walkable_sync_position:
+			sync_position = last_walkable_sync_position
+
+		NetworkManager.send_sync_position(
+			int(sync_position.x),
+			int(sync_position.y)
+		)
 		if _movement_state_reported:
 			NetworkManager.send_secure_packet({"Type": "SyncState", "State": "idle", "Dir": current_dir})
 	_movement_state_reported = false
