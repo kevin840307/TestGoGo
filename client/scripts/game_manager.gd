@@ -406,21 +406,21 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		_report_initial_loading_progress(progress_callback, 98.5, "預先準備遊戲視窗")
 		await current_hud.prepare_lazy_windows_before_reveal()
 
-	_report_initial_loading_progress(progress_callback, 98.4, "套用地圖環境")
+	_report_initial_loading_progress(progress_callback, 98.7, "套用地圖環境")
 	await get_tree().process_frame
 	_apply_current_festival_theme()
 	await get_tree().process_frame
 
-	_report_initial_loading_progress(progress_callback, 98.8, "初始化地圖物件")
+	_report_initial_loading_progress(progress_callback, 99.0, "初始化地圖物件")
 	if BuildingManager:
 		await _init_buildings_with_diagnostics(0, target_map_id)
 	await get_tree().process_frame
 
-	_report_initial_loading_progress(progress_callback, 99.2, "同步地圖角色")
+	_report_initial_loading_progress(progress_callback, 99.3, "同步地圖角色")
 	while NetworkEntityManager and NetworkEntityManager.has_method("is_initial_spawn_queue_idle") and not NetworkEntityManager.is_initial_spawn_queue_idle():
 		await get_tree().process_frame
 
-	_report_initial_loading_progress(progress_callback, 99.6, "載入背景音樂")
+	_report_initial_loading_progress(progress_callback, 99.7, "載入背景音樂")
 	await get_tree().process_frame
 	await AudioManager.play_map_bgm(map_id.to_int())
 
