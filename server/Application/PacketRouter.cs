@@ -537,11 +537,21 @@ public sealed class PacketRouter
                             }
                         ];
 
+                    var activePetUid = Convert.ToInt64(activePet["UID"]);
+                    var activePetPosition =
+                        state.PetPositions.TryGetValue(
+                            activePetUid,
+                            out var runtimePosition)
+                            ? runtimePosition
+                            : (state.LastX + 40, state.LastY + 20);
+
                     return _combat.PetAttack(
                         state,
-                        Convert.ToInt64(activePet["UID"]),
+                        activePetUid,
                         Math.Max(1, Convert.ToInt32(activePet["Attack"])),
-                        req.Int("TargetEntityID"));
+                        req.Int("TargetEntityID"),
+                        activePetPosition.X,
+                        activePetPosition.Y);
                 }
 
                 var petUid = req.Int("PetUID");
@@ -638,6 +648,8 @@ public sealed class PacketRouter
                     foreach (var oldPetUid in previouslyActivePets)
                     {
                         if (oldPetUid == petUid) continue;
+                        state.PetPositions.Remove(oldPetUid);
+                        state.PetLastAttackAt.Remove(oldPetUid);
                         responses.Add(new
                         {
                             Type = "DespawnEntity",
@@ -652,15 +664,20 @@ public sealed class PacketRouter
                         state.CharacterId.Value);
                     if (pet is not null && character is not null)
                     {
+                        var spawnX = Convert.ToDouble(character["LocX"]) + 40;
+                        var spawnY = Convert.ToDouble(character["LocY"]) + 20;
+                        state.PetPositions[petUid] = (spawnX, spawnY);
                         responses.Add(BuildPetSpawnPacket(
                             state.CharacterId.Value,
                             pet,
-                            Convert.ToDouble(character["LocX"]) + 40,
-                            Convert.ToDouble(character["LocY"]) + 20));
+                            spawnX,
+                            spawnY));
                     }
                 }
                 else if (success && action == "Recall")
                 {
+                    state.PetPositions.Remove(petUid);
+                    state.PetLastAttackAt.Remove(petUid);
                     responses.Add(new
                     {
                         Type = "DespawnEntity",
@@ -907,6 +924,7 @@ public sealed class PacketRouter
                     state.CurrentMapId));
             packets.AddRange(
                 BuildActivePetSpawnPackets(
+                    state,
                     accountId,
                     dbid,
                     state.LastX,
@@ -1205,6 +1223,7 @@ public sealed class PacketRouter
     }
 
     private IReadOnlyList<object> BuildActivePetSpawnPackets(
+        ClientSession state,
         long accountId,
         long dbid,
         double playerX,
@@ -1216,11 +1235,18 @@ public sealed class PacketRouter
         foreach (var pet in assets.Pets.Where(x =>
                      Convert.ToInt32(x["State"]) == 1))
         {
+            var petUid = Convert.ToInt64(pet["UID"]);
+            var spawnX = playerX + 40;
+            var spawnY = playerY + 20;
+
+            state.PetPositions[petUid] = (spawnX, spawnY);
+            state.PetLastAttackAt.Remove(petUid);
+
             packets.Add(BuildPetSpawnPacket(
                 dbid,
                 pet,
-                playerX + 40,
-                playerY + 20));
+                spawnX,
+                spawnY));
         }
 
         return packets;
@@ -1235,29 +1261,153 @@ public sealed class PacketRouter
         DateTimeOffset now)
     {
         if (now - state.LastPetFollowTick <
-            TimeSpan.FromMilliseconds(400))
+            TimeSpan.FromMilliseconds(250))
             return [];
 
         state.LastPetFollowTick = now;
 
         var assets = _store.GetCharacterAssets(accountId, dbid);
+        var character = _store.GetCharacter(accountId, dbid);
+        var playerAlive = character is not null &&
+                          Convert.ToInt32(character["HP"]) > 0;
         var packets = new List<object>();
 
         foreach (var pet in assets.Pets.Where(x =>
                      Convert.ToInt32(x["State"]) == 1))
         {
+            var petUid = Convert.ToInt64(pet["UID"]);
+            var petEntityId = 4_000_000L + petUid;
+
+            if (!state.PetPositions.TryGetValue(
+                    petUid,
+                    out var petPosition))
+            {
+                petPosition = (playerX + 40, playerY + 20);
+                state.PetPositions[petUid] = petPosition;
+                packets.Add(BuildPetSpawnPacket(
+                    dbid,
+                    pet,
+                    petPosition.X,
+                    petPosition.Y));
+            }
+
+            var target = playerAlive
+                ? state.Monsters.Values
+                    .Where(x =>
+                        x.IsAlive &&
+                        x.MapId == state.CurrentMapId)
+                    .Select(x => new
+                    {
+                        Monster = x,
+                        DistanceSquared =
+                            Math.Pow(x.X - petPosition.X, 2) +
+                            Math.Pow(x.Y - petPosition.Y, 2)
+                    })
+                    .Where(x =>
+                        x.DistanceSquared <= 420.0 * 420.0)
+                    .OrderBy(x => x.DistanceSquared)
+                    .FirstOrDefault()
+                : null;
+
+            if (target is not null)
+            {
+                var monster = target.Monster;
+                var dx = monster.X - petPosition.X;
+                var dy = monster.Y - petPosition.Y;
+                var distance = Math.Sqrt(target.DistanceSquared);
+
+                if (distance > 115.0)
+                {
+                    var step = Math.Min(
+                        65.0,
+                        Math.Max(0.0, distance - 110.0));
+                    if (step > 0.0)
+                    {
+                        var nx = petPosition.X + dx / distance * step;
+                        var ny = petPosition.Y + dy / distance * step;
+                        state.PetPositions[petUid] = (nx, ny);
+
+                        packets.Add(new
+                        {
+                            Type = "MoveEntity",
+                            EntityID = petEntityId,
+                            X = nx,
+                            Y = ny,
+                            Dir = DirectionFromDelta(dx, dy),
+                            SpeedTime = 0.30
+                        });
+                    }
+
+                    continue;
+                }
+
+                var lastAttackAt =
+                    state.PetLastAttackAt.GetValueOrDefault(
+                        petUid,
+                        DateTimeOffset.MinValue);
+
+                if (now - lastAttackAt >=
+                    TimeSpan.FromMilliseconds(1200))
+                {
+                    var attackPackets = _combat.PetAttack(
+                        state,
+                        petUid,
+                        Math.Max(1, Convert.ToInt32(pet["Attack"])),
+                        monster.EntityId,
+                        petPosition.X,
+                        petPosition.Y);
+
+                    if (attackPackets.Count > 0)
+                    {
+                        state.PetLastAttackAt[petUid] = now;
+                        packets.AddRange(attackPackets);
+                    }
+                }
+
+                continue;
+            }
+
+            var followX = playerX + 42;
+            var followY = playerY + 24;
+            var followDx = followX - petPosition.X;
+            var followDy = followY - petPosition.Y;
+            var followDistance = Math.Sqrt(
+                followDx * followDx +
+                followDy * followDy);
+
+            if (followDistance <= 10.0)
+                continue;
+
+            state.PetPositions[petUid] = (followX, followY);
             packets.Add(new
             {
                 Type = "MoveEntity",
-                EntityID = 4_000_000L + Convert.ToInt64(pet["UID"]),
-                X = playerX + 42,
-                Y = playerY + 24,
-                Dir = "6",
-                SpeedTime = 0.35
+                EntityID = petEntityId,
+                X = followX,
+                Y = followY,
+                Dir = DirectionFromDelta(followDx, followDy),
+                SpeedTime = followDistance > 250.0 ? 0.01 : 0.35
             });
         }
 
         return packets;
+    }
+
+    private static string DirectionFromDelta(
+        double dx,
+        double dy)
+    {
+        if (Math.Abs(dx) < 0.001 &&
+            Math.Abs(dy) < 0.001)
+            return "1";
+
+        var degrees = Math.Atan2(dy, dx) * 180.0 / Math.PI;
+        if (degrees < 0)
+            degrees += 360.0;
+
+        var dirs = new[] { "6", "7", "8", "1", "2", "3", "4", "5" };
+        var index = (int)Math.Round(degrees / 45.0) % 8;
+        return dirs[index];
     }
 
     private object BuildPetSpawnPacket(
