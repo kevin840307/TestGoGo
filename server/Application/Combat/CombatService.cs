@@ -2061,6 +2061,8 @@ public sealed class CombatService
             var runtime = _runtime.GetMap(
                 session.CurrentMapId);
             var totalDamageDealt = 0;
+            var screenAoeResults = new List<object>();
+            var screenAoeKills = new List<MonsterRuntimeState>();
 
             lock (runtime.SyncRoot)
             {
@@ -2115,19 +2117,33 @@ public sealed class CombatService
                         0,
                         hpBeforeDamage - monster.CurrentHp);
 
-                    packets.Add(new
+                    if (isScreenAreaAttack)
                     {
-                        Type = "EntityDamage",
-                        TargetID = monster.EntityId,
-                        TargetType = 1,
-                        Damage = damage,
-                        CurrentHP = monster.CurrentHp,
-                        MaxHP = monster.MaxHp,
-                        IsCrit = false,
-                        SkillID = skillId,
-                        SkillLevel = skillLevel,
-                        AttackerID = session.CharacterId.Value
-                    });
+                        screenAoeResults.Add(new
+                        {
+                            EntityID = monster.EntityId,
+                            Damage = damage,
+                            CurrentHP = monster.CurrentHp,
+                            MaxHP = monster.MaxHp,
+                            Died = monster.CurrentHp == 0
+                        });
+                    }
+                    else
+                    {
+                        packets.Add(new
+                        {
+                            Type = "EntityDamage",
+                            TargetID = monster.EntityId,
+                            TargetType = 1,
+                            Damage = damage,
+                            CurrentHP = monster.CurrentHp,
+                            MaxHP = monster.MaxHp,
+                            IsCrit = false,
+                            SkillID = skillId,
+                            SkillLevel = skillLevel,
+                            AttackerID = session.CharacterId.Value
+                        });
+                    }
 
                     if (monster.CurrentHp > 0 &&
                         !monster.HasTarget)
@@ -2159,36 +2175,64 @@ public sealed class CombatService
                         monster,
                         MonsterAiState.Dead);
 
-                    packets.Add(new
+                    if (isScreenAreaAttack)
                     {
-                        Type = "EntityDeath",
-                        EntityID = monster.EntityId,
-                        EntityType = 1,
-                        KillerID = session.CharacterId.Value
-                    });
+                        screenAoeKills.Add(monster);
+                    }
+                    else
+                    {
+                        packets.Add(new
+                        {
+                            Type = "EntityDeath",
+                            EntityID = monster.EntityId,
+                            EntityType = 1,
+                            KillerID = session.CharacterId.Value
+                        });
 
-                    AddCharacterKillRewards(
+                        AddCharacterKillRewards(
+                            session,
+                            accountId,
+                            monster,
+                            packets);
+
+                        AddMonsterDrops(
+                            session,
+                            accountId,
+                            monster,
+                            packets);
+
+                        AddMechaKillExperience(
+                            session,
+                            accountId,
+                            monster,
+                            packets);
+
+                        AddActivePetKillExperience(
+                            session,
+                            accountId,
+                            monster,
+                            packets);
+                    }
+                }
+            }
+
+            if (isScreenAreaAttack)
+            {
+                packets.Add(new
+                {
+                    Type = "ScreenAoeResult",
+                    SkillID = skillId,
+                    SkillLevel = skillLevel,
+                    AttackerID = session.CharacterId.Value,
+                    Results = screenAoeResults.ToArray()
+                });
+
+                if (screenAoeKills.Count > 0)
+                {
+                    AddScreenAreaKillRewards(
                         session,
                         accountId,
-                        monster,
-                        packets);
-
-                    AddMonsterDrops(
-                        session,
-                        accountId,
-                        monster,
-                        packets);
-
-                    AddMechaKillExperience(
-                        session,
-                        accountId,
-                        monster,
-                        packets);
-
-                    AddActivePetKillExperience(
-                        session,
-                        accountId,
-                        monster,
+                        screenAoeKills,
                         packets);
                 }
             }
@@ -2925,6 +2969,157 @@ public sealed class CombatService
                 });
             }
         }
+    }
+
+    private void AddScreenAreaKillRewards(
+        ClientSession session,
+        long accountId,
+        IReadOnlyList<MonsterRuntimeState> monsters,
+        List<object> packets)
+    {
+        if (!session.CharacterId.HasValue ||
+            monsters.Count == 0)
+            return;
+
+        var dbid = session.CharacterId.Value;
+        var before = _store.GetCharacter(accountId, dbid);
+        if (before is null)
+            return;
+
+        var oldLevel = Math.Clamp(
+            Convert.ToInt32(before["Level"]),
+            1,
+            255);
+
+        long totalExp = 0;
+        long totalMoney = 0;
+
+        foreach (var monster in monsters)
+        {
+            var gainedExp = _battle.ExperienceForKill(
+                oldLevel,
+                monster.Level);
+
+            var expMultiplierPercent =
+                _store.GetTimedEffectValue(
+                    accountId,
+                    dbid,
+                    "exp_multiplier_percent",
+                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+            if (expMultiplierPercent > 0)
+            {
+                gainedExp = (int)Math.Clamp(
+                    (long)gainedExp *
+                    expMultiplierPercent / 100L,
+                    0L,
+                    int.MaxValue);
+            }
+
+            totalExp += Math.Clamp(
+                (long)gainedExp *
+                CharacterExperienceMultiplier,
+                0L,
+                int.MaxValue);
+            totalMoney += Math.Max(1, monster.Level);
+        }
+
+        var expToAdd = (int)Math.Clamp(
+            totalExp,
+            0L,
+            int.MaxValue);
+        var moneyToAdd = (int)Math.Clamp(
+            totalMoney,
+            0L,
+            int.MaxValue);
+
+        var rewarded = _store.AddRewards(
+            accountId,
+            dbid,
+            expToAdd,
+            moneyToAdd);
+
+        if (rewarded is null)
+            return;
+
+        var accumulatedExp = Math.Max(
+            0,
+            Convert.ToInt32(rewarded["ExpAcc"]));
+        var newLevel = _growth.ResolveLevel(
+            oldLevel,
+            accumulatedExp);
+        var abilityPoints = _growth.AbilityPointsGained(
+            oldLevel,
+            newLevel);
+        var maxExp = _growth.ExperienceThresholdForLevel(
+            newLevel);
+
+        rewarded = _store.SetExperienceProgress(
+                       accountId,
+                       dbid,
+                       newLevel,
+                       maxExp,
+                       abilityPoints)
+                   ?? rewarded;
+
+        if (newLevel > oldLevel)
+        {
+            var growth = _growth.Calculate(rewarded);
+            rewarded = _store.ApplyGrowthStats(
+                           accountId,
+                           dbid,
+                           growth.MaxHP,
+                           growth.MaxMP,
+                           growth.MaxSP,
+                           growth.Attack,
+                           growth.Defense,
+                           growth.MagicAttack,
+                           growth.MagicDefense,
+                           growth.Hit,
+                           growth.Dodge,
+                           growth.MoveSpeed)
+                       ?? rewarded;
+
+            packets.Add(new
+            {
+                Type = "SystemMessageFlash",
+                Message = $"升級！Lv.{newLevel}"
+            });
+        }
+
+        packets.Add(new
+        {
+            Type = "ItemPickupFeedback",
+            Message =
+                $"範圍擊倒 {monsters.Count} 隻，獲得經驗值 {expToAdd:N0}",
+            PlaySound = false
+        });
+
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            dbid);
+        var stats = ApplyActiveSkillBuffs(
+            CharacterStatCalculator.Calculate(
+                rewarded,
+                assets,
+                _current),
+            dbid,
+            DateTimeOffset.UtcNow);
+
+        packets.Add(BuildPlayerStatusPacket(
+            rewarded,
+            stats));
+        BroadcastPublicStatus(
+            session,
+            dbid,
+            rewarded,
+            stats);
+
+        packets.Add(new
+        {
+            Type = "SyncMoney",
+            Money = rewarded["Money"]
+        });
     }
 
     private void AddCharacterKillRewards(
