@@ -3442,11 +3442,29 @@ public sealed class PacketRouter
 
             case "ChatMessage":
             {
-                if (!state.CharacterId.HasValue) return [];
-                var character = _store.GetCharacter(accountId, state.CharacterId.Value);
-                if (character is null) return [];
+                if (!state.CharacterId.HasValue)
+                    return [];
 
-                var message = req.Str("Message");
+                var selfDbid = state.CharacterId.Value;
+                var character = _store.GetCharacter(
+                    accountId,
+                    selfDbid);
+                if (character is null)
+                    return [];
+
+                var message = req.Str("Message").Trim();
+                if (message.Length == 0)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "聊天內容不可為空白"
+                        }
+                    ];
+                }
+
                 if (message.Length > 200)
                     message = message[..200];
 
@@ -3460,27 +3478,127 @@ public sealed class PacketRouter
                 var clubCommand =
                     _club.TryHandleChatCommand(
                         accountId,
-                        state.CharacterId.Value,
+                        selfDbid,
                         message);
 
                 if (clubCommand is not null)
                     return clubCommand;
 
+                var channel = req.Int("Channel", 0);
+                if (channel is < 0 or > 3)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "不支援的聊天頻道"
+                        }
+                    ];
+                }
+
+                var bubbleType = Math.Clamp(
+                    req.Int("BubbleType", 0),
+                    0,
+                    5);
+
                 var chatPacket = new
                 {
                     Type = "ChatBroadcast",
-                    EntityID = state.CharacterId.Value,
+                    EntityID = selfDbid,
                     SenderName = character["NAME"],
                     Race = character["Race"],
-                    Channel = req.Int("Channel"),
+                    Channel = channel,
                     Message = message,
-                    BubbleType = req.Int("BubbleType")
+                    BubbleType = bubbleType
                 };
 
-                _broadcasts.PublishToMap(
-                    state.CurrentMapId,
-                    chatPacket,
-                    state.ConnectionId);
+                switch (channel)
+                {
+                    // Nearby: only players on the same map. The sender gets
+                    // the packet from the normal response path below.
+                    case 0:
+                        _broadcasts.PublishToMap(
+                            state.CurrentMapId,
+                            chatPacket,
+                            state.ConnectionId);
+                        break;
+
+                    // Faction/world channel in the recovered UI has no
+                    // separate faction identifier on the wire. Broadcast to
+                    // all authenticated online characters, across maps.
+                    case 1:
+                        _broadcasts.PublishToAllExcept(
+                            state.ConnectionId,
+                            chatPacket);
+                        break;
+
+                    // Club: persistence is authoritative for membership;
+                    // only currently-online club members receive the packet.
+                    case 2:
+                    {
+                        var club = _store.GetClubSnapshot(
+                            accountId,
+                            selfDbid,
+                            DateTimeOffset.UtcNow
+                                .ToUnixTimeMilliseconds());
+
+                        if (club is null)
+                        {
+                            return
+                            [
+                                new
+                                {
+                                    Type = "SystemMessageFlash",
+                                    Message = "你尚未加入戰團"
+                                }
+                            ];
+                        }
+
+                        foreach (var member in club.Members)
+                        {
+                            if (member.DbId == selfDbid)
+                                continue;
+
+                            _broadcasts.PublishToCharacter(
+                                member.DbId,
+                                chatPacket);
+                        }
+
+                        break;
+                    }
+
+                    // Party: PartyService owns the current in-memory party
+                    // membership and is already used by combat sharing.
+                    case 3:
+                    {
+                        if (string.IsNullOrWhiteSpace(
+                                _party.GetPartyId(selfDbid)))
+                        {
+                            return
+                            [
+                                new
+                                {
+                                    Type = "SystemMessageFlash",
+                                    Message = "你尚未加入隊伍"
+                                }
+                            ];
+                        }
+
+                        foreach (var member in
+                                 _party.GetMembers(selfDbid))
+                        {
+                            if (member.CharacterId == selfDbid)
+                                continue;
+
+                            _broadcasts.PublishToCharacter(
+                                member.CharacterId,
+                                chatPacket);
+                        }
+
+                        break;
+                    }
+                }
 
                 return [chatPacket];
             }
