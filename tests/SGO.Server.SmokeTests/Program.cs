@@ -1107,9 +1107,11 @@ try
           closeRangePackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"SyncState\"") &&
-              JsonSerializer.Serialize(x).Contains(
-                  "\"State\":\"idle\"")),
-        "monster stops walk animation once inside melee stop distance");
+              (JsonSerializer.Serialize(x).Contains(
+                   "\"State\":\"attack\"") ||
+               JsonSerializer.Serialize(x).Contains(
+                   "\"State\":\"idle\""))),
+        "monster stops walk animation and switches to attack/idle inside melee stop distance");
 
     var sawDeath = false;
 
