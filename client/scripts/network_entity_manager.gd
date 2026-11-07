@@ -360,41 +360,56 @@ func _play_screen_aoe_target_effect(target_node: Node2D) -> void :
 	scene.add_child(effect_root)
 
 	var outer := Line2D.new()
-	outer.width = 3.0
-	outer.default_color = Color(0.65, 0.9, 1.0, 0.95)
+	outer.width = 4.0
+	outer.default_color = Color(0.52, 0.86, 1.0, 1.0)
 	outer.closed = true
 	outer.antialiased = true
 
 	var inner := Line2D.new()
 	inner.width = 2.0
-	inner.default_color = Color(1.0, 1.0, 1.0, 0.8)
+	inner.default_color = Color(1.0, 1.0, 1.0, 0.9)
 	inner.closed = true
 	inner.antialiased = true
 
-	var segments := 24
+	var segments := 28
 	for i in range(segments):
 		var angle := TAU * float(i) / float(segments)
-		outer.add_point(Vector2(cos(angle), sin(angle)) * 18.0)
+		var pulse := 1.0 + 0.10 * sin(angle * 6.0)
+		outer.add_point(Vector2(cos(angle), sin(angle)) * 20.0 * pulse)
 		inner.add_point(Vector2(cos(angle), sin(angle)) * 9.0)
 
 	effect_root.add_child(outer)
 	effect_root.add_child(inner)
 
-	effect_root.scale = Vector2(0.45, 0.45)
-	inner.modulate.a = 1.0
+	for ray_index in range(4):
+		var ray := Line2D.new()
+		ray.width = 2.0
+		ray.default_color = Color(0.92, 0.98, 1.0, 0.95)
+		var ray_angle := PI * 0.5 * float(ray_index)
+		ray.add_point(Vector2(cos(ray_angle), sin(ray_angle)) * 7.0)
+		ray.add_point(Vector2(cos(ray_angle), sin(ray_angle)) * 33.0)
+		effect_root.add_child(ray)
+
+	effect_root.scale = Vector2(0.35, 0.35)
 
 	var tween := effect_root.create_tween()
 	tween.tween_property(
 		effect_root,
 		"scale",
-		Vector2(2.2, 2.2),
-		0.22
-	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		Vector2(2.6, 2.6),
+		0.24
+	).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(
+		effect_root,
+		"rotation",
+		0.45,
+		0.24
+	)
 	tween.parallel().tween_property(
 		effect_root,
 		"modulate:a",
 		0.0,
-		0.28
+		0.32
 	)
 	tween.tween_callback(effect_root.queue_free)
 
