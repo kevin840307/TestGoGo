@@ -57,6 +57,12 @@ public interface ICharacterStore
         long dbid,
         int attackSpeed);
     Dictionary<string, object>? Revive(long accountId, long dbid);
+    Dictionary<string, object>? ReviveBySkill(
+        long accountId,
+        long dbid,
+        int hpPercent,
+        int mpPercent,
+        bool clearDeathExp);
     Dictionary<string, object>? ApplyDamage(
         long accountId,
         long dbid,
