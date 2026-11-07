@@ -1299,8 +1299,42 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 				push_warning("[WORLD_READY_REJECTED] %s" % str(data.get("Message", "")))
 
 		"UpdateShortcutResponse":
-			if not bool(data.get("Success", false)):
-				system_message_flash_received.emit(str(data.get("Message", "快速鍵儲存失敗")))
+			var shortcut_ok := bool(data.get("Success", false))
+			var slot_index := int(data.get("SlotIndex", -1))
+			var shortcut_type := int(data.get("ShortcutType", 0))
+			var target_id := int(data.get("TargetID", 0))
+
+			if shortcut_ok and GameManager.current_player and "data_model" in GameManager.current_player:
+				var p_data = GameManager.current_player.data_model
+				if p_data and "shortcuts" in p_data:
+					var shortcuts: Array = p_data.shortcuts
+					var found := false
+					for i in range(shortcuts.size() - 1, -1, -1):
+						if int(shortcuts[i].get("SlotIndex", -1)) != slot_index:
+							continue
+						if shortcut_type == 0:
+							shortcuts.remove_at(i)
+						else:
+							shortcuts[i]["ShortcutType"] = shortcut_type
+							shortcuts[i]["TargetID"] = target_id
+						found = true
+						break
+					if not found and shortcut_type > 0 and slot_index >= 0:
+						shortcuts.append({
+							"SlotIndex": slot_index,
+							"ShortcutType": shortcut_type,
+							"TargetID": target_id
+						})
+
+			if not shortcut_ok:
+				system_message_flash_received.emit(
+					str(data.get("Message", "快速鍵儲存失敗"))
+				)
+
+			# On success render the newly acknowledged model; on failure render the
+			# old authoritative model to roll back the optimistic visual slot.
+			if GameManager.current_hud and GameManager.current_hud.has_method("_load_shortcuts_from_data"):
+				GameManager.current_hud.call_deferred("_load_shortcuts_from_data")
 
 		"PacketError":
 			var request_type: String = str(data.get("RequestType", ""))
