@@ -110,7 +110,7 @@ var current_mecha_body_spr_id: int = 0
 var _audio_sequence_key: String = ""
 var _audio_played_cues: Dictionary = {}
 var _audio_last_frame: int = -1
-var _controller_timed_frames_cache: Dictionary = {}
+static var _shared_controller_timed_frames_cache: Dictionary = {}
 var _mecha_head_anchor_cache: Dictionary = {}
 
 const ACT_CONTROLLER_TIMELINES_META = "act_controller_timelines"
@@ -937,8 +937,8 @@ func _get_controller_timed_frames(source_frames: SpriteFrames, controller: Strin
 	if tick_rate <= 0.0:
 		return source_frames
 	var cache_key = "%s:%d:%s" % [controller, source_frames.get_instance_id(), skip_movement_timing]
-	if _controller_timed_frames_cache.has(cache_key):
-		return _controller_timed_frames_cache[cache_key]
+	if _shared_controller_timed_frames_cache.has(cache_key):
+		return _shared_controller_timed_frames_cache[cache_key]
 	var timed_frames = source_frames.duplicate() as SpriteFrames
 	if timed_frames == null:
 		return source_frames
@@ -969,10 +969,10 @@ func _get_controller_timed_frames(source_frames: SpriteFrames, controller: Strin
 				timed_frames.add_frame(animation_name, textures[index], float(timeline[index]["ticks"]))
 		applied_timelines[raw_action] = timeline
 	if applied_timelines.is_empty():
-		_controller_timed_frames_cache[cache_key] = source_frames
+		_shared_controller_timed_frames_cache[cache_key] = source_frames
 		return source_frames
 	timed_frames.set_meta(ACT_CONTROLLER_TIMELINES_META, applied_timelines)
-	_controller_timed_frames_cache[cache_key] = timed_frames
+	_shared_controller_timed_frames_cache[cache_key] = timed_frames
 	return timed_frames
 
 func _controller_timeline_fits(source_frames: SpriteFrames, animation_names: Array[StringName], timeline: Array, controller: String, raw_action: String) -> bool:
