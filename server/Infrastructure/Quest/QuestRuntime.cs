@@ -23,6 +23,13 @@ public sealed class QuestRuntimeBindings
     public Func<int, int>? ItemListCountLeft { get; init; }
     public Func<int, int, int, bool>? AddItem { get; init; }
     public Func<int, int, int, bool>? RemoveItem { get; init; }
+
+    public long CallerDbid { get; init; }
+    public Func<IReadOnlyList<long>>? GetTeamMemberIds { get; init; }
+    public Action<long, string, int>? SetTargetFlag { get; init; }
+    public Func<long, string, object?>? GetTargetData { get; init; }
+    public Func<long, (double X, double Y)>? GetTargetXY { get; init; }
+    public Func<long, int>? GetTargetEmotion { get; init; }
 }
 
 public sealed class QuestRuntime
@@ -84,6 +91,98 @@ public sealed class QuestRuntime
 
         // Common quest APIs. Flags and item mutations are bound by the
         // application layer so legacy Lua can keep its original API surface.
+        var teamMemberIds =
+            bindings?.GetTeamMemberIds?.Invoke() ??
+            Array.Empty<long>();
+        var teamCursor = -1;
+
+        script.Globals["GetCallerPtr"] =
+            (Func<long>)(() =>
+                bindings?.CallerDbid ?? 0L);
+
+        script.Globals["GetTeamList_First"] =
+            DynValue.NewCallback((ctx, args) =>
+            {
+                teamCursor = 0;
+                if (teamMemberIds.Count == 0)
+                {
+                    return DynValue.NewTuple(
+                        DynValue.NewNumber(0),
+                        DynValue.NewNumber(0));
+                }
+
+                return DynValue.NewTuple(
+                    DynValue.NewNumber(1),
+                    DynValue.NewNumber(teamMemberIds[0]));
+            });
+
+        script.Globals["GetTeamList_Next"] =
+            DynValue.NewCallback((ctx, args) =>
+            {
+                teamCursor++;
+                if (teamCursor < 0 ||
+                    teamCursor >= teamMemberIds.Count)
+                {
+                    return DynValue.NewTuple(
+                        DynValue.NewNumber(0),
+                        DynValue.NewNumber(0));
+                }
+
+                return DynValue.NewTuple(
+                    DynValue.NewNumber(1),
+                    DynValue.NewNumber(
+                        teamMemberIds[teamCursor]));
+            });
+
+        script.Globals["SetTargetFlag"] =
+            (Action<long,string,int>)((target, flag, value) =>
+                bindings?.SetTargetFlag?.Invoke(
+                    target,
+                    flag,
+                    value));
+
+        script.Globals["GetTargetData"] =
+            DynValue.NewCallback((ctx, args) =>
+            {
+                if (args.Count < 2)
+                    return DynValue.NewNumber(0);
+
+                var target = (long)args[0].Number;
+                var key = args[1].CastToString();
+                var value =
+                    bindings?.GetTargetData?.Invoke(
+                        target,
+                        key);
+
+                return DynValue.FromObject(
+                    script,
+                    value ?? 0);
+            });
+
+        script.Globals["GetTargetXY"] =
+            DynValue.NewCallback((ctx, args) =>
+            {
+                if (args.Count < 1)
+                {
+                    return DynValue.NewTuple(
+                        DynValue.NewNumber(0),
+                        DynValue.NewNumber(0));
+                }
+
+                var target = (long)args[0].Number;
+                var position =
+                    bindings?.GetTargetXY?.Invoke(target) ??
+                    (0.0, 0.0);
+
+                return DynValue.NewTuple(
+                    DynValue.NewNumber(position.X),
+                    DynValue.NewNumber(position.Y));
+            });
+
+        script.Globals["GetTargetEmotion"] =
+            (Func<long,int>)(target =>
+                bindings?.GetTargetEmotion?.Invoke(target) ?? 0);
+
         script.Globals["GetFlag"] = (Func<string,int>)(name =>
             bindings?.GetFlag?.Invoke(name) ?? 0);
         script.Globals["SetFlag"] = (Action<string,int>)((name, value) =>
