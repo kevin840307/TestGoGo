@@ -37,6 +37,39 @@ public sealed class SqliteGameStore : IGameStore
     private static void Arg(SqliteCommand cmd, string name, object? value)
         => cmd.Parameters.AddWithValue(name, value ?? DBNull.Value);
 
+    private static (
+        int Inventory,
+        int Equip,
+        int Pet,
+        int HorseEquip) ReadCharacterCapacities(
+        SqliteConnection db,
+        long dbid,
+        SqliteTransaction? tx = null)
+    {
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            SELECT inventory_capacity,
+                   equip_capacity,
+                   pet_capacity,
+                   horse_equip_capacity
+              FROM characters
+             WHERE id=$id
+             LIMIT 1
+            """;
+        Arg(cmd, "$id", dbid);
+
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read())
+            return (200, 200, 50, 100);
+
+        return (
+            Math.Max(1, reader.GetInt32(0)),
+            Math.Max(1, reader.GetInt32(1)),
+            Math.Max(1, reader.GetInt32(2)),
+            Math.Max(1, reader.GetInt32(3)));
+    }
+
     private static string Hash(string password)
     {
         var salt = RandomNumberGenerator.GetBytes(16);
@@ -594,10 +627,20 @@ public sealed class SqliteGameStore : IGameStore
 
     public CharacterAssets GetCharacterAssets(long accountId, long dbid)
     {
-        var assets = new CharacterAssets();
         using var db = Open();
         if (!OwnsCharacter(db, accountId, dbid))
-            return assets;
+            return new CharacterAssets();
+
+        var capacities = ReadCharacterCapacities(
+            db,
+            dbid);
+        var assets = new CharacterAssets
+        {
+            InventoryMaxSize = capacities.Inventory,
+            EquipMaxSize = capacities.Equip,
+            PetMaxSize = capacities.Pet,
+            HorseEquipMaxSize = capacities.HorseEquip
+        };
 
         using (var cmd = db.CreateCommand())
         {
@@ -1375,7 +1418,8 @@ public sealed class SqliteGameStore : IGameStore
                 {
                     if (CountRows(
                             "inventory_items",
-                            "AND in_bank=0 AND in_shop=0") >= 200)
+                            "AND in_bank=0 AND in_shop=0") >=
+                        ReadCharacterCapacities(db, dbid, tx).Inventory)
                     {
                         error = "背包空間不足";
                         return false;
@@ -1403,7 +1447,8 @@ public sealed class SqliteGameStore : IGameStore
 
             case AssetPurchaseKind.Equipment:
             {
-                if (CountRows("equipment_items") + assetCount > 200)
+                if (CountRows("equipment_items") + assetCount >
+                    ReadCharacterCapacities(db, dbid, tx).Equip)
                 {
                     error = "裝備欄空間不足";
                     return false;
@@ -3976,6 +4021,181 @@ public sealed class SqliteGameStore : IGameStore
         return Convert.ToInt64(cmd.ExecuteScalar());
     }
 
+    public CapacityExpansionResult ExpandCapacityFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        int inventoryDelta = 0,
+        int equipDelta = 0,
+        int petDelta = 0,
+        int horseEquipDelta = 0)
+    {
+        inventoryDelta = Math.Max(0, inventoryDelta);
+        equipDelta = Math.Max(0, equipDelta);
+        petDelta = Math.Max(0, petDelta);
+        horseEquipDelta = Math.Max(0, horseEquipDelta);
+
+        if (itemUid <= 0 ||
+            itemIndex <= 0 ||
+            inventoryDelta + equipDelta +
+                petDelta + horseEquipDelta <= 0)
+        {
+            return new(
+                false,
+                "擴充資料無效",
+                0,
+                0,
+                0,
+                0);
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+        {
+            return new(
+                false,
+                "角色不存在",
+                0,
+                0,
+                0,
+                0);
+        }
+
+        int sourceCount;
+        using (var source = db.CreateCommand())
+        {
+            source.Transaction = tx;
+            source.CommandText = """
+                SELECT count
+                  FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND item_index=$item
+                   AND in_bank=0
+                   AND in_shop=0
+                 LIMIT 1
+                """;
+            Arg(source, "$uid", itemUid);
+            Arg(source, "$id", dbid);
+            Arg(source, "$item", itemIndex);
+
+            var raw = source.ExecuteScalar();
+            if (raw is null)
+            {
+                return new(
+                    false,
+                    "找不到可使用的空間擴充卡",
+                    0,
+                    0,
+                    0,
+                    0);
+            }
+
+            sourceCount = Convert.ToInt32(raw);
+            if (sourceCount <= 0)
+            {
+                return new(
+                    false,
+                    "空間擴充卡數量不足",
+                    0,
+                    0,
+                    0,
+                    0);
+            }
+        }
+
+        using (var expand = db.CreateCommand())
+        {
+            expand.Transaction = tx;
+            expand.CommandText = """
+                UPDATE characters
+                   SET inventory_capacity =
+                           inventory_capacity + $inventory,
+                       equip_capacity =
+                           equip_capacity + $equip,
+                       pet_capacity =
+                           pet_capacity + $pet,
+                       horse_equip_capacity =
+                           horse_equip_capacity + $horseEquip
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(expand, "$inventory", inventoryDelta);
+            Arg(expand, "$equip", equipDelta);
+            Arg(expand, "$pet", petDelta);
+            Arg(expand, "$horseEquip", horseEquipDelta);
+            Arg(expand, "$id", dbid);
+            Arg(expand, "$account", accountId);
+
+            if (expand.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "空間擴充失敗",
+                    0,
+                    0,
+                    0,
+                    0);
+            }
+        }
+
+        using (var consume = db.CreateCommand())
+        {
+            consume.Transaction = tx;
+            consume.CommandText = sourceCount == 1
+                ? """
+                  DELETE FROM inventory_items
+                   WHERE uid=$uid
+                     AND character_id=$id
+                     AND item_index=$item
+                     AND in_bank=0
+                     AND in_shop=0
+                  """
+                : """
+                  UPDATE inventory_items
+                     SET count=count-1
+                   WHERE uid=$uid
+                     AND character_id=$id
+                     AND item_index=$item
+                     AND count > 1
+                     AND in_bank=0
+                     AND in_shop=0
+                  """;
+            Arg(consume, "$uid", itemUid);
+            Arg(consume, "$id", dbid);
+            Arg(consume, "$item", itemIndex);
+
+            if (consume.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "空間擴充卡消耗失敗",
+                    0,
+                    0,
+                    0,
+                    0);
+            }
+        }
+
+        var capacities = ReadCharacterCapacities(
+            db,
+            dbid,
+            tx);
+
+        tx.Commit();
+
+        return new(
+            true,
+            "空間擴充成功",
+            capacities.Inventory,
+            capacities.Equip,
+            capacities.Pet,
+            capacities.HorseEquip);
+    }
+
     public (bool Success, string Message, long RewardUid) OpenDoll(
         long accountId,
         long dbid,
@@ -4087,7 +4307,8 @@ public sealed class SqliteGameStore : IGameStore
                 {
                     if (CountRows(
                             "inventory_items",
-                            "AND in_bank=0 AND in_shop=0") >= 200)
+                            "AND in_bank=0 AND in_shop=0") >=
+                        ReadCharacterCapacities(db, dbid, tx).Inventory)
                         return (false, "背包空間不足，未消耗來源道具", 0);
 
                     using var add = db.CreateCommand();
@@ -4109,7 +4330,8 @@ public sealed class SqliteGameStore : IGameStore
 
             case AssetPurchaseKind.Equipment:
             {
-                if (CountRows("equipment_items") >= 200)
+                if (CountRows("equipment_items") >=
+                    ReadCharacterCapacities(db, dbid, tx).Equip)
                     return (false, "裝備欄空間不足，未消耗來源道具", 0);
 
                 using var add = db.CreateCommand();
@@ -4130,7 +4352,8 @@ public sealed class SqliteGameStore : IGameStore
 
             case AssetPurchaseKind.HorseEquipment:
             {
-                if (CountRows("horse_equipment") >= 100)
+                if (CountRows("horse_equipment") >=
+                    ReadCharacterCapacities(db, dbid, tx).HorseEquip)
                     return (false, "機甲裝備欄空間不足，未消耗來源道具", 0);
 
                 using var add = db.CreateCommand();
@@ -6245,7 +6468,11 @@ public sealed class SqliteGameStore : IGameStore
                     Arg(capacity, "$id", dbid);
 
                     if (Convert.ToInt32(
-                            capacity.ExecuteScalar()) >= 200)
+                            capacity.ExecuteScalar()) >=
+                            ReadCharacterCapacities(
+                                db,
+                                dbid,
+                                tx).Inventory)
                         return false;
                 }
 
@@ -6279,7 +6506,11 @@ public sealed class SqliteGameStore : IGameStore
 
                     if (Convert.ToInt32(
                             capacity.ExecuteScalar()) +
-                        grant.Count > 200)
+                        grant.Count >
+                            ReadCharacterCapacities(
+                                db,
+                                dbid,
+                                tx).Equip)
                         return false;
                 }
 
@@ -6325,7 +6556,11 @@ public sealed class SqliteGameStore : IGameStore
 
                     if (Convert.ToInt32(
                             capacity.ExecuteScalar()) +
-                        grant.Count > 20)
+                        grant.Count >
+                            ReadCharacterCapacities(
+                                db,
+                                dbid,
+                                tx).HorseEquip)
                         return false;
                 }
 
@@ -6809,7 +7044,11 @@ public sealed class SqliteGameStore : IGameStore
                            AND in_bank=0
                            AND in_shop=0
                         """,
-                        buyerDbid) >= 200)
+                        buyerDbid) >=
+                    ReadCharacterCapacities(
+                        db,
+                        buyerDbid,
+                        tx).Inventory)
                 {
                     return new(
                         false,
@@ -6898,7 +7137,11 @@ public sealed class SqliteGameStore : IGameStore
                            AND in_bank=0
                            AND in_shop=0
                         """,
-                        buyerDbid) >= 200)
+                        buyerDbid) >=
+                    ReadCharacterCapacities(
+                        db,
+                        buyerDbid,
+                        tx).Inventory)
                 {
                     return new(false, "裝備空間不足", buyerMoney, sellerMoney, false);
                 }
@@ -6930,7 +7173,11 @@ public sealed class SqliteGameStore : IGameStore
 
                 if (CountRows(
                         "SELECT COUNT(*) FROM pets WHERE character_id=$id",
-                        buyerDbid) >= 50)
+                        buyerDbid) >=
+                    ReadCharacterCapacities(
+                        db,
+                        buyerDbid,
+                        tx).Pet)
                 {
                     return new(false, "寵物空間不足", buyerMoney, sellerMoney, false);
                 }
@@ -8954,7 +9201,11 @@ public sealed class SqliteGameStore : IGameStore
                     """;
                 Arg(countTarget, "$id", dbid);
                 Arg(countTarget, "$target", targetBank);
-                if (Convert.ToInt32(countTarget.ExecuteScalar()) >= 200)
+                if (Convert.ToInt32(countTarget.ExecuteScalar()) >=
+                    ReadCharacterCapacities(
+                        db,
+                        dbid,
+                        tx).Inventory)
                     return (false, "目標區域空間已滿");
             }
 
@@ -9053,13 +9304,19 @@ public sealed class SqliteGameStore : IGameStore
                 table = "equipment_items";
                 uidColumn = "uid";
                 extraPredicate = " AND part=255";
-                maxSize = 200;
+                maxSize = ReadCharacterCapacities(
+                    db,
+                    dbid,
+                    tx).Equip;
                 break;
             case 3:
                 table = "horse_equipment";
                 uidColumn = "uid";
                 extraPredicate = " AND horse_uid=-1";
-                maxSize = 100;
+                maxSize = ReadCharacterCapacities(
+                    db,
+                    dbid,
+                    tx).HorseEquip;
                 break;
             default:
                 return (false, "不支援的銀行分類");
