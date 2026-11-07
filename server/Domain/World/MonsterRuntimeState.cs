@@ -28,6 +28,8 @@ public sealed class MonsterRuntimeState
     public double WanderCenterY { get; set; }
 
     public bool HasTarget { get; set; }
+    public long TargetCharacterId { get; set; }
+    public DateTimeOffset LastAiAt { get; set; } = DateTimeOffset.MinValue;
     public MonsterAiState AiState { get; set; } = MonsterAiState.Idle;
 
     // Compatibility mirrors while older tests/features migrate to AiState.
