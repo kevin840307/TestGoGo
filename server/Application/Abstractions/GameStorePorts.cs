@@ -330,6 +330,31 @@ public interface IRepairStore : ICharacterAssetReader
         long cost);
 }
 
+public sealed record TradeAssetOffer(
+    int TabType,
+    long Uid,
+    int ItemIndex,
+    int Count);
+
+public sealed record TradeCommitResult(
+    bool Success,
+    string Message,
+    long FirstMoney,
+    long SecondMoney);
+
+public interface ITradeStore : ICharacterAssetReader
+{
+    TradeCommitResult CommitTrade(
+        long firstAccountId,
+        long firstDbid,
+        long firstMoney,
+        IReadOnlyList<TradeAssetOffer> firstOffers,
+        long secondAccountId,
+        long secondDbid,
+        long secondMoney,
+        IReadOnlyList<TradeAssetOffer> secondOffers);
+}
+
 public interface IItemDiscardStore : ICharacterAssetReader
 {
     (bool Success, string Message) DiscardAsset(
