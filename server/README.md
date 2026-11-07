@@ -81,3 +81,48 @@ See `ARCHITECTURE.md`. The server is now split into:
 To add MySQL later, implement `MySqlGameStore : IGameStore` under `Infrastructure/Persistence/MySql/` and register the provider. No game-flow, WebSocket, map or Lua code should need changes.
 
 Dialog presentation prefixes such as `n`, `n1`, `p7`, and `s` are stripped before sending dialog text to the recovered client.
+
+
+## Current-client GameData alignment
+
+Runtime data is current-client first:
+
+- Current items: `client/Items/*/*.tres` or `Game:ClientRoot` / `SGO_CLIENT_ROOT`.
+- Current skills: `client/Skills/*.tres`.
+- Current pets: `client/Assets/Pets/Config.json`.
+- Old server `Dat/Shop/Shop.csv` only supplies legacy shop membership.
+- Legacy Item IDs are never trusted by ID alone. The server resolves a confirmed legacy display name to the current client ItemID. ID collisions with different names are rejected.
+- Legacy entries without a reliable name are skipped and logged instead of being exposed as the wrong current item.
+
+Useful log markers:
+
+- `[LEGACY_ID_COLLISION]`
+- `[LEGACY_NAME_UNCONFIRMED]`
+- `[CURRENT_ITEM_NOT_FOUND]`
+- `[UNHANDLED_PACKET]`
+- `[NO_RESPONSE]`
+- `[PACKET_HANDLER_FAILED]`
+
+## GM chat commands
+
+GM commands are server-side chat commands and require no client changes:
+
+```text
+/gm help
+/gm pos
+/gm map <MapID> [X] [Y]
+/gm heal
+/gm level <1-255>
+/gm money <amount>
+/gm item <current ItemID> [count]
+/gm equip <current ItemID>
+/gm mecha <current Horse ItemID>
+/gm pet <current PetID> [name]
+/gm skill <current SkillID|all> [level]
+/gm skills
+/gm clearskills
+/gm spawn <EnemyID> [X] [Y]
+/gm killall
+```
+
+Asset/skill/pet GM commands validate against the current recovered client GameData rather than accepting legacy IDs blindly.
