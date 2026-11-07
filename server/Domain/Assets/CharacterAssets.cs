@@ -11,5 +11,6 @@ public sealed class CharacterAssets
     public int InventoryMaxSize { get; init; } = 200;
     public int EquipMaxSize { get; init; } = 200;
     public int PetMaxSize { get; init; } = 50;
+    public int PetSummonMax { get; init; } = 1;
     public int HorseEquipMaxSize { get; init; } = 100;
 }
