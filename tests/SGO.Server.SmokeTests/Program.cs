@@ -2853,6 +2853,50 @@ try
             "unsupported private/wire chat channel is rejected instead of leaking to nearby players");
     }
 
+    while (clubLeaderRegistration.Queue.TryDequeue(out _)) { }
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var privateChat = Json(
+        """
+        {"Type":"ChatMessage","Message":"/name SecondCharacter cross-map-secret","Channel":0,"BubbleType":2}
+        """))
+    {
+        var responses = router.Handle(
+            privateChat.RootElement,
+            clubMemberSession);
+
+        Check(
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Channel\":4") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "cross-map-secret")) &&
+            clubLeaderRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Channel\":4") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "cross-map-secret")) &&
+            !broadcastRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "cross-map-secret")),
+            "original /name private message reaches only the named online character across maps");
+    }
+
+    using (var missingPrivateTarget = Json(
+        """
+        {"Type":"ChatMessage","Message":"/name NobodyHere hello","Channel":0,"BubbleType":0}
+        """))
+    {
+        var responses = router.Handle(
+            missingPrivateTarget.RootElement,
+            clubMemberSession);
+
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "找不到在線玩家")),
+            "private message reports an offline/unknown target instead of leaking to another chat scope");
+    }
+
     router.SyncPresence(session);
     broadcastHub.UpdatePresence(
         clubMemberRegistration.ConnectionId,
