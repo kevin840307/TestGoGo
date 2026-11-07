@@ -572,7 +572,11 @@ try
     {
         new BankPacketHandler(new BankService(store))
     };
-    var recovery = new ResourceRecoveryService(store, config);
+    var recovery = new ResourceRecoveryService(
+        store,
+        store,
+        currentCatalog,
+        config);
     config["Gameplay:Dolls:Happiness:AnnouncementRewardIds"] = "50102";
     config["Gameplay:Dolls:Happiness:AnnouncementMinimumPrice"] = "0";
     var dolls = new DollService(
