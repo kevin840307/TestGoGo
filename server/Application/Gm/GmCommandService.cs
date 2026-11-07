@@ -83,6 +83,8 @@ public sealed class GmCommandService
                 "money" => Money(parts, accountId, dbid),
                 "mallpoints" or "mallpoint" or "points"
                     => MallPoints(parts, accountId),
+                "donation" or "donate"
+                    => Donation(parts, accountId),
                 "item" => Item(parts, accountId, dbid),
                 "equip" => Equipment(parts, accountId, dbid),
                 "mecha" or "horse"
@@ -402,6 +404,32 @@ public sealed class GmCommandService
                 Points = balance
             },
             Chat($"目前商城點數：{balance}")
+        ];
+    }
+
+    private IReadOnlyList<object> Donation(
+        string[] parts,
+        long accountId)
+    {
+        if (parts.Length < 3 ||
+            !long.TryParse(parts[2], out var delta))
+        {
+            return [Chat(
+                "用法：/gm donation <變更量>，例如 5000 或 -500")];
+        }
+
+        if (!_store.AdjustLifetimeDonation(
+                accountId,
+                delta,
+                out var total))
+        {
+            return [Chat(
+                "修改累積贊助失敗（帳號不存在或累積值不可低於 0）")];
+        }
+
+        return
+        [
+            Chat($"目前累積贊助：{total} 點")
         ];
     }
 
@@ -972,7 +1000,7 @@ public sealed class GmCommandService
 
     private static string HelpText()
         => "GM: help | pos | map <id> [x] [y] | heal/restore/fullheal | level <n> | " +
-           "maxstats | attackspeed <1-1000> | money <n> | mallpoints <delta> | item <id> [count] | equip <id> | " +
+           "maxstats | attackspeed <1-1000> | money <n> | mallpoints <delta> | donation <delta> | item <id> [count] | equip <id> | " +
            "mecha <cardId> | mechacard <cardId> | mechaequip <id> [horseUid] | mechalevel <horseUid> <level> | pet <petId> [name] | " +
            "skill <id|all> [lv] | skills | clearskills | " +
            "spawn <enemyId> [x] [y] | killall | cleardrops";
