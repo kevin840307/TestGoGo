@@ -3032,6 +3032,562 @@ public sealed class SqliteGameStore : IGameStore
         return (true, "已丟棄物品");
     }
 
+    public TradeCommitResult CommitTrade(
+        long firstAccountId,
+        long firstDbid,
+        long firstMoney,
+        IReadOnlyList<TradeAssetOffer> firstOffers,
+        long secondAccountId,
+        long secondDbid,
+        long secondMoney,
+        IReadOnlyList<TradeAssetOffer> secondOffers)
+    {
+        if (firstDbid <= 0 ||
+            secondDbid <= 0 ||
+            firstDbid == secondDbid ||
+            firstMoney < 0 ||
+            secondMoney < 0)
+        {
+            return new(false, "交易資料無效", 0, 0);
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        long ReadMoney(
+            long accountId,
+            long dbid)
+        {
+            using var cmd = db.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = """
+                SELECT money
+                  FROM characters
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(cmd, "$id", dbid);
+            Arg(cmd, "$account", accountId);
+            var raw = cmd.ExecuteScalar();
+            return raw is null || raw == DBNull.Value
+                ? -1
+                : Convert.ToInt64(raw);
+        }
+
+        int ScalarInt(string sql, params (string Key, object Value)[] args)
+        {
+            using var cmd = db.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = sql;
+            foreach (var arg in args)
+                Arg(cmd, arg.Key, arg.Value);
+            return Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+        }
+
+        bool ValidateOffers(
+            long ownerDbid,
+            long targetDbid,
+            IReadOnlyList<TradeAssetOffer> offers,
+            out string error)
+        {
+            error = "";
+            var seen = new HashSet<(int TabType, long Uid)>();
+            var incomingGeneral = new Dictionary<int, int>();
+            var incomingGeneralNewSlots = new HashSet<int>();
+            var incomingEquip = 0;
+            var incomingPet = 0;
+            var incomingMecha = 0;
+
+            foreach (var offer in offers)
+            {
+                if (offer.Uid <= 0 ||
+                    offer.Count <= 0 ||
+                    offer.TabType is < 0 or > 3 ||
+                    !seen.Add((offer.TabType, offer.Uid)))
+                {
+                    error = "交易物品資料無效";
+                    return false;
+                }
+
+                switch (offer.TabType)
+                {
+                    case 0:
+                    {
+                        using var cmd = db.CreateCommand();
+                        cmd.Transaction = tx;
+                        cmd.CommandText = """
+                            SELECT item_index,count
+                              FROM inventory_items
+                             WHERE uid=$uid
+                               AND character_id=$owner
+                               AND in_bank=0
+                               AND in_shop=0
+                            """;
+                        Arg(cmd, "$uid", offer.Uid);
+                        Arg(cmd, "$owner", ownerDbid);
+                        using var reader = cmd.ExecuteReader();
+                        if (!reader.Read())
+                        {
+                            error = "交易物品已不存在";
+                            return false;
+                        }
+
+                        var itemIndex = reader.GetInt32(0);
+                        var ownedCount = reader.GetInt32(1);
+                        if (itemIndex != offer.ItemIndex ||
+                            offer.Count > ownedCount)
+                        {
+                            error = "交易物品數量已變更";
+                            return false;
+                        }
+
+                        incomingGeneral[itemIndex] =
+                            incomingGeneral.GetValueOrDefault(itemIndex) +
+                            offer.Count;
+                        break;
+                    }
+
+                    case 1:
+                    {
+                        using var cmd = db.CreateCommand();
+                        cmd.Transaction = tx;
+                        cmd.CommandText = """
+                            SELECT item_index
+                              FROM equipment_items
+                             WHERE uid=$uid
+                               AND character_id=$owner
+                               AND part=255
+                               AND in_bank=0
+                               AND in_shop=0
+                            """;
+                        Arg(cmd, "$uid", offer.Uid);
+                        Arg(cmd, "$owner", ownerDbid);
+                        var raw = cmd.ExecuteScalar();
+                        if (raw is null ||
+                            Convert.ToInt32(raw) != offer.ItemIndex ||
+                            offer.Count != 1)
+                        {
+                            error = "裝備狀態已變更";
+                            return false;
+                        }
+
+                        incomingEquip++;
+                        break;
+                    }
+
+                    case 2:
+                    {
+                        using var cmd = db.CreateCommand();
+                        cmd.Transaction = tx;
+                        cmd.CommandText = """
+                            SELECT pet_id,state,in_shop,equip0,equip1,equip2
+                              FROM pets
+                             WHERE uid=$uid
+                               AND character_id=$owner
+                            """;
+                        Arg(cmd, "$uid", offer.Uid);
+                        Arg(cmd, "$owner", ownerDbid);
+                        using var reader = cmd.ExecuteReader();
+                        if (!reader.Read() ||
+                            reader.GetInt32(0) != offer.ItemIndex ||
+                            reader.GetInt32(1) != 0 ||
+                            reader.GetInt32(2) != 0 ||
+                            reader.GetInt64(3) > 0 ||
+                            reader.GetInt64(4) > 0 ||
+                            reader.GetInt64(5) > 0 ||
+                            offer.Count != 1)
+                        {
+                            error = "寵物需收回且卸下裝備後才能交易";
+                            return false;
+                        }
+
+                        incomingPet++;
+                        break;
+                    }
+
+                    case 3:
+                    {
+                        using var cmd = db.CreateCommand();
+                        cmd.Transaction = tx;
+                        cmd.CommandText = """
+                            SELECT equip_index
+                              FROM horse_equipment
+                             WHERE uid=$uid
+                               AND character_id=$owner
+                               AND horse_uid=-1
+                               AND in_bank=0
+                               AND in_shop=0
+                            """;
+                        Arg(cmd, "$uid", offer.Uid);
+                        Arg(cmd, "$owner", ownerDbid);
+                        var raw = cmd.ExecuteScalar();
+                        if (raw is null ||
+                            Convert.ToInt32(raw) != offer.ItemIndex ||
+                            offer.Count != 1)
+                        {
+                            error = "機甲裝備狀態已變更";
+                            return false;
+                        }
+
+                        incomingMecha++;
+                        break;
+                    }
+                }
+            }
+
+            foreach (var pair in incomingGeneral)
+            {
+                var currentCount = ScalarInt(
+                    """
+                    SELECT COALESCE(SUM(count),0)
+                      FROM inventory_items
+                     WHERE character_id=$target
+                       AND item_index=$item
+                       AND in_bank=0
+                       AND in_shop=0
+                    """,
+                    ("$target", targetDbid),
+                    ("$item", pair.Key));
+
+                if (currentCount + pair.Value > 999)
+                {
+                    error = "對方物品疊加數量將超過 999";
+                    return false;
+                }
+
+                if (currentCount == 0)
+                    incomingGeneralNewSlots.Add(pair.Key);
+            }
+
+            var targetGeneralSlots = ScalarInt(
+                """
+                SELECT COUNT(*)
+                  FROM inventory_items
+                 WHERE character_id=$target
+                   AND in_bank=0
+                   AND in_shop=0
+                """,
+                ("$target", targetDbid));
+
+            var targetEquipSlots = ScalarInt(
+                """
+                SELECT COUNT(*)
+                  FROM equipment_items
+                 WHERE character_id=$target
+                   AND in_bank=0
+                   AND in_shop=0
+                """,
+                ("$target", targetDbid));
+
+            var targetPetSlots = ScalarInt(
+                """
+                SELECT COUNT(*)
+                  FROM pets
+                 WHERE character_id=$target
+                """,
+                ("$target", targetDbid));
+
+            var targetMechaSlots = ScalarInt(
+                """
+                SELECT COUNT(*)
+                  FROM horse_equipment
+                 WHERE character_id=$target
+                   AND in_bank=0
+                   AND in_shop=0
+                """,
+                ("$target", targetDbid));
+
+            if (targetGeneralSlots +
+                    incomingGeneralNewSlots.Count > 200 ||
+                targetEquipSlots + incomingEquip > 200 ||
+                targetPetSlots + incomingPet > 50 ||
+                targetMechaSlots + incomingMecha > 20)
+            {
+                error = "對方背包剩餘空間不足";
+                return false;
+            }
+
+            return true;
+        }
+
+        void TransferOffers(
+            long ownerDbid,
+            long targetDbid,
+            IReadOnlyList<TradeAssetOffer> offers)
+        {
+            foreach (var offer in offers)
+            {
+                switch (offer.TabType)
+                {
+                    case 0:
+                    {
+                        int sourceCount;
+                        using (var get = db.CreateCommand())
+                        {
+                            get.Transaction = tx;
+                            get.CommandText = """
+                                SELECT count
+                                  FROM inventory_items
+                                 WHERE uid=$uid
+                                   AND character_id=$owner
+                                """;
+                            Arg(get, "$uid", offer.Uid);
+                            Arg(get, "$owner", ownerDbid);
+                            sourceCount =
+                                Convert.ToInt32(get.ExecuteScalar());
+                        }
+
+                        long targetUid;
+                        using (var find = db.CreateCommand())
+                        {
+                            find.Transaction = tx;
+                            find.CommandText = """
+                                SELECT uid
+                                  FROM inventory_items
+                                 WHERE character_id=$target
+                                   AND item_index=$item
+                                   AND in_bank=0
+                                   AND in_shop=0
+                                 ORDER BY uid
+                                 LIMIT 1
+                                """;
+                            Arg(find, "$target", targetDbid);
+                            Arg(find, "$item", offer.ItemIndex);
+                            var raw = find.ExecuteScalar();
+                            targetUid = raw is null ||
+                                        raw == DBNull.Value
+                                ? 0
+                                : Convert.ToInt64(raw);
+                        }
+
+                        if (targetUid > 0)
+                        {
+                            using var add = db.CreateCommand();
+                            add.Transaction = tx;
+                            add.CommandText = """
+                                UPDATE inventory_items
+                                   SET count=count+$count
+                                 WHERE uid=$uid
+                                """;
+                            Arg(add, "$count", offer.Count);
+                            Arg(add, "$uid", targetUid);
+                            add.ExecuteNonQuery();
+
+                            using var take = db.CreateCommand();
+                            take.Transaction = tx;
+                            take.CommandText =
+                                sourceCount == offer.Count
+                                    ? "DELETE FROM inventory_items WHERE uid=$uid"
+                                    : """
+                                      UPDATE inventory_items
+                                         SET count=count-$count
+                                       WHERE uid=$uid
+                                      """;
+                            Arg(take, "$uid", offer.Uid);
+                            if (sourceCount != offer.Count)
+                                Arg(take, "$count", offer.Count);
+                            take.ExecuteNonQuery();
+                        }
+                        else if (sourceCount == offer.Count)
+                        {
+                            using var move = db.CreateCommand();
+                            move.Transaction = tx;
+                            move.CommandText = """
+                                UPDATE inventory_items
+                                   SET character_id=$target
+                                 WHERE uid=$uid
+                                """;
+                            Arg(move, "$target", targetDbid);
+                            Arg(move, "$uid", offer.Uid);
+                            move.ExecuteNonQuery();
+                        }
+                        else
+                        {
+                            using var take = db.CreateCommand();
+                            take.Transaction = tx;
+                            take.CommandText = """
+                                UPDATE inventory_items
+                                   SET count=count-$count
+                                 WHERE uid=$uid
+                                """;
+                            Arg(take, "$count", offer.Count);
+                            Arg(take, "$uid", offer.Uid);
+                            take.ExecuteNonQuery();
+
+                            using var add = db.CreateCommand();
+                            add.Transaction = tx;
+                            add.CommandText = """
+                                INSERT INTO inventory_items(
+                                    character_id,item_index,count)
+                                VALUES($target,$item,$count)
+                                """;
+                            Arg(add, "$target", targetDbid);
+                            Arg(add, "$item", offer.ItemIndex);
+                            Arg(add, "$count", offer.Count);
+                            add.ExecuteNonQuery();
+                        }
+
+                        break;
+                    }
+
+                    case 1:
+                    {
+                        using var move = db.CreateCommand();
+                        move.Transaction = tx;
+                        move.CommandText = """
+                            UPDATE equipment_items
+                               SET character_id=$target
+                             WHERE uid=$uid
+                               AND character_id=$owner
+                            """;
+                        Arg(move, "$target", targetDbid);
+                        Arg(move, "$uid", offer.Uid);
+                        Arg(move, "$owner", ownerDbid);
+                        move.ExecuteNonQuery();
+                        break;
+                    }
+
+                    case 2:
+                    {
+                        using var move = db.CreateCommand();
+                        move.Transaction = tx;
+                        move.CommandText = """
+                            UPDATE pets
+                               SET character_id=$target
+                             WHERE uid=$uid
+                               AND character_id=$owner
+                            """;
+                        Arg(move, "$target", targetDbid);
+                        Arg(move, "$uid", offer.Uid);
+                        Arg(move, "$owner", ownerDbid);
+                        move.ExecuteNonQuery();
+                        break;
+                    }
+
+                    case 3:
+                    {
+                        using var move = db.CreateCommand();
+                        move.Transaction = tx;
+                        move.CommandText = """
+                            UPDATE horse_equipment
+                               SET character_id=$target
+                             WHERE uid=$uid
+                               AND character_id=$owner
+                            """;
+                        Arg(move, "$target", targetDbid);
+                        Arg(move, "$uid", offer.Uid);
+                        Arg(move, "$owner", ownerDbid);
+                        move.ExecuteNonQuery();
+                        break;
+                    }
+                }
+            }
+        }
+
+        var firstBalance =
+            ReadMoney(firstAccountId, firstDbid);
+        var secondBalance =
+            ReadMoney(secondAccountId, secondDbid);
+
+        if (firstBalance < 0 ||
+            secondBalance < 0)
+            return new(false, "交易角色不存在", 0, 0);
+
+        if (firstBalance < firstMoney ||
+            secondBalance < secondMoney)
+        {
+            return new(
+                false,
+                "交易金額已超過目前持有金錢",
+                firstBalance,
+                secondBalance);
+        }
+
+        if (!ValidateOffers(
+                firstDbid,
+                secondDbid,
+                firstOffers,
+                out var firstError))
+        {
+            return new(
+                false,
+                firstError,
+                firstBalance,
+                secondBalance);
+        }
+
+        if (!ValidateOffers(
+                secondDbid,
+                firstDbid,
+                secondOffers,
+                out var secondError))
+        {
+            return new(
+                false,
+                secondError,
+                firstBalance,
+                secondBalance);
+        }
+
+        TransferOffers(
+            firstDbid,
+            secondDbid,
+            firstOffers);
+        TransferOffers(
+            secondDbid,
+            firstDbid,
+            secondOffers);
+
+        var firstNewMoney = checked(
+            firstBalance -
+            firstMoney +
+            secondMoney);
+        var secondNewMoney = checked(
+            secondBalance -
+            secondMoney +
+            firstMoney);
+
+        using (var first = db.CreateCommand())
+        {
+            first.Transaction = tx;
+            first.CommandText = """
+                UPDATE characters
+                   SET money=$money
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(first, "$money", firstNewMoney);
+            Arg(first, "$id", firstDbid);
+            Arg(first, "$account", firstAccountId);
+            if (first.ExecuteNonQuery() != 1)
+                return new(false, "交易提交失敗", firstBalance, secondBalance);
+        }
+
+        using (var second = db.CreateCommand())
+        {
+            second.Transaction = tx;
+            second.CommandText = """
+                UPDATE characters
+                   SET money=$money
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(second, "$money", secondNewMoney);
+            Arg(second, "$id", secondDbid);
+            Arg(second, "$account", secondAccountId);
+            if (second.ExecuteNonQuery() != 1)
+                return new(false, "交易提交失敗", firstBalance, secondBalance);
+        }
+
+        tx.Commit();
+
+        return new(
+            true,
+            "交易完成",
+            firstNewMoney,
+            secondNewMoney);
+    }
+
     public DirectTransferResult TransferMoney(
         long accountId,
         long dbid,
