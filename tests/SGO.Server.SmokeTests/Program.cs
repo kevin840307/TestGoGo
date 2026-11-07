@@ -7988,6 +7988,38 @@ try
             "UseItemRequest consumes one 1h EXP card and persists a 200% timed effect");
     }
 
+    var activeExpEffects =
+        store.GetActiveTimedEffects(
+            account.Value,
+            id,
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+    Check(activeExpEffects.Any(effect =>
+              effect.EffectKey == "exp_multiplier_percent" &&
+              effect.EffectValue == 200 &&
+              effect.SourceType == 1 &&
+              effect.SourceValue == 2460 &&
+              effect.DurationSeconds == 3600),
+        "timed EXP effect persists source item and total duration for reconnect HUD");
+
+    using (var reenterWithTimedBuff = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "SelectCharacterRequest",
+            DBID = id
+        })))
+    {
+        var responses = router.Handle(
+            reenterWithTimedBuff.RootElement,
+            session);
+        var json = JsonSerializer.Serialize(responses);
+        Check(json.Contains("\"Type\":\"SyncBuffs\"") &&
+              json.Contains("ExperienceBoost_200") &&
+              json.Contains("\"SourceType\":1") &&
+              json.Contains("\"Value\":2460") &&
+              json.Contains("\"TotalTime\":3600"),
+            "world bootstrap restores persistent EXP buff icon, source item and total duration");
+    }
+
     using (var reuseExpCard = Json(
         JsonSerializer.Serialize(new
         {
