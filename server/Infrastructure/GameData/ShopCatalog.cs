@@ -353,6 +353,13 @@ public sealed class ShopCatalog
             ? null
             : legacy.SourceCategory;
 
+    private static bool HasUsableLegacyServerName(
+        ShopItemDefinition legacy)
+        => !string.IsNullOrWhiteSpace(legacy.Name) &&
+           !legacy.Name.StartsWith(
+               "Item ",
+               StringComparison.OrdinalIgnoreCase);
+
     private static bool CategoryCompatible(
         string currentCategory,
         string legacyCategory)
