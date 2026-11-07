@@ -491,18 +491,24 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	while NetworkEntityManager and NetworkEntityManager.has_method("is_initial_spawn_queue_idle") and not NetworkEntityManager.is_initial_spawn_queue_idle():
 		await get_tree().process_frame
 
-	_report_initial_loading_progress(progress_callback, 99.7, "載入背景音樂")
-	await get_tree().process_frame
-	await AudioManager.play_map_bgm(map_id.to_int())
-
-	# Reveal the completed world atomically. Until this point the player only
-	# sees the loading overlay, even though the map/HUD have already entered the
-	# SceneTree and finished their _ready/deferred initialization.
-	set_frame_gap_stage("world_reveal")
+	# Warm the first rendered world frame while EntryManager's loading overlay
+	# still covers the screen. Setting these visible only at the final reveal
+	# concentrated CanvasItem/render registration into a 200-260 ms hitch.
+	_report_initial_loading_progress(progress_callback, 99.6, "預熱畫面")
+	set_frame_gap_stage("world_render_warmup")
 	if is_instance_valid(current_map_node):
 		current_map_node.visible = true
 	if is_instance_valid(current_hud):
 		current_hud.visible = true
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	_report_initial_loading_progress(progress_callback, 99.7, "載入背景音樂")
+	await AudioManager.play_map_bgm(map_id.to_int())
+
+	# The world has already rendered behind the loading overlay. Keep this stage
+	# as a diagnostic marker; the eventual overlay fade should now be cheap.
+	set_frame_gap_stage("world_reveal")
 	await get_tree().process_frame
 
 	# Optional heavy reference UI is no longer part of time-to-world. Warm it in
