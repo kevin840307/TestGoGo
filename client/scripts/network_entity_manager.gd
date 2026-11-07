@@ -343,6 +343,62 @@ func _on_entity_appearance_updated(data: Dictionary) -> void :
 	if target_node and target_node.has_method("update_appearance_from_server"):
 		target_node.update_appearance_from_server(data)
 
+func _play_screen_aoe_target_effect(target_node: Node2D) -> void :
+	if not is_instance_valid(target_node):
+		return
+	if not is_inside_tree():
+		return
+
+	var scene := get_tree().current_scene
+	if not is_instance_valid(scene):
+		return
+
+	var effect_root := Node2D.new()
+	effect_root.name = "ScreenAoeTargetHit"
+	effect_root.global_position = target_node.global_position
+	effect_root.z_index = 95
+	scene.add_child(effect_root)
+
+	var outer := Line2D.new()
+	outer.width = 3.0
+	outer.default_color = Color(0.65, 0.9, 1.0, 0.95)
+	outer.closed = true
+	outer.antialiased = true
+
+	var inner := Line2D.new()
+	inner.width = 2.0
+	inner.default_color = Color(1.0, 1.0, 1.0, 0.8)
+	inner.closed = true
+	inner.antialiased = true
+
+	var segments := 24
+	for i in range(segments):
+		var angle := TAU * float(i) / float(segments)
+		outer.add_point(Vector2(cos(angle), sin(angle)) * 18.0)
+		inner.add_point(Vector2(cos(angle), sin(angle)) * 9.0)
+
+	effect_root.add_child(outer)
+	effect_root.add_child(inner)
+
+	effect_root.scale = Vector2(0.45, 0.45)
+	inner.modulate.a = 1.0
+
+	var tween := effect_root.create_tween()
+	tween.tween_property(
+		effect_root,
+		"scale",
+		Vector2(2.2, 2.2),
+		0.22
+	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(
+		effect_root,
+		"modulate:a",
+		0.0,
+		0.28
+	)
+	tween.tween_callback(effect_root.queue_free)
+
+
 func _on_entity_damage_received(data: Dictionary) -> void :
 	var target_id = int(data.get("TargetID", 0))
 	var target_type = int(data.get("TargetType", 0))
@@ -381,6 +437,9 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 
 
 
+
+	if is_screen_aoe_stress_skill and is_instance_valid(target_node):
+		_play_screen_aoe_target_effect(target_node)
 
 	var is_mecha_double = false
 	var is_twingun = false
