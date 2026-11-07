@@ -381,14 +381,35 @@ func _play_screen_aoe_target_effect(target_node: Node2D) -> void :
 	effect_root.add_child(outer)
 	effect_root.add_child(inner)
 
-	for ray_index in range(4):
+	for ray_index in range(8):
 		var ray := Line2D.new()
-		ray.width = 2.0
-		ray.default_color = Color(0.92, 0.98, 1.0, 0.95)
-		var ray_angle := PI * 0.5 * float(ray_index)
-		ray.add_point(Vector2(cos(ray_angle), sin(ray_angle)) * 7.0)
-		ray.add_point(Vector2(cos(ray_angle), sin(ray_angle)) * 33.0)
+		ray.width = 2.0 if ray_index % 2 == 0 else 1.5
+		ray.default_color = Color(
+			0.92,
+			0.98,
+			1.0,
+			0.95 if ray_index % 2 == 0 else 0.70
+		)
+		var ray_angle := TAU * float(ray_index) / 8.0
+		ray.add_point(
+			Vector2(cos(ray_angle), sin(ray_angle)) * 6.0
+		)
+		ray.add_point(
+			Vector2(cos(ray_angle), sin(ray_angle)) *
+			(38.0 if ray_index % 2 == 0 else 29.0)
+		)
 		effect_root.add_child(ray)
+
+	var star := Line2D.new()
+	star.width = 2.0
+	star.default_color = Color(0.65, 0.88, 1.0, 0.9)
+	star.closed = true
+	star.antialiased = true
+	for i in range(16):
+		var angle := TAU * float(i) / 16.0
+		var radius := 17.0 if i % 2 == 0 else 8.0
+		star.add_point(Vector2(cos(angle), sin(angle)) * radius)
+	effect_root.add_child(star)
 
 	effect_root.scale = Vector2(0.35, 0.35)
 
