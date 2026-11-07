@@ -845,6 +845,8 @@ func prepare_lazy_windows_before_reveal(progress_callback: Callable = Callable()
 		if is_instance_valid(window):
 			window.visible = false
 			window.modulate.a = 0.0
+			if kind == "craft" and window.has_method("prepare_initial_async"):
+				await window.prepare_initial_async()
 		if progress_callback.is_valid():
 			progress_callback.call(index + 1, total, kind)
 		await get_tree().process_frame
@@ -877,6 +879,9 @@ func _toggle_lazy_window(kind: String) -> void :
 	var window := await _ensure_lazy_window(kind)
 	if not is_instance_valid(window):
 		return
+	if kind == "craft" and window.has_method("is_initial_prepared") and not bool(window.is_initial_prepared()):
+		if window.has_method("prepare_initial_async"):
+			await window.prepare_initial_async()
 	_toggle_window(window)
 
 func _setup_header_button_hover_signals() -> void :
