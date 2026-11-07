@@ -234,6 +234,14 @@ var currentCatalog = new CurrentClientDataCatalog(
         new CurrentSkillDefinition(27104, "生命之源"),
         new CurrentSkillDefinition(28102, "心靈轉換"),
         new CurrentSkillDefinition(28107, "治療風暴"),
+        new CurrentSkillDefinition(
+            29101,
+            "製彈術",
+            "AddItem:4103:100"),
+        new CurrentSkillDefinition(
+            25108,
+            "生命聖印",
+            "生命聖印"),
         new CurrentSkillDefinition(26104, "魔影術"),
         new CurrentSkillDefinition(45111, "月神審判")
     },
@@ -253,6 +261,26 @@ var currentCatalog = new CurrentClientDataCatalog(
     },
     new[]
     {
+        new CurrentSkillLevelDefinition(
+            29101, 1, 7, 0,
+            0, 0,
+            0, 20, 0,
+            0, 0, 1,
+            0, 0,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0,
+            0, 0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            25108, 1, 7, 0,
+            0, 0,
+            0, 0, 0,
+            0, 0, 1800,
+            0, 1,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0,
+            0, 0, 0, 0),
         new CurrentSkillLevelDefinition(
             28102, 1, 2, 0,
             250, 0,
@@ -451,6 +479,12 @@ Check(currentCatalog.FindSkillLevel(28102, 1) is
 Check(currentCatalog.FindSkillLevel(28107, 1) is
       { SkillType: 3, CostSp: 32, DamageMultiplier: 10 },
     "current 治療風暴 resolves party recovery data");
+Check(currentCatalog.FindSkill(29101) is
+      { SpecialSkill: "AddItem:4103:100" },
+    "current 製彈術 exposes data-driven AddItem special metadata");
+Check(currentCatalog.FindSkillLevel(25108, 1) is
+      { SkillType: 7, CooldownSeconds: 1800 },
+    "current 生命聖印 resolves full-HP special skill data");
 Check(currentCatalog.FindSkillLevel(26104, 5) is
       { CostMp: 126, CastRange: 280, AoeRadius: 280 },
     "current 魔影術 Lv5 resolves server-side cast data");
@@ -2325,6 +2359,80 @@ try
     session.CurrentMapId = combatMapId;
     session.PendingMapSpawn = false;
     router.SyncPresence(session);
+
+    store.SetSkill(
+        account.Value,
+        id,
+        29101,
+        1);
+    store.Revive(account.Value, id);
+
+    var bulletsBefore = store.GetCharacterAssets(
+            account.Value,
+            id)
+        .Inventory
+        .Where(x =>
+            Convert.ToInt32(x["ItemIndex"]) == 4103)
+        .Sum(x => Convert.ToInt32(x["Count"]));
+
+    var craftSkillPackets = combat.UseSkill(
+        session,
+        account.Value,
+        29101,
+        0,
+        0,
+        combatEnemy.X,
+        combatEnemy.Y,
+        DateTimeOffset.UtcNow);
+
+    var bulletsAfter = store.GetCharacterAssets(
+            account.Value,
+            id)
+        .Inventory
+        .Where(x =>
+            Convert.ToInt32(x["ItemIndex"]) == 4103)
+        .Sum(x => Convert.ToInt32(x["Count"]));
+
+    Check(
+        bulletsAfter == bulletsBefore + 100 &&
+        craftSkillPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"InventorySync\"")),
+        "製彈術 parses AddItem special metadata and creates 100 current bullets");
+
+    store.SetSkill(
+        account.Value,
+        id,
+        25108,
+        1);
+    store.ApplyDamage(
+        account.Value,
+        id,
+        50);
+
+    var sealBeforeHp = Convert.ToInt32(
+        store.GetCharacter(account.Value, id)!["HP"]);
+
+    combat.UseSkill(
+        session,
+        account.Value,
+        25108,
+        0,
+        0,
+        combatEnemy.X,
+        combatEnemy.Y,
+        DateTimeOffset.UtcNow.AddSeconds(2));
+
+    var sealAfter = store.GetCharacter(
+        account.Value,
+        id)!;
+
+    Check(
+        Convert.ToInt32(sealAfter["HP"]) >
+            sealBeforeHp &&
+        Convert.ToInt32(sealAfter["HP"]) ==
+            Convert.ToInt32(sealAfter["MaxHP"]),
+        "生命聖印 restores the caster to full HP");
 
     var combatSpawns = combat.EnterMap(session, combatMapId);
 
