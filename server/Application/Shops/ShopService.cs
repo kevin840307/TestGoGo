@@ -112,7 +112,8 @@ public sealed class ShopService
             item.ItemIndex,
             count,
             unitPrice,
-            currentItem.EquipSlot);
+            currentItem.EquipSlot,
+            currentItem.Durability);
 
         if (!result.Success)
             return Failure(result.Message);
