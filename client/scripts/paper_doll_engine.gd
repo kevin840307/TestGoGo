@@ -247,6 +247,152 @@ func _get_mecha_head_anchor_frame(sprite_node: AnimatedSprite2D, raw_action: Str
 	return sprite_node.frame if sprite_node.frame >= 0 and sprite_node.frame < anchor_count else -1
 
 
+func _yield_initial_build_frame() -> void :
+	var tree := get_tree()
+	if tree != null:
+		await tree.process_frame
+
+func build_human_model_initial_async(race: String, hair: String, hair_color: int, body_color: int, equips: Dictionary) -> void :
+	current_mode = Mode.HUMAN
+	current_race = race
+	current_hair = hair
+	current_hair_color_index = hair_color
+	current_body_color_index = body_color
+	current_equips = equips
+
+	clear_dolls()
+
+	_add_doll_part("Shadow", 0, "Shadow", "Shadow", false)
+	await _yield_initial_build_frame()
+
+	if current_race != "Robot":
+		_add_doll_part("Head", 0, "Head", "Standard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("Hair", -1, current_hair, "Standard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("Leg", 0, "Leg", "Standard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("L-Arm", 0, "L-Arm", "Standard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("R-Arm", 0, "R-Arm", "Standard", false)
+		await _yield_initial_build_frame()
+
+	_add_doll_part("Body", 0, "Body", "Standard", false)
+	await _yield_initial_build_frame()
+	await _update_equipment_layers_initial_async()
+
+func _update_equipment_layers_initial_async() -> void :
+	var bonnet_id: int = int(current_equips.get(0, 0))
+	var left_id: int = int(current_equips.get(1, 0))
+	var right_id: int = int(current_equips.get(2, 0))
+	var upper_id: int = int(current_equips.get(3, 0))
+	var lower_id: int = int(current_equips.get(4, 0))
+	var weapon_id: int = int(current_equips.get(5, 0))
+	var shield_id: int = int(current_equips.get(6, 0))
+	var back_id: int = int(current_equips.get(7, 0))
+
+	if upper_id >= 0 and not (current_race == "Yas" and not _is_transmog_upper_armor(upper_id)):
+		_add_doll_part("EquipBody", upper_id, "Body", "Equip", false)
+		await _yield_initial_build_frame()
+	if lower_id >= 0:
+		_add_doll_part("EquipLeg", lower_id, "Leg", "Equip", false)
+		await _yield_initial_build_frame()
+	if left_id >= 0:
+		_add_doll_part("EquipL-Arm", left_id, "L-Arm", "Equip", false)
+		await _yield_initial_build_frame()
+	if right_id >= 0:
+		_add_doll_part("EquipR-Arm", right_id, "R-Arm", "Equip", false)
+		await _yield_initial_build_frame()
+
+	if bonnet_id > 0:
+		_add_doll_part("Bonnet", bonnet_id, "Bonnet", "Equip", false)
+		await _yield_initial_build_frame()
+	elif current_race == "Robot":
+		_add_doll_part("Bonnet", -1, "Bonnet000", "Equip", false)
+		await _yield_initial_build_frame()
+
+	if back_id > 0:
+		_add_doll_part("Back", back_id, "Back", "Equip", false)
+		await _yield_initial_build_frame()
+
+	if weapon_id > 0:
+		var w_prefix: String = "Sword"
+		if ItemLoader:
+			var n4: String = str(ItemLoader.get_item_property(weapon_id, "note_4", "")).strip_edges()
+			if n4 != "":
+				w_prefix = n4
+		if w_prefix == "TwinGun":
+			_add_doll_part("L-Gun", weapon_id, "L_TwinGun", "Equip", true)
+			await _yield_initial_build_frame()
+			_add_doll_part("R-Gun", weapon_id, "R_TwinGun", "Equip", true)
+			await _yield_initial_build_frame()
+		else:
+			_add_doll_part("Sword", weapon_id, w_prefix, "Equip", true)
+			await _yield_initial_build_frame()
+
+	var disable_shield: bool = false
+	if weapon_id > 0 and ItemLoader:
+		disable_shield = int(ItemLoader.get_item_property(weapon_id, "no_shield", 0)) == 1
+	if shield_id > 0 and not disable_shield:
+		_add_doll_part("Shield", shield_id, "Shield", "Equip", true)
+		await _yield_initial_build_frame()
+
+func build_mecha_model_initial_async(race: String, hair: String, hair_color: int, bonnet_id: int, body_id: int, leg_id: int, weapon_id: int, mecha_type: String = "MS") -> void :
+	current_mode = Mode.MECHA
+	current_race = race
+	current_hair = hair
+	current_hair_color_index = hair_color
+	current_mecha_type = mecha_type
+
+	current_mecha_body_spr_id = 0
+	if body_id > 0 and ItemLoader:
+		current_mecha_body_spr_id = int(ItemLoader.get_item_property(body_id, "spr_id", 0))
+
+	clear_dolls()
+
+	if current_mecha_type == "MA":
+		_add_doll_part("MSBody", body_id, "MA", "MA_Standard", false)
+		await _yield_initial_build_frame()
+		if USE_RESOURCE_MECHA_HEAD_ANCHORS:
+			if current_race == "Robot":
+				if bonnet_id > 0:
+					_add_doll_part("Bonnet", bonnet_id, "Bonnet", "MechaHead", false)
+				else:
+					_add_doll_part("Bonnet", -1, "Bonnet00", "MechaHead", false)
+				await _yield_initial_build_frame()
+			else:
+				_add_doll_part("Head", 0, "Head", "MechaHead", false)
+				await _yield_initial_build_frame()
+				_add_doll_part("Hair", -1, current_hair, "MechaHead", false)
+				await _yield_initial_build_frame()
+				if bonnet_id > 0:
+					_add_doll_part("Bonnet", bonnet_id, "Bonnet", "MechaHead", false)
+					await _yield_initial_build_frame()
+	else:
+		_add_doll_part("MSBody", body_id, "MSBody", "MechaStandard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("MSLeg", leg_id, "MSLeg", "MechaStandard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("L-MSArm", weapon_id, "L-MSArm", "MechaStandard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("R-MSArm", weapon_id, "R-MSArm", "MechaStandard", false)
+		await _yield_initial_build_frame()
+
+		if current_race == "Robot":
+			if bonnet_id > 0:
+				_add_doll_part("Bonnet", bonnet_id, "Bonnet", "MechaHead", false)
+			else:
+				_add_doll_part("Bonnet", -1, "Bonnet00", "MechaHead", false)
+			await _yield_initial_build_frame()
+		else:
+			_add_doll_part("Head", 0, "Head", "MechaHead", false)
+			await _yield_initial_build_frame()
+			_add_doll_part("Hair", -1, current_hair, "MechaHead", false)
+			await _yield_initial_build_frame()
+			if bonnet_id > 0:
+				_add_doll_part("Bonnet", bonnet_id, "Bonnet", "MechaHead", false)
+				await _yield_initial_build_frame()
+
 func build_human_model(race: String, hair: String, hair_color: int, body_color: int, equips: Dictionary) -> void :
 	current_mode = Mode.HUMAN
 	current_race = race
