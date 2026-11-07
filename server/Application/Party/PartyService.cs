@@ -241,8 +241,6 @@ public sealed class PartyService
                     selfDbid);
             }
 
-            party = foundParty;
-
             if (party.Members.Count >= MaxMembers)
                 return [Flash("隊伍已滿")];
 
