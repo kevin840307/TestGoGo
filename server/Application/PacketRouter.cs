@@ -2322,6 +2322,35 @@ public sealed class PacketRouter
         var dbid = state.CharacterId.Value;
         var packets = new List<object>();
 
+        // Server-initiated travel (for example a party-return skill) updates
+        // persistence first and sends ChangeMap directly to the target socket.
+        // Reconcile this connection's runtime state from the authoritative DB
+        // on its next world tick.
+        var persistedCharacter = _store.GetCharacter(
+            accountId,
+            dbid);
+
+        if (persistedCharacter is not null)
+        {
+            var persistedMapId = Convert.ToInt32(
+                persistedCharacter["MapID"]);
+
+            if (persistedMapId > 0 &&
+                persistedMapId != state.CurrentMapId)
+            {
+                state.CurrentMapId = persistedMapId;
+                state.LastX = Convert.ToDouble(
+                    persistedCharacter["LocX"]);
+                state.LastY = Convert.ToDouble(
+                    persistedCharacter["LocY"]);
+                state.PendingMapSpawn = true;
+                state.LoadedMonsterMapId = 0;
+                state.WorldSnapshotRetriesRemaining = 0;
+                state.PetTargets.Clear();
+                state.PetOutOfRangeSince.Clear();
+            }
+        }
+
         packets.AddRange(
             _resourceRecovery.Tick(state, now));
         packets.AddRange(
