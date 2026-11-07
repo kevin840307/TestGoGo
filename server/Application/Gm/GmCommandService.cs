@@ -73,6 +73,8 @@ public sealed class GmCommandService
                 "level" => Level(parts, accountId, dbid),
                 "maxstats" or "maxstat"
                     => MaxStats(accountId, dbid),
+                "attackspeed" or "aspd"
+                    => AttackSpeed(parts, accountId, dbid),
                 "money" => Money(parts, accountId, dbid),
                 "item" => Item(parts, accountId, dbid),
                 "equip" => Equipment(parts, accountId, dbid),
@@ -299,6 +301,39 @@ public sealed class GmCommandService
                 $"ATK={effective.Attack} MATK={effective.MagicAttack} " +
                 $"DEF={effective.Defense} DODGE={effective.Dodge} " +
                 $"MOVE={effective.MoveSpeed}")
+        ];
+    }
+
+    private IReadOnlyList<object> AttackSpeed(
+        string[] parts,
+        long accountId,
+        long dbid)
+    {
+        if (parts.Length < 3 ||
+            !int.TryParse(parts[2], out var speed))
+            return [Chat("用法：/gm attackspeed <1-1000>")];
+
+        var ch = _store.SetAttackSpeed(
+            accountId,
+            dbid,
+            speed);
+
+        if (ch is null)
+            return [Chat("修改攻擊速度失敗")];
+
+        var assets = _store.GetCharacterAssets(accountId, dbid);
+        var effective = CharacterStatCalculator.Calculate(
+            ch,
+            assets,
+            _current);
+
+        return
+        [
+            CharacterStatCalculator.ToPlayerStatusPacket(
+                ch,
+                assets,
+                _current),
+            Chat($"攻擊速度已設為 {effective.AttackSpeed}")
         ];
     }
 
@@ -855,7 +890,7 @@ public sealed class GmCommandService
 
     private static string HelpText()
         => "GM: help | pos | map <id> [x] [y] | heal | level <n> | " +
-           "maxstats | money <n> | item <id> [count] | equip <id> | " +
+           "maxstats | attackspeed <1-1000> | money <n> | item <id> [count] | equip <id> | " +
            "mecha <cardId> | mechacard <cardId> | mechaequip <id> [horseUid] | mechalevel <horseUid> <level> | pet <petId> [name] | " +
            "skill <id|all> [lv] | skills | clearskills | " +
            "spawn <enemyId> [x] [y] | killall";
