@@ -9,8 +9,8 @@ level = 1
 cast_range = 0
 aoe_radius = 900
 cost_mp = 100
-base_damage = 1000000
-damage_multiplier = 10000
+base_damage = 1000
+damage_multiplier = 100
 cooldown = 0
 tick_count = 1
 
