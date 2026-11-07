@@ -1417,7 +1417,8 @@ public sealed class SqliteGameStore : IGameStore
         AssetPurchaseKind kind,
         int itemIndex,
         int count,
-        int unitPrice)
+        int unitPrice,
+        int itemPart = 255)
     {
         count = Math.Max(1, count);
         unitPrice = Math.Max(0, unitPrice);
@@ -1508,7 +1509,10 @@ public sealed class SqliteGameStore : IGameStore
                     """;
                 Arg(add, "$id", dbid);
                 Arg(add, "$idx", itemIndex);
-                Arg(add, "$part", ResolveHorseEquipPart(itemIndex));
+                Arg(add, "$part",
+                    itemPart is >= 0 and <= 3
+                        ? itemPart
+                        : 255);
                 uid = Convert.ToInt64(add.ExecuteScalar());
                 break;
             }
