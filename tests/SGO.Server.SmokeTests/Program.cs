@@ -520,6 +520,53 @@ try
           seededAssets.HorseEquips.Count == 4,
         "character assets round-trip from SQLite");
 
+    var seededPet = seededAssets.Pets.Single();
+    Check(Convert.ToInt32(seededPet["LifeCount"]) > 0 &&
+          Convert.ToInt32(seededPet["FeedValue"]) > 0 &&
+          Convert.ToInt32(seededPet["FeedExpLimit"]) > 0,
+        "new pets start alive and fed so recovered client enables Summon");
+
+    using (var login = Json(
+        """{"Type":"LoginRequest","User":"offline","Pass":"test-password"}"""))
+    {
+        var responses = router.Handle(login.RootElement, session);
+        Check(responses.Count == 1 && session.AccountId == account,
+            "router login establishes authenticated session");
+    }
+
+    using (var select = Json(JsonSerializer.Serialize(new
+    {
+        Type = "SelectCharacterRequest",
+        DBID = id
+    })))
+    {
+        var responses = router.Handle(select.RootElement, session);
+        Check(session.CharacterId == id,
+            "router selects character");
+        Check(session.CurrentMapId == 15 && session.PendingMapSpawn,
+            "selected character waits for server world tick spawn");
+        Check(responses.Count == 9,
+            "enter world emits bootstrap sync packets only");
+
+        Check(JsonSerializer.Serialize(responses[1]).Contains(
+                $"\"ItemIndex\":{generalShopItem.ItemIndex}"),
+            "InventorySync loads persisted item");
+        Check(JsonSerializer.Serialize(responses[2]).Contains(
+                $"\"ItemIdx\":{weaponShopItem.ItemIndex}"),
+            "EquipSync loads persisted equipment");
+        Check(JsonSerializer.Serialize(responses[3]).Contains("\"PETID\":45001"),
+            "PetSync loads persisted current-client pet");
+        Check(JsonSerializer.Serialize(responses[4]).Contains("\"HorseIdx\":50001") &&
+              JsonSerializer.Serialize(responses[4]).Contains("\"EquipIdx\":50293"),
+            "HorseSync loads persisted mecha card and mecha equipment");
+
+        using var first = Json(JsonSerializer.Serialize(responses[0]));
+        Check(first.RootElement.Str("Type") == "EnterWorldSuccess",
+            "first select response enters world");
+        Check(first.RootElement.Int("MapID") == 15,
+            "enter world includes Map15");
+    }
+
     // BankTransfer: general items support partial stack deposit/withdraw.
     using (var bankDeposit = Json(JsonSerializer.Serialize(new
     {
@@ -651,52 +698,6 @@ try
             "BankTransfer withdraws mecha equipment");
     }
 
-    var seededPet = seededAssets.Pets.Single();
-    Check(Convert.ToInt32(seededPet["LifeCount"]) > 0 &&
-          Convert.ToInt32(seededPet["FeedValue"]) > 0 &&
-          Convert.ToInt32(seededPet["FeedExpLimit"]) > 0,
-        "new pets start alive and fed so recovered client enables Summon");
-
-    using (var login = Json(
-        """{"Type":"LoginRequest","User":"offline","Pass":"test-password"}"""))
-    {
-        var responses = router.Handle(login.RootElement, session);
-        Check(responses.Count == 1 && session.AccountId == account,
-            "router login establishes authenticated session");
-    }
-
-    using (var select = Json(JsonSerializer.Serialize(new
-    {
-        Type = "SelectCharacterRequest",
-        DBID = id
-    })))
-    {
-        var responses = router.Handle(select.RootElement, session);
-        Check(session.CharacterId == id,
-            "router selects character");
-        Check(session.CurrentMapId == 15 && session.PendingMapSpawn,
-            "selected character waits for server world tick spawn");
-        Check(responses.Count == 9,
-            "enter world emits bootstrap sync packets only");
-
-        Check(JsonSerializer.Serialize(responses[1]).Contains(
-                $"\"ItemIndex\":{generalShopItem.ItemIndex}"),
-            "InventorySync loads persisted item");
-        Check(JsonSerializer.Serialize(responses[2]).Contains(
-                $"\"ItemIdx\":{weaponShopItem.ItemIndex}"),
-            "EquipSync loads persisted equipment");
-        Check(JsonSerializer.Serialize(responses[3]).Contains("\"PETID\":45001"),
-            "PetSync loads persisted current-client pet");
-        Check(JsonSerializer.Serialize(responses[4]).Contains("\"HorseIdx\":50001") &&
-              JsonSerializer.Serialize(responses[4]).Contains("\"EquipIdx\":50293"),
-            "HorseSync loads persisted mecha card and mecha equipment");
-
-        using var first = Json(JsonSerializer.Serialize(responses[0]));
-        Check(first.RootElement.Str("Type") == "EnterWorldSuccess",
-            "first select response enters world");
-        Check(first.RootElement.Int("MapID") == 15,
-            "enter world includes Map15");
-    }
 
     var damaged = store.ApplyDamage(account.Value, id, 50);
     Check(damaged is not null && Convert.ToInt32(damaged["HP"]) == 50,
