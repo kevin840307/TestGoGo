@@ -7,8 +7,14 @@ var sync_timer: float = 0.0
 const SYNC_RATE: float = 0.05
 var _movement_state_reported: bool = false
 var _initial_visual_ready: bool = false
-const DEFAULT_COLLISION_MASK: int = 21
-const SPECIAL_MECHA_COLLISION_MASK: int = 5
+# Blocking.dat is authoritative for map obstacles. Keep Godot collision only
+# for non-map interaction/detection layers so the player's physical capsule
+# does not artificially enlarge every 16px blocking cell at corners.
+const DEFAULT_COLLISION_MASK: int = 4
+const SPECIAL_MECHA_COLLISION_MASK: int = 4
+const NAVIGATION_REPATH_INTERVAL: float = 0.08
+const NAVIGATION_REPATH_DISTANCE: float = 24.0
+const WAYPOINT_REACH_DISTANCE: float = 10.0
 
 
 var target_position: Vector2 = Vector2.ZERO
@@ -32,6 +38,7 @@ var ready_to_cast_skill_id: int = -1
 var pending_skill_id: int = -1
 var confirmed_summoned_horse_uid: int = -1
 var can_cross_special_terrain: bool = false
+var navigation_repath_cooldown: float = 0.0
 
 
 
@@ -432,6 +439,11 @@ func _unhandled_input(event: InputEvent) -> void :
 			if NetworkManager.is_connected_to_server: NetworkManager.send_secure_packet({"Type": "SyncState", "State": "crouch", "Dir": current_dir})
 
 func _physics_process(_delta: float) -> void :
+	navigation_repath_cooldown = maxf(
+		0.0,
+		navigation_repath_cooldown - _delta
+	)
+
 	if is_dead:
 		_handle_death_timer(_delta)
 		return
@@ -444,7 +456,13 @@ func _physics_process(_delta: float) -> void :
 			var mouse_pos = get_global_mouse_position()
 
 			if global_position.distance_to(mouse_pos) > 10.0:
-				if move_destination.distance_to(mouse_pos) >= 8.0 or not is_moving:
+				var destination_changed: bool = (
+					move_destination.distance_to(mouse_pos) >= NAVIGATION_REPATH_DISTANCE
+				)
+				if not is_moving or (
+					destination_changed and
+					navigation_repath_cooldown <= 0.0
+				):
 					_set_navigation_target(mouse_pos)
 				if not is_action_locked and current_state != "walk":
 					current_state = "walk"
@@ -618,28 +636,51 @@ func _handle_action_lock(delta: float) -> void :
 		sync_animation()
 
 func _handle_movement(delta: float) -> void :
+	if move_path.is_empty() or move_path_index >= move_path.size():
+		_stop_movement()
+		return
+
 	var current_real_speed: float = get_real_move_speed()
 	var step_distance: float = current_real_speed * delta
-	var stop_threshold: float = max(4.0, step_distance)
+	var stop_threshold: float = maxf(
+		WAYPOINT_REACH_DISTANCE,
+		step_distance * 1.25
+	)
+	var map_id: int = int(data_model.map_id) if data_model else 0
+
+	# The legacy pathfinder shortens its node chain with line checks. Go one
+	# step further: while moving, continuously promote the next node as soon
+	# as Blocking.dat says it is directly visible from the current position.
+	# This rounds corners naturally without ever cutting through blocked cells.
+	while move_path_index + 1 < move_path.size():
+		var next_waypoint: Vector2 = move_path[move_path_index + 1]
+		var close_to_current: bool = (
+			global_position.distance_to(target_position) <= stop_threshold
+		)
+		var next_is_visible: bool = LegacyPathfinder.is_segment_walkable(
+			map_id,
+			global_position,
+			next_waypoint,
+			can_cross_special_terrain
+		)
+
+		if not close_to_current and not next_is_visible:
+			break
+
+		move_path_index += 1
+		target_position = move_path[move_path_index]
+
 	var dir_vector: Vector2 = target_position - global_position
 	var distance: float = dir_vector.length()
 
-	if distance <= stop_threshold:
-		if move_path_index + 1 < move_path.size():
-			move_path_index += 1
-			target_position = move_path[move_path_index]
-			dir_vector = target_position - global_position
-			distance = dir_vector.length()
-		else:
-			_stop_movement()
-			return
+	if move_path_index + 1 >= move_path.size() and distance <= stop_threshold:
+		global_position = move_destination
+		_stop_movement()
+		return
 
 	if distance <= 0.001:
 		return
 
-	# Blocking.dat decides the route. Godot physics remains only a final
-	# collision guard for scene objects that are not represented in the
-	# legacy blocking grid.
 	velocity = dir_vector.normalized() * current_real_speed
 	update_direction_8way(velocity)
 
@@ -647,7 +688,7 @@ func _handle_movement(delta: float) -> void :
 	move_and_slide()
 	var moved_distance: float = old_position.distance_to(global_position)
 
-	if moved_distance >= 1.0:
+	if moved_distance >= maxf(0.25, step_distance * 0.1):
 		stuck_frames = 0
 		return
 
@@ -682,6 +723,7 @@ func _set_navigation_target(destination: Vector2) -> void :
 	move_path_index = 0
 	target_position = move_path[0]
 	is_moving = true
+	navigation_repath_cooldown = NAVIGATION_REPATH_INTERVAL
 
 
 func apply_position_correction(corrected_position: Vector2) -> void :
