@@ -57,7 +57,9 @@ CurrentItemDefinition CurrentItem(
     int maxBattery = 0,
     int battery = 0,
     string horseType = "",
-    int reqLevel = 0)
+    int reqLevel = 0,
+    int durability = 0,
+    int canRepair = 1)
     => new(
         id,
         name,
@@ -86,7 +88,9 @@ CurrentItemDefinition CurrentItem(
         maxBattery,
         battery,
         horseType,
-        reqLevel);
+        reqLevel,
+        durability,
+        canRepair);
 
 var currentCatalog = new CurrentClientDataCatalog(
     new[]
@@ -112,7 +116,8 @@ var currentCatalog = new CurrentClientDataCatalog(
             "equip",
             price: 1,
             def: 5,
-            equipSlot: 4),
+            equipSlot: 4,
+            durability: 120),
 
         // Map15 shop_e3 -> Shop7 bullets.
         CurrentItem(
@@ -136,7 +141,8 @@ var currentCatalog = new CurrentClientDataCatalog(
             price: 50,
             atk: 10,
             equipSlot: 5,
-            attackRange: 140),
+            attackRange: 140,
+            durability: 100),
         CurrentItem(
             31262,
             "雙銃雷霆砲+16",
@@ -834,6 +840,41 @@ try
             "enter world includes Map15");
     }
 
+    var moneyBeforeRepair = Convert.ToInt64(
+        store.GetCharacter(account.Value, id)!["Money"]);
+
+    using (var repair = Json(JsonSerializer.Serialize(new
+    {
+        Type = "RepairItemRequest",
+        ItemType = "Equip",
+        UID = equipUid
+    })))
+    {
+        var responses = router.Handle(
+            repair.RootElement,
+            session);
+        var repairedEquip = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Equips
+            .First(x =>
+                Convert.ToInt64(x["ItemID"]) == equipUid);
+
+        Check(
+            Convert.ToInt32(repairedEquip["Damage"]) == 100 &&
+            Convert.ToInt64(
+                store.GetCharacter(
+                    account.Value,
+                    id)!["Money"]) < moneyBeforeRepair &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SyncMoney\"")) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"EquipSync\"")),
+            "RepairItemRequest restores current durability and deducts money");
+    }
+
     var beforeDollAssets = store.GetCharacterAssets(account.Value, id);
     var beforeDollRewardCount = beforeDollAssets.Inventory
         .Where(x =>
@@ -1206,8 +1247,9 @@ try
         Check(assetsAfterEquipBuy.Equips.Count ==
                   equipCountBeforePurchase + 1 &&
               assetsAfterEquipBuy.Equips.Any(x =>
-                  Convert.ToInt32(x["ItemIdx"]) == 18538),
-            "NPC shop buys mapped current equipment into equipment storage");
+                  Convert.ToInt32(x["ItemIdx"]) == 18538 &&
+                  Convert.ToInt32(x["Damage"]) == 120),
+            "NPC shop buys mapped current equipment at full durability");
         Check(responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"EquipSync\"")),
@@ -1736,6 +1778,47 @@ try
             JsonSerializer.Serialize(x).Contains(
                 $"\"EntityID\":{id}")),
         "joining player receives existing same-map players in world snapshot");
+
+    var senderMoneyBeforeTransfer = Convert.ToInt64(
+        store.GetCharacter(account.Value, id)!["Money"]);
+    var targetMoneyBeforeTransfer = Convert.ToInt64(
+        store.GetCharacter(
+            account.Value,
+            secondCharacterId)!["Money"]);
+
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var directTransfer = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "DirectTransfer",
+            TargetDBID = secondCharacterId,
+            Amount = 321L
+        })))
+    {
+        var responses = router.Handle(
+            directTransfer.RootElement,
+            session);
+
+        Check(
+            Convert.ToInt64(
+                store.GetCharacter(
+                    account.Value,
+                    id)!["Money"]) ==
+                senderMoneyBeforeTransfer - 321 &&
+            Convert.ToInt64(
+                store.GetCharacter(
+                    account.Value,
+                    secondCharacterId)!["Money"]) ==
+                targetMoneyBeforeTransfer + 321 &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SyncMoney\"")) &&
+            peerRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SyncMoney\"")),
+            "DirectTransfer atomically moves money and syncs both online players");
+    }
 
     Check(peerSession.Monsters.TryGetValue(
               monster.EntityId,
