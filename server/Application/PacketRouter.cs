@@ -781,14 +781,44 @@ public sealed class PacketRouter
             case "WorldReady":
             {
                 if (!state.CharacterId.HasValue || state.CurrentMapId <= 0)
-                    return [];
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "WorldReadyResponse",
+                            Success = false,
+                            MapID = state.CurrentMapId,
+                            Message = "角色尚未進入地圖"
+                        }
+                    ];
+                }
 
                 var requestedMapId = req.Int("MapID", state.CurrentMapId);
                 if (requestedMapId != state.CurrentMapId)
-                    return [];
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "WorldReadyResponse",
+                            Success = false,
+                            MapID = state.CurrentMapId,
+                            Message = "WorldReady 地圖與目前地圖不一致"
+                        }
+                    ];
+                }
 
                 state.WorldReady = true;
-                return [];
+                return
+                [
+                    new
+                    {
+                        Type = "WorldReadyResponse",
+                        Success = true,
+                        MapID = state.CurrentMapId
+                    }
+                ];
             }
 
             case "SyncPosition":
@@ -878,19 +908,45 @@ public sealed class PacketRouter
             case "UpdateShortcut":
             {
                 if (!state.CharacterId.HasValue)
-                    return [];
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "UpdateShortcutResponse",
+                            Success = false,
+                            SlotIndex = req.Int("SlotIndex", -1),
+                            ShortcutType = req.Int("ShortcutType"),
+                            TargetID = req.Int("TargetID"),
+                            Message = "角色尚未登入"
+                        }
+                    ];
+                }
+
+                var slotIndex = req.Int("SlotIndex", -1);
+                var shortcutType = req.Int("ShortcutType");
+                var targetId = req.Int("TargetID");
 
                 var ok = _store.UpdateShortcut(
                     accountId,
                     state.CharacterId.Value,
-                    req.Int("SlotIndex", -1),
-                    req.Int("ShortcutType"),
-                    req.Int("TargetID"));
+                    slotIndex,
+                    shortcutType,
+                    targetId);
 
                 if (!ok)
                 {
                     return
                     [
+                        new
+                        {
+                            Type = "UpdateShortcutResponse",
+                            Success = false,
+                            SlotIndex = slotIndex,
+                            ShortcutType = shortcutType,
+                            TargetID = targetId,
+                            Message = "快速鍵儲存失敗"
+                        },
                         new
                         {
                             Type = "SystemMessageFlash",
@@ -899,7 +955,17 @@ public sealed class PacketRouter
                     ];
                 }
 
-                return [];
+                return
+                [
+                    new
+                    {
+                        Type = "UpdateShortcutResponse",
+                        Success = true,
+                        SlotIndex = slotIndex,
+                        ShortcutType = shortcutType,
+                        TargetID = targetId
+                    }
+                ];
             }
 
             case "UseItemRequest":
