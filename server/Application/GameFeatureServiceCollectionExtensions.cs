@@ -7,6 +7,7 @@ using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Party;
 using SGO.Server.Application.Shops;
+using SGO.Server.Application.Trade;
 using SGO.Server.Application.World;
 
 namespace SGO.Server.Application;
@@ -22,6 +23,7 @@ public static class GameFeatureServiceCollectionExtensions
         services.AddSingleton<ResourceRecoveryService>();
         services.AddSingleton<ServerBroadcastHub>();
         services.AddSingleton<PartyService>();
+        services.AddSingleton<TradeService>();
         services.AddSingleton<DollService>();
         services.AddSingleton<ShopService>();
         services.AddSingleton<GmCommandService>();
