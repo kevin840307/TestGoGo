@@ -10,8 +10,15 @@ const COLLISION_BUILD_YIELD_CELLS: int = 4096
 const COLLISION_TILESET: TileSet = preload("res://collision_marker.tres")
 
 var _map_cache: Dictionary = {}
+var _query_can_cross_special_terrain: bool = false
 
-func get_path(map_id: int, start_world: Vector2, target_world: Vector2) -> PackedVector2Array:
+func get_path(
+	map_id: int,
+	start_world: Vector2,
+	target_world: Vector2,
+	can_cross_special_terrain: bool = false
+) -> PackedVector2Array:
+	_query_can_cross_special_terrain = can_cross_special_terrain
 	var grid: Dictionary = _get_grid(map_id)
 	if grid.is_empty():
 		return PackedVector2Array()
@@ -88,10 +95,15 @@ func build_collision_layer(map_id: int, collision_layer: TileMapLayer) -> Dictio
 	}
 
 
-func is_walkable(map_id: int, world_position: Vector2) -> bool:
+func is_walkable(
+	map_id: int,
+	world_position: Vector2,
+	can_cross_special_terrain: bool = false
+) -> bool:
+	_query_can_cross_special_terrain = can_cross_special_terrain
 	var grid: Dictionary = _get_grid(map_id)
 	if grid.is_empty():
-		return true
+		return false
 	return not _is_blocked(grid, _world_to_cell(world_position))
 
 
@@ -169,7 +181,12 @@ func _is_blocked(grid: Dictionary, cell: Vector2i) -> bool:
 	var index: int = cell.y * width + cell.x
 	if index < 0 or index >= cells.size():
 		return true
-	return (int(cells[index]) & BLOCK_MASK) != 0
+
+	var flags: int = int(cells[index]) & BLOCK_MASK
+	if flags == 0:
+		return false
+
+	return not (_query_can_cross_special_terrain and flags == 3)
 
 
 func _is_segment_walkable(grid: Dictionary, from_world: Vector2, to_world: Vector2) -> bool:
