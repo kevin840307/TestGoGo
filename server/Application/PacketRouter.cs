@@ -76,6 +76,89 @@ public sealed class PacketRouter
         _log = log;
     }
 
+    public void SyncPresence(ClientSession state)
+    {
+        var hasCurrent =
+            state.AccountId.HasValue &&
+            state.CharacterId.HasValue &&
+            state.CurrentMapId > 0;
+
+        var nextMapId = hasCurrent
+            ? state.CurrentMapId
+            : 0;
+        var nextCharacterId = hasCurrent
+            ? state.CharacterId!.Value
+            : 0L;
+
+        var changed =
+            state.PublishedMapId != nextMapId ||
+            state.PublishedCharacterId != nextCharacterId;
+
+        if (changed &&
+            state.PublishedMapId > 0 &&
+            state.PublishedCharacterId > 0)
+        {
+            _broadcasts.PublishToMap(
+                state.PublishedMapId,
+                new
+                {
+                    Type = "DespawnEntity",
+                    EntityID = state.PublishedCharacterId
+                },
+                state.ConnectionId);
+        }
+
+        _broadcasts.UpdatePresence(
+            state.ConnectionId,
+            nextMapId,
+            hasCurrent ? nextCharacterId : null,
+            hasCurrent ? state.AccountId : null);
+
+        if (changed &&
+            hasCurrent)
+        {
+            var spawn = BuildPlayerSpawnPacket(
+                state.AccountId!.Value,
+                nextCharacterId);
+
+            if (spawn is not null)
+            {
+                _broadcasts.PublishToMap(
+                    nextMapId,
+                    spawn,
+                    state.ConnectionId);
+            }
+        }
+
+        state.PublishedMapId = nextMapId;
+        state.PublishedCharacterId = nextCharacterId;
+    }
+
+    public void DisconnectPresence(ClientSession state)
+    {
+        if (state.PublishedMapId > 0 &&
+            state.PublishedCharacterId > 0)
+        {
+            _broadcasts.PublishToMap(
+                state.PublishedMapId,
+                new
+                {
+                    Type = "DespawnEntity",
+                    EntityID = state.PublishedCharacterId
+                },
+                state.ConnectionId);
+        }
+
+        _broadcasts.UpdatePresence(
+            state.ConnectionId,
+            0,
+            null,
+            null);
+
+        state.PublishedMapId = 0;
+        state.PublishedCharacterId = 0;
+    }
+
     public IReadOnlyList<object> Handle(JsonElement req, ClientSession state)
     {
         var type = req.Str("Type");
@@ -279,8 +362,19 @@ public sealed class PacketRouter
                     x,
                     y);
 
-                // World spawn/AI is driven by the server tick. Position packets
-                // now only update authoritative player coordinates.
+                _broadcasts.PublishToMap(
+                    state.CurrentMapId,
+                    new
+                    {
+                        Type = "MoveEntity",
+                        EntityID = state.CharacterId.Value,
+                        X = x,
+                        Y = y,
+                        Dir = req.Str("Dir", "1"),
+                        SpeedTime = 0.25
+                    },
+                    state.ConnectionId);
+
                 return [];
             }
 
@@ -1490,10 +1584,24 @@ public sealed class PacketRouter
             case "SyncState":
                 if (state.CharacterId.HasValue)
                 {
+                    var playerState =
+                        req.Str("State", "idle");
+
                     _store.UpdateState(
                         accountId,
                         state.CharacterId.Value,
-                        req.Str("State", "idle"));
+                        playerState);
+
+                    _broadcasts.PublishToMap(
+                        state.CurrentMapId,
+                        new
+                        {
+                            Type = "SyncState",
+                            EntityID = state.CharacterId.Value,
+                            State = playerState,
+                            Dir = req.Str("Dir", "1")
+                        },
+                        state.ConnectionId);
                 }
                 return [];
 
@@ -1670,6 +1778,8 @@ public sealed class PacketRouter
             packets.AddRange(
                 BuildGroundItemSnapshotPackets(state));
             packets.AddRange(
+                BuildOtherPlayerSnapshotPackets(state));
+            packets.AddRange(
                 BuildActivePetSpawnPackets(
                     state,
                     accountId,
@@ -1694,6 +1804,8 @@ public sealed class PacketRouter
                     _combat.BuildCurrentMapSnapshot(state));
                 packets.AddRange(
                     BuildGroundItemSnapshotPackets(state));
+                packets.AddRange(
+                    BuildOtherPlayerSnapshotPackets(state));
                 packets.AddRange(
                     BuildActivePetSnapshotPackets(
                         state,
@@ -1728,6 +1840,70 @@ public sealed class PacketRouter
         }
 
         return packets;
+    }
+
+    private IReadOnlyList<object> BuildOtherPlayerSnapshotPackets(
+        ClientSession state)
+    {
+        var packets = new List<object>();
+
+        foreach (var player in _broadcasts.PlayersInMap(
+                     state.CurrentMapId,
+                     state.ConnectionId))
+        {
+            var spawn = BuildPlayerSpawnPacket(
+                player.AccountId,
+                player.CharacterId);
+
+            if (spawn is not null)
+                packets.Add(spawn);
+        }
+
+        return packets;
+    }
+
+    private object? BuildPlayerSpawnPacket(
+        long accountId,
+        long dbid)
+    {
+        var character = _store.GetCharacter(
+            accountId,
+            dbid);
+
+        if (character is null)
+            return null;
+
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            dbid);
+
+        ApplyAssetsToCharacterBootstrap(
+            character,
+            assets);
+        ApplyEffectiveStats(
+            character,
+            assets);
+
+        var extra = new Dictionary<string, object>(
+            character)
+        {
+            ["State"] =
+                character.GetValueOrDefault(
+                    "State",
+                    "idle"),
+            ["Dir"] = "1"
+        };
+
+        return new
+        {
+            Type = "SpawnEntity",
+            EntityID = dbid,
+            EntityType = 0,
+            Name = character["NAME"],
+            LocX = character["LocX"],
+            LocY = character["LocY"],
+            ExtraData = extra
+        };
     }
 
     private IReadOnlyList<object> BuildGroundItemSnapshotPackets(
@@ -1795,6 +1971,9 @@ public sealed class PacketRouter
 
         packets.AddRange(
             BuildGroundItemSnapshotPackets(state));
+
+        packets.AddRange(
+            BuildOtherPlayerSnapshotPackets(state));
 
         packets.AddRange(
             BuildActivePetSpawnPackets(
