@@ -456,6 +456,56 @@ func _update_sprite_offset() -> void :
 			var actual_offset_x = frame_texture.get_width() - offset.x if sprite.flip_h else offset.x
 			sprite.offset = Vector2( - actual_offset_x, - offset.y)
 
+func _direction_from_vector(dir_vec: Vector2) -> String:
+	if dir_vec.length_squared() <= 0.000001:
+		return current_dir
+
+	var angle_deg: float = posmod(
+		rad_to_deg(dir_vec.angle()),
+		360.0
+	)
+	var index_raw: int = int(round(angle_deg / 45.0))
+	return GameConstants.DIR_STRINGS[index_raw % 8]
+
+
+func _apply_visual_direction_from_vector(
+	dir_vec: Vector2,
+	allow_hysteresis: bool = false
+) -> void :
+	if dir_vec.length_squared() <= 0.000001:
+		return
+
+	var visual_dir: String = _direction_from_vector(dir_vec)
+	if visual_dir == current_dir:
+		last_visual_move_dir = current_dir
+		last_visual_move_dir_ms = Time.get_ticks_msec()
+		return
+
+	if allow_hysteresis:
+		var angle_deg: float = posmod(
+			rad_to_deg(dir_vec.angle()),
+			360.0
+		)
+		var dirs: Array = GameConstants.DIR_STRINGS
+		var current_index: int = dirs.find(current_dir)
+		if current_index >= 0:
+			var current_center: float = float(current_index) * 45.0
+			var diff: float = absf(angle_deg - current_center)
+			diff = minf(diff, 360.0 - diff)
+			if diff <= 28.0:
+				return
+
+	current_dir = visual_dir
+	last_visual_move_dir = visual_dir
+	last_visual_move_dir_ms = Time.get_ticks_msec()
+	last_move_dir_change_ms = last_visual_move_dir_ms
+	pending_move_dir = ""
+	pending_move_dir_count = 0
+
+	if current_state in ["walk", "attack"]:
+		sync_animation()
+
+
 func apply_network_move_direction(new_dir: String) -> void :
 	# Once combat state owns the monster, stale/late MoveEntity packets from
 	# the preceding chase tick must not overwrite the authoritative attack
@@ -504,39 +554,12 @@ func apply_network_move_direction(new_dir: String) -> void :
 
 
 func apply_attack_visual_direction(target_pos: Vector2) -> void :
-	# Attack facing is visual only. After the initial walk -> attack transition
-	# has preserved the known-good chase direction, later attacks may need to
-	# turn as the target moves around the stationary monster.
-	var dir_vec := target_pos - global_position
-	if dir_vec.length_squared() <= 0.000001:
-		return
-
-	var angle_deg: float = posmod(rad_to_deg(dir_vec.angle()), 360.0)
-	var index_raw: int = int(round(angle_deg / 45.0))
-	var visual_dir: String = GameConstants.DIR_STRINGS[index_raw % 8]
-
-	if visual_dir == current_dir:
-		return
-
-	# Keep the current sector near a boundary so tiny rendered-position jitter
-	# does not make ATTACK_x flip every hit. Only turn once the target is
-	# clearly inside the neighbouring 45-degree sector.
-	var dirs := GameConstants.DIR_STRINGS
-	var current_index: int = dirs.find(current_dir)
-	if current_index >= 0:
-		var current_center := float(current_index) * 45.0
-		var diff := absf(angle_deg - current_center)
-		diff = minf(diff, 360.0 - diff)
-		if diff <= 28.0:
-			return
-
-	current_dir = visual_dir
-	pending_move_dir = ""
-	pending_move_dir_count = 0
-	last_move_dir_change_ms = Time.get_ticks_msec()
-
-	if current_state == "attack":
-		sync_animation()
+	# Use the exact same 8-way mapping as player/mecha movement. Only keep
+	# a small hysteresis near sector boundaries to avoid visual flicker.
+	_apply_visual_direction_from_vector(
+		target_pos - global_position,
+		true
+	)
 
 
 func apply_network_state(new_state: String, new_dir: String) -> void :
@@ -580,27 +603,9 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 
 
 func _apply_network_target_direction(target_pos: Vector2) -> void :
-	var dir_vec: Vector2 = target_pos - global_position
-	if dir_vec.length_squared() <= 0.000001:
-		return
-
-	var angle_deg: float = posmod(rad_to_deg(dir_vec.angle()), 360.0)
-	var index_raw: int = int(round(angle_deg / 45.0))
-	var visual_dir: String = GameConstants.DIR_STRINGS[index_raw % 8]
-	if visual_dir == current_dir:
-		last_visual_move_dir = current_dir
-		last_visual_move_dir_ms = Time.get_ticks_msec()
-		return
-
-	current_dir = visual_dir
-	last_visual_move_dir = visual_dir
-	last_visual_move_dir_ms = Time.get_ticks_msec()
-	last_move_dir_change_ms = last_visual_move_dir_ms
-	pending_move_dir = ""
-	pending_move_dir_count = 0
-
-	if current_state == "walk":
-		sync_animation()
+	_apply_visual_direction_from_vector(
+		target_pos - global_position
+	)
 
 
 func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
@@ -781,12 +786,9 @@ func _ensure_skill_use_effect() -> void :
 
 func execute_skill_visuals(skill_id: int, _skill_level: int, target_node: Node2D = null, aoe_targets: Array = []) -> void :
 	if is_instance_valid(target_node):
-		var dir_vec = target_node.global_position - global_position
-		if dir_vec != Vector2.ZERO:
-			var angle_deg = posmod(rad_to_deg(dir_vec.angle()), 360.0)
-			var index_raw = int(round(angle_deg / 45.0))
-			var DIR_STRINGS = ["6", "7", "8", "1", "2", "3", "4", "5"]
-			current_dir = DIR_STRINGS[index_raw % 8]
+		_apply_visual_direction_from_vector(
+			target_node.global_position - global_position
+		)
 
 	current_state = "attack"
 	action_state_started_ms = Time.get_ticks_msec()
