@@ -61,6 +61,15 @@ GitHub Actions `Server build` 工作流程已納入前兩項檢查，且會上�
 
 這是**靜態來源與必要欄位檢查**，不等於所有回傳欄位或業務邏輯的完整型別測試，也不是 Godot 實機端到端測試。
 
+## 2026-11-07 契約再補強：戰團／商城 Action 與更多回應
+
+- `ClubAction` 已增加 **6 種 Action** 的必要欄位型別檢查：邀請、接受邀請、更新公告、捐金幣、捐經驗及研發。清空公告允許 `ClubMsg=""`，避免破壞原本 UI。
+- `MallAction` 已增加 **5 種 Action** 的必要欄位型別檢查：購買商品、建立 PayPal 贊助請求、查詢舊服點數、舊服點數提領、領取獎勵。這**不代表**金流或舊服資料來源已接通，Server 仍照原本策略拒絕未設定服務，不扣款、不轉點。
+- `Client` 的 `send_mall_action`、戰團 `ClubAction` 固定 Dictionary 也加入 `tests/packet_schema_audit.py` 的欄位比對；新增 Python fixture 測試，驗證缺少商城數量會正確檢出。
+- 戰團目標 DBID、金幣與經驗捐款的 Router 參數改用 `Int64`，避免 `Int32` 溢位後被當成 0。
+- Server → Client 重要回應契約由 **16 種擴充到 27 種**，新增商城／PayPal／舊服點數／製作／分解／組隊／戰團／交易／排名回應。靜態分析檢查固定匿名封包必要欄位與 Client 接收入口，**不代表值的型別、封包順序或實際功能已測通**。
+- 目前共 **40 種請求 Type Schema、29 種動態 Action Schema、27 種關鍵 Server 回應 Schema**。這些是納入檢查的規則數量，而不是整個遊戲所有封包的百分比。
+
 ## 真正的網路封包整合測試
 
 `tests/SGO.Server.WireSmokeTests/` 是**非破壞性**的 .NET WebSocket client，使用與 Godot 一致的 AES/Base64 封包格式，連至正在執行的伺服器，驗證：
