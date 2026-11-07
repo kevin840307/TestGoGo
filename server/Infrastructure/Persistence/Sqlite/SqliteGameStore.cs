@@ -132,8 +132,10 @@ public sealed class SqliteGameStore : IGameStore
         r.Close();
 
         if (character is not null)
+        {
             ApplyClubFields(db, character);
             ApplyTitleFields(db, character);
+        }
 
         return character;
     }
