@@ -31,6 +31,7 @@ var attack_speed: float = 1.0
 var ready_to_cast_skill_id: int = -1
 var pending_skill_id: int = -1
 var confirmed_summoned_horse_uid: int = -1
+var can_cross_special_terrain: bool = false
 
 
 
@@ -203,7 +204,7 @@ func _on_drive_mecha_response_received(success: bool, horse_uid: int, _message: 
 	_update_special_terrain_collision(confirmed_summoned_horse_uid)
 
 func _update_special_terrain_collision(horse_uid: int) -> void :
-	var can_cross_special_terrain: = false
+	can_cross_special_terrain = false
 	if horse_uid != -1:
 		for horse_equip in data_model.horse_equip_list:
 			if int(horse_equip.get("horse_uid", -1)) != horse_uid:
@@ -669,7 +670,8 @@ func _set_navigation_target(destination: Vector2) -> void :
 	var route: PackedVector2Array = LegacyPathfinder.get_path(
 		map_id,
 		global_position,
-		destination
+		destination,
+		can_cross_special_terrain
 	)
 
 	if route.is_empty():
