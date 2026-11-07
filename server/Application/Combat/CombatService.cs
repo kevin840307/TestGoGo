@@ -739,6 +739,7 @@ public sealed class CombatService
                 monster.HasTarget = true;
                 monster.TargetCharacterId =
                     session.CharacterId.Value;
+                monster.TargetPetUid = petUid;
                 SetAiState(monster, MonsterAiState.Chase);
 
                 packets.Add(new
@@ -779,6 +780,12 @@ public sealed class CombatService
                     packets);
 
                 AddMechaKillExperience(
+                    session,
+                    accountId,
+                    monster,
+                    packets);
+
+                AddActivePetKillExperience(
                     session,
                     accountId,
                     monster,
@@ -2104,6 +2111,7 @@ public sealed class CombatService
                 monster.HasTarget = true;
                 monster.TargetCharacterId =
                     session.CharacterId.Value;
+                monster.TargetPetUid = petUid;
                 SetAiState(monster, MonsterAiState.Chase);
                 packets.Add(new
                 {
@@ -2143,6 +2151,12 @@ public sealed class CombatService
                     packets);
 
                 AddMechaKillExperience(
+                    session,
+                    accountId,
+                    monster,
+                    packets);
+
+                AddActivePetKillExperience(
                     session,
                     accountId,
                     monster,
@@ -2354,6 +2368,64 @@ public sealed class CombatService
             Type = "SyncMoney",
             Money = rewarded["Money"]
         });
+    }
+
+    private void AddActivePetKillExperience(
+        ClientSession session,
+        long accountId,
+        MonsterRuntimeState monster,
+        List<object> packets)
+    {
+        if (!session.CharacterId.HasValue)
+            return;
+
+        var dbid = session.CharacterId.Value;
+        var activePets = _store.GetCharacterAssets(
+                accountId,
+                dbid)
+            .Pets
+            .Where(x => Convert.ToInt32(x["State"]) == 1)
+            .ToArray();
+
+        foreach (var before in activePets)
+        {
+            var petUid = Convert.ToInt64(before["UID"]);
+            var oldLevel = Convert.ToInt32(before["Level"]);
+
+            // Keep pet progression independent from character EXP tables for
+            // now. The existing pet schema starts at MaxExp=100, and this
+            // grants useful progress without coupling pet levels to player
+            // growth rules.
+            var gainedExp = Math.Max(1, monster.Level * 10);
+            var pet = _store.AddPetExperience(
+                accountId,
+                dbid,
+                petUid,
+                gainedExp);
+
+            if (pet is null)
+                continue;
+
+            packets.Add(new
+            {
+                Type = "PetSync",
+                Pets = _store.GetCharacterAssets(
+                    accountId,
+                    dbid).Pets,
+                MaxSize = _store.GetCharacterAssets(
+                    accountId,
+                    dbid).PetMaxSize
+            });
+
+            if (Convert.ToInt32(pet["Level"]) > oldLevel)
+            {
+                packets.Add(new
+                {
+                    Type = "SystemMessageFlash",
+                    Message = $"寵物升級！Lv.{pet["Level"]}"
+                });
+            }
+        }
     }
 
     private void AddMechaKillExperience(
