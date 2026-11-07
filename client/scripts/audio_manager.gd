@@ -26,6 +26,9 @@ var _missing_se_names: Dictionary = {}
 var _se_player_play_order: Dictionary = {}
 var _se_player_volume_scales: Dictionary = {}
 var _next_se_play_order: int = 0
+var _last_se_played_at_msec: Dictionary = {}
+const SE_REPEAT_COOLDOWN_MSEC = 90
+const SE_REPEAT_COOLDOWN_UI_MSEC = 20
 var _se_event_index: Dictionary = {}
 var _se_controller_event_index: Dictionary = {}
 var _map_bgm_cache: Dictionary = {}
@@ -363,6 +366,15 @@ func play_se_by_name(se_name: String, volume_scale: float = 1.0, pitch_scale: fl
 	if normalized_name.is_empty():
 		return false
 
+	var now_msec := Time.get_ticks_msec()
+	var repeat_cooldown := SE_REPEAT_COOLDOWN_MSEC
+	if normalized_name in ["SE%04d" % UI_HOVER_SE_ID, "SE%04d" % UI_BUTTON_PRESS_SE_ID, "SE%04d" % UI_INTERFACE_ACTIVATION_SE_ID]:
+		repeat_cooldown = SE_REPEAT_COOLDOWN_UI_MSEC
+
+	var last_played := int(_last_se_played_at_msec.get(normalized_name, -1000000))
+	if now_msec - last_played < repeat_cooldown:
+		return false
+
 	var stream = _load_se_by_name(normalized_name)
 	if stream == null:
 		return false
@@ -381,6 +393,7 @@ func play_se_by_name(se_name: String, volume_scale: float = 1.0, pitch_scale: fl
 	_next_se_play_order += 1
 	_se_player_play_order[player] = _next_se_play_order
 	player.play()
+	_last_se_played_at_msec[normalized_name] = now_msec
 	return true
 
 func play_se_candidates(candidates: Array[String], volume_scale: float = 1.0, pitch_scale: float = 1.0) -> bool:
@@ -423,6 +436,7 @@ func stop_all_se() -> void :
 func clear_se_cache() -> void :
 	se_cache.clear()
 	_missing_se_names.clear()
+	_last_se_played_at_msec.clear()
 
 func set_se_volume(percentage: float) -> void :
 	current_se_volume_pct = clampf(percentage, 0.0, 100.0)
