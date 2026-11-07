@@ -1180,6 +1180,8 @@ public sealed class CombatService
             specialSkill.Equals(
                 "偵察",
                 StringComparison.Ordinal);
+        var isPortableRepair =
+            skillId == 31112;
 
         var hasBonus = HasGenericStatBonus(levelData);
         var isHeal = levelData.SkillType == 2;
@@ -1213,7 +1215,8 @@ public sealed class CombatService
             !isSelfRecovery &&
             !isPartyReturn &&
             !isTaunt &&
-            !isScout)
+            !isScout &&
+            !isPortableRepair)
         {
             return [Flash(
                 "此技能屬於特殊/製造類型，效果尚未還原")];
@@ -1424,6 +1427,15 @@ public sealed class CombatService
             targetEntityId = checked((int)session.CharacterId.Value);
             centerX = Convert.ToDouble(character["LocX"]);
             centerY = Convert.ToDouble(character["LocY"]);
+        }
+
+        if (isPortableRepair)
+        {
+            packets.Add(new
+            {
+                Type = "OpenRepairWindow",
+                RepairType = 10
+            });
         }
 
         if (hasCreateItemSpecial)
