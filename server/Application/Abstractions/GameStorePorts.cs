@@ -259,6 +259,20 @@ public interface ISkillStore
         int spCost);
 }
 
+public interface IQuestStore
+{
+    int GetQuestFlag(
+        long accountId,
+        long dbid,
+        string flagName);
+
+    bool SetQuestFlag(
+        long accountId,
+        long dbid,
+        string flagName,
+        int value);
+}
+
 public interface IShortcutStore
 {
     List<Dictionary<string, object>> GetShortcuts(
