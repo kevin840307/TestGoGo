@@ -55,8 +55,16 @@ public sealed class ResourceRecoveryService
             Convert.ToInt32(character["HP"]) <= 0)
             return [];
 
-        var maxHp = Math.Max(1, Convert.ToInt32(character["MaxHP"]));
-        var maxMp = Math.Max(0, Convert.ToInt32(character["MaxMP"]));
+        var effectiveAssets = _assets.GetCharacterAssets(
+            session.AccountId.Value,
+            session.CharacterId.Value);
+        var effectiveStats = CharacterStatCalculator.Calculate(
+            character,
+            effectiveAssets,
+            _current);
+
+        var maxHp = Math.Max(1, effectiveStats.MaxHP);
+        var maxMp = Math.Max(0, effectiveStats.MaxMP);
         var hp = Convert.ToInt32(character["HP"]);
         var mp = Convert.ToInt32(character["MP"]);
 
@@ -95,7 +103,9 @@ public sealed class ResourceRecoveryService
             session.AccountId.Value,
             session.CharacterId.Value,
             hpAmount,
-            mpAmount);
+            mpAmount,
+            maxHp,
+            maxMp);
 
         if (updated is null)
             return [];
@@ -103,10 +113,6 @@ public sealed class ResourceRecoveryService
         if (Convert.ToInt32(updated["HP"]) == hp &&
             Convert.ToInt32(updated["MP"]) == mp)
             return [];
-
-        var effectiveAssets = _assets.GetCharacterAssets(
-            session.AccountId.Value,
-            session.CharacterId.Value);
 
         return
         [
