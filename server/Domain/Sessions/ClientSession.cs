@@ -5,6 +5,8 @@ namespace SGO.Server.Domain.Sessions;
 public sealed class ClientSession
 {
     public Guid ConnectionId { get; set; }
+    public int PublishedMapId { get; set; }
+    public long PublishedCharacterId { get; set; }
     public long? AccountId { get; set; }
     public long? CharacterId { get; set; }
     public int CurrentMapId { get; set; }
