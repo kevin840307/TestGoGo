@@ -229,6 +229,7 @@ try
         store,
         skillCatalog,
         horseCardCatalog,
+        currentCatalog,
         config);
     var router = new PacketRouter(
         store,
@@ -452,6 +453,35 @@ try
         Check(Convert.ToInt64(
                   store.GetCharacter(account.Value, id)!["Money"]) < moneyBeforeShop,
             "NPC shop buy deducts money");
+    }
+
+    var mappedEquipShopItem = shopCatalog.GetShopItems(2)
+        .First(x => x.ItemIndex == 41078);
+    var equipCountBeforePurchase =
+        store.GetCharacterAssets(account.Value, id).Equips.Count;
+
+    using (var buyEquip = Json(JsonSerializer.Serialize(new
+    {
+        Type = "ShopAction",
+        Action = "BuyNpcItem",
+        ShopID = 2,
+        ItemIndex = mappedEquipShopItem.ItemIndex,
+        Count = 1
+    })))
+    {
+        var responses = router.Handle(buyEquip.RootElement, session);
+        var assetsAfterEquipBuy =
+            store.GetCharacterAssets(account.Value, id);
+
+        Check(assetsAfterEquipBuy.Equips.Count ==
+                  equipCountBeforePurchase + 1 &&
+              assetsAfterEquipBuy.Equips.Any(x =>
+                  Convert.ToInt32(x["ItemIdx"]) == 41078),
+            "NPC shop buys mapped current equipment into equipment storage");
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"EquipSync\"")),
+            "equipment purchase refreshes EquipSync");
     }
 
     var purchased = store.GetCharacterAssets(account.Value, id)
@@ -956,6 +986,19 @@ try
           Convert.ToInt32(selected["MapID"]) == 15 &&
           selected["State"].ToString() == "idle",
         "revive persists full HP idle state and reborn map");
+
+    using (var gmLevel = Json(
+        """{"Type":"ChatMessage","Channel":0,"Message":"/gm level 25","BubbleType":0}"""))
+    {
+        var responses = router.Handle(gmLevel.RootElement, session);
+        Check(Convert.ToInt32(
+                  store.GetCharacter(account.Value, id)!["Level"]) == 25,
+            "GM level command persists current character level");
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PlayerStatusSync\"")),
+            "GM level command refreshes player status");
+    }
 
     using (var gmSkill = Json(
         """{"Type":"ChatMessage","Channel":0,"Message":"/gm skill 20101 5","BubbleType":0}"""))
