@@ -303,6 +303,43 @@ public sealed class CombatService
         return packets;
     }
 
+    public IReadOnlyList<object> SpawnLegacyEnemy(
+        ClientSession session,
+        int enemyId,
+        double x,
+        double y)
+    {
+        var source = _world.GetEnemies(session.CurrentMapId)
+            .FirstOrDefault(e => e.EnemyId == enemyId);
+
+        if (source is null)
+            return [];
+
+        var entityId = 9_000_000;
+        while (session.Monsters.ContainsKey(entityId))
+            entityId++;
+
+        var state = new MonsterRuntimeState
+        {
+            EntityId = entityId,
+            EnemyId = source.EnemyId,
+            MapId = session.CurrentMapId,
+            Name = source.Name,
+            Sprite = source.Sprite,
+            Level = Math.Max(1, source.Level),
+            MaxHp = Math.Max(1, source.MaxHp),
+            CurrentHp = Math.Max(1, source.MaxHp),
+            SpawnX = x,
+            SpawnY = y,
+            X = x,
+            Y = y
+        };
+
+        session.Monsters[state.EntityId] = state;
+
+        return [BuildMonsterSpawnPacket(state)];
+    }
+
     public IReadOnlyList<object> PetAttack(
         ClientSession session,
         long petUid,
