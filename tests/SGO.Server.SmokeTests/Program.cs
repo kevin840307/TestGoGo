@@ -1116,12 +1116,19 @@ try
         session.LastResourceRecoveryAt.AddSeconds(5));
 
     var afterRecovery = store.GetCharacter(account.Value, id)!;
+    var effectiveRecoveryStats =
+        SGO.Server.Application.Assets.CharacterStatCalculator.Calculate(
+            afterRecovery,
+            store.GetCharacterAssets(account.Value, id),
+            currentCatalog);
     Check(Convert.ToInt32(afterRecovery["HP"]) > beforeRecoveryHp &&
           Convert.ToInt32(afterRecovery["MP"]) >= beforeRecoveryMp &&
           recoveryPackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
-                  "\"Type\":\"PlayerStatusSync\"")),
-        "resource recovery restores HP/MP and syncs status after interval");
+                  "\"Type\":\"PlayerStatusSync\"") &&
+              JsonSerializer.Serialize(x).Contains(
+                  $"\"MaxHP\":{effectiveRecoveryStats.MaxHP}")),
+        "resource recovery preserves effective mecha MaxHP instead of reverting to DB base MaxHP");
 
     using (var restore = Json(
         """{"Type":"ChatMessage","Channel":0,"Message":"/gm restore","BubbleType":0}"""))
@@ -2180,6 +2187,16 @@ try
                 $"\"AttackerID\":{monster.EntityId}")),
         "monster beyond legal melee range keeps chasing and cannot deal melee damage");
 
+    var invalidAttackPackets = combat.Attack(
+        session,
+        account.Value,
+        99_999_999,
+        1);
+    Check(invalidAttackPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "攻擊目標不存在")),
+        "invalid AttackEntity receives explicit response instead of NO_RESPONSE");
+
     var sawDeath = false;
     IReadOnlyList<object> deathPackets = Array.Empty<object>();
     var rewardBeforeKill = store.GetCharacter(account.Value, id)!;
@@ -2270,12 +2287,18 @@ try
             JsonSerializer.Serialize(x).Contains(
                 $"\"EntityID\":{monster.EntityId}"));
 
-        Check(!monsterAttackPackets.Any(x =>
+        var attackMovePackets = monsterAttackPackets
+            .Where(x =>
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"MoveEntity\"") &&
                 JsonSerializer.Serialize(x).Contains(
-                    $"\"EntityID\":{monster.EntityId}")),
-            "monster attack tick never emits movement for the attacking monster");
+                    $"\"EntityID\":{monster.EntityId}"))
+            .ToArray();
+
+        Check(attackMovePackets.All(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"SpeedTime\":0")),
+            "monster attack transition only emits authoritative snap movement");
 
         playerDeathSeen = monsterAttackPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
@@ -2799,8 +2822,13 @@ try
                 Convert.ToInt32(x["Color"]) == 2) &&
             responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains(
-                    "\"Type\":\"DespawnEntity\"")),
-            "PickUpItemRequest restores persisted equipment and removes ground row");
+                    "\"Type\":\"DespawnEntity\"")) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"ItemPickupFeedback\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "淺藍色初心褲子")),
+            "PickUpItemRequest restores persisted equipment, removes ground row and emits pickup feedback");
     }
 
     using (var logout = Json(
