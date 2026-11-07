@@ -173,6 +173,14 @@ CREATE TABLE IF NOT EXISTS character_shortcuts (
     FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS character_quest_flags (
+    character_id INTEGER NOT NULL,
+    flag_name TEXT NOT NULL,
+    flag_value INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(character_id, flag_name),
+    FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS ground_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     map_id INTEGER NOT NULL,
