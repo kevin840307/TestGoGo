@@ -453,6 +453,98 @@ func get_combat_hit_state() -> String:
 func is_riding_mecha() -> bool:
 	return "summoned_horse_uid" in data_model and data_model.summoned_horse_uid != -1
 
+func setup_layered_paper_dolls_initial_async() -> void :
+	if data_model.transform_type > 0:
+		setup_layered_paper_dolls()
+		return
+
+	if not is_instance_valid(doll_engine):
+		return
+	if is_instance_valid(transform_sprite):
+		transform_sprite.visible = false
+	doll_engine.visible = true
+	if is_instance_valid(name_label):
+		name_label.visible = not data_model.is_shop_open
+
+	if is_riding_mecha():
+		var body_id: int = 0
+		var leg_id: int = 0
+		var weapon_id: int = 0
+		var dynamic_mecha_type: String = str(data_model.mecha_type)
+		var mecha_horse_idx: int = 0
+
+		if "horse_list" in data_model and data_model.horse_list.size() > 0:
+			for h in data_model.horse_list:
+				if int(h.get("horse_uid", -1)) == int(data_model.summoned_horse_uid):
+					dynamic_mecha_type = str(h.get("horse_type", "MS"))
+					data_model.mecha_type = dynamic_mecha_type
+					mecha_horse_idx = int(h.get("horse_idx", 0))
+					break
+
+		for heq in data_model.horse_equip_list:
+			if int(heq.get("horse_uid", -1)) == int(data_model.summoned_horse_uid) and int(heq.get("in_bank", 0)) == 0:
+				var e_idx: int = int(heq.get("equip_idx", 0))
+				var part: int = int(heq.get("part", 0))
+				if part == 0:
+					body_id = e_idx
+					if ItemLoader:
+						var item_mecha_type: String = str(ItemLoader.get_item_property(e_idx, "horse_type", ""))
+						if item_mecha_type != "" and item_mecha_type != "0":
+							dynamic_mecha_type = item_mecha_type
+							data_model.mecha_type = dynamic_mecha_type
+				elif part == 1:
+					weapon_id = e_idx
+				elif part == 2:
+					leg_id = e_idx
+
+		if dynamic_mecha_type == "MA" and body_id == 0:
+			body_id = mecha_horse_idx
+			if ItemLoader:
+				var ma_body_id: int = int(ItemLoader.get_item_property(mecha_horse_idx, "body_id", 0))
+				if ma_body_id > 0:
+					body_id = ma_body_id
+
+		await doll_engine.build_mecha_model_initial_async(
+			current_race,
+			current_hair,
+			current_hair_color_index,
+			int(data_model.bonnet_id),
+			body_id,
+			leg_id,
+			weapon_id,
+			dynamic_mecha_type
+		)
+
+		if data_model.transform_type == 0:
+			if name_label: name_label.position.y = -160.0
+			if title_label: title_label.position.y = -180.0
+			if club_label: club_label.position.y = -200.0
+	else:
+		var equips: Dictionary = {
+			0: data_model.bonnet_id,
+			1: data_model.left_hand_id,
+			2: data_model.right_hand_id,
+			3: data_model.upper_armor_id,
+			4: data_model.lower_armor_id,
+			5: data_model.weapon_id,
+			6: data_model.shield_id,
+			7: data_model.back_id,
+		}
+		await doll_engine.build_human_model_initial_async(
+			current_race,
+			current_hair,
+			current_hair_color_index,
+			current_body_color_index,
+			equips
+		)
+
+		if data_model.transform_type == 0:
+			if name_label: name_label.position.y = -130.0
+			if title_label: title_label.position.y = -150.0
+			if club_label: club_label.position.y = -170.0
+
+	_refresh_appearance_visibility()
+
 func setup_layered_paper_dolls() -> void :
 
 	if data_model.transform_type > 0:
