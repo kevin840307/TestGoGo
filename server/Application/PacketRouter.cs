@@ -1240,18 +1240,21 @@ public sealed class PacketRouter
                 if (!state.CharacterId.HasValue)
                     return [];
 
-                var titleId = Math.Clamp(req.Int("TitleID"), 0, 26);
-                var character = _store.GetCharacter(
-                    accountId,
-                    state.CharacterId.Value);
-
-                if (character is null)
-                    return [];
-
-                // The current lightweight persistence schema does not yet
-                // expose a dedicated title write port. Keep the client and
-                // nearby entity presentation in sync for this session.
-                character["Title"] = titleId;
+                var titleId = req.Int("TitleID");
+                if (titleId is < 0 or > 26 ||
+                    !_store.SetCurrentTitle(
+                        accountId,
+                        state.CharacterId.Value,
+                        titleId))
+                {
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = titleId == 0
+                            ? "稱號設定失敗"
+                            : "尚未解鎖此稱號"
+                    }];
+                }
 
                 var titlePacket = new
                 {
@@ -2908,7 +2911,19 @@ public sealed class PacketRouter
                         return ResolveQuestTargetAccount(targetDbid) > 0
                             ? 0
                             : -1;
-                    }
+                    },
+                    HasTitle = titleId =>
+                        dbid > 0 &&
+                        _store.HasTitle(
+                            accountId,
+                            dbid,
+                            titleId),
+                    UnlockTitle = titleId =>
+                        dbid > 0 &&
+                        _store.UnlockTitle(
+                            accountId,
+                            dbid,
+                            titleId)
                 });
 
             if (result.RebornMapId.HasValue &&
