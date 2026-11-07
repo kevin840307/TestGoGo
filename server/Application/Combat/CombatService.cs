@@ -15,6 +15,7 @@ namespace SGO.Server.Application.Combat;
 
 public sealed class CombatService
 {
+    private const long CharacterExperienceMultiplier = 10_000_000L;
     private static readonly TimeSpan RespawnDelay = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan MonsterAttackCooldown = TimeSpan.FromMilliseconds(1400);
     private static readonly TimeSpan WanderMinInterval = TimeSpan.FromMilliseconds(1200);
@@ -2876,6 +2877,12 @@ public sealed class CombatService
                 int.MaxValue);
         }
 
+        gainedExp = (int)Math.Clamp(
+            (long)gainedExp *
+            CharacterExperienceMultiplier,
+            0L,
+            int.MaxValue);
+
         var gainedMoney = Math.Max(1, monster.Level);
 
         var rewarded = _store.AddRewards(
@@ -2886,6 +2893,12 @@ public sealed class CombatService
 
         if (rewarded is null)
             return;
+
+        packets.Add(new
+        {
+            Type = "SystemMessageChat",
+            Message = $"獲得經驗值 {gainedExp:N0}"
+        });
 
         var accumulatedExp = Math.Max(
             0,
