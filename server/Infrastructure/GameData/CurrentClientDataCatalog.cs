@@ -165,6 +165,10 @@ public sealed class CurrentClientDataCatalog
         {
             configuredRoot,
             Environment.GetEnvironmentVariable("SGO_CLIENT_ROOT"),
+            Path.Combine(Directory.GetCurrentDirectory(), "client"),
+            Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory,
+                "..", "..", "..", "..", "client")),
             @"C:SGORecovered",
             @"C:SGO重置版本Recovered"
         };
