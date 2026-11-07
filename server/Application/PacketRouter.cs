@@ -1529,7 +1529,7 @@ public sealed class PacketRouter
             case "DriveMechaRequest":
             {
                 if (!state.CharacterId.HasValue) return [];
-                var horseUid = req.Int("HorseUID", -1);
+                var horseUid = req.Long("HorseUID", -1);
                 var success = _store.SetSummonedHorse(
                     accountId,
                     state.CharacterId.Value,
@@ -1583,8 +1583,8 @@ public sealed class PacketRouter
             {
                 if (!state.CharacterId.HasValue) return [];
 
-                var equipUid = req.Int("EquipUID");
-                var horseUid = req.Int("HorseUID");
+                var equipUid = req.Long("EquipUID");
+                var horseUid = req.Long("HorseUID");
                 var assetsBefore = _store.GetCharacterAssets(
                     accountId,
                     state.CharacterId.Value);
@@ -1686,8 +1686,8 @@ public sealed class PacketRouter
                 var success = _store.UnequipHorseItem(
                     accountId,
                     state.CharacterId.Value,
-                    req.Int("EquipUID"),
-                    req.Int("HorseUID"));
+                    req.Long("EquipUID"),
+                    req.Long("HorseUID"));
 
                 var assets = _store.GetCharacterAssets(
                     accountId,
@@ -2324,7 +2324,7 @@ public sealed class PacketRouter
                 var ground = _store.DropAssetToGround(
                     accountId,
                     state.CharacterId.Value,
-                    req.Int("ItemUID"),
+                    req.Long("ItemUID"),
                     tabType,
                     Math.Max(1, req.Int("Count", 1)),
                     state.CurrentMapId,
@@ -3016,8 +3016,8 @@ public sealed class PacketRouter
             {
                 if (!state.CharacterId.HasValue) return [];
 
-                var horseUid = req.Int("HorseUID");
-                var itemUid = req.Int("ItemUID");
+                var horseUid = req.Long("HorseUID");
+                var itemUid = req.Long("ItemUID");
                 var assetsBefore = _store.GetCharacterAssets(
                     accountId,
                     state.CharacterId.Value);
