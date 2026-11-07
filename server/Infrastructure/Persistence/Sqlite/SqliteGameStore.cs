@@ -2115,6 +2115,257 @@ public sealed class SqliteGameStore : IGameStore
         return true;
     }
 
+    public (bool Success, string Message) BankTransfer(
+        long accountId,
+        long dbid,
+        long uid,
+        int tabType,
+        int amount,
+        bool toBank)
+    {
+        amount = Math.Max(1, amount);
+        var targetBank = toBank ? 1 : 0;
+        var sourceBank = toBank ? 0 : 1;
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return (false, "角色不存在");
+
+        if (tabType == 0)
+        {
+            int itemIndex;
+            int sourceCount;
+
+            using (var get = db.CreateCommand())
+            {
+                get.Transaction = tx;
+                get.CommandText = """
+                    SELECT item_index,count
+                      FROM inventory_items
+                     WHERE uid=$uid
+                       AND character_id=$id
+                       AND in_bank=$source
+                       AND in_shop=0
+                    """;
+                Arg(get, "$uid", uid);
+                Arg(get, "$id", dbid);
+                Arg(get, "$source", sourceBank);
+
+                using var r = get.ExecuteReader();
+                if (!r.Read())
+                    return (false, "找不到可轉移的物品");
+
+                itemIndex = r.GetInt32(0);
+                sourceCount = r.GetInt32(1);
+            }
+
+            if (amount > sourceCount)
+                return (false, "轉移數量超過持有數量");
+
+            long? targetUid = null;
+            using (var findTarget = db.CreateCommand())
+            {
+                findTarget.Transaction = tx;
+                findTarget.CommandText = """
+                    SELECT uid
+                      FROM inventory_items
+                     WHERE character_id=$id
+                       AND item_index=$item
+                       AND in_bank=$target
+                       AND in_shop=0
+                     ORDER BY uid
+                     LIMIT 1
+                    """;
+                Arg(findTarget, "$id", dbid);
+                Arg(findTarget, "$item", itemIndex);
+                Arg(findTarget, "$target", targetBank);
+                var scalar = findTarget.ExecuteScalar();
+                if (scalar is not null && scalar != DBNull.Value)
+                    targetUid = Convert.ToInt64(scalar);
+            }
+
+            if (targetUid is null)
+            {
+                using var countTarget = db.CreateCommand();
+                countTarget.Transaction = tx;
+                countTarget.CommandText = """
+                    SELECT count(*)
+                      FROM inventory_items
+                     WHERE character_id=$id
+                       AND in_bank=$target
+                       AND in_shop=0
+                    """;
+                Arg(countTarget, "$id", dbid);
+                Arg(countTarget, "$target", targetBank);
+                if (Convert.ToInt32(countTarget.ExecuteScalar()) >= 200)
+                    return (false, "目標區域空間已滿");
+            }
+
+            if (amount == sourceCount && targetUid is null)
+            {
+                using var moveWhole = db.CreateCommand();
+                moveWhole.Transaction = tx;
+                moveWhole.CommandText = """
+                    UPDATE inventory_items
+                       SET in_bank=$target
+                     WHERE uid=$uid AND character_id=$id
+                    """;
+                Arg(moveWhole, "$target", targetBank);
+                Arg(moveWhole, "$uid", uid);
+                Arg(moveWhole, "$id", dbid);
+                if (moveWhole.ExecuteNonQuery() != 1)
+                    return (false, "銀行轉移失敗");
+            }
+            else
+            {
+                using (var reduce = db.CreateCommand())
+                {
+                    reduce.Transaction = tx;
+                    reduce.CommandText = """
+                        UPDATE inventory_items
+                           SET count=count-$amount
+                         WHERE uid=$uid
+                           AND character_id=$id
+                           AND count >= $amount
+                        """;
+                    Arg(reduce, "$amount", amount);
+                    Arg(reduce, "$uid", uid);
+                    Arg(reduce, "$id", dbid);
+                    if (reduce.ExecuteNonQuery() != 1)
+                        return (false, "銀行轉移失敗");
+                }
+
+                if (targetUid.HasValue)
+                {
+                    using var merge = db.CreateCommand();
+                    merge.Transaction = tx;
+                    merge.CommandText = """
+                        UPDATE inventory_items
+                           SET count=count+$amount
+                         WHERE uid=$uid AND character_id=$id
+                        """;
+                    Arg(merge, "$amount", amount);
+                    Arg(merge, "$uid", targetUid.Value);
+                    Arg(merge, "$id", dbid);
+                    merge.ExecuteNonQuery();
+                }
+                else
+                {
+                    using var insert = db.CreateCommand();
+                    insert.Transaction = tx;
+                    insert.CommandText = """
+                        INSERT INTO inventory_items(
+                            character_id,item_index,count,in_bank,in_shop)
+                        VALUES($id,$item,$amount,$target,0)
+                        """;
+                    Arg(insert, "$id", dbid);
+                    Arg(insert, "$item", itemIndex);
+                    Arg(insert, "$amount", amount);
+                    Arg(insert, "$target", targetBank);
+                    insert.ExecuteNonQuery();
+                }
+
+                if (amount == sourceCount)
+                {
+                    using var deleteEmpty = db.CreateCommand();
+                    deleteEmpty.Transaction = tx;
+                    deleteEmpty.CommandText = """
+                        DELETE FROM inventory_items
+                         WHERE uid=$uid
+                           AND character_id=$id
+                           AND count <= 0
+                        """;
+                    Arg(deleteEmpty, "$uid", uid);
+                    Arg(deleteEmpty, "$id", dbid);
+                    deleteEmpty.ExecuteNonQuery();
+                }
+            }
+
+            tx.Commit();
+            return (true, toBank ? "已存入銀行" : "已從銀行提領");
+        }
+
+        string table;
+        string uidColumn;
+        string extraPredicate;
+        int maxSize;
+
+        switch (tabType)
+        {
+            case 1:
+                table = "equipment_items";
+                uidColumn = "uid";
+                extraPredicate = " AND part=255";
+                maxSize = 200;
+                break;
+            case 3:
+                table = "horse_equipment";
+                uidColumn = "uid";
+                extraPredicate = " AND horse_uid=-1";
+                maxSize = 100;
+                break;
+            default:
+                return (false, "不支援的銀行分類");
+        }
+
+        using (var exists = db.CreateCommand())
+        {
+            exists.Transaction = tx;
+            exists.CommandText = $"""
+                SELECT count(*)
+                  FROM {table}
+                 WHERE {uidColumn}=$uid
+                   AND character_id=$id
+                   AND in_bank=$source
+                   AND in_shop=0
+                   {extraPredicate}
+                """;
+            Arg(exists, "$uid", uid);
+            Arg(exists, "$id", dbid);
+            Arg(exists, "$source", sourceBank);
+            if (Convert.ToInt32(exists.ExecuteScalar()) != 1)
+                return (false, "找不到可轉移的裝備");
+        }
+
+        using (var countTarget = db.CreateCommand())
+        {
+            countTarget.Transaction = tx;
+            countTarget.CommandText = $"""
+                SELECT count(*)
+                  FROM {table}
+                 WHERE character_id=$id
+                   AND in_bank=$target
+                   AND in_shop=0
+                   {extraPredicate}
+                """;
+            Arg(countTarget, "$id", dbid);
+            Arg(countTarget, "$target", targetBank);
+            if (Convert.ToInt32(countTarget.ExecuteScalar()) >= maxSize)
+                return (false, "目標區域空間已滿");
+        }
+
+        using (var move = db.CreateCommand())
+        {
+            move.Transaction = tx;
+            move.CommandText = $"""
+                UPDATE {table}
+                   SET in_bank=$target
+                 WHERE {uidColumn}=$uid
+                   AND character_id=$id
+                """;
+            Arg(move, "$target", targetBank);
+            Arg(move, "$uid", uid);
+            Arg(move, "$id", dbid);
+            if (move.ExecuteNonQuery() != 1)
+                return (false, "銀行轉移失敗");
+        }
+
+        tx.Commit();
+        return (true, toBank ? "已存入銀行" : "已從銀行提領");
+    }
+
     public Dictionary<string, object>? UseRecoveryItem(
         long accountId,
         long dbid,
