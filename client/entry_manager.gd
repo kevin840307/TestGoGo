@@ -11,6 +11,7 @@ extends Control
 
 var _loading_session_id: int = 0
 var _loading_progress_value: float = 0.0
+var __world_loading_session_id_id: int = -1
 
 func _begin_loading_session() -> int:
 	_loading_session_id += 1
@@ -356,14 +357,14 @@ func _on_character_verified_and_enter_game(char_data: Dictionary, _map_id: Strin
 	# Independent loading session #2: character select -> world.
 	var overlay = get_node_or_null("%LoadingOverlay")
 	var select_script_node = character_select_layer.get_node_or_null("CharacterSelect")
-	var world_loading_session: int = _begin_loading_session()
+	__world_loading_session_id_id = _begin_loading_session()
 
 
 	if overlay:
 		for child in overlay.get_children():
 			if "modulate" in child:
 				child.modulate.a = 0.0
-		_set_loading_progress(0.0, world_loading_session)
+		_set_loading_progress(0.0, _world_loading_session_id)
 
 
 	var tween = create_tween()
@@ -408,7 +409,7 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 		# GameManager owns the heavy world-building work, but it must not consume
 		# the final 5% because WorldReady/final presentation still happens here.
 		var mapped_value: float = 5.0 + clampf(value, 0.0, 100.0) * 0.90
-		_set_loading_progress(mapped_value, world_loading_session)
+		_set_loading_progress(mapped_value, _world_loading_session_id)
 
 	var load_success = await GameManager.enter_game_world(server_full_data, map_id, spawn_pos, progress_callback)
 
@@ -421,7 +422,7 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 			if select_script_node: select_script_node.modulate.a = 1.0
 		return
 
-	_set_loading_progress(96.0, world_loading_session)
+	_set_loading_progress(96.0, _world_loading_session_id)
 
 	# The map and entity containers are fully ready at this point. Tell the
 	# server now, while the loading overlay is still covering the world, so the
@@ -429,11 +430,11 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 	# player sees the map.
 	if NetworkManager and NetworkManager.has_method("send_world_ready"):
 		NetworkManager.send_world_ready(int(server_full_data.get("MapID", 0)))
-	_set_loading_progress(97.0, world_loading_session)
+	_set_loading_progress(97.0, _world_loading_session_id)
 	await get_tree().process_frame
-	_set_loading_progress(99.0, world_loading_session)
+	_set_loading_progress(99.0, _world_loading_session_id)
 	await get_tree().process_frame
-	_set_loading_progress(100.0, world_loading_session)
+	_set_loading_progress(100.0, _world_loading_session_id)
 	await get_tree().process_frame
 
 	var fade_world_tween = create_tween()
