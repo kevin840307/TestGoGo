@@ -283,7 +283,12 @@ func show_damage_number(damage: int, is_crit: bool = false, hit_delay: float = 0
 
 func update_hp(new_hp: int, hit_delay: float = 0.3, is_miss: bool = false) -> void :
 	if hit_delay > 0:
-		await get_tree().create_timer(hit_delay).timeout
+		if not is_inside_tree():
+			return
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			return
+		await tree.create_timer(hit_delay).timeout
 
 	if not is_instance_valid(self) or not is_inside_tree():
 		return
@@ -302,7 +307,12 @@ func _die(hit_delay: float = 0.0) -> void :
 	if current_state == "death": return
 
 	if hit_delay > 0:
-		await get_tree().create_timer(hit_delay).timeout
+		if not is_inside_tree():
+			return
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			return
+		await tree.create_timer(hit_delay).timeout
 
 	if not is_instance_valid(self) or not is_inside_tree():
 		return
@@ -590,7 +600,11 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 	else:
 		action_state_started_ms = 0
 
-	if preserve_recent_move_facing:
+	if new_state == "attack" and new_dir != "":
+		# Server computes attack facing from monster -> current target.
+		# Do not preserve a previous walk sector here.
+		current_dir = new_dir
+	elif preserve_recent_move_facing:
 		current_dir = last_visual_move_dir
 	elif new_dir != "":
 		current_dir = new_dir
@@ -612,7 +626,12 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	if current_hp <= 0:
 		return
 
-	_apply_network_target_direction(target_pos)
+	# A late MoveEntity can arrive after SyncState/EntityDamage. While combat
+	# owns the animation, movement may update the buffered target/position but
+	# must never overwrite the attack-facing direction.
+	if current_state not in ["attack", "hit", "death", "die"]:
+		_apply_network_target_direction(target_pos)
+
 	move_idle_generation += 1
 	last_move_packet_ms = Time.get_ticks_msec()
 	network_move_target = target_pos
@@ -704,8 +723,11 @@ func sync_animation() -> void :
 		if requested_state in ["attack", "hit"] and not has_requested_animation:
 			fallback_action_generation += 1
 			var generation := fallback_action_generation
-			get_tree().create_timer(FALLBACK_ACTION_RELEASE_SECONDS).timeout.connect(func():
-				if not is_instance_valid(self) or current_hp <= 0:
+			var tree: SceneTree = get_tree()
+			if tree == null:
+				return
+			tree.create_timer(FALLBACK_ACTION_RELEASE_SECONDS).timeout.connect(func():
+				if not is_instance_valid(self) or not is_inside_tree() or current_hp <= 0:
 					return
 				if generation != fallback_action_generation:
 					return
