@@ -287,7 +287,21 @@ public sealed class PacketRouter
                 Message = "封包必須是 JSON 物件"
             }];
 
-        var type = req.Str("Type");
+        if (!req.TryGetProperty("Type", out var incomingTypeElement) ||
+            incomingTypeElement.ValueKind != JsonValueKind.String ||
+            string.IsNullOrWhiteSpace(incomingTypeElement.GetString()) ||
+            incomingTypeElement.GetString()!.Length > 128)
+        {
+            return [new
+            {
+                Type = "PacketError",
+                RequestType = "",
+                Code = "INVALID_PACKET",
+                Message = "封包 Type 必須是非空字串"
+            }];
+        }
+
+        var type = incomingTypeElement.GetString()!;
 
         if (type == "RegisterAccountRequest")
         {
