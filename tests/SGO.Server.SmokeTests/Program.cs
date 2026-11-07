@@ -2500,6 +2500,13 @@ try
               JsonSerializer.Serialize(responses[4]).Contains("\"EquipIdx\":50293"),
             "HorseSync loads persisted mecha card and mecha equipment");
 
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"FestivalThemeSync\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Theme\":\"normal\"")),
+            "enter world sends the default festival theme baseline");
+
         using var first = Json(JsonSerializer.Serialize(responses[0]));
         Check(first.RootElement.Str("Type") == "EnterWorldSuccess",
             "first select response enters world");
