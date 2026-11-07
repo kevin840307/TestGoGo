@@ -197,6 +197,12 @@ public interface IInventoryStore : ICharacterAssetReader
         int? effectiveMaxHp = null,
         int? effectiveMaxMp = null,
         int? effectiveMaxSp = null);
+    Dictionary<string, object>? UseDeathExpReductionItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        int reductionPercent);
 }
 
 public interface IEquipmentStore : ICharacterAssetReader
