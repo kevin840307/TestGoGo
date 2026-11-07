@@ -7478,6 +7478,20 @@ try
     session.CurrentMapId = originalMap;
     session.WorldReady = originalReady;
 
+    using (var unsupportedPacket = Json(
+        """{"Type":"PacketContractUnknownOperation"}"""))
+    {
+        var errorResponses = router.Handle(
+            unsupportedPacket.RootElement,
+            session);
+        var responseJson = JsonSerializer.Serialize(errorResponses);
+        Check(
+            responseJson.Contains("\"Type\":\"PacketError\"") &&
+            responseJson.Contains("\"RequestType\":\"PacketContractUnknownOperation\"") &&
+            responseJson.Contains("\"Code\":\"UNHANDLED_PACKET\""),
+            "unsupported client packet receives a typed PacketError instead of silence");
+    }
+
     using (var logout = Json(
         """{"Type":"LogoutRequest","IsBackToLogin":true}"""))
     {
