@@ -7405,6 +7405,35 @@ try
             "GM mallpoints cannot reduce mall balance below zero");
     }
 
+    using (var gmDonation = Json(
+        """{"Type":"ChatMessage","Channel":0,"Message":"/gm donation 250","BubbleType":0}"""))
+    {
+        var beforeDonation =
+            store.GetLifetimeDonation(account.Value);
+        var responses = router.Handle(
+            gmDonation.RootElement,
+            session);
+        Check(store.GetLifetimeDonation(account.Value) ==
+                  beforeDonation + 250 &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "目前累積贊助")),
+            "GM donation command adjusts lifetime donation for local gift testing");
+    }
+
+    using (var gmDonationTooLow = Json(
+        """{"Type":"ChatMessage","Channel":0,"Message":"/gm donation -999999","BubbleType":0}"""))
+    {
+        var beforeDonation =
+            store.GetLifetimeDonation(account.Value);
+        router.Handle(
+            gmDonationTooLow.RootElement,
+            session);
+        Check(store.GetLifetimeDonation(account.Value) ==
+                  beforeDonation,
+            "GM donation cannot reduce lifetime donation below zero");
+    }
+
     using (var gmItem = Json(
         """{"Type":"ChatMessage","Channel":0,"Message":"/gm item 1001 3","BubbleType":0}"""))
     {
