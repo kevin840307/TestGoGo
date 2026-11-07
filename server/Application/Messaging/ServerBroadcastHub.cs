@@ -46,6 +46,27 @@ public sealed class ServerBroadcastHub
             Math.Max(0, characterId ?? 0));
     }
 
+    public OnlinePlayerPresence? FindCharacter(long characterId)
+    {
+        if (characterId <= 0)
+            return null;
+
+        foreach (var pair in _presence)
+        {
+            if (pair.Value.CharacterId != characterId ||
+                pair.Value.AccountId <= 0)
+                continue;
+
+            return new OnlinePlayerPresence(
+                pair.Key,
+                pair.Value.AccountId,
+                pair.Value.CharacterId,
+                pair.Value.MapId);
+        }
+
+        return null;
+    }
+
     public bool IsCharacterInMap(
         long characterId,
         int mapId)
