@@ -1497,9 +1497,20 @@ func hide_map_loading() -> void :
 			has_fade_target = true
 
 	if has_fade_target:
-		fade_tween.chain().tween_callback( func(): loading_overlay.visible = false)
+		fade_tween.chain().tween_callback(_finish_map_loading)
 	else:
+		_finish_map_loading()
+
+func _finish_map_loading() -> void :
+	if loading_overlay:
 		loading_overlay.visible = false
+	if NetworkManager and NetworkManager.has_method("send_world_ready"):
+		var map_id := 0
+		if is_instance_valid(target_player) and target_player.get("data_model"):
+			map_id = int(target_player.data_model.map_id)
+		elif GameManager and is_instance_valid(GameManager.current_player) and GameManager.current_player.get("data_model"):
+			map_id = int(GameManager.current_player.data_model.map_id)
+		NetworkManager.send_world_ready(map_id)
 
 
 func show_player_context_menu(target_dbid: int, target_name: String) -> void :
