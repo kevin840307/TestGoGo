@@ -252,6 +252,7 @@ public sealed class PacketRouter
             state.CharacterId = null;
             state.CurrentMapId = 0;
             state.PendingMapSpawn = false;
+            ClearPendingTrainTravel(state);
 
             return [new
             {
@@ -2786,6 +2787,7 @@ public sealed class PacketRouter
                 state.AutoSaintEnabled = false;
                 state.AutoSaintMpThreshold = 30;
                 state.AutoSaintSpThreshold = 30;
+                ClearPendingTrainTravel(state);
                 state.CloseRequested = true;
 
                 return [new
