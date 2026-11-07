@@ -29,6 +29,8 @@ var skill_hit_effect: AnimatedSprite2D = null
 var collision_shape: CollisionShape2D = null
 
 var move_tween: Tween
+var move_idle_generation: int = 0
+const MOVE_IDLE_GRACE_SECONDS: float = 0.12
 
 const PALETTE_SHADER = preload("res://palette_swap.gdshader")
 const COLOR_INDEX_TO_DEGREES = {
@@ -377,14 +379,39 @@ func _update_sprite_offset() -> void :
 
 func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	if current_hp <= 0: return
-	if move_tween and move_tween.is_valid(): move_tween.kill()
+
+	move_idle_generation += 1
+	var generation := move_idle_generation
+
+	if move_tween and move_tween.is_valid():
+		move_tween.kill()
+
+	# Do not replay WALK for a waypoint that is already effectively reached.
+	# This also protects against duplicate/late MoveEntity packets.
+	if global_position.distance_to(target_pos) <= 0.5:
+		global_position = target_pos
+		return
+
 	move_tween = create_tween()
 	current_state = "walk"
 	sync_animation()
-	move_tween.tween_property(self, "global_position", target_pos, speed_time)
+	move_tween.tween_property(self, "global_position", target_pos, max(speed_time, 0.01))
 	move_tween.tween_callback( func():
-		current_state = "idle"
-		sync_animation()
+		if not is_instance_valid(self) or current_hp <= 0:
+			return
+
+		# Chase waypoints arrive every ~250 ms. Keep WALK alive for a short
+		# grace window so a completed 240 ms waypoint does not flicker to IDLE
+		# before the next packet. A later waypoint invalidates this generation.
+		get_tree().create_timer(MOVE_IDLE_GRACE_SECONDS).timeout.connect( func():
+			if not is_instance_valid(self) or current_hp <= 0:
+				return
+			if generation != move_idle_generation:
+				return
+			if current_state == "walk":
+				current_state = "idle"
+				sync_animation()
+		)
 	)
 
 func sync_animation() -> void :
