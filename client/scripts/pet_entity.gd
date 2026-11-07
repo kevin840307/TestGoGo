@@ -194,10 +194,17 @@ func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
 		if owner_data:
 			map_id = int(owner_data.map_id)
 
+	var owner_can_cross_special: bool = false
+	if GameManager and is_instance_valid(GameManager.current_player):
+		owner_can_cross_special = bool(
+			GameManager.current_player.get("can_cross_special_terrain")
+		)
+
 	var route: PackedVector2Array = LegacyPathfinder.get_path(
 		map_id,
 		global_position,
-		move_destination
+		move_destination,
+		owner_can_cross_special
 	)
 
 	if route.is_empty():
