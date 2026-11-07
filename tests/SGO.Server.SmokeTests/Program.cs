@@ -1692,7 +1692,7 @@ try
     var closeRangePackets = combat.TickAi(
         session,
         account.Value,
-        monster.X + 120,
+        monster.X + 90,
         monster.Y,
         session.LastMonsterAiTick.AddSeconds(1));
 
@@ -1712,6 +1712,27 @@ try
               JsonSerializer.Serialize(x).Contains(
                   $"\"EntityID\":{monster.EntityId}")),
         "monster entering melee range attacks immediately instead of standing through an old cooldown");
+
+    monster.HasTarget = true;
+    monster.AiState = MonsterAiState.Chase;
+    var boundaryStartX = monster.X;
+    var boundaryPackets = combat.TickAi(
+        session,
+        account.Value,
+        monster.X + 120,
+        monster.Y,
+        session.LastMonsterAiTick.AddMilliseconds(500));
+
+    Check(
+        monster.AiState == MonsterAiState.Chase &&
+        monster.X > boundaryStartX &&
+        boundaryPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"MoveEntity\"")) &&
+        !boundaryPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EntityDamage\"")),
+        "monster at 120px keeps moving closer instead of standing at the attack boundary");
 
     monster.HasTarget = true;
     monster.AiState = MonsterAiState.Attack;
@@ -1742,7 +1763,7 @@ try
                 "\"Type\":\"EntityDamage\"") &&
             JsonSerializer.Serialize(x).Contains(
                 $"\"AttackerID\":{monster.EntityId}")),
-        "monster beyond 130px keeps chasing and cannot deal melee damage");
+        "monster beyond legal melee range keeps chasing and cannot deal melee damage");
 
     var sawDeath = false;
 
