@@ -2424,13 +2424,49 @@ public sealed class CombatService
         if (!session.CharacterId.HasValue)
             return [];
 
+        var dbid = session.CharacterId.Value;
         var removed = PurgeExpiredBuffs(
-            session.CharacterId.Value,
+            dbid,
             now);
 
-        return removed
-            ? [BuildSyncBuffsPacket(session, now)]
-            : [];
+        if (!removed)
+            return [];
+
+        var packets = new List<object>
+        {
+            BuildSyncBuffsPacket(
+                dbid,
+                now)
+        };
+
+        if (session.AccountId.HasValue)
+        {
+            var accountId = session.AccountId.Value;
+            var character = _store.GetCharacter(
+                accountId,
+                dbid);
+
+            if (character is not null)
+            {
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    dbid);
+                var stats = ApplyActiveSkillBuffs(
+                    CharacterStatCalculator.Calculate(
+                        character,
+                        assets,
+                        _current),
+                    dbid,
+                    now);
+
+                packets.Add(
+                    BuildPlayerStatusPacket(
+                        character,
+                        stats));
+            }
+        }
+
+        return packets;
     }
 
     private bool PurgeExpiredBuffs(
