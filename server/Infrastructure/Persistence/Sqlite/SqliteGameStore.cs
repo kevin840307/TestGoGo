@@ -8195,6 +8195,84 @@ public sealed class SqliteGameStore : IGameStore
         return GetCharacter(accountId, dbid);
     }
 
+    public Dictionary<string, object>? UseDeathExpReductionItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        int reductionPercent)
+    {
+        reductionPercent = Math.Clamp(
+            reductionPercent,
+            0,
+            100);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(
+                db,
+                accountId,
+                dbid,
+                tx))
+            return null;
+
+        using (var item = db.CreateCommand())
+        {
+            item.Transaction = tx;
+            item.CommandText = """
+                SELECT count
+                  FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND item_index=$item
+                   AND in_bank=0
+                   AND in_shop=0
+                 LIMIT 1
+                """;
+            Arg(item, "$uid", itemUid);
+            Arg(item, "$id", dbid);
+            Arg(item, "$item", itemIndex);
+
+            var raw = item.ExecuteScalar();
+            if (raw is null ||
+                raw == DBNull.Value ||
+                Convert.ToInt32(raw) <= 0)
+                return null;
+        }
+
+        using (var update = db.CreateCommand())
+        {
+            update.Transaction = tx;
+            update.CommandText = """
+                UPDATE characters
+                   SET exp_death =
+                       MAX(
+                           0,
+                           exp_death * (100 - $reduction) / 100)
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(update, "$reduction", reductionPercent);
+            Arg(update, "$id", dbid);
+            Arg(update, "$account", accountId);
+
+            if (update.ExecuteNonQuery() != 1)
+                return null;
+        }
+
+        ConsumeInventoryItem(
+            db,
+            tx,
+            dbid,
+            itemUid);
+
+        tx.Commit();
+        return GetCharacter(
+            accountId,
+            dbid);
+    }
+
     public Dictionary<string, object>? ActivateHorseCard(
         long accountId,
         long dbid,
