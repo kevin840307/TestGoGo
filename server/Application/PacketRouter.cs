@@ -716,6 +716,7 @@ public sealed class PacketRouter
 
                     return _combat.PetAttack(
                         state,
+                        accountId,
                         activePetUid,
                         Math.Max(1, Convert.ToInt32(activePet["Attack"])),
                         targetEntityId,
@@ -2206,6 +2207,7 @@ public sealed class PacketRouter
                 {
                     var attackPackets = _combat.PetAttack(
                         state,
+                        accountId,
                         petUid,
                         Math.Max(1, Convert.ToInt32(pet["Attack"])),
                         monster.EntityId,
