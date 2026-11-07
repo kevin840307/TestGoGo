@@ -62,7 +62,11 @@ func _get_free_effect() -> AnimatedSprite2D:
 
 func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: float = 0.3, split_count: int = 1, skill_id: int = 0, is_primary: bool = true) -> void :
 	if hit_delay > 0:
-		await get_tree().create_timer(hit_delay).timeout
+		var tree := get_tree()
+		if tree == null:
+			return
+		var timer := tree.create_timer(hit_delay)
+		await timer.timeout
 
 	if not is_instance_valid(target) or not target.is_inside_tree():
 		return
