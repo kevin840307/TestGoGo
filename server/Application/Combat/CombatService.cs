@@ -18,9 +18,9 @@ public sealed class CombatService
 
     private const double AggroRadius = 420.0;
     private const double LoseTargetRadius = 700.0;
-    private const double AttackRange = 130.0;
-    private const double EngageDistance = 95.0;
-    private const double MoveStep = 42.0;
+    private const double AttackRange = 100.0;
+    private const double EngageDistance = 90.0;
+    private const double MoveStep = 35.0;
     // Keep the movement packet duration aligned with the 250 ms world cadence.
     // The client now interpolates continuously toward the latest authoritative
     // waypoint, so this value represents movement speed rather than tween timing.
@@ -363,8 +363,33 @@ public sealed class CombatService
 
                             var currentHp =
                                 Convert.ToInt32(updated["HP"]);
-                            var maxHp =
-                                Convert.ToInt32(updated["MaxHP"]);
+
+                            var updatedAssets = _store.GetCharacterAssets(
+                                accountId,
+                                currentCharacterId);
+                            var updatedEffective = ApplyActiveSkillBuffs(
+                                CharacterStatCalculator.Calculate(
+                                    updated,
+                                    updatedAssets,
+                                    _current),
+                                session,
+                                now);
+                            var maxHp = updatedEffective.MaxHP;
+
+                            // Snap the visual monster to its latest authoritative
+                            // position before attack state cancels client movement.
+                            if (enteredAttackRange)
+                            {
+                                packets.Add(new
+                                {
+                                    Type = "MoveEntity",
+                                    EntityID = monster.EntityId,
+                                    X = monster.X,
+                                    Y = monster.Y,
+                                    Dir = monster.CurrentDir,
+                                    SpeedTime = 0.0
+                                });
+                            }
 
                             packets.Add(new
                             {
@@ -388,16 +413,9 @@ public sealed class CombatService
                                 AttackerID = monster.EntityId
                             });
 
-                            packets.Add(new
-                            {
-                                Type = "PlayerStatusSync",
-                                HP = currentHp,
-                                MP = updated["MP"],
-                                SP = updated["SP"],
-                                MaxHP = maxHp,
-                                MaxMP = updated["MaxMP"],
-                                MaxSP = updated["MaxSP"]
-                            });
+                            packets.Add(BuildPlayerStatusPacket(
+                                updated,
+                                updatedEffective));
 
                             if (currentHp <= 0)
                             {
@@ -610,14 +628,14 @@ public sealed class CombatService
                 targetEntityId,
                 out var monster) ||
             monster.MapId != session.CurrentMapId)
-            return [];
+            return [Flash("攻擊目標不存在或已離開目前地圖")];
 
         var packets = new List<object>();
 
         lock (runtime.SyncRoot)
         {
             if (!monster.IsAlive)
-                return [];
+                return [Flash("目標已死亡")];
 
             var dx = monster.X - petX;
             var dy = monster.Y - petY;
@@ -1110,10 +1128,12 @@ public sealed class CombatService
         int targetEntityId,
         int targetType)
     {
-        if (targetType != 1 ||
-            !session.CharacterId.HasValue ||
+        if (targetType != 1)
+            return [Flash("攻擊目標類型無效")];
+
+        if (!session.CharacterId.HasValue ||
             session.CurrentMapId <= 0)
-            return [];
+            return [Flash("目前無法攻擊")];
 
         var runtime = SyncSessionMonsters(session);
         if (!session.Monsters.TryGetValue(
@@ -1127,7 +1147,7 @@ public sealed class CombatService
             session.CharacterId.Value);
 
         if (character is null)
-            return [];
+            return [Flash("角色資料不存在")];
 
         var playerX = Convert.ToDouble(character["LocX"]);
         var playerY = Convert.ToDouble(character["LocY"]);
