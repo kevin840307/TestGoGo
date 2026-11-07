@@ -59,13 +59,26 @@ public sealed class ShopService
         if (item is null)
             return Failure("此商店沒有這個商品");
 
-        if (count <= 0 || count > (item.TabType == 0 ? 9999 : 1))
-            return Failure("購買數量無效");
-
         var currentItem = _current.FindItem(item.ItemIndex);
         if (currentItem is null)
             return Failure(
                 $"新版 GameData 找不到 ItemIndex={item.ItemIndex}");
+
+        var stackable = currentItem.Category.Equals(
+                "booster",
+                StringComparison.OrdinalIgnoreCase) ||
+            currentItem.Category.Equals(
+                "general",
+                StringComparison.OrdinalIgnoreCase) ||
+            currentItem.Category.Equals(
+                "recovery",
+                StringComparison.OrdinalIgnoreCase) ||
+            currentItem.Category.Equals(
+                "horsebattery",
+                StringComparison.OrdinalIgnoreCase);
+
+        if (count <= 0 || count > (stackable ? 9999 : 1))
+            return Failure("購買數量無效");
 
         var kind = currentItem.Category.ToLowerInvariant() switch
         {
@@ -134,12 +147,32 @@ public sealed class ShopService
         if (item is null || !item.CanSell)
             return Failure("此物品無法出售");
 
+        var currentItem = _current.FindItem(itemIndex);
+        if (currentItem is null)
+            return Failure(
+                $"新版 GameData 找不到 ItemIndex={itemIndex}");
+
+        var kind = currentItem.Category.ToLowerInvariant() switch
+        {
+            "booster" or "general" or "recovery"
+                => AssetPurchaseKind.General,
+            "equip" or "weapon"
+                => AssetPurchaseKind.Equipment,
+            "horse"
+                => AssetPurchaseKind.Horse,
+            "horseequip"
+                => AssetPurchaseKind.HorseEquipment,
+            "horsebattery"
+                => AssetPurchaseKind.HorseBattery,
+            _ => AssetPurchaseKind.General
+        };
+
         var unitPrice = Math.Max(1, item.Price / 2);
         var success = _store.SellAsset(
             accountId,
             characterId,
             uid,
-            tabType,
+            kind,
             count,
             unitPrice,
             out var money);
@@ -206,6 +239,7 @@ public sealed class ShopService
         switch (tabType)
         {
             case 0:
+            case 5:
             {
                 var item = assets.Inventory.FirstOrDefault(
                     x => Convert.ToInt64(x["ItemUID"]) == uid);
@@ -224,6 +258,15 @@ public sealed class ShopService
             }
 
             case 3:
+            {
+                var horse = assets.Horses.FirstOrDefault(
+                    x => Convert.ToInt64(x["HorseUID"]) == uid);
+                return horse is null
+                    ? 0
+                    : Convert.ToInt32(horse["HorseIdx"]);
+            }
+
+            case 4:
             {
                 var item = assets.HorseEquips.FirstOrDefault(
                     x => Convert.ToInt64(x["EquipUID"]) == uid);
