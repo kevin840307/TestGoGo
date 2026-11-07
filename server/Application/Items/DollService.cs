@@ -90,8 +90,8 @@ public sealed class DollService
         // Current festival data does not declare multi-count equipment;
         // reject it defensively rather than silently granting the wrong
         // number of rows.
-        if (selected.Kind is AssetPurchaseKind.Equipment
-                or AssetPurchaseKind.HorseEquipment &&
+        if ((selected.Kind is AssetPurchaseKind.Equipment
+                or AssetPurchaseKind.HorseEquipment) &&
             rewardCount != 1)
         {
             return [Flash(
