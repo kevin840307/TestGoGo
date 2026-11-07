@@ -1113,14 +1113,19 @@ public sealed class PacketRouter
                 }
 
                 var petUid = req.Int("PetUID");
-                var previouslyActivePets = _store.GetCharacterAssets(
+                var assetsBeforePetAction = _store.GetCharacterAssets(
                     accountId,
-                    state.CharacterId.Value).Pets
+                    state.CharacterId.Value);
+                var selectedPetBefore = assetsBeforePetAction.Pets
+                    .FirstOrDefault(x =>
+                        Convert.ToInt64(x["UID"]) == petUid);
+                var previouslyActivePets = assetsBeforePetAction.Pets
                     .Where(x => Convert.ToInt32(x["State"]) == 1)
                     .Select(x => Convert.ToInt64(x["UID"]))
                     .ToArray();
 
                 bool success;
+                PetMutationResult? mutation = null;
 
                 switch (action)
                 {
@@ -1165,6 +1170,188 @@ public sealed class PacketRouter
                             req.Int("TargetSlot", -1));
                         break;
 
+                    case "Feed":
+                    {
+                        var itemUid = req.Long("ItemUID");
+                        var item = assetsBeforePetAction.Inventory
+                            .FirstOrDefault(x =>
+                                Convert.ToInt64(x["ItemUID"]) == itemUid &&
+                                Convert.ToInt32(x["InBank"]) == 0 &&
+                                Convert.ToInt32(x["InShop"]) == 0);
+
+                        if (item is null)
+                        {
+                            mutation = new(
+                                false,
+                                "找不到可使用的餵食道具",
+                                null);
+                            success = false;
+                            break;
+                        }
+
+                        var itemId = Convert.ToInt32(
+                            item["ItemIndex"]);
+                        var recovery = _recoveryItems.Find(itemId);
+                        var feedAmount = recovery is null
+                            ? 0
+                            : Math.Max(0, recovery.RecoverHp) +
+                              Math.Max(0, recovery.RecoverMp) +
+                              Math.Max(0, recovery.RecoverSp);
+
+                        mutation = feedAmount > 0
+                            ? _store.FeedPet(
+                                accountId,
+                                state.CharacterId.Value,
+                                petUid,
+                                itemUid,
+                                itemId,
+                                feedAmount)
+                            : new(
+                                false,
+                                "此物品不能用來餵食寵物",
+                                null);
+                        success = mutation.Success;
+                        break;
+                    }
+
+                    case "SetMainSkill":
+                    {
+                        if (selectedPetBefore is null)
+                        {
+                            mutation = new(
+                                false,
+                                "找不到寵物",
+                                null);
+                            success = false;
+                            break;
+                        }
+
+                        var skillId = req.Int("SkillID");
+                        var petId = Convert.ToInt32(
+                            selectedPetBefore["PETID"]);
+                        var evolId = Convert.ToInt32(
+                            selectedPetBefore["EvolID"]);
+
+                        mutation = _petSkills.CanUseAsMainSkill(
+                                petId,
+                                evolId,
+                                skillId)
+                            ? _store.SetPetMainSkill(
+                                accountId,
+                                state.CharacterId.Value,
+                                petUid,
+                                skillId)
+                            : new(
+                                false,
+                                "此進化型態尚未學會該技能",
+                                null);
+                        success = mutation.Success;
+                        break;
+                    }
+
+                    case "AllocateStat":
+                    {
+                        if (selectedPetBefore is null)
+                        {
+                            mutation = new(
+                                false,
+                                "找不到寵物",
+                                null);
+                            success = false;
+                            break;
+                        }
+
+                        var statType = req.Str("StatType")
+                            .Trim()
+                            .ToUpperInvariant();
+
+                        var baseValue = statType switch
+                        {
+                            "STR" => Convert.ToInt32(
+                                selectedPetBefore["STR"]),
+                            "DEX" => Convert.ToInt32(
+                                selectedPetBefore["DEX"]),
+                            "CON" => Convert.ToInt32(
+                                selectedPetBefore["CON"]),
+                            "WIS" => Convert.ToInt32(
+                                selectedPetBefore["WIS"]),
+                            _ => -1
+                        };
+
+                        var extraValue = statType switch
+                        {
+                            "STR" => Convert.ToInt32(
+                                selectedPetBefore["ExtraSTR"]),
+                            "DEX" => Convert.ToInt32(
+                                selectedPetBefore["ExtraDEX"]),
+                            "CON" => Convert.ToInt32(
+                                selectedPetBefore["ExtraCON"]),
+                            "WIS" => Convert.ToInt32(
+                                selectedPetBefore["ExtraWIS"]),
+                            _ => -1
+                        };
+
+                        mutation = baseValue >= 0 &&
+                                   extraValue >= 0
+                            ? _store.AllocatePetStat(
+                                accountId,
+                                state.CharacterId.Value,
+                                petUid,
+                                statType,
+                                _petGrowth.AllocationDelta(
+                                    statType,
+                                    baseValue,
+                                    extraValue))
+                            : new(
+                                false,
+                                "未知的寵物能力值",
+                                null);
+                        success = mutation.Success;
+                        break;
+                    }
+
+                    case "AddLife":
+                        mutation = _store.AddPetLife(
+                            accountId,
+                            state.CharacterId.Value,
+                            petUid,
+                            itemId: 2615,
+                            maxLife: 10);
+                        success = mutation.Success;
+                        break;
+
+                    case "ResetStat":
+                    {
+                        if (selectedPetBefore is null)
+                        {
+                            mutation = new(
+                                false,
+                                "找不到寵物",
+                                null);
+                            success = false;
+                            break;
+                        }
+
+                        var adjustment = _petGrowth.ResetDelta(
+                            Convert.ToInt32(selectedPetBefore["STR"]),
+                            Convert.ToInt32(selectedPetBefore["ExtraSTR"]),
+                            Convert.ToInt32(selectedPetBefore["DEX"]),
+                            Convert.ToInt32(selectedPetBefore["ExtraDEX"]),
+                            Convert.ToInt32(selectedPetBefore["CON"]),
+                            Convert.ToInt32(selectedPetBefore["ExtraCON"]),
+                            Convert.ToInt32(selectedPetBefore["WIS"]),
+                            Convert.ToInt32(selectedPetBefore["ExtraWIS"]));
+
+                        mutation = _store.ResetPetStats(
+                            accountId,
+                            state.CharacterId.Value,
+                            petUid,
+                            itemId: 2617,
+                            adjustment);
+                        success = mutation.Success;
+                        break;
+                    }
+
                     default:
                         _log.LogDebug(
                             "Unimplemented PetAction: {Action}",
@@ -1187,19 +1374,30 @@ public sealed class PacketRouter
                     new
                     {
                         Type = "SystemMessageFlash",
-                        Message = success
-                            ? action switch
-                            {
-                                "Summon" => "寵物已召喚",
-                                "Recall" => "寵物已收回",
-                                "Rename" => "寵物名稱已更新",
-                                "Equip" => "寵物裝備成功",
-                                "Unequip" => "寵物裝備已卸下",
-                                _ => "寵物操作成功"
-                            }
-                            : "寵物操作失敗"
+                        Message = mutation?.Message ??
+                            (success
+                                ? action switch
+                                {
+                                    "Summon" => "寵物已召喚",
+                                    "Recall" => "寵物已收回",
+                                    "Rename" => "寵物名稱已更新",
+                                    "Equip" => "寵物裝備成功",
+                                    "Unequip" => "寵物裝備已卸下",
+                                    _ => "寵物操作成功"
+                                }
+                                : "寵物操作失敗")
                     }
                 };
+
+                if (mutation?.InventoryChanged == true)
+                {
+                    responses.Add(new
+                    {
+                        Type = "InventorySync",
+                        Items = assets.Inventory,
+                        MaxSize = assets.InventoryMaxSize
+                    });
+                }
 
                 if (success && action == "Summon")
                 {
