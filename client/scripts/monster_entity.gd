@@ -12,14 +12,12 @@ var current_dir: String = "1"
 var is_action_locked: bool = false
 var entity_scale: float = 1.0
 
-@onready var sprite = $AnimatedSprite2D
-@onready var ui_container = $UIContainer
-@onready var name_label = $UIContainer / NameLabel
-
-
-@onready var bg_texture_rect = $UIContainer / TextureRect
-@onready var hp_bar = $UIContainer / TextureRect / HPBar
-@onready var level_icon = $UIContainer / TextureRect / LevelIcon
+@onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
+var ui_container: Control = null
+var name_label: Label = null
+var bg_texture_rect: TextureRect = null
+var hp_bar: ProgressBar = null
+var level_icon: TextureRect = null
 
 var target_indicator: AnimatedSprite2D = null
 var skill_use_effect: AnimatedSprite2D = null
@@ -60,7 +58,29 @@ const STATE_MAP = {
 	"hit": "HIT", "die": "DEATH", "death": "DEATH"
 }
 
+func _resolve_ui_nodes() -> void :
+	if not is_instance_valid(ui_container):
+		ui_container = get_node_or_null("UIContainer") as Control
+
+	if not is_instance_valid(ui_container):
+		ui_container = Control.new()
+		ui_container.name = "UIContainer"
+		ui_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(ui_container)
+		push_warning("[MonsterEntity] UIContainer missing; created runtime fallback for EntityID=%d" % entity_id)
+
+	if not is_instance_valid(name_label):
+		name_label = ui_container.get_node_or_null("NameLabel") as Label
+	if not is_instance_valid(bg_texture_rect):
+		bg_texture_rect = ui_container.get_node_or_null("TextureRect") as TextureRect
+	if not is_instance_valid(hp_bar):
+		hp_bar = ui_container.get_node_or_null("TextureRect/HPBar") as ProgressBar
+	if not is_instance_valid(level_icon):
+		level_icon = ui_container.get_node_or_null("TextureRect/LevelIcon") as TextureRect
+
+
 func _ready() -> void :
+	_resolve_ui_nodes()
 
 	collision_shape = get_node_or_null("CollisionShape2D")
 	if not collision_shape:
@@ -309,6 +329,7 @@ func _die(hit_delay: float = 0.0) -> void :
 
 func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 	self.entity_id = id
+	_resolve_ui_nodes()
 	if name_label: name_label.text = m_name
 	require_ctrl_to_attack = bool(extra_data.get("RequireCtrlToAttack", false))
 	entity_scale = float(extra_data.get("Scale", 1.0))
@@ -330,7 +351,8 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 		target_indicator.name = "TargetIndicator"
 		target_indicator.visible = false
 		target_indicator.z_index = 80
-		ui_container.add_child(target_indicator)
+		if is_instance_valid(ui_container):
+			ui_container.add_child(target_indicator)
 
 		if EffectLoader:
 			var frames = EffectLoader.get_effect("Enemy_Icon/ENEMY_ICON_00")
@@ -344,7 +366,8 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 	if is_instance_valid(target_indicator):
 		target_indicator.centered = true
 
-		target_indicator.position = Vector2(ui_container.size.x / 2.0, -25.0)
+		if is_instance_valid(ui_container):
+			target_indicator.position = Vector2(ui_container.size.x / 2.0, -25.0)
 
 	if extra_data.has("MaxHP") and extra_data.has("CurrentHP"):
 		max_hp = extra_data["MaxHP"]
