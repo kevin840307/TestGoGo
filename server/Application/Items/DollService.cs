@@ -86,7 +86,8 @@ public sealed class DollService
             1,
             rewardKind == AssetPurchaseKind.Equipment
                 ? 255
-                : rewardPart);
+                : rewardPart,
+            reward.Durability);
 
         if (!result.Success)
             return [Flash(result.Message)];
