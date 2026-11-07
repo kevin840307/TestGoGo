@@ -72,6 +72,26 @@ public static class PersistenceServiceCollectionExtensions
             sp.GetRequiredService<TStore>());
         services.AddSingleton<IItemDiscardStore>(sp =>
             sp.GetRequiredService<TStore>());
+        services.AddSingleton<IQuestStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<ITitleStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IMallStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IClubStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IRankStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IDirectTransferStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<ITradeStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IWorldGroundItemStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<ICraftingStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IPlayerShopStore>(sp =>
+            sp.GetRequiredService<TStore>());
         services.AddSingleton<IShopStore>(sp =>
             sp.GetRequiredService<TStore>());
         services.AddSingleton<ICharacterAssetReader>(sp =>
