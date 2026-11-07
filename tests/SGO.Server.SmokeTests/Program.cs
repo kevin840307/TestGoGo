@@ -232,6 +232,8 @@ var currentCatalog = new CurrentClientDataCatalog(
         new CurrentSkillDefinition(20101, "Current Skill 20101"),
         new CurrentSkillDefinition(20102, "Current Skill 20102"),
         new CurrentSkillDefinition(27104, "生命之源"),
+        new CurrentSkillDefinition(28102, "心靈轉換"),
+        new CurrentSkillDefinition(28107, "治療風暴"),
         new CurrentSkillDefinition(26104, "魔影術"),
         new CurrentSkillDefinition(45111, "月神審判")
     },
@@ -251,6 +253,26 @@ var currentCatalog = new CurrentClientDataCatalog(
     },
     new[]
     {
+        new CurrentSkillLevelDefinition(
+            28102, 1, 2, 0,
+            250, 0,
+            0, 38, 0,
+            0, 5, 1,
+            0, 1,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0,
+            0, 0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            28107, 1, 3, 0,
+            0, 0,
+            0, 0, 32,
+            0, 10, 1,
+            0, 1,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0,
+            0, 0, 0, 0),
         new CurrentSkillLevelDefinition(
             27104, 1, 6, 0,
             250, 0,
@@ -423,6 +445,12 @@ Check(horseCardCatalog.Find(50001) is { MaxBattery: 25200 },
 Check(currentCatalog.FindSkillLevel(27104, 1) is
       { SkillType: 6, CostMp: 50, CastRange: 250 },
     "current 生命之源 resolves revive-skill cast data");
+Check(currentCatalog.FindSkillLevel(28102, 1) is
+      { SkillType: 2, CostMp: 38, DamageMultiplier: 5 },
+    "current 心靈轉換 resolves single-target SP recovery data");
+Check(currentCatalog.FindSkillLevel(28107, 1) is
+      { SkillType: 3, CostSp: 32, DamageMultiplier: 10 },
+    "current 治療風暴 resolves party recovery data");
 Check(currentCatalog.FindSkillLevel(26104, 5) is
       { CostMp: 126, CastRange: 280, AoeRadius: 280 },
     "current 魔影術 Lv5 resolves server-side cast data");
@@ -2411,6 +2439,51 @@ try
                 "\"Type\":\"EntityHeal\"")),
         "accepted revive invitation restores target and emits EntityHeal");
 
+    store.SetSkill(
+        account.Value,
+        id,
+        28102,
+        1);
+    store.Revive(account.Value, id);
+    store.SpendSkillResources(
+        account.Value,
+        secondCharacterId,
+        0,
+        0,
+        40);
+
+    var targetSpBefore = Convert.ToInt32(
+        store.GetCharacter(
+            account.Value,
+            secondCharacterId)!["SP"]);
+
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    var spHealPackets = combat.UseSkill(
+        session,
+        account.Value,
+        28102,
+        checked((int)secondCharacterId),
+        0,
+        combatEnemy.X + 40,
+        combatEnemy.Y,
+        DateTimeOffset.UtcNow.AddSeconds(2));
+
+    var targetSpAfter = Convert.ToInt32(
+        store.GetCharacter(
+            account.Value,
+            secondCharacterId)!["SP"]);
+
+    Check(
+        targetSpAfter > targetSpBefore &&
+        spHealPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"SkillCast\"")) &&
+        peerRegistration.Queue.ToArray().Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"PlayerStatusSync\"")),
+        "心靈轉換 restores another same-map player's SP and syncs status");
+
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
     while (peerRegistration.Queue.TryDequeue(out _)) { }
 
@@ -2524,6 +2597,76 @@ try
                     firstPartyId)),
             "Party Invite/Accept synchronizes the same party to both online players");
     }
+
+    store.SetSkill(
+        account.Value,
+        id,
+        28107,
+        1);
+    store.Revive(account.Value, id);
+    store.Revive(
+        account.Value,
+        secondCharacterId);
+    store.ApplyDamage(
+        account.Value,
+        id,
+        20);
+    store.ApplyDamage(
+        account.Value,
+        secondCharacterId,
+        20);
+    store.SpendSkillResources(
+        account.Value,
+        id,
+        0,
+        10,
+        0);
+    store.SpendSkillResources(
+        account.Value,
+        secondCharacterId,
+        0,
+        10,
+        0);
+
+    var groupBeforeSelf = store.GetCharacter(
+        account.Value,
+        id)!;
+    var groupBeforePeer = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+
+    var groupHealPackets = combat.UseSkill(
+        session,
+        account.Value,
+        28107,
+        0,
+        0,
+        combatEnemy.X,
+        combatEnemy.Y,
+        DateTimeOffset.UtcNow.AddSeconds(3));
+
+    var groupAfterSelf = store.GetCharacter(
+        account.Value,
+        id)!;
+    var groupAfterPeer = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+
+    Check(
+        Convert.ToInt32(groupAfterSelf["HP"]) >
+            Convert.ToInt32(groupBeforeSelf["HP"]) &&
+        Convert.ToInt32(groupAfterPeer["HP"]) >
+            Convert.ToInt32(groupBeforePeer["HP"]) &&
+        Convert.ToInt32(groupAfterSelf["MP"]) >
+            Convert.ToInt32(groupBeforeSelf["MP"]) &&
+        Convert.ToInt32(groupAfterPeer["MP"]) >
+            Convert.ToInt32(groupBeforePeer["MP"]) &&
+        groupHealPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"SkillCast\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"AoeTargets\"")),
+        "治療風暴 restores HP and MP for online same-map party members");
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
     while (peerRegistration.Queue.TryDequeue(out _)) { }
