@@ -61,6 +61,12 @@ public sealed record CurrentPetDefinition(
     string Name,
     IReadOnlyDictionary<int, CurrentPetEvolution> Evolutions);
 
+public sealed record CurrentHorsePreset(
+    int HorseId,
+    int BodyId,
+    int WeaponId,
+    int EngineId);
+
 public sealed class CurrentClientDataCatalog
 {
     private static readonly string[] ItemFolders =
@@ -84,6 +90,7 @@ public sealed class CurrentClientDataCatalog
     private readonly Dictionary<string, List<CurrentSkillDefinition>> _skillsByName =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<int, CurrentPetDefinition> _pets = new();
+    private readonly Dictionary<int, CurrentHorsePreset> _horsePresets = new();
 
     public string? Root { get; }
     public bool IsAvailable => Root is not null;
@@ -95,6 +102,7 @@ public sealed class CurrentClientDataCatalog
             return;
 
         LoadItems(Root);
+        LoadHorsePresets(Root);
         LoadSkills(Root);
         LoadPets(Root);
     }
@@ -180,6 +188,11 @@ public sealed class CurrentClientDataCatalog
 
     public CurrentPetDefinition? FindPet(int petId)
         => _pets.TryGetValue(petId, out var pet) ? pet : null;
+
+    public CurrentHorsePreset? FindHorsePreset(int horseId)
+        => _horsePresets.TryGetValue(horseId, out var preset)
+            ? preset
+            : null;
 
     public CurrentPetEvolution? FindPetEvolution(int petId, int evolId)
         => FindPet(petId)?.Evolutions.TryGetValue(evolId, out var evolution) == true
@@ -270,6 +283,30 @@ public sealed class CurrentClientDataCatalog
                 _items[id] = item;
                 AddByName(_itemsByName, item.Name, item);
             }
+        }
+    }
+
+    private void LoadHorsePresets(string root)
+    {
+        var dir = Path.Combine(root, "Items", "horse");
+        if (!Directory.Exists(dir))
+            return;
+
+        foreach (var path in Directory.EnumerateFiles(
+                     dir,
+                     "*.tres",
+                     SearchOption.TopDirectoryOnly))
+        {
+            var text = File.ReadAllText(path);
+            var id = ReadInt(text, "id");
+            if (id <= 0)
+                continue;
+
+            _horsePresets[id] = new CurrentHorsePreset(
+                id,
+                ReadInt(text, "body_id"),
+                ReadInt(text, "weapon_id"),
+                ReadInt(text, "engine_id"));
         }
     }
 
