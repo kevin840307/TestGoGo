@@ -296,6 +296,7 @@ public sealed class PacketRouter
             state.CharacterId = null;
             state.CurrentMapId = 0;
             state.PendingMapSpawn = false;
+            state.WorldReady = false;
             state.LastPongAt = DateTimeOffset.UtcNow;
             state.LastPingAt = DateTimeOffset.MinValue;
             ClearPendingTrainTravel(state);
@@ -663,6 +664,7 @@ public sealed class PacketRouter
                 state.LastCompanionRuntimeAt = DateTimeOffset.UtcNow;
                 state.LastCompanionClientSyncAt = DateTimeOffset.UtcNow;
                 state.PendingMapSpawn = true;
+                state.WorldReady = false;
                 character["Type"] = "EnterWorldSuccess";
 
                 // Reconcile collection objectives against authoritative
@@ -723,6 +725,19 @@ public sealed class PacketRouter
                     },
                     new { Type = "FestivalThemeSync", Theme = "normal", Festival = "" }
                 ];
+            }
+
+            case "WorldReady":
+            {
+                if (!state.CharacterId.HasValue || state.CurrentMapId <= 0)
+                    return [];
+
+                var requestedMapId = req.Int("MapID", state.CurrentMapId);
+                if (requestedMapId != state.CurrentMapId)
+                    return [];
+
+                state.WorldReady = true;
+                return [];
             }
 
             case "SyncPosition":
@@ -3157,6 +3172,7 @@ public sealed class PacketRouter
 
                 state.CurrentMapId = rebornMapId;
                 state.PendingMapSpawn = true;
+                state.WorldReady = false;
                 state.Monsters.Clear();
 
                 var assets = _store.GetCharacterAssets(
@@ -3254,6 +3270,7 @@ public sealed class PacketRouter
                     state.PositionDirty = false;
                     state.LastPositionPersistAt = now;
                     state.PendingMapSpawn = true;
+                state.WorldReady = false;
                     state.LoadedMonsterMapId = 0;
                     state.WorldSnapshotRetriesRemaining = 0;
                     state.PetTargets.Clear();
@@ -4199,6 +4216,7 @@ public sealed class PacketRouter
                 state.PositionDirty = false;
                 state.LastPositionPersistAt = DateTimeOffset.UtcNow;
                 state.PendingMapSpawn = true;
+                state.WorldReady = false;
             }
 
             if (assetsChanged &&
