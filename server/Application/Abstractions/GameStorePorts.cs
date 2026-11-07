@@ -218,6 +218,16 @@ public interface IPetStore : ICharacterAssetReader
         long dbid,
         long petUid,
         int targetSlot);
+    Dictionary<string, object>? ApplyPetDamage(
+        long accountId,
+        long dbid,
+        long petUid,
+        int damage);
+    Dictionary<string, object>? AddPetExperience(
+        long accountId,
+        long dbid,
+        long petUid,
+        int exp);
 }
 
 public interface IMechaStore : ICharacterAssetReader
