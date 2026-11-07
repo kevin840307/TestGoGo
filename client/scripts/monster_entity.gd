@@ -38,8 +38,10 @@ var pending_move_dir: String = ""
 var pending_move_dir_count: int = 0
 var last_move_dir_change_ms: int = 0
 var fallback_action_generation: int = 0
+var action_state_started_ms: int = 0
 const MOVE_IDLE_GRACE_SECONDS: float = 0.12
 const FALLBACK_ACTION_RELEASE_SECONDS: float = 0.25
+const ACTION_STATE_MAX_MS: int = 900
 const NETWORK_MOVE_MIN_SPEED: float = 120.0
 const NETWORK_MOVE_MAX_SPEED: float = 205.0
 const NETWORK_MOVE_SNAP_EPSILON: float = 1.0
@@ -96,6 +98,11 @@ func _ready() -> void :
 func _process(delta: float) -> void :
 	if current_hp <= 0:
 		return
+
+	if current_state in ["attack", "hit"] and action_state_started_ms > 0:
+		var action_elapsed_ms: int = Time.get_ticks_msec() - action_state_started_ms
+		if action_elapsed_ms >= ACTION_STATE_MAX_MS:
+			_release_combat_action_state()
 
 	if not network_move_active:
 		if current_state == "walk":
@@ -466,6 +473,10 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		move_tween = null
 
 	current_state = new_state
+	if new_state in ["attack", "hit"]:
+		action_state_started_ms = Time.get_ticks_msec()
+	else:
+		action_state_started_ms = 0
 	if new_dir != "":
 		current_dir = new_dir
 		pending_move_dir = ""
@@ -568,35 +579,29 @@ func sync_animation() -> void :
 				if current_state not in ["attack", "hit"]:
 					return
 
-				var has_recent_move := (
-					last_move_packet_ms > 0 and
-					Time.get_ticks_msec() - last_move_packet_ms <= 700 and
-					global_position.distance_to(network_move_target) > NETWORK_MOVE_SNAP_EPSILON
-				)
-				if has_recent_move:
-					network_move_active = true
-					current_state = "walk"
-				else:
-					network_move_active = false
-					current_state = "idle"
-				sync_animation()
+				_release_combat_action_state()
 			)
+
+func _release_combat_action_state() -> void :
+	action_state_started_ms = 0
+	fallback_action_generation += 1
+	var has_recent_move: bool = (
+		last_move_packet_ms > 0 and
+		Time.get_ticks_msec() - last_move_packet_ms <= 700 and
+		global_position.distance_to(network_move_target) > NETWORK_MOVE_SNAP_EPSILON
+	)
+	if has_recent_move:
+		network_move_active = true
+		current_state = "walk"
+	else:
+		network_move_active = false
+		current_state = "idle"
+	sync_animation()
+
 
 func _on_animation_finished() -> void :
 	if (sprite.animation.begins_with("HIT") or sprite.animation.begins_with("ATTACK")) and current_hp > 0:
-		fallback_action_generation += 1
-		var has_recent_move := (
-			last_move_packet_ms > 0 and
-			Time.get_ticks_msec() - last_move_packet_ms <= 700 and
-			global_position.distance_to(network_move_target) > NETWORK_MOVE_SNAP_EPSILON
-		)
-		if has_recent_move:
-			network_move_active = true
-			current_state = "walk"
-		else:
-			network_move_active = false
-			current_state = "idle"
-		sync_animation()
+		_release_combat_action_state()
 
 func set_target_indicator(has_target: bool) -> void :
 	if is_instance_valid(target_indicator):
