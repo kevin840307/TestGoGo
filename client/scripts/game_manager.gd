@@ -299,11 +299,15 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	if not ResourceLoader.exists(map_path):
 		_trace_map_change("initial_map_missing", 0, target_map_id)
 		printerr("❌ [GameManager] 嚴重錯誤！找不到地圖檔案：", map_path)
+		if NetworkEntityManager and NetworkEntityManager.has_method("set_spawn_queue_paused"):
+			NetworkEntityManager.set_spawn_queue_paused(false)
 		return false
 
 	var request_error: int = ResourceLoader.load_threaded_request(map_path)
 	if request_error != OK:
 		_trace_map_change("initial_load_request_error", 0, target_map_id, {"error": request_error})
+		if NetworkEntityManager and NetworkEntityManager.has_method("set_spawn_queue_paused"):
+			NetworkEntityManager.set_spawn_queue_paused(false)
 		return false
 
 	var map_resource: PackedScene = null
@@ -325,10 +329,14 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 			await get_tree().process_frame
 			break
 		_trace_map_change("initial_load_failed", 0, target_map_id, {"status": status})
+		if NetworkEntityManager and NetworkEntityManager.has_method("set_spawn_queue_paused"):
+			NetworkEntityManager.set_spawn_queue_paused(false)
 		return false
 
 	if map_resource == null:
 		printerr("[GameManager] 地圖資源載入失敗（可能有缺少或無法載入的相依資源）: ", map_path)
+		if NetworkEntityManager and NetworkEntityManager.has_method("set_spawn_queue_paused"):
+			NetworkEntityManager.set_spawn_queue_paused(false)
 		return false
 
 	await get_tree().process_frame
