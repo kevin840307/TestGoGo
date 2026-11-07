@@ -398,6 +398,14 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	while is_instance_valid(current_hud) and current_hud.has_method("is_initial_hud_ready") and not current_hud.is_initial_hud_ready():
 		await get_tree().process_frame
 
+	# Heavy optional windows are instantiated while the loading overlay is still
+	# covering the world, one per frame. Their scenes were already prewarmed on
+	# login/character-select screens, so first user opening is only a visibility
+	# toggle instead of a first-load hitch.
+	if is_instance_valid(current_hud) and current_hud.has_method("prepare_lazy_windows_before_reveal"):
+		_report_initial_loading_progress(progress_callback, 98.5, "預先準備遊戲視窗")
+		await current_hud.prepare_lazy_windows_before_reveal()
+
 	_report_initial_loading_progress(progress_callback, 98.4, "套用地圖環境")
 	await get_tree().process_frame
 	_apply_current_festival_theme()
