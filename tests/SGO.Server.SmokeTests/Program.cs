@@ -4771,6 +4771,60 @@ try
                 "\"AoeTargets\"")),
         "治療風暴 restores HP and MP for online same-map party members");
 
+    store.UpdateLocation(
+        account.Value,
+        secondCharacterId,
+        combatMapId,
+        combatEnemy.X + 550,
+        combatEnemy.Y);
+    peerSession.LastX = combatEnemy.X + 550;
+    peerSession.LastY = combatEnemy.Y;
+
+    store.ApplyDamage(
+        account.Value,
+        secondCharacterId,
+        20);
+    store.SpendSkillResources(
+        account.Value,
+        secondCharacterId,
+        0,
+        10,
+        0);
+
+    var farPeerBefore = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+
+    combat.UseSkill(
+        session,
+        account.Value,
+        28107,
+        0,
+        0,
+        combatEnemy.X,
+        combatEnemy.Y,
+        DateTimeOffset.UtcNow.AddSeconds(5));
+
+    var farPeerAfter = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+
+    Check(
+        Convert.ToInt32(farPeerAfter["HP"]) ==
+            Convert.ToInt32(farPeerBefore["HP"]) &&
+        Convert.ToInt32(farPeerAfter["MP"]) ==
+            Convert.ToInt32(farPeerBefore["MP"]),
+        "治療風暴 does not heal same-map party members outside original 400 range");
+
+    store.UpdateLocation(
+        account.Value,
+        secondCharacterId,
+        combatMapId,
+        combatEnemy.X,
+        combatEnemy.Y);
+    peerSession.LastX = combatEnemy.X;
+    peerSession.LastY = combatEnemy.Y;
+
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
     while (peerRegistration.Queue.TryDequeue(out _)) { }
 
