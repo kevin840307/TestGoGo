@@ -43,6 +43,8 @@ var confirmed_summoned_horse_uid: int = -1
 var can_cross_special_terrain: bool = false
 var navigation_repath_cooldown: float = 0.0
 var _navigation_request_id: int = 0
+var _navigation_fallback_running: bool = false
+var _navigation_fallback_destination: Vector2 = Vector2.ZERO
 
 
 
@@ -746,6 +748,13 @@ func _handle_network_sync(delta: float) -> void :
 		)
 
 func _set_navigation_target(destination: Vector2) -> void :
+	# Holding the mouse can request a repath every ~80ms. If a large-detour
+	# fallback is already solving essentially the same destination, let it finish
+	# instead of cancelling and restarting expensive work.
+	if _navigation_fallback_running and _navigation_fallback_destination.distance_to(destination) < NAVIGATION_REPATH_DISTANCE:
+		move_destination = destination
+		return
+
 	_navigation_request_id += 1
 	var request_id: int = _navigation_request_id
 	var request_start: Vector2 = global_position
@@ -765,12 +774,15 @@ func _set_navigation_target(destination: Vector2) -> void :
 		velocity = Vector2.ZERO
 		is_moving = false
 		current_state = "idle"
+		_navigation_fallback_running = true
+		_navigation_fallback_destination = destination
 		route = await LegacyPathfinder.find_large_detour_path_async(
 			map_id,
 			request_start,
 			destination,
 			can_cross_special_terrain
 		)
+		_navigation_fallback_running = false
 
 		# A newer click/repath supersedes this search. Never let an old async
 		# result move the player toward a stale destination.
@@ -808,6 +820,7 @@ func _set_navigation_target(destination: Vector2) -> void :
 
 func apply_position_correction(corrected_position: Vector2) -> void :
 	_navigation_request_id += 1
+	_navigation_fallback_running = false
 	global_position = corrected_position
 	last_walkable_sync_position = corrected_position
 	has_last_walkable_sync_position = true
@@ -827,6 +840,7 @@ func apply_position_correction(corrected_position: Vector2) -> void :
 
 func _stop_movement() -> void :
 	_navigation_request_id += 1
+	_navigation_fallback_running = false
 	velocity = Vector2.ZERO
 	is_moving = false
 	move_path = PackedVector2Array()
