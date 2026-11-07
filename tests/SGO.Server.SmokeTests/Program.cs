@@ -2069,6 +2069,113 @@ try
             x.TryGetValue("NAME", out var n) &&
             n?.ToString() == "SecondCharacter")["DBID"]);
 
+    config["Gameplay:Mall:Items:0:MallID"] = "9001";
+    config["Gameplay:Mall:Items:0:ItemIndex"] = "1001";
+    config["Gameplay:Mall:Items:0:Name"] = "商城小藥水";
+    config["Gameplay:Mall:Items:0:Category"] = "消耗品";
+    config["Gameplay:Mall:Items:0:Kind"] = "General";
+    config["Gameplay:Mall:Items:0:Price"] = "25";
+    config["Gameplay:Mall:Items:0:OriginalPrice"] = "30";
+    config["Gameplay:Mall:Items:0:Tag"] = "HOT";
+    config["Gameplay:Mall:Items:0:Count"] = "2";
+    config["Gameplay:Mall:Items:0:MaxQuantity"] = "10";
+    config["Gameplay:Mall:Items:0:IsActive"] = "true";
+
+    var configuredMall = new MallService(
+        store,
+        config,
+        currentCatalog);
+    var mallProducts = MallCatalog.Read(
+        config,
+        currentCatalog);
+    Check(mallProducts.Length == 1 &&
+          mallProducts[0].MallId == 9001 &&
+          mallProducts[0].ItemIndex == 1001 &&
+          mallProducts[0].Price == 25 &&
+          mallProducts[0].Count == 2,
+        "configured mall catalog resolves a current-client item");
+
+    var mallOpenJson = JsonSerializer.Serialize(
+        configuredMall.Handle(
+            account.Value,
+            id,
+            "OpenMall",
+            0,
+            0,
+            0,
+            0));
+    Check(mallOpenJson.Contains("\"MallID\":9001") &&
+          mallOpenJson.Contains("\"ItemIndex\":1001") &&
+          mallOpenJson.Contains("\"Name\":\"商城小藥水\""),
+        "OpenMall returns configured catalog fields expected by Godot UI");
+
+    Check(store.AdjustMallPoints(
+              account.Value,
+              100,
+              out var fundedMallPoints) &&
+          fundedMallPoints == 100,
+        "prepare mall points for atomic purchase test");
+
+    int InventoryCountOf(int itemIndex)
+        => store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Inventory
+            .Where(x =>
+                Convert.ToInt32(x["ItemIndex"]) == itemIndex)
+            .Sum(x => Convert.ToInt32(x["Count"]));
+
+    var mallItemBefore =
+        InventoryCountOf(1001);
+    var mallBuyPackets = configuredMall.Handle(
+        account.Value,
+        id,
+        "BuyItem",
+        9001,
+        2,
+        0,
+        0);
+    var mallBuyJson =
+        JsonSerializer.Serialize(mallBuyPackets);
+
+    Check(store.GetMallPoints(account.Value) == 50 &&
+          InventoryCountOf(1001) == mallItemBefore + 4 &&
+          mallBuyJson.Contains("MallPointsSync") &&
+          mallBuyJson.Contains("InventorySync"),
+        "mall purchase atomically spends points and grants package quantity");
+
+    var mallItemAfterSuccess =
+        InventoryCountOf(1001);
+    var failedMallBuy = configuredMall.Handle(
+        account.Value,
+        id,
+        "BuyItem",
+        9001,
+        3,
+        0,
+        0);
+    Check(store.GetMallPoints(account.Value) == 50 &&
+          InventoryCountOf(1001) == mallItemAfterSuccess &&
+          JsonSerializer.Serialize(failedMallBuy)
+              .Contains("商城點數不足"),
+        "insufficient mall points neither debit balance nor grant an item");
+
+    config["Gameplay:Mall:Items:0:IsActive"] = "false";
+    var disabledMallBuy = configuredMall.Handle(
+        account.Value,
+        id,
+        "BuyItem",
+        9001,
+        1,
+        0,
+        0);
+    Check(store.GetMallPoints(account.Value) == 50 &&
+          InventoryCountOf(1001) == mallItemAfterSuccess &&
+          JsonSerializer.Serialize(disabledMallBuy)
+              .Contains("不存在或已下架"),
+        "inactive mall product cannot be purchased");
+    config["Gameplay:Mall:Items:0:IsActive"] = "true";
+
     var accelerationBook =
         realCurrentCatalog.ResolveSkillBook(3701)!;
     var accelerationBookUid =
