@@ -343,6 +343,7 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 	var current_hp = int(data.get("CurrentHP", 0))
 	var is_crit = bool(data.get("IsCrit", false))
 	var skill_id = int(data.get("SkillID", 0))
+	var is_screen_aoe_stress_skill: bool = skill_id == 99001
 
 	var attacker_id = int(data.get("AttackerID", 0))
 	if DEBUG_MONSTER_NETWORK_LOGS and int(_active_entity_types.get(attacker_id, -1)) == 1:
@@ -479,6 +480,8 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 
 		else:
 
+			if is_screen_aoe_stress_skill:
+				hit_delay = 0.0
 			if current_hp <= 0: target_node.set_meta("fatal_hit_delay", hit_delay)
 			if target_node.has_method("update_hp"): target_node.update_hp(current_hp, hit_delay, is_miss)
 
@@ -499,7 +502,7 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 			elif is_mecha_double:
 				simultaneous_split = 2
 
-			if target_node.has_method("show_damage_number"):
+			if not is_screen_aoe_stress_skill and target_node.has_method("show_damage_number"):
 				target_node.show_damage_number(damage, is_crit, hit_delay, simultaneous_split, skill_id, is_primary)
 
 
