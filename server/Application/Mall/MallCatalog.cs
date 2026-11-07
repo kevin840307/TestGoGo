@@ -70,7 +70,8 @@ public static class MallCatalog
                 if (pet is null || count != 1)
                     continue;
             }
-            else if (item is null)
+            else if (item is null ||
+                     !IsKindCompatible(kind, item.Category))
             {
                 continue;
             }
@@ -150,6 +151,27 @@ public static class MallCatalog
         return result
             .OrderBy(x => x.MallId)
             .ToArray();
+    }
+
+    private static bool IsKindCompatible(
+        AssetPurchaseKind kind,
+        string category)
+    {
+        category = category.Trim().ToLowerInvariant();
+        return kind switch
+        {
+            AssetPurchaseKind.General =>
+                category is "general" or "recovery" or "booster" or "horse",
+            AssetPurchaseKind.HorseBattery =>
+                category == "horsebattery",
+            AssetPurchaseKind.Equipment =>
+                category is "equip" or "weapon",
+            AssetPurchaseKind.Horse =>
+                category == "horse",
+            AssetPurchaseKind.HorseEquipment =>
+                category == "horseequip",
+            _ => false
+        };
     }
 
     private static string Limit(string? value, int maxLength)
