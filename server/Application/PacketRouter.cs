@@ -676,6 +676,16 @@ public sealed class PacketRouter
                         ];
 
                     var activePetUid = Convert.ToInt64(activePet["UID"]);
+                    var targetEntityId = req.Int("TargetEntityID");
+                    if (state.Monsters.TryGetValue(
+                            targetEntityId,
+                            out var commandTarget) &&
+                        commandTarget.IsAlive &&
+                        commandTarget.MapId == state.CurrentMapId)
+                    {
+                        state.PetTargets[activePetUid] = targetEntityId;
+                    }
+
                     var activePetPosition =
                         state.PetPositions.TryGetValue(
                             activePetUid,
@@ -689,7 +699,7 @@ public sealed class PacketRouter
                         state,
                         activePetUid,
                         Math.Max(1, Convert.ToInt32(activePet["Attack"])),
-                        req.Int("TargetEntityID"),
+                        targetEntityId,
                         activePetPosition.X,
                         activePetPosition.Y);
                 }
@@ -790,6 +800,7 @@ public sealed class PacketRouter
                         if (oldPetUid == petUid) continue;
                         state.PetPositions.Remove(oldPetUid);
                         state.PetLastAttackAt.Remove(oldPetUid);
+                        state.PetTargets.Remove(oldPetUid);
                         responses.Add(new
                         {
                             Type = "DespawnEntity",
@@ -818,6 +829,7 @@ public sealed class PacketRouter
                 {
                     state.PetPositions.Remove(petUid);
                     state.PetLastAttackAt.Remove(petUid);
+                    state.PetTargets.Remove(petUid);
                     responses.Add(new
                     {
                         Type = "DespawnEntity",
@@ -1160,6 +1172,7 @@ public sealed class PacketRouter
         if (state.PendingMapSpawn)
         {
             state.PendingMapSpawn = false;
+            state.PetTargets.Clear();
             packets.AddRange(
                 _combat.EnterMap(
                     state,
@@ -1632,6 +1645,7 @@ public sealed class PacketRouter
                 state.PetPositions[petUid] =
                     (ownerFollowX, ownerFollowY);
                 state.PetLastAttackAt.Remove(petUid);
+                state.PetTargets.Remove(petUid);
 
                 packets.Add(new
                 {
@@ -1646,23 +1660,61 @@ public sealed class PacketRouter
                 continue;
             }
 
+            MonsterRuntimeState? stickyTarget = null;
+            if (playerAlive &&
+                state.PetTargets.TryGetValue(
+                    petUid,
+                    out var stickyTargetId) &&
+                state.Monsters.TryGetValue(
+                    stickyTargetId,
+                    out var remembered) &&
+                remembered.IsAlive &&
+                remembered.MapId == state.CurrentMapId)
+            {
+                var stickyDx = remembered.X - petPosition.X;
+                var stickyDy = remembered.Y - petPosition.Y;
+
+                // Keep an existing target over a wider leash than initial
+                // acquisition so two nearby monsters do not make the pet
+                // switch direction every AI tick.
+                if (stickyDx * stickyDx + stickyDy * stickyDy <=
+                    650.0 * 650.0)
+                {
+                    stickyTarget = remembered;
+                }
+            }
+
+            if (stickyTarget is null)
+                state.PetTargets.Remove(petUid);
+
             var target = playerAlive
-                ? state.Monsters.Values
-                    .Where(x =>
-                        x.IsAlive &&
-                        x.MapId == state.CurrentMapId)
-                    .Select(x => new
+                ? (stickyTarget is not null
+                    ? new
                     {
-                        Monster = x,
+                        Monster = stickyTarget,
                         DistanceSquared =
-                            Math.Pow(x.X - petPosition.X, 2) +
-                            Math.Pow(x.Y - petPosition.Y, 2)
-                    })
-                    .Where(x =>
-                        x.DistanceSquared <= 420.0 * 420.0)
-                    .OrderBy(x => x.DistanceSquared)
-                    .FirstOrDefault()
+                            Math.Pow(stickyTarget.X - petPosition.X, 2) +
+                            Math.Pow(stickyTarget.Y - petPosition.Y, 2)
+                    }
+                    : state.Monsters.Values
+                        .Where(x =>
+                            x.IsAlive &&
+                            x.MapId == state.CurrentMapId)
+                        .Select(x => new
+                        {
+                            Monster = x,
+                            DistanceSquared =
+                                Math.Pow(x.X - petPosition.X, 2) +
+                                Math.Pow(x.Y - petPosition.Y, 2)
+                        })
+                        .Where(x =>
+                            x.DistanceSquared <= 420.0 * 420.0)
+                        .OrderBy(x => x.DistanceSquared)
+                        .FirstOrDefault())
                 : null;
+
+            if (target is not null)
+                state.PetTargets[petUid] = target.Monster.EntityId;
 
             if (target is not null)
             {
@@ -1689,7 +1741,7 @@ public sealed class PacketRouter
                             X = nx,
                             Y = ny,
                             Dir = DirectionFromDelta(dx, dy),
-                            SpeedTime = 0.30
+                            SpeedTime = 0.24
                         });
                     }
 
