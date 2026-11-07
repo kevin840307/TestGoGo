@@ -80,18 +80,29 @@ public interface ICharacterStore
         long accountId,
         long dbid,
         int hpAmount,
+        int mpAmount);
+    Dictionary<string, object>? RecoverResources(
+        long accountId,
+        long dbid,
+        int hpAmount,
         int mpAmount,
-        int? effectiveMaxHp = null,
-        int? effectiveMaxMp = null);
+        int effectiveMaxHp,
+        int effectiveMaxMp);
+    Dictionary<string, object>? RecoverResources(
+        long accountId,
+        long dbid,
+        int hpAmount,
+        int mpAmount,
+        int spAmount);
     Dictionary<string, object>? RecoverResources(
         long accountId,
         long dbid,
         int hpAmount,
         int mpAmount,
         int spAmount,
-        int? effectiveMaxHp = null,
-        int? effectiveMaxMp = null,
-        int? effectiveMaxSp = null);
+        int effectiveMaxHp,
+        int effectiveMaxMp,
+        int effectiveMaxSp);
     Dictionary<string, object>? AddRewards(
         long accountId,
         long dbid,
