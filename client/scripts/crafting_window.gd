@@ -155,7 +155,7 @@ func _calculate_max_craftable_cached(recipe: Dictionary, counts: Dictionary, mon
 	var max_craft: int = 9999
 	var cost: int = int(recipe.get("MoneyCost", 0))
 	if cost > 0:
-		max_craft = mini(max_craft, money / cost)
+		max_craft = mini(max_craft, int(money / cost))
 	var inputs: Array = recipe.get("Inputs", []).duplicate(true)
 	if int(recipe.get("BlueprintID", 0)) > 0:
 		inputs.append({"ItemID": recipe.get("BlueprintID"), "Count": 1})
@@ -165,7 +165,7 @@ func _calculate_max_craftable_cached(recipe: Dictionary, counts: Dictionary, mon
 		if need <= 0:
 			continue
 		var has_count: int = int(counts.get(int(req.get("ItemID", 0)), 0))
-		max_craft = mini(max_craft, has_count / need)
+		max_craft = mini(max_craft, int(has_count / need))
 	return maxi(max_craft, 0)
 
 func refresh_availability_async() -> void :
@@ -179,7 +179,7 @@ func refresh_availability_async() -> void :
 		var entry: Dictionary = entry_value
 		var recipe: Dictionary = entry["recipe"]
 		var recipe_id: int = int(entry["recipe_id"])
-		var tree_item = _tree_items_by_recipe_id.get(recipe_id, null)
+		var tree_item: TreeItem = _tree_items_by_recipe_id.get(recipe_id, null) as TreeItem
 		if tree_item == null:
 			continue
 		var max_can_do: int = _calculate_max_craftable_cached(recipe, counts, money)
