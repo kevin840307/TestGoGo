@@ -2111,7 +2111,7 @@ public sealed class CombatService
                 monster.HasTarget = true;
                 monster.TargetCharacterId =
                     session.CharacterId.Value;
-                monster.TargetPetUid = petUid;
+                monster.TargetPetUid = 0;
                 SetAiState(monster, MonsterAiState.Chase);
                 packets.Add(new
                 {
