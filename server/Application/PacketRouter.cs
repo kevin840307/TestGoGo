@@ -673,9 +673,10 @@ public sealed class PacketRouter
                 var recovery = _recoveryItems.Find(itemIndex);
                 if (recovery is not null)
                 {
-                    var assets = _store.GetCharacterAssets(
-                        accountId,
-                        state.CharacterId.Value);
+                    var assetsBeforeRecovery =
+                        _store.GetCharacterAssets(
+                            accountId,
+                            state.CharacterId.Value);
                     var beforeRecovery = _store.GetCharacter(
                         accountId,
                         state.CharacterId.Value);
@@ -684,7 +685,7 @@ public sealed class PacketRouter
 
                     var effectiveStats = CharacterStatCalculator.Calculate(
                         beforeRecovery,
-                        assets,
+                        assetsBeforeRecovery,
                         _current);
 
                     var character = _store.UseRecoveryItem(
@@ -701,12 +702,114 @@ public sealed class PacketRouter
                     if (character is null)
                         return [new { Type = "SystemMessageFlash", Message = "無法使用此恢復物品" }];
 
+                    var assetsAfterRecovery =
+                        _store.GetCharacterAssets(
+                            accountId,
+                            state.CharacterId.Value);
+
                     return
                     [
                         BuildEffectiveStatusPacket(
                             accountId,
                             state.CharacterId.Value,
-                            assets),
+                            assetsAfterRecovery),
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assetsAfterRecovery.Inventory,
+                            MaxSize = assetsAfterRecovery.InventoryMaxSize
+                        },
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex)
+                    ];
+                }
+
+                var batteryEnergy =
+                    _horseBatteries.GetEnergy(itemIndex);
+
+                if (batteryEnergy > 0)
+                {
+                    var character = _store.GetCharacter(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    if (character is null)
+                        return [];
+
+                    var summonedHorseUid = Convert.ToInt64(
+                        character["SummonedHorseUID"]);
+
+                    if (summonedHorseUid <= 0)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "請先駕駛要充能的機甲"
+                            }
+                        ];
+                    }
+
+                    var horseBefore = assetsBefore.Horses
+                        .FirstOrDefault(x =>
+                            Convert.ToInt64(x["HorseUID"]) ==
+                            summonedHorseUid);
+
+                    if (horseBefore is null)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "找不到目前駕駛的機甲"
+                            }
+                        ];
+                    }
+
+                    var horseIndex = Convert.ToInt32(
+                        horseBefore["HorseIdx"]);
+                    var maxEnergy =
+                        _horseCards.Find(horseIndex)?.MaxBattery
+                        ?? int.MaxValue;
+
+                    var horse = _store.ChargeHorse(
+                        accountId,
+                        state.CharacterId.Value,
+                        summonedHorseUid,
+                        itemUid,
+                        batteryEnergy,
+                        maxEnergy);
+
+                    if (horse is null)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "機甲能源已滿或充能失敗"
+                            }
+                        ];
+                    }
+
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "SyncMechaEnergy",
+                            HorseUID = summonedHorseUid,
+                            EnergyLeft = horse["EnergyLeft"],
+                            Exp = horse["Exp"],
+                            MaxExp = horse["MaxExp"],
+                            Level = horse["Level"]
+                        },
                         new
                         {
                             Type = "InventorySync",
@@ -715,9 +818,18 @@ public sealed class PacketRouter
                         },
                         new
                         {
-                            Type = "PlayItemEffect",
-                            EntityID = state.CharacterId.Value,
-                            ItemIndex = itemIndex
+                            Type = "HorseSync",
+                            Horses = assets.Horses,
+                            HorseEquips = assets.HorseEquips,
+                            MaxHorseEquipSize = assets.HorseEquipMaxSize
+                        },
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "機甲充能完成"
                         }
                     ];
                 }
@@ -2304,12 +2416,26 @@ public sealed class PacketRouter
                 if (energy <= 0)
                     return [new { Type = "SystemMessageFlash", Message = "此物品不是可用的機甲電池" }];
 
+                var horseBefore = assetsBefore.Horses
+                    .FirstOrDefault(x =>
+                        Convert.ToInt64(x["HorseUID"]) == horseUid);
+
+                if (horseBefore is null)
+                    return [new { Type = "SystemMessageFlash", Message = "找不到機甲" }];
+
+                var horseIndex = Convert.ToInt32(
+                    horseBefore["HorseIdx"]);
+                var maxEnergy =
+                    _horseCards.Find(horseIndex)?.MaxBattery
+                    ?? int.MaxValue;
+
                 var horse = _store.ChargeHorse(
                     accountId,
                     state.CharacterId.Value,
                     horseUid,
                     itemUid,
-                    energy);
+                    energy,
+                    maxEnergy);
 
                 if (horse is null)
                     return [new { Type = "SystemMessageFlash", Message = "機甲充能失敗" }];
@@ -2342,6 +2468,9 @@ public sealed class PacketRouter
                         HorseEquips = assets.HorseEquips,
                         MaxHorseEquipSize = assets.HorseEquipMaxSize
                     },
+                    BuildAndBroadcastItemEffect(
+                        state,
+                        itemIndex),
                     new { Type = "SystemMessageFlash", Message = "機甲充能完成" }
                 ];
             }
@@ -4062,6 +4191,29 @@ public sealed class PacketRouter
             state.CurrentMapId,
             packet,
             state.ConnectionId);
+
+        return packet;
+    }
+
+    private object BuildAndBroadcastItemEffect(
+        ClientSession state,
+        int itemIndex)
+    {
+        var packet = new
+        {
+            Type = "PlayItemEffect",
+            EntityID = state.CharacterId ?? 0,
+            ItemIndex = itemIndex
+        };
+
+        if (state.CurrentMapId > 0 &&
+            state.CharacterId.HasValue)
+        {
+            _broadcasts.PublishToMap(
+                state.CurrentMapId,
+                packet,
+                state.ConnectionId);
+        }
 
         return packet;
     }
