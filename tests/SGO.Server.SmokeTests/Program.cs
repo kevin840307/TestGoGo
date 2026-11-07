@@ -416,8 +416,8 @@ try
             "EquipSync loads persisted equipment");
         Check(JsonSerializer.Serialize(responses[3]).Contains("\"PETID\":1"),
             "PetSync loads persisted pet");
-        Check(JsonSerializer.Serialize(responses[4]).Contains("\"HorseIdx\":6001") &&
-              JsonSerializer.Serialize(responses[4]).Contains("\"EquipIdx\":6201"),
+        Check(JsonSerializer.Serialize(responses[4]).Contains("\"HorseIdx\":50001") &&
+              JsonSerializer.Serialize(responses[4]).Contains("\"EquipIdx\":50293"),
             "HorseSync loads persisted mecha card and mecha equipment");
 
         using var first = Json(JsonSerializer.Serialize(responses[0]));
