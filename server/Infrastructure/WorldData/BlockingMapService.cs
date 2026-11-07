@@ -8,6 +8,14 @@ namespace SGO.Server.Infrastructure.WorldData;
 /// The file is the single authoritative collision source for client pathing,
 /// Godot runtime collision generation, and server movement validation.
 /// </summary>
+public sealed record MoveValidationResult(
+    bool Allowed,
+    string Reason,
+    int FromCellX,
+    int FromCellY,
+    int ToCellX,
+    int ToCellY);
+
 public sealed class BlockingMapService
 {
     public const int CellSize = 16;
@@ -32,10 +40,33 @@ public sealed class BlockingMapService
         double toX,
         double toY,
         bool canCrossSpecialTerrain)
+        => ValidateMove(
+            mapId,
+            fromX,
+            fromY,
+            toX,
+            toY,
+            canCrossSpecialTerrain).Allowed;
+
+    public MoveValidationResult ValidateMove(
+        int mapId,
+        double fromX,
+        double fromY,
+        double toX,
+        double toY,
+        bool canCrossSpecialTerrain)
     {
         var grid = GetGrid(mapId);
         if (grid is null)
-            return false;
+        {
+            return new MoveValidationResult(
+                false,
+                "map_missing",
+                -1,
+                -1,
+                -1,
+                -1);
+        }
 
         var fromCellX = (int)Math.Floor(fromX / CellSize);
         var fromCellY = (int)Math.Floor(fromY / CellSize);
@@ -45,13 +76,29 @@ public sealed class BlockingMapService
         if (!grid.IsWalkable(
                 fromCellX,
                 fromCellY,
-                canCrossSpecialTerrain) ||
-            !grid.IsWalkable(
+                canCrossSpecialTerrain))
+        {
+            return new MoveValidationResult(
+                false,
+                "start_blocked",
+                fromCellX,
+                fromCellY,
+                toCellX,
+                toCellY);
+        }
+
+        if (!grid.IsWalkable(
                 toCellX,
                 toCellY,
                 canCrossSpecialTerrain))
         {
-            return false;
+            return new MoveValidationResult(
+                false,
+                "end_blocked",
+                fromCellX,
+                fromCellY,
+                toCellX,
+                toCellY);
         }
 
         if (IsStraightSegmentWalkable(
@@ -62,7 +109,13 @@ public sealed class BlockingMapService
                 toY,
                 canCrossSpecialTerrain))
         {
-            return true;
+            return new MoveValidationResult(
+                true,
+                "straight",
+                fromCellX,
+                fromCellY,
+                toCellX,
+                toCellY);
         }
 
         // Client movement follows Blocking.dat waypoints. Around a corner,
@@ -71,13 +124,23 @@ public sealed class BlockingMapService
         // Validate local grid connectivity instead of requiring that chord
         // itself to be clear. The bounded search keeps this inexpensive and
         // still rejects true wall tunnelling.
-        return HasShortLocalRoute(
+        var hasLocalRoute = HasShortLocalRoute(
             grid,
             fromCellX,
             fromCellY,
             toCellX,
             toCellY,
             canCrossSpecialTerrain);
+
+        return new MoveValidationResult(
+            hasLocalRoute,
+            hasLocalRoute
+                ? "local_route"
+                : "local_route_failed",
+            fromCellX,
+            fromCellY,
+            toCellX,
+            toCellY);
     }
 
     private static bool IsStraightSegmentWalkable(
