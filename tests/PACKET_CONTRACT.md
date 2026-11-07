@@ -28,12 +28,24 @@ GitHub Actions `Server build` 工作流程已納入前兩項檢查，且會上�
 ## 新增：必要欄位與 JSON 型別驗證
 
 - `server/Protocol/PacketSchemaValidator.cs` 在已登入且通過目前連線驗證後，先驗證常用可修改資料的請求，再交給 Handler。
-- 目前定義了 **37 種**請求的最低必要欄位，包括 `UseSkill`、`SyncPosition`、`BankTransfer`、`TradeReply`、`ShopAction`、`PetAction`、`UpdateShortcut` 等。
+- 目前定義了 **40 種**請求的最低必要欄位，包括 `UseSkill`、`SyncPosition`、`BankTransfer`、`TradeReply`、`ShopAction`、`PetAction`、`UpdateShortcut` 等。
 - 整數不接受字串、布林值不接受 `"true"` 等字串；必要欄位缺失會回傳 `PacketError(Code=INVALID_PACKET)`，不呼叫修改角色或資產的 Handler。
 - `tests/packet_schema_audit.py` 從 C# 規則擷取每種必要欄位，檢查 Godot 發送的**固定格式 Dictionary** 是否提供相同欄位；報告包含每個 Type 的 `MATCHED`／`FIELD_MISMATCH`／`NOT_FOUND` 與範例檔案。
 - 預留舊 Client 的非必要欄位（例如沒有目標的技能）為可省略，不強制新協定覆蓋舊協定。
 - Python 靜態檢查**只比對必要欄位存在**，實際欄位的數值型別由 Server 執行時驗證與 C# SmokeTests 測試。未涵蓋的封包與 Server → Client 事件欄位還需要擴充。
 - CI 的報告 `packet-schema-report.json` 將與 `packet-contract-report.json` 一同上傳；若 GitHub Actions 尚未能啟動 Runner，需另外在本機執行上述命令，不能宣稱 CI 已通過。
+
+## 持續補強（2026-11-07）：數值範圍、UID 與動態 Action
+
+- Runtime schema 現涵蓋 **40 種 Client 封包 Type**；其中直接交易的 `TradeAddItem`、`TradeRemoveItem`、`TradeSetMoney`，也會驗證必要欄位。
+- `ShopAction` 另對 **6 種操作**實施分支欄位檢查：`BuyNpcItem`、`SellNpcItem`、`AddItem`、`RemoveItem`、`BuyItem`、`ViewShop`。不會要求 `CloseShop` 帶購買欄位。
+- `Int32` 欄位必須可以由 `TryGetInt32` 解析；貨幣、角色 ID、物品 UID 等需要長整數的欄位使用 `TryGetInt64`，避免溢位後由 Handler 靜默回落預設值。
+- `DismantleItemRequest.ItemUIDs` 必須是陣列，每筆都必須為 `Int64` 數字，限制單次至多 512 筆。
+- Server 的銀行轉移、裝備、使用物品與 NPC 賣物已將 UID 讀取修正為 `Int64`。
+- `packet_schema_audit.py` 現可讀取 `send_trade_action("...", {...})` 和 `send_shop_action("...", {...})` 這些 Client 動態呼叫的欄位，並與 Server 對應規則比對。
+- 測試已補整數溢位、分解 UID 型別、缺少交易金額與商店數量、錯誤賣價等回歸案例。
+
+這仍只是**最低必要欄位驗證**。所有 Server → Client 回傳欄位、數值業務約束、真正 Godot UI E2E、多人競態與商城／舊服外部資料源均未宣稱完成；CI 必須實際執行並通過才能宣稱測試 PASS。
 
 ## 真正的網路封包整合測試
 
