@@ -615,7 +615,9 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 			var pets = data.get("Pets", [])
 			var max_size = int(data.get("MaxSize", 50))
 			if GameManager.current_player and "data_model" in GameManager.current_player:
-				GameManager.current_player.data_model.update_pets(pets, max_size)
+				var p_data = GameManager.current_player.data_model
+				p_data.pet_summon_max = int(data.get("MaxSummon", p_data.pet_summon_max))
+				p_data.update_pets(pets, max_size)
 			pet_synced.emit(pets, max_size)
 
 		"HorseSync":
