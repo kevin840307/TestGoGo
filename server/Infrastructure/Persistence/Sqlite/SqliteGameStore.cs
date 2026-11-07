@@ -6706,4 +6706,41 @@ public sealed class SqliteGameStore : IGameStore
         if (cmd.ExecuteNonQuery() != 1) return null;
         return GetCharacter(accountId, dbid);
     }
+
+    public Dictionary<string, object>? ReviveBySkill(
+        long accountId,
+        long dbid,
+        int hpPercent,
+        int mpPercent,
+        bool clearDeathExp)
+    {
+        hpPercent = Math.Clamp(hpPercent, 1, 100);
+        mpPercent = Math.Clamp(mpPercent, 0, 100);
+
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET hp=MAX(1, max_hp * $hpPct / 100),
+                   mp=max_mp * $mpPct / 100,
+                   state='idle',
+                   exp_death=CASE
+                       WHEN $clearDeathExp=1 THEN 0
+                       ELSE exp_death
+                   END
+             WHERE id=$id
+               AND account_id=$a
+               AND hp <= 0
+            """;
+        Arg(cmd, "$hpPct", hpPercent);
+        Arg(cmd, "$mpPct", mpPercent);
+        Arg(cmd, "$clearDeathExp", clearDeathExp ? 1 : 0);
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return null;
+
+        return GetCharacter(accountId, dbid);
+    }
 }
