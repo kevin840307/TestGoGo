@@ -1084,32 +1084,28 @@ public sealed class CombatService
         var offsetIndex = 0;
         foreach (var drop in drops)
         {
-            var entityId = session.NextGroundItemEntityId++;
             var offsetX = ((offsetIndex % 5) - 2) * 12.0;
             var offsetY = (((offsetIndex / 5) % 5) - 2) * 10.0;
             offsetIndex++;
 
-            var ground = new GroundItemRuntime
-            {
-                EntityId = entityId,
-                MapId = monster.MapId,
-                TabType = drop.TabType,
-                ItemIndex = drop.ItemId,
-                Count = 1,
-                Damage = 0,
-                Color = 0,
-                Part = 255,
-                X = monster.X + offsetX,
-                Y = monster.Y + offsetY,
-                OwnerDbid = session.CharacterId.Value
-            };
+            var ground = _store.CreateGroundItem(
+                session.CharacterId.Value,
+                drop.TabType,
+                drop.ItemId,
+                1,
+                monster.MapId,
+                monster.X + offsetX,
+                monster.Y + offsetY);
 
-            session.GroundItems[entityId] = ground;
+            if (ground is null)
+                continue;
+
+            session.GroundItems[ground.EntityId] = ground;
 
             packets.Add(new
             {
                 Type = "SpawnEntity",
-                EntityID = entityId,
+                EntityID = ground.EntityId,
                 EntityType = 3,
                 Name = drop.Name,
                 LocX = ground.X,
