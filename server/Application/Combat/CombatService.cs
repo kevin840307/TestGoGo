@@ -831,6 +831,7 @@ public sealed class CombatService
 
         var hasBonus = HasGenericStatBonus(levelData);
         var isHeal = levelData.SkillType == 2;
+        var isGroupHeal = levelData.SkillType == 3;
         var isRevive = levelData.SkillType == 6;
         var isBuff = levelData.SkillType is 4 or 5 || hasBonus;
         var isAttack =
@@ -840,7 +841,11 @@ public sealed class CombatService
               levelData.BaseDamage != 0 ||
               levelData.DamageMultiplier != 0));
 
-        if (!isAttack && !isHeal && !isBuff && !isRevive)
+        if (!isAttack &&
+            !isHeal &&
+            !isGroupHeal &&
+            !isBuff &&
+            !isRevive)
         {
             return [Flash(
                 "此技能屬於特殊/製造類型，效果尚未還原")];
@@ -849,6 +854,8 @@ public sealed class CombatService
         MonsterRuntimeState? primaryMonster = null;
         OnlinePlayerPresence? reviveTargetPresence = null;
         Dictionary<string, object>? reviveTargetCharacter = null;
+        OnlinePlayerPresence? healTargetPresence = null;
+        Dictionary<string, object>? healTargetCharacter = null;
         double centerX = targetX;
         double centerY = targetY;
 
@@ -929,14 +936,75 @@ public sealed class CombatService
             centerY = Convert.ToDouble(
                 reviveTargetCharacter["LocY"]);
         }
+        else if (isHeal)
+        {
+            if (targetType != 0)
+                return [Flash("治療目標類型無效")];
+
+            if (targetEntityId <= 0 ||
+                targetEntityId == session.CharacterId.Value)
+            {
+                targetEntityId =
+                    checked((int)session.CharacterId.Value);
+                healTargetCharacter = character;
+            }
+            else
+            {
+                healTargetPresence =
+                    _broadcasts.FindCharacter(targetEntityId);
+
+                if (healTargetPresence is null ||
+                    healTargetPresence.MapId != session.CurrentMapId)
+                {
+                    return [Flash("治療目標不在目前地圖")];
+                }
+
+                healTargetCharacter = _store.GetCharacter(
+                    healTargetPresence.AccountId,
+                    healTargetPresence.CharacterId);
+
+                if (healTargetCharacter is null ||
+                    Convert.ToInt32(healTargetCharacter["HP"]) <= 0)
+                {
+                    return [Flash("治療目標目前無法接受治療")];
+                }
+
+                var castDx =
+                    Convert.ToDouble(healTargetCharacter["LocX"]) -
+                    Convert.ToDouble(character["LocX"]);
+                var castDy =
+                    Convert.ToDouble(healTargetCharacter["LocY"]) -
+                    Convert.ToDouble(character["LocY"]);
+                var castRange =
+                    Math.Max(0, levelData.CastRange) + 120;
+
+                if (castDx * castDx + castDy * castDy >
+                    castRange * castRange)
+                {
+                    return [Flash("治療目標距離太遠")];
+                }
+            }
+
+            centerX = Convert.ToDouble(
+                healTargetCharacter!["LocX"]);
+            centerY = Convert.ToDouble(
+                healTargetCharacter["LocY"]);
+        }
+        else if (isGroupHeal)
+        {
+            targetEntityId =
+                checked((int)session.CharacterId.Value);
+            centerX = Convert.ToDouble(character["LocX"]);
+            centerY = Convert.ToDouble(character["LocY"]);
+        }
         else
         {
-            // Self-heal/self-buff accepts target 0 or this DBID.
+            // Self-buff accepts target 0 or this DBID.
             if (targetType == 0 &&
                 targetEntityId != 0 &&
                 targetEntityId != session.CharacterId.Value)
             {
-                return [Flash("目前僅支援自身治療/增益")];
+                return [Flash("目前僅支援自身增益")];
             }
 
             targetEntityId = checked((int)session.CharacterId.Value);
