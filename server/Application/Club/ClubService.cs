@@ -41,6 +41,23 @@ public sealed class ClubService
             case "GetInfo":
                 return [BuildSync(accountId, dbid)];
 
+            case "OpenCreate":
+            {
+                if (_store.GetClubIdForCharacter(dbid) > 0)
+                {
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = "你已經加入戰團"
+                    }];
+                }
+
+                return [new
+                {
+                    Type = "OpenCreateClubWindow"
+                }];
+            }
+
             case "Create":
             {
                 var result = _store.CreateClub(
