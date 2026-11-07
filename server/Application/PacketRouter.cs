@@ -12,6 +12,7 @@ using SGO.Server.Application.Mall;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Party;
 using SGO.Server.Application.Rank;
+using SGO.Server.Application.Quest;
 using SGO.Server.Application.Shops;
 using SGO.Server.Application.Trade;
 using SGO.Server.Domain.Sessions;
@@ -50,6 +51,7 @@ public sealed class PacketRouter
     private readonly ServerBroadcastHub _broadcasts;
     private readonly PartyService _party;
     private readonly RankService _rank;
+    private readonly QuestProgressService _questProgress;
     private readonly TradeService _trade;
     private readonly ILogger<PacketRouter> _log;
 
@@ -77,6 +79,7 @@ public sealed class PacketRouter
         ServerBroadcastHub broadcasts,
         PartyService party,
         RankService rank,
+        QuestProgressService questProgress,
         TradeService trade,
         ILogger<PacketRouter> log)
     {
@@ -105,6 +108,7 @@ public sealed class PacketRouter
         _broadcasts = broadcasts;
         _party = party;
         _rank = rank;
+        _questProgress = questProgress;
         _trade = trade;
         _log = log;
     }
@@ -492,6 +496,12 @@ public sealed class PacketRouter
                 state.LastResourceRecoveryAt = DateTimeOffset.UtcNow;
                 state.PendingMapSpawn = true;
                 character["Type"] = "EnterWorldSuccess";
+
+                // Reconcile collection objectives against authoritative
+                // inventory before sending the first QuestSync after login.
+                _questProgress.RefreshCollectedItems(
+                    accountId,
+                    dbid);
 
                 var assets = _store.GetCharacterAssets(accountId, dbid);
                 ApplyAssetsToCharacterBootstrap(character, assets);
@@ -1721,8 +1731,8 @@ public sealed class PacketRouter
                 var pickedName = _current.FindItem(ground.ItemIndex)?.Name
                     ?? $"Item {ground.ItemIndex}";
 
-                return
-                [
+                var responses = new List<object>
+                {
                     despawnPacket,
                     new
                     {
@@ -1753,7 +1763,15 @@ public sealed class PacketRouter
                         HorseEquips = assets.HorseEquips,
                         MaxHorseEquipSize = assets.HorseEquipMaxSize
                     }
-                ];
+                };
+
+                responses.AddRange(
+                    _questProgress.RefreshCollectedItems(
+                        accountId,
+                        state.CharacterId.Value,
+                        ground.ItemIndex));
+
+                return responses;
             }
 
             case "TradeRequest":
