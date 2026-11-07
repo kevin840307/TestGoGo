@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Configuration;
 using SGO.Server.Application;
+using SGO.Server.Application.Assets;
 using SGO.Server.Application.Bank;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Party;
