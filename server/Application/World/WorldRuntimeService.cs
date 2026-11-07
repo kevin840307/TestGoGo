@@ -18,12 +18,19 @@ public sealed class SharedMapRuntime
 
 public sealed class WorldRuntimeService
 {
+    private const int NiciaPlateauMapId = 13;
+    private const double SupplementalSpawnRadius = 120.0;
+
     private readonly WorldDataService _world;
+    private readonly MonsterNavigationService _navigation;
     private readonly ConcurrentDictionary<int, SharedMapRuntime> _maps = new();
 
-    public WorldRuntimeService(WorldDataService world)
+    public WorldRuntimeService(
+        WorldDataService world,
+        BlockingMapService blocking)
     {
         _world = world;
+        _navigation = new MonsterNavigationService(blocking);
     }
 
     public SharedMapRuntime GetMap(int mapId)
@@ -62,6 +69,102 @@ public sealed class WorldRuntimeService
             runtime.Monsters[monster.EntityId] = monster;
         }
 
+        if (mapId == NiciaPlateauMapId &&
+            runtime.Monsters.Count > 0)
+        {
+            AddNiciaSupplementalMonsters(runtime);
+        }
+
         return runtime;
+    }
+
+    private void AddNiciaSupplementalMonsters(
+        SharedMapRuntime runtime)
+    {
+        var sources = runtime.Monsters.Values
+            .OrderBy(x => x.EntityId)
+            .ToArray();
+
+        var extraCount = Math.Clamp(
+            sources.Length / 2,
+            10,
+            40);
+
+        for (var index = 0; index < extraCount; index++)
+        {
+            var source = sources[index % sources.Length];
+            var (x, y) = ResolveSupplementalSpawn(
+                source,
+                index);
+
+            var entityId =
+                8_000_000 +
+                runtime.MapId * 10_000 +
+                index;
+
+            while (runtime.Monsters.ContainsKey(entityId))
+                entityId++;
+
+            runtime.Monsters[entityId] =
+                new MonsterRuntimeState
+                {
+                    EntityId = entityId,
+                    EnemyId = source.EnemyId,
+                    MapId = source.MapId,
+                    Name = source.Name,
+                    Sprite = source.Sprite,
+                    Level = source.Level,
+                    MaxHp = source.MaxHp,
+                    CurrentHp = source.MaxHp,
+                    SpawnX = x,
+                    SpawnY = y,
+                    X = x,
+                    Y = y,
+                    WanderCenterX = x,
+                    WanderCenterY = y
+                };
+        }
+    }
+
+    private (double X, double Y) ResolveSupplementalSpawn(
+        MonsterRuntimeState source,
+        int sequence)
+    {
+        for (var attempt = 0; attempt < 12; attempt++)
+        {
+            var seed = unchecked(
+                source.EntityId * 1103515245 +
+                (sequence + 1) * 12345 +
+                attempt * 265443576);
+            var angle =
+                ((uint)seed % 360) *
+                Math.PI / 180.0;
+            var radiusSeed = unchecked(
+                seed * 214013 + 2531011);
+            var radius =
+                28.0 +
+                ((uint)radiusSeed % 10_001) /
+                10_000.0 *
+                (SupplementalSpawnRadius - 28.0);
+
+            var x =
+                source.SpawnX +
+                Math.Cos(angle) * radius;
+            var y =
+                source.SpawnY +
+                Math.Sin(angle) * radius;
+
+            if (_navigation.IsDirectClear(
+                    source.MapId,
+                    source.SpawnX,
+                    source.SpawnY,
+                    x,
+                    y))
+            {
+                return (x, y);
+            }
+        }
+
+        return (source.SpawnX, source.SpawnY);
     }
 }
