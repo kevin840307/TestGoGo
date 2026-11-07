@@ -452,16 +452,10 @@ public sealed class PacketRouter
 
                     return
                     [
-                        new
-                        {
-                            Type = "PlayerStatusSync",
-                            HP = character["HP"],
-                            MP = character["MP"],
-                            SP = character["SP"],
-                            MaxHP = character["MaxHP"],
-                            MaxMP = character["MaxMP"],
-                            MaxSP = character["MaxSP"]
-                        },
+                        BuildEffectiveStatusPacket(
+                            accountId,
+                            state.CharacterId.Value,
+                            assets),
                         new
                         {
                             Type = "InventorySync",
@@ -1961,18 +1955,16 @@ public sealed class PacketRouter
                 state.PendingMapSpawn = true;
                 state.Monsters.Clear();
 
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
                 return
                 [
-                    new
-                    {
-                        Type = "PlayerStatusSync",
-                        HP = character["HP"],
-                        MP = character["MP"],
-                        SP = character["SP"],
-                        MaxHP = character["MaxHP"],
-                        MaxMP = character["MaxMP"],
-                        MaxSP = character["MaxSP"]
-                    },
+                    BuildEffectiveStatusPacket(
+                        accountId,
+                        state.CharacterId.Value,
+                        assets),
                     new
                     {
                         Type = "ChangeMap",
