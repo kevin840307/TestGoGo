@@ -451,6 +451,9 @@ try
           enemyDrops.LuckRollCount(200) == 5,
         "enemy.cfg Luck thresholds increase only luck-checked drop rolls");
 
+    Check(enemyDrops.OwnerProtectionSeconds == 15,
+        "enemy.cfg OwnedDropItemTimeout drives server loot protection");
+
     var combat = new CombatService(
         store,
         world,
