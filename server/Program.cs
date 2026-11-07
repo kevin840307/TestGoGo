@@ -64,10 +64,11 @@ if (!currentClientData.IsAvailable)
 else
 {
     app.Logger.LogInformation(
-        "[CURRENT_GAMEDATA] Root={Root} Items={ItemCount} Skills={SkillCount}",
+        "[CURRENT_GAMEDATA] Root={Root} Items={ItemCount} Skills={SkillCount} Pets={PetCount}",
         currentClientData.Root,
         currentClientData.Items.Count,
-        currentClientData.Skills.Count);
+        currentClientData.Skills.Count,
+        currentClientData.Pets.Count);
 
     foreach (var warning in shopCatalog.MappingWarnings)
         app.Logger.LogWarning("{MappingWarning}", warning);
@@ -82,7 +83,8 @@ app.MapGet("/health", (IConfiguration config) => Results.Ok(new
     currentGameData = currentClientData.IsAvailable,
     currentClientRoot = currentClientData.Root,
     currentItemCount = currentClientData.Items.Count,
-    currentSkillCount = currentClientData.Skills.Count
+    currentSkillCount = currentClientData.Skills.Count,
+    currentPetCount = currentClientData.Pets.Count
 }));
 
 app.MapSgoWebSocket();
