@@ -24,6 +24,7 @@ var _last_received_packet_type: String = ""
 var _last_received_entity_type: int = -1
 var _drain_packet_types: Dictionary = {}
 var _drain_spawn_entity_types: Dictionary = {}
+var _unknown_server_packet_types: Dictionary = {}
 
 var _logout_action: String = "quit"
 var latest_skill_sync: Array = []
@@ -1285,8 +1286,18 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 		"Ping":
 			send_secure_packet({"Type": "Pong"})
 
+		"PacketError":
+			var request_type: String = str(data.get("RequestType", ""))
+			var error_code: String = str(data.get("Code", "UNKNOWN"))
+			var error_message: String = str(data.get("Message", "伺服器無法處理此操作"))
+			push_warning("[PACKET_ERROR] RequestType=%s Code=%s Message=%s" % [request_type, error_code, error_message])
+			system_message_flash_received.emit(error_message)
+
 		_:
-			pass
+			var unknown_type: String = str(packet_type)
+			if not _unknown_server_packet_types.has(unknown_type):
+				_unknown_server_packet_types[unknown_type] = true
+				push_warning("[UNHANDLED_SERVER_PACKET] Type=%s" % unknown_type)
 
 func send_trade_request(target_dbid: int) -> void :
 	if socket and socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
