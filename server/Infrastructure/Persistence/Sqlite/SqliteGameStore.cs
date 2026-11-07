@@ -899,6 +899,198 @@ public sealed class SqliteGameStore : IGameStore
         return true;
     }
 
+    public TimedEffectActivationResult ActivateTimedEffectFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        string effectKey,
+        int effectValue,
+        int durationSeconds,
+        long nowUtcMs)
+    {
+        if (itemUid <= 0 ||
+            itemIndex <= 0 ||
+            string.IsNullOrWhiteSpace(effectKey) ||
+            effectValue <= 0 ||
+            durationSeconds <= 0)
+        {
+            return new(
+                false,
+                "效果資料無效",
+                0,
+                0);
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(
+                db,
+                accountId,
+                dbid,
+                tx))
+        {
+            return new(
+                false,
+                "角色不存在",
+                0,
+                0);
+        }
+
+        using (var active = db.CreateCommand())
+        {
+            active.Transaction = tx;
+            active.CommandText = """
+                SELECT effect_value,expires_utc_ms
+                  FROM character_timed_effects
+                 WHERE character_id=$id
+                   AND effect_key=$key
+                 LIMIT 1
+                """;
+            Arg(active, "$id", dbid);
+            Arg(active, "$key", effectKey.Trim());
+
+            using var reader = active.ExecuteReader();
+            if (reader.Read())
+            {
+                var currentValue = reader.GetInt32(0);
+                var currentExpiry = reader.GetInt64(1);
+
+                if (currentExpiry > nowUtcMs)
+                {
+                    return new(
+                        false,
+                        "相同效果仍在持續中",
+                        currentValue,
+                        currentExpiry);
+                }
+            }
+        }
+
+        using (var item = db.CreateCommand())
+        {
+            item.Transaction = tx;
+            item.CommandText = """
+                SELECT count
+                  FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND item_index=$item
+                   AND in_bank=0
+                   AND in_shop=0
+                 LIMIT 1
+                """;
+            Arg(item, "$uid", itemUid);
+            Arg(item, "$id", dbid);
+            Arg(item, "$item", itemIndex);
+
+            var raw = item.ExecuteScalar();
+            if (raw is null ||
+                raw == DBNull.Value ||
+                Convert.ToInt32(raw) <= 0)
+            {
+                return new(
+                    false,
+                    "找不到可使用的道具",
+                    0,
+                    0);
+            }
+        }
+
+        var expiresUtcMs = checked(
+            nowUtcMs +
+            (long)durationSeconds * 1000L);
+
+        using (var upsert = db.CreateCommand())
+        {
+            upsert.Transaction = tx;
+            upsert.CommandText = """
+                INSERT INTO character_timed_effects(
+                    character_id,effect_key,effect_value,expires_utc_ms)
+                VALUES($id,$key,$value,$expires)
+                ON CONFLICT(character_id,effect_key)
+                DO UPDATE SET
+                    effect_value=excluded.effect_value,
+                    expires_utc_ms=excluded.expires_utc_ms
+                """;
+            Arg(upsert, "$id", dbid);
+            Arg(upsert, "$key", effectKey.Trim());
+            Arg(upsert, "$value", effectValue);
+            Arg(upsert, "$expires", expiresUtcMs);
+
+            if (upsert.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "效果啟動失敗",
+                    0,
+                    0);
+            }
+        }
+
+        ConsumeInventoryItem(
+            db,
+            tx,
+            dbid,
+            itemUid);
+
+        tx.Commit();
+
+        return new(
+            true,
+            "效果已啟動",
+            effectValue,
+            expiresUtcMs);
+    }
+
+    public int GetTimedEffectValue(
+        long accountId,
+        long dbid,
+        string effectKey,
+        long nowUtcMs)
+    {
+        if (dbid <= 0 ||
+            string.IsNullOrWhiteSpace(effectKey))
+            return 0;
+
+        using var db = Open();
+
+        using (var cleanup = db.CreateCommand())
+        {
+            cleanup.CommandText = """
+                DELETE FROM character_timed_effects
+                 WHERE character_id=$id
+                   AND effect_key=$key
+                   AND expires_utc_ms <= $now
+                """;
+            Arg(cleanup, "$id", dbid);
+            Arg(cleanup, "$key", effectKey.Trim());
+            Arg(cleanup, "$now", nowUtcMs);
+            cleanup.ExecuteNonQuery();
+        }
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT effect.effect_value
+              FROM character_timed_effects effect
+              JOIN characters c
+                ON c.id=effect.character_id
+             WHERE effect.character_id=$id
+               AND c.account_id=$account
+               AND effect.effect_key=$key
+               AND effect.expires_utc_ms > $now
+             LIMIT 1
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$account", accountId);
+        Arg(cmd, "$key", effectKey.Trim());
+        Arg(cmd, "$now", nowUtcMs);
+
+        return Convert.ToInt32(
+            cmd.ExecuteScalar() ?? 0);
+    }
+
     public IReadOnlyList<RankEntry> GetRankEntries(
         int rankType,
         int limit)
