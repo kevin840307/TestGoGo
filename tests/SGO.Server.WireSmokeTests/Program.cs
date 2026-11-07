@@ -136,8 +136,16 @@ async Task<JsonElement> ReceivePacket(CancellationToken token)
 static bool HasCode(JsonElement root, string expected) =>
     root.TryGetProperty("Code", out var code) &&
     code.ValueKind == JsonValueKind.String &&
-    code.GetString() == expected;
+    code.GetString() == expected &&
+    root.TryGetProperty("RequestType", out var requestType) &&
+    requestType.ValueKind == JsonValueKind.String &&
+    root.TryGetProperty("Message", out var message) &&
+    message.ValueKind == JsonValueKind.String &&
+    !string.IsNullOrWhiteSpace(message.GetString());
 
 static bool IsFailure(JsonElement root) =>
     root.TryGetProperty("Success", out var success) &&
-    success.ValueKind == JsonValueKind.False;
+    success.ValueKind == JsonValueKind.False &&
+    root.TryGetProperty("Message", out var message) &&
+    message.ValueKind == JsonValueKind.String &&
+    !string.IsNullOrWhiteSpace(message.GetString());
