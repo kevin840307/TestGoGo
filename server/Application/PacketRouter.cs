@@ -28,6 +28,11 @@ public sealed class PacketRouter
 {
     private const int NpcInteractRange = 500;
 
+    private sealed record TrainTravelSpec(
+        string Continuation,
+        string SourceVideo,
+        string DestinationVideo);
+
     private readonly IGameStore _store;
     private readonly WorldDataService _world;
     private readonly QuestRuntime _quests;
@@ -299,11 +304,66 @@ public sealed class PacketRouter
             }
 
             case "TrainTravelReady":
-                return [new
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var travelId = req.Str("TravelID");
+                if (string.IsNullOrWhiteSpace(
+                        state.PendingTrainTravelId) ||
+                    !string.Equals(
+                        travelId,
+                        state.PendingTrainTravelId,
+                        StringComparison.Ordinal) ||
+                    state.PendingTrainExpiresAt <
+                        DateTimeOffset.UtcNow)
                 {
-                    Type = "SystemMessageFlash",
-                    Message = "目前沒有等待中的列車旅行"
-                }];
+                    ClearPendingTrainTravel(state);
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = "列車行程已失效"
+                    }];
+                }
+
+                var npc = _world.FindNpc(
+                    state.CurrentMapId,
+                    state.PendingTrainNpcEntityId);
+
+                if (npc is null ||
+                    !string.Equals(
+                        npc.Script,
+                        state.PendingTrainScript,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    ClearPendingTrainTravel(state);
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = "找不到原列車車長"
+                    }];
+                }
+
+                var continuation =
+                    state.PendingTrainContinuation;
+                ClearPendingTrainTravel(state);
+
+                var character = _store.GetCharacter(
+                    accountId,
+                    state.CharacterId.Value);
+
+                if (character is null)
+                    return [];
+
+                return ExecuteQuest(
+                    state,
+                    accountId,
+                    npc,
+                    continuation,
+                    null,
+                    character,
+                    suppressLegacyMediaDialogs: true);
+            }
 
             case "ReviveAccept":
             {
@@ -3078,6 +3138,65 @@ public sealed class PacketRouter
         return packets;
     }
 
+    private static bool TryGetTrainTravelSpec(
+        string script,
+        string function,
+        out TrainTravelSpec spec)
+    {
+        spec = null!;
+
+        var key =
+            $"{Path.GetFileName(script)}:{function}";
+
+        spec = key.ToUpperInvariant() switch
+        {
+            "NQ024_B.TXT:DIA_04A1" =>
+                new TrainTravelSpec(
+                    "dia_04a6",
+                    "train_depart_king.ogv",
+                    "train_depart_magic.ogv"),
+            "NQ024_B.TXT:DIA_04B1" =>
+                new TrainTravelSpec(
+                    "dia_04b6",
+                    "train_depart_king.ogv",
+                    "train_depart_knight.ogv"),
+            "NQ024_B.TXT:DIA_04C1" =>
+                new TrainTravelSpec(
+                    "dia_04c6",
+                    "train_depart_king.ogv",
+                    "train_depart_robot.ogv"),
+            "NQ024_C.TXT:DIA_04A1" =>
+                new TrainTravelSpec(
+                    "dia_04a6",
+                    "train_depart_magic.ogv",
+                    "train_depart_king.ogv"),
+            "NQ024_D.TXT:DIA_04A1" =>
+                new TrainTravelSpec(
+                    "dia_04a6",
+                    "train_depart_robot.ogv",
+                    "train_depart_king.ogv"),
+            "NQ024_E.TXT:DIA_04A1" =>
+                new TrainTravelSpec(
+                    "dia_04a6",
+                    "train_depart_knight.ogv",
+                    "train_depart_king.ogv"),
+            _ => null!
+        };
+
+        return spec is not null;
+    }
+
+    private static void ClearPendingTrainTravel(
+        ClientSession state)
+    {
+        state.PendingTrainTravelId = "";
+        state.PendingTrainNpcEntityId = 0;
+        state.PendingTrainScript = "";
+        state.PendingTrainContinuation = "";
+        state.PendingTrainExpiresAt =
+            DateTimeOffset.MinValue;
+    }
+
     private static string TruncatePayload(
         string payload,
         int maxLength = 1200)
@@ -3185,14 +3304,52 @@ public sealed class PacketRouter
         WorldNpc npc,
         string function,
         int? choice,
-        Dictionary<string, object> character)
+        Dictionary<string, object> character,
+        bool suppressLegacyMediaDialogs = false)
     {
+        if (TryGetTrainTravelSpec(
+                npc.Script,
+                function,
+                out var trainSpec))
+        {
+            var travelId = Guid.NewGuid()
+                .ToString("N");
+
+            state.PendingTrainTravelId = travelId;
+            state.PendingTrainNpcEntityId = npc.EntityId;
+            state.PendingTrainScript = npc.Script;
+            state.PendingTrainContinuation =
+                trainSpec.Continuation;
+            state.PendingTrainExpiresAt =
+                DateTimeOffset.UtcNow.AddMinutes(3);
+
+            return
+            [
+                new
+                {
+                    Type = "TrainTravelStart",
+                    TravelID = travelId,
+                    SourceVideo = trainSpec.SourceVideo,
+                    DestinationVideo =
+                        trainSpec.DestinationVideo
+                },
+                new
+                {
+                    Type = "NpcDialogResponse",
+                    EntityID = npc.EntityId,
+                    ScriptName = npc.Script,
+                    DialogType = "Close"
+                }
+            ];
+        }
+
         try
         {
             var assetsChanged = false;
             var skillsChanged = false;
             var careerChanged = false;
             var appearanceChanged = false;
+            var moneyChanged = false;
             var questTrackerPackets =
                 new List<object>();
             var dbid = state.CharacterId ?? 0;
@@ -3422,7 +3579,30 @@ public sealed class PacketRouter
                             value);
                         appearanceChanged |= success;
                         return success;
-                    }
+                    },
+                    ModifyData = (key, delta) =>
+                    {
+                        if (dbid <= 0 ||
+                            !key.Equals(
+                                "Money",
+                                StringComparison.OrdinalIgnoreCase))
+                            return false;
+
+                        var updatedMoney = _store.AdjustMoney(
+                            accountId,
+                            dbid,
+                            delta);
+
+                        if (updatedMoney is null)
+                            return false;
+
+                        character["Money"] =
+                            updatedMoney["Money"];
+                        moneyChanged = true;
+                        return true;
+                    },
+                    SuppressLegacyMediaDialogs =
+                        suppressLegacyMediaDialogs
                 });
 
             result.Packets.AddRange(
@@ -3550,6 +3730,24 @@ public sealed class PacketRouter
                         accountId,
                         state.CharacterId.Value,
                         assets));
+            }
+
+            if (moneyChanged &&
+                state.CharacterId.HasValue)
+            {
+                var currentCharacter =
+                    _store.GetCharacter(
+                        accountId,
+                        state.CharacterId.Value);
+
+                if (currentCharacter is not null)
+                {
+                    result.Packets.Add(new
+                    {
+                        Type = "SyncMoney",
+                        Money = currentCharacter["Money"]
+                    });
+                }
             }
 
             return result.Packets;
