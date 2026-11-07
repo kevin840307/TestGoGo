@@ -1559,6 +1559,32 @@ try
         ConnectionId = broadcastRegistration.ConnectionId
     };
 
+    using (var malformedLogin = Json(
+        """{"Type":"LoginRequest","User":"offline"}"""))
+    {
+        var packets = router.Handle(malformedLogin.RootElement, session);
+        var json = JsonSerializer.Serialize(packets);
+        Check(json.Contains("LoginResponse") &&
+              json.Contains("false") &&
+              !session.AccountId.HasValue,
+            "malformed login gets LoginResponse failure without session mutation");
+    }
+    using (var malformedRegister = Json(
+        """{"Type":"RegisterAccountRequest","LoginName":"n","Password":"p","EMAIL":17}"""))
+    {
+        var packets = router.Handle(malformedRegister.RootElement, session);
+        var json = JsonSerializer.Serialize(packets);
+        Check(json.Contains("RegisterAccountResponse") &&
+              json.Contains("false"),
+            "invalid registration email type returns RegisterAccountResponse failure");
+    }
+    using (var nonObject = Json("""["not-a-packet"]"""))
+    {
+        var packets = router.Handle(nonObject.RootElement, session);
+        Check(JsonSerializer.Serialize(packets).Contains("INVALID_PACKET"),
+            "non-object JSON payload yields explicit error, not an exception");
+    }
+
     var pongBefore = session.LastPongAt;
     using (var pongRequest = Json(
         """{"Type":"Pong"}"""))
