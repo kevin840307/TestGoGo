@@ -493,6 +493,15 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	last_move_packet_ms = Time.get_ticks_msec()
 	network_move_target = target_pos
 
+	# Server uses SpeedTime <= 0.01 as an authoritative correction before
+	# entering attack state. Snap first so the following SyncState("attack")
+	# cannot freeze the monster at an older visual position.
+	if speed_time <= 0.01:
+		global_position = target_pos
+		network_move_active = false
+		network_move_speed = 0.0
+		return
+
 	var remaining: float = global_position.distance_to(target_pos)
 	if remaining <= NETWORK_MOVE_SNAP_EPSILON:
 		network_move_active = false
