@@ -839,6 +839,10 @@ public sealed class CombatService
                 out var createItemCount);
         var isSelfRecovery = skillId is
             25101 or 25106 or 25108 or 25109;
+        var isPartyReturn =
+            specialSkill.Equals(
+                "平安之祝",
+                StringComparison.Ordinal);
 
         var hasBonus = HasGenericStatBonus(levelData);
         var isHeal = levelData.SkillType == 2;
@@ -850,6 +854,7 @@ public sealed class CombatService
             (levelData.SkillType == 7 &&
              !hasCreateItemSpecial &&
              !isSelfRecovery &&
+             !isPartyReturn &&
              (targetType == 1 ||
               levelData.BaseDamage != 0 ||
               levelData.DamageMultiplier != 0));
@@ -860,7 +865,8 @@ public sealed class CombatService
             !isBuff &&
             !isRevive &&
             !hasCreateItemSpecial &&
-            !isSelfRecovery)
+            !isSelfRecovery &&
+            !isPartyReturn)
         {
             return [Flash(
                 "此技能屬於特殊/製造類型，效果尚未還原")];
@@ -1072,6 +1078,100 @@ public sealed class CombatService
                 AoeTargets = Array.Empty<object>()
             }
         };
+
+        if (isPartyReturn)
+        {
+            var originMapId = session.CurrentMapId;
+            _broadcasts.PublishToMap(
+                originMapId,
+                packets[0],
+                session.ConnectionId);
+
+            var members = _party.GetMembers(
+                session.CharacterId.Value);
+
+            if (members.Count == 0)
+            {
+                members =
+                [
+                    (accountId, session.CharacterId.Value)
+                ];
+            }
+
+            foreach (var member in members)
+            {
+                if (member.CharacterId != session.CharacterId.Value)
+                {
+                    var presence =
+                        _broadcasts.FindCharacter(member.CharacterId);
+
+                    if (presence is null ||
+                        presence.MapId != originMapId)
+                        continue;
+                }
+
+                var memberCharacter = _store.GetCharacter(
+                    member.AccountId,
+                    member.CharacterId);
+
+                if (memberCharacter is null)
+                    continue;
+
+                var mapId = Convert.ToInt32(
+                    memberCharacter["RebornMapID"]);
+                var x = Convert.ToDouble(
+                    memberCharacter["RebornX"]);
+                var y = Convert.ToDouble(
+                    memberCharacter["RebornY"]);
+
+                if (!_store.UpdateLocation(
+                        member.AccountId,
+                        member.CharacterId,
+                        mapId,
+                        checked((int)Math.Round(x)),
+                        checked((int)Math.Round(y))))
+                    continue;
+
+                var changeMap = new
+                {
+                    Type = "ChangeMap",
+                    MapID = mapId,
+                    X = x,
+                    Y = y
+                };
+
+                if (member.CharacterId ==
+                    session.CharacterId.Value)
+                {
+                    session.CurrentMapId = mapId;
+                    session.LastX = x;
+                    session.LastY = y;
+                    session.PendingMapSpawn = true;
+                    session.LoadedMonsterMapId = 0;
+                    packets.Add(changeMap);
+                }
+                else
+                {
+                    _broadcasts.PublishToCharacter(
+                        member.CharacterId,
+                        changeMap);
+                }
+            }
+
+            packets.Add(
+                CharacterStatCalculator.ToPlayerStatusPacket(
+                    updated,
+                    _store.GetCharacterAssets(
+                        accountId,
+                        session.CharacterId.Value),
+                    _current));
+
+            session.SkillReadyAt[skillId] =
+                now + TimeSpan.FromSeconds(
+                    Math.Max(0, levelData.CooldownSeconds));
+
+            return packets;
+        }
 
         if (hasCreateItemSpecial)
         {
