@@ -202,6 +202,15 @@ public sealed class CombatService
                     });
                 }
 
+                // Compatibility for runtime state created before target-owner
+                // tracking and for focused unit/smoke scenarios.
+                if (monster.HasTarget &&
+                    monster.TargetCharacterId == 0)
+                {
+                    monster.TargetCharacterId =
+                        currentCharacterId;
+                }
+
                 if (!playerAlive)
                 {
                     if (monster.HasTarget &&
