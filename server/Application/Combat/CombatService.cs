@@ -256,6 +256,9 @@ public sealed class CombatService
 
             if (shouldAttack)
             {
+                var enteredAttackRange =
+                    monster.AiState != MonsterAiState.Attack;
+
                 var wasMoving = monster.AiState is
                     MonsterAiState.Chase or
                     MonsterAiState.Wander;
@@ -274,11 +277,17 @@ public sealed class CombatService
                 monster.CurrentDir = stableDir;
                 SetAiState(monster, MonsterAiState.Attack);
 
+                // Entering melee range is an immediate attack opportunity.
+                // Cooldown only governs repeated attacks while the monster stays
+                // in range; it must not make a newly-arrived monster stand idle.
                 var attackReady =
                     session.CharacterId.HasValue &&
-                    now - monster.LastAttackAt >= MonsterAttackCooldown;
+                    (enteredAttackRange ||
+                     now - monster.LastAttackAt >= MonsterAttackCooldown);
 
-                if (attackReady && character is not null)
+                if (attackReady &&
+                    character is not null &&
+                    Convert.ToInt32(character["HP"]) > 0)
                 {
                     var assets = _store.GetCharacterAssets(
                         accountId,
