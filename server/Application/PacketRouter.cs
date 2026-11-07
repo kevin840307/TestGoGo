@@ -44,6 +44,8 @@ public sealed class PacketRouter
     private readonly HorseCardCatalog _horseCards;
     private readonly CurrentClientDataCatalog _current;
     private readonly LegacyPlayerGrowthCatalog _growth;
+    private readonly LegacyPetGrowthCatalog _petGrowth;
+    private readonly PetSkillCatalog _petSkills;
     private readonly MallService _mall;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly PartyService _party;
@@ -69,6 +71,8 @@ public sealed class PacketRouter
         HorseCardCatalog horseCards,
         CurrentClientDataCatalog current,
         LegacyPlayerGrowthCatalog growth,
+        LegacyPetGrowthCatalog petGrowth,
+        PetSkillCatalog petSkills,
         MallService mall,
         ServerBroadcastHub broadcasts,
         PartyService party,
@@ -95,6 +99,8 @@ public sealed class PacketRouter
         _horseCards = horseCards;
         _current = current;
         _growth = growth;
+        _petGrowth = petGrowth;
+        _petSkills = petSkills;
         _mall = mall;
         _broadcasts = broadcasts;
         _party = party;
