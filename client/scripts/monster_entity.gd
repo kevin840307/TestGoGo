@@ -30,10 +30,17 @@ var collision_shape: CollisionShape2D = null
 
 var move_tween: Tween
 var move_idle_generation: int = 0
+var network_move_target: Vector2 = Vector2.ZERO
+var network_move_speed: float = 0.0
+var network_move_active: bool = false
+var last_move_packet_ms: int = 0
 var pending_move_dir: String = ""
 var pending_move_dir_count: int = 0
 var last_move_dir_change_ms: int = 0
 const MOVE_IDLE_GRACE_SECONDS: float = 0.12
+const NETWORK_MOVE_MIN_SPEED: float = 120.0
+const NETWORK_MOVE_MAX_SPEED: float = 205.0
+const NETWORK_MOVE_SNAP_EPSILON: float = 1.0
 const MOVE_DIR_CONFIRM_COUNT: int = 2
 const MOVE_DIR_MAX_HOLD_MS: int = 450
 
@@ -83,6 +90,34 @@ func _ready() -> void :
 
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
+
+func _process(delta: float) -> void :
+	if not network_move_active or current_hp <= 0:
+		return
+	if current_state in ["attack", "hit", "death", "die"]:
+		network_move_active = false
+		return
+
+	var remaining := global_position.distance_to(network_move_target)
+	if remaining <= NETWORK_MOVE_SNAP_EPSILON:
+		global_position = network_move_target
+		network_move_active = false
+		if current_state == "walk":
+			var elapsed_ms := Time.get_ticks_msec() - last_move_packet_ms
+			if elapsed_ms >= int(MOVE_IDLE_GRACE_SECONDS * 1000.0):
+				current_state = "idle"
+				sync_animation()
+		return
+
+	var step := network_move_speed * delta
+	if step <= 0.0:
+		return
+
+	global_position = global_position.move_toward(network_move_target, step)
+	if current_state != "walk":
+		current_state = "walk"
+		sync_animation()
+
 
 func _exit_tree() -> void :
 
@@ -418,6 +453,8 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 	# MoveEntity tween/grace callback may keep it visually walking.
 	if new_state != "walk":
 		move_idle_generation += 1
+		network_move_active = false
+		network_move_speed = 0.0
 		if move_tween and move_tween.is_valid():
 			move_tween.kill()
 		move_tween = null
@@ -432,43 +469,36 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 
 
 func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
-	if current_hp <= 0: return
+	if current_hp <= 0:
+		return
 	if current_state in ["attack", "hit", "death", "die"]:
 		return
 
 	move_idle_generation += 1
-	var generation := move_idle_generation
+	last_move_packet_ms = Time.get_ticks_msec()
+	network_move_target = target_pos
 
-	if move_tween and move_tween.is_valid():
-		move_tween.kill()
-
-	# Do not replay WALK for a waypoint that is already effectively reached.
-	# This also protects against duplicate/late MoveEntity packets.
-	if global_position.distance_to(target_pos) <= 0.5:
-		global_position = target_pos
+	var remaining := global_position.distance_to(target_pos)
+	if remaining <= NETWORK_MOVE_SNAP_EPSILON:
+		network_move_active = false
 		return
 
-	move_tween = create_tween()
-	current_state = "walk"
-	sync_animation()
-	move_tween.tween_property(self, "global_position", target_pos, max(speed_time, 0.01))
-	move_tween.tween_callback( func():
-		if not is_instance_valid(self) or current_hp <= 0:
-			return
-
-		# Chase waypoints arrive every ~250 ms. Keep WALK alive for a short
-		# grace window so a completed 240 ms waypoint does not flicker to IDLE
-		# before the next packet. A later waypoint invalidates this generation.
-		get_tree().create_timer(MOVE_IDLE_GRACE_SECONDS).timeout.connect( func():
-			if not is_instance_valid(self) or current_hp <= 0:
-				return
-			if generation != move_idle_generation:
-				return
-			if current_state == "walk":
-				current_state = "idle"
-				sync_animation()
-		)
+	# Do not create/kill a tween per network packet. Packet jitter or a missed
+	# waypoint used to make the next 240 ms tween cover two or more steps,
+	# producing a visible speed burst that looked like teleporting.
+	# Keep a bounded visual speed instead; the client smoothly catches up.
+	var requested_time := max(speed_time, 0.01)
+	var requested_speed := remaining / requested_time
+	network_move_speed = clamp(
+		requested_speed,
+		NETWORK_MOVE_MIN_SPEED,
+		NETWORK_MOVE_MAX_SPEED
 	)
+	network_move_active = true
+
+	if current_state != "walk":
+		current_state = "walk"
+		sync_animation()
 
 func sync_animation() -> void :
 	if not sprite or not sprite.sprite_frames: return
