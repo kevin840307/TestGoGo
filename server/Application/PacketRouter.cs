@@ -28,6 +28,10 @@ namespace SGO.Server.Application;
 public sealed class PacketRouter
 {
     private const int NpcInteractRange = 500;
+    private static readonly TimeSpan PositionPersistInterval =
+        TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan PositionBroadcastInterval =
+        TimeSpan.FromMilliseconds(100);
 
     private sealed record TrainTravelSpec(
         string Continuation,
@@ -125,6 +129,24 @@ public sealed class PacketRouter
         _log = log;
     }
 
+    private void PersistPendingPosition(ClientSession state)
+    {
+        if (!state.PositionDirty ||
+            !state.AccountId.HasValue ||
+            !state.CharacterId.HasValue)
+        {
+            return;
+        }
+
+        _store.UpdatePosition(
+            state.AccountId.Value,
+            state.CharacterId.Value,
+            state.LastX,
+            state.LastY);
+        state.PositionDirty = false;
+        state.LastPositionPersistAt = DateTimeOffset.UtcNow;
+    }
+
     public void SyncPresence(ClientSession state)
     {
         var hasCurrent =
@@ -205,6 +227,8 @@ public sealed class PacketRouter
 
     public void DisconnectPresence(ClientSession state)
     {
+        PersistPendingPosition(state);
+
         var characterId =
             state.PublishedCharacterId > 0
                 ? state.PublishedCharacterId
@@ -577,6 +601,9 @@ public sealed class PacketRouter
                 state.CurrentMapId = Convert.ToInt32(character["MapID"]);
                 state.LastX = Convert.ToDouble(character["LocX"]);
                 state.LastY = Convert.ToDouble(character["LocY"]);
+                state.PositionDirty = false;
+                state.LastPositionPersistAt = DateTimeOffset.UtcNow;
+                state.LastPositionBroadcastAt = DateTimeOffset.MinValue;
                 state.LastResourceRecoveryAt = DateTimeOffset.UtcNow;
                 state.LastCompanionRuntimeAt = DateTimeOffset.UtcNow;
                 state.LastCompanionClientSyncAt = DateTimeOffset.UtcNow;
@@ -692,24 +719,32 @@ public sealed class PacketRouter
 
                 state.LastX = x;
                 state.LastY = y;
-                _store.UpdatePosition(
-                    accountId,
-                    state.CharacterId.Value,
-                    x,
-                    y);
+                state.PositionDirty = true;
 
-                _broadcasts.PublishToMap(
-                    state.CurrentMapId,
-                    new
-                    {
-                        Type = "MoveEntity",
-                        EntityID = state.CharacterId.Value,
-                        X = x,
-                        Y = y,
-                        Dir = req.Str("Dir", "1"),
-                        SpeedTime = 0.25
-                    },
-                    state.ConnectionId);
+                var now = DateTimeOffset.UtcNow;
+                if (now - state.LastPositionPersistAt >=
+                    PositionPersistInterval)
+                {
+                    PersistPendingPosition(state);
+                }
+
+                if (now - state.LastPositionBroadcastAt >=
+                    PositionBroadcastInterval)
+                {
+                    state.LastPositionBroadcastAt = now;
+                    _broadcasts.PublishToMap(
+                        state.CurrentMapId,
+                        new
+                        {
+                            Type = "MoveEntity",
+                            EntityID = state.CharacterId.Value,
+                            X = x,
+                            Y = y,
+                            Dir = req.Str("Dir", "1"),
+                            SpeedTime = 0.10
+                        },
+                        state.ConnectionId);
+                }
 
                 return [];
             }
@@ -3084,6 +3119,7 @@ public sealed class PacketRouter
             }
 
             case "LogoutRequest":
+                PersistPendingPosition(state);
                 state.AccountId = null;
                 state.CharacterId = null;
                 state.CurrentMapId = 0;
@@ -3153,6 +3189,8 @@ public sealed class PacketRouter
                     persistedCharacter["LocX"]);
                 state.LastY = Convert.ToDouble(
                     persistedCharacter["LocY"]);
+                state.PositionDirty = false;
+                state.LastPositionPersistAt = now;
                 state.PendingMapSpawn = true;
                 state.LoadedMonsterMapId = 0;
                 state.WorldSnapshotRetriesRemaining = 0;
@@ -4093,6 +4131,8 @@ public sealed class PacketRouter
                 state.CurrentMapId = result.NewMapId.Value;
                 state.LastX = result.NewX.Value;
                 state.LastY = result.NewY.Value;
+                state.PositionDirty = false;
+                state.LastPositionPersistAt = DateTimeOffset.UtcNow;
                 state.PendingMapSpawn = true;
             }
 
