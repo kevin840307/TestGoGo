@@ -657,20 +657,33 @@ public sealed class PacketRouter
                 var recovery = _recoveryItems.Find(itemIndex);
                 if (recovery is not null)
                 {
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+                    var beforeRecovery = _store.GetCharacter(
+                        accountId,
+                        state.CharacterId.Value);
+                    if (beforeRecovery is null)
+                        return [new { Type = "SystemMessageFlash", Message = "無法使用此恢復物品" }];
+
+                    var effectiveStats = CharacterStatCalculator.Calculate(
+                        beforeRecovery,
+                        assets,
+                        _current);
+
                     var character = _store.UseRecoveryItem(
                         accountId,
                         state.CharacterId.Value,
                         itemUid,
                         recovery.RecoverHp,
                         recovery.RecoverMp,
-                        recovery.RecoverSp);
+                        recovery.RecoverSp,
+                        effectiveStats.MaxHP,
+                        effectiveStats.MaxMP,
+                        effectiveStats.MaxSP);
 
                     if (character is null)
                         return [new { Type = "SystemMessageFlash", Message = "無法使用此恢復物品" }];
-
-                    var assets = _store.GetCharacterAssets(
-                        accountId,
-                        state.CharacterId.Value);
 
                     return
                     [
