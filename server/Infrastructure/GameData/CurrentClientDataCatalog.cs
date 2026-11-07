@@ -338,31 +338,75 @@ public sealed class CurrentClientDataCatalog
     }
 
     public static string NormalizeName(string value)
-        => Regex.Replace(
-                value ?? string.Empty,
-                @"[sp{P}p{S}]+",
-                string.Empty)
-            .Trim()
-            .ToLowerInvariant();
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        return new string(
+                value
+                    .Where(char.IsLetterOrDigit)
+                    .Select(char.ToLowerInvariant)
+                    .ToArray())
+            .Trim();
+    }
 
     private static int ReadInt(string text, string name)
     {
-        var match = Regex.Match(
-            text,
-            $@"(?m)^s*{Regex.Escape(name)}s*=s*(-?d+)s*$");
-        return match.Success && int.TryParse(match.Groups[1].Value, out var v)
-            ? v
-            : 0;
+        foreach (var raw in text.Split(
+                     new[] { "\r\n", "\n" },
+                     StringSplitOptions.None))
+        {
+            var line = raw.Trim();
+            var eq = line.IndexOf('=');
+            if (eq < 0)
+                continue;
+
+            var left = line[..eq].Trim();
+            if (!left.Equals(
+                    name,
+                    StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var value = line[(eq + 1)..].Trim();
+            if (int.TryParse(value, out var parsed))
+                return parsed;
+        }
+
+        return 0;
     }
 
     private static string ReadString(string text, string name)
     {
-        var match = Regex.Match(
-            text,
-            $@"(?m)^s*{Regex.Escape(name)}s*=s*""((?:\.|[^""])*)""s*$");
+        foreach (var raw in text.Split(
+                     new[] { "\r\n", "\n" },
+                     StringSplitOptions.None))
+        {
+            var line = raw.Trim();
+            var eq = line.IndexOf('=');
+            if (eq < 0)
+                continue;
 
-        return match.Success
-            ? Regex.Unescape(match.Groups[1].Value)
-            : string.Empty;
+            var left = line[..eq].Trim();
+            if (!left.Equals(
+                    name,
+                    StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var value = line[(eq + 1)..].Trim();
+            if (value.Length >= 2 &&
+                value[0] == '"' &&
+                value[^1] == '"')
+            {
+                value = value[1..^1];
+            }
+
+            return value
+                .Replace("\\\"", "\"")
+                .Replace("\\n", "\n")
+                .Replace("\\\\", "\\");
+        }
+
+        return string.Empty;
     }
+
 }
