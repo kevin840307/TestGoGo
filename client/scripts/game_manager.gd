@@ -47,6 +47,10 @@ var _map_transition_serial: int = 0
 var _active_map_transition_id: int = 0
 var _map_transition_started_usec: int = 0
 var _map_transition_last_stage_usec: int = 0
+var _frame_gap_last_usec: int = 0
+var _frame_gap_stage: String = "startup"
+var _frame_gap_stage_since_usec: int = 0
+const FRAME_GAP_WARN_USEC: int = 100000
 
 var _train_travel_active: bool = false
 var _train_travel_id: String = ""
@@ -57,6 +61,26 @@ var _train_video_player: VideoStreamPlayer = null
 var _train_video_finished: bool = false
 var _train_player_process_state: Dictionary = {}
 var _train_hud_process_state: Dictionary = {}
+
+func set_frame_gap_stage(stage: String) -> void :
+	_frame_gap_stage = stage
+	_frame_gap_stage_since_usec = Time.get_ticks_usec()
+
+func _process(_delta: float) -> void :
+	var now_usec := Time.get_ticks_usec()
+	if _frame_gap_last_usec > 0:
+		var gap_usec := now_usec - _frame_gap_last_usec
+		if gap_usec >= FRAME_GAP_WARN_USEC:
+			var stage_age_ms := float(now_usec - _frame_gap_stage_since_usec) / 1000.0 if _frame_gap_stage_since_usec > 0 else -1.0
+			var line := "[FRAME_GAP] gap_ms=%.2f stage=%s stage_age_ms=%.2f memory_mb=%.2f" % [
+				float(gap_usec) / 1000.0,
+				_frame_gap_stage,
+				stage_age_ms,
+				_get_process_memory_mb()
+			]
+			print(line)
+			_append_transition_log(line)
+	_frame_gap_last_usec = now_usec
 
 func _get_process_memory_mb() -> float:
 	return float(Performance.get_monitor(Performance.MEMORY_STATIC)) / 1048576.0
