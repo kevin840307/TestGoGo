@@ -44,6 +44,52 @@ Check(Directory.Exists(gameDataRoot), "server data directory exists");
 
 var world = new WorldDataService(gameDataRoot);
 
+var blockingTestRoot = Path.Combine(
+    Path.GetTempPath(),
+    "sgo-blocking-" + Guid.NewGuid().ToString("N"));
+var blockingMapRoot = Path.Combine(
+    blockingTestRoot,
+    "Map",
+    "Map01");
+Directory.CreateDirectory(blockingMapRoot);
+
+var blockingTestPath = Path.Combine(
+    blockingMapRoot,
+    "Blocking.dat");
+using (var writer = new BinaryWriter(
+           File.Open(
+               blockingTestPath,
+               FileMode.Create,
+               FileAccess.Write,
+               FileShare.None)))
+{
+    writer.Write(5);
+    writer.Write(1);
+    writer.Write(new byte[] { 0, 0, 1, 0, 3 });
+}
+
+var blocking = new BlockingMapService(blockingTestRoot);
+Check(blocking.HasMap(1),
+    "Blocking.dat parser loads original 8-byte header grid");
+Check(blocking.IsMoveAllowed(
+          1, 8, 8, 24, 8, false),
+    "Blocking.dat movement accepts clear cells");
+Check(!blocking.IsMoveAllowed(
+          1, 8, 8, 40, 8, false),
+    "Blocking.dat movement rejects a segment crossing blocked cell");
+Check(!blocking.IsMoveAllowed(
+          1, 56, 8, 72, 8, false) &&
+      blocking.IsMoveAllowed(
+          1, 56, 8, 72, 8, true),
+    "Blocking flag 3 requires special-terrain capability");
+Check(!blocking.IsMoveAllowed(
+          99, 8, 8, 24, 8, false),
+    "missing Blocking.dat fails closed");
+
+Directory.Delete(
+    blockingTestRoot,
+    recursive: true);
+
 var realCurrentCatalog = new CurrentClientDataCatalog(
     Path.Combine(repoRoot, "client"));
 
