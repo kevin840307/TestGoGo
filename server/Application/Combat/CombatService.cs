@@ -2896,8 +2896,9 @@ public sealed class CombatService
 
         packets.Add(new
         {
-            Type = "SystemMessageChat",
-            Message = $"獲得經驗值 {gainedExp:N0}"
+            Type = "ItemPickupFeedback",
+            Message = $"獲得經驗值 {gainedExp:N0}",
+            PlaySound = false
         });
 
         var accumulatedExp = Math.Max(
