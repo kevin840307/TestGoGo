@@ -340,6 +340,14 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	if current_player.has_method("parse_login_server_data"):
 		current_player.parse_login_server_data(char_data)
 
+	# SkillSync can arrive immediately after EnterWorldSuccess, before the
+	# Player/HUD has been instantiated. Replay the cached authoritative list
+	# now that PlayerData exists instead of losing the one-shot signal.
+	if NetworkManager and NetworkManager.has_latest_skill_sync and "data_model" in current_player:
+		current_player.data_model.update_skills(
+			NetworkManager.latest_skill_sync
+		)
+
 	current_player.global_position = spawn_position
 	if "target_position" in current_player:
 		current_player.target_position = spawn_position
