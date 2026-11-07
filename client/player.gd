@@ -12,6 +12,9 @@ const SPECIAL_MECHA_COLLISION_MASK: int = 5
 
 
 var target_position: Vector2 = Vector2.ZERO
+var move_destination: Vector2 = Vector2.ZERO
+var move_path: PackedVector2Array = PackedVector2Array()
+var move_path_index: int = 0
 var is_moving: bool = false
 var is_interacting_with_npc: bool = false
 var is_mouse_holding: bool = false
@@ -404,8 +407,7 @@ func _unhandled_input(event: InputEvent) -> void :
 				combat_target = null
 				pending_skill_id = -1
 				is_emoting = false
-				target_position = get_global_mouse_position()
-				is_moving = true
+				_set_navigation_target(get_global_mouse_position())
 				is_mouse_holding = true
 				if not is_action_locked:
 					current_state = "walk"
@@ -437,8 +439,8 @@ func _physics_process(_delta: float) -> void :
 			var mouse_pos = get_global_mouse_position()
 
 			if global_position.distance_to(mouse_pos) > 10.0:
-				target_position = mouse_pos
-				is_moving = true
+				if move_destination.distance_to(mouse_pos) >= 8.0 or not is_moving:
+					_set_navigation_target(mouse_pos)
 				if not is_action_locked and current_state != "walk":
 					current_state = "walk"
 
@@ -539,8 +541,9 @@ func _handle_combat_tracking() -> void :
 				required_range = float(s_lv.cast_range)
 
 	if dist > required_range:
-		target_position = combat_target.global_position
-		is_moving = true
+		var combat_destination: Vector2 = combat_target.global_position
+		if move_destination.distance_to(combat_destination) >= 16.0 or not is_moving:
+			_set_navigation_target(combat_destination)
 		if current_state != "walk":
 			current_state = "walk"
 			sync_animation()
@@ -610,55 +613,42 @@ func _handle_action_lock(delta: float) -> void :
 		sync_animation()
 
 func _handle_movement(delta: float) -> void :
-	var dir_vector: Vector2 = target_position - global_position
-	var distance: float = dir_vector.length()
 	var current_real_speed: float = get_real_move_speed()
 	var step_distance: float = current_real_speed * delta
 	var stop_threshold: float = max(4.0, step_distance)
+	var dir_vector: Vector2 = target_position - global_position
+	var distance: float = dir_vector.length()
 
 	if distance <= stop_threshold:
-		_stop_movement()
+		if move_path_index + 1 < move_path.size():
+			move_path_index += 1
+			target_position = move_path[move_path_index]
+			dir_vector = target_position - global_position
+			distance = dir_vector.length()
+		else:
+			_stop_movement()
+			return
+
+	if distance <= 0.001:
 		return
 
-	var desired_dir: Vector2 = dir_vector.normalized()
-	velocity = desired_dir * current_real_speed
+	# Blocking.dat decides the route. Godot physics remains only a final
+	# collision guard for scene objects that are not represented in the
+	# legacy blocking grid.
+	velocity = dir_vector.normalized() * current_real_speed
 	update_direction_8way(velocity)
 
 	var old_position: Vector2 = global_position
 	move_and_slide()
 	var moved_distance: float = old_position.distance_to(global_position)
 
-	if moved_distance >= 1.5:
+	if moved_distance >= 1.0:
 		stuck_frames = 0
 		return
 
-	if get_slide_collision_count() <= 0:
-		stuck_frames += 1
-		if stuck_frames >= MAX_STUCK_FRAMES:
-			_stop_movement()
-		return
-
-	# The legacy client searches around blocking cells instead of giving up
-	# when the direct line is blocked. Godot already supplies the collision
-	# normal, so use the equivalent local behaviour: choose the wall tangent
-	# that still makes the most progress toward the requested destination.
-	var collision: KinematicCollision2D = get_slide_collision(0)
-	var normal: Vector2 = collision.get_normal()
-	var tangent_a: Vector2 = Vector2(-normal.y, normal.x)
-	var tangent_b: Vector2 = -tangent_a
-	var detour_dir: Vector2 = tangent_a if tangent_a.dot(desired_dir) >= tangent_b.dot(desired_dir) else tangent_b
-
-	velocity = detour_dir.normalized() * current_real_speed
-	update_direction_8way(velocity)
-	var detour_start: Vector2 = global_position
-	move_and_slide()
-
-	if detour_start.distance_to(global_position) >= 1.0:
-		stuck_frames = 0
-	else:
-		stuck_frames += 1
-		if stuck_frames >= MAX_STUCK_FRAMES:
-			_stop_movement()
+	stuck_frames += 1
+	if stuck_frames >= MAX_STUCK_FRAMES:
+		_stop_movement()
 
 func _handle_network_sync(delta: float) -> void :
 	if current_state == "walk":
@@ -668,9 +658,32 @@ func _handle_network_sync(delta: float) -> void :
 			if NetworkManager.is_connected_to_server:
 				NetworkManager.send_sync_position(int(global_position.x), int(global_position.y))
 
+func _set_navigation_target(destination: Vector2) -> void :
+	move_destination = destination
+
+	var map_id: int = int(data_model.map_id) if data_model else 0
+	var route: PackedVector2Array = LegacyPathfinder.get_path(
+		map_id,
+		global_position,
+		destination
+	)
+
+	if route.is_empty():
+		_stop_movement()
+		return
+
+	move_path = route
+	move_path_index = 0
+	target_position = move_path[0]
+	is_moving = true
+
+
 func _stop_movement() -> void :
 	velocity = Vector2.ZERO
 	is_moving = false
+	move_path = PackedVector2Array()
+	move_path_index = 0
+	move_destination = global_position
 	target_position = global_position
 	current_state = "idle"
 	stuck_frames = 0
