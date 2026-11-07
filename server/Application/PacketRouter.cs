@@ -1046,6 +1046,60 @@ public sealed class PacketRouter
                     ];
                 }
 
+                var experienceCard =
+                    _current.ResolveExperienceCard(itemIndex);
+
+                if (experienceCard is not null)
+                {
+                    var now = DateTimeOffset.UtcNow;
+                    var activated =
+                        _store.ActivateTimedEffectFromItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            itemIndex,
+                            "exp_multiplier_percent",
+                            experienceCard.MultiplierPercent,
+                            experienceCard.DurationSeconds,
+                            now.ToUnixTimeMilliseconds());
+
+                    if (!activated.Success)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = activated.Message
+                            }
+                        ];
+                    }
+
+                    var assets =
+                        _store.GetCharacterAssets(
+                            accountId,
+                            state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message =
+                                $"雙倍經驗值已啟動 {experienceCard.DurationSeconds / 3600} 小時"
+                        }
+                    ];
+                }
+
                 return
                 [
                     new
