@@ -192,6 +192,25 @@ using (var closePlayerShop = Json(
         "shop close remains valid without buy/sell-only fields");
 }
 
+// Optional fields are deliberately not all in PacketSchemaValidator.
+// Their conversion helpers must never throw for malformed JSON values.
+using (var badOptionalNumbers = Json(
+    """{"Count":"2","UID":true,"Unknown":null}"""))
+{
+    Check(badOptionalNumbers.RootElement.Int("Count", 7) == 7 &&
+          badOptionalNumbers.RootElement.Long("UID", 9) == 9 &&
+          badOptionalNumbers.RootElement.Long("Unknown", 11) == 11 &&
+          badOptionalNumbers.RootElement.Int("Missing", 13) == 13,
+        "optional numeric fields safely return fallback for wrong types");
+}
+using (var jsonNonObject = Json("""[1,2,3]"""))
+{
+    Check(jsonNonObject.RootElement.Int("Count", 7) == 7 &&
+          jsonNonObject.RootElement.Long("UID", 9) == 9 &&
+          jsonNonObject.RootElement.Str("Name", "fallback") == "fallback",
+        "JSON numeric and text helpers safely reject non-object input");
+}
+
 var repoRoot = Directory.GetCurrentDirectory();
 var gameDataRoot = Path.Combine(repoRoot, "Old", "服務端", "Dat");
 var questRoot = Path.Combine(gameDataRoot, "Quest");
