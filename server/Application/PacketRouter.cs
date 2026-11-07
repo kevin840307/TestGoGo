@@ -1260,12 +1260,27 @@ public sealed class PacketRouter
         return packets;
     }
 
-    private static object BuildPetSpawnPacket(
+    private object BuildPetSpawnPacket(
         long ownerId,
         Dictionary<string, object> pet,
         double x,
         double y)
-        => new
+    {
+        var petId = Convert.ToInt32(pet["PETID"]);
+        var evolId = Convert.ToInt32(pet["EvolID"]);
+        var evolution = _current.FindPetEvolution(
+            petId,
+            evolId);
+
+        if (evolution is null)
+        {
+            _log.LogWarning(
+                "[CURRENT_PET_APPEARANCE_MISSING] PetID={PetID} EvolID={EvolID}",
+                petId,
+                evolId);
+        }
+
+        return new
         {
             Type = "SpawnEntity",
             EntityID = 4_000_000L + Convert.ToInt64(pet["UID"]),
@@ -1276,15 +1291,15 @@ public sealed class PacketRouter
             ExtraData = new
             {
                 OwnerID = ownerId,
-                // Pet appearance mapping will be replaced with source pet.ITD
-                // lookup; EN010A is a recovered MonsterLoader-safe fallback.
-                Sprite = "EN010A",
+                Sprite = evolution?.Outlook ?? "EN010A",
                 Level = pet["Level"],
                 MaxHP = pet["MaxHP"],
                 CurrentHP = pet["HP"],
-                ColorIndex = 0
+                ColorIndex = evolution?.Color ?? 0,
+                AttackRange = evolution?.AttackRange ?? 80
             }
         };
+    }
 
     private object BuildEffectiveStatusPacket(
         long accountId,
