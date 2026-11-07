@@ -17,6 +17,7 @@ public sealed class MonsterRuntimeState
     public double Y { get; set; }
 
     public bool HasTarget { get; set; }
+    public bool IsMoving { get; set; }
     public DateTimeOffset LastAttackAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset NextWanderAt { get; set; } = DateTimeOffset.MinValue;
     public int WanderSequence { get; set; }
