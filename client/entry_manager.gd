@@ -11,6 +11,7 @@ extends Control
 
 var _loading_session_id: int = 0
 var _loading_progress_value: float = 0.0
+var __login_select_session_id_id: int = -1
 var _world_loading_session_id: int = -1
 
 func _begin_loading_session() -> int:
@@ -23,6 +24,11 @@ func _begin_loading_session() -> int:
 		if bar:
 			bar.value = 0.0
 	return _loading_session_id
+
+func _begin_login_select_loading_session() -> int:
+	__login_select_session_id_id = _begin_loading_session()
+	_set_loading_progress(0.0, __login_select_session_id_id)
+	return __login_select_session_id_id
 
 func _set_loading_progress(value: float, session_id: int = -1) -> void :
 	if session_id >= 0 and session_id != _loading_session_id:
@@ -204,12 +210,12 @@ func _connect_character_select_signals() -> void :
 
 func _on_global_login_finished(success: bool, _msg: String) -> void :
 	if success:
-		# Independent loading session #1: account login -> character select.
+		# Independent loading session #1 starts when the user presses Login.
+		# Continue that same session here instead of resetting it on success.
 		var overlay = get_node_or_null("%LoadingOverlay")
-		var login_select_session: int = _begin_loading_session()
-		_set_loading_progress(0.0, login_select_session)
-
-		_set_loading_progress(3.0, login_select_session)
+		if __login_select_session_id_id < 0 or __login_select_session_id_id != _loading_session_id:
+			__login_select_session_id_id = _begin_loading_session()
+		_set_loading_progress(3.0, __login_select_session_id_id)
 		var tween = create_tween()
 		if login_screen:
 			tween.tween_property(login_screen, "modulate:a", 0.0, 0.5).set_trans(Tween.TRANS_SINE)
