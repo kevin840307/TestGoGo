@@ -6,14 +6,18 @@ public sealed record OnlinePlayerPresence(
     Guid ConnectionId,
     long AccountId,
     long CharacterId,
-    int MapId);
+    int MapId,
+    double X,
+    double Y);
 
 public sealed class ServerBroadcastHub
 {
     private sealed record Presence(
         int MapId,
         long AccountId,
-        long CharacterId);
+        long CharacterId,
+        double X,
+        double Y);
 
     private readonly ConcurrentDictionary<Guid, ConcurrentQueue<object>>
         _queues = new();
@@ -26,7 +30,7 @@ public sealed class ServerBroadcastHub
         var id = Guid.NewGuid();
         var queue = new ConcurrentQueue<object>();
         _queues[id] = queue;
-        _presence[id] = new Presence(0, 0, 0);
+        _presence[id] = new Presence(0, 0, 0, 0, 0);
         return (id, queue);
     }
 
@@ -34,7 +38,9 @@ public sealed class ServerBroadcastHub
         Guid connectionId,
         int mapId,
         long? characterId,
-        long? accountId = null)
+        long? accountId = null,
+        double x = 0,
+        double y = 0)
     {
         if (connectionId == Guid.Empty ||
             !_queues.ContainsKey(connectionId))
@@ -43,7 +49,26 @@ public sealed class ServerBroadcastHub
         _presence[connectionId] = new Presence(
             Math.Max(0, mapId),
             Math.Max(0, accountId ?? 0),
-            Math.Max(0, characterId ?? 0));
+            Math.Max(0, characterId ?? 0),
+            x,
+            y);
+    }
+
+    public void UpdatePosition(
+        Guid connectionId,
+        double x,
+        double y)
+    {
+        if (!_presence.TryGetValue(
+                connectionId,
+                out var current))
+            return;
+
+        _presence[connectionId] = current with
+        {
+            X = x,
+            Y = y
+        };
     }
 
     public OnlinePlayerPresence? FindCharacter(long characterId)
@@ -61,7 +86,9 @@ public sealed class ServerBroadcastHub
                 pair.Key,
                 pair.Value.AccountId,
                 pair.Value.CharacterId,
-                pair.Value.MapId);
+                pair.Value.MapId,
+                pair.Value.X,
+                pair.Value.Y);
         }
 
         return null;
@@ -88,7 +115,9 @@ public sealed class ServerBroadcastHub
                 x.Key,
                 x.Value.AccountId,
                 x.Value.CharacterId,
-                x.Value.MapId))
+                x.Value.MapId,
+                x.Value.X,
+                x.Value.Y))
             .ToArray();
 
     public void Unregister(Guid connectionId)
