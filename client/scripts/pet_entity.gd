@@ -47,6 +47,9 @@ const STATE_MAP = {
 var move_tween: Tween
 var level_up_effect: AnimatedSprite2D = null
 var idle_speech_fade_tween: Tween = null
+var _render_visible: bool = true
+var _render_notifier: VisibleOnScreenNotifier2D = null
+const RENDER_VISIBILITY_RECT: Rect2 = Rect2(-180.0, -220.0, 360.0, 380.0)
 
 func _ready() -> void :
 	collision_layer = 8
@@ -68,6 +71,29 @@ func _ready() -> void :
 	idle_speech_bubble.visible = false
 	if not idle_speech_timer.timeout.is_connected(_on_idle_speech_timer_timeout):
 		idle_speech_timer.timeout.connect(_on_idle_speech_timer_timeout)
+
+	_render_notifier = VisibleOnScreenNotifier2D.new()
+	_render_notifier.rect = RENDER_VISIBILITY_RECT
+	add_child(_render_notifier)
+	_render_notifier.screen_entered.connect(_on_render_screen_entered)
+	_render_notifier.screen_exited.connect(_on_render_screen_exited)
+
+func _on_render_screen_entered() -> void :
+	_render_visible = true
+	if is_instance_valid(sprite) and not sprite.is_playing():
+		sprite.play()
+	if is_instance_valid(ui_container):
+		ui_container.visible = true
+
+func _on_render_screen_exited() -> void :
+	_render_visible = false
+	if is_instance_valid(sprite) and sprite.is_playing():
+		sprite.pause()
+	if is_instance_valid(ui_container):
+		ui_container.visible = false
+
+func is_render_visible() -> bool:
+	return _render_visible
 
 func _exit_tree() -> void :
 
