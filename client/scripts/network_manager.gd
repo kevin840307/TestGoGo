@@ -901,6 +901,37 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 							)
 							break
 
+		"ScreenAoeResult":
+			var aoe_results: Array = data.get("Results", [])
+			var aoe_skill_id: int = int(data.get("SkillID", 0))
+			var aoe_skill_level: int = int(data.get("SkillLevel", 1))
+			var aoe_attacker_id: int = int(data.get("AttackerID", 0))
+			for result in aoe_results:
+				if not result is Dictionary:
+					continue
+				var entity_id: int = int(result.get("EntityID", 0))
+				if entity_id <= 0:
+					continue
+
+				entity_damage_received.emit({
+					"TargetID": entity_id,
+					"TargetType": 1,
+					"Damage": int(result.get("Damage", 0)),
+					"CurrentHP": int(result.get("CurrentHP", 0)),
+					"MaxHP": int(result.get("MaxHP", 0)),
+					"IsCrit": false,
+					"SkillID": aoe_skill_id,
+					"SkillLevel": aoe_skill_level,
+					"AttackerID": aoe_attacker_id
+				})
+
+				if bool(result.get("Died", false)):
+					entity_death_received.emit({
+						"EntityID": entity_id,
+						"EntityType": 1,
+						"KillerID": aoe_attacker_id
+					})
+
 		"EntityDeath":
 			entity_death_received.emit(data)
 
