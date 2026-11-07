@@ -939,7 +939,8 @@ public sealed class CombatService
                     "EntityDeath" or
                     "EntityHeal" or
                     "MonsterTarget" or
-                    "SkillCast"))
+                    "SkillCast" or
+                    "PlayEffect"))
                 continue;
 
             _broadcasts.PublishToMap(
@@ -2747,6 +2748,12 @@ public sealed class CombatService
                 Type = "SystemMessageFlash",
                 Message = $"升級！Lv.{newLevel}"
             });
+            packets.Add(new
+            {
+                Type = "PlayEffect",
+                EntityID = dbid,
+                EffectName = "LevelUp"
+            });
         }
 
         var assets = _store.GetCharacterAssets(
@@ -2887,6 +2894,12 @@ public sealed class CombatService
             {
                 Type = "SystemMessageFlash",
                 Message = $"機甲升級！Lv.{horse["Level"]}"
+            });
+            packets.Add(new
+            {
+                Type = "PlayEffect",
+                EntityID = session.CharacterId.Value,
+                EffectName = "MS_Levelup"
             });
         }
     }
