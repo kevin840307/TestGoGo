@@ -8,6 +8,7 @@ using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
 using SGO.Server.Application.Messaging;
+using SGO.Server.Application.Mall;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Party;
 using SGO.Server.Application.Rank;
@@ -43,6 +44,7 @@ public sealed class PacketRouter
     private readonly HorseCardCatalog _horseCards;
     private readonly CurrentClientDataCatalog _current;
     private readonly LegacyPlayerGrowthCatalog _growth;
+    private readonly MallService _mall;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly PartyService _party;
     private readonly RankService _rank;
@@ -67,6 +69,7 @@ public sealed class PacketRouter
         HorseCardCatalog horseCards,
         CurrentClientDataCatalog current,
         LegacyPlayerGrowthCatalog growth,
+        MallService mall,
         ServerBroadcastHub broadcasts,
         PartyService party,
         RankService rank,
@@ -92,6 +95,7 @@ public sealed class PacketRouter
         _horseCards = horseCards;
         _current = current;
         _growth = growth;
+        _mall = mall;
         _broadcasts = broadcasts;
         _party = party;
         _rank = rank;
@@ -261,6 +265,65 @@ public sealed class PacketRouter
 
         switch (type)
         {
+            case "MallAction":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                return _mall.Handle(
+                    accountId,
+                    state.CharacterId.Value,
+                    req.Str("Action"),
+                    req.Int("MallID"),
+                    req.Int("Count", 1),
+                    req.Int("Amount"),
+                    req.Int("RewardID"));
+            }
+
+            case "TrainTravelReady":
+                return [new
+                {
+                    Type = "SystemMessageFlash",
+                    Message = "目前沒有等待中的列車旅行"
+                }];
+
+            case "ReviveAccept":
+                return [new
+                {
+                    Type = "SystemMessageFlash",
+                    Message = "目前沒有等待中的復活技能邀請"
+                }];
+
+            case "AbandonQuest":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var questId = req.Int("QuestID");
+                var ok = _store.AbandonQuest(
+                    accountId,
+                    state.CharacterId.Value,
+                    questId);
+
+                return
+                [
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = ok
+                            ? "已放棄任務"
+                            : "找不到可放棄的任務"
+                    },
+                    new
+                    {
+                        Type = "QuestSync",
+                        Quests = _store.GetQuests(
+                            accountId,
+                            state.CharacterId.Value)
+                    }
+                ];
+            }
+
             case "ClubAction":
             {
                 if (!state.CharacterId.HasValue)
@@ -416,6 +479,7 @@ public sealed class PacketRouter
                 var assets = _store.GetCharacterAssets(accountId, dbid);
                 ApplyAssetsToCharacterBootstrap(character, assets);
                 character["Shortcuts"] = _store.GetShortcuts(accountId, dbid);
+                character["Quests"] = _store.GetQuests(accountId, dbid);
                 ApplyEffectiveStats(character, assets);
 
                 return
@@ -453,7 +517,11 @@ public sealed class PacketRouter
                     },
                     _club.BuildSync(accountId, dbid),
                     new { Type = "SyncBuffs", Buffs = Array.Empty<object>() },
-                    new { Type = "QuestSync", Quests = Array.Empty<object>() },
+                    new
+                    {
+                        Type = "QuestSync",
+                        Quests = _store.GetQuests(accountId, dbid)
+                    },
                     new { Type = "FestivalThemeSync", Theme = "normal", Festival = "" }
                 ];
             }
