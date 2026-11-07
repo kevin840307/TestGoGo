@@ -274,6 +274,80 @@ public interface IQuestStore
         int value);
 }
 
+public sealed record ClubMemberData(
+    long DbId,
+    string Name,
+    int Level,
+    int Career,
+    int Job,
+    int Position,
+    long Donation);
+
+public sealed record ClubResearchData(
+    int ResearchId,
+    int Level);
+
+public sealed record ClubSnapshot(
+    long ClubId,
+    string ClubName,
+    int ClubLevel,
+    long ClubExp,
+    long ClubSaving,
+    string ClubMessage,
+    int ActiveResearchId,
+    long ActiveResearchEndUtcMs,
+    int MyPosition,
+    long MyDonation,
+    IReadOnlyList<ClubMemberData> Members,
+    IReadOnlyList<ClubResearchData> Researches);
+
+public sealed record ClubMutationResult(
+    bool Success,
+    string Message);
+
+public interface IClubStore
+{
+    ClubSnapshot? GetClubSnapshot(
+        long accountId,
+        long dbid,
+        long nowUtcMs);
+
+    long GetClubIdForCharacter(long dbid);
+
+    ClubMutationResult CreateClub(
+        long accountId,
+        long dbid,
+        string clubName,
+        long nowUtcMs);
+
+    ClubMutationResult JoinClub(
+        long accountId,
+        long dbid,
+        long clubId,
+        long nowUtcMs);
+
+    ClubMutationResult UpdateClubMessage(
+        long accountId,
+        long dbid,
+        string message);
+
+    ClubMutationResult DonateClubMoney(
+        long accountId,
+        long dbid,
+        long amount);
+
+    ClubMutationResult DonateClubExp(
+        long accountId,
+        long dbid,
+        long amount);
+
+    ClubMutationResult StartClubResearch(
+        long accountId,
+        long dbid,
+        int researchId,
+        long nowUtcMs);
+}
+
 public sealed record RankEntry(
     long DbId,
     long AccountId,
