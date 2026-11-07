@@ -785,6 +785,73 @@ public sealed class PacketRouter
                     req.Int("TargetEntityID"),
                     req.Int("TargetType", 1));
 
+
+            case "UseSkill":
+                return _combat.UseSkill(
+                    state,
+                    accountId,
+                    req.Int("SkillID"),
+                    req.Int("TargetID"),
+                    req.Int("TargetType", 1),
+                    req.Int("TargetX"),
+                    req.Int("TargetY"),
+                    DateTimeOffset.UtcNow);
+
+            case "AllocateStatRequest":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var updated = _store.AllocateStat(
+                    accountId,
+                    state.CharacterId.Value,
+                    req.Str("StatType"));
+
+                if (updated is null)
+                {
+                    return [new
+                    {
+                        Type = "AllocateStatResponse",
+                        Success = false,
+                        Message = "沒有可用能力點或屬性已達上限"
+                    }];
+                }
+
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+                var stats = CharacterStatCalculator.Calculate(
+                    updated,
+                    assets,
+                    _current);
+
+                return [new
+                {
+                    Type = "AllocateStatResponse",
+                    Success = true,
+                    ExpUse = updated["ExpUse"],
+                    STR = updated["Str"],
+                    DEX = updated["Dex"],
+                    CON = updated["Con"],
+                    WIS = updated["Wis"],
+                    MaxHP = updated["MaxHP"],
+                    MaxMP = updated["MaxMP"],
+                    MaxSP = updated["MaxSP"],
+                    Attack = stats.Attack,
+                    Defense = stats.Defense,
+                    MagicAttack = stats.MagicAttack,
+                    MagicDefense = stats.MagicDefense,
+                    Hit = stats.Hit,
+                    Dodge = stats.Dodge,
+                    Lucky = stats.Lucky,
+                    AttackSpeed = stats.AttackSpeed,
+                    AttackRange = stats.AttackRange,
+                    MoveSpeed = stats.MoveSpeed,
+                    CritRate = stats.CritRate,
+                    CritDamage = stats.CritDamage
+                }];
+            }
+
             case "SyncState":
                 if (state.CharacterId.HasValue)
                 {
