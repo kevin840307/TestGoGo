@@ -428,6 +428,32 @@ using (var validMegaphoneUid = Json(
         "megaphone inventory UID preserves Int64 ID range");
 }
 
+using (var longCharacterSelect = Json(
+    """{"Type":"SelectCharacterRequest","DBID":4294967296}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              longCharacterSelect.RootElement,
+              "SelectCharacterRequest", out _),
+        "character selection preserves Int64 persistent DBID");
+}
+using (var longCharacterDelete = Json(
+    """{"Type":"DeleteCharacterRequest","DBID":4294967296,"Password":"1234"}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              longCharacterDelete.RootElement,
+              "DeleteCharacterRequest", out _),
+        "character deletion supports Int64 DBID");
+}
+using (var invalidModifyPasswordDbId = Json(
+    """{"Type":"ModifyPasswordRequest","DBID":"4294967296","NewPwd":"abc"}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              invalidModifyPasswordDbId.RootElement,
+              "ModifyPasswordRequest", out var reason) &&
+          reason.Contains("DBID"),
+        "password update rejects string DBID before database mutation");
+}
+
 var repoRoot = Directory.GetCurrentDirectory();
 var gameDataRoot = Path.Combine(repoRoot, "Old", "服務端", "Dat");
 var questRoot = Path.Combine(gameDataRoot, "Quest");
