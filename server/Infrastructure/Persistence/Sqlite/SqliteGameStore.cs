@@ -1478,7 +1478,11 @@ public sealed class SqliteGameStore : IGameStore
 
             case AssetPurchaseKind.Pet:
             {
-                if (CountRows("pets") + assetCount > 50)
+                if (CountRows("pets") + assetCount >
+                    ReadCharacterCapacities(
+                        db,
+                        dbid,
+                        tx).Pet)
                 {
                     error = "寵物欄空間不足";
                     return false;
@@ -1554,7 +1558,11 @@ public sealed class SqliteGameStore : IGameStore
 
             case AssetPurchaseKind.HorseEquipment:
             {
-                if (CountRows("horse_equipment") + assetCount > 100)
+                if (CountRows("horse_equipment") + assetCount >
+                    ReadCharacterCapacities(
+                        db,
+                        dbid,
+                        tx).HorseEquip)
                 {
                     error = "機甲裝備欄空間不足";
                     return false;
@@ -7141,7 +7149,7 @@ public sealed class SqliteGameStore : IGameStore
                     ReadCharacterCapacities(
                         db,
                         buyerDbid,
-                        tx).Inventory)
+                        tx).Equip)
                 {
                     return new(false, "裝備空間不足", buyerMoney, sellerMoney, false);
                 }
@@ -7218,7 +7226,11 @@ public sealed class SqliteGameStore : IGameStore
                            AND in_bank=0
                            AND in_shop=0
                         """,
-                        buyerDbid) >= 20)
+                        buyerDbid) >=
+                    ReadCharacterCapacities(
+                        db,
+                        buyerDbid,
+                        tx).HorseEquip)
                 {
                     return new(false, "機甲裝備空間不足", buyerMoney, sellerMoney, false);
                 }
@@ -8676,11 +8688,20 @@ public sealed class SqliteGameStore : IGameStore
                 """,
                 ("$target", targetDbid));
 
+            var targetCapacities = ReadCharacterCapacities(
+                db,
+                targetDbid,
+                tx);
+
             if (targetGeneralSlots +
-                    incomingGeneralNewSlots.Count > 200 ||
-                targetEquipSlots + incomingEquip > 200 ||
-                targetPetSlots + incomingPet > 50 ||
-                targetMechaSlots + incomingMecha > 20)
+                    incomingGeneralNewSlots.Count >
+                    targetCapacities.Inventory ||
+                targetEquipSlots + incomingEquip >
+                    targetCapacities.Equip ||
+                targetPetSlots + incomingPet >
+                    targetCapacities.Pet ||
+                targetMechaSlots + incomingMecha >
+                    targetCapacities.HorseEquip)
             {
                 error = "對方背包剩餘空間不足";
                 return false;
