@@ -4261,14 +4261,18 @@ try
         combatEnemy.Y,
         DateTimeOffset.UtcNow);
 
+    var revivePromptJson = JsonSerializer.Serialize(
+        peerRegistration.Queue.ToArray());
+
     Check(
         reviveCast.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"SkillCast\"")) &&
-        peerRegistration.Queue.ToArray().Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                "\"Type\":\"RevivePrompt\"")),
-        "revive skill sends a targeted RevivePrompt to dead same-map player");
+        revivePromptJson.Contains(
+            "\"Type\":\"RevivePrompt\"") &&
+        revivePromptJson.Contains("\"HPPct\":30") &&
+        revivePromptJson.Contains("\"MPPct\":30"),
+        "生命之源 Lv1 sends original 30% HP/MP revive prompt");
 
     var reviveAccepted = combat.AcceptRevive(
         peerSession,
@@ -4282,13 +4286,18 @@ try
         secondCharacterId)!;
 
     Check(
-        Convert.ToInt32(revivedCharacter["HP"]) > 0 &&
-        Convert.ToInt32(revivedCharacter["HP"]) <=
-            Convert.ToInt32(revivedCharacter["MaxHP"]) &&
+        Convert.ToInt32(revivedCharacter["HP"]) ==
+            Math.Max(
+                1,
+                Convert.ToInt32(
+                    revivedCharacter["MaxHP"]) * 30 / 100) &&
+        Convert.ToInt32(revivedCharacter["MP"]) ==
+            Convert.ToInt32(
+                revivedCharacter["MaxMP"]) * 30 / 100 &&
         reviveAccepted.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"EntityHeal\"")),
-        "accepted revive invitation restores target and emits EntityHeal");
+        "accepted 生命之源 Lv1 restores original 30% HP and MP");
 
     store.SetSkill(
         account.Value,
@@ -4301,7 +4310,7 @@ try
         secondCharacterId,
         0,
         0,
-        40);
+        50);
 
     var targetSpBefore = Convert.ToInt32(
         store.GetCharacter(
@@ -4325,8 +4334,11 @@ try
             account.Value,
             secondCharacterId)!["SP"]);
 
+    var targetSpRecovered =
+        targetSpAfter - targetSpBefore;
+
     Check(
-        targetSpAfter > targetSpBefore &&
+        targetSpRecovered is >= 35 and <= 41 &&
         spHealPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"SkillCast\"")) &&
