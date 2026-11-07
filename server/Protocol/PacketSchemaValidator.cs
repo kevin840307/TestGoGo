@@ -9,7 +9,7 @@ namespace SGO.Server.Protocol;
 /// </summary>
 public static class PacketSchemaValidator
 {
-    private enum FieldType { Integer, Text, NonEmptyText, Boolean, Array }
+    private enum FieldType { Integer, LongInteger, Text, NonEmptyText, Boolean, LongIntegerArray }
     private readonly record struct Field(string Name, FieldType Type);
 
     private static readonly IReadOnlyDictionary<string, Field[]> Rules =
@@ -50,10 +50,10 @@ public static class PacketSchemaValidator
                 new("Amount", FieldType.Integer),
                 new("ToBank", FieldType.Boolean)
             ],
-            ["TradeRequest"] = [new("TargetEntityID", FieldType.Integer)],
+            ["TradeRequest"] = [new("TargetEntityID", FieldType.LongInteger)],
             ["TradeReply"] =
             [
-                new("RequesterDBID", FieldType.Integer),
+                new("RequesterDBID", FieldType.LongInteger),
                 new("Accept", FieldType.Boolean)
             ],
             ["ShopAction"] = [new("Action", FieldType.NonEmptyText)],
@@ -95,8 +95,8 @@ public static class PacketSchemaValidator
             ["SetTitleRequest"] = [new("TitleID", FieldType.Integer)],
             ["DirectTransfer"] =
             [
-                new("TargetDBID", FieldType.Integer),
-                new("Amount", FieldType.Integer)
+                new("TargetDBID", FieldType.LongInteger),
+                new("Amount", FieldType.LongInteger)
             ],
             ["ReviveAccept"] =
             [
@@ -115,7 +115,7 @@ public static class PacketSchemaValidator
             ],
             ["DismantleItemRequest"] =
             [
-                new("ItemUIDs", FieldType.Array),
+                new("ItemUIDs", FieldType.LongIntegerArray),
                 new("ItemType", FieldType.NonEmptyText)
             ],
             ["ToggleAutoSaint"] =
@@ -157,6 +157,9 @@ public static class PacketSchemaValidator
             {
                 FieldType.Integer =>
                     value.ValueKind == JsonValueKind.Number &&
+                    value.TryGetInt32(out _),
+                FieldType.LongInteger =>
+                    value.ValueKind == JsonValueKind.Number &&
                     value.TryGetInt64(out _),
                 FieldType.Text =>
                     value.ValueKind == JsonValueKind.String &&
@@ -167,8 +170,12 @@ public static class PacketSchemaValidator
                     value.GetString()!.Length <= 256,
                 FieldType.Boolean =>
                     value.ValueKind is JsonValueKind.True or JsonValueKind.False,
-                FieldType.Array =>
-                    value.ValueKind == JsonValueKind.Array,
+                FieldType.LongIntegerArray =>
+                    value.ValueKind == JsonValueKind.Array &&
+                    value.GetArrayLength() <= 512 &&
+                    value.EnumerateArray().All(item =>
+                        item.ValueKind == JsonValueKind.Number &&
+                        item.TryGetInt64(out _)),
                 _ => false
             };
             if (!valid)
