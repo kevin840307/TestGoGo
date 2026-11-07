@@ -893,6 +893,9 @@ public sealed class PacketRouter
                             HorseEquips = assets.HorseEquips,
                             MaxHorseEquipSize = assets.HorseEquipMaxSize
                         },
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
                         new
                         {
                             Type = "SystemMessageFlash",
