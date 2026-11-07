@@ -644,7 +644,8 @@ public sealed class PacketRouter
             {
                 var dbid = req.Long("DBID");
                 var ok = _store.Delete(accountId, dbid, req.Str("Password"));
-                if (state.CharacterId == dbid)
+                if (ok &&
+                    state.CharacterId == dbid)
                 {
                     state.CharacterId = null;
                     state.CurrentMapId = 0;
