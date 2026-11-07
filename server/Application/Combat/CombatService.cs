@@ -1384,10 +1384,10 @@ public sealed class CombatService
             }
 
             var castDx =
-                Convert.ToDouble(reviveTargetCharacter["LocX"]) -
+                reviveTargetPresence.X -
                 session.LastX;
             var castDy =
-                Convert.ToDouble(reviveTargetCharacter["LocY"]) -
+                reviveTargetPresence.Y -
                 session.LastY;
             var castRange = Math.Max(0, levelData.CastRange) + 120;
 
@@ -1397,10 +1397,8 @@ public sealed class CombatService
                 return [Flash("復活目標距離太遠")];
             }
 
-            centerX = Convert.ToDouble(
-                reviveTargetCharacter["LocX"]);
-            centerY = Convert.ToDouble(
-                reviveTargetCharacter["LocY"]);
+            centerX = reviveTargetPresence.X;
+            centerY = reviveTargetPresence.Y;
         }
         else if (isHeal)
         {
@@ -1436,10 +1434,10 @@ public sealed class CombatService
                 }
 
                 var castDx =
-                    Convert.ToDouble(healTargetCharacter["LocX"]) -
+                    healTargetPresence.X -
                     session.LastX;
                 var castDy =
-                    Convert.ToDouble(healTargetCharacter["LocY"]) -
+                    healTargetPresence.Y -
                     session.LastY;
                 var castRange =
                     Math.Max(0, levelData.CastRange) + 120;
@@ -1451,10 +1449,16 @@ public sealed class CombatService
                 }
             }
 
-            centerX = Convert.ToDouble(
-                healTargetCharacter!["LocX"]);
-            centerY = Convert.ToDouble(
-                healTargetCharacter["LocY"]);
+            if (healTargetPresence is not null)
+            {
+                centerX = healTargetPresence.X;
+                centerY = healTargetPresence.Y;
+            }
+            else
+            {
+                centerX = session.LastX;
+                centerY = session.LastY;
+            }
         }
         else if (isGroupHeal)
         {
@@ -1500,10 +1504,16 @@ public sealed class CombatService
                 }
             }
 
-            centerX = Convert.ToDouble(
-                groupHealCenterCharacter!["LocX"]);
-            centerY = Convert.ToDouble(
-                groupHealCenterCharacter["LocY"]);
+            if (groupHealCenterPresence is not null)
+            {
+                centerX = groupHealCenterPresence.X;
+                centerY = groupHealCenterPresence.Y;
+            }
+            else
+            {
+                centerX = session.LastX;
+                centerY = session.LastY;
+            }
         }
         else if (isTaunt)
         {
@@ -1537,10 +1547,10 @@ public sealed class CombatService
                 return [Flash("找不到偵察目標")];
 
             var castDx =
-                Convert.ToDouble(scoutTargetCharacter["LocX"]) -
+                scoutTargetPresence.X -
                 session.LastX;
             var castDy =
-                Convert.ToDouble(scoutTargetCharacter["LocY"]) -
+                scoutTargetPresence.Y -
                 session.LastY;
             var castRange =
                 Math.Max(0, levelData.CastRange) + 120;
@@ -1551,10 +1561,8 @@ public sealed class CombatService
                 return [Flash("偵察目標距離太遠")];
             }
 
-            centerX = Convert.ToDouble(
-                scoutTargetCharacter["LocX"]);
-            centerY = Convert.ToDouble(
-                scoutTargetCharacter["LocY"]);
+            centerX = scoutTargetPresence.X;
+            centerY = scoutTargetPresence.Y;
         }
         else
         {
