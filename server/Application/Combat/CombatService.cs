@@ -1701,9 +1701,68 @@ public sealed class CombatService
         };
 
         // Crash isolation mode for the custom screen AOE skill:
-        // prove whether the crash happens before any monster HP/death/reward work.
+        // apply damage to exactly one nearby monster, but never kill it.
+        // This isolates EntityDamage/HP update from death/reward handling.
         if (isScreenAreaAttack)
         {
+            var runtime = SyncSessionMonsters(session);
+            object? probeDamagePacket = null;
+
+            lock (runtime.SyncRoot)
+            {
+                var radius = Math.Max(
+                    0,
+                    levelData.AoeRadius);
+
+                var probeTarget = runtime.Monsters.Values
+                    .Where(x =>
+                        x.IsAlive &&
+                        x.MapId == session.CurrentMapId &&
+                        Math.Pow(x.X - session.LastX, 2) +
+                        Math.Pow(x.Y - session.LastY, 2) <=
+                        radius * radius)
+                    .OrderBy(x =>
+                        Math.Pow(x.X - session.LastX, 2) +
+                        Math.Pow(x.Y - session.LastY, 2))
+                    .FirstOrDefault();
+
+                if (probeTarget is not null)
+                {
+                    var requestedDamage = (int)Math.Clamp(
+                        1_000L +
+                        (long)effective.Attack +
+                        (long)effective.MagicAttack,
+                        1L,
+                        int.MaxValue);
+
+                    var nonLethalDamage = Math.Min(
+                        requestedDamage,
+                        Math.Max(0, probeTarget.CurrentHp - 1));
+
+                    if (nonLethalDamage > 0)
+                    {
+                        probeTarget.CurrentHp -= nonLethalDamage;
+
+                        probeDamagePacket = new
+                        {
+                            Type = "EntityDamage",
+                            TargetID = probeTarget.EntityId,
+                            TargetType = 1,
+                            Damage = nonLethalDamage,
+                            CurrentHP = probeTarget.CurrentHp,
+                            MaxHP = probeTarget.MaxHp,
+                            IsCrit = false,
+                            SkillID = skillId,
+                            SkillLevel = skillLevel,
+                            AttackerID = session.CharacterId.Value
+                        };
+                    }
+                }
+            }
+
+            if (probeDamagePacket is not null)
+                packets.Add(probeDamagePacket);
+
             var isolationAssets = _store.GetCharacterAssets(
                 accountId,
                 session.CharacterId.Value);
