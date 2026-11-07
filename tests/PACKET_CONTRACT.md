@@ -116,6 +116,54 @@ powershell -ExecutionPolicy Bypass -File tests/run_protocol_checks.ps1
 
 上方為**設定片段**，合併到原有 `Game` 區塊，不要以整段取代整份設定檔。Server 會沿用現有 `AnnouncementListResponse` 格式回傳陣列，Client `announcement_window.gd` 使用 `Date／Title／Content` 顯示日期、標題及內文。預設設定仍是空陣列，不發布虛構的遊戲公告；最多讀取 50 筆、忽略空標題或空內文，並限制文字長度。新增 Smoke Tests 驗證欄位、空資料與上限，不需要資料庫或金流。
 
+## 2026-11-07 商城一般商品已可實際購買
+
+`MallAction(OpenMall/BuyItem)` 不再只是空清單／固定拒絕。Server 會從 `Gameplay:Mall:Items` 讀取商品，並以目前 Client 資料確認 Item／Pet ID。購買使用 SQLite **單一 transaction** 完成角色驗證、背包容量檢查、資產發放與商城點數扣除，避免扣點成功但沒有拿到商品。
+
+支援商品 `Kind`：
+
+- `General`：一般／恢復／其他可堆疊背包物品。
+- `HorseBattery`：機甲電池類背包物品。
+- `Equipment`：角色裝備。
+- `Pet`：寵物；ItemIndex 使用 Pet ID。
+- `Horse`：機甲。
+- `HorseEquipment`：機甲裝備。
+
+範例（放入既有 `Gameplay` 區塊）：
+
+```json
+"Mall": {
+  "Items": [
+    {
+      "MallID": 9001,
+      "ItemIndex": 1001,
+      "Name": "商城小藥水",
+      "Category": "消耗品",
+      "Kind": "General",
+      "Price": 25,
+      "OriginalPrice": 30,
+      "Tag": "HOT",
+      "Count": 2,
+      "MaxQuantity": 10,
+      "IsActive": true
+    }
+  ]
+}
+```
+
+商品 ID 必須唯一；價格、數量與購買上限會驗證。非堆疊資產的 `Count` 必須為 1；購買數量由 Client 的 Quantity 決定。成功後 Server 會回傳 `MallPointsSync` 與 Inventory/Equip/Pet/Horse Sync，現有 Client 不需新增商城封包。
+
+本地測試可在 `Game:GmCommandsEnabled=true` 時使用：
+
+```text
+/gm mallpoints 1000
+/gm mallpoints -100
+```
+
+點數不允許扣成負值。這個 GM 指令只用於既有 GM 功能開啟的環境，不會自動給一般玩家點數。
+
+**PayPal 金流、舊服點數資料源仍未設定，也不會因一般商城完成而假裝成功。** `ClaimDonationGift` 仍沒有可靠的真實累積贊助與一次性領取資料來源，因此維持安全拒絕。
+
 ## 真正的網路封包整合測試
 
 `tests/SGO.Server.WireSmokeTests/` 是**非破壞性**的 .NET WebSocket client，使用與 Godot 一致的 AES/Base64 封包格式，連至正在執行的伺服器，驗證：
