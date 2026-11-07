@@ -196,7 +196,8 @@ var currentCatalog = new CurrentClientDataCatalog(
     {
         new CurrentSkillDefinition(20101, "Current Skill 20101"),
         new CurrentSkillDefinition(20102, "Current Skill 20102"),
-        new CurrentSkillDefinition(26104, "魔影術")
+        new CurrentSkillDefinition(26104, "魔影術"),
+        new CurrentSkillDefinition(45111, "月神審判")
     },
     new[]
     {
@@ -218,7 +219,12 @@ var currentCatalog = new CurrentClientDataCatalog(
             26104, 5, 1, 1,
             280, 280,
             0, 126, 0,
-            350, 155, 2)
+            350, 155, 2),
+        new CurrentSkillLevelDefinition(
+            45111, 1, 7, 0,
+            300, 300,
+            0, 100, 0,
+            0, 0, 2)
     },
     new[]
     {
@@ -355,6 +361,9 @@ Check(horseCardCatalog.Find(50001) is { MaxBattery: 25200 },
 Check(currentCatalog.FindSkillLevel(26104, 5) is
       { CostMp: 126, CastRange: 280, AoeRadius: 280 },
     "current 魔影術 Lv5 resolves server-side cast data");
+Check(currentCatalog.FindSkillLevel(45111, 1) is
+      { SkillType: 7, CostMp: 100, CastRange: 300, AoeRadius: 300 },
+    "current 月神審判 resolves special-skill cast data");
 Check(currentCatalog.FindHorsePreset(50001) is
       { BodyId: 50292, WeaponId: 50293, EngineId: 50297 },
     "current mecha 50001 resolves default body weapon engine preset");
@@ -1497,7 +1506,62 @@ try
             "GM maxstats refreshes effective status");
     }
 
-    store.SetSkill(account.Value, id, 26104, 5);
+    using (var attackSpeed = Json(
+        """{"Type":"ChatMessage","Channel":0,"Message":"/gm attackspeed 300","BubbleType":0}"""))
+    {
+        var responses = router.Handle(attackSpeed.RootElement, session);
+        Check(Convert.ToInt32(
+                  store.GetCharacter(account.Value, id)!["AttackSpeed"]) == 300,
+            "GM attackspeed persists base attack speed");
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"AttackSpeed\":300")),
+            "GM attackspeed immediately syncs effective attack speed");
+    }
+
+    store.SetSkill(account.Value, id, 45111, 1);
+    store.Revive(account.Value, id);
+    session.CurrentMapId = combatMapId;
+    session.PendingMapSpawn = false;
+    combat.EnterMap(session, combatMapId);
+    var moonTarget = session.Monsters.Values.First(x => x.IsAlive);
+    store.UpdateLocation(
+        account.Value,
+        id,
+        combatMapId,
+        Convert.ToInt32(moonTarget.X),
+        Convert.ToInt32(moonTarget.Y));
+    session.LastX = moonTarget.X;
+    session.LastY = moonTarget.Y;
+
+    using (var moonJudgment = Json(JsonSerializer.Serialize(new
+    {
+        Type = "UseSkill",
+        SkillID = 45111,
+        TargetID = moonTarget.EntityId,
+        TargetType = 1,
+        TargetX = (int)moonTarget.X,
+        TargetY = (int)moonTarget.Y
+    })))
+    {
+        var before = moonTarget.CurrentHp;
+        var responses = router.Handle(moonJudgment.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SkillCast\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"SkillID\":45111")) &&
+              responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"EntityDamage\"")) &&
+              moonTarget.CurrentHp < before &&
+              !responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "此技能類型尚未支援")),
+            "月神審判 skill_type=7 casts and deals composite damage");
+    }
+
+        store.SetSkill(account.Value, id, 26104, 5);
     store.Revive(account.Value, id);
     session.CurrentMapId = combatMapId;
     session.PendingMapSpawn = false;
