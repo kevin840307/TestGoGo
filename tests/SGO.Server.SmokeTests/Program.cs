@@ -6054,6 +6054,279 @@ try
     broadcastHub.Unregister(
         returnPeerRegistration.ConnectionId);
 
+    var trainTicketMapping =
+        enemyDrops.ResolveItem(10505);
+    Check(trainTicketMapping is
+          {
+              TabType: 0
+          },
+        "legacy magic-line train ticket maps to a current inventory item");
+
+    var ticketNpc = world.GetNpcs(47)
+        .First(x =>
+            x.Script.Equals(
+                "NQ024_A.txt",
+                StringComparison.OrdinalIgnoreCase));
+    var conductorNpc = world.GetNpcs(47)
+        .First(x =>
+            x.Script.Equals(
+                "NQ024_B.txt",
+                StringComparison.OrdinalIgnoreCase));
+
+    store.UpdateLocation(
+        account.Value,
+        id,
+        47,
+        ticketNpc.X,
+        ticketNpc.Y);
+    session.CurrentMapId = 47;
+    session.LastX = ticketNpc.X;
+    session.LastY = ticketNpc.Y;
+    session.PendingMapSpawn = false;
+    router.SyncPresence(session);
+
+    store.AddRewards(
+        account.Value,
+        id,
+        0,
+        1_000);
+
+    var trainMoneyBefore = Convert.ToInt64(
+        store.GetCharacter(
+            account.Value,
+            id)!["Money"]);
+    var trainTicketCountBefore =
+        trainTicketMapping is null
+            ? 0
+            : store.GetCharacterAssets(
+                    account.Value,
+                    id)
+                .Inventory
+                .Where(x =>
+                    Convert.ToInt32(
+                        x["ItemIndex"]) ==
+                    trainTicketMapping.ItemId)
+                .Sum(x =>
+                    Convert.ToInt32(x["Count"]));
+
+    using (var buyTrainTicket = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "NpcOptionRequest",
+            EntityID = ticketNpc.EntityId,
+            ScriptName = ticketNpc.Script,
+            TargetNode = "BuySingleReply#0"
+        })))
+    {
+        var responses = router.Handle(
+            buyTrainTicket.RootElement,
+            session);
+
+        var trainMoneyAfter = Convert.ToInt64(
+            store.GetCharacter(
+                account.Value,
+                id)!["Money"]);
+        var trainTicketCountAfter =
+            store.GetCharacterAssets(
+                    account.Value,
+                    id)
+                .Inventory
+                .Where(x =>
+                    Convert.ToInt32(
+                        x["ItemIndex"]) ==
+                    trainTicketMapping!.ItemId)
+                .Sum(x =>
+                    Convert.ToInt32(x["Count"]));
+
+        Check(
+            trainMoneyAfter ==
+                trainMoneyBefore - 300 &&
+            trainTicketCountAfter ==
+                trainTicketCountBefore + 1 &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SyncMoney\"")) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"InventorySync\"")),
+            "legacy train ticket seller uses ModifyData(Money) and grants the mapped ticket");
+    }
+
+    store.SetQuestFlag(
+        account.Value,
+        id,
+        "NQ024_DEBUG",
+        1);
+
+    using (var conductorStart = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "InteractRequest",
+            EntityID = conductorNpc.EntityId
+        })))
+    {
+        store.UpdateLocation(
+            account.Value,
+            id,
+            47,
+            conductorNpc.X,
+            conductorNpc.Y);
+        session.LastX = conductorNpc.X;
+        session.LastY = conductorNpc.Y;
+
+        var responses = router.Handle(
+            conductorStart.RootElement,
+            session);
+
+        Check(
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"NpcDialogResponse\"")) &&
+            !responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "NPC 腳本執行失敗")),
+            "legacy train conductor schedule executes floor() and opens boarding choices");
+    }
+
+    store.SetQuestFlag(
+        account.Value,
+        id,
+        "NQ024_Type",
+        0);
+
+    var ticketCountBeforeVideo =
+        store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Inventory
+            .Where(x =>
+                Convert.ToInt32(
+                    x["ItemIndex"]) ==
+                trainTicketMapping!.ItemId)
+            .Sum(x =>
+                Convert.ToInt32(x["Count"]));
+
+    IReadOnlyList<object> trainStartPackets;
+    using (var trainDeparture = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "NpcOptionRequest",
+            EntityID = conductorNpc.EntityId,
+            ScriptName = conductorNpc.Script,
+            TargetNode = "dia_04a1"
+        })))
+    {
+        trainStartPackets = router.Handle(
+            trainDeparture.RootElement,
+            session);
+    }
+
+    var travelId =
+        session.PendingTrainTravelId;
+
+    Check(
+        !string.IsNullOrWhiteSpace(travelId) &&
+        trainStartPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"TrainTravelStart\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"SourceVideo\":\"train_depart_king.ogv\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"DestinationVideo\":\"train_depart_magic.ogv\"")) &&
+        store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Inventory
+            .Where(x =>
+                Convert.ToInt32(
+                    x["ItemIndex"]) ==
+                trainTicketMapping!.ItemId)
+            .Sum(x =>
+                Convert.ToInt32(x["Count"])) ==
+            ticketCountBeforeVideo,
+        "train departure starts client video without consuming the ticket before Ready");
+
+    IReadOnlyList<object> trainReadyPackets;
+    using (var trainReady = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "TrainTravelReady",
+            TravelID = travelId
+        })))
+    {
+        trainReadyPackets = router.Handle(
+            trainReady.RootElement,
+            session);
+    }
+
+    var afterTrainCharacter = store.GetCharacter(
+        account.Value,
+        id)!;
+    var ticketCountAfterTrain =
+        store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Inventory
+            .Where(x =>
+                Convert.ToInt32(
+                    x["ItemIndex"]) ==
+                trainTicketMapping!.ItemId)
+            .Sum(x =>
+                Convert.ToInt32(x["Count"]));
+
+    Check(
+        string.IsNullOrEmpty(
+            session.PendingTrainTravelId) &&
+        Convert.ToInt32(
+            afterTrainCharacter["MapID"]) == 47 &&
+        Math.Abs(
+            Convert.ToDouble(
+                afterTrainCharacter["LocX"]) -
+            5079.0) < 0.1 &&
+        Math.Abs(
+            Convert.ToDouble(
+                afterTrainCharacter["LocY"]) -
+            2887.0) < 0.1 &&
+        ticketCountAfterTrain ==
+            ticketCountBeforeVideo - 1 &&
+        trainReadyPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"ChangeMap\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"X\":5079") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"Y\":2887")),
+        "TrainTravelReady consumes the legacy ticket and resumes Lua movement to the magic-city station");
+
+    using (var duplicateTrainReady = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "TrainTravelReady",
+            TravelID = travelId
+        })))
+    {
+        var responses = router.Handle(
+            duplicateTrainReady.RootElement,
+            session);
+
+        Check(
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "列車行程已失效")) &&
+            store.GetCharacterAssets(
+                    account.Value,
+                    id)
+                .Inventory
+                .Where(x =>
+                    Convert.ToInt32(
+                        x["ItemIndex"]) ==
+                    trainTicketMapping!.ItemId)
+                .Sum(x =>
+                    Convert.ToInt32(x["Count"])) ==
+                ticketCountAfterTrain,
+            "replayed TrainTravelReady is rejected without consuming another ticket");
+    }
+
     using (var logout = Json(
         """{"Type":"LogoutRequest","IsBackToLogin":true}"""))
     {
