@@ -1677,10 +1677,7 @@ try
 
     session.CurrentMapId = combatMapId;
     session.PendingMapSpawn = false;
-    broadcastHub.UpdatePresence(
-        session.ConnectionId,
-        combatMapId,
-        id);
+    router.SyncPresence(session);
 
     var combatSpawns = combat.EnterMap(session, combatMapId);
 
@@ -1699,7 +1696,8 @@ try
         CharacterId = secondCharacterId,
         CurrentMapId = combatMapId,
         LastX = combatEnemy.X,
-        LastY = combatEnemy.Y
+        LastY = combatEnemy.Y,
+        PendingMapSpawn = true
     };
 
     store.UpdateLocation(
@@ -1708,12 +1706,32 @@ try
         combatMapId,
         combatEnemy.X,
         combatEnemy.Y);
-    broadcastHub.UpdatePresence(
-        peerSession.ConnectionId,
-        combatMapId,
-        secondCharacterId);
 
-    combat.EnterMap(peerSession, combatMapId);
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    router.SyncPresence(peerSession);
+
+    Check(
+        broadcastRegistration.Queue.TryDequeue(
+            out var peerPlayerSpawn) &&
+        JsonSerializer.Serialize(peerPlayerSpawn).Contains(
+            "\"EntityType\":0") &&
+        JsonSerializer.Serialize(peerPlayerSpawn).Contains(
+            $"\"EntityID\":{secondCharacterId}") &&
+        peerRegistration.Queue.IsEmpty,
+        "joining player broadcasts SpawnEntity to existing map peers only");
+
+    var peerWorldPackets = router.Tick(
+        peerSession,
+        DateTimeOffset.UtcNow.AddSeconds(1));
+
+    Check(peerWorldPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"EntityType\":0") &&
+            JsonSerializer.Serialize(x).Contains(
+                $"\"EntityID\":{id}")),
+        "joining player receives existing same-map players in world snapshot");
 
     Check(peerSession.Monsters.TryGetValue(
               monster.EntityId,
@@ -1744,6 +1762,18 @@ try
               "\"Type\":\"SpawnEntity\"") &&
           broadcastRegistration.Queue.IsEmpty,
         "map world events broadcast to peers without echoing to source connection");
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    router.DisconnectPresence(peerSession);
+
+    Check(
+        broadcastRegistration.Queue.TryDequeue(
+            out var peerDespawn) &&
+        JsonSerializer.Serialize(peerDespawn).Contains(
+            "\"Type\":\"DespawnEntity\"") &&
+        JsonSerializer.Serialize(peerDespawn).Contains(
+            $"\"EntityID\":{secondCharacterId}"),
+        "disconnecting player immediately despawns from map peers");
 
     broadcastHub.Unregister(peerRegistration.ConnectionId);
 
