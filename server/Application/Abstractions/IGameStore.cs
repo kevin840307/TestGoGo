@@ -25,6 +25,27 @@ public interface IGameStore
         long accountId,
         long dbid,
         string statType);
+    Dictionary<string, object>? SetPrimaryStats(
+        long accountId,
+        long dbid,
+        int str,
+        int dex,
+        int con,
+        int wis,
+        int expUse);
+    Dictionary<string, object>? ApplyGrowthStats(
+        long accountId,
+        long dbid,
+        int maxHp,
+        int maxMp,
+        int maxSp,
+        int attack,
+        int defense,
+        int magicAttack,
+        int magicDefense,
+        int hit,
+        int dodge,
+        int moveSpeed);
 
     long AddInventoryItem(long accountId, long dbid, int itemIndex, int count);
     long AddEquipment(long accountId, long dbid, int itemIndex, int part = 255, int damage = 0, int color = 0);
