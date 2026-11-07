@@ -105,9 +105,9 @@ func _initialize_player_paper_doll() -> void :
 		return
 	if GameManager:
 		GameManager.set_frame_gap_stage("player_paper_doll")
-	var started_usec := Time.get_ticks_usec()
-	setup_layered_paper_dolls()
-	var elapsed_ms := float(Time.get_ticks_usec() - started_usec) / 1000.0
+	var started_usec: int = Time.get_ticks_usec()
+	await setup_layered_paper_dolls_initial_async()
+	var elapsed_ms: float = float(Time.get_ticks_usec() - started_usec) / 1000.0
 	_initial_visual_ready = true
 	if elapsed_ms >= 50.0:
 		print("[PLAYER_INIT_TIMING] paper_doll_ms=%.2f" % elapsed_ms)
