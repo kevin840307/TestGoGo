@@ -944,7 +944,7 @@ public sealed class PacketRouter
                 packets.AddRange(
                     _combat.BuildCurrentMapSnapshot(state));
                 packets.AddRange(
-                    BuildActivePetSpawnPackets(
+                    BuildActivePetSnapshotPackets(
                         state,
                         accountId,
                         dbid,
@@ -1250,6 +1250,41 @@ public sealed class PacketRouter
                 pet,
                 spawnX,
                 spawnY));
+        }
+
+        return packets;
+    }
+
+    private IReadOnlyList<object> BuildActivePetSnapshotPackets(
+        ClientSession state,
+        long accountId,
+        long dbid,
+        double playerX,
+        double playerY)
+    {
+        var assets = _store.GetCharacterAssets(accountId, dbid);
+        var packets = new List<object>();
+
+        foreach (var pet in assets.Pets.Where(x =>
+                     Convert.ToInt32(x["State"]) == 1))
+        {
+            var petUid = Convert.ToInt64(pet["UID"]);
+
+            if (!state.PetPositions.TryGetValue(
+                    petUid,
+                    out var position))
+            {
+                position = (
+                    X: playerX + 40,
+                    Y: playerY + 20);
+                state.PetPositions[petUid] = position;
+            }
+
+            packets.Add(BuildPetSpawnPacket(
+                dbid,
+                pet,
+                position.X,
+                position.Y));
         }
 
         return packets;
