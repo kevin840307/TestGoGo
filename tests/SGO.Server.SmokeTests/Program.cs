@@ -244,6 +244,10 @@ var currentCatalog = new CurrentClientDataCatalog(
             "生命聖印",
             "生命聖印"),
         new CurrentSkillDefinition(
+            25104,
+            "生命吸收",
+            "生命吸收"),
+        new CurrentSkillDefinition(
             27110,
             "平安之祝",
             "平安之祝"),
@@ -309,6 +313,16 @@ var currentCatalog = new CurrentClientDataCatalog(
             0, 0,
             0, 0, 0,
             0, 0, 1800,
+            0, 1,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0,
+            0, 0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            25104, 1, 7, 0,
+            200, 0,
+            0, 0, 69,
+            60, 90, 2,
             0, 1,
             0, 0, 0,
             0, 0, 0, 0,
@@ -2743,6 +2757,57 @@ try
         "monster map initializes server-shared combat entities");
 
     var monster = session.Monsters.Values.First();
+
+    store.SetSkill(
+        account.Value,
+        id,
+        25104,
+        1);
+    store.Revive(account.Value, id);
+    store.ApplyDamage(
+        account.Value,
+        id,
+        40);
+    store.UpdateLocation(
+        account.Value,
+        id,
+        combatMapId,
+        Convert.ToInt32(monster.X),
+        Convert.ToInt32(monster.Y));
+    session.LastX = monster.X;
+    session.LastY = monster.Y;
+
+    var lifeDrainHpBefore = Convert.ToInt32(
+        store.GetCharacter(account.Value, id)!["HP"]);
+    var lifeDrainMonsterHpBefore = monster.CurrentHp;
+
+    var lifeDrainPackets = combat.UseSkill(
+        session,
+        account.Value,
+        25104,
+        monster.EntityId,
+        1,
+        Convert.ToInt32(monster.X),
+        Convert.ToInt32(monster.Y),
+        DateTimeOffset.UtcNow.AddSeconds(3));
+
+    var lifeDrainAfter = store.GetCharacter(
+        account.Value,
+        id)!;
+
+    Check(
+        monster.CurrentHp < lifeDrainMonsterHpBefore &&
+        Convert.ToInt32(lifeDrainAfter["HP"]) >
+            lifeDrainHpBefore &&
+        Convert.ToInt32(lifeDrainAfter["HP"]) <=
+            Convert.ToInt32(lifeDrainAfter["MaxHP"]) &&
+        lifeDrainPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EntityDamage\"")) &&
+        lifeDrainPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EntityHeal\"")),
+        "生命吸收 damages the monster and restores caster HP from actual damage");
 
     var peerRegistration = broadcastHub.Register();
     var peerSession = new ClientSession
