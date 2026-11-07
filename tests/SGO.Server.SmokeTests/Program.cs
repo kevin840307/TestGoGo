@@ -1587,15 +1587,17 @@ try
             Convert.ToInt32(x["QuestID"]) == 1004);
 
     Check(
-        Convert.ToInt32(killQuest["Status"]) == 1 &&
+        Convert.ToInt32(killQuest["Status"]) == 2 &&
         Convert.ToInt32(killQuest["CurrentStep"]) == 4 &&
         Convert.ToInt32(killQuest["StepProgress"]) == 0 &&
         killQuestPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"QuestUpdate\"") &&
             JsonSerializer.Serialize(x).Contains(
-                "\"CurrentStep\":4")),
-        "monster kill advances only matching active quest to its next step");
+                "\"CurrentStep\":4") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"Status\":2")),
+        "monster kill advances to a final NPC step as ready-to-report");
 
     Check(store.UpsertQuest(
               account.Value,
@@ -1642,6 +1644,163 @@ try
               id,
               1003),
         "quest progress test state can be cleaned through normal abandon flow");
+
+    var legacyQuestStartPackets =
+        questProgress.OnLegacyFlagChanged(
+            account.Value,
+            id,
+            "K27001_Task",
+            1);
+    var legacyQuest1001 = store.GetQuests(
+            account.Value,
+            id)
+        .First(x =>
+            Convert.ToInt32(x["QuestID"]) == 1001);
+
+    Check(
+        Convert.ToInt32(legacyQuest1001["Status"]) == 1 &&
+        Convert.ToInt32(legacyQuest1001["CurrentStep"]) == 1 &&
+        legacyQuestStartPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"QuestID\":1001")),
+        "legacy K27001_Task=1 starts quest 1001 tracker at the doctor-search step");
+
+    questProgress.OnLegacyFlagChanged(
+        account.Value,
+        id,
+        "K27001_Task",
+        2);
+    legacyQuest1001 = store.GetQuests(
+            account.Value,
+            id)
+        .First(x =>
+            Convert.ToInt32(x["QuestID"]) == 1001);
+
+    Check(
+        Convert.ToInt32(legacyQuest1001["Status"]) == 1 &&
+        Convert.ToInt32(legacyQuest1001["CurrentStep"]) == 2,
+        "legacy K27001_Task=2 advances quest 1001 tracker to feather collection");
+
+    questProgress.OnLegacyFlagChanged(
+        account.Value,
+        id,
+        "K27001_Task",
+        3);
+    legacyQuest1001 = store.GetQuests(
+            account.Value,
+            id)
+        .First(x =>
+            Convert.ToInt32(x["QuestID"]) == 1001);
+
+    Check(
+        Convert.ToInt32(legacyQuest1001["Status"]) == 2 &&
+        Convert.ToInt32(legacyQuest1001["CurrentStep"]) == 3,
+        "legacy K27001_Task=3 marks quest 1001 ready to report to the Royal Guard");
+
+    questProgress.OnLegacyFlagChanged(
+        account.Value,
+        id,
+        "K27001_END",
+        1);
+    legacyQuest1001 = store.GetQuests(
+            account.Value,
+            id)
+        .First(x =>
+            Convert.ToInt32(x["QuestID"]) == 1001);
+
+    Check(
+        Convert.ToInt32(legacyQuest1001["Status"]) == 3,
+        "legacy K27001_END completes and hides quest 1001 tracker");
+
+    if (store.GetQuests(
+            account.Value,
+            id).Any(x =>
+            Convert.ToInt32(x["QuestID"]) == 1002))
+    {
+        store.AbandonQuest(
+            account.Value,
+            id,
+            1002);
+    }
+
+    var mimiStartPackets =
+        questProgress.OnLegacyFlagChanged(
+            account.Value,
+            id,
+            "K27002A_Task",
+            1);
+    var mimiQuest = store.GetQuests(
+            account.Value,
+            id)
+        .First(x =>
+            Convert.ToInt32(x["QuestID"]) == 1002);
+
+    Check(
+        Convert.ToInt32(mimiQuest["Status"]) == 1 &&
+        Convert.ToInt32(mimiQuest["CurrentStep"]) == 1 &&
+        mimiStartPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"QuestID\":1002")),
+        "legacy K27002A_Task=1 starts Mimi collection tracker");
+
+    var mimiShellUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        4075,
+        300);
+
+    var mimiCollectionPackets =
+        questProgress.RefreshCollectedItems(
+            account.Value,
+            id,
+            4075);
+    mimiQuest = store.GetQuests(
+            account.Value,
+            id)
+        .First(x =>
+            Convert.ToInt32(x["QuestID"]) == 1002);
+
+    Check(
+        mimiShellUid > 0 &&
+        Convert.ToInt32(mimiQuest["Status"]) == 2 &&
+        Convert.ToInt32(mimiQuest["CurrentStep"]) == 2 &&
+        mimiCollectionPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Status\":2")),
+        "collecting 300 shells marks Mimi quest ready to report");
+
+    var removeMimiShells = store.DiscardAsset(
+        account.Value,
+        id,
+        mimiShellUid,
+        0,
+        300);
+    Check(removeMimiShells.Success,
+        "prepare successful Mimi turn-in by consuming the 300 shells");
+
+    var mimiRepeatPackets =
+        questProgress.OnLegacyInteractionCompleted(
+            account.Value,
+            id,
+            "K27002_A.txt",
+            "response1",
+            0,
+            true);
+
+    mimiQuest = store.GetQuests(
+            account.Value,
+            id)
+        .First(x =>
+            Convert.ToInt32(x["QuestID"]) == 1002);
+
+    Check(
+        Convert.ToInt32(mimiQuest["Status"]) == 1 &&
+        Convert.ToInt32(mimiQuest["CurrentStep"]) == 1 &&
+        Convert.ToInt32(mimiQuest["StepProgress"]) == 0 &&
+        mimiRepeatPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"QuestID\":1002")),
+        "successful Mimi turn-in resets repeatable quest tracker to shell collection");
 
     Check(store.AbandonQuest(
               account.Value,
