@@ -41,6 +41,11 @@ public static class GameDataServiceCollectionExtensions
                     "Pets",
                     "Config.json")));
         services.AddSingleton(
+            new QuestTrackingCatalog(
+                Path.Combine(
+                    gameDataRoot,
+                    "QuestConfig.json")));
+        services.AddSingleton(
             new RecipeCatalog(
                 Path.Combine(
                     gameDataRoot,
