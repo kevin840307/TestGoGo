@@ -68,7 +68,7 @@ public interface IGameStore
         long accountId,
         long dbid,
         long uid,
-        int tabType,
+        AssetPurchaseKind kind,
         int count,
         int unitPrice,
         out long newMoney);
