@@ -12,6 +12,7 @@ public interface IGameStore :
     IMechaStore,
     ISkillStore,
     IQuestStore,
+    IClubStore,
     IRankStore,
     IShortcutStore,
     IBankStore,
