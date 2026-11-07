@@ -132,6 +132,20 @@ public sealed class ServerBroadcastHub
             queue.Enqueue(packet);
     }
 
+    public bool PublishToConnection(
+        Guid connectionId,
+        object packet)
+    {
+        if (connectionId == Guid.Empty ||
+            !_queues.TryGetValue(
+                connectionId,
+                out var queue))
+            return false;
+
+        queue.Enqueue(packet);
+        return true;
+    }
+
     public bool PublishToCharacter(
         long characterId,
         object packet)
