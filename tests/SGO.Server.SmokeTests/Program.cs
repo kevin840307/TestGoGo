@@ -64,7 +64,7 @@ CurrentItemDefinition CurrentItem(
         matk,
         mdef,
         hit,
-        flee
+        flee,
         0, // Luk
         0, // Aspd
         moveSpeed,
