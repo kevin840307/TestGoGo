@@ -1,6 +1,7 @@
 using SGO.Server.Application.Bank;
 using SGO.Server.Application.Character;
 using SGO.Server.Application.Combat;
+using SGO.Server.Application.Crafting;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
 using SGO.Server.Application.Messaging;
@@ -20,6 +21,7 @@ public static class GameFeatureServiceCollectionExtensions
     {
         services.AddSingleton<WorldRuntimeService>();
         services.AddSingleton<CombatService>();
+        services.AddSingleton<CraftingService>();
         services.AddSingleton<ResourceRecoveryService>();
         services.AddSingleton<ServerBroadcastHub>();
         services.AddSingleton<PartyService>();
