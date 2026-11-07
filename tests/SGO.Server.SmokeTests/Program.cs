@@ -76,15 +76,18 @@ CurrentItemDefinition CurrentItem(
 var currentCatalog = new CurrentClientDataCatalog(
     new[]
     {
-        // Intentionally changed ID: old Shop.csv 31201 maps by legacy name
-        // to current 41201 when names match.
-        CurrentItem(41201, "Item 31201", "recovery", recoverHp: 20),
-        CurrentItem(31202, "Item 31202", "recovery", recoverHp: 30),
+        // Recovery has no reliable legacy display name in the uploaded old
+        // client data, so keep only confirmed same-ID mappings.
+        CurrentItem(31201, "Recovery 31201", "recovery", recoverHp: 20),
+        CurrentItem(31202, "Recovery 31202", "recovery", recoverHp: 30),
         CurrentItem(31203, "Item 31203", "recovery", recoverHp: 50),
         CurrentItem(31204, "Item 31204", "recovery", recoverHp: 80),
         CurrentItem(31205, "Item 31205", "recovery", recoverHp: 100),
 
-        CurrentItem(31078, "Equip 31078", "equip", atk: 20, equipSlot: 5),
+        // Old server Equip.itd confirms 31078 = 淺藍色初心褲子.
+        // Current client intentionally uses a different ID to verify
+        // name-based old -> current mapping.
+        CurrentItem(41078, "淺藍色初心褲子", "equip", atk: 20, equipSlot: 5),
         CurrentItem(31109, "Equip 31109", "equip", def: 8, equipSlot: 3),
         CurrentItem(31140, "Equip 31140", "equip", def: 8, equipSlot: 4),
         CurrentItem(272, "General 272", "general"),
@@ -192,11 +195,11 @@ Check(shopCatalog.GetShopItems(1).Count > 0 &&
     "Map15 item weapon armor and shield shops load source item data");
 Check(batteryCatalog.GetEnergy(6905) == 3600,
     "source mecha battery 6905 resolves 3600 seconds");
-Check(recoveryCatalog.Find(41201) is { RecoverHp: 20 },
-    "current recovery item 41201 resolves +20 HP");
-Check(shopCatalog.GetShopItems(1).Any(x => x.ItemIndex == 41201) &&
-      !shopCatalog.GetShopItems(1).Any(x => x.ItemIndex == 31201),
-    "legacy Shop.csv item maps by name to current item ID");
+Check(recoveryCatalog.Find(31201) is { RecoverHp: 20 },
+    "confirmed current recovery item 31201 resolves +20 HP");
+Check(shopCatalog.GetShopItems(2).Any(x => x.ItemIndex == 41078) &&
+      !shopCatalog.GetShopItems(2).Any(x => x.ItemIndex == 31078),
+    "legacy shop equip maps by confirmed name to changed current item ID");
 Check(horseCardCatalog.Find(6008) is { MaxBattery: 25200 },
     "source mecha card 6008 resolves max battery");
 
@@ -219,7 +222,7 @@ try
 {
     var store = new SqliteGameStore(Path.Combine(temp, "game.db"));
     var combat = new CombatService(store, world, currentCatalog);
-    var shops = new ShopService(store, shopCatalog);
+    var shops = new ShopService(store, shopCatalog, currentCatalog);
     var config = new ConfigurationManager();
     config["Game:GmCommandsEnabled"] = "true";
     var gm = new GmCommandService(
@@ -305,7 +308,7 @@ try
     var batteryUid = store.AddInventoryItem(
         account.Value, id, 6905, 1);
     var recoveryUid = store.AddInventoryItem(
-        account.Value, id, 41201, 1);
+        account.Value, id, 31201, 1);
     var horseCardUid = store.AddInventoryItem(
         account.Value, id, 6008, 1);
 
@@ -969,14 +972,14 @@ try
     }
 
     using (var gmItem = Json(
-        """{"Type":"ChatMessage","Channel":0,"Message":"/gm item 41201 3","BubbleType":0}"""))
+        """{"Type":"ChatMessage","Channel":0,"Message":"/gm item 31201 3","BubbleType":0}"""))
     {
         var before = store.GetCharacterAssets(account.Value, id).Inventory.Count;
         var responses = router.Handle(gmItem.RootElement, session);
         var after = store.GetCharacterAssets(account.Value, id).Inventory;
         Check(after.Count >= before + 1 &&
               after.Any(x =>
-                  Convert.ToInt32(x["ItemIndex"]) == 41201 &&
+                  Convert.ToInt32(x["ItemIndex"]) == 31201 &&
                   Convert.ToInt32(x["Count"]) == 3),
             "GM item command creates inventory item");
         Check(responses.Any(x =>
