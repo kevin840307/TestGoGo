@@ -935,6 +935,292 @@ public sealed class SqliteGameStore : IGameStore
         return true;
     }
 
+    public MallPurchaseResult PurchaseMallAsset(
+        long accountId,
+        long dbid,
+        AssetPurchaseKind kind,
+        int itemIndex,
+        int assetCount,
+        long totalPrice,
+        string assetName = "",
+        string horseType = "MS",
+        int initialEnergy = 0,
+        int itemPart = 255,
+        int itemDamage = 0)
+    {
+        if (accountId <= 0 ||
+            dbid <= 0 ||
+            itemIndex <= 0 ||
+            assetCount <= 0 ||
+            assetCount > 999 ||
+            totalPrice < 0)
+        {
+            return new(false, "商城購買資料無效", GetMallPoints(accountId));
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在", 0);
+
+        using (var ensure = db.CreateCommand())
+        {
+            ensure.Transaction = tx;
+            ensure.CommandText = """
+                INSERT INTO account_mall_points(
+                    account_id,points,lifetime_donation)
+                SELECT id,0,0
+                  FROM accounts
+                 WHERE id=$account
+                ON CONFLICT(account_id) DO NOTHING
+                """;
+            Arg(ensure, "$account", accountId);
+            ensure.ExecuteNonQuery();
+        }
+
+        long currentPoints;
+        using (var points = db.CreateCommand())
+        {
+            points.Transaction = tx;
+            points.CommandText = """
+                SELECT points
+                  FROM account_mall_points
+                 WHERE account_id=$account
+                 LIMIT 1
+                """;
+            Arg(points, "$account", accountId);
+            var raw = points.ExecuteScalar();
+            if (raw is null || raw == DBNull.Value)
+                return new(false, "商城點數帳戶不存在", 0);
+            currentPoints = Convert.ToInt64(raw);
+        }
+
+        if (currentPoints < totalPrice)
+            return new(false, "商城點數不足", currentPoints);
+
+        int CountRows(string table, string extra = "")
+        {
+            using var cmd = db.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText =
+                $"SELECT COUNT(*) FROM {table} WHERE character_id=$id {extra}";
+            Arg(cmd, "$id", dbid);
+            return Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+        }
+
+        switch (kind)
+        {
+            case AssetPurchaseKind.General:
+            case AssetPurchaseKind.HorseBattery:
+            {
+                long existingUid = 0;
+                int existingCount = 0;
+                using (var existing = db.CreateCommand())
+                {
+                    existing.Transaction = tx;
+                    existing.CommandText = """
+                        SELECT uid,count
+                          FROM inventory_items
+                         WHERE character_id=$id
+                           AND item_index=$item
+                           AND in_bank=0
+                           AND in_shop=0
+                         ORDER BY uid
+                         LIMIT 1
+                        """;
+                    Arg(existing, "$id", dbid);
+                    Arg(existing, "$item", itemIndex);
+                    using var reader = existing.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        existingUid = reader.GetInt64(0);
+                        existingCount = reader.GetInt32(1);
+                    }
+                }
+
+                if (existingUid > 0)
+                {
+                    if (existingCount + assetCount > 999)
+                        return new(false, "物品疊加數量將超過 999", currentPoints);
+
+                    using var add = db.CreateCommand();
+                    add.Transaction = tx;
+                    add.CommandText = """
+                        UPDATE inventory_items
+                           SET count=count+$count
+                         WHERE uid=$uid
+                           AND character_id=$id
+                        """;
+                    Arg(add, "$count", assetCount);
+                    Arg(add, "$uid", existingUid);
+                    Arg(add, "$id", dbid);
+                    if (add.ExecuteNonQuery() != 1)
+                        return new(false, "商城商品發放失敗", currentPoints);
+                }
+                else
+                {
+                    if (CountRows(
+                            "inventory_items",
+                            "AND in_bank=0 AND in_shop=0") >= 200)
+                    {
+                        return new(false, "背包空間不足", currentPoints);
+                    }
+
+                    using var add = db.CreateCommand();
+                    add.Transaction = tx;
+                    add.CommandText = """
+                        INSERT INTO inventory_items(
+                            character_id,item_index,count,in_bank,in_shop)
+                        VALUES($id,$item,$count,0,0)
+                        """;
+                    Arg(add, "$id", dbid);
+                    Arg(add, "$item", itemIndex);
+                    Arg(add, "$count", assetCount);
+                    if (add.ExecuteNonQuery() != 1)
+                        return new(false, "商城商品發放失敗", currentPoints);
+                }
+                break;
+            }
+
+            case AssetPurchaseKind.Equipment:
+            {
+                if (CountRows("equipment_items") + assetCount > 200)
+                    return new(false, "裝備欄空間不足", currentPoints);
+
+                for (var i = 0; i < assetCount; i++)
+                {
+                    using var add = db.CreateCommand();
+                    add.Transaction = tx;
+                    add.CommandText = """
+                        INSERT INTO equipment_items(
+                            character_id,item_index,damage,color,part,in_bank,in_shop)
+                        VALUES($id,$item,$damage,0,255,0,0)
+                        """;
+                    Arg(add, "$id", dbid);
+                    Arg(add, "$item", itemIndex);
+                    Arg(add, "$damage", Math.Max(0, itemDamage));
+                    if (add.ExecuteNonQuery() != 1)
+                        return new(false, "商城裝備發放失敗", currentPoints);
+                }
+                break;
+            }
+
+            case AssetPurchaseKind.Pet:
+            {
+                if (CountRows("pets") + assetCount > 50)
+                    return new(false, "寵物欄空間不足", currentPoints);
+
+                var name = string.IsNullOrWhiteSpace(assetName)
+                    ? $"Pet {itemIndex}"
+                    : assetName.Trim();
+
+                for (var i = 0; i < assetCount; i++)
+                {
+                    using var add = db.CreateCommand();
+                    add.Transaction = tx;
+                    add.CommandText = """
+                        INSERT INTO pets(
+                            character_id,pet_id,name,
+                            life_count,feed_exp_limit,feed_value,summon_wait_count)
+                        VALUES(
+                            $id,$pet,$name,
+                            10,43200,43200,0)
+                        """;
+                    Arg(add, "$id", dbid);
+                    Arg(add, "$pet", itemIndex);
+                    Arg(add, "$name", name);
+                    if (add.ExecuteNonQuery() != 1)
+                        return new(false, "商城寵物發放失敗", currentPoints);
+                }
+                break;
+            }
+
+            case AssetPurchaseKind.Horse:
+            {
+                if (CountRows("horses") + assetCount > 50)
+                    return new(false, "機甲欄空間不足", currentPoints);
+
+                var name = string.IsNullOrWhiteSpace(assetName)
+                    ? $"Mecha {itemIndex}"
+                    : assetName.Trim();
+                var type = string.IsNullOrWhiteSpace(horseType)
+                    ? "MS"
+                    : horseType.Trim();
+
+                for (var i = 0; i < assetCount; i++)
+                {
+                    using var add = db.CreateCommand();
+                    add.Transaction = tx;
+                    add.CommandText = """
+                        INSERT INTO horses(
+                            character_id,horse_index,name,horse_type,energy_left)
+                        VALUES($id,$item,$name,$type,$energy)
+                        """;
+                    Arg(add, "$id", dbid);
+                    Arg(add, "$item", itemIndex);
+                    Arg(add, "$name", name);
+                    Arg(add, "$type", type);
+                    Arg(add, "$energy", Math.Max(0, initialEnergy));
+                    if (add.ExecuteNonQuery() != 1)
+                        return new(false, "商城機甲發放失敗", currentPoints);
+                }
+                break;
+            }
+
+            case AssetPurchaseKind.HorseEquipment:
+            {
+                if (CountRows("horse_equipment") + assetCount > 100)
+                    return new(false, "機甲裝備欄空間不足", currentPoints);
+
+                var part = itemPart is >= 0 and <= 3
+                    ? itemPart
+                    : ResolveHorseEquipPart(itemIndex);
+
+                for (var i = 0; i < assetCount; i++)
+                {
+                    using var add = db.CreateCommand();
+                    add.Transaction = tx;
+                    add.CommandText = """
+                        INSERT INTO horse_equipment(
+                            character_id,equip_index,horse_uid,
+                            damage,color,part,in_bank,in_shop)
+                        VALUES($id,$item,-1,$damage,0,$part,0,0)
+                        """;
+                    Arg(add, "$id", dbid);
+                    Arg(add, "$item", itemIndex);
+                    Arg(add, "$damage", Math.Max(0, itemDamage));
+                    Arg(add, "$part", part);
+                    if (add.ExecuteNonQuery() != 1)
+                        return new(false, "商城機甲裝備發放失敗", currentPoints);
+                }
+                break;
+            }
+
+            default:
+                return new(false, "不支援的商城商品類型", currentPoints);
+        }
+
+        using (var debit = db.CreateCommand())
+        {
+            debit.Transaction = tx;
+            debit.CommandText = """
+                UPDATE account_mall_points
+                   SET points=points-$price
+                 WHERE account_id=$account
+                   AND points >= $price
+                """;
+            Arg(debit, "$price", totalPrice);
+            Arg(debit, "$account", accountId);
+            if (debit.ExecuteNonQuery() != 1)
+                return new(false, "商城點數不足", currentPoints);
+        }
+
+        var newBalance = currentPoints - totalPrice;
+        tx.Commit();
+        return new(true, "商城購買成功", newBalance);
+    }
+
     public TimedEffectActivationResult ActivateTimedEffectFromItem(
         long accountId,
         long dbid,
