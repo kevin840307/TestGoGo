@@ -10,7 +10,7 @@ namespace SGO.Server.Protocol;
 public static class PacketSchemaValidator
 {
     private enum FieldType { Integer, LongInteger, Text, NonEmptyText, Boolean, LongIntegerArray }
-    private readonly record struct Field(string Name, FieldType Type);
+    private readonly record struct Field(string Name, FieldType Type, bool Required = true);
 
     private static readonly IReadOnlyDictionary<string, Field[]> Rules =
         new Dictionary<string, Field[]>(StringComparer.Ordinal)
@@ -30,8 +30,19 @@ public static class PacketSchemaValidator
             ["SyncPosition"] = [new("X", FieldType.Integer), new("Y", FieldType.Integer)],
             ["UseItemRequest"] = [new("ItemUID", FieldType.LongInteger)],
             ["PickUpItemRequest"] = [new("EntityID", FieldType.Integer)],
-            ["AttackEntity"] = [new("TargetEntityID", FieldType.Integer)],
-            ["UseSkill"] = [new("SkillID", FieldType.Integer)],
+            ["AttackEntity"] =
+            [
+                new("TargetEntityID", FieldType.Integer),
+                new("TargetType", FieldType.Integer, false)
+            ],
+            ["UseSkill"] =
+            [
+                new("SkillID", FieldType.Integer),
+                new("TargetID", FieldType.Integer, false),
+                new("TargetType", FieldType.Integer, false),
+                new("TargetX", FieldType.Integer, false),
+                new("TargetY", FieldType.Integer, false)
+            ],
             ["UpdateShortcut"] =
             [
                 new("SlotIndex", FieldType.Integer),
@@ -60,7 +71,8 @@ public static class PacketSchemaValidator
             [
                 new("UID", FieldType.LongInteger),
                 new("TabType", FieldType.Integer),
-                new("Count", FieldType.Integer)
+                new("Count", FieldType.Integer),
+                new("ItemIndex", FieldType.Integer, false)
             ],
             ["TradeRemoveItem"] =
             [
@@ -71,7 +83,11 @@ public static class PacketSchemaValidator
             ["ShopAction"] = [new("Action", FieldType.NonEmptyText)],
             ["MallAction"] = [new("Action", FieldType.NonEmptyText)],
             ["PetAction"] = [new("Action", FieldType.NonEmptyText)],
-            ["PartyAction"] = [new("Action", FieldType.NonEmptyText)],
+            ["PartyAction"] =
+            [
+                new("Action", FieldType.NonEmptyText),
+                new("TargetDBID", FieldType.LongInteger, false)
+            ],
             ["DeleteCharacterRequest"] =
             [
                 new("DBID", FieldType.Integer),
@@ -278,6 +294,9 @@ public static class PacketSchemaValidator
         {
             if (!packet.TryGetProperty(field.Name, out var value))
             {
+                if (!field.Required)
+                    continue;
+
                 error = $"缺少必要欄位 {field.Name}";
                 return false;
             }
