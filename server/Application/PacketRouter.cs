@@ -205,7 +205,9 @@ public sealed class PacketRouter
             state.ConnectionId,
             nextMapId,
             hasCurrent ? nextCharacterId : null,
-            hasCurrent ? state.AccountId : null);
+            hasCurrent ? state.AccountId : null,
+            hasCurrent ? state.LastX : 0,
+            hasCurrent ? state.LastY : 0);
 
         if (changed &&
             hasCurrent)
@@ -722,6 +724,10 @@ public sealed class PacketRouter
                 state.LastX = x;
                 state.LastY = y;
                 state.PositionDirty = true;
+                _broadcasts.UpdatePosition(
+                    state.ConnectionId,
+                    x,
+                    y);
 
                 var now = DateTimeOffset.UtcNow;
                 if (now - state.LastPositionPersistAt >=
@@ -3713,8 +3719,8 @@ public sealed class PacketRouter
         if (character is null)
             return [];
 
-        var px = Convert.ToDouble(character["LocX"]);
-        var py = Convert.ToDouble(character["LocY"]);
+        var px = state.LastX;
+        var py = state.LastY;
         var dx = px - npc.X;
         var dy = py - npc.Y;
 
