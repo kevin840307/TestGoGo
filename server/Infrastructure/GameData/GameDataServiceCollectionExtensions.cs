@@ -30,6 +30,8 @@ public static class GameDataServiceCollectionExtensions
             new LegacyNpcVisualCatalog(legacyClientRoot));
         services.AddSingleton(
             new LegacyPlayerGrowthCatalog(gameDataRoot));
+        services.AddSingleton(
+            new LegacyBattleRulesCatalog(gameDataRoot));
 
         services.AddSingleton(sp =>
             new WorldDataService(
