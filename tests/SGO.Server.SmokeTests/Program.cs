@@ -583,6 +583,13 @@ try
             end
             hasnext, nextmember = GetTeamList_Next()
         end
+
+        function title()
+            if HasTitle(21) == 0 then
+                AddTitle(21)
+            end
+            AddTitle(21)
+        end
         """);
 
     var runtimeFlag = 0;
@@ -674,6 +681,33 @@ try
               JsonSerializer.Serialize(x).Contains(
                   "NPC 腳本執行失敗")),
         "legacy team iterator/data/position/emotion APIs execute without Lua errors");
+
+    var runtimeHasTitle = false;
+    var runtimeUnlockCalls = 0;
+
+    var titleResult = questApiRuntime.Execute(
+        "QuestApi.txt",
+        "title",
+        999,
+        "Quest Title API Test",
+        null,
+        _ => 0,
+        new QuestRuntimeBindings
+        {
+            HasTitle = _ => runtimeHasTitle,
+            UnlockTitle = _ =>
+            {
+                runtimeUnlockCalls++;
+                runtimeHasTitle = true;
+                return true;
+            }
+        });
+
+    Check(runtimeUnlockCalls == 1 &&
+          titleResult.Packets.Count(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"UnlockTitle\"")) == 1,
+        "legacy AddTitle unlocks once and suppresses duplicate unlock packets");
 }
 finally
 {
@@ -895,6 +929,35 @@ try
         slots.First(x =>
             x.TryGetValue("NAME", out var n) &&
             n?.ToString() == "SecondCharacter")["DBID"]);
+
+    Check(!store.SetCurrentTitle(
+              account.Value,
+              id,
+              21),
+        "locked title cannot be equipped");
+
+    Check(store.UnlockTitle(
+              account.Value,
+              id,
+              21) &&
+          store.HasTitle(
+              account.Value,
+              id,
+              21) &&
+          store.SetCurrentTitle(
+              account.Value,
+              id,
+              21),
+        "unlocked title can be equipped persistently");
+
+    var titledCharacter = store.GetCharacter(
+        account.Value,
+        id)!;
+
+    Check(Convert.ToInt32(titledCharacter["Title"]) == 21 &&
+          ((IEnumerable<int>)titledCharacter["UnlockedTitles"])
+              .Contains(21),
+        "character bootstrap reloads current and unlocked titles");
 
     Check(store.SetLevel(
               account.Value,
