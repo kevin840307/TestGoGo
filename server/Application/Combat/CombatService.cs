@@ -30,6 +30,7 @@ public sealed class CombatService
     private readonly WorldDataService _world;
     private readonly CurrentClientDataCatalog _current;
     private readonly LegacyPlayerGrowthCatalog _growth;
+    private readonly LegacyBattleRulesCatalog _battle;
     private readonly EnemyDropCatalog _drops;
 
     public CombatService(
@@ -37,12 +38,14 @@ public sealed class CombatService
         WorldDataService world,
         CurrentClientDataCatalog current,
         LegacyPlayerGrowthCatalog growth,
+        LegacyBattleRulesCatalog battle,
         EnemyDropCatalog drops)
     {
         _store = store;
         _world = world;
         _current = current;
         _growth = growth;
+        _battle = battle;
         _drops = drops;
     }
 
@@ -589,6 +592,7 @@ public sealed class CombatService
 
             AddMonsterDrops(
                 session,
+                accountId,
                 monster,
                 packets);
 
@@ -857,6 +861,7 @@ public sealed class CombatService
 
                     AddMonsterDrops(
                         session,
+                        accountId,
                         monster,
                         packets);
 
@@ -1053,6 +1058,7 @@ public sealed class CombatService
 
             AddMonsterDrops(
                 session,
+                accountId,
                 monster,
                 packets);
 
@@ -1068,18 +1074,37 @@ public sealed class CombatService
 
     private void AddMonsterDrops(
         ClientSession session,
+        long accountId,
         MonsterRuntimeState monster,
         List<object> packets)
     {
         if (!session.CharacterId.HasValue)
             return;
 
+        var dbid = session.CharacterId.Value;
+        var character = _store.GetCharacter(
+            accountId,
+            dbid);
+
+        if (character is null)
+            return;
+
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            dbid);
+        var lucky = CharacterStatCalculator.Calculate(
+                character,
+                assets,
+                _current)
+            .Lucky;
+
         monster.KillSequence++;
 
         var drops = _drops.RollDrops(
             monster.EnemyId,
             monster.EntityId,
-            monster.KillSequence);
+            monster.KillSequence,
+            lucky);
 
         var offsetIndex = 0;
         foreach (var drop in drops)
@@ -1089,18 +1114,21 @@ public sealed class CombatService
             offsetIndex++;
 
             var ground = _store.CreateGroundItem(
-                session.CharacterId.Value,
+                dbid,
                 drop.TabType,
                 drop.ItemId,
                 1,
                 monster.MapId,
                 monster.X + offsetX,
-                monster.Y + offsetY);
+                monster.Y + offsetY,
+                protectSeconds: 15,
+                lifetimeSeconds: 60);
 
             if (ground is null)
                 continue;
 
             session.GroundItems[ground.EntityId] = ground;
+            var now = DateTimeOffset.UtcNow;
 
             packets.Add(new
             {
@@ -1118,9 +1146,9 @@ public sealed class CombatService
                     Damage = ground.Damage,
                     Color = ground.Color,
                     Part = ground.Part,
-                    RemainingTime = 60.0,
+                    RemainingTime = ground.RemainingSeconds(now),
                     OwnerDBID = ground.OwnerDbid,
-                    ProtectTimeSeconds = 15.0
+                    ProtectTimeSeconds = ground.ProtectSeconds(now)
                 }
             });
         }
@@ -1140,11 +1168,17 @@ public sealed class CombatService
         if (before is null)
             return;
 
-        // Enemy_Data.csv contains original drop information, but the exact
-        // legacy character EXP/money columns are not yet identified safely.
-        // Keep this small fallback isolated so recovered values can replace it
-        // later without changing combat or persistence flow.
-        var gainedExp = Math.Max(1, monster.Level * 2);
+        var oldLevel = Math.Clamp(
+            Convert.ToInt32(before["Level"]),
+            1,
+            255);
+
+        // battle.cfg provides ExpX=2 and the original player-vs-monster
+        // level-difference ratios. Money still has no recovered source column,
+        // so keep only that small fallback isolated here.
+        var gainedExp = _battle.ExperienceForKill(
+            oldLevel,
+            monster.Level);
         var gainedMoney = Math.Max(1, monster.Level);
 
         var rewarded = _store.AddRewards(
@@ -1156,10 +1190,6 @@ public sealed class CombatService
         if (rewarded is null)
             return;
 
-        var oldLevel = Math.Clamp(
-            Convert.ToInt32(before["Level"]),
-            1,
-            255);
         var accumulatedExp = Math.Max(
             0,
             Convert.ToInt32(rewarded["ExpAcc"]));
