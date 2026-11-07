@@ -26,6 +26,50 @@ public sealed class LegacyPlayerGrowthCatalog
     public int AbilityPointsPerLevel(int level)
         => ReadSingle("ExpUse.csv", level, fallback: 2);
 
+    // Player_Up_Lv.csv stores the legacy accumulated EXP threshold for
+    // advancing from the supplied level to the next one.
+    public int ExperienceThresholdForLevel(int level)
+    {
+        level = Math.Clamp(level, 1, 255);
+        if (level >= 255)
+            return int.MaxValue;
+
+        return ReadSingle(
+            "Player_Up_Lv.csv",
+            level,
+            fallback: FallbackExperienceThreshold(level));
+    }
+
+    public int ResolveLevel(
+        int currentLevel,
+        int accumulatedExperience)
+    {
+        var level = Math.Clamp(currentLevel, 1, 255);
+        var exp = Math.Max(0, accumulatedExperience);
+
+        while (level < 255 &&
+               exp >= ExperienceThresholdForLevel(level))
+        {
+            level++;
+        }
+
+        return level;
+    }
+
+    public int AbilityPointsGained(
+        int fromLevel,
+        int toLevel)
+    {
+        var from = Math.Clamp(fromLevel, 1, 255);
+        var to = Math.Clamp(toLevel, from, 255);
+        var points = 0;
+
+        for (var level = from; level < to; level++)
+            points += Math.Max(0, AbilityPointsPerLevel(level));
+
+        return points;
+    }
+
     public LegacyPlayerGrowthStats Calculate(
         Dictionary<string, object> character)
     {
@@ -123,6 +167,13 @@ public sealed class LegacyPlayerGrowthCatalog
             return [];
 
         return rows[Math.Clamp(oneBasedIndex - 1, 0, rows.Length - 1)];
+    }
+
+    private static int FallbackExperienceThreshold(int level)
+    {
+        var n = (long)Math.Max(1, level);
+        var value = 2L * n * n * n * n;
+        return (int)Math.Min(200_000_000L, value);
     }
 
     private static int Get(int[] row, int index, int fallback = 0)
