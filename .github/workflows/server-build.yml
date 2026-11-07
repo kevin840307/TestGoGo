@@ -6,22 +6,20 @@ on:
     paths: ['server/**', 'tests/SGO.Server.SmokeTests/**', '.github/workflows/server-build.yml']
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
       - name: Build server
-        shell: pwsh
         run: |
-          dotnet build server/SGO.Server.csproj -c Release 2>&1 | Tee-Object -FilePath build.log
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          set -o pipefail
+          dotnet build server/SGO.Server.csproj -c Release 2>&1 | tee build.log
       - name: Smoke tests
-        shell: pwsh
         run: |
-          dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release 2>&1 | Tee-Object -FilePath smoke.log
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          set -o pipefail
+          dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release 2>&1 | tee smoke.log
       - name: Upload diagnostic logs
         if: always()
         uses: actions/upload-artifact@v4
