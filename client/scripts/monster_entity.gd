@@ -480,7 +480,7 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	last_move_packet_ms = Time.get_ticks_msec()
 	network_move_target = target_pos
 
-	var remaining := global_position.distance_to(target_pos)
+	var remaining: float = global_position.distance_to(target_pos)
 	if remaining <= NETWORK_MOVE_SNAP_EPSILON:
 		network_move_active = false
 		return
@@ -488,9 +488,9 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	# Packet jitter or a missed waypoint must not turn the next packet into a
 	# short high-speed tween. Keep the newest authoritative target and move
 	# toward it at a bounded visual speed.
-	var requested_time := max(speed_time, 0.01)
-	var requested_speed := remaining / requested_time
-	network_move_speed = clamp(
+	var requested_time: float = maxf(speed_time, 0.01)
+	var requested_speed: float = remaining / requested_time
+	network_move_speed = clampf(
 		requested_speed,
 		NETWORK_MOVE_MIN_SPEED,
 		NETWORK_MOVE_MAX_SPEED
