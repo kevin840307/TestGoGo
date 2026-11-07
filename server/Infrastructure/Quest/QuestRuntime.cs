@@ -15,17 +15,30 @@ public sealed class QuestExecutionResult
     public int? RebornY { get; set; }
 }
 
+public sealed class QuestRuntimeBindings
+{
+    public Func<string, int>? GetFlag { get; init; }
+    public Action<string, int>? SetFlag { get; init; }
+    public Func<int, int, int>? GetItemCount { get; init; }
+    public Func<int, int>? ItemListCountLeft { get; init; }
+    public Func<int, int, int, bool>? AddItem { get; init; }
+    public Func<int, int, int, bool>? RemoveItem { get; init; }
+}
+
 public sealed class QuestRuntime
 {
     private readonly string _questRoot;
     private readonly ShopCatalog _shops;
+    private readonly EnemyDropCatalog? _legacyItems;
 
     public QuestRuntime(
         string questRoot,
-        ShopCatalog shops)
+        ShopCatalog shops,
+        EnemyDropCatalog? legacyItems = null)
     {
         _questRoot = questRoot;
         _shops = shops;
+        _legacyItems = legacyItems;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     }
 
@@ -35,7 +48,8 @@ public sealed class QuestRuntime
         int entityId,
         string speaker,
         int? choiceIndex,
-        Func<string, object?> getData)
+        Func<string, object?> getData,
+        QuestRuntimeBindings? bindings = null)
     {
         var result = new QuestExecutionResult();
 
@@ -68,20 +82,103 @@ public sealed class QuestRuntime
         script.Globals["GetChoice"] = (Func<int>)(() => choiceIndex ?? 0);
         script.Globals["GetData"] = (Func<string, object?>)(name => getData(name));
 
-        // Common quest APIs. State-changing calls that are not yet wired
-        // to persistence are safe compatibility shims instead of nil globals.
-        script.Globals["GetFlag"] = (Func<string,int>)(_ => 0);
-        script.Globals["SetFlag"] = (Action<string,int>)((_, _) => { });
+        // Common quest APIs. Flags and item mutations are bound by the
+        // application layer so legacy Lua can keep its original API surface.
+        script.Globals["GetFlag"] = (Func<string,int>)(name =>
+            bindings?.GetFlag?.Invoke(name) ?? 0);
+        script.Globals["SetFlag"] = (Action<string,int>)((name, value) =>
+            bindings?.SetFlag?.Invoke(name, value));
         script.Globals["GetName"] = (Func<string>)(() =>
             Convert.ToString(getData("NAME")) ?? "");
+        script.Globals["GetRealTime"] = (Func<int>)(() =>
+            checked((int)DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
         script.Globals["Color"] = DynValue.NewCallback((ctx, args) =>
             DynValue.NewString(""));
         script.Globals["HasTitle"] = (Func<int,int>)(_ => 0);
         script.Globals["AddTitle"] = (Action<int>)(_ => { });
         script.Globals["SetData"] = DynValue.NewCallback((ctx, args) => DynValue.Nil);
         script.Globals["SetCareer"] = DynValue.NewCallback((ctx, args) => DynValue.Nil);
-        script.Globals["RemoveItem"] = DynValue.NewCallback((ctx, args) => DynValue.Nil);
-        script.Globals["AddItem"] = DynValue.NewCallback((ctx, args) => DynValue.Nil);
+
+        script.Globals["CheckItem"] = DynValue.NewCallback((ctx, args) =>
+        {
+            if (args.Count < 1)
+                return DynValue.NewNumber(0);
+
+            var legacyItemId = (int)args[0].Number;
+            var mapping = _legacyItems?.ResolveItem(legacyItemId);
+            if (mapping is null)
+                return DynValue.NewNumber(0);
+
+            var count = bindings?.GetItemCount?.Invoke(
+                mapping.ItemId,
+                mapping.TabType) ?? 0;
+
+            return DynValue.NewNumber(count > 0 ? 1 : 0);
+        });
+
+        script.Globals["GetItemCount"] = DynValue.NewCallback((ctx, args) =>
+        {
+            if (args.Count < 1)
+                return DynValue.NewNumber(0);
+
+            var legacyItemId = (int)args[0].Number;
+            var mapping = _legacyItems?.ResolveItem(legacyItemId);
+            if (mapping is null)
+                return DynValue.NewNumber(0);
+
+            var count = bindings?.GetItemCount?.Invoke(
+                mapping.ItemId,
+                mapping.TabType) ?? 0;
+
+            return DynValue.NewNumber(count);
+        });
+
+        script.Globals["ItemListCountLeft"] = (Func<int,int>)(tabType =>
+            bindings?.ItemListCountLeft?.Invoke(tabType) ?? 999);
+
+        script.Globals["AddItem"] = DynValue.NewCallback((ctx, args) =>
+        {
+            if (args.Count < 1)
+                return DynValue.NewBoolean(false);
+
+            var legacyItemId = (int)args[0].Number;
+            var count = args.Count > 1
+                ? Math.Max(1, (int)args[1].Number)
+                : 1;
+            var mapping = _legacyItems?.ResolveItem(legacyItemId);
+
+            if (mapping is null ||
+                bindings?.AddItem is null)
+                return DynValue.NewBoolean(false);
+
+            return DynValue.NewBoolean(
+                bindings.AddItem(
+                    mapping.ItemId,
+                    mapping.TabType,
+                    count));
+        });
+
+        script.Globals["RemoveItem"] = DynValue.NewCallback((ctx, args) =>
+        {
+            if (args.Count < 1)
+                return DynValue.NewBoolean(false);
+
+            var legacyItemId = (int)args[0].Number;
+            var count = args.Count > 1
+                ? Math.Max(1, (int)args[1].Number)
+                : 1;
+            var mapping = _legacyItems?.ResolveItem(legacyItemId);
+
+            if (mapping is null ||
+                bindings?.RemoveItem is null)
+                return DynValue.NewBoolean(false);
+
+            return DynValue.NewBoolean(
+                bindings.RemoveItem(
+                    mapping.ItemId,
+                    mapping.TabType,
+                    count));
+        });
 
         script.Globals["RankQuery"] = (Action<int>)(rankType =>
         {
