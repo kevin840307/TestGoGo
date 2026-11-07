@@ -3315,6 +3315,370 @@ public sealed class SqliteGameStore : IGameStore
     private static int PetMaxExpForLevel(int level)
         => Math.Max(100, level * 100);
 
+    public PetMutationResult FeedPet(
+        long accountId,
+        long dbid,
+        long petUid,
+        long itemUid,
+        int itemId,
+        int feedAmount)
+    {
+        if (petUid <= 0 ||
+            itemUid <= 0 ||
+            itemId <= 0 ||
+            feedAmount <= 0)
+            return new(false, "餵食資料無效", null);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在", null);
+
+        int feedValue;
+        int feedLimit;
+        using (var pet = db.CreateCommand())
+        {
+            pet.Transaction = tx;
+            pet.CommandText = """
+                SELECT feed_value,feed_exp_limit
+                  FROM pets
+                 WHERE uid=$pet
+                   AND character_id=$id
+                """;
+            Arg(pet, "$pet", petUid);
+            Arg(pet, "$id", dbid);
+
+            using var reader = pet.ExecuteReader();
+            if (!reader.Read())
+                return new(false, "找不到寵物", null);
+
+            feedValue = Math.Max(0, reader.GetInt32(0));
+            feedLimit = Math.Max(1, reader.GetInt32(1));
+        }
+
+        if (feedValue >= feedLimit)
+            return new(false, "寵物飽食度已滿", null);
+
+        if (!ConsumeRecipeInventory(
+                db,
+                tx,
+                dbid,
+                itemId,
+                1,
+                itemUid))
+        {
+            return new(false, "找不到可使用的餵食道具", null);
+        }
+
+        using (var update = db.CreateCommand())
+        {
+            update.Transaction = tx;
+            update.CommandText = """
+                UPDATE pets
+                   SET feed_value=MIN(
+                       feed_exp_limit,
+                       feed_value+$feed)
+                 WHERE uid=$pet
+                   AND character_id=$id
+                """;
+            Arg(update, "$feed", feedAmount);
+            Arg(update, "$pet", petUid);
+            Arg(update, "$id", dbid);
+
+            if (update.ExecuteNonQuery() != 1)
+                return new(false, "寵物餵食失敗", null);
+        }
+
+        tx.Commit();
+
+        return new(
+            true,
+            "寵物飽食度已恢復",
+            GetPetAsset(accountId, dbid, petUid),
+            InventoryChanged: true);
+    }
+
+    public PetMutationResult SetPetMainSkill(
+        long accountId,
+        long dbid,
+        long petUid,
+        int skillId)
+    {
+        if (petUid <= 0 || skillId < 0)
+            return new(false, "主技能資料無效", null);
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return new(false, "角色不存在", null);
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE pets
+               SET main_skill_id=$skill
+             WHERE uid=$pet
+               AND character_id=$id
+            """;
+        Arg(cmd, "$skill", skillId);
+        Arg(cmd, "$pet", petUid);
+        Arg(cmd, "$id", dbid);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return new(false, "找不到寵物", null);
+
+        return new(
+            true,
+            skillId == 0
+                ? "已取消寵物主技能"
+                : "寵物主技能已更新",
+            GetPetAsset(accountId, dbid, petUid));
+    }
+
+    public PetMutationResult AllocatePetStat(
+        long accountId,
+        long dbid,
+        long petUid,
+        string statType,
+        PetStatAdjustment adjustment)
+    {
+        var extraColumn = statType.ToUpperInvariant() switch
+        {
+            "STR" => "extra_str",
+            "DEX" => "extra_dex",
+            "CON" => "extra_con",
+            "WIS" => "extra_wis",
+            _ => ""
+        };
+
+        if (petUid <= 0 || extraColumn.Length == 0)
+            return new(false, "寵物配點資料無效", null);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在", null);
+
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = $"""
+            UPDATE pets
+               SET use_exp=use_exp-1,
+                   {extraColumn}={extraColumn}+1,
+                   max_hp=MAX(1,max_hp+$maxHp),
+                   hp=MIN(
+                       MAX(1,max_hp+$maxHp),
+                       hp+MAX(0,$maxHp)),
+                   max_mp=MAX(0,max_mp+$maxMp),
+                   mp=MIN(
+                       MAX(0,max_mp+$maxMp),
+                       mp+MAX(0,$maxMp)),
+                   attack=MAX(1,attack+$attack),
+                   magic_attack=MAX(0,magic_attack+$magicAttack),
+                   hit=MAX(0,hit+$hit),
+                   dodge=MAX(0,dodge+$dodge)
+             WHERE uid=$pet
+               AND character_id=$id
+               AND use_exp > 0
+            """;
+        Arg(cmd, "$maxHp", adjustment.MaxHp);
+        Arg(cmd, "$maxMp", adjustment.MaxMp);
+        Arg(cmd, "$attack", adjustment.Attack);
+        Arg(cmd, "$magicAttack", adjustment.MagicAttack);
+        Arg(cmd, "$hit", adjustment.Hit);
+        Arg(cmd, "$dodge", adjustment.Dodge);
+        Arg(cmd, "$pet", petUid);
+        Arg(cmd, "$id", dbid);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return new(false, "沒有可用的寵物配點", null);
+
+        tx.Commit();
+        return new(
+            true,
+            $"寵物 {statType.ToUpperInvariant()} 已提升",
+            GetPetAsset(accountId, dbid, petUid));
+    }
+
+    public PetMutationResult AddPetLife(
+        long accountId,
+        long dbid,
+        long petUid,
+        int itemId,
+        int maxLife)
+    {
+        maxLife = Math.Max(1, maxLife);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在", null);
+
+        int lifeCount;
+        using (var pet = db.CreateCommand())
+        {
+            pet.Transaction = tx;
+            pet.CommandText = """
+                SELECT life_count
+                  FROM pets
+                 WHERE uid=$pet
+                   AND character_id=$id
+                """;
+            Arg(pet, "$pet", petUid);
+            Arg(pet, "$id", dbid);
+
+            var raw = pet.ExecuteScalar();
+            if (raw is null)
+                return new(false, "找不到寵物", null);
+
+            lifeCount = Convert.ToInt32(raw);
+        }
+
+        if (lifeCount >= maxLife)
+            return new(false, "寵物壽命已滿", null);
+
+        if (!ConsumeRecipeInventory(
+                db,
+                tx,
+                dbid,
+                itemId,
+                1,
+                specificUid: null))
+        {
+            return new(false, "缺少精靈之魂", null);
+        }
+
+        using (var update = db.CreateCommand())
+        {
+            update.Transaction = tx;
+            update.CommandText = """
+                UPDATE pets
+                   SET life_count=MIN(
+                       $maxLife,
+                       life_count+1)
+                 WHERE uid=$pet
+                   AND character_id=$id
+                """;
+            Arg(update, "$maxLife", maxLife);
+            Arg(update, "$pet", petUid);
+            Arg(update, "$id", dbid);
+
+            if (update.ExecuteNonQuery() != 1)
+                return new(false, "增加寵物壽命失敗", null);
+        }
+
+        tx.Commit();
+        return new(
+            true,
+            "寵物壽命增加 1",
+            GetPetAsset(accountId, dbid, petUid),
+            InventoryChanged: true);
+    }
+
+    public PetMutationResult ResetPetStats(
+        long accountId,
+        long dbid,
+        long petUid,
+        int itemId,
+        PetStatAdjustment adjustment)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在", null);
+
+        int allocated;
+        using (var pet = db.CreateCommand())
+        {
+            pet.Transaction = tx;
+            pet.CommandText = """
+                SELECT
+                    extra_str+extra_dex+extra_con+extra_wis
+                  FROM pets
+                 WHERE uid=$pet
+                   AND character_id=$id
+                """;
+            Arg(pet, "$pet", petUid);
+            Arg(pet, "$id", dbid);
+
+            var raw = pet.ExecuteScalar();
+            if (raw is null)
+                return new(false, "找不到寵物", null);
+
+            allocated = Math.Max(0, Convert.ToInt32(raw));
+        }
+
+        if (allocated <= 0)
+            return new(false, "寵物目前沒有已配置的能力點", null);
+
+        if (!ConsumeRecipeInventory(
+                db,
+                tx,
+                dbid,
+                itemId,
+                1,
+                specificUid: null))
+        {
+            return new(false, "缺少精靈再生水晶", null);
+        }
+
+        using (var update = db.CreateCommand())
+        {
+            update.Transaction = tx;
+            update.CommandText = """
+                UPDATE pets
+                   SET use_exp=use_exp+$allocated,
+                       extra_str=0,
+                       extra_dex=0,
+                       extra_con=0,
+                       extra_wis=0,
+                       max_hp=MAX(1,max_hp+$maxHp),
+                       hp=MIN(
+                           hp,
+                           MAX(1,max_hp+$maxHp)),
+                       max_mp=MAX(0,max_mp+$maxMp),
+                       mp=MIN(
+                           mp,
+                           MAX(0,max_mp+$maxMp)),
+                       attack=MAX(1,attack+$attack),
+                       magic_attack=MAX(0,magic_attack+$magicAttack),
+                       hit=MAX(0,hit+$hit),
+                       dodge=MAX(0,dodge+$dodge)
+                 WHERE uid=$pet
+                   AND character_id=$id
+                """;
+            Arg(update, "$allocated", allocated);
+            Arg(update, "$maxHp", adjustment.MaxHp);
+            Arg(update, "$maxMp", adjustment.MaxMp);
+            Arg(update, "$attack", adjustment.Attack);
+            Arg(update, "$magicAttack", adjustment.MagicAttack);
+            Arg(update, "$hit", adjustment.Hit);
+            Arg(update, "$dodge", adjustment.Dodge);
+            Arg(update, "$pet", petUid);
+            Arg(update, "$id", dbid);
+
+            if (update.ExecuteNonQuery() != 1)
+                return new(false, "寵物配點重置失敗", null);
+        }
+
+        tx.Commit();
+        return new(
+            true,
+            "寵物能力配點已重置",
+            GetPetAsset(accountId, dbid, petUid),
+            InventoryChanged: true);
+    }
+
+    private Dictionary<string, object>? GetPetAsset(
+        long accountId,
+        long dbid,
+        long petUid)
+        => GetCharacterAssets(accountId, dbid).Pets
+            .FirstOrDefault(x =>
+                Convert.ToInt64(x["UID"]) == petUid);
+
     public bool RenamePet(long accountId, long dbid, long petUid, string name)
     {
         var clean = (name ?? "").Trim();
