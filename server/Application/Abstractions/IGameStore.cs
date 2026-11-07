@@ -64,6 +64,16 @@ public interface IGameStore
         int energyAmount);
     bool EquipHorseItem(long accountId, long dbid, long equipUid, long horseUid);
     bool UnequipHorseItem(long accountId, long dbid, long equipUid, long horseUid);
+    Dictionary<string, object>? SetHorseLevel(
+        long accountId,
+        long dbid,
+        long horseUid,
+        int level);
+    Dictionary<string, object>? AddHorseExperience(
+        long accountId,
+        long dbid,
+        long horseUid,
+        int exp);
     bool SetPetState(long accountId, long dbid, long petUid, int state);
     bool RenamePet(long accountId, long dbid, long petUid, string name);
     bool EquipPetItem(long accountId, long dbid, long petUid, long itemUid, int targetSlot);
