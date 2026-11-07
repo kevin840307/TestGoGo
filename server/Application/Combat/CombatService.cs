@@ -41,6 +41,15 @@ public sealed class CombatService
         ClientSession session,
         int mapId)
     {
+        if (session.Monsters.Count > 0 &&
+            session.CurrentMapId > 0)
+        {
+            session.MonstersByMap[session.CurrentMapId] =
+                session.Monsters.ToDictionary(
+                    x => x.Key,
+                    x => x.Value);
+        }
+
         session.Monsters.Clear();
         session.LastMonsterAiTick = DateTimeOffset.MinValue;
 
@@ -49,6 +58,20 @@ public sealed class CombatService
 
         if (_world.IsCityMap(mapId))
             return packets;
+
+        if (session.MonstersByMap.TryGetValue(
+                mapId,
+                out var preserved))
+        {
+            foreach (var pair in preserved)
+            {
+                session.Monsters[pair.Key] = pair.Value;
+                if (pair.Value.IsAlive)
+                    packets.Add(BuildMonsterSpawnPacket(pair.Value));
+            }
+
+            return packets;
+        }
 
         foreach (var enemy in _world.GetEnemies(mapId))
         {
@@ -76,6 +99,11 @@ public sealed class CombatService
             session.Monsters[state.EntityId] = state;
             packets.Add(BuildMonsterSpawnPacket(state));
         }
+
+        session.MonstersByMap[mapId] =
+            session.Monsters.ToDictionary(
+                x => x.Key,
+                x => x.Value);
 
         return packets;
     }
@@ -505,7 +533,12 @@ public sealed class CombatService
 
         var skillLevel = Math.Max(
             1,
-            Convert.ToInt32(learned["Level"]));
+            Convert.ToInt32(
+                learned.TryGetValue("level", out var lowerLevel)
+                    ? lowerLevel
+                    : learned.TryGetValue("SkillLevel", out var clientLevel)
+                        ? clientLevel
+                        : 1));
 
         var levelData = _current.FindSkillLevel(
             skillId,
