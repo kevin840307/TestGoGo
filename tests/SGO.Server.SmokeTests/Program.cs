@@ -4030,7 +4030,7 @@ try
     store.ApplyDamage(
         account.Value,
         id,
-        40);
+        99);
     store.UpdateLocation(
         account.Value,
         id,
@@ -4058,10 +4058,18 @@ try
         account.Value,
         id)!;
 
+    var lifeDrainDamageDealt = Math.Max(
+        0,
+        lifeDrainMonsterHpBefore - monster.CurrentHp);
+    var lifeDrainRecovered = Math.Max(
+        0,
+        Convert.ToInt32(lifeDrainAfter["HP"]) -
+        lifeDrainHpBefore);
+
     Check(
-        monster.CurrentHp < lifeDrainMonsterHpBefore &&
-        Convert.ToInt32(lifeDrainAfter["HP"]) >
-            lifeDrainHpBefore &&
+        lifeDrainDamageDealt > 0 &&
+        lifeDrainRecovered ==
+            Math.Min(lifeDrainDamageDealt, 94) &&
         Convert.ToInt32(lifeDrainAfter["HP"]) <=
             Convert.ToInt32(lifeDrainAfter["MaxHP"]) &&
         lifeDrainPackets.Any(x =>
@@ -4070,7 +4078,7 @@ try
         lifeDrainPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"EntityHeal\"")),
-        "生命吸收 damages the monster and restores caster HP from actual damage");
+        "生命吸收 Lv1 restores min(actual damage, original 94 HP cap)");
 
     var peerRegistration = broadcastHub.Register();
     var peerSession = new ClientSession
