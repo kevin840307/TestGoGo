@@ -598,7 +598,10 @@ try
         growth,
         broadcastHub,
         NullLogger<PacketRouter>.Instance);
-    var session = new ClientSession();
+    var session = new ClientSession
+    {
+        ConnectionId = broadcastRegistration.ConnectionId
+    };
 
     var (created, _) = store.Register("offline", "test-password", "");
     Check(created, "create account");
@@ -1674,14 +1677,75 @@ try
 
     session.CurrentMapId = combatMapId;
     session.PendingMapSpawn = false;
+    broadcastHub.UpdatePresence(
+        session.ConnectionId,
+        combatMapId,
+        id);
+
     var combatSpawns = combat.EnterMap(session, combatMapId);
 
     Check(session.Monsters.Count > 0 &&
           combatSpawns.Any(x =>
               JsonSerializer.Serialize(x).Contains("\"EntityType\":1")),
-        "monster map initializes per-session combat entities");
+        "monster map initializes server-shared combat entities");
 
     var monster = session.Monsters.Values.First();
+
+    var peerRegistration = broadcastHub.Register();
+    var peerSession = new ClientSession
+    {
+        ConnectionId = peerRegistration.ConnectionId,
+        AccountId = account.Value,
+        CharacterId = secondCharacterId,
+        CurrentMapId = combatMapId,
+        LastX = combatEnemy.X,
+        LastY = combatEnemy.Y
+    };
+
+    store.UpdateLocation(
+        account.Value,
+        secondCharacterId,
+        combatMapId,
+        combatEnemy.X,
+        combatEnemy.Y);
+    broadcastHub.UpdatePresence(
+        peerSession.ConnectionId,
+        combatMapId,
+        secondCharacterId);
+
+    combat.EnterMap(peerSession, combatMapId);
+
+    Check(peerSession.Monsters.TryGetValue(
+              monster.EntityId,
+              out var peerMonster) &&
+          ReferenceEquals(monster, peerMonster),
+        "two sessions on one map reference the same MonsterRuntimeState");
+
+    var sharedPositionBefore = monster.X;
+    monster.X += 3;
+    Check(Math.Abs(peerMonster!.X - monster.X) < 0.001 &&
+          Math.Abs(monster.X - sharedPositionBefore - 3) < 0.001,
+        "shared monster position changes are immediately visible to both sessions");
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    var sharedSpawnPackets = combat.SpawnLegacyEnemy(
+        session,
+        combatEnemy.EnemyId,
+        monster.X + 300,
+        monster.Y);
+
+    Check(sharedSpawnPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"SpawnEntity\"")) &&
+          peerRegistration.Queue.TryDequeue(out var peerSpawn) &&
+          JsonSerializer.Serialize(peerSpawn).Contains(
+              "\"Type\":\"SpawnEntity\"") &&
+          broadcastRegistration.Queue.IsEmpty,
+        "map world events broadcast to peers without echoing to source connection");
+
+    broadcastHub.Unregister(peerRegistration.ConnectionId);
 
     var idleMonsters = session.Monsters.Values
         .Take(2)
