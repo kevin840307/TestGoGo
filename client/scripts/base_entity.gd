@@ -114,7 +114,14 @@ func update_hp(new_hp: int, hit_delay: float = 0.3, is_miss: bool = false) -> vo
 	hp_update_seq += 1
 	var current_seq = hp_update_seq
 
-	if hit_delay > 0: await get_tree().create_timer(hit_delay).timeout
+	if hit_delay > 0:
+		if not is_instance_valid(self) or not is_inside_tree():
+			return
+		var tree := get_tree()
+		if tree == null:
+			return
+		var timer := tree.create_timer(hit_delay)
+		await timer.timeout
 	if not is_instance_valid(self) or not is_inside_tree(): return
 	if current_seq != hp_update_seq: return
 
