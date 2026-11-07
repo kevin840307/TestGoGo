@@ -218,6 +218,14 @@ public interface ITimedEffectStore
         long nowUtcMs);
 }
 
+public sealed record CapacityExpansionResult(
+    bool Success,
+    string Message,
+    int InventoryMaxSize,
+    int EquipMaxSize,
+    int PetMaxSize,
+    int HorseEquipMaxSize);
+
 public interface IInventoryStore : ICharacterAssetReader
 {
     long AddInventoryItem(
@@ -225,6 +233,16 @@ public interface IInventoryStore : ICharacterAssetReader
         long dbid,
         int itemIndex,
         int count);
+
+    CapacityExpansionResult ExpandCapacityFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        int inventoryDelta = 0,
+        int equipDelta = 0,
+        int petDelta = 0,
+        int horseEquipDelta = 0);
     (bool Success, string Message, long RewardUid) OpenDoll(
         long accountId,
         long dbid,
