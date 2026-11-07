@@ -25,8 +25,33 @@ public static class PersistenceServiceCollectionExtensions
                         "game.db");
                 }
 
-                services.AddSingleton<IGameStore>(
+                services.AddSingleton(
                     new SqliteGameStore(dbPath));
+
+                services.AddSingleton<IGameStore>(sp =>
+                    sp.GetRequiredService<SqliteGameStore>());
+                services.AddSingleton<IAccountStore>(sp =>
+                    sp.GetRequiredService<SqliteGameStore>());
+                services.AddSingleton<ICharacterStore>(sp =>
+                    sp.GetRequiredService<SqliteGameStore>());
+                services.AddSingleton<IInventoryStore>(sp =>
+                    sp.GetRequiredService<SqliteGameStore>());
+                services.AddSingleton<IEquipmentStore>(sp =>
+                    sp.GetRequiredService<SqliteGameStore>());
+                services.AddSingleton<IPetStore>(sp =>
+                    sp.GetRequiredService<SqliteGameStore>());
+                services.AddSingleton<IMechaStore>(sp =>
+                    sp.GetRequiredService<SqliteGameStore>());
+                services.AddSingleton<ISkillStore>(sp =>
+                    sp.GetRequiredService<SqliteGameStore>());
+                services.AddSingleton<IShortcutStore>(sp =>
+                    sp.GetRequiredService<SqliteGameStore>());
+                services.AddSingleton<IBankStore>(sp =>
+                    sp.GetRequiredService<SqliteGameStore>());
+                services.AddSingleton<IShopStore>(sp =>
+                    sp.GetRequiredService<SqliteGameStore>());
+                services.AddSingleton<ICharacterAssetReader>(sp =>
+                    sp.GetRequiredService<SqliteGameStore>());
                 break;
             }
 
