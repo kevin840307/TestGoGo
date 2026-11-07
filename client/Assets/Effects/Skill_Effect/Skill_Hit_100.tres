@@ -1,0 +1,82 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Hit.spr.0000.svg" id="tex0"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Hit.spr.0001.svg" id="tex1"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Hit.spr.0002.svg" id="tex2"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Hit.spr.0003.svg" id="tex3"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Hit.spr.0004.svg" id="tex4"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Hit.spr.0005.svg" id="tex5"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Hit.spr.0006.svg" id="tex6"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Hit.spr.0007.svg" id="tex7"]
+
+[sub_resource type="AtlasTexture" id="atlas0"]
+atlas = ExtResource("tex0")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas1"]
+atlas = ExtResource("tex1")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas2"]
+atlas = ExtResource("tex2")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas3"]
+atlas = ExtResource("tex3")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas4"]
+atlas = ExtResource("tex4")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas5"]
+atlas = ExtResource("tex5")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas6"]
+atlas = ExtResource("tex6")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas7"]
+atlas = ExtResource("tex7")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas0")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas1")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas2")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas3")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas4")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas5")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas6")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas7")
+}],
+"loop": false,
+"name": &"default",
+"speed": 16.0
+}]
