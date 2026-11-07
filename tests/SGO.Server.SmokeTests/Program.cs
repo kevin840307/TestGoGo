@@ -1188,6 +1188,24 @@ try
             "Pets",
             "Config.json"));
 
+    var petIdleSpeech = new PetIdleSpeechCatalog(
+        Path.Combine(
+            repoRoot,
+            "server",
+            "GameData",
+            "pet_idle_speech.json"));
+
+    var deterministicPetSpeech =
+        petIdleSpeech.Pick(45001, 12345, 7);
+    Check(!string.IsNullOrWhiteSpace(
+              deterministicPetSpeech) &&
+          deterministicPetSpeech ==
+              petIdleSpeech.Pick(
+                  45001,
+                  12345,
+                  7),
+        "pet idle speech catalog returns deterministic configurable text");
+
     var questTrackingCatalog = new QuestTrackingCatalog(
         Path.Combine(
             repoRoot,
@@ -1391,6 +1409,7 @@ try
         growth,
         petGrowth,
         petSkills,
+        petIdleSpeech,
         petEvolution,
         mall,
         broadcastHub,
@@ -3883,6 +3902,42 @@ try
             JsonSerializer.Serialize(x).Contains(
                 $"\"EntityID\":{4_000_000L + petUid}")),
         "summoned pet follows player from server world tick");
+
+    var speechPeer = broadcastHub.Register();
+    broadcastHub.UpdatePresence(
+        speechPeer.ConnectionId,
+        session.CurrentMapId,
+        secondCharacterId,
+        account.Value,
+        session.LastX + 50,
+        session.LastY);
+
+    while (speechPeer.Queue.TryDequeue(out _)) { }
+
+    statefulPetSpeech:
+    session.PetPositions[petUid] =
+        (session.LastX + 42, session.LastY + 24);
+    session.PetTargets.Remove(petUid);
+    session.PetNextIdleSpeechAt[petUid] =
+        DateTimeOffset.UtcNow.AddSeconds(-1);
+
+    var idleSpeechPackets = router.Tick(
+        session,
+        DateTimeOffset.UtcNow.AddSeconds(2));
+
+    Check(
+        idleSpeechPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"PetIdleSpeech\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                $"\"EntityID\":{4_000_000L + petUid}")) &&
+        speechPeer.Queue.ToArray().Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"PetIdleSpeech\"")),
+        "idle summoned pet emits configurable speech to owner and same-map peers");
+
+    broadcastHub.Unregister(
+        speechPeer.ConnectionId);
 
     var selected = store.GetCharacter(account.Value, id);
     Check(Convert.ToInt32(Convert.ToDouble(selected!["LocX"])) == 5000 &&
