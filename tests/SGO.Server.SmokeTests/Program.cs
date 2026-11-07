@@ -1308,6 +1308,35 @@ try
 
     var broadcastHub = new ServerBroadcastHub();
     var broadcastRegistration = broadcastHub.Register();
+    var accountSessions = new AccountSessionRegistry();
+
+    var registryA = Guid.NewGuid();
+    var registryB = Guid.NewGuid();
+    Check(accountSessions.Register(999, registryA) is null &&
+          accountSessions.Register(999, registryB) == registryA &&
+          !accountSessions.IsCurrent(999, registryA) &&
+          accountSessions.IsCurrent(999, registryB),
+        "account session registry atomically replaces an older connection");
+    accountSessions.Unregister(registryA);
+    Check(accountSessions.IsCurrent(999, registryB),
+        "unregistering superseded connection cannot remove current session");
+    accountSessions.Unregister(registryB);
+
+    var heartbeatBase = DateTimeOffset.UtcNow;
+    Check(ConnectionHeartbeat.ShouldPing(
+              DateTimeOffset.MinValue,
+              heartbeatBase) &&
+          ConnectionHeartbeat.ShouldPing(
+              heartbeatBase,
+              heartbeatBase.AddSeconds(20)) &&
+          !ConnectionHeartbeat.ShouldPing(
+              heartbeatBase,
+              heartbeatBase.AddSeconds(19)) &&
+          ConnectionHeartbeat.IsTimedOut(
+              heartbeatBase,
+              heartbeatBase.AddSeconds(60)),
+        "heartbeat policy uses 20-second Ping and 60-second timeout");
+
     var worldRuntime = new WorldRuntimeService(world);
     var party = new PartyService(
         store,
@@ -1413,6 +1442,7 @@ try
         petEvolution,
         mall,
         broadcastHub,
+        accountSessions,
         party,
         rank,
         questProgress,
@@ -1422,6 +1452,18 @@ try
     {
         ConnectionId = broadcastRegistration.ConnectionId
     };
+
+    var pongBefore = session.LastPongAt;
+    using (var pongRequest = Json(
+        """{"Type":"Pong"}"""))
+    {
+        var responses = router.Handle(
+            pongRequest.RootElement,
+            session);
+        Check(responses.Count == 0 &&
+              session.LastPongAt >= pongBefore,
+            "Pong is accepted before authentication for login-screen heartbeat");
+    }
 
     using (var announcementRequest = Json(
         """{"Type":"AnnouncementListRequest"}"""))
