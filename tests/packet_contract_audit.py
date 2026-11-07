@@ -102,14 +102,20 @@ def scan(root: Path) -> dict:
     # Mark known placeholder/partially implemented gameplay explicitly.
     # ROUTED only proves that a wire dispatcher exists, not E2E correctness.
     partial_requests = {
-        "MallAction": "OpenMall is routed; paid items, PayPal, legacy points and donation gifts are not configured.",
-        "AnnouncementListRequest": "Responds with an empty announcement list.",
-        "UseItemRequest": "Some item categories report that their effects are not supported.",
+        "MallAction": (
+            "Configurable point-shop catalog, atomic purchases and donation "
+            "gifts are implemented; PayPal orders and legacy-point transfer "
+            "still require external providers."
+        ),
+        "UseItemRequest": (
+            "Recovery items, mecha batteries/cards, dolls/festival rewards, "
+            "skill books, EXP cards, death-EXP reduction and recovered "
+            "transform scrolls are implemented; unknown scripted item effects "
+            "remain intentionally rejected."
+        ),
     }
     partial_events = {
-        "MallListResponse": "The item and gift catalog is currently empty.",
-        "AnnouncementListResponse": "The server currently responds with an empty list.",
-        "PayPalDonationCreated": "The response reports that payment is not configured.",
+        "PayPalDonationCreated": "No PayPal provider is configured.",
         "LegacyPointWithdrawalResponse": "No legacy points provider is configured.",
     }
     routes = []
