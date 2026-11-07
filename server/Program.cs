@@ -40,6 +40,8 @@ var legacyClientData =
 
 builder.Services.AddSingleton(currentClientData);
 builder.Services.AddSingleton(legacyClientData);
+builder.Services.AddSingleton(
+    new LegacyPlayerGrowthCatalog(gameDataRoot));
 
 var shopCatalog = new ShopCatalog(
     gameDataRoot,
