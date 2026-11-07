@@ -1,12 +1,6 @@
-namespace SGO.Server.Infrastructure.GameData;
+using SGO.Server.Application.Abstractions;
 
-public sealed record PetStatAdjustment(
-    int MaxHp = 0,
-    int MaxMp = 0,
-    int Attack = 0,
-    int MagicAttack = 0,
-    int Hit = 0,
-    int Dodge = 0);
+namespace SGO.Server.Infrastructure.GameData;
 
 public sealed class LegacyPetGrowthCatalog
 {
