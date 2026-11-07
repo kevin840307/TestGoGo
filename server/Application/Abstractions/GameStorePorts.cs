@@ -108,6 +108,10 @@ public interface ICharacterStore
         long dbid,
         int exp,
         int money);
+    Dictionary<string, object>? AdjustMoney(
+        long accountId,
+        long dbid,
+        int delta);
     Dictionary<string, object>? SetExperienceProgress(
         long accountId,
         long dbid,
