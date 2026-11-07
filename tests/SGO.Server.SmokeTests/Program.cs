@@ -593,10 +593,11 @@ try
             "equipment purchase refreshes EquipSync");
     }
 
-    var purchased = store.GetCharacterAssets(account.Value, id)
-        .Inventory.First(x =>
-            Convert.ToInt32(x["ItemIndex"]) == buyItem.ItemIndex);
-    var purchasedUid = Convert.ToInt64(purchased["ItemUID"]);
+    var purchasedEquip = store.GetCharacterAssets(account.Value, id)
+        .Equips.First(x =>
+            Convert.ToInt32(x["ItemIdx"]) == 18538);
+    var purchasedEquipUid =
+        Convert.ToInt64(purchasedEquip["ItemID"]);
     var moneyBeforeSell = Convert.ToInt64(
         store.GetCharacter(account.Value, id)!["Money"]);
 
@@ -604,20 +605,22 @@ try
     {
         Type = "ShopAction",
         Action = "SellNpcItem",
-        UID = purchasedUid,
-        TabType = 0,
+        UID = purchasedEquipUid,
+        TabType = 1,
         Count = 1
     })))
     {
         var responses = router.Handle(sell.RootElement, session);
         Check(responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains("\"Type\":\"SyncMoney\"")),
-            "NPC shop sell emits money sync");
+            "NPC shop sell emits money sync for sellable current equipment");
     }
 
-    Check(Convert.ToInt64(
+    Check(!store.GetCharacterAssets(account.Value, id).Equips.Any(x =>
+              Convert.ToInt64(x["ItemID"]) == purchasedEquipUid) &&
+          Convert.ToInt64(
               store.GetCharacter(account.Value, id)!["Money"]) > moneyBeforeSell,
-        "NPC shop sell adds money");
+        "NPC shop sell removes equipment and adds money");
 
     var baseAttackBeforeEquip = Convert.ToInt32(
         store.GetCharacter(account.Value, id)!["Attack"]);
