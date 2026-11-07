@@ -11,6 +11,24 @@ The primary design goals are:
 4. Static game resources should be loaded once and shared.
 5. Multiplayer runtime state should be shared by map/channel, not duplicated per connection.
 
+## Implemented shared map AI (2026-11-07)
+
+- `WorldRuntimeService` owns authoritative monster objects shared by all
+  players on a map; `ClientSession.Monsters` is a compatibility mirror of
+  references to those objects, not an independent HP/position copy.
+- `SharedMapAiTicker` owns the **single 250 ms map AI scheduler**.
+  It snapshots world-ready players per map, runs respawn once, and assigns
+  each monster to exactly one player context (current target owner or
+  nearest available player/pet). Per-client `PacketRouter.Tick` does not
+  execute monster AI for registered WebSocket sessions.
+- `MonsterNavigationService` strictly checks each monster movement segment
+  against `Blocking.dat` and uses a bounded A* path search when direct
+  chase movement is blocked. Melee line of sight is blocked by walls.
+- The map simulation is still in one process and uses map locks; per-map
+  actor queues, spatial interest management and multi-instance channels are
+  later scaling work. No 24-hour or real-client throughput guarantee
+  should be inferred from the smoke tests alone.
+
 ## Naming policy
 
 Use client-facing names in new application/domain code:
