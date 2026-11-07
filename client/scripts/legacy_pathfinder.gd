@@ -8,14 +8,15 @@ const MAX_GOAL_SEARCH_RADIUS: int = 16
 # Pathfinding runs on the main thread. A definitely unreachable target must
 # never spend an unbounded amount of time exhausting progressively larger
 # search windows and freeze the rendered frame.
-const PATH_QUERY_BUDGET_USEC: int = 6000
+const PATH_QUERY_BUDGET_USEC: int = 25000
 const PATH_SLOW_LOG_USEC: int = 4000
-const PATH_BUDGET_CHECK_INTERVAL: int = 32
+const PATH_BUDGET_CHECK_INTERVAL: int = 64
 const ADAPTIVE_SEARCH_SPECS: Array[Vector2i] = [
 	Vector2i(3, 50),
 	Vector2i(8, 80),
 	Vector2i(16, 112),
-	Vector2i(24, 144),
+	Vector2i(32, 176),
+	Vector2i(48, 224),
 ]
 
 var _map_cache: Dictionary = {}
@@ -329,6 +330,41 @@ func _find_path_adaptive(grid: Dictionary, start: Vector2i, goal: Vector2i) -> A
 	return []
 
 
+func _heap_push(open_heap: Array[Vector3i], cell: Vector2i, priority: int) -> void:
+	var index: int = open_heap.size()
+	open_heap.append(Vector3i(cell.x, cell.y, priority))
+	while index > 0:
+		var parent: int = (index - 1) / 2
+		if open_heap[parent].z <= priority:
+			break
+		open_heap[index] = open_heap[parent]
+		index = parent
+	open_heap[index] = Vector3i(cell.x, cell.y, priority)
+
+
+func _heap_pop(open_heap: Array[Vector3i]) -> Vector3i:
+	var root: Vector3i = open_heap[0]
+	var last: Vector3i = open_heap.pop_back()
+	if open_heap.is_empty():
+		return root
+
+	var index: int = 0
+	while true:
+		var left: int = index * 2 + 1
+		if left >= open_heap.size():
+			break
+		var right: int = left + 1
+		var child: int = left
+		if right < open_heap.size() and open_heap[right].z < open_heap[left].z:
+			child = right
+		if open_heap[child].z >= last.z:
+			break
+		open_heap[index] = open_heap[child]
+		index = child
+	open_heap[index] = last
+	return root
+
+
 func _find_path_with_limits(
 	grid: Dictionary,
 	start: Vector2i,
@@ -363,10 +399,14 @@ func _find_path_with_limits(
 	if goal.x < min_x or goal.x > max_x or goal.y < min_y or goal.y > max_y:
 		return []
 
-	var open: Array[Vector2i] = [start]
+	# Binary min-heap replaces the old Array scan. The previous implementation
+	# searched the entire open list for the lowest f-score on every expansion,
+	# which becomes O(n²) on large detours and caused visible frame hitches.
+	var open_heap: Array[Vector3i] = []
 	var closed: Dictionary = {}
 	var came_from: Dictionary = {}
 	var g_score: Dictionary = {start: 0}
+	_heap_push(open_heap, start, _heuristic(start, goal))
 
 	var neighbors: Array[Vector3i] = [
 		Vector3i(1, 0, 10), Vector3i(-1, 0, 10),
@@ -376,7 +416,7 @@ func _find_path_with_limits(
 	]
 
 	var expanded_since_budget_check: int = 0
-	while not open.is_empty():
+	while not open_heap.is_empty():
 		_path_query_expanded_cells += 1
 		expanded_since_budget_check += 1
 		if expanded_since_budget_check >= PATH_BUDGET_CHECK_INTERVAL:
@@ -384,19 +424,10 @@ func _find_path_with_limits(
 			if Time.get_ticks_usec() >= _path_query_deadline_usec:
 				return []
 
-		var best_index: int = 0
-		var best_score: int = 2147483647
-		for i: int in range(open.size()):
-			var candidate: Vector2i = open[i]
-			var candidate_g: int = int(g_score.get(candidate, 2147483647))
-			var candidate_f: int = candidate_g + _heuristic(candidate, goal)
-			if candidate_f < best_score:
-				best_score = candidate_f
-				best_index = i
-
-		var current: Vector2i = open[best_index]
-		open.remove_at(best_index)
-
+		var entry: Vector3i = _heap_pop(open_heap)
+		var current := Vector2i(entry.x, entry.y)
+		if closed.has(current):
+			continue
 		if current == goal:
 			return _reconstruct_path(came_from, start, goal)
 
@@ -419,8 +450,7 @@ func _find_path_with_limits(
 
 			came_from[next] = current
 			g_score[next] = new_g
-			if not open.has(next):
-				open.append(next)
+			_heap_push(open_heap, next, new_g + _heuristic(next, goal))
 
 	return []
 
