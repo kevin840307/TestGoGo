@@ -755,6 +755,7 @@ try
                 AddTitle(21)
             end
             AddTitle(21)
+            SetData("Title", 21)
         end
 
         function career_skill()
@@ -861,6 +862,7 @@ try
 
     var runtimeHasTitle = false;
     var runtimeUnlockCalls = 0;
+    var runtimeCurrentTitle = 0;
 
     var titleResult = questApiRuntime.Execute(
         "QuestApi.txt",
@@ -877,14 +879,26 @@ try
                 runtimeUnlockCalls++;
                 runtimeHasTitle = true;
                 return true;
+            },
+            SetData = (key, value) =>
+            {
+                if (!key.Equals(
+                        "Title",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    !runtimeHasTitle)
+                    return false;
+
+                runtimeCurrentTitle = value;
+                return true;
             }
         });
 
     Check(runtimeUnlockCalls == 1 &&
+          runtimeCurrentTitle == 21 &&
           titleResult.Packets.Count(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"UnlockTitle\"")) == 1,
-        "legacy AddTitle unlocks once and suppresses duplicate unlock packets");
+        "legacy AddTitle unlocks once and SetData(Title) equips the unlocked title");
 
     var runtimeCareer = 0;
     var runtimeJob = 0;
