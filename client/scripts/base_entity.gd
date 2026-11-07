@@ -1639,8 +1639,18 @@ func execute_skill_visuals(skill_id: int, skill_level: int, target_node: Node2D 
 		var fx_hit = s_res.fx_hit
 		if fx_hit != "":
 
-			if s_res.skill_type == 7 and "special_skill" in s_res and s_res.special_skill.contains("挑撥"):
+			var is_aoe_target_hit := (
+				s_res.skill_type == 7
+				and "special_skill" in s_res
+				and s_res.special_skill != null
+				and (
+					s_res.special_skill.contains("挑撥")
+					or s_res.special_skill.contains("範圍攻擊")
+				)
+				and not aoe_targets.is_empty()
+			)
 
+			if is_aoe_target_hit:
 				for t_info in aoe_targets:
 					var t_id = int(t_info.get("ID", t_info.get("id", 0)))
 					if NetworkEntityManager and NetworkEntityManager.active_entities.has(t_id):
