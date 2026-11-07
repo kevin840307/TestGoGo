@@ -1324,6 +1324,27 @@ public sealed class CombatService
                     ProtectTimeSeconds = ground.ProtectSeconds(now)
                 }
             });
+
+            // The recovered drop table contains explicit probabilities but no
+            // separate announcement flag. Treat ultra-rare entries (<= 0.5%)
+            // as treasure announcements while preserving the original rate.
+            if (drop.Chance <= 0.005)
+            {
+                var characterName =
+                    character.TryGetValue(
+                        "NAME",
+                        out var name)
+                        ? name?.ToString() ??
+                          $"角色{dbid}"
+                        : $"角色{dbid}";
+
+                _broadcasts.Publish(new
+                {
+                    Type = "SystemMessageBroadcast",
+                    Message =
+                        $"[掉寶] 恭喜 {characterName} 擊敗 {monster.Name}，獲得稀有寶物「{drop.Name}」！"
+                });
+            }
         }
     }
 
