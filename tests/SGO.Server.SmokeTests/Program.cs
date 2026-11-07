@@ -469,6 +469,12 @@ try
         account.Value, id, 50001, "TestMecha", "MS", 3600);
     var horseEquipUid = store.AddHorseEquipment(
         account.Value, id, 50293, -1, 1, 0, 1);
+    var beastCardUid1 = store.AddHorseEquipment(
+        account.Value, id, 51304, -1, 3);
+    var beastCardUid2 = store.AddHorseEquipment(
+        account.Value, id, 51304, -1, 3);
+    var beastCardUid3 = store.AddHorseEquipment(
+        account.Value, id, 51304, -1, 3);
     var batteryUid = store.AddInventoryItem(
         account.Value, id, 50102, 1);
     var recoveryUid = store.AddInventoryItem(
@@ -481,6 +487,9 @@ try
           petUid > 0 &&
           horseUid > 0 &&
           horseEquipUid > 0 &&
+          beastCardUid1 > 0 &&
+          beastCardUid2 > 0 &&
+          beastCardUid3 > 0 &&
           batteryUid > 0 &&
           recoveryUid > 0 &&
           horseCardUid > 0,
@@ -499,7 +508,7 @@ try
           seededAssets.Equips.Count == 1 &&
           seededAssets.Pets.Count == 1 &&
           seededAssets.Horses.Count == 1 &&
-          seededAssets.HorseEquips.Count == 1,
+          seededAssets.HorseEquips.Count == 4,
         "character assets round-trip from SQLite");
 
     var seededPet = seededAssets.Pets.Single();
@@ -779,6 +788,93 @@ try
                           Convert.ToInt32(x["Part"]) == 1),
             "mecha equipment assignment and part persist");
     }
+
+    // Beast Spirit is a real mecha reinforcement card (slot 3).
+    using (var tooLow = Json(JsonSerializer.Serialize(new
+    {
+        Type = "HorseEquipRequest",
+        EquipUID = beastCardUid1,
+        HorseUID = horseUid
+    })))
+    {
+        var responses = router.Handle(tooLow.RootElement, session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("機甲等級不足")),
+            "Lv1 mecha cannot equip Lv20 Beast Spirit card");
+    }
+
+    using (var mechaLevel = Json(JsonSerializer.Serialize(new
+    {
+        Type = "ChatMessage",
+        Channel = 0,
+        Message = $"/gm mechalevel {horseUid} 20",
+        BubbleType = 0
+    })))
+    {
+        var responses = router.Handle(mechaLevel.RootElement, session);
+        var leveled = store.GetCharacterAssets(account.Value, id).Horses
+            .First(x => Convert.ToInt64(x["HorseUID"]) == horseUid);
+
+        Check(Convert.ToInt32(leveled["Level"]) == 20 &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"Type\":\"SyncMechaEnergy\"")),
+            "GM mechalevel changes level and syncs mecha level/EXP");
+    }
+
+    foreach (var cardUid in new[]
+             {
+                 beastCardUid1,
+                 beastCardUid2,
+                 beastCardUid3
+             })
+    {
+        using var equipCard = Json(JsonSerializer.Serialize(new
+        {
+            Type = "HorseEquipRequest",
+            EquipUID = cardUid,
+            HorseUID = horseUid
+        }));
+        router.Handle(equipCard.RootElement, session);
+    }
+
+    var cardParts = store.GetCharacterAssets(account.Value, id).HorseEquips
+        .Where(x =>
+            Convert.ToInt32(x["EquipIdx"]) == 51304 &&
+            Convert.ToInt64(x["HorseUID"]) == horseUid)
+        .Select(x => Convert.ToInt32(x["Part"]))
+        .OrderBy(x => x)
+        .ToArray();
+
+    Check(cardParts.SequenceEqual(new[] { 3, 4, 5 }),
+        "three reinforcement cards occupy independent card1/card2/card3 slots");
+
+    var cardAssets = store.GetCharacterAssets(account.Value, id);
+    var cardCharacter = store.GetCharacter(account.Value, id)!;
+    var baseMaxHp = Convert.ToInt32(cardCharacter["MaxHP"]);
+    var cardStatusJson = JsonSerializer.Serialize(
+        SGO.Server.Application.Assets.CharacterStatCalculator
+            .ToPlayerStatusPacket(
+                cardCharacter,
+                cardAssets,
+                currentCatalog));
+
+    Check(cardStatusJson.Contains($"\"MaxHP\":{baseMaxHp + 1500}"),
+        "three Beast Spirit cards stack their +500 MaxHP bonuses");
+
+    var expHorseBefore = store.GetCharacterAssets(account.Value, id).Horses
+        .First(x => Convert.ToInt64(x["HorseUID"]) == horseUid);
+    var expBefore = Convert.ToInt32(expHorseBefore["Exp"]);
+    var expHorseAfter = store.AddHorseExperience(
+        account.Value,
+        id,
+        horseUid,
+        2500)!;
+
+    Check(Convert.ToInt32(expHorseAfter["Exp"]) > expBefore ||
+          Convert.ToInt32(expHorseAfter["Level"]) >
+              Convert.ToInt32(expHorseBefore["Level"]),
+        "mecha EXP persists and can advance mecha level");
 
     using (var petSummon = Json(JsonSerializer.Serialize(new { Type = "PetAction", Action = "Summon", PetUID = petUid })))
     {
