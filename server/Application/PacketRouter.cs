@@ -2674,6 +2674,16 @@ public sealed class PacketRouter
                 dbid);
         }
 
+        if (now - state.LastQuestProgressAt >=
+            TimeSpan.FromSeconds(2))
+        {
+            state.LastQuestProgressAt = now;
+            packets.AddRange(
+                _questProgress.RefreshCollectedItems(
+                    accountId,
+                    dbid));
+        }
+
         if (now - state.LastGroundItemCleanupAt >=
             TimeSpan.FromSeconds(1))
         {
