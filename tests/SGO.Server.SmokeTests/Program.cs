@@ -7446,6 +7446,8 @@ try
     // Test the production session lifecycle without running a background loop.
     var mapAi = new SharedMapAiTicker(
         combat,
+        worldRuntime,
+        store,
         broadcastHub,
         accountSessions,
         NullLogger<SharedMapAiTicker>.Instance);
@@ -7453,7 +7455,7 @@ try
     var originalMap = session.CurrentMapId;
     var originalReady = session.WorldReady;
     session.CharacterId = id;
-    session.CurrentMapId = 15; // city has no combat monsters
+    session.CurrentMapId = combatMapId; // active map with real monsters
     session.WorldReady = false;
     mapAi.Register(session);
     Check(session.SharedAiManaged &&
