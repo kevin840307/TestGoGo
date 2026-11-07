@@ -277,6 +277,9 @@ var currentCatalog = new CurrentClientDataCatalog(
             "生命吸收",
             "生命吸收"),
         new CurrentSkillDefinition(
+            23108,
+            "狂戰士體"),
+        new CurrentSkillDefinition(
             33011,
             "冰之觸",
             "冰之觸"),
@@ -367,6 +370,19 @@ var currentCatalog = new CurrentClientDataCatalog(
             0, 0, 0, 0,
             0, 0, 0,
             0, 0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            23108, 1, 4, 0,
+            0, 0,
+            0, 0, 0,
+            0, 0, 1800,
+            60, 1,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0)
+        {
+            AtkBonusPercent = 50
+        },
         new CurrentSkillLevelDefinition(
             33011, 1, 7, 0,
             0, 0,
