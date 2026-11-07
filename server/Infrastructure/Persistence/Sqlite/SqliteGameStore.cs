@@ -102,6 +102,7 @@ public sealed class SqliteGameStore : IGameStore
 
         foreach (var character in list)
             ApplyClubFields(db, character);
+            ApplyTitleFields(db, character);
 
         // The recovered client renders exactly three character slots and also
         // reads character_list[0].ACCID when creating a character. Keep the
@@ -130,6 +131,7 @@ public sealed class SqliteGameStore : IGameStore
 
         if (character is not null)
             ApplyClubFields(db, character);
+            ApplyTitleFields(db, character);
 
         return character;
     }
@@ -243,6 +245,49 @@ public sealed class SqliteGameStore : IGameStore
             ["Quests"] = Array.Empty<object>(),
             ["Shortcuts"] = Array.Empty<object>()
         };
+    }
+
+    private static void ApplyTitleFields(
+        SqliteConnection db,
+        Dictionary<string, object> character)
+    {
+        var dbid = Convert.ToInt64(
+            character.GetValueOrDefault("DBID", 0L));
+
+        if (dbid <= 0)
+            return;
+
+        using (var state = db.CreateCommand())
+        {
+            state.CommandText = """
+                SELECT current_title
+                  FROM character_title_state
+                 WHERE character_id=$id
+                 LIMIT 1
+                """;
+            Arg(state, "$id", dbid);
+
+            character["Title"] = Convert.ToInt32(
+                state.ExecuteScalar() ?? 0);
+        }
+
+        var unlocked = new List<int>();
+        using (var titles = db.CreateCommand())
+        {
+            titles.CommandText = """
+                SELECT title_id
+                  FROM character_titles
+                 WHERE character_id=$id
+                 ORDER BY title_id
+                """;
+            Arg(titles, "$id", dbid);
+
+            using var reader = titles.ExecuteReader();
+            while (reader.Read())
+                unlocked.Add(reader.GetInt32(0));
+        }
+
+        character["UnlockedTitles"] = unlocked.ToArray();
     }
 
     private static void ApplyClubFields(
@@ -1699,6 +1744,137 @@ public sealed class SqliteGameStore : IGameStore
         Arg(cmd, "$id", dbid);
         return Convert.ToInt64(
             cmd.ExecuteScalar() ?? 0L);
+    }
+
+    public IReadOnlyList<int> GetUnlockedTitles(
+        long accountId,
+        long dbid)
+    {
+        var result = new List<int>();
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return result;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT title_id
+              FROM character_titles
+             WHERE character_id=$id
+             ORDER BY title_id
+            """;
+        Arg(cmd, "$id", dbid);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+            result.Add(reader.GetInt32(0));
+
+        return result;
+    }
+
+    public bool HasTitle(
+        long accountId,
+        long dbid,
+        int titleId)
+    {
+        if (titleId is < 1 or > 26)
+            return false;
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return false;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT count(*)
+              FROM character_titles
+             WHERE character_id=$id
+               AND title_id=$title
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$title", titleId);
+
+        return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+    }
+
+    public bool UnlockTitle(
+        long accountId,
+        long dbid,
+        int titleId)
+    {
+        if (titleId is < 1 or > 26)
+            return false;
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return false;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO character_titles(
+                character_id,title_id,unlocked_utc_ms)
+            VALUES($id,$title,$time)
+            ON CONFLICT(character_id,title_id)
+            DO NOTHING
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$title", titleId);
+        Arg(cmd, "$time",
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        cmd.ExecuteNonQuery();
+
+        return true;
+    }
+
+    public bool SetCurrentTitle(
+        long accountId,
+        long dbid,
+        int titleId)
+    {
+        if (titleId is < 0 or > 26)
+            return false;
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return false;
+
+        if (titleId > 0)
+        {
+            using var check = db.CreateCommand();
+            check.Transaction = tx;
+            check.CommandText = """
+                SELECT count(*)
+                  FROM character_titles
+                 WHERE character_id=$id
+                   AND title_id=$title
+                """;
+            Arg(check, "$id", dbid);
+            Arg(check, "$title", titleId);
+
+            if (Convert.ToInt32(check.ExecuteScalar()) <= 0)
+                return false;
+        }
+
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            INSERT INTO character_title_state(
+                character_id,current_title)
+            VALUES($id,$title)
+            ON CONFLICT(character_id)
+            DO UPDATE SET
+                current_title=excluded.current_title
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$title", titleId);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return false;
+
+        tx.Commit();
+        return true;
     }
 
     public List<Dictionary<string, object>> GetShortcuts(
