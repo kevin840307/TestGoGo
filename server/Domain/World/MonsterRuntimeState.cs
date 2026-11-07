@@ -29,6 +29,10 @@ public sealed class MonsterRuntimeState
 
     public bool HasTarget { get; set; }
     public long TargetCharacterId { get; set; }
+    // 0 means the monster targets the character directly. A positive value
+    // means it targets that character's summoned pet while ownership stays
+    // bound to TargetCharacterId for multiplayer tick arbitration.
+    public long TargetPetUid { get; set; }
     public DateTimeOffset LastAiAt { get; set; } = DateTimeOffset.MinValue;
     public MonsterAiState AiState { get; set; } = MonsterAiState.Idle;
 
