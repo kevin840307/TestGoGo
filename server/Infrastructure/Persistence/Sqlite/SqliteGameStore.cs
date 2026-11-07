@@ -4204,6 +4204,204 @@ public sealed class SqliteGameStore : IGameStore
             capacities.HorseEquip);
     }
 
+    public CharacterStatResetResult ResetCharacterStatsFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        int str,
+        int dex,
+        int con,
+        int wis,
+        int maxHp,
+        int maxMp,
+        int maxSp,
+        int attack,
+        int defense,
+        int magicAttack,
+        int magicDefense,
+        int hit,
+        int dodge,
+        int moveSpeed)
+    {
+        str = Math.Clamp(str, 1, 100);
+        dex = Math.Clamp(dex, 1, 100);
+        con = Math.Clamp(con, 1, 100);
+        wis = Math.Clamp(wis, 1, 100);
+        maxHp = Math.Max(1, maxHp);
+        maxMp = Math.Max(0, maxMp);
+        maxSp = Math.Max(0, maxSp);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在", null);
+
+        int sourceCount;
+        using (var source = db.CreateCommand())
+        {
+            source.Transaction = tx;
+            source.CommandText = """
+                SELECT count
+                  FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND item_index=$item
+                   AND in_bank=0
+                   AND in_shop=0
+                 LIMIT 1
+                """;
+            Arg(source, "$uid", itemUid);
+            Arg(source, "$id", dbid);
+            Arg(source, "$item", itemIndex);
+
+            var raw = source.ExecuteScalar();
+            if (raw is null)
+                return new(false, "找不到可使用的再生水晶", null);
+
+            sourceCount = Convert.ToInt32(raw);
+            if (sourceCount <= 0)
+                return new(false, "再生水晶數量不足", null);
+        }
+
+        int oldStr;
+        int oldDex;
+        int oldCon;
+        int oldWis;
+        int oldExpUse;
+
+        using (var current = db.CreateCommand())
+        {
+            current.Transaction = tx;
+            current.CommandText = """
+                SELECT str,dex,con,wis,exp_use
+                  FROM characters
+                 WHERE id=$id
+                   AND account_id=$account
+                 LIMIT 1
+                """;
+            Arg(current, "$id", dbid);
+            Arg(current, "$account", accountId);
+
+            using var reader = current.ExecuteReader();
+            if (!reader.Read())
+                return new(false, "角色不存在", null);
+
+            oldStr = reader.GetInt32(0);
+            oldDex = reader.GetInt32(1);
+            oldCon = reader.GetInt32(2);
+            oldWis = reader.GetInt32(3);
+            oldExpUse = reader.GetInt32(4);
+        }
+
+        var refunded = checked(
+            Math.Max(0, oldStr - str) +
+            Math.Max(0, oldDex - dex) +
+            Math.Max(0, oldCon - con) +
+            Math.Max(0, oldWis - wis));
+        var newExpUse = checked(
+            Math.Max(0, oldExpUse) +
+            refunded);
+
+        using (var reset = db.CreateCommand())
+        {
+            reset.Transaction = tx;
+            reset.CommandText = """
+                UPDATE characters
+                   SET str=$str,
+                       dex=$dex,
+                       con=$con,
+                       wis=$wis,
+                       exp_use=$expUse,
+                       hp=MIN(
+                           $maxHp,
+                           MAX(
+                               0,
+                               hp + MAX(0, $maxHp-max_hp))),
+                       max_hp=$maxHp,
+                       mp=MIN(
+                           $maxMp,
+                           MAX(
+                               0,
+                               mp + MAX(0, $maxMp-max_mp))),
+                       max_mp=$maxMp,
+                       sp=MIN(
+                           $maxSp,
+                           MAX(
+                               0,
+                               sp + MAX(0, $maxSp-max_sp))),
+                       max_sp=$maxSp,
+                       attack=$attack,
+                       defense=$defense,
+                       magic_attack=$magicAttack,
+                       magic_defense=$magicDefense,
+                       hit=$hit,
+                       dodge=$dodge,
+                       move_speed=$moveSpeed
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(reset, "$str", str);
+            Arg(reset, "$dex", dex);
+            Arg(reset, "$con", con);
+            Arg(reset, "$wis", wis);
+            Arg(reset, "$expUse", newExpUse);
+            Arg(reset, "$maxHp", maxHp);
+            Arg(reset, "$maxMp", maxMp);
+            Arg(reset, "$maxSp", maxSp);
+            Arg(reset, "$attack", Math.Max(0, attack));
+            Arg(reset, "$defense", Math.Max(0, defense));
+            Arg(reset, "$magicAttack", Math.Max(0, magicAttack));
+            Arg(reset, "$magicDefense", Math.Max(0, magicDefense));
+            Arg(reset, "$hit", Math.Max(0, hit));
+            Arg(reset, "$dodge", Math.Max(0, dodge));
+            Arg(reset, "$moveSpeed", Math.Max(1, moveSpeed));
+            Arg(reset, "$id", dbid);
+            Arg(reset, "$account", accountId);
+
+            if (reset.ExecuteNonQuery() != 1)
+                return new(false, "能力點重置失敗", null);
+        }
+
+        using (var consume = db.CreateCommand())
+        {
+            consume.Transaction = tx;
+            consume.CommandText = sourceCount == 1
+                ? """
+                  DELETE FROM inventory_items
+                   WHERE uid=$uid
+                     AND character_id=$id
+                     AND item_index=$item
+                     AND in_bank=0
+                     AND in_shop=0
+                  """
+                : """
+                  UPDATE inventory_items
+                     SET count=count-1
+                   WHERE uid=$uid
+                     AND character_id=$id
+                     AND item_index=$item
+                     AND count > 1
+                     AND in_bank=0
+                     AND in_shop=0
+                  """;
+            Arg(consume, "$uid", itemUid);
+            Arg(consume, "$id", dbid);
+            Arg(consume, "$item", itemIndex);
+
+            if (consume.ExecuteNonQuery() != 1)
+                return new(false, "再生水晶消耗失敗", null);
+        }
+
+        tx.Commit();
+
+        return new(
+            true,
+            $"能力點已重置，退回 {refunded} 點",
+            GetCharacter(accountId, dbid));
+    }
+
     public (bool Success, string Message, long RewardUid) OpenDoll(
         long accountId,
         long dbid,
