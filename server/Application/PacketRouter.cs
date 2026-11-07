@@ -15,6 +15,7 @@ using SGO.Server.Application.Rank;
 using SGO.Server.Application.Quest;
 using SGO.Server.Application.Shops;
 using SGO.Server.Application.Trade;
+using SGO.Server.Domain.Assets;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
 using SGO.Server.Infrastructure.GameData;
@@ -35,6 +36,7 @@ public sealed class PacketRouter
 
     private readonly IGameStore _store;
     private readonly WorldDataService _world;
+    private readonly BlockingMapService _blocking;
     private readonly QuestRuntime _quests;
     private readonly CombatService _combat;
     private readonly ResourceRecoveryService _resourceRecovery;
@@ -64,6 +66,7 @@ public sealed class PacketRouter
     public PacketRouter(
         IGameStore store,
         WorldDataService world,
+        BlockingMapService blocking,
         QuestRuntime quests,
         CombatService combat,
         ResourceRecoveryService resourceRecovery,
@@ -92,6 +95,7 @@ public sealed class PacketRouter
     {
         _store = store;
         _world = world;
+        _blocking = blocking;
         _quests = quests;
         _combat = combat;
         _resourceRecovery = resourceRecovery;
@@ -587,6 +591,10 @@ public sealed class PacketRouter
 
                 var assets = _store.GetCharacterAssets(accountId, dbid);
                 ApplyAssetsToCharacterBootstrap(character, assets);
+                state.CanCrossSpecialTerrain =
+                    ResolveSpecialTerrainCapability(
+                        character,
+                        assets);
                 character["Shortcuts"] = _store.GetShortcuts(accountId, dbid);
                 character["Quests"] = _store.GetQuests(accountId, dbid);
                 ApplyEffectiveStats(character, assets);
@@ -645,6 +653,36 @@ public sealed class PacketRouter
 
                 var x = req.Int("X");
                 var y = req.Int("Y");
+
+                if (!_blocking.IsMoveAllowed(
+                        state.CurrentMapId,
+                        state.LastX,
+                        state.LastY,
+                        x,
+                        y,
+                        state.CanCrossSpecialTerrain))
+                {
+                    _log.LogWarning(
+                        "[MOVE_BLOCKED] DBID={DBID} Map={MapID} From=({FromX},{FromY}) To=({ToX},{ToY}) Special={Special}",
+                        state.CharacterId.Value,
+                        state.CurrentMapId,
+                        state.LastX,
+                        state.LastY,
+                        x,
+                        y,
+                        state.CanCrossSpecialTerrain);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "PositionCorrection",
+                            X = (int)Math.Round(state.LastX),
+                            Y = (int)Math.Round(state.LastY)
+                        }
+                    ];
+                }
+
                 state.LastX = x;
                 state.LastY = y;
                 _store.UpdatePosition(
@@ -1258,6 +1296,17 @@ public sealed class PacketRouter
 
                 if (success)
                 {
+                    var character = _store.GetCharacter(
+                        accountId,
+                        state.CharacterId.Value);
+                    if (character is not null)
+                    {
+                        state.CanCrossSpecialTerrain =
+                            ResolveSpecialTerrainCapability(
+                                character,
+                                assets);
+                    }
+
                     response.Add(BuildAndBroadcastEffectiveStatusPacket(state, 
                         accountId,
                         state.CharacterId.Value,
@@ -4346,6 +4395,40 @@ public sealed class PacketRouter
         }
 
         return true;
+    }
+
+    private static bool ResolveSpecialTerrainCapability(
+        Dictionary<string, object> character,
+        CharacterAssets assets)
+    {
+        var summonedHorseUid = Convert.ToInt64(
+            character.GetValueOrDefault(
+                "SummonedHorseUID",
+                -1L));
+
+        if (summonedHorseUid <= 0)
+            return false;
+
+        foreach (var equip in assets.HorseEquips)
+        {
+            if (Convert.ToInt64(equip["HorseUID"]) != summonedHorseUid)
+                continue;
+
+            if (Convert.ToInt32(equip["Part"]) != 0)
+                continue;
+
+            var equipIndex = Convert.ToInt32(
+                equip["EquipIdx"]);
+
+            if ((equipIndex >= 50311 && equipIndex <= 50318) ||
+                equipIndex == 50344 ||
+                (equipIndex >= 50359 && equipIndex <= 50361))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static void ApplyAssetsToCharacterBootstrap(
