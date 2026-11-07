@@ -203,7 +203,8 @@ public sealed class CombatService
         session.LastMonsterAiTick = now;
 
         if (!session.CharacterId.HasValue ||
-            session.CurrentMapId <= 0)
+            session.CurrentMapId <= 0 ||
+            !session.WorldReady)
             return [];
 
         var currentCharacterId = session.CharacterId.Value;
