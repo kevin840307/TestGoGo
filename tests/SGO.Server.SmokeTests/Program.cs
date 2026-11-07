@@ -116,6 +116,22 @@ var currentCatalog = new CurrentClientDataCatalog(
             atk: 10,
             equipSlot: 5,
             attackRange: 140),
+        CurrentItem(
+            31262,
+            "雙銃雷霆砲+16",
+            "weapon",
+            price: 999,
+            atk: 99,
+            equipSlot: 5,
+            attackRange: 180),
+        CurrentItem(
+            49962,
+            "戰鬥蝕日斧",
+            "weapon",
+            price: 500,
+            atk: 42,
+            equipSlot: 5,
+            attackRange: 130),
 
         CurrentItem(
             50001,
@@ -158,7 +174,17 @@ var currentCatalog = new CurrentClientDataCatalog(
             })
     });
 
-var shopCatalog = new ShopCatalog(gameDataRoot, currentCatalog);
+var legacyClientCatalog = new LegacyClientDataCatalog(
+    new (string Category, int Id, string Name)[]
+    {
+        ("weapon", 31262, "戰鬥蝕日斧")
+    },
+    Array.Empty<(int Id, string Name)>());
+
+var shopCatalog = new ShopCatalog(
+    gameDataRoot,
+    currentCatalog,
+    legacyClientCatalog);
 var batteryCatalog = new HorseBatteryCatalog(currentCatalog);
 var recoveryCatalog = new RecoveryItemCatalog(currentCatalog);
 var horseCardCatalog = new HorseCardCatalog(currentCatalog);
@@ -251,9 +277,23 @@ Check(shopCatalog.GetShopItems(2).Any(x => x.ItemIndex == 18538) &&
       !shopCatalog.GetShopItems(2).Any(x => x.ItemIndex == 31078),
     "legacy Shop2 equip maps by name from old 31078 to current 18538");
 Check(shopCatalog.MappingWarnings.Any(x =>
-        x.Contains("[LEGACY_NAME_UNCONFIRMED]") &&
+        x.Contains("[OLD_NAME_MISSING]") &&
         x.Contains("Shop=1")),
     "unconfirmed legacy recovery IDs are skipped instead of reused");
+
+Check(shopCatalog.GetShopItems(9).Any(x =>
+          x.ItemIndex == 49962 &&
+          x.Name == "戰鬥蝕日斧") &&
+      !shopCatalog.GetShopItems(9).Any(x =>
+          x.ItemIndex == 31262),
+    "Shop9 remaps legacy 31262 戰鬥蝕日斧 to current item ID by confirmed name");
+
+Check(shopCatalog.MappingInfo.Any(x =>
+        x.Contains("[NAME_REMAP]") &&
+        x.Contains("LegacyItemID=31262") &&
+        x.Contains("CurrentItemID=49962") &&
+        x.Contains("戰鬥蝕日斧")),
+    "Shop9 collision logs exact legacy-to-current name remap");
 Check(batteryCatalog.GetEnergy(50102) == 3600,
     "current mecha battery 50102 resolves 3600 seconds");
 Check(recoveryCatalog.Find(1001) is { RecoverHp: 140 },
@@ -288,6 +328,7 @@ try
         skillCatalog,
         horseCardCatalog,
         currentCatalog,
+        legacyClientCatalog,
         combat,
         config);
     var router = new PacketRouter(
