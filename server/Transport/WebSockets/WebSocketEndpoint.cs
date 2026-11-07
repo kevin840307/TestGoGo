@@ -22,6 +22,7 @@ public static class WebSocketEndpoint
             HttpContext ctx,
             PacketRouter router,
             ServerBroadcastHub broadcasts,
+            AccountSessionRegistry sessions,
             ILoggerFactory loggerFactory) =>
         {
             var log = loggerFactory.CreateLogger("SGO.WebSocket");
@@ -92,19 +93,57 @@ public static class WebSocketEndpoint
                            await worldTimer.WaitForNextTickAsync(
                                worldTickToken))
                     {
+                        var now = DateTimeOffset.UtcNow;
                         IReadOnlyList<object> packets;
+                        var shouldPing = false;
+                        var heartbeatTimedOut = false;
+                        var superseded = false;
+
                         lock (state)
                         {
-                            router.SyncPresence(state);
+                            superseded =
+                                state.AccountId.HasValue &&
+                                !sessions.IsCurrent(
+                                    state.AccountId.Value,
+                                    state.ConnectionId);
 
-                            packets = router.Tick(
-                                state,
-                                DateTimeOffset.UtcNow);
+                            if (!superseded)
+                            {
+                                router.SyncPresence(state);
+                                packets = router.Tick(
+                                    state,
+                                    now);
+
+                                shouldPing =
+                                    ConnectionHeartbeat.ShouldPing(
+                                        state.LastPingAt,
+                                        now);
+
+                                if (shouldPing)
+                                    state.LastPingAt = now;
+
+                                heartbeatTimedOut =
+                                    ConnectionHeartbeat.IsTimedOut(
+                                        state.LastPongAt,
+                                        now);
+                            }
+                            else
+                            {
+                                state.CloseRequested = true;
+                                packets = Array.Empty<object>();
+                            }
                         }
 
                         await SendPacketsAsync(
                             packets,
                             worldTickToken);
+
+                        if (shouldPing)
+                        {
+                            await SendPacketsAsync(
+                                [new { Type = "Ping" }],
+                                worldTickToken);
+                        }
 
                         if (!broadcastQueue.IsEmpty)
                         {
@@ -115,6 +154,29 @@ public static class WebSocketEndpoint
                             await SendPacketsAsync(
                                 broadcastPackets,
                                 worldTickToken);
+                        }
+
+                        if (superseded || heartbeatTimedOut)
+                        {
+                            if (heartbeatTimedOut && !superseded)
+                            {
+                                log.LogWarning(
+                                    "Heartbeat timeout. Connection={ConnectionID} Account={AccountID}",
+                                    state.ConnectionId,
+                                    state.AccountId);
+                            }
+
+                            if (socket.State == WebSocketState.Open)
+                            {
+                                await socket.CloseOutputAsync(
+                                    WebSocketCloseStatus.NormalClosure,
+                                    superseded
+                                        ? "Superseded login"
+                                        : "Heartbeat timeout",
+                                    CancellationToken.None);
+                            }
+
+                            break;
                         }
                     }
                 }
