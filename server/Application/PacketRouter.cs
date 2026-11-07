@@ -469,11 +469,67 @@ public sealed class PacketRouter
             case "HorseEquipRequest":
             {
                 if (!state.CharacterId.HasValue) return [];
+
+                var equipUid = req.Int("EquipUID");
+                var horseUid = req.Int("HorseUID");
+                var assetsBefore = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                var equipRecord = assetsBefore.HorseEquips.FirstOrDefault(x =>
+                    Convert.ToInt64(x["EquipUID"]) == equipUid);
+                var horseRecord = assetsBefore.Horses.FirstOrDefault(x =>
+                    Convert.ToInt64(x["HorseUID"]) == horseUid);
+
+                if (equipRecord is null || horseRecord is null)
+                {
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = "找不到機甲或機甲裝備"
+                    }];
+                }
+
+                var item = _current.FindItem(
+                    Convert.ToInt32(equipRecord["EquipIdx"]));
+
+                if (item is null)
+                {
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = "機甲裝備資料不存在"
+                    }];
+                }
+
+                if (Convert.ToInt32(horseRecord["Level"]) < item.ReqLevel)
+                {
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = $"機甲等級不足，需要 Lv.{item.ReqLevel}"
+                    }];
+                }
+
+                var horseType = horseRecord["HorseType"]?.ToString() ?? "MS";
+                if (!string.IsNullOrWhiteSpace(item.HorseType) &&
+                    !string.Equals(
+                        item.HorseType,
+                        horseType,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = "此強化/裝備不適用於這種機甲類型"
+                    }];
+                }
+
                 var success = _store.EquipHorseItem(
                     accountId,
                     state.CharacterId.Value,
-                    req.Int("EquipUID"),
-                    req.Int("HorseUID"));
+                    equipUid,
+                    horseUid);
 
                 var assets = _store.GetCharacterAssets(
                     accountId,
