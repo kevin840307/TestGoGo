@@ -571,6 +571,12 @@ func _on_skill_cast_received(caster_id: int, caster_type: int, skill_id: int, sk
 	else:
 		caster_node = get_active_entity(caster_id)
 
+	# 99001 is an extreme screen-range stress skill. Keep its combat result
+	# authoritative on the server but skip the legacy visual pipeline entirely;
+	# some legacy effect/animation combinations can terminate Godot natively.
+	if skill_id == 99001:
+		return
+
 	if is_instance_valid(caster_node) and caster_node.has_method("execute_skill_visuals"):
 		var target_node = null
 		if target_id > 0:
