@@ -1396,6 +1396,66 @@ try
               .Contains("\"Type\":\"OpenCreateClubWindow\""),
         "player without a club can request the create-club UI");
 
+    var rejectedClubCreate = club.Handle(
+        account.Value,
+        secondCharacterId,
+        "Create",
+        0,
+        "測試團",
+        "",
+        0,
+        0);
+
+    Check(
+        store.GetClubIdForCharacter(
+            secondCharacterId) == 0 &&
+        JsonSerializer.Serialize(rejectedClubCreate)
+            .Contains("30 級"),
+        "club creation rejects characters below the original level requirement");
+
+    Check(store.SetLevel(
+              account.Value,
+              secondCharacterId,
+              30) is not null &&
+          store.AddRewards(
+              account.Value,
+              secondCharacterId,
+              0,
+              500_000) is not null &&
+          store.AddInventoryItem(
+              account.Value,
+              secondCharacterId,
+              2560,
+              1) > 0 &&
+          store.AddInventoryItem(
+              account.Value,
+              secondCharacterId,
+              2561,
+              1) > 0 &&
+          store.AddInventoryItem(
+              account.Value,
+              secondCharacterId,
+              2562,
+              1) > 0,
+        "prepare original club creation level, fee, and signed documents");
+
+    var beforeClubCreateCharacter = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+    var beforeClubCreateAssets = store.GetCharacterAssets(
+        account.Value,
+        secondCharacterId);
+
+    int ClubDocumentCount(
+        SGO.Server.Domain.Assets.CharacterAssets assets,
+        int itemId)
+        => assets.Inventory
+            .Where(x =>
+                Convert.ToInt32(x["ItemIndex"]) == itemId &&
+                Convert.ToInt32(x["InBank"]) == 0 &&
+                Convert.ToInt32(x["InShop"]) == 0)
+            .Sum(x => Convert.ToInt32(x["Count"]));
+
     var createClubPackets = club.Handle(
         account.Value,
         secondCharacterId,
@@ -1406,11 +1466,39 @@ try
         0,
         0);
 
+    var afterClubCreateCharacter = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+    var afterClubCreateAssets = store.GetCharacterAssets(
+        account.Value,
+        secondCharacterId);
+
     Check(store.GetClubIdForCharacter(
               secondCharacterId) > 0 &&
           JsonSerializer.Serialize(createClubPackets)
-              .Contains("\"ClubID\":"),
-        "club creation persists leader membership and returns ClubSync");
+              .Contains("\"ClubID\":") &&
+          Convert.ToInt64(afterClubCreateCharacter["Money"]) ==
+              Convert.ToInt64(beforeClubCreateCharacter["Money"]) -
+              500_000 &&
+          ClubDocumentCount(
+              beforeClubCreateAssets,
+              2560) ==
+              ClubDocumentCount(
+                  afterClubCreateAssets,
+                  2560) + 1 &&
+          ClubDocumentCount(
+              beforeClubCreateAssets,
+              2561) ==
+              ClubDocumentCount(
+                  afterClubCreateAssets,
+                  2561) + 1 &&
+          ClubDocumentCount(
+              beforeClubCreateAssets,
+              2562) ==
+              ClubDocumentCount(
+                  afterClubCreateAssets,
+                  2562) + 1,
+        "club creation atomically consumes 500k and all three signed documents");
 
     Check(JsonSerializer.Serialize(
               club.Handle(
