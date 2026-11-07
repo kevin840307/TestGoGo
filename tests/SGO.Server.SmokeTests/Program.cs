@@ -415,11 +415,31 @@ try
     Check(growth.AbilityPointsGained(1, 4) == 6,
         "legacy ExpUse.csv grants two ability points per gained level");
 
+    var enemyDrops = new EnemyDropCatalog(
+        gameDataRoot,
+        currentCatalog);
+
+    var mappedEnemyDrops = Enumerable.Range(1, 300)
+        .SelectMany(enemyDrops.GetDrops)
+        .ToArray();
+
+    Check(mappedEnemyDrops.Length > 0 &&
+          mappedEnemyDrops.All(x =>
+              currentCatalog.FindItem(x.ItemId) is not null),
+        "enemy drop table exposes only safely mapped current-client ItemIDs");
+
+    Check(mappedEnemyDrops.Any(x =>
+              x.LegacyItemId == 31262 &&
+              x.ItemId == 49962 &&
+              x.Name == "戰鬥蝕日斧"),
+        "enemy drop table remaps legacy weapon 31262 to current 49962 by name");
+
     var combat = new CombatService(
         store,
         world,
         currentCatalog,
-        growth);
+        growth,
+        enemyDrops);
     var shops = new ShopService(
         store,
         store,
