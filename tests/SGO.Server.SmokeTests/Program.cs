@@ -4908,7 +4908,35 @@ try
 
     var sawDeath = false;
     IReadOnlyList<object> deathPackets = Array.Empty<object>();
-    var rewardBeforeKill = store.GetCharacter(account.Value, id)!;
+
+    var rewardBeforeKill = store.GetCharacter(
+        account.Value,
+        id)!;
+    var rewardLevelBeforeKill =
+        Convert.ToInt32(rewardBeforeKill["Level"]);
+    var nextLevelThreshold =
+        growth.ExperienceThresholdForLevel(
+            rewardLevelBeforeKill);
+    var accumulatedBeforeKill =
+        Convert.ToInt32(rewardBeforeKill["ExpAcc"]);
+
+    if (accumulatedBeforeKill < nextLevelThreshold)
+    {
+        store.AddRewards(
+            account.Value,
+            id,
+            Math.Max(
+                0,
+                nextLevelThreshold -
+                accumulatedBeforeKill -
+                1),
+            0);
+
+        rewardBeforeKill = store.GetCharacter(
+            account.Value,
+            id)!;
+    }
+
     var activePetBeforePlayerKill = store.GetCharacterAssets(
             account.Value,
             id)
@@ -4986,6 +5014,16 @@ try
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"SyncMoney\"")),
         "monster kill syncs EXP threshold and money to the existing client protocol");
+
+    Check(
+        Convert.ToInt32(rewardAfterKill["Level"]) >
+            rewardLevelBeforeKill &&
+        deathPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"PlayEffect\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"EffectName\":\"LevelUp\"")),
+        "character level-up emits the existing client PlayEffect animation packet");
 
     monster.RespawnAt = DateTimeOffset.UtcNow.AddMilliseconds(-1);
     var respawnPackets = combat.TickRespawns(
