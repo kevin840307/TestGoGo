@@ -3213,6 +3213,38 @@ public sealed class SqliteGameStore : IGameStore
         return GetCharacter(accountId, dbid);
     }
 
+    public Dictionary<string, object>? SetExperienceProgress(
+        long accountId,
+        long dbid,
+        int level,
+        int maxExp,
+        int abilityPointsToAdd)
+    {
+        level = Math.Clamp(level, 1, 255);
+        maxExp = Math.Max(1, maxExp);
+        abilityPointsToAdd = Math.Max(0, abilityPointsToAdd);
+
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET level=$level,
+                   max_exp=$maxExp,
+                   exp_use=exp_use+$points
+             WHERE id=$id AND account_id=$a
+            """;
+        Arg(cmd, "$level", level);
+        Arg(cmd, "$maxExp", maxExp);
+        Arg(cmd, "$points", abilityPointsToAdd);
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return null;
+
+        return GetCharacter(accountId, dbid);
+    }
+
     public Dictionary<string, object>? SetLevel(
         long accountId,
         long dbid,
