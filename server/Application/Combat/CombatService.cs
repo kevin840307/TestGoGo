@@ -1537,6 +1537,15 @@ public sealed class CombatService
             }
         };
 
+        if (isPortableRepair)
+        {
+            packets.Add(new
+            {
+                Type = "OpenRepairWindow",
+                RepairType = 10
+            });
+        }
+
         if (isTaunt)
         {
             var runtime = SyncSessionMonsters(session);
@@ -2429,15 +2438,6 @@ public sealed class CombatService
             effective.AttackRange);
 
         var packets = new List<object>();
-        if (isPortableRepair)
-        {
-            packets.Add(new
-            {
-                Type = "OpenRepairWindow",
-                RepairType = 10
-            });
-        }
-
 
         lock (runtime.SyncRoot)
         {
