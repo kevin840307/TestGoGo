@@ -3970,6 +3970,62 @@ try
                   "\"Type\":\"EntityDamage\"")),
         "summoned pet automatically acquires, sticks to and attacks nearby monster");
 
+    // Monster aggro must consider the summoned pet even when the pet has not
+    // attacked first. Put the pet closer than the player and verify the
+    // monster chooses and damages the pet directly.
+    monster.CurrentHp = monster.MaxHp;
+    monster.RespawnAt = null;
+    monster.HasTarget = false;
+    monster.TargetCharacterId = 0;
+    monster.TargetPetUid = 0;
+    monster.AiState = MonsterAiState.Idle;
+    monster.LastAttackAt = DateTimeOffset.MinValue;
+
+    session.PetTargets.Clear();
+    session.PetLastAttackAt[petUid] = DateTimeOffset.UtcNow;
+    session.PetPositions[petUid] =
+        (monster.X + 60, monster.Y);
+
+    var petBeforeMonsterAggro = store.GetCharacterAssets(
+            account.Value,
+            id)
+        .Pets
+        .First(x => Convert.ToInt64(x["UID"]) == petUid);
+    var petHpBeforeMonsterAggro =
+        Convert.ToInt32(petBeforeMonsterAggro["HP"]);
+
+    var monsterPetAggroPackets = combat.TickAi(
+        session,
+        account.Value,
+        monster.X + 300,
+        monster.Y,
+        session.LastMonsterAiTick.AddSeconds(1));
+
+    var petAfterMonsterAggro = store.GetCharacterAssets(
+            account.Value,
+            id)
+        .Pets
+        .First(x => Convert.ToInt64(x["UID"]) == petUid);
+
+    Check(
+        monster.HasTarget &&
+        monster.TargetCharacterId == id &&
+        monster.TargetPetUid == petUid &&
+        Convert.ToInt32(petAfterMonsterAggro["HP"]) <
+            petHpBeforeMonsterAggro &&
+        monsterPetAggroPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EntityDamage\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"TargetType\":4") &&
+            JsonSerializer.Serialize(x).Contains(
+                $"\"TargetID\":{4_000_000L + petUid}")),
+        "monster proactively aggros and attacks a closer summoned pet without waiting for pet attack");
+
+    monster.HasTarget = false;
+    monster.TargetCharacterId = 0;
+    monster.TargetPetUid = 0;
+
     // Owner leash uses a grace period. Falling far behind should not
     // immediately teleport the pet; only sustained off-screen distance does.
     session.LastX = monster.X - 1200;
@@ -4204,6 +4260,15 @@ try
     var sawDeath = false;
     IReadOnlyList<object> deathPackets = Array.Empty<object>();
     var rewardBeforeKill = store.GetCharacter(account.Value, id)!;
+    var activePetBeforePlayerKill = store.GetCharacterAssets(
+            account.Value,
+            id)
+        .Pets
+        .First(x => Convert.ToInt64(x["UID"]) == petUid);
+    var petExpBeforePlayerKill =
+        Convert.ToInt32(activePetBeforePlayerKill["Exp"]);
+    var petLevelBeforePlayerKill =
+        Convert.ToInt32(activePetBeforePlayerKill["Level"]);
 
     for (var i = 0; i < 100 && !sawDeath; i++)
     {
@@ -4237,6 +4302,25 @@ try
         Convert.ToInt64(rewardAfterKill["Money"]) >
             Convert.ToInt64(rewardBeforeKill["Money"]),
         "monster kill persists character EXP and money rewards");
+
+    var activePetAfterPlayerKill = store.GetCharacterAssets(
+            account.Value,
+            id)
+        .Pets
+        .First(x => Convert.ToInt64(x["UID"]) == petUid);
+
+    Check(
+        Convert.ToInt32(activePetAfterPlayerKill["Exp"]) >
+            petExpBeforePlayerKill ||
+        Convert.ToInt32(activePetAfterPlayerKill["Level"]) >
+            petLevelBeforePlayerKill,
+        "player monster kill also grants EXP to the currently summoned pet");
+
+    Check(
+        deathPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"PetSync\"")),
+        "player monster kill syncs summoned pet EXP to the client");
 
     Check(
         Convert.ToInt32(rewardAfterKill["MaxExp"]) ==
