@@ -778,6 +778,13 @@ var currentCatalog = new CurrentClientDataCatalog(
             price: 1),
 
         CurrentItem(
+            2000,
+            "封測傳送器",
+            "general",
+            price: 1,
+            scriptName: "封測傳送器"),
+
+        CurrentItem(
             2803,
             "大聲公",
             "general",
@@ -4947,6 +4954,106 @@ try
         persistedCapacity.HorseEquipMaxSize ==
             capacityAfter.HorseEquipMaxSize,
         "expanded capacities survive a fresh store instance/reconnect migration path");
+
+    var teleportOriginalMap =
+        session.CurrentMapId;
+    var teleportOriginalX =
+        session.LastX;
+    var teleportOriginalY =
+        session.LastY;
+    var teleportOriginalPending =
+        session.PendingMapSpawn;
+    var teleportOriginalWorldReady =
+        session.WorldReady;
+    var teleportOriginalLoadedMap =
+        session.LoadedMonsterMapId;
+
+    Check(
+        store.UpdateLocation(
+            account.Value,
+            id,
+            19,
+            5000,
+            4000),
+        "prepare non-capital location for teleport-item test");
+    session.CurrentMapId = 19;
+    session.LastX = 5000;
+    session.LastY = 4000;
+    session.PendingMapSpawn = false;
+    session.WorldReady = true;
+
+    var capitalTeleportUid =
+        store.AddInventoryItem(
+            account.Value,
+            id,
+            2000,
+            1);
+
+    using (var useCapitalTeleport = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "UseItemRequest",
+            ItemUID = capitalTeleportUid
+        })))
+    {
+        var responses = router.Handle(
+            useCapitalTeleport.RootElement,
+            session);
+        var teleportedCharacter =
+            store.GetCharacter(
+                account.Value,
+                id)!;
+        var json = JsonSerializer.Serialize(
+            responses);
+
+        Check(
+            Convert.ToInt32(
+                teleportedCharacter["MapID"]) == 15 &&
+            Convert.ToInt32(
+                Convert.ToDouble(
+                    teleportedCharacter["LocX"])) == 9408 &&
+            Convert.ToInt32(
+                Convert.ToDouble(
+                    teleportedCharacter["LocY"])) == 10336 &&
+            session.CurrentMapId == 15 &&
+            Math.Round(session.LastX) == 9408 &&
+            Math.Round(session.LastY) == 10336 &&
+            session.PendingMapSpawn &&
+            !session.WorldReady &&
+            !store.GetCharacterAssets(
+                account.Value,
+                id).Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    capitalTeleportUid) &&
+            json.Contains(
+                "\"Type\":\"InventorySync\"") &&
+            json.Contains(
+                "\"Type\":\"ChangeMap\"") &&
+            json.Contains(
+                "\"MapID\":15") &&
+            json.Contains(
+                "首都．尼尼亞皇城"),
+            "2000 teleport item atomically consumes itself and returns DB/session state to the fixed capital spawn");
+    }
+
+    store.UpdateLocation(
+        account.Value,
+        id,
+        teleportOriginalMap,
+        checked((int)Math.Round(
+            teleportOriginalX)),
+        checked((int)Math.Round(
+            teleportOriginalY)));
+    session.CurrentMapId =
+        teleportOriginalMap;
+    session.LastX = teleportOriginalX;
+    session.LastY = teleportOriginalY;
+    session.PendingMapSpawn =
+        teleportOriginalPending;
+    session.WorldReady =
+        teleportOriginalWorldReady;
+    session.LoadedMonsterMapId =
+        teleportOriginalLoadedMap;
 
     var statsBeforeRegeneration =
         store.GetCharacter(
