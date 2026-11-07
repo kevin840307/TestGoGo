@@ -1001,6 +1001,8 @@ func _on_unequip_requested(target_slot: int) -> void :
 		if NetworkManager.has_method("send_secure_packet"):
 			NetworkManager.send_secure_packet({"Type": "UnequipRequest", "TargetSlot": target_slot})
 
+var _initial_hud_ready: bool = false
+
 func initialize_hud(player: CharacterBody2D) -> void :
 	var hud_started_usec := Time.get_ticks_usec()
 	target_player = player
@@ -1055,6 +1057,10 @@ func _initialize_hud_deferred() -> void :
 		announcement_window.call("set_loading")
 	if NetworkManager:
 		NetworkManager.send_announcement_list_request()
+	_initial_hud_ready = true
+
+func is_initial_hud_ready() -> bool:
+	return _initial_hud_ready
 
 func update_map_info(map_id: int, raw_node_name: String) -> void :
 	_last_displayed_coords = null
