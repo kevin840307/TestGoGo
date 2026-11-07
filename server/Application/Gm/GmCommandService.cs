@@ -1,6 +1,7 @@
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Combat;
+using SGO.Server.Application.Messaging;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Infrastructure.GameData;
 
@@ -15,6 +16,7 @@ public sealed class GmCommandService
     private readonly LegacyClientDataCatalog _legacyClient;
     private readonly LegacyPlayerGrowthCatalog _growth;
     private readonly CombatService _combat;
+    private readonly ServerBroadcastHub _broadcasts;
     private readonly IConfiguration _config;
 
     public GmCommandService(
@@ -25,6 +27,7 @@ public sealed class GmCommandService
         LegacyClientDataCatalog legacyClient,
         LegacyPlayerGrowthCatalog growth,
         CombatService combat,
+        ServerBroadcastHub broadcasts,
         IConfiguration config)
     {
         _store = store;
@@ -34,6 +37,7 @@ public sealed class GmCommandService
         _legacyClient = legacyClient;
         _growth = growth;
         _combat = combat;
+        _broadcasts = broadcasts;
         _config = config;
     }
 
@@ -93,6 +97,8 @@ public sealed class GmCommandService
                 "clearskills" => ClearSkills(accountId, dbid),
                 "spawn" => Spawn(parts, session),
                 "killall" => KillAll(session),
+                "cleardrops" or "clearground" or "clearloot"
+                    => ClearGroundItems(session),
                 _ => [Chat($"未知 GM 指令：{command}。使用 /gm help")]
             };
         }
@@ -862,6 +868,36 @@ public sealed class GmCommandService
             .ToArray();
     }
 
+    private IReadOnlyList<object> ClearGroundItems(
+        ClientSession session)
+    {
+        if (session.CurrentMapId <= 0)
+            return [Chat("目前不在地圖中")];
+
+        var mapId = session.CurrentMapId;
+        var entityIds = _store.ClearGroundItems(mapId);
+
+        foreach (var entityId in entityIds)
+        {
+            session.GroundItems.Remove(entityId);
+
+            _broadcasts.PublishToMap(
+                mapId,
+                new
+                {
+                    Type = "DespawnEntity",
+                    EntityID = entityId
+                },
+                null);
+        }
+
+        return
+        [
+            Chat(
+                $"已清除 Map{mapId} 上 {entityIds.Count} 個掉落物")
+        ];
+    }
+
     private static IReadOnlyList<object> KillAll(
         ClientSession session)
     {
@@ -907,5 +943,5 @@ public sealed class GmCommandService
            "maxstats | attackspeed <1-1000> | money <n> | item <id> [count] | equip <id> | " +
            "mecha <cardId> | mechacard <cardId> | mechaequip <id> [horseUid] | mechalevel <horseUid> <level> | pet <petId> [name] | " +
            "skill <id|all> [lv] | skills | clearskills | " +
-           "spawn <enemyId> [x] [y] | killall";
+           "spawn <enemyId> [x] [y] | killall | cleardrops";
 }
