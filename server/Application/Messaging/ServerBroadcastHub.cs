@@ -82,6 +82,30 @@ public sealed class ServerBroadcastHub
             queue.Enqueue(packet);
     }
 
+    public bool PublishToCharacter(
+        long characterId,
+        object packet)
+    {
+        if (characterId <= 0)
+            return false;
+
+        foreach (var pair in _presence)
+        {
+            if (pair.Value.CharacterId != characterId)
+                continue;
+
+            if (!_queues.TryGetValue(
+                    pair.Key,
+                    out var queue))
+                continue;
+
+            queue.Enqueue(packet);
+            return true;
+        }
+
+        return false;
+    }
+
     public void PublishToMap(
         int mapId,
         object packet,
