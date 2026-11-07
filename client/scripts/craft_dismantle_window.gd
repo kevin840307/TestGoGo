@@ -11,6 +11,8 @@ const RECIPE_PATH: = "res://Assets/Recipe.json"
 @onready var dismantling_panel = $Background / ContentContainer / DismantlingPanel
 
 var _initial_prepared: bool = false
+var _static_prepared: bool = false
+var _cached_recipe_data: Array = []
 
 func _ready() -> void :
 
@@ -33,21 +35,40 @@ func _ready() -> void :
 
 	_show_crafting(false)
 
+func prepare_static_async() -> void :
+	if _static_prepared:
+		return
+	var started_usec: int = Time.get_ticks_usec()
+	_cached_recipe_data = _load_recipe_data()
+	if crafting_panel and crafting_panel.has_method("prepare_static_tree_async"):
+		await crafting_panel.prepare_static_tree_async(_cached_recipe_data)
+	_static_prepared = true
+	print("[CRAFT_STATIC_PREWARM] recipes=%d total_ms=%.2f" % [
+		_cached_recipe_data.size(),
+		float(Time.get_ticks_usec() - started_usec) / 1000.0,
+	])
+
 func prepare_initial_async() -> void :
 	if _initial_prepared:
 		return
 	var total_started_usec: int = Time.get_ticks_usec()
-	var recipe_data: Array = _load_recipe_data()
+	if not _static_prepared:
+		await prepare_static_async()
+	var recipe_data: Array = _cached_recipe_data
 
 	await get_tree().process_frame
 	var craft_started_usec: int = Time.get_ticks_usec()
-	if crafting_panel and crafting_panel.has_method("set_recipe_data"):
+	if crafting_panel and crafting_panel.has_method("refresh_availability_async"):
+		await crafting_panel.refresh_availability_async()
+	elif crafting_panel and crafting_panel.has_method("set_recipe_data"):
 		crafting_panel.set_recipe_data(recipe_data)
 	var craft_ms: float = float(Time.get_ticks_usec() - craft_started_usec) / 1000.0
 
 	await get_tree().process_frame
 	var dismantle_started_usec: int = Time.get_ticks_usec()
-	if dismantling_panel and dismantling_panel.has_method("set_recipe_data"):
+	if dismantling_panel and dismantling_panel.has_method("set_recipe_data_initial_async"):
+		await dismantling_panel.set_recipe_data_initial_async(recipe_data)
+	elif dismantling_panel and dismantling_panel.has_method("set_recipe_data"):
 		dismantling_panel.set_recipe_data(recipe_data)
 	var dismantle_ms: float = float(Time.get_ticks_usec() - dismantle_started_usec) / 1000.0
 
