@@ -2688,12 +2688,6 @@ public sealed class CombatService
             accountId,
             session.CharacterId.Value);
 
-    private void AddActivePetKillExperience(
-    private void     session,
-    private void     accountId,
-    private void     monster,
-    private void     packets);
-
         if (character is null)
             return;
 
