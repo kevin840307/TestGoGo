@@ -4,6 +4,7 @@ using SGO.Server.Application.Assets;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
+using SGO.Server.Application.Items;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Shops;
 using SGO.Server.Domain.Sessions;
@@ -27,6 +28,7 @@ public sealed class PacketRouter
     private readonly ShopService _shopService;
     private readonly IReadOnlyDictionary<string, IClientPacketHandler> _packetHandlers;
     private readonly GmCommandService _gm;
+    private readonly DollService _dolls;
     private readonly HorseBatteryCatalog _horseBatteries;
     private readonly RecoveryItemCatalog _recoveryItems;
     private readonly HorseCardCatalog _horseCards;
@@ -43,6 +45,7 @@ public sealed class PacketRouter
         ShopService shopService,
         IEnumerable<IClientPacketHandler> packetHandlers,
         GmCommandService gm,
+        DollService dolls,
         HorseBatteryCatalog horseBatteries,
         RecoveryItemCatalog recoveryItems,
         HorseCardCatalog horseCards,
@@ -60,6 +63,7 @@ public sealed class PacketRouter
             x => x.PacketType,
             StringComparer.Ordinal);
         _gm = gm;
+        _dolls = dolls;
         _horseBatteries = horseBatteries;
         _recoveryItems = recoveryItems;
         _horseCards = horseCards;
@@ -281,6 +285,15 @@ public sealed class PacketRouter
 
                 var itemIndex = Convert.ToInt32(
                     inventoryItem["ItemIndex"]);
+
+                if (_dolls.Supports(itemIndex))
+                {
+                    return _dolls.Open(
+                        accountId,
+                        state.CharacterId.Value,
+                        itemUid,
+                        itemIndex);
+                }
 
                 var recovery = _recoveryItems.Find(itemIndex);
                 if (recovery is not null)
