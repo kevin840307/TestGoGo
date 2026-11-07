@@ -475,8 +475,6 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	if current_hp <= 0:
 		return
-	if current_state in ["attack", "hit", "death", "die"]:
-		return
 
 	move_idle_generation += 1
 	last_move_packet_ms = Time.get_ticks_msec()
@@ -487,10 +485,9 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 		network_move_active = false
 		return
 
-	# Do not create/kill a tween per network packet. Packet jitter or a missed
-	# waypoint used to make the next 240 ms tween cover two or more steps,
-	# producing a visible speed burst that looked like teleporting.
-	# Keep a bounded visual speed instead; the client smoothly catches up.
+	# Packet jitter or a missed waypoint must not turn the next packet into a
+	# short high-speed tween. Keep the newest authoritative target and move
+	# toward it at a bounded visual speed.
 	var requested_time := max(speed_time, 0.01)
 	var requested_speed := remaining / requested_time
 	network_move_speed = clamp(
@@ -498,8 +495,15 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 		NETWORK_MOVE_MIN_SPEED,
 		NETWORK_MOVE_MAX_SPEED
 	)
-	network_move_active = true
 
+	# Combat animation owns the body while it is playing, but keep the newest
+	# movement target buffered. When ATTACK/HIT finishes, movement resumes
+	# smoothly instead of having discarded one or more server waypoints.
+	if current_state in ["attack", "hit", "death", "die"]:
+		network_move_active = false
+		return
+
+	network_move_active = true
 	if current_state != "walk":
 		current_state = "walk"
 		sync_animation()
@@ -545,7 +549,17 @@ func sync_animation() -> void :
 
 func _on_animation_finished() -> void :
 	if (sprite.animation.begins_with("HIT") or sprite.animation.begins_with("ATTACK")) and current_hp > 0:
-		current_state = "idle"
+		var has_recent_move := (
+			last_move_packet_ms > 0 and
+			Time.get_ticks_msec() - last_move_packet_ms <= 700 and
+			global_position.distance_to(network_move_target) > NETWORK_MOVE_SNAP_EPSILON
+		)
+		if has_recent_move:
+			network_move_active = true
+			current_state = "walk"
+		else:
+			network_move_active = false
+			current_state = "idle"
 		sync_animation()
 
 func set_target_indicator(has_target: bool) -> void :
