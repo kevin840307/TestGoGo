@@ -33,6 +33,10 @@ public sealed class QuestRuntimeBindings
 
     public Func<int, bool>? HasTitle { get; init; }
     public Func<int, bool>? UnlockTitle { get; init; }
+
+    public Func<int, bool>? HasSkill { get; init; }
+    public Func<int, bool>? AddSkill { get; init; }
+    public Func<int, int, bool>? SetCareer { get; init; }
 }
 
 public sealed class QuestRuntime
@@ -40,15 +44,21 @@ public sealed class QuestRuntime
     private readonly string _questRoot;
     private readonly ShopCatalog _shops;
     private readonly EnemyDropCatalog? _legacyItems;
+    private readonly LegacyClientDataCatalog? _legacyClient;
+    private readonly CurrentClientDataCatalog? _current;
 
     public QuestRuntime(
         string questRoot,
         ShopCatalog shops,
-        EnemyDropCatalog? legacyItems = null)
+        EnemyDropCatalog? legacyItems = null,
+        LegacyClientDataCatalog? legacyClient = null,
+        CurrentClientDataCatalog? current = null)
     {
         _questRoot = questRoot;
         _shops = shops;
         _legacyItems = legacyItems;
+        _legacyClient = legacyClient;
+        _current = current;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     }
 
@@ -216,7 +226,79 @@ public sealed class QuestRuntime
             });
         });
         script.Globals["SetData"] = DynValue.NewCallback((ctx, args) => DynValue.Nil);
-        script.Globals["SetCareer"] = DynValue.NewCallback((ctx, args) => DynValue.Nil);
+
+        script.Globals["SetCareer"] = DynValue.NewCallback((ctx, args) =>
+        {
+            if (args.Count < 2)
+                return DynValue.NewBoolean(false);
+
+            var career = (int)args[0].Number;
+            var job = (int)args[1].Number;
+
+            if (bindings?.SetCareer?.Invoke(career, job) != true)
+                throw new ScriptRuntimeException(
+                    $"SetCareer failed: Career={career}, Job={job}");
+
+            return DynValue.NewBoolean(true);
+        });
+
+        script.Globals["HasSkill"] = DynValue.NewCallback((ctx, args) =>
+        {
+            if (args.Count < 1)
+                return DynValue.NewNumber(0);
+
+            var currentSkillId = ResolveLegacySkillId(
+                (int)args[0].Number);
+
+            return DynValue.NewNumber(
+                currentSkillId > 0 &&
+                bindings?.HasSkill?.Invoke(currentSkillId) == true
+                    ? 1
+                    : 0);
+        });
+
+        script.Globals["AddSkill"] = DynValue.NewCallback((ctx, args) =>
+        {
+            if (args.Count < 1)
+                return DynValue.NewBoolean(false);
+
+            var legacySkillId = (int)args[0].Number;
+            var currentSkillId =
+                ResolveLegacySkillId(legacySkillId);
+
+            if (currentSkillId <= 0)
+            {
+                throw new ScriptRuntimeException(
+                    $"AddSkill mapping unavailable: legacy skill {legacySkillId}");
+            }
+
+            if (bindings?.AddSkill?.Invoke(currentSkillId) != true)
+            {
+                throw new ScriptRuntimeException(
+                    $"AddSkill failed: legacy {legacySkillId} -> current {currentSkillId}");
+            }
+
+            return DynValue.NewBoolean(true);
+        });
+
+        script.Globals["GetCountItemCount"] =
+            DynValue.NewCallback((ctx, args) =>
+            {
+                if (args.Count < 1)
+                    return DynValue.NewNumber(0);
+
+                var mapping = _legacyItems?.ResolveItem(
+                    (int)args[0].Number);
+
+                if (mapping is null)
+                    return DynValue.NewNumber(0);
+
+                var count = bindings?.GetItemCount?.Invoke(
+                    mapping.ItemId,
+                    mapping.TabType) ?? 0;
+
+                return DynValue.NewNumber(count);
+            });
 
         script.Globals["CheckItem"] = DynValue.NewCallback((ctx, args) =>
         {
@@ -477,6 +559,22 @@ public sealed class QuestRuntime
             });
 
         return result;
+    }
+
+    private int ResolveLegacySkillId(int legacySkillId)
+    {
+        if (legacySkillId <= 0 ||
+            _legacyClient is null ||
+            _current is null)
+            return 0;
+
+        var legacyName =
+            _legacyClient.FindSkillName(legacySkillId);
+
+        if (string.IsNullOrWhiteSpace(legacyName))
+            return 0;
+
+        return _current.FindSkillByName(legacyName)?.SkillId ?? 0;
     }
 
     private string LoadAndPreprocessScript(
