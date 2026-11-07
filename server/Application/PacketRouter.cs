@@ -988,6 +988,63 @@ public sealed class PacketRouter
                     ];
                 }
 
+                var scriptedItem =
+                    _current.FindItem(itemIndex);
+
+                if (scriptedItem is not null &&
+                    scriptedItem.ScriptName.Equals(
+                        "無罪之書",
+                        StringComparison.Ordinal))
+                {
+                    var character =
+                        _store.UseDeathExpReductionItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            itemIndex,
+                            90);
+
+                    if (character is null)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "無法使用無罪之書"
+                            }
+                        ];
+                    }
+
+                    var assets =
+                        _store.GetCharacterAssets(
+                            accountId,
+                            state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        new
+                        {
+                            Type = "PlayerStatusSync",
+                            ExpDeath = character["ExpDeath"]
+                        },
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "死亡經驗值已減少 90%"
+                        }
+                    ];
+                }
+
                 var skillBook =
                     _current.ResolveSkillBook(itemIndex);
 
