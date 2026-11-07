@@ -543,7 +543,9 @@ public sealed class PacketRouter
                             activePetUid,
                             out var runtimePosition)
                             ? runtimePosition
-                            : (state.LastX + 40, state.LastY + 20);
+                            : (
+                                X: state.LastX + 40,
+                                Y: state.LastY + 20);
 
                     return _combat.PetAttack(
                         state,
@@ -943,6 +945,7 @@ public sealed class PacketRouter
                     _combat.BuildCurrentMapSnapshot(state));
                 packets.AddRange(
                     BuildActivePetSpawnPackets(
+                        state,
                         accountId,
                         dbid,
                         state.LastX,
