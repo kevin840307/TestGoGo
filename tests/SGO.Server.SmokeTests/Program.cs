@@ -1649,6 +1649,126 @@ try
               "\"Name\":\"測試團\""),
         "club ranking exposes ClubID while using leader ownership internally");
 
+    var clubLeaderSession = new ClientSession
+    {
+        ConnectionId =
+            clubLeaderRegistration.ConnectionId,
+        AccountId = account.Value,
+        CharacterId = secondCharacterId,
+        CurrentMapId = 15
+    };
+    var clubMemberSession = new ClientSession
+    {
+        ConnectionId =
+            clubMemberRegistration.ConnectionId,
+        AccountId = account.Value,
+        CharacterId = id,
+        CurrentMapId = 15
+    };
+
+    using (var leaderQuit = Json(
+        """{"Type":"ChatMessage","Message":"/quit","Channel":0,"BubbleType":0}"""))
+    {
+        var responses = router.Handle(
+            leaderQuit.RootElement,
+            clubLeaderSession);
+
+        Check(
+            JsonSerializer.Serialize(responses)
+                .Contains("團長無法直接退出戰團") &&
+            store.GetClubIdForCharacter(
+                secondCharacterId) == clubId,
+            "club leader cannot use /quit");
+    }
+
+    using (var promote = Json(
+        """{"Type":"ChatMessage","Message":"/poweron 2 TestCharacter","Channel":0,"BubbleType":0}"""))
+    {
+        var responses = router.Handle(
+            promote.RootElement,
+            clubLeaderSession);
+        var snapshot = store.GetClubSnapshot(
+            account.Value,
+            secondCharacterId,
+            DateTimeOffset.UtcNow
+                .ToUnixTimeMilliseconds())!;
+
+        Check(
+            snapshot.Members.Any(x =>
+                x.DbId == id &&
+                x.Position == 2) &&
+            !responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"ChatBroadcast\"")),
+            "/poweron changes a lower member position and is intercepted from normal chat");
+    }
+
+    using (var memberQuit = Json(
+        """{"Type":"ChatMessage","Message":"/quit","Channel":0,"BubbleType":0}"""))
+    {
+        var responses = router.Handle(
+            memberQuit.RootElement,
+            clubMemberSession);
+
+        Check(
+            JsonSerializer.Serialize(responses)
+                .Contains("已退出戰團") &&
+            store.GetClubIdForCharacter(id) == 0,
+            "non-leader /quit removes membership persistently");
+    }
+
+    club.Handle(
+        account.Value,
+        secondCharacterId,
+        "Invite",
+        id,
+        "",
+        "",
+        0,
+        0);
+    club.Handle(
+        account.Value,
+        id,
+        "Accept",
+        secondCharacterId,
+        "",
+        "",
+        0,
+        0);
+
+    Check(store.GetClubIdForCharacter(id) == clubId,
+        "club member can rejoin after /quit for kick-command coverage");
+
+    using (var fire = Json(
+        """{"Type":"ChatMessage","Message":"/fire TestCharacter","Channel":0,"BubbleType":0}"""))
+    {
+        var responses = router.Handle(
+            fire.RootElement,
+            clubLeaderSession);
+
+        Check(
+            JsonSerializer.Serialize(responses)
+                .Contains("移出戰團") &&
+            store.GetClubIdForCharacter(id) == 0,
+            "/fire removes only a lower-position club member");
+    }
+
+    using (var dismiss = Json(
+        """{"Type":"ChatMessage","Message":"/dismiss","Channel":0,"BubbleType":0}"""))
+    {
+        var responses = router.Handle(
+            dismiss.RootElement,
+            clubLeaderSession);
+
+        Check(
+            JsonSerializer.Serialize(responses)
+                .Contains("戰團已解散") &&
+            store.GetClubIdForCharacter(
+                secondCharacterId) == 0 &&
+            store.GetClubIdForCharacter(id) == 0,
+            "/dismiss removes the leader club and all remaining memberships");
+    }
+
     broadcastHub.Unregister(
         clubLeaderRegistration.ConnectionId);
     broadcastHub.Unregister(
