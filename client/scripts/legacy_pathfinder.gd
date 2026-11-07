@@ -3,6 +3,7 @@ extends Node
 const CELL_SIZE: int = 16
 const BLOCK_MASK: int = 0x07
 const SEARCH_WINDOW_CELLS: int = 50
+const HALF_SEARCH_WINDOW_CELLS: int = 25
 const MAX_GOAL_SEARCH_RADIUS: int = 8
 
 var _map_cache: Dictionary = {}
@@ -10,7 +11,7 @@ var _map_cache: Dictionary = {}
 func get_path(map_id: int, start_world: Vector2, target_world: Vector2) -> PackedVector2Array:
 	var grid: Dictionary = _get_grid(map_id)
 	if grid.is_empty():
-		return PackedVector2Array([target_world])
+		return PackedVector2Array()
 
 	if _is_segment_walkable(grid, start_world, target_world):
 		return PackedVector2Array([target_world])
@@ -27,7 +28,7 @@ func get_path(map_id: int, start_world: Vector2, target_world: Vector2) -> Packe
 			return PackedVector2Array()
 		goal_cell = nearest
 
-	var cell_path: Array[Vector2i] = _find_path(grid, start_cell, goal_cell)
+	var cell_path: Array[Vector2i] = _find_segmented_path(grid, start_cell, goal_cell)
 	if cell_path.size() < 2:
 		return PackedVector2Array()
 
@@ -53,9 +54,11 @@ func _get_grid(map_id: int) -> Dictionary:
 		return _map_cache[map_id] as Dictionary
 
 	var map_name: String = "Map%02d" % map_id
+	var legacy_relative: String = "../Old/服務端/Dat/Map/%s/Blocking.dat" % map_name
+	var legacy_absolute: String = ProjectSettings.globalize_path("res://").path_join(legacy_relative)
 	var candidates: Array[String] = [
 		"res://legacy_map/%s/Blocking.dat" % map_name,
-		"res://../Old/服務端/Dat/Map/%s/Blocking.dat" % map_name,
+		legacy_absolute,
 	]
 
 	var file: FileAccess = null
@@ -152,6 +155,46 @@ func _find_nearest_walkable(grid: Dictionary, origin: Vector2i, radius: int) -> 
 	return Vector2i(-1, -1)
 
 
+func _find_segmented_path(grid: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
+	var complete: Array[Vector2i] = [start]
+	var current: Vector2i = start
+	var safety: int = 0
+
+	while current != goal and safety < 64:
+		safety += 1
+		var delta := Vector2(goal.x - current.x, goal.y - current.y)
+		var segment_goal: Vector2i = goal
+
+		if absi(goal.x - current.x) >= SEARCH_WINDOW_CELLS - 6 or absi(goal.y - current.y) >= SEARCH_WINDOW_CELLS - 6:
+			if delta.length_squared() <= 0.001:
+				break
+			var direction: Vector2 = delta.normalized()
+			var advance: float = float(SEARCH_WINDOW_CELLS - 8)
+			segment_goal = Vector2i(
+				current.x + roundi(direction.x * advance),
+				current.y + roundi(direction.y * advance)
+			)
+			if _is_blocked(grid, segment_goal):
+				var nearest: Vector2i = _find_nearest_walkable(grid, segment_goal, MAX_GOAL_SEARCH_RADIUS)
+				if nearest.x < 0:
+					return []
+				segment_goal = nearest
+
+		var part: Array[Vector2i] = _find_path(grid, current, segment_goal)
+		if part.size() < 2:
+			return []
+
+		for i: int in range(1, part.size()):
+			complete.append(part[i])
+
+		var next_current: Vector2i = part[part.size() - 1]
+		if next_current == current:
+			return []
+		current = next_current
+
+	return complete if current == goal else []
+
+
 func _find_path(grid: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
 	if start == goal:
 		return [start]
@@ -163,13 +206,13 @@ func _find_path(grid: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vect
 
 	if max_x - min_x + 1 > SEARCH_WINDOW_CELLS:
 		var center_x: int = floori(float(start.x + goal.x) / 2.0)
-		min_x = maxi(0, center_x - SEARCH_WINDOW_CELLS >> 1)
+		min_x = maxi(0, center_x - HALF_SEARCH_WINDOW_CELLS)
 		max_x = mini(int(grid.get("width", 0)) - 1, min_x + SEARCH_WINDOW_CELLS - 1)
 		min_x = maxi(0, max_x - SEARCH_WINDOW_CELLS + 1)
 
 	if max_y - min_y + 1 > SEARCH_WINDOW_CELLS:
 		var center_y: int = floori(float(start.y + goal.y) / 2.0)
-		min_y = maxi(0, center_y - SEARCH_WINDOW_CELLS >> 1)
+		min_y = maxi(0, center_y - HALF_SEARCH_WINDOW_CELLS)
 		max_y = mini(int(grid.get("height", 0)) - 1, min_y + SEARCH_WINDOW_CELLS - 1)
 		min_y = maxi(0, max_y - SEARCH_WINDOW_CELLS + 1)
 
