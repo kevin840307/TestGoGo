@@ -1889,13 +1889,82 @@ public sealed class PacketRouter
     {
         try
         {
+            var assetsChanged = false;
+            var dbid = state.CharacterId ?? 0;
+
             var result = _quests.Execute(
                 npc.Script,
                 function,
                 npc.EntityId,
                 npc.Name,
                 choice,
-                name => GetCharacterData(character, name));
+                name => GetCharacterData(character, name),
+                new QuestRuntimeBindings
+                {
+                    GetFlag = name =>
+                        dbid > 0
+                            ? _store.GetQuestFlag(
+                                accountId,
+                                dbid,
+                                name)
+                            : 0,
+                    SetFlag = (name, value) =>
+                    {
+                        if (dbid <= 0 ||
+                            !_store.SetQuestFlag(
+                                accountId,
+                                dbid,
+                                name,
+                                value))
+                        {
+                            throw new InvalidOperationException(
+                                $"Unable to persist quest flag {name}");
+                        }
+                    },
+                    GetItemCount = (itemId, tabType) =>
+                        dbid > 0
+                            ? GetQuestItemCount(
+                                accountId,
+                                dbid,
+                                itemId,
+                                tabType)
+                            : 0,
+                    ItemListCountLeft = tabType =>
+                        dbid > 0
+                            ? GetQuestItemListCountLeft(
+                                accountId,
+                                dbid,
+                                tabType)
+                            : 0,
+                    AddItem = (itemId, tabType, count) =>
+                    {
+                        if (dbid <= 0)
+                            return false;
+
+                        var success = AddQuestItem(
+                            accountId,
+                            dbid,
+                            itemId,
+                            tabType,
+                            count);
+                        assetsChanged |= success;
+                        return success;
+                    },
+                    RemoveItem = (itemId, tabType, count) =>
+                    {
+                        if (dbid <= 0)
+                            return false;
+
+                        var success = RemoveQuestItem(
+                            accountId,
+                            dbid,
+                            itemId,
+                            tabType,
+                            count);
+                        assetsChanged |= success;
+                        return success;
+                    }
+                });
 
             if (result.RebornMapId.HasValue &&
                 result.RebornX.HasValue &&
@@ -1928,6 +1997,37 @@ public sealed class PacketRouter
                 state.PendingMapSpawn = true;
             }
 
+            if (assetsChanged &&
+                state.CharacterId.HasValue)
+            {
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                result.Packets.Add(new
+                {
+                    Type = "InventorySync",
+                    Items = assets.Inventory,
+                    MaxSize = assets.InventoryMaxSize
+                });
+                result.Packets.Add(new
+                {
+                    Type = "EquipSync",
+                    Equips = assets.Equips,
+                    MaxSize = assets.EquipMaxSize
+                });
+                result.Packets.Add(
+                    BuildEffectiveStatusPacket(
+                        accountId,
+                        state.CharacterId.Value,
+                        assets));
+                result.Packets.Add(
+                    BuildAppearancePacket(
+                        accountId,
+                        state.CharacterId.Value,
+                        assets));
+            }
+
             return result.Packets;
         }
         catch (Exception ex)
@@ -1944,6 +2044,193 @@ public sealed class PacketRouter
                 Message = $"NPC 腳本執行失敗: {npc.Script}"
             }];
         }
+    }
+
+    private int GetQuestItemCount(
+        long accountId,
+        long dbid,
+        int itemId,
+        int tabType)
+    {
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            dbid);
+
+        if (tabType == 0)
+        {
+            return assets.Inventory
+                .Where(x =>
+                    Convert.ToInt32(x["ItemIndex"]) == itemId &&
+                    Convert.ToInt32(x["InBank"]) == 0 &&
+                    Convert.ToInt32(x["InShop"]) == 0)
+                .Sum(x => Math.Max(
+                    0,
+                    Convert.ToInt32(x["Count"])));
+        }
+
+        if (tabType == 1)
+        {
+            return assets.Equips.Count(x =>
+                Convert.ToInt32(x["ItemIdx"]) == itemId &&
+                Convert.ToInt32(x["InBank"]) == 0 &&
+                Convert.ToInt32(x["InShop"]) == 0);
+        }
+
+        return 0;
+    }
+
+    private int GetQuestItemListCountLeft(
+        long accountId,
+        long dbid,
+        int tabType)
+    {
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            dbid);
+
+        return tabType switch
+        {
+            0 => Math.Max(
+                0,
+                assets.InventoryMaxSize -
+                assets.Inventory.Count(x =>
+                    Convert.ToInt32(x["InBank"]) == 0 &&
+                    Convert.ToInt32(x["InShop"]) == 0)),
+            1 => Math.Max(
+                0,
+                assets.EquipMaxSize -
+                assets.Equips.Count(x =>
+                    Convert.ToInt32(x["InBank"]) == 0 &&
+                    Convert.ToInt32(x["InShop"]) == 0)),
+            _ => 0
+        };
+    }
+
+    private bool AddQuestItem(
+        long accountId,
+        long dbid,
+        int itemId,
+        int tabType,
+        int count)
+    {
+        count = Math.Max(1, count);
+
+        if (GetQuestItemListCountLeft(
+                accountId,
+                dbid,
+                tabType) < (tabType == 0 ? 1 : count))
+            return false;
+
+        if (tabType == 0)
+        {
+            return _store.AddInventoryItem(
+                       accountId,
+                       dbid,
+                       itemId,
+                       count) > 0;
+        }
+
+        if (tabType != 1)
+            return false;
+
+        for (var i = 0; i < count; i++)
+        {
+            if (_store.AddEquipment(
+                    accountId,
+                    dbid,
+                    itemId,
+                    255) <= 0)
+                return false;
+        }
+
+        return true;
+    }
+
+    private bool RemoveQuestItem(
+        long accountId,
+        long dbid,
+        int itemId,
+        int tabType,
+        int count)
+    {
+        count = Math.Max(1, count);
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            dbid);
+
+        if (tabType == 0)
+        {
+            var stacks = assets.Inventory
+                .Where(x =>
+                    Convert.ToInt32(x["ItemIndex"]) == itemId &&
+                    Convert.ToInt32(x["InBank"]) == 0 &&
+                    Convert.ToInt32(x["InShop"]) == 0)
+                .ToArray();
+
+            if (stacks.Sum(x =>
+                    Math.Max(
+                        0,
+                        Convert.ToInt32(x["Count"]))) < count)
+                return false;
+
+            var remaining = count;
+            foreach (var stack in stacks)
+            {
+                if (remaining <= 0)
+                    break;
+
+                var stackCount = Math.Max(
+                    0,
+                    Convert.ToInt32(stack["Count"]));
+                var remove = Math.Min(
+                    remaining,
+                    stackCount);
+
+                var result = _store.DiscardAsset(
+                    accountId,
+                    dbid,
+                    Convert.ToInt64(stack["ItemUID"]),
+                    0,
+                    remove);
+
+                if (!result.Success)
+                    return false;
+
+                remaining -= remove;
+            }
+
+            return remaining == 0;
+        }
+
+        if (tabType != 1)
+            return false;
+
+        var equips = assets.Equips
+            .Where(x =>
+                Convert.ToInt32(x["ItemIdx"]) == itemId &&
+                Convert.ToInt32(x["Part"]) == 255 &&
+                Convert.ToInt32(x["InBank"]) == 0 &&
+                Convert.ToInt32(x["InShop"]) == 0)
+            .Take(count)
+            .ToArray();
+
+        if (equips.Length < count)
+            return false;
+
+        foreach (var equip in equips)
+        {
+            var result = _store.DiscardAsset(
+                accountId,
+                dbid,
+                Convert.ToInt64(equip["ItemID"]),
+                1,
+                1);
+
+            if (!result.Success)
+                return false;
+        }
+
+        return true;
     }
 
     private static void ApplyAssetsToCharacterBootstrap(
