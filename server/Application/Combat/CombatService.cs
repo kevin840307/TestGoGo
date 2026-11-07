@@ -1453,6 +1453,7 @@ public sealed class CombatService
 
             var runtime = _runtime.GetMap(
                 session.CurrentMapId);
+            var totalDamageDealt = 0;
 
             lock (runtime.SyncRoot)
             {
@@ -1489,9 +1490,13 @@ public sealed class CombatService
 
                 foreach (var monster in targets)
                 {
+                    var hpBeforeDamage = monster.CurrentHp;
                     monster.CurrentHp = Math.Max(
                         0,
                         monster.CurrentHp - damage);
+                    totalDamageDealt += Math.Max(
+                        0,
+                        hpBeforeDamage - monster.CurrentHp);
 
                     packets.Add(new
                     {
@@ -1562,6 +1567,44 @@ public sealed class CombatService
                         accountId,
                         monster,
                         packets);
+                }
+            }
+
+            if (skillId == 25104 &&
+                totalDamageDealt > 0)
+            {
+                var beforeHeal = updated;
+                var healed = _store.RecoverResources(
+                    accountId,
+                    session.CharacterId.Value,
+                    totalDamageDealt,
+                    0,
+                    0);
+
+                if (healed is not null)
+                {
+                    var recoveredHp = Math.Max(
+                        0,
+                        Convert.ToInt32(healed["HP"]) -
+                        Convert.ToInt32(beforeHeal["HP"]));
+
+                    if (recoveredHp > 0)
+                    {
+                        packets.Add(new
+                        {
+                            Type = "EntityHeal",
+                            TargetID = session.CharacterId.Value,
+                            TargetType = 0,
+                            Amount = recoveredHp,
+                            CurrentHP = healed["HP"],
+                            MaxHP = healed["MaxHP"],
+                            SkillID = skillId,
+                            SkillLevel = skillLevel,
+                            HealerID = session.CharacterId.Value
+                        });
+                    }
+
+                    updated = healed;
                 }
             }
         }
