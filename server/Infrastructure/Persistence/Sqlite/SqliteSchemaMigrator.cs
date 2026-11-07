@@ -22,6 +22,10 @@ internal static class SqliteSchemaMigrator
         ApplyEnsureColumnDirectives(
             db,
             ResolveSqlPath("004_ground_item_lifecycle.sql"));
+
+        ExecuteSqlFile(
+            db,
+            ResolveSqlPath("005_rank.sql"));
     }
 
     private static void ExecuteSqlFile(
