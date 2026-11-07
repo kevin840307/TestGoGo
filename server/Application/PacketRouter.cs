@@ -1457,6 +1457,156 @@ public sealed class PacketRouter
                 ];
             }
 
+            case "RepairItemRequest":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = "尚未選擇角色"
+                    }];
+
+                var uid = req.Long("UID");
+                var itemType = req.Str("ItemType");
+                var isMechaEquipment = string.Equals(
+                    itemType,
+                    "HorseEquip",
+                    StringComparison.OrdinalIgnoreCase);
+
+                if (!isMechaEquipment &&
+                    !string.Equals(
+                        itemType,
+                        "Equip",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = "不支援的維修類型"
+                    }];
+                }
+
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                Dictionary<string, object>? asset = isMechaEquipment
+                    ? assets.HorseEquips.FirstOrDefault(x =>
+                        Convert.ToInt64(x["EquipUID"]) == uid &&
+                        Convert.ToInt32(x["InBank"]) == 0 &&
+                        Convert.ToInt32(x["InShop"]) == 0)
+                    : assets.Equips.FirstOrDefault(x =>
+                        Convert.ToInt64(x["ItemID"]) == uid &&
+                        Convert.ToInt32(x["InBank"]) == 0 &&
+                        Convert.ToInt32(x["InShop"]) == 0);
+
+                if (asset is null)
+                {
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = "找不到可維修的裝備"
+                    }];
+                }
+
+                var itemIndex = Convert.ToInt32(
+                    asset[isMechaEquipment
+                        ? "EquipIdx"
+                        : "ItemIdx"]);
+                var definition = _current.FindItem(itemIndex);
+
+                if (definition is null ||
+                    definition.Durability <= 0 ||
+                    definition.CanRepair != 1)
+                {
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = "此裝備無法維修"
+                    }];
+                }
+
+                var currentDurability = Math.Max(
+                    0,
+                    Convert.ToInt32(asset["Damage"]));
+                var maxDurability = definition.Durability;
+
+                if (currentDurability >= maxDurability)
+                {
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = "此裝備和新的一樣，不需要修理！"
+                    }];
+                }
+
+                var usedDurability = maxDurability - currentDurability;
+                var repairCost = Math.Max(
+                    1L,
+                    (long)Math.Floor(
+                        (double)usedDurability /
+                        maxDurability *
+                        definition.Price));
+
+                var repair = _store.RepairAsset(
+                    accountId,
+                    state.CharacterId.Value,
+                    uid,
+                    isMechaEquipment,
+                    maxDurability,
+                    repairCost);
+
+                if (!repair.Success)
+                {
+                    return [new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = repair.Message
+                    }];
+                }
+
+                assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                var packets = new List<object>
+                {
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message =
+                            $"維修完成：{definition.Name}，花費 {repairCost}"
+                    },
+                    new
+                    {
+                        Type = "SyncMoney",
+                        Money = repair.Money
+                    }
+                };
+
+                if (isMechaEquipment)
+                {
+                    packets.Add(new
+                    {
+                        Type = "HorseSync",
+                        Horses = assets.Horses,
+                        HorseEquips = assets.HorseEquips,
+                        MaxHorseEquipSize = assets.HorseEquipMaxSize
+                    });
+                }
+                else
+                {
+                    packets.Add(new
+                    {
+                        Type = "EquipSync",
+                        Equips = assets.Equips,
+                        MaxSize = assets.EquipMaxSize
+                    });
+                }
+
+                return packets;
+            }
+
             case "DirectTransfer":
             {
                 if (!state.CharacterId.HasValue)
