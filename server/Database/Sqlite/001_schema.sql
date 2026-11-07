@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS characters (
     inventory_capacity INTEGER NOT NULL DEFAULT 200,
     equip_capacity INTEGER NOT NULL DEFAULT 200,
     pet_capacity INTEGER NOT NULL DEFAULT 50,
+    pet_summon_capacity INTEGER NOT NULL DEFAULT 1,
     horse_equip_capacity INTEGER NOT NULL DEFAULT 100,
     FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
 );
