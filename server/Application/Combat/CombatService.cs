@@ -726,6 +726,12 @@ public sealed class CombatService
                     EntityType = 1,
                     KillerID = session.CharacterId.Value
                 });
+
+                AddMechaKillExperience(
+                    session,
+                    accountId,
+                    monster,
+                    packets);
             }
         }
 
@@ -822,9 +828,76 @@ public sealed class CombatService
                 EntityType = 1,
                 KillerID = session.CharacterId.Value
             });
+
+            AddMechaKillExperience(
+                session,
+                accountId,
+                monster,
+                packets);
         }
 
         return packets;
+    }
+
+    private void AddMechaKillExperience(
+        ClientSession session,
+        long accountId,
+        MonsterRuntimeState monster,
+        List<object> packets)
+    {
+        if (!session.CharacterId.HasValue)
+            return;
+
+        var character = _store.GetCharacter(
+            accountId,
+            session.CharacterId.Value);
+
+        if (character is null)
+            return;
+
+        var horseUid = Convert.ToInt64(
+            character["SummonedHorseUID"]);
+
+        if (horseUid <= 0)
+            return;
+
+        var gainedExp = Math.Max(1, monster.Level * 100);
+        var before = _store.GetCharacterAssets(
+                accountId,
+                session.CharacterId.Value)
+            .Horses
+            .FirstOrDefault(x =>
+                Convert.ToInt64(x["HorseUID"]) == horseUid);
+
+        var horse = _store.AddHorseExperience(
+            accountId,
+            session.CharacterId.Value,
+            horseUid,
+            gainedExp);
+
+        if (horse is null)
+            return;
+
+        packets.Add(new
+        {
+            Type = "SyncMechaEnergy",
+            HorseUID = horseUid,
+            EnergyLeft = horse["EnergyLeft"],
+            Exp = horse["Exp"],
+            MaxExp = horse["MaxExp"],
+            Level = horse["Level"]
+        });
+
+        if (before is not null &&
+            Convert.ToInt32(horse["Level"]) >
+            Convert.ToInt32(before["Level"]))
+        {
+            packets.Add(new
+            {
+                Type = "SystemMessageFlash",
+                Message = $"機甲升級！Lv.{horse["Level"]}"
+            });
+        }
     }
 
     private static void TryWander(
