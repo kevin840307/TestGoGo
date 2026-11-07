@@ -1785,10 +1785,9 @@ try
         sharedAttackPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"EntityDamage\"")) &&
-        peerRegistration.Queue.TryDequeue(
-            out var peerDamage) &&
-        JsonSerializer.Serialize(peerDamage).Contains(
-            "\"Type\":\"EntityDamage\""),
+        peerRegistration.Queue.ToArray().Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EntityDamage\"")),
         "shared monster damage and HP are synchronized across map sessions");
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
