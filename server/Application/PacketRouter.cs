@@ -558,6 +558,8 @@ public sealed class PacketRouter
                 state.LastX = Convert.ToDouble(character["LocX"]);
                 state.LastY = Convert.ToDouble(character["LocY"]);
                 state.LastResourceRecoveryAt = DateTimeOffset.UtcNow;
+                state.LastCompanionRuntimeAt = DateTimeOffset.UtcNow;
+                state.LastCompanionClientSyncAt = DateTimeOffset.UtcNow;
                 state.PendingMapSpawn = true;
                 character["Type"] = "EnterWorldSuccess";
 
@@ -2910,6 +2912,12 @@ public sealed class PacketRouter
         }
 
         packets.AddRange(
+            TickCompanionRuntime(
+                state,
+                accountId,
+                dbid,
+                now));
+        packets.AddRange(
             _resourceRecovery.Tick(state, now));
         packets.AddRange(
             _combat.TickBuffs(state, now));
@@ -3038,6 +3046,137 @@ public sealed class PacketRouter
                     state.LastY,
                     now));
         }
+
+        return packets;
+    }
+
+    private IReadOnlyList<object> TickCompanionRuntime(
+        ClientSession state,
+        long accountId,
+        long dbid,
+        DateTimeOffset now)
+    {
+        if (state.LastCompanionRuntimeAt ==
+            DateTimeOffset.MinValue)
+        {
+            state.LastCompanionRuntimeAt = now;
+            state.LastCompanionClientSyncAt = now;
+            return [];
+        }
+
+        var elapsed = (int)Math.Floor(
+            (now - state.LastCompanionRuntimeAt)
+                .TotalSeconds);
+
+        if (elapsed <= 0)
+            return [];
+
+        // Consume only whole seconds and preserve the fractional remainder.
+        // A bounded catch-up protects against an unexpected system-clock jump;
+        // subsequent ticks continue draining until caught up.
+        elapsed = Math.Min(elapsed, 300);
+        state.LastCompanionRuntimeAt =
+            state.LastCompanionRuntimeAt
+                .AddSeconds(elapsed);
+
+        var drained = _store.DrainCompanionRuntime(
+            accountId,
+            dbid,
+            elapsed);
+
+        var transition =
+            drained.MechaDismounted ||
+            drained.RecalledPetUids.Count > 0;
+
+        var shouldCorrectClient =
+            transition ||
+            now - state.LastCompanionClientSyncAt >=
+                TimeSpan.FromSeconds(10);
+
+        if (!shouldCorrectClient)
+            return [];
+
+        state.LastCompanionClientSyncAt = now;
+
+        var packets = new List<object>();
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            dbid);
+
+        if (drained.Horse is not null)
+        {
+            packets.Add(new
+            {
+                Type = "SyncMechaEnergy",
+                HorseUID = drained.Horse["HorseUID"],
+                EnergyLeft = drained.Horse["EnergyLeft"],
+                Exp = drained.Horse["Exp"],
+                MaxExp = drained.Horse["MaxExp"],
+                Level = drained.Horse["Level"]
+            });
+        }
+
+        if (drained.MechaDismounted)
+        {
+            packets.Add(new
+            {
+                Type = "DriveMechaResponse",
+                Success = true,
+                HorseUID = -1,
+                Message = "機甲能源耗盡，已自動解除駕駛"
+            });
+
+            packets.Add(
+                BuildAndBroadcastEffectiveStatusPacket(
+                    state,
+                    accountId,
+                    dbid,
+                    assets));
+
+            packets.Add(
+                BuildAndBroadcastAppearancePacket(
+                    state,
+                    accountId,
+                    dbid,
+                    assets));
+        }
+
+        if (drained.Pets.Count > 0)
+        {
+            packets.Add(new
+            {
+                Type = "PetSync",
+                Pets = assets.Pets,
+                MaxSize = assets.PetMaxSize
+            });
+        }
+
+        foreach (var petUid in drained.RecalledPetUids)
+        {
+            state.PetPositions.Remove(petUid);
+            state.PetLastAttackAt.Remove(petUid);
+            state.PetTargets.Remove(petUid);
+            state.PetOutOfRangeSince.Remove(petUid);
+
+            packets.Add(new
+            {
+                Type = "DespawnEntity",
+                EntityID = 4_000_000L + petUid
+            });
+        }
+
+        if (drained.RecalledPetUids.Count > 0)
+        {
+            packets.Add(new
+            {
+                Type = "SystemMessageFlash",
+                Message = "寵物飽食度已耗盡，已自動收回"
+            });
+        }
+
+        BroadcastMapEntityPackets(
+            state,
+            packets);
 
         return packets;
     }
