@@ -39,6 +39,8 @@ const GAME_HUD_INSTANCE_PREWARM: Dictionary = {
 }
 
 const GAME_HUD_PREWARM_PATHS: Array[String] = [
+	"res://player.tscn",
+	"res://game_hud.tscn",
 	"res://quest_window.tscn",
 	"res://mall_window.tscn",
 	"res://announcement_window.tscn",
