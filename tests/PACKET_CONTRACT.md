@@ -95,6 +95,27 @@ powershell -ExecutionPolicy Bypass -File tests/run_protocol_checks.ps1
 
 以上為程式碼修改及靜態檢查／測試案例的新增，**不是已通過實機 .NET 或 Godot E2E 的證明**。GitHub Actions 若尚未取得 Runner，請在 Windows 執行一鍵腳本並檢查實際結果。
 
+## 公告列表：已接上可設定的資料來源
+
+原先 `AnnouncementListRequest` 只會回傳空清單；現在可使用 `server/appsettings.json` 的 `Game:Announcements` 設定公告。範例：
+
+```json
+{
+  "Game": {
+    "ListenUrl": "http://127.0.0.1:5678",
+    "Announcements": [
+      {
+        "Date": "2026-11-07",
+        "Title": "伺服器公告",
+        "Content": "這裡填入要顯示給玩家的內容"
+      }
+    ]
+  }
+}
+```
+
+上方為**設定片段**，合併到原有 `Game` 區塊，不要以整段取代整份設定檔。Server 會沿用現有 `AnnouncementListResponse` 格式回傳陣列，Client `announcement_window.gd` 使用 `Date／Title／Content` 顯示日期、標題及內文。預設設定仍是空陣列，不發布虛構的遊戲公告；最多讀取 50 筆、忽略空標題或空內文，並限制文字長度。新增 Smoke Tests 驗證欄位、空資料與上限，不需要資料庫或金流。
+
 ## 真正的網路封包整合測試
 
 `tests/SGO.Server.WireSmokeTests/` 是**非破壞性**的 .NET WebSocket client，使用與 Godot 一致的 AES/Base64 封包格式，連至正在執行的伺服器，驗證：
@@ -115,7 +136,7 @@ CI 會在 .NET Build + SmokeTests 後啟動 localhost Server 執行 WireSmokeTes
 - 商城 `MallAction(BuyItem)`：目前商品表未設定，拒絕扣點。
 - `MallAction(CreatePayPalDonation)`：未設定 PayPal 金流，不建立付款訂單。
 - `MallAction(QueryLegacyPoints / WithdrawLegacyPoints)`：未設定舊服點數資料來源。
-- `AnnouncementListRequest`：目前回傳空清單。
+- `AnnouncementListRequest`：已支援從 `Game:Announcements` 讀取公告；未設定資料時回傳空清單。
 - 部分 `UseItemRequest` 物品效果與舊 Lua 任務仍需補充實作。
 
 這些都不應使用假的「Success=true」或發放資產方式補齊。後續真正接入功能時應補相應的契約、資料庫交易及 E2E 測試。
