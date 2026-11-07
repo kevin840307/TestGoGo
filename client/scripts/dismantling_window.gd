@@ -180,7 +180,7 @@ func set_recipe_data_initial_async(recipes: Array) -> void :
 				target_tree_item = tree_item
 
 			processed += 1
-			if processed % 24 == 0:
+			if processed % 8 == 0:
 				await get_tree().process_frame
 
 	if target_tree_item:
