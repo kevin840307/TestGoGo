@@ -13,6 +13,7 @@ public sealed class ClientSession
     public double LastX { get; set; }
     public double LastY { get; set; }
     public bool PendingMapSpawn { get; set; }
+    public bool WorldReady { get; set; }
     public int WorldSnapshotRetriesRemaining { get; set; }
     public DateTimeOffset NextWorldSnapshotAt { get; set; } = DateTimeOffset.MinValue;
     public bool CloseRequested { get; set; }
