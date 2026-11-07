@@ -438,6 +438,30 @@ public sealed class QuestRuntime
             });
         });
 
+        script.Globals["AddGift"] = DynValue.NewCallback((ctx, args) =>
+        {
+            // Legacy CDGiftSys.dll exposed AddGift(ok, fail, none).
+            // The recovered server currently has no pending-gift provider,
+            // so preserve script flow by dispatching the original "none"
+            // callback instead of leaving AddGift as a nil Lua global.
+            var noneTarget = args.Count > 2
+                ? args[2].CastToString()
+                : "";
+
+            if (!string.IsNullOrWhiteSpace(noneTarget))
+            {
+                var target = script.Globals.Get(noneTarget);
+                if (target.Type == DataType.Function ||
+                    target.Type == DataType.ClrFunction)
+                {
+                    script.Call(target);
+                }
+            }
+
+            return DynValue.Nil;
+        });
+
+
         script.Globals["MovePlayer"] = (Action<int,int,int>)((x,y,mapId) =>
         {
             result.NewMapId = mapId;
