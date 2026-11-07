@@ -1853,10 +1853,20 @@ public sealed class CombatService
             reviveTargetPresence is not null &&
             reviveTargetCharacter is not null)
         {
-            var hpPercent = skillId == 27111
-                ? 100
-                : 10;
-            var mpPercent = 0;
+            var hpPercent = skillId switch
+            {
+                27111 => 100,
+                27104 or 28109 => skillLevel switch
+                {
+                    1 => 30,
+                    2 => 50,
+                    _ => 70
+                },
+                _ => 10
+            };
+            var mpPercent = skillId is 27104 or 28109
+                ? hpPercent
+                : 0;
             var deathExpReductionPercent = Math.Clamp(
                 skillId == 27111
                     ? Math.Max(
@@ -3199,7 +3209,7 @@ public sealed class CombatService
         Dictionary<string, object> before,
         out int hpRecovered)
     {
-        var amount = Math.Max(
+        var genericAmount = Math.Max(
             1,
             levelData.BaseDamage +
             casterStats.MagicAttack *
@@ -3209,19 +3219,43 @@ public sealed class CombatService
         var mpAmount = 0;
         var spAmount = 0;
 
+        var legacyPrimary = RollLegacyCureValue(
+            skillId,
+            levelData.Level,
+            secondary: false);
+        var legacySecondary = RollLegacyCureValue(
+            skillId,
+            levelData.Level,
+            secondary: true);
+
         switch (skillId)
         {
+            case 28101: // 治療術 -> HP
+            case 28104: // 天使之光 -> party HP
+                hpAmount = legacyPrimary > 0
+                    ? legacyPrimary
+                    : genericAmount;
+                break;
+
             case 28102: // 心靈轉換 -> 意志(SP)
-                spAmount = amount;
+                spAmount = legacyPrimary > 0
+                    ? legacyPrimary
+                    : genericAmount;
                 break;
 
             case 28103: // 靈魂轉換 -> 魔力(MP)
-                mpAmount = amount;
+                mpAmount = legacyPrimary > 0
+                    ? legacyPrimary
+                    : genericAmount;
                 break;
 
             case 28107: // 治療風暴 -> HP + MP
-                hpAmount = amount;
-                mpAmount = amount;
+                hpAmount = legacyPrimary > 0
+                    ? legacyPrimary
+                    : genericAmount;
+                mpAmount = legacySecondary > 0
+                    ? legacySecondary
+                    : genericAmount;
                 break;
 
             case 28108: // 祝福之光 -> 全 HP
@@ -3234,9 +3268,7 @@ public sealed class CombatService
                 break;
 
             default:
-                // 治療術(28101)、天使之光(28104)與其他明確
-                // healing 類技能依目前技能倍率回復 HP。
-                hpAmount = amount;
+                hpAmount = genericAmount;
                 break;
         }
 
@@ -3255,6 +3287,45 @@ public sealed class CombatService
                 Convert.ToInt32(before["HP"]));
 
         return healed;
+    }
+
+    private static int RollLegacyCureValue(
+        int skillId,
+        int skillLevel,
+        bool secondary)
+    {
+        var index = Math.Clamp(
+            skillLevel,
+            1,
+            5) - 1;
+
+        int[]? values = skillId switch
+        {
+            28101 => [11, 15, 21, 28, 36],
+            28102 => [38, 69, 113, 169, 238],
+            28103 => [17, 21, 31, 41, 53],
+            28104 => [28, 45, 68, 95, 128],
+            28107 when secondary =>
+                [90, 135, 190, 255, 330],
+            28107 =>
+                [170, 260, 370, 500, 650],
+            _ => null
+        };
+
+        if (values is null)
+            return 0;
+
+        var baseValue = values[index];
+
+        // Legacy curecommon.txt applies an independent -10%..+9% roll.
+        var deltaPercent = Random.Shared.Next(
+            -10,
+            10);
+
+        return Math.Max(
+            1,
+            baseValue +
+            baseValue * deltaPercent / 100);
     }
 
     private static bool HasGenericStatBonus(
