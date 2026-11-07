@@ -426,15 +426,31 @@ public sealed class PacketRouter
                         req.Int("ResearchID"))
                     .ToList();
 
-                if (action is "DonateMoney" or "DonateExp")
+                if (action is
+                    "DonateMoney" or
+                    "DonateExp" or
+                    "Create")
                 {
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+
                     packets.Add(
-                        BuildAndBroadcastEffectiveStatusPacket(state, 
+                        BuildAndBroadcastEffectiveStatusPacket(
+                            state,
                             accountId,
                             state.CharacterId.Value,
-                            _store.GetCharacterAssets(
-                                accountId,
-                                state.CharacterId.Value)));
+                            assets));
+
+                    if (action == "Create")
+                    {
+                        packets.Add(new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        });
+                    }
                 }
 
                 return packets;
@@ -2772,6 +2788,15 @@ public sealed class PacketRouter
                 {
                     return _gm.Execute(message, state);
                 }
+
+                var clubCommand =
+                    _club.TryHandleChatCommand(
+                        accountId,
+                        state.CharacterId.Value,
+                        message);
+
+                if (clubCommand is not null)
+                    return clubCommand;
 
                 var chatPacket = new
                 {
