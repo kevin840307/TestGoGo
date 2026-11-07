@@ -2028,7 +2028,7 @@ public sealed class SqliteGameStore : IGameStore
         return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
     }
 
-    public bool SetPlayerShopAssetState(
+    public PlayerShopReserveResult SetPlayerShopAssetState(
         long accountId,
         long dbid,
         long uid,
@@ -2046,7 +2046,7 @@ public sealed class SqliteGameStore : IGameStore
                 accountId,
                 dbid,
                 tx))
-            return false;
+            return new(false, 0);
 
         switch (tabType)
         {
@@ -2067,10 +2067,10 @@ public sealed class SqliteGameStore : IGameStore
                     Arg(clear, "$uid", uid);
                     Arg(clear, "$id", dbid);
                     if (clear.ExecuteNonQuery() != 1)
-                        return false;
+                        return new(false, 0);
 
                     tx.Commit();
-                    return true;
+                    return new(true, uid);
                 }
 
                 int itemIndex;
@@ -2090,14 +2090,14 @@ public sealed class SqliteGameStore : IGameStore
                     Arg(get, "$id", dbid);
                     using var reader = get.ExecuteReader();
                     if (!reader.Read())
-                        return false;
+                        return new(false, 0);
 
                     itemIndex = reader.GetInt32(0);
                     ownedCount = reader.GetInt32(1);
                 }
 
                 if (count > ownedCount)
-                    return false;
+                    return new(false, 0);
 
                 if (count == ownedCount)
                 {
@@ -2114,7 +2114,7 @@ public sealed class SqliteGameStore : IGameStore
                     Arg(mark, "$uid", uid);
                     Arg(mark, "$id", dbid);
                     if (mark.ExecuteNonQuery() != 1)
-                        return false;
+                        return new(false, 0);
                 }
                 else
                 {
@@ -2134,7 +2134,7 @@ public sealed class SqliteGameStore : IGameStore
                         Arg(take, "$uid", uid);
                         Arg(take, "$id", dbid);
                         if (take.ExecuteNonQuery() != 1)
-                            return false;
+                            return new(false, 0);
                     }
 
                     using var add = db.CreateCommand();
@@ -2142,12 +2142,14 @@ public sealed class SqliteGameStore : IGameStore
                     add.CommandText = """
                         INSERT INTO inventory_items(
                             character_id,item_index,count,in_bank,in_shop)
-                        VALUES($id,$item,$count,0,1)
+                        VALUES($id,$item,$count,0,1);
+                        SELECT last_insert_rowid();
                         """;
                     Arg(add, "$id", dbid);
                     Arg(add, "$item", itemIndex);
                     Arg(add, "$count", count);
-                    add.ExecuteNonQuery();
+                    uid = Convert.ToInt64(
+                        add.ExecuteScalar());
                 }
 
                 break;
@@ -2178,7 +2180,7 @@ public sealed class SqliteGameStore : IGameStore
                 Arg(cmd, "$uid", uid);
                 Arg(cmd, "$id", dbid);
                 if (cmd.ExecuteNonQuery() != 1)
-                    return false;
+                    return new(false, 0);
                 break;
             }
 
@@ -2209,7 +2211,7 @@ public sealed class SqliteGameStore : IGameStore
                 Arg(cmd, "$uid", uid);
                 Arg(cmd, "$id", dbid);
                 if (cmd.ExecuteNonQuery() != 1)
-                    return false;
+                    return new(false, 0);
                 break;
             }
 
@@ -2238,16 +2240,16 @@ public sealed class SqliteGameStore : IGameStore
                 Arg(cmd, "$uid", uid);
                 Arg(cmd, "$id", dbid);
                 if (cmd.ExecuteNonQuery() != 1)
-                    return false;
+                    return new(false, 0);
                 break;
             }
 
             default:
-                return false;
+                return new(false, 0);
         }
 
         tx.Commit();
-        return true;
+        return new(true, uid);
     }
 
     public void ClearPlayerShopAssets(
