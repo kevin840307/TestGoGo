@@ -41,10 +41,7 @@ public static class WebSocketEndpoint
             var broadcastConnectionId = broadcastRegistration.ConnectionId;
             var broadcastQueue = broadcastRegistration.Queue;
             state.ConnectionId = broadcastConnectionId;
-            broadcasts.UpdatePresence(
-                broadcastConnectionId,
-                state.CurrentMapId,
-                state.CharacterId);
+            router.SyncPresence(state);
             using var worldTickCts =
                 CancellationTokenSource.CreateLinkedTokenSource(
                     ctx.RequestAborted);
@@ -98,10 +95,7 @@ public static class WebSocketEndpoint
                         IReadOnlyList<object> packets;
                         lock (state)
                         {
-                            broadcasts.UpdatePresence(
-                                broadcastConnectionId,
-                                state.CurrentMapId,
-                                state.CharacterId);
+                            router.SyncPresence(state);
 
                             packets = router.Tick(
                                 state,
@@ -198,10 +192,7 @@ public static class WebSocketEndpoint
                                     packet.RootElement,
                                     state);
 
-                                broadcasts.UpdatePresence(
-                                    broadcastConnectionId,
-                                    state.CurrentMapId,
-                                    state.CharacterId);
+                                router.SyncPresence(state);
                             }
                         }
                         catch (Exception ex)
@@ -271,6 +262,11 @@ public static class WebSocketEndpoint
             }
             finally
             {
+                lock (state)
+                {
+                    router.DisconnectPresence(state);
+                }
+
                 broadcasts.Unregister(broadcastConnectionId);
                 worldTickCts.Cancel();
 
