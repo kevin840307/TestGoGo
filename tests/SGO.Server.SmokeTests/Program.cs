@@ -415,6 +415,15 @@ try
     Check(growth.AbilityPointsGained(1, 4) == 6,
         "legacy ExpUse.csv grants two ability points per gained level");
 
+    var battle = new LegacyBattleRulesCatalog(gameDataRoot);
+    Check(battle.ExpMultiplier == 2 &&
+          battle.ExperienceRatio(20, 20) == 100 &&
+          battle.ExperienceRatio(24, 20) == 80 &&
+          battle.ExperienceRatio(26, 20) == 50 &&
+          battle.ExperienceRatio(29, 20) == 10 &&
+          battle.ExperienceRatio(30, 20) == 0,
+        "legacy battle.cfg drives ExpX and level-difference EXP ratios");
+
     var enemyDrops = new EnemyDropCatalog(
         gameDataRoot,
         currentCatalog);
@@ -434,11 +443,20 @@ try
               x.Name == "戰鬥蝕日斧"),
         "enemy drop table remaps legacy weapon 31262 to current 49962 by name");
 
+    Check(enemyDrops.LuckRollCount(0) == 1 &&
+          enemyDrops.LuckRollCount(49) == 1 &&
+          enemyDrops.LuckRollCount(50) == 2 &&
+          enemyDrops.LuckRollCount(90) == 3 &&
+          enemyDrops.LuckRollCount(140) == 4 &&
+          enemyDrops.LuckRollCount(200) == 5,
+        "enemy.cfg Luck thresholds increase only luck-checked drop rolls");
+
     var combat = new CombatService(
         store,
         world,
         currentCatalog,
         growth,
+        battle,
         enemyDrops);
     var shops = new ShopService(
         store,
@@ -535,6 +553,57 @@ try
         slots.First(x =>
             x.TryGetValue("NAME", out var n) &&
             n?.ToString() == "TestCharacter")["DBID"]);
+
+    var secondCharacterId = Convert.ToInt64(
+        slots.First(x =>
+            x.TryGetValue("NAME", out var n) &&
+            n?.ToString() == "SecondCharacter")["DBID"]);
+
+    var protectedGround = store.CreateGroundItem(
+        id,
+        0,
+        1001,
+        1,
+        15,
+        10000,
+        10000,
+        protectSeconds: 15,
+        lifetimeSeconds: 60)!;
+
+    var protectedAttempt = store.PickUpGroundItem(
+        account.Value,
+        secondCharacterId,
+        protectedGround.GroundItemId);
+
+    Check(!protectedAttempt.Success &&
+          protectedAttempt.Message.Contains("保護"),
+        "ground-item owner protection is enforced server-side");
+
+    var ownerPickup = store.PickUpGroundItem(
+        account.Value,
+        id,
+        protectedGround.GroundItemId);
+    Check(ownerPickup.Success,
+        "ground-item owner can pick up during protection");
+
+    var expiringGround = store.CreateGroundItem(
+        id,
+        0,
+        1001,
+        1,
+        15,
+        10000,
+        10000,
+        lifetimeSeconds: 1)!;
+
+    var expiredEntities = store.RemoveExpiredGroundItems(
+        15,
+        DateTimeOffset.UtcNow.AddSeconds(2));
+
+    Check(expiredEntities.Contains(expiringGround.EntityId) &&
+          !store.GetGroundItems(15).Any(x =>
+              x.EntityId == expiringGround.EntityId),
+        "expired ground items are deleted by the server lifecycle");
 
     var moneyBeforeFunding = Convert.ToInt64(
         store.GetCharacter(account.Value, id)!["Money"]);
