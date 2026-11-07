@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
+using SGO.Server.Application.Announcements;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Combat;
@@ -70,6 +72,7 @@ public sealed class PacketRouter
     private readonly QuestProgressService _questProgress;
     private readonly TradeService _trade;
     private readonly ILogger<PacketRouter> _log;
+    private readonly IConfiguration? _configuration;
 
     public PacketRouter(
         IGameStore store,
@@ -101,7 +104,8 @@ public sealed class PacketRouter
         RankService rank,
         QuestProgressService questProgress,
         TradeService trade,
-        ILogger<PacketRouter> log)
+        ILogger<PacketRouter> log,
+        IConfiguration? configuration = null)
     {
         _store = store;
         _world = world;
@@ -135,6 +139,7 @@ public sealed class PacketRouter
         _questProgress = questProgress;
         _trade = trade;
         _log = log;
+        _configuration = configuration;
     }
 
     private void PersistPendingPosition(ClientSession state)
@@ -379,7 +384,7 @@ public sealed class PacketRouter
                 Type = "AnnouncementListResponse",
                 Success = true,
                 Message = "",
-                Announcements = Array.Empty<object>()
+                Announcements = AnnouncementCatalog.Read(_configuration)
             }];
         }
 
