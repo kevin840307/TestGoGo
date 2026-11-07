@@ -1091,6 +1091,52 @@ public sealed class CombatService
             centerY = Convert.ToDouble(character["LocY"]);
         }
 
+        if (hasCreateItemSpecial)
+        {
+            var item = _current.FindItem(createItemId);
+            if (item is null ||
+                item.Category is not (
+                    "general" or
+                    "booster" or
+                    "recovery" or
+                    "horsebattery"))
+            {
+                return [Flash(
+                    $"技能製造物品不存在 ItemID={createItemId}")];
+            }
+
+            targetEntityId =
+                checked((int)session.CharacterId.Value);
+            centerX = Convert.ToDouble(character["LocX"]);
+            centerY = Convert.ToDouble(character["LocY"]);
+        }
+
+        var updated = _store.SpendSkillResources(
+            accountId,
+            session.CharacterId.Value,
+            levelData.CostHp,
+            levelData.CostMp,
+            levelData.CostSp);
+
+        if (updated is null)
+            return [Flash("HP / MP / SP 不足")];
+
+        var packets = new List<object>
+        {
+            new
+            {
+                Type = "SkillCast",
+                CasterID = session.CharacterId.Value,
+                CasterType = 0,
+                SkillID = skillId,
+                SkillLevel = skillLevel,
+                TargetID = targetEntityId,
+                TargetX = Convert.ToInt32(centerX),
+                TargetY = Convert.ToInt32(centerY),
+                AoeTargets = Array.Empty<object>()
+            }
+        };
+
         if (isTaunt)
         {
             var runtime = SyncSessionMonsters(session);
@@ -1166,52 +1212,6 @@ public sealed class CombatService
                     $"防禦 {scoutTargetCharacter["Defense"]}"
             });
         }
-
-        if (hasCreateItemSpecial)
-        {
-            var item = _current.FindItem(createItemId);
-            if (item is null ||
-                item.Category is not (
-                    "general" or
-                    "booster" or
-                    "recovery" or
-                    "horsebattery"))
-            {
-                return [Flash(
-                    $"技能製造物品不存在 ItemID={createItemId}")];
-            }
-
-            targetEntityId =
-                checked((int)session.CharacterId.Value);
-            centerX = Convert.ToDouble(character["LocX"]);
-            centerY = Convert.ToDouble(character["LocY"]);
-        }
-
-        var updated = _store.SpendSkillResources(
-            accountId,
-            session.CharacterId.Value,
-            levelData.CostHp,
-            levelData.CostMp,
-            levelData.CostSp);
-
-        if (updated is null)
-            return [Flash("HP / MP / SP 不足")];
-
-        var packets = new List<object>
-        {
-            new
-            {
-                Type = "SkillCast",
-                CasterID = session.CharacterId.Value,
-                CasterType = 0,
-                SkillID = skillId,
-                SkillLevel = skillLevel,
-                TargetID = targetEntityId,
-                TargetX = Convert.ToInt32(centerX),
-                TargetY = Convert.ToInt32(centerY),
-                AoeTargets = Array.Empty<object>()
-            }
-        };
 
         if (isPartyReturn)
         {
