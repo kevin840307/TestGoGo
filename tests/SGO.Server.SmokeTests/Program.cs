@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Configuration;
 using SGO.Server.Application;
+using SGO.Server.Application.Bank;
+using SGO.Server.Application.Packets;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Shops;
@@ -400,12 +402,17 @@ try
         growth,
         combat,
         config);
+    var packetHandlers = new IClientPacketHandler[]
+    {
+        new BankPacketHandler(new BankService(store))
+    };
     var router = new PacketRouter(
         store,
         world,
         quests,
         combat,
         shops,
+        packetHandlers,
         gm,
         batteryCatalog,
         recoveryCatalog,
