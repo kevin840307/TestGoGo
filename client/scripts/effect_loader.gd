@@ -18,7 +18,12 @@ func get_effect(sub_path: String) -> SpriteFrames:
 	if _effect_cache.has(full_path):
 		return _effect_cache[full_path]
 	if _missing_effect_cache.has(full_path):
-		return null
+		# Assets may be added or replaced while developing. Re-check the
+		# filesystem instead of permanently returning a stale miss.
+		if ResourceLoader.exists(full_path):
+			_missing_effect_cache.erase(full_path)
+		else:
+			return null
 
 	if ResourceLoader.exists(full_path):
 		var source_frames = load(full_path) as SpriteFrames
