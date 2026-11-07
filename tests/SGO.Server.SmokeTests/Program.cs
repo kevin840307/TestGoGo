@@ -73,6 +73,17 @@ Check(realCurrentCatalog.FindSkillLevel(
           1) is { DeathExpReductionPercent: 100 },
     "real Skill.csv exposes revive death-EXP reduction percentages");
 
+Check(realCurrentCatalog.ResolveSkillBook(3701) is
+      { SkillId: 27103, SkillLevel: 1 },
+    "general 加速術一級 book resolves to current skill 27103 Lv1");
+
+Check(realCurrentCatalog.ResolveSkillBook(3797) is
+      { SkillId: 29106, SkillLevel: 2 },
+    "general 雷之閃影二級 book resolves to current skill 29106 Lv2");
+
+Check(realCurrentCatalog.ResolveSkillBook(3239) is null,
+    "crafting blueprint is not misclassified as a skill book");
+
 CurrentItemDefinition CurrentItem(
     int id,
     string name,
@@ -1294,6 +1305,70 @@ try
         slots.First(x =>
             x.TryGetValue("NAME", out var n) &&
             n?.ToString() == "SecondCharacter")["DBID"]);
+
+    var accelerationBook =
+        realCurrentCatalog.ResolveSkillBook(3701)!;
+    var accelerationBookUid =
+        store.AddInventoryItem(
+            account.Value,
+            secondCharacterId,
+            3701,
+            2);
+
+    Check(accelerationBookUid > 0,
+        "prepare two 加速術一級 skill books");
+
+    var learnedAcceleration =
+        store.LearnSkillFromBook(
+            account.Value,
+            secondCharacterId,
+            accelerationBookUid,
+            3701,
+            accelerationBook.SkillId,
+            accelerationBook.SkillLevel);
+
+    var accelerationAfterLearn =
+        store.GetCharacterAssets(
+            account.Value,
+            secondCharacterId)
+        .Inventory
+        .First(x =>
+            Convert.ToInt64(x["ItemUID"]) ==
+            accelerationBookUid);
+
+    Check(learnedAcceleration.Success &&
+          Convert.ToInt32(
+              accelerationAfterLearn["Count"]) == 1 &&
+          store.GetSkills(
+              account.Value,
+              secondCharacterId)
+            .Any(x =>
+                Convert.ToInt32(x["SkillID"]) == 27103 &&
+                Convert.ToInt32(x["SkillLevel"]) == 1),
+        "skill book atomically learns skill and consumes exactly one book");
+
+    var duplicateAcceleration =
+        store.LearnSkillFromBook(
+            account.Value,
+            secondCharacterId,
+            accelerationBookUid,
+            3701,
+            accelerationBook.SkillId,
+            accelerationBook.SkillLevel);
+
+    var accelerationAfterDuplicate =
+        store.GetCharacterAssets(
+            account.Value,
+            secondCharacterId)
+        .Inventory
+        .First(x =>
+            Convert.ToInt64(x["ItemUID"]) ==
+            accelerationBookUid);
+
+    Check(!duplicateAcceleration.Success &&
+          Convert.ToInt32(
+              accelerationAfterDuplicate["Count"]) == 1,
+        "reusing same-level skill book is rejected without consuming another book");
 
     Check(!store.SetCurrentTitle(
               account.Value,
