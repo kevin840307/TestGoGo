@@ -46,6 +46,25 @@ public sealed class PlayerShopService
         _broadcasts = broadcasts;
     }
 
+    public (bool IsOpen, string ShopName) GetPublicState(
+        long characterId)
+    {
+        lock (_sync)
+        {
+            if (!_shops.TryGetValue(
+                    characterId,
+                    out var shop) ||
+                !shop.IsOpen)
+            {
+                return (false, "");
+            }
+
+            return (
+                true,
+                shop.Name);
+        }
+    }
+
     public IReadOnlyList<object> Handle(
         ClientSession session,
         long accountId,
@@ -345,7 +364,7 @@ public sealed class PlayerShopService
         {
             if (!_shops.TryGetValue(
                     characterId,
-                    out shop!))
+                    out var foundShop))
             {
                 return
                 [
@@ -356,6 +375,7 @@ public sealed class PlayerShopService
                 ];
             }
 
+            shop = foundShop;
             _shops.Remove(characterId);
         }
 
