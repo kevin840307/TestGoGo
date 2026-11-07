@@ -3891,8 +3891,13 @@ try
                 "\"Type\":\"SkillCast\"")) &&
         peerRegistration.Queue.ToArray().Any(x =>
             JsonSerializer.Serialize(x).Contains(
-                "\"Type\":\"PlayerStatusSync\"")),
-        "心靈轉換 restores another same-map player's SP and syncs status");
+                "\"Type\":\"PlayerStatusSync\"")) &&
+        peerRegistration.Queue.ToArray().Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"SyncStatus\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                $"\"EntityID\":{secondCharacterId}")),
+        "心靈轉換 restores another same-map player's SP and broadcasts public SyncStatus");
 
     store.SetSkill(
         account.Value,
