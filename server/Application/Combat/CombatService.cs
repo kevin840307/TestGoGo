@@ -4178,6 +4178,103 @@ public sealed class CombatService
             CritDamageBonusPercent = source.CritDamageBonusPercent
         };
 
+    public IReadOnlyList<object> GetCombinedBuffEntries(
+        long accountId,
+        long characterId,
+        DateTimeOffset now)
+    {
+        var buffs = GetActiveSkillBuffEntries(
+                characterId,
+                now)
+            .ToList();
+
+        if (accountId <= 0 || characterId <= 0)
+            return buffs;
+
+        var nowUtcMs = now.ToUnixTimeMilliseconds();
+        buffs.AddRange(
+            _store.GetActiveTimedEffects(
+                    accountId,
+                    characterId,
+                    nowUtcMs)
+                .Select(effect =>
+                {
+                    var remainingSeconds = Math.Max(
+                        0.0,
+                        (effect.ExpiresUtcMs - nowUtcMs) / 1000.0);
+                    var totalSeconds = effect.DurationSeconds > 0
+                        ? effect.DurationSeconds
+                        : remainingSeconds;
+                    var buffName = effect.EffectKey switch
+                    {
+                        "exp_multiplier_percent" =>
+                            $"ExperienceBoost_{effect.EffectValue}",
+                        _ => $"TimedEffect_{effect.EffectKey}"
+                    };
+
+                    return (object)new
+                    {
+                        BuffName = buffName,
+                        SourceType = effect.SourceType,
+                        Value = effect.SourceValue > 0
+                            ? effect.SourceValue
+                            : effect.EffectValue,
+                        RemainingTime = remainingSeconds,
+                        TotalTime = totalSeconds
+                    };
+                }));
+
+        var character = _store.GetCharacter(
+            accountId,
+            characterId);
+        if (character is null ||
+            Convert.ToInt32(
+                character.GetValueOrDefault(
+                    "TransformType",
+                    0)) <= 0)
+        {
+            return buffs;
+        }
+
+        var expiresUtcMs = Convert.ToInt64(
+            character.GetValueOrDefault(
+                "TransformExpiresUtcMs",
+                0L));
+        var startedUtcMs = Convert.ToInt64(
+            character.GetValueOrDefault(
+                "TransformStartedUtcMs",
+                0L));
+
+        if (expiresUtcMs <= nowUtcMs)
+            return buffs;
+
+        var transformId = Convert.ToString(
+            character.GetValueOrDefault(
+                "TransformID",
+                "")) ?? "";
+        var sourceItemId = Convert.ToInt32(
+            character.GetValueOrDefault(
+                "TransformSourceItemID",
+                2802));
+
+        buffs.Add(new
+        {
+            BuffName = $"Transform_{transformId}",
+            SourceType = 3,
+            Value = sourceItemId > 0
+                ? sourceItemId
+                : 2802,
+            RemainingTime = Math.Max(
+                0.0,
+                (expiresUtcMs - nowUtcMs) / 1000.0),
+            TotalTime = Math.Max(
+                1.0,
+                (expiresUtcMs - startedUtcMs) / 1000.0)
+        });
+
+        return buffs;
+    }
+
     private object BuildSyncBuffsPacket(
         ClientSession session,
         DateTimeOffset now)
@@ -4206,13 +4303,23 @@ public sealed class CombatService
     private object BuildSyncBuffsPacket(
         long characterId,
         DateTimeOffset now)
-        => new
+    {
+        var accountId =
+            _broadcasts.FindCharacter(characterId)?.AccountId ?? 0;
+
+        return new
         {
             Type = "SyncBuffs",
-            Buffs = GetActiveSkillBuffEntries(
-                characterId,
-                now)
+            Buffs = accountId > 0
+                ? GetCombinedBuffEntries(
+                    accountId,
+                    characterId,
+                    now)
+                : GetActiveSkillBuffEntries(
+                    characterId,
+                    now)
         };
+    }
 
     private static object BuildPlayerStatusPacket(
         Dictionary<string, object> character,
