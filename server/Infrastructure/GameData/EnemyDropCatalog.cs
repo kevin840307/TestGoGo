@@ -21,6 +21,7 @@ public sealed class EnemyDropCatalog
     private readonly Dictionary<int, List<EnemyDropDefinition>> _drops = new();
     private readonly Dictionary<int, List<LegacyItemReference>> _legacyItems = new();
     private readonly CurrentClientDataCatalog _current;
+    private int[] _luckThresholds = [0, 0, 50, 90, 140, 200];
 
     public EnemyDropCatalog(
         string dataRoot,
@@ -32,6 +33,7 @@ public sealed class EnemyDropCatalog
         LoadLegacyGeneral(Path.Combine(dataRoot, "Item", "General.itd"));
         LoadLegacyEquip(Path.Combine(dataRoot, "Item", "Equip.itd"));
         LoadLegacyWeapons(Path.Combine(dataRoot, "Item", "Weapon.itd"));
+        LoadLuckConfig(ResolveConfigPath(dataRoot, "enemy.cfg"));
         LoadDrops(Path.Combine(dataRoot, "Enemy", "Enemy_Data.csv"));
     }
 
@@ -40,10 +42,27 @@ public sealed class EnemyDropCatalog
             ? drops
             : Array.Empty<EnemyDropDefinition>();
 
+    public int LuckRollCount(int lucky)
+    {
+        var highestTier = 1;
+
+        for (var i = 1; i < _luckThresholds.Length; i++)
+        {
+            if (lucky >= _luckThresholds[i])
+                highestTier = i;
+        }
+
+        // enemy.cfg contains Luck00=0 and Luck01=0. Treat tier 1 as the
+        // baseline single roll; positive thresholds add extra independent
+        // rolls for the 30 "CheckLuckItem" slots.
+        return Math.Max(1, highestTier);
+    }
+
     public IReadOnlyList<EnemyDropDefinition> RollDrops(
         int enemyId,
         int entityId,
-        int killSequence)
+        int killSequence,
+        int lucky)
     {
         var drops = GetDrops(enemyId);
         if (drops.Count == 0)
@@ -53,18 +72,79 @@ public sealed class EnemyDropCatalog
         for (var i = 0; i < drops.Count; i++)
         {
             var drop = drops[i];
-            if (Roll01(
-                    enemyId,
-                    entityId,
-                    killSequence,
-                    drop.ItemId,
-                    i) < drop.Chance)
+            var rollCount = drop.ChecksLuck
+                ? LuckRollCount(Math.Max(0, lucky))
+                : 1;
+
+            for (var attempt = 0; attempt < rollCount; attempt++)
             {
+                if (Roll01(
+                        enemyId,
+                        entityId,
+                        killSequence,
+                        drop.ItemId,
+                        i,
+                        attempt) >= drop.Chance)
+                    continue;
+
                 result.Add(drop);
+                break;
             }
         }
 
         return result;
+    }
+
+    private void LoadLuckConfig(string path)
+    {
+        if (!File.Exists(path))
+            return;
+
+        var values = new SortedDictionary<int, int>();
+        foreach (var raw in File.ReadLines(path))
+        {
+            var line = raw.Split(
+                    "//",
+                    2,
+                    StringSplitOptions.None)[0]
+                .Trim();
+
+            if (!line.StartsWith(
+                    "Luck",
+                    StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var equals = line.IndexOf('=');
+            if (equals <= 4)
+                continue;
+
+            if (!int.TryParse(
+                    line.AsSpan(4, equals - 4),
+                    out var index) ||
+                !int.TryParse(
+                    line[(equals + 1)..].Trim(),
+                    out var value))
+                continue;
+
+            values[index] = Math.Max(0, value);
+        }
+
+        if (values.Count >= 2)
+            _luckThresholds = values.Values.ToArray();
+    }
+
+    private static string ResolveConfigPath(
+        string dataRoot,
+        string file)
+    {
+        var copied = Path.Combine(dataRoot, file);
+        if (File.Exists(copied))
+            return copied;
+
+        var legacy = Path.Combine(
+            Directory.GetParent(dataRoot)?.FullName ?? dataRoot,
+            file);
+        return legacy;
     }
 
     private void LoadDrops(string path)
@@ -322,7 +402,8 @@ public sealed class EnemyDropCatalog
         int entityId,
         int killSequence,
         int itemId,
-        int slot)
+        int slot,
+        int attempt)
     {
         unchecked
         {
@@ -332,6 +413,7 @@ public sealed class EnemyDropCatalog
             x = (x ^ (uint)killSequence) * 16777619;
             x = (x ^ (uint)itemId) * 16777619;
             x = (x ^ (uint)slot) * 16777619;
+            x = (x ^ (uint)attempt) * 16777619;
             x ^= x << 13;
             x ^= x >> 17;
             x ^= x << 5;
