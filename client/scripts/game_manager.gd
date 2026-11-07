@@ -252,6 +252,10 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	await get_tree().process_frame
 	set_frame_gap_stage("initial_map_instantiate")
 	current_map_node = map_resource.instantiate()
+	# Keep the first world completely hidden while its nodes initialize.
+	# The entry loading overlay remains the only visible surface until the
+	# readiness gate at the end of this function has completed.
+	current_map_node.visible = false
 	var instantiate_ms: float = float(Time.get_ticks_usec() - instantiate_started_usec) / 1000.0
 	_trace_map_change("initial_map_instantiated", 0, target_map_id, {
 		"instantiate_ms": instantiate_ms,
@@ -303,6 +307,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	var hud_scene = ResourceLoader.load("res://game_hud.tscn")
 	set_frame_gap_stage("hud_instantiate")
 	current_hud = hud_scene.instantiate()
+	current_hud.visible = false
 	_report_initial_loading_progress(progress_callback, 95.0, "建立遊戲介面")
 	await get_tree().process_frame
 	set_frame_gap_stage("hud_add_child")
@@ -343,6 +348,16 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	_report_initial_loading_progress(progress_callback, 99.6, "載入背景音樂")
 	await get_tree().process_frame
 	await AudioManager.play_map_bgm(map_id.to_int())
+
+	# Reveal the completed world atomically. Until this point the player only
+	# sees the loading overlay, even though the map/HUD have already entered the
+	# SceneTree and finished their _ready/deferred initialization.
+	set_frame_gap_stage("world_reveal")
+	if is_instance_valid(current_map_node):
+		current_map_node.visible = true
+	if is_instance_valid(current_hud):
+		current_hud.visible = true
+	await get_tree().process_frame
 
 	set_frame_gap_stage("world_ready")
 	_trace_map_change("initial_enter_completed", 0, target_map_id, {
