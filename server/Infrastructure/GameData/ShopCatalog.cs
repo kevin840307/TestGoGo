@@ -9,6 +9,7 @@ public sealed class ShopCatalog
     private readonly Dictionary<int, List<ShopItemDefinition>> _shops = new();
     private readonly Dictionary<int, ShopItemDefinition> _items = new();
     private readonly CurrentClientDataCatalog _current;
+    private readonly List<string> _mappingWarnings = [];
 
     public ShopCatalog(
         string dataRoot,
@@ -43,6 +44,8 @@ public sealed class ShopCatalog
     public ShopItemDefinition? FindItem(int itemIndex)
         => _items.TryGetValue(itemIndex, out var value) ? value : null;
 
+    public IReadOnlyList<string> MappingWarnings => _mappingWarnings;
+
     private void LoadRecovery(string path)
     {
         const int recordSize = 1175;
@@ -63,7 +66,8 @@ public sealed class ShopCatalog
                 TabType: 0,
                 Price: price,
                 CanSell: bytes[offset + 2] != 0,
-                Name: $"Item {itemIndex}");
+                Name: $"Item {itemIndex}",
+                SourceCategory: "recovery");
 
             Add(item);
             Add(item with { ShopId = 24 });
@@ -96,7 +100,8 @@ public sealed class ShopCatalog
                 TabType: 0,
                 Price: price,
                 CanSell: bytes[offset + 2] != 0,
-                Name: name);
+                Name: name,
+                SourceCategory: "general");
 
             // KingCity_All_Shop: 1=items, 8=materials.
             // Keep 13 for other legacy shop scripts that reference the broad
@@ -157,7 +162,8 @@ public sealed class ShopCatalog
                 TabType: 1,
                 Price: price,
                 CanSell: bytes[offset + 2] != 0,
-                Name: name));
+                Name: name,
+                SourceCategory: "equip"));
         }
     }
 
@@ -187,7 +193,8 @@ public sealed class ShopCatalog
                 TabType: 1,
                 Price: price,
                 CanSell: bytes[offset + 2] != 0,
-                Name: name);
+                Name: name,
+                SourceCategory: "weapon");
 
             Add(item);
             // Legacy scripts use both Shop2 and Shop10 for weapon views.
@@ -222,26 +229,41 @@ public sealed class ShopCatalog
             foreach (var legacyItemIndex in itemIds)
             {
                 if (!_items.TryGetValue(legacyItemIndex, out var legacy))
-                    continue;
-
-                var current = _current.FindItem(legacyItemIndex);
-
-                if (current is null &&
-                    !string.IsNullOrWhiteSpace(legacy.Name) &&
-                    !legacy.Name.StartsWith(
-                        "Item ",
-                        StringComparison.OrdinalIgnoreCase))
                 {
-                    current = _current.FindItemByName(
-                        legacy.Name,
-                        PreferredCurrentCategory(legacy));
+                    _mappingWarnings.Add(
+                        $"[LEGACY_ITEM_UNKNOWN] Shop={shopId} LegacyItemID={legacyItemIndex}");
+                    continue;
                 }
+
+                if (!HasReliableLegacyName(legacy))
+                {
+                    _mappingWarnings.Add(
+                        $"[LEGACY_NAME_UNCONFIRMED] Shop={shopId} LegacyItemID={legacyItemIndex} Category={legacy.SourceCategory}");
+                    continue;
+                }
+
+                CurrentItemDefinition? current = null;
+
+                var sameId = _current.FindItem(legacyItemIndex);
+                if (sameId is not null &&
+                    SameName(sameId.Name, legacy.Name))
+                {
+                    current = sameId;
+                }
+                else if (sameId is not null)
+                {
+                    _mappingWarnings.Add(
+                        $"[LEGACY_ID_COLLISION] Shop={shopId} LegacyItemID={legacyItemIndex} LegacyName={legacy.Name} CurrentName={sameId.Name}");
+                }
+
+                current ??= _current.FindItemByName(
+                    legacy.Name,
+                    PreferredCurrentCategory(legacy));
 
                 if (current is null)
                 {
-                    // Old server/client IDs are reference-only. Do not expose
-                    // a legacy ID to the current recovered client when no
-                    // current match was found.
+                    _mappingWarnings.Add(
+                        $"[CURRENT_ITEM_NOT_FOUND] Shop={shopId} LegacyItemID={legacyItemIndex} LegacyName={legacy.Name}");
                     continue;
                 }
 
@@ -253,22 +275,28 @@ public sealed class ShopCatalog
                         ? current.Price
                         : legacy.Price,
                     CanSell: current.CanSell != 0,
-                    Name: current.Name));
+                    Name: current.Name,
+                    SourceCategory: current.Category));
             }
         }
     }
 
     private static string? PreferredCurrentCategory(
         ShopItemDefinition legacy)
-        => legacy.TabType switch
-        {
-            0 => null,
-            1 => null,
-            3 => "horse",
-            4 => "horseequip",
-            5 => "horsebattery",
-            _ => null
-        };
+        => string.IsNullOrWhiteSpace(legacy.SourceCategory)
+            ? null
+            : legacy.SourceCategory;
+
+    private static bool HasReliableLegacyName(
+        ShopItemDefinition legacy)
+        => !string.IsNullOrWhiteSpace(legacy.Name) &&
+           !legacy.Name.StartsWith(
+               "Item ",
+               StringComparison.OrdinalIgnoreCase);
+
+    private static bool SameName(string a, string b)
+        => CurrentClientDataCatalog.NormalizeName(a) ==
+           CurrentClientDataCatalog.NormalizeName(b);
 
     private static int CurrentTabType(string category)
         => category.ToLowerInvariant() switch
