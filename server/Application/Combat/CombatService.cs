@@ -204,11 +204,12 @@ public sealed class CombatService
         var activePetUid = activePet is null
             ? 0L
             : Convert.ToInt64(activePet["UID"]);
+        var activePetPosition = (X: 0.0, Y: 0.0);
         var petAlive =
             activePetUid > 0 &&
             session.PetPositions.TryGetValue(
                 activePetUid,
-                out var activePetPosition);
+                out activePetPosition);
 
         var runtime = SyncSessionMonsters(session);
         var packets = new List<object>();
@@ -592,7 +593,6 @@ public sealed class CombatService
 
                                 if (currentHp <= 0)
                                 {
-                                    stateCleanup:
                                     session.PetPositions.Remove(
                                         targetPetUid);
                                     session.PetLastAttackAt.Remove(
@@ -1854,6 +1854,12 @@ public sealed class CombatService
                         accountId,
                         monster,
                         packets);
+
+                    AddActivePetKillExperience(
+                        session,
+                        accountId,
+                        monster,
+                        packets);
                 }
             }
 
@@ -2681,6 +2687,12 @@ public sealed class CombatService
         var character = _store.GetCharacter(
             accountId,
             session.CharacterId.Value);
+
+    private void AddActivePetKillExperience(
+    private void     session,
+    private void     accountId,
+    private void     monster,
+    private void     packets);
 
         if (character is null)
             return;
