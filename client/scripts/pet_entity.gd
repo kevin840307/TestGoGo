@@ -13,6 +13,9 @@ var current_dir: String = "1"
 var level: int = 1
 
 var target_position: Vector2 = Vector2.ZERO
+var move_destination: Vector2 = Vector2.ZERO
+var move_path: PackedVector2Array = PackedVector2Array()
+var move_path_index: int = 0
 const MIN_LERP_WEIGHT: float = 8.0
 const MAX_LERP_WEIGHT: float = 20.0
 const TELEPORT_DISTANCE: float = 900.0
@@ -163,11 +166,14 @@ func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
 	if current_hp <= 0:
 		return
 
-	target_position = new_pos
-	var distance: float = global_position.distance_to(target_position)
+	move_destination = new_pos
+	var distance: float = global_position.distance_to(move_destination)
 
 	if distance > TELEPORT_DISTANCE or speed_time <= 0.01:
-		global_position = target_position
+		global_position = move_destination
+		target_position = move_destination
+		move_path = PackedVector2Array()
+		move_path_index = 0
 		velocity = Vector2.ZERO
 		network_move_active = false
 		network_move_speed = 0.0
@@ -178,6 +184,26 @@ func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
 		if move_tween and move_tween.is_valid():
 			move_tween.kill()
 		return
+
+	var map_id: int = 0
+	if GameManager and is_instance_valid(GameManager.current_player):
+		var owner_data = GameManager.current_player.get("data_model")
+		if owner_data:
+			map_id = int(owner_data.map_id)
+
+	var route: PackedVector2Array = LegacyPathfinder.get_path(
+		map_id,
+		global_position,
+		move_destination
+	)
+
+	if route.is_empty():
+		_stop_network_move()
+		return
+
+	move_path = route
+	move_path_index = 0
+	target_position = move_path[0]
 
 	if move_tween and move_tween.is_valid():
 		move_tween.kill()
@@ -194,59 +220,45 @@ func _physics_process(delta: float) -> void :
 	if not network_move_active or current_hp <= 0:
 		return
 
-	var to_target: Vector2 = target_position - global_position
-	var distance: float = to_target.length()
 	var step_distance: float = network_move_speed * delta
 	var stop_threshold: float = max(3.0, step_distance)
+	var to_target: Vector2 = target_position - global_position
+	var distance: float = to_target.length()
 
 	if distance <= stop_threshold:
-		global_position = target_position
-		velocity = Vector2.ZERO
-		network_move_active = false
-		network_move_speed = 0.0
-		stuck_frames = 0
-		if current_state == "walk":
-			current_state = "idle"
-			sync_animation()
+		if move_path_index + 1 < move_path.size():
+			move_path_index += 1
+			target_position = move_path[move_path_index]
+			to_target = target_position - global_position
+			distance = to_target.length()
+		else:
+			global_position = move_destination
+			_stop_network_move()
+			return
+
+	if distance <= 0.001:
 		return
 
-	var desired_dir: Vector2 = to_target.normalized()
-	velocity = desired_dir * network_move_speed
+	velocity = to_target.normalized() * network_move_speed
 	_update_direction_from_velocity(velocity)
 
 	var old_position: Vector2 = global_position
 	move_and_slide()
-	if old_position.distance_to(global_position) >= 1.0:
+	if old_position.distance_to(global_position) >= 0.75:
 		stuck_frames = 0
 		return
 
-	if get_slide_collision_count() <= 0:
-		stuck_frames += 1
-		if stuck_frames >= PET_STUCK_FRAME_LIMIT:
-			_stop_network_move()
-		return
-
-	var collision: KinematicCollision2D = get_slide_collision(0)
-	var normal: Vector2 = collision.get_normal()
-	var tangent_a: Vector2 = Vector2(-normal.y, normal.x)
-	var tangent_b: Vector2 = -tangent_a
-	var detour_dir: Vector2 = tangent_a if tangent_a.dot(desired_dir) >= tangent_b.dot(desired_dir) else tangent_b
-
-	velocity = detour_dir.normalized() * network_move_speed
-	_update_direction_from_velocity(velocity)
-	var detour_start: Vector2 = global_position
-	move_and_slide()
-
-	if detour_start.distance_to(global_position) >= 0.75:
-		stuck_frames = 0
-	else:
-		stuck_frames += 1
-		if stuck_frames >= PET_STUCK_FRAME_LIMIT:
-			_stop_network_move()
+	stuck_frames += 1
+	if stuck_frames >= PET_STUCK_FRAME_LIMIT:
+		_stop_network_move()
 
 
 func _stop_network_move() -> void :
 	velocity = Vector2.ZERO
+	move_path = PackedVector2Array()
+	move_path_index = 0
+	move_destination = global_position
+	target_position = global_position
 	network_move_active = false
 	network_move_speed = 0.0
 	stuck_frames = 0
