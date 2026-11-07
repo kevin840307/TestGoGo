@@ -4738,47 +4738,14 @@ public sealed class PacketRouter
     private object BuildTimedEffectSync(
         long accountId,
         long dbid)
-    {
-        var nowUtcMs =
-            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var buffs = _store.GetActiveTimedEffects(
-                accountId,
-                dbid,
-                nowUtcMs)
-            .Select(effect =>
-            {
-                var remainingSeconds = Math.Max(
-                    0.0,
-                    (effect.ExpiresUtcMs - nowUtcMs) / 1000.0);
-                var totalSeconds = effect.DurationSeconds > 0
-                    ? effect.DurationSeconds
-                    : remainingSeconds;
-                var buffName = effect.EffectKey switch
-                {
-                    "exp_multiplier_percent" =>
-                        $"ExperienceBoost_{effect.EffectValue}",
-                    _ => $"TimedEffect_{effect.EffectKey}"
-                };
-
-                return (object)new
-                {
-                    BuffName = buffName,
-                    SourceType = effect.SourceType,
-                    Value = effect.SourceValue > 0
-                        ? effect.SourceValue
-                        : effect.EffectValue,
-                    RemainingTime = remainingSeconds,
-                    TotalTime = totalSeconds
-                };
-            })
-            .ToArray();
-
-        return new
+        => new
         {
             Type = "SyncBuffs",
-            Buffs = buffs
+            Buffs = _combat.GetCombinedBuffEntries(
+                accountId,
+                dbid,
+                DateTimeOffset.UtcNow)
         };
-    }
 
     private static bool ResolveSpecialTerrainCapability(
         Dictionary<string, object> character,
