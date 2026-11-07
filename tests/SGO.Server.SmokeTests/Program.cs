@@ -1920,6 +1920,7 @@ try
         legacyClientCatalog,
         growth,
         combat,
+        broadcastHub,
         config);
     var packetHandlers = new IClientPacketHandler[]
     {
