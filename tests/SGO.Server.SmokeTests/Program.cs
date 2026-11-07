@@ -119,6 +119,45 @@ using (var invalidAction = Json(
         "packet schema rejects blank dynamic shop actions");
 }
 
+using (var oversizedInt = Json(
+    """{"Type":"SyncPosition","X":2147483648,"Y":100}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              oversizedInt.RootElement,
+              "SyncPosition", out var rangeError) &&
+          rangeError.Contains("X"),
+        "packet schema rejects Int32 overflow before req.Int fallback");
+}
+using (var validLongTransfer = Json(
+    """{"Type":"DirectTransfer","TargetDBID":2147483648,"Amount":4294967296}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              validLongTransfer.RootElement,
+              "DirectTransfer", out _),
+        "packet schema preserves Int64 transfer IDs and amounts");
+}
+using (var invalidMixedUidArray = Json(
+    """{"Type":"DismantleItemRequest","ItemUIDs":[11,"12",13],"ItemType":"Equip"}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              invalidMixedUidArray.RootElement,
+              "DismantleItemRequest", out var arrayError) &&
+          arrayError.Contains("ItemUIDs"),
+        "packet schema rejects mixed-type dismantle UID arrays");
+}
+using (var oversizedUidArray = Json(JsonSerializer.Serialize(new
+{
+    Type = "DismantleItemRequest",
+    ItemUIDs = Enumerable.Range(1, 513).ToArray(),
+    ItemType = "Equip"
+})))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              oversizedUidArray.RootElement,
+              "DismantleItemRequest", out _),
+        "packet schema rejects oversized dismantle arrays");
+}
+
 var repoRoot = Directory.GetCurrentDirectory();
 var gameDataRoot = Path.Combine(repoRoot, "Old", "服務端", "Dat");
 var questRoot = Path.Combine(gameDataRoot, "Quest");
