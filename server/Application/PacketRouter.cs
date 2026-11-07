@@ -1596,6 +1596,38 @@ public sealed class PacketRouter
                     petPosition.Y));
             }
 
+            // Owner leash always has priority over combat. The recovered
+            // client teleports PetEntity when a network move exceeds 250 px,
+            // so keep the authoritative server rule aligned with that limit.
+            var ownerFollowX = playerX + 42;
+            var ownerFollowY = playerY + 24;
+            var ownerDx = ownerFollowX - petPosition.X;
+            var ownerDy = ownerFollowY - petPosition.Y;
+            var ownerDistanceSquared =
+                ownerDx * ownerDx +
+                ownerDy * ownerDy;
+
+            const double petTeleportDistance = 250.0;
+            if (ownerDistanceSquared >
+                petTeleportDistance * petTeleportDistance)
+            {
+                state.PetPositions[petUid] =
+                    (ownerFollowX, ownerFollowY);
+                state.PetLastAttackAt.Remove(petUid);
+
+                packets.Add(new
+                {
+                    Type = "MoveEntity",
+                    EntityID = petEntityId,
+                    X = ownerFollowX,
+                    Y = ownerFollowY,
+                    Dir = DirectionFromDelta(ownerDx, ownerDy),
+                    SpeedTime = 0.01
+                });
+
+                continue;
+            }
+
             var target = playerAlive
                 ? state.Monsters.Values
                     .Where(x =>
