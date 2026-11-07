@@ -248,6 +248,10 @@ var currentCatalog = new CurrentClientDataCatalog(
             "生命吸收",
             "生命吸收"),
         new CurrentSkillDefinition(
+            33011,
+            "冰之觸",
+            "冰之觸"),
+        new CurrentSkillDefinition(
             27110,
             "平安之祝",
             "平安之祝"),
@@ -328,6 +332,16 @@ var currentCatalog = new CurrentClientDataCatalog(
             0, 0, 0, 0,
             0, 0, 0,
             0, 0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            33011, 1, 7, 0,
+            0, 0,
+            0, 209, 0,
+            0, 0, 1,
+            900, 1,
+            0, 0, 0,
+            0, 80, 0, 80,
+            0, 0, 0, 0,
+            0, 0, 0),
         new CurrentSkillLevelDefinition(
             25108, 1, 7, 0,
             0, 0,
@@ -3133,6 +3147,100 @@ try
                     firstPartyId)),
             "Party Invite/Accept synchronizes the same party to both online players");
     }
+
+    var casterBeforeIceTouch = store.GetCharacter(
+        account.Value,
+        id)!;
+
+    store.ApplyGrowthStats(
+        account.Value,
+        id,
+        Convert.ToInt32(casterBeforeIceTouch["MaxHP"]),
+        Math.Max(
+            500,
+            Convert.ToInt32(casterBeforeIceTouch["MaxMP"])),
+        Convert.ToInt32(casterBeforeIceTouch["MaxSP"]),
+        Convert.ToInt32(casterBeforeIceTouch["Attack"]),
+        Convert.ToInt32(casterBeforeIceTouch["Defense"]),
+        Convert.ToInt32(casterBeforeIceTouch["MagicAttack"]),
+        Convert.ToInt32(casterBeforeIceTouch["MagicDefense"]),
+        Convert.ToInt32(casterBeforeIceTouch["Hit"]),
+        Convert.ToInt32(casterBeforeIceTouch["Dodge"]),
+        Convert.ToInt32(casterBeforeIceTouch["MoveSpeed"]));
+
+    store.SetSkill(
+        account.Value,
+        id,
+        33011,
+        1);
+
+    var peerBeforeIceTouch = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+    var peerBaseStats = CharacterStatCalculator.Calculate(
+        peerBeforeIceTouch,
+        store.GetCharacterAssets(
+            account.Value,
+            secondCharacterId),
+        currentCatalog);
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    var iceTouchAt =
+        DateTimeOffset.UtcNow.AddSeconds(2);
+
+    var iceTouchPackets = combat.UseSkill(
+        session,
+        account.Value,
+        33011,
+        0,
+        0,
+        combatEnemy.X,
+        combatEnemy.Y,
+        iceTouchAt);
+
+    var peerIceTouchJson = JsonSerializer.Serialize(
+        peerRegistration.Queue.ToArray());
+
+    Check(
+        iceTouchPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                $"\"ID\":{secondCharacterId}")) &&
+        peerIceTouchJson.Contains(
+            "\"Type\":\"SyncBuffs\"") &&
+        peerIceTouchJson.Contains("冰之觸") &&
+        peerIceTouchJson.Contains(
+            $"\"Defense\":{peerBaseStats.Defense + 80}") &&
+        peerIceTouchJson.Contains(
+            $"\"MagicDefense\":{peerBaseStats.MagicDefense + 80}"),
+        "冰之觸 applies real +80 DEF/MDEF to online same-map party members");
+
+    var expiredPeerBuffPackets = combat.TickBuffs(
+        peerSession,
+        iceTouchAt.AddSeconds(901));
+
+    var expiredPeerBuffJson =
+        JsonSerializer.Serialize(
+            expiredPeerBuffPackets);
+
+    Check(
+        expiredPeerBuffJson.Contains(
+            "\"Type\":\"SyncBuffs\"") &&
+        expiredPeerBuffJson.Contains(
+            "\"Buffs\":[]") &&
+        expiredPeerBuffJson.Contains(
+            $"\"Defense\":{peerBaseStats.Defense}") &&
+        expiredPeerBuffJson.Contains(
+            $"\"MagicDefense\":{peerBaseStats.MagicDefense}"),
+        "expired party buff removes icon and restores peer effective stats");
+
+    combat.TickBuffs(
+        session,
+        iceTouchAt.AddSeconds(901));
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
 
     store.SetSkill(
         account.Value,
