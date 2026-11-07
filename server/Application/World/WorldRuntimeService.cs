@@ -86,9 +86,9 @@ public sealed class WorldRuntimeService
             .ToArray();
 
         var extraCount = Math.Clamp(
-            sources.Length / 2,
-            10,
-            40);
+            sources.Length,
+            20,
+            80);
 
         for (var index = 0; index < extraCount; index++)
         {
