@@ -81,6 +81,9 @@ else
         currentClientData.Skills.Count,
         currentClientData.Pets.Count);
 
+    foreach (var info in shopCatalog.MappingInfo)
+        app.Logger.LogInformation("{MappingInfo}", info);
+
     foreach (var warning in shopCatalog.MappingWarnings)
         app.Logger.LogWarning("{MappingWarning}", warning);
 }
