@@ -10,7 +10,6 @@ namespace SGO.Server.Application.Combat;
 public sealed class CombatService
 {
     private static readonly TimeSpan RespawnDelay = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan AiTickInterval = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan MonsterAttackCooldown = TimeSpan.FromMilliseconds(1400);
     private static readonly TimeSpan WanderMinInterval = TimeSpan.FromMilliseconds(1200);
     private static readonly TimeSpan WanderMaxInterval = TimeSpan.FromMilliseconds(2800);
