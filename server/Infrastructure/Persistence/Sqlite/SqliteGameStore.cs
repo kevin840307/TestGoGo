@@ -2420,6 +2420,122 @@ public sealed class SqliteGameStore : IGameStore
         return true;
     }
 
+    public (bool Success, string Message) DiscardAsset(
+        long accountId,
+        long dbid,
+        long uid,
+        int tabType,
+        int count)
+    {
+        count = Math.Max(1, count);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return (false, "角色不存在");
+
+        if (tabType is 0 or 5)
+        {
+            int ownedCount;
+            using (var get = db.CreateCommand())
+            {
+                get.Transaction = tx;
+                get.CommandText = """
+                    SELECT count
+                      FROM inventory_items
+                     WHERE uid=$uid
+                       AND character_id=$id
+                       AND in_bank=0
+                       AND in_shop=0
+                    """;
+                Arg(get, "$uid", uid);
+                Arg(get, "$id", dbid);
+                var raw = get.ExecuteScalar();
+                if (raw is null || raw == DBNull.Value)
+                    return (false, "找不到可丟棄的物品");
+                ownedCount = Convert.ToInt32(raw);
+            }
+
+            if (count > ownedCount)
+                return (false, "丟棄數量超過持有數量");
+
+            if (count == ownedCount)
+            {
+                using var delete = db.CreateCommand();
+                delete.Transaction = tx;
+                delete.CommandText = """
+                    DELETE FROM inventory_items
+                     WHERE uid=$uid AND character_id=$id
+                    """;
+                Arg(delete, "$uid", uid);
+                Arg(delete, "$id", dbid);
+                if (delete.ExecuteNonQuery() != 1)
+                    return (false, "丟棄失敗");
+            }
+            else
+            {
+                using var reduce = db.CreateCommand();
+                reduce.Transaction = tx;
+                reduce.CommandText = """
+                    UPDATE inventory_items
+                       SET count=count-$count
+                     WHERE uid=$uid
+                       AND character_id=$id
+                       AND count >= $count
+                    """;
+                Arg(reduce, "$count", count);
+                Arg(reduce, "$uid", uid);
+                Arg(reduce, "$id", dbid);
+                if (reduce.ExecuteNonQuery() != 1)
+                    return (false, "丟棄失敗");
+            }
+
+            tx.Commit();
+            return (true, "已丟棄物品");
+        }
+
+        string table;
+        string availabilityPredicate;
+
+        switch (tabType)
+        {
+            case 1:
+                table = "equipment_items";
+                availabilityPredicate = "part=255";
+                break;
+
+            case 3:
+                table = "horse_equipment";
+                availabilityPredicate = "horse_uid=-1";
+                break;
+
+            default:
+                return (false, "不支援的丟棄分類");
+        }
+
+        using (var delete = db.CreateCommand())
+        {
+            delete.Transaction = tx;
+            delete.CommandText = $"""
+                DELETE FROM {table}
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND in_bank=0
+                   AND in_shop=0
+                   AND {availabilityPredicate}
+                """;
+            Arg(delete, "$uid", uid);
+            Arg(delete, "$id", dbid);
+
+            if (delete.ExecuteNonQuery() != 1)
+                return (false, "此物品正在使用或不存在");
+        }
+
+        tx.Commit();
+        return (true, "已丟棄物品");
+    }
+
     public (bool Success, string Message) BankTransfer(
         long accountId,
         long dbid,
