@@ -60,6 +60,7 @@ public sealed class PacketRouter
     private readonly LegacyPlayerGrowthCatalog _growth;
     private readonly LegacyPetGrowthCatalog _petGrowth;
     private readonly PetSkillCatalog _petSkills;
+    private readonly PetIdleSpeechCatalog _petIdleSpeech;
     private readonly PetEvolutionService _petEvolution;
     private readonly MallService _mall;
     private readonly ServerBroadcastHub _broadcasts;
@@ -90,6 +91,7 @@ public sealed class PacketRouter
         LegacyPlayerGrowthCatalog growth,
         LegacyPetGrowthCatalog petGrowth,
         PetSkillCatalog petSkills,
+        PetIdleSpeechCatalog petIdleSpeech,
         PetEvolutionService petEvolution,
         MallService mall,
         ServerBroadcastHub broadcasts,
@@ -121,6 +123,7 @@ public sealed class PacketRouter
         _growth = growth;
         _petGrowth = petGrowth;
         _petSkills = petSkills;
+        _petIdleSpeech = petIdleSpeech;
         _petEvolution = petEvolution;
         _mall = mall;
         _broadcasts = broadcasts;
@@ -1991,6 +1994,8 @@ public sealed class PacketRouter
                     state.PetLastAttackAt.Remove(petUid);
                     state.PetTargets.Remove(petUid);
                     state.PetOutOfRangeSince.Remove(petUid);
+                    state.PetNextIdleSpeechAt.Remove(petUid);
+                    state.PetIdleSpeechSequence.Remove(petUid);
                     responses.Add(new
                     {
                         Type = "DespawnEntity",
@@ -3457,6 +3462,8 @@ public sealed class PacketRouter
             state.PetLastAttackAt.Remove(petUid);
             state.PetTargets.Remove(petUid);
             state.PetOutOfRangeSince.Remove(petUid);
+            state.PetNextIdleSpeechAt.Remove(petUid);
+            state.PetIdleSpeechSequence.Remove(petUid);
 
             packets.Add(new
             {
@@ -4662,6 +4669,18 @@ public sealed class PacketRouter
         {
             var petUid = Convert.ToInt64(pet["UID"]);
             var petEntityId = 4_000_000L + petUid;
+            var petSpeechSequence =
+                state.PetIdleSpeechSequence.GetValueOrDefault(
+                    petUid,
+                    0);
+
+            if (!state.PetNextIdleSpeechAt.ContainsKey(petUid))
+            {
+                state.PetNextIdleSpeechAt[petUid] =
+                    now + NextPetIdleSpeechDelay(
+                        petUid,
+                        petSpeechSequence);
+            }
 
             if (!state.PetPositions.TryGetValue(
                     petUid,
@@ -4849,7 +4868,36 @@ public sealed class PacketRouter
                 followDy * followDy);
 
             if (followDistance <= 10.0)
+            {
+                if (playerAlive &&
+                    now >= state.PetNextIdleSpeechAt[petUid])
+                {
+                    petSpeechSequence++;
+                    state.PetIdleSpeechSequence[petUid] =
+                        petSpeechSequence;
+                    state.PetNextIdleSpeechAt[petUid] =
+                        now + NextPetIdleSpeechDelay(
+                            petUid,
+                            petSpeechSequence);
+
+                    var speech = _petIdleSpeech.Pick(
+                        Convert.ToInt32(pet["PETID"]),
+                        petUid,
+                        petSpeechSequence);
+
+                    if (!string.IsNullOrWhiteSpace(speech))
+                    {
+                        packets.Add(new
+                        {
+                            Type = "PetIdleSpeech",
+                            EntityID = petEntityId,
+                            Message = speech
+                        });
+                    }
+                }
+
                 continue;
+            }
 
             var followStep = Math.Min(70.0, followDistance);
             var nextFollowX =
@@ -4875,6 +4923,21 @@ public sealed class PacketRouter
             packets);
 
         return packets;
+    }
+
+    private static TimeSpan NextPetIdleSpeechDelay(
+        long petUid,
+        int sequence)
+    {
+        var seed = unchecked(
+            petUid * 1103515245L +
+            (long)sequence * 12345L +
+            0x5F3759DFL);
+
+        var seconds =
+            45 + (int)((ulong)seed % 46UL);
+
+        return TimeSpan.FromSeconds(seconds);
     }
 
     private static string DirectionFromDelta(
@@ -4952,7 +5015,8 @@ public sealed class PacketRouter
             if (type is not (
                     "SpawnEntity" or
                     "DespawnEntity" or
-                    "MoveEntity"))
+                    "MoveEntity" or
+                    "PetIdleSpeech"))
                 continue;
 
             _broadcasts.PublishToMap(
