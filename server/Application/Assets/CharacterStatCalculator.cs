@@ -43,6 +43,27 @@ public static class CharacterStatCalculator
         var critRate = Convert.ToInt32(character["CritRate"]);
         var critDamage = Convert.ToInt32(character["CritDamage"]);
 
+        attack += Convert.ToInt32(
+            character.GetValueOrDefault("ClubTechAttack", 0));
+        defense += Convert.ToInt32(
+            character.GetValueOrDefault("ClubTechDefense", 0));
+        magicAttack += Convert.ToInt32(
+            character.GetValueOrDefault("ClubTechMagicAttack", 0));
+        magicDefense += Convert.ToInt32(
+            character.GetValueOrDefault("ClubTechMagicDefense", 0));
+        hit += Convert.ToInt32(
+            character.GetValueOrDefault("ClubTechHit", 0));
+        dodge += Convert.ToInt32(
+            character.GetValueOrDefault("ClubTechDodge", 0));
+        moveSpeed += Convert.ToInt32(
+            character.GetValueOrDefault("ClubTechMoveSpeed", 0));
+        attackSpeed += Convert.ToInt32(
+            character.GetValueOrDefault("ClubTechAttackSpeed", 0));
+        critRate += Convert.ToInt32(
+            character.GetValueOrDefault("ClubTechCritRate", 0));
+        critDamage += Convert.ToInt32(
+            character.GetValueOrDefault("ClubTechCritDamage", 0));
+
         foreach (var eq in assets.Equips)
         {
             if (Convert.ToInt32(eq["InBank"]) != 0 ||
