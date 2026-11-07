@@ -39,16 +39,24 @@ public static class ClientProtocol
     }
 
     public static string Str(this JsonElement json, string key, string fallback = "")
-        => json.TryGetProperty(key, out var v) ? v.ToString() : fallback;
+        => json.ValueKind == JsonValueKind.Object &&
+           json.TryGetProperty(key, out var v)
+            ? v.ToString()
+            : fallback;
 
     public static int Int(this JsonElement json, string key, int fallback = 0)
-        => json.TryGetProperty(key, out var v) && v.TryGetInt32(out int n) ? n : fallback;
+        => json.ValueKind == JsonValueKind.Object &&
+           json.TryGetProperty(key, out var v) &&
+           v.ValueKind == JsonValueKind.Number &&
+           v.TryGetInt32(out int n) ? n : fallback;
 
     public static long Long(
         this JsonElement json,
         string key,
         long fallback = 0)
-        => json.TryGetProperty(key, out var v) &&
+        => json.ValueKind == JsonValueKind.Object &&
+           json.TryGetProperty(key, out var v) &&
+           v.ValueKind == JsonValueKind.Number &&
            v.TryGetInt64(out long n)
             ? n
             : fallback;
