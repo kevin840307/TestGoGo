@@ -11,7 +11,7 @@ dotnet build server/SGO.Server.csproj -c Release
 dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release
 ```
 
-GitHub Actions `Server build` 工作流程已納入前兩項檢查，且會上傳 `packet-contract-report.json`。
+GitHub Actions `Server build` 工作流程已納入前兩項檢查，且會上傳 `packet-contract-report.json`。報告的 `routes[]` 會逐一列出封包 `direction`、`type`、`status`（`ROUTED`／`PARTIAL`／`MISSING_SERVER_HANDLER`／`MISSING_CLIENT_HANDLER`）與說明；`ROUTED` 只代表路由存在，不代表功能或 E2E 已通過。
 
 ## 契約稽核內容
 
