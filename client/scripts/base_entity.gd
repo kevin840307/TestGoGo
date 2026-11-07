@@ -1639,16 +1639,13 @@ func execute_skill_visuals(skill_id: int, skill_level: int, target_node: Node2D 
 		var fx_hit = s_res.fx_hit
 		if fx_hit != "":
 
-			var is_aoe_target_hit := (
-				s_res.skill_type == 7
-				and "special_skill" in s_res
-				and s_res.special_skill != null
-				and (
-					s_res.special_skill.contains("挑撥")
-					or s_res.special_skill.contains("範圍攻擊")
+			var is_aoe_target_hit: bool = false
+			if s_res.skill_type == 7 and not aoe_targets.is_empty():
+				var special_text: String = str(s_res.special_skill)
+				is_aoe_target_hit = (
+					special_text.contains("挑撥")
+					or special_text.contains("範圍攻擊")
 				)
-				and not aoe_targets.is_empty()
-			)
 
 			if is_aoe_target_hit:
 				for t_info in aoe_targets:
