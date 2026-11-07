@@ -30,6 +30,10 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_packet_response_audit.py", "-v"
     )
+    Invoke-Checked "Sensitive packet log privacy tests" "python" @(
+        "-m", "unittest", "discover", "-s", "tests",
+        "-p", "test_packet_log_privacy.py", "-v"
+    )
     Invoke-Checked "Packet Type/Action coverage" "python" @(
         "tests/packet_contract_audit.py", "--strict", "--output",
         (Join-Path $logRoot "packet-contract.json")
@@ -79,7 +83,7 @@ try {
     Write-Host "[CHECK] Starting isolated local server" -ForegroundColor Cyan
     $server = Start-Process -FilePath "dotnet" -ArgumentList @(
         ('"' + $serverDll + '"')
-    ) -WorkingDirectory $root -RedirectStandardOutput (
+    ) -WorkingDirectory (Join-Path $root "server") -RedirectStandardOutput (
         Join-Path $logRoot "server.log"
     ) -RedirectStandardError (
         Join-Path $logRoot "server-errors.log"
