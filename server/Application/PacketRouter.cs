@@ -1233,6 +1233,112 @@ public sealed class PacketRouter
                         itemIndex);
                 }
 
+                var capacityExpansion = itemIndex switch
+                {
+                    2302 => (
+                        Inventory: 100,
+                        Equip: 0,
+                        Pet: 0,
+                        HorseEquip: 0,
+                        Label: "道具空間"),
+                    2303 => (
+                        Inventory: 0,
+                        Equip: 100,
+                        Pet: 0,
+                        HorseEquip: 0,
+                        Label: "裝備空間"),
+                    2304 => (
+                        Inventory: 0,
+                        Equip: 0,
+                        Pet: 10,
+                        HorseEquip: 0,
+                        Label: "寵物空間"),
+                    2305 => (
+                        Inventory: 0,
+                        Equip: 0,
+                        Pet: 0,
+                        HorseEquip: 25,
+                        Label: "機甲裝備空間"),
+                    _ => (
+                        Inventory: 0,
+                        Equip: 0,
+                        Pet: 0,
+                        HorseEquip: 0,
+                        Label: "")
+                };
+
+                if (capacityExpansion.Inventory +
+                    capacityExpansion.Equip +
+                    capacityExpansion.Pet +
+                    capacityExpansion.HorseEquip > 0)
+                {
+                    var expanded =
+                        _store.ExpandCapacityFromItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            itemIndex,
+                            capacityExpansion.Inventory,
+                            capacityExpansion.Equip,
+                            capacityExpansion.Pet,
+                            capacityExpansion.HorseEquip);
+
+                    if (!expanded.Success)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = expanded.Message
+                            }
+                        ];
+                    }
+
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        new
+                        {
+                            Type = "EquipSync",
+                            Equips = assets.Equips,
+                            MaxSize = assets.EquipMaxSize
+                        },
+                        new
+                        {
+                            Type = "PetSync",
+                            Pets = assets.Pets,
+                            MaxSize = assets.PetMaxSize
+                        },
+                        new
+                        {
+                            Type = "HorseSync",
+                            Horses = assets.Horses,
+                            HorseEquips = assets.HorseEquips,
+                            MaxHorseEquipSize =
+                                assets.HorseEquipMaxSize
+                        },
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message =
+                                $"{capacityExpansion.Label}擴充完成"
+                        }
+                    ];
+                }
+
                 var recovery = _recoveryItems.Find(itemIndex);
                 if (recovery is not null)
                 {
