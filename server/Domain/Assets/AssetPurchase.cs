@@ -4,6 +4,7 @@ public enum AssetPurchaseKind
 {
     General = 0,
     Equipment = 1,
+    Pet = 2,
     Horse = 3,
     HorseEquipment = 4,
     HorseBattery = 5
