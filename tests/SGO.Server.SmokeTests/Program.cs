@@ -1654,6 +1654,31 @@ try
                   $"\"EntityID\":{monster.EntityId}")),
         "monster entering melee range attacks immediately instead of standing through an old cooldown");
 
+    monster.HasTarget = true;
+    monster.AiState = MonsterAiState.Attack;
+    monster.LastAttackAt = DateTimeOffset.MinValue;
+    var hpBeforeFarAttack =
+        Convert.ToInt32(store.GetCharacter(account.Value, id)!["HP"]);
+
+    var farAttackPackets = combat.TickAi(
+        session,
+        account.Value,
+        monster.X + 155,
+        monster.Y,
+        session.LastMonsterAiTick.AddSeconds(2));
+
+    var hpAfterFarAttack =
+        Convert.ToInt32(store.GetCharacter(account.Value, id)!["HP"]);
+
+    Check(
+        hpAfterFarAttack == hpBeforeFarAttack &&
+        !farAttackPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EntityDamage\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                $\"\"AttackerID\":{monster.EntityId}\")),
+        "monster in attack hysteresis range cannot deal damage beyond 130px");
+
     var sawDeath = false;
 
     for (var i = 0; i < 100 && !sawDeath; i++)
