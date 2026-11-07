@@ -621,7 +621,7 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 		"HorseSync":
 			var horses = data.get("Horses", [])
 			var horse_equips = data.get("HorseEquips", [])
-			var max_horse_eq_size = int(data.get("MaxHorseEquipSize", 20))
+			var max_horse_eq_size = int(data.get("MaxHorseEquipSize", 100))
 
 			if GameManager.current_player and "data_model" in GameManager.current_player:
 				GameManager.current_player.data_model.update_horses(horses, horse_equips, max_horse_eq_size)
