@@ -1912,6 +1912,8 @@ try
     config["Gameplay:ResourceRecovery:MpPercent"] = "10";
     config["Gameplay:ResourceRecovery:MinimumHp"] = "1";
     config["Gameplay:ResourceRecovery:MinimumMp"] = "1";
+    config["Gameplay:Festival:Theme"] = "easter";
+    config["Gameplay:Festival:Activity"] = "easter";
     var gm = new GmCommandService(
         store,
         skillCatalog,
@@ -1969,7 +1971,8 @@ try
         rank,
         questProgress,
         trade,
-        NullLogger<PacketRouter>.Instance);
+        NullLogger<PacketRouter>.Instance,
+        config);
     var session = new ClientSession
     {
         ConnectionId = broadcastRegistration.ConnectionId
