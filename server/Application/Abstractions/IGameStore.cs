@@ -15,6 +15,7 @@ public interface IGameStore :
     IQuestStore,
     ITitleStore,
     IMallStore,
+    ITimedEffectStore,
     IClubStore,
     IRankStore,
     IShortcutStore,
