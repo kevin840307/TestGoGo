@@ -189,6 +189,7 @@ public sealed class GmCommandService
             {
                 Type = "PlayerStatusSync",
                 Level = ch["Level"],
+                ExpUse = ch["ExpUse"],
                 HP = ch["HP"],
                 MP = ch["MP"],
                 SP = ch["SP"],
@@ -196,7 +197,7 @@ public sealed class GmCommandService
                 MaxMP = ch["MaxMP"],
                 MaxSP = ch["MaxSP"]
             },
-            Chat($"角色等級已設為 {ch["Level"]}")
+            Chat($"角色等級已設為 {ch["Level"]}，可用能力點 {ch["ExpUse"]}")
         ];
     }
 
