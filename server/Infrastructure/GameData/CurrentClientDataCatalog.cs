@@ -33,7 +33,8 @@ public sealed record CurrentItemDefinition(
     string HorseType,
     int ReqLevel = 0,
     int Durability = 0,
-    int CanRepair = 1);
+    int CanRepair = 1,
+    int CanTrade = 1);
 
 public sealed record CurrentSkillDefinition(
     int SkillId,
@@ -314,7 +315,8 @@ public sealed class CurrentClientDataCatalog
                     ReadString(text, "horse_type"),
                     ReadInt(text, "req_level"),
                     ReadInt(text, "durability"),
-                    ReadInt(text, "can_repair", 1));
+                    ReadInt(text, "can_repair", 1),
+                    ReadInt(text, "can_trade", 1));
 
                 _items[id] = item;
                 AddByName(_itemsByName, item.Name, item);
