@@ -250,7 +250,15 @@ public sealed class PacketRouter
         }
 
         if (type == "AnnouncementListRequest")
-            return [new { Type = "AnnouncementListResponse", Announcements = Array.Empty<object>() }];
+        {
+            return [new
+            {
+                Type = "AnnouncementListResponse",
+                Success = true,
+                Message = "",
+                Announcements = Array.Empty<object>()
+            }];
+        }
 
         if (!state.AccountId.HasValue)
         {
