@@ -1619,6 +1619,13 @@ try
             "non-object JSON payload yields explicit error, not an exception");
     }
 
+    using (var invalidPacketType = Json("""{"Type":42}"""))
+    {
+        var packets = router.Handle(invalidPacketType.RootElement, session);
+        Check(JsonSerializer.Serialize(packets).Contains("INVALID_PACKET"),
+            "non-string Type is rejected before packet routing");
+    }
+
     var pongBefore = session.LastPongAt;
     using (var pongRequest = Json(
         """{"Type":"Pong"}"""))
