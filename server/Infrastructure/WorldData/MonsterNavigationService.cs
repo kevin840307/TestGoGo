@@ -162,7 +162,25 @@ public sealed class MonsterNavigationService
         var x2 = fromX + wayDx / wayDistance * move;
         var y2 = fromY + wayDy / wayDistance * move;
         if (!IsDirectClear(mapId, fromX, fromY, x2, y2))
-            return false;
+        {
+            // At a sharp corner, the direct line from a point near the
+            // edge of the starting cell can cut the wall even though the
+            // A* cell route is legal. First steer to our own cell centre.
+            var centerX = start.Item1 * Cell + Cell / 2.0;
+            var centerY = start.Item2 * Cell + Cell / 2.0;
+            var centerDx = centerX - fromX;
+            var centerDy = centerY - fromY;
+            var centerDistance = Math.Sqrt(
+                centerDx * centerDx + centerDy * centerDy);
+            if (centerDistance < 0.01)
+                return false;
+
+            var centerStep = Math.Min(maxStep, centerDistance);
+            x2 = fromX + centerDx / centerDistance * centerStep;
+            y2 = fromY + centerDy / centerDistance * centerStep;
+            if (!IsDirectClear(mapId, fromX, fromY, x2, y2))
+                return false;
+        }
 
         nextX = x2;
         nextY = y2;
