@@ -1892,6 +1892,69 @@ try
             "PetAction ResetStat consumes 精靈再生水晶 and refunds allocated points");
     }
 
+    var disposablePetUid = store.AddPet(
+        account.Value,
+        id,
+        45001,
+        "DiscardPet");
+    var disposableHorseUid = store.AddHorse(
+        account.Value,
+        id,
+        50001,
+        "DiscardMecha",
+        "MS",
+        100);
+
+    using (var dropPet = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "DropItemRequest",
+            TabType = 2,
+            ItemUID = disposablePetUid,
+            Count = 1
+        })))
+    {
+        var responses = router.Handle(
+            dropPet.RootElement,
+            session);
+
+        Check(
+            !store.GetCharacterAssets(
+                account.Value,
+                id).Pets.Any(x =>
+                Convert.ToInt64(x["UID"]) ==
+                    disposablePetUid) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PetSync\"")),
+            "DropItemRequest permanently removes an inactive unequipped pet");
+    }
+
+    using (var dropMecha = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "DropItemRequest",
+            TabType = 4,
+            ItemUID = disposableHorseUid,
+            Count = 1
+        })))
+    {
+        var responses = router.Handle(
+            dropMecha.RootElement,
+            session);
+
+        Check(
+            !store.GetCharacterAssets(
+                account.Value,
+                id).Horses.Any(x =>
+                Convert.ToInt64(x["HorseUID"]) ==
+                    disposableHorseUid) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"HorseSync\"")),
+            "DropItemRequest permanently removes an unused unequipped mecha");
+    }
+
     var megaphoneUid = store.AddInventoryItem(
         account.Value,
         id,
