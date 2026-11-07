@@ -28,6 +28,7 @@ public sealed class DollService
     private readonly CurrentClientDataCatalog _current;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly IConfiguration _config;
+    private readonly FestivalRewardCatalog _festivalRewards;
 
     public DollService(
         IInventoryStore inventory,
@@ -41,10 +42,19 @@ public sealed class DollService
         _current = current;
         _broadcasts = broadcasts;
         _config = config;
+        _festivalRewards = new FestivalRewardCatalog(current.Root);
     }
 
     public bool Supports(int itemIndex)
-        => itemIndex == HappinessDollItemId;
+        => itemIndex == HappinessDollItemId ||
+           _festivalRewards.Supports(itemIndex);
+
+    private sealed record RewardCandidate(
+        CurrentItemDefinition Item,
+        AssetPurchaseKind Kind,
+        int Part,
+        int MinCount,
+        int MaxCount);
 
     public IReadOnlyList<object> Open(
         long accountId,
@@ -55,25 +65,37 @@ public sealed class DollService
         if (!Supports(dollItemIndex))
             return [];
 
-        var availableRewards = HappinessRewards
-            .Select(id => _current.FindItem(id))
-            .Where(x => x is not null)
-            .Cast<CurrentItemDefinition>()
-            .ToArray();
+        var availableRewards =
+            BuildAvailableRewards(dollItemIndex);
 
         if (availableRewards.Length == 0)
-            return [Flash("幸福娃娃獎池目前沒有可用物品")];
+        {
+            var sourceName =
+                _current.FindItem(dollItemIndex)?.Name ??
+                $"道具 {dollItemIndex}";
+            return [Flash(
+                $"{sourceName}獎池目前沒有可安全發放的物品")];
+        }
 
-        var reward = availableRewards[
+        var selected = availableRewards[
             Random.Shared.Next(availableRewards.Length)];
 
-        if (!TryResolveRewardKind(
-                reward,
-                out var rewardKind,
-                out var rewardPart))
+        var rewardCount = selected.MinCount == selected.MaxCount
+            ? selected.MinCount
+            : Random.Shared.Next(
+                selected.MinCount,
+                selected.MaxCount + 1);
+
+        // Non-stackable assets are represented by one DB row per item.
+        // Current festival data does not declare multi-count equipment;
+        // reject it defensively rather than silently granting the wrong
+        // number of rows.
+        if (selected.Kind is AssetPurchaseKind.Equipment
+                or AssetPurchaseKind.HorseEquipment &&
+            rewardCount != 1)
         {
             return [Flash(
-                $"幸福娃娃抽到尚未支援的獎勵類型：{reward.Name}")];
+                $"獎勵數量設定無效：{selected.Item.Name}")];
         }
 
         var result = _inventory.OpenDoll(
@@ -81,13 +103,13 @@ public sealed class DollService
             characterId,
             dollUid,
             dollItemIndex,
-            reward.ItemId,
-            rewardKind,
-            1,
-            rewardKind == AssetPurchaseKind.Equipment
+            selected.Item.ItemId,
+            selected.Kind,
+            rewardCount,
+            selected.Kind == AssetPurchaseKind.Equipment
                 ? 255
-                : rewardPart,
-            reward.Durability);
+                : selected.Part,
+            selected.Item.Durability);
 
         if (!result.Success)
             return [Flash(result.Message)];
@@ -106,7 +128,7 @@ public sealed class DollService
             }
         };
 
-        if (rewardKind == AssetPurchaseKind.Equipment)
+        if (selected.Kind == AssetPurchaseKind.Equipment)
         {
             packets.Add(new
             {
@@ -115,7 +137,7 @@ public sealed class DollService
                 MaxSize = assets.EquipMaxSize
             });
         }
-        else if (rewardKind == AssetPurchaseKind.HorseEquipment)
+        else if (selected.Kind == AssetPurchaseKind.HorseEquipment)
         {
             packets.Add(new
             {
@@ -145,10 +167,15 @@ public sealed class DollService
                 presence.ConnectionId);
         }
 
+        var sourceItem = _current.FindItem(dollItemIndex);
+        var sourceName = sourceItem?.Name ??
+                         $"道具 {dollItemIndex}";
         packets.Add(Flash(
-            $"幸福娃娃送給你：{reward.Name}"));
+            $"{sourceName}送給你：{selected.Item.Name}" +
+            (rewardCount > 1 ? $" x {rewardCount}" : "")));
 
-        if (ShouldAnnounce(reward))
+        if (dollItemIndex == HappinessDollItemId &&
+            ShouldAnnounce(selected.Item))
         {
             var character = _characters.GetCharacter(
                 accountId,
@@ -162,11 +189,64 @@ public sealed class DollService
             {
                 Type = "SystemMessageBroadcast",
                 Message =
-                    $"[幸福娃娃] 恭喜 {characterName} 抽中了稀有寶物「{reward.Name}」！"
+                    $"[幸福娃娃] 恭喜 {characterName} 抽中了稀有寶物「{selected.Item.Name}」！"
             });
         }
 
         return packets;
+    }
+
+    private RewardCandidate[] BuildAvailableRewards(
+        int sourceItemId)
+    {
+        if (sourceItemId == HappinessDollItemId)
+        {
+            return HappinessRewards
+                .Select(id => new FestivalRandomReward(id, 1, 1))
+                .Select(TryBuildCandidate)
+                .Where(x => x is not null)
+                .Cast<RewardCandidate>()
+                .ToArray();
+        }
+
+        return _festivalRewards
+            .GetRewards(sourceItemId)
+            .Select(TryBuildCandidate)
+            .Where(x => x is not null)
+            .Cast<RewardCandidate>()
+            .ToArray();
+    }
+
+    private RewardCandidate? TryBuildCandidate(
+        FestivalRandomReward rewardSpec)
+    {
+        var reward = _current.FindItem(
+            rewardSpec.ItemId);
+        if (reward is null ||
+            !TryResolveRewardKind(
+                reward,
+                out var kind,
+                out var part))
+            return null;
+
+        var min = Math.Clamp(
+            rewardSpec.MinCount, 1, 999);
+        var max = Math.Clamp(
+            rewardSpec.MaxCount, min, 999);
+
+        if (kind is AssetPurchaseKind.Equipment
+                or AssetPurchaseKind.HorseEquipment)
+        {
+            min = 1;
+            max = 1;
+        }
+
+        return new(
+            reward,
+            kind,
+            part,
+            min,
+            max);
     }
 
     private bool ShouldAnnounce(CurrentItemDefinition reward)
