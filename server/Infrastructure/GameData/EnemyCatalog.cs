@@ -12,6 +12,8 @@ public sealed record EnemyDefinition(
 public sealed class EnemyCatalog
 {
     private readonly Dictionary<int, EnemyDefinition> _items = new();
+    private readonly Dictionary<string, EnemyDefinition> _itemsByName =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public EnemyCatalog(string csvPath)
     {
@@ -31,15 +33,25 @@ public sealed class EnemyCatalog
             var sprite = cols[6].Trim();
             var maxHp = int.TryParse(cols[9], out var hp) ? hp : 1;
 
-            _items[id] = new EnemyDefinition(
+            var definition = new EnemyDefinition(
                 id,
                 string.IsNullOrWhiteSpace(name) ? $"Enemy{id}" : name,
                 level,
                 sprite,
                 Math.Max(1, maxHp));
+
+            _items[id] = definition;
+            if (!string.IsNullOrWhiteSpace(definition.Name))
+                _itemsByName.TryAdd(definition.Name.Trim(), definition);
         }
     }
 
     public EnemyDefinition? Find(int enemyId)
         => _items.TryGetValue(enemyId, out var value) ? value : null;
+
+    public EnemyDefinition? FindByName(string name)
+        => !string.IsNullOrWhiteSpace(name) &&
+           _itemsByName.TryGetValue(name.Trim(), out var value)
+            ? value
+            : null;
 }
