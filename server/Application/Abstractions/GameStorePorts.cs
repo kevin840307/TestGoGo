@@ -231,6 +231,13 @@ public sealed record CharacterStatResetResult(
     string Message,
     Dictionary<string, object>? Character);
 
+public sealed record TeleportItemUseResult(
+    bool Success,
+    string Message,
+    int MapId,
+    int X,
+    int Y);
+
 public interface IInventoryStore : ICharacterAssetReader
 {
     long AddInventoryItem(
@@ -268,6 +275,15 @@ public interface IInventoryStore : ICharacterAssetReader
         int hit,
         int dodge,
         int moveSpeed);
+
+    TeleportItemUseResult UseTeleportItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        int mapId,
+        int x,
+        int y);
     (bool Success, string Message, long RewardUid) OpenDoll(
         long accountId,
         long dbid,
