@@ -296,6 +296,30 @@ public sealed class PacketRouter
                     if (horse is null)
                         return [new { Type = "SystemMessageFlash", Message = "機甲卡啟用失敗" }];
 
+                    var activatedHorseUid =
+                        Convert.ToInt64(horse["HorseUID"]);
+                    var preset = _current.FindHorsePreset(
+                        horseCard.ItemIndex);
+
+                    if (preset is not null)
+                    {
+                        foreach (var equipIndex in new[]
+                                 {
+                                     preset.BodyId,
+                                     preset.WeaponId,
+                                     preset.EngineId
+                                 }.Where(x => x > 0).Distinct())
+                        {
+                            var equip = _current.FindItem(equipIndex);
+                            _store.AddHorseEquipment(
+                                accountId,
+                                state.CharacterId.Value,
+                                equipIndex,
+                                activatedHorseUid,
+                                equip?.EquipSlot ?? 255);
+                        }
+                    }
+
                     var assets = _store.GetCharacterAssets(
                         accountId,
                         state.CharacterId.Value);
@@ -318,7 +342,9 @@ public sealed class PacketRouter
                         new
                         {
                             Type = "SystemMessageFlash",
-                            Message = $"已啟用機甲：{horseCard.Name}"
+                            Message = preset is null
+                                ? $"已啟用機甲：{horseCard.Name}"
+                                : $"已啟用機甲：{horseCard.Name}（含預設裝備）"
                         }
                     ];
                 }
