@@ -680,6 +680,176 @@ public sealed class SqliteGameStore : IGameStore
         return true;
     }
 
+    public IReadOnlyList<Dictionary<string, object>> GetQuests(
+        long accountId,
+        long dbid)
+    {
+        var result =
+            new List<Dictionary<string, object>>();
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return result;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT quest_id,status,current_step,step_progress
+              FROM character_quests
+             WHERE character_id=$id
+             ORDER BY quest_id
+            """;
+        Arg(cmd, "$id", dbid);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            result.Add(new Dictionary<string, object>
+            {
+                ["QuestID"] = reader.GetInt32(0),
+                ["Status"] = reader.GetInt32(1),
+                ["CurrentStep"] = reader.GetInt32(2),
+                ["StepProgress"] = reader.GetInt32(3)
+            });
+        }
+
+        return result;
+    }
+
+    public bool UpsertQuest(
+        long accountId,
+        long dbid,
+        int questId,
+        int status,
+        int currentStep,
+        int stepProgress)
+    {
+        if (questId <= 0)
+            return false;
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return false;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO character_quests(
+                character_id,quest_id,status,current_step,
+                step_progress,updated_utc_ms)
+            VALUES(
+                $id,$quest,$status,$step,$progress,$updated)
+            ON CONFLICT(character_id,quest_id)
+            DO UPDATE SET
+                status=excluded.status,
+                current_step=excluded.current_step,
+                step_progress=excluded.step_progress,
+                updated_utc_ms=excluded.updated_utc_ms
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$quest", questId);
+        Arg(cmd, "$status", Math.Clamp(status, 0, 3));
+        Arg(cmd, "$step", Math.Max(0, currentStep));
+        Arg(cmd, "$progress", Math.Max(0, stepProgress));
+        Arg(cmd, "$updated",
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+        return cmd.ExecuteNonQuery() == 1;
+    }
+
+    public bool AbandonQuest(
+        long accountId,
+        long dbid,
+        int questId)
+    {
+        if (questId <= 0)
+            return false;
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return false;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            DELETE FROM character_quests
+             WHERE character_id=$id
+               AND quest_id=$quest
+               AND status IN (1,2)
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$quest", questId);
+        return cmd.ExecuteNonQuery() == 1;
+    }
+
+    public long GetMallPoints(long accountId)
+    {
+        if (accountId <= 0)
+            return 0;
+
+        using var db = Open();
+
+        using (var ensure = db.CreateCommand())
+        {
+            ensure.CommandText = """
+                INSERT INTO account_mall_points(
+                    account_id,points,lifetime_donation)
+                SELECT id,0,0
+                  FROM accounts
+                 WHERE id=$account
+                ON CONFLICT(account_id) DO NOTHING
+                """;
+            Arg(ensure, "$account", accountId);
+            ensure.ExecuteNonQuery();
+        }
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT points
+              FROM account_mall_points
+             WHERE account_id=$account
+             LIMIT 1
+            """;
+        Arg(cmd, "$account", accountId);
+        return Convert.ToInt64(cmd.ExecuteScalar() ?? 0L);
+    }
+
+    public bool AdjustMallPoints(
+        long accountId,
+        long delta,
+        out long newBalance)
+    {
+        newBalance = GetMallPoints(accountId);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        using var update = db.CreateCommand();
+        update.Transaction = tx;
+        update.CommandText = """
+            UPDATE account_mall_points
+               SET points=points+$delta
+             WHERE account_id=$account
+               AND points+$delta >= 0
+            """;
+        Arg(update, "$delta", delta);
+        Arg(update, "$account", accountId);
+
+        if (update.ExecuteNonQuery() != 1)
+            return false;
+
+        using var read = db.CreateCommand();
+        read.Transaction = tx;
+        read.CommandText = """
+            SELECT points
+              FROM account_mall_points
+             WHERE account_id=$account
+            """;
+        Arg(read, "$account", accountId);
+        newBalance = Convert.ToInt64(
+            read.ExecuteScalar() ?? 0L);
+
+        tx.Commit();
+        return true;
+    }
+
     public IReadOnlyList<RankEntry> GetRankEntries(
         int rankType,
         int limit)
