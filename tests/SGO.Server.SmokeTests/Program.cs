@@ -4395,6 +4395,31 @@ try
                   $"\"EntityID\":{monster.EntityId}")),
         "monster entering melee range attacks immediately instead of standing through an old cooldown");
 
+    // Regression: vector math can produce 90.0000000000001 for a target that
+    // is logically exactly at the 90px engage boundary. That must not enter
+    // Chase with an effectively zero movement step.
+    monster.HasTarget = true;
+    monster.TargetCharacterId = id;
+    monster.IsMoving = true;
+    monster.AiState = MonsterAiState.Chase;
+    monster.LastAttackAt = session.LastMonsterAiTick;
+    var floatingBoundaryPackets = combat.TickAi(
+        session,
+        account.Value,
+        monster.X + 90.0000000000001,
+        monster.Y,
+        session.LastMonsterAiTick.AddMilliseconds(250));
+
+    Check(
+        monster.AiState == MonsterAiState.Attack &&
+        !monster.IsMoving &&
+        !floatingBoundaryPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"MoveEntity\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                $"\"EntityID\":{monster.EntityId}")),
+        "monster treats floating-point noise at the 90px engage boundary as in range instead of zero-step chasing");
+
     monster.HasTarget = true;
     monster.AiState = MonsterAiState.Chase;
     var boundaryStartX = monster.X;
