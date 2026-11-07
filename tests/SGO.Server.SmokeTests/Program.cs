@@ -329,7 +329,24 @@ var currentCatalog = new CurrentClientDataCatalog(
                     0,
                     "EN050A",
                     0,
-                    80)
+                    80,
+                    NextEvolIds: new[] { 1 }),
+                [1] = new CurrentPetEvolution(
+                    1,
+                    "EN010A",
+                    2,
+                    80,
+                    MinLevel: 2,
+                    RequiredStr: 1,
+                    NextEvolIds: new[] { 2 }),
+                [2] = new CurrentPetEvolution(
+                    2,
+                    "EN011A",
+                    0,
+                    80,
+                    MinLevel: 10,
+                    RequiredStr: 10,
+                    NextEvolIds: Array.Empty<int>())
             })
     },
     new[]
@@ -1108,6 +1125,9 @@ try
     var party = new PartyService(
         store,
         broadcastHub);
+    var petEvolution = new PetEvolutionService(
+        store,
+        currentCatalog);
     var club = new ClubService(
         store,
         broadcastHub);
@@ -1134,6 +1154,7 @@ try
         worldRuntime,
         broadcastHub,
         party,
+        petEvolution,
         questProgress,
         NullLogger<CombatService>.Instance);
     var shops = new ShopService(
@@ -1200,6 +1221,7 @@ try
         growth,
         petGrowth,
         petSkills,
+        petEvolution,
         mall,
         broadcastHub,
         party,
@@ -2070,10 +2092,14 @@ try
                 useExpBeforePetStat - 1 &&
             Convert.ToInt32(updatedPet["Attack"]) ==
                 attackBeforePetStat + 2 &&
+            Convert.ToInt32(updatedPet["EvolID"]) == 1 &&
             responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains(
-                    "\"Type\":\"PetSync\"")),
-            "PetAction AllocateStat consumes UseExp and applies legacy STR attack growth");
+                    "\"Type\":\"PetSync\"")) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "寵物進化")),
+            "PetAction AllocateStat consumes UseExp, applies STR growth, and evolves when requirements are met");
     }
 
     using (var db = new SqliteConnection(
