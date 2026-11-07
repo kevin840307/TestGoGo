@@ -5131,6 +5131,15 @@ try
                 Convert.ToInt32(x["State"]) == 1) == 3,
         "second 2301 card raises the permanent limit to three and all three pets can remain summoned");
 
+    var reopenedPetSummonStore =
+        new SqliteGameStore(dbPath);
+    Check(
+        reopenedPetSummonStore
+            .GetCharacterAssets(
+                account.Value,
+                id).PetSummonMax == 3,
+        "2301 simultaneous summon capacity survives a fresh store instance/reconnect");
+
     var rejectedPetExpansionUid =
         store.AddInventoryItem(
             account.Value,
