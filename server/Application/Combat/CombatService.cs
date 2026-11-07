@@ -50,7 +50,7 @@ public sealed class CombatService
         int SkillLevel,
         int HpPercent,
         int MpPercent,
-        bool ClearDeathExp,
+        int DeathExpReductionPercent,
         DateTimeOffset ExpiresAt);
 
     private readonly ConcurrentDictionary<long, PendingRevive>
@@ -1809,7 +1809,14 @@ public sealed class CombatService
                 ? 100
                 : 10;
             var mpPercent = 0;
-            var clearDeathExp = skillId == 27111;
+            var deathExpReductionPercent = Math.Clamp(
+                skillId == 27111
+                    ? Math.Max(
+                        100,
+                        levelData.DeathExpReductionPercent)
+                    : levelData.DeathExpReductionPercent,
+                0,
+                100);
 
             _pendingRevives[reviveTargetPresence.CharacterId] =
                 new PendingRevive(
@@ -1821,7 +1828,7 @@ public sealed class CombatService
                     skillLevel,
                     hpPercent,
                     mpPercent,
-                    clearDeathExp,
+                    deathExpReductionPercent,
                     now.AddSeconds(30));
 
             var casterName =
@@ -2342,7 +2349,7 @@ public sealed class CombatService
             dbid,
             pending.HpPercent,
             pending.MpPercent,
-            pending.ClearDeathExp);
+            pending.DeathExpReductionPercent);
 
         if (revived is null)
             return [Flash("目前無法接受復活")];
@@ -3031,7 +3038,10 @@ public sealed class CombatService
 
     private static bool HasGenericStatBonus(
         CurrentSkillLevelDefinition level)
-        => level.AtkBonus != 0 ||
+        => level.MaxHpBonus != 0 ||
+           level.MaxMpBonus != 0 ||
+           level.MaxSpBonus != 0 ||
+           level.AtkBonus != 0 ||
            level.DefBonus != 0 ||
            level.MAtkBonus != 0 ||
            level.MDefBonus != 0 ||
@@ -3041,7 +3051,21 @@ public sealed class CombatService
            level.AspdBonus != 0 ||
            level.MoveSpeedBonus != 0 ||
            level.CritRateBonus != 0 ||
-           level.CritDamageBonus != 0;
+           level.CritDamageBonus != 0 ||
+           level.MaxHpBonusPercent != 0 ||
+           level.MaxMpBonusPercent != 0 ||
+           level.MaxSpBonusPercent != 0 ||
+           level.AtkBonusPercent != 0 ||
+           level.DefBonusPercent != 0 ||
+           level.MAtkBonusPercent != 0 ||
+           level.MDefBonusPercent != 0 ||
+           level.HitBonusPercent != 0 ||
+           level.FleeBonusPercent != 0 ||
+           level.LukBonusPercent != 0 ||
+           level.AspdBonusPercent != 0 ||
+           level.MoveSpeedBonusPercent != 0 ||
+           level.CritRateBonusPercent != 0 ||
+           level.CritDamageBonusPercent != 0;
 
     private EffectiveCharacterStats ApplyActiveSkillBuffs(
         EffectiveCharacterStats stats,
@@ -3062,21 +3086,94 @@ public sealed class CombatService
             now);
 
         return new EffectiveCharacterStats(
-            stats.MaxHP,
-            stats.MaxMP,
-            stats.MaxSP,
-            stats.Attack + buffs.Sum(x => x.AtkBonus),
-            stats.Defense + buffs.Sum(x => x.DefBonus),
-            stats.MagicAttack + buffs.Sum(x => x.MAtkBonus),
-            stats.MagicDefense + buffs.Sum(x => x.MDefBonus),
-            stats.Hit + buffs.Sum(x => x.HitBonus),
-            stats.Dodge + buffs.Sum(x => x.FleeBonus),
-            stats.Lucky + buffs.Sum(x => x.LukBonus),
-            stats.AttackSpeed + buffs.Sum(x => x.AspdBonus),
+            ApplyBuffValue(
+                stats.MaxHP,
+                buffs.Sum(x => x.MaxHpBonus),
+                buffs.Sum(x => x.MaxHpBonusPercent),
+                1),
+            ApplyBuffValue(
+                stats.MaxMP,
+                buffs.Sum(x => x.MaxMpBonus),
+                buffs.Sum(x => x.MaxMpBonusPercent),
+                0),
+            ApplyBuffValue(
+                stats.MaxSP,
+                buffs.Sum(x => x.MaxSpBonus),
+                buffs.Sum(x => x.MaxSpBonusPercent),
+                0),
+            ApplyBuffValue(
+                stats.Attack,
+                buffs.Sum(x => x.AtkBonus),
+                buffs.Sum(x => x.AtkBonusPercent),
+                0),
+            ApplyBuffValue(
+                stats.Defense,
+                buffs.Sum(x => x.DefBonus),
+                buffs.Sum(x => x.DefBonusPercent),
+                0),
+            ApplyBuffValue(
+                stats.MagicAttack,
+                buffs.Sum(x => x.MAtkBonus),
+                buffs.Sum(x => x.MAtkBonusPercent),
+                0),
+            ApplyBuffValue(
+                stats.MagicDefense,
+                buffs.Sum(x => x.MDefBonus),
+                buffs.Sum(x => x.MDefBonusPercent),
+                0),
+            ApplyBuffValue(
+                stats.Hit,
+                buffs.Sum(x => x.HitBonus),
+                buffs.Sum(x => x.HitBonusPercent),
+                0),
+            ApplyBuffValue(
+                stats.Dodge,
+                buffs.Sum(x => x.FleeBonus),
+                buffs.Sum(x => x.FleeBonusPercent),
+                0),
+            ApplyBuffValue(
+                stats.Lucky,
+                buffs.Sum(x => x.LukBonus),
+                buffs.Sum(x => x.LukBonusPercent),
+                0),
+            ApplyBuffValue(
+                stats.AttackSpeed,
+                buffs.Sum(x => x.AspdBonus),
+                buffs.Sum(x => x.AspdBonusPercent),
+                0),
             stats.AttackRange,
-            stats.MoveSpeed + buffs.Sum(x => x.MoveSpeedBonus),
-            stats.CritRate + buffs.Sum(x => x.CritRateBonus),
-            stats.CritDamage + buffs.Sum(x => x.CritDamageBonus));
+            ApplyBuffValue(
+                stats.MoveSpeed,
+                buffs.Sum(x => x.MoveSpeedBonus),
+                buffs.Sum(x => x.MoveSpeedBonusPercent),
+                1),
+            ApplyBuffValue(
+                stats.CritRate,
+                buffs.Sum(x => x.CritRateBonus),
+                buffs.Sum(x => x.CritRateBonusPercent),
+                0),
+            ApplyBuffValue(
+                stats.CritDamage,
+                buffs.Sum(x => x.CritDamageBonus),
+                buffs.Sum(x => x.CritDamageBonusPercent),
+                0));
+    }
+
+    private static int ApplyBuffValue(
+        int baseValue,
+        int flatBonus,
+        int percentBonus,
+        int minimum)
+    {
+        var value =
+            (long)baseValue +
+            flatBonus +
+            (long)baseValue * percentBonus / 100L;
+
+        return (int)Math.Clamp(
+            value,
+            minimum,
+            (long)int.MaxValue);
     }
 
     private SkillBuffRuntime[] GetActiveBuffs(
@@ -3134,6 +3231,9 @@ public sealed class CombatService
             DurationSeconds = duration,
             ExpiresAt =
                 now + TimeSpan.FromSeconds(duration),
+            MaxHpBonus = levelData.MaxHpBonus,
+            MaxMpBonus = levelData.MaxMpBonus,
+            MaxSpBonus = levelData.MaxSpBonus,
             AtkBonus = levelData.AtkBonus,
             DefBonus = levelData.DefBonus,
             MAtkBonus = levelData.MAtkBonus,
@@ -3144,7 +3244,21 @@ public sealed class CombatService
             AspdBonus = levelData.AspdBonus,
             MoveSpeedBonus = levelData.MoveSpeedBonus,
             CritRateBonus = levelData.CritRateBonus,
-            CritDamageBonus = levelData.CritDamageBonus
+            CritDamageBonus = levelData.CritDamageBonus,
+            MaxHpBonusPercent = levelData.MaxHpBonusPercent,
+            MaxMpBonusPercent = levelData.MaxMpBonusPercent,
+            MaxSpBonusPercent = levelData.MaxSpBonusPercent,
+            AtkBonusPercent = levelData.AtkBonusPercent,
+            DefBonusPercent = levelData.DefBonusPercent,
+            MAtkBonusPercent = levelData.MAtkBonusPercent,
+            MDefBonusPercent = levelData.MDefBonusPercent,
+            HitBonusPercent = levelData.HitBonusPercent,
+            FleeBonusPercent = levelData.FleeBonusPercent,
+            LukBonusPercent = levelData.LukBonusPercent,
+            AspdBonusPercent = levelData.AspdBonusPercent,
+            MoveSpeedBonusPercent = levelData.MoveSpeedBonusPercent,
+            CritRateBonusPercent = levelData.CritRateBonusPercent,
+            CritDamageBonusPercent = levelData.CritDamageBonusPercent
         };
     }
 
@@ -3157,6 +3271,9 @@ public sealed class CombatService
             Level = source.Level,
             DurationSeconds = source.DurationSeconds,
             ExpiresAt = source.ExpiresAt,
+            MaxHpBonus = source.MaxHpBonus,
+            MaxMpBonus = source.MaxMpBonus,
+            MaxSpBonus = source.MaxSpBonus,
             AtkBonus = source.AtkBonus,
             DefBonus = source.DefBonus,
             MAtkBonus = source.MAtkBonus,
@@ -3167,7 +3284,21 @@ public sealed class CombatService
             AspdBonus = source.AspdBonus,
             MoveSpeedBonus = source.MoveSpeedBonus,
             CritRateBonus = source.CritRateBonus,
-            CritDamageBonus = source.CritDamageBonus
+            CritDamageBonus = source.CritDamageBonus,
+            MaxHpBonusPercent = source.MaxHpBonusPercent,
+            MaxMpBonusPercent = source.MaxMpBonusPercent,
+            MaxSpBonusPercent = source.MaxSpBonusPercent,
+            AtkBonusPercent = source.AtkBonusPercent,
+            DefBonusPercent = source.DefBonusPercent,
+            MAtkBonusPercent = source.MAtkBonusPercent,
+            MDefBonusPercent = source.MDefBonusPercent,
+            HitBonusPercent = source.HitBonusPercent,
+            FleeBonusPercent = source.FleeBonusPercent,
+            LukBonusPercent = source.LukBonusPercent,
+            AspdBonusPercent = source.AspdBonusPercent,
+            MoveSpeedBonusPercent = source.MoveSpeedBonusPercent,
+            CritRateBonusPercent = source.CritRateBonusPercent,
+            CritDamageBonusPercent = source.CritDamageBonusPercent
         };
 
     private object BuildSyncBuffsPacket(
