@@ -578,29 +578,6 @@ func sync_animation() -> void :
 			2, 3: anim_suffix = "3";should_flip = false
 			4, 5: anim_suffix = "3";should_flip = true
 			6, 7: anim_suffix = "1";should_flip = true
-	elif current_state.to_lower() == "attack":
-		# Recovered monster ATTACK frames are authored 180 degrees opposite
-		# to the logical/world direction used by WALK. Convert the logical
-		# facing to the asset-facing direction first, then select the closest
-		# available ATTACK_1/2/3 frame and mirror it when needed.
-		var attack_asset_dir: int = int({
-			1: 5,
-			2: 6,
-			3: 7,
-			4: 8,
-			5: 1,
-			6: 2,
-			7: 3,
-			8: 4,
-		}.get(dir_int, dir_int))
-
-		match int(attack_asset_dir):
-			8, 1: anim_suffix = "1";should_flip = false
-			2: anim_suffix = "2";should_flip = false
-			3, 4: anim_suffix = "3";should_flip = false
-			5: anim_suffix = "3";should_flip = true
-			6: anim_suffix = "2";should_flip = true
-			7: anim_suffix = "1";should_flip = true
 	else:
 		match dir_int:
 			1, 2, 3, 4, 8: anim_suffix = str(dir_int);should_flip = false
