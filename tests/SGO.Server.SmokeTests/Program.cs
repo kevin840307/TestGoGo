@@ -2836,6 +2836,100 @@ try
             "mecha battery is consumed");
     }
 
+    var directBatteryUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        50102,
+        1);
+    var directEnergyBefore = Convert.ToInt32(
+        store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Horses
+            .First(x =>
+                Convert.ToInt64(x["HorseUID"]) == horseUid)["EnergyLeft"]);
+
+    using (var useBattery = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "UseItemRequest",
+            ItemUID = directBatteryUid
+        })))
+    {
+        var responses = router.Handle(
+            useBattery.RootElement,
+            session);
+        var after = store.GetCharacterAssets(
+            account.Value,
+            id);
+        var chargedHorse = after.Horses
+            .First(x =>
+                Convert.ToInt64(x["HorseUID"]) == horseUid);
+
+        Check(
+            Convert.ToInt32(chargedHorse["EnergyLeft"]) ==
+                Math.Min(25_200, directEnergyBefore + 3_600) &&
+            !after.Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    directBatteryUid) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SyncMechaEnergy\"")) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PlayItemEffect\"")),
+            "UseItemRequest directly charges the currently driven mecha and consumes one battery");
+    }
+
+    var fillBatteryUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        50102,
+        1);
+
+    Check(store.ChargeHorse(
+              account.Value,
+              id,
+              horseUid,
+              fillBatteryUid,
+              99_999,
+              25_200) is not null,
+        "direct store charge clamps test mecha to max battery");
+
+    var fullBatteryUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        50102,
+        1);
+
+    using (var useFullBattery = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "UseItemRequest",
+            ItemUID = fullBatteryUid
+        })))
+    {
+        var responses = router.Handle(
+            useFullBattery.RootElement,
+            session);
+        var after = store.GetCharacterAssets(
+            account.Value,
+            id);
+        var fullHorse = after.Horses
+            .First(x =>
+                Convert.ToInt64(x["HorseUID"]) == horseUid);
+
+        Check(
+            Convert.ToInt32(fullHorse["EnergyLeft"]) == 25_200 &&
+            after.Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    fullBatteryUid) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "機甲能源已滿")),
+            "full mecha rejects battery use without consuming the battery");
+    }
+
     using (var horseEquip = Json(JsonSerializer.Serialize(new { Type = "HorseEquipRequest", EquipUID = horseEquipUid, HorseUID = horseUid })))
     {
         var responses = router.Handle(horseEquip.RootElement, session);
