@@ -405,7 +405,10 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 
 
 	var progress_callback := func(value: float, _stage: String) -> void:
-		_set_loading_progress(value, world_loading_session)
+		# GameManager owns the heavy world-building work, but it must not consume
+		# the final 5% because WorldReady/final presentation still happens here.
+		var mapped_value: float = 5.0 + clampf(value, 0.0, 100.0) * 0.90
+		_set_loading_progress(mapped_value, world_loading_session)
 
 	var load_success = await GameManager.enter_game_world(server_full_data, map_id, spawn_pos, progress_callback)
 
