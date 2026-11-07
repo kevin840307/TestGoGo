@@ -1775,6 +1775,12 @@ public sealed class CombatService
                     accountId,
                     killedMonsters,
                     packets);
+
+                AddScreenAreaBatchExtras(
+                    session,
+                    accountId,
+                    killedMonsters,
+                    packets);
             }
 
             var isolationAssets = _store.GetCharacterAssets(
@@ -3218,6 +3224,197 @@ public sealed class CombatService
             Type = "SyncMoney",
             Money = rewarded["Money"]
         });
+    }
+
+    private void AddScreenAreaBatchExtras(
+        ClientSession session,
+        long accountId,
+        IReadOnlyList<MonsterRuntimeState> monsters,
+        List<object> packets)
+    {
+        if (!session.CharacterId.HasValue ||
+            monsters.Count == 0)
+            return;
+
+        var dbid = session.CharacterId.Value;
+
+        // Drops keep their original per-monster probability/kill-sequence
+        // semantics, but all resulting spawn packets are returned together
+        // with this one skill request instead of causing repeated status syncs.
+        foreach (var monster in monsters)
+        {
+            AddMonsterDrops(
+                session,
+                accountId,
+                monster,
+                packets);
+        }
+
+        // Quest progression still receives every kill so count-based quests do
+        // not lose credit. Only quest-specific packets are emitted here.
+        foreach (var monster in monsters)
+        {
+            packets.AddRange(
+                _questProgress.OnMonsterKilled(
+                    accountId,
+                    dbid,
+                    monster.Name));
+        }
+
+        // Aggregate all monster EXP into one mecha mutation/sync.
+        var character = _store.GetCharacter(
+            accountId,
+            dbid);
+
+        if (character is not null)
+        {
+            var horseUid = Convert.ToInt64(
+                character["SummonedHorseUID"]);
+
+            if (horseUid > 0)
+            {
+                var assetsBefore = _store.GetCharacterAssets(
+                    accountId,
+                    dbid);
+                var beforeHorse = assetsBefore.Horses
+                    .FirstOrDefault(x =>
+                        Convert.ToInt64(x["HorseUID"]) == horseUid);
+
+                var totalHorseExp = (int)Math.Clamp(
+                    monsters.Sum(x =>
+                        (long)Math.Max(1, x.Level * 100)),
+                    0L,
+                    int.MaxValue);
+
+                var horse = _store.AddHorseExperience(
+                    accountId,
+                    dbid,
+                    horseUid,
+                    totalHorseExp);
+
+                if (horse is not null)
+                {
+                    packets.Add(new
+                    {
+                        Type = "SyncMechaEnergy",
+                        HorseUID = horseUid,
+                        EnergyLeft = horse["EnergyLeft"],
+                        Exp = horse["Exp"],
+                        MaxExp = horse["MaxExp"],
+                        Level = horse["Level"]
+                    });
+
+                    if (beforeHorse is not null &&
+                        Convert.ToInt32(horse["Level"]) >
+                        Convert.ToInt32(beforeHorse["Level"]))
+                    {
+                        packets.Add(new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = $"機甲升級！Lv.{horse["Level"]}"
+                        });
+                    }
+                }
+            }
+        }
+
+        // Aggregate pet EXP across the whole AOE. Each active pet mutates once
+        // and the final asset state is synchronized once.
+        var activePets = _store.GetCharacterAssets(
+                accountId,
+                dbid)
+            .Pets
+            .Where(x => Convert.ToInt32(x["State"]) == 1)
+            .ToArray();
+
+        var totalPetExp = (int)Math.Clamp(
+            monsters.Sum(x =>
+                (long)Math.Max(1, x.Level * 10)),
+            0L,
+            int.MaxValue);
+
+        var petStateChanged = false;
+
+        foreach (var beforePet in activePets)
+        {
+            var petUid = Convert.ToInt64(beforePet["UID"]);
+            var oldLevel = Convert.ToInt32(beforePet["Level"]);
+
+            var pet = _store.AddPetExperience(
+                accountId,
+                dbid,
+                petUid,
+                totalPetExp);
+
+            if (pet is null)
+                continue;
+
+            var evolution = _petEvolution.Advance(
+                accountId,
+                dbid,
+                petUid,
+                pet);
+            pet = evolution.Pet;
+            petStateChanged = true;
+
+            if (Convert.ToInt32(pet["Level"]) > oldLevel)
+            {
+                packets.Add(new
+                {
+                    Type = "SystemMessageFlash",
+                    Message = $"寵物升級！Lv.{pet["Level"]}"
+                });
+            }
+
+            if (!evolution.Changed)
+                continue;
+
+            packets.Add(new
+            {
+                Type = "SystemMessageFlash",
+                Message =
+                    $"寵物進化！Evol {evolution.FromEvolId} → {evolution.ToEvolId}"
+            });
+
+            if (Convert.ToInt32(pet["State"]) != 1)
+                continue;
+
+            var entityId = 4_000_000L + petUid;
+            packets.Add(new
+            {
+                Type = "DespawnEntity",
+                EntityID = entityId
+            });
+
+            var position = session.PetPositions.TryGetValue(
+                    petUid,
+                    out var runtimePosition)
+                ? runtimePosition
+                : (
+                    X: session.LastX + 40,
+                    Y: session.LastY + 20);
+
+            session.PetPositions[petUid] = position;
+            packets.Add(BuildPetSpawnPacket(
+                dbid,
+                pet,
+                position.X,
+                position.Y));
+        }
+
+        if (petStateChanged)
+        {
+            var refreshedAssets = _store.GetCharacterAssets(
+                accountId,
+                dbid);
+
+            packets.Add(new
+            {
+                Type = "PetSync",
+                Pets = refreshedAssets.Pets,
+                MaxSize = refreshedAssets.PetMaxSize
+            });
+        }
     }
 
     private void AddCharacterKillRewards(
