@@ -2303,7 +2303,7 @@ public sealed class CombatService
                         continue;
 
                     monster.RespawnAt =
-                        now + GetRespawnDelay(target.MapId);
+                        now + GetRespawnDelay(monster.MapId);
                     monster.HasTarget = false;
                     monster.TargetCharacterId = 0;
                     SetAiState(
