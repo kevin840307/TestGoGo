@@ -1315,6 +1315,7 @@ public sealed class PacketRouter
 
                 bool success;
                 PetMutationResult? mutation = null;
+                PetEvolutionAdvanceResult? evolutionAdvance = null;
 
                 switch (action)
                 {
@@ -1572,6 +1573,17 @@ public sealed class PacketRouter
                         return [];
                 }
 
+                if (success &&
+                    action == "AllocateStat" &&
+                    mutation?.Pet is not null)
+                {
+                    evolutionAdvance = _petEvolution.Advance(
+                        accountId,
+                        state.CharacterId.Value,
+                        petUid,
+                        mutation.Pet);
+                }
+
                 var assets = _store.GetCharacterAssets(
                     accountId,
                     state.CharacterId.Value);
@@ -1610,6 +1622,48 @@ public sealed class PacketRouter
                         Items = assets.Inventory,
                         MaxSize = assets.InventoryMaxSize
                     });
+                }
+
+                if (evolutionAdvance?.Changed == true)
+                {
+                    var evolvedPet = evolutionAdvance.Pet;
+
+                    responses.Add(new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message =
+                            $"寵物進化！Evol {evolutionAdvance.FromEvolId} → {evolutionAdvance.ToEvolId}"
+                    });
+
+                    if (Convert.ToInt32(
+                            evolvedPet["State"]) == 1)
+                    {
+                        var entityId =
+                            4_000_000L + petUid;
+
+                        responses.Add(new
+                        {
+                            Type = "DespawnEntity",
+                            EntityID = entityId
+                        });
+
+                        var position =
+                            state.PetPositions.TryGetValue(
+                                petUid,
+                                out var runtimePosition)
+                                ? runtimePosition
+                                : (
+                                    X: state.LastX + 40,
+                                    Y: state.LastY + 20);
+
+                        state.PetPositions[petUid] = position;
+
+                        responses.Add(BuildPetSpawnPacket(
+                            state.CharacterId.Value,
+                            evolvedPet,
+                            position.X,
+                            position.Y));
+                    }
                 }
 
                 if (success && action == "Summon")
