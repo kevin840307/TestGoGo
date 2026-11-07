@@ -2273,20 +2273,33 @@ public sealed class SqliteGameStore : IGameStore
         double y,
         int damage = 0,
         int color = 0,
-        int part = 255)
+        int part = 255,
+        int protectSeconds = 0,
+        int lifetimeSeconds = 0)
     {
         if (itemIndex <= 0 || count <= 0)
             return null;
+
+        var now = DateTimeOffset.UtcNow;
+        var createdMs = now.ToUnixTimeMilliseconds();
+        var protectUntil = protectSeconds > 0
+            ? now.AddSeconds(protectSeconds)
+            : (DateTimeOffset?)null;
+        var expiresAt = lifetimeSeconds > 0
+            ? now.AddSeconds(lifetimeSeconds)
+            : (DateTimeOffset?)null;
 
         using var db = Open();
         using var add = db.CreateCommand();
         add.CommandText = """
             INSERT INTO ground_items(
                 map_id,owner_dbid,tab_type,item_index,count,
-                damage,color,part,x,y)
+                damage,color,part,x,y,
+                created_utc_ms,protect_until_utc_ms,expires_utc_ms)
             VALUES(
                 $map,$owner,$tab,$item,$count,
-                $damage,$color,$part,$x,$y);
+                $damage,$color,$part,$x,$y,
+                $created,$protect,$expires);
             SELECT last_insert_rowid();
             """;
         Arg(add, "$map", mapId);
@@ -2299,6 +2312,11 @@ public sealed class SqliteGameStore : IGameStore
         Arg(add, "$part", part);
         Arg(add, "$x", x);
         Arg(add, "$y", y);
+        Arg(add, "$created", createdMs);
+        Arg(add, "$protect",
+            protectUntil?.ToUnixTimeMilliseconds() ?? 0L);
+        Arg(add, "$expires",
+            expiresAt?.ToUnixTimeMilliseconds() ?? 0L);
 
         var groundId = Convert.ToInt64(add.ExecuteScalar());
         return new GroundItemRuntime
@@ -2314,7 +2332,10 @@ public sealed class SqliteGameStore : IGameStore
             Part = part,
             X = x,
             Y = y,
-            OwnerDbid = ownerDbid
+            OwnerDbid = ownerDbid,
+            CreatedAt = now,
+            ProtectUntil = protectUntil,
+            ExpiresAt = expiresAt
         };
     }
 
@@ -2477,10 +2498,12 @@ public sealed class SqliteGameStore : IGameStore
             add.CommandText = """
                 INSERT INTO ground_items(
                     map_id,owner_dbid,tab_type,item_index,count,
-                    damage,color,part,x,y)
+                    damage,color,part,x,y,
+                    created_utc_ms,protect_until_utc_ms,expires_utc_ms)
                 VALUES(
                     $map,$owner,$tab,$item,$count,
-                    $damage,$color,$part,$x,$y);
+                    $damage,$color,$part,$x,$y,
+                    $created,0,0);
                 SELECT last_insert_rowid();
                 """;
             Arg(add, "$map", mapId);
@@ -2493,6 +2516,7 @@ public sealed class SqliteGameStore : IGameStore
             Arg(add, "$part", part);
             Arg(add, "$x", x);
             Arg(add, "$y", y);
+            Arg(add, "$created", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
             groundId = Convert.ToInt64(add.ExecuteScalar());
         }
 
@@ -2510,18 +2534,35 @@ public sealed class SqliteGameStore : IGameStore
             Part = part,
             X = x,
             Y = y,
-            OwnerDbid = dbid
+            OwnerDbid = dbid,
+            CreatedAt = DateTimeOffset.UtcNow
         };
     }
 
     public IReadOnlyList<GroundItemRuntime> GetGroundItems(int mapId)
     {
+        var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var result = new List<GroundItemRuntime>();
         using var db = Open();
+
+        using (var cleanup = db.CreateCommand())
+        {
+            cleanup.CommandText = """
+                DELETE FROM ground_items
+                 WHERE map_id=$map
+                   AND expires_utc_ms > 0
+                   AND expires_utc_ms <= $now
+                """;
+            Arg(cleanup, "$map", mapId);
+            Arg(cleanup, "$now", nowMs);
+            cleanup.ExecuteNonQuery();
+        }
+
         using var cmd = db.CreateCommand();
         cmd.CommandText = """
             SELECT id,map_id,owner_dbid,tab_type,item_index,count,
-                   damage,color,part,x,y
+                   damage,color,part,x,y,
+                   created_utc_ms,protect_until_utc_ms,expires_utc_ms
               FROM ground_items
              WHERE map_id=$map
              ORDER BY id
@@ -2533,6 +2574,56 @@ public sealed class SqliteGameStore : IGameStore
             result.Add(ReadGroundItem(reader));
 
         return result;
+    }
+
+    public IReadOnlyList<int> RemoveExpiredGroundItems(
+        int mapId,
+        DateTimeOffset now)
+    {
+        var nowMs = now.ToUnixTimeMilliseconds();
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        var entityIds = new List<int>();
+        using (var select = db.CreateCommand())
+        {
+            select.Transaction = tx;
+            select.CommandText = """
+                SELECT id
+                  FROM ground_items
+                 WHERE map_id=$map
+                   AND expires_utc_ms > 0
+                   AND expires_utc_ms <= $now
+                """;
+            Arg(select, "$map", mapId);
+            Arg(select, "$now", nowMs);
+
+            using var reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                var groundId = reader.GetInt64(0);
+                entityIds.Add(
+                    checked(6_000_000 + (int)groundId));
+            }
+        }
+
+        if (entityIds.Count > 0)
+        {
+            using var delete = db.CreateCommand();
+            delete.Transaction = tx;
+            delete.CommandText = """
+                DELETE FROM ground_items
+                 WHERE map_id=$map
+                   AND expires_utc_ms > 0
+                   AND expires_utc_ms <= $now
+                """;
+            Arg(delete, "$map", mapId);
+            Arg(delete, "$now", nowMs);
+            delete.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+        return entityIds;
     }
 
     public (bool Success, string Message, GroundItemRuntime? Item)
@@ -2553,7 +2644,8 @@ public sealed class SqliteGameStore : IGameStore
             get.Transaction = tx;
             get.CommandText = """
                 SELECT id,map_id,owner_dbid,tab_type,item_index,count,
-                       damage,color,part,x,y
+                       damage,color,part,x,y,
+                       created_utc_ms,protect_until_utc_ms,expires_utc_ms
                   FROM ground_items
                  WHERE id=$id
                 """;
@@ -2563,6 +2655,22 @@ public sealed class SqliteGameStore : IGameStore
                 return (false, "物品已不存在", null);
             item = ReadGroundItem(reader);
         }
+
+        var now = DateTimeOffset.UtcNow;
+        if (item.IsExpired(now))
+        {
+            using var expire = db.CreateCommand();
+            expire.Transaction = tx;
+            expire.CommandText =
+                "DELETE FROM ground_items WHERE id=$id";
+            Arg(expire, "$id", groundItemId);
+            expire.ExecuteNonQuery();
+            tx.Commit();
+            return (false, "物品已消失", item);
+        }
+
+        if (item.IsProtectedFor(dbid, now))
+            return (false, "物品目前受掉落者保護", item);
 
         using (var add = db.CreateCommand())
         {
@@ -2627,6 +2735,10 @@ public sealed class SqliteGameStore : IGameStore
         SqliteDataReader reader)
     {
         var groundId = reader.GetInt64(0);
+        var createdMs = reader.GetInt64(11);
+        var protectMs = reader.GetInt64(12);
+        var expiresMs = reader.GetInt64(13);
+
         return new GroundItemRuntime
         {
             GroundItemId = groundId,
@@ -2640,7 +2752,16 @@ public sealed class SqliteGameStore : IGameStore
             Color = reader.GetInt32(7),
             Part = reader.GetInt32(8),
             X = reader.GetDouble(9),
-            Y = reader.GetDouble(10)
+            Y = reader.GetDouble(10),
+            CreatedAt = createdMs > 0
+                ? DateTimeOffset.FromUnixTimeMilliseconds(createdMs)
+                : DateTimeOffset.UnixEpoch,
+            ProtectUntil = protectMs > 0
+                ? DateTimeOffset.FromUnixTimeMilliseconds(protectMs)
+                : null,
+            ExpiresAt = expiresMs > 0
+                ? DateTimeOffset.FromUnixTimeMilliseconds(expiresMs)
+                : null
         };
     }
 
