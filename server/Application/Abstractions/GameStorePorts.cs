@@ -716,6 +716,8 @@ public interface IWorldGroundItemStore
         int mapId,
         DateTimeOffset now);
 
+    IReadOnlyList<int> ClearGroundItems(int mapId);
+
     GroundItemRuntime? DropAssetToGround(
         long accountId,
         long dbid,
