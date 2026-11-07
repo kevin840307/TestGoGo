@@ -55,6 +55,14 @@ public sealed class CombatService
     private readonly ConcurrentDictionary<long, PendingRevive>
         _pendingRevives = new();
 
+    // Buffs are character-scoped rather than connection-scoped so effects
+    // applied by another player remain authoritative for combat/stat
+    // calculation on the target player's own connection.
+    private readonly ConcurrentDictionary<
+        long,
+        ConcurrentDictionary<int, SkillBuffRuntime>>
+        _skillBuffsByCharacter = new();
+
     public CombatService(
         IGameStore store,
         WorldDataService world,
@@ -1803,30 +1811,94 @@ public sealed class CombatService
         if (isBuff && HasGenericStatBonus(levelData))
         {
             var definition = _current.FindSkill(skillId);
-            var duration = Math.Max(
-                1,
-                levelData.DurationSeconds);
+            var buff = CreateSkillBuff(
+                skillId,
+                definition?.Name ?? $"Skill {skillId}",
+                skillLevel,
+                levelData,
+                now);
 
-            session.ActiveSkillBuffs[skillId] =
-                new SkillBuffRuntime
+            SetCharacterBuff(
+                session.CharacterId.Value,
+                buff);
+
+            if (skillId == 33011) // 冰之觸：同地圖在線隊員
+            {
+                var affected = new List<object>
                 {
-                    SkillId = skillId,
-                    Name = definition?.Name ?? $"Skill {skillId}",
-                    Level = skillLevel,
-                    DurationSeconds = duration,
-                    ExpiresAt = now + TimeSpan.FromSeconds(duration),
-                    AtkBonus = levelData.AtkBonus,
-                    DefBonus = levelData.DefBonus,
-                    MAtkBonus = levelData.MAtkBonus,
-                    MDefBonus = levelData.MDefBonus,
-                    HitBonus = levelData.HitBonus,
-                    FleeBonus = levelData.FleeBonus,
-                    LukBonus = levelData.LukBonus,
-                    AspdBonus = levelData.AspdBonus,
-                    MoveSpeedBonus = levelData.MoveSpeedBonus,
-                    CritRateBonus = levelData.CritRateBonus,
-                    CritDamageBonus = levelData.CritDamageBonus
+                    new { ID = session.CharacterId.Value }
                 };
+
+                foreach (var member in _party.GetMembers(
+                             session.CharacterId.Value))
+                {
+                    if (member.CharacterId ==
+                        session.CharacterId.Value)
+                        continue;
+
+                    var presence =
+                        _broadcasts.FindCharacter(
+                            member.CharacterId);
+
+                    if (presence is null ||
+                        presence.MapId != session.CurrentMapId)
+                        continue;
+
+                    SetCharacterBuff(
+                        member.CharacterId,
+                        CloneSkillBuff(buff));
+
+                    affected.Add(new
+                    {
+                        ID = member.CharacterId
+                    });
+
+                    _broadcasts.PublishToCharacter(
+                        member.CharacterId,
+                        BuildSyncBuffsPacket(
+                            member.CharacterId,
+                            now));
+
+                    var targetCharacter = _store.GetCharacter(
+                        member.AccountId,
+                        member.CharacterId);
+
+                    if (targetCharacter is not null)
+                    {
+                        var targetAssets =
+                            _store.GetCharacterAssets(
+                                member.AccountId,
+                                member.CharacterId);
+                        var targetStats =
+                            ApplyActiveSkillBuffs(
+                                CharacterStatCalculator.Calculate(
+                                    targetCharacter,
+                                    targetAssets,
+                                    _current),
+                                member.CharacterId,
+                                now);
+
+                        _broadcasts.PublishToCharacter(
+                            member.CharacterId,
+                            BuildPlayerStatusPacket(
+                                targetCharacter,
+                                targetStats));
+                    }
+                }
+
+                packets[0] = new
+                {
+                    Type = "SkillCast",
+                    CasterID = session.CharacterId.Value,
+                    CasterType = 0,
+                    SkillID = skillId,
+                    SkillLevel = skillLevel,
+                    TargetID = session.CharacterId.Value,
+                    TargetX = Convert.ToInt32(centerX),
+                    TargetY = Convert.ToInt32(centerY),
+                    AoeTargets = affected.ToArray()
+                };
+            }
 
             packets.Add(BuildSyncBuffsPacket(
                 session,
@@ -2347,23 +2419,40 @@ public sealed class CombatService
         ClientSession session,
         DateTimeOffset now)
     {
-        var removed = PurgeExpiredBuffs(session, now);
+        if (!session.CharacterId.HasValue)
+            return [];
+
+        var removed = PurgeExpiredBuffs(
+            session.CharacterId.Value,
+            now);
+
         return removed
             ? [BuildSyncBuffsPacket(session, now)]
             : [];
     }
 
-    private static bool PurgeExpiredBuffs(
-        ClientSession session,
+    private bool PurgeExpiredBuffs(
+        long characterId,
         DateTimeOffset now)
     {
-        var expired = session.ActiveSkillBuffs
+        if (characterId <= 0 ||
+            !_skillBuffsByCharacter.TryGetValue(
+                characterId,
+                out var buffs))
+            return false;
+
+        var expired = buffs
             .Where(x => x.Value.ExpiresAt <= now)
             .Select(x => x.Key)
             .ToArray();
 
         foreach (var skillId in expired)
-            session.ActiveSkillBuffs.Remove(skillId);
+            buffs.TryRemove(skillId, out _);
+
+        if (buffs.IsEmpty)
+            _skillBuffsByCharacter.TryRemove(
+                characterId,
+                out _);
 
         return expired.Length > 0;
     }
@@ -2475,39 +2564,149 @@ public sealed class CombatService
            level.CritRateBonus != 0 ||
            level.CritDamageBonus != 0;
 
-    private static EffectiveCharacterStats ApplyActiveSkillBuffs(
+    private EffectiveCharacterStats ApplyActiveSkillBuffs(
         EffectiveCharacterStats stats,
         ClientSession session,
         DateTimeOffset now)
+        => ApplyActiveSkillBuffs(
+            stats,
+            session.CharacterId ?? 0,
+            now);
+
+    private EffectiveCharacterStats ApplyActiveSkillBuffs(
+        EffectiveCharacterStats stats,
+        long characterId,
+        DateTimeOffset now)
     {
-        PurgeExpiredBuffs(session, now);
+        var buffs = GetActiveBuffs(
+            characterId,
+            now);
 
         return new EffectiveCharacterStats(
             stats.MaxHP,
             stats.MaxMP,
             stats.MaxSP,
-            stats.Attack + session.ActiveSkillBuffs.Values.Sum(x => x.AtkBonus),
-            stats.Defense + session.ActiveSkillBuffs.Values.Sum(x => x.DefBonus),
-            stats.MagicAttack + session.ActiveSkillBuffs.Values.Sum(x => x.MAtkBonus),
-            stats.MagicDefense + session.ActiveSkillBuffs.Values.Sum(x => x.MDefBonus),
-            stats.Hit + session.ActiveSkillBuffs.Values.Sum(x => x.HitBonus),
-            stats.Dodge + session.ActiveSkillBuffs.Values.Sum(x => x.FleeBonus),
-            stats.Lucky + session.ActiveSkillBuffs.Values.Sum(x => x.LukBonus),
-            stats.AttackSpeed + session.ActiveSkillBuffs.Values.Sum(x => x.AspdBonus),
+            stats.Attack + buffs.Sum(x => x.AtkBonus),
+            stats.Defense + buffs.Sum(x => x.DefBonus),
+            stats.MagicAttack + buffs.Sum(x => x.MAtkBonus),
+            stats.MagicDefense + buffs.Sum(x => x.MDefBonus),
+            stats.Hit + buffs.Sum(x => x.HitBonus),
+            stats.Dodge + buffs.Sum(x => x.FleeBonus),
+            stats.Lucky + buffs.Sum(x => x.LukBonus),
+            stats.AttackSpeed + buffs.Sum(x => x.AspdBonus),
             stats.AttackRange,
-            stats.MoveSpeed + session.ActiveSkillBuffs.Values.Sum(x => x.MoveSpeedBonus),
-            stats.CritRate + session.ActiveSkillBuffs.Values.Sum(x => x.CritRateBonus),
-            stats.CritDamage + session.ActiveSkillBuffs.Values.Sum(x => x.CritDamageBonus));
+            stats.MoveSpeed + buffs.Sum(x => x.MoveSpeedBonus),
+            stats.CritRate + buffs.Sum(x => x.CritRateBonus),
+            stats.CritDamage + buffs.Sum(x => x.CritDamageBonus));
     }
 
-    private static object BuildSyncBuffsPacket(
+    private SkillBuffRuntime[] GetActiveBuffs(
+        long characterId,
+        DateTimeOffset now)
+    {
+        if (characterId <= 0)
+            return [];
+
+        PurgeExpiredBuffs(
+            characterId,
+            now);
+
+        if (!_skillBuffsByCharacter.TryGetValue(
+                characterId,
+                out var buffs))
+            return [];
+
+        return buffs.Values
+            .Where(x => x.ExpiresAt > now)
+            .OrderBy(x => x.SkillId)
+            .ToArray();
+    }
+
+    private void SetCharacterBuff(
+        long characterId,
+        SkillBuffRuntime buff)
+    {
+        if (characterId <= 0)
+            return;
+
+        var buffs = _skillBuffsByCharacter.GetOrAdd(
+            characterId,
+            _ => new ConcurrentDictionary<int, SkillBuffRuntime>());
+
+        buffs[buff.SkillId] = buff;
+    }
+
+    private static SkillBuffRuntime CreateSkillBuff(
+        int skillId,
+        string name,
+        int skillLevel,
+        CurrentSkillLevelDefinition levelData,
+        DateTimeOffset now)
+    {
+        var duration = Math.Max(
+            1,
+            levelData.DurationSeconds);
+
+        return new SkillBuffRuntime
+        {
+            SkillId = skillId,
+            Name = name,
+            Level = skillLevel,
+            DurationSeconds = duration,
+            ExpiresAt =
+                now + TimeSpan.FromSeconds(duration),
+            AtkBonus = levelData.AtkBonus,
+            DefBonus = levelData.DefBonus,
+            MAtkBonus = levelData.MAtkBonus,
+            MDefBonus = levelData.MDefBonus,
+            HitBonus = levelData.HitBonus,
+            FleeBonus = levelData.FleeBonus,
+            LukBonus = levelData.LukBonus,
+            AspdBonus = levelData.AspdBonus,
+            MoveSpeedBonus = levelData.MoveSpeedBonus,
+            CritRateBonus = levelData.CritRateBonus,
+            CritDamageBonus = levelData.CritDamageBonus
+        };
+    }
+
+    private static SkillBuffRuntime CloneSkillBuff(
+        SkillBuffRuntime source)
+        => new()
+        {
+            SkillId = source.SkillId,
+            Name = source.Name,
+            Level = source.Level,
+            DurationSeconds = source.DurationSeconds,
+            ExpiresAt = source.ExpiresAt,
+            AtkBonus = source.AtkBonus,
+            DefBonus = source.DefBonus,
+            MAtkBonus = source.MAtkBonus,
+            MDefBonus = source.MDefBonus,
+            HitBonus = source.HitBonus,
+            FleeBonus = source.FleeBonus,
+            LukBonus = source.LukBonus,
+            AspdBonus = source.AspdBonus,
+            MoveSpeedBonus = source.MoveSpeedBonus,
+            CritRateBonus = source.CritRateBonus,
+            CritDamageBonus = source.CritDamageBonus
+        };
+
+    private object BuildSyncBuffsPacket(
         ClientSession session,
+        DateTimeOffset now)
+        => BuildSyncBuffsPacket(
+            session.CharacterId ?? 0,
+            now);
+
+    private object BuildSyncBuffsPacket(
+        long characterId,
         DateTimeOffset now)
         => new
         {
             Type = "SyncBuffs",
-            Buffs = session.ActiveSkillBuffs.Values
-                .Where(x => x.ExpiresAt > now)
+            Buffs = GetActiveBuffs(
+                    characterId,
+                    now)
                 .Select(x => new
                 {
                     BuffName = x.Name,
