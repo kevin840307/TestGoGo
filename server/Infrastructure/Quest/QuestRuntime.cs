@@ -149,13 +149,28 @@ public sealed class QuestRuntime
 
             if (mapping is null ||
                 bindings?.AddItem is null)
-                return DynValue.NewBoolean(false);
+            {
+                if (bindings is not null)
+                {
+                    throw new ScriptRuntimeException(
+                        $"AddItem mapping unavailable: legacy item {legacyItemId}");
+                }
 
-            return DynValue.NewBoolean(
-                bindings.AddItem(
-                    mapping.ItemId,
-                    mapping.TabType,
-                    count));
+                return DynValue.NewBoolean(false);
+            }
+
+            var success = bindings.AddItem(
+                mapping.ItemId,
+                mapping.TabType,
+                count);
+
+            if (!success)
+            {
+                throw new ScriptRuntimeException(
+                    $"AddItem failed: legacy item {legacyItemId}, count {count}");
+            }
+
+            return DynValue.NewBoolean(true);
         });
 
         script.Globals["RemoveItem"] = DynValue.NewCallback((ctx, args) =>
@@ -171,13 +186,28 @@ public sealed class QuestRuntime
 
             if (mapping is null ||
                 bindings?.RemoveItem is null)
-                return DynValue.NewBoolean(false);
+            {
+                if (bindings is not null)
+                {
+                    throw new ScriptRuntimeException(
+                        $"RemoveItem mapping unavailable: legacy item {legacyItemId}");
+                }
 
-            return DynValue.NewBoolean(
-                bindings.RemoveItem(
-                    mapping.ItemId,
-                    mapping.TabType,
-                    count));
+                return DynValue.NewBoolean(false);
+            }
+
+            var success = bindings.RemoveItem(
+                mapping.ItemId,
+                mapping.TabType,
+                count);
+
+            if (!success)
+            {
+                throw new ScriptRuntimeException(
+                    $"RemoveItem failed: legacy item {legacyItemId}, count {count}");
+            }
+
+            return DynValue.NewBoolean(true);
         });
 
         script.Globals["RankQuery"] = (Action<int>)(rankType =>
