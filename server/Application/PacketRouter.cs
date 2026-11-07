@@ -354,7 +354,16 @@ public sealed class PacketRouter
         if (!state.AccountId.HasValue)
         {
             _log.LogWarning("Unauthenticated request: {Type}", type);
-            return [];
+            return
+            [
+                new
+                {
+                    Type = "PacketError",
+                    RequestType = type,
+                    Code = "AUTH_REQUIRED",
+                    Message = "請先登入後再進行此操作"
+                }
+            ];
         }
 
         var accountId = state.AccountId.Value;
