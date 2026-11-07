@@ -539,6 +539,15 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 					main_entry.show_error_popup(msg)
 			)
 
+		"PositionCorrection":
+			if GameManager and is_instance_valid(GameManager.current_player):
+				var corrected_position := Vector2(
+					float(data.get("X", GameManager.current_player.global_position.x)),
+					float(data.get("Y", GameManager.current_player.global_position.y))
+				)
+				if GameManager.current_player.has_method("apply_position_correction"):
+					GameManager.current_player.apply_position_correction(corrected_position)
+
 		"CreateCharacterResponse":
 			create_character_response_received.emit(data.get("Success", false), data.get("Message", ""))
 
