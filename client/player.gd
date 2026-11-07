@@ -674,7 +674,7 @@ func _handle_movement(delta: float) -> void :
 	var distance: float = dir_vector.length()
 
 	if move_path_index + 1 >= move_path.size() and distance <= stop_threshold:
-		global_position = move_destination
+		global_position = target_position
 		_stop_movement()
 		return
 
