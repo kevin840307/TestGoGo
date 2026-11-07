@@ -2028,6 +2028,585 @@ public sealed class SqliteGameStore : IGameStore
         return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
     }
 
+    public CraftCommitResult CommitCraft(
+        long accountId,
+        long dbid,
+        long moneyCost,
+        IReadOnlyList<CraftIngredient> ingredients,
+        IReadOnlyList<CraftGrant> grants)
+    {
+        moneyCost = Math.Max(0, moneyCost);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(
+                db,
+                accountId,
+                dbid,
+                tx))
+            return new(false, "角色不存在", 0);
+
+        var money = ReadCharacterMoney(
+            db,
+            tx,
+            accountId,
+            dbid);
+
+        if (money < 0)
+            return new(false, "角色不存在", 0);
+
+        if (money < moneyCost)
+            return new(false, "金錢不足", money);
+
+        foreach (var ingredient in ingredients
+                     .GroupBy(x => x.ItemId)
+                     .Select(x => new CraftIngredient(
+                         x.Key,
+                         x.Sum(y => y.Count))))
+        {
+            if (ingredient.ItemId <= 0 ||
+                ingredient.Count <= 0 ||
+                !ConsumeRecipeInventory(
+                    db,
+                    tx,
+                    dbid,
+                    ingredient.ItemId,
+                    ingredient.Count,
+                    specificUid: null))
+            {
+                return new(
+                    false,
+                    "材料不足或狀態已變更",
+                    money);
+            }
+        }
+
+        foreach (var grant in grants)
+        {
+            if (!AddRecipeGrant(
+                    db,
+                    tx,
+                    dbid,
+                    grant))
+            {
+                return new(
+                    false,
+                    "產物背包空間不足或數量超過上限",
+                    money);
+            }
+        }
+
+        var newMoney = money - moneyCost;
+        if (!WriteCharacterMoney(
+                db,
+                tx,
+                accountId,
+                dbid,
+                newMoney))
+        {
+            return new(
+                false,
+                "合成扣款失敗",
+                money);
+        }
+
+        tx.Commit();
+        return new(
+            true,
+            "合成提交成功",
+            newMoney);
+    }
+
+    public CraftCommitResult CommitDismantle(
+        long accountId,
+        long dbid,
+        long moneyCost,
+        IReadOnlyList<DismantleTarget> targets,
+        IReadOnlyList<CraftGrant> grants)
+    {
+        moneyCost = Math.Max(0, moneyCost);
+
+        if (targets.Count == 0)
+            return new(false, "未選擇分解物品", 0);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(
+                db,
+                accountId,
+                dbid,
+                tx))
+            return new(false, "角色不存在", 0);
+
+        var money = ReadCharacterMoney(
+            db,
+            tx,
+            accountId,
+            dbid);
+
+        if (money < 0)
+            return new(false, "角色不存在", 0);
+
+        if (money < moneyCost)
+            return new(false, "金錢不足", money);
+
+        var seen = new HashSet<(int TabType, long Uid)>();
+
+        foreach (var target in targets)
+        {
+            if (target.Uid <= 0 ||
+                target.ItemId <= 0 ||
+                target.Count <= 0 ||
+                !seen.Add((
+                    target.TabType,
+                    target.Uid)))
+            {
+                return new(
+                    false,
+                    "分解物品資料無效",
+                    money);
+            }
+
+            if (target.TabType == 0)
+            {
+                using var check = db.CreateCommand();
+                check.Transaction = tx;
+                check.CommandText = """
+                    SELECT item_index,count
+                      FROM inventory_items
+                     WHERE uid=$uid
+                       AND character_id=$id
+                       AND in_bank=0
+                       AND in_shop=0
+                    """;
+                Arg(check, "$uid", target.Uid);
+                Arg(check, "$id", dbid);
+
+                using var reader = check.ExecuteReader();
+                if (!reader.Read() ||
+                    reader.GetInt32(0) !=
+                        target.ItemId ||
+                    reader.GetInt32(1) <
+                        target.Count)
+                {
+                    return new(
+                        false,
+                        "分解材料狀態已變更",
+                        money);
+                }
+
+                reader.Close();
+
+                if (!ConsumeRecipeInventory(
+                        db,
+                        tx,
+                        dbid,
+                        target.ItemId,
+                        target.Count,
+                        target.Uid))
+                {
+                    return new(
+                        false,
+                        "分解材料扣除失敗",
+                        money);
+                }
+            }
+            else if (target.TabType == 1)
+            {
+                if (target.Count != 1)
+                    return new(
+                        false,
+                        "裝備一次只能分解一件",
+                        money);
+
+                using var remove = db.CreateCommand();
+                remove.Transaction = tx;
+                remove.CommandText = """
+                    DELETE FROM equipment_items
+                     WHERE uid=$uid
+                       AND character_id=$id
+                       AND item_index=$item
+                       AND part=255
+                       AND in_bank=0
+                       AND in_shop=0
+                    """;
+                Arg(remove, "$uid", target.Uid);
+                Arg(remove, "$id", dbid);
+                Arg(remove, "$item", target.ItemId);
+
+                if (remove.ExecuteNonQuery() != 1)
+                {
+                    return new(
+                        false,
+                        "分解裝備狀態已變更",
+                        money);
+                }
+            }
+            else
+            {
+                return new(
+                    false,
+                    "不支援的分解物品類型",
+                    money);
+            }
+        }
+
+        foreach (var grant in grants)
+        {
+            if (!AddRecipeGrant(
+                    db,
+                    tx,
+                    dbid,
+                    grant))
+            {
+                return new(
+                    false,
+                    "分解產物背包空間不足或數量超過上限",
+                    money);
+            }
+        }
+
+        var newMoney = money - moneyCost;
+        if (!WriteCharacterMoney(
+                db,
+                tx,
+                accountId,
+                dbid,
+                newMoney))
+        {
+            return new(
+                false,
+                "分解扣款失敗",
+                money);
+        }
+
+        tx.Commit();
+        return new(
+            true,
+            "分解提交成功",
+            newMoney);
+    }
+
+    private static long ReadCharacterMoney(
+        SqliteConnection db,
+        SqliteTransaction tx,
+        long accountId,
+        long dbid)
+    {
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            SELECT money
+              FROM characters
+             WHERE id=$id
+               AND account_id=$account
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$account", accountId);
+        var raw = cmd.ExecuteScalar();
+        return raw is null ||
+               raw == DBNull.Value
+            ? -1
+            : Convert.ToInt64(raw);
+    }
+
+    private static bool WriteCharacterMoney(
+        SqliteConnection db,
+        SqliteTransaction tx,
+        long accountId,
+        long dbid,
+        long money)
+    {
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            UPDATE characters
+               SET money=$money
+             WHERE id=$id
+               AND account_id=$account
+            """;
+        Arg(cmd, "$money", money);
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$account", accountId);
+        return cmd.ExecuteNonQuery() == 1;
+    }
+
+    private static bool ConsumeRecipeInventory(
+        SqliteConnection db,
+        SqliteTransaction tx,
+        long dbid,
+        int itemId,
+        int count,
+        long? specificUid)
+    {
+        var rows = new List<(long Uid, int Count)>();
+
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = specificUid.HasValue
+                ? """
+                  SELECT uid,count
+                    FROM inventory_items
+                   WHERE uid=$uid
+                     AND character_id=$id
+                     AND item_index=$item
+                     AND in_bank=0
+                     AND in_shop=0
+                  """
+                : """
+                  SELECT uid,count
+                    FROM inventory_items
+                   WHERE character_id=$id
+                     AND item_index=$item
+                     AND in_bank=0
+                     AND in_shop=0
+                   ORDER BY uid
+                  """;
+            Arg(cmd, "$id", dbid);
+            Arg(cmd, "$item", itemId);
+            if (specificUid.HasValue)
+                Arg(cmd, "$uid", specificUid.Value);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                rows.Add((
+                    reader.GetInt64(0),
+                    reader.GetInt32(1)));
+            }
+        }
+
+        if (rows.Sum(x => x.Count) < count)
+            return false;
+
+        var remaining = count;
+
+        foreach (var row in rows)
+        {
+            if (remaining <= 0)
+                break;
+
+            var take = Math.Min(
+                remaining,
+                row.Count);
+
+            using var cmd = db.CreateCommand();
+            cmd.Transaction = tx;
+
+            if (take == row.Count)
+            {
+                cmd.CommandText =
+                    "DELETE FROM inventory_items WHERE uid=$uid";
+                Arg(cmd, "$uid", row.Uid);
+            }
+            else
+            {
+                cmd.CommandText = """
+                    UPDATE inventory_items
+                       SET count=count-$count
+                     WHERE uid=$uid
+                       AND count >= $count
+                    """;
+                Arg(cmd, "$count", take);
+                Arg(cmd, "$uid", row.Uid);
+            }
+
+            if (cmd.ExecuteNonQuery() != 1)
+                return false;
+
+            remaining -= take;
+        }
+
+        return remaining == 0;
+    }
+
+    private static bool AddRecipeGrant(
+        SqliteConnection db,
+        SqliteTransaction tx,
+        long dbid,
+        CraftGrant grant)
+    {
+        if (grant.ItemId <= 0 ||
+            grant.Count <= 0)
+            return false;
+
+        switch (grant.Kind)
+        {
+            case AssetPurchaseKind.General:
+            case AssetPurchaseKind.HorseBattery:
+            {
+                int currentTotal;
+                long stackUid;
+
+                using (var find = db.CreateCommand())
+                {
+                    find.Transaction = tx;
+                    find.CommandText = """
+                        SELECT COALESCE(SUM(count),0),
+                               COALESCE(MIN(uid),0)
+                          FROM inventory_items
+                         WHERE character_id=$id
+                           AND item_index=$item
+                           AND in_bank=0
+                           AND in_shop=0
+                        """;
+                    Arg(find, "$id", dbid);
+                    Arg(find, "$item", grant.ItemId);
+                    using var reader = find.ExecuteReader();
+                    reader.Read();
+                    currentTotal = reader.GetInt32(0);
+                    stackUid = reader.GetInt64(1);
+                }
+
+                if (currentTotal + grant.Count > 999)
+                    return false;
+
+                if (stackUid > 0)
+                {
+                    using var add = db.CreateCommand();
+                    add.Transaction = tx;
+                    add.CommandText = """
+                        UPDATE inventory_items
+                           SET count=count+$count
+                         WHERE uid=$uid
+                        """;
+                    Arg(add, "$count", grant.Count);
+                    Arg(add, "$uid", stackUid);
+                    return add.ExecuteNonQuery() == 1;
+                }
+
+                using (var capacity = db.CreateCommand())
+                {
+                    capacity.Transaction = tx;
+                    capacity.CommandText = """
+                        SELECT COUNT(*)
+                          FROM inventory_items
+                         WHERE character_id=$id
+                           AND in_bank=0
+                           AND in_shop=0
+                        """;
+                    Arg(capacity, "$id", dbid);
+
+                    if (Convert.ToInt32(
+                            capacity.ExecuteScalar()) >= 200)
+                        return false;
+                }
+
+                using var insert = db.CreateCommand();
+                insert.Transaction = tx;
+                insert.CommandText = """
+                    INSERT INTO inventory_items(
+                        character_id,item_index,count,
+                        in_bank,in_shop)
+                    VALUES($id,$item,$count,0,0)
+                    """;
+                Arg(insert, "$id", dbid);
+                Arg(insert, "$item", grant.ItemId);
+                Arg(insert, "$count", grant.Count);
+                return insert.ExecuteNonQuery() == 1;
+            }
+
+            case AssetPurchaseKind.Equipment:
+            {
+                using (var capacity = db.CreateCommand())
+                {
+                    capacity.Transaction = tx;
+                    capacity.CommandText = """
+                        SELECT COUNT(*)
+                          FROM equipment_items
+                         WHERE character_id=$id
+                           AND in_bank=0
+                           AND in_shop=0
+                        """;
+                    Arg(capacity, "$id", dbid);
+
+                    if (Convert.ToInt32(
+                            capacity.ExecuteScalar()) +
+                        grant.Count > 200)
+                        return false;
+                }
+
+                for (var index = 0;
+                     index < grant.Count;
+                     index++)
+                {
+                    using var insert = db.CreateCommand();
+                    insert.Transaction = tx;
+                    insert.CommandText = """
+                        INSERT INTO equipment_items(
+                            character_id,item_index,
+                            damage,color,part,
+                            in_bank,in_shop)
+                        VALUES(
+                            $id,$item,$damage,0,255,0,0)
+                        """;
+                    Arg(insert, "$id", dbid);
+                    Arg(insert, "$item", grant.ItemId);
+                    Arg(insert, "$damage",
+                        Math.Max(0, grant.Durability));
+
+                    if (insert.ExecuteNonQuery() != 1)
+                        return false;
+                }
+
+                return true;
+            }
+
+            case AssetPurchaseKind.HorseEquipment:
+            {
+                using (var capacity = db.CreateCommand())
+                {
+                    capacity.Transaction = tx;
+                    capacity.CommandText = """
+                        SELECT COUNT(*)
+                          FROM horse_equipment
+                         WHERE character_id=$id
+                           AND in_bank=0
+                           AND in_shop=0
+                        """;
+                    Arg(capacity, "$id", dbid);
+
+                    if (Convert.ToInt32(
+                            capacity.ExecuteScalar()) +
+                        grant.Count > 20)
+                        return false;
+                }
+
+                for (var index = 0;
+                     index < grant.Count;
+                     index++)
+                {
+                    using var insert = db.CreateCommand();
+                    insert.Transaction = tx;
+                    insert.CommandText = """
+                        INSERT INTO horse_equipment(
+                            character_id,equip_index,
+                            horse_uid,damage,color,part,
+                            in_bank,in_shop)
+                        VALUES(
+                            $id,$item,-1,$damage,0,$part,0,0)
+                        """;
+                    Arg(insert, "$id", dbid);
+                    Arg(insert, "$item", grant.ItemId);
+                    Arg(insert, "$damage",
+                        Math.Max(0, grant.Durability));
+                    Arg(insert, "$part", grant.Part);
+
+                    if (insert.ExecuteNonQuery() != 1)
+                        return false;
+                }
+
+                return true;
+            }
+
+            default:
+                return false;
+        }
+    }
+
     public PlayerShopReserveResult SetPlayerShopAssetState(
         long accountId,
         long dbid,
