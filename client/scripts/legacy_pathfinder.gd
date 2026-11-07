@@ -5,6 +5,9 @@ const BLOCK_MASK: int = 0x07
 const SEARCH_WINDOW_CELLS: int = 50
 const HALF_SEARCH_WINDOW_CELLS: int = 25
 const MAX_GOAL_SEARCH_RADIUS: int = 8
+const COLLISION_SOURCE_ID: int = 1
+const COLLISION_BUILD_YIELD_CELLS: int = 4096
+const COLLISION_TILESET: TileSet = preload("res://collision_marker.tres")
 
 var _map_cache: Dictionary = {}
 
@@ -40,6 +43,49 @@ func get_path(map_id: int, start_world: Vector2, target_world: Vector2) -> Packe
 		result.append(target_world)
 
 	return _smooth_path(grid, start_world, result)
+
+
+func build_collision_layer(map_id: int, collision_layer: TileMapLayer) -> Dictionary:
+	var grid: Dictionary = _get_grid(map_id)
+	if grid.is_empty() or collision_layer == null:
+		return {
+			"success": false,
+			"blocked_cells": 0,
+			"reason": "blocking_missing_or_layer_missing",
+		}
+
+	collision_layer.clear()
+	collision_layer.tile_set = COLLISION_TILESET
+	collision_layer.modulate = Color(1.0, 1.0, 1.0, 0.0)
+
+	var width: int = int(grid.get("width", 0))
+	var height: int = int(grid.get("height", 0))
+	var cells: PackedByteArray = grid.get("cells", PackedByteArray()) as PackedByteArray
+	var blocked_cells: int = 0
+	var processed_cells: int = 0
+
+	for y: int in range(height):
+		for x: int in range(width):
+			var index: int = y * width + x
+			var flags: int = int(cells[index]) & BLOCK_MASK
+			if flags != 0:
+				collision_layer.set_cell(
+					Vector2i(x, y),
+					COLLISION_SOURCE_ID,
+					Vector2i(flags, 0)
+				)
+				blocked_cells += 1
+
+			processed_cells += 1
+			if processed_cells % COLLISION_BUILD_YIELD_CELLS == 0:
+				await get_tree().process_frame
+
+	return {
+		"success": true,
+		"blocked_cells": blocked_cells,
+		"width": width,
+		"height": height,
+	}
 
 
 func is_walkable(map_id: int, world_position: Vector2) -> bool:
