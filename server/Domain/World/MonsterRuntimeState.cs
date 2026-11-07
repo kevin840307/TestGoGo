@@ -18,6 +18,8 @@ public sealed class MonsterRuntimeState
 
     public bool HasTarget { get; set; }
     public DateTimeOffset LastAttackAt { get; set; } = DateTimeOffset.MinValue;
+    public DateTimeOffset NextWanderAt { get; set; } = DateTimeOffset.MinValue;
+    public int WanderSequence { get; set; }
     public DateTimeOffset? RespawnAt { get; set; }
 
     public bool IsAlive => CurrentHp > 0 && RespawnAt is null;
