@@ -4083,6 +4083,16 @@ stretch_mode = 0
 [node name="LoadingOverlay" type="CanvasLayer" parent="." unique_id=811334640]
 unique_name_in_owner = true
 visible = false
+layer = 100
+
+[node name="BlackBackground" type="ColorRect" parent="LoadingOverlay"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
 
 [node name="Background" type="TextureRect" parent="LoadingOverlay" unique_id=520243095]
 anchors_preset = 8
