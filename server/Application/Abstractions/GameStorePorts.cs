@@ -272,6 +272,33 @@ public interface IQuestStore
         long dbid,
         string flagName,
         int value);
+
+    IReadOnlyList<Dictionary<string, object>> GetQuests(
+        long accountId,
+        long dbid);
+
+    bool UpsertQuest(
+        long accountId,
+        long dbid,
+        int questId,
+        int status,
+        int currentStep,
+        int stepProgress);
+
+    bool AbandonQuest(
+        long accountId,
+        long dbid,
+        int questId);
+}
+
+public interface IMallStore
+{
+    long GetMallPoints(long accountId);
+
+    bool AdjustMallPoints(
+        long accountId,
+        long delta,
+        out long newBalance);
 }
 
 public sealed record ClubMemberData(
