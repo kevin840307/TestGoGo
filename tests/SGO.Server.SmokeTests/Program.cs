@@ -76,26 +76,67 @@ CurrentItemDefinition CurrentItem(
 var currentCatalog = new CurrentClientDataCatalog(
     new[]
     {
-        // Recovery has no reliable legacy display name in the uploaded old
-        // client data, so keep only confirmed same-ID mappings.
-        CurrentItem(31201, "Recovery 31201", "recovery", recoverHp: 20),
-        CurrentItem(31202, "Recovery 31202", "recovery", recoverHp: 30),
-        CurrentItem(31203, "Item 31203", "recovery", recoverHp: 50),
-        CurrentItem(31204, "Item 31204", "recovery", recoverHp: 80),
-        CurrentItem(31205, "Item 31205", "recovery", recoverHp: 100),
+        CurrentItem(
+            1001,
+            "小藥水",
+            "recovery",
+            price: 20,
+            recoverHp: 140),
 
-        // Old server Equip.itd confirms 31078 = 淺藍色初心褲子.
-        // Current client intentionally uses a different ID to verify
-        // name-based old -> current mapping.
-        CurrentItem(41078, "淺藍色初心褲子", "equip", atk: 20, equipSlot: 5),
-        CurrentItem(31109, "Equip 31109", "equip", def: 8, equipSlot: 3),
-        CurrentItem(31140, "Equip 31140", "equip", def: 8, equipSlot: 4),
-        CurrentItem(272, "General 272", "general"),
-        CurrentItem(281, "General 281", "general"),
+        // Legacy Shop2 item 31078 is 淺藍色初心褲子.
+        // Current client moved it to 18538.
+        CurrentItem(
+            18538,
+            "淺藍色初心褲子",
+            "equip",
+            price: 1,
+            def: 5,
+            equipSlot: 4),
 
-        CurrentItem(6008, "Test Current Mecha", "horse", maxBattery: 25200, horseType: "MS"),
-        CurrentItem(6201, "Test Current Mecha Weapon", "horseequip", atk: 8, equipSlot: 1),
-        CurrentItem(6905, "Test Current Battery", "horsebattery", battery: 3600)
+        // Map15 shop_e3 -> Shop7 bullets.
+        CurrentItem(
+            4103,
+            "合金彈",
+            "general",
+            price: 1,
+            canSell: 0),
+        CurrentItem(
+            4112,
+            "魔咒彈",
+            "general",
+            price: 1,
+            canSell: 0),
+
+        // Map15 shop_e3 -> Shop10 weapons.
+        CurrentItem(
+            31548,
+            "小鐵劍",
+            "weapon",
+            price: 50,
+            atk: 10,
+            equipSlot: 5,
+            attackRange: 140),
+
+        CurrentItem(
+            50001,
+            "機甲卡",
+            "horse",
+            maxBattery: 25200,
+            horseType: "MS"),
+        CurrentItem(
+            50293,
+            "戰鬥型鋼臂",
+            "horseequip",
+            price: 100,
+            atk: 18,
+            equipSlot: 1,
+            attackRange: 50),
+        CurrentItem(
+            50102,
+            "魔靈電池",
+            "horsebattery",
+            price: 1200,
+            battery: 3600)
     },
     new[]
     {
@@ -187,21 +228,24 @@ var map15Merchant = map15Npcs.First(x => x.IsMerchant);
 Check(map15Merchant.NpcTypeId == 393 &&
       map15Merchant.Sprite == "NPC002.png",
     "Map15 merchant uses a recovered visible/clickable sprite fallback");
-Check(shopCatalog.GetShopItems(1).Count > 0 &&
-      shopCatalog.GetShopItems(2).Count > 0 &&
-      shopCatalog.GetShopItems(5).Count > 0 &&
-      shopCatalog.GetShopItems(6).Count > 0 &&
-      shopCatalog.GetShopItems(7).Count > 0,
-    "Map15 item weapon armor and shield shops load source item data");
-Check(batteryCatalog.GetEnergy(6905) == 3600,
-    "source mecha battery 6905 resolves 3600 seconds");
-Check(recoveryCatalog.Find(31201) is { RecoverHp: 20 },
-    "confirmed current recovery item 31201 resolves +20 HP");
-Check(shopCatalog.GetShopItems(2).Any(x => x.ItemIndex == 41078) &&
+Check(shopCatalog.GetShopItems(7).Any(x => x.ItemIndex == 4103) &&
+      shopCatalog.GetShopItems(7).Any(x => x.ItemIndex == 4112),
+    "Map15 Shop7 maps old bullet names to current client IDs");
+Check(shopCatalog.GetShopItems(10).Any(x => x.ItemIndex == 31548),
+    "Map15 Shop10 maps old weapon name to current client ID");
+Check(shopCatalog.GetShopItems(2).Any(x => x.ItemIndex == 18538) &&
       !shopCatalog.GetShopItems(2).Any(x => x.ItemIndex == 31078),
-    "legacy shop equip maps by confirmed name to changed current item ID");
-Check(horseCardCatalog.Find(6008) is { MaxBattery: 25200 },
-    "source mecha card 6008 resolves max battery");
+    "legacy Shop2 equip maps by name from old 31078 to current 18538");
+Check(shopCatalog.MappingWarnings.Any(x =>
+        x.Contains("[LEGACY_NAME_UNCONFIRMED]") &&
+        x.Contains("Shop=1")),
+    "unconfirmed legacy recovery IDs are skipped instead of reused");
+Check(batteryCatalog.GetEnergy(50102) == 3600,
+    "current mecha battery 50102 resolves 3600 seconds");
+Check(recoveryCatalog.Find(1001) is { RecoverHp: 140 },
+    "current recovery item 1001 resolves +140 HP");
+Check(horseCardCatalog.Find(50001) is { MaxBattery: 25200 },
+    "current mecha card 50001 resolves max battery");
 
 var payload = new { Type = "LoginRequest", User = "offline", Pass = "test" };
 var ciphertext = ClientProtocol.Encode(payload);
@@ -293,8 +337,10 @@ try
           Convert.ToInt64(funded["Money"]) == moneyBeforeFunding + 10_000,
         "fund character for NPC shop transaction tests");
 
-    var generalShopItem = shopCatalog.GetShopItems(1).First();
-    var weaponShopItem = shopCatalog.GetShopItems(2).First();
+    var generalShopItem = shopCatalog.GetShopItems(7)
+        .First(x => x.ItemIndex == 4103);
+    var weaponShopItem = shopCatalog.GetShopItems(10)
+        .First(x => x.ItemIndex == 31548);
 
     var itemUid = store.AddInventoryItem(
         account.Value, id, generalShopItem.ItemIndex, 5);
@@ -303,15 +349,15 @@ try
     var petUid = store.AddPet(
         account.Value, id, 1, "TestPet");
     var horseUid = store.AddHorse(
-        account.Value, id, 6001, "TestMecha", "MS", 3600);
+        account.Value, id, 50001, "TestMecha", "MS", 3600);
     var horseEquipUid = store.AddHorseEquipment(
-        account.Value, id, 6201, -1, 255, 0, 1);
+        account.Value, id, 50293, -1, 1, 0, 1);
     var batteryUid = store.AddInventoryItem(
-        account.Value, id, 6905, 1);
+        account.Value, id, 50102, 1);
     var recoveryUid = store.AddInventoryItem(
-        account.Value, id, 31201, 1);
+        account.Value, id, 1001, 1);
     var horseCardUid = store.AddInventoryItem(
-        account.Value, id, 6008, 1);
+        account.Value, id, 50001, 1);
 
     Check(itemUid > 0 &&
           equipUid > 0 &&
@@ -393,8 +439,8 @@ try
         var responses = router.Handle(useRecovery.RootElement, session);
         var recovered = store.GetCharacter(account.Value, id)!;
 
-        Check(Convert.ToInt32(recovered["HP"]) == 70,
-            "UseItemRequest applies current recovery .tres HP effect");
+        Check(Convert.ToInt32(recovered["HP"]) == 100,
+            "UseItemRequest applies current recovery .tres and caps at MaxHP");
         Check(!store.GetCharacterAssets(account.Value, id).Inventory.Any(x =>
                 Convert.ToInt64(x["ItemUID"]) == recoveryUid),
             "recovery item is consumed");
@@ -417,7 +463,7 @@ try
 
         Check(assetsAfterCard.Horses.Count == horseCountBeforeCard + 1 &&
               assetsAfterCard.Horses.Any(x =>
-                  Convert.ToInt32(x["HorseIdx"]) == 6008 &&
+                  Convert.ToInt32(x["HorseIdx"]) == 50001 &&
                   Convert.ToInt32(x["EnergyLeft"]) == 25200),
             "UseItemRequest converts source mecha card into rideable mecha");
         Check(!assetsAfterCard.Inventory.Any(x =>
@@ -428,7 +474,8 @@ try
             "mecha-card activation refreshes HorseSync");
     }
 
-    var buyItem = shopCatalog.GetShopItems(1).First();
+    var buyItem = shopCatalog.GetShopItems(7)
+        .First(x => x.ItemIndex == 4103);
     var moneyBeforeShop = Convert.ToInt64(
         store.GetCharacter(account.Value, id)!["Money"]);
 
@@ -436,7 +483,7 @@ try
     {
         Type = "ShopAction",
         Action = "BuyNpcItem",
-        ShopID = 1,
+        ShopID = 7,
         ItemIndex = buyItem.ItemIndex,
         Count = 2
     })))
@@ -456,7 +503,7 @@ try
     }
 
     var mappedEquipShopItem = shopCatalog.GetShopItems(2)
-        .First(x => x.ItemIndex == 41078);
+        .First(x => x.ItemIndex == 18538);
     var equipCountBeforePurchase =
         store.GetCharacterAssets(account.Value, id).Equips.Count;
 
@@ -476,7 +523,7 @@ try
         Check(assetsAfterEquipBuy.Equips.Count ==
                   equipCountBeforePurchase + 1 &&
               assetsAfterEquipBuy.Equips.Any(x =>
-                  Convert.ToInt32(x["ItemIdx"]) == 41078),
+                  Convert.ToInt32(x["ItemIdx"]) == 18538),
             "NPC shop buys mapped current equipment into equipment storage");
         Check(responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains(
