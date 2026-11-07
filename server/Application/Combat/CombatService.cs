@@ -592,38 +592,46 @@ public sealed class CombatService
         double petX,
         double petY)
     {
-        if (!session.Monsters.TryGetValue(
+        if (!session.CharacterId.HasValue ||
+            !session.Monsters.TryGetValue(
                 targetEntityId,
                 out var monster) ||
-            !monster.IsAlive ||
             monster.MapId != session.CurrentMapId)
             return [];
 
-        var dx = monster.X - petX;
-        var dy = monster.Y - petY;
-        var distanceSquared = dx * dx + dy * dy;
-        const double petAttackRange = 130.0;
+        var runtime = _runtime.GetMap(session.CurrentMapId);
+        var packets = new List<object>();
 
-        if (distanceSquared > petAttackRange * petAttackRange)
-            return [];
-
-        var petEntityId = 4_000_000L + petUid;
-        var damage = Math.Max(1, petAttack);
-
-        monster.CurrentHp = Math.Max(
-            0,
-            monster.CurrentHp - damage);
-
-        var packets = new List<object>
+        lock (runtime.SyncRoot)
         {
-            new
+            if (!monster.IsAlive)
+                return [];
+
+            var dx = monster.X - petX;
+            var dy = monster.Y - petY;
+            var distanceSquared = dx * dx + dy * dy;
+            const double petAttackRange = 130.0;
+
+            if (distanceSquared >
+                petAttackRange * petAttackRange)
+                return [];
+
+            var petEntityId = 4_000_000L + petUid;
+            var damage = Math.Max(1, petAttack);
+
+            monster.CurrentHp = Math.Max(
+                0,
+                monster.CurrentHp - damage);
+
+            packets.Add(new
             {
                 Type = "SyncState",
                 EntityID = petEntityId,
                 State = "attack",
                 Dir = DirectionFromDelta(dx, dy)
-            },
-            new
+            });
+
+            packets.Add(new
             {
                 Type = "EntityDamage",
                 TargetID = monster.EntityId,
@@ -635,58 +643,62 @@ public sealed class CombatService
                 SkillID = 0,
                 SkillLevel = 1,
                 AttackerID = petEntityId
+            });
+
+            if (monster.CurrentHp > 0 &&
+                !monster.HasTarget)
+            {
+                monster.HasTarget = true;
+                monster.TargetCharacterId =
+                    session.CharacterId.Value;
+                SetAiState(monster, MonsterAiState.Chase);
+
+                packets.Add(new
+                {
+                    Type = "MonsterTarget",
+                    EntityID = monster.EntityId,
+                    HasTarget = true,
+                    TargetID = session.CharacterId.Value
+                });
             }
-        };
 
-        // A pet is the owner's combat extension. Until pet HP/damage is backed
-        // by the persistence port, a successful pet hit pulls aggro onto the
-        // owner instead of creating a half-persistent monster->pet target.
-        if (monster.CurrentHp > 0 && !monster.HasTarget)
-        {
-            monster.HasTarget = true;
-            SetAiState(monster, MonsterAiState.Chase);
-            packets.Add(new
+            if (monster.CurrentHp == 0)
             {
-                Type = "MonsterTarget",
-                EntityID = monster.EntityId,
-                HasTarget = true
-            });
+                monster.RespawnAt =
+                    DateTimeOffset.UtcNow + RespawnDelay;
+                monster.HasTarget = false;
+                monster.TargetCharacterId = 0;
+                SetAiState(monster, MonsterAiState.Dead);
+
+                packets.Add(new
+                {
+                    Type = "EntityDeath",
+                    EntityID = monster.EntityId,
+                    EntityType = 1,
+                    KillerID = petEntityId
+                });
+
+                AddCharacterKillRewards(
+                    session,
+                    accountId,
+                    monster,
+                    packets);
+
+                AddMonsterDrops(
+                    session,
+                    accountId,
+                    monster,
+                    packets);
+
+                AddMechaKillExperience(
+                    session,
+                    accountId,
+                    monster,
+                    packets);
+            }
         }
 
-        if (monster.CurrentHp == 0)
-        {
-            monster.RespawnAt =
-                DateTimeOffset.UtcNow + RespawnDelay;
-            monster.HasTarget = false;
-            SetAiState(monster, MonsterAiState.Dead);
-
-            packets.Add(new
-            {
-                Type = "EntityDeath",
-                EntityID = monster.EntityId,
-                EntityType = 1,
-                KillerID = petEntityId
-            });
-
-            AddCharacterKillRewards(
-                session,
-                accountId,
-                monster,
-                packets);
-
-            AddMonsterDrops(
-                session,
-                accountId,
-                monster,
-                packets);
-
-            AddMechaKillExperience(
-                session,
-                accountId,
-                monster,
-                packets);
-        }
-
+        BroadcastWorldPackets(session, packets);
         return packets;
     }
 
@@ -875,59 +887,91 @@ public sealed class CombatService
                     effective.Attack + effective.MagicAttack);
             }
 
-            var radius = Math.Max(0, levelData.AoeRadius);
-            var targets = session.Monsters.Values
-                .Where(x =>
-                    x.IsAlive &&
-                    x.MapId == session.CurrentMapId &&
-                    (radius <= 0
-                        ? x.EntityId == primaryMonster.EntityId
-                        : Math.Pow(x.X - centerX, 2) +
-                          Math.Pow(x.Y - centerY, 2) <=
-                          radius * radius))
-                .ToArray();
+            var runtime = _runtime.GetMap(
+                session.CurrentMapId);
 
-            packets[0] = new
+            lock (runtime.SyncRoot)
             {
-                Type = "SkillCast",
-                CasterID = session.CharacterId.Value,
-                CasterType = 0,
-                SkillID = skillId,
-                SkillLevel = skillLevel,
-                TargetID = primaryMonster.EntityId,
-                TargetX = Convert.ToInt32(centerX),
-                TargetY = Convert.ToInt32(centerY),
-                AoeTargets = targets
-                    .Select(x => new { ID = x.EntityId })
-                    .ToArray()
-            };
-
-            foreach (var monster in targets)
-            {
-                monster.CurrentHp = Math.Max(
+                var radius = Math.Max(
                     0,
-                    monster.CurrentHp - damage);
+                    levelData.AoeRadius);
 
-                packets.Add(new
+                var targets = runtime.Monsters.Values
+                    .Where(x =>
+                        x.IsAlive &&
+                        x.MapId == session.CurrentMapId &&
+                        (radius <= 0
+                            ? x.EntityId ==
+                              primaryMonster.EntityId
+                            : Math.Pow(x.X - centerX, 2) +
+                              Math.Pow(x.Y - centerY, 2) <=
+                              radius * radius))
+                    .ToArray();
+
+                packets[0] = new
                 {
-                    Type = "EntityDamage",
-                    TargetID = monster.EntityId,
-                    TargetType = 1,
-                    Damage = damage,
-                    CurrentHP = monster.CurrentHp,
-                    MaxHP = monster.MaxHp,
-                    IsCrit = false,
+                    Type = "SkillCast",
+                    CasterID = session.CharacterId.Value,
+                    CasterType = 0,
                     SkillID = skillId,
                     SkillLevel = skillLevel,
-                    AttackerID = session.CharacterId.Value
-                });
+                    TargetID = primaryMonster.EntityId,
+                    TargetX = Convert.ToInt32(centerX),
+                    TargetY = Convert.ToInt32(centerY),
+                    AoeTargets = targets
+                        .Select(x => new { ID = x.EntityId })
+                        .ToArray()
+                };
 
-                if (monster.CurrentHp == 0)
+                foreach (var monster in targets)
                 {
-                    monster.RespawnAt = now + RespawnDelay;
+                    monster.CurrentHp = Math.Max(
+                        0,
+                        monster.CurrentHp - damage);
+
+                    packets.Add(new
+                    {
+                        Type = "EntityDamage",
+                        TargetID = monster.EntityId,
+                        TargetType = 1,
+                        Damage = damage,
+                        CurrentHP = monster.CurrentHp,
+                        MaxHP = monster.MaxHp,
+                        IsCrit = false,
+                        SkillID = skillId,
+                        SkillLevel = skillLevel,
+                        AttackerID = session.CharacterId.Value
+                    });
+
+                    if (monster.CurrentHp > 0 &&
+                        !monster.HasTarget)
+                    {
+                        monster.HasTarget = true;
+                        monster.TargetCharacterId =
+                            session.CharacterId.Value;
+                        SetAiState(
+                            monster,
+                            MonsterAiState.Chase);
+
+                        packets.Add(new
+                        {
+                            Type = "MonsterTarget",
+                            EntityID = monster.EntityId,
+                            HasTarget = true,
+                            TargetID = session.CharacterId.Value
+                        });
+                    }
+
+                    if (monster.CurrentHp != 0)
+                        continue;
+
+                    monster.RespawnAt =
+                        now + RespawnDelay;
                     monster.HasTarget = false;
-                    monster.IsMoving = false;
-                    monster.HoldingAttackRange = false;
+                    monster.TargetCharacterId = 0;
+                    SetAiState(
+                        monster,
+                        MonsterAiState.Dead);
 
                     packets.Add(new
                     {
@@ -1041,6 +1085,7 @@ public sealed class CombatService
             now + TimeSpan.FromSeconds(
                 Math.Max(0, levelData.CooldownSeconds));
 
+        BroadcastWorldPackets(session, packets);
         return packets;
     }
 
@@ -1052,9 +1097,10 @@ public sealed class CombatService
     {
         if (targetType != 1 ||
             !session.CharacterId.HasValue ||
-            !session.Monsters.TryGetValue(targetEntityId, out var monster) ||
-            monster.MapId != session.CurrentMapId ||
-            !monster.IsAlive)
+            !session.Monsters.TryGetValue(
+                targetEntityId,
+                out var monster) ||
+            monster.MapId != session.CurrentMapId)
             return [];
 
         var character = _store.GetCharacter(
@@ -1081,31 +1127,37 @@ public sealed class CombatService
             80,
             effective.AttackRange);
 
-        var dx = playerX - monster.X;
-        var dy = playerY - monster.Y;
-        var allowedRange = attackRange + 120;
+        var runtime = _runtime.GetMap(session.CurrentMapId);
+        var packets = new List<object>();
 
-        if ((dx * dx) + (dy * dy) >
-            allowedRange * allowedRange)
+        lock (runtime.SyncRoot)
         {
-            return [new
+            if (!monster.IsAlive)
+                return [];
+
+            var dx = playerX - monster.X;
+            var dy = playerY - monster.Y;
+            var allowedRange = attackRange + 120;
+
+            if ((dx * dx) + (dy * dy) >
+                allowedRange * allowedRange)
             {
-                Type = "SystemMessageFlash",
-                Message = "目標距離太遠"
-            }];
-        }
+                return [new
+                {
+                    Type = "SystemMessageFlash",
+                    Message = "目標距離太遠"
+                }];
+            }
 
-        var damage = Math.Max(
-            1,
-            effective.Attack);
+            var damage = Math.Max(
+                1,
+                effective.Attack);
 
-        monster.CurrentHp = Math.Max(
-            0,
-            monster.CurrentHp - damage);
+            monster.CurrentHp = Math.Max(
+                0,
+                monster.CurrentHp - damage);
 
-        var packets = new List<object>
-        {
-            new
+            packets.Add(new
             {
                 Type = "EntityDamage",
                 TargetID = monster.EntityId,
@@ -1117,42 +1169,61 @@ public sealed class CombatService
                 SkillID = 0,
                 SkillLevel = 1,
                 AttackerID = session.CharacterId.Value
-            }
-        };
-
-        if (monster.CurrentHp == 0)
-        {
-            monster.RespawnAt =
-                DateTimeOffset.UtcNow + RespawnDelay;
-            monster.HasTarget = false;
-
-            packets.Add(new
-            {
-                Type = "EntityDeath",
-                EntityID = monster.EntityId,
-                EntityType = 1,
-                KillerID = session.CharacterId.Value
             });
 
-            AddCharacterKillRewards(
-                session,
-                accountId,
-                monster,
-                packets);
+            if (monster.CurrentHp > 0 &&
+                !monster.HasTarget)
+            {
+                monster.HasTarget = true;
+                monster.TargetCharacterId =
+                    session.CharacterId.Value;
+                SetAiState(monster, MonsterAiState.Chase);
+                packets.Add(new
+                {
+                    Type = "MonsterTarget",
+                    EntityID = monster.EntityId,
+                    HasTarget = true,
+                    TargetID = session.CharacterId.Value
+                });
+            }
 
-            AddMonsterDrops(
-                session,
-                accountId,
-                monster,
-                packets);
+            if (monster.CurrentHp == 0)
+            {
+                monster.RespawnAt =
+                    DateTimeOffset.UtcNow + RespawnDelay;
+                monster.HasTarget = false;
+                monster.TargetCharacterId = 0;
+                SetAiState(monster, MonsterAiState.Dead);
 
-            AddMechaKillExperience(
-                session,
-                accountId,
-                monster,
-                packets);
+                packets.Add(new
+                {
+                    Type = "EntityDeath",
+                    EntityID = monster.EntityId,
+                    EntityType = 1,
+                    KillerID = session.CharacterId.Value
+                });
+
+                AddCharacterKillRewards(
+                    session,
+                    accountId,
+                    monster,
+                    packets);
+
+                AddMonsterDrops(
+                    session,
+                    accountId,
+                    monster,
+                    packets);
+
+                AddMechaKillExperience(
+                    session,
+                    accountId,
+                    monster,
+                    packets);
+            }
         }
 
+        BroadcastWorldPackets(session, packets);
         return packets;
     }
 
