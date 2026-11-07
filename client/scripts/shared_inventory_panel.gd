@@ -17,6 +17,9 @@ const PLAYER_SCENE = preload("res://player.tscn")
 const PALETTE_SHADER = preload("res://palette_swap.gdshader")
 const COLOR_INDEX_TO_DEGREES = {0: 0.0, 1: 90.0, 2: 180.0, 3: 270.0, 4: 45.0, 5: 135.0, 6: 225.0, 7: 315.0}
 var _palette_mat_cache: Dictionary = {}
+const ITEM_LIST_BATCH_SIZE: int = 12
+var _item_list_render_generation: int = 0
+var _equip_preview_building: bool = false
 
 
 var tex_tab_general_on: Texture2D = preload("res://ui/B_ITEM_ITEM2.png")
@@ -292,7 +295,7 @@ func render_equip_items(items: Array) -> void :
 		["item_id", "ItemID", "equip_uid", "EquipUID"]
 	)
 	if current_mode == DisplayMode.SIMPLE_LIST:
-		_update_item_list(sorted_items, list_equip_simple, TabType.EQUIP)
+		_update_item_list_batched(sorted_items, list_equip_simple, TabType.EQUIP)
 	else:
 		_cached_equip_items = sorted_items
 		_apply_equip_filter()
@@ -432,69 +435,94 @@ func render_equipped_slots(equipped_map: Dictionary, data_model = null) -> void 
 
 	if panel_equip_detailed:
 		var player_preview = panel_equip_detailed.get_node_or_null("EquipPreview")
-		if not player_preview:
-			player_preview = PLAYER_SCENE.instantiate()
-			player_preview.name = "EquipPreview"
-			panel_equip_detailed.add_child(player_preview)
-			player_preview.position = Vector2(178, 180)
+		if not is_instance_valid(player_preview):
+			if not _equip_preview_building:
+				_equip_preview_building = true
+				call_deferred("_build_equip_preview_async", data_model)
+			return
+		_update_equip_preview(player_preview, data_model)
 
-			if player_preview.has_method("set_physics_process"):
-				player_preview.set_physics_process(false)
-				player_preview.set_process(false)
+func _build_equip_preview_async(data_model = null) -> void :
+	await get_tree().process_frame
+	if not is_instance_valid(panel_equip_detailed):
+		_equip_preview_building = false
+		return
+	if panel_equip_detailed.get_node_or_null("EquipPreview") != null:
+		_equip_preview_building = false
+		return
 
-			if NetworkManager:
-				if NetworkManager.change_map_received.is_connected(player_preview._on_change_map_received):
-					NetworkManager.change_map_received.disconnect(player_preview._on_change_map_received)
+	var started_usec: int = Time.get_ticks_usec()
+	var player_preview = PLAYER_SCENE.instantiate()
+	player_preview.name = "EquipPreview"
+	panel_equip_detailed.add_child(player_preview)
+	player_preview.position = Vector2(178, 180)
 
-			var head_name_tag = player_preview.get_node_or_null("UIContainer")
-			if head_name_tag: head_name_tag.queue_free()
+	if player_preview.has_method("set_physics_process"):
+		player_preview.set_physics_process(false)
+	player_preview.set_process(false)
 
-		var model = data_model if data_model else (_target_player.data_model if is_instance_valid(_target_player) else null)
-		if is_instance_valid(player_preview) and model:
-			if is_instance_valid(_target_player) and "current_race" in _target_player:
-				player_preview.current_race = _target_player.current_race
-				player_preview.current_hair = _target_player.current_hair
-				player_preview.current_hair_color_index = _target_player.current_hair_color_index
-				player_preview.current_body_color_index = _target_player.current_body_color_index
+	if NetworkManager and NetworkManager.change_map_received.is_connected(player_preview._on_change_map_received):
+		NetworkManager.change_map_received.disconnect(player_preview._on_change_map_received)
 
-			if "data_model" in player_preview and player_preview.data_model:
-				player_preview.data_model.bonnet_id = model.bonnet_id
-				player_preview.data_model.left_hand_id = model.left_hand_id
-				player_preview.data_model.right_hand_id = model.right_hand_id
-				player_preview.data_model.upper_armor_id = model.upper_armor_id
-				player_preview.data_model.lower_armor_id = model.lower_armor_id
-				player_preview.data_model.weapon_id = model.weapon_id
-				player_preview.data_model.shield_id = model.shield_id
-				player_preview.data_model.back_id = model.back_id
+	var head_name_tag = player_preview.get_node_or_null("UIContainer")
+	if head_name_tag:
+		head_name_tag.queue_free()
 
-			if player_preview.has_method("update_paper_doll_part"):
-				player_preview.update_paper_doll_part(0, model.bonnet_id)
-				player_preview.update_paper_doll_part(1, model.left_hand_id)
-				player_preview.update_paper_doll_part(2, model.right_hand_id)
-				player_preview.update_paper_doll_part(3, model.upper_armor_id)
-				player_preview.update_paper_doll_part(4, model.lower_armor_id)
-				player_preview.update_paper_doll_part(5, model.weapon_id)
-				player_preview.update_paper_doll_part(6, model.shield_id)
-				player_preview.update_paper_doll_part(7, model.back_id)
+	_update_equip_preview(player_preview, data_model)
+	_equip_preview_building = false
+	print("[INVENTORY_PREVIEW_TIMING] total_ms=%.2f" % (float(Time.get_ticks_usec() - started_usec) / 1000.0))
 
-			player_preview.current_dir = "1"
-			if player_preview.has_method("get_combat_idle_state"):
-				player_preview.current_state = player_preview.get_combat_idle_state()
-			else:
-				player_preview.current_state = "idle_weapon_melee"
+func _update_equip_preview(player_preview: Node, data_model = null) -> void :
+	var model = data_model if data_model else (_target_player.data_model if is_instance_valid(_target_player) else null)
+	if not is_instance_valid(player_preview) or model == null:
+		return
 
-			if "is_dead" in player_preview: player_preview.is_dead = false
-			if is_instance_valid(player_preview.get("death_effect")):
-				player_preview.death_effect.visible = false
-				player_preview.death_effect.stop()
-			if is_instance_valid(player_preview.get("doll_engine")):
-				player_preview.doll_engine.visible = true
+	if is_instance_valid(_target_player) and "current_race" in _target_player:
+		player_preview.current_race = _target_player.current_race
+		player_preview.current_hair = _target_player.current_hair
+		player_preview.current_hair_color_index = _target_player.current_hair_color_index
+		player_preview.current_body_color_index = _target_player.current_body_color_index
 
-			if player_preview.has_method("setup_layered_paper_dolls"): player_preview.setup_layered_paper_dolls()
-			if player_preview.has_method("sync_animation"): player_preview.sync_animation()
+	if "data_model" in player_preview and player_preview.data_model:
+		player_preview.data_model.bonnet_id = model.bonnet_id
+		player_preview.data_model.left_hand_id = model.left_hand_id
+		player_preview.data_model.right_hand_id = model.right_hand_id
+		player_preview.data_model.upper_armor_id = model.upper_armor_id
+		player_preview.data_model.lower_armor_id = model.lower_armor_id
+		player_preview.data_model.weapon_id = model.weapon_id
+		player_preview.data_model.shield_id = model.shield_id
+		player_preview.data_model.back_id = model.back_id
 
-			player_preview.position = Vector2(178, 180)
+	if player_preview.has_method("update_paper_doll_part"):
+		player_preview.update_paper_doll_part(0, model.bonnet_id)
+		player_preview.update_paper_doll_part(1, model.left_hand_id)
+		player_preview.update_paper_doll_part(2, model.right_hand_id)
+		player_preview.update_paper_doll_part(3, model.upper_armor_id)
+		player_preview.update_paper_doll_part(4, model.lower_armor_id)
+		player_preview.update_paper_doll_part(5, model.weapon_id)
+		player_preview.update_paper_doll_part(6, model.shield_id)
+		player_preview.update_paper_doll_part(7, model.back_id)
 
+	player_preview.current_dir = "1"
+	if player_preview.has_method("get_combat_idle_state"):
+		player_preview.current_state = player_preview.get_combat_idle_state()
+	else:
+		player_preview.current_state = "idle_weapon_melee"
+
+	if "is_dead" in player_preview:
+		player_preview.is_dead = false
+	if is_instance_valid(player_preview.get("death_effect")):
+		player_preview.death_effect.visible = false
+		player_preview.death_effect.stop()
+	if is_instance_valid(player_preview.get("doll_engine")):
+		player_preview.doll_engine.visible = true
+
+	if player_preview.has_method("setup_layered_paper_dolls"):
+		player_preview.setup_layered_paper_dolls()
+	if player_preview.has_method("sync_animation"):
+		player_preview.sync_animation()
+
+	player_preview.position = Vector2(178, 180)
 
 
 
@@ -514,6 +542,69 @@ func _get_first_int(item: Dictionary, keys: Array) -> int:
 		if item.has(key):
 			return int(item[key])
 	return 0
+
+func _update_item_list_batched(items: Array, parent_container: VBoxContainer, tab: TabType) -> void :
+	if not parent_container:
+		return
+
+	_item_list_render_generation += 1
+	var generation: int = _item_list_render_generation
+	var started_usec: int = Time.get_ticks_usec()
+	var existing_children: Array[Node] = parent_container.get_children()
+	var used_count: int = 0
+	var processed_in_batch: int = 0
+
+	for i: int in range(items.size()):
+		if generation != _item_list_render_generation or not is_instance_valid(parent_container):
+			return
+
+		var item_data: Dictionary = items[i]
+		var row: Control
+
+		if i < existing_children.size():
+			row = existing_children[i] as Control
+			if row == null:
+				continue
+			row.visible = true
+
+			var old_data: Dictionary = row.get_meta("cached_item_data", {})
+			var old_tab: int = int(row.get_meta("cached_tab_type", -1))
+			if old_tab == tab and old_data.hash() == item_data.hash():
+				used_count += 1
+				processed_in_batch += 1
+				if processed_in_batch >= ITEM_LIST_BATCH_SIZE:
+					processed_in_batch = 0
+					await get_tree().process_frame
+				continue
+
+			_disconnect_all_signals(row, "mouse_entered")
+			_disconnect_all_signals(row, "mouse_exited")
+			_disconnect_all_signals(row, "gui_input")
+		else:
+			row = INVENTORY_ROW_SCENE.instantiate() as Control
+			parent_container.add_child(row)
+
+		_setup_row_data(row, item_data, tab)
+		row.set_meta("cached_item_data", item_data)
+		row.set_meta("cached_tab_type", tab)
+		used_count += 1
+		processed_in_batch += 1
+
+		if processed_in_batch >= ITEM_LIST_BATCH_SIZE:
+			processed_in_batch = 0
+			await get_tree().process_frame
+
+	for i: int in range(used_count, existing_children.size()):
+		var child := existing_children[i]
+		if is_instance_valid(child):
+			child.visible = false
+			child.set_meta("cached_item_data", {})
+
+	print("[INVENTORY_LIST_TIMING] tab=%d items=%d total_ms=%.2f batched=true" % [
+		int(tab),
+		items.size(),
+		float(Time.get_ticks_usec() - started_usec) / 1000.0,
+	])
 
 func _update_item_list(items: Array, parent_container: VBoxContainer, tab: TabType) -> void :
 	if not parent_container: return
