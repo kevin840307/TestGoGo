@@ -2348,6 +2348,28 @@ public sealed class SqliteGameStore : IGameStore
         return GetCharacter(accountId, dbid);
     }
 
+    public Dictionary<string, object>? SetAttackSpeed(
+        long accountId,
+        long dbid,
+        int attackSpeed)
+    {
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET attack_speed=$speed
+             WHERE id=$id AND account_id=$a
+            """;
+        Arg(cmd, "$speed", Math.Clamp(attackSpeed, 1, 1000));
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return null;
+
+        return GetCharacter(accountId, dbid);
+    }
+
     public Dictionary<string, object>? Revive(long accountId, long dbid)
     {
         using var db = Open();
