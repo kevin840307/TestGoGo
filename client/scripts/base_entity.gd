@@ -1679,6 +1679,54 @@ func execute_skill_visuals(skill_id: int, skill_level: int, target_node: Node2D 
 			_play_skill_extra(fx_extra)
 
 
+func play_screen_aoe_visual(radius: float = 900.0) -> void :
+	# Dedicated lightweight visual for skill 99001. Do not fan out legacy
+	# hit/extra effects to every monster; render only a few expanding rings
+	# around the caster so large AOE casts stay cheap and stable.
+	if not is_inside_tree():
+		return
+
+	var visual_radius: float = clamp(radius, 240.0, 900.0)
+	var ring_specs = [
+		{"delay": 0.0, "width": 6.0, "alpha": 0.90},
+		{"delay": 0.08, "width": 4.0, "alpha": 0.65},
+		{"delay": 0.16, "width": 3.0, "alpha": 0.45}
+	]
+
+	for spec in ring_specs:
+		var ring := Line2D.new()
+		ring.name = "ScreenAoeRing"
+		ring.z_index = 90
+		ring.width = float(spec["width"])
+		ring.default_color = Color(0.55, 0.82, 1.0, float(spec["alpha"]))
+		ring.closed = true
+		ring.antialiased = true
+
+		var segments := 64
+		for i in range(segments):
+			var angle := TAU * float(i) / float(segments)
+			ring.add_point(Vector2(cos(angle), sin(angle)) * 48.0)
+
+		add_child(ring)
+		ring.scale = Vector2(0.35, 0.35)
+		ring.modulate.a = 0.0
+
+		var delay := float(spec["delay"])
+		var target_scale := visual_radius / 48.0
+		var tween := create_tween()
+		if delay > 0.0:
+			tween.tween_interval(delay)
+		tween.tween_property(ring, "modulate:a", 1.0, 0.04)
+		tween.parallel().tween_property(
+			ring,
+			"scale",
+			Vector2(target_scale, target_scale),
+			0.42
+		).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.tween_property(ring, "modulate:a", 0.0, 0.20)
+		tween.tween_callback(ring.queue_free)
+
+
 func _play_skill_hit(fx_hit: String, is_self_cast_effect: bool = false) -> void :
 	var effect_name = ""
 	if fx_hit.begins_with("Normal"):
