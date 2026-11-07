@@ -664,6 +664,45 @@ try
             "rare Happiness Doll reward publishes global announcement");
     }
 
+    var equipmentDollUid = store.AddInventoryItem(
+        account.Value, id, 2126, 1);
+    var equipmentOnlyCatalog = new CurrentClientDataCatalog(
+        new[]
+        {
+            CurrentItem(2126, "幸福娃娃", "general", price: 1),
+            CurrentItem(
+                19059,
+                "黃金戰神頭盔",
+                "equip",
+                price: 100000,
+                def: 177,
+                equipSlot: 0)
+        },
+        Array.Empty<CurrentSkillDefinition>());
+    var equipmentBroadcasts = new ServerBroadcastHub();
+    var equipmentDolls = new DollService(
+        store,
+        store,
+        equipmentOnlyCatalog,
+        equipmentBroadcasts,
+        config);
+
+    var equipmentDollResponses = equipmentDolls.Open(
+        account.Value,
+        id,
+        equipmentDollUid,
+        2126);
+    var equipmentReward = store.GetCharacterAssets(account.Value, id)
+        .Equips
+        .Last(x => Convert.ToInt32(x["ItemIdx"]) == 19059);
+
+    Check(
+        Convert.ToInt32(equipmentReward["Part"]) == 255 &&
+        equipmentDollResponses.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EquipSync\"")),
+        "Happiness Doll equipment reward stays in equipment bag instead of auto-equipping");
+
     // BankTransfer: general items support partial stack deposit/withdraw.
     using (var bankDeposit = Json(JsonSerializer.Serialize(new
     {
