@@ -848,29 +848,238 @@ public sealed class PacketRouter
                 return responses;
             }
 
+            case "SetTitleRequest":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var titleId = Math.Clamp(req.Int("TitleID"), 0, 26);
+                var character = _store.GetCharacter(
+                    accountId,
+                    state.CharacterId.Value);
+
+                if (character is null)
+                    return [];
+
+                // The current lightweight persistence schema does not yet
+                // expose a dedicated title write port. Keep the client and
+                // nearby entity presentation in sync for this session.
+                character["Title"] = titleId;
+
+                return
+                [
+                    new
+                    {
+                        Type = "UpdateAppearance",
+                        EntityID = state.CharacterId.Value,
+                        Title = titleId
+                    }
+                ];
+            }
+
+            case "PartyAction":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var action = req.Str("Action");
+                var self = _store.GetCharacter(
+                    accountId,
+                    state.CharacterId.Value);
+
+                if (self is null)
+                    return [];
+
+                if (action == "Create")
+                {
+                    if (string.IsNullOrWhiteSpace(state.PartyId))
+                    {
+                        state.PartyId = $"local-{state.CharacterId.Value}";
+                        state.PartyLeaderDbid = state.CharacterId.Value;
+                        state.PartyMembers.Clear();
+                        state.PartyMembers.Add(new Dictionary<string, object>
+                        {
+                            ["DBID"] = state.CharacterId.Value,
+                            ["Name"] = self["NAME"],
+                            ["Level"] = self["Level"],
+                            ["HP"] = self["HP"],
+                            ["MaxHP"] = self["MaxHP"],
+                            ["MP"] = self["MP"],
+                            ["MaxMP"] = self["MaxMP"],
+                            ["SP"] = self["SP"],
+                            ["MaxSP"] = self["MaxSP"]
+                        });
+                    }
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "PartySync",
+                            PartyID = state.PartyId,
+                            LeaderDBID = state.PartyLeaderDbid,
+                            Members = state.PartyMembers
+                        }
+                    ];
+                }
+
+                if (action is "Leave" or "Disband")
+                {
+                    state.PartyId = "";
+                    state.PartyLeaderDbid = 0;
+                    state.PartyMembers.Clear();
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "PartySync",
+                            PartyID = "",
+                            LeaderDBID = 0,
+                            Members = Array.Empty<object>()
+                        }
+                    ];
+                }
+
+                return
+                [
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = $"隊伍操作尚未支援：{action}"
+                    }
+                ];
+            }
+
             case "ShopAction":
             {
                 if (!state.CharacterId.HasValue) return [];
 
                 var action = req.Str("Action");
-                return action switch
+
+                if (action == "BuyNpcItem")
                 {
-                    "BuyNpcItem" => _shopService.Buy(
+                    return _shopService.Buy(
                         accountId,
                         state.CharacterId.Value,
                         req.Int("ShopID"),
                         req.Int("ItemIndex"),
-                        req.Int("Count", 1)),
+                        req.Int("Count", 1));
+                }
 
-                    "SellNpcItem" => _shopService.Sell(
+                if (action == "SellNpcItem")
+                {
+                    return _shopService.Sell(
                         accountId,
                         state.CharacterId.Value,
                         req.Int("UID"),
                         req.Int("TabType"),
-                        req.Int("Count", 1)),
+                        req.Int("Count", 1));
+                }
 
-                    _ => []
-                };
+                if (action == "SyncMyShop")
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "ShopSync",
+                            Items = state.PlayerShopItems
+                        }
+                    ];
+                }
+
+                if (action == "AddItem")
+                {
+                    var uid = req.Int("UID");
+                    var tabType = req.Int("TabType");
+                    var count = Math.Max(1, req.Int("Count", 1));
+                    var price = Math.Max(1, req.Int("Price", 1));
+
+                    state.PlayerShopItems.RemoveAll(x =>
+                        Convert.ToInt64(x["UID"]) == uid &&
+                        Convert.ToInt32(x["TabType"]) == tabType);
+
+                    state.PlayerShopItems.Add(new Dictionary<string, object>
+                    {
+                        ["UID"] = uid,
+                        ["Count"] = count,
+                        ["Price"] = price,
+                        ["TabType"] = tabType
+                    });
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "ShopSync",
+                            Items = state.PlayerShopItems
+                        }
+                    ];
+                }
+
+                if (action == "RemoveItem")
+                {
+                    var uid = req.Int("UID");
+                    var tabType = req.Int("TabType");
+
+                    state.PlayerShopItems.RemoveAll(x =>
+                        Convert.ToInt64(x["UID"]) == uid &&
+                        Convert.ToInt32(x["TabType"]) == tabType);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "ShopSync",
+                            Items = state.PlayerShopItems
+                        }
+                    ];
+                }
+
+                if (action == "OpenShop")
+                {
+                    state.IsPlayerShopOpen = true;
+                    state.PlayerShopName = req.Str(
+                        "ShopName",
+                        "我的商店");
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "SyncShopBoard",
+                            EntityID = state.CharacterId.Value,
+                            IsOpen = true,
+                            ShopName = state.PlayerShopName
+                        }
+                    ];
+                }
+
+                if (action == "CloseShop")
+                {
+                    state.IsPlayerShopOpen = false;
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "SyncShopBoard",
+                            EntityID = state.CharacterId.Value,
+                            IsOpen = false,
+                            ShopName = state.PlayerShopName
+                        }
+                    ];
+                }
+
+                return
+                [
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = $"玩家商店操作尚未支援：{action}"
+                    }
+                ];
             }
 
             case "HorseChargeRequest":
