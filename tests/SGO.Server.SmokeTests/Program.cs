@@ -10,6 +10,7 @@ using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Shops;
+using SGO.Server.Application.Trade;
 using SGO.Server.Application.World;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
@@ -556,6 +557,11 @@ try
         store,
         broadcastHub);
 
+    var trade = new TradeService(
+        store,
+        currentCatalog,
+        broadcastHub);
+
     var combat = new CombatService(
         store,
         world,
@@ -621,6 +627,7 @@ try
         growth,
         broadcastHub,
         party,
+        trade,
         NullLogger<PacketRouter>.Instance);
     var session = new ClientSession
     {
