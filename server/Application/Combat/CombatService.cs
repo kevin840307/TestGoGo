@@ -19,8 +19,11 @@ public sealed class CombatService
     private const double LoseTargetRadius = 700.0;
     private const double StopDistance = 130.0;
     private const double ResumeChaseDistance = 160.0;
-    private const double MoveStep = 35.0;
-    private const double MoveTweenSeconds = 0.18;
+    private const double MoveStep = 42.0;
+    // Slightly overlap the 250ms server AI tick so the client never reaches
+    // the end of a chase tween and visibly pauses before the next waypoint.
+    // Direction/attack hysteresis prevents the old walk/attack oscillation.
+    private const double MoveTweenSeconds = 0.30;
     private const double WanderRadius = 180.0;
     private const double WanderStep = 45.0;
 
