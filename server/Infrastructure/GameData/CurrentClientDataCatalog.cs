@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace SGO.Server.Infrastructure.GameData;
@@ -35,6 +36,17 @@ public sealed record CurrentSkillDefinition(
     int SkillId,
     string Name);
 
+public sealed record CurrentPetEvolution(
+    int EvolId,
+    string Outlook,
+    int Color,
+    int AttackRange);
+
+public sealed record CurrentPetDefinition(
+    int PetId,
+    string Name,
+    IReadOnlyDictionary<int, CurrentPetEvolution> Evolutions);
+
 public sealed class CurrentClientDataCatalog
 {
     private static readonly string[] ItemFolders =
@@ -55,6 +67,7 @@ public sealed class CurrentClientDataCatalog
     private readonly Dictionary<int, CurrentSkillDefinition> _skills = new();
     private readonly Dictionary<string, List<CurrentSkillDefinition>> _skillsByName =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<int, CurrentPetDefinition> _pets = new();
 
     public string? Root { get; }
     public bool IsAvailable => Root is not null;
@@ -67,11 +80,13 @@ public sealed class CurrentClientDataCatalog
 
         LoadItems(Root);
         LoadSkills(Root);
+        LoadPets(Root);
     }
 
     public CurrentClientDataCatalog(
         IEnumerable<CurrentItemDefinition> items,
-        IEnumerable<CurrentSkillDefinition> skills)
+        IEnumerable<CurrentSkillDefinition> skills,
+        IEnumerable<CurrentPetDefinition>? pets = null)
     {
         Root = "<in-memory>";
 
@@ -85,6 +100,12 @@ public sealed class CurrentClientDataCatalog
         {
             _skills[skill.SkillId] = skill;
             AddByName(_skillsByName, skill.Name, skill);
+        }
+
+        if (pets is not null)
+        {
+            foreach (var pet in pets)
+                _pets[pet.PetId] = pet;
         }
     }
 
@@ -126,8 +147,17 @@ public sealed class CurrentClientDataCatalog
         return matches.Count == 1 ? matches[0] : null;
     }
 
+    public CurrentPetDefinition? FindPet(int petId)
+        => _pets.TryGetValue(petId, out var pet) ? pet : null;
+
+    public CurrentPetEvolution? FindPetEvolution(int petId, int evolId)
+        => FindPet(petId)?.Evolutions.TryGetValue(evolId, out var evolution) == true
+            ? evolution
+            : null;
+
     public IReadOnlyCollection<CurrentItemDefinition> Items => _items.Values;
     public IReadOnlyCollection<CurrentSkillDefinition> Skills => _skills.Values;
+    public IReadOnlyCollection<CurrentPetDefinition> Pets => _pets.Values;
 
     private static string? ResolveRoot(string? configuredRoot)
     {
@@ -205,6 +235,63 @@ public sealed class CurrentClientDataCatalog
                 _items[id] = item;
                 AddByName(_itemsByName, item.Name, item);
             }
+        }
+    }
+
+    private void LoadPets(string root)
+    {
+        var path = Path.Combine(
+            root,
+            "Assets",
+            "Pets",
+            "Config.json");
+
+        if (!File.Exists(path))
+            return;
+
+        using var doc = JsonDocument.Parse(
+            File.ReadAllText(path));
+
+        foreach (var property in doc.RootElement.EnumerateObject())
+        {
+            if (!int.TryParse(property.Name, out var petId))
+                continue;
+
+            var value = property.Value;
+            var name = value.TryGetProperty("name", out var nameElement)
+                ? nameElement.GetString() ?? $"Pet {petId}"
+                : $"Pet {petId}";
+
+            var evolutions =
+                new Dictionary<int, CurrentPetEvolution>();
+
+            if (value.TryGetProperty("evolutions", out var evolElement) &&
+                evolElement.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var evolProperty in evolElement.EnumerateObject())
+                {
+                    if (!int.TryParse(evolProperty.Name, out var evolId))
+                        continue;
+
+                    var evol = evolProperty.Value;
+                    evolutions[evolId] = new CurrentPetEvolution(
+                        evolId,
+                        evol.TryGetProperty("outlook", out var outlook)
+                            ? outlook.GetString() ?? "EN010A"
+                            : "EN010A",
+                        evol.TryGetProperty("color", out var color)
+                            ? color.GetInt32()
+                            : 0,
+                        evol.TryGetProperty("attack_range", out var range)
+                            ? range.GetInt32()
+                            : 80);
+                }
+            }
+
+            _pets[petId] = new CurrentPetDefinition(
+                petId,
+                name,
+                evolutions);
         }
     }
 
