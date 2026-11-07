@@ -3463,7 +3463,7 @@ public sealed class SqliteGameStore : IGameStore
         int rewardPart = 255,
         int rewardDamage = 0)
     {
-        rewardCount = Math.Max(1, rewardCount);
+        rewardCount = Math.Clamp(rewardCount, 1, 999);
 
         using var db = Open();
         using var tx = db.BeginTransaction();
@@ -3494,6 +3494,16 @@ public sealed class SqliteGameStore : IGameStore
             }
         }
 
+        int CountRows(string table, string extra = "")
+        {
+            using var count = db.CreateCommand();
+            count.Transaction = tx;
+            count.CommandText =
+                $"SELECT COUNT(*) FROM {table} WHERE character_id=$id {extra}";
+            Arg(count, "$id", dbid);
+            return Convert.ToInt32(count.ExecuteScalar() ?? 0);
+        }
+
         long rewardUid = 0;
 
         switch (rewardKind)
@@ -3501,25 +3511,38 @@ public sealed class SqliteGameStore : IGameStore
             case AssetPurchaseKind.General:
             case AssetPurchaseKind.HorseBattery:
             {
-                using var existing = db.CreateCommand();
-                existing.Transaction = tx;
-                existing.CommandText = """
-                    SELECT uid
-                      FROM inventory_items
-                     WHERE character_id=$id
-                       AND item_index=$idx
-                       AND in_bank=0
-                       AND in_shop=0
-                     ORDER BY uid
-                     LIMIT 1
-                    """;
-                Arg(existing, "$id", dbid);
-                Arg(existing, "$idx", rewardItemIndex);
-
-                var existingUid = existing.ExecuteScalar();
-                if (existingUid is not null && existingUid != DBNull.Value)
+                long existingUid = 0;
+                int existingCount = 0;
+                using (var existing = db.CreateCommand())
                 {
-                    rewardUid = Convert.ToInt64(existingUid);
+                    existing.Transaction = tx;
+                    existing.CommandText = """
+                        SELECT uid,count
+                          FROM inventory_items
+                         WHERE character_id=$id
+                           AND item_index=$idx
+                           AND in_bank=0
+                           AND in_shop=0
+                         ORDER BY uid
+                         LIMIT 1
+                        """;
+                    Arg(existing, "$id", dbid);
+                    Arg(existing, "$idx", rewardItemIndex);
+
+                    using var reader = existing.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        existingUid = reader.GetInt64(0);
+                        existingCount = reader.GetInt32(1);
+                    }
+                }
+
+                if (existingUid > 0)
+                {
+                    if (existingCount + rewardCount > 999)
+                        return (false, "獎勵疊加數量將超過 999", 0);
+
+                    rewardUid = existingUid;
 
                     using var addCount = db.CreateCommand();
                     addCount.Transaction = tx;
@@ -3538,6 +3561,11 @@ public sealed class SqliteGameStore : IGameStore
                 }
                 else
                 {
+                    if (CountRows(
+                            "inventory_items",
+                            "AND in_bank=0 AND in_shop=0") >= 200)
+                        return (false, "背包空間不足，未消耗來源道具", 0);
+
                     using var add = db.CreateCommand();
                     add.Transaction = tx;
                     add.CommandText = """
@@ -3557,6 +3585,9 @@ public sealed class SqliteGameStore : IGameStore
 
             case AssetPurchaseKind.Equipment:
             {
+                if (CountRows("equipment_items") >= 200)
+                    return (false, "裝備欄空間不足，未消耗來源道具", 0);
+
                 using var add = db.CreateCommand();
                 add.Transaction = tx;
                 add.CommandText = """
@@ -3575,6 +3606,9 @@ public sealed class SqliteGameStore : IGameStore
 
             case AssetPurchaseKind.HorseEquipment:
             {
+                if (CountRows("horse_equipment") >= 100)
+                    return (false, "機甲裝備欄空間不足，未消耗來源道具", 0);
+
                 using var add = db.CreateCommand();
                 add.Transaction = tx;
                 add.CommandText = """
