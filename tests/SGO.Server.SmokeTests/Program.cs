@@ -297,6 +297,45 @@ using (var openMall = Json(
         "mall opening remains valid without purchase-only fields");
 }
 
+using (var badOptionalSkillTarget = Json(
+    """{"Type":"UseSkill","SkillID":26104,"TargetID":"55"}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              badOptionalSkillTarget.RootElement, "UseSkill", out var reason) &&
+          reason.Contains("TargetID"),
+        "optional combat target must be numeric when present");
+}
+using (var validNoTargetSkill = Json(
+    """{"Type":"UseSkill","SkillID":26104}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              validNoTargetSkill.RootElement, "UseSkill", out _),
+        "legacy no-target skill request remains valid");
+}
+using (var badAttackTargetType = Json(
+    """{"Type":"AttackEntity","TargetEntityID":100,"TargetType":false}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              badAttackTargetType.RootElement, "AttackEntity", out var reason) &&
+          reason.Contains("TargetType"),
+        "attack target type must be an integer when present");
+}
+using (var invalidPartyTarget = Json(
+    """{"Type":"PartyAction","Action":"Invite","TargetDBID":"1234"}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              invalidPartyTarget.RootElement, "PartyAction", out var reason) &&
+          reason.Contains("TargetDBID"),
+        "party target ID must be numeric when present");
+}
+using (var validPartyCreate = Json(
+    """{"Type":"PartyAction","Action":"Create"}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              validPartyCreate.RootElement, "PartyAction", out _),
+        "party create remains compatible without a target");
+}
+
 var repoRoot = Directory.GetCurrentDirectory();
 var gameDataRoot = Path.Combine(repoRoot, "Old", "服務端", "Dat");
 var questRoot = Path.Combine(gameDataRoot, "Quest");
