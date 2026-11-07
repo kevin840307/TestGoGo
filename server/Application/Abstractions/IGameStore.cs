@@ -133,6 +133,10 @@ public interface IGameStore
         long accountId,
         long dbid,
         int level);
+    Dictionary<string, object>? SetAttackSpeed(
+        long accountId,
+        long dbid,
+        int attackSpeed);
 
     Dictionary<string, object>? Revive(long accountId, long dbid);
 
