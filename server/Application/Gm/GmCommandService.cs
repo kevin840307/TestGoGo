@@ -11,6 +11,7 @@ public sealed class GmCommandService
     private readonly SkillCatalog _skills;
     private readonly HorseCardCatalog _horseCards;
     private readonly CurrentClientDataCatalog _current;
+    private readonly LegacyClientDataCatalog _legacyClient;
     private readonly CombatService _combat;
     private readonly IConfiguration _config;
 
@@ -19,6 +20,7 @@ public sealed class GmCommandService
         SkillCatalog skills,
         HorseCardCatalog horseCards,
         CurrentClientDataCatalog current,
+        LegacyClientDataCatalog legacyClient,
         CombatService combat,
         IConfiguration config)
     {
@@ -26,6 +28,7 @@ public sealed class GmCommandService
         _skills = skills;
         _horseCards = horseCards;
         _current = current;
+        _legacyClient = legacyClient;
         _combat = combat;
         _config = config;
     }
