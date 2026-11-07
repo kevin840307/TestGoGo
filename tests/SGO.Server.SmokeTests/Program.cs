@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using SGO.Server.Application;
 using SGO.Server.Application.Bank;
 using SGO.Server.Application.Packets;
+using SGO.Server.Application.Party;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
@@ -548,6 +549,9 @@ try
     var broadcastHub = new ServerBroadcastHub();
     var broadcastRegistration = broadcastHub.Register();
     var worldRuntime = new WorldRuntimeService(world);
+    var party = new PartyService(
+        store,
+        broadcastHub);
 
     var combat = new CombatService(
         store,
@@ -613,6 +617,7 @@ try
         currentCatalog,
         growth,
         broadcastHub,
+        party,
         NullLogger<PacketRouter>.Instance);
     var session = new ClientSession
     {
@@ -1984,6 +1989,93 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"SyncMoney\"")),
             "DirectTransfer atomically moves money and syncs both online players");
+    }
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var partyInvite = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "PartyAction",
+            Action = "Invite",
+            TargetDBID = secondCharacterId
+        })))
+    {
+        var responses = router.Handle(
+            partyInvite.RootElement,
+            session);
+
+        Check(
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "隊伍邀請已送出")) &&
+            peerRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PartyInvite\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "TestCharacter")),
+            "Party Invite targets the selected online player");
+    }
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var partyAccept = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "PartyAction",
+            Action = "Accept",
+            TargetDBID = id
+        })))
+    {
+        var responses = router.Handle(
+            partyAccept.RootElement,
+            peerSession);
+
+        var firstPartyId = party.GetPartyId(id);
+        Check(
+            !string.IsNullOrWhiteSpace(firstPartyId) &&
+            firstPartyId ==
+                party.GetPartyId(secondCharacterId) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PartySync\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    firstPartyId)) &&
+            broadcastRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PartySync\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    firstPartyId)),
+            "Party Invite/Accept synchronizes the same party to both online players");
+    }
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var partyLeave = Json(
+        """
+        {"Type":"PartyAction","Action":"Leave","TargetDBID":-1}
+        """))
+    {
+        var responses = router.Handle(
+            partyLeave.RootElement,
+            peerSession);
+
+        Check(
+            string.IsNullOrWhiteSpace(
+                party.GetPartyId(id)) &&
+            string.IsNullOrWhiteSpace(
+                party.GetPartyId(secondCharacterId)) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PartySync\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"PartyID\":\"\"")) &&
+            broadcastRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"PartyID\":\"\"")),
+            "leaving a two-player party dissolves it for both players");
     }
 
     Check(peerSession.Monsters.TryGetValue(
