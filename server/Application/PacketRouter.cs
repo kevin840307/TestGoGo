@@ -1533,16 +1533,53 @@ public sealed class PacketRouter
                 var tabType = req.Int("TabType");
                 if (tabType is 2 or 4)
                 {
-                    return
-                    [
+                    var (discarded, discardMessage) =
+                        _store.DiscardAsset(
+                            accountId,
+                            state.CharacterId.Value,
+                            req.Long("ItemUID"),
+                            tabType,
+                            1);
+
+                    var assetsAfterDiscard =
+                        _store.GetCharacterAssets(
+                            accountId,
+                            state.CharacterId.Value);
+
+                    var responses = new List<object>
+                    {
                         new
                         {
                             Type = "SystemMessageFlash",
-                            Message = tabType == 2
-                                ? "寵物丟棄尚未開放"
-                                : "整台機甲丟棄尚未開放"
+                            Message = discardMessage
                         }
-                    ];
+                    };
+
+                    if (discarded)
+                    {
+                        if (tabType == 2)
+                        {
+                            responses.Add(new
+                            {
+                                Type = "PetSync",
+                                Pets = assetsAfterDiscard.Pets,
+                                MaxSize = assetsAfterDiscard.PetMaxSize
+                            });
+                        }
+                        else
+                        {
+                            responses.Add(new
+                            {
+                                Type = "HorseSync",
+                                Horses = assetsAfterDiscard.Horses,
+                                HorseEquips = assetsAfterDiscard.HorseEquips,
+                                MaxHorseEquipSize =
+                                    assetsAfterDiscard.HorseEquipMaxSize
+                            });
+                        }
+                    }
+
+                    return responses;
                 }
 
                 var ground = _store.DropAssetToGround(
