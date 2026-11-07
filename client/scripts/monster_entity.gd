@@ -628,7 +628,9 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		set_process(true)
 	else:
 		action_state_started_ms = 0
-		if new_state in ["idle", "death", "die"]:
+		if new_state == "walk":
+			set_process(true)
+		elif new_state in ["idle", "death", "die"]:
 			set_process(false)
 
 	if new_state == "attack" and new_dir != "":
