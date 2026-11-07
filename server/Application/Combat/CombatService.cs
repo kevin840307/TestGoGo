@@ -24,7 +24,7 @@ public sealed class CombatService
     // waypoint, so this value represents movement speed rather than tween timing.
     private const double MoveTweenSeconds = 0.25;
     private const double WanderRadius = 180.0;
-    private const double WanderStep = 45.0;
+    private const double WanderStep = 60.0;
 
     private readonly IGameStore _store;
     private readonly WorldDataService _world;
@@ -146,8 +146,7 @@ public sealed class CombatService
             monster.CurrentHp = monster.MaxHp;
             monster.RespawnAt = null;
             monster.HasTarget = false;
-            monster.IsMoving = false;
-            monster.HoldingAttackRange = false;
+            SetAiState(monster, MonsterAiState.Idle);
             monster.X = monster.SpawnX;
             monster.Y = monster.SpawnY;
             monster.WanderCenterX = monster.SpawnX;
@@ -166,35 +165,36 @@ public sealed class CombatService
         double playerY,
         DateTimeOffset now)
     {
-        // PacketRouter/WebSocketEndpoint already drives this on the fixed
-        // 250 ms world cadence. A second '< 250 ms' gate here could reject a
-        // timer tick that arrived a fraction early (for example 249.x ms),
-        // creating an unintended ~500 ms AI pause.
         session.LastMonsterAiTick = now;
 
         var packets = new List<object>();
-        var playerAlive = false;
+        Dictionary<string, object>? character = null;
 
         if (session.CharacterId.HasValue)
         {
-            var character = _store.GetCharacter(
+            character = _store.GetCharacter(
                 accountId,
                 session.CharacterId.Value);
-            playerAlive = character is not null &&
-                          Convert.ToInt32(character["HP"]) > 0;
         }
+
+        var playerAlive =
+            character is not null &&
+            Convert.ToInt32(character["HP"]) > 0;
 
         foreach (var monster in session.Monsters.Values)
         {
             if (!monster.IsAlive)
+            {
+                SetAiState(monster, MonsterAiState.Dead);
                 continue;
+            }
 
             if (!playerAlive)
             {
                 if (monster.HasTarget)
                 {
                     monster.HasTarget = false;
-                    monster.IsMoving = false;
+                    SetAiState(monster, MonsterAiState.Idle);
                     monster.WanderCenterX = monster.X;
                     monster.WanderCenterY = monster.Y;
                     monster.NextWanderAt = now + NextWanderDelay(
@@ -208,9 +208,6 @@ public sealed class CombatService
                         HasTarget = false
                     });
 
-                    // Do not move on the same tick that the player dies.
-                    // The monster keeps its current world position and starts
-                    // local idle wandering on a later server tick.
                     continue;
                 }
 
@@ -222,19 +219,10 @@ public sealed class CombatService
             var dy = playerY - monster.Y;
             var distance = Math.Sqrt(dx * dx + dy * dy);
 
-            if (monster.HoldingAttackRange)
-            {
-                if (distance > ResumeChaseDistance)
-                    monster.HoldingAttackRange = false;
-            }
-            else if (distance <= StopDistance)
-            {
-                monster.HoldingAttackRange = true;
-            }
-
             if (!monster.HasTarget && distance <= AggroRadius)
             {
                 monster.HasTarget = true;
+                SetAiState(monster, MonsterAiState.Chase);
                 packets.Add(new
                 {
                     Type = "MonsterTarget",
@@ -245,40 +233,57 @@ public sealed class CombatService
 
             if (monster.HasTarget && distance > LoseTargetRadius)
             {
-                monster.HasTarget = false;
-                monster.IsMoving = false;
-                monster.HoldingAttackRange = false;
-                monster.WanderCenterX = monster.X;
-                monster.WanderCenterY = monster.Y;
-                monster.NextWanderAt = now + NextWanderDelay(
-                    monster.EntityId,
-                    monster.WanderSequence);
-
+                DropMonsterTarget(monster, now);
                 packets.Add(new
                 {
                     Type = "MonsterTarget",
                     EntityID = monster.EntityId,
                     HasTarget = false
                 });
-
                 continue;
             }
 
-            if (monster.HasTarget &&
-                monster.HoldingAttackRange &&
-                session.CharacterId.HasValue &&
-                now - monster.LastAttackAt >= MonsterAttackCooldown)
+            if (!monster.HasTarget)
             {
-                var character = _store.GetCharacter(
-                    accountId,
-                    session.CharacterId.Value);
+                TryWander(monster, now, packets);
+                continue;
+            }
 
-                if (character is not null &&
-                    Convert.ToInt32(character["HP"]) > 0)
+            var shouldAttack =
+                monster.AiState == MonsterAiState.Attack
+                    ? distance <= ResumeChaseDistance
+                    : distance <= StopDistance;
+
+            if (shouldAttack)
+            {
+                var wasMoving = monster.AiState is
+                    MonsterAiState.Chase or
+                    MonsterAiState.Wander;
+
+                var stableDir = StableDirectionFromDelta(
+                    dx,
+                    dy,
+                    monster.CurrentDir);
+
+                var directionChanged =
+                    !string.Equals(
+                        stableDir,
+                        monster.CurrentDir,
+                        StringComparison.Ordinal);
+
+                monster.CurrentDir = stableDir;
+                SetAiState(monster, MonsterAiState.Attack);
+
+                var attackReady =
+                    session.CharacterId.HasValue &&
+                    now - monster.LastAttackAt >= MonsterAttackCooldown;
+
+                if (attackReady && character is not null)
                 {
                     var assets = _store.GetCharacterAssets(
                         accountId,
-                        session.CharacterId.Value);
+                        session.CharacterId!.Value);
+
                     var effective = ApplyActiveSkillBuffs(
                         CharacterStatCalculator.Calculate(
                             character,
@@ -286,12 +291,9 @@ public sealed class CombatService
                             _current),
                         session,
                         now);
+
                     var defense = Math.Max(0, effective.Defense);
-
-                    var rawDamage = Math.Max(
-                        1,
-                        monster.Level * 2);
-
+                    var rawDamage = Math.Max(1, monster.Level * 2);
                     var damage = Math.Max(
                         1,
                         rawDamage - defense / 5);
@@ -304,14 +306,11 @@ public sealed class CombatService
                     if (updated is not null)
                     {
                         monster.LastAttackAt = now;
+                        character = updated;
+
                         var currentHp = Convert.ToInt32(updated["HP"]);
                         var maxHp = Convert.ToInt32(updated["MaxHP"]);
 
-                        monster.IsMoving = false;
-                        monster.CurrentDir = StableDirectionFromDelta(
-                            dx,
-                            dy,
-                            monster.CurrentDir);
                         packets.Add(new
                         {
                             Type = "SyncState",
@@ -355,41 +354,15 @@ public sealed class CombatService
                                 KillerID = monster.EntityId
                             });
 
-                            monster.HasTarget = false;
-                            monster.IsMoving = false;
-                            monster.HoldingAttackRange = false;
-                            monster.WanderCenterX = monster.X;
-                            monster.WanderCenterY = monster.Y;
-                            monster.NextWanderAt = DateTimeOffset.MinValue;
+                            DropMonsterTarget(
+                                monster,
+                                now,
+                                scheduleWander: false);
                         }
                     }
                 }
-
-                continue;
-            }
-
-            if (!monster.HasTarget)
-            {
-                TryWander(monster, now, packets);
-                continue;
-            }
-
-            if (monster.HoldingAttackRange)
-            {
-                var stableDir = StableDirectionFromDelta(
-                    dx,
-                    dy,
-                    monster.CurrentDir);
-                var directionChanged =
-                    !string.Equals(
-                        stableDir,
-                        monster.CurrentDir,
-                        StringComparison.Ordinal);
-
-                if (monster.IsMoving || directionChanged)
+                else if (wasMoving || directionChanged)
                 {
-                    monster.IsMoving = false;
-                    monster.CurrentDir = stableDir;
                     packets.Add(new
                     {
                         Type = "SyncState",
@@ -402,12 +375,17 @@ public sealed class CombatService
                 continue;
             }
 
+            SetAiState(monster, MonsterAiState.Chase);
+
             var step = Math.Min(
                 MoveStep,
                 Math.Max(0.0, distance - StopDistance));
 
             if (step <= 0.0)
+            {
+                SetAiState(monster, MonsterAiState.Attack);
                 continue;
+            }
 
             var nx = monster.X + dx / distance * step;
             var ny = monster.Y + dy / distance * step;
@@ -416,7 +394,6 @@ public sealed class CombatService
 
             monster.X = nx;
             monster.Y = ny;
-            monster.IsMoving = true;
 
             packets.Add(BuildMovePacket(
                 monster,
@@ -428,6 +405,33 @@ public sealed class CombatService
         }
 
         return packets;
+    }
+
+    private static void SetAiState(
+        MonsterRuntimeState monster,
+        MonsterAiState state)
+    {
+        monster.AiState = state;
+        monster.IsMoving =
+            state is MonsterAiState.Wander or MonsterAiState.Chase;
+        monster.HoldingAttackRange =
+            state == MonsterAiState.Attack;
+    }
+
+    private static void DropMonsterTarget(
+        MonsterRuntimeState monster,
+        DateTimeOffset now,
+        bool scheduleWander = true)
+    {
+        monster.HasTarget = false;
+        SetAiState(monster, MonsterAiState.Idle);
+        monster.WanderCenterX = monster.X;
+        monster.WanderCenterY = monster.Y;
+        monster.NextWanderAt = scheduleWander
+            ? now + NextWanderDelay(
+                monster.EntityId,
+                monster.WanderSequence)
+            : DateTimeOffset.MinValue;
     }
 
     public IReadOnlyList<object> SpawnLegacyEnemy(
@@ -529,7 +533,7 @@ public sealed class CombatService
         if (monster.CurrentHp > 0 && !monster.HasTarget)
         {
             monster.HasTarget = true;
-            monster.HoldingAttackRange = false;
+            SetAiState(monster, MonsterAiState.Chase);
             packets.Add(new
             {
                 Type = "MonsterTarget",
@@ -543,8 +547,7 @@ public sealed class CombatService
             monster.RespawnAt =
                 DateTimeOffset.UtcNow + RespawnDelay;
             monster.HasTarget = false;
-            monster.IsMoving = false;
-            monster.HoldingAttackRange = false;
+            SetAiState(monster, MonsterAiState.Dead);
 
             packets.Add(new
             {
@@ -1257,7 +1260,7 @@ public sealed class CombatService
 
         monster.X = desiredX;
         monster.Y = desiredY;
-        monster.IsMoving = true;
+        SetAiState(monster, MonsterAiState.Wander);
         monster.NextWanderAt = now + NextWanderDelay(
             monster.EntityId,
             monster.WanderSequence);
