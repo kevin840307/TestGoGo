@@ -188,7 +188,8 @@ var currentCatalog = new CurrentClientDataCatalog(
             price: 100,
             atk: 18,
             equipSlot: 1,
-            attackRange: 50),
+            attackRange: 50,
+            durability: 100),
         CurrentItem(
             50297,
             "戰鬥型二足引擎",
@@ -1121,6 +1122,89 @@ try
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"EquipSync\"")),
         "Happiness Doll equipment reward stays in equipment bag instead of auto-equipping");
+
+    // RepairItemRequest: character equipment uses the same price formula
+    // as SharedInventoryPanel and restores remaining durability to max.
+    var repairEquipUid = store.AddEquipment(
+        account.Value,
+        id,
+        18538,
+        255,
+        60);
+    var moneyBeforeEquipRepair = Convert.ToInt64(
+        store.GetCharacter(account.Value, id)!["Money"]);
+
+    using (var repairEquip = Json(JsonSerializer.Serialize(new
+    {
+        Type = "RepairItemRequest",
+        ItemType = "Equip",
+        UID = repairEquipUid
+    })))
+    {
+        var responses = router.Handle(
+            repairEquip.RootElement,
+            session);
+        var repairedEquip = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Equips
+            .First(x =>
+                Convert.ToInt64(x["ItemID"]) == repairEquipUid);
+
+        Check(
+            Convert.ToInt32(repairedEquip["Damage"]) == 120 &&
+            Convert.ToInt64(
+                store.GetCharacter(account.Value, id)!["Money"]) ==
+                moneyBeforeEquipRepair - 1 &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"EquipSync\"")) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SyncMoney\"")),
+            "RepairItemRequest repairs character equipment and syncs money/equipment");
+    }
+
+    var repairHorseEquipUid = store.AddHorseEquipment(
+        account.Value,
+        id,
+        50293,
+        -1,
+        255,
+        25);
+    var moneyBeforeHorseRepair = Convert.ToInt64(
+        store.GetCharacter(account.Value, id)!["Money"]);
+
+    using (var repairHorseEquip = Json(JsonSerializer.Serialize(new
+    {
+        Type = "RepairItemRequest",
+        ItemType = "HorseEquip",
+        UID = repairHorseEquipUid
+    })))
+    {
+        var responses = router.Handle(
+            repairHorseEquip.RootElement,
+            session);
+        var repairedHorseEquip = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .HorseEquips
+            .First(x =>
+                Convert.ToInt64(x["EquipUID"]) == repairHorseEquipUid);
+
+        Check(
+            Convert.ToInt32(repairedHorseEquip["Damage"]) == 100 &&
+            Convert.ToInt64(
+                store.GetCharacter(account.Value, id)!["Money"]) ==
+                moneyBeforeHorseRepair - 75 &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"HorseSync\"")) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SyncMoney\"")),
+            "RepairItemRequest repairs mecha equipment and syncs money/mecha data");
+    }
 
     // BankTransfer: general items support partial stack deposit/withdraw.
     using (var bankDeposit = Json(JsonSerializer.Serialize(new
