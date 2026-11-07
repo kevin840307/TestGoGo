@@ -16,6 +16,12 @@ var target_position: Vector2 = Vector2.ZERO
 const MIN_LERP_WEIGHT: float = 8.0
 const MAX_LERP_WEIGHT: float = 20.0
 const TELEPORT_DISTANCE: float = 900.0
+const PET_COLLISION_MASK: int = 17
+const PET_STUCK_FRAME_LIMIT: int = 30
+
+var network_move_active: bool = false
+var network_move_speed: float = 0.0
+var stuck_frames: int = 0
 
 @onready var sprite = $AnimatedSprite2D
 @onready var ui_container = $UIContainer
@@ -37,6 +43,14 @@ var level_up_effect: AnimatedSprite2D = null
 var idle_speech_fade_tween: Tween = null
 
 func _ready() -> void :
+	collision_layer = 8
+	collision_mask = PET_COLLISION_MASK
+	var body_collision: CollisionShape2D = get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if body_collision and body_collision.shape == null:
+		var body_shape := CircleShape2D.new()
+		body_shape.radius = 7.0
+		body_collision.shape = body_shape
+
 	if not sprite.animation_finished.is_connected(_on_animation_finished):
 		sprite.animation_finished.connect(_on_animation_finished)
 
@@ -146,34 +160,108 @@ func update_state(state: String, dir: String) -> void :
 	sync_animation()
 
 func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
-	if current_hp <= 0: return
+	if current_hp <= 0:
+		return
 
 	target_position = new_pos
+	var distance: float = global_position.distance_to(target_position)
 
-
-	if global_position.distance_to(target_position) > TELEPORT_DISTANCE or speed_time <= 0.01:
+	if distance > TELEPORT_DISTANCE or speed_time <= 0.01:
 		global_position = target_position
+		velocity = Vector2.ZERO
+		network_move_active = false
+		network_move_speed = 0.0
+		stuck_frames = 0
 		current_state = "idle"
 		sprite.speed_scale = 1.0
 		sync_animation()
-
-		if move_tween and move_tween.is_valid(): move_tween.kill()
+		if move_tween and move_tween.is_valid():
+			move_tween.kill()
 		return
 
+	if move_tween and move_tween.is_valid():
+		move_tween.kill()
+
+	network_move_speed = distance / max(speed_time, 0.01)
+	network_move_active = true
+	stuck_frames = 0
 	current_state = "walk"
 	sprite.speed_scale = 1.0
-
 	sync_animation()
 
-	if move_tween and move_tween.is_valid(): move_tween.kill()
-	move_tween = create_tween()
-	move_tween.tween_property(self, "global_position", target_position, speed_time)
-	move_tween.tween_callback( func():
+
+func _physics_process(delta: float) -> void :
+	if not network_move_active or current_hp <= 0:
+		return
+
+	var to_target: Vector2 = target_position - global_position
+	var distance: float = to_target.length()
+	var step_distance: float = network_move_speed * delta
+	var stop_threshold: float = max(3.0, step_distance)
+
+	if distance <= stop_threshold:
+		global_position = target_position
+		velocity = Vector2.ZERO
+		network_move_active = false
+		network_move_speed = 0.0
+		stuck_frames = 0
 		if current_state == "walk":
 			current_state = "idle"
-			sprite.speed_scale = 1.0
 			sync_animation()
-	)
+		return
+
+	var desired_dir: Vector2 = to_target.normalized()
+	velocity = desired_dir * network_move_speed
+	_update_direction_from_velocity(velocity)
+
+	var old_position: Vector2 = global_position
+	move_and_slide()
+	if old_position.distance_to(global_position) >= 1.0:
+		stuck_frames = 0
+		return
+
+	if get_slide_collision_count() <= 0:
+		stuck_frames += 1
+		if stuck_frames >= PET_STUCK_FRAME_LIMIT:
+			_stop_network_move()
+		return
+
+	var collision: KinematicCollision2D = get_slide_collision(0)
+	var normal: Vector2 = collision.get_normal()
+	var tangent_a: Vector2 = Vector2(-normal.y, normal.x)
+	var tangent_b: Vector2 = -tangent_a
+	var detour_dir: Vector2 = tangent_a if tangent_a.dot(desired_dir) >= tangent_b.dot(desired_dir) else tangent_b
+
+	velocity = detour_dir.normalized() * network_move_speed
+	_update_direction_from_velocity(velocity)
+	var detour_start: Vector2 = global_position
+	move_and_slide()
+
+	if detour_start.distance_to(global_position) >= 0.75:
+		stuck_frames = 0
+	else:
+		stuck_frames += 1
+		if stuck_frames >= PET_STUCK_FRAME_LIMIT:
+			_stop_network_move()
+
+
+func _stop_network_move() -> void :
+	velocity = Vector2.ZERO
+	network_move_active = false
+	network_move_speed = 0.0
+	stuck_frames = 0
+	if current_state == "walk":
+		current_state = "idle"
+		sync_animation()
+
+
+func _update_direction_from_velocity(move_velocity: Vector2) -> void :
+	if move_velocity == Vector2.ZERO:
+		return
+	var angle_deg: float = posmod(rad_to_deg(move_velocity.angle()), 360.0)
+	var index_raw: int = int(round(angle_deg / 45.0))
+	current_dir = GameConstants.DIR_STRINGS[index_raw % 8]
+	sync_animation()
 
 func sync_animation() -> void :
 	if not sprite or not sprite.sprite_frames: return
