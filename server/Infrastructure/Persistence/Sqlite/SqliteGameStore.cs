@@ -2290,6 +2290,29 @@ public sealed class SqliteGameStore : IGameStore
         return GetCharacter(accountId, dbid);
     }
 
+    public Dictionary<string, object>? ApplyHeal(
+        long accountId,
+        long dbid,
+        int amount)
+    {
+        amount = Math.Max(0, amount);
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET hp = MIN(max_hp, hp + $amount)
+             WHERE id=$id AND account_id=$a
+            """;
+        Arg(cmd, "$amount", amount);
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return null;
+
+        return GetCharacter(accountId, dbid);
+    }
+
     public Dictionary<string, object>? AddRewards(
         long accountId,
         long dbid,
