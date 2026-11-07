@@ -169,6 +169,7 @@ public sealed class PacketRouter
                 state.CurrentMapId = Convert.ToInt32(character["MapID"]);
                 state.LastX = Convert.ToDouble(character["LocX"]);
                 state.LastY = Convert.ToDouble(character["LocY"]);
+                state.LastResourceRecoveryAt = DateTimeOffset.UtcNow;
                 state.PendingMapSpawn = true;
                 character["Type"] = "EnterWorldSuccess";
 
