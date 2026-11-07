@@ -2045,11 +2045,25 @@ public sealed class CombatService
             if (skillId == 25104 &&
                 totalDamageDealt > 0)
             {
+                // Legacy SKC25J104 + skillcommon Attack_Cure:
+                // heal HP by min(actual damage dealt, per-level cure cap).
+                var cureCap = skillLevel switch
+                {
+                    1 => 94,
+                    2 => 123,
+                    3 => 156,
+                    4 => 193,
+                    _ => 234
+                };
+                var lifeDrainHeal = Math.Min(
+                    totalDamageDealt,
+                    cureCap);
+
                 var beforeHeal = updated;
                 var healed = _store.RecoverResources(
                     accountId,
                     session.CharacterId.Value,
-                    totalDamageDealt,
+                    lifeDrainHeal,
                     0,
                     0);
 
