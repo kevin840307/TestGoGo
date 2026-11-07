@@ -1795,7 +1795,7 @@ public sealed class PacketRouter
                         activePetPosition.Y);
                 }
 
-                var petUid = req.Int("PetUID");
+                var petUid = req.Long("PetUID");
                 var assetsBeforePetAction = _store.GetCharacterAssets(
                     accountId,
                     state.CharacterId.Value);
@@ -1866,7 +1866,7 @@ public sealed class PacketRouter
                             accountId,
                             state.CharacterId.Value,
                             petUid,
-                            req.Int("ItemUID"),
+                            req.Long("ItemUID"),
                             req.Int("TargetSlot", -1));
                         break;
 
