@@ -10,13 +10,14 @@ namespace SGO.Server.Application.Combat;
 public sealed class CombatService
 {
     private static readonly TimeSpan RespawnDelay = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan AiTickInterval = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan AiTickInterval = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan MonsterAttackCooldown = TimeSpan.FromMilliseconds(1400);
 
     private const double AggroRadius = 420.0;
     private const double LoseTargetRadius = 700.0;
     private const double StopDistance = 90.0;
-    private const double MoveStep = 70.0;
+    private const double MoveStep = 35.0;
+    private const double MoveTweenSeconds = 0.32;
 
     private readonly IGameStore _store;
     private readonly WorldDataService _world;
@@ -223,6 +224,14 @@ public sealed class CombatService
 
                         packets.Add(new
                         {
+                            Type = "SyncState",
+                            EntityID = monster.EntityId,
+                            State = "attack",
+                            Dir = DirectionFromDelta(dx, dy)
+                        });
+
+                        packets.Add(new
+                        {
                             Type = "EntityDamage",
                             TargetID = session.CharacterId.Value,
                             TargetType = 0,
@@ -286,7 +295,7 @@ public sealed class CombatService
                 monster,
                 nx,
                 ny,
-                0.5,
+                MoveTweenSeconds,
                 moveDx,
                 moveDy));
         }
