@@ -357,6 +357,7 @@ try
     var store = new SqliteGameStore(Path.Combine(temp, "game.db"));
     var combat = new CombatService(store, world, currentCatalog);
     var shops = new ShopService(store, shopCatalog, currentCatalog);
+    var growth = new LegacyPlayerGrowthCatalog(gameDataRoot);
     var config = new ConfigurationManager();
     config["Game:GmCommandsEnabled"] = "true";
     var gm = new GmCommandService(
@@ -365,6 +366,7 @@ try
         horseCardCatalog,
         currentCatalog,
         legacyClientCatalog,
+        growth,
         combat,
         config);
     var router = new PacketRouter(
@@ -378,6 +380,7 @@ try
         recoveryCatalog,
         horseCardCatalog,
         currentCatalog,
+        growth,
         NullLogger<PacketRouter>.Instance);
     var session = new ClientSession();
 
@@ -1313,11 +1316,11 @@ try
         var afterLevel = store.GetCharacter(account.Value, id)!;
         Check(Convert.ToInt32(afterLevel["Level"]) == 80 &&
               Convert.ToInt32(afterLevel["ExpUse"]) ==
-                  pointsBeforeGm + Math.Max(0, 80 - levelBeforeGm) &&
+                  pointsBeforeGm + Math.Max(0, 80 - levelBeforeGm) * 2 &&
               responses.Any(x =>
                   JsonSerializer.Serialize(x).Contains(
                       "\"ExpUse\"")),
-            "GM level grants and syncs one ability point per gained level");
+            "GM level grants and syncs two ability points per gained level from legacy ExpUse.csv");
     }
 
     using (var allocate = Json(
@@ -1337,6 +1340,43 @@ try
                   JsonSerializer.Serialize(x).Contains(
                       "\"Success\":true")),
             "AllocateStatRequest spends an ability point server-side");
+    }
+
+
+    var beforeMaxStats = store.GetCharacter(account.Value, id)!;
+    using (var maxStats = Json(
+        """{"Type":"ChatMessage","Channel":0,"Message":"/gm maxstats","BubbleType":0}"""))
+    {
+        var responses = router.Handle(maxStats.RootElement, session);
+        var after = store.GetCharacter(account.Value, id)!;
+
+        Check(Convert.ToInt32(after["Str"]) == 100 &&
+              Convert.ToInt32(after["Dex"]) == 100 &&
+              Convert.ToInt32(after["Con"]) == 100 &&
+              Convert.ToInt32(after["Wis"]) == 100 &&
+              Convert.ToInt32(after["ExpUse"]) == 0,
+            "GM maxstats sets all four primary stats to client maximum");
+
+        Check(Convert.ToInt32(after["MaxHP"]) >
+                  Convert.ToInt32(beforeMaxStats["MaxHP"]) &&
+              Convert.ToInt32(after["MaxMP"]) >
+                  Convert.ToInt32(beforeMaxStats["MaxMP"]) &&
+              Convert.ToInt32(after["Attack"]) >
+                  Convert.ToInt32(beforeMaxStats["Attack"]) &&
+              Convert.ToInt32(after["MagicAttack"]) >
+                  Convert.ToInt32(beforeMaxStats["MagicAttack"]) &&
+              Convert.ToInt32(after["Defense"]) >
+                  Convert.ToInt32(beforeMaxStats["Defense"]) &&
+              Convert.ToInt32(after["Dodge"]) >
+                  Convert.ToInt32(beforeMaxStats["Dodge"]) &&
+              Convert.ToInt32(after["MoveSpeed"]) >
+                  Convert.ToInt32(beforeMaxStats["MoveSpeed"]),
+            "legacy primary-stat tables increase HP MP ATK MATK DEF dodge and move speed");
+
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PlayerStatusSync\"")),
+            "GM maxstats refreshes effective status");
     }
 
     store.SetSkill(account.Value, id, 26104, 5);
