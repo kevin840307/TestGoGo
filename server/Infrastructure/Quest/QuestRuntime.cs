@@ -30,6 +30,9 @@ public sealed class QuestRuntimeBindings
     public Func<long, string, object?>? GetTargetData { get; init; }
     public Func<long, (double X, double Y)>? GetTargetXY { get; init; }
     public Func<long, int>? GetTargetEmotion { get; init; }
+
+    public Func<int, bool>? HasTitle { get; init; }
+    public Func<int, bool>? UnlockTitle { get; init; }
 }
 
 public sealed class QuestRuntime
@@ -193,8 +196,22 @@ public sealed class QuestRuntime
             checked((int)DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
         script.Globals["Color"] = DynValue.NewCallback((ctx, args) =>
             DynValue.NewString(""));
-        script.Globals["HasTitle"] = (Func<int,int>)(_ => 0);
-        script.Globals["AddTitle"] = (Action<int>)(_ => { });
+        script.Globals["HasTitle"] = (Func<int,int>)(titleId =>
+            bindings?.HasTitle?.Invoke(titleId) == true
+                ? 1
+                : 0);
+
+        script.Globals["AddTitle"] = (Action<int>)(titleId =>
+        {
+            if (bindings?.UnlockTitle?.Invoke(titleId) != true)
+                return;
+
+            result.Packets.Add(new
+            {
+                Type = "UnlockTitle",
+                TitleID = titleId
+            });
+        });
         script.Globals["SetData"] = DynValue.NewCallback((ctx, args) => DynValue.Nil);
         script.Globals["SetCareer"] = DynValue.NewCallback((ctx, args) => DynValue.Nil);
 
