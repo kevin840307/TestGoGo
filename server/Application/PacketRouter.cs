@@ -1598,6 +1598,23 @@ public sealed class PacketRouter
         packets.AddRange(
             _combat.TickRespawns(state, now));
 
+        if (now - state.LastGroundItemCleanupAt >=
+            TimeSpan.FromSeconds(1))
+        {
+            state.LastGroundItemCleanupAt = now;
+            foreach (var entityId in _store.RemoveExpiredGroundItems(
+                         state.CurrentMapId,
+                         now))
+            {
+                state.GroundItems.Remove(entityId);
+                packets.Add(new
+                {
+                    Type = "DespawnEntity",
+                    EntityID = entityId
+                });
+            }
+        }
+
         if (state.PendingMapSpawn)
         {
             state.PendingMapSpawn = false;
@@ -1687,7 +1704,9 @@ public sealed class PacketRouter
 
     private object BuildGroundItemSpawnPacket(
         GroundItemRuntime ground)
-        => new
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new
         {
             Type = "SpawnEntity",
             EntityID = ground.EntityId,
@@ -1700,11 +1719,16 @@ public sealed class PacketRouter
             {
                 ItemIndex = ground.ItemIndex,
                 Count = ground.Count,
-                RemainingTime = 0,
+                TabType = ground.TabType,
+                Damage = ground.Damage,
+                Color = ground.Color,
+                Part = ground.Part,
+                RemainingTime = ground.RemainingSeconds(now),
                 OwnerDBID = ground.OwnerDbid,
-                ProtectTimeSeconds = 0
+                ProtectTimeSeconds = ground.ProtectSeconds(now)
             }
         };
+    }
 
     private List<object> EnsureCurrentCombatMapLoaded(
         ClientSession state,
