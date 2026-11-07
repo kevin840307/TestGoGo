@@ -186,6 +186,11 @@ func _on_entity_moved(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
 	var target_node = get_active_entity(entity_id)
 	if target_node:
+		if int(_active_entity_types.get(entity_id, -1)) == 1:
+			print("[MONSTER_NET_MOVE] id=", entity_id,
+				" x=", data.get("X", 0),
+				" y=", data.get("Y", 0),
+				" speed=", data.get("SpeedTime", 1.0))
 		var target_x = float(data.get("X", 0))
 		var target_y = float(data.get("Y", 0))
 		var new_dir = str(data.get("Dir", ""))
@@ -203,6 +208,10 @@ func _on_entity_moved(data: Dictionary) -> void :
 func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String) -> void :
 	var target_node = get_active_entity(entity_id)
 	if target_node:
+		if int(_active_entity_types.get(entity_id, -1)) == 1:
+			print("[MONSTER_NET_STATE] id=", entity_id,
+				" state=", new_state,
+				" dir=", new_dir)
 		if target_node.has_method("apply_network_state"):
 			target_node.apply_network_state(new_state, new_dir)
 		else:
@@ -239,6 +248,12 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 	var skill_id = int(data.get("SkillID", 0))
 
 	var attacker_id = int(data.get("AttackerID", 0))
+	if int(_active_entity_types.get(attacker_id, -1)) == 1:
+		print("[MONSTER_NET_DAMAGE] attacker=", attacker_id,
+			" target=", target_id,
+			" target_type=", target_type,
+			" damage=", damage,
+			" hp=", current_hp)
 
 	var is_primary = true
 	if skill_id > 0 and _last_skill_casts.has(attacker_id):
