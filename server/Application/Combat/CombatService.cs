@@ -167,9 +167,10 @@ public sealed class CombatService
         double playerY,
         DateTimeOffset now)
     {
-        if (now - session.LastMonsterAiTick < AiTickInterval)
-            return [];
-
+        // PacketRouter/WebSocketEndpoint already drives this on the fixed
+        // 250 ms world cadence. A second '< 250 ms' gate here could reject a
+        // timer tick that arrived a fraction early (for example 249.x ms),
+        // creating an unintended ~500 ms AI pause.
         session.LastMonsterAiTick = now;
 
         var packets = new List<object>();
