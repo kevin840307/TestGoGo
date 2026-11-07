@@ -1,0 +1,5 @@
+-- Metadata required to rebuild timed-effect HUD state after reconnect.
+-- @ensure-column character_timed_effects source_type INTEGER NOT NULL DEFAULT 0
+-- @ensure-column character_timed_effects source_value INTEGER NOT NULL DEFAULT 0
+-- @ensure-column character_timed_effects started_utc_ms INTEGER NOT NULL DEFAULT 0
+-- @ensure-column character_timed_effects duration_seconds INTEGER NOT NULL DEFAULT 0
