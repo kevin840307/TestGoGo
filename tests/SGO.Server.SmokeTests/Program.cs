@@ -109,7 +109,8 @@ CurrentItemDefinition CurrentItem(
     int reqLevel = 0,
     int durability = 0,
     int canRepair = 1,
-    int canTrade = 1)
+    int canTrade = 1,
+    string scriptName = "")
     => new(
         id,
         name,
@@ -141,7 +142,8 @@ CurrentItemDefinition CurrentItem(
         reqLevel,
         durability,
         canRepair,
-        canTrade);
+        canTrade,
+        scriptName);
 
 var currentCatalog = new CurrentClientDataCatalog(
     new[]
@@ -164,6 +166,13 @@ var currentCatalog = new CurrentClientDataCatalog(
             "大聲公",
             "general",
             price: 1),
+
+        CurrentItem(
+            3701,
+            "加速術．一級",
+            "general",
+            price: 1,
+            scriptName: "加速術．一級"),
 
         CurrentItem(
             2615,
@@ -286,6 +295,7 @@ var currentCatalog = new CurrentClientDataCatalog(
         new CurrentSkillDefinition(20101, "Current Skill 20101"),
         new CurrentSkillDefinition(20102, "Current Skill 20102"),
         new CurrentSkillDefinition(77701, "烈火爆劍"),
+        new CurrentSkillDefinition(27103, "加速術"),
         new CurrentSkillDefinition(27104, "生命之源"),
         new CurrentSkillDefinition(28102, "心靈轉換"),
         new CurrentSkillDefinition(28107, "治療風暴"),
@@ -481,6 +491,16 @@ var currentCatalog = new CurrentClientDataCatalog(
             0, 0, 32,
             0, 10, 1,
             0, 1,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0,
+            0, 0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            27103, 1, 4, 0,
+            0, 0,
+            0, 10, 0,
+            0, 0, 1,
+            60, 1,
             0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0,
@@ -2670,6 +2690,46 @@ try
     }
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+
+    var skillBookUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        3701,
+        1);
+
+    using (var useSkillBook = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "UseItemRequest",
+            ItemUID = skillBookUid
+        })))
+    {
+        var responses = router.Handle(
+            useSkillBook.RootElement,
+            session);
+
+        Check(
+            !store.GetCharacterAssets(
+                account.Value,
+                id).Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    skillBookUid) &&
+            store.GetSkills(
+                account.Value,
+                id).Any(x =>
+                Convert.ToInt32(x["SkillID"]) == 27103 &&
+                Convert.ToInt32(x["SkillLevel"]) == 1) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"InventorySync\"")) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SkillSync\"")) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "已學會 加速術 Lv.1")),
+            "UseItemRequest consumes a resolved skill book and syncs learned skill");
+    }
 
     var autoSaintStartX = session.LastX;
     var autoSaintStartY = session.LastY;
