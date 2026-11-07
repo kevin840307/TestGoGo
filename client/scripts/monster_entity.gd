@@ -37,7 +37,9 @@ var last_move_packet_ms: int = 0
 var pending_move_dir: String = ""
 var pending_move_dir_count: int = 0
 var last_move_dir_change_ms: int = 0
+var fallback_action_generation: int = 0
 const MOVE_IDLE_GRACE_SECONDS: float = 0.12
+const FALLBACK_ACTION_RELEASE_SECONDS: float = 0.25
 const NETWORK_MOVE_MIN_SPEED: float = 120.0
 const NETWORK_MOVE_MAX_SPEED: float = 205.0
 const NETWORK_MOVE_SNAP_EPSILON: float = 1.0
@@ -542,13 +544,47 @@ func sync_animation() -> void :
 		if all_anims.size() > 0: anim_to_play = all_anims[0]
 
 	if anim_to_play != "":
+		var requested_state := current_state.to_lower()
+		var requested_prefix := str(mapped_prefix) + "_"
+		var has_requested_animation := anim_to_play.begins_with(requested_prefix)
+
 		if sprite.animation != anim_to_play or not sprite.is_playing():
 			MonsterLoader.begin_audio_sequence(sprite)
-		sprite.play(anim_to_play)
+			sprite.play(anim_to_play)
 		_update_sprite_offset()
+
+		# Some recovered monster sprites do not contain ATTACK/HIT animations.
+		# In that case we fall back to IDLE visually, but must not leave the
+		# logical state stuck in "attack"/"hit" forever because IDLE loops and
+		# never emits animation_finished.
+		if requested_state in ["attack", "hit"] and not has_requested_animation:
+			fallback_action_generation += 1
+			var generation := fallback_action_generation
+			get_tree().create_timer(FALLBACK_ACTION_RELEASE_SECONDS).timeout.connect(func():
+				if not is_instance_valid(self) or current_hp <= 0:
+					return
+				if generation != fallback_action_generation:
+					return
+				if current_state not in ["attack", "hit"]:
+					return
+
+				var has_recent_move := (
+					last_move_packet_ms > 0 and
+					Time.get_ticks_msec() - last_move_packet_ms <= 700 and
+					global_position.distance_to(network_move_target) > NETWORK_MOVE_SNAP_EPSILON
+				)
+				if has_recent_move:
+					network_move_active = true
+					current_state = "walk"
+				else:
+					network_move_active = false
+					current_state = "idle"
+				sync_animation()
+			)
 
 func _on_animation_finished() -> void :
 	if (sprite.animation.begins_with("HIT") or sprite.animation.begins_with("ATTACK")) and current_hp > 0:
+		fallback_action_generation += 1
 		var has_recent_move := (
 			last_move_packet_ms > 0 and
 			Time.get_ticks_msec() - last_move_packet_ms <= 700 and
