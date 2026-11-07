@@ -1130,12 +1130,36 @@ public sealed class PacketRouter
                 switch (action)
                 {
                     case "Summon":
-                        success = _store.SetPetState(
+                    {
+                        var owner = _store.GetCharacter(
                             accountId,
-                            state.CharacterId.Value,
-                            petUid,
-                            1);
+                            state.CharacterId.Value);
+                        var nowMs = DateTimeOffset.UtcNow
+                            .ToUnixTimeMilliseconds();
+
+                        var canSummon =
+                            selectedPetBefore is not null &&
+                            owner is not null &&
+                            Convert.ToInt32(
+                                selectedPetBefore["LifeCount"]) > 0 &&
+                            Convert.ToInt32(
+                                selectedPetBefore["FeedValue"]) > 0 &&
+                            Convert.ToInt64(
+                                selectedPetBefore["SummonWaitCount"]) <= nowMs &&
+                            Convert.ToInt32(
+                                selectedPetBefore["HP"]) > 0 &&
+                            Convert.ToInt32(owner["Level"]) >=
+                                Convert.ToInt32(
+                                    selectedPetBefore["Level"]);
+
+                        success = canSummon &&
+                            _store.SetPetState(
+                                accountId,
+                                state.CharacterId.Value,
+                                petUid,
+                                1);
                         break;
+                    }
 
                     case "Recall":
                         success = _store.SetPetState(
