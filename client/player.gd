@@ -33,8 +33,10 @@ var confirmed_summoned_horse_uid: int = -1
 func _ready() -> void :
 	super._ready()
 
-	if is_inside_tree() and is_instance_valid(doll_engine) and doll_engine.doll_sprites.is_empty():
-		setup_layered_paper_dolls()
+	# Building the layered paper doll can synchronously decode/create many
+	# textures on first login. Defer it until the world has rendered at least
+	# one frame so it no longer blocks the map-entry critical path.
+	call_deferred("_initialize_player_paper_doll")
 
 	if is_dead or data_model.hp <= 0:
 		is_dead = false
@@ -74,6 +76,18 @@ func _ready() -> void :
 	click_area.input_event.connect(_on_click_area_input_event)
 	click_area.mouse_entered.connect(_on_mouse_entered)
 	click_area.mouse_exited.connect(_on_mouse_exited)
+
+func _initialize_player_paper_doll() -> void :
+	if not is_inside_tree() or not is_instance_valid(doll_engine) or not doll_engine.doll_sprites.is_empty():
+		return
+	await get_tree().process_frame
+	if not is_inside_tree() or not is_instance_valid(doll_engine) or not doll_engine.doll_sprites.is_empty():
+		return
+	var started_usec := Time.get_ticks_usec()
+	setup_layered_paper_dolls()
+	var elapsed_ms := float(Time.get_ticks_usec() - started_usec) / 1000.0
+	if elapsed_ms >= 50.0:
+		print("[PLAYER_INIT_TIMING] paper_doll_ms=%.2f" % elapsed_ms)
 
 func _exit_tree() -> void :
 	if CursorManager:
