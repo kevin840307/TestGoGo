@@ -504,6 +504,7 @@ public interface IMechaStore : ICharacterAssetReader
         long accountId,
         long dbid,
         long itemUid,
+        int sourceItemIndex,
         int horseIndex,
         string name,
         string horseType,
