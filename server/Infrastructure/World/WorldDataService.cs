@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using SGO.Server.Infrastructure.GameData;
 
@@ -10,8 +11,8 @@ public sealed class WorldDataService
     private readonly string _dataRoot;
     private readonly EnemyCatalog _enemyCatalog;
     private readonly LegacyNpcVisualCatalog _npcVisuals;
-    private readonly Dictionary<int, IReadOnlyList<WorldNpc>> _npcCache = new();
-    private readonly Dictionary<int, IReadOnlyList<WorldEnemy>> _enemyCache = new();
+    private readonly ConcurrentDictionary<int, IReadOnlyList<WorldNpc>> _npcCache = new();
+    private readonly ConcurrentDictionary<int, IReadOnlyList<WorldEnemy>> _enemyCache = new();
 
     public WorldDataService(string dataRoot)
         : this(
@@ -32,10 +33,10 @@ public sealed class WorldDataService
     }
 
     public IReadOnlyList<WorldNpc> GetNpcs(int mapId)
-    {
-        if (_npcCache.TryGetValue(mapId, out var cached))
-            return cached;
+        => _npcCache.GetOrAdd(mapId, LoadNpcs);
 
+    private IReadOnlyList<WorldNpc> LoadNpcs(int mapId)
+    {
         var path = Path.Combine(
             _dataRoot,
             "Map",
@@ -43,12 +44,12 @@ public sealed class WorldDataService
             "NPC.dat");
 
         if (!File.Exists(path))
-            return _npcCache[mapId] = Array.Empty<WorldNpc>();
+            return Array.Empty<WorldNpc>();
 
         var raw = NpcDatReader.Read(path);
         var big5 = Encoding.GetEncoding(950);
 
-        var list = raw.Select((npc, index) =>
+        return raw.Select((npc, index) =>
         {
             var isMerchant = IsMerchantScript(npc.Script);
             return new WorldNpc
@@ -60,23 +61,19 @@ public sealed class WorldDataService
                 Y = npc.Y,
                 Script = npc.Script,
                 Name = DecodeName(big5, npc.NameBytes),
-
                 Sprite = _npcVisuals.FindSprite(npc.NpcTypeId)
                     ?? $"NPC{GetNpcSpriteId(npc.NpcTypeId):D3}.png",
-
                 IsPortal = IsPortalScript(npc.Script),
                 IsMerchant = isMerchant
             };
         }).ToArray();
-
-        return _npcCache[mapId] = list;
     }
 
     public IReadOnlyList<WorldEnemy> GetEnemies(int mapId)
-    {
-        if (_enemyCache.TryGetValue(mapId, out var cached))
-            return cached;
+        => _enemyCache.GetOrAdd(mapId, LoadEnemies);
 
+    private IReadOnlyList<WorldEnemy> LoadEnemies(int mapId)
+    {
         var path = Path.Combine(
             _dataRoot,
             "Map",
@@ -84,7 +81,7 @@ public sealed class WorldDataService
             "Enemy.dat");
 
         if (!File.Exists(path))
-            return _enemyCache[mapId] = Array.Empty<WorldEnemy>();
+            return Array.Empty<WorldEnemy>();
 
         var raw = EnemyDatReader.Read(path);
         var list = new List<WorldEnemy>(raw.Count);
@@ -112,7 +109,7 @@ public sealed class WorldDataService
             });
         }
 
-        return _enemyCache[mapId] = list;
+        return list;
     }
 
     public bool IsCityMap(int mapId) => CityMaps.Contains(mapId);
