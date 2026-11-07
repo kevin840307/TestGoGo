@@ -211,6 +211,39 @@ using (var jsonNonObject = Json("""[1,2,3]"""))
         "JSON numeric and text helpers safely reject non-object input");
 }
 
+// Pet helper always carries PetUID, but combat-mode/attack packets
+// use a different shape. Validate both before entering any pet mutation.
+using (var wrongPetEquipUid = Json(
+    """{"Type":"PetAction","Action":"Equip","PetUID":2147483648,"ItemUID":"9","TargetSlot":1}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              wrongPetEquipUid.RootElement, "PetAction", out var petError) &&
+          petError.Contains("ItemUID"),
+        "pet equip rejects nonnumeric equipment UID");
+}
+using (var validLongPetUid = Json(
+    """{"Type":"PetAction","Action":"Summon","PetUID":2147483648}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              validLongPetUid.RootElement, "PetAction", out _),
+        "pet actions support full Int64 pet UIDs");
+}
+using (var petModeWithoutUid = Json(
+    """{"Type":"PetAction","Action":"SetCombatMode","CombatMode":2}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              petModeWithoutUid.RootElement, "PetAction", out _),
+        "pet combat mode does not incorrectly require PetUID");
+}
+using (var missingPetAttackTarget = Json(
+    """{"Type":"PetAction","Action":"CommandAttack"}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              missingPetAttackTarget.RootElement, "PetAction", out var commandError) &&
+          commandError.Contains("TargetEntityID"),
+        "pet attack command requires target ID");
+}
+
 var repoRoot = Directory.GetCurrentDirectory();
 var gameDataRoot = Path.Combine(repoRoot, "Old", "服務端", "Dat");
 var questRoot = Path.Combine(gameDataRoot, "Quest");
