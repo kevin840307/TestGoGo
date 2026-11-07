@@ -269,6 +269,17 @@ public static class WebSocketEndpoint
                                 rawPayload.Length <= 1200
                                     ? rawPayload
                                     : rawPayload[..1200] + "...<truncated>");
+                            await SendPacketsAsync(
+                                [
+                                    new
+                                    {
+                                        Type = "PacketError",
+                                        RequestType = packetType,
+                                        Code = "HANDLER_FAILED",
+                                        Message = "伺服器處理操作時發生錯誤"
+                                    }
+                                ],
+                                ctx.RequestAborted);
                             continue;
                         }
 
