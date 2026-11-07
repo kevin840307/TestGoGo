@@ -26,6 +26,7 @@ public sealed class PacketRouter
     private readonly RecoveryItemCatalog _recoveryItems;
     private readonly HorseCardCatalog _horseCards;
     private readonly CurrentClientDataCatalog _current;
+    private readonly LegacyPlayerGrowthCatalog _growth;
     private readonly ILogger<PacketRouter> _log;
 
     public PacketRouter(
@@ -39,6 +40,7 @@ public sealed class PacketRouter
         RecoveryItemCatalog recoveryItems,
         HorseCardCatalog horseCards,
         CurrentClientDataCatalog current,
+        LegacyPlayerGrowthCatalog growth,
         ILogger<PacketRouter> log)
     {
         _store = store;
@@ -51,6 +53,7 @@ public sealed class PacketRouter
         _recoveryItems = recoveryItems;
         _horseCards = horseCards;
         _current = current;
+        _growth = growth;
         _log = log;
     }
 
@@ -858,6 +861,21 @@ public sealed class PacketRouter
                         Message = "沒有可用能力點或屬性已達上限"
                     }];
                 }
+
+                var growth = _growth.Calculate(updated);
+                updated = _store.ApplyGrowthStats(
+                    accountId,
+                    state.CharacterId.Value,
+                    growth.MaxHP,
+                    growth.MaxMP,
+                    growth.MaxSP,
+                    growth.Attack,
+                    growth.Defense,
+                    growth.MagicAttack,
+                    growth.MagicDefense,
+                    growth.Hit,
+                    growth.Dodge,
+                    growth.MoveSpeed) ?? updated;
 
                 var assets = _store.GetCharacterAssets(
                     accountId,
