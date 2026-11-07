@@ -603,6 +603,107 @@ public sealed class SqliteGameStore : IGameStore
         return true;
     }
 
+    public IReadOnlyList<RankEntry> GetRankEntries(
+        int rankType,
+        int limit)
+    {
+        limit = Math.Clamp(limit, 1, 100);
+
+        var orderBy = rankType switch
+        {
+            1 => "level DESC, exp_acc DESC, id ASC",
+            2 => "money DESC, level DESC, id ASC",
+            _ => null
+        };
+
+        if (orderBy is null)
+            return Array.Empty<RankEntry>();
+
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = $"""
+            SELECT id, account_id, name,
+                   {(rankType == 1 ? "level" : "money")} AS value
+              FROM characters
+             ORDER BY {orderBy}
+             LIMIT $limit
+            """;
+        Arg(cmd, "$limit", limit);
+
+        var result = new List<RankEntry>();
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            result.Add(new RankEntry(
+                reader.GetInt64(0),
+                reader.GetInt64(1),
+                reader.GetString(2),
+                reader.GetInt64(3)));
+        }
+
+        return result;
+    }
+
+    public string GetRankMessage(
+        int rankType,
+        long dbid)
+    {
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT message
+              FROM rank_messages
+             WHERE rank_type=$type
+               AND character_id=$id
+             LIMIT 1
+            """;
+        Arg(cmd, "$type", rankType);
+        Arg(cmd, "$id", dbid);
+
+        return Convert.ToString(cmd.ExecuteScalar())
+               ?? "尚無宣言";
+    }
+
+    public bool SetRankMessage(
+        long accountId,
+        long dbid,
+        int rankType,
+        string message)
+    {
+        if (rankType is not (1 or 2 or 4) ||
+            message.Length > 20)
+            return false;
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return false;
+
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            INSERT INTO rank_messages(
+                rank_type,character_id,message,updated_utc_ms)
+            VALUES($type,$id,$message,$updated)
+            ON CONFLICT(rank_type,character_id)
+            DO UPDATE SET
+                message=excluded.message,
+                updated_utc_ms=excluded.updated_utc_ms
+            """;
+        Arg(cmd, "$type", rankType);
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$message", message);
+        Arg(cmd, "$updated",
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+        var ok = cmd.ExecuteNonQuery() == 1;
+        if (ok)
+            tx.Commit();
+
+        return ok;
+    }
+
     public List<Dictionary<string, object>> GetShortcuts(
         long accountId,
         long dbid)
