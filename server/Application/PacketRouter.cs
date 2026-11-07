@@ -3329,6 +3329,11 @@ public sealed class PacketRouter
                         accountId,
                         state.CharacterId.Value,
                         assets));
+
+                result.Packets.AddRange(
+                    _questProgress.RefreshCollectedItems(
+                        accountId,
+                        state.CharacterId.Value));
             }
 
             if (skillsChanged &&
