@@ -8,6 +8,9 @@ const GROUND_ITEM_SCENE = preload("res://ground_item_entity.tscn")
 const PET_SCENE = preload("res://pet_entity.tscn")
 const DYNAMIC_ENTITY_VISIBILITY_LAYER: = 1 << 1
 const DEBUG_MONSTER_NETWORK_LOGS: bool = false
+const MONSTER_AOI_ENTER_RADIUS: float = 1800.0
+const MONSTER_AOI_EXIT_RADIUS: float = 2200.0
+const MONSTER_AOI_UPDATE_INTERVAL: float = 0.20
 
 var active_entities: Dictionary = {}
 var _last_skill_casts: Dictionary = {}
@@ -23,6 +26,9 @@ var _queued_spawn_ids: Dictionary = {}
 var _last_spawn_enqueue_usec: int = 0
 var _runtime_monster_ids: Dictionary = {}
 var _spawn_queue_paused: bool = false
+var _monster_spawn_templates: Dictionary = {}
+var _deferred_monster_spawns: Dictionary = {}
+var _monster_aoi_elapsed: float = 0.0
 
 func get_active_entity(entity_id: int) -> Node2D:
 	var entity = active_entities.get(entity_id)
@@ -49,6 +55,9 @@ func clear_map_entities() -> Dictionary:
 	_spawn_queue.clear()
 	_queued_spawn_ids.clear()
 	_runtime_monster_ids.clear()
+	_monster_spawn_templates.clear()
+	_deferred_monster_spawns.clear()
+	_monster_aoi_elapsed = 0.0
 	return {"total": cleared_total, "by_type": cleared_by_type}
 
 func _ready() -> void :
@@ -75,10 +84,94 @@ func _unhandled_input(event: InputEvent) -> void :
 			if GameManager.current_hud.get("_next_dialog_node") != "":
 				GameManager.current_hud.request_next_dialog_sentence()
 
+func _get_local_player_position() -> Variant:
+	var player = GameManager.current_player if GameManager else null
+	if not is_instance_valid(player) or not player.is_inside_tree():
+		return null
+	return player.global_position
+
+func _monster_packet_position(data: Dictionary) -> Vector2:
+	return Vector2(
+		float(data.get("LocX", data.get("X", 0.0))),
+		float(data.get("LocY", data.get("Y", 0.0)))
+	)
+
+func _is_monster_inside_aoi(data: Dictionary, radius: float) -> bool:
+	var player_pos = _get_local_player_position()
+	if player_pos == null:
+		return true
+	return (player_pos as Vector2).distance_squared_to(_monster_packet_position(data)) <= radius * radius
+
+func _defer_monster_spawn(data: Dictionary) -> void :
+	var entity_id: int = int(data.get("EntityID", 0))
+	if entity_id <= 0:
+		return
+	var cached: Dictionary = data.duplicate(true)
+	_monster_spawn_templates[entity_id] = cached
+	_deferred_monster_spawns[entity_id] = cached
+	_queued_spawn_ids.erase(entity_id)
+
+func _queue_cached_monster_spawn(entity_id: int) -> void :
+	if get_active_entity(entity_id) or _queued_spawn_ids.has(entity_id):
+		return
+	var cached = _deferred_monster_spawns.get(entity_id, null)
+	if not cached is Dictionary:
+		return
+	_deferred_monster_spawns.erase(entity_id)
+	_queued_spawn_ids[entity_id] = true
+	_spawn_queue.append((cached as Dictionary).duplicate(true))
+	_last_spawn_enqueue_usec = Time.get_ticks_usec()
+
+func _unload_monster_for_aoi(entity_id: int, monster: Node2D) -> void :
+	var cached = _monster_spawn_templates.get(entity_id, null)
+	if cached is Dictionary:
+		var updated: Dictionary = (cached as Dictionary).duplicate(true)
+		updated["LocX"] = monster.global_position.x
+		updated["LocY"] = monster.global_position.y
+		_monster_spawn_templates[entity_id] = updated
+		_deferred_monster_spawns[entity_id] = updated
+	_unregister_entity_hover(monster)
+	monster.queue_free()
+	active_entities.erase(entity_id)
+	_active_entity_types.erase(entity_id)
+	_runtime_monster_ids.erase(entity_id)
+
+func _update_monster_aoi(delta: float) -> void :
+	_monster_aoi_elapsed += delta
+	if _monster_aoi_elapsed < MONSTER_AOI_UPDATE_INTERVAL:
+		return
+	_monster_aoi_elapsed = 0.0
+	var player_pos = _get_local_player_position()
+	if player_pos == null:
+		return
+	var local_pos: Vector2 = player_pos as Vector2
+	var exit_radius_sq: float = MONSTER_AOI_EXIT_RADIUS * MONSTER_AOI_EXIT_RADIUS
+	var enter_radius_sq: float = MONSTER_AOI_ENTER_RADIUS * MONSTER_AOI_ENTER_RADIUS
+	for raw_id in _active_entity_types.keys():
+		var entity_id: int = int(raw_id)
+		if int(_active_entity_types.get(entity_id, -1)) != 1:
+			continue
+		var monster := get_active_entity(entity_id)
+		if is_instance_valid(monster) and local_pos.distance_squared_to(monster.global_position) > exit_radius_sq:
+			_unload_monster_for_aoi(entity_id, monster)
+	for raw_id in _deferred_monster_spawns.keys():
+		var entity_id: int = int(raw_id)
+		var cached = _deferred_monster_spawns.get(entity_id, null)
+		if cached is Dictionary and local_pos.distance_squared_to(_monster_packet_position(cached)) <= enter_radius_sq:
+			_queue_cached_monster_spawn(entity_id)
+
 func _on_entity_spawned(data: Dictionary) -> void :
 	var entity_id := int(data.get("EntityID", 0))
 	if entity_id <= 0:
 		return
+	var entity_type: int = int(data.get("EntityType", -1))
+	if entity_type == 1:
+		var cached: Dictionary = data.duplicate(true)
+		_monster_spawn_templates[entity_id] = cached
+		if not _is_monster_inside_aoi(cached, MONSTER_AOI_ENTER_RADIUS):
+			_defer_monster_spawn(cached)
+			return
+		_deferred_monster_spawns.erase(entity_id)
 	if get_active_entity(entity_id) or _queued_spawn_ids.has(entity_id):
 		return
 	_queued_spawn_ids[entity_id] = true
@@ -103,7 +196,11 @@ func _process(delta: float) -> void :
 		_spawn_queue.clear()
 		_queued_spawn_ids.clear()
 		_runtime_monster_ids.clear()
+		_monster_spawn_templates.clear()
+		_deferred_monster_spawns.clear()
 		return
+
+	_update_monster_aoi(delta)
 
 	if not _spawn_queue_paused and not _spawn_queue.is_empty():
 		var frame_started_usec := Time.get_ticks_usec()
@@ -145,6 +242,11 @@ func _process(delta: float) -> void :
 func _spawn_entity_now(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
 	var entity_type = int(data.get("EntityType", 0))
+	if entity_type == 1:
+		_monster_spawn_templates[entity_id] = data.duplicate(true)
+		if not _is_monster_inside_aoi(data, MONSTER_AOI_EXIT_RADIUS):
+			_defer_monster_spawn(data)
+			return
 
 	if get_active_entity(entity_id):
 		return
@@ -266,9 +368,22 @@ func _on_entity_despawned(data: Dictionary) -> void :
 	if _last_skill_casts.has(entity_id):
 		_last_skill_casts.erase(entity_id)
 	_runtime_monster_ids.erase(entity_id)
+	_monster_spawn_templates.erase(entity_id)
+	_deferred_monster_spawns.erase(entity_id)
+	_queued_spawn_ids.erase(entity_id)
 
 func _on_entity_moved(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
+	if _monster_spawn_templates.has(entity_id):
+		var cached: Dictionary = (_monster_spawn_templates[entity_id] as Dictionary).duplicate(true)
+		cached["LocX"] = float(data.get("X", cached.get("LocX", 0.0)))
+		cached["LocY"] = float(data.get("Y", cached.get("LocY", 0.0)))
+		_monster_spawn_templates[entity_id] = cached
+		if _deferred_monster_spawns.has(entity_id):
+			_deferred_monster_spawns[entity_id] = cached
+			if _is_monster_inside_aoi(cached, MONSTER_AOI_ENTER_RADIUS):
+				_queue_cached_monster_spawn(entity_id)
+			return
 	var target_node = get_active_entity(entity_id)
 	if target_node:
 		if DEBUG_MONSTER_NETWORK_LOGS and int(_active_entity_types.get(entity_id, -1)) == 1:
@@ -558,6 +673,12 @@ func _on_entity_death_received(data: Dictionary) -> void :
 			_finalize_entity_death(entity, clear_hover_on_death)
 	if entity_type != 0:
 		active_entities.erase(entity_id)
+	if entity_type == 1:
+		_active_entity_types.erase(entity_id)
+		_runtime_monster_ids.erase(entity_id)
+		_monster_spawn_templates.erase(entity_id)
+		_deferred_monster_spawns.erase(entity_id)
+		_queued_spawn_ids.erase(entity_id)
 
 
 func _on_skill_cast_received(caster_id: int, caster_type: int, skill_id: int, skill_level: int, target_id: int, target_x: int, target_y: int, aoe_targets: Array = []) -> void :
