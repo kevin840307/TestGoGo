@@ -1105,6 +1105,9 @@ public sealed class PacketRouter
                 state.CurrentMapId = 0;
                 state.PendingMapSpawn = false;
                 state.Monsters.Clear();
+                state.MonstersByMap.Clear();
+                state.LoadedMonsterMapId = 0;
+                state.ActiveSkillBuffs.Clear();
                 state.CloseRequested = true;
 
                 return [new
@@ -1141,6 +1144,8 @@ public sealed class PacketRouter
         var packets = new List<object>();
 
         packets.AddRange(
+            _combat.TickBuffs(state, now));
+        packets.AddRange(
             _combat.TickRespawns(state, now));
 
         if (state.PendingMapSpawn)
@@ -1158,9 +1163,13 @@ public sealed class PacketRouter
                     state.LastX,
                     state.LastY));
 
-            state.WorldSnapshotRetriesRemaining = 4;
+            // The Godot map scene is loaded asynchronously. Re-send NPC,
+            // monster and active-pet snapshots long enough for the target
+            // scene to finish loading even when the first spawn packets arrive
+            // too early.
+            state.WorldSnapshotRetriesRemaining = 8;
             state.NextWorldSnapshotAt =
-                now + TimeSpan.FromMilliseconds(750);
+                now + TimeSpan.FromMilliseconds(500);
         }
         else
         {
