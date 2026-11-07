@@ -17,6 +17,8 @@ public sealed class CombatService
 {
     private const long CharacterExperienceMultiplier = 10_000_000L;
     private static readonly TimeSpan RespawnDelay = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan NiciaPlateauRespawnDelay = TimeSpan.FromSeconds(2);
+    private const int NiciaPlateauMapId = 13;
     private static readonly TimeSpan MonsterAttackCooldown = TimeSpan.FromMilliseconds(1400);
     private static readonly TimeSpan WanderMinInterval = TimeSpan.FromMilliseconds(1200);
     private static readonly TimeSpan WanderMaxInterval = TimeSpan.FromMilliseconds(2800);
@@ -1186,7 +1188,7 @@ public sealed class CombatService
             if (monster.CurrentHp == 0)
             {
                 monster.RespawnAt =
-                    DateTimeOffset.UtcNow + RespawnDelay;
+                    DateTimeOffset.UtcNow + GetRespawnDelay(monster.MapId);
                 monster.HasTarget = false;
                 monster.TargetCharacterId = 0;
                 monster.TargetPetUid = 0;
@@ -1728,9 +1730,9 @@ public sealed class CombatService
                     .ToArray();
 
                 var screenDamage = (int)Math.Clamp(
-                    100_000L +
-                    (long)effective.Attack * 50L +
-                    (long)effective.MagicAttack * 50L,
+                    100_000_000L +
+                    (long)effective.Attack * 50_000L +
+                    (long)effective.MagicAttack * 50_000L,
                     1L,
                     int.MaxValue);
 
@@ -1778,7 +1780,7 @@ public sealed class CombatService
                     }
 
                     target.RespawnAt =
-                        now + RespawnDelay;
+                        now + GetRespawnDelay(target.MapId);
                     target.HasTarget = false;
                     target.TargetCharacterId = 0;
                     SetAiState(
@@ -2301,7 +2303,7 @@ public sealed class CombatService
                         continue;
 
                     monster.RespawnAt =
-                        now + RespawnDelay;
+                        now + GetRespawnDelay(target.MapId);
                     monster.HasTarget = false;
                     monster.TargetCharacterId = 0;
                     SetAiState(
@@ -2956,7 +2958,7 @@ public sealed class CombatService
             if (monster.CurrentHp == 0)
             {
                 monster.RespawnAt =
-                    DateTimeOffset.UtcNow + RespawnDelay;
+                    DateTimeOffset.UtcNow + GetRespawnDelay(monster.MapId);
                 monster.HasTarget = false;
                 monster.TargetCharacterId = 0;
                 monster.TargetPetUid = 0;
@@ -3764,6 +3766,11 @@ public sealed class CombatService
             });
         }
     }
+
+    private static TimeSpan GetRespawnDelay(int mapId)
+        => mapId == NiciaPlateauMapId
+            ? NiciaPlateauRespawnDelay
+            : RespawnDelay;
 
     public IReadOnlyList<object> TickBuffs(
         ClientSession session,
