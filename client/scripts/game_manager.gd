@@ -82,6 +82,10 @@ func _process(_delta: float) -> void :
 			_append_transition_log(line)
 	_frame_gap_last_usec = now_usec
 
+func _report_initial_loading_progress(progress_callback: Callable, value: float, stage: String) -> void :
+	if progress_callback.is_valid():
+		progress_callback.call(clampf(value, 0.0, 100.0), stage)
+
 func _get_process_memory_mb() -> float:
 	return float(Performance.get_monitor(Performance.MEMORY_STATIC)) / 1048576.0
 
@@ -184,7 +188,7 @@ func _init_buildings_with_diagnostics(source_map_id: int, target_map_id: int) ->
 		"duration_ms": float(Time.get_ticks_usec() - started_usec) / 1000.0, 
 	})
 
-func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vector2) -> bool:
+func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vector2, progress_callback: Callable = Callable()) -> bool:
 	var raw_num_str = map_id.replace("map", "")
 	var target_map_id: int = int(raw_num_str)
 	var formatted_map_name = "Map%02d" % target_map_id
@@ -192,6 +196,8 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	var initial_started_usec: int = Time.get_ticks_usec()
 
 	_trace_map_change("initial_enter_started", 0, target_map_id)
+	_report_initial_loading_progress(progress_callback, 50.0, "準備載入地圖")
+	await get_tree().process_frame
 
 	if not ResourceLoader.exists(map_path):
 		_trace_map_change("initial_map_missing", 0, target_map_id)
@@ -208,6 +214,8 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		var progress: Array = []
 		var status: int = ResourceLoader.load_threaded_get_status(map_path, progress)
 		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			var threaded_progress := float(progress[0]) if not progress.is_empty() else 0.0
+			_report_initial_loading_progress(progress_callback, 50.0 + threaded_progress * 25.0, "載入地圖資源")
 			await get_tree().process_frame
 			continue
 		if status == ResourceLoader.THREAD_LOAD_LOADED:
@@ -216,6 +224,8 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 			_trace_map_change("initial_load_completed", 0, target_map_id, {
 				"load_get_ms": float(Time.get_ticks_usec() - load_get_started_usec) / 1000.0,
 			})
+			_report_initial_loading_progress(progress_callback, 75.0, "地圖資源載入完成")
+			await get_tree().process_frame
 			break
 		_trace_map_change("initial_load_failed", 0, target_map_id, {"status": status})
 		return false
@@ -226,6 +236,8 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 
 	await get_tree().process_frame
 	var instantiate_started_usec: int = Time.get_ticks_usec()
+	_report_initial_loading_progress(progress_callback, 78.0, "建立地圖")
+	await get_tree().process_frame
 	set_frame_gap_stage("initial_map_instantiate")
 	current_map_node = map_resource.instantiate()
 	var instantiate_ms: float = float(Time.get_ticks_usec() - instantiate_started_usec) / 1000.0
@@ -235,6 +247,8 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 
 	await get_tree().process_frame
 	var add_child_started_usec: int = Time.get_ticks_usec()
+	_report_initial_loading_progress(progress_callback, 82.0, "初始化地圖")
+	await get_tree().process_frame
 	set_frame_gap_stage("initial_map_add_child")
 	get_tree().root.add_child(current_map_node)
 	var add_child_ms: float = float(Time.get_ticks_usec() - add_child_started_usec) / 1000.0
@@ -249,6 +263,8 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	if BuildingManager:
 		BuildingManager.call_deferred("init_buildings")
 
+	_report_initial_loading_progress(progress_callback, 86.0, "建立角色")
+	await get_tree().process_frame
 	var player_scene = ResourceLoader.load("res://player.tscn")
 	set_frame_gap_stage("player_instantiate")
 	current_player = player_scene.instantiate()
@@ -259,6 +275,8 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	if "target_position" in current_player:
 		current_player.target_position = spawn_position
 
+	_report_initial_loading_progress(progress_callback, 89.0, "初始化角色")
+	await get_tree().process_frame
 	set_frame_gap_stage("player_add_child")
 	if current_map_node.has_node("Entities"):
 		current_map_node.get_node("Entities").add_child(current_player)
@@ -274,22 +292,32 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	_ensure_day_night_overlay()
 	set_world_enhancement_enabled(_load_world_enhancement_setting())
 
+	_report_initial_loading_progress(progress_callback, 92.0, "載入介面")
+	await get_tree().process_frame
 	var hud_scene = ResourceLoader.load("res://game_hud.tscn")
 	set_frame_gap_stage("hud_instantiate")
 	current_hud = hud_scene.instantiate()
+	_report_initial_loading_progress(progress_callback, 95.0, "建立遊戲介面")
+	await get_tree().process_frame
 	set_frame_gap_stage("hud_add_child")
 	get_tree().root.add_child(current_hud)
+	_report_initial_loading_progress(progress_callback, 97.0, "初始化遊戲介面")
+	await get_tree().process_frame
 	set_frame_gap_stage("hud_initialize")
 	current_hud.initialize_hud(current_player)
 
 	if CursorManager:
 		CursorManager.set_cursor_state("normal")
 
+	_report_initial_loading_progress(progress_callback, 99.0, "完成最後初始化")
+	await get_tree().process_frame
 	set_frame_gap_stage("world_running")
 	AudioManager.play_map_bgm(map_id.to_int())
 	_trace_map_change("initial_enter_completed", 0, target_map_id, {
 		"total_ms": float(Time.get_ticks_usec() - initial_started_usec) / 1000.0,
 	})
+	_report_initial_loading_progress(progress_callback, 100.0, "載入完成")
+	await get_tree().process_frame
 	return true
 
 func cleanup_and_return_to_login() -> void :
