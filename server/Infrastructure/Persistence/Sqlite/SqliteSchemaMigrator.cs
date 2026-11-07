@@ -46,6 +46,10 @@ internal static class SqliteSchemaMigrator
         ExecuteSqlFile(
             db,
             ResolveSqlPath("010_timed_effects.sql"));
+
+        ApplyEnsureColumnDirectives(
+            db,
+            ResolveSqlPath("011_timed_effect_metadata.sql"));
     }
 
     private static void ExecuteSqlFile(
