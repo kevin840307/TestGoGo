@@ -69,7 +69,8 @@ public sealed class GmCommandService
                 "pos" => Position(accountId, dbid),
                 "map" or "warp" or "teleport"
                     => Teleport(parts, accountId, dbid, session),
-                "heal" => Heal(accountId, dbid),
+                "heal" or "restore" or "fullheal"
+                    => Heal(accountId, dbid),
                 "level" => Level(parts, accountId, dbid),
                 "maxstats" or "maxstat"
                     => MaxStats(accountId, dbid),
@@ -889,7 +890,7 @@ public sealed class GmCommandService
         };
 
     private static string HelpText()
-        => "GM: help | pos | map <id> [x] [y] | heal | level <n> | " +
+        => "GM: help | pos | map <id> [x] [y] | heal/restore/fullheal | level <n> | " +
            "maxstats | attackspeed <1-1000> | money <n> | item <id> [count] | equip <id> | " +
            "mecha <cardId> | mechacard <cardId> | mechaequip <id> [horseUid] | mechalevel <horseUid> <level> | pet <petId> [name] | " +
            "skill <id|all> [lv] | skills | clearskills | " +
