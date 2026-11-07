@@ -7336,6 +7336,55 @@ try
                 .ToUnixTimeMilliseconds()) == 0,
         "expired double-EXP timed effect is removed from persistence");
 
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+
+    var duplicateRegistration = broadcastHub.Register();
+    var duplicateSession = new ClientSession
+    {
+        ConnectionId = duplicateRegistration.ConnectionId
+    };
+
+    using (var duplicateLogin = Json(
+        """{"Type":"LoginRequest","User":"offline","Pass":"test-password"}"""))
+    {
+        var responses = router.Handle(
+            duplicateLogin.RootElement,
+            duplicateSession);
+
+        Check(
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"LoginResponse\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Success\":true")) &&
+            broadcastRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"ForceLogout\"")),
+            "new login supersedes old account session and queues ForceLogout");
+    }
+
+    while (duplicateRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var reclaimLogin = Json(
+        """{"Type":"LoginRequest","User":"offline","Pass":"test-password"}"""))
+    {
+        var responses = router.Handle(
+            reclaimLogin.RootElement,
+            session);
+
+        Check(
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Success\":true")) &&
+            duplicateRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"ForceLogout\"")),
+            "original connection can re-login and force out the superseding session");
+    }
+
+    broadcastHub.Unregister(
+        duplicateRegistration.ConnectionId);
+
     using (var logout = Json(
         """{"Type":"LogoutRequest","IsBackToLogin":true}"""))
     {
