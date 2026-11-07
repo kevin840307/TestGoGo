@@ -567,10 +567,10 @@ public sealed class PacketRouter
                         accountId,
                         state.CharacterId.Value,
                         action,
-                        req.Int("TargetDBID"),
+                        req.Long("TargetDBID"),
                         req.Str("ClubName"),
                         req.Str("ClubMsg"),
-                        req.Int("Amount"),
+                        req.Long("Amount"),
                         req.Int("ResearchID"))
                     .ToList();
 
