@@ -1,9 +1,9 @@
 using System.Text.Json;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
-using SGO.Server.Application.Bank;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Gm;
+using SGO.Server.Application.Packets;
 using SGO.Server.Application.Shops;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Infrastructure.GameData;
@@ -22,7 +22,7 @@ public sealed class PacketRouter
     private readonly QuestRuntime _quests;
     private readonly CombatService _combat;
     private readonly ShopService _shopService;
-    private readonly BankService _bankService;
+    private readonly IReadOnlyDictionary<string, IClientPacketHandler> _packetHandlers;
     private readonly GmCommandService _gm;
     private readonly HorseBatteryCatalog _horseBatteries;
     private readonly RecoveryItemCatalog _recoveryItems;
@@ -37,7 +37,7 @@ public sealed class PacketRouter
         QuestRuntime quests,
         CombatService combat,
         ShopService shopService,
-        BankService bankService,
+        IEnumerable<IClientPacketHandler> packetHandlers,
         GmCommandService gm,
         HorseBatteryCatalog horseBatteries,
         RecoveryItemCatalog recoveryItems,
@@ -51,7 +51,9 @@ public sealed class PacketRouter
         _quests = quests;
         _combat = combat;
         _shopService = shopService;
-        _bankService = bankService;
+        _packetHandlers = packetHandlers.ToDictionary(
+            x => x.PacketType,
+            StringComparer.Ordinal);
         _gm = gm;
         _horseBatteries = horseBatteries;
         _recoveryItems = recoveryItems;
@@ -101,6 +103,9 @@ public sealed class PacketRouter
         }
 
         var accountId = state.AccountId.Value;
+
+        if (_packetHandlers.TryGetValue(type, out var moduleHandler))
+            return moduleHandler.Handle(req, state, accountId);
 
         switch (type)
         {
@@ -251,21 +256,6 @@ public sealed class PacketRouter
                 }
 
                 return [];
-            }
-
-            case "BankTransfer":
-            {
-                if (!state.CharacterId.HasValue)
-                    return [];
-
-                return _bankService.Transfer(
-                    accountId,
-                    state.CharacterId.Value,
-                    req.Int("UID"),
-                    req.Int("TabType"),
-                    req.Int("Amount", 1),
-                    req.TryGetProperty("ToBank", out var toBank) &&
-                    toBank.ValueKind == JsonValueKind.True);
             }
 
             case "UseItemRequest":
