@@ -1276,9 +1276,22 @@ public sealed class PacketRouter
                     despawnPacket,
                     state.ConnectionId);
 
+                var pickedName = _current.FindItem(ground.ItemIndex)?.Name
+                    ?? $"Item {ground.ItemIndex}";
+
                 return
                 [
                     despawnPacket,
+                    new
+                    {
+                        Type = "ItemPickupFeedback",
+                        ItemIndex = ground.ItemIndex,
+                        Count = ground.Count,
+                        Name = pickedName,
+                        Message = ground.Count > 1
+                            ? $"獲得：{pickedName} x{ground.Count}"
+                            : $"獲得：{pickedName}"
+                    },
                     new
                     {
                         Type = "InventorySync",
