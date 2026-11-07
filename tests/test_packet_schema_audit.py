@@ -64,6 +64,45 @@ class PacketSchemaAuditTests(unittest.TestCase):
         self.assertEqual("FIELD_MISMATCH", result["issues"][0]["status"])
         self.assertEqual(["Y"], result["issues"][0]["missing_fields"])
 
+    def test_dynamic_trade_and_shop_fields(self):
+        with (self.root / "server/Protocol/PacketSchemaValidator.cs").open(
+            "a", encoding="utf-8"
+        ) as file:
+            file.write(
+                '\\n["TradeSetMoney"] = [new("Money", FieldType.LongInteger)],\\n'
+                '["ShopAction:AddItem"] = ['
+                'new("UID", FieldType.LongInteger),'
+                'new("Price", FieldType.LongInteger),'
+                'new("Count", FieldType.Integer),'
+                'new("TabType", FieldType.Integer)],\\n'
+            )
+        self.write(
+            "client/scripts/trade_window.gd",
+            'NetworkManager.send_trade_action("TradeSetMoney", {"Money": amount})\\n',
+        )
+        self.write(
+            "client/scripts/shop_window.gd",
+            'NetworkManager.send_shop_action("AddItem", '
+            '{"UID": uid, "Price": price, "Count": count, "TabType": tab})\\n',
+        )
+        result = scan(self.root)
+        self.assertEqual([], result["issues"])
+        self.assertEqual(3, result["matched_count"])
+        self.assertEqual(1, result["action_matched_count"])
+
+        self.write(
+            "client/scripts/shop_window.gd",
+            'NetworkManager.send_shop_action("AddItem", '
+            '{"UID": uid, "Count": count, "TabType": tab})\\n',
+        )
+        result = scan(self.root)
+        self.assertEqual(
+            ["Price"], result["issues"][0]["missing_fields"]
+        )
+        self.assertEqual(
+            "ShopAction:AddItem", result["issues"][0]["type"]
+        )
+
     def test_literal_parser_skips_quoted_braces_and_comments(self):
         source = (
             'var note = "{not a dictionary}"\n'
