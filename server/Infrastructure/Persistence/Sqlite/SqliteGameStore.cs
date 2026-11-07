@@ -98,6 +98,10 @@ public sealed class SqliteGameStore : IGameStore
         Arg(cmd, "$a", accountId);
         using var r = cmd.ExecuteReader();
         while (r.Read()) list.Add(ReadCharacter(r));
+        r.Close();
+
+        foreach (var character in list)
+            ApplyClubFields(db, character);
 
         // The recovered client renders exactly three character slots and also
         // reads character_list[0].ACCID when creating a character. Keep the
@@ -119,7 +123,15 @@ public sealed class SqliteGameStore : IGameStore
         Arg(cmd, "$a", accountId);
         Arg(cmd, "$id", dbid);
         using var r = cmd.ExecuteReader();
-        return r.Read() ? ReadCharacter(r) : null;
+        var character = r.Read()
+            ? ReadCharacter(r)
+            : null;
+        r.Close();
+
+        if (character is not null)
+            ApplyClubFields(db, character);
+
+        return character;
     }
 
     private static SqliteCommand CharacterQuery(SqliteConnection db)
@@ -231,6 +243,36 @@ public sealed class SqliteGameStore : IGameStore
             ["Quests"] = Array.Empty<object>(),
             ["Shortcuts"] = Array.Empty<object>()
         };
+    }
+
+    private static void ApplyClubFields(
+        SqliteConnection db,
+        Dictionary<string, object> character)
+    {
+        var dbid = Convert.ToInt64(
+            character.GetValueOrDefault("DBID", 0L));
+
+        if (dbid <= 0)
+            return;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT c.id,c.name,m.position,m.donation
+              FROM club_members m
+              JOIN clubs c ON c.id=m.club_id
+             WHERE m.character_id=$id
+             LIMIT 1
+            """;
+        Arg(cmd, "$id", dbid);
+
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read())
+            return;
+
+        character["ClubID"] = reader.GetInt64(0);
+        character["ClubName"] = reader.GetString(1);
+        character["ClubPosition"] = reader.GetInt32(2);
+        character["ClubDonation"] = reader.GetInt64(3);
     }
 
     public (bool Success, string Message) Create(long accountId, JsonElement data)
