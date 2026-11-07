@@ -803,7 +803,9 @@ public sealed class CombatService
         if (!session.CharacterId.HasValue)
             return [];
 
-        PurgeExpiredBuffs(session, now);
+        PurgeExpiredBuffs(
+            session.CharacterId.Value,
+            now);
 
         var learned = _store.GetSkills(
             accountId,
