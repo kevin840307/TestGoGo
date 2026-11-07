@@ -2099,6 +2099,14 @@ try
     config["Gameplay:Mall:Items:1:Price"] = "10";
     config["Gameplay:Mall:Items:1:Count"] = "1";
 
+    config["Gameplay:Mall:Gifts:0:RewardID"] = "7001";
+    config["Gameplay:Mall:Gifts:0:ItemIndex"] = "1001";
+    config["Gameplay:Mall:Gifts:0:Name"] = "小藥水滿額禮";
+    config["Gameplay:Mall:Gifts:0:Kind"] = "General";
+    config["Gameplay:Mall:Gifts:0:RequiredDonation"] = "500";
+    config["Gameplay:Mall:Gifts:0:Count"] = "3";
+    config["Gameplay:Mall:Gifts:0:IsActive"] = "true";
+
     var configuredMall = new MallService(
         store,
         config,
@@ -2194,6 +2202,81 @@ try
               .Contains("不存在或已下架"),
         "inactive mall product cannot be purchased");
     config["Gameplay:Mall:Items:0:IsActive"] = "true";
+
+    var mallGifts = MallGiftCatalog.Read(
+        config,
+        currentCatalog);
+    Check(mallGifts.Length == 1 &&
+          mallGifts[0].RewardId == 7001 &&
+          mallGifts[0].RequiredDonation == 500 &&
+          mallGifts[0].Count == 3,
+        "configured donation gift catalog resolves current-client reward");
+
+    var giftBeforeFundingJson = JsonSerializer.Serialize(
+        configuredMall.Handle(
+            account.Value,
+            id,
+            "OpenMall",
+            0,
+            0,
+            0,
+            0));
+    Check(!giftBeforeFundingJson.Contains("\"RewardID\":7001"),
+        "donation gift stays hidden until lifetime threshold is reached");
+
+    Check(store.AdjustLifetimeDonation(
+              account.Value,
+              500,
+              out var lifetimeDonation) &&
+          lifetimeDonation == 500,
+        "prepare lifetime donation for one-time gift claim");
+
+    var eligibleGiftJson = JsonSerializer.Serialize(
+        configuredMall.Handle(
+            account.Value,
+            id,
+            "OpenMall",
+            0,
+            0,
+            0,
+            0));
+    Check(eligibleGiftJson.Contains("\"RewardID\":7001") &&
+          eligibleGiftJson.Contains("\"RequiredDonation\":500") &&
+          eligibleGiftJson.Contains("\"ClaimStatus\":\"Unclaimed\""),
+        "eligible donation gift appears with fields consumed by Godot UI");
+
+    var giftItemBefore = InventoryCountOf(1001);
+    var claimGiftPackets = configuredMall.Handle(
+        account.Value,
+        id,
+        "ClaimDonationGift",
+        0,
+        0,
+        0,
+        7001);
+    var claimGiftJson =
+        JsonSerializer.Serialize(claimGiftPackets);
+
+    Check(InventoryCountOf(1001) == giftItemBefore + 3 &&
+          store.GetClaimedMallGiftIds(account.Value).Contains(7001) &&
+          claimGiftJson.Contains("已領取滿額禮") &&
+          claimGiftJson.Contains("\"ClaimStatus\":\"Claimed\"") &&
+          claimGiftJson.Contains("InventorySync"),
+        "donation gift atomically grants reward and becomes claimed");
+
+    var giftItemAfterClaim = InventoryCountOf(1001);
+    var duplicateGiftClaim = configuredMall.Handle(
+        account.Value,
+        id,
+        "ClaimDonationGift",
+        0,
+        0,
+        0,
+        7001);
+    Check(InventoryCountOf(1001) == giftItemAfterClaim &&
+          JsonSerializer.Serialize(duplicateGiftClaim)
+              .Contains("已領取"),
+        "same account cannot claim the same donation gift twice");
 
     var festivalDolls = new DollService(
         store,
