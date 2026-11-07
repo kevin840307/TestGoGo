@@ -52,6 +52,12 @@ await Probe(
     root => HasCode(root, "INVALID_PACKET"),
     "non-object encrypted JSON yields INVALID_PACKET");
 
+await Probe(
+    new { Type = 42 },
+    "PacketError",
+    root => HasCode(root, "INVALID_PACKET"),
+    "non-string encrypted packet Type yields INVALID_PACKET");
+
 if (socket.State == WebSocketState.Open)
 {
     using var closeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
