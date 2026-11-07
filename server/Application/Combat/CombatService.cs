@@ -2034,13 +2034,20 @@ public sealed class CombatService
         if (isAttack &&
             (primaryMonster is not null || isScreenAreaAttack))
         {
-            var damage = Math.Max(
-                1,
-                levelData.BaseDamage +
-                (levelData.DamageType == 1
-                    ? effective.MagicAttack
-                    : effective.Attack) *
-                Math.Max(0, levelData.DamageMultiplier) / 100);
+            var damage = isScreenAreaAttack
+                ? Math.Max(
+                    1,
+                    checked(
+                        1_000_000 +
+                        effective.Attack * 100 +
+                        effective.MagicAttack * 100))
+                : Math.Max(
+                    1,
+                    levelData.BaseDamage +
+                    (levelData.DamageType == 1
+                        ? effective.MagicAttack
+                        : effective.Attack) *
+                    Math.Max(0, levelData.DamageMultiplier) / 100);
 
             if (levelData.SkillType == 7 &&
                 levelData.BaseDamage == 0 &&
