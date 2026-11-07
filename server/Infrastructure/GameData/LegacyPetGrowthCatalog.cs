@@ -37,14 +37,14 @@ public sealed class LegacyPetGrowthCatalog
             "STR" => new PetStatAdjustment(
                 Attack: Value(_str, after) - Value(_str, before)),
             "DEX" => new PetStatAdjustment(
-                Hit: Value(_dex, after).Hit - Value(_dex, before).Hit,
-                Dodge: Value(_dex, after).Dodge - Value(_dex, before).Dodge),
+                Hit: DexValue(_dex, after).Hit - DexValue(_dex, before).Hit,
+                Dodge: DexValue(_dex, after).Dodge - DexValue(_dex, before).Dodge),
             "CON" => new PetStatAdjustment(
                 MaxHp: Value(_con, after) - Value(_con, before)),
             "WIS" => new PetStatAdjustment(
-                MaxMp: Value(_wis, after).MaxMp - Value(_wis, before).MaxMp,
-                MagicAttack: Value(_wis, after).MagicAttack -
-                             Value(_wis, before).MagicAttack),
+                MaxMp: WisValue(_wis, after).MaxMp - WisValue(_wis, before).MaxMp,
+                MagicAttack: WisValue(_wis, after).MagicAttack -
+                             WisValue(_wis, before).MagicAttack),
             _ => new PetStatAdjustment()
         };
     }
@@ -61,12 +61,12 @@ public sealed class LegacyPetGrowthCatalog
     {
         var str = Value(_str, Math.Max(0, baseStr)) -
                   Value(_str, Math.Max(0, baseStr + extraStr));
-        var dexBefore = Value(_dex, Math.Max(0, baseDex + extraDex));
-        var dexAfter = Value(_dex, Math.Max(0, baseDex));
+        var dexBefore = DexValue(_dex, Math.Max(0, baseDex + extraDex));
+        var dexAfter = DexValue(_dex, Math.Max(0, baseDex));
         var con = Value(_con, Math.Max(0, baseCon)) -
                   Value(_con, Math.Max(0, baseCon + extraCon));
-        var wisBefore = Value(_wis, Math.Max(0, baseWis + extraWis));
-        var wisAfter = Value(_wis, Math.Max(0, baseWis));
+        var wisBefore = WisValue(_wis, Math.Max(0, baseWis + extraWis));
+        var wisAfter = WisValue(_wis, Math.Max(0, baseWis));
 
         return new PetStatAdjustment(
             MaxHp: con,
@@ -104,17 +104,16 @@ public sealed class LegacyPetGrowthCatalog
             ? 0
             : values[Math.Min(values.Length, stat) - 1];
 
-    private static (int Hit, int Dodge) Value(
+    private static (int Hit, int Dodge) DexValue(
         (int Hit, int Dodge)[] values,
         int stat)
         => stat <= 0 || values.Length == 0
             ? (0, 0)
             : values[Math.Min(values.Length, stat) - 1];
 
-    private static (int MaxMp, int MagicAttack) Value(
+    private static (int MaxMp, int MagicAttack) WisValue(
         (int MaxMp, int MagicAttack)[] values,
-        int stat,
-        bool _ = true)
+        int stat)
         => stat <= 0 || values.Length == 0
             ? (0, 0)
             : values[Math.Min(values.Length, stat) - 1];
