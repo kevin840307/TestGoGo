@@ -1612,7 +1612,7 @@ public sealed class SqliteGameStore : IGameStore
             removed = del.ExecuteNonQuery() == 1;
             gain = unitPrice;
         }
-        else if (tabType == 4)
+        else if (tabType == 3)
         {
             using var del = db.CreateCommand();
             del.Transaction = tx;
