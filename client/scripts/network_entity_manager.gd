@@ -78,6 +78,16 @@ func _ready() -> void :
 		if not NetworkManager.entity_heal_received.is_connected(_on_entity_heal_received):
 			NetworkManager.entity_heal_received.connect(_on_entity_heal_received)
 
+func get_aoi_active_monster_count() -> int:
+	var count: int = 0
+	for entity_type in _active_entity_types.values():
+		if int(entity_type) == 1:
+			count += 1
+	return count
+
+func get_aoi_deferred_monster_count() -> int:
+	return _deferred_monster_spawns.size()
+
 func _unhandled_input(event: InputEvent) -> void :
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if GameManager.current_hud and is_instance_valid(GameManager.current_hud):
@@ -110,6 +120,12 @@ func _defer_monster_spawn(data: Dictionary) -> void :
 	_monster_spawn_templates[entity_id] = cached
 	_deferred_monster_spawns[entity_id] = cached
 	_queued_spawn_ids.erase(entity_id)
+
+func _remove_queued_spawn(entity_id: int) -> void :
+	_queued_spawn_ids.erase(entity_id)
+	for index: int in range(_spawn_queue.size() - 1, -1, -1):
+		if int(_spawn_queue[index].get("EntityID", 0)) == entity_id:
+			_spawn_queue.remove_at(index)
 
 func _queue_cached_monster_spawn(entity_id: int) -> void :
 	if get_active_entity(entity_id) or _queued_spawn_ids.has(entity_id):
@@ -370,7 +386,7 @@ func _on_entity_despawned(data: Dictionary) -> void :
 	_runtime_monster_ids.erase(entity_id)
 	_monster_spawn_templates.erase(entity_id)
 	_deferred_monster_spawns.erase(entity_id)
-	_queued_spawn_ids.erase(entity_id)
+	_remove_queued_spawn(entity_id)
 
 func _on_entity_moved(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
@@ -463,6 +479,16 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 	var target_type = int(data.get("TargetType", 0))
 	var damage = int(data.get("Damage", 0))
 	var current_hp = int(data.get("CurrentHP", 0))
+	if target_type == 1 and _monster_spawn_templates.has(target_id):
+		var cached: Dictionary = (_monster_spawn_templates[target_id] as Dictionary).duplicate(true)
+		var extra: Dictionary = (cached.get("ExtraData", {}) as Dictionary).duplicate(true)
+		extra["CurrentHP"] = current_hp
+		if data.has("MaxHP"):
+			extra["MaxHP"] = int(data.get("MaxHP", extra.get("MaxHP", 1)))
+		cached["ExtraData"] = extra
+		_monster_spawn_templates[target_id] = cached
+		if _deferred_monster_spawns.has(target_id):
+			_deferred_monster_spawns[target_id] = cached
 	var is_crit = bool(data.get("IsCrit", false))
 	var skill_id = int(data.get("SkillID", 0))
 
@@ -678,7 +704,7 @@ func _on_entity_death_received(data: Dictionary) -> void :
 		_runtime_monster_ids.erase(entity_id)
 		_monster_spawn_templates.erase(entity_id)
 		_deferred_monster_spawns.erase(entity_id)
-		_queued_spawn_ids.erase(entity_id)
+		_remove_queued_spawn(entity_id)
 
 
 func _on_skill_cast_received(caster_id: int, caster_type: int, skill_id: int, skill_level: int, target_id: int, target_x: int, target_y: int, aoe_targets: Array = []) -> void :
