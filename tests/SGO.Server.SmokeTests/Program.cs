@@ -2081,6 +2081,12 @@ try
     config["Gameplay:Mall:Items:0:MaxQuantity"] = "10";
     config["Gameplay:Mall:Items:0:IsActive"] = "true";
 
+    config["Gameplay:Mall:Items:1:MallID"] = "9002";
+    config["Gameplay:Mall:Items:1:ItemIndex"] = "1001";
+    config["Gameplay:Mall:Items:1:Kind"] = "Equipment";
+    config["Gameplay:Mall:Items:1:Price"] = "10";
+    config["Gameplay:Mall:Items:1:Count"] = "1";
+
     var configuredMall = new MallService(
         store,
         config,
@@ -2089,6 +2095,7 @@ try
         config,
         currentCatalog);
     Check(mallProducts.Length == 1 &&
+          mallProducts.All(x => x.MallId != 9002) &&
           mallProducts[0].MallId == 9001 &&
           mallProducts[0].ItemIndex == 1001 &&
           mallProducts[0].Price == 25 &&
