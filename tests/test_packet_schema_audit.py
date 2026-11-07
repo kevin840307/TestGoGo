@@ -143,6 +143,56 @@ class PacketSchemaAuditTests(unittest.TestCase):
                        if x["type"] == "PetAction:Equip")
         self.assertEqual(["ItemUID"], missing["missing_fields"])
 
+    def test_club_and_mall_action_payload_fields(self):
+        with (self.root / "server/Protocol/PacketSchemaValidator.cs").open(
+            "a", encoding="utf-8"
+        ) as stream:
+            stream.write(
+                """
+                ["ClubAction"] = [
+                    new("Action", FieldType.NonEmptyText)
+                ],
+                ["MallAction"] = [
+                    new("Action", FieldType.NonEmptyText)
+                ],
+                ["ClubAction:DonateMoney"] = [
+                    new("Amount", FieldType.LongInteger)
+                ],
+                ["MallAction:BuyItem"] = [
+                    new("MallID", FieldType.Integer),
+                    new("Count", FieldType.Integer)
+                ],
+                """
+            )
+        self.write(
+            "client/scripts/clan_window.gd",
+            'NetworkManager.send_secure_packet({'
+            '"Type": "ClubAction", "Action": "DonateMoney", '
+            '"Amount": donation})\\n',
+        )
+        self.write(
+            "client/scripts/mall_window.gd",
+            'NetworkManager.send_mall_action("BuyItem", '
+            '{"MallID": 10, "Count": 2})\\n',
+        )
+        matched = scan(self.root)
+        self.assertEqual([], matched["issues"])
+        self.assertEqual(4, matched["matched_count"])
+        self.assertEqual(2, matched["action_matched_count"])
+
+        self.write(
+            "client/scripts/mall_window.gd",
+            'NetworkManager.send_mall_action("BuyItem", '
+            '{"MallID": 10})\\n',
+        )
+        missing = scan(self.root)
+        issue = next(
+            entry for entry in missing["issues"]
+            if entry["type"] == "MallAction:BuyItem"
+        )
+        self.assertEqual("FIELD_MISMATCH", issue["status"])
+        self.assertEqual(["Count"], issue["missing_fields"])
+
     def test_literal_parser_skips_quoted_braces_and_comments(self):
         source = (
             'var note = "{not a dictionary}"\n'
