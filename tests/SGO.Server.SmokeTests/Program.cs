@@ -4916,6 +4916,122 @@ try
             capacityAfter.HorseEquipMaxSize,
         "expanded capacities survive a fresh store instance/reconnect migration path");
 
+    var statsBeforeRegeneration =
+        store.GetCharacter(
+            account.Value,
+            id)!;
+    var restoreStr = Convert.ToInt32(
+        statsBeforeRegeneration["Str"]);
+    var restoreDex = Convert.ToInt32(
+        statsBeforeRegeneration["Dex"]);
+    var restoreCon = Convert.ToInt32(
+        statsBeforeRegeneration["Con"]);
+    var restoreWis = Convert.ToInt32(
+        statsBeforeRegeneration["Wis"]);
+    var restoreExpUse = Convert.ToInt32(
+        statsBeforeRegeneration["ExpUse"]);
+
+    var syntheticStats = store.SetPrimaryStats(
+        account.Value,
+        id,
+        5,
+        4,
+        3,
+        2,
+        7)!;
+    var syntheticGrowth =
+        growth.Calculate(syntheticStats);
+    store.ApplyGrowthStats(
+        account.Value,
+        id,
+        syntheticGrowth.MaxHP,
+        syntheticGrowth.MaxMP,
+        syntheticGrowth.MaxSP,
+        syntheticGrowth.Attack,
+        syntheticGrowth.Defense,
+        syntheticGrowth.MagicAttack,
+        syntheticGrowth.MagicDefense,
+        syntheticGrowth.Hit,
+        syntheticGrowth.Dodge,
+        syntheticGrowth.MoveSpeed);
+
+    var regenerationCrystalUid =
+        store.AddInventoryItem(
+            account.Value,
+            id,
+            2616,
+            1);
+
+    using (var useRegenerationCrystal = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "UseItemRequest",
+            ItemUID = regenerationCrystalUid
+        })))
+    {
+        var responses = router.Handle(
+            useRegenerationCrystal.RootElement,
+            session);
+        var resetCharacter = store.GetCharacter(
+            account.Value,
+            id)!;
+        var resetGrowth =
+            growth.Calculate(resetCharacter);
+        var json = JsonSerializer.Serialize(
+            responses);
+
+        Check(
+            Convert.ToInt32(resetCharacter["Str"]) == 1 &&
+            Convert.ToInt32(resetCharacter["Dex"]) == 1 &&
+            Convert.ToInt32(resetCharacter["Con"]) == 1 &&
+            Convert.ToInt32(resetCharacter["Wis"]) == 1 &&
+            Convert.ToInt32(resetCharacter["ExpUse"]) == 17 &&
+            Convert.ToInt32(resetCharacter["MaxHP"]) ==
+                resetGrowth.MaxHP &&
+            Convert.ToInt32(resetCharacter["MaxMP"]) ==
+                resetGrowth.MaxMP &&
+            Convert.ToInt32(resetCharacter["MaxSP"]) ==
+                resetGrowth.MaxSP &&
+            !store.GetCharacterAssets(
+                account.Value,
+                id).Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    regenerationCrystalUid) &&
+            json.Contains(
+                "\"Type\":\"AllocateStatResponse\"") &&
+            json.Contains(
+                "\"Success\":true") &&
+            json.Contains(
+                "\"Type\":\"PlayerStatusSync\"") &&
+            json.Contains(
+                "退回 10 點"),
+            "2616 regeneration crystal atomically resets all four primary stats to 1, refunds allocated points, recomputes growth and consumes itself");
+    }
+
+    var restoredStats = store.SetPrimaryStats(
+        account.Value,
+        id,
+        restoreStr,
+        restoreDex,
+        restoreCon,
+        restoreWis,
+        restoreExpUse)!;
+    var restoredGrowth =
+        growth.Calculate(restoredStats);
+    store.ApplyGrowthStats(
+        account.Value,
+        id,
+        restoredGrowth.MaxHP,
+        restoredGrowth.MaxMP,
+        restoredGrowth.MaxSP,
+        restoredGrowth.Attack,
+        restoredGrowth.Defense,
+        restoredGrowth.MagicAttack,
+        restoredGrowth.MagicDefense,
+        restoredGrowth.Hit,
+        restoredGrowth.Dodge,
+        restoredGrowth.MoveSpeed);
+
     using (var horseEquip = Json(JsonSerializer.Serialize(new { Type = "HorseEquipRequest", EquipUID = horseEquipUid, HorseUID = horseUid })))
     {
         var responses = router.Handle(horseEquip.RootElement, session);
