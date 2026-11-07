@@ -25,6 +25,13 @@ ACTION_CALL = re.compile(
     r"""send_(trade|shop)_action\s*\(\s*['"]([A-Za-z][A-Za-z0-9_]*)['"]\s*,\s*(\{[^{}]*\})""",
     re.S
 )
+PET_CALL = re.compile(
+    r"""send_pet_action\s*\(\s*['"]([A-Za-z][A-Za-z0-9_]*)['"]\s*,\s*[^,()\n]+(?:\s*,\s*(\{[^{}]*\}))?""",
+    re.S
+)
+ACTION_LITERAL = re.compile(
+    r"""['"]Action['"]\s*:\s*['"]([A-Za-z][A-Za-z0-9_]*)['"]"""
+)
 
 
 def dictionary_literals(source: str):
@@ -82,9 +89,18 @@ def scan(root: Path) -> dict:
     for path in sorted(client.rglob("*.gd")):
         source = path.read_text(encoding="utf-8-sig")
         if not any(name in source for name in (
-            "send_secure_packet", "send_trade_action", "send_shop_action"
+            "send_secure_packet", "send_trade_action", "send_shop_action",
+            "send_pet_action"
         )):
             continue
+        for name, payload in PET_CALL.findall(source):
+            # send_pet_action constructs PetAction with PetUID, then
+            # merges these literal extra fields.
+            action_samples.setdefault("PetAction:" + name, []).append({
+                "path": path.relative_to(root).as_posix(),
+                "fields": set(KEY.findall(payload)) | {"PetUID"}
+            })
+
         for kind, name, payload in ACTION_CALL.findall(source):
             entry = {
                 "path": path.relative_to(root).as_posix(),
@@ -108,6 +124,16 @@ def scan(root: Path) -> dict:
                 "path": path.relative_to(root).as_posix(),
                 "fields": fields
             })
+            # Pet SetCombatMode and CommandAttack use direct packets,
+            # not the shared send_pet_action helper.
+            if packet_type == "PetAction":
+                actions = ACTION_LITERAL.findall(literal)
+                if len(actions) == 1:
+                    action_samples.setdefault(
+                        "PetAction:" + actions[0], []).append({
+                            "path": path.relative_to(root).as_posix(),
+                            "fields": fields
+                        })
 
     def compare_rules(requirements_by_type, source_samples):
         checks = []
