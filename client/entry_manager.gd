@@ -190,6 +190,7 @@ func _on_global_login_finished(success: bool, _msg: String) -> void :
 		if overlay: overlay.visible = true
 		_set_loading_progress(0.0)
 
+		_set_loading_progress(3.0)
 		var tween = create_tween()
 		if login_screen:
 			tween.tween_property(login_screen, "modulate:a", 0.0, 0.5).set_trans(Tween.TRANS_SINE)
@@ -200,18 +201,22 @@ func _on_global_login_finished(success: bool, _msg: String) -> void :
 				var select_node = character_select_layer.get_node_or_null("CharacterSelect")
 				if select_node: select_node.modulate.a = 0.0
 				character_select_layer.visible = true
+				_set_loading_progress(6.0)
 				call_deferred("_start_character_selection_load")
 		)
 
 func _start_character_selection_load() -> void :
-	_set_loading_progress(10.0)
+	_set_loading_progress(8.0)
+	await get_tree().process_frame
+	_set_loading_progress(12.0)
+
 	var select_script_node = character_select_layer.get_node_or_null("CharacterSelect")
 	if select_script_node and select_script_node.has_method("request_character_list"):
 		_connect_character_select_signals()
-		select_script_node.request_character_list()
+		await select_script_node.request_character_list()
 
-		var tween = create_tween()
-		tween.tween_property(select_script_node, "modulate:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE)
+		if is_instance_valid(select_script_node):
+			select_script_node.modulate.a = 1.0
 
 func hide_loading_overlay() -> void :
 	var overlay = get_node_or_null("%LoadingOverlay")
