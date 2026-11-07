@@ -13,6 +13,13 @@ public interface IGameStore
     Dictionary<string, object>? GetCharacter(long accountId, long dbid);
     CharacterAssets GetCharacterAssets(long accountId, long dbid);
     List<Dictionary<string, object>> GetSkills(long accountId, long dbid);
+    List<Dictionary<string, object>> GetShortcuts(long accountId, long dbid);
+    bool UpdateShortcut(
+        long accountId,
+        long dbid,
+        int slotIndex,
+        int shortcutType,
+        int targetId);
     bool SetSkill(long accountId, long dbid, int skillId, int level);
     bool ClearSkills(long accountId, long dbid);
     Dictionary<string, object>? SpendSkillResources(
