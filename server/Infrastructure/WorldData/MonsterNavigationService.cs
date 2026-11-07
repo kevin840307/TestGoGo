@@ -146,12 +146,48 @@ public sealed class MonsterNavigationService
         if (!reached)
             return false;
 
-        var waypoint = goal;
-        while (parents.TryGetValue(waypoint, out var parent) && parent != start)
-            waypoint = parent;
+        // Reconstruct the local A* route and steer toward the furthest
+        // visible waypoint instead of always aiming at the next cell centre.
+        // The old one-cell steering made monsters zig-zag and visibly stutter
+        // on diagonal stairs because the route was recalculated every AI tick.
+        var path = new List<(int X, int Y)> { goal };
+        var cursor = goal;
+        while (parents.TryGetValue(cursor, out var parent))
+        {
+            path.Add(parent);
+            if (parent == start)
+                break;
+            cursor = parent;
+        }
+        path.Reverse();
 
-        var waypointX = waypoint.Item1 * Cell + Cell / 2.0;
-        var waypointY = waypoint.Item2 * Cell + Cell / 2.0;
+        var waypoint = path.Count > 1
+            ? path[1]
+            : goal;
+
+        for (var index = 2; index < path.Count; index++)
+        {
+            var candidate = path[index];
+            var candidateX =
+                candidate.X * Cell + Cell / 2.0;
+            var candidateY =
+                candidate.Y * Cell + Cell / 2.0;
+
+            if (!IsDirectClear(
+                    mapId,
+                    fromX,
+                    fromY,
+                    candidateX,
+                    candidateY))
+            {
+                break;
+            }
+
+            waypoint = candidate;
+        }
+
+        var waypointX = waypoint.X * Cell + Cell / 2.0;
+        var waypointY = waypoint.Y * Cell + Cell / 2.0;
         var wayDx = waypointX - fromX;
         var wayDy = waypointY - fromY;
         var wayDistance = Math.Sqrt(wayDx * wayDx + wayDy * wayDy);
