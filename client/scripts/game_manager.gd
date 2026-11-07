@@ -350,11 +350,15 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	# scenes may still contain a huge legacy CollisionContainer TileMapLayer.
 	# Remove it before the map enters SceneTree so Godot does not register/build
 	# thousands of unused collision cells during initial add_child().
-	var legacy_collision := current_map_node.get_node_or_null("CollisionContainer")
-	if is_instance_valid(legacy_collision):
-		current_map_node.remove_child(legacy_collision)
-		legacy_collision.free()
-		print("[MAP_INIT_OPT] removed_legacy_collision=true")
+	var removed_collision_nodes: Array[String] = []
+	for collision_name: String in ["CollisionContainer", "CollisionLayer"]:
+		var legacy_collision := current_map_node.get_node_or_null(collision_name)
+		if is_instance_valid(legacy_collision):
+			current_map_node.remove_child(legacy_collision)
+			legacy_collision.free()
+			removed_collision_nodes.append(collision_name)
+	if not removed_collision_nodes.is_empty():
+		print("[MAP_INIT_OPT] removed_collision_nodes=%s" % ",".join(removed_collision_nodes))
 
 	# Keep the first world completely hidden while its nodes initialize.
 	# The entry loading overlay remains the only visible surface until the
