@@ -1676,7 +1676,7 @@ try
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"EntityDamage\"") &&
             JsonSerializer.Serialize(x).Contains(
-                $\"\"AttackerID\":{monster.EntityId}\")),
+                $"\"AttackerID\":{monster.EntityId}")),
         "monster in attack hysteresis range cannot deal damage beyond 130px");
 
     var sawDeath = false;
