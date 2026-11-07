@@ -1541,8 +1541,8 @@ try
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"MoveEntity\"") &&
               JsonSerializer.Serialize(x).Contains(
-                  "\"SpeedTime\":0.24")),
-        "monster enters aggro and emits a chase waypoint that completes before the next AI tick");
+                  "\"SpeedTime\":0.25")),
+        "monster enters aggro and emits a chase waypoint aligned with the 250ms world tick");
 
     var chaseStartX = monster.X;
     var chaseStartY = monster.Y;
