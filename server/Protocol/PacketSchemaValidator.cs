@@ -237,6 +237,16 @@ public static class PacketSchemaValidator
                 [new("CombatMode", FieldType.Integer)],
             ["PetAction:CommandAttack"] =
                 [new("TargetEntityID", FieldType.Integer)],
+            ["PartyAction:Invite"] =
+                [new("TargetDBID", FieldType.LongInteger)],
+            ["PartyAction:Accept"] =
+                [new("TargetDBID", FieldType.LongInteger)],
+            ["PartyAction:Decline"] =
+                [new("TargetDBID", FieldType.LongInteger)],
+            ["PartyAction:Kick"] =
+                [new("TargetDBID", FieldType.LongInteger)],
+            ["ClubAction:Create"] =
+                [new("ClubName", FieldType.NonEmptyText)],
             ["ClubAction:Invite"] =
                 [new("TargetDBID", FieldType.LongInteger)],
             ["ClubAction:Accept"] =
