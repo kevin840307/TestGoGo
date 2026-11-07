@@ -12,12 +12,15 @@ public sealed class CombatService
     private static readonly TimeSpan RespawnDelay = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan AiTickInterval = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan MonsterAttackCooldown = TimeSpan.FromMilliseconds(1400);
+    private static readonly TimeSpan WanderInterval = TimeSpan.FromMilliseconds(1800);
 
     private const double AggroRadius = 420.0;
     private const double LoseTargetRadius = 700.0;
     private const double StopDistance = 90.0;
     private const double MoveStep = 35.0;
     private const double MoveTweenSeconds = 0.32;
+    private const double WanderRadius = 180.0;
+    private const double WanderStep = 45.0;
 
     private readonly IGameStore _store;
     private readonly WorldDataService _world;
@@ -128,11 +131,38 @@ public sealed class CombatService
         session.LastMonsterAiTick = now;
 
         var packets = new List<object>();
+        var playerAlive = false;
+
+        if (session.CharacterId.HasValue)
+        {
+            var character = _store.GetCharacter(
+                accountId,
+                session.CharacterId.Value);
+            playerAlive = character is not null &&
+                          Convert.ToInt32(character["HP"]) > 0;
+        }
 
         foreach (var monster in session.Monsters.Values)
         {
             if (!monster.IsAlive)
                 continue;
+
+            if (!playerAlive)
+            {
+                if (monster.HasTarget)
+                {
+                    monster.HasTarget = false;
+                    packets.Add(new
+                    {
+                        Type = "MonsterTarget",
+                        EntityID = monster.EntityId,
+                        HasTarget = false
+                    });
+                }
+
+                TryWander(monster, now, packets);
+                continue;
+            }
 
             var dx = playerX - monster.X;
             var dy = playerY - monster.Y;
@@ -273,7 +303,13 @@ public sealed class CombatService
                 continue;
             }
 
-            if (!monster.HasTarget || distance <= StopDistance)
+            if (!monster.HasTarget)
+            {
+                TryWander(monster, now, packets);
+                continue;
+            }
+
+            if (distance <= StopDistance)
                 continue;
 
             var step = Math.Min(
@@ -493,6 +529,58 @@ public sealed class CombatService
         }
 
         return packets;
+    }
+
+    private static void TryWander(
+        MonsterRuntimeState monster,
+        DateTimeOffset now,
+        List<object> packets)
+    {
+        if (now < monster.NextWanderAt)
+            return;
+
+        monster.NextWanderAt = now + WanderInterval;
+        monster.WanderSequence++;
+
+        // Deterministic pseudo-random direction keeps tests stable while
+        // making different monsters wander independently.
+        var seed = unchecked(
+            monster.EntityId * 1103515245 +
+            monster.WanderSequence * 12345);
+        var angle = ((uint)seed % 360) * Math.PI / 180.0;
+
+        var desiredX = monster.X + Math.Cos(angle) * WanderStep;
+        var desiredY = monster.Y + Math.Sin(angle) * WanderStep;
+
+        var fromSpawnX = desiredX - monster.SpawnX;
+        var fromSpawnY = desiredY - monster.SpawnY;
+        var fromSpawnDistance = Math.Sqrt(
+            fromSpawnX * fromSpawnX +
+            fromSpawnY * fromSpawnY);
+
+        if (fromSpawnDistance > WanderRadius)
+        {
+            desiredX = monster.SpawnX;
+            desiredY = monster.SpawnY;
+        }
+
+        var moveDx = desiredX - monster.X;
+        var moveDy = desiredY - monster.Y;
+
+        if (Math.Abs(moveDx) < 0.001 &&
+            Math.Abs(moveDy) < 0.001)
+            return;
+
+        monster.X = desiredX;
+        monster.Y = desiredY;
+
+        packets.Add(BuildMovePacket(
+            monster,
+            desiredX,
+            desiredY,
+            MoveTweenSeconds,
+            moveDx,
+            moveDy));
     }
 
     private static object BuildMovePacket(
