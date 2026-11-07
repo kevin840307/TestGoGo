@@ -1243,6 +1243,43 @@ try
                   "\"Type\":\"EntityDamage\"")),
         "summoned pet automatically acquires and attacks nearby monster");
 
+    // Owner leash must beat combat acquisition. Even if a monster is
+    // near the pet, being >250 px from the owner teleports it back first.
+    session.LastX = monster.X - 500;
+    session.LastY = monster.Y;
+    session.PetPositions[petUid] =
+        (monster.X - 20, monster.Y);
+    session.PetLastAttackAt[petUid] =
+        DateTimeOffset.MinValue;
+    session.LastPetFollowTick =
+        DateTimeOffset.MinValue;
+
+    var leashPackets = router.Tick(
+        session,
+        DateTimeOffset.UtcNow.AddSeconds(6));
+
+    var expectedPetX = session.LastX + 42;
+    var expectedPetY = session.LastY + 24;
+    var leashedPetPosition =
+        session.PetPositions[petUid];
+
+    Check(
+        Math.Abs(leashedPetPosition.X - expectedPetX) < 0.001 &&
+        Math.Abs(leashedPetPosition.Y - expectedPetY) < 0.001 &&
+        leashPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"MoveEntity\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                $"\"EntityID\":{4_000_000L + petUid}") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"SpeedTime\":0.01")) &&
+        !leashPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EntityDamage\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                $"\"AttackerID\":{4_000_000L + petUid}")),
+        "pet teleports back to owner beyond 250 range before chasing/attacking monsters");
+
     var aiPackets = combat.TickAi(
         session,
         account.Value,
