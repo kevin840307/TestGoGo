@@ -1427,8 +1427,27 @@ try
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"MoveEntity\"") &&
               JsonSerializer.Serialize(x).Contains(
-                  "\"SpeedTime\":0.32")),
-        "monster enters aggro and emits overlapped smooth chase movement");
+                  "\"SpeedTime\":0.24")),
+        "monster enters aggro and emits a chase waypoint that completes before the next AI tick");
+
+    var chaseStartX = monster.X;
+    var chaseStartY = monster.Y;
+    var chaseTick2 = combat.TickAi(
+        session,
+        account.Value,
+        monster.X + 260,
+        monster.Y + 20,
+        session.LastMonsterAiTick.AddSeconds(1));
+
+    var chaseMoved = Math.Sqrt(
+        Math.Pow(monster.X - chaseStartX, 2) +
+        Math.Pow(monster.Y - chaseStartY, 2));
+
+    Check(chaseMoved > 0.001 &&
+          chaseTick2.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"MoveEntity\"")),
+        "consecutive monster chase ticks keep advancing instead of emitting a run-in-place waypoint");
 
     monster.IsMoving = true;
     var closeRangePackets = combat.TickAi(
