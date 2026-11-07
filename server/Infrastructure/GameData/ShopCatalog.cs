@@ -390,11 +390,13 @@ public sealed class ShopCatalog
     private static int CurrentTabType(string category)
         => category.ToLowerInvariant() switch
         {
-            "booster" or "general" or "recovery" => 0,
+            // Godot SharedInventoryPanel exposes only
+            // GENERAL=0, EQUIP=1, PET=2 and MECHA=3.
+            // Batteries live in the normal inventory; horse bodies and
+            // horse equipment are both presented through the MECHA tab.
+            "booster" or "general" or "recovery" or "horsebattery" => 0,
             "equip" or "weapon" => 1,
-            "horse" => 3,
-            "horseequip" => 4,
-            "horsebattery" => 5,
+            "horse" or "horseequip" => 3,
             _ => 0
         };
 
