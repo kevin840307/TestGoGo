@@ -1333,6 +1333,7 @@ try
     var router = new PacketRouter(
         store,
         world,
+        new BlockingMapService(gameDataRoot),
         quests,
         combat,
         recovery,
