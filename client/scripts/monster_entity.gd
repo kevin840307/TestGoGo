@@ -578,6 +578,21 @@ func sync_animation() -> void :
 			2, 3: anim_suffix = "3";should_flip = false
 			4, 5: anim_suffix = "3";should_flip = true
 			6, 7: anim_suffix = "1";should_flip = true
+	elif current_state.to_lower() == "attack":
+		# Recovered monster ATTACK_1/2/3 sprites use the opposite-facing
+		# convention from WALK_1/2/3. Treat them as the right-side attack
+		# set and mirror for the left side.
+		#
+		# Logical directions:
+		#   5 = up-right, 6 = right, 7 = down-right
+		#   3 = up-left,  2 = left,  1 = down-left
+		match dir_int:
+			4, 5: anim_suffix = "1";should_flip = false
+			6: anim_suffix = "2";should_flip = false
+			7, 8: anim_suffix = "3";should_flip = false
+			1: anim_suffix = "3";should_flip = true
+			2: anim_suffix = "2";should_flip = true
+			3: anim_suffix = "1";should_flip = true
 	else:
 		match dir_int:
 			1, 2, 3, 4, 8: anim_suffix = str(dir_int);should_flip = false
