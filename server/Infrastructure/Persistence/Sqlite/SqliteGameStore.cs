@@ -7121,10 +7121,14 @@ public sealed class SqliteGameStore : IGameStore
         long dbid,
         int hpPercent,
         int mpPercent,
-        bool clearDeathExp)
+        int deathExpReductionPercent)
     {
         hpPercent = Math.Clamp(hpPercent, 1, 100);
         mpPercent = Math.Clamp(mpPercent, 0, 100);
+        deathExpReductionPercent = Math.Clamp(
+            deathExpReductionPercent,
+            0,
+            100);
 
         using var db = Open();
         using var cmd = db.CreateCommand();
@@ -7133,17 +7137,20 @@ public sealed class SqliteGameStore : IGameStore
                SET hp=MAX(1, max_hp * $hpPct / 100),
                    mp=max_mp * $mpPct / 100,
                    state='idle',
-                   exp_death=CASE
-                       WHEN $clearDeathExp=1 THEN 0
-                       ELSE exp_death
-                   END
+                   exp_death=MAX(
+                       0,
+                       exp_death -
+                       (exp_death * $deathExpReductionPct / 100))
              WHERE id=$id
                AND account_id=$a
                AND hp <= 0
             """;
         Arg(cmd, "$hpPct", hpPercent);
         Arg(cmd, "$mpPct", mpPercent);
-        Arg(cmd, "$clearDeathExp", clearDeathExp ? 1 : 0);
+        Arg(
+            cmd,
+            "$deathExpReductionPct",
+            deathExpReductionPercent);
         Arg(cmd, "$id", dbid);
         Arg(cmd, "$a", accountId);
 
