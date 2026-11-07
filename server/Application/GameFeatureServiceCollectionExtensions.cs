@@ -6,6 +6,7 @@ using SGO.Server.Application.Crafting;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
 using SGO.Server.Application.Messaging;
+using SGO.Server.Application.Mall;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Party;
 using SGO.Server.Application.Rank;
@@ -27,6 +28,7 @@ public static class GameFeatureServiceCollectionExtensions
         services.AddSingleton<ClubService>();
         services.AddSingleton<ResourceRecoveryService>();
         services.AddSingleton<ServerBroadcastHub>();
+        services.AddSingleton<MallService>();
         services.AddSingleton<PartyService>();
         services.AddSingleton<RankService>();
         services.AddSingleton<TradeService>();
