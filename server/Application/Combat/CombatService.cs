@@ -1327,6 +1327,8 @@ public sealed class CombatService
         Dictionary<string, object>? reviveTargetCharacter = null;
         OnlinePlayerPresence? healTargetPresence = null;
         Dictionary<string, object>? healTargetCharacter = null;
+        OnlinePlayerPresence? groupHealCenterPresence = null;
+        Dictionary<string, object>? groupHealCenterCharacter = null;
         OnlinePlayerPresence? scoutTargetPresence = null;
         Dictionary<string, object>? scoutTargetCharacter = null;
         double centerX = targetX;
@@ -1463,7 +1465,56 @@ public sealed class CombatService
             centerY = Convert.ToDouble(
                 healTargetCharacter["LocY"]);
         }
-        else if (isGroupHeal || isTaunt)
+        else if (isGroupHeal)
+        {
+            if (targetType != 0)
+                return [Flash("群體治療目標類型無效")];
+
+            var partyMembers = _party.GetMembers(
+                session.CharacterId.Value);
+
+            if (targetEntityId <= 0 ||
+                targetEntityId == session.CharacterId.Value)
+            {
+                targetEntityId =
+                    checked((int)session.CharacterId.Value);
+                groupHealCenterCharacter = character;
+            }
+            else
+            {
+                if (!partyMembers.Any(x =>
+                        x.CharacterId == targetEntityId))
+                {
+                    return [Flash("群體治療只能指定隊伍成員")];
+                }
+
+                groupHealCenterPresence =
+                    _broadcasts.FindCharacter(targetEntityId);
+
+                if (groupHealCenterPresence is null ||
+                    groupHealCenterPresence.MapId != session.CurrentMapId)
+                {
+                    return [Flash("群體治療中心不在目前地圖")];
+                }
+
+                groupHealCenterCharacter = _store.GetCharacter(
+                    groupHealCenterPresence.AccountId,
+                    groupHealCenterPresence.CharacterId);
+
+                if (groupHealCenterCharacter is null ||
+                    Convert.ToInt32(
+                        groupHealCenterCharacter["HP"]) <= 0)
+                {
+                    return [Flash("群體治療中心目前無法接受治療")];
+                }
+            }
+
+            centerX = Convert.ToDouble(
+                groupHealCenterCharacter!["LocX"]);
+            centerY = Convert.ToDouble(
+                groupHealCenterCharacter["LocY"]);
+        }
+        else if (isTaunt)
         {
             targetEntityId =
                 checked((int)session.CharacterId.Value);
@@ -2209,6 +2260,26 @@ public sealed class CombatService
                     Convert.ToInt32(before["HP"]) <= 0)
                     continue;
 
+                var healRadius = skillId is 28104 or 28107
+                    ? 400.0
+                    : Math.Max(
+                        0.0,
+                        levelData.AoeRadius);
+
+                if (healRadius > 0)
+                {
+                    var dx =
+                        Convert.ToDouble(before["LocX"]) -
+                        centerX;
+                    var dy =
+                        Convert.ToDouble(before["LocY"]) -
+                        centerY;
+
+                    if (dx * dx + dy * dy >
+                        healRadius * healRadius)
+                        continue;
+                }
+
                 var healed = ApplyRecoverySkill(
                     member.AccountId,
                     member.CharacterId,
@@ -2285,7 +2356,7 @@ public sealed class CombatService
                 CasterType = 0,
                 SkillID = skillId,
                 SkillLevel = skillLevel,
-                TargetID = session.CharacterId.Value,
+                TargetID = targetEntityId,
                 TargetX = Convert.ToInt32(centerX),
                 TargetY = Convert.ToInt32(centerY),
                 AoeTargets = affected.ToArray()
