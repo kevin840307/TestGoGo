@@ -17,6 +17,14 @@ RULE = re.compile(r'\["([A-Za-z][A-Za-z0-9_]*)"\]\s*=\s*\[([^\]]*)\]', re.S)
 FIELD = re.compile(r'new\("([A-Za-z][A-Za-z0-9_]*)",\s*FieldType\.(\w+)\)')
 TYPE = re.compile(r"""['"]Type['"]\s*:\s*['"]([A-Za-z][A-Za-z0-9_]*)['"]""")
 KEY = re.compile(r"""['"]([A-Za-z][A-Za-z0-9_]*)['"]\s*:""")
+ACTION_RULE = re.compile(
+    r'\["([A-Za-z][A-Za-z0-9_]*:[A-Za-z][A-Za-z0-9_]*)"\]\s*=\s*\[([^\]]*)\]',
+    re.S
+)
+ACTION_CALL = re.compile(
+    r"""send_(trade|shop)_action\s*\(\s*['"]([A-Za-z][A-Za-z0-9_]*)['"]\s*,\s*(\{[^{}]*\})""",
+    re.S
+)
 
 
 def dictionary_literals(source: str):
@@ -64,11 +72,30 @@ def scan(root: Path) -> dict:
     if not rules:
         raise ValueError("No field rules were found in PacketSchemaValidator")
 
+    action_rules = {
+        name: {field: kind for field, kind in FIELD.findall(body)}
+        for name, body in ACTION_RULE.findall(validator.read_text(encoding="utf-8-sig"))
+    }
+
     samples: dict[str, list[dict]] = {}
+    action_samples: dict[str, list[dict]] = {}
     for path in sorted(client.rglob("*.gd")):
         source = path.read_text(encoding="utf-8-sig")
-        if "send_secure_packet" not in source:
+        if not any(name in source for name in (
+            "send_secure_packet", "send_trade_action", "send_shop_action"
+        )):
             continue
+        for kind, name, payload in ACTION_CALL.findall(source):
+            entry = {
+                "path": path.relative_to(root).as_posix(),
+                "fields": set(KEY.findall(payload))
+            }
+            if kind == "trade":
+                # The trade helper sends Action as the packet Type.
+                samples.setdefault(name, []).append(entry)
+            elif kind == "shop":
+                action_samples.setdefault("ShopAction:" + name, []).append(entry)
+
         for literal in dictionary_literals(source):
             packet_types = TYPE.findall(literal)
             if len(packet_types) != 1:
@@ -82,29 +109,39 @@ def scan(root: Path) -> dict:
                 "fields": fields
             })
 
-    checks = []
-    for name, requirements in sorted(rules.items()):
-        instances = samples.get(name, [])
-        matched = next(
-            (s for s in instances if requirements.keys() <= s["fields"]),
-            None
-        )
-        observed = set().union(*(s["fields"] for s in instances))
-        checks.append({
-            "type": name,
-            "required_fields": requirements,
-            "status": "MATCHED" if matched else
-                      "NOT_FOUND" if not instances else "FIELD_MISMATCH",
-            "example": matched["path"] if matched else None,
-            "missing_fields": sorted(requirements.keys() - observed),
-            "samples_found": len(instances)
-        })
+    def compare_rules(requirements_by_type, source_samples):
+        checks = []
+        for name, requirements in sorted(requirements_by_type.items()):
+            instances = source_samples.get(name, [])
+            matched = next(
+                (entry for entry in instances
+                 if requirements.keys() <= entry["fields"]), None
+            )
+            observed = set().union(*(entry["fields"] for entry in instances))
+            checks.append({
+                "type": name,
+                "required_fields": requirements,
+                "status": "MATCHED" if matched else
+                          "NOT_FOUND" if not instances else "FIELD_MISMATCH",
+                "example": matched["path"] if matched else None,
+                "missing_fields": sorted(requirements.keys() - observed),
+                "samples_found": len(instances)
+            })
+        return checks
+
+    checks = compare_rules(rules, samples)
+    action_checks = compare_rules(action_rules, action_samples)
 
     return {
         "checks": checks,
+        "action_checks": action_checks,
         "schema_type_count": len(rules),
         "matched_count": sum(x["status"] == "MATCHED" for x in checks),
-        "issues": [x for x in checks if x["status"] != "MATCHED"],
+        "action_schema_count": len(action_rules),
+        "action_matched_count": sum(x["status"] == "MATCHED" for x in action_checks),
+        "issues": [
+            x for x in [*checks, *action_checks] if x["status"] != "MATCHED"
+        ],
         "limits": [
             "Static dictionary keys are checked; dynamic merged fields may need manual review.",
             "Values and response fields need runtime tests; this is not an E2E certificate."
@@ -127,6 +164,8 @@ def main() -> int:
         )
     print("Wire schema coverage: {}/{} request types".format(
         result["matched_count"], result["schema_type_count"]))
+    print("Action schema coverage: {}/{} variants".format(
+        result["action_matched_count"], result["action_schema_count"]))
     for issue in result["issues"]:
         print("{}: {} missing={}".format(
             issue["status"], issue["type"], issue["missing_fields"]))
