@@ -6,6 +6,7 @@ using SGO.Server.Application.Packets;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
+using SGO.Server.Application.Items;
 using SGO.Server.Application.Shops;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
@@ -94,6 +95,12 @@ var currentCatalog = new CurrentClientDataCatalog(
             "recovery",
             price: 20,
             recoverHp: 140),
+
+        CurrentItem(
+            2126,
+            "幸福娃娃",
+            "general",
+            price: 1),
 
         // Legacy Shop2 item 31078 is 淺藍色初心褲子.
         // Current client moved it to 18538.
@@ -429,6 +436,7 @@ try
         new BankPacketHandler(new BankService(store))
     };
     var recovery = new ResourceRecoveryService(store, config);
+    var dolls = new DollService(store, currentCatalog);
     var router = new PacketRouter(
         store,
         world,
@@ -438,6 +446,7 @@ try
         shops,
         packetHandlers,
         gm,
+        dolls,
         batteryCatalog,
         recoveryCatalog,
         horseCardCatalog,
@@ -521,6 +530,8 @@ try
         account.Value, id, 1001, 1);
     var horseCardUid = store.AddInventoryItem(
         account.Value, id, 50001, 1);
+    var happinessDollUid = store.AddInventoryItem(
+        account.Value, id, 2126, 3);
 
     Check(itemUid > 0 &&
           equipUid > 0 &&
@@ -532,8 +543,9 @@ try
           beastCardUid3 > 0 &&
           batteryUid > 0 &&
           recoveryUid > 0 &&
-          horseCardUid > 0,
-        "seed persistent inventory equipment pet and mecha assets");
+          horseCardUid > 0 &&
+          happinessDollUid > 0,
+        "seed persistent inventory equipment pet mecha and doll assets");
 
     var seededAssets = store.GetCharacterAssets(account.Value, id);
     Check(seededAssets.Inventory.Count >= 4 &&
@@ -596,6 +608,40 @@ try
             "first select response enters world");
         Check(first.RootElement.Int("MapID") == 15,
             "enter world includes Map15");
+    }
+
+    var beforeDollAssets = store.GetCharacterAssets(account.Value, id);
+    var beforeDollRewardCount = beforeDollAssets.Inventory
+        .Where(x =>
+            Convert.ToInt32(x["ItemIndex"]) is 1001 or 50102)
+        .Sum(x => Convert.ToInt32(x["Count"]));
+
+    using (var openDoll = Json(JsonSerializer.Serialize(new
+    {
+        Type = "UseItemRequest",
+        ItemUID = happinessDollUid
+    })))
+    {
+        var responses = router.Handle(openDoll.RootElement, session);
+        var after = store.GetCharacterAssets(account.Value, id);
+
+        var doll = after.Inventory.FirstOrDefault(x =>
+            Convert.ToInt64(x["ItemUID"]) == happinessDollUid);
+        var afterRewardCount = after.Inventory
+            .Where(x =>
+                Convert.ToInt32(x["ItemIndex"]) is 1001 or 50102)
+            .Sum(x => Convert.ToInt32(x["Count"]));
+
+        Check(doll is not null &&
+              Convert.ToInt32(doll["Count"]) == 2 &&
+              afterRewardCount == beforeDollRewardCount + 1 &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"Type\":\"InventorySync\"")) &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "幸福娃娃送給你")),
+            "UseItemRequest opens Happiness Doll, consumes one and grants one reward");
     }
 
     // BankTransfer: general items support partial stack deposit/withdraw.
