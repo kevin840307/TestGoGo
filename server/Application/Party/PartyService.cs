@@ -302,11 +302,13 @@ public sealed class PartyService
 
             if (!_parties.TryGetValue(
                     invite.PartyId,
-                    out party!))
+                    out var foundParty))
             {
                 _invites.Remove(selfDbid);
                 return [Flash("隊伍已不存在")];
             }
+
+            party = foundParty;
 
             if (party.Members.Count >= MaxMembers)
             {
