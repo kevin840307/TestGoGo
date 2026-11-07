@@ -151,6 +151,15 @@ public sealed record TimedEffectActivationResult(
     int EffectValue,
     long ExpiresUtcMs);
 
+public sealed record ActiveTimedEffect(
+    string EffectKey,
+    int EffectValue,
+    long ExpiresUtcMs,
+    int SourceType,
+    int SourceValue,
+    long StartedUtcMs,
+    int DurationSeconds);
+
 public interface ITimedEffectStore
 {
     TimedEffectActivationResult ActivateTimedEffectFromItem(
@@ -161,12 +170,19 @@ public interface ITimedEffectStore
         string effectKey,
         int effectValue,
         int durationSeconds,
-        long nowUtcMs);
+        long nowUtcMs,
+        int sourceType = 0,
+        int sourceValue = 0);
 
     int GetTimedEffectValue(
         long accountId,
         long dbid,
         string effectKey,
+        long nowUtcMs);
+
+    IReadOnlyList<ActiveTimedEffect> GetActiveTimedEffects(
+        long accountId,
+        long dbid,
         long nowUtcMs);
 }
 
