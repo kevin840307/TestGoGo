@@ -274,6 +274,7 @@ try
         skillCatalog,
         horseCardCatalog,
         currentCatalog,
+        combat,
         config);
     var router = new PacketRouter(
         store,
@@ -1060,6 +1061,33 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"PlayerStatusSync\"")),
             "GM level command refreshes player status");
+    }
+
+    session.CurrentMapId = 16;
+    session.LastX = 10000;
+    session.LastY = 10000;
+
+    var spawnableEnemy = world.GetEnemies(16)
+        .FirstOrDefault(x => x.Level < 65535);
+
+    if (spawnableEnemy is not null)
+    {
+        using var gmSpawn = Json(JsonSerializer.Serialize(new
+        {
+            Type = "ChatMessage",
+            Channel = 0,
+            Message = $"/gm spawn {spawnableEnemy.EnemyId} 10120 10000",
+            BubbleType = 0
+        }));
+
+        var beforeSpawnCount = session.Monsters.Count;
+        var responses = router.Handle(gmSpawn.RootElement, session);
+
+        Check(session.Monsters.Count == beforeSpawnCount + 1 &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"Type\":\"SpawnEntity\"")),
+            "GM spawn command creates a real map monster runtime entity");
     }
 
     using (var gmSkill = Json(
