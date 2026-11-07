@@ -2330,6 +2330,16 @@ try
 
     router.SyncPresence(peerSession);
 
+    Check(
+        broadcastRegistration.Queue.TryDequeue(
+            out var peerPlayerSpawn) &&
+        JsonSerializer.Serialize(peerPlayerSpawn).Contains(
+            "\"EntityType\":0") &&
+        JsonSerializer.Serialize(peerPlayerSpawn).Contains(
+            $"\"EntityID\":{secondCharacterId}") &&
+        peerRegistration.Queue.IsEmpty,
+        "joining player broadcasts SpawnEntity to existing map peers only");
+
     store.SetSkill(
         account.Value,
         id,
@@ -2400,15 +2410,8 @@ try
                 "\"Type\":\"EntityHeal\"")),
         "accepted revive invitation restores target and emits EntityHeal");
 
-    Check(
-        broadcastRegistration.Queue.TryDequeue(
-            out var peerPlayerSpawn) &&
-        JsonSerializer.Serialize(peerPlayerSpawn).Contains(
-            "\"EntityType\":0") &&
-        JsonSerializer.Serialize(peerPlayerSpawn).Contains(
-            $"\"EntityID\":{secondCharacterId}") &&
-        peerRegistration.Queue.IsEmpty,
-        "joining player broadcasts SpawnEntity to existing map peers only");
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
 
     var peerWorldPackets = router.Tick(
         peerSession,
