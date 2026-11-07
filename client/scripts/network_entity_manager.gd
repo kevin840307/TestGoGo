@@ -21,6 +21,7 @@ const SPAWN_FRAME_BUDGET_USEC: int = 3500
 var _spawn_queue: Array[Dictionary] = []
 var _queued_spawn_ids: Dictionary = {}
 var _last_spawn_enqueue_usec: int = 0
+var _runtime_monster_ids: Dictionary = {}
 
 func get_active_entity(entity_id: int) -> Node2D:
 	var entity = active_entities.get(entity_id)
@@ -46,6 +47,7 @@ func clear_map_entities() -> Dictionary:
 	_last_skill_casts.clear()
 	_spawn_queue.clear()
 	_queued_spawn_ids.clear()
+	_runtime_monster_ids.clear()
 	return {"total": cleared_total, "by_type": cleared_by_type}
 
 func _ready() -> void :
@@ -89,32 +91,49 @@ func is_initial_spawn_queue_idle(quiet_usec: int = 300000) -> bool:
 		return true
 	return Time.get_ticks_usec() - _last_spawn_enqueue_usec >= quiet_usec
 
-func _process(_delta: float) -> void :
-	if _spawn_queue.is_empty():
-		return
+func _process(delta: float) -> void :
 	if not is_instance_valid(GameManager.current_map_node) or GameManager.current_map_node.is_queued_for_deletion():
 		_spawn_queue.clear()
 		_queued_spawn_ids.clear()
+		_runtime_monster_ids.clear()
 		return
 
-	var frame_started_usec := Time.get_ticks_usec()
-	var spawned_count := 0
-	while not _spawn_queue.is_empty() and spawned_count < SPAWN_BATCH_PER_FRAME:
-		if spawned_count > 0 and Time.get_ticks_usec() - frame_started_usec >= SPAWN_FRAME_BUDGET_USEC:
-			break
-		var data: Dictionary = _spawn_queue.pop_front()
-		var entity_id := int(data.get("EntityID", 0))
-		_queued_spawn_ids.erase(entity_id)
-		_spawn_entity_now(data)
-		spawned_count += 1
+	if not _spawn_queue.is_empty():
+		var frame_started_usec := Time.get_ticks_usec()
+		var spawned_count := 0
+		while not _spawn_queue.is_empty() and spawned_count < SPAWN_BATCH_PER_FRAME:
+			if spawned_count > 0 and Time.get_ticks_usec() - frame_started_usec >= SPAWN_FRAME_BUDGET_USEC:
+				break
+			var data: Dictionary = _spawn_queue.pop_front()
+			var entity_id := int(data.get("EntityID", 0))
+			_queued_spawn_ids.erase(entity_id)
+			_spawn_entity_now(data)
+			spawned_count += 1
 
-	var elapsed_usec := Time.get_ticks_usec() - frame_started_usec
-	if elapsed_usec >= 10000:
-		print("[ENTITY_SPAWN_TIMING] count=%d elapsed_ms=%.2f remaining=%d" % [
-			spawned_count,
-			float(elapsed_usec) / 1000.0,
-			_spawn_queue.size()
-		])
+		var elapsed_usec := Time.get_ticks_usec() - frame_started_usec
+		if elapsed_usec >= 10000:
+			print("[ENTITY_SPAWN_TIMING] count=%d elapsed_ms=%.2f remaining=%d" % [
+				spawned_count,
+				float(elapsed_usec) / 1000.0,
+				_spawn_queue.size()
+			])
+
+	if _runtime_monster_ids.is_empty():
+		return
+
+	var finished_ids: Array[int] = []
+	for runtime_id in _runtime_monster_ids.keys():
+		var entity_id := int(runtime_id)
+		var monster := get_active_entity(entity_id)
+		if not is_instance_valid(monster) or not monster.has_method("advance_network_runtime"):
+			finished_ids.append(entity_id)
+			continue
+		var keep_active: bool = bool(monster.advance_network_runtime(delta))
+		if not keep_active:
+			finished_ids.append(entity_id)
+
+	for entity_id in finished_ids:
+		_runtime_monster_ids.erase(entity_id)
 
 func _spawn_entity_now(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
@@ -239,6 +258,7 @@ func _on_entity_despawned(data: Dictionary) -> void :
 	_active_entity_types.erase(entity_id)
 	if _last_skill_casts.has(entity_id):
 		_last_skill_casts.erase(entity_id)
+	_runtime_monster_ids.erase(entity_id)
 
 func _on_entity_moved(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
@@ -265,6 +285,8 @@ func _on_entity_moved(data: Dictionary) -> void :
 
 		if target_node.has_method("network_move_to"):
 			target_node.network_move_to(target_pos, speed_time)
+			if int(_active_entity_types.get(entity_id, -1)) == 1 and speed_time > 0.01:
+				_runtime_monster_ids[entity_id] = true
 
 func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String) -> void :
 	var target_node = get_active_entity(entity_id)
@@ -288,6 +310,11 @@ func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String
 			target_node.sync_animation()
 		if target_node.has_method("refresh_network_physics"):
 			target_node.refresh_network_physics()
+		if int(_active_entity_types.get(entity_id, -1)) == 1:
+			if new_state in ["walk", "attack", "hit"]:
+				_runtime_monster_ids[entity_id] = true
+			elif new_state in ["idle", "death", "die"]:
+				_runtime_monster_ids.erase(entity_id)
 
 func _on_pet_idle_speech_received(entity_id: int, message: String) -> void :
 	var target_node = get_active_entity(entity_id)
