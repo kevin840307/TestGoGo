@@ -262,6 +262,16 @@ public sealed class ShopService
 
             case 3:
             {
+                // The recovered Godot NPC shop collapses all mecha assets
+                // into TabType.MECHA (3), and its sell list currently shows
+                // unequipped horse equipment. Prefer that collection first.
+                var equip = assets.HorseEquips.FirstOrDefault(
+                    x => Convert.ToInt64(x["EquipUID"]) == uid);
+                if (equip is not null)
+                    return Convert.ToInt32(equip["EquipIdx"]);
+
+                // Keep compatibility with any caller that sends a horse body
+                // through the same aggregate MECHA tab.
                 var horse = assets.Horses.FirstOrDefault(
                     x => Convert.ToInt64(x["HorseUID"]) == uid);
                 return horse is null
@@ -271,6 +281,8 @@ public sealed class ShopService
 
             case 4:
             {
+                // Legacy/internal callers may still use the old dedicated
+                // horse-equipment tab value.
                 var item = assets.HorseEquips.FirstOrDefault(
                     x => Convert.ToInt64(x["EquipUID"]) == uid);
                 return item is null
