@@ -12,6 +12,13 @@ public sealed record EnemyDropDefinition(
     double Chance,
     bool ChecksLuck);
 
+public sealed record LegacyItemMapping(
+    int LegacyItemId,
+    int ItemId,
+    string Name,
+    int TabType,
+    string Category);
+
 public sealed class EnemyDropCatalog
 {
     private const int FirstDropColumn = 74;
@@ -45,6 +52,19 @@ public sealed class EnemyDropCatalog
         => _drops.TryGetValue(enemyId, out var drops)
             ? drops
             : Array.Empty<EnemyDropDefinition>();
+
+    public LegacyItemMapping? ResolveItem(int legacyItemId)
+    {
+        var current = ResolveCurrentItem(legacyItemId);
+        return current is null
+            ? null
+            : new LegacyItemMapping(
+                legacyItemId,
+                current.ItemId,
+                current.Name,
+                CurrentTabType(current.Category),
+                current.Category);
+    }
 
     public int LuckRollCount(int lucky)
     {
