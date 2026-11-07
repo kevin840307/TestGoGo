@@ -102,6 +102,32 @@ public sealed class QuestRuntime
 
         script.Globals["GetChoice"] = (Func<int>)(() => choiceIndex ?? 0);
         script.Globals["GetData"] = (Func<string, object?>)(name => getData(name));
+        script.Globals["random"] = DynValue.NewCallback((ctx, args) =>
+        {
+            if (args.Count < 1)
+                return DynValue.NewNumber(0);
+
+            var first = (int)args[0].Number;
+
+            if (args.Count == 1)
+            {
+                if (first <= 0)
+                    return DynValue.NewNumber(0);
+
+                return DynValue.NewNumber(
+                    Random.Shared.Next(1, first + 1));
+            }
+
+            var second = (int)args[1].Number;
+            var min = Math.Min(first, second);
+            var max = Math.Max(first, second);
+
+            if (min == max)
+                return DynValue.NewNumber(min);
+
+            return DynValue.NewNumber(
+                Random.Shared.Next(min, max + 1));
+        });
 
         // Common quest APIs. Flags and item mutations are bound by the
         // application layer so legacy Lua can keep its original API surface.
