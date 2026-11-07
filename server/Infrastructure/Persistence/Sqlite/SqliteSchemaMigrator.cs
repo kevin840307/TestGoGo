@@ -26,6 +26,10 @@ internal static class SqliteSchemaMigrator
         ExecuteSqlFile(
             db,
             ResolveSqlPath("005_rank.sql"));
+
+        ExecuteSqlFile(
+            db,
+            ResolveSqlPath("006_club.sql"));
     }
 
     private static void ExecuteSqlFile(
