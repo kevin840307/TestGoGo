@@ -119,7 +119,7 @@ public static class PacketSchemaValidator
             ["UnequipRequest"] = [new("TargetSlot", FieldType.Integer)],
             ["TrainTravelReady"] = [new("TravelID", FieldType.NonEmptyText)],
             ["AllocateStatRequest"] = [new("StatType", FieldType.NonEmptyText)],
-            ["DriveMechaRequest"] = [new("HorseUID", FieldType.Integer)],
+            ["DriveMechaRequest"] = [new("HorseUID", FieldType.LongInteger)],
             ["SetTitleRequest"] = [new("TitleID", FieldType.Integer)],
             ["DirectTransfer"] =
             [
@@ -133,7 +133,7 @@ public static class PacketSchemaValidator
             ],
             ["MegaphoneMessage"] =
             [
-                new("ItemUID", FieldType.Integer),
+                new("ItemUID", FieldType.LongInteger),
                 new("Message", FieldType.NonEmptyText)
             ],
             ["CraftItemRequest"] =
@@ -155,7 +155,30 @@ public static class PacketSchemaValidator
             ["ChatMessage"] = [new("Message", FieldType.Text)],
             ["ClubAction"] = [new("Action", FieldType.NonEmptyText)],
             ["NpcOptionRequest"] = [new("EntityID", FieldType.Integer)],
-            ["AbandonQuest"] = [new("QuestID", FieldType.Integer)]
+            ["AbandonQuest"] = [new("QuestID", FieldType.Integer)],
+            ["HorseEquipRequest"] =
+            [
+                new("EquipUID", FieldType.LongInteger),
+                new("HorseUID", FieldType.LongInteger)
+            ],
+            ["HorseUnequipRequest"] =
+            [
+                new("EquipUID", FieldType.LongInteger),
+                new("HorseUID", FieldType.LongInteger)
+            ],
+            ["HorseChargeRequest"] =
+            [
+                new("HorseUID", FieldType.LongInteger),
+                new("ItemUID", FieldType.LongInteger)
+            ],
+            ["DropItemRequest"] =
+            [
+                new("TabType", FieldType.Integer),
+                new("ItemUID", FieldType.LongInteger),
+                new("Count", FieldType.Integer, false),
+                new("DropX", FieldType.Integer, false),
+                new("DropY", FieldType.Integer, false)
+            ]
         };
 
     // Action-dependent fields are not mandatory for every ShopAction.
