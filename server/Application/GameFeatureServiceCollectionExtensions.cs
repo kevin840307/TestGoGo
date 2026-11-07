@@ -6,6 +6,7 @@ using SGO.Server.Application.Items;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Shops;
+using SGO.Server.Application.World;
 
 namespace SGO.Server.Application;
 
@@ -15,6 +16,7 @@ public static class GameFeatureServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.AddSingleton<WorldRuntimeService>();
         services.AddSingleton<CombatService>();
         services.AddSingleton<ResourceRecoveryService>();
         services.AddSingleton<ServerBroadcastHub>();
