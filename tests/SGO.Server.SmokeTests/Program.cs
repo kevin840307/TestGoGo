@@ -231,6 +231,7 @@ var currentCatalog = new CurrentClientDataCatalog(
     {
         new CurrentSkillDefinition(20101, "Current Skill 20101"),
         new CurrentSkillDefinition(20102, "Current Skill 20102"),
+        new CurrentSkillDefinition(77701, "烈火爆劍"),
         new CurrentSkillDefinition(27104, "生命之源"),
         new CurrentSkillDefinition(28102, "心靈轉換"),
         new CurrentSkillDefinition(28107, "治療風暴"),
@@ -385,7 +386,10 @@ var legacyClientCatalog = new LegacyClientDataCatalog(
     {
         ("weapon", 31262, "戰鬥蝕日斧")
     },
-    Array.Empty<(int Id, string Name)>());
+    new (int Id, string Name)[]
+    {
+        (1103, "烈火爆劍")
+    });
 
 var shopCatalog = new ShopCatalog(
     gameDataRoot,
@@ -401,7 +405,9 @@ var skillCatalog = new SkillCatalog(currentCatalog);
 var quests = new QuestRuntime(
     questRoot,
     shopCatalog,
-    enemyDrops);
+    enemyDrops,
+    legacyClientCatalog,
+    currentCatalog);
 var map15Npcs = world.GetNpcs(15);
 
 Check(map15Npcs.Count == 52, "Map15 NPC.dat contains 52 NPC records");
@@ -590,6 +596,15 @@ try
             end
             AddTitle(21)
         end
+
+        function career_skill()
+            SetCareer(2, 1)
+            if HasSkill(1103) == 0 then
+                AddSkill(1103)
+            end
+            learned = HasSkill(1103)
+            item_count = GetCountItemCount(31262)
+        end
         """);
 
     var runtimeFlag = 0;
@@ -602,7 +617,9 @@ try
     var questApiRuntime = new QuestRuntime(
         questApiRoot,
         shopCatalog,
-        enemyDrops);
+        enemyDrops,
+        legacyClientCatalog,
+        currentCatalog);
 
     questApiRuntime.Execute(
         "QuestApi.txt",
@@ -708,6 +725,51 @@ try
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"UnlockTitle\"")) == 1,
         "legacy AddTitle unlocks once and suppresses duplicate unlock packets");
+
+    var runtimeCareer = 0;
+    var runtimeJob = 0;
+    var runtimeLearnedSkill = 0;
+    var runtimeSkillSet = new HashSet<int>();
+
+    var careerSkillResult = questApiRuntime.Execute(
+        "QuestApi.txt",
+        "career_skill",
+        999,
+        "Quest Career Skill API Test",
+        null,
+        _ => 0,
+        new QuestRuntimeBindings
+        {
+            SetCareer = (career, job) =>
+            {
+                runtimeCareer = career;
+                runtimeJob = job;
+                return true;
+            },
+            HasSkill = currentSkillId =>
+                runtimeSkillSet.Contains(currentSkillId),
+            AddSkill = currentSkillId =>
+            {
+                runtimeLearnedSkill = currentSkillId;
+                runtimeSkillSet.Add(currentSkillId);
+                return true;
+            },
+            GetItemCount = (itemId, tabType) =>
+                itemId == 49962 && tabType == 1
+                    ? 3
+                    : 0
+        });
+
+    Check(runtimeCareer == 2 &&
+          runtimeJob == 1 &&
+          runtimeLearnedSkill == 77701 &&
+          runtimeSkillSet.Contains(77701),
+        "legacy SetCareer/AddSkill maps old skill 1103 by name to current skill 77701");
+
+    Check(!careerSkillResult.Packets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "NPC 腳本執行失敗")),
+        "legacy HasSkill and GetCountItemCount APIs execute with safe current mappings");
 }
 finally
 {
