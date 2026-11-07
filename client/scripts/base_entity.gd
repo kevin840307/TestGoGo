@@ -1680,17 +1680,35 @@ func execute_skill_visuals(skill_id: int, skill_level: int, target_node: Node2D 
 
 
 func play_screen_aoe_visual(radius: float = 900.0) -> void :
-	# Dedicated lightweight visual for skill 99001. Do not fan out legacy
-	# hit/extra effects to every monster; render only a few expanding rings
-	# around the caster so large AOE casts stay cheap and stable.
+	# Dedicated lightweight visual for skill 99001.
 	if not is_inside_tree():
 		return
 
 	var visual_radius: float = clamp(radius, 240.0, 900.0)
+
+	var flash := Polygon2D.new()
+	flash.name = "ScreenAoeFlash"
+	flash.z_index = 88
+	var flash_points := PackedVector2Array()
+	var flash_segments := 48
+	for i in range(flash_segments):
+		var angle := TAU * float(i) / float(flash_segments)
+		flash_points.append(Vector2(cos(angle), sin(angle)) * 70.0)
+	flash.polygon = flash_points
+	flash.color = Color(0.65, 0.88, 1.0, 0.28)
+	add_child(flash)
+	flash.scale = Vector2(0.6, 0.6)
+
+	var flash_tween := create_tween()
+	flash_tween.tween_property(flash, "scale", Vector2(3.2, 3.2), 0.18)
+	flash_tween.parallel().tween_property(flash, "modulate:a", 0.0, 0.22)
+	flash_tween.tween_callback(flash.queue_free)
+
 	var ring_specs = [
-		{"delay": 0.0, "width": 6.0, "alpha": 0.90},
-		{"delay": 0.08, "width": 4.0, "alpha": 0.65},
-		{"delay": 0.16, "width": 3.0, "alpha": 0.45}
+		{"delay": 0.00, "width": 8.0, "alpha": 1.00, "spin": 0.45},
+		{"delay": 0.06, "width": 5.0, "alpha": 0.75, "spin": -0.35},
+		{"delay": 0.12, "width": 4.0, "alpha": 0.55, "spin": 0.25},
+		{"delay": 0.18, "width": 3.0, "alpha": 0.38, "spin": -0.20}
 	]
 
 	for spec in ring_specs:
@@ -1698,33 +1716,64 @@ func play_screen_aoe_visual(radius: float = 900.0) -> void :
 		ring.name = "ScreenAoeRing"
 		ring.z_index = 90
 		ring.width = float(spec["width"])
-		ring.default_color = Color(0.55, 0.82, 1.0, float(spec["alpha"]))
+		ring.default_color = Color(0.48, 0.83, 1.0, float(spec["alpha"]))
 		ring.closed = true
 		ring.antialiased = true
 
-		var segments := 64
+		var segments := 72
 		for i in range(segments):
 			var angle := TAU * float(i) / float(segments)
-			ring.add_point(Vector2(cos(angle), sin(angle)) * 48.0)
+			var wobble := 1.0 + 0.035 * sin(angle * 8.0)
+			ring.add_point(Vector2(cos(angle), sin(angle)) * 46.0 * wobble)
 
 		add_child(ring)
-		ring.scale = Vector2(0.35, 0.35)
+		ring.scale = Vector2(0.28, 0.28)
 		ring.modulate.a = 0.0
 
 		var delay := float(spec["delay"])
-		var target_scale := visual_radius / 48.0
+		var target_scale := visual_radius / 46.0
 		var tween := create_tween()
 		if delay > 0.0:
 			tween.tween_interval(delay)
-		tween.tween_property(ring, "modulate:a", 1.0, 0.04)
+		tween.tween_property(ring, "modulate:a", 1.0, 0.03)
 		tween.parallel().tween_property(
 			ring,
 			"scale",
 			Vector2(target_scale, target_scale),
-			0.42
+			0.48
 		).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tween.tween_property(ring, "modulate:a", 0.0, 0.20)
+		tween.parallel().tween_property(
+			ring,
+			"rotation",
+			float(spec["spin"]),
+			0.48
+		)
+		tween.tween_property(ring, "modulate:a", 0.0, 0.18)
 		tween.tween_callback(ring.queue_free)
+
+	# Four short energy spokes make the cast read as an actual blast rather
+	# than only concentric circles.
+	for spoke_index in range(4):
+		var spoke := Line2D.new()
+		spoke.name = "ScreenAoeSpoke"
+		spoke.z_index = 91
+		spoke.width = 4.0
+		spoke.default_color = Color(0.85, 0.95, 1.0, 0.85)
+		var angle := PI * 0.5 * float(spoke_index)
+		spoke.add_point(Vector2.ZERO)
+		spoke.add_point(Vector2(cos(angle), sin(angle)) * 110.0)
+		add_child(spoke)
+		spoke.scale = Vector2(0.35, 0.35)
+
+		var spoke_tween := create_tween()
+		spoke_tween.tween_property(
+			spoke,
+			"scale",
+			Vector2(visual_radius / 110.0, visual_radius / 110.0),
+			0.34
+		)
+		spoke_tween.parallel().tween_property(spoke, "modulate:a", 0.0, 0.34)
+		spoke_tween.tween_callback(spoke.queue_free)
 
 
 func _play_skill_hit(fx_hit: String, is_self_cast_effect: bool = false) -> void :
