@@ -681,6 +681,7 @@ public sealed class PacketRouter
                         assets);
                 character["Shortcuts"] = _store.GetShortcuts(accountId, dbid);
                 character["Quests"] = _store.GetQuests(accountId, dbid);
+                character["SkillList"] = _store.GetSkills(accountId, dbid);
                 ApplyEffectiveStats(character, assets);
 
                 return
