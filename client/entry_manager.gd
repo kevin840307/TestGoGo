@@ -186,6 +186,7 @@ func _connect_character_select_signals() -> void :
 
 func _on_global_login_finished(success: bool, _msg: String) -> void :
 	if success:
+		# Independent loading session #1: account login -> character select.
 		var overlay = get_node_or_null("%LoadingOverlay")
 		if overlay: overlay.visible = true
 		_set_loading_progress(0.0)
@@ -335,6 +336,7 @@ func _on_global_password_modify_finished(success: bool, msg: String, char_slot: 
 
 
 func _on_character_verified_and_enter_game(char_data: Dictionary, _map_id: String, _spawn_position: Vector2) -> void :
+	# Independent loading session #2: character select -> world.
 	var overlay = get_node_or_null("%LoadingOverlay")
 	var select_script_node = character_select_layer.get_node_or_null("CharacterSelect")
 
@@ -374,7 +376,7 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 	if character_select_layer: character_select_layer.visible = false
 
 	var overlay = get_node_or_null("%LoadingOverlay")
-	_set_loading_progress(8.0)
+	_set_loading_progress(5.0)
 
 
 	var default_map_int = GameConstants.DEFAULT_MAP_ID.replace("map", "").to_int()
