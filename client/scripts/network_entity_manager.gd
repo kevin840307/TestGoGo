@@ -578,10 +578,11 @@ func _on_skill_cast_received(caster_id: int, caster_type: int, skill_id: int, sk
 	else:
 		caster_node = get_active_entity(caster_id)
 
-	# 99001 is an extreme screen-range stress skill. Keep its combat result
-	# authoritative on the server but skip the legacy visual pipeline entirely;
-	# some legacy effect/animation combinations can terminate Godot natively.
+	# 99001 uses a dedicated caster-only shockwave. Avoid the generic legacy
+	# visual pipeline because a 32-target AOE must not create per-target effects.
 	if skill_id == 99001:
+		if is_instance_valid(caster_node) and caster_node.has_method("play_screen_aoe_visual"):
+			caster_node.play_screen_aoe_visual(900.0)
 		return
 
 	if is_instance_valid(caster_node) and caster_node.has_method("execute_skill_visuals"):
