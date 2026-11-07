@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Domain.Sessions;
@@ -17,6 +18,7 @@ public sealed class SharedMapAiTicker : BackgroundService
     private readonly ConcurrentDictionary<Guid, ClientSession> _sessions = new();
     private readonly CombatService _combat;
     private readonly WorldRuntimeService _world;
+    private readonly ICharacterStore _characters;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly AccountSessionRegistry _accounts;
     private readonly ILogger<SharedMapAiTicker> _log;
@@ -24,12 +26,14 @@ public sealed class SharedMapAiTicker : BackgroundService
     public SharedMapAiTicker(
         CombatService combat,
         WorldRuntimeService world,
+        ICharacterStore characters,
         ServerBroadcastHub broadcasts,
         AccountSessionRegistry accounts,
         ILogger<SharedMapAiTicker> log)
     {
         _combat = combat;
         _world = world;
+        _characters = characters;
         _broadcasts = broadcasts;
         _accounts = accounts;
         _log = log;
@@ -64,6 +68,7 @@ public sealed class SharedMapAiTicker : BackgroundService
     private sealed record PlayerContext(
         ClientSession Session,
         long CharacterId,
+        bool IsAlive,
         double X,
         double Y,
         (double X, double Y)[] PetPositions);
@@ -95,9 +100,14 @@ public sealed class SharedMapAiTicker : BackgroundService
                             session.AccountId.Value, session.ConnectionId))
                         continue;
 
+                    var character = _characters.GetCharacter(
+                        session.AccountId.Value,
+                        session.CharacterId.Value);
+                    var isAlive = character is not null &&
+                        Convert.ToInt32(character["HP"]) > 0;
                     players.Add(new PlayerContext(
                         session, session.CharacterId.Value,
-                        session.LastX, session.LastY,
+                        isAlive, session.LastX, session.LastY,
                         session.PetPositions.Values.ToArray()));
                 }
             }
@@ -159,9 +169,13 @@ public sealed class SharedMapAiTicker : BackgroundService
                         var bestDistance = double.MaxValue;
                         foreach (var player in players)
                         {
+                            if (!player.IsAlive && player.PetPositions.Length == 0)
+                                continue;
                             var dx = player.X - monster.X;
                             var dy = player.Y - monster.Y;
-                            var distance = dx * dx + dy * dy;
+                            var distance = player.IsAlive
+                                ? dx * dx + dy * dy
+                                : double.MaxValue;
                             foreach (var pet in player.PetPositions)
                             {
                                 var petDx = pet.X - monster.X;
@@ -178,9 +192,11 @@ public sealed class SharedMapAiTicker : BackgroundService
                         }
                     }
 
-                    if (owner is not null)
-                        assignments[owner.Session.ConnectionId].Add(
-                            monster.EntityId);
+                    // When everyone is dead, keep one owner for idle
+                    // wandering and stale-target cleanup only.
+                    owner ??= players[0];
+                    assignments[owner.Session.ConnectionId].Add(
+                        monster.EntityId);
                 }
             }
 
