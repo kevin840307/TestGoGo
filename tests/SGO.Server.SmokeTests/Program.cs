@@ -766,6 +766,11 @@ try
             learned = HasSkill(1103)
             item_count = GetCountItemCount(31262)
         end
+
+        function legacy_random()
+            SetFlag("RANDOM_ONE", random(10))
+            SetFlag("RANDOM_RANGE", random(5, 7))
+        end
         """);
 
     var runtimeFlag = 0;
@@ -944,6 +949,31 @@ try
               JsonSerializer.Serialize(x).Contains(
                   "NPC 腳本執行失敗")),
         "legacy HasSkill and GetCountItemCount APIs execute with safe current mappings");
+
+    var randomOne = 0;
+    var randomRange = 0;
+
+    questApiRuntime.Execute(
+        "QuestApi.txt",
+        "legacy_random",
+        999,
+        "Quest Random API Test",
+        null,
+        _ => 0,
+        new QuestRuntimeBindings
+        {
+            SetFlag = (name, value) =>
+            {
+                if (name == "RANDOM_ONE")
+                    randomOne = value;
+                else if (name == "RANDOM_RANGE")
+                    randomRange = value;
+            }
+        });
+
+    Check(randomOne is >= 1 and <= 10 &&
+          randomRange is >= 5 and <= 7,
+        "legacy Lua random(max) and random(min,max) use inclusive ranges");
 }
 finally
 {
