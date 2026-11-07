@@ -2218,6 +2218,97 @@ try
             "local chat echoes as ChatBroadcast");
     }
 
+    // NPC selling must use current client item metadata even when the
+    // legacy shop catalog does not contain the player's item.
+    var sellUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        1001,
+        1);
+
+    using (var sellCurrentItem = Json(JsonSerializer.Serialize(new
+    {
+        Type = "ShopAction",
+        Action = "SellNpcItem",
+        UID = sellUid,
+        TabType = 0,
+        Count = 1
+    })))
+    {
+        var responses = router.Handle(
+            sellCurrentItem.RootElement,
+            session);
+
+        Check(
+            !responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "此物品無法出售")) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "出售成功")),
+            "NPC selling uses current client can_sell metadata instead of legacy catalog");
+    }
+
+    // Drop/pickup round-trip for an unequipped item.
+    var dropEquipUid = store.AddEquipment(
+        account.Value,
+        id,
+        18538,
+        255,
+        7,
+        2);
+
+    session.LastX = 8000;
+    session.LastY = 11200;
+    session.CurrentMapId = 15;
+
+    using (var dropItem = Json(JsonSerializer.Serialize(new
+    {
+        Type = "DropItemRequest",
+        TabType = 1,
+        ItemUID = dropEquipUid,
+        Count = 1,
+        DropX = 8020,
+        DropY = 11220
+    })))
+    {
+        var responses = router.Handle(
+            dropItem.RootElement,
+            session);
+
+        Check(
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"EntityType\":3")) &&
+            !store.GetCharacterAssets(account.Value, id).Equips.Any(x =>
+                Convert.ToInt64(x["ItemID"]) == dropEquipUid) &&
+            session.GroundItems.Count > 0,
+            "DropItemRequest removes equipment and spawns a ground item");
+    }
+
+    var droppedEntityId = session.GroundItems.Keys.Last();
+    using (var pickupItem = Json(JsonSerializer.Serialize(new
+    {
+        Type = "PickUpItemRequest",
+        EntityID = droppedEntityId
+    })))
+    {
+        var responses = router.Handle(
+            pickupItem.RootElement,
+            session);
+
+        Check(
+            !session.GroundItems.ContainsKey(droppedEntityId) &&
+            store.GetCharacterAssets(account.Value, id).Equips.Any(x =>
+                Convert.ToInt32(x["ItemIdx"]) == 18538 &&
+                Convert.ToInt32(x["Damage"]) == 7 &&
+                Convert.ToInt32(x["Color"]) == 2) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"DespawnEntity\"")),
+            "PickUpItemRequest restores dropped equipment and despawns ground item");
+    }
+
     using (var logout = Json(
         """{"Type":"LogoutRequest","IsBackToLogin":true}"""))
     {
