@@ -6,7 +6,8 @@ public sealed record ShopItemDefinition(
     int TabType,
     int Price,
     bool CanSell,
-    string Name);
+    string Name,
+    string SourceCategory = "");
 
 public sealed record ShopMutationResult(
     bool Success,
