@@ -295,6 +295,18 @@ public interface IItemDiscardStore : ICharacterAssetReader
 
 public interface IWorldGroundItemStore
 {
+    GroundItemRuntime? CreateGroundItem(
+        long ownerDbid,
+        int tabType,
+        int itemIndex,
+        int count,
+        int mapId,
+        double x,
+        double y,
+        int damage = 0,
+        int color = 0,
+        int part = 255);
+
     GroundItemRuntime? DropAssetToGround(
         long accountId,
         long dbid,
