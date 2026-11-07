@@ -5,6 +5,12 @@ const BLOCK_MASK: int = 0x07
 const SEARCH_WINDOW_CELLS: int = 50
 const HALF_SEARCH_WINDOW_CELLS: int = 25
 const MAX_GOAL_SEARCH_RADIUS: int = 16
+# Pathfinding runs on the main thread. A definitely unreachable target must
+# never spend an unbounded amount of time exhausting progressively larger
+# search windows and freeze the rendered frame.
+const PATH_QUERY_BUDGET_USEC: int = 6000
+const PATH_SLOW_LOG_USEC: int = 4000
+const PATH_BUDGET_CHECK_INTERVAL: int = 32
 const ADAPTIVE_SEARCH_SPECS: Array[Vector2i] = [
 	Vector2i(3, 50),
 	Vector2i(8, 80),
@@ -14,6 +20,8 @@ const ADAPTIVE_SEARCH_SPECS: Array[Vector2i] = [
 
 var _map_cache: Dictionary = {}
 var _query_can_cross_special_terrain: bool = false
+var _path_query_deadline_usec: int = 0
+var _path_query_expanded_cells: int = 0
 
 func find_path(
 	map_id: int,
@@ -21,6 +29,9 @@ func find_path(
 	target_world: Vector2,
 	can_cross_special_terrain: bool = false
 ) -> PackedVector2Array:
+	var query_started_usec: int = Time.get_ticks_usec()
+	_path_query_deadline_usec = query_started_usec + PATH_QUERY_BUDGET_USEC
+	_path_query_expanded_cells = 0
 	_query_can_cross_special_terrain = can_cross_special_terrain
 	var grid: Dictionary = _get_grid(map_id)
 	if grid.is_empty():
@@ -43,6 +54,7 @@ func find_path(
 
 	var cell_path: Array[Vector2i] = _find_segmented_path(grid, start_cell, goal_cell)
 	if cell_path.size() < 2:
+		_log_path_query_if_slow(query_started_usec, map_id, start_world, target_world, false)
 		return PackedVector2Array()
 
 	var result := PackedVector2Array()
@@ -52,7 +64,32 @@ func find_path(
 	if not result.is_empty() and _is_segment_walkable(grid, result[result.size() - 1], target_world):
 		result.append(target_world)
 
-	return _smooth_path(grid, start_world, result)
+	var smoothed: PackedVector2Array = _smooth_path(grid, start_world, result)
+	_log_path_query_if_slow(query_started_usec, map_id, start_world, target_world, true)
+	return smoothed
+
+
+func _log_path_query_if_slow(
+	started_usec: int,
+	map_id: int,
+	start_world: Vector2,
+	target_world: Vector2,
+	found: bool
+) -> void:
+	var elapsed_usec: int = Time.get_ticks_usec() - started_usec
+	if elapsed_usec < PATH_SLOW_LOG_USEC:
+		return
+	print("[PATHFIND_TIMING] map=%d from=(%.0f,%.0f) to=(%.0f,%.0f) found=%s elapsed_ms=%.2f expanded=%d budget_hit=%s" % [
+		map_id,
+		start_world.x,
+		start_world.y,
+		target_world.x,
+		target_world.y,
+		str(found),
+		float(elapsed_usec) / 1000.0,
+		_path_query_expanded_cells,
+		str(Time.get_ticks_usec() >= _path_query_deadline_usec)
+	])
 
 
 func is_segment_walkable(
@@ -250,6 +287,8 @@ func _find_reachable_segment_goal(
 	var best := Vector2i(-1, -1)
 	var best_goal_distance: int = 2147483647
 	for radius: int in [4, 8, 12]:
+		if Time.get_ticks_usec() >= _path_query_deadline_usec:
+			return best
 		for y: int in range(preferred.y - radius, preferred.y + radius + 1):
 			for x: int in range(preferred.x - radius, preferred.x + radius + 1):
 				if abs(x - preferred.x) != radius and abs(y - preferred.y) != radius:
@@ -275,6 +314,8 @@ func _find_path_adaptive(grid: Dictionary, start: Vector2i, goal: Vector2i) -> A
 		return [start]
 
 	for spec: Vector2i in ADAPTIVE_SEARCH_SPECS:
+		if Time.get_ticks_usec() >= _path_query_deadline_usec:
+			return []
 		var path: Array[Vector2i] = _find_path_with_limits(
 			grid,
 			start,
@@ -334,7 +375,15 @@ func _find_path_with_limits(
 		Vector3i(-1, 1, 14), Vector3i(-1, -1, 14),
 	]
 
+	var expanded_since_budget_check: int = 0
 	while not open.is_empty():
+		_path_query_expanded_cells += 1
+		expanded_since_budget_check += 1
+		if expanded_since_budget_check >= PATH_BUDGET_CHECK_INTERVAL:
+			expanded_since_budget_check = 0
+			if Time.get_ticks_usec() >= _path_query_deadline_usec:
+				return []
+
 		var best_index: int = 0
 		var best_score: int = 2147483647
 		for i: int in range(open.size()):
