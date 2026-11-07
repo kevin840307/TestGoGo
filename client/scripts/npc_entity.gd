@@ -25,6 +25,7 @@ var is_bubble_active: bool = false
 
 var npc_script_name: String = ""
 var is_portal: bool = false
+var _pending_initialize_data: Dictionary = {}
 
 func _ready() -> void :
 	chat_bubble_bg.visible = false
@@ -49,8 +50,28 @@ func _ready() -> void :
 	chat_bubble_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	chat_bubble_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 
+	if not _pending_initialize_data.is_empty():
+		var pending_data := _pending_initialize_data
+		_pending_initialize_data = {}
+		_apply_npc_data(pending_data)
+
 func initialize_npc(data: Dictionary) -> void :
+	# Entity packets can arrive while the new map exists but is not inside the
+	# SceneTree yet. In that case @onready members are still null, so defer the
+	# visual/UI part until _ready() runs.
 	entity_id = int(data.get("EntityID", 0))
+	npc_name = str(data.get("Name", "未知NPC"))
+	var extra = data.get("ExtraData", {})
+	npc_script_name = str(extra.get("Script", ""))
+	is_portal = bool(extra.get("IsPortal", npc_script_name.begins_with("Portal_")))
+
+	if not is_node_ready():
+		_pending_initialize_data = data.duplicate(true)
+		return
+
+	_apply_npc_data(data)
+
+func _apply_npc_data(data: Dictionary) -> void :
 	npc_name = str(data.get("Name", "未知NPC"))
 	name_label.text = npc_name
 
