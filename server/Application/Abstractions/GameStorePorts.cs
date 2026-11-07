@@ -108,6 +108,15 @@ public interface IInventoryStore : ICharacterAssetReader
         long dbid,
         int itemIndex,
         int count);
+    (bool Success, string Message, long RewardUid) OpenDoll(
+        long accountId,
+        long dbid,
+        long dollUid,
+        int dollItemIndex,
+        int rewardItemIndex,
+        AssetPurchaseKind rewardKind,
+        int rewardCount = 1,
+        int rewardPart = 255);
     Dictionary<string, object>? UseRecoveryItem(
         long accountId,
         long dbid,
