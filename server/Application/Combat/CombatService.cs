@@ -1,5 +1,7 @@
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
+using SGO.Server.Application.Messaging;
+using SGO.Server.Application.World;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
 using SGO.Server.Infrastructure.WorldData;
@@ -32,6 +34,8 @@ public sealed class CombatService
     private readonly LegacyPlayerGrowthCatalog _growth;
     private readonly LegacyBattleRulesCatalog _battle;
     private readonly EnemyDropCatalog _drops;
+    private readonly WorldRuntimeService _runtime;
+    private readonly ServerBroadcastHub _broadcasts;
 
     public CombatService(
         IGameStore store,
@@ -39,7 +43,9 @@ public sealed class CombatService
         CurrentClientDataCatalog current,
         LegacyPlayerGrowthCatalog growth,
         LegacyBattleRulesCatalog battle,
-        EnemyDropCatalog drops)
+        EnemyDropCatalog drops,
+        WorldRuntimeService runtime,
+        ServerBroadcastHub broadcasts)
     {
         _store = store;
         _world = world;
@@ -47,76 +53,36 @@ public sealed class CombatService
         _growth = growth;
         _battle = battle;
         _drops = drops;
+        _runtime = runtime;
+        _broadcasts = broadcasts;
     }
 
     public IReadOnlyList<object> EnterMap(
         ClientSession session,
         int mapId)
     {
-        if (session.Monsters.Count > 0 &&
-            session.LoadedMonsterMapId > 0)
-        {
-            session.MonstersByMap[session.LoadedMonsterMapId] =
-                session.Monsters.ToDictionary(
-                    x => x.Key,
-                    x => x.Value);
-        }
-
         session.Monsters.Clear();
+        session.MonstersByMap.Clear();
         session.LoadedMonsterMapId = mapId;
         session.LastMonsterAiTick = DateTimeOffset.MinValue;
 
         var packets = new List<object>();
         packets.AddRange(_world.BuildNpcSpawnPackets(mapId));
 
-        if (_world.IsCityMap(mapId))
-            return packets;
-
-        if (session.MonstersByMap.TryGetValue(
-                mapId,
-                out var preserved))
+        var runtime = _runtime.GetMap(mapId);
+        lock (runtime.SyncRoot)
         {
-            foreach (var pair in preserved)
+            foreach (var pair in runtime.Monsters)
             {
+                // Every connection points at the same MonsterRuntimeState
+                // instances. Position, HP, aggro and respawn state therefore
+                // belong to the server map rather than an individual socket.
                 session.Monsters[pair.Key] = pair.Value;
+
                 if (pair.Value.IsAlive)
                     packets.Add(BuildMonsterSpawnPacket(pair.Value));
             }
-
-            return packets;
         }
-
-        foreach (var enemy in _world.GetEnemies(mapId))
-        {
-            if (enemy.Level >= 65535)
-                continue;
-
-            var state = new MonsterRuntimeState
-            {
-                EntityId = enemy.EntityId,
-                EnemyId = enemy.EnemyId,
-                MapId = enemy.MapId,
-                Name = enemy.Name,
-                Sprite = enemy.Sprite,
-                Level = Math.Max(1, enemy.Level),
-                MaxHp = Math.Max(1, enemy.MaxHp),
-                CurrentHp = Math.Max(1, enemy.MaxHp),
-                SpawnX = enemy.X,
-                SpawnY = enemy.Y,
-                X = enemy.X,
-                Y = enemy.Y,
-                WanderCenterX = enemy.X,
-                WanderCenterY = enemy.Y
-            };
-
-            session.Monsters[state.EntityId] = state;
-            packets.Add(BuildMonsterSpawnPacket(state));
-        }
-
-        session.MonstersByMap[mapId] =
-            session.Monsters.ToDictionary(
-                x => x.Key,
-                x => x.Value);
 
         return packets;
     }
@@ -129,10 +95,14 @@ public sealed class CombatService
             _world.BuildNpcSpawnPackets(
                 session.CurrentMapId));
 
-        foreach (var monster in session.Monsters.Values)
+        var runtime = SyncSessionMonsters(session);
+        lock (runtime.SyncRoot)
         {
-            if (monster.IsAlive)
-                packets.Add(BuildMonsterSpawnPacket(monster));
+            foreach (var monster in runtime.Monsters.Values)
+            {
+                if (monster.IsAlive)
+                    packets.Add(BuildMonsterSpawnPacket(monster));
+            }
         }
 
         return packets;
@@ -142,28 +112,36 @@ public sealed class CombatService
         ClientSession session,
         DateTimeOffset now)
     {
-        if (session.Monsters.Count == 0)
+        if (session.CurrentMapId <= 0)
             return [];
 
+        var runtime = SyncSessionMonsters(session);
         var packets = new List<object>();
-        foreach (var monster in session.Monsters.Values)
-        {
-            if (monster.RespawnAt is null ||
-                monster.RespawnAt > now)
-                continue;
 
-            monster.CurrentHp = monster.MaxHp;
-            monster.RespawnAt = null;
-            monster.HasTarget = false;
-            SetAiState(monster, MonsterAiState.Idle);
-            monster.X = monster.SpawnX;
-            monster.Y = monster.SpawnY;
-            monster.WanderCenterX = monster.SpawnX;
-            monster.WanderCenterY = monster.SpawnY;
-            monster.NextWanderAt = DateTimeOffset.MinValue;
-            packets.Add(BuildMonsterSpawnPacket(monster));
+        lock (runtime.SyncRoot)
+        {
+            foreach (var monster in runtime.Monsters.Values)
+            {
+                if (monster.RespawnAt is null ||
+                    monster.RespawnAt > now)
+                    continue;
+
+                monster.CurrentHp = monster.MaxHp;
+                monster.RespawnAt = null;
+                monster.HasTarget = false;
+                monster.TargetCharacterId = 0;
+                monster.LastAiAt = DateTimeOffset.MinValue;
+                SetAiState(monster, MonsterAiState.Idle);
+                monster.X = monster.SpawnX;
+                monster.Y = monster.SpawnY;
+                monster.WanderCenterX = monster.SpawnX;
+                monster.WanderCenterY = monster.SpawnY;
+                monster.NextWanderAt = DateTimeOffset.MinValue;
+                packets.Add(BuildMonsterSpawnPacket(monster));
+            }
         }
 
+        BroadcastWorldPackets(session, packets);
         return packets;
     }
 
@@ -433,6 +411,55 @@ public sealed class CombatService
         return packets;
     }
 
+    private SharedMapRuntime SyncSessionMonsters(
+        ClientSession session)
+    {
+        var runtime = _runtime.GetMap(session.CurrentMapId);
+
+        lock (runtime.SyncRoot)
+        {
+            session.Monsters.Clear();
+            foreach (var pair in runtime.Monsters)
+                session.Monsters[pair.Key] = pair.Value;
+        }
+
+        session.LoadedMonsterMapId = session.CurrentMapId;
+        return runtime;
+    }
+
+    private void BroadcastWorldPackets(
+        ClientSession session,
+        IEnumerable<object> packets)
+    {
+        if (session.CurrentMapId <= 0)
+            return;
+
+        foreach (var packet in packets)
+        {
+            var type = packet.GetType()
+                .GetProperty("Type")
+                ?.GetValue(packet)
+                ?.ToString();
+
+            if (type is not (
+                    "SpawnEntity" or
+                    "DespawnEntity" or
+                    "MoveEntity" or
+                    "SyncState" or
+                    "EntityDamage" or
+                    "EntityDeath" or
+                    "EntityHeal" or
+                    "MonsterTarget" or
+                    "SkillCast"))
+                continue;
+
+            _broadcasts.PublishToMap(
+                session.CurrentMapId,
+                packet,
+                session.ConnectionId);
+        }
+    }
+
     private static void SetAiState(
         MonsterRuntimeState monster,
         MonsterAiState state)
@@ -472,31 +499,43 @@ public sealed class CombatService
         if (source is null)
             return [];
 
-        var entityId = 9_000_000;
-        while (session.Monsters.ContainsKey(entityId))
-            entityId++;
+        var runtime = _runtime.GetMap(session.CurrentMapId);
+        MonsterRuntimeState state;
 
-        var state = new MonsterRuntimeState
+        lock (runtime.SyncRoot)
         {
-            EntityId = entityId,
-            EnemyId = source.EnemyId,
-            MapId = session.CurrentMapId,
-            Name = source.Name,
-            Sprite = source.Sprite,
-            Level = Math.Max(1, source.Level),
-            MaxHp = Math.Max(1, source.MaxHp),
-            CurrentHp = Math.Max(1, source.MaxHp),
-            SpawnX = x,
-            SpawnY = y,
-            X = x,
-            Y = y,
-            WanderCenterX = x,
-            WanderCenterY = y
+            var entityId = 9_000_000;
+            while (runtime.Monsters.ContainsKey(entityId))
+                entityId++;
+
+            state = new MonsterRuntimeState
+            {
+                EntityId = entityId,
+                EnemyId = source.EnemyId,
+                MapId = session.CurrentMapId,
+                Name = source.Name,
+                Sprite = source.Sprite,
+                Level = Math.Max(1, source.Level),
+                MaxHp = Math.Max(1, source.MaxHp),
+                CurrentHp = Math.Max(1, source.MaxHp),
+                SpawnX = x,
+                SpawnY = y,
+                X = x,
+                Y = y,
+                WanderCenterX = x,
+                WanderCenterY = y
+            };
+
+            runtime.Monsters[state.EntityId] = state;
+            session.Monsters[state.EntityId] = state;
+        }
+
+        var packets = new List<object>
+        {
+            BuildMonsterSpawnPacket(state)
         };
-
-        session.Monsters[state.EntityId] = state;
-
-        return [BuildMonsterSpawnPacket(state)];
+        BroadcastWorldPackets(session, packets);
+        return packets;
     }
 
     public IReadOnlyList<object> PetAttack(
