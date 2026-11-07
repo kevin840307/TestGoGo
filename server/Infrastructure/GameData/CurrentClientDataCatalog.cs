@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -69,7 +70,24 @@ public sealed record CurrentSkillLevelDefinition(
     int AspdBonus,
     int MoveSpeedBonus,
     int CritRateBonus,
-    int CritDamageBonus);
+    int CritDamageBonus)
+{
+    public int MaxHpBonusPercent { get; init; }
+    public int MaxMpBonusPercent { get; init; }
+    public int MaxSpBonusPercent { get; init; }
+    public int AtkBonusPercent { get; init; }
+    public int DefBonusPercent { get; init; }
+    public int MAtkBonusPercent { get; init; }
+    public int MDefBonusPercent { get; init; }
+    public int HitBonusPercent { get; init; }
+    public int FleeBonusPercent { get; init; }
+    public int LukBonusPercent { get; init; }
+    public int AspdBonusPercent { get; init; }
+    public int MoveSpeedBonusPercent { get; init; }
+    public int CritRateBonusPercent { get; init; }
+    public int CritDamageBonusPercent { get; init; }
+    public int DeathExpReductionPercent { get; init; }
+}
 
 public sealed record CurrentPetEvolution(
     int EvolId,
@@ -125,6 +143,7 @@ public sealed class CurrentClientDataCatalog
         LoadItems(Root);
         LoadHorsePresets(Root);
         LoadSkills(Root);
+        LoadSkillPercentageBonuses(Root);
         LoadPets(Root);
     }
 
@@ -441,11 +460,11 @@ public sealed class CurrentClientDataCatalog
 
             foreach (Match match in blocks)
             {
+                // Every sub_resource in a SkillData .tres is a SkillLevelData
+                // entry. Some valid levels only contain tick_count/cooldown or
+                // rely entirely on percentage bonuses stored in Skill.csv, so
+                // filtering by cast_range/cost_mp/base_damage drops real skills.
                 var block = match.Groups[1].Value;
-                if (!block.Contains("cast_range", StringComparison.OrdinalIgnoreCase) &&
-                    !block.Contains("cost_mp", StringComparison.OrdinalIgnoreCase) &&
-                    !block.Contains("base_damage", StringComparison.OrdinalIgnoreCase))
-                    continue;
 
                 var level = ReadInt(block, "level");
                 if (level <= 0)
@@ -482,6 +501,181 @@ public sealed class CurrentClientDataCatalog
                     ReadInt(block, "crit_damage_bonus"));
             }
         }
+    }
+
+    private void LoadSkillPercentageBonuses(string root)
+    {
+        var path = Path.Combine(
+            root,
+            "Assets",
+            "GameInfo",
+            "Skill.csv");
+
+        if (!File.Exists(path))
+            return;
+
+        var lines = File.ReadLines(path).GetEnumerator();
+        if (!lines.MoveNext())
+            return;
+
+        var header = SplitCsvLine(lines.Current);
+        var columns = new Dictionary<string, int>(
+            StringComparer.OrdinalIgnoreCase);
+
+        for (var i = 0; i < header.Length; i++)
+            columns[header[i].Trim()] = i;
+
+        var required = new[]
+        {
+            "技能編號",
+            "加最大HP比例",
+            "加最大MP比例",
+            "加最大SP比例",
+            "加攻擊比例",
+            "加防禦比例",
+            "加魔攻比例",
+            "加魔防比例",
+            "加命中比例",
+            "加迴避比例",
+            "加幸運比例",
+            "加攻速比例",
+            "加移速比例",
+            "加暴率比例",
+            "加暴傷比例",
+            "減免死經比例"
+        };
+
+        if (required.Any(x => !columns.ContainsKey(x)))
+            return;
+
+        var levelsBySkill = _skillLevels.Values
+            .GroupBy(x => x.SkillId)
+            .ToDictionary(
+                x => x.Key,
+                x => x.OrderBy(y => y.Level).ToArray());
+
+        var rowIndexBySkill = new Dictionary<int, int>();
+
+        while (lines.MoveNext())
+        {
+            var raw = lines.Current;
+            if (string.IsNullOrWhiteSpace(raw))
+                continue;
+
+            var row = SplitCsvLine(raw);
+            var skillId = CsvInt(
+                row,
+                columns["技能編號"]);
+
+            if (skillId <= 0 ||
+                !levelsBySkill.TryGetValue(
+                    skillId,
+                    out var levels))
+                continue;
+
+            var rowIndex =
+                rowIndexBySkill.TryGetValue(
+                    skillId,
+                    out var currentIndex)
+                    ? currentIndex
+                    : 0;
+
+            rowIndexBySkill[skillId] =
+                rowIndex + 1;
+
+            if (rowIndex >= levels.Length)
+                continue;
+
+            var level = levels[rowIndex];
+            _skillLevels[(skillId, level.Level)] =
+                level with
+                {
+                    MaxHpBonusPercent =
+                        CsvInt(row, columns["加最大HP比例"]),
+                    MaxMpBonusPercent =
+                        CsvInt(row, columns["加最大MP比例"]),
+                    MaxSpBonusPercent =
+                        CsvInt(row, columns["加最大SP比例"]),
+                    AtkBonusPercent =
+                        CsvInt(row, columns["加攻擊比例"]),
+                    DefBonusPercent =
+                        CsvInt(row, columns["加防禦比例"]),
+                    MAtkBonusPercent =
+                        CsvInt(row, columns["加魔攻比例"]),
+                    MDefBonusPercent =
+                        CsvInt(row, columns["加魔防比例"]),
+                    HitBonusPercent =
+                        CsvInt(row, columns["加命中比例"]),
+                    FleeBonusPercent =
+                        CsvInt(row, columns["加迴避比例"]),
+                    LukBonusPercent =
+                        CsvInt(row, columns["加幸運比例"]),
+                    AspdBonusPercent =
+                        CsvInt(row, columns["加攻速比例"]),
+                    MoveSpeedBonusPercent =
+                        CsvInt(row, columns["加移速比例"]),
+                    CritRateBonusPercent =
+                        CsvInt(row, columns["加暴率比例"]),
+                    CritDamageBonusPercent =
+                        CsvInt(row, columns["加暴傷比例"]),
+                    DeathExpReductionPercent =
+                        CsvInt(row, columns["減免死經比例"])
+                };
+        }
+    }
+
+    private static int CsvInt(
+        string[] row,
+        int index)
+    {
+        if (index < 0 ||
+            index >= row.Length)
+            return 0;
+
+        return int.TryParse(
+            row[index].Trim(),
+            out var value)
+            ? value
+            : 0;
+    }
+
+    private static string[] SplitCsvLine(string line)
+    {
+        var values = new List<string>();
+        var current = new StringBuilder();
+        var quoted = false;
+
+        for (var i = 0; i < line.Length; i++)
+        {
+            var ch = line[i];
+
+            if (ch == '"')
+            {
+                if (quoted &&
+                    i + 1 < line.Length &&
+                    line[i + 1] == '"')
+                {
+                    current.Append('"');
+                    i++;
+                    continue;
+                }
+
+                quoted = !quoted;
+                continue;
+            }
+
+            if (ch == ',' && !quoted)
+            {
+                values.Add(current.ToString());
+                current.Clear();
+                continue;
+            }
+
+            current.Append(ch);
+        }
+
+        values.Add(current.ToString());
+        return values.ToArray();
     }
 
     private static void AddByName<T>(
