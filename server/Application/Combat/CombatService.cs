@@ -2084,7 +2084,7 @@ public sealed class CombatService
                         .OrderBy(x =>
                             Math.Pow(x.X - centerX, 2) +
                             Math.Pow(x.Y - centerY, 2))
-                        .Take(24)
+                        .Take(8)
                         .ToArray()
                     : targetQuery.ToArray();
 
