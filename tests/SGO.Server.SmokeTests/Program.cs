@@ -932,7 +932,8 @@ try
         enemyDrops,
         worldRuntime,
         broadcastHub,
-        party);
+        party,
+        NullLogger<CombatService>.Instance);
     var shops = new ShopService(
         store,
         store,
