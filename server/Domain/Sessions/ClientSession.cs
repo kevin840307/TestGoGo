@@ -44,6 +44,8 @@ public sealed class ClientSession
     public Dictionary<long, DateTimeOffset> PetLastAttackAt { get; } = new();
     public Dictionary<long, int> PetTargets { get; } = new();
     public Dictionary<long, DateTimeOffset> PetOutOfRangeSince { get; } = new();
+    public Dictionary<long, DateTimeOffset> PetNextIdleSpeechAt { get; } = new();
+    public Dictionary<long, int> PetIdleSpeechSequence { get; } = new();
 
     public string PartyId { get; set; } = "";
     public long PartyLeaderDbid { get; set; }
