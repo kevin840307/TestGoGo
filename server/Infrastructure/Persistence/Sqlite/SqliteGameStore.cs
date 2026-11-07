@@ -315,7 +315,7 @@ public sealed class SqliteGameStore : IGameStore
             ["PetMaxSize"] = 50,
             ["HorseList"] = Array.Empty<object>(),
             ["HorseEquipList"] = Array.Empty<object>(),
-            ["HorseEquipMaxSize"] = 20,
+            ["HorseEquipMaxSize"] = 100,
             ["SkillList"] = Array.Empty<object>(),
             ["Quests"] = Array.Empty<object>(),
             ["Shortcuts"] = Array.Empty<object>()
