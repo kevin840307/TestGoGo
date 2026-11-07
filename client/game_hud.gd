@@ -763,6 +763,29 @@ func _ensure_lazy_window(kind: String) -> Control:
 		return existing
 
 	var total_started_usec: int = Time.get_ticks_usec()
+
+	# craft/game_info may already have entered the SceneTree on the login screen.
+	# Reuse those exact nodes so their first _ready/layout cost is never paid in
+	# the world-entry critical path.
+	if GameManager and GameManager.has_method("take_prewarmed_hud_window"):
+		var warmed := GameManager.take_prewarmed_hud_window(kind) as Control
+		if is_instance_valid(warmed) and is_instance_valid(windows_container):
+			var add_started_usec: int = Time.get_ticks_usec()
+			windows_container.add_child(warmed)
+			var add_child_ms: float = float(Time.get_ticks_usec() - add_started_usec) / 1000.0
+			_assign_lazy_window(kind, warmed)
+			var setup_started_usec: int = Time.get_ticks_usec()
+			_configure_lazy_window(kind, warmed)
+			var setup_ms: float = float(Time.get_ticks_usec() - setup_started_usec) / 1000.0
+			var total_ms: float = float(Time.get_ticks_usec() - total_started_usec) / 1000.0
+			print("[HUD_WINDOW_INIT] kind=%s source=login_cache load_ms=0.00 instantiate_ms=0.00 add_child_ms=%.2f setup_ms=%.2f total_ms=%.2f" % [
+				kind,
+				add_child_ms,
+				setup_ms,
+				total_ms,
+			])
+			return warmed
+
 	var load_started_usec: int = total_started_usec
 	var path: String = str(LAZY_WINDOW_PATHS.get(kind, ""))
 	if path.is_empty():
