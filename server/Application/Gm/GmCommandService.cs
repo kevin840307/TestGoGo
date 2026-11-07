@@ -82,6 +82,8 @@ public sealed class GmCommandService
                     => MechaCard(parts, accountId, dbid),
                 "mechaequip"
                     => MechaEquip(parts, accountId, dbid),
+                "mechalevel"
+                    => MechaLevel(parts, accountId, dbid),
                 "pet" => Pet(parts, accountId, dbid),
                 "skill" => Skill(parts, accountId, dbid),
                 "skills" => SkillList(accountId, dbid),
@@ -593,6 +595,49 @@ public sealed class GmCommandService
         return responses;
     }
 
+    private IReadOnlyList<object> MechaLevel(
+        string[] parts,
+        long accountId,
+        long dbid)
+    {
+        if (parts.Length < 4 ||
+            !long.TryParse(parts[2], out var horseUid) ||
+            !int.TryParse(parts[3], out var level))
+            return [Chat("用法：/gm mechalevel <HorseUID> <1-200>")];
+
+        var horse = _store.SetHorseLevel(
+            accountId,
+            dbid,
+            horseUid,
+            level);
+
+        if (horse is null)
+            return [Chat($"找不到機甲 HorseUID={horseUid}")];
+
+        var assets = _store.GetCharacterAssets(accountId, dbid);
+
+        return
+        [
+            new
+            {
+                Type = "SyncMechaEnergy",
+                HorseUID = horseUid,
+                EnergyLeft = horse["EnergyLeft"],
+                Exp = horse["Exp"],
+                MaxExp = horse["MaxExp"],
+                Level = horse["Level"]
+            },
+            new
+            {
+                Type = "HorseSync",
+                Horses = assets.Horses,
+                HorseEquips = assets.HorseEquips,
+                MaxHorseEquipSize = assets.HorseEquipMaxSize
+            },
+            Chat($"機甲 {horseUid} 已設為 Lv.{horse["Level"]}")
+        ];
+    }
+
     private IReadOnlyList<object> Pet(
         string[] parts,
         long accountId,
@@ -811,7 +856,7 @@ public sealed class GmCommandService
     private static string HelpText()
         => "GM: help | pos | map <id> [x] [y] | heal | level <n> | " +
            "maxstats | money <n> | item <id> [count] | equip <id> | " +
-           "mecha <cardId> | mechacard <cardId> | mechaequip <id> [horseUid] | pet <petId> [name] | " +
+           "mecha <cardId> | mechacard <cardId> | mechaequip <id> [horseUid] | mechalevel <horseUid> <level> | pet <petId> [name] | " +
            "skill <id|all> [lv] | skills | clearskills | " +
            "spawn <enemyId> [x] [y] | killall";
 }
