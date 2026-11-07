@@ -1140,7 +1140,7 @@ public sealed class CombatService
                 targetEntityId,
                 out var monster) ||
             monster.MapId != session.CurrentMapId)
-            return [];
+            return [Flash("攻擊目標不存在或已離開目前地圖")];
 
         var character = _store.GetCharacter(
             accountId,
@@ -1171,7 +1171,7 @@ public sealed class CombatService
         lock (runtime.SyncRoot)
         {
             if (!monster.IsAlive)
-                return [];
+                return [Flash("目標已死亡")];
 
             var dx = playerX - monster.X;
             var dy = playerY - monster.Y;
