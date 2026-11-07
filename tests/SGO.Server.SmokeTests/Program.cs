@@ -1218,8 +1218,10 @@ try
           Math.Abs(monster.WanderCenterY - deathPositionY) < 0.001 &&
           !deadPlayerAiPackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
-                  "\"Type\":\"MoveEntity\"")),
-        "player death preserves monster position and re-anchors idle wandering there");
+                  "\"Type\":\"MoveEntity\"") &&
+              JsonSerializer.Serialize(x).Contains(
+                  $"\"EntityID\":{monster.EntityId}")),
+        "player death preserves target monster position and re-anchors idle wandering there");
 
     var deadPlayerWanderPackets = combat.TickAi(
         session,
