@@ -1725,13 +1725,25 @@ public sealed class CombatService
                 }
             }
 
-            packets.Add(
-                CharacterStatCalculator.ToPlayerStatusPacket(
+            var returnAssets = _store.GetCharacterAssets(
+                accountId,
+                session.CharacterId.Value);
+            var returnStats = ApplyActiveSkillBuffs(
+                CharacterStatCalculator.Calculate(
                     updated,
-                    _store.GetCharacterAssets(
-                        accountId,
-                        session.CharacterId.Value),
-                    _current));
+                    returnAssets,
+                    _current),
+                session,
+                now);
+
+            packets.Add(BuildPlayerStatusPacket(
+                updated,
+                returnStats));
+            BroadcastPublicStatus(
+                session,
+                session.CharacterId.Value,
+                updated,
+                returnStats);
 
             session.SkillReadyAt[skillId] =
                 now + TimeSpan.FromSeconds(
@@ -2090,6 +2102,17 @@ public sealed class CombatService
                     });
                 }
 
+                var targetAssets = _store.GetCharacterAssets(
+                    targetAccountId,
+                    targetDbId);
+                var targetStats = ApplyActiveSkillBuffs(
+                    CharacterStatCalculator.Calculate(
+                        healed,
+                        targetAssets,
+                        _current),
+                    targetDbId,
+                    now);
+
                 if (targetDbId == session.CharacterId.Value)
                 {
                     updated = healed;
@@ -2098,13 +2121,16 @@ public sealed class CombatService
                 {
                     _broadcasts.PublishToCharacter(
                         targetDbId,
-                        CharacterStatCalculator.ToPlayerStatusPacket(
+                        BuildPlayerStatusPacket(
                             healed,
-                            _store.GetCharacterAssets(
-                                targetAccountId,
-                                targetDbId),
-                            _current));
+                            targetStats));
                 }
+
+                BroadcastPublicStatus(
+                    session,
+                    targetDbId,
+                    healed,
+                    targetStats);
 
                 _party.PublishStat(
                     targetAccountId,
@@ -2180,6 +2206,17 @@ public sealed class CombatService
                     });
                 }
 
+                var memberAssets = _store.GetCharacterAssets(
+                    member.AccountId,
+                    member.CharacterId);
+                var memberStats = ApplyActiveSkillBuffs(
+                    CharacterStatCalculator.Calculate(
+                        healed,
+                        memberAssets,
+                        _current),
+                    member.CharacterId,
+                    now);
+
                 if (member.CharacterId ==
                     session.CharacterId.Value)
                 {
@@ -2189,13 +2226,16 @@ public sealed class CombatService
                 {
                     _broadcasts.PublishToCharacter(
                         member.CharacterId,
-                        CharacterStatCalculator.ToPlayerStatusPacket(
+                        BuildPlayerStatusPacket(
                             healed,
-                            _store.GetCharacterAssets(
-                                member.AccountId,
-                                member.CharacterId),
-                            _current));
+                            memberStats));
                 }
+
+                BroadcastPublicStatus(
+                    session,
+                    member.CharacterId,
+                    healed,
+                    memberStats);
 
                 _party.PublishStat(
                     member.AccountId,
@@ -2327,6 +2367,11 @@ public sealed class CombatService
         packets.Add(BuildPlayerStatusPacket(
             updated,
             refreshedStats));
+        BroadcastPublicStatus(
+            session,
+            session.CharacterId.Value,
+            updated,
+            refreshedStats);
 
         session.SkillReadyAt[skillId] =
             now + TimeSpan.FromSeconds(
@@ -2381,6 +2426,13 @@ public sealed class CombatService
         var assets = _store.GetCharacterAssets(
             accountId,
             dbid);
+        var revivedStats = ApplyActiveSkillBuffs(
+            CharacterStatCalculator.Calculate(
+                revived,
+                assets,
+                _current),
+            dbid,
+            now);
         var packets = new List<object>
         {
             new
@@ -2402,10 +2454,9 @@ public sealed class CombatService
                 State = "idle",
                 Dir = "1"
             },
-            CharacterStatCalculator.ToPlayerStatusPacket(
+            BuildPlayerStatusPacket(
                 revived,
-                assets,
-                _current),
+                revivedStats),
             new
             {
                 Type = "SystemMessageFlash",
@@ -2413,6 +2464,11 @@ public sealed class CombatService
             }
         };
 
+        BroadcastPublicStatus(
+            session,
+            dbid,
+            revived,
+            revivedStats);
         BroadcastWorldPackets(session, packets);
         return packets;
     }
@@ -2763,11 +2819,23 @@ public sealed class CombatService
             accountId,
             dbid);
 
-        packets.Add(
-            CharacterStatCalculator.ToPlayerStatusPacket(
+        var rewardStats = ApplyActiveSkillBuffs(
+            CharacterStatCalculator.Calculate(
                 rewarded,
                 assets,
-                _current));
+                _current),
+            dbid,
+            DateTimeOffset.UtcNow);
+
+        packets.Add(
+            BuildPlayerStatusPacket(
+                rewarded,
+                rewardStats));
+        BroadcastPublicStatus(
+            session,
+            dbid,
+            rewarded,
+            rewardStats);
 
         packets.Add(new
         {
@@ -2953,6 +3021,11 @@ public sealed class CombatService
                     BuildPlayerStatusPacket(
                         character,
                         stats));
+                BroadcastPublicStatus(
+                    session,
+                    dbid,
+                    character,
+                    stats);
             }
         }
 
@@ -3403,6 +3476,51 @@ public sealed class CombatService
             CritRate = s.CritRate,
             CritDamage = s.CritDamage
         };
+
+    private void BroadcastPublicStatus(
+        ClientSession session,
+        long entityId,
+        Dictionary<string, object> character,
+        EffectiveCharacterStats s)
+    {
+        if (session.CurrentMapId <= 0 ||
+            entityId <= 0)
+            return;
+
+        _broadcasts.PublishToMap(
+            session.CurrentMapId,
+            new
+            {
+                Type = "SyncStatus",
+                EntityID = entityId,
+                Level = character["Level"],
+                HP = Math.Min(
+                    Convert.ToInt32(character["HP"]),
+                    s.MaxHP),
+                MP = Math.Min(
+                    Convert.ToInt32(character["MP"]),
+                    s.MaxMP),
+                SP = Math.Min(
+                    Convert.ToInt32(character["SP"]),
+                    s.MaxSP),
+                MaxHP = s.MaxHP,
+                MaxMP = s.MaxMP,
+                MaxSP = s.MaxSP,
+                Attack = s.Attack,
+                Defense = s.Defense,
+                MagicAttack = s.MagicAttack,
+                MagicDefense = s.MagicDefense,
+                Hit = s.Hit,
+                Dodge = s.Dodge,
+                Lucky = s.Lucky,
+                AttackSpeed = s.AttackSpeed,
+                AttackRange = s.AttackRange,
+                MoveSpeed = s.MoveSpeed,
+                CritRate = s.CritRate,
+                CritDamage = s.CritDamage
+            },
+            session.ConnectionId);
+    }
 
     private static object Flash(string message)
         => new
