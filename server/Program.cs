@@ -20,9 +20,6 @@ var gameDataRoot = Path.Combine(
     AppContext.BaseDirectory,
     "GameData");
 
-builder.Services.AddSingleton(
-    new WorldDataService(gameDataRoot));
-
 var configuredClientRoot =
     builder.Configuration["Game:ClientRoot"]
     ?? Environment.GetEnvironmentVariable("SGO_CLIENT_ROOT");
@@ -37,7 +34,15 @@ var configuredLegacyClientRoot =
 
 var legacyClientData =
     new LegacyClientDataCatalog(configuredLegacyClientRoot);
+var legacyNpcVisuals =
+    new LegacyNpcVisualCatalog(configuredLegacyClientRoot);
+var worldData =
+    new WorldDataService(
+        gameDataRoot,
+        legacyNpcVisuals);
 
+builder.Services.AddSingleton(worldData);
+builder.Services.AddSingleton(legacyNpcVisuals);
 builder.Services.AddSingleton(currentClientData);
 builder.Services.AddSingleton(legacyClientData);
 builder.Services.AddSingleton(
@@ -82,6 +87,11 @@ else
         currentClientData.Items.Count,
         currentClientData.Skills.Count,
         currentClientData.Pets.Count);
+
+    app.Logger.LogInformation(
+        "[LEGACY_NPC_VISUALS] Root={Root} Mapped={Count}",
+        configuredLegacyClientRoot,
+        legacyNpcVisuals.Count);
 
     foreach (var info in shopCatalog.MappingInfo)
         app.Logger.LogInformation("{MappingInfo}", info);
