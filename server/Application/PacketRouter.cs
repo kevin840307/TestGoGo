@@ -824,15 +824,25 @@ public sealed class PacketRouter
                 }
 
                 state.WorldReady = true;
-                return
-                [
+
+                // Map loading is asynchronous on the Godot client. Ground-item
+                // spawn packets sent during the scene swap can be discarded
+                // when the old map entity queue is cleared. WorldReady is the
+                // first reliable point where the new scene is fully active, so
+                // send a fresh snapshot here as the authoritative final sync.
+                var worldReadyPackets = new List<object>
+                {
                     new
                     {
                         Type = "WorldReadyResponse",
                         Success = true,
                         MapID = state.CurrentMapId
                     }
-                ];
+                };
+                worldReadyPackets.AddRange(
+                    BuildGroundItemSnapshotPackets(state));
+
+                return worldReadyPackets;
             }
 
             case "SyncPosition":
