@@ -1142,8 +1142,14 @@ public sealed class CombatService
         var hasBonus = HasGenericStatBonus(levelData);
         var isHeal = levelData.SkillType == 2;
         var isGroupHeal = levelData.SkillType == 3;
-        var isRevive = levelData.SkillType == 6;
+        var isRevive = skillId is
+            27104 or // 生命之源
+            28109 or // 天使的祝福
+            27111;   // 生命之祝
         var isBuff = levelData.SkillType is 4 or 5 || hasBonus;
+        var isPartyStatBuff = skillId is
+            33011 or // 冰之觸
+            33012;   // 黑暗之影
         var isAttack =
             levelData.SkillType is 0 or 1 ||
             (levelData.SkillType == 7 &&
@@ -2077,7 +2083,7 @@ public sealed class CombatService
                 session.CharacterId.Value,
                 buff);
 
-            if (skillId == 33011) // 冰之觸：同地圖在線隊員
+            if (isPartyStatBuff)
             {
                 var affected = new List<object>
                 {
