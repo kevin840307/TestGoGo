@@ -1333,6 +1333,10 @@ public sealed class CombatService
                 StringComparison.Ordinal);
         var isPortableRepair =
             skillId == 31112;
+        var isScreenAreaAttack =
+            specialSkill.Equals(
+                "畫面範圍攻擊",
+                StringComparison.Ordinal);
 
         var hasBonus = HasGenericStatBonus(levelData);
         var isHeal = levelData.SkillType == 2;
@@ -1390,29 +1394,40 @@ public sealed class CombatService
 
         if (isAttack)
         {
-            if (targetType != 1 ||
-                !session.Monsters.TryGetValue(
-                    targetEntityId,
-                    out primaryMonster) ||
-                !primaryMonster.IsAlive ||
-                primaryMonster.MapId != session.CurrentMapId)
+            if (isScreenAreaAttack)
             {
-                return [Flash("技能目標無效")];
+                targetEntityId =
+                    checked((int)session.CharacterId.Value);
+                targetType = 0;
+                centerX = session.LastX;
+                centerY = session.LastY;
             }
-
-            centerX = primaryMonster.X;
-            centerY = primaryMonster.Y;
-
-            var playerX = session.LastX;
-            var playerY = session.LastY;
-            var castDx = centerX - playerX;
-            var castDy = centerY - playerY;
-            var castRange = Math.Max(0, levelData.CastRange) + 120;
-
-            if (castDx * castDx + castDy * castDy >
-                castRange * castRange)
+            else
             {
-                return [Flash("技能目標距離太遠")];
+                if (targetType != 1 ||
+                    !session.Monsters.TryGetValue(
+                        targetEntityId,
+                        out primaryMonster) ||
+                    !primaryMonster.IsAlive ||
+                    primaryMonster.MapId != session.CurrentMapId)
+                {
+                    return [Flash("技能目標無效")];
+                }
+
+                centerX = primaryMonster.X;
+                centerY = primaryMonster.Y;
+
+                var playerX = session.LastX;
+                var playerY = session.LastY;
+                var castDx = centerX - playerX;
+                var castDy = centerY - playerY;
+                var castRange = Math.Max(0, levelData.CastRange) + 120;
+
+                if (castDx * castDx + castDy * castDy >
+                    castRange * castRange)
+                {
+                    return [Flash("技能目標距離太遠")];
+                }
             }
         }
         else if (isRevive)
@@ -2016,7 +2031,8 @@ public sealed class CombatService
                 });
         }
 
-        if (isAttack && primaryMonster is not null)
+        if (isAttack &&
+            (primaryMonster is not null || isScreenAreaAttack))
         {
             var damage = Math.Max(
                 1,
@@ -2050,8 +2066,8 @@ public sealed class CombatService
                         x.IsAlive &&
                         x.MapId == session.CurrentMapId &&
                         (radius <= 0
-                            ? x.EntityId ==
-                              primaryMonster.EntityId
+                            ? primaryMonster is not null &&
+                              x.EntityId == primaryMonster.EntityId
                             : Math.Pow(x.X - centerX, 2) +
                               Math.Pow(x.Y - centerY, 2) <=
                               radius * radius))
@@ -2064,7 +2080,9 @@ public sealed class CombatService
                     CasterType = 0,
                     SkillID = skillId,
                     SkillLevel = skillLevel,
-                    TargetID = primaryMonster.EntityId,
+                    TargetID = isScreenAreaAttack
+                        ? session.CharacterId.Value
+                        : primaryMonster!.EntityId,
                     TargetX = Convert.ToInt32(centerX),
                     TargetY = Convert.ToInt32(centerY),
                     AoeTargets = targets
