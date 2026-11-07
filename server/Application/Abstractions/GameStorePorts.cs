@@ -476,6 +476,11 @@ public sealed record MallPurchaseResult(
     string Message,
     long NewBalance);
 
+public sealed record MallGiftClaimResult(
+    bool Success,
+    string Message,
+    long LifetimeDonation);
+
 public interface IMallStore : ICharacterAssetReader
 {
     long GetMallPoints(long accountId);
@@ -485,6 +490,16 @@ public interface IMallStore : ICharacterAssetReader
         long delta,
         out long newBalance);
 
+    long GetLifetimeDonation(long accountId);
+
+    bool AdjustLifetimeDonation(
+        long accountId,
+        long delta,
+        out long newTotal);
+
+    IReadOnlySet<int> GetClaimedMallGiftIds(
+        long accountId);
+
     MallPurchaseResult PurchaseMallAsset(
         long accountId,
         long dbid,
@@ -492,6 +507,20 @@ public interface IMallStore : ICharacterAssetReader
         int itemIndex,
         int assetCount,
         long totalPrice,
+        string assetName = "",
+        string horseType = "MS",
+        int initialEnergy = 0,
+        int itemPart = 255,
+        int itemDamage = 0);
+
+    MallGiftClaimResult ClaimMallGift(
+        long accountId,
+        long dbid,
+        int rewardId,
+        long requiredDonation,
+        AssetPurchaseKind kind,
+        int itemIndex,
+        int assetCount,
         string assetName = "",
         string horseType = "MS",
         int initialEnergy = 0,
