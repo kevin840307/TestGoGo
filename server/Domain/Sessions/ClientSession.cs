@@ -21,6 +21,9 @@ public sealed class ClientSession
     public DateTimeOffset LastResourceRecoveryAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastGroundItemCleanupAt { get; set; } = DateTimeOffset.MinValue;
     public int PetCombatMode { get; set; } = 0;
+    public bool AutoSaintEnabled { get; set; }
+    public int AutoSaintMpThreshold { get; set; } = 30;
+    public int AutoSaintSpThreshold { get; set; } = 30;
     public Dictionary<long, (double X, double Y)> PetPositions { get; } = new();
     public Dictionary<long, DateTimeOffset> PetLastAttackAt { get; } = new();
     public Dictionary<long, int> PetTargets { get; } = new();
