@@ -2308,6 +2308,32 @@ try
     }
 
     var droppedEntityId = session.GroundItems.Keys.Last();
+
+    // Simulate a completely new login/session. Ground items must be restored
+    // from SQLite rather than relying on the old ClientSession dictionary.
+    var reloggedSession = new ClientSession
+    {
+        AccountId = account.Value,
+        CharacterId = id,
+        CurrentMapId = 15,
+        LastX = 8000,
+        LastY = 11200,
+        PendingMapSpawn = true
+    };
+
+    var relogPackets = router.Tick(
+        reloggedSession,
+        DateTimeOffset.UtcNow.AddSeconds(30));
+
+    Check(
+        reloggedSession.GroundItems.ContainsKey(droppedEntityId) &&
+        relogPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"EntityType\":3") &&
+            JsonSerializer.Serialize(x).Contains(
+                $"\"EntityID\":{droppedEntityId}")),
+        "dropped ground item is restored from DB after relog");
+
     using (var pickupItem = Json(JsonSerializer.Serialize(new
     {
         Type = "PickUpItemRequest",
@@ -2316,10 +2342,12 @@ try
     {
         var responses = router.Handle(
             pickupItem.RootElement,
-            session);
+            reloggedSession);
 
         Check(
-            !session.GroundItems.ContainsKey(droppedEntityId) &&
+            !reloggedSession.GroundItems.ContainsKey(droppedEntityId) &&
+            !store.GetGroundItems(15).Any(x =>
+                x.EntityId == droppedEntityId) &&
             store.GetCharacterAssets(account.Value, id).Equips.Any(x =>
                 Convert.ToInt32(x["ItemIdx"]) == 18538 &&
                 Convert.ToInt32(x["Damage"]) == 7 &&
@@ -2327,7 +2355,7 @@ try
             responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"DespawnEntity\"")),
-            "PickUpItemRequest restores dropped equipment and despawns ground item");
+            "PickUpItemRequest restores persisted equipment and removes ground row");
     }
 
     using (var logout = Json(
