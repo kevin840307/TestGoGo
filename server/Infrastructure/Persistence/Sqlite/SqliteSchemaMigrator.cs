@@ -18,6 +18,10 @@ internal static class SqliteSchemaMigrator
         ApplyEnsureColumnDirectives(
             db,
             ResolveSqlPath("003_character_columns.sql"));
+
+        ApplyEnsureColumnDirectives(
+            db,
+            ResolveSqlPath("004_ground_item_lifecycle.sql"));
     }
 
     private static void ExecuteSqlFile(
