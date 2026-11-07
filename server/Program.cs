@@ -23,28 +23,26 @@ var gameDataRoot = Path.Combine(
 builder.Services.AddSingleton(
     new WorldDataService(gameDataRoot));
 
-builder.Services.AddSingleton(
-    new ShopCatalog(gameDataRoot));
-builder.Services.AddSingleton(
-    new HorseBatteryCatalog(
-        Path.Combine(gameDataRoot, "Horse", "HorseBattery.csv")));
-builder.Services.AddSingleton(
-    new RecoveryItemCatalog(
-        Path.Combine(gameDataRoot, "Item", "Recovery.itd")));
-builder.Services.AddSingleton(
-    new HorseCardCatalog(
-        Path.Combine(gameDataRoot, "Horse", "HorseMA.csv")));
+var configuredClientRoot =
+    builder.Configuration["Game:ClientRoot"]
+    ?? Environment.GetEnvironmentVariable("SGO_CLIENT_ROOT");
 
-var clientDataRoot = Path.Combine(
-    AppContext.BaseDirectory,
-    "ClientData");
+var currentClientData =
+    new CurrentClientDataCatalog(configuredClientRoot);
 
+builder.Services.AddSingleton(currentClientData);
 builder.Services.AddSingleton(
-    new SkillCatalog(
-        Path.Combine(
-            clientDataRoot,
-            "Interface",
-            "skill_cht.dat")));
+    new ShopCatalog(
+        gameDataRoot,
+        currentClientData));
+builder.Services.AddSingleton(
+    new HorseBatteryCatalog(currentClientData));
+builder.Services.AddSingleton(
+    new RecoveryItemCatalog(currentClientData));
+builder.Services.AddSingleton(
+    new HorseCardCatalog(currentClientData));
+builder.Services.AddSingleton(
+    new SkillCatalog(currentClientData));
 builder.Services.AddSingleton(sp =>
     new QuestRuntime(
         Path.Combine(gameDataRoot, "Quest"),
@@ -57,12 +55,30 @@ builder.Services.AddSingleton<PacketRouter>();
 
 var app = builder.Build();
 
+if (!currentClientData.IsAvailable)
+{
+    app.Logger.LogWarning(
+        "[CURRENT_GAMEDATA_MISSING] 無法找到新版 recovered client 的 Items/Skills。設定 Game:ClientRoot 或 SGO_CLIENT_ROOT；舊 ClientData 不會當正式 runtime GameData 使用。");
+}
+else
+{
+    app.Logger.LogInformation(
+        "[CURRENT_GAMEDATA] Root={Root} Items={ItemCount} Skills={SkillCount}",
+        currentClientData.Root,
+        currentClientData.Items.Count,
+        currentClientData.Skills.Count);
+}
+
 app.MapGet("/health", (IConfiguration config) => Results.Ok(new
 {
     status = "ok",
     database = config["Database:Provider"] ?? "Sqlite",
     websocket = config["Game:ListenUrl"]
-                ?? "http://127.0.0.1:5678"
+                ?? "http://127.0.0.1:5678",
+    currentGameData = currentClientData.IsAvailable,
+    currentClientRoot = currentClientData.Root,
+    currentItemCount = currentClientData.Items.Count,
+    currentSkillCount = currentClientData.Skills.Count
 }));
 
 app.MapSgoWebSocket();
