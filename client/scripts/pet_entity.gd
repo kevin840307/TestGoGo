@@ -15,7 +15,7 @@ var level: int = 1
 var target_position: Vector2 = Vector2.ZERO
 const MIN_LERP_WEIGHT: float = 8.0
 const MAX_LERP_WEIGHT: float = 20.0
-const TELEPORT_DISTANCE: float = 250.0
+const TELEPORT_DISTANCE: float = 900.0
 
 @onready var sprite = $AnimatedSprite2D
 @onready var ui_container = $UIContainer
