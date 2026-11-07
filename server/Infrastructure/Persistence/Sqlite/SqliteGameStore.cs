@@ -1285,6 +1285,9 @@ public sealed class SqliteGameStore : IGameStore
         string clubName,
         long nowUtcMs)
     {
+        const long creationFee = 500_000;
+        int[] requiredDocuments = [2560, 2561, 2562];
+
         clubName = clubName.Trim();
         if (clubName.Length is < 1 or > 8)
             return new(false, "戰團名稱需為 1 到 8 個字");
@@ -1294,6 +1297,35 @@ public sealed class SqliteGameStore : IGameStore
 
         if (!OwnsCharacter(db, accountId, dbid, tx))
             return new(false, "角色不存在");
+
+        int level;
+        long money;
+        using (var character = db.CreateCommand())
+        {
+            character.Transaction = tx;
+            character.CommandText = """
+                SELECT level,money
+                  FROM characters
+                 WHERE id=$id
+                   AND account_id=$account
+                 LIMIT 1
+                """;
+            Arg(character, "$id", dbid);
+            Arg(character, "$account", accountId);
+
+            using var reader = character.ExecuteReader();
+            if (!reader.Read())
+                return new(false, "角色不存在");
+
+            level = reader.GetInt32(0);
+            money = reader.GetInt64(1);
+        }
+
+        if (level < 30)
+            return new(false, "建立戰團需要角色等級 30 級以上");
+
+        if (money < creationFee)
+            return new(false, "建立戰團需要 50 萬星幣");
 
         using (var existing = db.CreateCommand())
         {
@@ -1308,10 +1340,120 @@ public sealed class SqliteGameStore : IGameStore
                 return new(false, "你已經加入戰團");
         }
 
-        long clubId;
-        try
+        using (var sameName = db.CreateCommand())
         {
-            using var insert = db.CreateCommand();
+            sameName.Transaction = tx;
+            sameName.CommandText = """
+                SELECT count(*)
+                  FROM clubs
+                 WHERE name=$name
+                """;
+            Arg(sameName, "$name", clubName);
+            if (Convert.ToInt32(sameName.ExecuteScalar()) > 0)
+                return new(false, "戰團名稱已被使用");
+        }
+
+        foreach (var documentId in requiredDocuments)
+        {
+            using var check = db.CreateCommand();
+            check.Transaction = tx;
+            check.CommandText = """
+                SELECT COALESCE(SUM(count),0)
+                  FROM inventory_items
+                 WHERE character_id=$id
+                   AND item_index=$item
+                   AND in_bank=0
+                   AND in_shop=0
+                """;
+            Arg(check, "$id", dbid);
+            Arg(check, "$item", documentId);
+
+            if (Convert.ToInt32(check.ExecuteScalar()) < 1)
+            {
+                return new(
+                    false,
+                    $"缺少建立戰團所需文件 ItemID={documentId}");
+            }
+        }
+
+        using (var deductMoney = db.CreateCommand())
+        {
+            deductMoney.Transaction = tx;
+            deductMoney.CommandText = """
+                UPDATE characters
+                   SET money=money-$fee
+                 WHERE id=$id
+                   AND account_id=$account
+                   AND money >= $fee
+                """;
+            Arg(deductMoney, "$fee", creationFee);
+            Arg(deductMoney, "$id", dbid);
+            Arg(deductMoney, "$account", accountId);
+
+            if (deductMoney.ExecuteNonQuery() != 1)
+                return new(false, "建立戰團費用扣除失敗");
+        }
+
+        foreach (var documentId in requiredDocuments)
+        {
+            long itemUid;
+            using (var find = db.CreateCommand())
+            {
+                find.Transaction = tx;
+                find.CommandText = """
+                    SELECT uid
+                      FROM inventory_items
+                     WHERE character_id=$id
+                       AND item_index=$item
+                       AND count > 0
+                       AND in_bank=0
+                       AND in_shop=0
+                     ORDER BY uid
+                     LIMIT 1
+                    """;
+                Arg(find, "$id", dbid);
+                Arg(find, "$item", documentId);
+
+                var rawUid = find.ExecuteScalar();
+                if (rawUid is null)
+                    return new(false, "建立戰團文件狀態已變更");
+
+                itemUid = Convert.ToInt64(rawUid);
+            }
+
+            using (var consume = db.CreateCommand())
+            {
+                consume.Transaction = tx;
+                consume.CommandText = """
+                    UPDATE inventory_items
+                       SET count=count-1
+                     WHERE uid=$uid
+                       AND character_id=$id
+                       AND count > 0
+                    """;
+                Arg(consume, "$uid", itemUid);
+                Arg(consume, "$id", dbid);
+
+                if (consume.ExecuteNonQuery() != 1)
+                    return new(false, "建立戰團文件扣除失敗");
+            }
+
+            using var cleanup = db.CreateCommand();
+            cleanup.Transaction = tx;
+            cleanup.CommandText = """
+                DELETE FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND count <= 0
+                """;
+            Arg(cleanup, "$uid", itemUid);
+            Arg(cleanup, "$id", dbid);
+            cleanup.ExecuteNonQuery();
+        }
+
+        long clubId;
+        using (var insert = db.CreateCommand())
+        {
             insert.Transaction = tx;
             insert.CommandText = """
                 INSERT INTO clubs(
@@ -1322,10 +1464,6 @@ public sealed class SqliteGameStore : IGameStore
             Arg(insert, "$name", clubName);
             Arg(insert, "$created", nowUtcMs);
             clubId = Convert.ToInt64(insert.ExecuteScalar());
-        }
-        catch (SqliteException e) when (e.SqliteErrorCode == 19)
-        {
-            return new(false, "戰團名稱已被使用");
         }
 
         using (var member = db.CreateCommand())
