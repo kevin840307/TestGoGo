@@ -285,6 +285,12 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	var formatted_map_name = "Map%02d" % target_map_id
 	var map_path = "res://maps/" + formatted_map_name + ".scn"
 	var initial_started_usec: int = Time.get_ticks_usec()
+	# Network entity packets may arrive immediately, but instantiating dozens of
+	# monsters while the first map/player/PaperDoll/HUD are initializing creates
+	# main-thread contention. Queue them now and drain only after the critical
+	# first-world setup is complete.
+	if NetworkEntityManager and NetworkEntityManager.has_method("set_spawn_queue_paused"):
+		NetworkEntityManager.set_spawn_queue_paused(true)
 
 	_trace_map_change("initial_enter_started", 0, target_map_id)
 	_report_initial_loading_progress(progress_callback, 50.0, "準備載入地圖")
@@ -443,6 +449,9 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	await get_tree().process_frame
 
 	_report_initial_loading_progress(progress_callback, 99.3, "同步地圖角色")
+	if NetworkEntityManager and NetworkEntityManager.has_method("set_spawn_queue_paused"):
+		NetworkEntityManager.set_spawn_queue_paused(false)
+	await get_tree().process_frame
 	while NetworkEntityManager and NetworkEntityManager.has_method("is_initial_spawn_queue_idle") and not NetworkEntityManager.is_initial_spawn_queue_idle():
 		await get_tree().process_frame
 
