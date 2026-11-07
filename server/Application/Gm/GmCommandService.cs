@@ -303,12 +303,30 @@ public sealed class GmCommandService
             !int.TryParse(parts[2], out var itemIndex))
             return [Chat("用法：/gm mecha <CardID>")];
 
+        var requestedItemIndex = itemIndex;
         var currentItem = _current.FindItem(itemIndex);
+
         if (currentItem is null ||
             !currentItem.Category.Equals(
                 "horse",
                 StringComparison.OrdinalIgnoreCase))
-            return [Chat($"新版 GameData 找不到機甲 ItemIndex={itemIndex}")];
+        {
+            var legacyName = _legacyClient.FindItemName(
+                requestedItemIndex,
+                "horse");
+
+            currentItem = string.IsNullOrWhiteSpace(legacyName)
+                ? null
+                : _current.FindItemByName(
+                    legacyName,
+                    "horse");
+
+            if (currentItem is null)
+                return [Chat(
+                    $"找不到舊機甲 {requestedItemIndex} 對應的新版 GameData")];
+
+            itemIndex = currentItem.ItemId;
+        }
 
         var card = _horseCards.Find(itemIndex);
         var uid = _store.AddHorse(
@@ -409,17 +427,38 @@ public sealed class GmCommandService
         if (!int.TryParse(parts[2], out var skillId))
             return [Chat("SkillID 必須是數字或 all")];
 
+        var requestedSkillId = skillId;
         var definition = _skills.Find(skillId);
-        if (definition is null)
-            return [Chat($"找不到 SkillID={skillId}")];
 
-        if (!_store.SetSkill(accountId, dbid, skillId, level))
+        if (definition is null)
+        {
+            var legacyName =
+                _legacyClient.FindSkillName(requestedSkillId);
+
+            var currentSkill =
+                string.IsNullOrWhiteSpace(legacyName)
+                    ? null
+                    : _current.FindSkillByName(legacyName);
+
+            if (currentSkill is null)
+                return [Chat(
+                    $"找不到舊 SkillID={requestedSkillId} 對應的新版技能")];
+
+            skillId = currentSkill.SkillId;
+            definition = _skills.Find(skillId);
+        }
+
+        if (definition is null ||
+            !_store.SetSkill(accountId, dbid, skillId, level))
             return [Chat("學習技能失敗")];
 
         return
         [
             BuildSkillSync(accountId, dbid),
-            Chat($"已學會 {definition.Name} ({skillId}) Lv.{level}")
+            Chat(
+                requestedSkillId == skillId
+                    ? $"已學會 {definition.Name} ({skillId}) Lv.{level}"
+                    : $"已對齊舊技能 {requestedSkillId} -> 新技能 {skillId}：{definition.Name} Lv.{level}")
         ];
     }
 
