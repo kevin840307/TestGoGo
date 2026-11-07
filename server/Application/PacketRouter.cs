@@ -5,6 +5,7 @@ using SGO.Server.Application.Combat;
 using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
+using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Shops;
 using SGO.Server.Domain.Sessions;
@@ -34,6 +35,7 @@ public sealed class PacketRouter
     private readonly HorseCardCatalog _horseCards;
     private readonly CurrentClientDataCatalog _current;
     private readonly LegacyPlayerGrowthCatalog _growth;
+    private readonly ServerBroadcastHub _broadcasts;
     private readonly ILogger<PacketRouter> _log;
 
     public PacketRouter(
@@ -51,6 +53,7 @@ public sealed class PacketRouter
         HorseCardCatalog horseCards,
         CurrentClientDataCatalog current,
         LegacyPlayerGrowthCatalog growth,
+        ServerBroadcastHub broadcasts,
         ILogger<PacketRouter> log)
     {
         _store = store;
@@ -69,6 +72,7 @@ public sealed class PacketRouter
         _horseCards = horseCards;
         _current = current;
         _growth = growth;
+        _broadcasts = broadcasts;
         _log = log;
     }
 
@@ -1050,10 +1054,17 @@ public sealed class PacketRouter
                 var assets = _store.GetCharacterAssets(
                     accountId,
                     state.CharacterId.Value);
+                var spawnPacket =
+                    BuildGroundItemSpawnPacket(ground);
+
+                _broadcasts.PublishToMap(
+                    state.CurrentMapId,
+                    spawnPacket,
+                    state.ConnectionId);
 
                 return
                 [
-                    BuildGroundItemSpawnPacket(ground),
+                    spawnPacket,
                     new
                     {
                         Type = "InventorySync",
@@ -1082,17 +1093,29 @@ public sealed class PacketRouter
                     return [];
 
                 var entityId = req.Int("EntityID");
-                if (!state.GroundItems.TryGetValue(entityId, out var ground) ||
+                if (!state.GroundItems.TryGetValue(
+                        entityId,
+                        out var ground) ||
                     ground.MapId != state.CurrentMapId)
                 {
-                    return
-                    [
-                        new
-                        {
-                            Type = "SystemMessageFlash",
-                            Message = "物品已不存在"
-                        }
-                    ];
+                    ground = _store.GetGroundItems(
+                            state.CurrentMapId)
+                        .FirstOrDefault(x =>
+                            x.EntityId == entityId);
+
+                    if (ground is null)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "物品已不存在"
+                            }
+                        ];
+                    }
+
+                    state.GroundItems[entityId] = ground;
                 }
 
                 var dx = ground.X - state.LastX;
@@ -1130,14 +1153,20 @@ public sealed class PacketRouter
                 var assets = _store.GetCharacterAssets(
                     accountId,
                     state.CharacterId.Value);
+                var despawnPacket = new
+                {
+                    Type = "DespawnEntity",
+                    EntityID = entityId
+                };
+
+                _broadcasts.PublishToMap(
+                    state.CurrentMapId,
+                    despawnPacket,
+                    state.ConnectionId);
 
                 return
                 [
-                    new
-                    {
-                        Type = "DespawnEntity",
-                        EntityID = entityId
-                    },
+                    despawnPacket,
                     new
                     {
                         Type = "InventorySync",
@@ -1616,11 +1645,16 @@ public sealed class PacketRouter
             foreach (var entityId in expiredEntityIds)
             {
                 state.GroundItems.Remove(entityId);
-                packets.Add(new
+                var despawnPacket = new
                 {
                     Type = "DespawnEntity",
                     EntityID = entityId
-                });
+                };
+                packets.Add(despawnPacket);
+                _broadcasts.PublishToMap(
+                    state.CurrentMapId,
+                    despawnPacket,
+                    state.ConnectionId);
             }
         }
 
