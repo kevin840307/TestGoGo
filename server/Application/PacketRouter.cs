@@ -426,7 +426,7 @@ public sealed class PacketRouter
                 if (action is "DonateMoney" or "DonateExp")
                 {
                     packets.Add(
-                        BuildEffectiveStatusPacket(
+                        BuildAndBroadcastEffectiveStatusPacket(state, 
                             accountId,
                             state.CharacterId.Value,
                             _store.GetCharacterAssets(
@@ -770,7 +770,7 @@ public sealed class PacketRouter
 
                     return
                     [
-                        BuildEffectiveStatusPacket(
+                        BuildAndBroadcastEffectiveStatusPacket(state, 
                             accountId,
                             state.CharacterId.Value,
                             assetsAfterRecovery),
@@ -1004,7 +1004,7 @@ public sealed class PacketRouter
                         Equips = assets.Equips,
                         MaxSize = assets.EquipMaxSize
                     },
-                    BuildEffectiveStatusPacket(accountId, state.CharacterId.Value, assets),
+                    BuildAndBroadcastEffectiveStatusPacket(state, accountId, state.CharacterId.Value, assets),
                     BuildAndBroadcastAppearancePacket(state, accountId, state.CharacterId.Value, assets)
                 ];
             }
@@ -1035,7 +1035,7 @@ public sealed class PacketRouter
                         Equips = assets.Equips,
                         MaxSize = assets.EquipMaxSize
                     },
-                    BuildEffectiveStatusPacket(accountId, state.CharacterId.Value, assets),
+                    BuildAndBroadcastEffectiveStatusPacket(state, accountId, state.CharacterId.Value, assets),
                     BuildAndBroadcastAppearancePacket(state, accountId, state.CharacterId.Value, assets)
                 ];
             }
@@ -1068,7 +1068,7 @@ public sealed class PacketRouter
 
                 if (success)
                 {
-                    response.Add(BuildEffectiveStatusPacket(
+                    response.Add(BuildAndBroadcastEffectiveStatusPacket(state, 
                         accountId,
                         state.CharacterId.Value,
                         assets));
@@ -1169,7 +1169,7 @@ public sealed class PacketRouter
 
                 if (success)
                 {
-                    response.Add(BuildEffectiveStatusPacket(
+                    response.Add(BuildAndBroadcastEffectiveStatusPacket(state, 
                         accountId,
                         state.CharacterId.Value,
                         assets));
@@ -1214,7 +1214,7 @@ public sealed class PacketRouter
 
                 if (success)
                 {
-                    response.Add(BuildEffectiveStatusPacket(
+                    response.Add(BuildAndBroadcastEffectiveStatusPacket(state, 
                         accountId,
                         state.CharacterId.Value,
                         assets));
@@ -2760,7 +2760,7 @@ public sealed class PacketRouter
 
                 return
                 [
-                    BuildEffectiveStatusPacket(
+                    BuildAndBroadcastEffectiveStatusPacket(state, 
                         accountId,
                         state.CharacterId.Value,
                         assets),
@@ -3670,7 +3670,7 @@ public sealed class PacketRouter
                     MaxSize = assets.EquipMaxSize
                 });
                 result.Packets.Add(
-                    BuildEffectiveStatusPacket(
+                    BuildAndBroadcastEffectiveStatusPacket(state, 
                         accountId,
                         state.CharacterId.Value,
                         assets));
@@ -3707,7 +3707,7 @@ public sealed class PacketRouter
                     state.CharacterId.Value);
 
                 result.Packets.Add(
-                    BuildEffectiveStatusPacket(
+                    BuildAndBroadcastEffectiveStatusPacket(state, 
                         accountId,
                         state.CharacterId.Value,
                         assets));
@@ -4472,7 +4472,8 @@ public sealed class PacketRouter
         return packet;
     }
 
-    private object BuildEffectiveStatusPacket(
+    private object BuildAndBroadcastEffectiveStatusPacket(
+        ClientSession state,
         long accountId,
         long dbid,
         SGO.Server.Domain.Assets.CharacterAssets assets)
@@ -4480,6 +4481,49 @@ public sealed class PacketRouter
         var character = _store.GetCharacter(accountId, dbid);
         if (character is null)
             return new { Type = "PlayerStatusSync" };
+
+        var stats = CharacterStatCalculator.Calculate(
+            character,
+            assets,
+            _current);
+
+        if (state.CurrentMapId > 0 &&
+            state.CharacterId == dbid)
+        {
+            _broadcasts.PublishToMap(
+                state.CurrentMapId,
+                new
+                {
+                    Type = "SyncStatus",
+                    EntityID = dbid,
+                    Level = character["Level"],
+                    HP = Math.Min(
+                        Convert.ToInt32(character["HP"]),
+                        stats.MaxHP),
+                    MP = Math.Min(
+                        Convert.ToInt32(character["MP"]),
+                        stats.MaxMP),
+                    SP = Math.Min(
+                        Convert.ToInt32(character["SP"]),
+                        stats.MaxSP),
+                    MaxHP = stats.MaxHP,
+                    MaxMP = stats.MaxMP,
+                    MaxSP = stats.MaxSP,
+                    Attack = stats.Attack,
+                    Defense = stats.Defense,
+                    MagicAttack = stats.MagicAttack,
+                    MagicDefense = stats.MagicDefense,
+                    Hit = stats.Hit,
+                    Dodge = stats.Dodge,
+                    Lucky = stats.Lucky,
+                    AttackSpeed = stats.AttackSpeed,
+                    AttackRange = stats.AttackRange,
+                    MoveSpeed = stats.MoveSpeed,
+                    CritRate = stats.CritRate,
+                    CritDamage = stats.CritDamage
+                },
+                state.ConnectionId);
+        }
 
         return CharacterStatCalculator.ToPlayerStatusPacket(
             character,
