@@ -469,6 +469,32 @@ func apply_network_move_direction(new_dir: String) -> void :
 			sync_animation()
 
 
+func apply_attack_visual_direction(target_pos: Vector2) -> void :
+	# Combat authority stays on the server, but facing is visual. Use the
+	# positions currently rendered on this client so an already-moving target
+	# is not shown in a different 8-way sector than the last server position.
+	var dir_vec := target_pos - global_position
+	if dir_vec.length_squared() <= 0.000001:
+		return
+
+	var angle_deg: float = posmod(rad_to_deg(dir_vec.angle()), 360.0)
+	var index_raw: int = int(round(angle_deg / 45.0))
+	var visual_dir: String = GameConstants.DIR_STRINGS[index_raw % 8]
+
+	if visual_dir == current_dir:
+		return
+
+	current_dir = visual_dir
+	pending_move_dir = ""
+	pending_move_dir_count = 0
+	last_move_dir_change_ms = Time.get_ticks_msec()
+
+	# If the attack animation has already started from SyncState, switching
+	# direction here immediately selects the matching ATTACK_x/flip frame.
+	if current_state == "attack":
+		sync_animation()
+
+
 func apply_network_state(new_state: String, new_dir: String) -> void :
 	# Server combat state is authoritative over an older movement waypoint.
 	# Once the monster can attack (or is told to idle/hit/die), no previous
