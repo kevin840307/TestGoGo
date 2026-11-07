@@ -26,6 +26,8 @@ var _drain_packet_types: Dictionary = {}
 var _drain_spawn_entity_types: Dictionary = {}
 
 var _logout_action: String = "quit"
+var latest_skill_sync: Array = []
+var has_latest_skill_sync: bool = false
 
 
 
@@ -448,6 +450,8 @@ func send_modify_password_request(char_slot: int, dbid: int, new_pwd: String) ->
 	send_secure_packet({"Type": "ModifyPasswordRequest", "CharSlot": char_slot, "DBID": dbid, "NewPwd": new_pwd})
 
 func send_select_character_request(dbid: int) -> void :
+	latest_skill_sync.clear()
+	has_latest_skill_sync = false
 	if socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
 		send_secure_packet({"Type": "SelectCharacterRequest", "DBID": dbid})
 
@@ -621,7 +625,13 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 			if GameManager.current_hud and GameManager.current_hud.has_method("_refresh_inventory_if_open"):
 				GameManager.current_hud._refresh_inventory_if_open()
 
-		"SkillSync": skill_synced.emit(data.get("Skills", []))
+		"SkillSync":
+			var skills: Array = data.get("Skills", [])
+			latest_skill_sync = skills.duplicate(true)
+			has_latest_skill_sync = true
+			if GameManager.current_player and "data_model" in GameManager.current_player:
+				GameManager.current_player.data_model.update_skills(latest_skill_sync)
+			skill_synced.emit(latest_skill_sync)
 		"SyncBuffs": buffs_synced.emit(data.get("Buffs", []))
 		"SpawnEntity": entity_spawned.emit(data)
 		"DespawnEntity": entity_despawned.emit(data)
