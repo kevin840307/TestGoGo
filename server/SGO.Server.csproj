@@ -20,11 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="GameData/pet_idle_speech.json">
-      <Link>GameData/pet_idle_speech.json</Link>
+    <None Update="GameData/pet_idle_speech.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
