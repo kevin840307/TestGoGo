@@ -61,7 +61,8 @@ public interface IGameStore
         AssetPurchaseKind kind,
         int itemIndex,
         int count,
-        int unitPrice);
+        int unitPrice,
+        int itemPart = 255);
 
     bool SellAsset(
         long accountId,
