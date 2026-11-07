@@ -344,6 +344,12 @@ public sealed class PacketRouter
             }];
         }
 
+        if (type == "Pong")
+        {
+            state.LastPongAt = DateTimeOffset.UtcNow;
+            return [];
+        }
+
         if (!state.AccountId.HasValue)
         {
             _log.LogWarning("Unauthenticated request: {Type}", type);
@@ -3198,10 +3204,6 @@ public sealed class PacketRouter
                         req.TryGetProperty("IsBackToLogin", out var back) &&
                         back.ValueKind == JsonValueKind.True
                 }];
-
-            case "Pong":
-                state.LastPongAt = DateTimeOffset.UtcNow;
-                return [];
 
             default:
                 _log.LogWarning(
