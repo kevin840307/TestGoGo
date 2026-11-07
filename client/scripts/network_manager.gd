@@ -71,6 +71,7 @@ signal open_create_club_window_received()
 signal system_message_flash_received(message: String)
 signal system_message_chat_received(message: String)
 signal system_message_broadcast_received(message: String)
+signal item_pickup_feedback_received(data: Dictionary)
 signal open_bank_window_received()
 signal open_repair_window_received(repair_type: int)
 
@@ -628,6 +629,7 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 		"SystemMessageFlash": system_message_flash_received.emit(data.get("Message", ""))
 		"SystemMessageChat": system_message_chat_received.emit(data.get("Message", ""))
 		"SystemMessageBroadcast": system_message_broadcast_received.emit(data.get("Message", ""))
+		"ItemPickupFeedback": item_pickup_feedback_received.emit(data)
 		"OpenBankWindow": open_bank_window_received.emit()
 		"OpenRepairWindow": open_repair_window_received.emit(int(data.get("RepairType", 1)))
 
