@@ -68,7 +68,21 @@ GitHub Actions `Server build` 工作流程已納入前兩項檢查，且會上�
 - `Client` 的 `send_mall_action`、戰團 `ClubAction` 固定 Dictionary 也加入 `tests/packet_schema_audit.py` 的欄位比對；新增 Python fixture 測試，驗證缺少商城數量會正確檢出。
 - 戰團目標 DBID、金幣與經驗捐款的 Router 參數改用 `Int64`，避免 `Int32` 溢位後被當成 0。
 - Server → Client 重要回應契約由 **16 種擴充到 27 種**，新增商城／PayPal／舊服點數／製作／分解／組隊／戰團／交易／排名回應。靜態分析檢查固定匿名封包必要欄位與 Client 接收入口，**不代表值的型別、封包順序或實際功能已測通**。
-- 目前共 **40 種請求 Type Schema、29 種動態 Action Schema、27 種關鍵 Server 回應 Schema**。這些是納入檢查的規則數量，而不是整個遊戲所有封包的百分比。
+- 目前共 **40 種請求 Type Schema、34 種動態 Action Schema、27 種關鍵 Server 回應 Schema**。這些是納入檢查的規則數量，而不是整個遊戲所有封包的百分比。
+
+## 2026-11-07 補充：組隊、戰團建立與可省略的戰鬥欄位
+
+- `PartyAction` 的 Invite、Accept、Decline、Kick 新增 `TargetDBID (Int64)` 必要欄位；Create、Leave、Disband 不需指定目標，保留舊 Client 行為。
+- `ClubAction(Create)` 新增非空的 `ClubName` 驗證，避免空名稱進入資料庫處理。
+- `tests/packet_schema_audit.py` 同時檢查 Client 的 `send_party_action` 送出格式（Helper 固定包含 `TargetDBID`），新增對應 Python 單元測試。
+- 針對 `UseSkill` 的 TargetID、TargetType、TargetX、TargetY，以及 `AttackEntity.TargetType`、`PartyAction.TargetDBID`、`TradeAddItem.ItemIndex`：**可以省略，但若有帶就必須符合型別**。無目標技能不會被當作封包錯誤。
+- `tests/run_protocol_checks.ps1` 可在 Windows PowerShell 5.1／PowerShell 7 一鍵執行 Python 三組契約單元測試、三組靜態稽核、.NET Build、Server SmokeTests 和本機 AES/WebSocket 真實收發測試。會清理自行啟動的 Server，並將報告與 Server 日誌存放於暫存目錄；本腳本不會啟用商城金流、舊服點數或完成真正 Godot 多人 E2E。
+
+本機執行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tests/run_protocol_checks.ps1
+```
 
 ## 真正的網路封包整合測試
 
