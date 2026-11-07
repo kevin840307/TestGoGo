@@ -4591,6 +4591,46 @@ try
             "NPC shop sells horse batteries from Godot GENERAL tab as stackable inventory");
     }
 
+    var npcSellHorseCardUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        50001,
+        1);
+    var horseCountBeforeCardSell =
+        store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Horses.Count;
+
+    using (var sellHorseCard = Json(JsonSerializer.Serialize(new
+    {
+        Type = "ShopAction",
+        Action = "SellNpcItem",
+        UID = npcSellHorseCardUid,
+        // Unactivated mecha cards are ordinary inventory items.
+        TabType = 0,
+        Count = 1
+    })))
+    {
+        var responses = router.Handle(
+            sellHorseCard.RootElement,
+            session);
+        var assetsAfterCardSale =
+            store.GetCharacterAssets(
+                account.Value,
+                id);
+
+        Check(
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("出售成功")) &&
+            !assetsAfterCardSale.Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    npcSellHorseCardUid) &&
+            assetsAfterCardSale.Horses.Count ==
+                horseCountBeforeCardSell,
+            "NPC shop sells an unactivated horse-category mecha card from inventory without deleting/creating a horse row");
+    }
+
     var baseAttackBeforeEquip = Convert.ToInt32(
         store.GetCharacter(account.Value, id)!["Attack"]);
 
