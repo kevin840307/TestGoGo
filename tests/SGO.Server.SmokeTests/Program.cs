@@ -520,6 +520,137 @@ try
           seededAssets.HorseEquips.Count == 4,
         "character assets round-trip from SQLite");
 
+    // BankTransfer: general items support partial stack deposit/withdraw.
+    using (var bankDeposit = Json(JsonSerializer.Serialize(new
+    {
+        Type = "BankTransfer",
+        UID = itemUid,
+        ToBank = true,
+        Amount = 1,
+        TabType = 0
+    })))
+    {
+        var responses = router.Handle(bankDeposit.RootElement, session);
+        var after = store.GetCharacterAssets(account.Value, id);
+
+        Check(after.Inventory.Any(x =>
+                  Convert.ToInt64(x["ItemUID"]) == itemUid &&
+                  Convert.ToInt32(x["InBank"]) == 0 &&
+                  Convert.ToInt32(x["Count"]) == 4) &&
+              after.Inventory.Any(x =>
+                  Convert.ToInt32(x["ItemIndex"]) ==
+                      generalShopItem.ItemIndex &&
+                  Convert.ToInt32(x["InBank"]) == 1 &&
+                  Convert.ToInt32(x["Count"]) == 1) &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"Type\":\"InventorySync\"")),
+            "BankTransfer deposits one item from a general-item stack");
+    }
+
+    var bankGeneralUid = Convert.ToInt64(
+        store.GetCharacterAssets(account.Value, id).Inventory
+            .First(x =>
+                Convert.ToInt32(x["ItemIndex"]) ==
+                    generalShopItem.ItemIndex &&
+                Convert.ToInt32(x["InBank"]) == 1)["ItemUID"]);
+
+    using (var bankWithdraw = Json(JsonSerializer.Serialize(new
+    {
+        Type = "BankTransfer",
+        UID = bankGeneralUid,
+        ToBank = false,
+        Amount = 1,
+        TabType = 0
+    })))
+    {
+        var responses = router.Handle(bankWithdraw.RootElement, session);
+        var after = store.GetCharacterAssets(account.Value, id);
+
+        Check(after.Inventory.Any(x =>
+                  Convert.ToInt64(x["ItemUID"]) == itemUid &&
+                  Convert.ToInt32(x["InBank"]) == 0 &&
+                  Convert.ToInt32(x["Count"]) == 5) &&
+              !after.Inventory.Any(x =>
+                  Convert.ToInt32(x["ItemIndex"]) ==
+                      generalShopItem.ItemIndex &&
+                  Convert.ToInt32(x["InBank"]) == 1) &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"Type\":\"InventorySync\"")),
+            "BankTransfer withdraws and merges a general-item stack");
+    }
+
+    using (var bankEquip = Json(JsonSerializer.Serialize(new
+    {
+        Type = "BankTransfer",
+        UID = equipUid,
+        ToBank = true,
+        Amount = 1,
+        TabType = 1
+    })))
+    {
+        var responses = router.Handle(bankEquip.RootElement, session);
+        Check(store.GetCharacterAssets(account.Value, id).Equips.Any(x =>
+                  Convert.ToInt64(x["ItemID"]) == equipUid &&
+                  Convert.ToInt32(x["InBank"]) == 1) &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"Type\":\"EquipSync\"")),
+            "BankTransfer deposits unequipped character equipment");
+    }
+
+    using (var bankEquipBack = Json(JsonSerializer.Serialize(new
+    {
+        Type = "BankTransfer",
+        UID = equipUid,
+        ToBank = false,
+        Amount = 1,
+        TabType = 1
+    })))
+    {
+        router.Handle(bankEquipBack.RootElement, session);
+        Check(store.GetCharacterAssets(account.Value, id).Equips.Any(x =>
+                Convert.ToInt64(x["ItemID"]) == equipUid &&
+                Convert.ToInt32(x["InBank"]) == 0),
+            "BankTransfer withdraws character equipment");
+    }
+
+    using (var bankMechaEquip = Json(JsonSerializer.Serialize(new
+    {
+        Type = "BankTransfer",
+        UID = horseEquipUid,
+        ToBank = true,
+        Amount = 1,
+        TabType = 3
+    })))
+    {
+        var responses = router.Handle(bankMechaEquip.RootElement, session);
+        Check(store.GetCharacterAssets(account.Value, id).HorseEquips.Any(x =>
+                  Convert.ToInt64(x["EquipUID"]) == horseEquipUid &&
+                  Convert.ToInt32(x["InBank"]) == 1) &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"Type\":\"HorseSync\"")),
+            "BankTransfer deposits unbound mecha equipment");
+    }
+
+    using (var bankMechaEquipBack = Json(JsonSerializer.Serialize(new
+    {
+        Type = "BankTransfer",
+        UID = horseEquipUid,
+        ToBank = false,
+        Amount = 1,
+        TabType = 3
+    })))
+    {
+        router.Handle(bankMechaEquipBack.RootElement, session);
+        Check(store.GetCharacterAssets(account.Value, id).HorseEquips.Any(x =>
+                Convert.ToInt64(x["EquipUID"]) == horseEquipUid &&
+                Convert.ToInt32(x["InBank"]) == 0),
+            "BankTransfer withdraws mecha equipment");
+    }
+
     var seededPet = seededAssets.Pets.Single();
     Check(Convert.ToInt32(seededPet["LifeCount"]) > 0 &&
           Convert.ToInt32(seededPet["FeedValue"]) > 0 &&
