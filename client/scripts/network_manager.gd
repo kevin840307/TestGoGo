@@ -1286,6 +1286,20 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 		"Ping":
 			send_secure_packet({"Type": "Pong"})
 
+		"WorldReadyResponse":
+			var ready_ok: bool = bool(data.get("Success", false))
+			if GameManager and GameManager.has_method("trace_map_diagnostic"):
+				GameManager.trace_map_diagnostic("world_ready_ack", {
+					"map_id": int(data.get("MapID", 0)),
+					"success": ready_ok,
+				})
+			if not ready_ok:
+				push_warning("[WORLD_READY_REJECTED] %s" % str(data.get("Message", "")))
+
+		"UpdateShortcutResponse":
+			if not bool(data.get("Success", false)):
+				system_message_flash_received.emit(str(data.get("Message", "快速鍵儲存失敗")))
+
 		"PacketError":
 			var request_type: String = str(data.get("RequestType", ""))
 			var error_code: String = str(data.get("Code", "UNKNOWN"))
