@@ -474,6 +474,40 @@ Check(careerNpc.Packets.Any(x =>
         JsonSerializer.Serialize(x).Contains("\"Type\":\"NpcDialogResponse\"")),
     "nonstandard smart-quote escapes are normalized");
 
+var legacyCareer = 0;
+var legacyJob = 0;
+var legacyCareerFlag = 0;
+
+var legacyJobResult = quests.Execute(
+    "Job_Test.txt",
+    "KnightJob",
+    8,
+    "職業管理人",
+    0,
+    key => key == "Race" ? 0 : 0,
+    new QuestRuntimeBindings
+    {
+        SetCareer = (career, job) =>
+        {
+            legacyCareer = career;
+            legacyJob = job;
+            return true;
+        },
+        SetFlag = (flag, value) =>
+        {
+            if (flag == "職業測試完成")
+                legacyCareerFlag = value;
+        }
+    });
+
+Check(legacyCareer == 2 &&
+      legacyJob == 1 &&
+      legacyCareerFlag == 1 &&
+      !legacyJobResult.Packets.Any(x =>
+          JsonSerializer.Serialize(x).Contains(
+              "NPC 腳本執行失敗")),
+    "original Job_Test KnightJob executes SetCareer and completion flag");
+
 var map15Enemies = world.GetEnemies(15);
 Check(map15Enemies.Count == 4,
     "Map15 Enemy.dat binary parser reads four records");
