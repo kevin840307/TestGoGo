@@ -1870,6 +1870,293 @@ public sealed class SqliteGameStore : IGameStore
             $"已開始研發科技 Lv.{nextLevel}");
     }
 
+    public ClubMutationResult SetClubMemberPosition(
+        long accountId,
+        long callerDbid,
+        string targetName,
+        int position)
+    {
+        targetName = targetName.Trim();
+
+        if (targetName.Length == 0)
+            return new(false, "請輸入玩家名稱");
+
+        if (position is < 0 or > 2)
+            return new(false, "職位代號只能是 0、1、2");
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(
+                db,
+                accountId,
+                callerDbid,
+                tx))
+            return new(false, "角色不存在");
+
+        long clubId;
+        int callerPosition;
+        using (var caller = db.CreateCommand())
+        {
+            caller.Transaction = tx;
+            caller.CommandText = """
+                SELECT club_id,position
+                  FROM club_members
+                 WHERE character_id=$id
+                 LIMIT 1
+                """;
+            Arg(caller, "$id", callerDbid);
+
+            using var reader = caller.ExecuteReader();
+            if (!reader.Read())
+                return new(false, "你尚未加入戰團");
+
+            clubId = reader.GetInt64(0);
+            callerPosition = reader.GetInt32(1);
+        }
+
+        if (callerPosition < 2)
+            return new(false, "你沒有變更職位的權限");
+
+        if (position >= callerPosition)
+            return new(false, "不能任命與自己同級或更高的職位");
+
+        long targetDbid;
+        int targetPosition;
+        using (var target = db.CreateCommand())
+        {
+            target.Transaction = tx;
+            target.CommandText = """
+                SELECT member.character_id,member.position
+                  FROM club_members member
+                  JOIN characters character
+                    ON character.id=member.character_id
+                 WHERE member.club_id=$club
+                   AND character.name=$name COLLATE NOCASE
+                 LIMIT 1
+                """;
+            Arg(target, "$club", clubId);
+            Arg(target, "$name", targetName);
+
+            using var reader = target.ExecuteReader();
+            if (!reader.Read())
+                return new(false, "找不到同戰團的玩家");
+
+            targetDbid = reader.GetInt64(0);
+            targetPosition = reader.GetInt32(1);
+        }
+
+        if (targetDbid == callerDbid)
+            return new(false, "不能變更自己的職位");
+
+        if (targetPosition >= callerPosition)
+            return new(false, "不能變更同級或更高職位的成員");
+
+        using var update = db.CreateCommand();
+        update.Transaction = tx;
+        update.CommandText = """
+            UPDATE club_members
+               SET position=$position
+             WHERE club_id=$club
+               AND character_id=$target
+            """;
+        Arg(update, "$position", position);
+        Arg(update, "$club", clubId);
+        Arg(update, "$target", targetDbid);
+
+        if (update.ExecuteNonQuery() != 1)
+            return new(false, "戰團職位更新失敗");
+
+        tx.Commit();
+        return new(
+            true,
+            $"已將 {targetName} 的職位調整為 {position}");
+    }
+
+    public ClubMutationResult KickClubMember(
+        long accountId,
+        long callerDbid,
+        string targetName)
+    {
+        targetName = targetName.Trim();
+
+        if (targetName.Length == 0)
+            return new(false, "請輸入玩家名稱");
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(
+                db,
+                accountId,
+                callerDbid,
+                tx))
+            return new(false, "角色不存在");
+
+        long clubId;
+        int callerPosition;
+        using (var caller = db.CreateCommand())
+        {
+            caller.Transaction = tx;
+            caller.CommandText = """
+                SELECT club_id,position
+                  FROM club_members
+                 WHERE character_id=$id
+                 LIMIT 1
+                """;
+            Arg(caller, "$id", callerDbid);
+
+            using var reader = caller.ExecuteReader();
+            if (!reader.Read())
+                return new(false, "你尚未加入戰團");
+
+            clubId = reader.GetInt64(0);
+            callerPosition = reader.GetInt32(1);
+        }
+
+        if (callerPosition < 2)
+            return new(false, "你沒有剔除成員的權限");
+
+        long targetDbid;
+        int targetPosition;
+        using (var target = db.CreateCommand())
+        {
+            target.Transaction = tx;
+            target.CommandText = """
+                SELECT member.character_id,member.position
+                  FROM club_members member
+                  JOIN characters character
+                    ON character.id=member.character_id
+                 WHERE member.club_id=$club
+                   AND character.name=$name COLLATE NOCASE
+                 LIMIT 1
+                """;
+            Arg(target, "$club", clubId);
+            Arg(target, "$name", targetName);
+
+            using var reader = target.ExecuteReader();
+            if (!reader.Read())
+                return new(false, "找不到同戰團的玩家");
+
+            targetDbid = reader.GetInt64(0);
+            targetPosition = reader.GetInt32(1);
+        }
+
+        if (targetDbid == callerDbid)
+            return new(false, "不能剔除自己");
+
+        if (targetPosition >= callerPosition)
+            return new(false, "只能剔除職位低於自己的成員");
+
+        using var delete = db.CreateCommand();
+        delete.Transaction = tx;
+        delete.CommandText = """
+            DELETE FROM club_members
+             WHERE club_id=$club
+               AND character_id=$target
+            """;
+        Arg(delete, "$club", clubId);
+        Arg(delete, "$target", targetDbid);
+
+        if (delete.ExecuteNonQuery() != 1)
+            return new(false, "剔除戰團成員失敗");
+
+        tx.Commit();
+        return new(true, $"已將 {targetName} 移出戰團");
+    }
+
+    public ClubMutationResult LeaveClub(
+        long accountId,
+        long dbid)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在");
+
+        int position;
+        using (var membership = db.CreateCommand())
+        {
+            membership.Transaction = tx;
+            membership.CommandText = """
+                SELECT position
+                  FROM club_members
+                 WHERE character_id=$id
+                 LIMIT 1
+                """;
+            Arg(membership, "$id", dbid);
+
+            var raw = membership.ExecuteScalar();
+            if (raw is null)
+                return new(false, "你尚未加入戰團");
+
+            position = Convert.ToInt32(raw);
+        }
+
+        if (position == 3)
+            return new(false, "團長無法直接退出戰團，請先解散戰團");
+
+        using var delete = db.CreateCommand();
+        delete.Transaction = tx;
+        delete.CommandText = """
+            DELETE FROM club_members
+             WHERE character_id=$id
+            """;
+        Arg(delete, "$id", dbid);
+
+        if (delete.ExecuteNonQuery() != 1)
+            return new(false, "退出戰團失敗");
+
+        tx.Commit();
+        return new(true, "已退出戰團");
+    }
+
+    public ClubMutationResult DisbandClub(
+        long accountId,
+        long dbid)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在");
+
+        long clubId;
+        using (var membership = db.CreateCommand())
+        {
+            membership.Transaction = tx;
+            membership.CommandText = """
+                SELECT club_id
+                  FROM club_members
+                 WHERE character_id=$id
+                   AND position=3
+                 LIMIT 1
+                """;
+            Arg(membership, "$id", dbid);
+
+            clubId = Convert.ToInt64(
+                membership.ExecuteScalar() ?? 0L);
+        }
+
+        if (clubId <= 0)
+            return new(false, "只有團長可以解散戰團");
+
+        using var delete = db.CreateCommand();
+        delete.Transaction = tx;
+        delete.CommandText = """
+            DELETE FROM clubs
+             WHERE id=$club
+            """;
+        Arg(delete, "$club", clubId);
+
+        if (delete.ExecuteNonQuery() != 1)
+            return new(false, "解散戰團失敗");
+
+        tx.Commit();
+        return new(true, "戰團已解散");
+    }
+
     private static long ReadClubId(
         SqliteConnection db,
         SqliteTransaction tx,
