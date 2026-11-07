@@ -2772,6 +2772,94 @@ try
         CurrentMapId = 15
     };
 
+    // Chat channel routing follows the recovered Godot channel enum:
+    // 0 nearby, 1 faction/world, 2 club, 3 party.
+    broadcastHub.UpdatePresence(
+        broadcastRegistration.ConnectionId,
+        16,
+        id,
+        account.Value);
+    broadcastHub.UpdatePresence(
+        clubMemberRegistration.ConnectionId,
+        16,
+        id,
+        account.Value);
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (clubMemberRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var nearbyChat = Json(
+        """{"Type":"ChatMessage","Message":"nearby-only","Channel":0,"BubbleType":2}"""))
+    {
+        var responses = router.Handle(
+            nearbyChat.RootElement,
+            clubLeaderSession);
+
+        Check(responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains("nearby-only")) &&
+              !broadcastRegistration.Queue.ToArray().Any(x =>
+                  JsonSerializer.Serialize(x).Contains("nearby-only")) &&
+              !clubMemberRegistration.Queue.ToArray().Any(x =>
+                  JsonSerializer.Serialize(x).Contains("nearby-only")),
+            "nearby chat does not cross maps");
+    }
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (clubMemberRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var worldChat = Json(
+        """{"Type":"ChatMessage","Message":"world-cross-map","Channel":1,"BubbleType":3}"""))
+    {
+        router.Handle(
+            worldChat.RootElement,
+            clubLeaderSession);
+
+        Check(
+            broadcastRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains("world-cross-map")) ||
+            clubMemberRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains("world-cross-map")),
+            "world/faction chat reaches authenticated players across maps");
+    }
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (clubMemberRegistration.Queue.TryDequeue(out _)) { }
+
+    using (var clubChat = Json(
+        """{"Type":"ChatMessage","Message":"club-cross-map","Channel":2,"BubbleType":4}"""))
+    {
+        var responses = router.Handle(
+            clubChat.RootElement,
+            clubLeaderSession);
+
+        Check(responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"Channel\":2")) &&
+              (broadcastRegistration.Queue.ToArray().Any(x =>
+                   JsonSerializer.Serialize(x).Contains("club-cross-map")) ||
+               clubMemberRegistration.Queue.ToArray().Any(x =>
+                   JsonSerializer.Serialize(x).Contains("club-cross-map"))),
+            "club chat reaches online club members even on another map");
+    }
+
+    using (var invalidChatChannel = Json(
+        """{"Type":"ChatMessage","Message":"invalid","Channel":4,"BubbleType":0}"""))
+    {
+        var responses = router.Handle(
+            invalidChatChannel.RootElement,
+            clubLeaderSession);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "不支援的聊天頻道")),
+            "unsupported private/wire chat channel is rejected instead of leaking to nearby players");
+    }
+
+    router.SyncPresence(session);
+    broadcastHub.UpdatePresence(
+        clubMemberRegistration.ConnectionId,
+        15,
+        id,
+        account.Value);
+
     using (var leaderQuit = Json(
         """{"Type":"ChatMessage","Message":"/quit","Channel":0,"BubbleType":0}"""))
     {
