@@ -67,7 +67,7 @@ public interface ICharacterStore
         long dbid,
         int hpPercent,
         int mpPercent,
-        bool clearDeathExp);
+        int deathExpReductionPercent);
     Dictionary<string, object>? ApplyDamage(
         long accountId,
         long dbid,
