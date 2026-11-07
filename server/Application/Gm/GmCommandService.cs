@@ -1,4 +1,5 @@
 using SGO.Server.Application.Abstractions;
+using SGO.Server.Application.Assets;
 using SGO.Server.Application.Combat;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Infrastructure.GameData;
