@@ -340,6 +340,9 @@ func _ready() -> void :
 		if NetworkManager.has_signal("system_message_flash_received"):
 			if not NetworkManager.system_message_flash_received.is_connected(show_system_message_flash):
 				NetworkManager.system_message_flash_received.connect(show_system_message_flash)
+		if NetworkManager.has_signal("item_pickup_feedback_received"):
+			if not NetworkManager.item_pickup_feedback_received.is_connected(_on_item_pickup_feedback_received):
+				NetworkManager.item_pickup_feedback_received.connect(_on_item_pickup_feedback_received)
 
 		if NetworkManager.has_signal("system_message_chat_received"):
 			if not NetworkManager.system_message_chat_received.is_connected(show_system_message_chat):
@@ -482,11 +485,20 @@ func _on_skill_synced_hud(skills: Array) -> void :
 		skill_window.update_ui()
 
 const REJECTION_FEEDBACK_SE_ID: int = 97
+const ITEM_PICKUP_SE_ID: int = 64
 const PARTY_INVITATION_SE_ID: int = 129
 
 func show_rejection_message_flash(msg: String) -> void :
 	show_system_message_flash(msg)
 	_play_rejection_feedback_se()
+
+func _on_item_pickup_feedback_received(data: Dictionary) -> void :
+	var message: String = str(data.get("Message", ""))
+	if not message.is_empty():
+		show_system_message_flash(message)
+
+	if AudioManager:
+		AudioManager.play_se(ITEM_PICKUP_SE_ID)
 
 func show_system_message_flash(msg: String) -> void :
 	var lbl_sys_msg_node = chat_panel.get_node_or_null("LblSystemMsg") if chat_panel else null
