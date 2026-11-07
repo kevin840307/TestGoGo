@@ -404,6 +404,10 @@ public interface IWorldGroundItemStore
             long groundItemId);
 }
 
+public sealed record PlayerShopReserveResult(
+    bool Success,
+    long ReservedUid);
+
 public sealed record PlayerShopPurchaseResult(
     bool Success,
     string Message,
@@ -413,7 +417,7 @@ public sealed record PlayerShopPurchaseResult(
 
 public interface IPlayerShopStore : ICharacterAssetReader
 {
-    bool SetPlayerShopAssetState(
+    PlayerShopReserveResult SetPlayerShopAssetState(
         long accountId,
         long dbid,
         long uid,
