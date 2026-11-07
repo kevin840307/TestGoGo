@@ -1,4 +1,5 @@
 using SGO.Server.Application;
+using SGO.Server.Application.Bank;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Shops;
@@ -69,6 +70,7 @@ builder.Services.AddSingleton(sp =>
 
 builder.Services.AddSingleton<CombatService>();
 builder.Services.AddSingleton<ShopService>();
+builder.Services.AddSingleton<BankService>();
 builder.Services.AddSingleton<GmCommandService>();
 builder.Services.AddSingleton<PacketRouter>();
 
