@@ -347,6 +347,7 @@ public sealed class PartyService
         PublishSyncToOthers(
             party,
             selfDbid);
+        PublishPartyNameColors(party);
 
         return [BuildSyncPacket(party)];
     }
@@ -423,15 +424,23 @@ public sealed class PartyService
             }
         }
 
+        PublishNameColor(selfDbid, "");
+
         foreach (var target in notifyEmpty)
+        {
             _broadcasts.PublishToCharacter(
                 target,
                 EmptySync());
+            PublishNameColor(target, "");
+        }
 
         if (remainingParty is not null)
+        {
             PublishSyncToOthers(
                 remainingParty,
                 selfDbid);
+            PublishPartyNameColors(remainingParty);
+        }
 
         return [EmptySync()];
     }
@@ -469,10 +478,15 @@ public sealed class PartyService
             _parties.Remove(party.PartyId);
         }
 
+        PublishNameColor(selfDbid, "");
+
         foreach (var target in targets)
+        {
             _broadcasts.PublishToCharacter(
                 target,
                 EmptySync());
+            PublishNameColor(target, "");
+        }
 
         return [EmptySync()];
     }
@@ -517,10 +531,12 @@ public sealed class PartyService
         _broadcasts.PublishToCharacter(
             targetDbid,
             EmptySync());
+        PublishNameColor(targetDbid, "");
 
         PublishSyncToOthers(
             party,
             selfDbid);
+        PublishPartyNameColors(party);
 
         return [BuildSyncPacket(party)];
     }
@@ -560,6 +576,39 @@ public sealed class PartyService
                 member.CharacterId,
                 packet);
         }
+    }
+
+    private void PublishPartyNameColors(
+        PartyRuntime party)
+    {
+        foreach (var member in party.Members)
+            PublishNameColor(
+                member.CharacterId,
+                party.PartyId);
+    }
+
+    private void PublishNameColor(
+        long characterId,
+        string partyId)
+    {
+        var presence =
+            _broadcasts.FindCharacter(characterId);
+
+        if (presence is null ||
+            presence.MapId <= 0)
+            return;
+
+        _broadcasts.PublishToMap(
+            presence.MapId,
+            new
+            {
+                Type = "UpdateNameColor",
+                EntityID = characterId,
+                ColorState = 0,
+                PKStatus = -1,
+                RedManKillLeft = -1,
+                PartyID = partyId
+            });
     }
 
     private object BuildSyncPacket(
