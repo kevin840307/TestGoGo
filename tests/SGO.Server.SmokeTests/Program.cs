@@ -7442,6 +7442,40 @@ try
     broadcastHub.Unregister(
         duplicateRegistration.ConnectionId);
 
+    // Map ticks are driven by one scheduler, not the per-connection router.
+    // Test the production session lifecycle without running a background loop.
+    var mapAi = new SharedMapAiTicker(
+        combat,
+        broadcastHub,
+        accountSessions,
+        NullLogger<SharedMapAiTicker>.Instance);
+    var originalCharacter = session.CharacterId;
+    var originalMap = session.CurrentMapId;
+    var originalReady = session.WorldReady;
+    session.CharacterId = id;
+    session.CurrentMapId = 15; // city has no combat monsters
+    session.WorldReady = false;
+    mapAi.Register(session);
+    Check(session.SharedAiManaged &&
+          mapAi.TickOnce(DateTimeOffset.UtcNow) == 0,
+        "shared map scheduler ignores maps without world-ready players");
+    session.WorldReady = true;
+    var sharedTickTime = DateTimeOffset.UtcNow.AddSeconds(1);
+    Check(mapAi.TickOnce(sharedTickTime) == 1 &&
+          session.LastMonsterAiTick == sharedTickTime,
+        "shared map scheduler ticks an active map once");
+    var socketTickTime = sharedTickTime.AddMilliseconds(250);
+    router.Tick(session, socketTickTime);
+    Check(session.LastMonsterAiTick == sharedTickTime,
+        "per-socket tick does not run managed monster AI again");
+    mapAi.Unregister(session);
+    Check(!session.SharedAiManaged &&
+          mapAi.TickOnce(sharedTickTime.AddSeconds(1)) == 0,
+        "shared map scheduler stops maps after last player disconnects");
+    session.CharacterId = originalCharacter;
+    session.CurrentMapId = originalMap;
+    session.WorldReady = originalReady;
+
     using (var logout = Json(
         """{"Type":"LogoutRequest","IsBackToLogin":true}"""))
     {
