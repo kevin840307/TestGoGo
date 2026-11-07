@@ -2985,7 +2985,7 @@ public sealed class PacketRouter
                     return _shopService.Sell(
                         accountId,
                         state.CharacterId.Value,
-                        req.Int("UID"),
+                        req.Long("UID"),
                         req.Int("TabType"),
                         req.Int("Count", 1));
                 }
