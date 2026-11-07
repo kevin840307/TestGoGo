@@ -80,13 +80,18 @@ public interface ICharacterStore
         long accountId,
         long dbid,
         int hpAmount,
-        int mpAmount);
+        int mpAmount,
+        int? effectiveMaxHp = null,
+        int? effectiveMaxMp = null);
     Dictionary<string, object>? RecoverResources(
         long accountId,
         long dbid,
         int hpAmount,
         int mpAmount,
-        int spAmount);
+        int spAmount,
+        int? effectiveMaxHp = null,
+        int? effectiveMaxMp = null,
+        int? effectiveMaxSp = null);
     Dictionary<string, object>? AddRewards(
         long accountId,
         long dbid,
@@ -148,7 +153,10 @@ public interface IInventoryStore : ICharacterAssetReader
         long itemUid,
         int recoverHp,
         int recoverMp,
-        int recoverSp);
+        int recoverSp,
+        int? effectiveMaxHp = null,
+        int? effectiveMaxMp = null,
+        int? effectiveMaxSp = null);
 }
 
 public interface IEquipmentStore : ICharacterAssetReader
