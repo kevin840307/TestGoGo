@@ -22,6 +22,10 @@ public sealed class EnemyDropCatalog
     private readonly Dictionary<int, List<LegacyItemReference>> _legacyItems = new();
     private readonly CurrentClientDataCatalog _current;
     private int[] _luckThresholds = [0, 0, 50, 90, 140, 200];
+    private int _ownerProtectionMilliseconds = 15_000;
+
+    public int OwnerProtectionSeconds
+        => Math.Max(0, _ownerProtectionMilliseconds / 1000);
 
     public EnemyDropCatalog(
         string dataRoot,
@@ -109,20 +113,34 @@ public sealed class EnemyDropCatalog
                     StringSplitOptions.None)[0]
                 .Trim();
 
-            if (!line.StartsWith(
+            var equals = line.IndexOf('=');
+            if (equals <= 0)
+                continue;
+
+            var key = line[..equals].Trim();
+            var rawValue = line[(equals + 1)..].Trim();
+
+            if (key.Equals(
+                    "OwnedDropItemTimeout",
+                    StringComparison.OrdinalIgnoreCase) &&
+                int.TryParse(rawValue, out var ownerTimeout))
+            {
+                _ownerProtectionMilliseconds =
+                    Math.Max(0, ownerTimeout);
+                continue;
+            }
+
+            if (!key.StartsWith(
                     "Luck",
                     StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            var equals = line.IndexOf('=');
-            if (equals <= 4)
-                continue;
-
-            if (!int.TryParse(
-                    line.AsSpan(4, equals - 4),
+            if (key.Length <= 4 ||
+                !int.TryParse(
+                    key.AsSpan(4),
                     out var index) ||
                 !int.TryParse(
-                    line[(equals + 1)..].Trim(),
+                    rawValue,
                     out var value))
                 continue;
 
@@ -360,7 +378,12 @@ public sealed class EnemyDropCatalog
 
         return legacy switch
         {
-            "general" => current is "general" or "booster",
+            "general" => current is
+                "general" or
+                "booster" or
+                "recovery" or
+                "horse" or
+                "horsebattery",
             "equip" => current == "equip",
             "weapon" => current == "weapon",
             _ => false
