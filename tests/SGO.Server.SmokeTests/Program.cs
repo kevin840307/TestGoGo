@@ -90,6 +90,10 @@ Check(realCurrentCatalog.ResolveExperienceCard(2460) is
       { MultiplierPercent: 200, DurationSeconds: 10800 },
     "double-EXP cards resolve 2x multiplier and original 1h/3h durations");
 
+Check(realCurrentCatalog.FindItem(2459) is
+      { ScriptName: "無罪之書" },
+    "real innocence book exposes its authoritative client script name");
+
 CurrentItemDefinition CurrentItem(
     int id,
     string name,
@@ -179,6 +183,13 @@ var currentCatalog = new CurrentClientDataCatalog(
             "general",
             price: 1,
             scriptName: "雙倍經驗值卡(1小時)"),
+
+        CurrentItem(
+            2459,
+            "無罪之書",
+            "general",
+            price: 1,
+            scriptName: "無罪之書"),
 
         CurrentItem(
             3701,
@@ -6997,6 +7008,61 @@ try
         runtimeJson.Contains(
             $"\"EntityID\":{4_000_000L + runtimePetUid}"),
         "server runtime drains one unit per second and immediately dismounts/recalls depleted companions");
+
+    using (var db = new SqliteConnection(
+        $"Data Source={dbPath}"))
+    {
+        db.Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET exp_death=1000
+             WHERE id=$id
+               AND account_id=$account
+            """;
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.Parameters.AddWithValue("$account", account.Value);
+        Check(cmd.ExecuteNonQuery() == 1,
+            "prepare 1000 death EXP for innocence-book test");
+    }
+
+    var innocenceBookUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        2459,
+        1);
+
+    using (var useInnocenceBook = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "UseItemRequest",
+            ItemUID = innocenceBookUid
+        })))
+    {
+        var responses = router.Handle(
+            useInnocenceBook.RootElement,
+            session);
+        var characterAfterBook = store.GetCharacter(
+            account.Value,
+            id)!;
+        var responseJson = JsonSerializer.Serialize(
+            responses);
+
+        Check(
+            Convert.ToInt32(
+                characterAfterBook["ExpDeath"]) == 100 &&
+            !store.GetCharacterAssets(
+                account.Value,
+                id).Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    innocenceBookUid) &&
+            responseJson.Contains(
+                "\"Type\":\"PlayerStatusSync\"") &&
+            responseJson.Contains("\"ExpDeath\":100") &&
+            responseJson.Contains(
+                "死亡經驗值已減少 90%"),
+            "無罪之書 atomically leaves 10% death EXP, consumes one book and syncs ExpDeath");
+    }
 
     var expCardUid = store.AddInventoryItem(
         account.Value,
