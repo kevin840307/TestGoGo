@@ -551,7 +551,12 @@ public sealed class CombatService
                 Message = $"技能資料不存在 SkillID={skillId} Lv.{skillLevel}"
             }];
 
-        if (levelData.SkillType is not (0 or 1))
+        var isMoonJudgment =
+            skillId == 45111 &&
+            levelData.SkillType == 7;
+
+        if (levelData.SkillType is not (0 or 1) &&
+            !isMoonJudgment)
             return [new
             {
                 Type = "SystemMessageFlash",
@@ -641,13 +646,21 @@ public sealed class CombatService
             assets,
             _current);
 
-        var scalingStat = levelData.DamageType == 1
-            ? effective.MagicAttack
-            : effective.Attack;
-        var damage = Math.Max(
-            1,
-            levelData.BaseDamage +
-            scalingStat * Math.Max(0, levelData.DamageMultiplier) / 100);
+        var damage = isMoonJudgment
+            // Client marks 月神審判 as a special attack and its current
+            // .tres carries no generic base_damage fields. Treat it as a
+            // physical+magical composite until the original service formula
+            // is recovered.
+            ? Math.Max(
+                1,
+                effective.Attack + effective.MagicAttack)
+            : Math.Max(
+                1,
+                levelData.BaseDamage +
+                (levelData.DamageType == 1
+                    ? effective.MagicAttack
+                    : effective.Attack) *
+                Math.Max(0, levelData.DamageMultiplier) / 100);
 
         var centerX = target.X;
         var centerY = target.Y;
