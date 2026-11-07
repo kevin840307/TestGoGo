@@ -908,15 +908,27 @@ public sealed class PacketRouter
             }
 
             case "AttackEntity":
-                return _combat.Attack(
+            {
+                var packets = EnsureCurrentCombatMapLoaded(
+                    state,
+                    accountId);
+
+                packets.AddRange(_combat.Attack(
                     state,
                     accountId,
                     req.Int("TargetEntityID"),
-                    req.Int("TargetType", 1));
+                    req.Int("TargetType", 1)));
 
+                return packets;
+            }
 
             case "UseSkill":
-                return _combat.UseSkill(
+            {
+                var packets = EnsureCurrentCombatMapLoaded(
+                    state,
+                    accountId);
+
+                packets.AddRange(_combat.UseSkill(
                     state,
                     accountId,
                     req.Int("SkillID"),
@@ -924,7 +936,10 @@ public sealed class PacketRouter
                     req.Int("TargetType", 1),
                     req.Int("TargetX"),
                     req.Int("TargetY"),
-                    DateTimeOffset.UtcNow);
+                    DateTimeOffset.UtcNow));
+
+                return packets;
+            }
 
             case "AllocateStatRequest":
             {
@@ -1190,6 +1205,42 @@ public sealed class PacketRouter
         return packets;
     }
 
+    private List<object> EnsureCurrentCombatMapLoaded(
+        ClientSession state,
+        long accountId)
+    {
+        var packets = new List<object>();
+
+        if (!state.CharacterId.HasValue ||
+            state.CurrentMapId <= 0)
+            return packets;
+
+        if (!state.PendingMapSpawn &&
+            state.LoadedMonsterMapId == state.CurrentMapId)
+            return packets;
+
+        state.PendingMapSpawn = false;
+        packets.AddRange(
+            _combat.EnterMap(
+                state,
+                state.CurrentMapId));
+
+        packets.AddRange(
+            BuildActivePetSpawnPackets(
+                state,
+                accountId,
+                state.CharacterId.Value,
+                state.LastX,
+                state.LastY));
+
+        state.WorldSnapshotRetriesRemaining = 4;
+        state.NextWorldSnapshotAt =
+            DateTimeOffset.UtcNow +
+            TimeSpan.FromMilliseconds(750);
+
+        return packets;
+    }
+
     private static string TruncatePayload(
         string payload,
         int maxLength = 1200)
@@ -1335,6 +1386,8 @@ public sealed class PacketRouter
                     result.NewY.Value);
 
                 state.CurrentMapId = result.NewMapId.Value;
+                state.LastX = result.NewX.Value;
+                state.LastY = result.NewY.Value;
                 state.PendingMapSpawn = true;
             }
 
