@@ -273,6 +273,7 @@ func update_hp(new_hp: int, hit_delay: float = 0.3, is_miss: bool = false) -> vo
 
 	if current_hp > 0 and sprite and took_damage and not is_miss:
 		current_state = "hit"
+		action_state_started_ms = Time.get_ticks_msec()
 		sync_animation()
 
 func _die(hit_delay: float = 0.0) -> void :
@@ -670,6 +671,7 @@ func execute_skill_visuals(skill_id: int, _skill_level: int, target_node: Node2D
 			current_dir = DIR_STRINGS[index_raw % 8]
 
 	current_state = "attack"
+	action_state_started_ms = Time.get_ticks_msec()
 	sync_animation()
 
 	if SkillLoader:
