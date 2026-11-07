@@ -5,6 +5,9 @@ using SGO.Server.Application.Bank;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Party;
 using SGO.Server.Application.Combat;
+using SGO.Server.Application.Crafting;
+using SGO.Server.Application.Club;
+using SGO.Server.Application.Rank;
 using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
@@ -556,6 +559,15 @@ try
     var party = new PartyService(
         store,
         broadcastHub);
+    var club = new ClubService(
+        store,
+        broadcastHub);
+    var rank = new RankService(store);
+    var crafting = new CraftingService(
+        store,
+        new RecipeCatalog(
+            Path.Combine(gameDataRoot, "Recipe.json")),
+        currentCatalog);
 
     var trade = new TradeService(
         store,
@@ -621,6 +633,8 @@ try
         quests,
         combat,
         recovery,
+        crafting,
+        club,
         shops,
         playerShop,
         packetHandlers,
@@ -633,6 +647,7 @@ try
         growth,
         broadcastHub,
         party,
+        rank,
         trade,
         NullLogger<PacketRouter>.Instance);
     var session = new ClientSession
