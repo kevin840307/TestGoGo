@@ -23,6 +23,7 @@ public sealed class ClientSession
     public DateTimeOffset LastPartyStatAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastQuestProgressAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastCompanionRuntimeAt { get; set; } = DateTimeOffset.MinValue;
+    public DateTimeOffset LastCompanionClientSyncAt { get; set; } = DateTimeOffset.MinValue;
     public int PetCombatMode { get; set; } = 0;
     public bool AutoSaintEnabled { get; set; }
     public int AutoSaintMpThreshold { get; set; } = 30;
