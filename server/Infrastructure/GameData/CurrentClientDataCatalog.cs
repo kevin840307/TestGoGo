@@ -44,6 +44,12 @@ public sealed record CurrentSkillBookDefinition(
     int SkillLevel,
     string SkillName);
 
+public sealed record CurrentExperienceCardDefinition(
+    int ItemId,
+    string Name,
+    int MultiplierPercent,
+    int DurationSeconds);
+
 public sealed record CurrentSkillDefinition(
     int SkillId,
     string Name,
@@ -277,6 +283,47 @@ public sealed class CurrentClientDataCatalog
             skill.SkillId,
             level,
             skill.Name);
+    }
+
+    public CurrentExperienceCardDefinition? ResolveExperienceCard(
+        int itemId)
+    {
+        var item = FindItem(itemId);
+        if (item is null ||
+            !item.Category.Equals(
+                "general",
+                StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(item.ScriptName) ||
+            !item.ScriptName.StartsWith(
+                "雙倍經驗值卡(",
+                StringComparison.Ordinal) ||
+            !item.ScriptName.EndsWith(
+                "小時)",
+                StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        const string prefix = "雙倍經驗值卡(";
+        const string suffix = "小時)";
+        var hoursText = item.ScriptName[
+            prefix.Length..
+            ^suffix.Length];
+
+        if (!int.TryParse(
+                hoursText,
+                out var hours) ||
+            hours <= 0 ||
+            hours > 24)
+        {
+            return null;
+        }
+
+        return new CurrentExperienceCardDefinition(
+            item.ItemId,
+            item.Name,
+            200,
+            checked(hours * 60 * 60));
     }
 
     public CurrentPetDefinition? FindPet(int petId)
