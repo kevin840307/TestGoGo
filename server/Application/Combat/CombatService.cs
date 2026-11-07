@@ -875,10 +875,19 @@ public sealed class CombatService
                     continue;
                 }
 
-                var nx =
-                    monster.X + dx / distance * step;
-                var ny =
-                    monster.Y + dy / distance * step;
+                if (!_world.TryResolveMove(
+                        monster.MapId,
+                        monster.X,
+                        monster.Y,
+                        targetX,
+                        targetY,
+                        step,
+                        out var nx,
+                        out var ny))
+                {
+                    continue;
+                }
+
                 var moveDx = nx - monster.X;
                 var moveDy = ny - monster.Y;
 
@@ -3681,8 +3690,24 @@ public sealed class CombatService
             }
         }
 
-        var moveDx = desiredX - monster.X;
-        var moveDy = desiredY - monster.Y;
+        if (!_world.TryResolveMove(
+                monster.MapId,
+                monster.X,
+                monster.Y,
+                desiredX,
+                desiredY,
+                wanderStep,
+                out var resolvedX,
+                out var resolvedY))
+        {
+            monster.NextWanderAt = now + NextWanderDelay(
+                monster.EntityId,
+                monster.WanderSequence);
+            return;
+        }
+
+        var moveDx = resolvedX - monster.X;
+        var moveDy = resolvedY - monster.Y;
 
         if (Math.Abs(moveDx) < 0.001 &&
             Math.Abs(moveDy) < 0.001)
@@ -3695,8 +3720,8 @@ public sealed class CombatService
 
         var oldX = monster.X;
         var oldY = monster.Y;
-        monster.X = desiredX;
-        monster.Y = desiredY;
+        monster.X = resolvedX;
+        monster.Y = resolvedY;
         SetAiState(monster, MonsterAiState.Wander);
         monster.NextWanderAt = now + NextWanderDelay(
             monster.EntityId,
@@ -3708,8 +3733,8 @@ public sealed class CombatService
             now,
             oldX,
             oldY,
-            desiredX,
-            desiredY,
+            resolvedX,
+            resolvedY,
             MoveTweenSeconds,
             moveDx,
             moveDy);
