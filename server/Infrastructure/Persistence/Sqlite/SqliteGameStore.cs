@@ -4402,6 +4402,157 @@ public sealed class SqliteGameStore : IGameStore
             GetCharacter(accountId, dbid));
     }
 
+    public TeleportItemUseResult UseTeleportItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        int mapId,
+        int x,
+        int y)
+    {
+        if (itemUid <= 0 ||
+            itemIndex <= 0 ||
+            mapId <= 0)
+        {
+            return new(
+                false,
+                "傳送資料無效",
+                0,
+                0,
+                0);
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+        {
+            return new(
+                false,
+                "角色不存在",
+                0,
+                0,
+                0);
+        }
+
+        int sourceCount;
+        using (var source = db.CreateCommand())
+        {
+            source.Transaction = tx;
+            source.CommandText = """
+                SELECT count
+                  FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND item_index=$item
+                   AND in_bank=0
+                   AND in_shop=0
+                 LIMIT 1
+                """;
+            Arg(source, "$uid", itemUid);
+            Arg(source, "$id", dbid);
+            Arg(source, "$item", itemIndex);
+
+            var raw = source.ExecuteScalar();
+            if (raw is null)
+            {
+                return new(
+                    false,
+                    "找不到可使用的傳送道具",
+                    0,
+                    0,
+                    0);
+            }
+
+            sourceCount = Convert.ToInt32(raw);
+            if (sourceCount <= 0)
+            {
+                return new(
+                    false,
+                    "傳送道具數量不足",
+                    0,
+                    0,
+                    0);
+            }
+        }
+
+        using (var move = db.CreateCommand())
+        {
+            move.Transaction = tx;
+            move.CommandText = """
+                UPDATE characters
+                   SET map_id=$map,
+                       x=$x,
+                       y=$y,
+                       state='idle'
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(move, "$map", mapId);
+            Arg(move, "$x", x);
+            Arg(move, "$y", y);
+            Arg(move, "$id", dbid);
+            Arg(move, "$account", accountId);
+
+            if (move.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "傳送失敗",
+                    0,
+                    0,
+                    0);
+            }
+        }
+
+        using (var consume = db.CreateCommand())
+        {
+            consume.Transaction = tx;
+            consume.CommandText = sourceCount == 1
+                ? """
+                  DELETE FROM inventory_items
+                   WHERE uid=$uid
+                     AND character_id=$id
+                     AND item_index=$item
+                     AND in_bank=0
+                     AND in_shop=0
+                  """
+                : """
+                  UPDATE inventory_items
+                     SET count=count-1
+                   WHERE uid=$uid
+                     AND character_id=$id
+                     AND item_index=$item
+                     AND count > 1
+                     AND in_bank=0
+                     AND in_shop=0
+                  """;
+            Arg(consume, "$uid", itemUid);
+            Arg(consume, "$id", dbid);
+            Arg(consume, "$item", itemIndex);
+
+            if (consume.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "傳送道具消耗失敗",
+                    0,
+                    0,
+                    0);
+            }
+        }
+
+        tx.Commit();
+
+        return new(
+            true,
+            "傳送成功",
+            mapId,
+            x,
+            y);
+    }
+
     public (bool Success, string Message, long RewardUid) OpenDoll(
         long accountId,
         long dbid,
