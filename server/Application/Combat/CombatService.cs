@@ -4185,26 +4185,33 @@ public sealed class CombatService
             session.CharacterId ?? 0,
             now);
 
+    public IReadOnlyList<object> GetActiveSkillBuffEntries(
+        long characterId,
+        DateTimeOffset now)
+        => GetActiveBuffs(
+                characterId,
+                now)
+            .Select(x => (object)new
+            {
+                BuffName = x.Name,
+                SourceType = 2,
+                Value = x.SkillId,
+                RemainingTime = Math.Max(
+                    0.0,
+                    (x.ExpiresAt - now).TotalSeconds),
+                TotalTime = x.DurationSeconds
+            })
+            .ToArray();
+
     private object BuildSyncBuffsPacket(
         long characterId,
         DateTimeOffset now)
         => new
         {
             Type = "SyncBuffs",
-            Buffs = GetActiveBuffs(
-                    characterId,
-                    now)
-                .Select(x => new
-                {
-                    BuffName = x.Name,
-                    SourceType = 2,
-                    Value = x.SkillId,
-                    RemainingTime = Math.Max(
-                        0.0,
-                        (x.ExpiresAt - now).TotalSeconds),
-                    TotalTime = x.DurationSeconds
-                })
-                .ToArray()
+            Buffs = GetActiveSkillBuffEntries(
+                characterId,
+                now)
         };
 
     private static object BuildPlayerStatusPacket(
