@@ -32,6 +32,9 @@ public sealed class WorldDataService
             Path.Combine(_dataRoot, "Enemy", "Enemy_Data.csv"));
     }
 
+    public EnemyDefinition? FindEnemyByName(string name)
+        => _enemyCatalog.FindByName(name);
+
     public IReadOnlyList<WorldNpc> GetNpcs(int mapId)
         => _npcCache.GetOrAdd(
             mapId,
