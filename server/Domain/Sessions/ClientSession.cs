@@ -20,6 +20,7 @@ public sealed class ClientSession
     public Dictionary<long, (double X, double Y)> PetPositions { get; } = new();
     public Dictionary<long, DateTimeOffset> PetLastAttackAt { get; } = new();
     public Dictionary<long, int> PetTargets { get; } = new();
+    public Dictionary<long, DateTimeOffset> PetOutOfRangeSince { get; } = new();
     public Dictionary<int, DateTimeOffset> SkillReadyAt { get; } = new();
     public Dictionary<int, SkillBuffRuntime> ActiveSkillBuffs { get; } = new();
 
