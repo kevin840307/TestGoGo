@@ -2,6 +2,7 @@ using System.Text.Json;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Combat;
+using SGO.Server.Application.Crafting;
 using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
@@ -28,6 +29,7 @@ public sealed class PacketRouter
     private readonly QuestRuntime _quests;
     private readonly CombatService _combat;
     private readonly ResourceRecoveryService _resourceRecovery;
+    private readonly CraftingService _crafting;
     private readonly ShopService _shopService;
     private readonly PlayerShopService _playerShop;
     private readonly IReadOnlyDictionary<string, IClientPacketHandler> _packetHandlers;
@@ -49,6 +51,7 @@ public sealed class PacketRouter
         QuestRuntime quests,
         CombatService combat,
         ResourceRecoveryService resourceRecovery,
+        CraftingService crafting,
         ShopService shopService,
         PlayerShopService playerShop,
         IEnumerable<IClientPacketHandler> packetHandlers,
@@ -69,6 +72,7 @@ public sealed class PacketRouter
         _quests = quests;
         _combat = combat;
         _resourceRecovery = resourceRecovery;
+        _crafting = crafting;
         _shopService = shopService;
         _playerShop = playerShop;
         _packetHandlers = packetHandlers.ToDictionary(
@@ -1461,6 +1465,50 @@ public sealed class PacketRouter
                         Message = "大聲公已發送"
                     }
                 ];
+            }
+
+            case "CraftItemRequest":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                return _crafting.Craft(
+                    accountId,
+                    state.CharacterId.Value,
+                    req.Int("RecipeID"),
+                    req.Int("BatchCount", 1));
+            }
+
+            case "DismantleItemRequest":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var itemUids = new List<long>();
+
+                if (req.TryGetProperty(
+                        "ItemUIDs",
+                        out var rawUids) &&
+                    rawUids.ValueKind ==
+                        JsonValueKind.Array)
+                {
+                    foreach (var rawUid in
+                             rawUids.EnumerateArray())
+                    {
+                        if (rawUid.TryGetInt64(
+                                out var uid) &&
+                            uid > 0)
+                        {
+                            itemUids.Add(uid);
+                        }
+                    }
+                }
+
+                return _crafting.Dismantle(
+                    accountId,
+                    state.CharacterId.Value,
+                    itemUids,
+                    req.Str("ItemType"));
             }
 
             case "ToggleAutoSaint":
