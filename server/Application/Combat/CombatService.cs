@@ -1724,7 +1724,7 @@ public sealed class CombatService
                     .OrderBy(x =>
                         Math.Pow(x.X - session.LastX, 2) +
                         Math.Pow(x.Y - session.LastY, 2))
-                    .Take(16)
+                    .Take(32)
                     .ToArray();
 
                 foreach (var probeTarget in probeTargets)
