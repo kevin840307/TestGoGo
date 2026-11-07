@@ -280,8 +280,12 @@ public sealed class CombatService
                 // Entering melee range is an immediate attack opportunity.
                 // Cooldown only governs repeated attacks while the monster stays
                 // in range; it must not make a newly-arrived monster stand idle.
+                var withinDamageRange =
+                    distance <= StopDistance;
+
                 var attackReady =
                     session.CharacterId.HasValue &&
+                    withinDamageRange &&
                     (enteredAttackRange ||
                      now - monster.LastAttackAt >= MonsterAttackCooldown);
 
