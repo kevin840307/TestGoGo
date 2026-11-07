@@ -9,6 +9,7 @@ using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Party;
 using SGO.Server.Application.Shops;
+using SGO.Server.Application.Trade;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
 using SGO.Server.Infrastructure.GameData;
@@ -38,6 +39,7 @@ public sealed class PacketRouter
     private readonly LegacyPlayerGrowthCatalog _growth;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly PartyService _party;
+    private readonly TradeService _trade;
     private readonly ILogger<PacketRouter> _log;
 
     public PacketRouter(
@@ -57,6 +59,7 @@ public sealed class PacketRouter
         LegacyPlayerGrowthCatalog growth,
         ServerBroadcastHub broadcasts,
         PartyService party,
+        TradeService trade,
         ILogger<PacketRouter> log)
     {
         _store = store;
@@ -77,6 +80,7 @@ public sealed class PacketRouter
         _growth = growth;
         _broadcasts = broadcasts;
         _party = party;
+        _trade = trade;
         _log = log;
     }
 
@@ -102,6 +106,8 @@ public sealed class PacketRouter
             state.PublishedCharacterId != nextCharacterId)
         {
             _party.Disconnect(
+                state.PublishedCharacterId);
+            _trade.Disconnect(
                 state.PublishedCharacterId);
         }
 
@@ -155,6 +161,8 @@ public sealed class PacketRouter
         if (characterId > 0)
         {
             _party.Disconnect(
+                characterId);
+            _trade.Disconnect(
                 characterId);
         }
 
@@ -1306,6 +1314,40 @@ public sealed class PacketRouter
                     }
                 ];
             }
+
+            case "TradeRequest":
+                return _trade.Request(
+                    state,
+                    accountId,
+                    req.Long("TargetEntityID"),
+                    DateTimeOffset.UtcNow);
+
+            case "TradeReply":
+            {
+                var accept =
+                    req.TryGetProperty(
+                        "Accept",
+                        out var accepted) &&
+                    accepted.ValueKind == JsonValueKind.True;
+
+                return _trade.Reply(
+                    state,
+                    accountId,
+                    req.Long("RequesterDBID"),
+                    accept,
+                    DateTimeOffset.UtcNow);
+            }
+
+            case "TradeAddItem":
+            case "TradeRemoveItem":
+            case "TradeSetMoney":
+            case "TradeLock":
+            case "TradeFinalConfirm":
+            case "TradeCancel":
+                return _trade.Action(
+                    state,
+                    type,
+                    req);
 
             case "MegaphoneMessage":
             {
