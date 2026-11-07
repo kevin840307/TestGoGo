@@ -101,8 +101,10 @@ public sealed class SqliteGameStore : IGameStore
         r.Close();
 
         foreach (var character in list)
+        {
             ApplyClubFields(db, character);
             ApplyTitleFields(db, character);
+        }
 
         // The recovered client renders exactly three character slots and also
         // reads character_list[0].ACCID when creating a character. Keep the
