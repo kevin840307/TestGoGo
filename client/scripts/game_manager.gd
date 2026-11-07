@@ -162,25 +162,68 @@ func _init_buildings_with_diagnostics(source_map_id: int, target_map_id: int) ->
 
 func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vector2) -> bool:
 	var raw_num_str = map_id.replace("map", "")
-	var formatted_map_name = "Map%02d" % int(raw_num_str)
+	var target_map_id: int = int(raw_num_str)
+	var formatted_map_name = "Map%02d" % target_map_id
 	var map_path = "res://maps/" + formatted_map_name + ".scn"
+	var initial_started_usec: int = Time.get_ticks_usec()
+
+	_trace_map_change("initial_enter_started", 0, target_map_id)
 
 	if not ResourceLoader.exists(map_path):
+		_trace_map_change("initial_map_missing", 0, target_map_id)
 		printerr("❌ [GameManager] 嚴重錯誤！找不到地圖檔案：", map_path)
 		return false
 
-	var map_resource: = load(map_path) as PackedScene
+	var request_error: int = ResourceLoader.load_threaded_request(map_path)
+	if request_error != OK:
+		_trace_map_change("initial_load_request_error", 0, target_map_id, {"error": request_error})
+		return false
+
+	var map_resource: PackedScene = null
+	while true:
+		var progress: Array = []
+		var status: int = ResourceLoader.load_threaded_get_status(map_path, progress)
+		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			await get_tree().process_frame
+			continue
+		if status == ResourceLoader.THREAD_LOAD_LOADED:
+			var load_get_started_usec: int = Time.get_ticks_usec()
+			map_resource = ResourceLoader.load_threaded_get(map_path) as PackedScene
+			_trace_map_change("initial_load_completed", 0, target_map_id, {
+				"load_get_ms": float(Time.get_ticks_usec() - load_get_started_usec) / 1000.0,
+			})
+			break
+		_trace_map_change("initial_load_failed", 0, target_map_id, {"status": status})
+		return false
+
 	if map_resource == null:
 		printerr("[GameManager] 地圖資源載入失敗（可能有缺少或無法載入的相依資源）: ", map_path)
 		return false
 
+	await get_tree().process_frame
+	var instantiate_started_usec: int = Time.get_ticks_usec()
 	current_map_node = map_resource.instantiate()
+	var instantiate_ms: float = float(Time.get_ticks_usec() - instantiate_started_usec) / 1000.0
+	_trace_map_change("initial_map_instantiated", 0, target_map_id, {
+		"instantiate_ms": instantiate_ms,
+	})
+
+	await get_tree().process_frame
+	var add_child_started_usec: int = Time.get_ticks_usec()
 	get_tree().root.add_child(current_map_node)
-	_apply_current_festival_theme()
+	var add_child_ms: float = float(Time.get_ticks_usec() - add_child_started_usec) / 1000.0
+	_trace_map_change("initial_map_added", 0, target_map_id, {
+		"instantiate_ms": instantiate_ms,
+		"add_child_ms": add_child_ms,
+	})
 
-	if BuildingManager: BuildingManager.call_deferred("init_buildings")
+	# Theme/building traversal can be expensive; keep them out of the blocking
+	# initial-map critical path.
+	call_deferred("_apply_current_festival_theme")
+	if BuildingManager:
+		BuildingManager.call_deferred("init_buildings")
 
-	var player_scene = ResourceLoader.load("res://player.tscn", "", ResourceLoader.CACHE_MODE_REPLACE)
+	var player_scene = ResourceLoader.load("res://player.tscn")
 	current_player = player_scene.instantiate()
 	if current_player.has_method("parse_login_server_data"):
 		current_player.parse_login_server_data(char_data)
@@ -203,18 +246,19 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	_ensure_day_night_overlay()
 	set_world_enhancement_enabled(_load_world_enhancement_setting())
 
-	var hud_scene = ResourceLoader.load("res://game_hud.tscn", "", ResourceLoader.CACHE_MODE_REPLACE)
+	var hud_scene = ResourceLoader.load("res://game_hud.tscn")
 	current_hud = hud_scene.instantiate()
 	get_tree().root.add_child(current_hud)
 	current_hud.initialize_hud(current_player)
 
-
-	if CursorManager: CursorManager.set_cursor_state("normal")
+	if CursorManager:
+		CursorManager.set_cursor_state("normal")
 
 	AudioManager.play_map_bgm(map_id.to_int())
-
+	_trace_map_change("initial_enter_completed", 0, target_map_id, {
+		"total_ms": float(Time.get_ticks_usec() - initial_started_usec) / 1000.0,
+	})
 	return true
-
 
 func cleanup_and_return_to_login() -> void :
 	_cancel_active_map_transition("cleanup_and_return_to_login")
@@ -610,7 +654,9 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 	await get_tree().process_frame
 	if not _is_map_transition_current(transition_id):
 		return
-	_clear_visual_runtime_caches()
+	# Keep reusable visual caches across normal map transitions. Clearing them
+	# here forces large SpriteFrames/Texture rebuilds on the next map and can
+	# stall the render driver while add_child/_ready runs.
 	_trace_map_change("old_map_teardown_completed", source_map_id, target_map_id, {
 		"old_map_still_valid": is_instance_valid(old_map), 
 	})
