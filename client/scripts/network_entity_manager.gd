@@ -22,6 +22,7 @@ var _spawn_queue: Array[Dictionary] = []
 var _queued_spawn_ids: Dictionary = {}
 var _last_spawn_enqueue_usec: int = 0
 var _runtime_monster_ids: Dictionary = {}
+var _spawn_queue_paused: bool = false
 
 func get_active_entity(entity_id: int) -> Node2D:
 	var entity = active_entities.get(entity_id)
@@ -84,6 +85,12 @@ func _on_entity_spawned(data: Dictionary) -> void :
 	_spawn_queue.append(data.duplicate(true))
 	_last_spawn_enqueue_usec = Time.get_ticks_usec()
 
+func set_spawn_queue_paused(paused: bool) -> void :
+	_spawn_queue_paused = paused
+
+func is_spawn_queue_paused() -> bool:
+	return _spawn_queue_paused
+
 func is_initial_spawn_queue_idle(quiet_usec: int = 300000) -> bool:
 	if not _spawn_queue.is_empty() or not _queued_spawn_ids.is_empty():
 		return false
@@ -98,7 +105,7 @@ func _process(delta: float) -> void :
 		_runtime_monster_ids.clear()
 		return
 
-	if not _spawn_queue.is_empty():
+	if not _spawn_queue_paused and not _spawn_queue.is_empty():
 		var frame_started_usec := Time.get_ticks_usec()
 		var spawned_count := 0
 		while not _spawn_queue.is_empty() and spawned_count < SPAWN_BATCH_PER_FRAME:
