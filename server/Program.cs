@@ -31,10 +31,11 @@ var currentClientData =
     new CurrentClientDataCatalog(configuredClientRoot);
 
 builder.Services.AddSingleton(currentClientData);
-builder.Services.AddSingleton(
-    new ShopCatalog(
-        gameDataRoot,
-        currentClientData));
+var shopCatalog = new ShopCatalog(
+    gameDataRoot,
+    currentClientData);
+
+builder.Services.AddSingleton(shopCatalog);
 builder.Services.AddSingleton(
     new HorseBatteryCatalog(currentClientData));
 builder.Services.AddSingleton(
@@ -67,6 +68,9 @@ else
         currentClientData.Root,
         currentClientData.Items.Count,
         currentClientData.Skills.Count);
+
+    foreach (var warning in shopCatalog.MappingWarnings)
+        app.Logger.LogWarning("{MappingWarning}", warning);
 }
 
 app.MapGet("/health", (IConfiguration config) => Results.Ok(new
