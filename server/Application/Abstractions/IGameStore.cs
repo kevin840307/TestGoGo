@@ -11,6 +11,7 @@ public interface IGameStore :
     IPetStore,
     IMechaStore,
     ISkillStore,
+    IQuestStore,
     IShortcutStore,
     IBankStore,
     IItemDiscardStore,
