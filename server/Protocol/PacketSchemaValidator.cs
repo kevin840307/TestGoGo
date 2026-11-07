@@ -28,7 +28,7 @@ public static class PacketSchemaValidator
             ],
             ["WorldReady"] = [new("MapID", FieldType.Integer)],
             ["SyncPosition"] = [new("X", FieldType.Integer), new("Y", FieldType.Integer)],
-            ["UseItemRequest"] = [new("ItemUID", FieldType.Integer)],
+            ["UseItemRequest"] = [new("ItemUID", FieldType.LongInteger)],
             ["PickUpItemRequest"] = [new("EntityID", FieldType.Integer)],
             ["AttackEntity"] = [new("TargetEntityID", FieldType.Integer)],
             ["UseSkill"] = [new("SkillID", FieldType.Integer)],
@@ -40,12 +40,12 @@ public static class PacketSchemaValidator
             ],
             ["RepairItemRequest"] =
             [
-                new("UID", FieldType.Integer),
+                new("UID", FieldType.LongInteger),
                 new("ItemType", FieldType.NonEmptyText)
             ],
             ["BankTransfer"] =
             [
-                new("UID", FieldType.Integer),
+                new("UID", FieldType.LongInteger),
                 new("TabType", FieldType.Integer),
                 new("Amount", FieldType.Integer),
                 new("ToBank", FieldType.Boolean)
@@ -85,7 +85,7 @@ public static class PacketSchemaValidator
             ],
             ["EquipRequest"] =
             [
-                new("ItemUID", FieldType.Integer),
+                new("ItemUID", FieldType.LongInteger),
                 new("TargetSlot", FieldType.Integer)
             ],
             ["UnequipRequest"] = [new("TargetSlot", FieldType.Integer)],
