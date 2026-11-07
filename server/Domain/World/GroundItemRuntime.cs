@@ -2,6 +2,7 @@ namespace SGO.Server.Domain.World;
 
 public sealed class GroundItemRuntime
 {
+    public long GroundItemId { get; init; }
     public int EntityId { get; init; }
     public int MapId { get; init; }
     public int TabType { get; init; }
