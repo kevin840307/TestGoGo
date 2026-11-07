@@ -389,7 +389,11 @@ try
 {
     var store = new SqliteGameStore(Path.Combine(temp, "game.db"));
     var combat = new CombatService(store, world, currentCatalog);
-    var shops = new ShopService(store, shopCatalog, currentCatalog);
+    var shops = new ShopService(
+        store,
+        store,
+        shopCatalog,
+        currentCatalog);
     var growth = new LegacyPlayerGrowthCatalog(gameDataRoot);
     var config = new ConfigurationManager();
     config["Game:GmCommandsEnabled"] = "true";
