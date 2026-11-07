@@ -432,6 +432,14 @@ func _update_sprite_offset() -> void :
 			sprite.offset = Vector2( - actual_offset_x, - offset.y)
 
 func apply_network_move_direction(new_dir: String) -> void :
+	# Once combat state owns the monster, stale/late MoveEntity packets from
+	# the preceding chase tick must not overwrite the authoritative attack
+	# facing supplied by SyncState.
+	if current_state in ["attack", "hit", "death", "die"]:
+		pending_move_dir = ""
+		pending_move_dir_count = 0
+		return
+
 	if new_dir == "" or new_dir == current_dir:
 		pending_move_dir = ""
 		pending_move_dir_count = 0
