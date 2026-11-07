@@ -12,7 +12,8 @@ public sealed class CombatService
     private static readonly TimeSpan RespawnDelay = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan AiTickInterval = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan MonsterAttackCooldown = TimeSpan.FromMilliseconds(1400);
-    private static readonly TimeSpan WanderInterval = TimeSpan.FromMilliseconds(1800);
+    private static readonly TimeSpan WanderMinInterval = TimeSpan.FromMilliseconds(1200);
+    private static readonly TimeSpan WanderMaxInterval = TimeSpan.FromMilliseconds(2800);
 
     private const double AggroRadius = 420.0;
     private const double LoseTargetRadius = 700.0;
@@ -67,7 +68,9 @@ public sealed class CombatService
                 SpawnX = enemy.X,
                 SpawnY = enemy.Y,
                 X = enemy.X,
-                Y = enemy.Y
+                Y = enemy.Y,
+                WanderCenterX = enemy.X,
+                WanderCenterY = enemy.Y
             };
 
             session.Monsters[state.EntityId] = state;
@@ -114,6 +117,9 @@ public sealed class CombatService
             monster.IsMoving = false;
             monster.X = monster.SpawnX;
             monster.Y = monster.SpawnY;
+            monster.WanderCenterX = monster.SpawnX;
+            monster.WanderCenterY = monster.SpawnY;
+            monster.NextWanderAt = DateTimeOffset.MinValue;
             packets.Add(BuildMonsterSpawnPacket(monster));
         }
 
@@ -154,6 +160,11 @@ public sealed class CombatService
                 if (monster.HasTarget)
                 {
                     monster.HasTarget = false;
+                    monster.IsMoving = false;
+                    monster.WanderCenterX = monster.X;
+                    monster.WanderCenterY = monster.Y;
+                    monster.NextWanderAt = DateTimeOffset.MinValue;
+
                     packets.Add(new
                     {
                         Type = "MonsterTarget",
@@ -184,32 +195,17 @@ public sealed class CombatService
             if (monster.HasTarget && distance > LoseTargetRadius)
             {
                 monster.HasTarget = false;
+                monster.IsMoving = false;
+                monster.WanderCenterX = monster.X;
+                monster.WanderCenterY = monster.Y;
+                monster.NextWanderAt = DateTimeOffset.MinValue;
+
                 packets.Add(new
                 {
                     Type = "MonsterTarget",
                     EntityID = monster.EntityId,
                     HasTarget = false
                 });
-
-                var homeDx = monster.SpawnX - monster.X;
-                var homeDy = monster.SpawnY - monster.Y;
-                var homeDistance = Math.Sqrt(
-                    homeDx * homeDx + homeDy * homeDy);
-
-                if (homeDistance > 1.0)
-                {
-                    var returnMoveDx = monster.SpawnX - monster.X;
-                    var returnMoveDy = monster.SpawnY - monster.Y;
-                    monster.X = monster.SpawnX;
-                    monster.Y = monster.SpawnY;
-                    packets.Add(BuildMovePacket(
-                        monster,
-                        monster.X,
-                        monster.Y,
-                        0.6,
-                        returnMoveDx,
-                        returnMoveDy));
-                }
 
                 continue;
             }
@@ -300,6 +296,9 @@ public sealed class CombatService
 
                             monster.HasTarget = false;
                             monster.IsMoving = false;
+                            monster.WanderCenterX = monster.X;
+                            monster.WanderCenterY = monster.Y;
+                            monster.NextWanderAt = DateTimeOffset.MinValue;
                         }
                     }
                 }
@@ -386,7 +385,9 @@ public sealed class CombatService
             SpawnX = x,
             SpawnY = y,
             X = x,
-            Y = y
+            Y = y,
+            WanderCenterX = x,
+            WanderCenterY = y
         };
 
         session.Monsters[state.EntityId] = state;
@@ -563,14 +564,22 @@ public sealed class CombatService
         DateTimeOffset now,
         List<object> packets)
     {
+        // Each monster gets its own deterministic-but-different schedule.
+        // MinValue means "not scheduled yet", so the first idle tick only
+        // assigns an offset instead of making every monster move together.
+        if (monster.NextWanderAt == DateTimeOffset.MinValue)
+        {
+            monster.NextWanderAt = now + NextWanderDelay(
+                monster.EntityId,
+                monster.WanderSequence);
+            return;
+        }
+
         if (now < monster.NextWanderAt)
             return;
 
-        monster.NextWanderAt = now + WanderInterval;
         monster.WanderSequence++;
 
-        // Deterministic pseudo-random direction keeps tests stable while
-        // making different monsters wander independently.
         var seed = unchecked(
             monster.EntityId * 1103515245 +
             monster.WanderSequence * 12345);
@@ -579,16 +588,33 @@ public sealed class CombatService
         var desiredX = monster.X + Math.Cos(angle) * WanderStep;
         var desiredY = monster.Y + Math.Sin(angle) * WanderStep;
 
-        var fromSpawnX = desiredX - monster.SpawnX;
-        var fromSpawnY = desiredY - monster.SpawnY;
-        var fromSpawnDistance = Math.Sqrt(
-            fromSpawnX * fromSpawnX +
-            fromSpawnY * fromSpawnY);
+        var fromCenterX = desiredX - monster.WanderCenterX;
+        var fromCenterY = desiredY - monster.WanderCenterY;
+        var fromCenterDistance = Math.Sqrt(
+            fromCenterX * fromCenterX +
+            fromCenterY * fromCenterY);
 
-        if (fromSpawnDistance > WanderRadius)
+        if (fromCenterDistance > WanderRadius)
         {
-            desiredX = monster.SpawnX;
-            desiredY = monster.SpawnY;
+            var centerDx = monster.WanderCenterX - monster.X;
+            var centerDy = monster.WanderCenterY - monster.Y;
+            var centerDistance = Math.Sqrt(
+                centerDx * centerDx +
+                centerDy * centerDy);
+
+            if (centerDistance > 1.0)
+            {
+                var step = Math.Min(WanderStep, centerDistance);
+                desiredX = monster.X + centerDx / centerDistance * step;
+                desiredY = monster.Y + centerDy / centerDistance * step;
+            }
+            else
+            {
+                monster.NextWanderAt = now + NextWanderDelay(
+                    monster.EntityId,
+                    monster.WanderSequence);
+                return;
+            }
         }
 
         var moveDx = desiredX - monster.X;
@@ -596,11 +622,19 @@ public sealed class CombatService
 
         if (Math.Abs(moveDx) < 0.001 &&
             Math.Abs(moveDy) < 0.001)
+        {
+            monster.NextWanderAt = now + NextWanderDelay(
+                monster.EntityId,
+                monster.WanderSequence);
             return;
+        }
 
         monster.X = desiredX;
         monster.Y = desiredY;
         monster.IsMoving = true;
+        monster.NextWanderAt = now + NextWanderDelay(
+            monster.EntityId,
+            monster.WanderSequence);
 
         packets.Add(BuildMovePacket(
             monster,
@@ -609,6 +643,23 @@ public sealed class CombatService
             MoveTweenSeconds,
             moveDx,
             moveDy));
+    }
+
+    private static TimeSpan NextWanderDelay(
+        int entityId,
+        int sequence)
+    {
+        var minMs = (int)WanderMinInterval.TotalMilliseconds;
+        var maxMs = (int)WanderMaxInterval.TotalMilliseconds;
+        var range = Math.Max(1, maxMs - minMs + 1);
+
+        var seed = unchecked(
+            entityId * 214013 +
+            sequence * 2531011 +
+            1376312589);
+
+        var jitter = (int)((uint)seed % (uint)range);
+        return TimeSpan.FromMilliseconds(minMs + jitter);
     }
 
     private static object BuildMovePacket(
