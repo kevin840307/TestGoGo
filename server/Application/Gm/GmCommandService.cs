@@ -343,18 +343,55 @@ public sealed class GmCommandService
 
         if (uid <= 0) return [Chat("建立機甲失敗")];
 
+        var preset = _current.FindHorsePreset(itemIndex);
+        if (preset is not null)
+        {
+            foreach (var equipIndex in new[]
+                     {
+                         preset.BodyId,
+                         preset.WeaponId,
+                         preset.EngineId
+                     }.Where(x => x > 0).Distinct())
+            {
+                var equip = _current.FindItem(equipIndex);
+                _store.AddHorseEquipment(
+                    accountId,
+                    dbid,
+                    equipIndex,
+                    uid,
+                    equip?.EquipSlot ?? 255);
+            }
+        }
+
         var assets = _store.GetCharacterAssets(accountId, dbid);
-        return
-        [
+        var character = _store.GetCharacter(accountId, dbid);
+        var status = character is null
+            ? null
+            : CharacterStatCalculator.ToPlayerStatusPacket(
+                character,
+                assets,
+                _current);
+
+        var responses = new List<object>
+        {
             new
             {
                 Type = "HorseSync",
                 Horses = assets.Horses,
                 HorseEquips = assets.HorseEquips,
                 MaxHorseEquipSize = assets.HorseEquipMaxSize
-            },
-            Chat($"已建立機甲 {card?.Name ?? itemIndex.ToString()}")
-        ];
+            }
+        };
+
+        if (status is not null)
+            responses.Add(status);
+
+        responses.Add(Chat(
+            preset is null
+                ? $"已建立機甲 {card?.Name ?? itemIndex.ToString()}"
+                : $"已建立機甲 {card?.Name ?? itemIndex.ToString()} 並裝上預設機甲裝備"));
+
+        return responses;
     }
 
     private IReadOnlyList<object> Pet(
