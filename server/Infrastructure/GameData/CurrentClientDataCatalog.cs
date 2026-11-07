@@ -169,8 +169,8 @@ public sealed class CurrentClientDataCatalog
             Path.GetFullPath(Path.Combine(
                 AppContext.BaseDirectory,
                 "..", "..", "..", "..", "client")),
-            @"C:SGORecovered",
-            @"C:SGO重置版本Recovered"
+            @"C:\SGO\Recovered",
+            @"C:\SGO\重置版本\Recovered"
         };
 
         foreach (var candidate in candidates)
