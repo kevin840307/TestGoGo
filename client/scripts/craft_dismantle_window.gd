@@ -121,7 +121,9 @@ func _show_crafting(refresh_ui: bool = true) -> void :
 
 func _show_dismantling() -> void :
 	if not _dismantle_prepared:
+		var started_usec: int = Time.get_ticks_usec()
 		await prepare_dismantle_background_async()
+		print("[DISMANTLE_ON_DEMAND] total_ms=%.2f" % (float(Time.get_ticks_usec() - started_usec) / 1000.0))
 
 	if crafting_panel: crafting_panel.visible = false
 	if dismantling_panel: dismantling_panel.visible = true
