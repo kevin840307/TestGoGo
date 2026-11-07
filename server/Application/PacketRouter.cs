@@ -1325,7 +1325,7 @@ public sealed class PacketRouter
         return packet;
     }
 
-    private static void ApplyEffectiveStats(
+    private void ApplyEffectiveStats(
         Dictionary<string, object> character,
         SGO.Server.Domain.Assets.CharacterAssets assets)
     {
