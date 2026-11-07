@@ -84,6 +84,17 @@ GitHub Actions `Server build` 工作流程已納入前兩項檢查，且會上�
 powershell -ExecutionPolicy Bypass -File tests/run_protocol_checks.ps1
 ```
 
+## 2026-11-07 補強：持久化 UID / DBID 與封包日誌隱私
+
+- **44 種請求 Type Schema**：新增 `DropItemRequest`、`HorseEquipRequest`、`HorseUnequipRequest`、`HorseChargeRequest` 的欄位型別規則。原先的 40 種仍維持相容。
+- 修正 Server 的 `DropItemRequest`、`DriveMechaRequest`、`HorseEquipRequest`、`HorseUnequipRequest`、`HorseChargeRequest` 使用 `Int64` 讀取持久化 UID，以符合 `IGameStore` 介面；`MegaphoneMessage.ItemUID` 的驗證同步改為 `Int64`。
+- `SelectCharacterRequest`、`DeleteCharacterRequest`、`ModifyPasswordRequest` 的 DBID 讀取及 Schema 也改成 `Int64`，與角色表的 `long` ID 一致。
+- 新增相關 Smoke Tests：超過 `Int32.MaxValue` 的合法 UID／DBID、錯誤字串 UID、缺少丟物 ItemUID、丟物座標型別錯誤、合法機甲充能與角色選擇等。
+- `WebSocketEndpoint` 的 `[PACKET_HANDLER_FAILED]` 和 `[NO_RESPONSE]`、`PacketRouter` 的 `[UNHANDLED_PACKET]`，不再記錄解密後的完整 JSON。日誌只保留 Type／加密封包字串長度，避免在密碼、舊服憑證或敏感欄位出現時洩漏原始內容；新增 `test_packet_log_privacy.py` 並加入 CI。
+- CI 與 Windows `run_protocol_checks.ps1` 會從 `server/` 目錄啟動 Server，正確載入 `server/appsettings.json`。Windows 一鍵腳本新增敏感日誌回歸檢查。
+
+以上為程式碼修改及靜態檢查／測試案例的新增，**不是已通過實機 .NET 或 Godot E2E 的證明**。GitHub Actions 若尚未取得 Runner，請在 Windows 執行一鍵腳本並檢查實際結果。
+
 ## 真正的網路封包整合測試
 
 `tests/SGO.Server.WireSmokeTests/` 是**非破壞性**的 .NET WebSocket client，使用與 Godot 一致的 AES/Base64 封包格式，連至正在執行的伺服器，驗證：
