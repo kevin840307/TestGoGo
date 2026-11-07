@@ -3293,8 +3293,8 @@ public sealed class PacketRouter
             _resourceRecovery.Tick(state, now));
         packets.AddRange(
             _combat.TickBuffs(state, now));
-        packets.AddRange(
-            _combat.TickRespawns(state, now));
+        if (!state.SharedAiManaged)
+            packets.AddRange(_combat.TickRespawns(state, now));
 
         if (now - state.LastPartyStatAt >=
             TimeSpan.FromSeconds(1))
@@ -3410,8 +3410,10 @@ public sealed class PacketRouter
                     state.LastX,
                     state.LastY,
                     now));
-            packets.AddRange(
-                _combat.TickAi(
+            // Standalone smoke sessions retain their legacy local tick.
+            // Live WebSockets use SharedMapAiTicker once per active map.
+            if (!state.SharedAiManaged)
+                packets.AddRange(_combat.TickAi(
                     state,
                     accountId,
                     state.LastX,
