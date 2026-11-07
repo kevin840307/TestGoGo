@@ -79,6 +79,9 @@ func initialize_pet(data: Dictionary, extra: Dictionary) -> void :
 	var spawn_pos = Vector2(float(data.get("LocX", 0)), float(data.get("LocY", 0)))
 	global_position = spawn_pos
 	target_position = spawn_pos
+	move_destination = spawn_pos
+	move_path = PackedVector2Array()
+	move_path_index = 0
 
 	max_hp = int(extra.get("MaxHP", 100))
 	current_hp = int(extra.get("CurrentHP", max_hp))
