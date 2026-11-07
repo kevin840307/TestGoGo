@@ -1801,11 +1801,9 @@ public sealed class CombatService
             {
                 case 25101: // 體力回復
                 case 25106: // 大氣旋風
-                    hpAmount = Math.Max(
-                        1,
-                        Convert.ToInt32(before["MaxHP"]) *
-                        Math.Max(1, levelData.DamageMultiplier) /
-                        100);
+                    hpAmount = RollLegacySelfCure(
+                        skillId,
+                        skillLevel);
                     break;
 
                 case 25108: // 生命聖印
@@ -3126,6 +3124,44 @@ public sealed class CombatService
                 out _);
 
         return expired.Length > 0;
+    }
+
+    private static int RollLegacySelfCure(
+        int skillId,
+        int skillLevel)
+    {
+        var levelIndex = Math.Clamp(
+            skillLevel,
+            1,
+            5) - 1;
+
+        var baseValue = skillId switch
+        {
+            25101 => new[]
+            {
+                13, 21, 33, 49, 70
+            }[levelIndex],
+            25106 => new[]
+            {
+                156, 234, 329, 441, 569
+            }[levelIndex],
+            _ => 0
+        };
+
+        if (baseValue <= 0)
+            return 0;
+
+        // Legacy curecommon.txt:
+        // effect + effect * (varyDelta - random(varyDelta*2)) / 100
+        // with varyDelta=10. Equivalent integer range: -10% .. +9%.
+        var deltaPercent = Random.Shared.Next(
+            -10,
+            10);
+
+        return Math.Max(
+            1,
+            baseValue +
+            baseValue * deltaPercent / 100);
     }
 
     private static bool TryParseAddItemSpecial(
