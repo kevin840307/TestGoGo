@@ -83,7 +83,8 @@ public sealed class PetIdleSpeechCatalog
             petUid * 19349663L ^
             (long)sequence * 83492791L);
 
-        var index = (int)(Math.Abs(seed) % lines.Length);
+        var index = (int)(
+            (ulong)seed % (ulong)lines.Length);
         return lines[index];
     }
 
