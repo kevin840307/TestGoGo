@@ -35,6 +35,7 @@ public sealed class CombatService
     // waypoint, so this value represents movement speed rather than tween timing.
     private const double MoveTweenSeconds = 0.25;
     private const double WanderRadius = 260.0;
+    private const double RespawnRandomRadius = 120.0;
     private const double WanderMinStep = 95.0;
     private const double WanderMaxStep = 175.0;
 
@@ -45,6 +46,7 @@ public sealed class CombatService
     private readonly LegacyBattleRulesCatalog _battle;
     private readonly EnemyDropCatalog _drops;
     private readonly WorldRuntimeService _runtime;
+    private readonly BlockingMapService _blocking;
     private readonly MonsterNavigationService _navigation;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly PartyService _party;
@@ -92,6 +94,7 @@ public sealed class CombatService
     {
         _store = store;
         _world = world;
+        _blocking = blocking;
         _navigation = new MonsterNavigationService(blocking);
         _current = current;
         _growth = growth;
@@ -183,10 +186,11 @@ public sealed class CombatService
                 monster.LastMovePacketX = null;
                 monster.LastMovePacketY = null;
                 SetAiState(monster, MonsterAiState.Idle);
-                monster.X = monster.SpawnX;
-                monster.Y = monster.SpawnY;
-                monster.WanderCenterX = monster.SpawnX;
-                monster.WanderCenterY = monster.SpawnY;
+                var respawnPosition = ResolveRespawnPosition(monster);
+                monster.X = respawnPosition.X;
+                monster.Y = respawnPosition.Y;
+                monster.WanderCenterX = respawnPosition.X;
+                monster.WanderCenterY = respawnPosition.Y;
                 monster.NextWanderAt = DateTimeOffset.MinValue;
                 packets.Add(BuildMonsterSpawnPacket(monster));
             }
