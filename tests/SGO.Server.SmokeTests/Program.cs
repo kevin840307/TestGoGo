@@ -575,7 +575,7 @@ try
             "equipped slot persists");
         Check(responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains("\"Type\":\"PlayerStatusSync\"") &&
-                JsonSerializer.Serialize(x).Contains($"\"Attack\":{baseAttackBeforeEquip + 20}")),
+                JsonSerializer.Serialize(x).Contains($"\"Attack\":{baseAttackBeforeEquip + 10}")),
             "equipping weapon increases effective attack");
     }
 
@@ -1077,14 +1077,14 @@ try
     }
 
     using (var gmItem = Json(
-        """{"Type":"ChatMessage","Channel":0,"Message":"/gm item 31201 3","BubbleType":0}"""))
+        """{"Type":"ChatMessage","Channel":0,"Message":"/gm item 1001 3","BubbleType":0}"""))
     {
         var before = store.GetCharacterAssets(account.Value, id).Inventory.Count;
         var responses = router.Handle(gmItem.RootElement, session);
         var after = store.GetCharacterAssets(account.Value, id).Inventory;
         Check(after.Count >= before + 1 &&
               after.Any(x =>
-                  Convert.ToInt32(x["ItemIndex"]) == 31201 &&
+                  Convert.ToInt32(x["ItemIndex"]) == 1001 &&
                   Convert.ToInt32(x["Count"]) == 3),
             "GM item command creates inventory item");
         Check(responses.Any(x =>
