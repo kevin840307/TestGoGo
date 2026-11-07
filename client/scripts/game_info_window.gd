@@ -702,6 +702,7 @@ var _festival_buttons: Dictionary = {}
 var _festival_data: Dictionary = {}
 var _festival_load_error: = ""
 var _selected_festival_id: = ""
+var _pet_evolution_catalog_loaded: bool = false
 
 func _ready() -> void :
 	for category in CATEGORIES:
@@ -731,7 +732,8 @@ func _ready() -> void :
 	_build_engraving_info_page()
 	_load_monster_drop_catalog()
 	_build_pet_guide()
-	_build_pet_evolution_catalog()
+	# Pet evolution catalog loads many skill resources. Build it lazily when the
+	# player actually opens the pet page instead of blocking world entry.
 	_build_doll_categories()
 	_build_club_pages()
 	_load_festival_data()
@@ -770,6 +772,9 @@ func _select_category(category: String) -> void :
 	if category == "裝備":
 		equipment_scroll.scroll_vertical = 0
 		_ensure_equipment_catalog_loaded()
+	if category == "寵物" and not _pet_evolution_catalog_loaded:
+		_pet_evolution_catalog_loaded = true
+		_build_pet_evolution_catalog()
 	if category == "皇家領地戰":
 		royal_territory_war_scroll.scroll_vertical = 0
 	if content_scroll.visible:
