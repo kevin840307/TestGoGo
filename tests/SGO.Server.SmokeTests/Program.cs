@@ -1561,7 +1561,59 @@ try
             "月神審判 skill_type=7 casts and deals composite damage");
     }
 
-        store.SetSkill(account.Value, id, 26104, 5);
+        // Reproduce real map-transition timing: CurrentMapId changes first,
+    // while combat runtime is still loaded for the previous map. UseSkill
+    // must load the destination monster runtime before validating TargetID.
+    var transitionMapId = world.GetEnemies(8).Any(x => x.Level < 65535)
+        ? 8
+        : combatMapId;
+    var transitionEnemy = world.GetEnemies(transitionMapId)
+        .First(x => x.Level < 65535);
+
+    store.UpdateLocation(
+        account.Value,
+        id,
+        transitionMapId,
+        transitionEnemy.X,
+        transitionEnemy.Y);
+    session.CurrentMapId = transitionMapId;
+    session.LastX = transitionEnemy.X;
+    session.LastY = transitionEnemy.Y;
+    session.PendingMapSpawn = true;
+
+    // Derive the expected entity ID from the destination world data exactly
+    // as EnterMap will populate it, but do not call Tick/EnterMap first.
+    var expectedTransitionTarget = transitionEnemy.EntityId;
+
+    store.SetSkill(account.Value, id, 26104, 5);
+    store.Revive(account.Value, id);
+
+    using (var transitionSkill = Json(JsonSerializer.Serialize(new
+    {
+        Type = "UseSkill",
+        SkillID = 26104,
+        TargetID = expectedTransitionTarget,
+        TargetType = 1,
+        TargetX = transitionEnemy.X,
+        TargetY = transitionEnemy.Y
+    })))
+    {
+        var responses = router.Handle(
+            transitionSkill.RootElement,
+            session);
+
+        Check(!session.PendingMapSpawn &&
+              session.LoadedMonsterMapId == transitionMapId &&
+              session.Monsters.ContainsKey(expectedTransitionTarget),
+            "UseSkill loads destination monster runtime immediately after map change");
+
+        Check(!responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "技能目標無效")),
+            "魔影術 does not report invalid target after map transition");
+    }
+
+    store.SetSkill(account.Value, id, 26104, 5);
     store.Revive(account.Value, id);
     session.CurrentMapId = combatMapId;
     session.PendingMapSpawn = false;
