@@ -15,6 +15,8 @@ public sealed class MonsterRuntimeState
     public double SpawnY { get; init; }
     public double X { get; set; }
     public double Y { get; set; }
+    public double WanderCenterX { get; set; }
+    public double WanderCenterY { get; set; }
 
     public bool HasTarget { get; set; }
     public bool IsMoving { get; set; }
