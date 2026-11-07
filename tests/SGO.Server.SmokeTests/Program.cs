@@ -489,6 +489,19 @@ Check(reborn.RebornMapId == 15 &&
       reborn.RebornY == 10336,
     "SetRebornLocation captured");
 
+var addGiftResult = quests.Execute(
+    "Add_Gift.txt",
+    "CheckGift",
+    5,
+    "虛寶管理員",
+    0,
+    _ => 0);
+
+Check(addGiftResult.Packets.Any(x =>
+        JsonSerializer.Serialize(x).Contains(
+            "你沒有未領取的虛擬道具")),
+    "legacy AddGift safely dispatches None callback when no gift provider is configured");
+
 var tsPortal = quests.Execute(
     "TS_KINGTD_KING.txt", "start", 6, "傳送點", null, _ => 0);
 Check(tsPortal.Packets.Any(x =>
