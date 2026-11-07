@@ -462,12 +462,11 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 			pass
 		else:
 			if is_instance_valid(target_node):
-				if attacker_node is MonsterEntity:
-					# Monster facing is already established by the visually
-					# correct chase direction / authoritative SyncState. Do not
-					# recalculate it again from potentially desynchronised
-					# rendered positions in the damage handler.
-					pass
+				if attacker_node is MonsterEntity and attacker_node.has_method("apply_attack_visual_direction"):
+					# The first attack keeps the known-good chase facing. For
+					# repeated stationary attacks, update toward the target's
+					# current rendered position with hysteresis in MonsterEntity.
+					attacker_node.apply_attack_visual_direction(target_node.global_position)
 				elif attacker_node.has_method("update_direction_8way"):
 					attacker_node.update_direction_8way(target_node.global_position - attacker_node.global_position)
 				elif "current_dir" in attacker_node:
