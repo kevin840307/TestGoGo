@@ -158,6 +158,7 @@ public sealed class CombatService
                 monster.RespawnAt = null;
                 monster.HasTarget = false;
                 monster.TargetCharacterId = 0;
+                monster.TargetPetUid = 0;
                 monster.LastAiAt = DateTimeOffset.MinValue;
                 SetAiState(monster, MonsterAiState.Idle);
                 monster.X = monster.SpawnX;
@@ -194,6 +195,21 @@ public sealed class CombatService
             character is not null &&
             Convert.ToInt32(character["HP"]) > 0;
 
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            currentCharacterId);
+        var activePet = assets.Pets.FirstOrDefault(x =>
+            Convert.ToInt32(x["State"]) == 1 &&
+            Convert.ToInt32(x["HP"]) > 0);
+        var activePetUid = activePet is null
+            ? 0L
+            : Convert.ToInt64(activePet["UID"]);
+        var petAlive =
+            activePetUid > 0 &&
+            session.PetPositions.TryGetValue(
+                activePetUid,
+                out var activePetPosition);
+
         var runtime = SyncSessionMonsters(session);
         var packets = new List<object>();
 
@@ -207,13 +223,9 @@ public sealed class CombatService
                     continue;
                 }
 
-                // A targeted monster is normally driven by the target
-                // player's connection. Presence alone is not enough to keep
-                // that ownership forever: reconnects/map transitions can leave
-                // a character nominally present while the monster is already
-                // far away or the target is dead. Validate the authoritative
-                // character state before skipping this connection, otherwise
-                // the monster can stand beside another player forever.
+                // Only the target owner's websocket advances an already-owned
+                // monster. For pet targets, the owner connection also owns the
+                // authoritative pet runtime position.
                 if (monster.HasTarget &&
                     monster.TargetCharacterId > 0 &&
                     monster.TargetCharacterId != currentCharacterId)
@@ -222,10 +234,15 @@ public sealed class CombatService
                         _broadcasts.FindCharacter(
                             monster.TargetCharacterId);
 
-                    var keepForeignTarget = false;
                     if (targetPresence is not null &&
                         targetPresence.MapId == session.CurrentMapId)
                     {
+                        // A foreign pet target cannot be validated from this
+                        // session because pet positions are owner-session
+                        // runtime state. Let its owner connection drive it.
+                        if (monster.TargetPetUid > 0)
+                            continue;
+
                         var targetCharacter = _store.GetCharacter(
                             targetPresence.AccountId,
                             monster.TargetCharacterId);
@@ -233,23 +250,20 @@ public sealed class CombatService
                         if (targetCharacter is not null &&
                             Convert.ToInt32(targetCharacter["HP"]) > 0)
                         {
-                            var targetX =
+                            var foreignX =
                                 Convert.ToDouble(targetCharacter["LocX"]);
-                            var targetY =
+                            var foreignY =
                                 Convert.ToDouble(targetCharacter["LocY"]);
-                            var targetDx = targetX - monster.X;
-                            var targetDy = targetY - monster.Y;
-                            var targetDistance = Math.Sqrt(
-                                targetDx * targetDx +
-                                targetDy * targetDy);
+                            var foreignDx = foreignX - monster.X;
+                            var foreignDy = foreignY - monster.Y;
+                            var foreignDistance = Math.Sqrt(
+                                foreignDx * foreignDx +
+                                foreignDy * foreignDy);
 
-                            keepForeignTarget =
-                                targetDistance <= LoseTargetRadius;
+                            if (foreignDistance <= LoseTargetRadius)
+                                continue;
                         }
                     }
-
-                    if (keepForeignTarget)
-                        continue;
 
                     DropMonsterTarget(monster, now);
                     packets.Add(new
@@ -260,8 +274,6 @@ public sealed class CombatService
                     });
                 }
 
-                // Compatibility for runtime state created before target-owner
-                // tracking and for focused unit/smoke scenarios.
                 if (monster.HasTarget &&
                     monster.TargetCharacterId == 0)
                 {
@@ -269,10 +281,35 @@ public sealed class CombatService
                         currentCharacterId;
                 }
 
-                if (!playerAlive)
+                // Resolve an existing target owned by this player.
+                var targetPetUid = 0L;
+                var targetIsPet = false;
+                var targetX = playerX;
+                var targetY = playerY;
+                var targetAlive = playerAlive;
+                Dictionary<string, object>? targetPet = null;
+
+                if (monster.HasTarget &&
+                    monster.TargetCharacterId == currentCharacterId &&
+                    monster.TargetPetUid > 0)
                 {
-                    if (monster.HasTarget &&
-                        monster.TargetCharacterId == currentCharacterId)
+                    targetPetUid = monster.TargetPetUid;
+                    targetPet = assets.Pets.FirstOrDefault(x =>
+                        Convert.ToInt64(x["UID"]) == targetPetUid &&
+                        Convert.ToInt32(x["State"]) == 1 &&
+                        Convert.ToInt32(x["HP"]) > 0);
+
+                    if (targetPet is not null &&
+                        session.PetPositions.TryGetValue(
+                            targetPetUid,
+                            out var petPosition))
+                    {
+                        targetIsPet = true;
+                        targetAlive = true;
+                        targetX = petPosition.X;
+                        targetY = petPosition.Y;
+                    }
+                    else
                     {
                         DropMonsterTarget(monster, now);
                         packets.Add(new
@@ -281,42 +318,86 @@ public sealed class CombatService
                             EntityID = monster.EntityId,
                             HasTarget = false
                         });
-                        continue;
                     }
-
-                    if (!monster.HasTarget &&
-                        (monster.LastAiAt == DateTimeOffset.MinValue ||
-                         now - monster.LastAiAt >=
-                         TimeSpan.FromMilliseconds(200)))
-                    {
-                        monster.LastAiAt = now;
-                        TryWander(monster, now, packets);
-                    }
-
-                    continue;
                 }
 
-                var dx = playerX - monster.X;
-                var dy = playerY - monster.Y;
-                var distance = Math.Sqrt(dx * dx + dy * dy);
-
-                // Every nearby player may compete to acquire an idle monster.
-                // The map lock makes this decision atomic; after acquisition
-                // only the winning TargetCharacterId drives the monster.
-                if (!monster.HasTarget &&
-                    distance <= AggroRadius)
+                // An idle monster chooses the closest valid target. A summoned
+                // pet is therefore aggroed exactly like a nearby player; it
+                // does not need to attack first.
+                if (!monster.HasTarget)
                 {
-                    monster.HasTarget = true;
-                    monster.TargetCharacterId = currentCharacterId;
-                    monster.LastAiAt = now;
-                    SetAiState(monster, MonsterAiState.Chase);
-                    packets.Add(new
+                    var playerDx = playerX - monster.X;
+                    var playerDy = playerY - monster.Y;
+                    var playerDistanceSquared =
+                        playerDx * playerDx +
+                        playerDy * playerDy;
+
+                    var petDistanceSquared = double.MaxValue;
+                    if (petAlive)
                     {
-                        Type = "MonsterTarget",
-                        EntityID = monster.EntityId,
-                        HasTarget = true,
-                        TargetID = currentCharacterId
-                    });
+                        var petDx =
+                            activePetPosition.X - monster.X;
+                        var petDy =
+                            activePetPosition.Y - monster.Y;
+                        petDistanceSquared =
+                            petDx * petDx +
+                            petDy * petDy;
+                    }
+
+                    var playerInAggro =
+                        playerAlive &&
+                        playerDistanceSquared <=
+                        AggroRadius * AggroRadius;
+                    var petInAggro =
+                        petAlive &&
+                        petDistanceSquared <=
+                        AggroRadius * AggroRadius;
+
+                    if (playerInAggro || petInAggro)
+                    {
+                        targetIsPet =
+                            petInAggro &&
+                            (!playerInAggro ||
+                             petDistanceSquared <
+                             playerDistanceSquared);
+
+                        monster.HasTarget = true;
+                        monster.TargetCharacterId =
+                            currentCharacterId;
+                        monster.TargetPetUid =
+                            targetIsPet
+                                ? activePetUid
+                                : 0;
+                        monster.LastAiAt = now;
+                        SetAiState(
+                            monster,
+                            MonsterAiState.Chase);
+
+                        if (targetIsPet)
+                        {
+                            targetPetUid = activePetUid;
+                            targetPet = activePet;
+                            targetAlive = true;
+                            targetX = activePetPosition.X;
+                            targetY = activePetPosition.Y;
+                        }
+                        else
+                        {
+                            targetAlive = playerAlive;
+                            targetX = playerX;
+                            targetY = playerY;
+                        }
+
+                        packets.Add(new
+                        {
+                            Type = "MonsterTarget",
+                            EntityID = monster.EntityId,
+                            HasTarget = true,
+                            TargetID = targetIsPet
+                                ? 4_000_000L + targetPetUid
+                                : currentCharacterId
+                        });
+                    }
                 }
 
                 if (!monster.HasTarget)
@@ -335,7 +416,55 @@ public sealed class CombatService
                 if (monster.TargetCharacterId != currentCharacterId)
                     continue;
 
+                if (!targetAlive)
+                {
+                    DropMonsterTarget(monster, now);
+                    packets.Add(new
+                    {
+                        Type = "MonsterTarget",
+                        EntityID = monster.EntityId,
+                        HasTarget = false
+                    });
+                    continue;
+                }
+
+                // Re-resolve a pet target after acquisition above.
+                if (monster.TargetPetUid > 0)
+                {
+                    targetPetUid = monster.TargetPetUid;
+                    targetPet ??= assets.Pets.FirstOrDefault(x =>
+                        Convert.ToInt64(x["UID"]) == targetPetUid &&
+                        Convert.ToInt32(x["State"]) == 1 &&
+                        Convert.ToInt32(x["HP"]) > 0);
+
+                    if (targetPet is null ||
+                        !session.PetPositions.TryGetValue(
+                            targetPetUid,
+                            out var currentPetPosition))
+                    {
+                        DropMonsterTarget(monster, now);
+                        continue;
+                    }
+
+                    targetIsPet = true;
+                    targetX = currentPetPosition.X;
+                    targetY = currentPetPosition.Y;
+                }
+                else
+                {
+                    targetIsPet = false;
+                    targetX = playerX;
+                    targetY = playerY;
+                    targetAlive = playerAlive;
+                }
+
                 monster.LastAiAt = now;
+
+                var dx = targetX - monster.X;
+                var dy = targetY - monster.Y;
+                var distance = Math.Sqrt(
+                    dx * dx +
+                    dy * dy);
 
                 if (distance > LoseTargetRadius)
                 {
@@ -349,14 +478,10 @@ public sealed class CombatService
                     continue;
                 }
 
-                var shouldAttack =
-                    distance <= EngageDistance;
-
-                if (shouldAttack)
+                if (distance <= EngageDistance)
                 {
                     var enteredAttackRange =
                         monster.AiState != MonsterAiState.Attack;
-
                     var wasMoving = monster.AiState is
                         MonsterAiState.Chase or
                         MonsterAiState.Wander;
@@ -365,7 +490,6 @@ public sealed class CombatService
                         dx,
                         dy,
                         monster.CurrentDir);
-
                     var directionChanged =
                         !string.Equals(
                             stableDir,
@@ -373,122 +497,228 @@ public sealed class CombatService
                             StringComparison.Ordinal);
 
                     monster.CurrentDir = stableDir;
-                    SetAiState(monster, MonsterAiState.Attack);
-
-                    var withinDamageRange =
-                        distance <= AttackRange;
+                    SetAiState(
+                        monster,
+                        MonsterAiState.Attack);
 
                     var cooldownElapsed =
                         monster.LastAttackAt > now ||
                         now - monster.LastAttackAt >=
                         MonsterAttackCooldown;
-
                     var attackReady =
-                        withinDamageRange &&
+                        distance <= AttackRange &&
                         (enteredAttackRange || cooldownElapsed);
 
-                    if (attackReady &&
-                        character is not null &&
-                        Convert.ToInt32(character["HP"]) > 0)
+                    if (attackReady)
                     {
-                        var assets = _store.GetCharacterAssets(
-                            accountId,
-                            currentCharacterId);
+                        var rawDamage =
+                            Math.Max(1, monster.Level * 2);
 
-                        var effective = ApplyActiveSkillBuffs(
-                            CharacterStatCalculator.Calculate(
-                                character,
-                                assets,
-                                _current),
-                            session,
-                            now);
-
-                        var defense = Math.Max(0, effective.Defense);
-                        var rawDamage = Math.Max(1, monster.Level * 2);
-                        var damage = Math.Max(
-                            1,
-                            rawDamage - defense / 5);
-
-                        var updated = _store.ApplyDamage(
-                            accountId,
-                            currentCharacterId,
-                            damage);
-
-                        if (updated is not null)
+                        if (targetIsPet &&
+                            targetPet is not null)
                         {
-                            monster.LastAttackAt = now;
-                            character = updated;
+                            var defense = Math.Max(
+                                0,
+                                Convert.ToInt32(
+                                    targetPet["Defense"]));
+                            var damage = Math.Max(
+                                1,
+                                rawDamage - defense / 5);
+                            var updatedPet =
+                                _store.ApplyPetDamage(
+                                    accountId,
+                                    currentCharacterId,
+                                    targetPetUid,
+                                    damage);
 
-                            var currentHp =
-                                Convert.ToInt32(updated["HP"]);
-
-                            var updatedAssets = _store.GetCharacterAssets(
-                                accountId,
-                                currentCharacterId);
-                            var updatedEffective = ApplyActiveSkillBuffs(
-                                CharacterStatCalculator.Calculate(
-                                    updated,
-                                    updatedAssets,
-                                    _current),
-                                session,
-                                now);
-                            var maxHp = updatedEffective.MaxHP;
-
-                            // Snap the visual monster to its latest authoritative
-                            // position before attack state cancels client movement.
-                            if (enteredAttackRange)
+                            if (updatedPet is not null)
                             {
+                                monster.LastAttackAt = now;
+                                var currentHp =
+                                    Convert.ToInt32(
+                                        updatedPet["HP"]);
+                                var maxHp =
+                                    Convert.ToInt32(
+                                        updatedPet["MaxHP"]);
+                                var petEntityId =
+                                    4_000_000L + targetPetUid;
+
+                                if (enteredAttackRange)
+                                {
+                                    packets.Add(new
+                                    {
+                                        Type = "MoveEntity",
+                                        EntityID = monster.EntityId,
+                                        X = monster.X,
+                                        Y = monster.Y,
+                                        Dir = monster.CurrentDir,
+                                        SpeedTime = 0.0
+                                    });
+                                }
+
                                 packets.Add(new
                                 {
-                                    Type = "MoveEntity",
+                                    Type = "SyncState",
                                     EntityID = monster.EntityId,
-                                    X = monster.X,
-                                    Y = monster.Y,
-                                    Dir = monster.CurrentDir,
-                                    SpeedTime = 0.0
+                                    State = "attack",
+                                    Dir = monster.CurrentDir
                                 });
-                            }
 
-                            packets.Add(new
-                            {
-                                Type = "SyncState",
-                                EntityID = monster.EntityId,
-                                State = "attack",
-                                Dir = monster.CurrentDir
-                            });
-
-                            packets.Add(new
-                            {
-                                Type = "EntityDamage",
-                                TargetID = currentCharacterId,
-                                TargetType = 0,
-                                Damage = damage,
-                                CurrentHP = currentHp,
-                                MaxHP = maxHp,
-                                IsCrit = false,
-                                SkillID = 0,
-                                SkillLevel = 1,
-                                AttackerID = monster.EntityId
-                            });
-
-                            packets.Add(BuildPlayerStatusPacket(
-                                updated,
-                                updatedEffective));
-
-                            if (currentHp <= 0)
-                            {
                                 packets.Add(new
                                 {
-                                    Type = "EntityDeath",
-                                    EntityID = currentCharacterId,
-                                    EntityType = 0,
-                                    KillerID = monster.EntityId
+                                    Type = "EntityDamage",
+                                    TargetID = petEntityId,
+                                    TargetType = 4,
+                                    Damage = damage,
+                                    CurrentHP = currentHp,
+                                    MaxHP = maxHp,
+                                    IsCrit = false,
+                                    SkillID = 0,
+                                    SkillLevel = 1,
+                                    AttackerID = monster.EntityId
                                 });
 
-                                DropMonsterTarget(
-                                    monster,
-                                    now,
-                                    scheduleWander: false);
+                                var refreshedAssets =
+                                    _store.GetCharacterAssets(
+                                        accountId,
+                                        currentCharacterId);
+                                packets.Add(new
+                                {
+                                    Type = "PetSync",
+                                    Pets = refreshedAssets.Pets,
+                                    MaxSize =
+                                        refreshedAssets.PetMaxSize
+                                });
+
+                                if (currentHp <= 0)
+                                {
+                                    stateCleanup:
+                                    session.PetPositions.Remove(
+                                        targetPetUid);
+                                    session.PetLastAttackAt.Remove(
+                                        targetPetUid);
+                                    session.PetTargets.Remove(
+                                        targetPetUid);
+                                    session.PetOutOfRangeSince.Remove(
+                                        targetPetUid);
+
+                                    packets.Add(new
+                                    {
+                                        Type = "EntityDeath",
+                                        EntityID = petEntityId,
+                                        EntityType = 4,
+                                        KillerID = monster.EntityId
+                                    });
+
+                                    DropMonsterTarget(
+                                        monster,
+                                        now,
+                                        scheduleWander: false);
+                                }
+                            }
+                        }
+                        else if (character is not null &&
+                                 Convert.ToInt32(
+                                     character["HP"]) > 0)
+                        {
+                            var effective =
+                                ApplyActiveSkillBuffs(
+                                    CharacterStatCalculator.Calculate(
+                                        character,
+                                        assets,
+                                        _current),
+                                    session,
+                                    now);
+                            var defense =
+                                Math.Max(0, effective.Defense);
+                            var damage = Math.Max(
+                                1,
+                                rawDamage - defense / 5);
+                            var updated = _store.ApplyDamage(
+                                accountId,
+                                currentCharacterId,
+                                damage);
+
+                            if (updated is not null)
+                            {
+                                monster.LastAttackAt = now;
+                                character = updated;
+                                var currentHp =
+                                    Convert.ToInt32(updated["HP"]);
+                                var updatedAssets =
+                                    _store.GetCharacterAssets(
+                                        accountId,
+                                        currentCharacterId);
+                                var updatedEffective =
+                                    ApplyActiveSkillBuffs(
+                                        CharacterStatCalculator.Calculate(
+                                            updated,
+                                            updatedAssets,
+                                            _current),
+                                        session,
+                                        now);
+                                var maxHp =
+                                    updatedEffective.MaxHP;
+
+                                if (enteredAttackRange)
+                                {
+                                    packets.Add(new
+                                    {
+                                        Type = "MoveEntity",
+                                        EntityID = monster.EntityId,
+                                        X = monster.X,
+                                        Y = monster.Y,
+                                        Dir = monster.CurrentDir,
+                                        SpeedTime = 0.0
+                                    });
+                                }
+
+                                packets.Add(new
+                                {
+                                    Type = "SyncState",
+                                    EntityID = monster.EntityId,
+                                    State = "attack",
+                                    Dir = monster.CurrentDir
+                                });
+
+                                packets.Add(new
+                                {
+                                    Type = "EntityDamage",
+                                    TargetID =
+                                        currentCharacterId,
+                                    TargetType = 0,
+                                    Damage = damage,
+                                    CurrentHP = currentHp,
+                                    MaxHP = maxHp,
+                                    IsCrit = false,
+                                    SkillID = 0,
+                                    SkillLevel = 1,
+                                    AttackerID =
+                                        monster.EntityId
+                                });
+
+                                packets.Add(
+                                    BuildPlayerStatusPacket(
+                                        updated,
+                                        updatedEffective));
+
+                                if (currentHp <= 0)
+                                {
+                                    packets.Add(new
+                                    {
+                                        Type = "EntityDeath",
+                                        EntityID =
+                                            currentCharacterId,
+                                        EntityType = 0,
+                                        KillerID =
+                                            monster.EntityId
+                                    });
+
+                                    DropMonsterTarget(
+                                        monster,
+                                        now,
+                                        scheduleWander: false);
+                                }
                             }
                         }
                     }
@@ -506,20 +736,28 @@ public sealed class CombatService
                     continue;
                 }
 
-                SetAiState(monster, MonsterAiState.Chase);
+                SetAiState(
+                    monster,
+                    MonsterAiState.Chase);
 
                 var step = Math.Min(
                     MoveStep,
-                    Math.Max(0.0, distance - EngageDistance));
+                    Math.Max(
+                        0.0,
+                        distance - EngageDistance));
 
                 if (step <= 0.0)
                 {
-                    SetAiState(monster, MonsterAiState.Attack);
+                    SetAiState(
+                        monster,
+                        MonsterAiState.Attack);
                     continue;
                 }
 
-                var nx = monster.X + dx / distance * step;
-                var ny = monster.Y + dy / distance * step;
+                var nx =
+                    monster.X + dx / distance * step;
+                var ny =
+                    monster.Y + dy / distance * step;
                 var moveDx = nx - monster.X;
                 var moveDy = ny - monster.Y;
 
@@ -607,6 +845,7 @@ public sealed class CombatService
     {
         monster.HasTarget = false;
         monster.TargetCharacterId = 0;
+        monster.TargetPetUid = 0;
         SetAiState(monster, MonsterAiState.Idle);
         monster.WanderCenterX = monster.X;
         monster.WanderCenterY = monster.Y;
@@ -757,6 +996,7 @@ public sealed class CombatService
                     DateTimeOffset.UtcNow + RespawnDelay;
                 monster.HasTarget = false;
                 monster.TargetCharacterId = 0;
+                monster.TargetPetUid = 0;
                 SetAiState(monster, MonsterAiState.Dead);
 
                 packets.Add(new
@@ -2128,6 +2368,7 @@ public sealed class CombatService
                     DateTimeOffset.UtcNow + RespawnDelay;
                 monster.HasTarget = false;
                 monster.TargetCharacterId = 0;
+                monster.TargetPetUid = 0;
                 SetAiState(monster, MonsterAiState.Dead);
 
                 packets.Add(new
