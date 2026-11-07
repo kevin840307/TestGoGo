@@ -2449,6 +2449,212 @@ public sealed class SqliteGameStore : IGameStore
         return cmd.ExecuteNonQuery() == 1;
     }
 
+    public SkillBookUseResult LearnSkillFromBook(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        int skillId,
+        int targetLevel)
+    {
+        if (itemUid <= 0 ||
+            itemIndex <= 0 ||
+            skillId <= 0 ||
+            targetLevel <= 0)
+        {
+            return new(
+                false,
+                "技能書資料無效",
+                skillId,
+                Math.Max(0, targetLevel));
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(
+                db,
+                accountId,
+                dbid,
+                tx))
+        {
+            return new(
+                false,
+                "角色不存在",
+                skillId,
+                targetLevel);
+        }
+
+        int bookCount;
+        using (var book = db.CreateCommand())
+        {
+            book.Transaction = tx;
+            book.CommandText = """
+                SELECT count
+                  FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND item_index=$item
+                   AND in_bank=0
+                   AND in_shop=0
+                 LIMIT 1
+                """;
+            Arg(book, "$uid", itemUid);
+            Arg(book, "$id", dbid);
+            Arg(book, "$item", itemIndex);
+
+            var raw = book.ExecuteScalar();
+            if (raw is null || raw == DBNull.Value)
+            {
+                return new(
+                    false,
+                    "找不到可使用的技能書",
+                    skillId,
+                    targetLevel);
+            }
+
+            bookCount = Convert.ToInt32(raw);
+            if (bookCount <= 0)
+            {
+                return new(
+                    false,
+                    "技能書數量不足",
+                    skillId,
+                    targetLevel);
+            }
+        }
+
+        var currentLevel = 0;
+        using (var current = db.CreateCommand())
+        {
+            current.Transaction = tx;
+            current.CommandText = """
+                SELECT level
+                  FROM character_skills
+                 WHERE character_id=$id
+                   AND skill_id=$skill
+                 LIMIT 1
+                """;
+            Arg(current, "$id", dbid);
+            Arg(current, "$skill", skillId);
+
+            var raw = current.ExecuteScalar();
+            if (raw is not null &&
+                raw != DBNull.Value)
+            {
+                currentLevel = Convert.ToInt32(raw);
+            }
+        }
+
+        if (currentLevel >= targetLevel)
+        {
+            return new(
+                false,
+                "已學會同級或更高等級技能",
+                skillId,
+                currentLevel);
+        }
+
+        if (currentLevel != targetLevel - 1)
+        {
+            return new(
+                false,
+                targetLevel <= 1
+                    ? "技能學習狀態不正確"
+                    : $"請先學會前一級技能 Lv.{targetLevel - 1}",
+                skillId,
+                currentLevel);
+        }
+
+        using (var learn = db.CreateCommand())
+        {
+            learn.Transaction = tx;
+            learn.CommandText = """
+                INSERT INTO character_skills(
+                    character_id,skill_id,level,exp)
+                VALUES($id,$skill,$level,0)
+                ON CONFLICT(character_id,skill_id)
+                DO UPDATE SET
+                    level=excluded.level,
+                    exp=0
+                """;
+            Arg(learn, "$id", dbid);
+            Arg(learn, "$skill", skillId);
+            Arg(learn, "$level", targetLevel);
+
+            if (learn.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "技能學習失敗",
+                    skillId,
+                    currentLevel);
+            }
+        }
+
+        if (bookCount == 1)
+        {
+            using var delete = db.CreateCommand();
+            delete.Transaction = tx;
+            delete.CommandText = """
+                DELETE FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND item_index=$item
+                   AND count=1
+                   AND in_bank=0
+                   AND in_shop=0
+                """;
+            Arg(delete, "$uid", itemUid);
+            Arg(delete, "$id", dbid);
+            Arg(delete, "$item", itemIndex);
+
+            if (delete.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "技能書扣除失敗",
+                    skillId,
+                    currentLevel);
+            }
+        }
+        else
+        {
+            using var reduce = db.CreateCommand();
+            reduce.Transaction = tx;
+            reduce.CommandText = """
+                UPDATE inventory_items
+                   SET count=count-1
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND item_index=$item
+                   AND count > 1
+                   AND in_bank=0
+                   AND in_shop=0
+                """;
+            Arg(reduce, "$uid", itemUid);
+            Arg(reduce, "$id", dbid);
+            Arg(reduce, "$item", itemIndex);
+
+            if (reduce.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "技能書扣除失敗",
+                    skillId,
+                    currentLevel);
+            }
+        }
+
+        tx.Commit();
+
+        return new(
+            true,
+            $"已學會技能 Lv.{targetLevel}",
+            skillId,
+            targetLevel);
+    }
+
     public bool ClearSkills(long accountId, long dbid)
     {
         using var db = Open();
