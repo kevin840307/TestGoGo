@@ -6029,6 +6029,155 @@ try
     peerSession.LastX = combatEnemy.X;
     peerSession.LastY = combatEnemy.Y;
 
+    router.SyncPresence(peerSession);
+
+    using (var unqualifiedAutoSaint = Json(
+        """
+        {"Type":"ToggleAutoSaint","IsOn":true,"MpThreshold":90,"SpThreshold":90}
+        """))
+    {
+        var responses = router.Handle(
+            unqualifiedAutoSaint.RootElement,
+            peerSession);
+
+        Check(
+            !peerSession.AutoSaintEnabled &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"ToggleAutoSaintResponse\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"IsOn\":false")) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "需要先學會治療風暴與心靈轉換")),
+            "auto saint refuses characters without both recovered support skills");
+    }
+
+    session.WorldReady = true;
+    peerSession.WorldReady = true;
+    session.SkillReadyAt.Clear();
+
+    using (var enableAutoSaint = Json(
+        """
+        {"Type":"ToggleAutoSaint","IsOn":true,"MpThreshold":90,"SpThreshold":90}
+        """))
+    {
+        var responses = router.Handle(
+            enableAutoSaint.RootElement,
+            session);
+
+        Check(
+            session.AutoSaintEnabled &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"ToggleAutoSaintResponse\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"IsOn\":true")),
+            "learned saint can enable authoritative stationary auto support");
+    }
+
+    store.ApplyDamage(
+        account.Value,
+        secondCharacterId,
+        30);
+    store.SpendSkillResources(
+        account.Value,
+        secondCharacterId,
+        0,
+        20,
+        0);
+
+    var autoHealBefore = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+    var autoSaintAt =
+        DateTimeOffset.UtcNow.AddMinutes(10);
+
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    var autoHealPackets = router.Tick(
+        session,
+        autoSaintAt);
+    var autoHealAfter = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+
+    Check(
+        Convert.ToInt32(autoHealAfter["HP"]) >
+            Convert.ToInt32(autoHealBefore["HP"]) &&
+        Convert.ToInt32(autoHealAfter["MP"]) >
+            Convert.ToInt32(autoHealBefore["MP"]) &&
+        autoHealPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"SkillCast\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"SkillID\":28107")),
+        "auto saint casts existing 治療風暴 when a nearby party member HP/MP falls below threshold");
+
+    var peerSpState = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+    var peerSpNow = Convert.ToInt32(
+        peerSpState["SP"]);
+    if (peerSpNow > 5)
+    {
+        store.SpendSkillResources(
+            account.Value,
+            secondCharacterId,
+            0,
+            0,
+            peerSpNow - 5);
+    }
+
+    var autoSpBefore = Convert.ToInt32(
+        store.GetCharacter(
+            account.Value,
+            secondCharacterId)!["SP"]);
+
+    session.SkillReadyAt.Remove(28102);
+    var autoSpPackets = router.Tick(
+        session,
+        autoSaintAt.AddSeconds(2));
+    var autoSpAfter = Convert.ToInt32(
+        store.GetCharacter(
+            account.Value,
+            secondCharacterId)!["SP"]);
+
+    Check(
+        autoSpAfter > autoSpBefore &&
+        autoSpPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"SkillCast\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"SkillID\":28102")),
+        "auto saint uses existing 心靈轉換 on the lowest-SP in-range party member");
+
+    using (var blockedManualAttack = Json(
+        """
+        {"Type":"AttackEntity","TargetEntityID":1,"TargetType":1}
+        """))
+    {
+        var responses = router.Handle(
+            blockedManualAttack.RootElement,
+            session);
+        Check(responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "自動聖靈啟動中，禁止手動攻擊")),
+            "auto saint preserves original stationary/manual-combat lock while its server rotation is active");
+    }
+
+    using (var disableAutoSaint = Json(
+        """
+        {"Type":"ToggleAutoSaint","IsOn":false,"MpThreshold":90,"SpThreshold":90}
+        """))
+    {
+        router.Handle(
+            disableAutoSaint.RootElement,
+            session);
+        Check(!session.AutoSaintEnabled,
+            "auto saint can be disabled and releases manual control");
+    }
+
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
     while (peerRegistration.Queue.TryDequeue(out _)) { }
 
