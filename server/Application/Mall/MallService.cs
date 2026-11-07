@@ -1,14 +1,23 @@
+using Microsoft.Extensions.Configuration;
 using SGO.Server.Application.Abstractions;
+using SGO.Server.Infrastructure.GameData;
 
 namespace SGO.Server.Application.Mall;
 
 public sealed class MallService
 {
     private readonly IMallStore _store;
+    private readonly IConfiguration? _configuration;
+    private readonly CurrentClientDataCatalog? _current;
 
-    public MallService(IMallStore store)
+    public MallService(
+        IMallStore store,
+        IConfiguration? configuration = null,
+        CurrentClientDataCatalog? current = null)
     {
         _store = store;
+        _configuration = configuration;
+        _current = current;
     }
 
     public IReadOnlyList<object> Handle(
@@ -28,21 +37,11 @@ public sealed class MallService
                 return [BuildMallList(accountId)];
 
             case "BuyItem":
-                return
-                [
-                    new
-                    {
-                        Type = "SystemMessageFlash",
-                        Message = mallId > 0
-                            ? "商城商品資料尚未設定，已拒絕扣點"
-                            : "商城商品編號無效"
-                    },
-                    new
-                    {
-                        Type = "MallPointsSync",
-                        Points = _store.GetMallPoints(accountId)
-                    }
-                ];
+                return BuyItem(
+                    accountId,
+                    dbid,
+                    mallId,
+                    count);
 
             case "CreatePayPalDonation":
                 return [new
@@ -90,12 +89,167 @@ public sealed class MallService
         }
     }
 
+    private IReadOnlyList<object> BuyItem(
+        long accountId,
+        long dbid,
+        int mallId,
+        int quantity)
+    {
+        var product = MallCatalog.Read(
+                _configuration,
+                _current)
+            .FirstOrDefault(x =>
+                x.MallId == mallId &&
+                x.IsActive);
+
+        if (product is null)
+        {
+            return
+            [
+                Flash(mallId > 0
+                    ? "商城商品不存在或已下架"
+                    : "商城商品編號無效"),
+                Points(accountId)
+            ];
+        }
+
+        if (quantity <= 0 ||
+            quantity > product.MaxQuantity)
+        {
+            return
+            [
+                Flash(
+                    $"單次購買數量必須介於 1 至 {product.MaxQuantity}"),
+                Points(accountId)
+            ];
+        }
+
+        long totalPrice;
+        int assetCount;
+        try
+        {
+            totalPrice = checked(
+                product.Price * quantity);
+            assetCount = checked(
+                product.Count * quantity);
+        }
+        catch (OverflowException)
+        {
+            return
+            [
+                Flash("商城購買數量過大"),
+                Points(accountId)
+            ];
+        }
+
+        if (assetCount <= 0 ||
+            assetCount > 999)
+        {
+            return
+            [
+                Flash("商城商品數量超過單次發放上限"),
+                Points(accountId)
+            ];
+        }
+
+        var result = _store.PurchaseMallAsset(
+            accountId,
+            dbid,
+            product.Kind,
+            product.ItemIndex,
+            assetCount,
+            totalPrice,
+            product.AssetName,
+            product.HorseType,
+            product.InitialEnergy,
+            product.ItemPart,
+            product.ItemDamage);
+
+        var packets = new List<object>
+        {
+            Flash(
+                result.Success
+                    ? $"已購買 {product.Name} x {assetCount}"
+                    : result.Message),
+            new
+            {
+                Type = "MallPointsSync",
+                Points = result.NewBalance
+            }
+        };
+
+        if (!result.Success)
+            return packets;
+
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            dbid);
+
+        packets.Add(new
+        {
+            Type = "InventorySync",
+            Items = assets.Inventory,
+            MaxSize = assets.InventoryMaxSize
+        });
+        packets.Add(new
+        {
+            Type = "EquipSync",
+            Equips = assets.Equips,
+            MaxSize = assets.EquipMaxSize
+        });
+        packets.Add(new
+        {
+            Type = "PetSync",
+            Pets = assets.Pets,
+            MaxSize = assets.PetMaxSize
+        });
+        packets.Add(new
+        {
+            Type = "HorseSync",
+            Horses = assets.Horses,
+            HorseEquips = assets.HorseEquips,
+            MaxHorseEquipSize = assets.HorseEquipMaxSize
+        });
+
+        return packets;
+    }
+
     private object BuildMallList(long accountId)
         => new
         {
             Type = "MallListResponse",
             Points = _store.GetMallPoints(accountId),
-            Items = Array.Empty<object>(),
+            Items = MallCatalog.Read(
+                    _configuration,
+                    _current)
+                .Select(item => new
+                {
+                    MallID = item.MallId,
+                    ItemIndex = item.ItemIndex,
+                    Name = item.Name,
+                    Category = item.Category,
+                    Price = item.Price,
+                    OriginalPrice = item.OriginalPrice,
+                    Tag = item.Tag,
+                    Count = item.Count,
+                    IsActive = item.IsActive
+                })
+                .Cast<object>()
+                .ToArray(),
             Gifts = Array.Empty<object>()
+        };
+
+    private object Points(long accountId)
+        => new
+        {
+            Type = "MallPointsSync",
+            Points = _store.GetMallPoints(accountId)
+        };
+
+    private static object Flash(string message)
+        => new
+        {
+            Type = "SystemMessageFlash",
+            Message = message
         };
 }
