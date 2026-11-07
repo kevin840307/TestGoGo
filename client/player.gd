@@ -42,6 +42,7 @@ var pending_skill_id: int = -1
 var confirmed_summoned_horse_uid: int = -1
 var can_cross_special_terrain: bool = false
 var navigation_repath_cooldown: float = 0.0
+var _navigation_request_id: int = 0
 
 
 
@@ -745,18 +746,57 @@ func _handle_network_sync(delta: float) -> void :
 		)
 
 func _set_navigation_target(destination: Vector2) -> void :
+	_navigation_request_id += 1
+	var request_id: int = _navigation_request_id
+	var request_start: Vector2 = global_position
 	move_destination = destination
 
 	var map_id: int = int(data_model.map_id) if data_model else 0
 	var route: PackedVector2Array = LegacyPathfinder.find_path(
 		map_id,
-		global_position,
+		request_start,
 		destination,
 		can_cross_special_terrain
 	)
 
 	if route.is_empty():
-		_stop_movement()
+		# Preserve the proven fast path for normal movement. Only when it cannot
+		# find a route do we start the frame-budgeted large-detour fallback.
+		velocity = Vector2.ZERO
+		is_moving = false
+		current_state = "idle"
+		route = await LegacyPathfinder.find_large_detour_path_async(
+			map_id,
+			request_start,
+			destination,
+			can_cross_special_terrain
+		)
+
+		# A newer click/repath supersedes this search. Never let an old async
+		# result move the player toward a stale destination.
+		if request_id != _navigation_request_id:
+			return
+		if route.is_empty():
+			_stop_movement()
+			return
+
+		# If another gameplay event moved/corrected the player while the fallback
+		# was yielding, discard the route rather than starting from stale cells.
+		if global_position.distance_to(request_start) > 24.0:
+			return
+
+		# Final safety gate: a fallback path is accepted only if every segment is
+		# still legal according to the same Blocking.dat used by movement.
+		if not LegacyPathfinder.validate_world_path(
+			map_id,
+			global_position,
+			route,
+			can_cross_special_terrain
+		):
+			_stop_movement()
+			return
+
+	if request_id != _navigation_request_id:
 		return
 
 	move_path = route
@@ -767,6 +807,7 @@ func _set_navigation_target(destination: Vector2) -> void :
 
 
 func apply_position_correction(corrected_position: Vector2) -> void :
+	_navigation_request_id += 1
 	global_position = corrected_position
 	last_walkable_sync_position = corrected_position
 	has_last_walkable_sync_position = true
@@ -785,6 +826,7 @@ func apply_position_correction(corrected_position: Vector2) -> void :
 
 
 func _stop_movement() -> void :
+	_navigation_request_id += 1
 	velocity = Vector2.ZERO
 	is_moving = false
 	move_path = PackedVector2Array()
