@@ -336,6 +336,37 @@ using (var validPartyCreate = Json(
         "party create remains compatible without a target");
 }
 
+using (var missingPartyInviteTarget = Json(
+    """{"Type":"PartyAction","Action":"Invite"}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              missingPartyInviteTarget.RootElement, "PartyAction", out var reason) &&
+          reason.Contains("TargetDBID"),
+        "party invite requires target DBID");
+}
+using (var partyDisband = Json(
+    """{"Type":"PartyAction","Action":"Disband"}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              partyDisband.RootElement, "PartyAction", out _),
+        "party disband remains valid without target DBID");
+}
+using (var invalidClubName = Json(
+    """{"Type":"ClubAction","Action":"Create","ClubName":"  "}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              invalidClubName.RootElement, "ClubAction", out var reason) &&
+          reason.Contains("ClubName"),
+        "club creation rejects blank club names before database mutation");
+}
+using (var validClubName = Json(
+    """{"Type":"ClubAction","Action":"Create","ClubName":"TestClub"}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              validClubName.RootElement, "ClubAction", out _),
+        "club creation accepts recovered client name field");
+}
+
 var repoRoot = Directory.GetCurrentDirectory();
 var gameDataRoot = Path.Combine(repoRoot, "Old", "服務端", "Dat");
 var questRoot = Path.Combine(gameDataRoot, "Quest");
