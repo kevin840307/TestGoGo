@@ -2752,6 +2752,8 @@ public sealed class PacketRouter
         try
         {
             var assetsChanged = false;
+            var skillsChanged = false;
+            var careerChanged = false;
             var dbid = state.CharacterId ?? 0;
             var questTeamMembers = dbid > 0
                 ? _party.GetMembers(dbid)
@@ -2923,7 +2925,41 @@ public sealed class PacketRouter
                         _store.UnlockTitle(
                             accountId,
                             dbid,
-                            titleId)
+                            titleId),
+                    HasSkill = currentSkillId =>
+                        dbid > 0 &&
+                        _store.GetSkills(
+                                accountId,
+                                dbid)
+                            .Any(x =>
+                                Convert.ToInt32(x["SkillID"]) ==
+                                currentSkillId),
+                    AddSkill = currentSkillId =>
+                    {
+                        if (dbid <= 0)
+                            return false;
+
+                        var success = _store.SetSkill(
+                            accountId,
+                            dbid,
+                            currentSkillId,
+                            1);
+                        skillsChanged |= success;
+                        return success;
+                    },
+                    SetCareer = (career, job) =>
+                    {
+                        if (dbid <= 0)
+                            return false;
+
+                        var updated = _store.SetCareer(
+                            accountId,
+                            dbid,
+                            career,
+                            job);
+                        careerChanged |= updated is not null;
+                        return updated is not null;
+                    }
                 });
 
             if (result.RebornMapId.HasValue &&
@@ -2981,6 +3017,39 @@ public sealed class PacketRouter
                         accountId,
                         state.CharacterId.Value,
                         assets));
+                result.Packets.Add(
+                    BuildAndBroadcastAppearancePacket(
+                        state,
+                        accountId,
+                        state.CharacterId.Value,
+                        assets));
+            }
+
+            if (skillsChanged &&
+                state.CharacterId.HasValue)
+            {
+                result.Packets.Add(new
+                {
+                    Type = "SkillSync",
+                    Skills = _store.GetSkills(
+                        accountId,
+                        state.CharacterId.Value)
+                });
+            }
+
+            if (careerChanged &&
+                state.CharacterId.HasValue)
+            {
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                result.Packets.Add(
+                    BuildEffectiveStatusPacket(
+                        accountId,
+                        state.CharacterId.Value,
+                        assets));
+
                 result.Packets.Add(
                     BuildAndBroadcastAppearancePacket(
                         state,
