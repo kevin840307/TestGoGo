@@ -790,6 +790,7 @@ public sealed class PacketRouter
                 state.LastX = x;
                 state.LastY = y;
                 state.PositionDirty = true;
+                state.IsResting = false;
                 _broadcasts.UpdatePosition(
                     state.ConnectionId,
                     x,
@@ -3083,6 +3084,9 @@ public sealed class PacketRouter
                 {
                     var playerState =
                         req.Str("State", "idle");
+                    state.IsResting = playerState.Equals(
+                        "crouch",
+                        StringComparison.OrdinalIgnoreCase);
 
                     _store.UpdateState(
                         accountId,
