@@ -343,98 +343,6 @@ func _on_entity_appearance_updated(data: Dictionary) -> void :
 	if target_node and target_node.has_method("update_appearance_from_server"):
 		target_node.update_appearance_from_server(data)
 
-func _play_screen_aoe_target_effect(target_node: Node2D) -> void :
-	if not is_instance_valid(target_node):
-		return
-	if not is_inside_tree():
-		return
-
-	var scene := get_tree().current_scene
-	if not is_instance_valid(scene):
-		return
-
-	var effect_root := Node2D.new()
-	effect_root.name = "ScreenAoeTargetHit"
-	effect_root.global_position = target_node.global_position
-	effect_root.z_index = 95
-	scene.add_child(effect_root)
-
-	var outer := Line2D.new()
-	outer.width = 4.0
-	outer.default_color = Color(0.52, 0.86, 1.0, 1.0)
-	outer.closed = true
-	outer.antialiased = true
-
-	var inner := Line2D.new()
-	inner.width = 2.0
-	inner.default_color = Color(1.0, 1.0, 1.0, 0.9)
-	inner.closed = true
-	inner.antialiased = true
-
-	var segments := 28
-	for i in range(segments):
-		var angle := TAU * float(i) / float(segments)
-		var pulse := 1.0 + 0.10 * sin(angle * 6.0)
-		outer.add_point(Vector2(cos(angle), sin(angle)) * 20.0 * pulse)
-		inner.add_point(Vector2(cos(angle), sin(angle)) * 9.0)
-
-	effect_root.add_child(outer)
-	effect_root.add_child(inner)
-
-	for ray_index in range(8):
-		var ray := Line2D.new()
-		ray.width = 2.0 if ray_index % 2 == 0 else 1.5
-		ray.default_color = Color(
-			0.92,
-			0.98,
-			1.0,
-			0.95 if ray_index % 2 == 0 else 0.70
-		)
-		var ray_angle := TAU * float(ray_index) / 8.0
-		ray.add_point(
-			Vector2(cos(ray_angle), sin(ray_angle)) * 6.0
-		)
-		ray.add_point(
-			Vector2(cos(ray_angle), sin(ray_angle)) *
-			(38.0 if ray_index % 2 == 0 else 29.0)
-		)
-		effect_root.add_child(ray)
-
-	var star := Line2D.new()
-	star.width = 2.0
-	star.default_color = Color(0.65, 0.88, 1.0, 0.9)
-	star.closed = true
-	star.antialiased = true
-	for i in range(16):
-		var angle := TAU * float(i) / 16.0
-		var radius := 17.0 if i % 2 == 0 else 8.0
-		star.add_point(Vector2(cos(angle), sin(angle)) * radius)
-	effect_root.add_child(star)
-
-	effect_root.scale = Vector2(0.35, 0.35)
-
-	var tween := effect_root.create_tween()
-	tween.tween_property(
-		effect_root,
-		"scale",
-		Vector2(2.6, 2.6),
-		0.24
-	).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(
-		effect_root,
-		"rotation",
-		0.45,
-		0.24
-	)
-	tween.parallel().tween_property(
-		effect_root,
-		"modulate:a",
-		0.0,
-		0.32
-	)
-	tween.tween_callback(effect_root.queue_free)
-
-
 func _on_entity_damage_received(data: Dictionary) -> void :
 	var target_id = int(data.get("TargetID", 0))
 	var target_type = int(data.get("TargetType", 0))
@@ -442,7 +350,6 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 	var current_hp = int(data.get("CurrentHP", 0))
 	var is_crit = bool(data.get("IsCrit", false))
 	var skill_id = int(data.get("SkillID", 0))
-	var is_screen_aoe_stress_skill: bool = skill_id == 99001
 
 	var attacker_id = int(data.get("AttackerID", 0))
 	if DEBUG_MONSTER_NETWORK_LOGS and int(_active_entity_types.get(attacker_id, -1)) == 1:
@@ -473,9 +380,6 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 
 
 
-
-	if is_screen_aoe_stress_skill and is_instance_valid(target_node):
-		_play_screen_aoe_target_effect(target_node)
 
 	var is_mecha_double = false
 	var is_twingun = false
@@ -582,8 +486,6 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 
 		else:
 
-			if is_screen_aoe_stress_skill:
-				hit_delay = 0.0
 			if current_hp <= 0: target_node.set_meta("fatal_hit_delay", hit_delay)
 			if target_node.has_method("update_hp"): target_node.update_hp(current_hp, hit_delay, is_miss)
 
@@ -672,13 +574,6 @@ func _on_skill_cast_received(caster_id: int, caster_type: int, skill_id: int, sk
 		caster_node = local_player
 	else:
 		caster_node = get_active_entity(caster_id)
-
-	# 99001 uses a dedicated caster-only shockwave. Avoid the generic legacy
-	# visual pipeline because a 32-target AOE must not create per-target effects.
-	if skill_id == 99001:
-		if is_instance_valid(caster_node) and caster_node.has_method("play_screen_aoe_visual"):
-			caster_node.play_screen_aoe_visual(900.0)
-		return
 
 	if is_instance_valid(caster_node) and caster_node.has_method("execute_skill_visuals"):
 		var target_node = null
