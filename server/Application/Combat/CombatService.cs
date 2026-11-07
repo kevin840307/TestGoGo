@@ -3496,14 +3496,6 @@ public sealed class CombatService
             actualDx * actualDx +
             actualDy * actualDy;
 
-        var repeatsLastPacket =
-            monster.LastMovePacketX.HasValue &&
-            monster.LastMovePacketY.HasValue &&
-            Math.Abs(
-                newX - monster.LastMovePacketX.Value) <= epsilon &&
-            Math.Abs(
-                newY - monster.LastMovePacketY.Value) <= epsilon;
-
         if (actualDistanceSquared <= epsilon * epsilon)
         {
             if (monster.LastStallLogAt == DateTimeOffset.MinValue ||
