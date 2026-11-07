@@ -120,6 +120,22 @@ public sealed class ServerBroadcastHub
                 x.Value.Y))
             .ToArray();
 
+    public IReadOnlyList<OnlinePlayerPresence> OnlinePlayers(
+        Guid exceptConnectionId = default)
+        => _presence
+            .Where(x =>
+                x.Key != exceptConnectionId &&
+                x.Value.AccountId > 0 &&
+                x.Value.CharacterId > 0)
+            .Select(x => new OnlinePlayerPresence(
+                x.Key,
+                x.Value.AccountId,
+                x.Value.CharacterId,
+                x.Value.MapId,
+                x.Value.X,
+                x.Value.Y))
+            .ToArray();
+
     public void Unregister(Guid connectionId)
     {
         _queues.TryRemove(connectionId, out _);
