@@ -92,6 +92,248 @@ func _log_path_query_if_slow(
 	])
 
 
+func _is_blocked_for_query(
+	grid: Dictionary,
+	cell: Vector2i,
+	can_cross_special_terrain: bool
+) -> bool:
+	if not _is_inside(grid, cell):
+		return true
+	var width: int = int(grid.get("width", 0))
+	var cells: PackedByteArray = grid.get("cells", PackedByteArray()) as PackedByteArray
+	var index: int = cell.y * width + cell.x
+	if index < 0 or index >= cells.size():
+		return true
+	var flags: int = int(cells[index]) & BLOCK_MASK
+	if flags == 0:
+		return false
+	return not (can_cross_special_terrain and flags == 3)
+
+
+func _is_segment_walkable_for_query(
+	grid: Dictionary,
+	from_world: Vector2,
+	to_world: Vector2,
+	can_cross_special_terrain: bool
+) -> bool:
+	var distance: float = from_world.distance_to(to_world)
+	if distance <= 0.001:
+		return not _is_blocked_for_query(
+			grid,
+			_world_to_cell(from_world),
+			can_cross_special_terrain
+		)
+	var samples: int = maxi(1, ceili(distance / (float(CELL_SIZE) * 0.5)))
+	for i: int in range(samples + 1):
+		var t: float = float(i) / float(samples)
+		var pos: Vector2 = from_world.lerp(to_world, t)
+		if _is_blocked_for_query(
+			grid,
+			_world_to_cell(pos),
+			can_cross_special_terrain
+		):
+			return false
+	return true
+
+
+func validate_world_path(
+	map_id: int,
+	start_world: Vector2,
+	path: PackedVector2Array,
+	can_cross_special_terrain: bool = false
+) -> bool:
+	var grid: Dictionary = _get_grid(map_id)
+	if grid.is_empty():
+		return false
+	var from_world: Vector2 = start_world
+	for waypoint: Vector2 in path:
+		if not _is_segment_walkable_for_query(
+			grid,
+			from_world,
+			waypoint,
+			can_cross_special_terrain
+		):
+			return false
+		from_world = waypoint
+	return true
+
+
+func find_large_detour_path_async(
+	map_id: int,
+	start_world: Vector2,
+	target_world: Vector2,
+	can_cross_special_terrain: bool = false,
+	frame_budget_usec: int = 1500,
+	max_expanded_cells: int = 45000
+) -> PackedVector2Array:
+	var grid: Dictionary = _get_grid(map_id)
+	if grid.is_empty():
+		return PackedVector2Array()
+
+	var start: Vector2i = _world_to_cell(start_world)
+	var goal: Vector2i = _world_to_cell(target_world)
+	if not _is_inside(grid, start):
+		return PackedVector2Array()
+
+	if not _is_inside(grid, goal) or _is_blocked_for_query(
+		grid,
+		goal,
+		can_cross_special_terrain
+	):
+		var found_goal := Vector2i(-1, -1)
+		for radius: int in range(1, MAX_GOAL_SEARCH_RADIUS + 1):
+			for y: int in range(goal.y - radius, goal.y + radius + 1):
+				for x: int in range(goal.x - radius, goal.x + radius + 1):
+					if abs(x - goal.x) != radius and abs(y - goal.y) != radius:
+						continue
+					var candidate := Vector2i(x, y)
+					if _is_inside(grid, candidate) and not _is_blocked_for_query(
+						grid,
+						candidate,
+						can_cross_special_terrain
+					):
+						found_goal = candidate
+						break
+				if found_goal.x >= 0:
+					break
+			if found_goal.x >= 0:
+				break
+		if found_goal.x < 0:
+			return PackedVector2Array()
+		goal = found_goal
+
+	# Large-detour fallback is deliberately isolated from the normal fast path.
+	# It expands incrementally and yields once its per-frame CPU budget is used.
+	var open: Array[Vector2i] = [start]
+	var open_set: Dictionary = {start: true}
+	var closed: Dictionary = {}
+	var came_from: Dictionary = {}
+	var g_score: Dictionary = {start: 0}
+	var expanded: int = 0
+	var frame_started_usec: int = Time.get_ticks_usec()
+
+	var neighbors: Array[Vector3i] = [
+		Vector3i(1, 0, 10), Vector3i(-1, 0, 10),
+		Vector3i(0, 1, 10), Vector3i(0, -1, 10),
+		Vector3i(1, 1, 14), Vector3i(1, -1, 14),
+		Vector3i(-1, 1, 14), Vector3i(-1, -1, 14),
+	]
+
+	while not open.is_empty() and expanded < max_expanded_cells:
+		if Time.get_ticks_usec() - frame_started_usec >= frame_budget_usec:
+			await get_tree().process_frame
+			frame_started_usec = Time.get_ticks_usec()
+
+		var best_index: int = 0
+		var best_score: int = 2147483647
+		for index: int in range(open.size()):
+			var candidate: Vector2i = open[index]
+			var candidate_score: int = int(g_score.get(candidate, 2147483647)) + _heuristic(candidate, goal)
+			if candidate_score < best_score:
+				best_score = candidate_score
+				best_index = index
+
+		var current: Vector2i = open[best_index]
+		open.remove_at(best_index)
+		open_set.erase(current)
+		if closed.has(current):
+			continue
+		if current == goal:
+			var cells: Array[Vector2i] = _reconstruct_path(came_from, start, goal)
+			var raw := PackedVector2Array()
+			for i: int in range(1, cells.size()):
+				raw.append(_cell_center(cells[i]))
+			if not raw.is_empty() and _is_segment_walkable_for_query(
+				grid,
+				raw[raw.size() - 1],
+				target_world,
+				can_cross_special_terrain
+			):
+				raw.append(target_world)
+
+			# Keep smoothing conservative and query-local so other movement checks
+			# cannot change this fallback's terrain mode while it is yielding.
+			var smoothed := PackedVector2Array()
+			var anchor_world: Vector2 = start_world
+			var raw_index: int = 0
+			while raw_index < raw.size():
+				var furthest: int = raw_index
+				for test_index: int in range(raw_index, raw.size()):
+					if _is_segment_walkable_for_query(
+						grid,
+						anchor_world,
+						raw[test_index],
+						can_cross_special_terrain
+					):
+						furthest = test_index
+					else:
+						break
+				smoothed.append(raw[furthest])
+				anchor_world = raw[furthest]
+				raw_index = furthest + 1
+
+			if validate_world_path(
+				map_id,
+				start_world,
+				smoothed,
+				can_cross_special_terrain
+			):
+				print("[PATHFIND_FALLBACK] map=%d from=(%.0f,%.0f) to=(%.0f,%.0f) found=true expanded=%d waypoints=%d" % [
+					map_id,
+					start_world.x,
+					start_world.y,
+					target_world.x,
+					target_world.y,
+					expanded,
+					smoothed.size()
+				])
+				return smoothed
+			return PackedVector2Array()
+
+		closed[current] = true
+		expanded += 1
+
+		for spec: Vector3i in neighbors:
+			var next := Vector2i(current.x + spec.x, current.y + spec.y)
+			if closed.has(next) or _is_blocked_for_query(
+				grid,
+				next,
+				can_cross_special_terrain
+			):
+				continue
+
+			if spec.x != 0 and spec.y != 0:
+				if _is_blocked_for_query(
+					grid,
+					Vector2i(current.x + spec.x, current.y),
+					can_cross_special_terrain
+				) or _is_blocked_for_query(
+					grid,
+					Vector2i(current.x, current.y + spec.y),
+					can_cross_special_terrain
+				):
+					continue
+
+			var new_g: int = int(g_score.get(current, 0)) + spec.z
+			if new_g >= int(g_score.get(next, 2147483647)):
+				continue
+			came_from[next] = current
+			g_score[next] = new_g
+			if not open_set.has(next):
+				open.append(next)
+				open_set[next] = true
+
+	print("[PATHFIND_FALLBACK] map=%d from=(%.0f,%.0f) to=(%.0f,%.0f) found=false expanded=%d" % [
+		map_id,
+		start_world.x,
+		start_world.y,
+		target_world.x,
+		target_world.y,
+		expanded
+	])
+	return PackedVector2Array()
+
+
 func is_segment_walkable(
 	map_id: int,
 	from_world: Vector2,
