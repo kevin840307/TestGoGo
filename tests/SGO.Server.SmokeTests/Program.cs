@@ -1092,6 +1092,16 @@ try
     Check(enemyDrops.OwnerProtectionSeconds == 15,
         "enemy.cfg OwnedDropItemTimeout drives server loot protection");
 
+    var legacyTrainTicketIds =
+        new[] { 10505, 10506, 10507, 10508, 10509, 10510, 10511 };
+
+    Check(legacyTrainTicketIds.All(id =>
+              questItemMappings.ResolveItem(id) is
+              {
+                  TabType: 0
+              }),
+        "all seven legacy rail tickets map to current-client inventory items");
+
     var broadcastHub = new ServerBroadcastHub();
     var broadcastRegistration = broadcastHub.Register();
     var worldRuntime = new WorldRuntimeService(world);
