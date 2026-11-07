@@ -2702,7 +2702,7 @@ try
                   "\"Type\":\"MoveEntity\"") &&
               JsonSerializer.Serialize(x).Contains(
                   $"\"EntityID\":{monster.EntityId}")) &&
-          deadWanderDistance > 45.0 &&
+          deadWanderDistance > 60.0 &&
           deadWanderDistance <= 180.001 &&
           monster.AiState == MonsterAiState.Wander,
         "monster resumes longer local random wandering after player death without returning to spawn");
