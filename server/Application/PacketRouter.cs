@@ -1816,10 +1816,9 @@ public sealed class PacketRouter
         double playerY,
         DateTimeOffset now)
     {
-        if (now - state.LastPetFollowTick <
-            TimeSpan.FromMilliseconds(250))
-            return [];
-
+        // WebSocketEndpoint already drives PacketRouter.Tick on the fixed
+        // 250 ms world cadence. Do not add a second 250 ms gate here or a
+        // 249.x ms timer tick can be skipped and make pet movement stutter.
         state.LastPetFollowTick = now;
 
         var assets = _store.GetCharacterAssets(accountId, dbid);
@@ -1977,7 +1976,7 @@ public sealed class PacketRouter
                             X = nx,
                             Y = ny,
                             Dir = DirectionFromDelta(dx, dy),
-                            SpeedTime = 0.24
+                            SpeedTime = 0.25
                         });
                     }
 
@@ -2036,7 +2035,7 @@ public sealed class PacketRouter
                 X = nextFollowX,
                 Y = nextFollowY,
                 Dir = DirectionFromDelta(followDx, followDy),
-                SpeedTime = 0.35
+                SpeedTime = 0.25
             });
         }
 
