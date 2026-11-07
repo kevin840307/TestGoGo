@@ -18,8 +18,9 @@ public sealed class CombatService
     private const double AggroRadius = 420.0;
     private const double LoseTargetRadius = 700.0;
     private const double StopDistance = 130.0;
+    private const double ResumeChaseDistance = 160.0;
     private const double MoveStep = 35.0;
-    private const double MoveTweenSeconds = 0.32;
+    private const double MoveTweenSeconds = 0.18;
     private const double WanderRadius = 180.0;
     private const double WanderStep = 45.0;
 
@@ -42,15 +43,16 @@ public sealed class CombatService
         int mapId)
     {
         if (session.Monsters.Count > 0 &&
-            session.CurrentMapId > 0)
+            session.LoadedMonsterMapId > 0)
         {
-            session.MonstersByMap[session.CurrentMapId] =
+            session.MonstersByMap[session.LoadedMonsterMapId] =
                 session.Monsters.ToDictionary(
                     x => x.Key,
                     x => x.Value);
         }
 
         session.Monsters.Clear();
+        session.LoadedMonsterMapId = mapId;
         session.LastMonsterAiTick = DateTimeOffset.MinValue;
 
         var packets = new List<object>();
@@ -143,6 +145,7 @@ public sealed class CombatService
             monster.RespawnAt = null;
             monster.HasTarget = false;
             monster.IsMoving = false;
+            monster.HoldingAttackRange = false;
             monster.X = monster.SpawnX;
             monster.Y = monster.SpawnY;
             monster.WanderCenterX = monster.SpawnX;
@@ -216,6 +219,16 @@ public sealed class CombatService
             var dy = playerY - monster.Y;
             var distance = Math.Sqrt(dx * dx + dy * dy);
 
+            if (monster.HoldingAttackRange)
+            {
+                if (distance > ResumeChaseDistance)
+                    monster.HoldingAttackRange = false;
+            }
+            else if (distance <= StopDistance)
+            {
+                monster.HoldingAttackRange = true;
+            }
+
             if (!monster.HasTarget && distance <= AggroRadius)
             {
                 monster.HasTarget = true;
@@ -231,6 +244,7 @@ public sealed class CombatService
             {
                 monster.HasTarget = false;
                 monster.IsMoving = false;
+                monster.HoldingAttackRange = false;
                 monster.WanderCenterX = monster.X;
                 monster.WanderCenterY = monster.Y;
                 monster.NextWanderAt = now + NextWanderDelay(
@@ -248,7 +262,7 @@ public sealed class CombatService
             }
 
             if (monster.HasTarget &&
-                distance <= StopDistance &&
+                monster.HoldingAttackRange &&
                 session.CharacterId.HasValue &&
                 now - monster.LastAttackAt >= MonsterAttackCooldown)
             {
@@ -288,12 +302,16 @@ public sealed class CombatService
                         var maxHp = Convert.ToInt32(updated["MaxHP"]);
 
                         monster.IsMoving = false;
+                        monster.CurrentDir = StableDirectionFromDelta(
+                            dx,
+                            dy,
+                            monster.CurrentDir);
                         packets.Add(new
                         {
                             Type = "SyncState",
                             EntityID = monster.EntityId,
                             State = "attack",
-                            Dir = DirectionFromDelta(dx, dy)
+                            Dir = monster.CurrentDir
                         });
 
                         packets.Add(new
@@ -333,6 +351,7 @@ public sealed class CombatService
 
                             monster.HasTarget = false;
                             monster.IsMoving = false;
+                            monster.HoldingAttackRange = false;
                             monster.WanderCenterX = monster.X;
                             monster.WanderCenterY = monster.Y;
                             monster.NextWanderAt = DateTimeOffset.MinValue;
@@ -349,19 +368,31 @@ public sealed class CombatService
                 continue;
             }
 
-            if (distance <= StopDistance)
+            if (monster.HoldingAttackRange)
             {
-                if (monster.IsMoving)
+                var stableDir = StableDirectionFromDelta(
+                    dx,
+                    dy,
+                    monster.CurrentDir);
+                var directionChanged =
+                    !string.Equals(
+                        stableDir,
+                        monster.CurrentDir,
+                        StringComparison.Ordinal);
+
+                if (monster.IsMoving || directionChanged)
                 {
                     monster.IsMoving = false;
+                    monster.CurrentDir = stableDir;
                     packets.Add(new
                     {
                         Type = "SyncState",
                         EntityID = monster.EntityId,
                         State = "idle",
-                        Dir = DirectionFromDelta(dx, dy)
+                        Dir = monster.CurrentDir
                     });
                 }
+
                 continue;
             }
 
@@ -1023,15 +1054,22 @@ public sealed class CombatService
         double speedTime,
         double moveDx,
         double moveDy)
-        => new
+    {
+        monster.CurrentDir = StableDirectionFromDelta(
+            moveDx,
+            moveDy,
+            monster.CurrentDir);
+
+        return new
         {
             Type = "MoveEntity",
             EntityID = monster.EntityId,
             X = x,
             Y = y,
-            Dir = DirectionFromDelta(moveDx, moveDy),
+            Dir = monster.CurrentDir,
             SpeedTime = speedTime
         };
+    }
 
     private static string DirectionFromDelta(
         double dx,
@@ -1048,6 +1086,39 @@ public sealed class CombatService
         var dirs = new[] { "6", "7", "8", "1", "2", "3", "4", "5" };
         var index = (int)Math.Round(degrees / 45.0) % 8;
         return dirs[index];
+    }
+
+    private static string StableDirectionFromDelta(
+        double dx,
+        double dy,
+        string currentDir)
+    {
+        if (Math.Abs(dx) < 0.001 &&
+            Math.Abs(dy) < 0.001)
+            return string.IsNullOrWhiteSpace(currentDir)
+                ? "1"
+                : currentDir;
+
+        var degrees = Math.Atan2(dy, dx) * 180.0 / Math.PI;
+        if (degrees < 0)
+            degrees += 360.0;
+
+        var dirs = new[] { "6", "7", "8", "1", "2", "3", "4", "5" };
+        var currentIndex = Array.IndexOf(dirs, currentDir);
+
+        if (currentIndex >= 0)
+        {
+            var center = currentIndex * 45.0;
+            var diff = Math.Abs(degrees - center);
+            diff = Math.Min(diff, 360.0 - diff);
+
+            // Keep the existing facing slightly beyond the normal 22.5°
+            // sector boundary to prevent rapid direction flipping.
+            if (diff <= 30.0)
+                return currentDir;
+        }
+
+        return DirectionFromDelta(dx, dy);
     }
 
     private static object BuildMonsterSpawnPacket(
