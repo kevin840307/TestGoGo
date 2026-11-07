@@ -2890,15 +2890,22 @@ public sealed class CombatService
             if (pet is null)
                 continue;
 
+            var evolution = _petEvolution.Advance(
+                accountId,
+                dbid,
+                petUid,
+                pet);
+            pet = evolution.Pet;
+
+            var refreshedAssets = _store.GetCharacterAssets(
+                accountId,
+                dbid);
+
             packets.Add(new
             {
                 Type = "PetSync",
-                Pets = _store.GetCharacterAssets(
-                    accountId,
-                    dbid).Pets,
-                MaxSize = _store.GetCharacterAssets(
-                    accountId,
-                    dbid).PetMaxSize
+                Pets = refreshedAssets.Pets,
+                MaxSize = refreshedAssets.PetMaxSize
             });
 
             if (Convert.ToInt32(pet["Level"]) > oldLevel)
@@ -2909,6 +2916,41 @@ public sealed class CombatService
                     Message = $"寵物升級！Lv.{pet["Level"]}"
                 });
             }
+
+            if (!evolution.Changed)
+                continue;
+
+            packets.Add(new
+            {
+                Type = "SystemMessageFlash",
+                Message =
+                    $"寵物進化！Evol {evolution.FromEvolId} → {evolution.ToEvolId}"
+            });
+
+            if (Convert.ToInt32(pet["State"]) != 1)
+                continue;
+
+            var entityId = 4_000_000L + petUid;
+            packets.Add(new
+            {
+                Type = "DespawnEntity",
+                EntityID = entityId
+            });
+
+            var position = session.PetPositions.TryGetValue(
+                    petUid,
+                    out var runtimePosition)
+                ? runtimePosition
+                : (
+                    X: session.LastX + 40,
+                    Y: session.LastY + 20);
+
+            session.PetPositions[petUid] = position;
+            packets.Add(BuildPetSpawnPacket(
+                dbid,
+                pet,
+                position.X,
+                position.Y));
         }
     }
 
@@ -3480,6 +3522,40 @@ public sealed class CombatService
             CritRate = s.CritRate,
             CritDamage = s.CritDamage
         };
+
+    private object BuildPetSpawnPacket(
+        long ownerId,
+        Dictionary<string, object> pet,
+        double x,
+        double y)
+    {
+        var petId = Convert.ToInt32(pet["PETID"]);
+        var evolId = Convert.ToInt32(pet["EvolID"]);
+        var evolution = _current.FindPetEvolution(
+            petId,
+            evolId);
+
+        return new
+        {
+            Type = "SpawnEntity",
+            EntityID =
+                4_000_000L + Convert.ToInt64(pet["UID"]),
+            EntityType = 4,
+            Name = pet["Name"],
+            LocX = x,
+            LocY = y,
+            ExtraData = new
+            {
+                OwnerID = ownerId,
+                Sprite = evolution?.Outlook ?? "EN010A",
+                Level = pet["Level"],
+                MaxHP = pet["MaxHP"],
+                CurrentHP = pet["HP"],
+                ColorIndex = evolution?.Color ?? 0,
+                AttackRange = evolution?.AttackRange ?? 80
+            }
+        };
+    }
 
     private void BroadcastPublicStatus(
         ClientSession session,
