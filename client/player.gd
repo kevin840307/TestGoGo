@@ -15,6 +15,7 @@ const SPECIAL_MECHA_COLLISION_MASK: int = 4
 const NAVIGATION_REPATH_INTERVAL: float = 0.08
 const NAVIGATION_REPATH_DISTANCE: float = 24.0
 const WAYPOINT_REACH_DISTANCE: float = 10.0
+const CORNER_STEER_SAMPLES: int = 4
 
 
 var target_position: Vector2 = Vector2.ZERO
@@ -648,14 +649,14 @@ func _handle_movement(delta: float) -> void :
 	)
 	var map_id: int = int(data_model.map_id) if data_model else 0
 
-	# The legacy pathfinder shortens its node chain with line checks. Go one
-	# step further: while moving, continuously promote the next node as soon
-	# as Blocking.dat says it is directly visible from the current position.
-	# This rounds corners naturally without ever cutting through blocked cells.
+	# Promote whole waypoints whenever the next node is directly visible.
+	# Use the actual waypoint for reach checks; target_position may temporarily
+	# be a corner-steering probe between two nodes.
 	while move_path_index + 1 < move_path.size():
+		var current_waypoint: Vector2 = move_path[move_path_index]
 		var next_waypoint: Vector2 = move_path[move_path_index + 1]
 		var close_to_current: bool = (
-			global_position.distance_to(target_position) <= stop_threshold
+			global_position.distance_to(current_waypoint) <= stop_threshold
 		)
 		var next_is_visible: bool = LegacyPathfinder.is_segment_walkable(
 			map_id,
@@ -668,15 +669,35 @@ func _handle_movement(delta: float) -> void :
 			break
 
 		move_path_index += 1
-		target_position = move_path[move_path_index]
+
+	var final_waypoint: Vector2 = move_path[move_path_index]
+	var final_distance: float = global_position.distance_to(final_waypoint)
+	if move_path_index + 1 >= move_path.size() and final_distance <= stop_threshold:
+		global_position = final_waypoint
+		_stop_movement()
+		return
+
+	# Tight stairs/corners feel jerky if movement must hit the exact 16px cell
+	# centre before turning. Probe forward along the next route segment and
+	# steer toward the furthest currently-visible point. Every probe is checked
+	# against Blocking.dat, so this smooths the turn without cutting a wall.
+	target_position = final_waypoint
+	if move_path_index + 1 < move_path.size():
+		var next_waypoint: Vector2 = move_path[move_path_index + 1]
+		for sample_index: int in range(CORNER_STEER_SAMPLES - 1, 0, -1):
+			var ratio: float = float(sample_index) / float(CORNER_STEER_SAMPLES)
+			var probe: Vector2 = final_waypoint.lerp(next_waypoint, ratio)
+			if LegacyPathfinder.is_segment_walkable(
+				map_id,
+				global_position,
+				probe,
+				can_cross_special_terrain
+			):
+				target_position = probe
+				break
 
 	var dir_vector: Vector2 = target_position - global_position
 	var distance: float = dir_vector.length()
-
-	if move_path_index + 1 >= move_path.size() and distance <= stop_threshold:
-		global_position = target_position
-		_stop_movement()
-		return
 
 	if distance <= 0.001:
 		return
