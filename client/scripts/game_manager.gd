@@ -312,7 +312,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		NetworkEntityManager.set_spawn_queue_paused(true)
 
 	_trace_map_change("initial_enter_started", 0, target_map_id)
-	_report_initial_loading_progress(progress_callback, 8.0, "準備載入地圖")
+	_report_initial_loading_progress(progress_callback, 5.0, "準備載入地圖")
 	await get_tree().process_frame
 
 	if not ResourceLoader.exists(map_path):
@@ -335,7 +335,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		var status: int = ResourceLoader.load_threaded_get_status(map_path, progress)
 		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			var threaded_progress := float(progress[0]) if not progress.is_empty() else 0.0
-			_report_initial_loading_progress(progress_callback, 8.0 + threaded_progress * 15.0, "載入地圖資源")
+			_report_initial_loading_progress(progress_callback, 5.0 + threaded_progress * 18.0, "載入地圖資源")
 			await get_tree().process_frame
 			continue
 		if status == ResourceLoader.THREAD_LOAD_LOADED:
