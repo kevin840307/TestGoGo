@@ -71,23 +71,38 @@ public sealed class ResourceRecoveryService
         if (hp >= maxHp && mp >= maxMp)
             return [];
 
-        var hpPercent = Math.Max(
+        var normalHpPercent = Math.Max(
             0,
             _config.GetValue<int?>(
                 "Gameplay:ResourceRecovery:HpPercent") ?? 1);
-        var mpPercent = Math.Max(
+        var normalMpPercent = Math.Max(
             0,
             _config.GetValue<int?>(
                 "Gameplay:ResourceRecovery:MpPercent") ?? 1);
+        var restingHpPercent = Math.Max(
+            0,
+            _config.GetValue<int?>(
+                "Gameplay:ResourceRecovery:RestingHpPercent") ?? 20);
+        var restingMpPercent = Math.Max(
+            0,
+            _config.GetValue<int?>(
+                "Gameplay:ResourceRecovery:RestingMpPercent") ?? 20);
+
+        var hpPercent = session.IsResting
+            ? restingHpPercent
+            : normalHpPercent;
+        var mpPercent = session.IsResting
+            ? restingMpPercent
+            : normalMpPercent;
 
         var minHp = Math.Max(
             0,
             _config.GetValue<int?>(
-                "Gameplay:ResourceRecovery:MinimumHp") ?? 1);
+                "Gameplay:ResourceRecovery:MinimumHp") ?? 5);
         var minMp = Math.Max(
             0,
             _config.GetValue<int?>(
-                "Gameplay:ResourceRecovery:MinimumMp") ?? 1);
+                "Gameplay:ResourceRecovery:MinimumMp") ?? 5);
 
         var hpAmount = hpPercent <= 0
             ? 0
