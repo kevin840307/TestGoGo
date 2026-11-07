@@ -982,26 +982,52 @@ try
 
     var monster = session.Monsters.Values.First();
 
+    var idleMonsters = session.Monsters.Values
+        .Take(2)
+        .ToArray();
     var wanderStartX = monster.X;
     var wanderStartY = monster.Y;
+    var wanderScheduleAt = DateTimeOffset.UtcNow.AddSeconds(1);
+
+    var initialWanderPackets = combat.TickAi(
+        session,
+        account.Value,
+        monster.X + 2000,
+        monster.Y + 2000,
+        wanderScheduleAt);
+
+    Check(!initialWanderPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"MoveEntity\"")) &&
+          idleMonsters.All(x =>
+              x.NextWanderAt > wanderScheduleAt),
+        "idle monsters schedule their own first wander instead of moving in sync");
+
+    if (idleMonsters.Length >= 2)
+    {
+        Check(idleMonsters[0].NextWanderAt !=
+              idleMonsters[1].NextWanderAt,
+            "different monsters receive staggered independent wander timers");
+    }
+
     var wanderPackets = combat.TickAi(
         session,
         account.Value,
         monster.X + 2000,
         monster.Y + 2000,
-        DateTimeOffset.UtcNow.AddSeconds(1));
+        wanderScheduleAt.AddSeconds(4));
 
-    var wanderDistanceFromSpawn = Math.Sqrt(
-        Math.Pow(monster.X - monster.SpawnX, 2) +
-        Math.Pow(monster.Y - monster.SpawnY, 2));
+    var wanderDistanceFromCenter = Math.Sqrt(
+        Math.Pow(monster.X - monster.WanderCenterX, 2) +
+        Math.Pow(monster.Y - monster.WanderCenterY, 2));
 
     Check(wanderPackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"MoveEntity\"")) &&
           (Math.Abs(monster.X - wanderStartX) > 0.001 ||
            Math.Abs(monster.Y - wanderStartY) > 0.001) &&
-          wanderDistanceFromSpawn <= 180.001,
-        "idle monster wanders near its spawn point without client input");
+          wanderDistanceFromCenter <= 180.001,
+        "idle monster wanders near its own center without client input");
 
     store.SetPetState(account.Value, id, petUid, 1);
     session.PetPositions[petUid] = (monster.X - 80, monster.Y);
@@ -1162,12 +1188,16 @@ try
 
     monster.HasTarget = true;
     monster.NextWanderAt = DateTimeOffset.MinValue;
+    var deathPositionX = monster.X;
+    var deathPositionY = monster.Y;
+    var deadPlayerTickAt = session.LastMonsterAiTick.AddSeconds(2);
+
     var deadPlayerAiPackets = combat.TickAi(
         session,
         account.Value,
         monster.X + 20,
         monster.Y,
-        session.LastMonsterAiTick.AddSeconds(2));
+        deadPlayerTickAt);
 
     Check(!monster.HasTarget &&
           deadPlayerAiPackets.Any(x =>
@@ -1180,10 +1210,33 @@ try
                   "\"Type\":\"EntityDamage\"")),
         "dead player immediately drops monster aggro and cannot be attacked");
 
-    Check(deadPlayerAiPackets.Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                "\"Type\":\"MoveEntity\"")),
-        "monster may resume idle wandering while player is dead");
+    Check(Math.Abs(monster.X - deathPositionX) < 0.001 &&
+          Math.Abs(monster.Y - deathPositionY) < 0.001 &&
+          Math.Abs(monster.WanderCenterX - deathPositionX) < 0.001 &&
+          Math.Abs(monster.WanderCenterY - deathPositionY) < 0.001 &&
+          !deadPlayerAiPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"MoveEntity\"")),
+        "player death preserves monster position and re-anchors idle wandering there");
+
+    var deadPlayerWanderPackets = combat.TickAi(
+        session,
+        account.Value,
+        monster.X + 20,
+        monster.Y,
+        deadPlayerTickAt.AddSeconds(4));
+
+    var deadWanderDistance = Math.Sqrt(
+        Math.Pow(monster.X - deathPositionX, 2) +
+        Math.Pow(monster.Y - deathPositionY, 2));
+
+    Check(deadPlayerWanderPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"MoveEntity\"") &&
+              JsonSerializer.Serialize(x).Contains(
+                  $"\"EntityID\":{monster.EntityId}")) &&
+          deadWanderDistance <= 180.001,
+        "monster resumes local random wandering after player death without returning to spawn");
 
     using (var revive = Json(
         """{"Type":"ReviveRequest"}"""))
