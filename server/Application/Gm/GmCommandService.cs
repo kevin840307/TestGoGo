@@ -427,7 +427,9 @@ public sealed class GmCommandService
         var uid = _store.AddEquipment(
             accountId,
             dbid,
-            itemIndex);
+            itemIndex,
+            255,
+            currentItem.Durability);
 
         if (uid <= 0) return [Chat("給裝備失敗")];
 
@@ -505,7 +507,8 @@ public sealed class GmCommandService
                     dbid,
                     equipIndex,
                     uid,
-                    equip?.EquipSlot ?? 255);
+                    equip?.EquipSlot ?? 255,
+                    equip?.Durability ?? 0);
             }
         }
 
@@ -604,7 +607,8 @@ public sealed class GmCommandService
             dbid,
             itemIndex,
             horseUid,
-            item.EquipSlot);
+            item.EquipSlot,
+            item.Durability);
 
         if (uid <= 0)
             return [Chat("給機甲裝備失敗")];
