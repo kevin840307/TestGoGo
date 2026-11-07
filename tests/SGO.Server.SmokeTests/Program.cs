@@ -832,7 +832,7 @@ try
                   Convert.ToInt32(restored["MaxSP"]) &&
               responses.Any(x =>
                   JsonSerializer.Serialize(x).Contains(
-                      "HP/MP/SP 已補滿")),
+                      "\"Type\":\"PlayerStatusSync\"")),
             "GM restore fully restores HP MP SP");
     }
 
