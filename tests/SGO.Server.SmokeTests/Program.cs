@@ -6413,6 +6413,97 @@ try
             "replayed TrainTravelReady is rejected without consuming another ticket");
     }
 
+    var runtimePetUid = store.AddPet(
+        account.Value,
+        id,
+        45001,
+        "RuntimePet");
+    var runtimeHorseUid = store.AddHorse(
+        account.Value,
+        id,
+        50001,
+        "RuntimeMecha",
+        "MS",
+        1);
+
+    using (var db = new SqliteConnection(
+        $"Data Source={dbPath}"))
+    {
+        db.Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE pets
+               SET feed_value=1,
+                   state=0
+             WHERE uid=$pet
+            """;
+        cmd.Parameters.AddWithValue(
+            "$pet",
+            runtimePetUid);
+        cmd.ExecuteNonQuery();
+    }
+
+    Check(
+        store.SetPetState(
+            account.Value,
+            id,
+            runtimePetUid,
+            1) &&
+        store.SetSummonedHorse(
+            account.Value,
+            id,
+            runtimeHorseUid),
+        "prepare one-second pet hunger and mecha energy runtime");
+
+    state.PetPositions[runtimePetUid] = (
+        state.LastX + 40,
+        state.LastY + 20);
+
+    var runtimeTickNow =
+        DateTimeOffset.UtcNow;
+    state.LastCompanionRuntimeAt =
+        runtimeTickNow.AddSeconds(-2);
+    state.LastCompanionClientSyncAt =
+        runtimeTickNow;
+
+    var runtimeDrainPackets = router.Tick(
+        session,
+        runtimeTickNow);
+
+    var runtimeAssets = store.GetCharacterAssets(
+        account.Value,
+        id);
+    var runtimePet = runtimeAssets.Pets.Single(x =>
+        Convert.ToInt64(x["UID"]) ==
+            runtimePetUid);
+    var runtimeHorse = runtimeAssets.Horses.Single(x =>
+        Convert.ToInt64(x["HorseUID"]) ==
+            runtimeHorseUid);
+    var runtimeCharacter = store.GetCharacter(
+        account.Value,
+        id)!;
+    var runtimeJson = JsonSerializer.Serialize(
+        runtimeDrainPackets);
+
+    Check(
+        Convert.ToInt32(runtimePet["FeedValue"]) == 0 &&
+        Convert.ToInt32(runtimePet["State"]) == 0 &&
+        Convert.ToInt32(runtimeHorse["EnergyLeft"]) == 0 &&
+        Convert.ToInt64(
+            runtimeCharacter["SummonedHorseUID"]) == -1 &&
+        !state.PetPositions.ContainsKey(runtimePetUid) &&
+        runtimeJson.Contains(
+            "\"Type\":\"DriveMechaResponse\"") &&
+        runtimeJson.Contains(
+            "\"HorseUID\":-1") &&
+        runtimeJson.Contains(
+            "\"Type\":\"SyncMechaEnergy\"") &&
+        runtimeJson.Contains(
+            "\"Type\":\"PetSync\"") &&
+        runtimeJson.Contains(
+            $"\"EntityID\":{4_000_000L + runtimePetUid}"),
+        "server runtime drains one unit per second and immediately dismounts/recalls depleted companions");
+
     using (var logout = Json(
         """{"Type":"LogoutRequest","IsBackToLogin":true}"""))
     {
