@@ -27,7 +27,7 @@ public sealed class BankPacketHandler : IClientPacketHandler
         return _bank.Transfer(
             accountId,
             session.CharacterId.Value,
-            request.Int("UID"),
+            request.Long("UID"),
             request.Int("TabType"),
             request.Int("Amount", 1),
             request.TryGetProperty("ToBank", out var toBank) &&
