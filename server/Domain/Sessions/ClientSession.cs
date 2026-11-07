@@ -27,6 +27,9 @@ public sealed class ClientSession
     public int PetCombatMode { get; set; } = 0;
     public bool AutoSaintEnabled { get; set; }
     public bool CanCrossSpecialTerrain { get; set; }
+    public bool PositionDirty { get; set; }
+    public DateTimeOffset LastPositionPersistAt { get; set; } = DateTimeOffset.MinValue;
+    public DateTimeOffset LastPositionBroadcastAt { get; set; } = DateTimeOffset.MinValue;
     public int AutoSaintMpThreshold { get; set; } = 30;
     public int AutoSaintSpThreshold { get; set; } = 30;
 
