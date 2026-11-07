@@ -1,5 +1,5 @@
 using SGO.Server.Infrastructure.Quest;
-using SGO.Server.Infrastructure.World;
+using SGO.Server.Infrastructure.WorldData;
 
 namespace SGO.Server.Infrastructure.GameData;
 
