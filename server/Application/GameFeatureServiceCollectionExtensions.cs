@@ -24,6 +24,7 @@ public static class GameFeatureServiceCollectionExtensions
         IConfiguration configuration)
     {
         services.AddSingleton<WorldRuntimeService>();
+        services.AddSingleton<PetEvolutionService>();
         services.AddSingleton<CombatService>();
         services.AddSingleton<CraftingService>();
         services.AddSingleton<ClubService>();
