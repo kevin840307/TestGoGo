@@ -278,7 +278,26 @@ public sealed class CombatService
                                 foreignDy * foreignDy);
 
                             if (foreignDistance <= LoseTargetRadius)
+                            {
+                                if (monster.LastStallLogAt == DateTimeOffset.MinValue ||
+                                    now - monster.LastStallLogAt >= TimeSpan.FromSeconds(2))
+                                {
+                                    monster.LastStallLogAt = now;
+                                    _log.LogWarning(
+                                        "[MONSTER_AI_FOREIGN_OWNER] EntityID={EntityID} State={State} TargetCharacterID={TargetCharacterID} TargetPetUID={TargetPetUID} Monster=({MonsterX:F1},{MonsterY:F1}) ForeignTarget=({TargetX:F1},{TargetY:F1}) Distance={Distance:F1} MapID={MapID}",
+                                        monster.EntityId,
+                                        monster.AiState,
+                                        monster.TargetCharacterId,
+                                        monster.TargetPetUid,
+                                        monster.X,
+                                        monster.Y,
+                                        foreignX,
+                                        foreignY,
+                                        foreignDistance,
+                                        session.CurrentMapId);
+                                }
                                 continue;
+                            }
                         }
                     }
 
