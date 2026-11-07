@@ -158,6 +158,40 @@ using (var oversizedUidArray = Json(JsonSerializer.Serialize(new
         "packet schema rejects oversized dismantle arrays");
 }
 
+using (var missingTradeMoney = Json(
+    """{"Type":"TradeSetMoney"}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              missingTradeMoney.RootElement, "TradeSetMoney", out _) &&
+          !PacketSchemaValidator.TryValidate(
+              Json("""{"Type":"TradeAddItem","UID":1,"TabType":0}""").RootElement,
+              "TradeAddItem", out _),
+        "trade money and offered item count are mandatory");
+}
+using (var missingNpcBuyCount = Json(
+    """{"Type":"ShopAction","Action":"BuyNpcItem","ShopID":7,"ItemIndex":100}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              missingNpcBuyCount.RootElement, "ShopAction", out var shopReason) &&
+          shopReason.Contains("Count"),
+        "NPC purchase action requires valid quantity");
+}
+using (var brokenSellerPrice = Json(
+    """{"Type":"ShopAction","Action":"AddItem","UID":9,"Count":2,"Price":"100","TabType":0}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              brokenSellerPrice.RootElement, "ShopAction", out var sellerReason) &&
+          sellerReason.Contains("Price"),
+        "player shop rejects string price without mutating inventory");
+}
+using (var closePlayerShop = Json(
+    """{"Type":"ShopAction","Action":"CloseShop"}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              closePlayerShop.RootElement, "ShopAction", out _),
+        "shop close remains valid without buy/sell-only fields");
+}
+
 var repoRoot = Directory.GetCurrentDirectory();
 var gameDataRoot = Path.Combine(repoRoot, "Old", "服務端", "Dat");
 var questRoot = Path.Combine(gameDataRoot, "Quest");
