@@ -7,6 +7,7 @@ using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Packets;
+using SGO.Server.Application.Party;
 using SGO.Server.Application.Shops;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
@@ -36,6 +37,7 @@ public sealed class PacketRouter
     private readonly CurrentClientDataCatalog _current;
     private readonly LegacyPlayerGrowthCatalog _growth;
     private readonly ServerBroadcastHub _broadcasts;
+    private readonly PartyService _party;
     private readonly ILogger<PacketRouter> _log;
 
     public PacketRouter(
@@ -54,6 +56,7 @@ public sealed class PacketRouter
         CurrentClientDataCatalog current,
         LegacyPlayerGrowthCatalog growth,
         ServerBroadcastHub broadcasts,
+        PartyService party,
         ILogger<PacketRouter> log)
     {
         _store = store;
@@ -73,6 +76,7 @@ public sealed class PacketRouter
         _current = current;
         _growth = growth;
         _broadcasts = broadcasts;
+        _party = party;
         _log = log;
     }
 
@@ -93,6 +97,13 @@ public sealed class PacketRouter
         var changed =
             state.PublishedMapId != nextMapId ||
             state.PublishedCharacterId != nextCharacterId;
+
+        if (state.PublishedCharacterId > 0 &&
+            state.PublishedCharacterId != nextCharacterId)
+        {
+            _party.Disconnect(
+                state.PublishedCharacterId);
+        }
 
         if (changed &&
             state.PublishedMapId > 0 &&
@@ -136,6 +147,17 @@ public sealed class PacketRouter
 
     public void DisconnectPresence(ClientSession state)
     {
+        var characterId =
+            state.PublishedCharacterId > 0
+                ? state.PublishedCharacterId
+                : state.CharacterId ?? 0;
+
+        if (characterId > 0)
+        {
+            _party.Disconnect(
+                characterId);
+        }
+
         if (state.PublishedMapId > 0 &&
             state.PublishedCharacterId > 0)
         {
@@ -1083,73 +1105,12 @@ public sealed class PacketRouter
                 if (!state.CharacterId.HasValue)
                     return [];
 
-                var action = req.Str("Action");
-                var self = _store.GetCharacter(
+                return _party.Handle(
+                    state,
                     accountId,
-                    state.CharacterId.Value);
-
-                if (self is null)
-                    return [];
-
-                if (action == "Create")
-                {
-                    if (string.IsNullOrWhiteSpace(state.PartyId))
-                    {
-                        state.PartyId = $"local-{state.CharacterId.Value}";
-                        state.PartyLeaderDbid = state.CharacterId.Value;
-                        state.PartyMembers.Clear();
-                        state.PartyMembers.Add(new Dictionary<string, object>
-                        {
-                            ["DBID"] = state.CharacterId.Value,
-                            ["Name"] = self["NAME"],
-                            ["Level"] = self["Level"],
-                            ["HP"] = self["HP"],
-                            ["MaxHP"] = self["MaxHP"],
-                            ["MP"] = self["MP"],
-                            ["MaxMP"] = self["MaxMP"],
-                            ["SP"] = self["SP"],
-                            ["MaxSP"] = self["MaxSP"]
-                        });
-                    }
-
-                    return
-                    [
-                        new
-                        {
-                            Type = "PartySync",
-                            PartyID = state.PartyId,
-                            LeaderDBID = state.PartyLeaderDbid,
-                            Members = state.PartyMembers
-                        }
-                    ];
-                }
-
-                if (action is "Leave" or "Disband")
-                {
-                    state.PartyId = "";
-                    state.PartyLeaderDbid = 0;
-                    state.PartyMembers.Clear();
-
-                    return
-                    [
-                        new
-                        {
-                            Type = "PartySync",
-                            PartyID = "",
-                            LeaderDBID = 0,
-                            Members = Array.Empty<object>()
-                        }
-                    ];
-                }
-
-                return
-                [
-                    new
-                    {
-                        Type = "SystemMessageFlash",
-                        Message = $"隊伍操作尚未支援：{action}"
-                    }
-                ];
+                    req.Str("Action"),
+                    req.Long("TargetDBID", -1),
+                    DateTimeOffset.UtcNow);
             }
 
             case "DropItemRequest":
@@ -2249,6 +2210,15 @@ public sealed class PacketRouter
         packets.AddRange(
             _combat.TickRespawns(state, now));
 
+        if (now - state.LastPartyStatAt >=
+            TimeSpan.FromSeconds(1))
+        {
+            state.LastPartyStatAt = now;
+            _party.PublishStat(
+                accountId,
+                dbid);
+        }
+
         if (now - state.LastGroundItemCleanupAt >=
             TimeSpan.FromSeconds(1))
         {
@@ -2405,7 +2375,8 @@ public sealed class PacketRouter
                 character.GetValueOrDefault(
                     "State",
                     "idle"),
-            ["Dir"] = "1"
+            ["Dir"] = "1",
+            ["PartyID"] = _party.GetPartyId(dbid)
         };
 
         return new
