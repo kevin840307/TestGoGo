@@ -200,7 +200,7 @@ func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
 			GameManager.current_player.get("can_cross_special_terrain")
 		)
 
-	var route: PackedVector2Array = LegacyPathfinder.get_path(
+	var route: PackedVector2Array = LegacyPathfinder.find_path(
 		map_id,
 		global_position,
 		move_destination,
