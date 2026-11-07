@@ -305,7 +305,13 @@ public interface IWorldGroundItemStore
         double y,
         int damage = 0,
         int color = 0,
-        int part = 255);
+        int part = 255,
+        int protectSeconds = 0,
+        int lifetimeSeconds = 0);
+
+    IReadOnlyList<int> RemoveExpiredGroundItems(
+        int mapId,
+        DateTimeOffset now);
 
     GroundItemRuntime? DropAssetToGround(
         long accountId,
