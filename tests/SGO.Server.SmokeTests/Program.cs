@@ -408,13 +408,23 @@ Directory.CreateDirectory(temp);
 try
 {
     var store = new SqliteGameStore(Path.Combine(temp, "game.db"));
-    var combat = new CombatService(store, world, currentCatalog);
+    var growth = new LegacyPlayerGrowthCatalog(gameDataRoot);
+    Check(growth.ExperienceThresholdForLevel(1) == 2 &&
+          growth.ExperienceThresholdForLevel(10) == 20000,
+        "legacy Player_Up_Lv.csv drives character EXP thresholds");
+    Check(growth.AbilityPointsGained(1, 4) == 6,
+        "legacy ExpUse.csv grants two ability points per gained level");
+
+    var combat = new CombatService(
+        store,
+        world,
+        currentCatalog,
+        growth);
     var shops = new ShopService(
         store,
         store,
         shopCatalog,
         currentCatalog);
-    var growth = new LegacyPlayerGrowthCatalog(gameDataRoot);
     var config = new ConfigurationManager();
     config["Game:GmCommandsEnabled"] = "true";
     config["Gameplay:ResourceRecovery:Enabled"] = "true";
@@ -1766,6 +1776,8 @@ try
         "monster beyond legal melee range keeps chasing and cannot deal melee damage");
 
     var sawDeath = false;
+    IReadOnlyList<object> deathPackets = Array.Empty<object>();
+    var rewardBeforeKill = store.GetCharacter(account.Value, id)!;
 
     for (var i = 0; i < 100 && !sawDeath; i++)
     {
@@ -1781,12 +1793,40 @@ try
         sawDeath = attackPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"EntityDeath\""));
+
+        if (sawDeath)
+            deathPackets = attackPackets;
     }
+
+    var rewardAfterKill = store.GetCharacter(account.Value, id)!;
 
     Check(sawDeath &&
           monster.CurrentHp == 0 &&
           monster.RespawnAt.HasValue,
         "monster reaches death state and schedules respawn");
+
+    Check(
+        Convert.ToInt32(rewardAfterKill["ExpAcc"]) >
+            Convert.ToInt32(rewardBeforeKill["ExpAcc"]) &&
+        Convert.ToInt64(rewardAfterKill["Money"]) >
+            Convert.ToInt64(rewardBeforeKill["Money"]),
+        "monster kill persists character EXP and money rewards");
+
+    Check(
+        Convert.ToInt32(rewardAfterKill["MaxExp"]) ==
+            growth.ExperienceThresholdForLevel(
+                Convert.ToInt32(rewardAfterKill["Level"])) &&
+        deathPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"PlayerStatusSync\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"ExpAcc\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"MaxExp\"")) &&
+        deathPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"SyncMoney\"")),
+        "monster kill syncs EXP threshold and money to the existing client protocol");
 
     monster.RespawnAt = DateTimeOffset.UtcNow.AddMilliseconds(-1);
     var respawnPackets = combat.TickRespawns(
