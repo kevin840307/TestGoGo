@@ -829,6 +829,17 @@ public sealed class CombatService
             session,
             now);
 
+        var skillDefinition = _current.FindSkill(skillId);
+        var specialSkill =
+            skillDefinition?.SpecialSkill?.Trim() ?? "";
+        var hasCreateItemSpecial =
+            TryParseAddItemSpecial(
+                specialSkill,
+                out var createItemId,
+                out var createItemCount);
+        var isSelfRecovery = skillId is
+            25101 or 25106 or 25108 or 25109;
+
         var hasBonus = HasGenericStatBonus(levelData);
         var isHeal = levelData.SkillType == 2;
         var isGroupHeal = levelData.SkillType == 3;
@@ -837,6 +848,8 @@ public sealed class CombatService
         var isAttack =
             levelData.SkillType is 0 or 1 ||
             (levelData.SkillType == 7 &&
+             !hasCreateItemSpecial &&
+             !isSelfRecovery &&
              (targetType == 1 ||
               levelData.BaseDamage != 0 ||
               levelData.DamageMultiplier != 0));
@@ -845,7 +858,9 @@ public sealed class CombatService
             !isHeal &&
             !isGroupHeal &&
             !isBuff &&
-            !isRevive)
+            !isRevive &&
+            !hasCreateItemSpecial &&
+            !isSelfRecovery)
         {
             return [Flash(
                 "此技能屬於特殊/製造類型，效果尚未還原")];
@@ -1012,6 +1027,26 @@ public sealed class CombatService
             centerY = Convert.ToDouble(character["LocY"]);
         }
 
+        if (hasCreateItemSpecial)
+        {
+            var item = _current.FindItem(createItemId);
+            if (item is null ||
+                item.Category is not (
+                    "general" or
+                    "booster" or
+                    "recovery" or
+                    "horsebattery"))
+            {
+                return [Flash(
+                    $"技能製造物品不存在 ItemID={createItemId}")];
+            }
+
+            targetEntityId =
+                checked((int)session.CharacterId.Value);
+            centerX = Convert.ToDouble(character["LocX"]);
+            centerY = Convert.ToDouble(character["LocY"]);
+        }
+
         var updated = _store.SpendSkillResources(
             accountId,
             session.CharacterId.Value,
@@ -1037,6 +1072,91 @@ public sealed class CombatService
                 AoeTargets = Array.Empty<object>()
             }
         };
+
+        if (hasCreateItemSpecial)
+        {
+            var itemUid = _store.AddInventoryItem(
+                accountId,
+                session.CharacterId.Value,
+                createItemId,
+                createItemCount);
+
+            if (itemUid <= 0)
+                return [Flash("技能製造物品失敗")];
+
+            var refreshed = _store.GetCharacterAssets(
+                accountId,
+                session.CharacterId.Value);
+
+            packets.Add(new
+            {
+                Type = "InventorySync",
+                Items = refreshed.Inventory,
+                MaxSize = refreshed.InventoryMaxSize
+            });
+            packets.Add(Flash(
+                $"獲得 {_current.FindItem(createItemId)?.Name ?? $"Item {createItemId}"} x{createItemCount}"));
+        }
+
+        if (isSelfRecovery)
+        {
+            var before = updated;
+            var hpAmount = 0;
+            var mpAmount = 0;
+
+            switch (skillId)
+            {
+                case 25101: // 體力回復
+                case 25106: // 大氣旋風
+                    hpAmount = Math.Max(
+                        1,
+                        Convert.ToInt32(before["MaxHP"]) *
+                        Math.Max(1, levelData.DamageMultiplier) /
+                        100);
+                    break;
+
+                case 25108: // 生命聖印
+                    hpAmount = int.MaxValue;
+                    break;
+
+                case 25109: // 魔力聖印
+                    mpAmount = int.MaxValue;
+                    break;
+            }
+
+            var recovered = _store.RecoverResources(
+                accountId,
+                session.CharacterId.Value,
+                hpAmount,
+                mpAmount,
+                0);
+
+            if (recovered is not null)
+            {
+                var hpRecovered = Math.Max(
+                    0,
+                    Convert.ToInt32(recovered["HP"]) -
+                    Convert.ToInt32(before["HP"]));
+
+                if (hpRecovered > 0)
+                {
+                    packets.Add(new
+                    {
+                        Type = "EntityHeal",
+                        TargetID = session.CharacterId.Value,
+                        TargetType = 0,
+                        Amount = hpRecovered,
+                        CurrentHP = recovered["HP"],
+                        MaxHP = recovered["MaxHP"],
+                        SkillID = skillId,
+                        SkillLevel = skillLevel,
+                        HealerID = session.CharacterId.Value
+                    });
+                }
+
+                updated = recovered;
+            }
+        }
 
         if (isRevive &&
             reviveTargetPresence is not null &&
@@ -1939,6 +2059,32 @@ public sealed class CombatService
             session.ActiveSkillBuffs.Remove(skillId);
 
         return expired.Length > 0;
+    }
+
+    private static bool TryParseAddItemSpecial(
+        string specialSkill,
+        out int itemId,
+        out int count)
+    {
+        itemId = 0;
+        count = 0;
+
+        if (string.IsNullOrWhiteSpace(specialSkill))
+            return false;
+
+        var parts = specialSkill.Split(
+            ':',
+            StringSplitOptions.TrimEntries |
+            StringSplitOptions.RemoveEmptyEntries);
+
+        return parts.Length == 3 &&
+               parts[0].Equals(
+                   "AddItem",
+                   StringComparison.OrdinalIgnoreCase) &&
+               int.TryParse(parts[1], out itemId) &&
+               itemId > 0 &&
+               int.TryParse(parts[2], out count) &&
+               count > 0;
     }
 
     private Dictionary<string, object>? ApplyRecoverySkill(
