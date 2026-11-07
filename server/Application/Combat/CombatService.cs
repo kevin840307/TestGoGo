@@ -1729,25 +1729,35 @@ public sealed class CombatService
                     .Take(32)
                     .ToArray();
 
-                var screenDamage = (int)Math.Clamp(
+                var screenDamageBase =
                     100_000_000L +
                     (long)effective.Attack * 50_000L +
-                    (long)effective.MagicAttack * 50_000L,
-                    1L,
-                    int.MaxValue);
+                    (long)effective.MagicAttack * 50_000L;
 
                 foreach (var target in targets)
                 {
+                    // Match the legacy combat feel: each target gets its own
+                    // independent damage roll instead of every monster showing
+                    // the exact same number. Range is 90%..110% of the base.
+                    var variancePercent = Random.Shared.Next(
+                        -10,
+                        11);
+                    var rolledDamage = (int)Math.Clamp(
+                        screenDamageBase +
+                        screenDamageBase * variancePercent / 100L,
+                        1L,
+                        int.MaxValue);
+
                     target.CurrentHp = Math.Max(
                         0,
-                        target.CurrentHp - screenDamage);
+                        target.CurrentHp - rolledDamage);
 
                     packets.Add(new
                     {
                         Type = "EntityDamage",
                         TargetID = target.EntityId,
                         TargetType = 1,
-                        Damage = screenDamage,
+                        Damage = rolledDamage,
                         CurrentHP = target.CurrentHp,
                         MaxHP = target.MaxHp,
                         IsCrit = false,
@@ -3053,7 +3063,7 @@ public sealed class CombatService
                 monster.Y + offsetY,
                 damage: _current.FindItem(drop.ItemId)?.Durability ?? 0,
                 protectSeconds: _drops.OwnerProtectionSeconds,
-                lifetimeSeconds: 0);
+                lifetimeSeconds: 60);
 
             if (ground is null)
                 continue;
