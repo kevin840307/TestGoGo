@@ -477,6 +477,232 @@ public sealed class CombatService
         return packets;
     }
 
+    public IReadOnlyList<object> UseSkill(
+        ClientSession session,
+        long accountId,
+        int skillId,
+        int targetEntityId,
+        int targetType,
+        int targetX,
+        int targetY,
+        DateTimeOffset now)
+    {
+        if (!session.CharacterId.HasValue)
+            return [];
+
+        var learned = _store.GetSkills(
+            accountId,
+            session.CharacterId.Value)
+            .FirstOrDefault(x =>
+                Convert.ToInt32(x["SkillID"]) == skillId);
+
+        if (learned is null)
+            return [new
+            {
+                Type = "SystemMessageFlash",
+                Message = "尚未學會此技能"
+            }];
+
+        var skillLevel = Math.Max(
+            1,
+            Convert.ToInt32(learned["Level"]));
+
+        var levelData = _current.FindSkillLevel(
+            skillId,
+            skillLevel);
+
+        if (levelData is null)
+            return [new
+            {
+                Type = "SystemMessageFlash",
+                Message = $"技能資料不存在 SkillID={skillId} Lv.{skillLevel}"
+            }];
+
+        if (levelData.SkillType is not (0 or 1))
+            return [new
+            {
+                Type = "SystemMessageFlash",
+                Message = "此技能類型尚未支援"
+            }];
+
+        if (session.SkillReadyAt.TryGetValue(
+                skillId,
+                out var readyAt) &&
+            now < readyAt)
+        {
+            return [new
+            {
+                Type = "SystemMessageFlash",
+                Message = "技能冷卻中"
+            }];
+        }
+
+        var character = _store.GetCharacter(
+            accountId,
+            session.CharacterId.Value);
+
+        if (character is null ||
+            Convert.ToInt32(character["HP"]) <= 0)
+            return [];
+
+        if (Convert.ToInt32(character["HP"]) < levelData.CostHp ||
+            Convert.ToInt32(character["MP"]) < levelData.CostMp ||
+            Convert.ToInt32(character["SP"]) < levelData.CostSp)
+        {
+            return [new
+            {
+                Type = "SystemMessageFlash",
+                Message = "HP / MP / SP 不足"
+            }];
+        }
+
+        if (targetType != 1 ||
+            !session.Monsters.TryGetValue(
+                targetEntityId,
+                out var target) ||
+            !target.IsAlive ||
+            target.MapId != session.CurrentMapId)
+        {
+            return [new
+            {
+                Type = "SystemMessageFlash",
+                Message = "技能目標無效"
+            }];
+        }
+
+        var playerX = Convert.ToDouble(character["LocX"]);
+        var playerY = Convert.ToDouble(character["LocY"]);
+        var castDx = target.X - playerX;
+        var castDy = target.Y - playerY;
+        var castRange = Math.Max(0, levelData.CastRange) + 120;
+
+        if (castDx * castDx + castDy * castDy >
+            castRange * castRange)
+        {
+            return [new
+            {
+                Type = "SystemMessageFlash",
+                Message = "技能目標距離太遠"
+            }];
+        }
+
+        var updated = _store.SpendSkillResources(
+            accountId,
+            session.CharacterId.Value,
+            levelData.CostHp,
+            levelData.CostMp,
+            levelData.CostSp);
+
+        if (updated is null)
+            return [new
+            {
+                Type = "SystemMessageFlash",
+                Message = "HP / MP / SP 不足"
+            }];
+
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            session.CharacterId.Value);
+        var effective = CharacterStatCalculator.Calculate(
+            updated,
+            assets,
+            _current);
+
+        var scalingStat = levelData.DamageType == 1
+            ? effective.MagicAttack
+            : effective.Attack;
+        var damage = Math.Max(
+            1,
+            levelData.BaseDamage +
+            scalingStat * Math.Max(0, levelData.DamageMultiplier) / 100);
+
+        var centerX = target.X;
+        var centerY = target.Y;
+        var radius = Math.Max(0, levelData.AoeRadius);
+
+        var targets = session.Monsters.Values
+            .Where(x =>
+                x.IsAlive &&
+                x.MapId == session.CurrentMapId &&
+                (radius <= 0
+                    ? x.EntityId == target.EntityId
+                    : Math.Pow(x.X - centerX, 2) +
+                      Math.Pow(x.Y - centerY, 2) <=
+                      radius * radius))
+            .ToArray();
+
+        var packets = new List<object>
+        {
+            new
+            {
+                Type = "SkillCast",
+                CasterID = session.CharacterId.Value,
+                CasterType = 0,
+                SkillID = skillId,
+                SkillLevel = skillLevel,
+                TargetID = target.EntityId,
+                TargetX = Convert.ToInt32(centerX),
+                TargetY = Convert.ToInt32(centerY),
+                AoeTargets = targets
+                    .Select(x => new { ID = x.EntityId })
+                    .ToArray()
+            },
+            new
+            {
+                Type = "PlayerStatusSync",
+                HP = updated["HP"],
+                MP = updated["MP"],
+                SP = updated["SP"],
+                MaxHP = updated["MaxHP"],
+                MaxMP = updated["MaxMP"],
+                MaxSP = updated["MaxSP"]
+            }
+        };
+
+        foreach (var monster in targets)
+        {
+            monster.CurrentHp = Math.Max(
+                0,
+                monster.CurrentHp - damage);
+
+            packets.Add(new
+            {
+                Type = "EntityDamage",
+                TargetID = monster.EntityId,
+                TargetType = 1,
+                Damage = damage,
+                CurrentHP = monster.CurrentHp,
+                MaxHP = monster.MaxHp,
+                IsCrit = false,
+                SkillID = skillId,
+                SkillLevel = skillLevel,
+                AttackerID = session.CharacterId.Value
+            });
+
+            if (monster.CurrentHp == 0)
+            {
+                monster.RespawnAt =
+                    now + RespawnDelay;
+                monster.HasTarget = false;
+                monster.IsMoving = false;
+
+                packets.Add(new
+                {
+                    Type = "EntityDeath",
+                    EntityID = monster.EntityId,
+                    EntityType = 1,
+                    KillerID = session.CharacterId.Value
+                });
+            }
+        }
+
+        session.SkillReadyAt[skillId] =
+            now + TimeSpan.FromSeconds(
+                Math.Max(0, levelData.CooldownSeconds));
+
+        return packets;
+    }
+
     public IReadOnlyList<object> Attack(
         ClientSession session,
         long accountId,
