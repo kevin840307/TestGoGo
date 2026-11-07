@@ -635,7 +635,7 @@ public sealed class PacketRouter
 
             case "DeleteCharacterRequest":
             {
-                var dbid = req.Int("DBID");
+                var dbid = req.Long("DBID");
                 var ok = _store.Delete(accountId, dbid, req.Str("Password"));
                 if (state.CharacterId == dbid)
                 {
@@ -659,7 +659,7 @@ public sealed class PacketRouter
                 var newPwd = req.Str("NewPwd");
                 var ok = newPwd.Length is >= 1 and <= 100 &&
                          _store.ChangeCharacterPassword(
-                             accountId, req.Int("DBID"), newPwd);
+                             accountId, req.Long("DBID"), newPwd);
 
                 return [new
                 {
@@ -673,7 +673,7 @@ public sealed class PacketRouter
 
             case "SelectCharacterRequest":
             {
-                var dbid = req.Int("DBID");
+                var dbid = req.Long("DBID");
                 var character = _store.GetCharacter(accountId, dbid);
                 if (character is null)
                     return [new { Type = "SystemMessageFlash", Message = "角色不存在" }];
