@@ -811,10 +811,42 @@ var currentCatalog = new CurrentClientDataCatalog(
             price: 1),
 
         CurrentItem(
+            2616,
+            "再生水晶",
+            "general",
+            price: 1,
+            scriptName: "再生水晶"),
+
+        CurrentItem(
             2617,
             "精靈再生水晶",
             "general",
             price: 1),
+
+        CurrentItem(
+            2302,
+            "空間擴充卡(道具)",
+            "general",
+            price: 1,
+            scriptName: "空間擴充卡(道具)"),
+        CurrentItem(
+            2303,
+            "空間擴充卡(裝備)",
+            "general",
+            price: 1,
+            scriptName: "空間擴充卡(裝備)"),
+        CurrentItem(
+            2304,
+            "空間擴充卡(寵物)",
+            "general",
+            price: 1,
+            scriptName: "空間擴充卡(寵物)"),
+        CurrentItem(
+            2305,
+            "空間擴充卡(機甲裝備)",
+            "general",
+            price: 1,
+            scriptName: "空間擴充卡(機甲裝備)"),
 
         // Legacy Shop2 item 31078 is 淺藍色初心褲子.
         // Current client moved it to 18538.
