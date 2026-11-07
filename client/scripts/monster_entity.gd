@@ -579,10 +579,35 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 	sync_animation()
 
 
+func _apply_network_target_direction(target_pos: Vector2) -> void :
+	var dir_vec: Vector2 = target_pos - global_position
+	if dir_vec.length_squared() <= 0.000001:
+		return
+
+	var angle_deg: float = posmod(rad_to_deg(dir_vec.angle()), 360.0)
+	var index_raw: int = int(round(angle_deg / 45.0))
+	var visual_dir: String = GameConstants.DIR_STRINGS[index_raw % 8]
+	if visual_dir == current_dir:
+		last_visual_move_dir = current_dir
+		last_visual_move_dir_ms = Time.get_ticks_msec()
+		return
+
+	current_dir = visual_dir
+	last_visual_move_dir = visual_dir
+	last_visual_move_dir_ms = Time.get_ticks_msec()
+	last_move_dir_change_ms = last_visual_move_dir_ms
+	pending_move_dir = ""
+	pending_move_dir_count = 0
+
+	if current_state == "walk":
+		sync_animation()
+
+
 func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	if current_hp <= 0:
 		return
 
+	_apply_network_target_direction(target_pos)
 	move_idle_generation += 1
 	last_move_packet_ms = Time.get_ticks_msec()
 	network_move_target = target_pos
