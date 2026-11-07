@@ -21,6 +21,15 @@ public sealed class ClientSession
     public Dictionary<long, DateTimeOffset> PetLastAttackAt { get; } = new();
     public Dictionary<long, int> PetTargets { get; } = new();
     public Dictionary<long, DateTimeOffset> PetOutOfRangeSince { get; } = new();
+
+    public string PartyId { get; set; } = "";
+    public long PartyLeaderDbid { get; set; }
+    public List<Dictionary<string, object>> PartyMembers { get; } = new();
+
+    public bool IsPlayerShopOpen { get; set; }
+    public string PlayerShopName { get; set; } = "";
+    public List<Dictionary<string, object>> PlayerShopItems { get; } = new();
+
     public Dictionary<int, DateTimeOffset> SkillReadyAt { get; } = new();
     public Dictionary<int, SkillBuffRuntime> ActiveSkillBuffs { get; } = new();
 
