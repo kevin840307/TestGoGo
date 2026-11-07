@@ -2,6 +2,7 @@ using System.Text.Json;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Combat;
+using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Shops;
@@ -22,6 +23,7 @@ public sealed class PacketRouter
     private readonly WorldDataService _world;
     private readonly QuestRuntime _quests;
     private readonly CombatService _combat;
+    private readonly ResourceRecoveryService _resourceRecovery;
     private readonly ShopService _shopService;
     private readonly IReadOnlyDictionary<string, IClientPacketHandler> _packetHandlers;
     private readonly GmCommandService _gm;
@@ -37,6 +39,7 @@ public sealed class PacketRouter
         WorldDataService world,
         QuestRuntime quests,
         CombatService combat,
+        ResourceRecoveryService resourceRecovery,
         ShopService shopService,
         IEnumerable<IClientPacketHandler> packetHandlers,
         GmCommandService gm,
@@ -51,6 +54,7 @@ public sealed class PacketRouter
         _world = world;
         _quests = quests;
         _combat = combat;
+        _resourceRecovery = resourceRecovery;
         _shopService = shopService;
         _packetHandlers = packetHandlers.ToDictionary(
             x => x.PacketType,
@@ -1165,6 +1169,8 @@ public sealed class PacketRouter
         var dbid = state.CharacterId.Value;
         var packets = new List<object>();
 
+        packets.AddRange(
+            _resourceRecovery.Tick(state, now));
         packets.AddRange(
             _combat.TickBuffs(state, now));
         packets.AddRange(
