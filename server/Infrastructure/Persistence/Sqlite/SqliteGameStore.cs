@@ -663,8 +663,12 @@ public sealed class SqliteGameStore : IGameStore
 
         using var cmd = db.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO pets(character_id,pet_id,name)
-            VALUES($id,$pet,$name);
+            INSERT INTO pets(
+                character_id,pet_id,name,
+                life_count,feed_exp_limit,feed_value,summon_wait_count)
+            VALUES(
+                $id,$pet,$name,
+                10,43200,43200,0);
             SELECT last_insert_rowid();
             """;
         Arg(cmd, "$id", dbid);
