@@ -91,6 +91,10 @@ func get_aoi_active_monster_count() -> int:
 func get_aoi_deferred_monster_count() -> int:
 	return _deferred_monster_spawns.size()
 
+func get_spawn_queue_remaining_count() -> int:
+	return _spawn_queue.size()
+
+
 func _unhandled_input(event: InputEvent) -> void :
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if GameManager.current_hud and is_instance_valid(GameManager.current_hud):
