@@ -807,6 +807,7 @@ public sealed class PacketRouter
                         state.PetPositions.Remove(oldPetUid);
                         state.PetLastAttackAt.Remove(oldPetUid);
                         state.PetTargets.Remove(oldPetUid);
+                        state.PetOutOfRangeSince.Remove(oldPetUid);
                         responses.Add(new
                         {
                             Type = "DespawnEntity",
@@ -836,6 +837,7 @@ public sealed class PacketRouter
                     state.PetPositions.Remove(petUid);
                     state.PetLastAttackAt.Remove(petUid);
                     state.PetTargets.Remove(petUid);
+                    state.PetOutOfRangeSince.Remove(petUid);
                     responses.Add(new
                     {
                         Type = "DespawnEntity",
@@ -1181,6 +1183,7 @@ public sealed class PacketRouter
         {
             state.PendingMapSpawn = false;
             state.PetTargets.Clear();
+            state.PetOutOfRangeSince.Clear();
             packets.AddRange(
                 _combat.EnterMap(
                     state,
@@ -1635,9 +1638,10 @@ public sealed class PacketRouter
                     petPosition.Y));
             }
 
-            // Owner leash always has priority over combat. The recovered
-            // client teleports PetEntity when a network move exceeds 250 px,
-            // so keep the authoritative server rule aligned with that limit.
+            // Let the pet fall behind naturally. Only hard-return after it
+            // stays roughly beyond a full-screen distance for several seconds.
+            // The server does not know the exact client viewport, so 900 px is
+            // used as a conservative "off-screen" leash approximation.
             var ownerFollowX = playerX + 42;
             var ownerFollowY = playerY + 24;
             var ownerDx = ownerFollowX - petPosition.X;
@@ -1646,26 +1650,41 @@ public sealed class PacketRouter
                 ownerDx * ownerDx +
                 ownerDy * ownerDy;
 
-            const double petTeleportDistance = 250.0;
-            if (ownerDistanceSquared >
-                petTeleportDistance * petTeleportDistance)
+            const double petTeleportDistance = 900.0;
+            var beyondTeleportLeash =
+                ownerDistanceSquared >
+                petTeleportDistance * petTeleportDistance;
+
+            if (beyondTeleportLeash)
             {
-                state.PetPositions[petUid] =
-                    (ownerFollowX, ownerFollowY);
-                state.PetLastAttackAt.Remove(petUid);
-                state.PetTargets.Remove(petUid);
+                if (!state.PetOutOfRangeSince.ContainsKey(petUid))
+                    state.PetOutOfRangeSince[petUid] = now;
 
-                packets.Add(new
+                if (now - state.PetOutOfRangeSince[petUid] >=
+                    TimeSpan.FromSeconds(3))
                 {
-                    Type = "MoveEntity",
-                    EntityID = petEntityId,
-                    X = ownerFollowX,
-                    Y = ownerFollowY,
-                    Dir = DirectionFromDelta(ownerDx, ownerDy),
-                    SpeedTime = 0.01
-                });
+                    state.PetPositions[petUid] =
+                        (ownerFollowX, ownerFollowY);
+                    state.PetLastAttackAt.Remove(petUid);
+                    state.PetTargets.Remove(petUid);
+                    state.PetOutOfRangeSince.Remove(petUid);
 
-                continue;
+                    packets.Add(new
+                    {
+                        Type = "MoveEntity",
+                        EntityID = petEntityId,
+                        X = ownerFollowX,
+                        Y = ownerFollowY,
+                        Dir = DirectionFromDelta(ownerDx, ownerDy),
+                        SpeedTime = 0.01
+                    });
+
+                    continue;
+                }
+            }
+            else
+            {
+                state.PetOutOfRangeSince.Remove(petUid);
             }
 
             MonsterRuntimeState? stickyTarget = null;
@@ -1793,15 +1812,22 @@ public sealed class PacketRouter
             if (followDistance <= 10.0)
                 continue;
 
-            state.PetPositions[petUid] = (followX, followY);
+            var followStep = Math.Min(70.0, followDistance);
+            var nextFollowX =
+                petPosition.X + followDx / followDistance * followStep;
+            var nextFollowY =
+                petPosition.Y + followDy / followDistance * followStep;
+
+            state.PetPositions[petUid] =
+                (nextFollowX, nextFollowY);
             packets.Add(new
             {
                 Type = "MoveEntity",
                 EntityID = petEntityId,
-                X = followX,
-                Y = followY,
+                X = nextFollowX,
+                Y = nextFollowY,
                 Dir = DirectionFromDelta(followDx, followDy),
-                SpeedTime = followDistance > 250.0 ? 0.01 : 0.35
+                SpeedTime = 0.35
             });
         }
 
