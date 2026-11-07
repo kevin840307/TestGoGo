@@ -1363,6 +1363,7 @@ try
     var combat = new CombatService(
         store,
         world,
+        new BlockingMapService(gameDataRoot),
         currentCatalog,
         growth,
         battle,
