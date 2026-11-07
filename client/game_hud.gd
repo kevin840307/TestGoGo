@@ -485,7 +485,8 @@ func _on_skill_synced_hud(skills: Array) -> void :
 		skill_window.update_ui()
 
 const REJECTION_FEEDBACK_SE_ID: int = 97
-# SE0064 is a skill-hit sound. SE0066 is the short, heavier normal-effect cue used for pickup feedback.\nconst ITEM_PICKUP_SE_ID: int = 66
+# SE0064 is a skill-hit sound. SE0066 is the short, heavier normal-effect cue used for pickup feedback.
+const ITEM_PICKUP_SE_ID: int = 66
 const PARTY_INVITATION_SE_ID: int = 129
 
 func show_rejection_message_flash(msg: String) -> void :
