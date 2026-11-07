@@ -190,8 +190,39 @@ public sealed class BlockingMapService
         if (startX == goalX && startY == goalY)
             return true;
 
-        const int margin = 3;
-        const int maxSearchWindowCells = 50;
+        // Tight validation is cheapest and matches the normal client path.
+        // Plateau stairs/ramps can require a slightly wider detour around
+        // diagonal blocking cells, so retry with larger margins before
+        // declaring the move invalid. We still require a real Blocking.dat
+        // route; this does not permit crossing a closed wall.
+        foreach (var margin in new[] { 3, 6, 10 })
+        {
+            if (HasLocalRouteWithinMargin(
+                    grid,
+                    startX,
+                    startY,
+                    goalX,
+                    goalY,
+                    canCrossSpecialTerrain,
+                    margin))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasLocalRouteWithinMargin(
+        BlockingGrid grid,
+        int startX,
+        int startY,
+        int goalX,
+        int goalY,
+        bool canCrossSpecialTerrain,
+        int margin)
+    {
+        const int maxSearchWindowCells = 64;
 
         var minX = Math.Min(startX, goalX) - margin;
         var maxX = Math.Max(startX, goalX) + margin;
