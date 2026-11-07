@@ -8,6 +8,7 @@ using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Shops;
 using SGO.Server.Domain.Sessions;
+using SGO.Server.Domain.World;
 using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Infrastructure.Quest;
 using SGO.Server.Infrastructure.WorldData;
