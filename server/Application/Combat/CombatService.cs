@@ -1701,12 +1701,13 @@ public sealed class CombatService
         };
 
         // Crash isolation mode for the custom screen AOE skill:
-        // apply damage to exactly one nearby monster, but never kill it.
-        // This isolates EntityDamage/HP update from death/reward handling.
+        // kill exactly one nearby monster, but do not run any reward/drop/quest
+        // pipeline. This isolates client monster-death handling.
         if (isScreenAreaAttack)
         {
             var runtime = SyncSessionMonsters(session);
             object? probeDamagePacket = null;
+            object? probeDeathPacket = null;
 
             lock (runtime.SyncRoot)
             {
@@ -1728,40 +1729,47 @@ public sealed class CombatService
 
                 if (probeTarget is not null)
                 {
-                    var requestedDamage = (int)Math.Clamp(
-                        1_000L +
-                        (long)effective.Attack +
-                        (long)effective.MagicAttack,
-                        1L,
-                        int.MaxValue);
+                    var lethalDamage = Math.Max(
+                        1,
+                        probeTarget.CurrentHp);
 
-                    var nonLethalDamage = Math.Min(
-                        requestedDamage,
-                        Math.Max(0, probeTarget.CurrentHp - 1));
+                    probeTarget.CurrentHp = 0;
+                    probeTarget.RespawnAt =
+                        now + RespawnDelay;
+                    probeTarget.HasTarget = false;
+                    probeTarget.TargetCharacterId = 0;
+                    SetAiState(
+                        probeTarget,
+                        MonsterAiState.Dead);
 
-                    if (nonLethalDamage > 0)
+                    probeDamagePacket = new
                     {
-                        probeTarget.CurrentHp -= nonLethalDamage;
+                        Type = "EntityDamage",
+                        TargetID = probeTarget.EntityId,
+                        TargetType = 1,
+                        Damage = lethalDamage,
+                        CurrentHP = 0,
+                        MaxHP = probeTarget.MaxHp,
+                        IsCrit = false,
+                        SkillID = skillId,
+                        SkillLevel = skillLevel,
+                        AttackerID = session.CharacterId.Value
+                    };
 
-                        probeDamagePacket = new
-                        {
-                            Type = "EntityDamage",
-                            TargetID = probeTarget.EntityId,
-                            TargetType = 1,
-                            Damage = nonLethalDamage,
-                            CurrentHP = probeTarget.CurrentHp,
-                            MaxHP = probeTarget.MaxHp,
-                            IsCrit = false,
-                            SkillID = skillId,
-                            SkillLevel = skillLevel,
-                            AttackerID = session.CharacterId.Value
-                        };
-                    }
+                    probeDeathPacket = new
+                    {
+                        Type = "EntityDeath",
+                        EntityID = probeTarget.EntityId,
+                        EntityType = 1,
+                        KillerID = session.CharacterId.Value
+                    };
                 }
             }
 
             if (probeDamagePacket is not null)
                 packets.Add(probeDamagePacket);
+            if (probeDeathPacket is not null)
+                packets.Add(probeDeathPacket);
 
             var isolationAssets = _store.GetCharacterAssets(
                 accountId,
