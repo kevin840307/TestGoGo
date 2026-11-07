@@ -248,8 +248,10 @@ public static class WebSocketEndpoint
                             typeElement.ValueKind == JsonValueKind.String
                             ? typeElement.GetString() ?? "<empty>"
                             : "<missing>";
-                        var rawPayload =
-                            packet.RootElement.GetRawText();
+                        // Never log decrypted JSON: it can contain passwords
+                        // or other credentials. The encoded length is enough
+                        // for transport diagnostics without exposing content.
+                        var encodedLength = encoded.Length;
 
                         try
                         {
@@ -266,11 +268,9 @@ public static class WebSocketEndpoint
                         {
                             log.LogError(
                                 ex,
-                                "[PACKET_HANDLER_FAILED] Type={Type} Payload={Payload}",
+                                "[PACKET_HANDLER_FAILED] Type={Type} EncodedLength={EncodedLength}",
                                 packetType,
-                                rawPayload.Length <= 1200
-                                    ? rawPayload
-                                    : rawPayload[..1200] + "...<truncated>");
+                                encodedLength);
                             await SendPacketsAsync(
                                 [
                                     new
@@ -292,11 +292,9 @@ public static class WebSocketEndpoint
                                 "SyncState"))
                         {
                             log.LogWarning(
-                                "[NO_RESPONSE] Type={Type} Payload={Payload}",
+                                "[NO_RESPONSE] Type={Type} EncodedLength={EncodedLength}",
                                 packetType,
-                                rawPayload.Length <= 1200
-                                    ? rawPayload
-                                    : rawPayload[..1200] + "...<truncated>");
+                                encodedLength);
                         }
 
                         await SendPacketsAsync(
