@@ -3367,10 +3367,11 @@ public sealed class PacketRouter
                 }];
 
             default:
+                // Do not log request JSON; account/password actions can
+                // carry secrets even when Type is unsupported.
                 _log.LogWarning(
-                    "[UNHANDLED_PACKET] Type={Type} Payload={Payload}",
-                    type,
-                    TruncatePayload(req.GetRawText()));
+                    "[UNHANDLED_PACKET] Type={Type}",
+                    type);
                 return
                 [
                     new
@@ -3920,13 +3921,6 @@ public sealed class PacketRouter
         state.PendingTrainExpiresAt =
             DateTimeOffset.MinValue;
     }
-
-    private static string TruncatePayload(
-        string payload,
-        int maxLength = 1200)
-        => payload.Length <= maxLength
-            ? payload
-            : payload[..maxLength] + "...<truncated>";
 
     private IReadOnlyList<object> HandleInteract(
         JsonElement req,
