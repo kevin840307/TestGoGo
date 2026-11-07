@@ -41,6 +41,8 @@ public sealed class ClientSession
     public DateTimeOffset LastPongAt { get; set; } = DateTimeOffset.UtcNow;
     public int AutoSaintMpThreshold { get; set; } = 30;
     public int AutoSaintSpThreshold { get; set; } = 30;
+    public DateTimeOffset LastAutoSaintActionAt { get; set; } =
+        DateTimeOffset.MinValue;
 
     public string PendingTrainTravelId { get; set; } = "";
     public int PendingTrainNpcEntityId { get; set; }
