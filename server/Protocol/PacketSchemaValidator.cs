@@ -90,10 +90,10 @@ public static class PacketSchemaValidator
             ],
             ["DeleteCharacterRequest"] =
             [
-                new("DBID", FieldType.Integer),
+                new("DBID", FieldType.LongInteger),
                 new("Password", FieldType.Text)
             ],
-            ["SelectCharacterRequest"] = [new("DBID", FieldType.Integer)],
+            ["SelectCharacterRequest"] = [new("DBID", FieldType.LongInteger)],
             ["CreateCharacterRequest"] =
             [
                 new("Name", FieldType.NonEmptyText),
@@ -108,7 +108,7 @@ public static class PacketSchemaValidator
             ],
             ["ModifyPasswordRequest"] =
             [
-                new("DBID", FieldType.Integer),
+                new("DBID", FieldType.LongInteger),
                 new("NewPwd", FieldType.Text)
             ],
             ["EquipRequest"] =
