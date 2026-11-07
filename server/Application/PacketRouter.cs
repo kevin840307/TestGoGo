@@ -748,6 +748,15 @@ public sealed class PacketRouter
                     ResolveSpecialTerrainCapability(
                         character,
                         assets);
+                var transformExpiresUtcMs = Convert.ToInt64(
+                    character.GetValueOrDefault(
+                        "TransformExpiresUtcMs",
+                        0L));
+                state.ActiveTransformExpiresAt =
+                    transformExpiresUtcMs > 0
+                        ? DateTimeOffset.FromUnixTimeMilliseconds(
+                            transformExpiresUtcMs)
+                        : DateTimeOffset.MinValue;
                 character["Shortcuts"] = _store.GetShortcuts(accountId, dbid);
                 character["Quests"] = _store.GetQuests(accountId, dbid);
                 character["SkillList"] = _store.GetSkills(accountId, dbid);
@@ -1040,6 +1049,174 @@ public sealed class PacketRouter
                         {
                             Type = "OpenMegaphoneWindow",
                             ItemUID = itemUid
+                        }
+                    ];
+                }
+
+                if (itemIndex ==
+                    TransformationCatalog.TransformScrollItemId)
+                {
+                    var spec = TransformationCatalog.Resolve(
+                        _world,
+                        assetsBefore);
+
+                    if (spec is null)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "目前沒有可用的變身外型資料"
+                            }
+                        ];
+                    }
+
+                    var now = DateTimeOffset.UtcNow;
+                    var startedUtcMs =
+                        now.ToUnixTimeMilliseconds();
+                    var expiresUtcMs = checked(
+                        startedUtcMs +
+                        (long)TransformationCatalog.DurationSeconds *
+                        1000L);
+                    var mutation =
+                        _store.ActivateTransformFromItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            itemIndex,
+                            new CharacterTransformState(
+                                1,
+                                spec.TransformId,
+                                0,
+                                itemIndex,
+                                startedUtcMs,
+                                expiresUtcMs,
+                                spec.AttackBonus,
+                                spec.DefenseBonus,
+                                spec.MagicAttackBonus,
+                                spec.MagicDefenseBonus,
+                                spec.HitBonus,
+                                spec.DodgeBonus));
+
+                    if (!mutation.Success)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = mutation.Message
+                            }
+                        ];
+                    }
+
+                    state.ActiveTransformExpiresAt =
+                        DateTimeOffset.FromUnixTimeMilliseconds(
+                            expiresUtcMs);
+
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    _party.PublishStat(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        BuildAndBroadcastAppearancePacket(
+                            state,
+                            accountId,
+                            state.CharacterId.Value,
+                            assets),
+                        BuildAndBroadcastEffectiveStatusPacket(
+                            state,
+                            accountId,
+                            state.CharacterId.Value,
+                            assets),
+                        BuildTimedEffectSync(
+                            accountId,
+                            state.CharacterId.Value),
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message =
+                                $"已變身為：{spec.DisplayName}（1 小時）"
+                        }
+                    ];
+                }
+
+                if (itemIndex ==
+                    TransformationCatalog.RestoreScrollItemId)
+                {
+                    var mutation =
+                        _store.ClearTransformFromItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            itemIndex);
+
+                    if (!mutation.Success)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = mutation.Message
+                            }
+                        ];
+                    }
+
+                    state.ActiveTransformExpiresAt =
+                        DateTimeOffset.MinValue;
+
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    _party.PublishStat(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        BuildAndBroadcastAppearancePacket(
+                            state,
+                            accountId,
+                            state.CharacterId.Value,
+                            assets),
+                        BuildAndBroadcastEffectiveStatusPacket(
+                            state,
+                            accountId,
+                            state.CharacterId.Value,
+                            assets),
+                        BuildTimedEffectSync(
+                            accountId,
+                            state.CharacterId.Value),
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "已恢復原本外觀"
                         }
                     ];
                 }
@@ -3441,6 +3618,46 @@ public sealed class PacketRouter
                     state.PetTargets.Clear();
                     state.PetOutOfRangeSince.Clear();
                 }
+            }
+        }
+
+        if (state.ActiveTransformExpiresAt !=
+                DateTimeOffset.MinValue &&
+            now >= state.ActiveTransformExpiresAt)
+        {
+            state.ActiveTransformExpiresAt =
+                DateTimeOffset.MinValue;
+
+            // GetCharacter removes the expired transform row before
+            // rebuilding appearance/stats, so expiry is authoritative even
+            // when the client stays connected for the whole hour.
+            var characterAfterTransform =
+                _store.GetCharacter(accountId, dbid);
+            if (characterAfterTransform is not null)
+            {
+                var assetsAfterTransform =
+                    _store.GetCharacterAssets(accountId, dbid);
+
+                packets.Add(
+                    BuildAndBroadcastAppearancePacket(
+                        state,
+                        accountId,
+                        dbid,
+                        assetsAfterTransform));
+                packets.Add(
+                    BuildAndBroadcastEffectiveStatusPacket(
+                        state,
+                        accountId,
+                        dbid,
+                        assetsAfterTransform));
+                packets.Add(
+                    BuildTimedEffectSync(
+                        accountId,
+                        dbid));
+
+                _party.PublishStat(
+                    accountId,
+                    dbid);
             }
         }
 
