@@ -276,10 +276,13 @@ public sealed class CombatService
                     var assets = _store.GetCharacterAssets(
                         accountId,
                         session.CharacterId.Value);
-                    var effective = CharacterStatCalculator.Calculate(
-                        character,
-                        assets,
-                        _current);
+                    var effective = ApplyActiveSkillBuffs(
+                        CharacterStatCalculator.Calculate(
+                            character,
+                            assets,
+                            _current),
+                        session,
+                        now);
                     var defense = Math.Max(0, effective.Defense);
 
                     var rawDamage = Math.Max(
@@ -549,6 +552,8 @@ public sealed class CombatService
         if (!session.CharacterId.HasValue)
             return [];
 
+        PurgeExpiredBuffs(session, now);
+
         var learned = _store.GetSkills(
             accountId,
             session.CharacterId.Value)
@@ -556,54 +561,33 @@ public sealed class CombatService
                 Convert.ToInt32(x["SkillID"]) == skillId);
 
         if (learned is null)
-            return [new
-            {
-                Type = "SystemMessageFlash",
-                Message = "尚未學會此技能"
-            }];
+            return [Flash("尚未學會此技能")];
 
         var skillLevel = Math.Max(
             1,
             Convert.ToInt32(
-                learned.TryGetValue("level", out var lowerLevel)
-                    ? lowerLevel
-                    : learned.TryGetValue("SkillLevel", out var clientLevel)
-                        ? clientLevel
-                        : 1));
+                learned.TryGetValue("Level", out var upperLevel)
+                    ? upperLevel
+                    : learned.TryGetValue("level", out var lowerLevel)
+                        ? lowerLevel
+                        : learned.TryGetValue("SkillLevel", out var clientLevel)
+                            ? clientLevel
+                            : 1));
 
         var levelData = _current.FindSkillLevel(
             skillId,
             skillLevel);
 
         if (levelData is null)
-            return [new
-            {
-                Type = "SystemMessageFlash",
-                Message = $"技能資料不存在 SkillID={skillId} Lv.{skillLevel}"
-            }];
-
-        var isMoonJudgment =
-            skillId == 45111 &&
-            levelData.SkillType == 7;
-
-        if (levelData.SkillType is not (0 or 1) &&
-            !isMoonJudgment)
-            return [new
-            {
-                Type = "SystemMessageFlash",
-                Message = "此技能類型尚未支援"
-            }];
+            return [Flash(
+                $"技能資料不存在 SkillID={skillId} Lv.{skillLevel}")];
 
         if (session.SkillReadyAt.TryGetValue(
                 skillId,
                 out var readyAt) &&
             now < readyAt)
         {
-            return [new
-            {
-                Type = "SystemMessageFlash",
-                Message = "技能冷卻中"
-            }];
+            return [Flash("技能冷卻中")];
         }
 
         var character = _store.GetCharacter(
@@ -618,41 +602,81 @@ public sealed class CombatService
             Convert.ToInt32(character["MP"]) < levelData.CostMp ||
             Convert.ToInt32(character["SP"]) < levelData.CostSp)
         {
-            return [new
-            {
-                Type = "SystemMessageFlash",
-                Message = "HP / MP / SP 不足"
-            }];
+            return [Flash("HP / MP / SP 不足")];
         }
 
-        if (targetType != 1 ||
-            !session.Monsters.TryGetValue(
-                targetEntityId,
-                out var target) ||
-            !target.IsAlive ||
-            target.MapId != session.CurrentMapId)
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            session.CharacterId.Value);
+        var effective = ApplyActiveSkillBuffs(
+            CharacterStatCalculator.Calculate(
+                character,
+                assets,
+                _current),
+            session,
+            now);
+
+        var hasBonus = HasGenericStatBonus(levelData);
+        var isHeal = levelData.SkillType == 2;
+        var isBuff = levelData.SkillType is 4 or 5 || hasBonus;
+        var isAttack =
+            levelData.SkillType is 0 or 1 ||
+            (levelData.SkillType == 7 &&
+             (targetType == 1 ||
+              levelData.BaseDamage != 0 ||
+              levelData.DamageMultiplier != 0));
+
+        if (!isAttack && !isHeal && !isBuff)
         {
-            return [new
-            {
-                Type = "SystemMessageFlash",
-                Message = "技能目標無效"
-            }];
+            return [Flash(
+                "此技能屬於特殊/製造/復活類型，效果尚未還原")];
         }
 
-        var playerX = Convert.ToDouble(character["LocX"]);
-        var playerY = Convert.ToDouble(character["LocY"]);
-        var castDx = target.X - playerX;
-        var castDy = target.Y - playerY;
-        var castRange = Math.Max(0, levelData.CastRange) + 120;
+        MonsterRuntimeState? primaryMonster = null;
+        double centerX = targetX;
+        double centerY = targetY;
 
-        if (castDx * castDx + castDy * castDy >
-            castRange * castRange)
+        if (isAttack)
         {
-            return [new
+            if (targetType != 1 ||
+                !session.Monsters.TryGetValue(
+                    targetEntityId,
+                    out primaryMonster) ||
+                !primaryMonster.IsAlive ||
+                primaryMonster.MapId != session.CurrentMapId)
             {
-                Type = "SystemMessageFlash",
-                Message = "技能目標距離太遠"
-            }];
+                return [Flash("技能目標無效")];
+            }
+
+            centerX = primaryMonster.X;
+            centerY = primaryMonster.Y;
+
+            var playerX = Convert.ToDouble(character["LocX"]);
+            var playerY = Convert.ToDouble(character["LocY"]);
+            var castDx = centerX - playerX;
+            var castDy = centerY - playerY;
+            var castRange = Math.Max(0, levelData.CastRange) + 120;
+
+            if (castDx * castDx + castDy * castDy >
+                castRange * castRange)
+            {
+                return [Flash("技能目標距離太遠")];
+            }
+        }
+        else
+        {
+            // The current local server only owns the selected player's state.
+            // Self-heal/self-buff therefore accepts target 0 or this DBID.
+            if (targetType == 0 &&
+                targetEntityId != 0 &&
+                targetEntityId != session.CharacterId.Value)
+            {
+                return [Flash("目前僅支援自身治療/增益")];
+            }
+
+            targetEntityId = session.CharacterId.Value;
+            centerX = Convert.ToDouble(character["LocX"]);
+            centerY = Convert.ToDouble(character["LocY"]);
         }
 
         var updated = _store.SpendSkillResources(
@@ -663,50 +687,7 @@ public sealed class CombatService
             levelData.CostSp);
 
         if (updated is null)
-            return [new
-            {
-                Type = "SystemMessageFlash",
-                Message = "HP / MP / SP 不足"
-            }];
-
-        var assets = _store.GetCharacterAssets(
-            accountId,
-            session.CharacterId.Value);
-        var effective = CharacterStatCalculator.Calculate(
-            updated,
-            assets,
-            _current);
-
-        var damage = isMoonJudgment
-            // Client marks 月神審判 as a special attack and its current
-            // .tres carries no generic base_damage fields. Treat it as a
-            // physical+magical composite until the original service formula
-            // is recovered.
-            ? Math.Max(
-                1,
-                effective.Attack + effective.MagicAttack)
-            : Math.Max(
-                1,
-                levelData.BaseDamage +
-                (levelData.DamageType == 1
-                    ? effective.MagicAttack
-                    : effective.Attack) *
-                Math.Max(0, levelData.DamageMultiplier) / 100);
-
-        var centerX = target.X;
-        var centerY = target.Y;
-        var radius = Math.Max(0, levelData.AoeRadius);
-
-        var targets = session.Monsters.Values
-            .Where(x =>
-                x.IsAlive &&
-                x.MapId == session.CurrentMapId &&
-                (radius <= 0
-                    ? x.EntityId == target.EntityId
-                    : Math.Pow(x.X - centerX, 2) +
-                      Math.Pow(x.Y - centerY, 2) <=
-                      radius * radius))
-            .ToArray();
+            return [Flash("HP / MP / SP 不足")];
 
         var packets = new List<object>
         {
@@ -717,67 +698,181 @@ public sealed class CombatService
                 CasterType = 0,
                 SkillID = skillId,
                 SkillLevel = skillLevel,
-                TargetID = target.EntityId,
+                TargetID = targetEntityId,
+                TargetX = Convert.ToInt32(centerX),
+                TargetY = Convert.ToInt32(centerY),
+                AoeTargets = Array.Empty<object>()
+            }
+        };
+
+        if (isAttack && primaryMonster is not null)
+        {
+            var damage = Math.Max(
+                1,
+                levelData.BaseDamage +
+                (levelData.DamageType == 1
+                    ? effective.MagicAttack
+                    : effective.Attack) *
+                Math.Max(0, levelData.DamageMultiplier) / 100);
+
+            if (levelData.SkillType == 7 &&
+                levelData.BaseDamage == 0 &&
+                levelData.DamageMultiplier == 0)
+            {
+                damage = Math.Max(
+                    1,
+                    effective.Attack + effective.MagicAttack);
+            }
+
+            var radius = Math.Max(0, levelData.AoeRadius);
+            var targets = session.Monsters.Values
+                .Where(x =>
+                    x.IsAlive &&
+                    x.MapId == session.CurrentMapId &&
+                    (radius <= 0
+                        ? x.EntityId == primaryMonster.EntityId
+                        : Math.Pow(x.X - centerX, 2) +
+                          Math.Pow(x.Y - centerY, 2) <=
+                          radius * radius))
+                .ToArray();
+
+            packets[0] = new
+            {
+                Type = "SkillCast",
+                CasterID = session.CharacterId.Value,
+                CasterType = 0,
+                SkillID = skillId,
+                SkillLevel = skillLevel,
+                TargetID = primaryMonster.EntityId,
                 TargetX = Convert.ToInt32(centerX),
                 TargetY = Convert.ToInt32(centerY),
                 AoeTargets = targets
                     .Select(x => new { ID = x.EntityId })
                     .ToArray()
-            },
-            new
-            {
-                Type = "PlayerStatusSync",
-                HP = updated["HP"],
-                MP = updated["MP"],
-                SP = updated["SP"],
-                MaxHP = updated["MaxHP"],
-                MaxMP = updated["MaxMP"],
-                MaxSP = updated["MaxSP"]
-            }
-        };
+            };
 
-        foreach (var monster in targets)
-        {
-            monster.CurrentHp = Math.Max(
-                0,
-                monster.CurrentHp - damage);
-
-            packets.Add(new
+            foreach (var monster in targets)
             {
-                Type = "EntityDamage",
-                TargetID = monster.EntityId,
-                TargetType = 1,
-                Damage = damage,
-                CurrentHP = monster.CurrentHp,
-                MaxHP = monster.MaxHp,
-                IsCrit = false,
-                SkillID = skillId,
-                SkillLevel = skillLevel,
-                AttackerID = session.CharacterId.Value
-            });
-
-            if (monster.CurrentHp == 0)
-            {
-                monster.RespawnAt =
-                    now + RespawnDelay;
-                monster.HasTarget = false;
-                monster.IsMoving = false;
+                monster.CurrentHp = Math.Max(
+                    0,
+                    monster.CurrentHp - damage);
 
                 packets.Add(new
                 {
-                    Type = "EntityDeath",
-                    EntityID = monster.EntityId,
-                    EntityType = 1,
-                    KillerID = session.CharacterId.Value
+                    Type = "EntityDamage",
+                    TargetID = monster.EntityId,
+                    TargetType = 1,
+                    Damage = damage,
+                    CurrentHP = monster.CurrentHp,
+                    MaxHP = monster.MaxHp,
+                    IsCrit = false,
+                    SkillID = skillId,
+                    SkillLevel = skillLevel,
+                    AttackerID = session.CharacterId.Value
                 });
 
-                AddMechaKillExperience(
-                    session,
-                    accountId,
-                    monster,
-                    packets);
+                if (monster.CurrentHp == 0)
+                {
+                    monster.RespawnAt = now + RespawnDelay;
+                    monster.HasTarget = false;
+                    monster.IsMoving = false;
+                    monster.HoldingAttackRange = false;
+
+                    packets.Add(new
+                    {
+                        Type = "EntityDeath",
+                        EntityID = monster.EntityId,
+                        EntityType = 1,
+                        KillerID = session.CharacterId.Value
+                    });
+
+                    AddMechaKillExperience(
+                        session,
+                        accountId,
+                        monster,
+                        packets);
+                }
             }
         }
+
+        if (isHeal)
+        {
+            var healAmount = Math.Max(
+                1,
+                levelData.BaseDamage +
+                effective.MagicAttack *
+                Math.Max(1, levelData.DamageMultiplier) / 100);
+
+            var healed = _store.ApplyHeal(
+                accountId,
+                session.CharacterId.Value,
+                healAmount);
+
+            if (healed is not null)
+            {
+                packets.Add(new
+                {
+                    Type = "EntityHeal",
+                    TargetID = session.CharacterId.Value,
+                    TargetType = 0,
+                    Amount = healAmount,
+                    CurrentHP = healed["HP"],
+                    MaxHP = healed["MaxHP"],
+                    SkillID = skillId,
+                    SkillLevel = skillLevel,
+                    HealerID = session.CharacterId.Value
+                });
+                updated = healed;
+            }
+        }
+
+        if (isBuff && HasGenericStatBonus(levelData))
+        {
+            var definition = _current.FindSkill(skillId);
+            var duration = Math.Max(
+                1,
+                levelData.DurationSeconds);
+
+            session.ActiveSkillBuffs[skillId] =
+                new SkillBuffRuntime
+                {
+                    SkillId = skillId,
+                    Name = definition?.Name ?? $"Skill {skillId}",
+                    Level = skillLevel,
+                    DurationSeconds = duration,
+                    ExpiresAt = now + TimeSpan.FromSeconds(duration),
+                    AtkBonus = levelData.AtkBonus,
+                    DefBonus = levelData.DefBonus,
+                    MAtkBonus = levelData.MAtkBonus,
+                    MDefBonus = levelData.MDefBonus,
+                    HitBonus = levelData.HitBonus,
+                    FleeBonus = levelData.FleeBonus,
+                    LukBonus = levelData.LukBonus,
+                    AspdBonus = levelData.AspdBonus,
+                    MoveSpeedBonus = levelData.MoveSpeedBonus,
+                    CritRateBonus = levelData.CritRateBonus,
+                    CritDamageBonus = levelData.CritDamageBonus
+                };
+
+            packets.Add(BuildSyncBuffsPacket(
+                session,
+                now));
+        }
+
+        var refreshedAssets = _store.GetCharacterAssets(
+            accountId,
+            session.CharacterId.Value);
+        var refreshedStats = ApplyActiveSkillBuffs(
+            CharacterStatCalculator.Calculate(
+                updated,
+                refreshedAssets,
+                _current),
+            session,
+            now);
+
+        packets.Add(BuildPlayerStatusPacket(
+            updated,
+            refreshedStats));
 
         session.SkillReadyAt[skillId] =
             now + TimeSpan.FromSeconds(
@@ -811,10 +906,13 @@ public sealed class CombatService
         var assets = _store.GetCharacterAssets(
             accountId,
             session.CharacterId.Value);
-        var effective = CharacterStatCalculator.Calculate(
-            character,
-            assets,
-            _current);
+        var effective = ApplyActiveSkillBuffs(
+            CharacterStatCalculator.Calculate(
+                character,
+                assets,
+                _current),
+            session,
+            DateTimeOffset.UtcNow);
 
         var attackRange = Math.Max(
             80,
@@ -943,6 +1041,130 @@ public sealed class CombatService
             });
         }
     }
+
+    public IReadOnlyList<object> TickBuffs(
+        ClientSession session,
+        DateTimeOffset now)
+    {
+        var removed = PurgeExpiredBuffs(session, now);
+        return removed
+            ? [BuildSyncBuffsPacket(session, now)]
+            : [];
+    }
+
+    private static bool PurgeExpiredBuffs(
+        ClientSession session,
+        DateTimeOffset now)
+    {
+        var expired = session.ActiveSkillBuffs
+            .Where(x => x.Value.ExpiresAt <= now)
+            .Select(x => x.Key)
+            .ToArray();
+
+        foreach (var skillId in expired)
+            session.ActiveSkillBuffs.Remove(skillId);
+
+        return expired.Length > 0;
+    }
+
+    private static bool HasGenericStatBonus(
+        CurrentSkillLevelDefinition level)
+        => level.AtkBonus != 0 ||
+           level.DefBonus != 0 ||
+           level.MAtkBonus != 0 ||
+           level.MDefBonus != 0 ||
+           level.HitBonus != 0 ||
+           level.FleeBonus != 0 ||
+           level.LukBonus != 0 ||
+           level.AspdBonus != 0 ||
+           level.MoveSpeedBonus != 0 ||
+           level.CritRateBonus != 0 ||
+           level.CritDamageBonus != 0;
+
+    private static EffectiveCharacterStats ApplyActiveSkillBuffs(
+        EffectiveCharacterStats stats,
+        ClientSession session,
+        DateTimeOffset now)
+    {
+        PurgeExpiredBuffs(session, now);
+
+        return new EffectiveCharacterStats(
+            stats.MaxHP,
+            stats.MaxMP,
+            stats.MaxSP,
+            stats.Attack + session.ActiveSkillBuffs.Values.Sum(x => x.AtkBonus),
+            stats.Defense + session.ActiveSkillBuffs.Values.Sum(x => x.DefBonus),
+            stats.MagicAttack + session.ActiveSkillBuffs.Values.Sum(x => x.MAtkBonus),
+            stats.MagicDefense + session.ActiveSkillBuffs.Values.Sum(x => x.MDefBonus),
+            stats.Hit + session.ActiveSkillBuffs.Values.Sum(x => x.HitBonus),
+            stats.Dodge + session.ActiveSkillBuffs.Values.Sum(x => x.FleeBonus),
+            stats.Lucky + session.ActiveSkillBuffs.Values.Sum(x => x.LukBonus),
+            stats.AttackSpeed + session.ActiveSkillBuffs.Values.Sum(x => x.AspdBonus),
+            stats.AttackRange,
+            stats.MoveSpeed + session.ActiveSkillBuffs.Values.Sum(x => x.MoveSpeedBonus),
+            stats.CritRate + session.ActiveSkillBuffs.Values.Sum(x => x.CritRateBonus),
+            stats.CritDamage + session.ActiveSkillBuffs.Values.Sum(x => x.CritDamageBonus));
+    }
+
+    private static object BuildSyncBuffsPacket(
+        ClientSession session,
+        DateTimeOffset now)
+        => new
+        {
+            Type = "SyncBuffs",
+            Buffs = session.ActiveSkillBuffs.Values
+                .Where(x => x.ExpiresAt > now)
+                .Select(x => new
+                {
+                    BuffName = x.Name,
+                    SourceType = 2,
+                    Value = x.SkillId,
+                    RemainingTime = Math.Max(
+                        0.0,
+                        (x.ExpiresAt - now).TotalSeconds),
+                    TotalTime = x.DurationSeconds
+                })
+                .ToArray()
+        };
+
+    private static object BuildPlayerStatusPacket(
+        Dictionary<string, object> character,
+        EffectiveCharacterStats s)
+        => new
+        {
+            Type = "PlayerStatusSync",
+            Level = character["Level"],
+            ExpUse = character["ExpUse"],
+            Str = character["Str"],
+            Dex = character["Dex"],
+            Con = character["Con"],
+            Wis = character["Wis"],
+            HP = Math.Min(Convert.ToInt32(character["HP"]), s.MaxHP),
+            MP = Math.Min(Convert.ToInt32(character["MP"]), s.MaxMP),
+            SP = Math.Min(Convert.ToInt32(character["SP"]), s.MaxSP),
+            MaxHP = s.MaxHP,
+            MaxMP = s.MaxMP,
+            MaxSP = s.MaxSP,
+            Attack = s.Attack,
+            Defense = s.Defense,
+            MagicAttack = s.MagicAttack,
+            MagicDefense = s.MagicDefense,
+            Hit = s.Hit,
+            Dodge = s.Dodge,
+            Lucky = s.Lucky,
+            AttackSpeed = s.AttackSpeed,
+            AttackRange = s.AttackRange,
+            MoveSpeed = s.MoveSpeed,
+            CritRate = s.CritRate,
+            CritDamage = s.CritDamage
+        };
+
+    private static object Flash(string message)
+        => new
+        {
+            Type = "SystemMessageFlash",
+            Message = message
+        };
 
     private static void TryWander(
         MonsterRuntimeState monster,
