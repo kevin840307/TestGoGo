@@ -30,6 +30,7 @@ public static class GameFeatureServiceCollectionExtensions
         services.AddSingleton<ClubService>();
         services.AddSingleton<ResourceRecoveryService>();
         services.AddSingleton<ServerBroadcastHub>();
+        services.AddSingleton<AccountSessionRegistry>();
         services.AddSingleton<MallService>();
         services.AddSingleton<PartyService>();
         services.AddSingleton<RankService>();
