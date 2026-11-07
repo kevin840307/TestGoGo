@@ -242,6 +242,10 @@ var currentCatalog = new CurrentClientDataCatalog(
             25108,
             "生命聖印",
             "生命聖印"),
+        new CurrentSkillDefinition(
+            27110,
+            "平安之祝",
+            "平安之祝"),
         new CurrentSkillDefinition(26104, "魔影術"),
         new CurrentSkillDefinition(45111, "月神審判")
     },
@@ -267,6 +271,16 @@ var currentCatalog = new CurrentClientDataCatalog(
             0, 20, 0,
             0, 0, 1,
             0, 0,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0,
+            0, 0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            27110, 1, 7, 0,
+            0, 0,
+            0, 0, 0,
+            0, 0, 1800,
+            0, 1,
             0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0,
@@ -4240,6 +4254,117 @@ try
                     "淺藍色初心褲子")),
             "PickUpItemRequest restores persisted equipment, removes ground row and emits pickup feedback");
     }
+
+    var returnPeerRegistration = broadcastHub.Register();
+    var returnPeerSession = new ClientSession
+    {
+        ConnectionId = returnPeerRegistration.ConnectionId,
+        AccountId = account.Value,
+        CharacterId = secondCharacterId,
+        CurrentMapId = 15,
+        LastX = 9408,
+        LastY = 10336
+    };
+
+    store.UpdateLocation(
+        account.Value,
+        id,
+        15,
+        9408,
+        10336);
+    store.UpdateLocation(
+        account.Value,
+        secondCharacterId,
+        15,
+        9448,
+        10336);
+    store.SetRebornLocation(
+        account.Value,
+        id,
+        16,
+        9000,
+        9000);
+    store.SetRebornLocation(
+        account.Value,
+        secondCharacterId,
+        16,
+        9040,
+        9000);
+
+    session.CurrentMapId = 15;
+    session.LastX = 9408;
+    session.LastY = 10336;
+    router.SyncPresence(session);
+    router.SyncPresence(returnPeerSession);
+
+    party.Handle(
+        session,
+        account.Value,
+        "Invite",
+        secondCharacterId,
+        DateTimeOffset.UtcNow);
+    party.Handle(
+        returnPeerSession,
+        account.Value,
+        "Accept",
+        id,
+        DateTimeOffset.UtcNow.AddSeconds(1));
+
+    store.SetSkill(
+        account.Value,
+        id,
+        27110,
+        1);
+    store.Revive(account.Value, id);
+
+    while (returnPeerRegistration.Queue.TryDequeue(out _)) { }
+
+    var returnPackets = combat.UseSkill(
+        session,
+        account.Value,
+        27110,
+        0,
+        0,
+        9408,
+        10336,
+        DateTimeOffset.UtcNow.AddSeconds(2));
+
+    Check(
+        session.CurrentMapId == 16 &&
+        Convert.ToInt32(
+            store.GetCharacter(
+                account.Value,
+                id)!["MapID"]) == 16 &&
+        Convert.ToInt32(
+            store.GetCharacter(
+                account.Value,
+                secondCharacterId)!["MapID"]) == 16 &&
+        returnPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"ChangeMap\"")) &&
+        returnPeerRegistration.Queue.ToArray().Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"ChangeMap\"")),
+        "平安之祝 sends online same-map party members to their reborn locations");
+
+    router.Tick(
+        returnPeerSession,
+        DateTimeOffset.UtcNow.AddSeconds(3));
+
+    Check(
+        returnPeerSession.CurrentMapId == 16 &&
+        returnPeerSession.PendingMapSpawn == false,
+        "peer world tick reconciles server-initiated party map travel");
+
+    party.Handle(
+        returnPeerSession,
+        account.Value,
+        "Leave",
+        -1,
+        DateTimeOffset.UtcNow.AddSeconds(4));
+    router.DisconnectPresence(returnPeerSession);
+    broadcastHub.Unregister(
+        returnPeerRegistration.ConnectionId);
 
     using (var logout = Json(
         """{"Type":"LogoutRequest","IsBackToLogin":true}"""))
