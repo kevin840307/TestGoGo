@@ -511,6 +511,9 @@ var shopCatalog = new ShopCatalog(
 var enemyDrops = new EnemyDropCatalog(
     gameDataRoot,
     currentCatalog);
+var questItemMappings = new EnemyDropCatalog(
+    gameDataRoot,
+    realCurrentCatalog);
 var batteryCatalog = new HorseBatteryCatalog(currentCatalog);
 var recoveryCatalog = new RecoveryItemCatalog(currentCatalog);
 var horseCardCatalog = new HorseCardCatalog(currentCatalog);
@@ -518,7 +521,7 @@ var skillCatalog = new SkillCatalog(currentCatalog);
 var quests = new QuestRuntime(
     questRoot,
     shopCatalog,
-    enemyDrops,
+    questItemMappings,
     legacyClientCatalog,
     currentCatalog);
 var map15Npcs = world.GetNpcs(15);
@@ -6055,7 +6058,7 @@ try
         returnPeerRegistration.ConnectionId);
 
     var trainTicketMapping =
-        enemyDrops.ResolveItem(10505);
+        questItemMappings.ResolveItem(10505);
     Check(trainTicketMapping is
           {
               TabType: 0
