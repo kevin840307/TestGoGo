@@ -15,6 +15,7 @@ public sealed class ClientSession
     public bool CloseRequested { get; set; }
     public DateTimeOffset LastMonsterAiTick { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastPetFollowTick { get; set; } = DateTimeOffset.MinValue;
+    public DateTimeOffset LastResourceRecoveryAt { get; set; } = DateTimeOffset.MinValue;
     public int PetCombatMode { get; set; } = 0;
     public Dictionary<long, (double X, double Y)> PetPositions { get; } = new();
     public Dictionary<long, DateTimeOffset> PetLastAttackAt { get; } = new();
