@@ -1771,6 +1771,30 @@ public sealed class CombatService
             if (probeDeathPacket is not null)
                 packets.Add(probeDeathPacket);
 
+            if (probeDeathPacket is not null)
+            {
+                MonsterRuntimeState? rewardedMonster = null;
+                lock (runtime.SyncRoot)
+                {
+                    rewardedMonster = runtime.Monsters.Values
+                        .Where(x =>
+                            x.MapId == session.CurrentMapId &&
+                            x.CurrentHp == 0 &&
+                            x.RespawnAt.HasValue)
+                        .OrderByDescending(x => x.RespawnAt)
+                        .FirstOrDefault();
+                }
+
+                if (rewardedMonster is not null)
+                {
+                    AddScreenAreaKillRewards(
+                        session,
+                        accountId,
+                        [rewardedMonster],
+                        packets);
+                }
+            }
+
             var isolationAssets = _store.GetCharacterAssets(
                 accountId,
                 session.CharacterId.Value);
