@@ -352,7 +352,9 @@ public sealed record RankEntry(
     long DbId,
     long AccountId,
     string Name,
-    long Value);
+    long Value,
+    long MessageOwnerDbId = 0,
+    long AppearanceDbId = 0);
 
 public interface IRankStore
 {
