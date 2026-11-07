@@ -1,4 +1,5 @@
 using SGO.Server.Application.Bank;
+using SGO.Server.Application.Character;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Packets;
@@ -13,6 +14,7 @@ public static class GameFeatureServiceCollectionExtensions
         IConfiguration configuration)
     {
         services.AddSingleton<CombatService>();
+        services.AddSingleton<ResourceRecoveryService>();
         services.AddSingleton<ShopService>();
         services.AddSingleton<GmCommandService>();
 
