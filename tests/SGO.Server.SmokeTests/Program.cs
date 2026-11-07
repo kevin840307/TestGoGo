@@ -1751,7 +1751,7 @@ try
     var sharedSpawnPackets = combat.SpawnLegacyEnemy(
         session,
         combatEnemy.EnemyId,
-        monster.X + 300,
+        monster.X + 100,
         monster.Y);
 
     Check(sharedSpawnPackets.Any(x =>
@@ -1762,6 +1762,34 @@ try
               "\"Type\":\"SpawnEntity\"") &&
           broadcastRegistration.Queue.IsEmpty,
         "map world events broadcast to peers without echoing to source connection");
+
+    combat.BuildCurrentMapSnapshot(peerSession);
+    var dynamicMonster = session.Monsters.Values
+        .First(x => x.EntityId >= 9_000_000);
+    var peerDynamicMonster =
+        peerSession.Monsters[dynamicMonster.EntityId];
+    var dynamicHpBefore = dynamicMonster.CurrentHp;
+
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    var sharedAttackPackets = combat.Attack(
+        session,
+        account.Value,
+        dynamicMonster.EntityId,
+        1);
+
+    Check(
+        dynamicMonster.CurrentHp < dynamicHpBefore &&
+        peerDynamicMonster.CurrentHp ==
+            dynamicMonster.CurrentHp &&
+        sharedAttackPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EntityDamage\"")) &&
+        peerRegistration.Queue.TryDequeue(
+            out var peerDamage) &&
+        JsonSerializer.Serialize(peerDamage).Contains(
+            "\"Type\":\"EntityDamage\""),
+        "shared monster damage and HP are synchronized across map sessions");
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
     router.DisconnectPresence(peerSession);
