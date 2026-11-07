@@ -7443,6 +7443,33 @@ public sealed class SqliteGameStore : IGameStore
         return GetCharacter(accountId, dbid);
     }
 
+    public Dictionary<string, object>? AdjustMoney(
+        long accountId,
+        long dbid,
+        int delta)
+    {
+        if (delta == 0)
+            return GetCharacter(accountId, dbid);
+
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET money = money + $delta
+             WHERE id=$id
+               AND account_id=$account
+               AND money + $delta >= 0
+            """;
+        Arg(cmd, "$delta", delta);
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$account", accountId);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return null;
+
+        return GetCharacter(accountId, dbid);
+    }
+
     public Dictionary<string, object>? SetExperienceProgress(
         long accountId,
         long dbid,
