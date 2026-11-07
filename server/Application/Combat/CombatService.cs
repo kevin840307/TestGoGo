@@ -843,6 +843,14 @@ public sealed class CombatService
             specialSkill.Equals(
                 "平安之祝",
                 StringComparison.Ordinal);
+        var isTaunt =
+            specialSkill.Equals(
+                "挑撥",
+                StringComparison.Ordinal);
+        var isScout =
+            specialSkill.Equals(
+                "偵察",
+                StringComparison.Ordinal);
 
         var hasBonus = HasGenericStatBonus(levelData);
         var isHeal = levelData.SkillType == 2;
@@ -855,6 +863,8 @@ public sealed class CombatService
              !hasCreateItemSpecial &&
              !isSelfRecovery &&
              !isPartyReturn &&
+             !isTaunt &&
+             !isScout &&
              (targetType == 1 ||
               levelData.BaseDamage != 0 ||
               levelData.DamageMultiplier != 0));
@@ -866,7 +876,9 @@ public sealed class CombatService
             !isRevive &&
             !hasCreateItemSpecial &&
             !isSelfRecovery &&
-            !isPartyReturn)
+            !isPartyReturn &&
+            !isTaunt &&
+            !isScout)
         {
             return [Flash(
                 "此技能屬於特殊/製造類型，效果尚未還原")];
@@ -877,6 +889,8 @@ public sealed class CombatService
         Dictionary<string, object>? reviveTargetCharacter = null;
         OnlinePlayerPresence? healTargetPresence = null;
         Dictionary<string, object>? healTargetCharacter = null;
+        OnlinePlayerPresence? scoutTargetPresence = null;
+        Dictionary<string, object>? scoutTargetCharacter = null;
         double centerX = targetX;
         double centerY = targetY;
 
@@ -1011,12 +1025,56 @@ public sealed class CombatService
             centerY = Convert.ToDouble(
                 healTargetCharacter["LocY"]);
         }
-        else if (isGroupHeal)
+        else if (isGroupHeal || isTaunt)
         {
             targetEntityId =
                 checked((int)session.CharacterId.Value);
             centerX = Convert.ToDouble(character["LocX"]);
             centerY = Convert.ToDouble(character["LocY"]);
+        }
+        else if (isScout)
+        {
+            if (targetType != 0 ||
+                targetEntityId <= 0)
+            {
+                return [Flash("請選擇要偵察的玩家")];
+            }
+
+            scoutTargetPresence =
+                _broadcasts.FindCharacter(targetEntityId);
+
+            if (scoutTargetPresence is null ||
+                scoutTargetPresence.MapId != session.CurrentMapId)
+            {
+                return [Flash("偵察目標不在目前地圖")];
+            }
+
+            scoutTargetCharacter = _store.GetCharacter(
+                scoutTargetPresence.AccountId,
+                scoutTargetPresence.CharacterId);
+
+            if (scoutTargetCharacter is null)
+                return [Flash("找不到偵察目標")];
+
+            var castDx =
+                Convert.ToDouble(scoutTargetCharacter["LocX"]) -
+                Convert.ToDouble(character["LocX"]);
+            var castDy =
+                Convert.ToDouble(scoutTargetCharacter["LocY"]) -
+                Convert.ToDouble(character["LocY"]);
+            var castRange =
+                Math.Max(0, levelData.CastRange) + 120;
+
+            if (castDx * castDx + castDy * castDy >
+                castRange * castRange)
+            {
+                return [Flash("偵察目標距離太遠")];
+            }
+
+            centerX = Convert.ToDouble(
+                scoutTargetCharacter["LocX"]);
+            centerY = Convert.ToDouble(
+                scoutTargetCharacter["LocY"]);
         }
         else
         {
@@ -1031,6 +1089,82 @@ public sealed class CombatService
             targetEntityId = checked((int)session.CharacterId.Value);
             centerX = Convert.ToDouble(character["LocX"]);
             centerY = Convert.ToDouble(character["LocY"]);
+        }
+
+        if (isTaunt)
+        {
+            var runtime = SyncSessionMonsters(session);
+            var affected = new List<object>();
+            var radius = Math.Max(
+                0,
+                levelData.AoeRadius);
+
+            lock (runtime.SyncRoot)
+            {
+                foreach (var monster in runtime.Monsters.Values)
+                {
+                    if (!monster.IsAlive ||
+                        monster.MapId != session.CurrentMapId)
+                        continue;
+
+                    var dx = monster.X - centerX;
+                    var dy = monster.Y - centerY;
+                    if (dx * dx + dy * dy >
+                        radius * radius)
+                        continue;
+
+                    monster.HasTarget = true;
+                    monster.TargetCharacterId =
+                        session.CharacterId.Value;
+                    SetAiState(
+                        monster,
+                        MonsterAiState.Chase);
+
+                    affected.Add(new
+                    {
+                        ID = monster.EntityId
+                    });
+
+                    packets.Add(new
+                    {
+                        Type = "MonsterTarget",
+                        EntityID = monster.EntityId,
+                        HasTarget = true,
+                        TargetID = session.CharacterId.Value
+                    });
+                }
+            }
+
+            packets[0] = new
+            {
+                Type = "SkillCast",
+                CasterID = session.CharacterId.Value,
+                CasterType = 0,
+                SkillID = skillId,
+                SkillLevel = skillLevel,
+                TargetID = session.CharacterId.Value,
+                TargetX = Convert.ToInt32(centerX),
+                TargetY = Convert.ToInt32(centerY),
+                AoeTargets = affected.ToArray()
+            };
+        }
+
+        if (isScout &&
+            scoutTargetPresence is not null &&
+            scoutTargetCharacter is not null)
+        {
+            packets.Add(new
+            {
+                Type = "SystemMessageChat",
+                Message =
+                    $"[偵察] {scoutTargetCharacter["NAME"]} " +
+                    $"Lv.{scoutTargetCharacter["Level"]} " +
+                    $"HP {scoutTargetCharacter["HP"]}/{scoutTargetCharacter["MaxHP"]} " +
+                    $"MP {scoutTargetCharacter["MP"]}/{scoutTargetCharacter["MaxMP"]} " +
+                    $"SP {scoutTargetCharacter["SP"]}/{scoutTargetCharacter["MaxSP"]} " +
+                    $"攻擊 {scoutTargetCharacter["Attack"]} " +
+                    $"防禦 {scoutTargetCharacter["Defense"]}"
+            });
         }
 
         if (hasCreateItemSpecial)
