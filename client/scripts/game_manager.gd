@@ -4,6 +4,10 @@ extends Node
 const MAP_LOADING_FADE_IN_SECONDS: = 0.3
 const MAP_LOADING_COVER_DELAY_SECONDS: = 0.35
 const MAP_LOADING_MIN_VISIBLE_SECONDS: = 0.55
+const MAP_LOADING_RESOURCE_PROGRESS_MAX: = 90.0
+const MAP_LOADING_INSTANTIATE_PROGRESS: = 94.0
+const MAP_LOADING_ADD_CHILD_PROGRESS: = 97.0
+const MAP_LOADING_FINALIZE_PROGRESS: = 99.0
 const TRAIN_TRAVEL_MAP_TIMEOUT_SECONDS: = 15.0
 const TRAIN_VIDEO_TIMEOUT_SECONDS: = 120.0
 const WORLD_ENHANCEMENT_SCENE: = preload("res://world_enhancement.tscn")
@@ -554,7 +558,10 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 
 
 			if is_instance_valid(current_hud) and current_hud.loading_bar:
-				current_hud.loading_bar.value = max_recorded_progress * 100.0
+				current_hud.loading_bar.value = minf(
+					MAP_LOADING_RESOURCE_PROGRESS_MAX,
+					max_recorded_progress * MAP_LOADING_RESOURCE_PROGRESS_MAX
+				)
 
 			await get_tree().process_frame
 			if not _is_map_transition_current(transition_id):
@@ -569,7 +576,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 				"progress": max_recorded_progress, 
 			})
 			if is_instance_valid(current_hud) and current_hud.loading_bar:
-				current_hud.loading_bar.value = 100.0
+				current_hud.loading_bar.value = MAP_LOADING_RESOURCE_PROGRESS_MAX
 			break
 
 		else:
@@ -608,9 +615,22 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 		"old_map_still_valid": is_instance_valid(old_map), 
 	})
 
+	if is_instance_valid(current_hud) and current_hud.loading_bar:
+		current_hud.loading_bar.value = MAP_LOADING_INSTANTIATE_PROGRESS
+	await get_tree().process_frame
+	if not _is_map_transition_current(transition_id):
+		return
+
 	var instantiate_started_usec: = Time.get_ticks_usec()
 	current_map_node = map_resource.instantiate()
 	var instantiate_ms: = float(Time.get_ticks_usec() - instantiate_started_usec) / 1000.0
+
+	if is_instance_valid(current_hud) and current_hud.loading_bar:
+		current_hud.loading_bar.value = MAP_LOADING_ADD_CHILD_PROGRESS
+	await get_tree().process_frame
+	if not _is_map_transition_current(transition_id):
+		return
+
 	var add_child_started_usec: = Time.get_ticks_usec()
 	get_tree().root.add_child(current_map_node)
 	var add_child_ms: = float(Time.get_ticks_usec() - add_child_started_usec) / 1000.0
@@ -618,12 +638,16 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 		"instantiate_ms": instantiate_ms, 
 		"add_child_ms": add_child_ms, 
 	})
-	var theme_started_usec: = Time.get_ticks_usec()
-	var theme_result: = _apply_current_festival_theme()
-	_trace_map_change("festival_theme_applied", source_map_id, target_map_id, {
-		"duration_ms": float(Time.get_ticks_usec() - theme_started_usec) / 1000.0, 
-		"result": theme_result, 
-	})
+
+	if is_instance_valid(current_hud) and current_hud.loading_bar:
+		current_hud.loading_bar.value = MAP_LOADING_FINALIZE_PROGRESS
+	await get_tree().process_frame
+	if not _is_map_transition_current(transition_id):
+		return
+
+	# Festival replacement may traverse a large map tree. Keep it out of the
+	# blocking map-transition critical path so the loading UI remains responsive.
+	call_deferred("_apply_current_festival_theme")
 
 	if BuildingManager: call_deferred("_init_buildings_with_diagnostics", source_map_id, target_map_id)
 
