@@ -27,31 +27,7 @@ public static class PersistenceServiceCollectionExtensions
 
                 services.AddSingleton(
                     new SqliteGameStore(dbPath));
-
-                services.AddSingleton<IGameStore>(sp =>
-                    sp.GetRequiredService<SqliteGameStore>());
-                services.AddSingleton<IAccountStore>(sp =>
-                    sp.GetRequiredService<SqliteGameStore>());
-                services.AddSingleton<ICharacterStore>(sp =>
-                    sp.GetRequiredService<SqliteGameStore>());
-                services.AddSingleton<IInventoryStore>(sp =>
-                    sp.GetRequiredService<SqliteGameStore>());
-                services.AddSingleton<IEquipmentStore>(sp =>
-                    sp.GetRequiredService<SqliteGameStore>());
-                services.AddSingleton<IPetStore>(sp =>
-                    sp.GetRequiredService<SqliteGameStore>());
-                services.AddSingleton<IMechaStore>(sp =>
-                    sp.GetRequiredService<SqliteGameStore>());
-                services.AddSingleton<ISkillStore>(sp =>
-                    sp.GetRequiredService<SqliteGameStore>());
-                services.AddSingleton<IShortcutStore>(sp =>
-                    sp.GetRequiredService<SqliteGameStore>());
-                services.AddSingleton<IBankStore>(sp =>
-                    sp.GetRequiredService<SqliteGameStore>());
-                services.AddSingleton<IShopStore>(sp =>
-                    sp.GetRequiredService<SqliteGameStore>());
-                services.AddSingleton<ICharacterAssetReader>(sp =>
-                    sp.GetRequiredService<SqliteGameStore>());
+                RegisterStorePorts<SqliteGameStore>(services);
                 break;
             }
 
@@ -66,5 +42,35 @@ public static class PersistenceServiceCollectionExtensions
         }
 
         return services;
+    }
+
+    private static void RegisterStorePorts<TStore>(
+        IServiceCollection services)
+        where TStore : class, IGameStore
+    {
+        services.AddSingleton<IGameStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IAccountStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<ICharacterStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IInventoryStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IEquipmentStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IPetStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IMechaStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<ISkillStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IShortcutStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IBankStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<IShopStore>(sp =>
+            sp.GetRequiredService<TStore>());
+        services.AddSingleton<ICharacterAssetReader>(sp =>
+            sp.GetRequiredService<TStore>());
     }
 }
