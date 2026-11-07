@@ -13,6 +13,13 @@ public sealed class WorldDataService
     private readonly Dictionary<int, IReadOnlyList<WorldNpc>> _npcCache = new();
     private readonly Dictionary<int, IReadOnlyList<WorldEnemy>> _enemyCache = new();
 
+    public WorldDataService(string dataRoot)
+        : this(
+            dataRoot,
+            new LegacyNpcVisualCatalog(string.Empty))
+    {
+    }
+
     public WorldDataService(
         string dataRoot,
         LegacyNpcVisualCatalog npcVisuals)
