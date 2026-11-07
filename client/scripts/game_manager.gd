@@ -485,11 +485,16 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	await get_tree().process_frame
 
 	_report_initial_loading_progress(progress_callback, 99.3, "同步地圖角色")
-	if NetworkEntityManager and NetworkEntityManager.has_method("set_spawn_queue_paused"):
-		NetworkEntityManager.set_spawn_queue_paused(false)
+	if NetworkEntityManager:
+		if NetworkEntityManager.has_method("set_initial_spawn_boost"):
+			NetworkEntityManager.set_initial_spawn_boost(true)
+		if NetworkEntityManager.has_method("set_spawn_queue_paused"):
+			NetworkEntityManager.set_spawn_queue_paused(false)
 	await get_tree().process_frame
 	while NetworkEntityManager and NetworkEntityManager.has_method("is_initial_spawn_queue_idle") and not NetworkEntityManager.is_initial_spawn_queue_idle():
 		await get_tree().process_frame
+	if NetworkEntityManager and NetworkEntityManager.has_method("set_initial_spawn_boost"):
+		NetworkEntityManager.set_initial_spawn_boost(false)
 
 	# Warm the first rendered world frame while EntryManager's loading overlay
 	# still covers the screen. Setting these visible only at the final reveal
