@@ -583,7 +583,7 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 			elif is_mecha_double:
 				simultaneous_split = 2
 
-			if not is_screen_aoe_stress_skill and target_node.has_method("show_damage_number"):
+			if target_node.has_method("show_damage_number"):
 				target_node.show_damage_number(damage, is_crit, hit_delay, simultaneous_split, skill_id, is_primary)
 
 
