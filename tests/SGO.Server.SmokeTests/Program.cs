@@ -142,6 +142,20 @@ var currentCatalog = new CurrentClientDataCatalog(
     {
         new CurrentSkillDefinition(20101, "Current Skill 20101"),
         new CurrentSkillDefinition(20102, "Current Skill 20102")
+    },
+    new[]
+    {
+        new CurrentPetDefinition(
+            45001,
+            "波奇鳥獸",
+            new Dictionary<int, CurrentPetEvolution>
+            {
+                [0] = new CurrentPetEvolution(
+                    0,
+                    "EN050A",
+                    0,
+                    80)
+            })
     });
 
 var shopCatalog = new ShopCatalog(gameDataRoot, currentCatalog);
@@ -348,7 +362,7 @@ try
     var equipUid = store.AddEquipment(
         account.Value, id, weaponShopItem.ItemIndex, 255, 0, 2);
     var petUid = store.AddPet(
-        account.Value, id, 1, "TestPet");
+        account.Value, id, 45001, "TestPet");
     var horseUid = store.AddHorse(
         account.Value, id, 50001, "TestMecha", "MS", 3600);
     var horseEquipUid = store.AddHorseEquipment(
@@ -386,6 +400,12 @@ try
           seededAssets.HorseEquips.Count == 1,
         "character assets round-trip from SQLite");
 
+    var seededPet = seededAssets.Pets.Single();
+    Check(Convert.ToInt32(seededPet["LifeCount"]) > 0 &&
+          Convert.ToInt32(seededPet["FeedValue"]) > 0 &&
+          Convert.ToInt32(seededPet["FeedExpLimit"]) > 0,
+        "new pets start alive and fed so recovered client enables Summon");
+
     using (var login = Json(
         """{"Type":"LoginRequest","User":"offline","Pass":"test-password"}"""))
     {
@@ -414,8 +434,8 @@ try
         Check(JsonSerializer.Serialize(responses[2]).Contains(
                 $"\"ItemIdx\":{weaponShopItem.ItemIndex}"),
             "EquipSync loads persisted equipment");
-        Check(JsonSerializer.Serialize(responses[3]).Contains("\"PETID\":1"),
-            "PetSync loads persisted pet");
+        Check(JsonSerializer.Serialize(responses[3]).Contains("\"PETID\":45001"),
+            "PetSync loads persisted current-client pet");
         Check(JsonSerializer.Serialize(responses[4]).Contains("\"HorseIdx\":50001") &&
               JsonSerializer.Serialize(responses[4]).Contains("\"EquipIdx\":50293"),
             "HorseSync loads persisted mecha card and mecha equipment");
@@ -666,8 +686,10 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"SpawnEntity\"") &&
                 JsonSerializer.Serialize(x).Contains(
-                    "\"EntityType\":4")),
-            "PetAction Summon spawns pet entity");
+                    "\"EntityType\":4") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Sprite\":\"EN050A\"")),
+            "PetAction Summon spawns current-client pet appearance");
         Check(store.GetCharacterAssets(account.Value, id).Pets
                 .Any(x => Convert.ToInt64(x["UID"]) == petUid &&
                           Convert.ToInt32(x["State"]) == 1),
