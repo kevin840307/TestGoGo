@@ -179,7 +179,48 @@ public static class PacketSchemaValidator
                 new("Count", FieldType.Integer)
             ],
             ["ShopAction:ViewShop"] =
-                [new("TargetDBID", FieldType.LongInteger)]
+                [new("TargetDBID", FieldType.LongInteger)],
+            // The shared Godot send_pet_action helper always sends PetUID.
+            // SetCombatMode and CommandAttack use separate client packets.
+            ["PetAction:Summon"] = [new("PetUID", FieldType.LongInteger)],
+            ["PetAction:Recall"] = [new("PetUID", FieldType.LongInteger)],
+            ["PetAction:AddLife"] = [new("PetUID", FieldType.LongInteger)],
+            ["PetAction:ResetStat"] = [new("PetUID", FieldType.LongInteger)],
+            ["PetAction:Rename"] =
+            [
+                new("PetUID", FieldType.LongInteger),
+                new("NewName", FieldType.NonEmptyText)
+            ],
+            ["PetAction:Equip"] =
+            [
+                new("PetUID", FieldType.LongInteger),
+                new("ItemUID", FieldType.LongInteger),
+                new("TargetSlot", FieldType.Integer)
+            ],
+            ["PetAction:Unequip"] =
+            [
+                new("PetUID", FieldType.LongInteger),
+                new("TargetSlot", FieldType.Integer)
+            ],
+            ["PetAction:Feed"] =
+            [
+                new("PetUID", FieldType.LongInteger),
+                new("ItemUID", FieldType.LongInteger)
+            ],
+            ["PetAction:SetMainSkill"] =
+            [
+                new("PetUID", FieldType.LongInteger),
+                new("SkillID", FieldType.Integer)
+            ],
+            ["PetAction:AllocateStat"] =
+            [
+                new("PetUID", FieldType.LongInteger),
+                new("StatType", FieldType.NonEmptyText)
+            ],
+            ["PetAction:SetCombatMode"] =
+                [new("CombatMode", FieldType.Integer)],
+            ["PetAction:CommandAttack"] =
+                [new("TargetEntityID", FieldType.Integer)]
         };
 
     public static bool TryValidate(
