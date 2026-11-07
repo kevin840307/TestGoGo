@@ -4,6 +4,9 @@ using SGO.Server.Infrastructure.GameData;
 namespace SGO.Server.Application.Assets;
 
 public sealed record EffectiveCharacterStats(
+    int MaxHP,
+    int MaxMP,
+    int MaxSP,
     int Attack,
     int Defense,
     int MagicAttack,
@@ -24,6 +27,9 @@ public static class CharacterStatCalculator
         CharacterAssets assets,
         CurrentClientDataCatalog current)
     {
+        var maxHp = Convert.ToInt32(character["MaxHP"]);
+        var maxMp = Convert.ToInt32(character["MaxMP"]);
+        var maxSp = Convert.ToInt32(character["MaxSP"]);
         var attack = Convert.ToInt32(character["Attack"]);
         var defense = Convert.ToInt32(character["Defense"]);
         var magicAttack = Convert.ToInt32(character["MagicAttack"]);
@@ -50,6 +56,9 @@ public static class CharacterStatCalculator
             if (item is null)
                 continue;
 
+            maxHp += item.MaxHpBonus;
+            maxMp += item.MaxMpBonus;
+            maxSp += item.MaxSpBonus;
             attack += item.Atk;
             defense += item.Def;
             magicAttack += item.MAtk;
@@ -80,6 +89,9 @@ public static class CharacterStatCalculator
                 if (item is null)
                     continue;
 
+                maxHp += item.MaxHpBonus;
+                maxMp += item.MaxMpBonus;
+                maxSp += item.MaxSpBonus;
                 attack += item.Atk;
                 defense += item.Def;
                 magicAttack += item.MAtk;
@@ -96,6 +108,9 @@ public static class CharacterStatCalculator
         }
 
         return new(
+            maxHp,
+            maxMp,
+            maxSp,
             attack,
             defense,
             magicAttack,
@@ -125,12 +140,12 @@ public static class CharacterStatCalculator
             Dex = character["Dex"],
             Con = character["Con"],
             Wis = character["Wis"],
-            HP = character["HP"],
-            MP = character["MP"],
-            SP = character["SP"],
-            MaxHP = character["MaxHP"],
-            MaxMP = character["MaxMP"],
-            MaxSP = character["MaxSP"],
+            HP = Math.Min(Convert.ToInt32(character["HP"]), s.MaxHP),
+            MP = Math.Min(Convert.ToInt32(character["MP"]), s.MaxMP),
+            SP = Math.Min(Convert.ToInt32(character["SP"]), s.MaxSP),
+            MaxHP = s.MaxHP,
+            MaxMP = s.MaxMP,
+            MaxSP = s.MaxSP,
             Attack = s.Attack,
             Defense = s.Defense,
             MagicAttack = s.MagicAttack,
