@@ -831,6 +831,13 @@ var currentCatalog = new CurrentClientDataCatalog(
             price: 1),
 
         CurrentItem(
+            2301,
+            "寵物擴充卡",
+            "general",
+            price: 1,
+            scriptName: "寵物擴充卡"),
+
+        CurrentItem(
             2302,
             "空間擴充卡(道具)",
             "general",
@@ -4954,6 +4961,226 @@ try
         persistedCapacity.HorseEquipMaxSize ==
             capacityAfter.HorseEquipMaxSize,
         "expanded capacities survive a fresh store instance/reconnect migration path");
+
+    var secondMultiPetUid = store.AddPet(
+        account.Value,
+        id,
+        45001,
+        "MultiPet2");
+    var thirdMultiPetUid = store.AddPet(
+        account.Value,
+        id,
+        45001,
+        "MultiPet3");
+
+    Check(
+        store.GetCharacterAssets(
+            account.Value,
+            id).PetSummonMax == 1,
+        "characters start with one simultaneous pet summon slot");
+
+    using (var summonFirstBeforeExpansion = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "PetAction",
+            Action = "Summon",
+            PetUID = petUid
+        })))
+    {
+        router.Handle(
+            summonFirstBeforeExpansion.RootElement,
+            session);
+    }
+
+    using (var blockedSecondBeforeExpansion = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "PetAction",
+            Action = "Summon",
+            PetUID = secondMultiPetUid
+        })))
+    {
+        var responses = router.Handle(
+            blockedSecondBeforeExpansion.RootElement,
+            session);
+        var activeCount = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Pets.Count(x =>
+                Convert.ToInt32(x["State"]) == 1);
+
+        Check(
+            activeCount == 1 &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "召喚寵物空間已滿")),
+            "a second pet cannot be summoned before using the expansion card");
+    }
+
+    var firstPetExpansionUid =
+        store.AddInventoryItem(
+            account.Value,
+            id,
+            2301,
+            1);
+
+    using (var expandPetSummon = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "UseItemRequest",
+            ItemUID = firstPetExpansionUid
+        })))
+    {
+        var responses = router.Handle(
+            expandPetSummon.RootElement,
+            session);
+        var afterExpansion =
+            store.GetCharacterAssets(
+                account.Value,
+                id);
+
+        Check(
+            afterExpansion.PetSummonMax == 2 &&
+            !afterExpansion.Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    firstPetExpansionUid) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"MaxSummon\":2")),
+            "2301 permanently expands simultaneous summon capacity from one to two and consumes itself");
+    }
+
+    using (var summonSecondAfterExpansion = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "PetAction",
+            Action = "Summon",
+            PetUID = secondMultiPetUid
+        })))
+    {
+        var responses = router.Handle(
+            summonSecondAfterExpansion.RootElement,
+            session);
+        var activeUids = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Pets
+            .Where(x =>
+                Convert.ToInt32(x["State"]) == 1)
+            .Select(x =>
+                Convert.ToInt64(x["UID"]))
+            .ToHashSet();
+
+        Check(
+            activeUids.Contains(petUid) &&
+            activeUids.Contains(
+                secondMultiPetUid) &&
+            activeUids.Count == 2 &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"SpawnEntity\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    $"\"EntityID\":{4_000_000L + secondMultiPetUid}")) &&
+            !responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"DespawnEntity\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    $"\"EntityID\":{4_000_000L + petUid}")),
+            "summoning a second pet keeps the first pet active and visible");
+    }
+
+    var secondPetExpansionUid =
+        store.AddInventoryItem(
+            account.Value,
+            id,
+            2301,
+            1);
+
+    using (var expandPetSummonAgain = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "UseItemRequest",
+            ItemUID = secondPetExpansionUid
+        })))
+    {
+        router.Handle(
+            expandPetSummonAgain.RootElement,
+            session);
+    }
+
+    using (var summonThirdAfterExpansion = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "PetAction",
+            Action = "Summon",
+            PetUID = thirdMultiPetUid
+        })))
+    {
+        router.Handle(
+            summonThirdAfterExpansion.RootElement,
+            session);
+    }
+
+    Check(
+        store.GetCharacterAssets(
+            account.Value,
+            id).PetSummonMax == 3 &&
+        store.GetCharacterAssets(
+            account.Value,
+            id).Pets.Count(x =>
+                Convert.ToInt32(x["State"]) == 1) == 3,
+        "second 2301 card raises the permanent limit to three and all three pets can remain summoned");
+
+    var rejectedPetExpansionUid =
+        store.AddInventoryItem(
+            account.Value,
+            id,
+            2301,
+            1);
+
+    using (var expandPastPetLimit = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "UseItemRequest",
+            ItemUID = rejectedPetExpansionUid
+        })))
+    {
+        var responses = router.Handle(
+            expandPastPetLimit.RootElement,
+            session);
+        var afterRejectedExpansion =
+            store.GetCharacterAssets(
+                account.Value,
+                id);
+
+        Check(
+            afterRejectedExpansion.PetSummonMax == 3 &&
+            afterRejectedExpansion.Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    rejectedPetExpansionUid) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "已達上限")),
+            "third 2301 use is rejected at max three and does not consume the card");
+    }
+
+    foreach (var activePetUid in new[]
+             {
+                 petUid,
+                 secondMultiPetUid,
+                 thirdMultiPetUid
+             })
+    {
+        store.SetPetState(
+            account.Value,
+            id,
+            activePetUid,
+            0);
+        state.PetPositions.Remove(
+            activePetUid);
+        state.PetTargets.Remove(
+            activePetUid);
+    }
 
     var teleportOriginalMap =
         session.CurrentMapId;
