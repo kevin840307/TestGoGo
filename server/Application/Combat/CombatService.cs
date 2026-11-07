@@ -201,7 +201,8 @@ public sealed class CombatService
         long accountId,
         double playerX,
         double playerY,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        IReadOnlyList<int>? monsterEntityIds = null)
     {
         session.LastMonsterAiTick = now;
 
@@ -239,7 +240,17 @@ public sealed class CombatService
 
         lock (runtime.SyncRoot)
         {
-            foreach (var monster in runtime.Monsters.Values)
+            // A shared-map tick assigns each monster to one eligible player
+            // (its current target's owner, or the closest player when idle).
+            // Standalone tests can omit the filter to retain legacy behavior.
+            var candidates = monsterEntityIds is null
+                ? runtime.Monsters.Values.ToArray()
+                : monsterEntityIds
+                    .Where(id => runtime.Monsters.ContainsKey(id))
+                    .Select(id => runtime.Monsters[id])
+                    .ToArray();
+
+            foreach (var monster in candidates)
             {
                 if (!monster.IsAlive)
                 {
@@ -945,9 +956,15 @@ public sealed class CombatService
 
         lock (runtime.SyncRoot)
         {
-            session.Monsters.Clear();
-            foreach (var pair in runtime.Monsters)
-                session.Monsters[pair.Key] = pair.Value;
+            // Existing entries reference the authoritative mutable objects.
+            // Avoid rebuilding every player's mirror on every AI tick.
+            if (session.LoadedMonsterMapId != session.CurrentMapId ||
+                session.Monsters.Count != runtime.Monsters.Count)
+            {
+                session.Monsters.Clear();
+                foreach (var pair in runtime.Monsters)
+                    session.Monsters[pair.Key] = pair.Value;
+            }
         }
 
         session.LoadedMonsterMapId = session.CurrentMapId;
