@@ -3253,6 +3253,7 @@ public sealed class SqliteGameStore : IGameStore
         int level;
         int currentExp;
         int maxExp;
+        var levelsGained = 0;
 
         using (var get = db.CreateCommand())
         {
@@ -3281,6 +3282,7 @@ public sealed class SqliteGameStore : IGameStore
         {
             currentExp -= maxExp;
             level++;
+            levelsGained++;
             maxExp = PetMaxExpForLevel(level);
         }
 
@@ -3291,13 +3293,17 @@ public sealed class SqliteGameStore : IGameStore
                 UPDATE pets
                    SET level=$level,
                        exp=$exp,
-                       max_exp=$maxExp
+                       max_exp=$maxExp,
+                       use_exp=use_exp+$abilityPoints
                  WHERE uid=$pet
                    AND character_id=$id
                 """;
             Arg(update, "$level", level);
             Arg(update, "$exp", currentExp);
             Arg(update, "$maxExp", maxExp);
+            // Legacy Dat/Player/ExpUse.csv grants two points for every
+            // gained level and no separate pet-specific ExpUse table exists.
+            Arg(update, "$abilityPoints", levelsGained * 2);
             Arg(update, "$pet", petUid);
             Arg(update, "$id", dbid);
 
