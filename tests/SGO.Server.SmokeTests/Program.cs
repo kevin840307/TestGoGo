@@ -2636,9 +2636,21 @@ try
         Check(!store.GetCharacterAssets(account.Value, id).Inventory.Any(x =>
                 Convert.ToInt64(x["ItemUID"]) == recoveryUid),
             "recovery item is consumed");
+        var recoveryInventorySync = responses
+            .FirstOrDefault(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"InventorySync\""));
+
         Check(responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains("\"Type\":\"PlayerStatusSync\"")),
-            "recovery item refreshes player status");
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PlayerStatusSync\"")) &&
+              recoveryInventorySync is not null &&
+              !JsonSerializer.Serialize(recoveryInventorySync)
+                  .Contains($"\"ItemUID\":{recoveryUid}") &&
+              responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PlayItemEffect\"")),
+            "recovery item refreshes post-consumption inventory, status and item effect");
     }
 
     var horseCountBeforeCard =
