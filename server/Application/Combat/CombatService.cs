@@ -879,9 +879,13 @@ public sealed class CombatService
                     continue;
                 }
 
-                SetAiState(
-                    monster,
-                    MonsterAiState.Chase);
+                // Failed routes are retried at a bounded rate instead of
+                // running a costly path search every 250ms against a wall.
+                if (now < monster.NextPathRetryAt)
+                    continue;
+
+                var wasAlreadyIdle = monster.AiState == MonsterAiState.Idle;
+                SetAiState(monster, MonsterAiState.Chase);
 
                 var step = hasClearAttackPath
                     ? Math.Min(MoveStep, Math.Max(0.0, distance - EngageDistance))
@@ -905,10 +909,13 @@ public sealed class CombatService
                         out var nx,
                         out var ny))
                 {
-                    // A blocked route must not advance authoritative position.
-                    if (monster.AiState != MonsterAiState.Idle)
+                    // No collision-free next step. Do not animate running
+                    // in place, spam idle packets, or repeatedly pathfind.
+                    monster.NextPathRetryAt =
+                        now + TimeSpan.FromMilliseconds(750);
+                    SetAiState(monster, MonsterAiState.Idle);
+                    if (!wasAlreadyIdle)
                     {
-                        SetAiState(monster, MonsterAiState.Idle);
                         packets.Add(new
                         {
                             Type = "SyncState",
@@ -920,6 +927,7 @@ public sealed class CombatService
                     continue;
                 }
 
+                monster.NextPathRetryAt = DateTimeOffset.MinValue;
                 var moveDx = nx - monster.X;
                 var moveDy = ny - monster.Y;
 
@@ -1024,6 +1032,7 @@ public sealed class CombatService
         monster.HasTarget = false;
         monster.TargetCharacterId = 0;
         monster.TargetPetUid = 0;
+        monster.NextPathRetryAt = DateTimeOffset.MinValue;
         monster.LastMovePacketX = null;
         monster.LastMovePacketY = null;
         SetAiState(monster, MonsterAiState.Idle);
