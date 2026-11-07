@@ -98,6 +98,14 @@ func _prewarm_game_hud_resources() -> void :
 		window.modulate.a = 0.0
 		if GameManager and GameManager.has_method("cache_prewarmed_hud_window"):
 			GameManager.cache_prewarmed_hud_window(kind, window)
+
+		# Craft's expensive 1453-row static recipe tree is independent of the
+		# selected character. Build it here while the player is still on the
+		# login/character-select screens; in-world initialization only refreshes
+		# player-specific availability and dismantle ownership.
+		if kind == "craft" and window.has_method("prepare_static_async"):
+			await window.prepare_static_async()
+
 		var elapsed_ms: float = float(Time.get_ticks_usec() - started_usec) / 1000.0
 		print("[LOGIN_HUD_PREWARM] kind=%s total_ms=%.2f" % [kind, elapsed_ms])
 		await get_tree().process_frame
