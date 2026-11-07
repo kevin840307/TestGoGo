@@ -544,9 +544,9 @@ func sync_animation() -> void :
 		if all_anims.size() > 0: anim_to_play = all_anims[0]
 
 	if anim_to_play != "":
-		var requested_state := current_state.to_lower()
-		var requested_prefix := str(mapped_prefix) + "_"
-		var has_requested_animation := anim_to_play.begins_with(requested_prefix)
+		var requested_state: String = current_state.to_lower()
+		var requested_prefix: String = str(mapped_prefix) + "_"
+		var has_requested_animation: bool = anim_to_play.begins_with(requested_prefix)
 
 		if sprite.animation != anim_to_play or not sprite.is_playing():
 			MonsterLoader.begin_audio_sequence(sprite)
