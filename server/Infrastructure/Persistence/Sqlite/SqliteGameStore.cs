@@ -5966,6 +5966,79 @@ public sealed class SqliteGameStore : IGameStore
         if (!OwnsCharacter(db, accountId, dbid, tx))
             return (false, "角色不存在");
 
+        if (tabType == 2)
+        {
+            using var pet = db.CreateCommand();
+            pet.Transaction = tx;
+            pet.CommandText = """
+                DELETE FROM pets
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND state=0
+                   AND in_shop=0
+                   AND equip0=0
+                   AND equip1=0
+                   AND equip2=0
+                """;
+            Arg(pet, "$uid", uid);
+            Arg(pet, "$id", dbid);
+
+            if (pet.ExecuteNonQuery() != 1)
+                return (
+                    false,
+                    "寵物需先收回並卸下所有裝備才能永久丟棄");
+
+            tx.Commit();
+            return (true, "寵物已永久丟棄");
+        }
+
+        if (tabType == 4)
+        {
+            using (var attached = db.CreateCommand())
+            {
+                attached.Transaction = tx;
+                attached.CommandText = """
+                    SELECT count(*)
+                      FROM horse_equipment
+                     WHERE character_id=$id
+                       AND horse_uid=$horse
+                    """;
+                Arg(attached, "$id", dbid);
+                Arg(attached, "$horse", uid);
+
+                if (Convert.ToInt32(
+                        attached.ExecuteScalar() ?? 0) > 0)
+                {
+                    return (
+                        false,
+                        "請先卸下機甲上的所有裝備");
+                }
+            }
+
+            using var horse = db.CreateCommand();
+            horse.Transaction = tx;
+            horse.CommandText = """
+                DELETE FROM horses
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND NOT EXISTS(
+                       SELECT 1
+                         FROM characters
+                        WHERE id=$id
+                          AND summoned_horse_uid=$uid)
+                """;
+            Arg(horse, "$uid", uid);
+            Arg(horse, "$id", dbid);
+
+            if (horse.ExecuteNonQuery() != 1)
+                return (
+                    false,
+                    "目前駕駛中的機甲無法永久丟棄");
+
+            tx.Commit();
+            return (true, "機甲已永久丟棄");
+        }
+
         if (tabType is 0 or 5)
         {
             int ownedCount;
