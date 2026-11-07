@@ -99,7 +99,47 @@ def scan(root: Path) -> dict:
         if diff:
             missing_actions[kind] = diff
 
+    # Mark known placeholder/partially implemented gameplay explicitly.
+    # ROUTED only proves that a wire dispatcher exists, not E2E correctness.
+    partial_requests = {
+        "MallAction": "OpenMall is routed; paid items, PayPal, legacy points and donation gifts are not configured.",
+        "AnnouncementListRequest": "Responds with an empty announcement list.",
+        "UseItemRequest": "Some item categories report that their effects are not supported.",
+    }
+    partial_events = {
+        "MallListResponse": "The item and gift catalog is currently empty.",
+        "AnnouncementListResponse": "The server currently responds with an empty list.",
+        "PayPalDonationCreated": "The response reports that payment is not configured.",
+        "LegacyPointWithdrawalResponse": "No legacy points provider is configured.",
+    }
+    routes = []
+    for packet_type in sorted(outgoing):
+        status = (
+            "MISSING_SERVER_HANDLER" if packet_type not in incoming
+            else "PARTIAL" if packet_type in partial_requests
+            else "ROUTED"
+        )
+        routes.append({
+            "direction": "client_to_server",
+            "type": packet_type,
+            "status": status,
+            "note": partial_requests.get(packet_type, ""),
+        })
+    for packet_type in sorted(emitted):
+        status = (
+            "MISSING_CLIENT_HANDLER" if packet_type not in client_dispatch
+            else "PARTIAL" if packet_type in partial_events
+            else "ROUTED"
+        )
+        routes.append({
+            "direction": "server_to_client",
+            "type": packet_type,
+            "status": status,
+            "note": partial_events.get(packet_type, ""),
+        })
+
     return {
+        "routes": routes,
         "client_outgoing_count": len(outgoing),
         "server_incoming_count": len(incoming),
         "server_outgoing_count": len(emitted),
