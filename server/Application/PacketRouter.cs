@@ -512,7 +512,8 @@ public sealed class PacketRouter
                                 state.CharacterId.Value,
                                 equipIndex,
                                 activatedHorseUid,
-                                equip?.EquipSlot ?? 255);
+                                equip?.EquipSlot ?? 255,
+                                equip?.Durability ?? 0);
                         }
                     }
 
@@ -2383,7 +2384,8 @@ public sealed class PacketRouter
                     accountId,
                     dbid,
                     itemId,
-                    255) <= 0)
+                    255,
+                    _current.FindItem(itemId)?.Durability ?? 0) <= 0)
                 return false;
         }
 
