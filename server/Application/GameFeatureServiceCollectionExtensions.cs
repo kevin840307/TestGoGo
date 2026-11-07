@@ -26,6 +26,7 @@ public static class GameFeatureServiceCollectionExtensions
         services.AddSingleton<TradeService>();
         services.AddSingleton<DollService>();
         services.AddSingleton<ShopService>();
+        services.AddSingleton<PlayerShopService>();
         services.AddSingleton<GmCommandService>();
 
         if (IsEnabled(configuration, "Bank", defaultValue: true))
