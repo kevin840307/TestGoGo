@@ -3331,6 +3331,38 @@ public sealed class SqliteGameStore : IGameStore
     private static int PetMaxExpForLevel(int level)
         => Math.Max(100, level * 100);
 
+    public Dictionary<string, object>? SetPetEvolution(
+        long accountId,
+        long dbid,
+        long petUid,
+        int evolId)
+    {
+        if (petUid <= 0 || evolId < 0)
+            return null;
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return null;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE pets
+               SET evol_id=$evol
+             WHERE uid=$pet
+               AND character_id=$id
+            """;
+        Arg(cmd, "$evol", evolId);
+        Arg(cmd, "$pet", petUid);
+        Arg(cmd, "$id", dbid);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return null;
+
+        return GetCharacterAssets(accountId, dbid).Pets
+            .FirstOrDefault(x =>
+                Convert.ToInt64(x["UID"]) == petUid);
+    }
+
     public PetMutationResult FeedPet(
         long accountId,
         long dbid,
