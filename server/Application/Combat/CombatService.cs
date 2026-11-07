@@ -16,7 +16,8 @@ public sealed class CombatService
 
     private const double AggroRadius = 420.0;
     private const double LoseTargetRadius = 700.0;
-    private const double StopDistance = 130.0;
+    private const double AttackRange = 130.0;
+    private const double EngageDistance = 95.0;
     private const double MoveStep = 42.0;
     // Keep the movement packet duration aligned with the 250 ms world cadence.
     // The client now interpolates continuously toward the latest authoritative
@@ -252,7 +253,7 @@ public sealed class CombatService
             // inside damage range. Keeping Attack state out to 160 px made
             // them stop at 130-160 px while damage was correctly forbidden.
             var shouldAttack =
-                distance <= StopDistance;
+                distance <= EngageDistance;
 
             if (shouldAttack)
             {
@@ -281,7 +282,7 @@ public sealed class CombatService
                 // Cooldown only governs repeated attacks while the monster stays
                 // in range; it must not make a newly-arrived monster stand idle.
                 var withinDamageRange =
-                    distance <= StopDistance;
+                    distance <= AttackRange;
 
                 var attackReady =
                     session.CharacterId.HasValue &&
@@ -392,7 +393,7 @@ public sealed class CombatService
 
             var step = Math.Min(
                 MoveStep,
-                Math.Max(0.0, distance - StopDistance));
+                Math.Max(0.0, distance - EngageDistance));
 
             if (step <= 0.0)
             {
