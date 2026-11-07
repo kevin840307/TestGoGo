@@ -583,7 +583,7 @@ func sync_animation() -> void :
 		# to the logical/world direction used by WALK. Convert the logical
 		# facing to the asset-facing direction first, then select the closest
 		# available ATTACK_1/2/3 frame and mirror it when needed.
-		var attack_asset_dir := {
+		var attack_asset_dir: int = int({
 			1: 5,
 			2: 6,
 			3: 7,
@@ -592,7 +592,7 @@ func sync_animation() -> void :
 			6: 2,
 			7: 3,
 			8: 4,
-		}.get(dir_int, dir_int)
+		}.get(dir_int, dir_int))
 
 		match int(attack_asset_dir):
 			8, 1: anim_suffix = "1";should_flip = false
