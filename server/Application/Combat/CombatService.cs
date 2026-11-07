@@ -3,6 +3,7 @@ using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Party;
+using SGO.Server.Application.Quest;
 using SGO.Server.Application.World;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
@@ -43,6 +44,7 @@ public sealed class CombatService
     private readonly WorldRuntimeService _runtime;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly PartyService _party;
+    private readonly QuestProgressService _questProgress;
     private readonly ILogger<CombatService> _log;
 
     private sealed record PendingRevive(
@@ -78,6 +80,7 @@ public sealed class CombatService
         WorldRuntimeService runtime,
         ServerBroadcastHub broadcasts,
         PartyService party,
+        QuestProgressService questProgress,
         ILogger<CombatService> log)
     {
         _store = store;
@@ -89,6 +92,7 @@ public sealed class CombatService
         _runtime = runtime;
         _broadcasts = broadcasts;
         _party = party;
+        _questProgress = questProgress;
         _log = log;
     }
 
@@ -2760,6 +2764,12 @@ public sealed class CombatService
             Type = "SyncMoney",
             Money = rewarded["Money"]
         });
+
+        packets.AddRange(
+            _questProgress.OnMonsterKilled(
+                accountId,
+                dbid,
+                monster.Name));
     }
 
     private void AddActivePetKillExperience(
