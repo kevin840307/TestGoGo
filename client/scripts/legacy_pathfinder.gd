@@ -95,6 +95,19 @@ func build_collision_layer(map_id: int, collision_layer: TileMapLayer) -> Dictio
 	}
 
 
+func is_segment_walkable(
+	map_id: int,
+	from_world: Vector2,
+	to_world: Vector2,
+	can_cross_special_terrain: bool = false
+) -> bool:
+	_query_can_cross_special_terrain = can_cross_special_terrain
+	var grid: Dictionary = _get_grid(map_id)
+	if grid.is_empty():
+		return false
+	return _is_segment_walkable(grid, from_world, to_world)
+
+
 func is_walkable(
 	map_id: int,
 	world_position: Vector2,
