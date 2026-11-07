@@ -37,6 +37,7 @@ public sealed class QuestRuntimeBindings
     public Func<int, bool>? HasSkill { get; init; }
     public Func<int, bool>? AddSkill { get; init; }
     public Func<int, int, bool>? SetCareer { get; init; }
+    public Func<string, int, bool>? SetData { get; init; }
 }
 
 public sealed class QuestRuntime
@@ -225,7 +226,29 @@ public sealed class QuestRuntime
                 TitleID = titleId
             });
         });
-        script.Globals["SetData"] = DynValue.NewCallback((ctx, args) => DynValue.Nil);
+        script.Globals["SetData"] = DynValue.NewCallback((ctx, args) =>
+        {
+            if (args.Count < 2)
+                return DynValue.NewBoolean(false);
+
+            var key = args[0].CastToString();
+            var value = (int)args[1].Number;
+
+            if (!key.Equals(
+                    "Title",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return DynValue.NewBoolean(false);
+            }
+
+            if (bindings?.SetData?.Invoke(key, value) != true)
+            {
+                throw new ScriptRuntimeException(
+                    $"SetData failed: {key}={value}");
+            }
+
+            return DynValue.NewBoolean(true);
+        });
 
         script.Globals["SetCareer"] = DynValue.NewCallback((ctx, args) =>
         {
