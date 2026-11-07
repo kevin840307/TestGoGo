@@ -54,6 +54,10 @@ CREATE TABLE IF NOT EXISTS characters (
     reborn_x REAL NOT NULL DEFAULT 9408,
     reborn_y REAL NOT NULL DEFAULT 10336,
     summoned_horse_uid INTEGER NOT NULL DEFAULT -1,
+    inventory_capacity INTEGER NOT NULL DEFAULT 200,
+    equip_capacity INTEGER NOT NULL DEFAULT 200,
+    pet_capacity INTEGER NOT NULL DEFAULT 50,
+    horse_equip_capacity INTEGER NOT NULL DEFAULT 100,
     FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
 );
 
