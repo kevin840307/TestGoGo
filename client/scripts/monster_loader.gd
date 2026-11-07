@@ -7,6 +7,8 @@ const AUDIO_RESOURCE_PATH_META = "se_event_resource_path"
 const AUDIO_PLAYED_CUES_META = "se_event_played_cues"
 const AUDIO_LAST_FRAME_META = "se_event_last_frame"
 const ACT_TIMELINES_META = "act_timing_timelines"
+const DEFAULT_ANIMATION_FPS: float = 8.0
+const WALK_ANIMATION_FPS: float = 6.0
 var _cache: Dictionary = {}
 
 func clear_runtime_cache() -> void :
@@ -45,7 +47,13 @@ func get_monster_frames(monster_id: String, apply_act_timing: bool = false) -> S
 		sf.add_animation(anim_name)
 
 		sf.set_animation_loop(anim_name, not ("DEATH" in anim_name or "ATTACK" in anim_name or "HIT" in anim_name))
-		sf.set_animation_speed(anim_name, 8.0)
+
+		# Monster movement waypoints are ~42 px per 250 ms (~168 px/s).
+		# Five-frame WALK clips at 8 FPS looked like the feet were cycling
+		# faster than the body was actually travelling, so keep locomotion
+		# slower without changing attack/hit/death timing.
+		var animation_fps := WALK_ANIMATION_FPS if str(anim_name).begins_with("WALK_") else DEFAULT_ANIMATION_FPS
+		sf.set_animation_speed(anim_name, animation_fps)
 
 		for f_key in animations[anim_name]:
 			var meta = frames_meta[f_key]
