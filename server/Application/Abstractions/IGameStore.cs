@@ -14,6 +14,7 @@ public interface IGameStore :
     IShortcutStore,
     IBankStore,
     IItemDiscardStore,
+    IWorldGroundItemStore,
     IShopStore
 {
 }
