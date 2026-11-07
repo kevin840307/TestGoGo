@@ -1447,6 +1447,115 @@ public sealed class SqliteGameStore : IGameStore
         return cmd.ExecuteNonQuery() == 1;
     }
 
+
+    public Dictionary<string, object>? SetHorseLevel(
+        long accountId,
+        long dbid,
+        long horseUid,
+        int level)
+    {
+        level = Math.Clamp(level, 1, 200);
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return null;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE horses
+               SET level=$level,
+                   exp=0,
+                   max_exp=$maxExp
+             WHERE uid=$horse AND character_id=$id
+            """;
+        Arg(cmd, "$level", level);
+        Arg(cmd, "$maxExp", HorseMaxExpForLevel(level));
+        Arg(cmd, "$horse", horseUid);
+        Arg(cmd, "$id", dbid);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return null;
+
+        return GetCharacterAssets(accountId, dbid).Horses
+            .FirstOrDefault(x => Convert.ToInt64(x["HorseUID"]) == horseUid);
+    }
+
+    public Dictionary<string, object>? AddHorseExperience(
+        long accountId,
+        long dbid,
+        long horseUid,
+        int exp)
+    {
+        if (exp <= 0)
+            return null;
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return null;
+
+        int level;
+        int currentExp;
+        int maxExp;
+
+        using (var get = db.CreateCommand())
+        {
+            get.Transaction = tx;
+            get.CommandText = """
+                SELECT level,exp,max_exp
+                  FROM horses
+                 WHERE uid=$horse AND character_id=$id
+                """;
+            Arg(get, "$horse", horseUid);
+            Arg(get, "$id", dbid);
+
+            using var r = get.ExecuteReader();
+            if (!r.Read())
+                return null;
+
+            level = Math.Max(1, r.GetInt32(0));
+            currentExp = Math.Max(0, r.GetInt32(1));
+            maxExp = Math.Max(1, r.GetInt32(2));
+        }
+
+        currentExp += exp;
+
+        while (level < 200 && currentExp >= maxExp)
+        {
+            currentExp -= maxExp;
+            level++;
+            maxExp = HorseMaxExpForLevel(level);
+        }
+
+        using (var update = db.CreateCommand())
+        {
+            update.Transaction = tx;
+            update.CommandText = """
+                UPDATE horses
+                   SET level=$level,
+                       exp=$exp,
+                       max_exp=$maxExp
+                 WHERE uid=$horse AND character_id=$id
+                """;
+            Arg(update, "$level", level);
+            Arg(update, "$exp", currentExp);
+            Arg(update, "$maxExp", maxExp);
+            Arg(update, "$horse", horseUid);
+            Arg(update, "$id", dbid);
+            if (update.ExecuteNonQuery() != 1)
+                return null;
+        }
+
+        tx.Commit();
+
+        return GetCharacterAssets(accountId, dbid).Horses
+            .FirstOrDefault(x => Convert.ToInt64(x["HorseUID"]) == horseUid);
+    }
+
+    private static int HorseMaxExpForLevel(int level)
+        => Math.Max(1000, level * 1000);
+
     public bool SetPetState(long accountId, long dbid, long petUid, int state)
     {
         using var db = Open();
