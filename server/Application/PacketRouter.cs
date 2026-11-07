@@ -10,7 +10,7 @@ using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
 using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Infrastructure.Quest;
-using SGO.Server.Infrastructure.World;
+using SGO.Server.Infrastructure.WorldData;
 using SGO.Server.Protocol;
 
 namespace SGO.Server.Application;
