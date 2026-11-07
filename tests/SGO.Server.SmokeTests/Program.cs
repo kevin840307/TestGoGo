@@ -4,6 +4,7 @@ using SGO.Server.Application;
 using SGO.Server.Application.Bank;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Combat;
+using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Shops;
 using SGO.Server.Domain.Sessions;
@@ -407,6 +408,12 @@ try
     var growth = new LegacyPlayerGrowthCatalog(gameDataRoot);
     var config = new ConfigurationManager();
     config["Game:GmCommandsEnabled"] = "true";
+    config["Gameplay:ResourceRecovery:Enabled"] = "true";
+    config["Gameplay:ResourceRecovery:IntervalSeconds"] = "5";
+    config["Gameplay:ResourceRecovery:HpPercent"] = "10";
+    config["Gameplay:ResourceRecovery:MpPercent"] = "10";
+    config["Gameplay:ResourceRecovery:MinimumHp"] = "1";
+    config["Gameplay:ResourceRecovery:MinimumMp"] = "1";
     var gm = new GmCommandService(
         store,
         skillCatalog,
@@ -420,11 +427,13 @@ try
     {
         new BankPacketHandler(new BankService(store))
     };
+    var recovery = new ResourceRecoveryService(store, config);
     var router = new PacketRouter(
         store,
         world,
         quests,
         combat,
+        recovery,
         shops,
         packetHandlers,
         gm,
@@ -719,6 +728,66 @@ try
             "BankTransfer withdraws mecha equipment");
     }
 
+
+    // Timed HP/MP recovery is server-driven and interval-gated.
+    store.ApplyDamage(account.Value, id, 50);
+    var beforeRecovery = store.GetCharacter(account.Value, id)!;
+    var beforeRecoveryHp = Convert.ToInt32(beforeRecovery["HP"]);
+    var beforeRecoveryMp = Convert.ToInt32(beforeRecovery["MP"]);
+
+    // Spend some MP without requiring a learned skill for this persistence test.
+    store.SpendSkillResources(account.Value, id, 0, Math.Min(10, beforeRecoveryMp), 0);
+    beforeRecovery = store.GetCharacter(account.Value, id)!;
+    beforeRecoveryMp = Convert.ToInt32(beforeRecovery["MP"]);
+
+    session.LastResourceRecoveryAt = DateTimeOffset.UtcNow;
+    var earlyRecoveryPackets = recovery.Tick(
+        session,
+        session.LastResourceRecoveryAt.AddSeconds(4));
+
+    Check(earlyRecoveryPackets.Count == 0 &&
+          Convert.ToInt32(store.GetCharacter(account.Value, id)!["HP"]) ==
+              beforeRecoveryHp,
+        "resource recovery waits for configured interval");
+
+    var recoveryPackets = recovery.Tick(
+        session,
+        session.LastResourceRecoveryAt.AddSeconds(5));
+
+    var afterRecovery = store.GetCharacter(account.Value, id)!;
+    Check(Convert.ToInt32(afterRecovery["HP"]) > beforeRecoveryHp &&
+          Convert.ToInt32(afterRecovery["MP"]) >= beforeRecoveryMp &&
+          recoveryPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"PlayerStatusSync\"")),
+        "resource recovery restores HP/MP and syncs status after interval");
+
+    using (var restore = Json(
+        """{"Type":"ChatMessage","Channel":0,"Message":"/gm restore","BubbleType":0}"""))
+    {
+        store.ApplyDamage(account.Value, id, 50);
+        var beforeRestore = store.GetCharacter(account.Value, id)!;
+        store.SpendSkillResources(
+            account.Value,
+            id,
+            0,
+            Math.Min(10, Convert.ToInt32(beforeRestore["MP"])),
+            0);
+
+        var responses = router.Handle(restore.RootElement, session);
+        var restored = store.GetCharacter(account.Value, id)!;
+
+        Check(Convert.ToInt32(restored["HP"]) ==
+                  Convert.ToInt32(restored["MaxHP"]) &&
+              Convert.ToInt32(restored["MP"]) ==
+                  Convert.ToInt32(restored["MaxMP"]) &&
+              Convert.ToInt32(restored["SP"]) ==
+                  Convert.ToInt32(restored["MaxSP"]) &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "HP/MP/SP 已補滿")),
+            "GM restore fully restores HP MP SP");
+    }
 
     var damaged = store.ApplyDamage(account.Value, id, 50);
     Check(damaged is not null && Convert.ToInt32(damaged["HP"]) == 50,
