@@ -103,6 +103,46 @@ class PacketSchemaAuditTests(unittest.TestCase):
             "ShopAction:AddItem", result["issues"][0]["type"]
         )
 
+    def test_pet_action_helper_and_direct_packets(self):
+        with (self.root / "server/Protocol/PacketSchemaValidator.cs").open(
+            "a", encoding="utf-8"
+        ) as file:
+            file.write(
+                '\n["PetAction"] = [new("Action", FieldType.NonEmptyText)],\n'
+                '["PetAction:Equip"] = ['
+                'new("PetUID", FieldType.LongInteger),'
+                'new("ItemUID", FieldType.LongInteger),'
+                'new("TargetSlot", FieldType.Integer)],\n'
+                '["PetAction:SetCombatMode"] = ['
+                'new("CombatMode", FieldType.Integer)],\n'
+            )
+        with (self.root / "client/scripts/network_manager.gd").open(
+            "a", encoding="utf-8"
+        ) as file:
+            file.write(
+                '\nsend_secure_packet({"Type":"PetAction",'
+                '"Action":"SetCombatMode","CombatMode":3})\n'
+            )
+        self.write(
+            "client/scripts/pet_window.gd",
+            'NetworkManager.send_pet_action("Equip", selected_pet_uid, '
+            '{"ItemUID": uid, "TargetSlot": slot})\n',
+        )
+        result = scan(self.root)
+        self.assertEqual([], result["issues"])
+        self.assertEqual(3, result["matched_count"])
+        self.assertEqual(2, result["action_matched_count"])
+
+        self.write(
+            "client/scripts/pet_window.gd",
+            'NetworkManager.send_pet_action("Equip", selected_pet_uid, '
+            '{"TargetSlot": slot})\n',
+        )
+        result = scan(self.root)
+        missing = next(x for x in result["issues"]
+                       if x["type"] == "PetAction:Equip")
+        self.assertEqual(["ItemUID"], missing["missing_fields"])
+
     def test_literal_parser_skips_quoted_braces_and_comments(self):
         source = (
             'var note = "{not a dictionary}"\n'
