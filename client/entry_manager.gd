@@ -11,7 +11,7 @@ extends Control
 
 var _loading_session_id: int = 0
 var _loading_progress_value: float = 0.0
-var __world_loading_session_id_id: int = -1
+var _world_loading_session_id: int = -1
 
 func _begin_loading_session() -> int:
 	_loading_session_id += 1
@@ -357,7 +357,7 @@ func _on_character_verified_and_enter_game(char_data: Dictionary, _map_id: Strin
 	# Independent loading session #2: character select -> world.
 	var overlay = get_node_or_null("%LoadingOverlay")
 	var select_script_node = character_select_layer.get_node_or_null("CharacterSelect")
-	__world_loading_session_id_id = _begin_loading_session()
+	_world_loading_session_id = _begin_loading_session()
 
 
 	if overlay:
@@ -384,7 +384,7 @@ func _on_character_verified_and_enter_game(char_data: Dictionary, _map_id: Strin
 	await get_tree().process_frame
 
 
-	_set_loading_progress(3.0)
+	_set_loading_progress(3.0, _world_loading_session_id)
 	var char_dbid: int = int(float(char_data.get("DBID", 0)))
 	NetworkManager.send_select_character_request(char_dbid)
 
@@ -394,7 +394,7 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 	if character_select_layer: character_select_layer.visible = false
 
 	var overlay = get_node_or_null("%LoadingOverlay")
-	_set_loading_progress(5.0)
+	_set_loading_progress(5.0, _world_loading_session_id)
 
 
 	var default_map_int = GameConstants.DEFAULT_MAP_ID.replace("map", "").to_int()
