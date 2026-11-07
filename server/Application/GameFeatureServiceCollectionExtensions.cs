@@ -2,6 +2,7 @@ using SGO.Server.Application.Bank;
 using SGO.Server.Application.Character;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Gm;
+using SGO.Server.Application.Items;
 using SGO.Server.Application.Packets;
 using SGO.Server.Application.Shops;
 
@@ -15,6 +16,7 @@ public static class GameFeatureServiceCollectionExtensions
     {
         services.AddSingleton<CombatService>();
         services.AddSingleton<ResourceRecoveryService>();
+        services.AddSingleton<DollService>();
         services.AddSingleton<ShopService>();
         services.AddSingleton<GmCommandService>();
 
