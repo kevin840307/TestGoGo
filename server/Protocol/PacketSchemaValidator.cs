@@ -220,7 +220,39 @@ public static class PacketSchemaValidator
             ["PetAction:SetCombatMode"] =
                 [new("CombatMode", FieldType.Integer)],
             ["PetAction:CommandAttack"] =
-                [new("TargetEntityID", FieldType.Integer)]
+                [new("TargetEntityID", FieldType.Integer)],
+            ["ClubAction:Invite"] =
+                [new("TargetDBID", FieldType.LongInteger)],
+            ["ClubAction:Accept"] =
+                [new("TargetDBID", FieldType.LongInteger)],
+            ["ClubAction:UpdateMessage"] =
+                [new("ClubMsg", FieldType.Text)],
+            ["ClubAction:DonateMoney"] =
+                [new("Amount", FieldType.LongInteger)],
+            ["ClubAction:DonateExp"] =
+                [new("Amount", FieldType.LongInteger)],
+            ["ClubAction:Research"] =
+                [new("ResearchID", FieldType.Integer)],
+            ["MallAction:BuyItem"] =
+            [
+                new("MallID", FieldType.Integer),
+                new("Count", FieldType.Integer)
+            ],
+            ["MallAction:CreatePayPalDonation"] =
+                [new("Amount", FieldType.Integer)],
+            ["MallAction:QueryLegacyPoints"] =
+            [
+                new("LoginName", FieldType.NonEmptyText),
+                new("Password", FieldType.Text)
+            ],
+            ["MallAction:WithdrawLegacyPoints"] =
+            [
+                new("LoginName", FieldType.NonEmptyText),
+                new("Password", FieldType.Text),
+                new("Amount", FieldType.Integer)
+            ],
+            ["MallAction:ClaimDonationGift"] =
+                [new("RewardID", FieldType.Integer)]
         };
 
     public static bool TryValidate(
