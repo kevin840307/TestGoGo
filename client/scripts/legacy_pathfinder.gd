@@ -217,6 +217,16 @@ func _find_segmented_path(grid: Dictionary, start: Vector2i, goal: Vector2i) -> 
 				segment_goal = nearest
 
 		var part: Array[Vector2i] = _find_path_adaptive(grid, current, segment_goal)
+		if part.size() < 2 and segment_goal != goal:
+			var alternate_goal: Vector2i = _find_reachable_segment_goal(
+				grid,
+				current,
+				segment_goal,
+				goal
+			)
+			if alternate_goal.x >= 0:
+				segment_goal = alternate_goal
+				part = _find_path_adaptive(grid, current, segment_goal)
 		if part.size() < 2:
 			return []
 
@@ -229,6 +239,35 @@ func _find_segmented_path(grid: Dictionary, start: Vector2i, goal: Vector2i) -> 
 		current = next_current
 
 	return complete if current == goal else []
+
+
+func _find_reachable_segment_goal(
+	grid: Dictionary,
+	start: Vector2i,
+	preferred: Vector2i,
+	final_goal: Vector2i
+) -> Vector2i:
+	var best := Vector2i(-1, -1)
+	var best_goal_distance: int = 2147483647
+	for radius: int in [4, 8, 12]:
+		for y: int in range(preferred.y - radius, preferred.y + radius + 1):
+			for x: int in range(preferred.x - radius, preferred.x + radius + 1):
+				if abs(x - preferred.x) != radius and abs(y - preferred.y) != radius:
+					continue
+				var candidate := Vector2i(x, y)
+				if not _is_inside(grid, candidate) or _is_blocked(grid, candidate):
+					continue
+				var goal_distance: int = _heuristic(candidate, final_goal)
+				if goal_distance >= best_goal_distance:
+					continue
+				var candidate_path: Array[Vector2i] = _find_path_adaptive(grid, start, candidate)
+				if candidate_path.size() < 2:
+					continue
+				best = candidate
+				best_goal_distance = goal_distance
+		if best.x >= 0:
+			return best
+	return best
 
 
 func _find_path_adaptive(grid: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
