@@ -34,7 +34,7 @@ jobs:
       - name: Encrypted WebSocket transport smoke
         run: |
           set -o pipefail
-          dotnet server/bin/Release/net8.0/SGO.Server.dll > server.log 2>&1 &
+          (cd server && dotnet bin/Release/net8.0/SGO.Server.dll) > server.log 2>&1 &
           SERVER_PID=$!
           trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
           ready=0
