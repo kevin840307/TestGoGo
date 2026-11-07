@@ -690,9 +690,11 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 			npc_shop_view_response_received.emit(int(data.get("ShopID", 0)), str(data.get("ShopName", "")), data.get("Items", []))
 
 		"AllocateStatResponse":
-			var success = data.get("Success", false)
-
-
+			var success = bool(data.get("Success", false))
+			if not success:
+				system_message_flash_received.emit(
+					str(data.get("Message", "能力配點失敗"))
+				)
 
 			if GameManager.current_player and "data_model" in GameManager.current_player:
 				var p_data = GameManager.current_player.data_model
