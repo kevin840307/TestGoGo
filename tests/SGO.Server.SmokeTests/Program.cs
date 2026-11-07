@@ -252,6 +252,12 @@ var currentCatalog = new CurrentClientDataCatalog(
             "冰之觸",
             "冰之觸"),
         new CurrentSkillDefinition(
+            33012,
+            "黑暗之影"),
+        new CurrentSkillDefinition(
+            31112,
+            "隨身修理店"),
+        new CurrentSkillDefinition(
             27110,
             "平安之祝",
             "平安之祝"),
@@ -340,6 +346,26 @@ var currentCatalog = new CurrentClientDataCatalog(
             900, 1,
             0, 0, 0,
             0, 80, 0, 80,
+            0, 0, 0, 0,
+            0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            33012, 1, 6, 0,
+            0, 0,
+            0, 213, 17,
+            0, 0, 1,
+            0, 1,
+            0, 0, 0,
+            80, 0, 80, 0,
+            0, 0, 0, 0,
+            0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            31112, 1, 6, 0,
+            0, 0,
+            0, 0, 0,
+            0, 0, 0,
+            0, 1,
+            0, 0, 0,
+            0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0),
         new CurrentSkillLevelDefinition(
@@ -3173,7 +3199,9 @@ try
         Math.Max(
             500,
             Convert.ToInt32(casterBeforeIceTouch["MaxMP"])),
-        Convert.ToInt32(casterBeforeIceTouch["MaxSP"]),
+        Math.Max(
+            100,
+            Convert.ToInt32(casterBeforeIceTouch["MaxSP"])),
         Convert.ToInt32(casterBeforeIceTouch["Attack"]),
         Convert.ToInt32(casterBeforeIceTouch["Defense"]),
         Convert.ToInt32(casterBeforeIceTouch["MagicAttack"]),
@@ -3255,6 +3283,78 @@ try
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
     while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    store.SetSkill(
+        account.Value,
+        id,
+        33012,
+        1);
+
+    var darkShadowAt =
+        iceTouchAt.AddSeconds(902);
+
+    var darkShadowPackets = combat.UseSkill(
+        session,
+        account.Value,
+        33012,
+        0,
+        0,
+        combatEnemy.X,
+        combatEnemy.Y,
+        darkShadowAt);
+
+    var peerDarkShadowJson =
+        JsonSerializer.Serialize(
+            peerRegistration.Queue.ToArray());
+
+    Check(
+        darkShadowPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                $"\"ID\":{secondCharacterId}")) &&
+        peerDarkShadowJson.Contains("黑暗之影") &&
+        peerDarkShadowJson.Contains(
+            $"\"Attack\":{peerBaseStats.Attack + 80}") &&
+        peerDarkShadowJson.Contains(
+            $"\"MagicAttack\":{peerBaseStats.MagicAttack + 80}") &&
+        !JsonSerializer.Serialize(darkShadowPackets)
+            .Contains("死亡角色"),
+        "黑暗之影 type-6 data is treated as a party ATK/MATK buff, not revive");
+
+    combat.TickBuffs(
+        peerSession,
+        darkShadowAt.AddSeconds(2));
+    combat.TickBuffs(
+        session,
+        darkShadowAt.AddSeconds(2));
+
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
+    while (peerRegistration.Queue.TryDequeue(out _)) { }
+
+    store.SetSkill(
+        account.Value,
+        id,
+        31112,
+        1);
+
+    var portableRepairPackets = combat.UseSkill(
+        session,
+        account.Value,
+        31112,
+        0,
+        0,
+        combatEnemy.X,
+        combatEnemy.Y,
+        darkShadowAt.AddSeconds(3));
+
+    Check(
+        portableRepairPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"OpenRepairWindow\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"RepairType\":10")) &&
+        !JsonSerializer.Serialize(portableRepairPackets)
+            .Contains("死亡角色"),
+        "隨身修理店 type-6 skill opens the repair UI instead of revive targeting");
 
     store.SetSkill(
         account.Value,
