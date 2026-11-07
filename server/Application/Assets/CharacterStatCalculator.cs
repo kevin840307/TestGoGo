@@ -64,6 +64,19 @@ public static class CharacterStatCalculator
         critDamage += Convert.ToInt32(
             character.GetValueOrDefault("ClubTechCritDamage", 0));
 
+        attack += Convert.ToInt32(
+            character.GetValueOrDefault("TransformAttackBonus", 0));
+        defense += Convert.ToInt32(
+            character.GetValueOrDefault("TransformDefenseBonus", 0));
+        magicAttack += Convert.ToInt32(
+            character.GetValueOrDefault("TransformMagicAttackBonus", 0));
+        magicDefense += Convert.ToInt32(
+            character.GetValueOrDefault("TransformMagicDefenseBonus", 0));
+        hit += Convert.ToInt32(
+            character.GetValueOrDefault("TransformHitBonus", 0));
+        dodge += Convert.ToInt32(
+            character.GetValueOrDefault("TransformDodgeBonus", 0));
+
         foreach (var eq in assets.Equips)
         {
             if (Convert.ToInt32(eq["InBank"]) != 0 ||
