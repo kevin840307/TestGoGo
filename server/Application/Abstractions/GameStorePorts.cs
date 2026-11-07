@@ -123,7 +123,8 @@ public interface IInventoryStore : ICharacterAssetReader
         int rewardItemIndex,
         AssetPurchaseKind rewardKind,
         int rewardCount = 1,
-        int rewardPart = 255);
+        int rewardPart = 255,
+        int rewardDamage = 0);
     Dictionary<string, object>? UseRecoveryItem(
         long accountId,
         long dbid,
@@ -387,7 +388,8 @@ public interface IShopStore : ICharacterAssetReader
         int itemIndex,
         int count,
         int unitPrice,
-        int itemPart = 255);
+        int itemPart = 255,
+        int itemDamage = 0);
 
     bool SellAsset(
         long accountId,
