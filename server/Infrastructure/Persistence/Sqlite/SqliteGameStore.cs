@@ -1548,7 +1548,7 @@ public sealed class SqliteGameStore : IGameStore
         long accountId,
         long dbid,
         long uid,
-        int tabType,
+        AssetPurchaseKind kind,
         int count,
         int unitPrice,
         out long newMoney)
@@ -1566,7 +1566,7 @@ public sealed class SqliteGameStore : IGameStore
         var gain = 0L;
         var removed = false;
 
-        if (tabType == 0)
+        if (kind is AssetPurchaseKind.General or AssetPurchaseKind.HorseBattery)
         {
             using var get = db.CreateCommand();
             get.Transaction = tx;
@@ -1577,17 +1577,24 @@ public sealed class SqliteGameStore : IGameStore
                 """;
             Arg(get, "$uid", uid);
             Arg(get, "$id", dbid);
+
             var raw = get.ExecuteScalar();
-            if (raw is null) return false;
+            if (raw is null)
+                return false;
+
             var owned = Convert.ToInt32(raw);
             var sellCount = Math.Min(count, owned);
             gain = (long)unitPrice * sellCount;
 
             using var update = db.CreateCommand();
             update.Transaction = tx;
+
             if (sellCount >= owned)
             {
-                update.CommandText = "DELETE FROM inventory_items WHERE uid=$uid AND character_id=$id";
+                update.CommandText = """
+                    DELETE FROM inventory_items
+                     WHERE uid=$uid AND character_id=$id
+                    """;
             }
             else
             {
@@ -1598,11 +1605,12 @@ public sealed class SqliteGameStore : IGameStore
                     """;
                 Arg(update, "$count", sellCount);
             }
+
             Arg(update, "$uid", uid);
             Arg(update, "$id", dbid);
             removed = update.ExecuteNonQuery() == 1;
         }
-        else if (tabType == 1)
+        else if (kind == AssetPurchaseKind.Equipment)
         {
             using var del = db.CreateCommand();
             del.Transaction = tx;
@@ -1616,7 +1624,7 @@ public sealed class SqliteGameStore : IGameStore
             removed = del.ExecuteNonQuery() == 1;
             gain = unitPrice;
         }
-        else if (tabType == 3)
+        else if (kind == AssetPurchaseKind.HorseEquipment)
         {
             using var del = db.CreateCommand();
             del.Transaction = tx;
@@ -1624,6 +1632,50 @@ public sealed class SqliteGameStore : IGameStore
                 DELETE FROM horse_equipment
                  WHERE uid=$uid AND character_id=$id
                    AND horse_uid=-1 AND in_bank=0 AND in_shop=0
+                """;
+            Arg(del, "$uid", uid);
+            Arg(del, "$id", dbid);
+            removed = del.ExecuteNonQuery() == 1;
+            gain = unitPrice;
+        }
+        else if (kind == AssetPurchaseKind.Horse)
+        {
+            using (var summoned = db.CreateCommand())
+            {
+                summoned.Transaction = tx;
+                summoned.CommandText = """
+                    SELECT count(*)
+                      FROM characters
+                     WHERE id=$id AND account_id=$a
+                       AND summoned_horse_uid=$horse
+                    """;
+                Arg(summoned, "$id", dbid);
+                Arg(summoned, "$a", accountId);
+                Arg(summoned, "$horse", uid);
+
+                if (Convert.ToInt32(summoned.ExecuteScalar()) != 0)
+                    return false;
+            }
+
+            using (var attached = db.CreateCommand())
+            {
+                attached.Transaction = tx;
+                attached.CommandText = """
+                    SELECT count(*) FROM horse_equipment
+                     WHERE character_id=$id AND horse_uid=$horse
+                    """;
+                Arg(attached, "$id", dbid);
+                Arg(attached, "$horse", uid);
+
+                if (Convert.ToInt32(attached.ExecuteScalar()) != 0)
+                    return false;
+            }
+
+            using var del = db.CreateCommand();
+            del.Transaction = tx;
+            del.CommandText = """
+                DELETE FROM horses
+                 WHERE uid=$uid AND character_id=$id
                 """;
             Arg(del, "$uid", uid);
             Arg(del, "$id", dbid);
@@ -1645,6 +1697,7 @@ public sealed class SqliteGameStore : IGameStore
             Arg(addMoney, "$gain", gain);
             Arg(addMoney, "$id", dbid);
             Arg(addMoney, "$a", accountId);
+
             if (addMoney.ExecuteNonQuery() != 1)
                 return false;
         }
@@ -1652,8 +1705,12 @@ public sealed class SqliteGameStore : IGameStore
         using (var read = db.CreateCommand())
         {
             read.Transaction = tx;
-            read.CommandText = "SELECT money FROM characters WHERE id=$id";
+            read.CommandText = """
+                SELECT money FROM characters
+                 WHERE id=$id AND account_id=$a
+                """;
             Arg(read, "$id", dbid);
+            Arg(read, "$a", accountId);
             newMoney = Convert.ToInt64(read.ExecuteScalar());
         }
 
