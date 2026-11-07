@@ -17,7 +17,6 @@ public sealed class CombatService
     private const double AggroRadius = 420.0;
     private const double LoseTargetRadius = 700.0;
     private const double StopDistance = 130.0;
-    private const double ResumeChaseDistance = 160.0;
     private const double MoveStep = 42.0;
     // Keep the movement packet duration aligned with the 250 ms world cadence.
     // The client now interpolates continuously toward the latest authoritative
@@ -249,10 +248,11 @@ public sealed class CombatService
                 continue;
             }
 
+            // Melee monsters must keep chasing until they are truly
+            // inside damage range. Keeping Attack state out to 160 px made
+            // them stop at 130-160 px while damage was correctly forbidden.
             var shouldAttack =
-                monster.AiState == MonsterAiState.Attack
-                    ? distance <= ResumeChaseDistance
-                    : distance <= StopDistance;
+                distance <= StopDistance;
 
             if (shouldAttack)
             {
