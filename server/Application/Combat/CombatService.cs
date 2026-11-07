@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Messaging;
@@ -36,6 +37,21 @@ public sealed class CombatService
     private readonly EnemyDropCatalog _drops;
     private readonly WorldRuntimeService _runtime;
     private readonly ServerBroadcastHub _broadcasts;
+
+    private sealed record PendingRevive(
+        long TargetAccountId,
+        long TargetDbId,
+        long CasterDbId,
+        int MapId,
+        int SkillId,
+        int SkillLevel,
+        int HpPercent,
+        int MpPercent,
+        bool ClearDeathExp,
+        DateTimeOffset ExpiresAt);
+
+    private readonly ConcurrentDictionary<long, PendingRevive>
+        _pendingRevives = new();
 
     public CombatService(
         IGameStore store,
@@ -811,6 +827,7 @@ public sealed class CombatService
 
         var hasBonus = HasGenericStatBonus(levelData);
         var isHeal = levelData.SkillType == 2;
+        var isRevive = levelData.SkillType == 6;
         var isBuff = levelData.SkillType is 4 or 5 || hasBonus;
         var isAttack =
             levelData.SkillType is 0 or 1 ||
@@ -819,13 +836,15 @@ public sealed class CombatService
               levelData.BaseDamage != 0 ||
               levelData.DamageMultiplier != 0));
 
-        if (!isAttack && !isHeal && !isBuff)
+        if (!isAttack && !isHeal && !isBuff && !isRevive)
         {
             return [Flash(
-                "此技能屬於特殊/製造/復活類型，效果尚未還原")];
+                "此技能屬於特殊/製造類型，效果尚未還原")];
         }
 
         MonsterRuntimeState? primaryMonster = null;
+        OnlinePlayerPresence? reviveTargetPresence = null;
+        Dictionary<string, object>? reviveTargetCharacter = null;
         double centerX = targetX;
         double centerY = targetY;
 
@@ -859,10 +878,56 @@ public sealed class CombatService
                 return [Flash("技能目標距離太遠")];
             }
         }
+        else if (isRevive)
+        {
+            if (targetType != 0 ||
+                targetEntityId <= 0 ||
+                targetEntityId == session.CharacterId.Value)
+            {
+                return [Flash("請選擇同地圖的死亡角色")];
+            }
+
+            reviveTargetPresence =
+                _broadcasts.FindCharacter(targetEntityId);
+
+            if (reviveTargetPresence is null ||
+                reviveTargetPresence.MapId != session.CurrentMapId)
+            {
+                return [Flash("復活目標不在目前地圖")];
+            }
+
+            reviveTargetCharacter = _store.GetCharacter(
+                reviveTargetPresence.AccountId,
+                reviveTargetPresence.CharacterId);
+
+            if (reviveTargetCharacter is null ||
+                Convert.ToInt32(reviveTargetCharacter["HP"]) > 0)
+            {
+                return [Flash("目標目前不需要復活")];
+            }
+
+            var castDx =
+                Convert.ToDouble(reviveTargetCharacter["LocX"]) -
+                Convert.ToDouble(character["LocX"]);
+            var castDy =
+                Convert.ToDouble(reviveTargetCharacter["LocY"]) -
+                Convert.ToDouble(character["LocY"]);
+            var castRange = Math.Max(0, levelData.CastRange) + 120;
+
+            if (castDx * castDx + castDy * castDy >
+                castRange * castRange)
+            {
+                return [Flash("復活目標距離太遠")];
+            }
+
+            centerX = Convert.ToDouble(
+                reviveTargetCharacter["LocX"]);
+            centerY = Convert.ToDouble(
+                reviveTargetCharacter["LocY"]);
+        }
         else
         {
-            // The current local server only owns the selected player's state.
-            // Self-heal/self-buff therefore accepts target 0 or this DBID.
+            // Self-heal/self-buff accepts target 0 or this DBID.
             if (targetType == 0 &&
                 targetEntityId != 0 &&
                 targetEntityId != session.CharacterId.Value)
@@ -900,6 +965,46 @@ public sealed class CombatService
                 AoeTargets = Array.Empty<object>()
             }
         };
+
+        if (isRevive &&
+            reviveTargetPresence is not null &&
+            reviveTargetCharacter is not null)
+        {
+            var hpPercent = skillId == 27111
+                ? 100
+                : 10;
+            var mpPercent = 0;
+            var clearDeathExp = skillId == 27111;
+
+            _pendingRevives[reviveTargetPresence.CharacterId] =
+                new PendingRevive(
+                    reviveTargetPresence.AccountId,
+                    reviveTargetPresence.CharacterId,
+                    session.CharacterId.Value,
+                    session.CurrentMapId,
+                    skillId,
+                    skillLevel,
+                    hpPercent,
+                    mpPercent,
+                    clearDeathExp,
+                    now.AddSeconds(30));
+
+            var casterName =
+                Convert.ToString(character["NAME"]) ??
+                $"角色{session.CharacterId.Value}";
+
+            _broadcasts.PublishToCharacter(
+                reviveTargetPresence.CharacterId,
+                new
+                {
+                    Type = "RevivePrompt",
+                    CasterName = casterName,
+                    SkillID = skillId,
+                    SkillLevel = skillLevel,
+                    HPPct = hpPercent,
+                    MPPct = mpPercent
+                });
+        }
 
         if (isAttack && primaryMonster is not null)
         {
@@ -1117,6 +1222,87 @@ public sealed class CombatService
         session.SkillReadyAt[skillId] =
             now + TimeSpan.FromSeconds(
                 Math.Max(0, levelData.CooldownSeconds));
+
+        BroadcastWorldPackets(session, packets);
+        return packets;
+    }
+
+    public IReadOnlyList<object> AcceptRevive(
+        ClientSession session,
+        long accountId,
+        int skillId,
+        int skillLevel,
+        DateTimeOffset now)
+    {
+        if (!session.CharacterId.HasValue)
+            return [];
+
+        var dbid = session.CharacterId.Value;
+
+        if (!_pendingRevives.TryRemove(
+                dbid,
+                out var pending) ||
+            pending.TargetAccountId != accountId ||
+            pending.TargetDbId != dbid ||
+            pending.SkillId != skillId ||
+            pending.SkillLevel != skillLevel ||
+            pending.ExpiresAt < now)
+        {
+            return [Flash("復活邀請已失效")];
+        }
+
+        if (pending.MapId != session.CurrentMapId ||
+            !_broadcasts.IsCharacterInMap(
+                pending.CasterDbId,
+                pending.MapId))
+        {
+            return [Flash("施法者已離開目前地圖")];
+        }
+
+        var revived = _store.ReviveBySkill(
+            accountId,
+            dbid,
+            pending.HpPercent,
+            pending.MpPercent,
+            pending.ClearDeathExp);
+
+        if (revived is null)
+            return [Flash("目前無法接受復活")];
+
+        var assets = _store.GetCharacterAssets(
+            accountId,
+            dbid);
+        var packets = new List<object>
+        {
+            new
+            {
+                Type = "EntityHeal",
+                TargetID = dbid,
+                TargetType = 0,
+                Amount = revived["HP"],
+                CurrentHP = revived["HP"],
+                MaxHP = revived["MaxHP"],
+                SkillID = pending.SkillId,
+                SkillLevel = pending.SkillLevel,
+                HealerID = pending.CasterDbId
+            },
+            new
+            {
+                Type = "SyncState",
+                EntityID = dbid,
+                State = "idle",
+                Dir = "1"
+            },
+            CharacterStatCalculator.ToPlayerStatusPacket(
+                revived,
+                assets,
+                _current),
+            new
+            {
+                Type = "SystemMessageFlash",
+                Message = "復活成功"
+            }
+        };
 
         BroadcastWorldPackets(session, packets);
         return packets;
