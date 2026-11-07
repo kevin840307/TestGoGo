@@ -1121,7 +1121,7 @@ public sealed class CombatService
                 monster.MapId,
                 monster.X + offsetX,
                 monster.Y + offsetY,
-                protectSeconds: 15,
+                protectSeconds: _drops.OwnerProtectionSeconds,
                 lifetimeSeconds: 60);
 
             if (ground is null)
