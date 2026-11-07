@@ -601,7 +601,12 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 				if char_win and char_win.visible and char_win.has_method("update_ui"):
 					char_win.update_ui()
 
-		"EnterWorldSuccess": enter_world_success.emit(data)
+		"EnterWorldSuccess":
+			var bootstrap_skills: Array = data.get("SkillList", [])
+			if not bootstrap_skills.is_empty():
+				latest_skill_sync = bootstrap_skills.duplicate(true)
+				has_latest_skill_sync = true
+			enter_world_success.emit(data)
 
 		"InventorySync": inventory_synced.emit(data.get("Items", []), int(data.get("MaxSize", 200)))
 		"EquipSync": equip_synced.emit(data.get("Equips", []), int(data.get("MaxSize", 200)))
