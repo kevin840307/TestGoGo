@@ -13,6 +13,7 @@ public sealed class GmCommandService
     private readonly HorseCardCatalog _horseCards;
     private readonly CurrentClientDataCatalog _current;
     private readonly LegacyClientDataCatalog _legacyClient;
+    private readonly LegacyPlayerGrowthCatalog _growth;
     private readonly CombatService _combat;
     private readonly IConfiguration _config;
 
@@ -22,6 +23,7 @@ public sealed class GmCommandService
         HorseCardCatalog horseCards,
         CurrentClientDataCatalog current,
         LegacyClientDataCatalog legacyClient,
+        LegacyPlayerGrowthCatalog growth,
         CombatService combat,
         IConfiguration config)
     {
@@ -30,6 +32,7 @@ public sealed class GmCommandService
         _horseCards = horseCards;
         _current = current;
         _legacyClient = legacyClient;
+        _growth = growth;
         _combat = combat;
         _config = config;
     }
@@ -68,6 +71,8 @@ public sealed class GmCommandService
                     => Teleport(parts, accountId, dbid, session),
                 "heal" => Heal(accountId, dbid),
                 "level" => Level(parts, accountId, dbid),
+                "maxstats" or "maxstat"
+                    => MaxStats(accountId, dbid),
                 "money" => Money(parts, accountId, dbid),
                 "item" => Item(parts, accountId, dbid),
                 "equip" => Equipment(parts, accountId, dbid),
@@ -186,21 +191,110 @@ public sealed class GmCommandService
         if (ch is null)
             return [Chat("修改等級失敗")];
 
+        var growth = _growth.Calculate(ch);
+        ch = _store.ApplyGrowthStats(
+            accountId,
+            dbid,
+            growth.MaxHP,
+            growth.MaxMP,
+            growth.MaxSP,
+            growth.Attack,
+            growth.Defense,
+            growth.MagicAttack,
+            growth.MagicDefense,
+            growth.Hit,
+            growth.Dodge,
+            growth.MoveSpeed) ?? ch;
+
+        var assets = _store.GetCharacterAssets(accountId, dbid);
+        var responses = new List<object>
+        {
+            CharacterStatCalculator.ToPlayerStatusPacket(
+                ch,
+                assets,
+                _current),
+            Chat(
+                $"角色等級已設為 {ch["Level"]}，可用能力點 {ch["ExpUse"]}；" +
+                $"HP {ch["MaxHP"]} MP {ch["MaxMP"]}")
+        };
+
+        return responses;
+    }
+
+    private IReadOnlyList<object> MaxStats(
+        long accountId,
+        long dbid)
+    {
+        var ch = _store.SetPrimaryStats(
+            accountId,
+            dbid,
+            100,
+            100,
+            100,
+            100,
+            0);
+
+        if (ch is null)
+            return [Chat("能力值設滿失敗")];
+
+        var growth = _growth.Calculate(ch);
+        ch = _store.ApplyGrowthStats(
+            accountId,
+            dbid,
+            growth.MaxHP,
+            growth.MaxMP,
+            growth.MaxSP,
+            growth.Attack,
+            growth.Defense,
+            growth.MagicAttack,
+            growth.MagicDefense,
+            growth.Hit,
+            growth.Dodge,
+            growth.MoveSpeed) ?? ch;
+
+        var assets = _store.GetCharacterAssets(accountId, dbid);
+        var effective = CharacterStatCalculator.Calculate(
+            ch,
+            assets,
+            _current);
+
         return
         [
             new
             {
-                Type = "PlayerStatusSync",
-                Level = ch["Level"],
+                Type = "AllocateStatResponse",
+                Success = true,
                 ExpUse = ch["ExpUse"],
-                HP = ch["HP"],
-                MP = ch["MP"],
-                SP = ch["SP"],
+                STR = ch["Str"],
+                DEX = ch["Dex"],
+                CON = ch["Con"],
+                WIS = ch["Wis"],
                 MaxHP = ch["MaxHP"],
                 MaxMP = ch["MaxMP"],
-                MaxSP = ch["MaxSP"]
+                MaxSP = ch["MaxSP"],
+                Attack = effective.Attack,
+                Defense = effective.Defense,
+                MagicAttack = effective.MagicAttack,
+                MagicDefense = effective.MagicDefense,
+                Hit = effective.Hit,
+                Dodge = effective.Dodge,
+                Lucky = effective.Lucky,
+                AttackSpeed = effective.AttackSpeed,
+                AttackRange = effective.AttackRange,
+                MoveSpeed = effective.MoveSpeed,
+                CritRate = effective.CritRate,
+                CritDamage = effective.CritDamage
             },
-            Chat($"角色等級已設為 {ch["Level"]}，可用能力點 {ch["ExpUse"]}")
+            CharacterStatCalculator.ToPlayerStatusPacket(
+                ch,
+                assets,
+                _current),
+            Chat(
+                $"能力值已滿：STR/DEX/CON/WIS=100；" +
+                $"HP={ch["MaxHP"]} MP={ch["MaxMP"]} " +
+                $"ATK={effective.Attack} MATK={effective.MagicAttack} " +
+                $"DEF={effective.Defense} DODGE={effective.Dodge} " +
+                $"MOVE={effective.MoveSpeed}")
         ];
     }
 
@@ -652,7 +746,7 @@ public sealed class GmCommandService
 
     private static string HelpText()
         => "GM: help | pos | map <id> [x] [y] | heal | level <n> | " +
-           "money <n> | item <id> [count] | equip <id> | " +
+           "maxstats | money <n> | item <id> [count] | equip <id> | " +
            "mecha <cardId> | mechacard <cardId> | pet <petId> [name] | " +
            "skill <id|all> [lv] | skills | clearskills | " +
            "spawn <enemyId> [x] [y] | killall";
