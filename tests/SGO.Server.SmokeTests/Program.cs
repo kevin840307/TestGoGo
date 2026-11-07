@@ -7222,6 +7222,31 @@ try
             "GM skill command refreshes SkillSync");
     }
 
+    using (var gmMallPoints = Json(
+        """{"Type":"ChatMessage","Channel":0,"Message":"/gm mallpoints 125","BubbleType":0}"""))
+    {
+        var beforePoints = store.GetMallPoints(account.Value);
+        var responses = router.Handle(
+            gmMallPoints.RootElement,
+            session);
+        Check(store.GetMallPoints(account.Value) == beforePoints + 125 &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"Type\":\"MallPointsSync\"")),
+            "GM mallpoints command adjusts point balance and refreshes client");
+    }
+
+    using (var gmMallPointsTooLow = Json(
+        """{"Type":"ChatMessage","Channel":0,"Message":"/gm mallpoints -999999","BubbleType":0}"""))
+    {
+        var beforePoints = store.GetMallPoints(account.Value);
+        router.Handle(
+            gmMallPointsTooLow.RootElement,
+            session);
+        Check(store.GetMallPoints(account.Value) == beforePoints,
+            "GM mallpoints cannot reduce mall balance below zero");
+    }
+
     using (var gmItem = Json(
         """{"Type":"ChatMessage","Channel":0,"Message":"/gm item 1001 3","BubbleType":0}"""))
     {
