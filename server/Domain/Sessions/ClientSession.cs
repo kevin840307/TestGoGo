@@ -20,7 +20,8 @@ public sealed class ClientSession
     public Dictionary<long, DateTimeOffset> PetLastAttackAt { get; } = new();
     public Dictionary<int, DateTimeOffset> SkillReadyAt { get; } = new();
 
-    // Runtime entities are intentionally per session for now.
-    // This prevents one local player's combat from mutating cached legacy definitions.
+    // Runtime entities are per session. Each visited map retains its monster
+    // state so leaving and re-entering does not reset positions/HP.
     public Dictionary<int, MonsterRuntimeState> Monsters { get; } = new();
+    public Dictionary<int, Dictionary<int, MonsterRuntimeState>> MonstersByMap { get; } = new();
 }
