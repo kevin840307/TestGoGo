@@ -81,6 +81,8 @@ public sealed class GmCommandService
                 "attackspeed" or "aspd"
                     => AttackSpeed(parts, accountId, dbid),
                 "money" => Money(parts, accountId, dbid),
+                "mallpoints" or "mallpoint" or "points"
+                    => MallPoints(parts, accountId),
                 "item" => Item(parts, accountId, dbid),
                 "equip" => Equipment(parts, accountId, dbid),
                 "mecha" or "horse"
@@ -369,6 +371,37 @@ public sealed class GmCommandService
         [
             new { Type = "SyncMoney", Money = ch["Money"] },
             Chat($"目前金錢：{ch["Money"]}")
+        ];
+    }
+
+    private IReadOnlyList<object> MallPoints(
+        string[] parts,
+        long accountId)
+    {
+        if (parts.Length < 3 ||
+            !long.TryParse(parts[2], out var delta))
+        {
+            return [Chat(
+                "用法：/gm mallpoints <變更量>，例如 1000 或 -100")];
+        }
+
+        if (!_store.AdjustMallPoints(
+                accountId,
+                delta,
+                out var balance))
+        {
+            return [Chat(
+                "修改商城點數失敗（帳號不存在或餘額不可低於 0）")];
+        }
+
+        return
+        [
+            new
+            {
+                Type = "MallPointsSync",
+                Points = balance
+            },
+            Chat($"目前商城點數：{balance}")
         ];
     }
 
@@ -939,7 +972,7 @@ public sealed class GmCommandService
 
     private static string HelpText()
         => "GM: help | pos | map <id> [x] [y] | heal/restore/fullheal | level <n> | " +
-           "maxstats | attackspeed <1-1000> | money <n> | item <id> [count] | equip <id> | " +
+           "maxstats | attackspeed <1-1000> | money <n> | mallpoints <delta> | item <id> [count] | equip <id> | " +
            "mecha <cardId> | mechacard <cardId> | mechaequip <id> [horseUid] | mechalevel <horseUid> <level> | pet <petId> [name] | " +
            "skill <id|all> [lv] | skills | clearskills | " +
            "spawn <enemyId> [x] [y] | killall | cleardrops";
