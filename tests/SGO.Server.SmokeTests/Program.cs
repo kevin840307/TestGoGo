@@ -77,6 +77,46 @@ Check(blocking.IsMoveAllowed(
 Check(!blocking.IsMoveAllowed(
           1, 8, 8, 40, 8, false),
     "Blocking.dat movement rejects a segment crossing blocked cell");
+
+var cornerRoot = Path.Combine(
+    Path.GetTempPath(),
+    "sgo-blocking-corner-" + Guid.NewGuid().ToString("N"));
+var cornerMapRoot = Path.Combine(
+    cornerRoot,
+    "Map",
+    "Map01");
+Directory.CreateDirectory(cornerMapRoot);
+
+using (var writer = new BinaryWriter(
+           File.Open(
+               Path.Combine(cornerMapRoot, "Blocking.dat"),
+               FileMode.Create,
+               FileAccess.Write,
+               FileShare.None)))
+{
+    writer.Write(3);
+    writer.Write(3);
+    writer.Write(new byte[]
+    {
+        0, 1, 0,
+        0, 0, 0,
+        0, 0, 0
+    });
+}
+
+var cornerBlocking = new BlockingMapService(cornerRoot);
+Check(cornerBlocking.IsMoveAllowed(
+          1,
+          8,
+          8,
+          40,
+          8,
+          false),
+    "Blocking.dat server validation allows a short legal route around a corner");
+
+Directory.Delete(
+    cornerRoot,
+    recursive: true);
 Check(!blocking.IsMoveAllowed(
           1, 56, 8, 72, 8, false) &&
       blocking.IsMoveAllowed(
