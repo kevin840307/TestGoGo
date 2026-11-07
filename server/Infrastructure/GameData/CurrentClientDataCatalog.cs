@@ -38,7 +38,8 @@ public sealed record CurrentItemDefinition(
 
 public sealed record CurrentSkillDefinition(
     int SkillId,
-    string Name);
+    string Name,
+    string SpecialSkill = "");
 
 public sealed record CurrentSkillLevelDefinition(
     int SkillId,
@@ -425,7 +426,8 @@ public sealed class CurrentClientDataCatalog
                 continue;
             var skill = new CurrentSkillDefinition(
                 id,
-                ReadString(text, "skill_name"));
+                ReadString(text, "skill_name"),
+                ReadString(text, "special_skill"));
 
             _skills[id] = skill;
             AddByName(_skillsByName, skill.Name, skill);
