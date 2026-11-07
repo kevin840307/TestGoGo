@@ -198,6 +198,15 @@ public sealed class GmCommandService
         if (ch is null)
             return [Chat("修改等級失敗")];
 
+        ch = _store.SetExperienceProgress(
+                 accountId,
+                 dbid,
+                 Convert.ToInt32(ch["Level"]),
+                 _growth.ExperienceThresholdForLevel(
+                     Convert.ToInt32(ch["Level"])),
+                 0)
+             ?? ch;
+
         var growth = _growth.Calculate(ch);
         ch = _store.ApplyGrowthStats(
             accountId,
