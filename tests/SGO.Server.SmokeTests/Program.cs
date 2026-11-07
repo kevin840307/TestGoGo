@@ -7436,8 +7436,28 @@ try
           wanderDistanceFromCenter <= 180.001,
         "idle monster wanders near its own center without client input");
 
-    store.SetPetState(account.Value, id, petUid, 1);
-    session.PetPositions[petUid] = (monster.X - 80, monster.Y);
+    foreach (var commandedPetUid in new[]
+             {
+                 petUid,
+                 secondMultiPetUid,
+                 thirdMultiPetUid
+             })
+    {
+        Check(
+            store.SetPetState(
+                account.Value,
+                id,
+                commandedPetUid,
+                1),
+            "multi-pet command setup respects expanded summon capacity");
+    }
+
+    session.PetPositions[petUid] =
+        (monster.X - 80, monster.Y);
+    session.PetPositions[secondMultiPetUid] =
+        (monster.X - 75, monster.Y + 20);
+    session.PetPositions[thirdMultiPetUid] =
+        (monster.X - 75, monster.Y - 20);
     var hpBeforePetAttack = monster.CurrentHp;
 
     using (var petAttack = Json(JsonSerializer.Serialize(new
@@ -7448,26 +7468,59 @@ try
     })))
     {
         var responses = router.Handle(petAttack.RootElement, session);
-        Check(monster.CurrentHp < hpBeforePetAttack &&
-              monster.HasTarget &&
-              session.PetTargets.TryGetValue(
-                  petUid,
-                  out var commandedTargetId) &&
-              commandedTargetId == monster.EntityId &&
-              responses.Any(x =>
-                  JsonSerializer.Serialize(x).Contains(
-                      "\"Type\":\"SyncState\"") &&
-                  JsonSerializer.Serialize(x).Contains(
-                      "\"State\":\"attack\"")) &&
-              responses.Any(x =>
-                  JsonSerializer.Serialize(x).Contains(
-                      "\"Type\":\"EntityDamage\"")) &&
-              responses.Any(x =>
-                  JsonSerializer.Serialize(x).Contains(
-                      "\"Type\":\"MonsterTarget\"") &&
-                  JsonSerializer.Serialize(x).Contains(
-                      "\"HasTarget\":true")),
-            "CommandAttack pins the pet target and pulls monster aggro onto the owner");
+        var responseJson =
+            JsonSerializer.Serialize(responses);
+
+        Check(
+            monster.CurrentHp < hpBeforePetAttack &&
+            monster.HasTarget &&
+            new[]
+            {
+                petUid,
+                secondMultiPetUid,
+                thirdMultiPetUid
+            }.All(uid =>
+                session.PetTargets.TryGetValue(
+                    uid,
+                    out var commandedTargetId) &&
+                commandedTargetId ==
+                    monster.EntityId) &&
+            new[]
+            {
+                petUid,
+                secondMultiPetUid,
+                thirdMultiPetUid
+            }.All(uid =>
+                responseJson.Contains(
+                    $"\"EntityID\":{4_000_000L + uid}")) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"EntityDamage\"")) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"MonsterTarget\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"HasTarget\":true")),
+            "CommandAttack commands all three expanded summoned pets without collapsing to the first pet");
+    }
+
+    foreach (var extraPetUid in new[]
+             {
+                 secondMultiPetUid,
+                 thirdMultiPetUid
+             })
+    {
+        store.SetPetState(
+            account.Value,
+            id,
+            extraPetUid,
+            0);
+        session.PetPositions.Remove(
+            extraPetUid);
+        session.PetTargets.Remove(
+            extraPetUid);
+        session.PetLastAttackAt.Remove(
+            extraPetUid);
     }
 
     // Pet AI should independently acquire and attack a nearby monster.
