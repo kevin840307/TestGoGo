@@ -1,9 +1,9 @@
 name: Server build
 on:
   push:
-    paths: ['server/**', 'client/**/*.gd', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', '.github/workflows/server-build.yml']
+    paths: ['server/**', 'client/**/*.gd', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', '.github/workflows/server-build.yml']
   pull_request:
-    paths: ['server/**', 'client/**/*.gd', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', '.github/workflows/server-build.yml']
+    paths: ['server/**', 'client/**/*.gd', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', '.github/workflows/server-build.yml']
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,8 +16,10 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -p 'test_packet_contract_audit.py' -v
           python3 -m unittest discover -s tests -p 'test_packet_schema_audit.py' -v
+          python3 -m unittest discover -s tests -p 'test_packet_response_audit.py' -v
           python3 tests/packet_contract_audit.py --strict --output packet-contract-report.json
           python3 tests/packet_schema_audit.py --strict --output packet-schema-report.json
+          python3 tests/packet_response_audit.py --strict --output packet-response-report.json
       - name: Build server
         run: |
           set -o pipefail
@@ -62,4 +64,5 @@ jobs:
             server.log
             packet-contract-report.json
             packet-schema-report.json
+            packet-response-report.json
           if-no-files-found: ignore
