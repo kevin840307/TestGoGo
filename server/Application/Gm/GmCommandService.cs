@@ -204,12 +204,12 @@ public sealed class GmCommandService
         if (ch is null)
             return [Chat("修改等級失敗")];
 
+        var currentLevel = Convert.ToInt32(ch["Level"]);
         ch = _store.SetExperienceProgress(
                  accountId,
                  dbid,
-                 Convert.ToInt32(ch["Level"]),
-                 _growth.ExperienceThresholdForLevel(
-                     Convert.ToInt32(ch["Level"])),
+                 currentLevel,
+                 _growth.ExperienceThresholdForLevel(currentLevel),
                  0)
              ?? ch;
 
