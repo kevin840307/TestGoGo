@@ -304,6 +304,14 @@ var currentCatalog = new CurrentClientDataCatalog(
             "製彈術",
             "AddItem:4103:100"),
         new CurrentSkillDefinition(
+            25101,
+            "體力回復",
+            "體力回復"),
+        new CurrentSkillDefinition(
+            25106,
+            "大氣旋風",
+            "大氣旋風"),
+        new CurrentSkillDefinition(
             25108,
             "生命聖印",
             "生命聖印"),
@@ -407,6 +415,26 @@ var currentCatalog = new CurrentClientDataCatalog(
             0, 0,
             0, 0, 0,
             0, 0, 1800,
+            0, 1,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0,
+            0, 0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            25101, 1, 7, 0,
+            0, 0,
+            0, 22, 0,
+            0, 10, 1,
+            0, 1,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0,
+            0, 0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            25106, 1, 7, 0,
+            0, 0,
+            0, 0, 26,
+            0, 20, 1,
             0, 1,
             0, 0, 0,
             0, 0, 0, 0,
@@ -4079,6 +4107,42 @@ try
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"EntityHeal\"")),
         "生命吸收 Lv1 restores min(actual damage, original 94 HP cap)");
+
+    store.SetSkill(
+        account.Value,
+        id,
+        25101,
+        1);
+    store.Revive(account.Value, id);
+    store.ApplyDamage(
+        account.Value,
+        id,
+        60);
+
+    var selfCureBefore = Convert.ToInt32(
+        store.GetCharacter(account.Value, id)!["HP"]);
+
+    var selfCurePackets = combat.UseSkill(
+        session,
+        account.Value,
+        25101,
+        0,
+        0,
+        Convert.ToInt32(monster.X),
+        Convert.ToInt32(monster.Y),
+        DateTimeOffset.UtcNow.AddSeconds(6));
+
+    var selfCureAfter = Convert.ToInt32(
+        store.GetCharacter(account.Value, id)!["HP"]);
+    var selfCureAmount =
+        selfCureAfter - selfCureBefore;
+
+    Check(
+        selfCureAmount is >= 12 and <= 14 &&
+        selfCurePackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"EntityHeal\"")),
+        "體力回復 Lv1 uses original fixed 13 HP cure with ±10% variance");
 
     var peerRegistration = broadcastHub.Register();
     var peerSession = new ClientSession
