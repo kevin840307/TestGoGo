@@ -50,6 +50,10 @@ internal static class SqliteSchemaMigrator
         ApplyEnsureColumnDirectives(
             db,
             ResolveSqlPath("011_timed_effect_metadata.sql"));
+
+        ExecuteSqlFile(
+            db,
+            ResolveSqlPath("012_mall_gift_claims.sql"));
     }
 
     private static void ExecuteSqlFile(
