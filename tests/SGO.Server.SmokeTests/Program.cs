@@ -960,6 +960,7 @@ try
         "idle monster wanders near its spawn point without client input");
 
     store.SetPetState(account.Value, id, petUid, 1);
+    session.PetPositions[petUid] = (monster.X - 80, monster.Y);
     var hpBeforePetAttack = monster.CurrentHp;
 
     using (var petAttack = Json(JsonSerializer.Serialize(new
@@ -973,9 +974,38 @@ try
         Check(monster.CurrentHp < hpBeforePetAttack &&
               responses.Any(x =>
                   JsonSerializer.Serialize(x).Contains(
+                      "\"Type\":\"SyncState\"") &&
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"State\":\"attack\"")) &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
                       "\"Type\":\"EntityDamage\"")),
-            "CommandAttack makes summoned pet damage monster");
+            "CommandAttack makes summoned pet face and attack nearby monster");
     }
+
+    // Pet AI should independently acquire and attack a nearby monster.
+    monster.CurrentHp = monster.MaxHp;
+    monster.RespawnAt = null;
+    session.PetPositions[petUid] = (monster.X - 80, monster.Y);
+    session.PetLastAttackAt[petUid] = DateTimeOffset.MinValue;
+    session.LastPetFollowTick = DateTimeOffset.MinValue;
+    var hpBeforeAutoPetAttack = monster.CurrentHp;
+    var autoPetPackets = router.Tick(
+        session,
+        DateTimeOffset.UtcNow.AddSeconds(5));
+
+    Check(monster.CurrentHp < hpBeforeAutoPetAttack &&
+          autoPetPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"SyncState\"") &&
+              JsonSerializer.Serialize(x).Contains(
+                  $"\"EntityID\":{4_000_000L + petUid}") &&
+              JsonSerializer.Serialize(x).Contains(
+                  "\"State\":\"attack\"")) &&
+          autoPetPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"EntityDamage\"")),
+        "summoned pet automatically acquires and attacks nearby monster");
 
     var aiPackets = combat.TickAi(
         session,
@@ -994,6 +1024,22 @@ try
               JsonSerializer.Serialize(x).Contains(
                   "\"SpeedTime\":0.32")),
         "monster enters aggro and emits overlapped smooth chase movement");
+
+    monster.IsMoving = true;
+    var closeRangePackets = combat.TickAi(
+        session,
+        account.Value,
+        monster.X + 120,
+        monster.Y,
+        session.LastMonsterAiTick.AddSeconds(1));
+
+    Check(!monster.IsMoving &&
+          closeRangePackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"SyncState\"") &&
+              JsonSerializer.Serialize(x).Contains(
+                  "\"State\":\"idle\"")),
+        "monster stops walk animation once inside melee stop distance");
 
     var sawDeath = false;
 
