@@ -1791,6 +1791,22 @@ try
             "PetAction SetMainSkill accepts a skill from the current evolution config");
     }
 
+    using (var db = new SqliteConnection(
+        $"Data Source={dbPath}"))
+    {
+        db.Open();
+        using var restoreEvolution = db.CreateCommand();
+        restoreEvolution.CommandText = """
+            UPDATE pets
+               SET evol_id=0
+             WHERE uid=$pet
+            """;
+        restoreEvolution.Parameters.AddWithValue(
+            "$pet",
+            petUid);
+        restoreEvolution.ExecuteNonQuery();
+    }
+
     using (var feedPet = Json(
         JsonSerializer.Serialize(new
         {
