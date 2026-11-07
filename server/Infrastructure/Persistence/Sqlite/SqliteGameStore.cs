@@ -2028,6 +2028,690 @@ public sealed class SqliteGameStore : IGameStore
         return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
     }
 
+    public bool SetPlayerShopAssetState(
+        long accountId,
+        long dbid,
+        long uid,
+        int tabType,
+        int count,
+        bool inShop)
+    {
+        count = Math.Max(1, count);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(
+                db,
+                accountId,
+                dbid,
+                tx))
+            return false;
+
+        switch (tabType)
+        {
+            case 0:
+            {
+                if (!inShop)
+                {
+                    using var clear = db.CreateCommand();
+                    clear.Transaction = tx;
+                    clear.CommandText = """
+                        UPDATE inventory_items
+                           SET in_shop=0
+                         WHERE uid=$uid
+                           AND character_id=$id
+                           AND in_bank=0
+                           AND in_shop=1
+                        """;
+                    Arg(clear, "$uid", uid);
+                    Arg(clear, "$id", dbid);
+                    if (clear.ExecuteNonQuery() != 1)
+                        return false;
+
+                    tx.Commit();
+                    return true;
+                }
+
+                int itemIndex;
+                int ownedCount;
+                using (var get = db.CreateCommand())
+                {
+                    get.Transaction = tx;
+                    get.CommandText = """
+                        SELECT item_index,count
+                          FROM inventory_items
+                         WHERE uid=$uid
+                           AND character_id=$id
+                           AND in_bank=0
+                           AND in_shop=0
+                        """;
+                    Arg(get, "$uid", uid);
+                    Arg(get, "$id", dbid);
+                    using var reader = get.ExecuteReader();
+                    if (!reader.Read())
+                        return false;
+
+                    itemIndex = reader.GetInt32(0);
+                    ownedCount = reader.GetInt32(1);
+                }
+
+                if (count > ownedCount)
+                    return false;
+
+                if (count == ownedCount)
+                {
+                    using var mark = db.CreateCommand();
+                    mark.Transaction = tx;
+                    mark.CommandText = """
+                        UPDATE inventory_items
+                           SET in_shop=1
+                         WHERE uid=$uid
+                           AND character_id=$id
+                           AND in_bank=0
+                           AND in_shop=0
+                        """;
+                    Arg(mark, "$uid", uid);
+                    Arg(mark, "$id", dbid);
+                    if (mark.ExecuteNonQuery() != 1)
+                        return false;
+                }
+                else
+                {
+                    using (var take = db.CreateCommand())
+                    {
+                        take.Transaction = tx;
+                        take.CommandText = """
+                            UPDATE inventory_items
+                               SET count=count-$count
+                             WHERE uid=$uid
+                               AND character_id=$id
+                               AND in_bank=0
+                               AND in_shop=0
+                               AND count >= $count
+                            """;
+                        Arg(take, "$count", count);
+                        Arg(take, "$uid", uid);
+                        Arg(take, "$id", dbid);
+                        if (take.ExecuteNonQuery() != 1)
+                            return false;
+                    }
+
+                    using var add = db.CreateCommand();
+                    add.Transaction = tx;
+                    add.CommandText = """
+                        INSERT INTO inventory_items(
+                            character_id,item_index,count,in_bank,in_shop)
+                        VALUES($id,$item,$count,0,1)
+                        """;
+                    Arg(add, "$id", dbid);
+                    Arg(add, "$item", itemIndex);
+                    Arg(add, "$count", count);
+                    add.ExecuteNonQuery();
+                }
+
+                break;
+            }
+
+            case 1:
+            {
+                using var cmd = db.CreateCommand();
+                cmd.Transaction = tx;
+                cmd.CommandText = inShop
+                    ? """
+                      UPDATE equipment_items
+                         SET in_shop=1
+                       WHERE uid=$uid
+                         AND character_id=$id
+                         AND part=255
+                         AND in_bank=0
+                         AND in_shop=0
+                      """
+                    : """
+                      UPDATE equipment_items
+                         SET in_shop=0
+                       WHERE uid=$uid
+                         AND character_id=$id
+                         AND in_bank=0
+                         AND in_shop=1
+                      """;
+                Arg(cmd, "$uid", uid);
+                Arg(cmd, "$id", dbid);
+                if (cmd.ExecuteNonQuery() != 1)
+                    return false;
+                break;
+            }
+
+            case 2:
+            {
+                using var cmd = db.CreateCommand();
+                cmd.Transaction = tx;
+                cmd.CommandText = inShop
+                    ? """
+                      UPDATE pets
+                         SET in_shop=1
+                       WHERE uid=$uid
+                         AND character_id=$id
+                         AND state=0
+                         AND in_shop=0
+                         AND equip0=0
+                         AND equip1=0
+                         AND equip2=0
+                      """
+                    : """
+                      UPDATE pets
+                         SET in_shop=0,
+                             shop_price=0
+                       WHERE uid=$uid
+                         AND character_id=$id
+                         AND in_shop=1
+                      """;
+                Arg(cmd, "$uid", uid);
+                Arg(cmd, "$id", dbid);
+                if (cmd.ExecuteNonQuery() != 1)
+                    return false;
+                break;
+            }
+
+            case 3:
+            {
+                using var cmd = db.CreateCommand();
+                cmd.Transaction = tx;
+                cmd.CommandText = inShop
+                    ? """
+                      UPDATE horse_equipment
+                         SET in_shop=1
+                       WHERE uid=$uid
+                         AND character_id=$id
+                         AND horse_uid=-1
+                         AND in_bank=0
+                         AND in_shop=0
+                      """
+                    : """
+                      UPDATE horse_equipment
+                         SET in_shop=0
+                       WHERE uid=$uid
+                         AND character_id=$id
+                         AND in_bank=0
+                         AND in_shop=1
+                      """;
+                Arg(cmd, "$uid", uid);
+                Arg(cmd, "$id", dbid);
+                if (cmd.ExecuteNonQuery() != 1)
+                    return false;
+                break;
+            }
+
+            default:
+                return false;
+        }
+
+        tx.Commit();
+        return true;
+    }
+
+    public void ClearPlayerShopAssets(
+        long accountId,
+        long dbid)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(
+                db,
+                accountId,
+                dbid,
+                tx))
+            return;
+
+        foreach (var sql in new[]
+                 {
+                     "UPDATE inventory_items SET in_shop=0 WHERE character_id=$id AND in_shop=1",
+                     "UPDATE equipment_items SET in_shop=0 WHERE character_id=$id AND in_shop=1",
+                     "UPDATE pets SET in_shop=0,shop_price=0 WHERE character_id=$id AND in_shop=1",
+                     "UPDATE horse_equipment SET in_shop=0 WHERE character_id=$id AND in_shop=1"
+                 })
+        {
+            using var cmd = db.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = sql;
+            Arg(cmd, "$id", dbid);
+            cmd.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+    }
+
+    public PlayerShopPurchaseResult BuyPlayerShopAsset(
+        long buyerAccountId,
+        long buyerDbid,
+        long sellerAccountId,
+        long sellerDbid,
+        long uid,
+        int tabType,
+        int count,
+        long unitPrice)
+    {
+        count = Math.Max(1, count);
+        unitPrice = Math.Max(1, unitPrice);
+
+        if (buyerDbid <= 0 ||
+            sellerDbid <= 0 ||
+            buyerDbid == sellerDbid)
+        {
+            return new(
+                false,
+                "購買資料無效",
+                0,
+                0,
+                false);
+        }
+
+        long total;
+        try
+        {
+            total = checked(
+                unitPrice * count);
+        }
+        catch (OverflowException)
+        {
+            return new(
+                false,
+                "交易金額過大",
+                0,
+                0,
+                false);
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        long ReadMoney(
+            long accountId,
+            long dbid)
+        {
+            using var cmd = db.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = """
+                SELECT money
+                  FROM characters
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(cmd, "$id", dbid);
+            Arg(cmd, "$account", accountId);
+            var raw = cmd.ExecuteScalar();
+            return raw is null ||
+                   raw == DBNull.Value
+                ? -1
+                : Convert.ToInt64(raw);
+        }
+
+        int CountRows(string sql, long dbid)
+        {
+            using var cmd = db.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = sql;
+            Arg(cmd, "$id", dbid);
+            return Convert.ToInt32(
+                cmd.ExecuteScalar() ?? 0);
+        }
+
+        var buyerMoney =
+            ReadMoney(
+                buyerAccountId,
+                buyerDbid);
+        var sellerMoney =
+            ReadMoney(
+                sellerAccountId,
+                sellerDbid);
+
+        if (buyerMoney < 0 ||
+            sellerMoney < 0)
+        {
+            return new(
+                false,
+                "角色不存在",
+                Math.Max(0, buyerMoney),
+                Math.Max(0, sellerMoney),
+                false);
+        }
+
+        if (buyerMoney < total)
+        {
+            return new(
+                false,
+                "金錢不足",
+                buyerMoney,
+                sellerMoney,
+                false);
+        }
+
+        var soldOut = true;
+
+        switch (tabType)
+        {
+            case 0:
+            {
+                int itemIndex;
+                int listedCount;
+                using (var get = db.CreateCommand())
+                {
+                    get.Transaction = tx;
+                    get.CommandText = """
+                        SELECT item_index,count
+                          FROM inventory_items
+                         WHERE uid=$uid
+                           AND character_id=$seller
+                           AND in_bank=0
+                           AND in_shop=1
+                        """;
+                    Arg(get, "$uid", uid);
+                    Arg(get, "$seller", sellerDbid);
+                    using var reader = get.ExecuteReader();
+                    if (!reader.Read())
+                    {
+                        return new(
+                            false,
+                            "商品已下架",
+                            buyerMoney,
+                            sellerMoney,
+                            false);
+                    }
+
+                    itemIndex = reader.GetInt32(0);
+                    listedCount = reader.GetInt32(1);
+                }
+
+                if (count > listedCount)
+                {
+                    return new(
+                        false,
+                        "商品數量不足",
+                        buyerMoney,
+                        sellerMoney,
+                        false);
+                }
+
+                int buyerItemTotal;
+                long buyerStackUid;
+                using (var getBuyer = db.CreateCommand())
+                {
+                    getBuyer.Transaction = tx;
+                    getBuyer.CommandText = """
+                        SELECT COALESCE(SUM(count),0),
+                               COALESCE(MIN(uid),0)
+                          FROM inventory_items
+                         WHERE character_id=$buyer
+                           AND item_index=$item
+                           AND in_bank=0
+                           AND in_shop=0
+                        """;
+                    Arg(getBuyer, "$buyer", buyerDbid);
+                    Arg(getBuyer, "$item", itemIndex);
+                    using var reader = getBuyer.ExecuteReader();
+                    reader.Read();
+                    buyerItemTotal = reader.GetInt32(0);
+                    buyerStackUid = reader.GetInt64(1);
+                }
+
+                if (buyerItemTotal + count > 999)
+                {
+                    return new(
+                        false,
+                        "物品疊加數量將超過 999",
+                        buyerMoney,
+                        sellerMoney,
+                        false);
+                }
+
+                if (buyerStackUid <= 0 &&
+                    CountRows(
+                        """
+                        SELECT COUNT(*)
+                          FROM inventory_items
+                         WHERE character_id=$id
+                           AND in_bank=0
+                           AND in_shop=0
+                        """,
+                        buyerDbid) >= 200)
+                {
+                    return new(
+                        false,
+                        "背包空間不足",
+                        buyerMoney,
+                        sellerMoney,
+                        false);
+                }
+
+                if (buyerStackUid > 0)
+                {
+                    using var add = db.CreateCommand();
+                    add.Transaction = tx;
+                    add.CommandText = """
+                        UPDATE inventory_items
+                           SET count=count+$count
+                         WHERE uid=$uid
+                        """;
+                    Arg(add, "$count", count);
+                    Arg(add, "$uid", buyerStackUid);
+                    add.ExecuteNonQuery();
+                }
+                else
+                {
+                    using var add = db.CreateCommand();
+                    add.Transaction = tx;
+                    add.CommandText = """
+                        INSERT INTO inventory_items(
+                            character_id,item_index,count,in_bank,in_shop)
+                        VALUES($buyer,$item,$count,0,0)
+                        """;
+                    Arg(add, "$buyer", buyerDbid);
+                    Arg(add, "$item", itemIndex);
+                    Arg(add, "$count", count);
+                    add.ExecuteNonQuery();
+                }
+
+                if (count == listedCount)
+                {
+                    using var remove = db.CreateCommand();
+                    remove.Transaction = tx;
+                    remove.CommandText = """
+                        DELETE FROM inventory_items
+                         WHERE uid=$uid
+                           AND character_id=$seller
+                           AND in_shop=1
+                        """;
+                    Arg(remove, "$uid", uid);
+                    Arg(remove, "$seller", sellerDbid);
+                    if (remove.ExecuteNonQuery() != 1)
+                        return new(false, "商品狀態已變更", buyerMoney, sellerMoney, false);
+                }
+                else
+                {
+                    soldOut = false;
+                    using var remove = db.CreateCommand();
+                    remove.Transaction = tx;
+                    remove.CommandText = """
+                        UPDATE inventory_items
+                           SET count=count-$count
+                         WHERE uid=$uid
+                           AND character_id=$seller
+                           AND in_shop=1
+                           AND count >= $count
+                        """;
+                    Arg(remove, "$count", count);
+                    Arg(remove, "$uid", uid);
+                    Arg(remove, "$seller", sellerDbid);
+                    if (remove.ExecuteNonQuery() != 1)
+                        return new(false, "商品狀態已變更", buyerMoney, sellerMoney, false);
+                }
+
+                break;
+            }
+
+            case 1:
+            {
+                if (count != 1)
+                    return new(false, "裝備一次只能購買一件", buyerMoney, sellerMoney, false);
+
+                if (CountRows(
+                        """
+                        SELECT COUNT(*)
+                          FROM equipment_items
+                         WHERE character_id=$id
+                           AND in_bank=0
+                           AND in_shop=0
+                        """,
+                        buyerDbid) >= 200)
+                {
+                    return new(false, "裝備空間不足", buyerMoney, sellerMoney, false);
+                }
+
+                using var move = db.CreateCommand();
+                move.Transaction = tx;
+                move.CommandText = """
+                    UPDATE equipment_items
+                       SET character_id=$buyer,
+                           in_shop=0
+                     WHERE uid=$uid
+                       AND character_id=$seller
+                       AND part=255
+                       AND in_bank=0
+                       AND in_shop=1
+                    """;
+                Arg(move, "$buyer", buyerDbid);
+                Arg(move, "$uid", uid);
+                Arg(move, "$seller", sellerDbid);
+                if (move.ExecuteNonQuery() != 1)
+                    return new(false, "商品已下架", buyerMoney, sellerMoney, false);
+                break;
+            }
+
+            case 2:
+            {
+                if (count != 1)
+                    return new(false, "寵物一次只能購買一隻", buyerMoney, sellerMoney, false);
+
+                if (CountRows(
+                        "SELECT COUNT(*) FROM pets WHERE character_id=$id",
+                        buyerDbid) >= 50)
+                {
+                    return new(false, "寵物空間不足", buyerMoney, sellerMoney, false);
+                }
+
+                using var move = db.CreateCommand();
+                move.Transaction = tx;
+                move.CommandText = """
+                    UPDATE pets
+                       SET character_id=$buyer,
+                           in_shop=0,
+                           shop_price=0
+                     WHERE uid=$uid
+                       AND character_id=$seller
+                       AND state=0
+                       AND in_shop=1
+                       AND equip0=0
+                       AND equip1=0
+                       AND equip2=0
+                    """;
+                Arg(move, "$buyer", buyerDbid);
+                Arg(move, "$uid", uid);
+                Arg(move, "$seller", sellerDbid);
+                if (move.ExecuteNonQuery() != 1)
+                    return new(false, "商品已下架", buyerMoney, sellerMoney, false);
+                break;
+            }
+
+            case 3:
+            {
+                if (count != 1)
+                    return new(false, "機甲裝備一次只能購買一件", buyerMoney, sellerMoney, false);
+
+                if (CountRows(
+                        """
+                        SELECT COUNT(*)
+                          FROM horse_equipment
+                         WHERE character_id=$id
+                           AND in_bank=0
+                           AND in_shop=0
+                        """,
+                        buyerDbid) >= 20)
+                {
+                    return new(false, "機甲裝備空間不足", buyerMoney, sellerMoney, false);
+                }
+
+                using var move = db.CreateCommand();
+                move.Transaction = tx;
+                move.CommandText = """
+                    UPDATE horse_equipment
+                       SET character_id=$buyer,
+                           in_shop=0
+                     WHERE uid=$uid
+                       AND character_id=$seller
+                       AND horse_uid=-1
+                       AND in_bank=0
+                       AND in_shop=1
+                    """;
+                Arg(move, "$buyer", buyerDbid);
+                Arg(move, "$uid", uid);
+                Arg(move, "$seller", sellerDbid);
+                if (move.ExecuteNonQuery() != 1)
+                    return new(false, "商品已下架", buyerMoney, sellerMoney, false);
+                break;
+            }
+
+            default:
+                return new(false, "不支援的商品類型", buyerMoney, sellerMoney, false);
+        }
+
+        var buyerNewMoney =
+            checked(buyerMoney - total);
+        var sellerNewMoney =
+            checked(sellerMoney + total);
+
+        using (var debit = db.CreateCommand())
+        {
+            debit.Transaction = tx;
+            debit.CommandText = """
+                UPDATE characters
+                   SET money=$money
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(debit, "$money", buyerNewMoney);
+            Arg(debit, "$id", buyerDbid);
+            Arg(debit, "$account", buyerAccountId);
+            if (debit.ExecuteNonQuery() != 1)
+                return new(false, "購買失敗", buyerMoney, sellerMoney, false);
+        }
+
+        using (var credit = db.CreateCommand())
+        {
+            credit.Transaction = tx;
+            credit.CommandText = """
+                UPDATE characters
+                   SET money=$money
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(credit, "$money", sellerNewMoney);
+            Arg(credit, "$id", sellerDbid);
+            Arg(credit, "$account", sellerAccountId);
+            if (credit.ExecuteNonQuery() != 1)
+                return new(false, "購買失敗", buyerMoney, sellerMoney, false);
+        }
+
+        tx.Commit();
+
+        return new(
+            true,
+            "購買成功",
+            buyerNewMoney,
+            sellerNewMoney,
+            soldOut);
+    }
+
     public AssetPurchaseResult BuyAsset(
         long accountId,
         long dbid,
