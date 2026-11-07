@@ -938,6 +938,27 @@ try
 
     var monster = session.Monsters.Values.First();
 
+    var wanderStartX = monster.X;
+    var wanderStartY = monster.Y;
+    var wanderPackets = combat.TickAi(
+        session,
+        account.Value,
+        monster.X + 2000,
+        monster.Y + 2000,
+        DateTimeOffset.UtcNow.AddSeconds(1));
+
+    var wanderDistanceFromSpawn = Math.Sqrt(
+        Math.Pow(monster.X - monster.SpawnX, 2) +
+        Math.Pow(monster.Y - monster.SpawnY, 2));
+
+    Check(wanderPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"MoveEntity\"")) &&
+          (Math.Abs(monster.X - wanderStartX) > 0.001 ||
+           Math.Abs(monster.Y - wanderStartY) > 0.001) &&
+          wanderDistanceFromSpawn <= 180.001,
+        "idle monster wanders near its spawn point without client input");
+
     store.SetPetState(account.Value, id, petUid, 1);
     var hpBeforePetAttack = monster.CurrentHp;
 
@@ -961,7 +982,7 @@ try
         account.Value,
         monster.X + 200,
         monster.Y,
-        DateTimeOffset.UtcNow.AddSeconds(1));
+        session.LastMonsterAiTick.AddSeconds(1));
 
     Check(monster.HasTarget &&
           aiPackets.Any(x =>
@@ -1048,6 +1069,31 @@ try
           Convert.ToInt32(selected!["HP"]) == 0 &&
           selected["State"].ToString() == "death",
         "monster attacks can kill player and persist death state");
+
+    monster.HasTarget = true;
+    monster.NextWanderAt = DateTimeOffset.MinValue;
+    var deadPlayerAiPackets = combat.TickAi(
+        session,
+        account.Value,
+        monster.X + 20,
+        monster.Y,
+        session.LastMonsterAiTick.AddSeconds(2));
+
+    Check(!monster.HasTarget &&
+          deadPlayerAiPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"MonsterTarget\"") &&
+              JsonSerializer.Serialize(x).Contains(
+                  "\"HasTarget\":false")) &&
+          !deadPlayerAiPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"EntityDamage\"")),
+        "dead player immediately drops monster aggro and cannot be attacked");
+
+    Check(deadPlayerAiPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"MoveEntity\"")),
+        "monster may resume idle wandering while player is dead");
 
     using (var revive = Json(
         """{"Type":"ReviveRequest"}"""))
