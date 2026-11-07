@@ -269,10 +269,45 @@ public sealed class SqliteGameStore : IGameStore
         if (!reader.Read())
             return;
 
-        character["ClubID"] = reader.GetInt64(0);
+        var clubId = reader.GetInt64(0);
+        character["ClubID"] = clubId;
         character["ClubName"] = reader.GetString(1);
         character["ClubPosition"] = reader.GetInt32(2);
         character["ClubDonation"] = reader.GetInt64(3);
+        reader.Close();
+
+        using var tech = db.CreateCommand();
+        tech.CommandText = """
+            SELECT
+                COALESCE(MAX(CASE WHEN research_id=2 THEN level END),0),
+                COALESCE(MAX(CASE WHEN research_id=3 THEN level END),0),
+                COALESCE(MAX(CASE WHEN research_id=4 THEN level END),0),
+                COALESCE(MAX(CASE WHEN research_id=5 THEN level END),0),
+                COALESCE(MAX(CASE WHEN research_id=6 THEN level END),0),
+                COALESCE(MAX(CASE WHEN research_id=7 THEN level END),0),
+                COALESCE(MAX(CASE WHEN research_id=8 THEN level END),0),
+                COALESCE(MAX(CASE WHEN research_id=9 THEN level END),0),
+                COALESCE(MAX(CASE WHEN research_id=10 THEN level END),0),
+                COALESCE(MAX(CASE WHEN research_id=11 THEN level END),0)
+              FROM club_research
+             WHERE club_id=$club
+            """;
+        Arg(tech, "$club", clubId);
+
+        using var levels = tech.ExecuteReader();
+        if (!levels.Read())
+            return;
+
+        character["ClubTechAttack"] = levels.GetInt32(0) * 10;
+        character["ClubTechDefense"] = levels.GetInt32(1) * 10;
+        character["ClubTechMagicAttack"] = levels.GetInt32(2) * 10;
+        character["ClubTechMagicDefense"] = levels.GetInt32(3) * 10;
+        character["ClubTechHit"] = levels.GetInt32(4) * 5;
+        character["ClubTechDodge"] = levels.GetInt32(5) * 5;
+        character["ClubTechMoveSpeed"] = levels.GetInt32(6) * 5;
+        character["ClubTechAttackSpeed"] = levels.GetInt32(7) * 5;
+        character["ClubTechCritRate"] = levels.GetInt32(8) * 3;
+        character["ClubTechCritDamage"] = levels.GetInt32(9) * 5;
     }
 
     public (bool Success, string Message) Create(long accountId, JsonElement data)
@@ -1136,22 +1171,27 @@ public sealed class SqliteGameStore : IGameStore
         {
             capacity.Transaction = tx;
             capacity.CommandText = """
-                SELECT
-                    CASE
-                        WHEN EXISTS(
-                            SELECT 1 FROM clubs WHERE id=$club)
-                        THEN (
-                            SELECT count(*)
-                              FROM club_members
-                             WHERE club_id=$club)
-                        ELSE -1
-                    END
+                SELECT club.level,
+                       (
+                           SELECT count(*)
+                             FROM club_members
+                            WHERE club_id=club.id
+                       )
+                  FROM clubs club
+                 WHERE club.id=$club
+                 LIMIT 1
                 """;
             Arg(capacity, "$club", clubId);
-            var count = Convert.ToInt32(capacity.ExecuteScalar());
-            if (count < 0)
+
+            using var reader = capacity.ExecuteReader();
+            if (!reader.Read())
                 return new(false, "戰團不存在");
-            if (count >= 50)
+
+            var level = Math.Clamp(reader.GetInt32(0), 1, 5);
+            var count = reader.GetInt32(1);
+            var maxMembers = Math.Min(50, level * 10);
+
+            if (count >= maxMembers)
                 return new(false, "戰團人數已滿");
         }
 
