@@ -35,6 +35,11 @@ func _ready() -> void :
 
 	_start_game_entry_flow()
 
+const GAME_HUD_INSTANCE_PREWARM: Dictionary = {
+	"craft": "res://craft_dismantle_window.tscn",
+	"game_info": "res://game_info_window.tscn",
+}
+
 const GAME_HUD_PREWARM_PATHS: Array[String] = [
 	"res://quest_window.tscn",
 	"res://mall_window.tscn",
@@ -69,6 +74,32 @@ func _prewarm_game_hud_resources() -> void :
 				pending.remove_at(index)
 			elif status == ResourceLoader.THREAD_LOAD_FAILED or status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 				pending.remove_at(index)
+		await get_tree().process_frame
+
+	# Resource preloading alone is not enough for the two expensive windows:
+	# their first SceneTree entry/layout is the real hitch. Pay that cost here,
+	# while the player is still on login/character selection, and keep the same
+	# instances alive for GameHUD to adopt later.
+	for kind_value in GAME_HUD_INSTANCE_PREWARM.keys():
+		if not is_inside_tree():
+			return
+		var kind: String = str(kind_value)
+		if GameManager and GameManager.has_method("has_prewarmed_hud_window") and GameManager.has_prewarmed_hud_window(kind):
+			continue
+		var path: String = str(GAME_HUD_INSTANCE_PREWARM[kind])
+		var scene := ResourceLoader.load(path) as PackedScene
+		if scene == null:
+			continue
+		var started_usec: int = Time.get_ticks_usec()
+		var window := scene.instantiate() as Control
+		if window == null:
+			continue
+		window.visible = false
+		window.modulate.a = 0.0
+		if GameManager and GameManager.has_method("cache_prewarmed_hud_window"):
+			GameManager.cache_prewarmed_hud_window(kind, window)
+		var elapsed_ms: float = float(Time.get_ticks_usec() - started_usec) / 1000.0
+		print("[LOGIN_HUD_PREWARM] kind=%s total_ms=%.2f" % [kind, elapsed_ms])
 		await get_tree().process_frame
 
 func _start_game_entry_flow() -> void :
