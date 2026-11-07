@@ -2823,6 +2823,178 @@ public sealed class SqliteGameStore : IGameStore
         return true;
     }
 
+    public CompanionRuntimeDrainResult DrainCompanionRuntime(
+        long accountId,
+        long dbid,
+        int elapsedSeconds)
+    {
+        elapsedSeconds = Math.Max(0, elapsedSeconds);
+        if (elapsedSeconds <= 0)
+        {
+            return new CompanionRuntimeDrainResult(
+                null,
+                false,
+                Array.Empty<Dictionary<string, object>>(),
+                Array.Empty<long>());
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+        {
+            return new CompanionRuntimeDrainResult(
+                null,
+                false,
+                Array.Empty<Dictionary<string, object>>(),
+                Array.Empty<long>());
+        }
+
+        long horseUid;
+        using (var character = db.CreateCommand())
+        {
+            character.Transaction = tx;
+            character.CommandText = """
+                SELECT summoned_horse_uid
+                  FROM characters
+                 WHERE id=$id
+                   AND account_id=$account
+                 LIMIT 1
+                """;
+            Arg(character, "$id", dbid);
+            Arg(character, "$account", accountId);
+            horseUid = Convert.ToInt64(
+                character.ExecuteScalar() ?? -1L);
+        }
+
+        var activePetUids = new List<long>();
+        using (var pets = db.CreateCommand())
+        {
+            pets.Transaction = tx;
+            pets.CommandText = """
+                SELECT uid
+                  FROM pets
+                 WHERE character_id=$id
+                   AND state=1
+                """;
+            Arg(pets, "$id", dbid);
+
+            using var reader = pets.ExecuteReader();
+            while (reader.Read())
+                activePetUids.Add(reader.GetInt64(0));
+        }
+
+        var mechaDismounted = false;
+
+        if (horseUid > 0)
+        {
+            using (var drainHorse = db.CreateCommand())
+            {
+                drainHorse.Transaction = tx;
+                drainHorse.CommandText = """
+                    UPDATE horses
+                       SET energy_left=MAX(
+                           0,
+                           energy_left-$elapsed)
+                     WHERE uid=$horse
+                       AND character_id=$id
+                    """;
+                Arg(drainHorse, "$elapsed", elapsedSeconds);
+                Arg(drainHorse, "$horse", horseUid);
+                Arg(drainHorse, "$id", dbid);
+
+                if (drainHorse.ExecuteNonQuery() != 1)
+                {
+                    mechaDismounted = true;
+                }
+            }
+
+            if (!mechaDismounted)
+            {
+                using var energy = db.CreateCommand();
+                energy.Transaction = tx;
+                energy.CommandText = """
+                    SELECT energy_left
+                      FROM horses
+                     WHERE uid=$horse
+                       AND character_id=$id
+                     LIMIT 1
+                    """;
+                Arg(energy, "$horse", horseUid);
+                Arg(energy, "$id", dbid);
+
+                mechaDismounted =
+                    Convert.ToInt32(
+                        energy.ExecuteScalar() ?? 0) <= 0;
+            }
+
+            if (mechaDismounted)
+            {
+                using var clear = db.CreateCommand();
+                clear.Transaction = tx;
+                clear.CommandText = """
+                    UPDATE characters
+                       SET summoned_horse_uid=-1
+                     WHERE id=$id
+                       AND account_id=$account
+                    """;
+                Arg(clear, "$id", dbid);
+                Arg(clear, "$account", accountId);
+                clear.ExecuteNonQuery();
+            }
+        }
+
+        if (activePetUids.Count > 0)
+        {
+            using var drainPets = db.CreateCommand();
+            drainPets.Transaction = tx;
+            drainPets.CommandText = """
+                UPDATE pets
+                   SET feed_value=MAX(
+                           0,
+                           feed_value-$elapsed),
+                       state=CASE
+                           WHEN feed_value-$elapsed <= 0
+                           THEN 0
+                           ELSE state
+                       END
+                 WHERE character_id=$id
+                   AND state=1
+                """;
+            Arg(drainPets, "$elapsed", elapsedSeconds);
+            Arg(drainPets, "$id", dbid);
+            drainPets.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+
+        var assets = GetCharacterAssets(accountId, dbid);
+
+        var horse = horseUid > 0
+            ? assets.Horses.FirstOrDefault(x =>
+                Convert.ToInt64(x["HorseUID"]) == horseUid)
+            : null;
+
+        var petUidSet = activePetUids.ToHashSet();
+        var affectedPets = assets.Pets
+            .Where(x => petUidSet.Contains(
+                Convert.ToInt64(x["UID"])))
+            .ToArray();
+
+        var recalledPetUids = affectedPets
+            .Where(x =>
+                Convert.ToInt32(x["State"]) == 0 &&
+                Convert.ToInt32(x["FeedValue"]) <= 0)
+            .Select(x => Convert.ToInt64(x["UID"]))
+            .ToArray();
+
+        return new CompanionRuntimeDrainResult(
+            horse,
+            mechaDismounted,
+            affectedPets,
+            recalledPetUids);
+    }
+
     public bool SetSummonedHorse(long accountId, long dbid, long horseUid)
     {
         using var db = Open();
