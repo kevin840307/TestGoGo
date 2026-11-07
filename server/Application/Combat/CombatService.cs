@@ -39,6 +39,7 @@ public sealed class CombatService
     private readonly WorldRuntimeService _runtime;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly PartyService _party;
+    private readonly ILogger<CombatService> _log;
 
     private sealed record PendingRevive(
         long TargetAccountId,
@@ -72,7 +73,8 @@ public sealed class CombatService
         EnemyDropCatalog drops,
         WorldRuntimeService runtime,
         ServerBroadcastHub broadcasts,
-        PartyService party)
+        PartyService party,
+        ILogger<CombatService> log)
     {
         _store = store;
         _world = world;
@@ -83,6 +85,7 @@ public sealed class CombatService
         _runtime = runtime;
         _broadcasts = broadcasts;
         _party = party;
+        _log = log;
     }
 
     public IReadOnlyList<object> EnterMap(
@@ -242,7 +245,20 @@ public sealed class CombatService
                         // session because pet positions are owner-session
                         // runtime state. Let its owner connection drive it.
                         if (monster.TargetPetUid > 0)
+                        {
+                            if (monster.LastStallLogAt == DateTimeOffset.MinValue ||
+                                now - monster.LastStallLogAt >= TimeSpan.FromSeconds(2))
+                            {
+                                monster.LastStallLogAt = now;
+                                _log.LogWarning(
+                                    "[MONSTER_AI_FOREIGN_PET_OWNER] EntityID={EntityID} TargetCharacterID={TargetCharacterID} TargetPetUID={TargetPetUID} MapID={MapID}",
+                                    monster.EntityId,
+                                    monster.TargetCharacterId,
+                                    monster.TargetPetUid,
+                                    session.CurrentMapId);
+                            }
                             continue;
+                        }
 
                         var targetCharacter = _store.GetCharacter(
                             targetPresence.AccountId,
@@ -370,6 +386,7 @@ public sealed class CombatService
                                 ? activePetUid
                                 : 0;
                         monster.LastAiAt = now;
+                        monster.LastActionAt = now;
                         SetAiState(
                             monster,
                             MonsterAiState.Chase);
@@ -535,6 +552,7 @@ public sealed class CombatService
                             if (updatedPet is not null)
                             {
                                 monster.LastAttackAt = now;
+                                monster.LastActionAt = now;
                                 var currentHp =
                                     Convert.ToInt32(
                                         updatedPet["HP"]);
@@ -642,6 +660,7 @@ public sealed class CombatService
                             if (updated is not null)
                             {
                                 monster.LastAttackAt = now;
+                                monster.LastActionAt = now;
                                 character = updated;
                                 var currentHp =
                                     Convert.ToInt32(updated["HP"]);
@@ -733,6 +752,28 @@ public sealed class CombatService
                         });
                     }
 
+                    if (monster.LastActionAt != DateTimeOffset.MinValue &&
+                        now - monster.LastActionAt >= TimeSpan.FromSeconds(2) &&
+                        (monster.LastStallLogAt == DateTimeOffset.MinValue ||
+                         now - monster.LastStallLogAt >= TimeSpan.FromSeconds(2)))
+                    {
+                        monster.LastStallLogAt = now;
+                        _log.LogWarning(
+                            "[MONSTER_AI_STALL] EntityID={EntityID} State={State} HasTarget={HasTarget} TargetCharacterID={TargetCharacterID} TargetPetUID={TargetPetUID} Monster=({MonsterX:F1},{MonsterY:F1}) Target=({TargetX:F1},{TargetY:F1}) Distance={Distance:F1} LastAttackAt={LastAttackAt:o} LastActionAt={LastActionAt:o}",
+                            monster.EntityId,
+                            monster.AiState,
+                            monster.HasTarget,
+                            monster.TargetCharacterId,
+                            monster.TargetPetUid,
+                            monster.X,
+                            monster.Y,
+                            targetX,
+                            targetY,
+                            distance,
+                            monster.LastAttackAt,
+                            monster.LastActionAt);
+                    }
+
                     continue;
                 }
 
@@ -763,6 +804,7 @@ public sealed class CombatService
 
                 monster.X = nx;
                 monster.Y = ny;
+                monster.LastActionAt = now;
 
                 packets.Add(BuildMovePacket(
                     monster,
@@ -3194,6 +3236,7 @@ public sealed class CombatService
 
         monster.X = desiredX;
         monster.Y = desiredY;
+        monster.LastActionAt = now;
         SetAiState(monster, MonsterAiState.Wander);
         monster.NextWanderAt = now + NextWanderDelay(
             monster.EntityId,
