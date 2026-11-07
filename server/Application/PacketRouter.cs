@@ -988,6 +988,64 @@ public sealed class PacketRouter
                     ];
                 }
 
+                var skillBook =
+                    _current.ResolveSkillBook(itemIndex);
+
+                if (skillBook is not null)
+                {
+                    var learned =
+                        _store.LearnSkillFromBook(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            itemIndex,
+                            skillBook.SkillId,
+                            skillBook.SkillLevel);
+
+                    if (!learned.Success)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = learned.Message
+                            }
+                        ];
+                    }
+
+                    var assets =
+                        _store.GetCharacterAssets(
+                            accountId,
+                            state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        new
+                        {
+                            Type = "SkillSync",
+                            Skills = _store.GetSkills(
+                                accountId,
+                                state.CharacterId.Value)
+                        },
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message =
+                                $"已學會 {skillBook.SkillName} Lv.{skillBook.SkillLevel}"
+                        }
+                    ];
+                }
+
                 return
                 [
                     new
