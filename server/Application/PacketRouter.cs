@@ -3528,6 +3528,95 @@ public sealed class PacketRouter
                     return _gm.Execute(message, state);
                 }
 
+                if (message.StartsWith(
+                        "/name ",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    var parts = message.Split(
+                        ' ',
+                        3,
+                        StringSplitOptions.RemoveEmptyEntries |
+                        StringSplitOptions.TrimEntries);
+
+                    if (parts.Length < 3 ||
+                        string.IsNullOrWhiteSpace(parts[1]) ||
+                        string.IsNullOrWhiteSpace(parts[2]))
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message =
+                                    "密語用法：/name 玩家名 訊息"
+                            }
+                        ];
+                    }
+
+                    var targetName = parts[1];
+                    var privateText = parts[2];
+                    OnlinePlayerPresence? target = null;
+
+                    foreach (var presence in
+                             _broadcasts.OnlinePlayers(
+                                 state.ConnectionId))
+                    {
+                        var targetCharacter =
+                            _store.GetCharacter(
+                                presence.AccountId,
+                                presence.CharacterId);
+
+                        if (targetCharacter is null ||
+                            !targetCharacter.TryGetValue(
+                                "NAME",
+                                out var rawTargetName))
+                        {
+                            continue;
+                        }
+
+                        if (!string.Equals(
+                                rawTargetName?.ToString(),
+                                targetName,
+                                StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        target = presence;
+                        break;
+                    }
+
+                    if (target is null)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message =
+                                    $"找不到在線玩家：{targetName}"
+                            }
+                        ];
+                    }
+
+                    var privatePacket = new
+                    {
+                        Type = "ChatBroadcast",
+                        EntityID = selfDbid,
+                        SenderName = character["NAME"],
+                        Race = character["Race"],
+                        Channel = 4,
+                        Message = privateText,
+                        BubbleType = 0
+                    };
+
+                    _broadcasts.PublishToConnection(
+                        target.ConnectionId,
+                        privatePacket);
+
+                    return [privatePacket];
+                }
+
                 var clubCommand =
                     _club.TryHandleChatCommand(
                         accountId,
