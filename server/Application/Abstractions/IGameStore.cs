@@ -144,6 +144,10 @@ public interface IGameStore
         long accountId,
         long dbid,
         int damage);
+    Dictionary<string, object>? ApplyHeal(
+        long accountId,
+        long dbid,
+        int amount);
 
     Dictionary<string, object>? AddRewards(
         long accountId,
