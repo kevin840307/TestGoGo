@@ -352,6 +352,9 @@ public sealed class PacketRouter
                 if (!state.CharacterId.HasValue)
                     return [];
 
+                if (state.AutoSaintEnabled)
+                    return [];
+
                 var x = req.Int("X");
                 var y = req.Int("Y");
                 state.LastX = x;
@@ -422,6 +425,35 @@ public sealed class PacketRouter
 
                 var itemIndex = Convert.ToInt32(
                     inventoryItem["ItemIndex"]);
+
+                if (itemIndex == 2803)
+                {
+                    if (Convert.ToInt32(
+                            inventoryItem["InBank"]) != 0 ||
+                        Convert.ToInt32(
+                            inventoryItem["InShop"]) != 0 ||
+                        Convert.ToInt32(
+                            inventoryItem["Count"]) <= 0)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "大聲公目前無法使用"
+                            }
+                        ];
+                    }
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "OpenMegaphoneWindow",
+                            ItemUID = itemUid
+                        }
+                    ];
+                }
 
                 if (_dolls.Supports(itemIndex))
                 {
@@ -1314,6 +1346,156 @@ public sealed class PacketRouter
                 ];
             }
 
+            case "MegaphoneMessage":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var itemUid = req.Long("ItemUID");
+                var message = req.Str("Message").Trim();
+
+                if (message.Length is < 1 or > 50)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "大聲公訊息需為 1～50 個字"
+                        }
+                    ];
+                }
+
+                var assetsBefore = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                var megaphone = assetsBefore.Inventory.FirstOrDefault(x =>
+                    Convert.ToInt64(x["ItemUID"]) == itemUid &&
+                    Convert.ToInt32(x["ItemIndex"]) == 2803 &&
+                    Convert.ToInt32(x["InBank"]) == 0 &&
+                    Convert.ToInt32(x["InShop"]) == 0 &&
+                    Convert.ToInt32(x["Count"]) > 0);
+
+                if (megaphone is null)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "找不到可使用的大聲公"
+                        }
+                    ];
+                }
+
+                var consumed = _store.DiscardAsset(
+                    accountId,
+                    state.CharacterId.Value,
+                    itemUid,
+                    0,
+                    1);
+
+                if (!consumed.Success)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "大聲公使用失敗"
+                        }
+                    ];
+                }
+
+                var character = _store.GetCharacter(
+                    accountId,
+                    state.CharacterId.Value);
+
+                var senderName = character is not null &&
+                                 character.TryGetValue(
+                                     "NAME",
+                                     out var rawName)
+                    ? rawName?.ToString() ??
+                      $"角色{state.CharacterId.Value}"
+                    : $"角色{state.CharacterId.Value}";
+
+                _broadcasts.Publish(new
+                {
+                    Type = "SystemMessageBroadcast",
+                    Message = $"[大聲公] {senderName}：{message}"
+                });
+
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
+
+                return
+                [
+                    new
+                    {
+                        Type = "InventorySync",
+                        Items = assets.Inventory,
+                        MaxSize = assets.InventoryMaxSize
+                    },
+                    new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = "大聲公已發送"
+                    }
+                ];
+            }
+
+            case "ToggleAutoSaint":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var enabled =
+                    req.TryGetProperty(
+                        "IsOn",
+                        out var isOn) &&
+                    isOn.ValueKind == JsonValueKind.True;
+
+                state.AutoSaintEnabled = enabled;
+                state.AutoSaintMpThreshold = Math.Clamp(
+                    req.Int("MpThreshold", 30),
+                    0,
+                    100);
+                state.AutoSaintSpThreshold = Math.Clamp(
+                    req.Int("SpThreshold", 30),
+                    0,
+                    100);
+
+                if (enabled)
+                {
+                    state.PetTargets.Clear();
+
+                    foreach (var monster in state.Monsters.Values)
+                    {
+                        if (monster.TargetCharacterId !=
+                            state.CharacterId.Value)
+                            continue;
+
+                        monster.HasTarget = false;
+                        monster.TargetCharacterId = 0;
+                    }
+                }
+
+                return
+                [
+                    new
+                    {
+                        Type = "ToggleAutoSaintResponse",
+                        IsOn = state.AutoSaintEnabled,
+                        MpThreshold =
+                            state.AutoSaintMpThreshold,
+                        SpThreshold =
+                            state.AutoSaintSpThreshold
+                    }
+                ];
+            }
+
             case "DirectTransfer":
             {
                 if (!state.CharacterId.HasValue)
@@ -1779,6 +1961,18 @@ public sealed class PacketRouter
 
             case "AttackEntity":
             {
+                if (state.AutoSaintEnabled)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "自動聖靈啟動中，禁止手動攻擊"
+                        }
+                    ];
+                }
+
                 var packets = EnsureCurrentCombatMapLoaded(
                     state,
                     accountId);
@@ -1794,6 +1988,18 @@ public sealed class PacketRouter
 
             case "UseSkill":
             {
+                if (state.AutoSaintEnabled)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "自動聖靈啟動中，禁止手動施法"
+                        }
+                    ];
+                }
+
                 var packets = EnsureCurrentCombatMapLoaded(
                     state,
                     accountId);
@@ -1998,6 +2204,9 @@ public sealed class PacketRouter
                 state.LoadedMonsterMapId = 0;
                 state.ActiveSkillBuffs.Clear();
                 state.GroundItems.Clear();
+                state.AutoSaintEnabled = false;
+                state.AutoSaintMpThreshold = 30;
+                state.AutoSaintSpThreshold = 30;
                 state.CloseRequested = true;
 
                 return [new
