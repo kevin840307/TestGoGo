@@ -26,7 +26,7 @@ public sealed class CombatService
     // waypoint, so this value represents movement speed rather than tween timing.
     private const double MoveTweenSeconds = 0.25;
     private const double WanderRadius = 180.0;
-    private const double WanderStep = 60.0;
+    private const double WanderStep = 85.0;
 
     private readonly IGameStore _store;
     private readonly WorldDataService _world;
