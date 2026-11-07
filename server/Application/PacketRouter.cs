@@ -583,7 +583,7 @@ public sealed class PacketRouter
                         MaxSize = assets.EquipMaxSize
                     },
                     BuildEffectiveStatusPacket(accountId, state.CharacterId.Value, assets),
-                    BuildAppearancePacket(accountId, state.CharacterId.Value, assets)
+                    BuildAndBroadcastAppearancePacket(state, accountId, state.CharacterId.Value, assets)
                 ];
             }
 
@@ -614,7 +614,7 @@ public sealed class PacketRouter
                         MaxSize = assets.EquipMaxSize
                     },
                     BuildEffectiveStatusPacket(accountId, state.CharacterId.Value, assets),
-                    BuildAppearancePacket(accountId, state.CharacterId.Value, assets)
+                    BuildAndBroadcastAppearancePacket(state, accountId, state.CharacterId.Value, assets)
                 ];
             }
 
@@ -650,7 +650,8 @@ public sealed class PacketRouter
                         accountId,
                         state.CharacterId.Value,
                         assets));
-                    response.Add(BuildAppearancePacket(
+                    response.Add(BuildAndBroadcastAppearancePacket(
+                        state,
                         accountId,
                         state.CharacterId.Value,
                         assets));
@@ -745,10 +746,17 @@ public sealed class PacketRouter
                 };
 
                 if (success)
+                {
                     response.Add(BuildEffectiveStatusPacket(
                         accountId,
                         state.CharacterId.Value,
                         assets));
+                    response.Add(BuildAndBroadcastAppearancePacket(
+                        state,
+                        accountId,
+                        state.CharacterId.Value,
+                        assets));
+                }
 
                 return response;
             }
@@ -783,10 +791,17 @@ public sealed class PacketRouter
                 };
 
                 if (success)
+                {
                     response.Add(BuildEffectiveStatusPacket(
                         accountId,
                         state.CharacterId.Value,
                         assets));
+                    response.Add(BuildAndBroadcastAppearancePacket(
+                        state,
+                        accountId,
+                        state.CharacterId.Value,
+                        assets));
+                }
 
                 return response;
             }
@@ -996,6 +1011,10 @@ public sealed class PacketRouter
                     });
                 }
 
+                BroadcastMapEntityPackets(
+                    state,
+                    responses);
+
                 return responses;
             }
 
@@ -1017,15 +1036,19 @@ public sealed class PacketRouter
                 // nearby entity presentation in sync for this session.
                 character["Title"] = titleId;
 
-                return
-                [
-                    new
-                    {
-                        Type = "UpdateAppearance",
-                        EntityID = state.CharacterId.Value,
-                        Title = titleId
-                    }
-                ];
+                var titlePacket = new
+                {
+                    Type = "UpdateAppearance",
+                    EntityID = state.CharacterId.Value,
+                    Title = titleId
+                };
+
+                _broadcasts.PublishToMap(
+                    state.CurrentMapId,
+                    titlePacket,
+                    state.ConnectionId);
+
+                return [titlePacket];
             }
 
             case "PartyAction":
@@ -1628,7 +1651,7 @@ public sealed class PacketRouter
                     return _gm.Execute(message, state);
                 }
 
-                return [new
+                var chatPacket = new
                 {
                     Type = "ChatBroadcast",
                     EntityID = state.CharacterId.Value,
@@ -1637,7 +1660,14 @@ public sealed class PacketRouter
                     Channel = req.Int("Channel"),
                     Message = message,
                     BubbleType = req.Int("BubbleType")
-                }];
+                };
+
+                _broadcasts.PublishToMap(
+                    state.CurrentMapId,
+                    chatPacket,
+                    state.ConnectionId);
+
+                return [chatPacket];
             }
 
             case "ReviveRequest":
@@ -2235,7 +2265,8 @@ public sealed class PacketRouter
                         state.CharacterId.Value,
                         assets));
                 result.Packets.Add(
-                    BuildAppearancePacket(
+                    BuildAndBroadcastAppearancePacket(
+                        state,
                         accountId,
                         state.CharacterId.Value,
                         assets));
@@ -2826,6 +2857,10 @@ public sealed class PacketRouter
             });
         }
 
+        BroadcastMapEntityPackets(
+            state,
+            packets);
+
         return packets;
     }
 
@@ -2885,6 +2920,52 @@ public sealed class PacketRouter
                 AttackRange = evolution?.AttackRange ?? 80
             }
         };
+    }
+
+    private void BroadcastMapEntityPackets(
+        ClientSession state,
+        IEnumerable<object> packets)
+    {
+        if (state.CurrentMapId <= 0)
+            return;
+
+        foreach (var packet in packets)
+        {
+            var type = packet.GetType()
+                .GetProperty("Type")
+                ?.GetValue(packet)
+                ?.ToString();
+
+            if (type is not (
+                    "SpawnEntity" or
+                    "DespawnEntity" or
+                    "MoveEntity"))
+                continue;
+
+            _broadcasts.PublishToMap(
+                state.CurrentMapId,
+                packet,
+                state.ConnectionId);
+        }
+    }
+
+    private object BuildAndBroadcastAppearancePacket(
+        ClientSession state,
+        long accountId,
+        long dbid,
+        SGO.Server.Domain.Assets.CharacterAssets assets)
+    {
+        var packet = BuildAppearancePacket(
+            accountId,
+            dbid,
+            assets);
+
+        _broadcasts.PublishToMap(
+            state.CurrentMapId,
+            packet,
+            state.ConnectionId);
+
+        return packet;
     }
 
     private object BuildEffectiveStatusPacket(
