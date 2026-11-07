@@ -33,6 +33,14 @@ public static class GameDataServiceCollectionExtensions
         services.AddSingleton(
             new LegacyBattleRulesCatalog(gameDataRoot));
         services.AddSingleton(
+            new LegacyPetGrowthCatalog(gameDataRoot));
+        services.AddSingleton(
+            new PetSkillCatalog(
+                Path.Combine(
+                    gameDataRoot,
+                    "Pets",
+                    "Config.json")));
+        services.AddSingleton(
             new RecipeCatalog(
                 Path.Combine(
                     gameDataRoot,
