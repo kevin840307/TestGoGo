@@ -86,6 +86,18 @@ public sealed class SharedMapAiTicker : BackgroundService
         var tickedMaps = 0;
         foreach (var group in activeByMap)
         {
+            // Empty city/maps need no player HP queries and no monster AI.
+            // GM-spawned monsters still cause normal processing.
+            var map = _world.GetMap(group.Key);
+            lock (map.SyncRoot)
+            {
+                if (map.Monsters.Count == 0)
+                {
+                    tickedMaps++;
+                    continue;
+                }
+            }
+
             var players = new List<PlayerContext>();
             foreach (var session in group)
             {
@@ -142,8 +154,6 @@ public sealed class SharedMapAiTicker : BackgroundService
             var assignments = players.ToDictionary(
                 p => p.Session.ConnectionId,
                 _ => new List<int>());
-            var map = _world.GetMap(group.Key);
-
             lock (map.SyncRoot)
             {
                 foreach (var monster in map.Monsters.Values)
