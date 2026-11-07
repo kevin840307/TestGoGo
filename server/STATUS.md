@@ -5,6 +5,28 @@
 > Scope: recovered/current Godot client interoperability using a local .NET 8 server.
 > The current recovered client GameData is authoritative at runtime. Old server/client data is reference material for recovering names, relationships, scripts, map layout, shop membership, and gameplay rules.
 
+## 2026-11-07: Shared map AI and monster wall navigation
+
+The code now uses **one 250 ms scheduler** (`SharedMapAiTicker`) for
+monster AI and monster respawns across connected players, grouped by map.
+Each monster is assigned once per map tick to its target owner's session
+or the nearest eligible player/pet context. Personal HP/MP recovery, buffs,
+pet follow and client snapshots still run in the per-connection tick.
+Maps with no connected world-ready players do not advance monster AI;
+monster positions are retained in `WorldRuntimeService`.
+
+Monster chase and wandering use `MonsterNavigationService`, reading the
+same `Blocking.dat` collision source as the client. Every movement
+segment is checked strictly; chase performs bounded A* detours and does
+not cut diagonally through wall corners. Melee attacks cannot hit through
+walls. Blocked paths stop the run animation and retry no more than once
+per 750 ms. Missing collision maps fail closed.
+
+The smoke suite has new navigation/central-tick regression assertions.
+**Automated build and runtime gameplay verification still need a working
+CI runner and Godot client run; do not infer that a successful commit means
+those checks have passed.**
+
 ## 1. Runtime data priority
 
 The server must not assume that a legacy ID still means the same thing in the current recovered client.
