@@ -459,11 +459,25 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	# task is really complete. The entry loading overlay stays visible while
 	# this readiness gate is running.
 	_report_initial_loading_progress(progress_callback, 82.0, "載入角色外觀")
+	var visual_wait_started_usec: int = Time.get_ticks_usec()
 	while is_instance_valid(current_player) and current_player.has_method("is_initial_visual_ready") and not current_player.is_initial_visual_ready():
+		var visual_elapsed_ms: float = float(Time.get_ticks_usec() - visual_wait_started_usec) / 1000.0
+		_report_initial_loading_progress(
+			progress_callback,
+			minf(85.5, 82.0 + visual_elapsed_ms / 220.0),
+			"載入角色外觀"
+		)
 		await get_tree().process_frame
 
 	_report_initial_loading_progress(progress_callback, 86.0, "初始化遊戲資料")
+	var hud_wait_started_usec: int = Time.get_ticks_usec()
 	while is_instance_valid(current_hud) and current_hud.has_method("is_initial_hud_ready") and not current_hud.is_initial_hud_ready():
+		var hud_elapsed_ms: float = float(Time.get_ticks_usec() - hud_wait_started_usec) / 1000.0
+		_report_initial_loading_progress(
+			progress_callback,
+			minf(88.5, 86.0 + hud_elapsed_ms / 260.0),
+			"初始化遊戲資料"
+		)
 		await get_tree().process_frame
 
 	# Heavy optional windows are instantiated while the loading overlay is still
@@ -484,22 +498,40 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		await _init_buildings_with_diagnostics(0, target_map_id)
 	await get_tree().process_frame
 
-	_report_initial_loading_progress(progress_callback, 95.0, "同步地圖角色")
+	_report_initial_loading_progress(progress_callback, 93.0, "同步地圖角色")
+	var initial_spawn_total: int = 0
 	if NetworkEntityManager:
+		if NetworkEntityManager.has_method("get_spawn_queue_remaining_count"):
+			initial_spawn_total = int(NetworkEntityManager.get_spawn_queue_remaining_count())
 		if NetworkEntityManager.has_method("set_initial_spawn_boost"):
 			NetworkEntityManager.set_initial_spawn_boost(true)
 		if NetworkEntityManager.has_method("set_spawn_queue_paused"):
 			NetworkEntityManager.set_spawn_queue_paused(false)
 	await get_tree().process_frame
+
 	while NetworkEntityManager and NetworkEntityManager.has_method("is_initial_spawn_queue_idle") and not NetworkEntityManager.is_initial_spawn_queue_idle():
+		var remaining_spawns: int = 0
+		if NetworkEntityManager.has_method("get_spawn_queue_remaining_count"):
+			remaining_spawns = int(NetworkEntityManager.get_spawn_queue_remaining_count())
+			initial_spawn_total = maxi(initial_spawn_total, remaining_spawns)
+		var spawn_progress: float = 0.0
+		if initial_spawn_total > 0:
+			spawn_progress = 1.0 - float(remaining_spawns) / float(initial_spawn_total)
+		_report_initial_loading_progress(
+			progress_callback,
+			93.0 + clampf(spawn_progress, 0.0, 1.0) * 4.0,
+			"同步地圖角色"
+		)
 		await get_tree().process_frame
+
+	_report_initial_loading_progress(progress_callback, 97.0, "地圖角色同步完成")
 	if NetworkEntityManager and NetworkEntityManager.has_method("set_initial_spawn_boost"):
 		NetworkEntityManager.set_initial_spawn_boost(false)
 
 	# Warm the first rendered world frame while EntryManager's loading overlay
 	# still covers the screen. Setting these visible only at the final reveal
 	# concentrated CanvasItem/render registration into a 200-260 ms hitch.
-	_report_initial_loading_progress(progress_callback, 97.0, "預熱畫面")
+	_report_initial_loading_progress(progress_callback, 98.0, "預熱畫面")
 	set_frame_gap_stage("world_render_warmup")
 	if is_instance_valid(current_map_node):
 		current_map_node.visible = true
