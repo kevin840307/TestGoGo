@@ -4808,6 +4808,114 @@ try
             "full mecha rejects battery use without consuming the battery");
     }
 
+    var capacityBefore =
+        store.GetCharacterAssets(
+            account.Value,
+            id);
+
+    var capacityCards = new[]
+    {
+        (
+            ItemId: 2302,
+            Inventory: 100,
+            Equip: 0,
+            Pet: 0,
+            HorseEquip: 0,
+            Label: "道具空間"),
+        (
+            ItemId: 2303,
+            Inventory: 0,
+            Equip: 100,
+            Pet: 0,
+            HorseEquip: 0,
+            Label: "裝備空間"),
+        (
+            ItemId: 2304,
+            Inventory: 0,
+            Equip: 0,
+            Pet: 10,
+            HorseEquip: 0,
+            Label: "寵物空間"),
+        (
+            ItemId: 2305,
+            Inventory: 0,
+            Equip: 0,
+            Pet: 0,
+            HorseEquip: 25,
+            Label: "機甲裝備空間")
+    };
+
+    var capacityCardUids =
+        new List<long>();
+
+    foreach (var card in capacityCards)
+    {
+        var uid = store.AddInventoryItem(
+            account.Value,
+            id,
+            card.ItemId,
+            1);
+        capacityCardUids.Add(uid);
+
+        using var useCapacityCard = Json(
+            JsonSerializer.Serialize(new
+            {
+                Type = "UseItemRequest",
+                ItemUID = uid
+            }));
+
+        var responses = router.Handle(
+            useCapacityCard.RootElement,
+            session);
+        var json = JsonSerializer.Serialize(
+            responses);
+
+        Check(
+            json.Contains(card.Label + "擴充完成") &&
+            json.Contains("\"Type\":\"InventorySync\"") &&
+            json.Contains("\"Type\":\"EquipSync\"") &&
+            json.Contains("\"Type\":\"PetSync\"") &&
+            json.Contains("\"Type\":\"HorseSync\""),
+            $"capacity card {card.ItemId} immediately refreshes all client capacity views");
+    }
+
+    var capacityAfter =
+        store.GetCharacterAssets(
+            account.Value,
+            id);
+
+    Check(
+        capacityAfter.InventoryMaxSize ==
+            capacityBefore.InventoryMaxSize + 100 &&
+        capacityAfter.EquipMaxSize ==
+            capacityBefore.EquipMaxSize + 100 &&
+        capacityAfter.PetMaxSize ==
+            capacityBefore.PetMaxSize + 10 &&
+        capacityAfter.HorseEquipMaxSize ==
+            capacityBefore.HorseEquipMaxSize + 25 &&
+        capacityCardUids.All(uid =>
+            !capacityAfter.Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) == uid)),
+        "2302-2305 expansion cards atomically consume one card and increase the correct persistent capacity");
+
+    var reopenedCapacityStore =
+        new SqliteGameStore(dbPath);
+    var persistedCapacity =
+        reopenedCapacityStore.GetCharacterAssets(
+            account.Value,
+            id);
+
+    Check(
+        persistedCapacity.InventoryMaxSize ==
+            capacityAfter.InventoryMaxSize &&
+        persistedCapacity.EquipMaxSize ==
+            capacityAfter.EquipMaxSize &&
+        persistedCapacity.PetMaxSize ==
+            capacityAfter.PetMaxSize &&
+        persistedCapacity.HorseEquipMaxSize ==
+            capacityAfter.HorseEquipMaxSize,
+        "expanded capacities survive a fresh store instance/reconnect migration path");
+
     using (var horseEquip = Json(JsonSerializer.Serialize(new { Type = "HorseEquipRequest", EquipUID = horseEquipUid, HorseUID = horseUid })))
     {
         var responses = router.Handle(horseEquip.RootElement, session);
