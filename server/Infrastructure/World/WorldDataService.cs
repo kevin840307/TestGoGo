@@ -11,8 +11,8 @@ public sealed class WorldDataService
     private readonly string _dataRoot;
     private readonly EnemyCatalog _enemyCatalog;
     private readonly LegacyNpcVisualCatalog _npcVisuals;
-    private readonly ConcurrentDictionary<int, IReadOnlyList<WorldNpc>> _npcCache = new();
-    private readonly ConcurrentDictionary<int, IReadOnlyList<WorldEnemy>> _enemyCache = new();
+    private readonly ConcurrentDictionary<int, Lazy<IReadOnlyList<WorldNpc>>> _npcCache = new();
+    private readonly ConcurrentDictionary<int, Lazy<IReadOnlyList<WorldEnemy>>> _enemyCache = new();
 
     public WorldDataService(string dataRoot)
         : this(
@@ -33,7 +33,12 @@ public sealed class WorldDataService
     }
 
     public IReadOnlyList<WorldNpc> GetNpcs(int mapId)
-        => _npcCache.GetOrAdd(mapId, LoadNpcs);
+        => _npcCache.GetOrAdd(
+            mapId,
+            id => new Lazy<IReadOnlyList<WorldNpc>>(
+                () => LoadNpcs(id),
+                LazyThreadSafetyMode.ExecutionAndPublication))
+            .Value;
 
     private IReadOnlyList<WorldNpc> LoadNpcs(int mapId)
     {
@@ -70,7 +75,12 @@ public sealed class WorldDataService
     }
 
     public IReadOnlyList<WorldEnemy> GetEnemies(int mapId)
-        => _enemyCache.GetOrAdd(mapId, LoadEnemies);
+        => _enemyCache.GetOrAdd(
+            mapId,
+            id => new Lazy<IReadOnlyList<WorldEnemy>>(
+                () => LoadEnemies(id),
+                LazyThreadSafetyMode.ExecutionAndPublication))
+            .Value;
 
     private IReadOnlyList<WorldEnemy> LoadEnemies(int mapId)
     {
