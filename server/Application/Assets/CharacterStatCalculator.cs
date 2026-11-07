@@ -135,6 +135,10 @@ public static class CharacterStatCalculator
         {
             Type = "PlayerStatusSync",
             Level = character["Level"],
+            Money = character["Money"],
+            ExpAcc = character["ExpAcc"],
+            ExpDeath = character["ExpDeath"],
+            MaxExp = character["MaxExp"],
             ExpUse = character["ExpUse"],
             Str = character["Str"],
             Dex = character["Dex"],
