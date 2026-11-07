@@ -2859,10 +2859,15 @@ public sealed class SqliteGameStore : IGameStore
         long dbid,
         long horseUid,
         long itemUid,
-        int energyAmount)
+        int energyAmount,
+        int maxEnergy)
     {
         if (energyAmount <= 0)
             return null;
+
+        maxEnergy = maxEnergy > 0
+            ? maxEnergy
+            : int.MaxValue;
 
         using var db = Open();
         using var tx = db.BeginTransaction();
@@ -2892,10 +2897,15 @@ public sealed class SqliteGameStore : IGameStore
             horse.Transaction = tx;
             horse.CommandText = """
                 UPDATE horses
-                   SET energy_left = energy_left + $energy
-                 WHERE uid=$horse AND character_id=$id
+                   SET energy_left = MIN(
+                       $maxEnergy,
+                       energy_left + $energy)
+                 WHERE uid=$horse
+                   AND character_id=$id
+                   AND energy_left < $maxEnergy
                 """;
             Arg(horse, "$energy", energyAmount);
+            Arg(horse, "$maxEnergy", maxEnergy);
             Arg(horse, "$horse", horseUid);
             Arg(horse, "$id", dbid);
 
