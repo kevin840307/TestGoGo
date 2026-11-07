@@ -1701,13 +1701,12 @@ public sealed class CombatService
         };
 
         // Crash isolation mode for the custom screen AOE skill:
-        // kill exactly one nearby monster, but do not run any reward/drop/quest
-        // pipeline. This isolates client monster-death handling.
+        // kill up to four nearby monsters and aggregate character rewards once.
+        // Drops, quests, pet EXP and mecha EXP remain disabled.
         if (isScreenAreaAttack)
         {
             var runtime = SyncSessionMonsters(session);
-            object? probeDamagePacket = null;
-            object? probeDeathPacket = null;
+            var killedMonsters = new List<MonsterRuntimeState>();
 
             lock (runtime.SyncRoot)
             {
@@ -1715,7 +1714,7 @@ public sealed class CombatService
                     0,
                     levelData.AoeRadius);
 
-                var probeTarget = runtime.Monsters.Values
+                var probeTargets = runtime.Monsters.Values
                     .Where(x =>
                         x.IsAlive &&
                         x.MapId == session.CurrentMapId &&
@@ -1725,9 +1724,10 @@ public sealed class CombatService
                     .OrderBy(x =>
                         Math.Pow(x.X - session.LastX, 2) +
                         Math.Pow(x.Y - session.LastY, 2))
-                    .FirstOrDefault();
+                    .Take(4)
+                    .ToArray();
 
-                if (probeTarget is not null)
+                foreach (var probeTarget in probeTargets)
                 {
                     var lethalDamage = Math.Max(
                         1,
@@ -1742,7 +1742,7 @@ public sealed class CombatService
                         probeTarget,
                         MonsterAiState.Dead);
 
-                    probeDamagePacket = new
+                    packets.Add(new
                     {
                         Type = "EntityDamage",
                         TargetID = probeTarget.EntityId,
@@ -1754,45 +1754,27 @@ public sealed class CombatService
                         SkillID = skillId,
                         SkillLevel = skillLevel,
                         AttackerID = session.CharacterId.Value
-                    };
+                    });
 
-                    probeDeathPacket = new
+                    packets.Add(new
                     {
                         Type = "EntityDeath",
                         EntityID = probeTarget.EntityId,
                         EntityType = 1,
                         KillerID = session.CharacterId.Value
-                    };
+                    });
+
+                    killedMonsters.Add(probeTarget);
                 }
             }
 
-            if (probeDamagePacket is not null)
-                packets.Add(probeDamagePacket);
-            if (probeDeathPacket is not null)
-                packets.Add(probeDeathPacket);
-
-            if (probeDeathPacket is not null)
+            if (killedMonsters.Count > 0)
             {
-                MonsterRuntimeState? rewardedMonster = null;
-                lock (runtime.SyncRoot)
-                {
-                    rewardedMonster = runtime.Monsters.Values
-                        .Where(x =>
-                            x.MapId == session.CurrentMapId &&
-                            x.CurrentHp == 0 &&
-                            x.RespawnAt.HasValue)
-                        .OrderByDescending(x => x.RespawnAt)
-                        .FirstOrDefault();
-                }
-
-                if (rewardedMonster is not null)
-                {
-                    AddScreenAreaKillRewards(
-                        session,
-                        accountId,
-                        [rewardedMonster],
-                        packets);
-                }
+                AddScreenAreaKillRewards(
+                    session,
+                    accountId,
+                    killedMonsters,
+                    packets);
             }
 
             var isolationAssets = _store.GetCharacterAssets(
