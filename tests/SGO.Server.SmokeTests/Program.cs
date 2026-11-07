@@ -642,6 +642,17 @@ Directory.Delete(
 var realCurrentCatalog = new CurrentClientDataCatalog(
     Path.Combine(repoRoot, "client"));
 
+var festivalRewards =
+    new FestivalRewardCatalog(realCurrentCatalog.Root);
+Check(festivalRewards.Supports(2133) &&
+      festivalRewards.GetRewards(2133).Any(x =>
+          x.ItemId == 2014) &&
+      festivalRewards.Supports(2837) &&
+      festivalRewards.GetRewards(2837).Select(x => x.ItemId)
+          .OrderBy(x => x)
+          .SequenceEqual(new[] { 2689, 2690, 2691, 2784 }),
+    "real client Festival_Data random reward boxes are available to server");
+
 Check(realCurrentCatalog.FindSkillLevel(
           31112,
           1) is not null,
@@ -2182,6 +2193,62 @@ try
               .Contains("不存在或已下架"),
         "inactive mall product cannot be purchased");
     config["Gameplay:Mall:Items:0:IsActive"] = "true";
+
+    var festivalDolls = new DollService(
+        store,
+        store,
+        realCurrentCatalog,
+        broadcastHub,
+        config);
+    var festivalBoxUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        2837,
+        1);
+    var festivalRewardIds = festivalRewards
+        .GetRewards(2837)
+        .Select(x => x.ItemId)
+        .ToHashSet();
+    var festivalBefore = store.GetCharacterAssets(
+        account.Value,
+        id);
+    var festivalBeforeCounts = festivalBefore.Inventory
+        .Where(x => festivalRewardIds.Contains(
+            Convert.ToInt32(x["ItemIndex"])))
+        .GroupBy(x => Convert.ToInt32(x["ItemIndex"]))
+        .ToDictionary(
+            x => x.Key,
+            x => x.Sum(y => Convert.ToInt32(y["Count"])));
+
+    var festivalPackets = festivalDolls.Open(
+        account.Value,
+        id,
+        festivalBoxUid,
+        2837);
+    var festivalAfter = store.GetCharacterAssets(
+        account.Value,
+        id);
+    var receivedFestivalReward = festivalAfter.Inventory
+        .Where(x => festivalRewardIds.Contains(
+            Convert.ToInt32(x["ItemIndex"])))
+        .Any(x =>
+        {
+            var itemId = Convert.ToInt32(x["ItemIndex"]);
+            var afterCount = festivalAfter.Inventory
+                .Where(y => Convert.ToInt32(y["ItemIndex"]) == itemId)
+                .Sum(y => Convert.ToInt32(y["Count"]));
+            return afterCount >
+                festivalBeforeCounts.GetValueOrDefault(itemId, 0);
+        });
+
+    Check(!festivalAfter.Inventory.Any(x =>
+              Convert.ToInt64(x["ItemUID"]) == festivalBoxUid) &&
+          receivedFestivalReward &&
+          festivalPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains("InventorySync")) &&
+          festivalPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains("精靈飼養盒送給你")),
+        "festival reward box atomically consumes source and grants a recovered-client reward");
 
     var accelerationBook =
         realCurrentCatalog.ResolveSkillBook(3701)!;
