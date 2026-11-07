@@ -667,7 +667,7 @@ func _set_navigation_target(destination: Vector2) -> void :
 	move_destination = destination
 
 	var map_id: int = int(data_model.map_id) if data_model else 0
-	var route: PackedVector2Array = LegacyPathfinder.get_path(
+	var route: PackedVector2Array = LegacyPathfinder.find_path(
 		map_id,
 		global_position,
 		destination,
