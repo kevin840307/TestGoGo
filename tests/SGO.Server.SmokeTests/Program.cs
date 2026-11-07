@@ -12,6 +12,7 @@ using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
 using SGO.Server.Application.Messaging;
+using SGO.Server.Application.Mall;
 using SGO.Server.Application.Shops;
 using SGO.Server.Application.Trade;
 using SGO.Server.Application.World;
@@ -563,6 +564,7 @@ try
         store,
         broadcastHub);
     var rank = new RankService(store);
+    var mall = new MallService(store);
     var crafting = new CraftingService(
         store,
         new RecipeCatalog(
@@ -645,6 +647,7 @@ try
         horseCardCatalog,
         currentCatalog,
         growth,
+        mall,
         broadcastHub,
         party,
         rank,
@@ -880,6 +883,36 @@ try
               x.Level == 1),
         "completed club research is finalized persistently on snapshot");
 
+    var researchedLeader = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+    var researchedStats = CharacterStatCalculator.Calculate(
+        researchedLeader,
+        store.GetCharacterAssets(
+            account.Value,
+            secondCharacterId),
+        currentCatalog);
+
+    Check(Convert.ToInt32(
+              researchedLeader.GetValueOrDefault(
+                  "ClubTechAttack",
+                  0)) == 10 &&
+          researchedStats.Attack >=
+              Convert.ToInt32(researchedLeader["Attack"]) + 10,
+        "completed club attack research contributes to effective combat stats");
+
+    var clubRankJson = JsonSerializer.Serialize(
+        rank.GetRankData(
+            account.Value,
+            secondCharacterId,
+            3));
+
+    Check(clubRankJson.Contains(
+              $"\"DBID\":{clubId}") &&
+          clubRankJson.Contains(
+              "\"Name\":\"測試團\""),
+        "club ranking exposes ClubID while using leader ownership internally");
+
     broadcastHub.Unregister(
         clubLeaderRegistration.ConnectionId);
     broadcastHub.Unregister(
@@ -905,6 +938,61 @@ try
               secondCharacterId,
               "SMOKE_FLAG") == 0,
         "quest flags persist per character and do not leak across characters");
+
+    Check(store.UpsertQuest(
+              account.Value,
+              id,
+              1002,
+              1,
+              1,
+              12) &&
+          store.GetQuests(
+              account.Value,
+              id).Any(x =>
+              Convert.ToInt32(x["QuestID"]) == 1002 &&
+              Convert.ToInt32(x["CurrentStep"]) == 1 &&
+              Convert.ToInt32(x["StepProgress"]) == 12),
+        "tracked quest state persists current step and progress");
+
+    Check(store.AbandonQuest(
+              account.Value,
+              id,
+              1002) &&
+          !store.GetQuests(
+              account.Value,
+              id).Any(x =>
+              Convert.ToInt32(x["QuestID"]) == 1002),
+        "active quest can be abandoned persistently");
+
+    Check(store.GetMallPoints(account.Value) == 0 &&
+          store.AdjustMallPoints(
+              account.Value,
+              250,
+              out var mallPoints) &&
+          mallPoints == 250 &&
+          JsonSerializer.Serialize(
+              mall.Handle(
+                  account.Value,
+                  id,
+                  "OpenMall",
+                  0,
+                  1,
+                  0,
+                  0))
+              .Contains("\"Points\":250"),
+        "mall point balance persists and OpenMall returns safe current balance");
+
+    Check(JsonSerializer.Serialize(
+              mall.Handle(
+                  account.Value,
+                  id,
+                  "CreatePayPalDonation",
+                  0,
+                  1,
+                  500,
+                  0))
+              .Contains("\"Success\":false"),
+        "unconfigured PayPal flow fails safely without creating an order");
 
     var protectedGround = store.CreateGroundItem(
         id,
