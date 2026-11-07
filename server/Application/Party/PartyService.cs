@@ -54,6 +54,29 @@ public sealed class PartyService
         }
     }
 
+    public IReadOnlyList<(long AccountId, long CharacterId)> GetMembers(
+        long characterId)
+    {
+        lock (_sync)
+        {
+            if (!_membership.TryGetValue(
+                    characterId,
+                    out var partyId) ||
+                !_parties.TryGetValue(
+                    partyId,
+                    out var party))
+            {
+                return Array.Empty<(long AccountId, long CharacterId)>();
+            }
+
+            return party.Members
+                .Select(x => (
+                    x.AccountId,
+                    x.CharacterId))
+                .ToArray();
+        }
+    }
+
     public IReadOnlyList<object> Handle(
         ClientSession session,
         long accountId,
