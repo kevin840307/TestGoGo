@@ -15,3 +15,6 @@ CREATE INDEX IF NOT EXISTS ix_horses_character
 
 CREATE INDEX IF NOT EXISTS ix_horse_equipment_character
     ON horse_equipment(character_id);
+
+CREATE INDEX IF NOT EXISTS ix_ground_items_map
+    ON ground_items(map_id);
