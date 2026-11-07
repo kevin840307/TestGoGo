@@ -347,10 +347,22 @@ public static class WebSocketEndpoint
 
                 if (socket.State == WebSocketState.Open)
                 {
-                    await socket.CloseAsync(
-                        WebSocketCloseStatus.NormalClosure,
-                        "Bye",
-                        CancellationToken.None);
+                    try
+                    {
+                        await socket.CloseAsync(
+                            WebSocketCloseStatus.NormalClosure,
+                            "Bye",
+                            CancellationToken.None);
+                    }
+                    catch (WebSocketException)
+                    {
+                        // The peer may have already crashed/reset the TCP
+                        // connection without a WebSocket close handshake.
+                    }
+                    catch (IOException)
+                    {
+                        // Treat transport reset during shutdown as normal.
+                    }
                 }
             }
         });
