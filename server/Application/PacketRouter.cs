@@ -654,22 +654,29 @@ public sealed class PacketRouter
                 var x = req.Int("X");
                 var y = req.Int("Y");
 
-                if (!_blocking.IsMoveAllowed(
-                        state.CurrentMapId,
-                        state.LastX,
-                        state.LastY,
-                        x,
-                        y,
-                        state.CanCrossSpecialTerrain))
+                var moveValidation = _blocking.ValidateMove(
+                    state.CurrentMapId,
+                    state.LastX,
+                    state.LastY,
+                    x,
+                    y,
+                    state.CanCrossSpecialTerrain);
+
+                if (!moveValidation.Allowed)
                 {
                     _log.LogWarning(
-                        "[MOVE_BLOCKED] DBID={DBID} Map={MapID} From=({FromX},{FromY}) To=({ToX},{ToY}) Special={Special}",
+                        "[MOVE_BLOCKED] DBID={DBID} Map={MapID} Reason={Reason} From=({FromX},{FromY}) To=({ToX},{ToY}) Cells=({FromCellX},{FromCellY})->({ToCellX},{ToCellY}) Special={Special}",
                         state.CharacterId.Value,
                         state.CurrentMapId,
+                        moveValidation.Reason,
                         state.LastX,
                         state.LastY,
                         x,
                         y,
+                        moveValidation.FromCellX,
+                        moveValidation.FromCellY,
+                        moveValidation.ToCellX,
+                        moveValidation.ToCellY,
                         state.CanCrossSpecialTerrain);
 
                     return
