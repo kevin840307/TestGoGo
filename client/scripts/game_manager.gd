@@ -53,6 +53,7 @@ var _frame_gap_stage_since_usec: int = 0
 const FRAME_GAP_WARN_USEC: int = 100000
 const RENDER_STATS_INTERVAL_SECONDS: float = 2.0
 var _render_stats_elapsed: float = 0.0
+var _prewarmed_hud_windows: Dictionary = {}
 
 var _train_travel_active: bool = false
 var _train_travel_id: String = ""
@@ -63,6 +64,31 @@ var _train_video_player: VideoStreamPlayer = null
 var _train_video_finished: bool = false
 var _train_player_process_state: Dictionary = {}
 var _train_hud_process_state: Dictionary = {}
+
+func cache_prewarmed_hud_window(kind: String, window: Control) -> void :
+	if kind.is_empty() or not is_instance_valid(window):
+		return
+	var existing = _prewarmed_hud_windows.get(kind, null)
+	if is_instance_valid(existing):
+		window.queue_free()
+		return
+	window.visible = false
+	window.modulate.a = 0.0
+	add_child(window)
+	_prewarmed_hud_windows[kind] = window
+
+func take_prewarmed_hud_window(kind: String) -> Control:
+	var window = _prewarmed_hud_windows.get(kind, null)
+	if not is_instance_valid(window):
+		_prewarmed_hud_windows.erase(kind)
+		return null
+	_prewarmed_hud_windows.erase(kind)
+	if window.get_parent() != null:
+		window.get_parent().remove_child(window)
+	return window
+
+func has_prewarmed_hud_window(kind: String) -> bool:
+	return is_instance_valid(_prewarmed_hud_windows.get(kind, null))
 
 func set_frame_gap_stage(stage: String) -> void :
 	_frame_gap_stage = stage
