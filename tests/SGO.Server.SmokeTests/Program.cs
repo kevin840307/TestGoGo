@@ -42,6 +42,35 @@ Check(Directory.Exists(gameDataRoot), "server data directory exists");
 
 var world = new WorldDataService(gameDataRoot);
 
+var realCurrentCatalog = new CurrentClientDataCatalog(
+    Path.Combine(repoRoot, "client"));
+
+Check(realCurrentCatalog.FindSkillLevel(
+          31112,
+          1) is not null,
+    "real client loader keeps tick-only 隨身修理店 skill level");
+
+Check(realCurrentCatalog.FindSkillLevel(
+          23108,
+          1) is { AtkBonusPercent: 50, DurationSeconds: 60 },
+    "real Skill.csv enriches 狂戰士體 with +50% attack");
+
+Check(realCurrentCatalog.FindSkillLevel(
+          26110,
+          1) is { MaxMpBonusPercent: 100, DurationSeconds: 600 },
+    "real Skill.csv enriches 魔法之泉 with +100% MaxMP");
+
+Check(realCurrentCatalog.FindSkillLevel(
+          27104,
+          1) is { DeathExpReductionPercent: 10 } &&
+      realCurrentCatalog.FindSkillLevel(
+          27104,
+          3) is { DeathExpReductionPercent: 30 } &&
+      realCurrentCatalog.FindSkillLevel(
+          27111,
+          1) is { DeathExpReductionPercent: 100 },
+    "real Skill.csv exposes revive death-EXP reduction percentages");
+
 CurrentItemDefinition CurrentItem(
     int id,
     string name,
