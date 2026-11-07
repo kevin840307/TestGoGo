@@ -145,6 +145,31 @@ public interface ICharacterStore
         int moveSpeed);
 }
 
+public sealed record TimedEffectActivationResult(
+    bool Success,
+    string Message,
+    int EffectValue,
+    long ExpiresUtcMs);
+
+public interface ITimedEffectStore
+{
+    TimedEffectActivationResult ActivateTimedEffectFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        string effectKey,
+        int effectValue,
+        int durationSeconds,
+        long nowUtcMs);
+
+    int GetTimedEffectValue(
+        long accountId,
+        long dbid,
+        string effectKey,
+        long nowUtcMs);
+}
+
 public interface IInventoryStore : ICharacterAssetReader
 {
     long AddInventoryItem(
