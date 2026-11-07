@@ -9,12 +9,16 @@ public sealed class WorldDataService
 
     private readonly string _dataRoot;
     private readonly EnemyCatalog _enemyCatalog;
+    private readonly LegacyNpcVisualCatalog _npcVisuals;
     private readonly Dictionary<int, IReadOnlyList<WorldNpc>> _npcCache = new();
     private readonly Dictionary<int, IReadOnlyList<WorldEnemy>> _enemyCache = new();
 
-    public WorldDataService(string dataRoot)
+    public WorldDataService(
+        string dataRoot,
+        LegacyNpcVisualCatalog npcVisuals)
     {
         _dataRoot = dataRoot;
+        _npcVisuals = npcVisuals;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _enemyCatalog = new EnemyCatalog(
             Path.Combine(_dataRoot, "Enemy", "Enemy_Data.csv"));
@@ -50,15 +54,8 @@ public sealed class WorldDataService
                 Script = npc.Script,
                 Name = DecodeName(big5, npc.NameBytes),
 
-                // npc_entity.gd only creates its click CollisionShape when the
-                // supplied texture exists. Some packed legacy merchant IDs do
-                // not map to a recovered NPCxxx.png, making the NPC both
-                // invisible and unclickable. Use a known recovered sprite for
-                // merchants until the full legacy id -> client sprite table is
-                // reconstructed.
-                Sprite = isMerchant
-                    ? "NPC002.png"
-                    : $"NPC{GetNpcSpriteId(npc.NpcTypeId):D3}.png",
+                Sprite = _npcVisuals.FindSprite(npc.NpcTypeId)
+                    ?? $"NPC{GetNpcSpriteId(npc.NpcTypeId):D3}.png",
 
                 IsPortal = IsPortalScript(npc.Script),
                 IsMerchant = isMerchant
