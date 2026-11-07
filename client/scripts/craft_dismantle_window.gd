@@ -13,6 +13,8 @@ const RECIPE_PATH: = "res://Assets/Recipe.json"
 var _initial_prepared: bool = false
 var _static_prepared: bool = false
 var _cached_recipe_data: Array = []
+var _dismantle_prepared: bool = false
+var _dismantle_preparing: bool = false
 
 func _ready() -> void :
 
@@ -64,21 +66,30 @@ func prepare_initial_async() -> void :
 		crafting_panel.set_recipe_data(recipe_data)
 	var craft_ms: float = float(Time.get_ticks_usec() - craft_started_usec) / 1000.0
 
-	await get_tree().process_frame
-	var dismantle_started_usec: int = Time.get_ticks_usec()
-	if dismantling_panel and dismantling_panel.has_method("set_recipe_data_initial_async"):
-		await dismantling_panel.set_recipe_data_initial_async(recipe_data)
-	elif dismantling_panel and dismantling_panel.has_method("set_recipe_data"):
-		dismantling_panel.set_recipe_data(recipe_data)
-	var dismantle_ms: float = float(Time.get_ticks_usec() - dismantle_started_usec) / 1000.0
-
-	await get_tree().process_frame
 	_initial_prepared = true
-	print("[CRAFT_INIT_TIMING] recipes=%d craft_ms=%.2f dismantle_ms=%.2f total_ms=%.2f" % [
+	print("[CRAFT_INIT_TIMING] recipes=%d craft_ms=%.2f dismantle_ms=0.00 total_ms=%.2f deferred_dismantle=true" % [
 		recipe_data.size(),
 		craft_ms,
-		dismantle_ms,
 		float(Time.get_ticks_usec() - total_started_usec) / 1000.0,
+	])
+
+func prepare_dismantle_background_async() -> void :
+	if _dismantle_prepared or _dismantle_preparing:
+		return
+	_dismantle_preparing = true
+	var started_usec: int = Time.get_ticks_usec()
+	if not _static_prepared:
+		await prepare_static_async()
+	await get_tree().process_frame
+	if dismantling_panel and dismantling_panel.has_method("set_recipe_data_initial_async"):
+		await dismantling_panel.set_recipe_data_initial_async(_cached_recipe_data)
+	elif dismantling_panel and dismantling_panel.has_method("set_recipe_data"):
+		dismantling_panel.set_recipe_data(_cached_recipe_data)
+	_dismantle_prepared = true
+	_dismantle_preparing = false
+	print("[DISMANTLE_BACKGROUND_PREWARM] recipes=%d total_ms=%.2f" % [
+		_cached_recipe_data.size(),
+		float(Time.get_ticks_usec() - started_usec) / 1000.0,
 	])
 
 func is_initial_prepared() -> bool:
@@ -105,6 +116,9 @@ func _show_crafting(refresh_ui: bool = true) -> void :
 		crafting_panel.update_ui()
 
 func _show_dismantling() -> void :
+	if not _dismantle_prepared:
+		await prepare_dismantle_background_async()
+
 	if crafting_panel: crafting_panel.visible = false
 	if dismantling_panel: dismantling_panel.visible = true
 
