@@ -7502,6 +7502,21 @@ try
             "logout clears authenticated session");
     }
 
+    using (var unauthorizedPacket = Json(
+        """{"Type":"UseSkill","SkillID":123}"""))
+    {
+        var unauthorizedResponses = router.Handle(
+            unauthorizedPacket.RootElement,
+            session);
+        var unauthorizedJson = JsonSerializer.Serialize(
+            unauthorizedResponses);
+        Check(
+            unauthorizedJson.Contains("\"Type\":\"PacketError\"") &&
+            unauthorizedJson.Contains("\"Code\":\"AUTH_REQUIRED\"") &&
+            unauthorizedJson.Contains("\"RequestType\":\"UseSkill\""),
+            "unauthenticated packet receives an explicit error");
+    }
+
     Check(!store.Delete(account.Value, id, "wrong"),
         "reject wrong character password");
     Check(store.Delete(account.Value, id, "1234"),
