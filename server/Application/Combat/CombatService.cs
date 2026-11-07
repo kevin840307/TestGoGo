@@ -2036,9 +2036,9 @@ public sealed class CombatService
         {
             var damage = isScreenAreaAttack
                 ? (int)Math.Clamp(
-                    1_000_000L +
-                    (long)effective.Attack * 100L +
-                    (long)effective.MagicAttack * 100L,
+                    1_000L +
+                    (long)effective.Attack +
+                    (long)effective.MagicAttack,
                     1L,
                     int.MaxValue)
                 : Math.Max(
