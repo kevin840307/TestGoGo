@@ -701,6 +701,190 @@ try
             x.TryGetValue("NAME", out var n) &&
             n?.ToString() == "SecondCharacter")["DBID"]);
 
+    Check(store.SetLevel(
+              account.Value,
+              secondCharacterId,
+              9) is not null,
+        "prepare ranked character level");
+
+    var rankLevelPackets = rank.GetRankData(
+        account.Value,
+        secondCharacterId,
+        1);
+    var rankLevelJson = JsonSerializer.Serialize(
+        rankLevelPackets);
+
+    Check(rankLevelJson.Contains(
+              $"\"DBID\":{secondCharacterId}") &&
+          rankLevelJson.Contains("\"Value\":9"),
+        "level ranking returns persisted character level");
+
+    var rankMessage = rank.UpdateMessage(
+        account.Value,
+        secondCharacterId,
+        1,
+        "我是第一名");
+
+    Check(JsonSerializer.Serialize(rankMessage)
+              .Contains("\"Success\":true") &&
+          JsonSerializer.Serialize(
+              rank.GetRankData(
+                  account.Value,
+                  secondCharacterId,
+                  1))
+              .Contains("我是第一名"),
+        "rank #1 can persist and reload top message");
+
+    Check(JsonSerializer.Serialize(
+              rank.UpdateMessage(
+                  account.Value,
+                  id,
+                  1,
+                  "不應成功"))
+              .Contains("\"Success\":false"),
+        "non-top character cannot update rank message");
+
+    var clubLeaderRegistration = broadcastHub.Register();
+    var clubMemberRegistration = broadcastHub.Register();
+
+    broadcastHub.UpdatePresence(
+        clubLeaderRegistration.ConnectionId,
+        15,
+        secondCharacterId,
+        account.Value);
+    broadcastHub.UpdatePresence(
+        clubMemberRegistration.ConnectionId,
+        15,
+        id,
+        account.Value);
+
+    var createClubPackets = club.Handle(
+        account.Value,
+        secondCharacterId,
+        "Create",
+        0,
+        "測試團",
+        "",
+        0,
+        0);
+
+    Check(store.GetClubIdForCharacter(
+              secondCharacterId) > 0 &&
+          JsonSerializer.Serialize(createClubPackets)
+              .Contains("\"ClubID\":"),
+        "club creation persists leader membership and returns ClubSync");
+
+    var invitePackets = club.Handle(
+        account.Value,
+        secondCharacterId,
+        "Invite",
+        id,
+        "",
+        "",
+        0,
+        0);
+
+    Check(JsonSerializer.Serialize(invitePackets)
+              .Contains("戰團邀請已送出") &&
+          clubMemberRegistration.Queue.ToArray().Any(x =>
+              JsonSerializer.Serialize(x)
+                  .Contains("\"Type\":\"ClubInvite\"")),
+        "club leader can invite an online character");
+
+    var acceptPackets = club.Handle(
+        account.Value,
+        id,
+        "Accept",
+        secondCharacterId,
+        "",
+        "",
+        0,
+        0);
+
+    var clubId = store.GetClubIdForCharacter(
+        secondCharacterId);
+
+    Check(clubId > 0 &&
+          store.GetClubIdForCharacter(id) == clubId &&
+          JsonSerializer.Serialize(acceptPackets)
+              .Contains("\"ClubID\":"),
+        "club invitation acceptance persists shared membership");
+
+    Check(!store.UpdateClubMessage(
+              account.Value,
+              id,
+              "非法公告").Success &&
+          store.UpdateClubMessage(
+              account.Value,
+              secondCharacterId,
+              "團長公告").Success,
+        "only club leader can update announcement");
+
+    Check(store.AddRewards(
+              account.Value,
+              secondCharacterId,
+              1_100_000,
+              600_000) is not null,
+        "fund club leader for donation tests");
+
+    var beforeClubDonation = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+
+    Check(store.DonateClubMoney(
+              account.Value,
+              secondCharacterId,
+              500_000).Success &&
+          store.DonateClubExp(
+              account.Value,
+              secondCharacterId,
+              1_000_000).Success,
+        "club money and EXP donations commit successfully");
+
+    var afterClubDonation = store.GetCharacter(
+        account.Value,
+        secondCharacterId)!;
+    var clubSnapshot = store.GetClubSnapshot(
+        account.Value,
+        secondCharacterId,
+        DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())!;
+
+    Check(
+        Convert.ToInt64(afterClubDonation["Money"]) ==
+            Convert.ToInt64(beforeClubDonation["Money"]) - 500_000 &&
+        Convert.ToInt32(afterClubDonation["ExpAcc"]) ==
+            Convert.ToInt32(beforeClubDonation["ExpAcc"]) - 1_000_000 &&
+        clubSnapshot.ClubSaving >= 500_000 &&
+        clubSnapshot.ClubExp >= 1_000_000,
+        "club donations atomically deduct character resources and fund club");
+
+    var researchStart = store.StartClubResearch(
+        account.Value,
+        secondCharacterId,
+        2,
+        DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+    Check(researchStart.Success,
+        "club leader can start affordable technology research");
+
+    var completedResearch = store.GetClubSnapshot(
+        account.Value,
+        secondCharacterId,
+        DateTimeOffset.UtcNow
+            .AddHours(7)
+            .ToUnixTimeMilliseconds())!;
+
+    Check(completedResearch.ActiveResearchId == 0 &&
+          completedResearch.Researches.Any(x =>
+              x.ResearchId == 2 &&
+              x.Level == 1),
+        "completed club research is finalized persistently on snapshot");
+
+    broadcastHub.Unregister(
+        clubLeaderRegistration.ConnectionId);
+    broadcastHub.Unregister(
+        clubMemberRegistration.ConnectionId);
+
     Check(store.GetQuestFlag(
               account.Value,
               id,
