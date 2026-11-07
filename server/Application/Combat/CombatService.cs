@@ -20,12 +20,10 @@ public sealed class CombatService
     private const double StopDistance = 130.0;
     private const double ResumeChaseDistance = 160.0;
     private const double MoveStep = 42.0;
-    // Finish each authoritative waypoint just before the 250ms AI tick.
-    // The client keeps the walk animation alive briefly between waypoints, so
-    // we do not need overlapping tweens. Overlap caused every new MoveEntity
-    // to kill an unfinished tween and slowly desync the rendered position from
-    // the server position, which could look like the monster was running in place.
-    private const double MoveTweenSeconds = 0.24;
+    // Keep the movement packet duration aligned with the 250 ms world cadence.
+    // The client now interpolates continuously toward the latest authoritative
+    // waypoint, so this value represents movement speed rather than tween timing.
+    private const double MoveTweenSeconds = 0.25;
     private const double WanderRadius = 180.0;
     private const double WanderStep = 45.0;
 
