@@ -1,4 +1,5 @@
 using SGO.Server.Application.Abstractions;
+using SGO.Server.Application.Messaging;
 using SGO.Server.Domain.Assets;
 using SGO.Server.Infrastructure.GameData;
 
@@ -23,14 +24,23 @@ public sealed class DollService
     ];
 
     private readonly IInventoryStore _inventory;
+    private readonly ICharacterStore _characters;
     private readonly CurrentClientDataCatalog _current;
+    private readonly ServerBroadcastHub _broadcasts;
+    private readonly IConfiguration _config;
 
     public DollService(
         IInventoryStore inventory,
-        CurrentClientDataCatalog current)
+        ICharacterStore characters,
+        CurrentClientDataCatalog current,
+        ServerBroadcastHub broadcasts,
+        IConfiguration config)
     {
         _inventory = inventory;
+        _characters = characters;
         _current = current;
+        _broadcasts = broadcasts;
+        _config = config;
     }
 
     public bool Supports(int itemIndex)
@@ -74,7 +84,9 @@ public sealed class DollService
             reward.ItemId,
             rewardKind,
             1,
-            rewardPart);
+            rewardKind == AssetPurchaseKind.Equipment
+                ? 255
+                : rewardPart);
 
         if (!result.Success)
             return [Flash(result.Message)];
@@ -123,7 +135,53 @@ public sealed class DollService
         packets.Add(Flash(
             $"幸福娃娃送給你：{reward.Name}"));
 
+        if (ShouldAnnounce(reward))
+        {
+            var character = _characters.GetCharacter(
+                accountId,
+                characterId);
+            var characterName = character is not null &&
+                                character.TryGetValue("NAME", out var name)
+                ? name?.ToString() ?? $"角色{characterId}"
+                : $"角色{characterId}";
+
+            _broadcasts.Publish(new
+            {
+                Type = "SystemMessageBroadcast",
+                Message =
+                    $"[幸福娃娃] 恭喜 {characterName} 抽中了稀有寶物「{reward.Name}」！"
+            });
+        }
+
         return packets;
+    }
+
+    private bool ShouldAnnounce(CurrentItemDefinition reward)
+    {
+        var configured =
+            _config["Gameplay:Dolls:Happiness:AnnouncementRewardIds"];
+
+        var ids = string.IsNullOrWhiteSpace(configured)
+            ? new HashSet<int> { 19059, 18021 }
+            : configured
+                .Split(
+                    ',',
+                    StringSplitOptions.RemoveEmptyEntries |
+                    StringSplitOptions.TrimEntries)
+                .Select(x => int.TryParse(x, out var id) ? id : 0)
+                .Where(x => x > 0)
+                .ToHashSet();
+
+        if (ids.Contains(reward.ItemId))
+            return true;
+
+        var minimumPrice =
+            _config.GetValue<int?>(
+                "Gameplay:Dolls:Happiness:AnnouncementMinimumPrice")
+            ?? 100000;
+
+        return minimumPrice > 0 &&
+               reward.Price >= minimumPrice;
     }
 
     private static bool TryResolveRewardKind(
