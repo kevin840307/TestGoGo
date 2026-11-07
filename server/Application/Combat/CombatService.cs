@@ -16,7 +16,7 @@ public sealed class CombatService
 
     private const double AggroRadius = 420.0;
     private const double LoseTargetRadius = 700.0;
-    private const double StopDistance = 90.0;
+    private const double StopDistance = 130.0;
     private const double MoveStep = 35.0;
     private const double MoveTweenSeconds = 0.32;
     private const double WanderRadius = 180.0;
@@ -110,6 +110,7 @@ public sealed class CombatService
             monster.CurrentHp = monster.MaxHp;
             monster.RespawnAt = null;
             monster.HasTarget = false;
+            monster.IsMoving = false;
             monster.X = monster.SpawnX;
             monster.Y = monster.SpawnY;
             packets.Add(BuildMonsterSpawnPacket(monster));
@@ -252,6 +253,7 @@ public sealed class CombatService
                         var currentHp = Convert.ToInt32(updated["HP"]);
                         var maxHp = Convert.ToInt32(updated["MaxHP"]);
 
+                        monster.IsMoving = false;
                         packets.Add(new
                         {
                             Type = "SyncState",
@@ -296,6 +298,7 @@ public sealed class CombatService
                             });
 
                             monster.HasTarget = false;
+                            monster.IsMoving = false;
                         }
                     }
                 }
@@ -310,7 +313,20 @@ public sealed class CombatService
             }
 
             if (distance <= StopDistance)
+            {
+                if (monster.IsMoving)
+                {
+                    monster.IsMoving = false;
+                    packets.Add(new
+                    {
+                        Type = "SyncState",
+                        EntityID = monster.EntityId,
+                        State = "idle",
+                        Dir = DirectionFromDelta(dx, dy)
+                    });
+                }
                 continue;
+            }
 
             var step = Math.Min(
                 MoveStep,
@@ -326,6 +342,7 @@ public sealed class CombatService
 
             monster.X = nx;
             monster.Y = ny;
+            monster.IsMoving = true;
 
             packets.Add(BuildMovePacket(
                 monster,
@@ -573,6 +590,7 @@ public sealed class CombatService
 
         monster.X = desiredX;
         monster.Y = desiredY;
+        monster.IsMoving = true;
 
         packets.Add(BuildMovePacket(
             monster,
