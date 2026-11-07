@@ -7,6 +7,7 @@ using SGO.Server.Application.Combat;
 using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
+using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Shops;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
@@ -436,7 +437,16 @@ try
         new BankPacketHandler(new BankService(store))
     };
     var recovery = new ResourceRecoveryService(store, config);
-    var dolls = new DollService(store, currentCatalog);
+    config["Gameplay:Dolls:Happiness:AnnouncementRewardIds"] = "50102";
+    config["Gameplay:Dolls:Happiness:AnnouncementMinimumPrice"] = "0";
+    var broadcastHub = new ServerBroadcastHub();
+    var broadcastRegistration = broadcastHub.Register();
+    var dolls = new DollService(
+        store,
+        store,
+        currentCatalog,
+        broadcastHub,
+        config);
     var router = new PacketRouter(
         store,
         world,
@@ -642,6 +652,16 @@ try
                   JsonSerializer.Serialize(x).Contains(
                       "幸福娃娃送給你")),
             "UseItemRequest opens Happiness Doll, consumes one and grants one reward");
+
+        Check(
+            broadcastRegistration.Queue.TryDequeue(out var announcement) &&
+            JsonSerializer.Serialize(announcement).Contains(
+                "\"Type\":\"SystemMessageBroadcast\"") &&
+            JsonSerializer.Serialize(announcement).Contains(
+                "TestCharacter") &&
+            JsonSerializer.Serialize(announcement).Contains(
+                "魔靈電池"),
+            "rare Happiness Doll reward publishes global announcement");
     }
 
     // BankTransfer: general items support partial stack deposit/withdraw.
