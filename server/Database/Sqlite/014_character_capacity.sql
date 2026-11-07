@@ -1,0 +1,5 @@
+-- Persistent character inventory capacities used by the recovered expansion cards.
+-- @ensure-column characters inventory_capacity INTEGER NOT NULL DEFAULT 200
+-- @ensure-column characters equip_capacity INTEGER NOT NULL DEFAULT 200
+-- @ensure-column characters pet_capacity INTEGER NOT NULL DEFAULT 50
+-- @ensure-column characters horse_equip_capacity INTEGER NOT NULL DEFAULT 100
