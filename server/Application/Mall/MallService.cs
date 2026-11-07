@@ -68,17 +68,10 @@ public sealed class MallService
                 }];
 
             case "ClaimDonationGift":
-                return
-                [
-                    new
-                    {
-                        Type = "SystemMessageFlash",
-                        Message = rewardId > 0
-                            ? "目前沒有可領取的贊助滿額禮"
-                            : "贊助獎勵編號無效"
-                    },
-                    BuildMallList(accountId)
-                ];
+                return ClaimDonationGift(
+                    accountId,
+                    dbid,
+                    rewardId);
 
             default:
                 return [new
@@ -214,8 +207,117 @@ public sealed class MallService
         return packets;
     }
 
+    private IReadOnlyList<object> ClaimDonationGift(
+        long accountId,
+        long dbid,
+        int rewardId)
+    {
+        var gift = MallGiftCatalog.Read(
+                _configuration,
+                _current)
+            .FirstOrDefault(x =>
+                x.RewardId == rewardId &&
+                x.IsActive);
+
+        if (gift is null)
+        {
+            return
+            [
+                Flash(rewardId > 0
+                    ? "贊助滿額禮不存在或已下架"
+                    : "贊助獎勵編號無效"),
+                BuildMallList(accountId)
+            ];
+        }
+
+        var result = _store.ClaimMallGift(
+            accountId,
+            dbid,
+            gift.RewardId,
+            gift.RequiredDonation,
+            gift.Kind,
+            gift.ItemIndex,
+            gift.Count,
+            gift.AssetName,
+            gift.HorseType,
+            gift.InitialEnergy,
+            gift.ItemPart,
+            gift.ItemDamage);
+
+        var packets = new List<object>
+        {
+            Flash(
+                result.Success
+                    ? $"已領取滿額禮：{gift.Name} x {gift.Count}"
+                    : result.Message)
+        };
+
+        if (result.Success)
+        {
+            var assets = _store.GetCharacterAssets(
+                accountId,
+                dbid);
+
+            packets.Add(new
+            {
+                Type = "InventorySync",
+                Items = assets.Inventory,
+                MaxSize = assets.InventoryMaxSize
+            });
+            packets.Add(new
+            {
+                Type = "EquipSync",
+                Equips = assets.Equips,
+                MaxSize = assets.EquipMaxSize
+            });
+            packets.Add(new
+            {
+                Type = "PetSync",
+                Pets = assets.Pets,
+                MaxSize = assets.PetMaxSize
+            });
+            packets.Add(new
+            {
+                Type = "HorseSync",
+                Horses = assets.Horses,
+                HorseEquips = assets.HorseEquips,
+                MaxHorseEquipSize = assets.HorseEquipMaxSize
+            });
+        }
+
+        packets.Add(BuildMallList(accountId));
+        return packets;
+    }
+
     private object BuildMallList(long accountId)
-        => new
+    {
+        var lifetimeDonation =
+            _store.GetLifetimeDonation(accountId);
+        var claimed =
+            _store.GetClaimedMallGiftIds(accountId);
+
+        var gifts = MallGiftCatalog.Read(
+                _configuration,
+                _current)
+            .Where(gift =>
+                gift.IsActive &&
+                lifetimeDonation >= gift.RequiredDonation)
+            .Select(gift => new
+            {
+                RewardID = gift.RewardId,
+                ItemIndex = gift.ItemIndex,
+                Name = gift.Name,
+                Count = gift.Count,
+                RequiredDonation = gift.RequiredDonation,
+                ItemCategory = gift.ItemCategory,
+                ClaimStatus = claimed.Contains(gift.RewardId)
+                    ? "Claimed"
+                    : "Unclaimed"
+            })
+            .Cast<object>()
+            .ToArray();
+
+        return new
         {
             Type = "MallListResponse",
             Points = _store.GetMallPoints(accountId),
@@ -236,8 +338,9 @@ public sealed class MallService
                 })
                 .Cast<object>()
                 .ToArray(),
-            Gifts = Array.Empty<object>()
+            Gifts = gifts
         };
+    }
 
     private object Points(long accountId)
         => new
