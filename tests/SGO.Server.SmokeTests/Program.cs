@@ -60,7 +60,8 @@ CurrentItemDefinition CurrentItem(
     string horseType = "",
     int reqLevel = 0,
     int durability = 0,
-    int canRepair = 1)
+    int canRepair = 1,
+    int canTrade = 1)
     => new(
         id,
         name,
@@ -91,7 +92,8 @@ CurrentItemDefinition CurrentItem(
         horseType,
         reqLevel,
         durability,
-        canRepair);
+        canRepair,
+        canTrade);
 
 var currentCatalog = new CurrentClientDataCatalog(
     new[]
