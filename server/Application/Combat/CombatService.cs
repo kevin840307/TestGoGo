@@ -1736,10 +1736,6 @@ public sealed class CombatService
 
                 foreach (var target in targets)
                 {
-                    var appliedDamage = Math.Min(
-                        screenDamage,
-                        Math.Max(1, target.CurrentHp));
-
                     target.CurrentHp = Math.Max(
                         0,
                         target.CurrentHp - screenDamage);
@@ -1749,7 +1745,7 @@ public sealed class CombatService
                         Type = "EntityDamage",
                         TargetID = target.EntityId,
                         TargetType = 1,
-                        Damage = appliedDamage,
+                        Damage = screenDamage,
                         CurrentHP = target.CurrentHp,
                         MaxHP = target.MaxHp,
                         IsCrit = false,
