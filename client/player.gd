@@ -682,6 +682,22 @@ func _set_navigation_target(destination: Vector2) -> void :
 	is_moving = true
 
 
+func apply_position_correction(corrected_position: Vector2) -> void :
+	global_position = corrected_position
+	velocity = Vector2.ZERO
+	is_moving = false
+	is_mouse_holding = false
+	move_path = PackedVector2Array()
+	move_path_index = 0
+	move_destination = corrected_position
+	target_position = corrected_position
+	stuck_frames = 0
+	_movement_state_reported = false
+	if not is_action_locked and not is_dead:
+		current_state = "idle"
+		sync_animation()
+
+
 func _stop_movement() -> void :
 	velocity = Vector2.ZERO
 	is_moving = false
