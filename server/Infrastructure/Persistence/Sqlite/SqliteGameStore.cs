@@ -5,6 +5,7 @@ using SGO.Server.Application.Abstractions;
 using SGO.Server.Protocol;
 using SGO.Server.Domain.Assets;
 using SGO.Server.Domain.Shops;
+using SGO.Server.Domain.World;
 
 namespace SGO.Server.Infrastructure.Persistence.Sqlite;
 
@@ -2260,6 +2261,332 @@ public sealed class SqliteGameStore : IGameStore
 
         tx.Commit();
         return true;
+    }
+
+    public GroundItemRuntime? DropAssetToGround(
+        long accountId,
+        long dbid,
+        long uid,
+        int tabType,
+        int count,
+        int mapId,
+        double x,
+        double y)
+    {
+        count = Math.Max(1, count);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return null;
+
+        int itemIndex;
+        int actualCount = 1;
+        int damage = 0;
+        int color = 0;
+        int part = 255;
+
+        if (tabType is 0 or 5)
+        {
+            using var get = db.CreateCommand();
+            get.Transaction = tx;
+            get.CommandText = """
+                SELECT item_index,count
+                  FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND in_bank=0
+                   AND in_shop=0
+                """;
+            Arg(get, "$uid", uid);
+            Arg(get, "$id", dbid);
+
+            using var reader = get.ExecuteReader();
+            if (!reader.Read())
+                return null;
+
+            itemIndex = reader.GetInt32(0);
+            var owned = reader.GetInt32(1);
+            if (count > owned)
+                return null;
+
+            actualCount = count;
+            reader.Close();
+
+            using var change = db.CreateCommand();
+            change.Transaction = tx;
+            if (count == owned)
+            {
+                change.CommandText = """
+                    DELETE FROM inventory_items
+                     WHERE uid=$uid AND character_id=$id
+                    """;
+            }
+            else
+            {
+                change.CommandText = """
+                    UPDATE inventory_items
+                       SET count=count-$count
+                     WHERE uid=$uid
+                       AND character_id=$id
+                       AND count >= $count
+                    """;
+                Arg(change, "$count", count);
+            }
+
+            Arg(change, "$uid", uid);
+            Arg(change, "$id", dbid);
+            if (change.ExecuteNonQuery() != 1)
+                return null;
+        }
+        else if (tabType == 1)
+        {
+            using var get = db.CreateCommand();
+            get.Transaction = tx;
+            get.CommandText = """
+                SELECT item_index,damage,color,part
+                  FROM equipment_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND part=255
+                   AND in_bank=0
+                   AND in_shop=0
+                """;
+            Arg(get, "$uid", uid);
+            Arg(get, "$id", dbid);
+            using var reader = get.ExecuteReader();
+            if (!reader.Read())
+                return null;
+            itemIndex = reader.GetInt32(0);
+            damage = reader.GetInt32(1);
+            color = reader.GetInt32(2);
+            part = reader.GetInt32(3);
+            reader.Close();
+
+            using var del = db.CreateCommand();
+            del.Transaction = tx;
+            del.CommandText = """
+                DELETE FROM equipment_items
+                 WHERE uid=$uid AND character_id=$id
+                """;
+            Arg(del, "$uid", uid);
+            Arg(del, "$id", dbid);
+            if (del.ExecuteNonQuery() != 1)
+                return null;
+        }
+        else if (tabType == 3)
+        {
+            using var get = db.CreateCommand();
+            get.Transaction = tx;
+            get.CommandText = """
+                SELECT equip_index,damage,color,part
+                  FROM horse_equipment
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND horse_uid=-1
+                   AND in_bank=0
+                   AND in_shop=0
+                """;
+            Arg(get, "$uid", uid);
+            Arg(get, "$id", dbid);
+            using var reader = get.ExecuteReader();
+            if (!reader.Read())
+                return null;
+            itemIndex = reader.GetInt32(0);
+            damage = reader.GetInt32(1);
+            color = reader.GetInt32(2);
+            part = reader.GetInt32(3);
+            reader.Close();
+
+            using var del = db.CreateCommand();
+            del.Transaction = tx;
+            del.CommandText = """
+                DELETE FROM horse_equipment
+                 WHERE uid=$uid AND character_id=$id
+                """;
+            Arg(del, "$uid", uid);
+            Arg(del, "$id", dbid);
+            if (del.ExecuteNonQuery() != 1)
+                return null;
+        }
+        else
+        {
+            return null;
+        }
+
+        long groundId;
+        using (var add = db.CreateCommand())
+        {
+            add.Transaction = tx;
+            add.CommandText = """
+                INSERT INTO ground_items(
+                    map_id,owner_dbid,tab_type,item_index,count,
+                    damage,color,part,x,y)
+                VALUES(
+                    $map,$owner,$tab,$item,$count,
+                    $damage,$color,$part,$x,$y);
+                SELECT last_insert_rowid();
+                """;
+            Arg(add, "$map", mapId);
+            Arg(add, "$owner", dbid);
+            Arg(add, "$tab", tabType);
+            Arg(add, "$item", itemIndex);
+            Arg(add, "$count", actualCount);
+            Arg(add, "$damage", damage);
+            Arg(add, "$color", color);
+            Arg(add, "$part", part);
+            Arg(add, "$x", x);
+            Arg(add, "$y", y);
+            groundId = Convert.ToInt64(add.ExecuteScalar());
+        }
+
+        tx.Commit();
+        return new GroundItemRuntime
+        {
+            GroundItemId = groundId,
+            EntityId = checked(6_000_000 + (int)groundId),
+            MapId = mapId,
+            TabType = tabType,
+            ItemIndex = itemIndex,
+            Count = actualCount,
+            Damage = damage,
+            Color = color,
+            Part = part,
+            X = x,
+            Y = y,
+            OwnerDbid = dbid
+        };
+    }
+
+    public IReadOnlyList<GroundItemRuntime> GetGroundItems(int mapId)
+    {
+        var result = new List<GroundItemRuntime>();
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT id,map_id,owner_dbid,tab_type,item_index,count,
+                   damage,color,part,x,y
+              FROM ground_items
+             WHERE map_id=$map
+             ORDER BY id
+            """;
+        Arg(cmd, "$map", mapId);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+            result.Add(ReadGroundItem(reader));
+
+        return result;
+    }
+
+    public (bool Success, string Message, GroundItemRuntime? Item)
+        PickUpGroundItem(
+            long accountId,
+            long dbid,
+            long groundItemId)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return (false, "角色不存在", null);
+
+        GroundItemRuntime item;
+        using (var get = db.CreateCommand())
+        {
+            get.Transaction = tx;
+            get.CommandText = """
+                SELECT id,map_id,owner_dbid,tab_type,item_index,count,
+                       damage,color,part,x,y
+                  FROM ground_items
+                 WHERE id=$id
+                """;
+            Arg(get, "$id", groundItemId);
+            using var reader = get.ExecuteReader();
+            if (!reader.Read())
+                return (false, "物品已不存在", null);
+            item = ReadGroundItem(reader);
+        }
+
+        using (var add = db.CreateCommand())
+        {
+            add.Transaction = tx;
+            if (item.TabType is 0 or 5)
+            {
+                add.CommandText = """
+                    INSERT INTO inventory_items(
+                        character_id,item_index,count,in_bank,in_shop)
+                    VALUES($char,$item,$count,0,0)
+                    """;
+                Arg(add, "$count", item.Count);
+            }
+            else if (item.TabType == 1)
+            {
+                add.CommandText = """
+                    INSERT INTO equipment_items(
+                        character_id,item_index,damage,color,part,in_bank,in_shop)
+                    VALUES($char,$item,$damage,$color,$part,0,0)
+                    """;
+                Arg(add, "$damage", item.Damage);
+                Arg(add, "$color", item.Color);
+                Arg(add, "$part", item.Part);
+            }
+            else if (item.TabType == 3)
+            {
+                add.CommandText = """
+                    INSERT INTO horse_equipment(
+                        character_id,equip_index,horse_uid,damage,color,part,in_bank,in_shop)
+                    VALUES($char,$item,-1,$damage,$color,$part,0,0)
+                    """;
+                Arg(add, "$damage", item.Damage);
+                Arg(add, "$color", item.Color);
+                Arg(add, "$part", item.Part);
+            }
+            else
+            {
+                return (false, "此類物品目前無法撿回", item);
+            }
+
+            Arg(add, "$char", dbid);
+            Arg(add, "$item", item.ItemIndex);
+            if (add.ExecuteNonQuery() != 1)
+                return (false, "撿取失敗", item);
+        }
+
+        using (var del = db.CreateCommand())
+        {
+            del.Transaction = tx;
+            del.CommandText =
+                "DELETE FROM ground_items WHERE id=$id";
+            Arg(del, "$id", groundItemId);
+            if (del.ExecuteNonQuery() != 1)
+                return (false, "撿取失敗", item);
+        }
+
+        tx.Commit();
+        return (true, "撿取成功", item);
+    }
+
+    private static GroundItemRuntime ReadGroundItem(
+        SqliteDataReader reader)
+    {
+        var groundId = reader.GetInt64(0);
+        return new GroundItemRuntime
+        {
+            GroundItemId = groundId,
+            EntityId = checked(6_000_000 + (int)groundId),
+            MapId = reader.GetInt32(1),
+            OwnerDbid = reader.GetInt64(2),
+            TabType = reader.GetInt32(3),
+            ItemIndex = reader.GetInt32(4),
+            Count = reader.GetInt32(5),
+            Damage = reader.GetInt32(6),
+            Color = reader.GetInt32(7),
+            Part = reader.GetInt32(8),
+            X = reader.GetDouble(9),
+            Y = reader.GetDouble(10)
+        };
     }
 
     public (bool Success, string Message) DiscardAsset(
