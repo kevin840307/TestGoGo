@@ -415,6 +415,45 @@ public sealed record PlayerShopPurchaseResult(
     long SellerMoney,
     bool SoldOut);
 
+public sealed record CraftIngredient(
+    int ItemId,
+    int Count);
+
+public sealed record CraftGrant(
+    int ItemId,
+    int Count,
+    AssetPurchaseKind Kind,
+    int Part,
+    int Durability);
+
+public sealed record DismantleTarget(
+    int TabType,
+    long Uid,
+    int ItemId,
+    int Count);
+
+public sealed record CraftCommitResult(
+    bool Success,
+    string Message,
+    long Money);
+
+public interface ICraftingStore : ICharacterAssetReader
+{
+    CraftCommitResult CommitCraft(
+        long accountId,
+        long dbid,
+        long moneyCost,
+        IReadOnlyList<CraftIngredient> ingredients,
+        IReadOnlyList<CraftGrant> grants);
+
+    CraftCommitResult CommitDismantle(
+        long accountId,
+        long dbid,
+        long moneyCost,
+        IReadOnlyList<DismantleTarget> targets,
+        IReadOnlyList<CraftGrant> grants);
+}
+
 public interface IPlayerShopStore : ICharacterAssetReader
 {
     PlayerShopReserveResult SetPlayerShopAssetState(
