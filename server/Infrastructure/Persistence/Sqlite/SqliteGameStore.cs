@@ -6902,6 +6902,36 @@ public sealed class SqliteGameStore : IGameStore
         return GetCharacter(accountId, dbid);
     }
 
+    public Dictionary<string, object>? SetCareer(
+        long accountId,
+        long dbid,
+        int career,
+        int job)
+    {
+        if (career is < 0 or > 10 ||
+            job is < 0 or > 2)
+            return null;
+
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET career=$career,
+                   job=$job
+             WHERE id=$id
+               AND account_id=$account
+            """;
+        Arg(cmd, "$career", career);
+        Arg(cmd, "$job", job);
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$account", accountId);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return null;
+
+        return GetCharacter(accountId, dbid);
+    }
+
     public Dictionary<string, object>? Revive(long accountId, long dbid)
     {
         using var db = Open();
