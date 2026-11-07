@@ -3191,6 +3191,128 @@ public sealed class SqliteGameStore : IGameStore
         return true;
     }
 
+    public Dictionary<string, object>? ApplyPetDamage(
+        long accountId,
+        long dbid,
+        long petUid,
+        int damage)
+    {
+        damage = Math.Max(0, damage);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return null;
+
+        using (var update = db.CreateCommand())
+        {
+            update.Transaction = tx;
+            update.CommandText = """
+                UPDATE pets
+                   SET hp=MAX(0, hp-$damage),
+                       state=CASE
+                           WHEN hp-$damage <= 0 THEN 0
+                           ELSE state
+                       END
+                 WHERE uid=$pet
+                   AND character_id=$id
+                """;
+            Arg(update, "$damage", damage);
+            Arg(update, "$pet", petUid);
+            Arg(update, "$id", dbid);
+
+            if (update.ExecuteNonQuery() != 1)
+                return null;
+        }
+
+        tx.Commit();
+
+        return GetCharacterAssets(accountId, dbid).Pets
+            .FirstOrDefault(x =>
+                Convert.ToInt64(x["UID"]) == petUid);
+    }
+
+    public Dictionary<string, object>? AddPetExperience(
+        long accountId,
+        long dbid,
+        long petUid,
+        int exp)
+    {
+        if (exp <= 0)
+            return null;
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return null;
+
+        int level;
+        int currentExp;
+        int maxExp;
+
+        using (var get = db.CreateCommand())
+        {
+            get.Transaction = tx;
+            get.CommandText = """
+                SELECT level,exp,max_exp
+                  FROM pets
+                 WHERE uid=$pet
+                   AND character_id=$id
+                """;
+            Arg(get, "$pet", petUid);
+            Arg(get, "$id", dbid);
+
+            using var reader = get.ExecuteReader();
+            if (!reader.Read())
+                return null;
+
+            level = Math.Max(1, reader.GetInt32(0));
+            currentExp = Math.Max(0, reader.GetInt32(1));
+            maxExp = Math.Max(1, reader.GetInt32(2));
+        }
+
+        currentExp += exp;
+
+        while (level < 255 && currentExp >= maxExp)
+        {
+            currentExp -= maxExp;
+            level++;
+            maxExp = PetMaxExpForLevel(level);
+        }
+
+        using (var update = db.CreateCommand())
+        {
+            update.Transaction = tx;
+            update.CommandText = """
+                UPDATE pets
+                   SET level=$level,
+                       exp=$exp,
+                       max_exp=$maxExp
+                 WHERE uid=$pet
+                   AND character_id=$id
+                """;
+            Arg(update, "$level", level);
+            Arg(update, "$exp", currentExp);
+            Arg(update, "$maxExp", maxExp);
+            Arg(update, "$pet", petUid);
+            Arg(update, "$id", dbid);
+
+            if (update.ExecuteNonQuery() != 1)
+                return null;
+        }
+
+        tx.Commit();
+
+        return GetCharacterAssets(accountId, dbid).Pets
+            .FirstOrDefault(x =>
+                Convert.ToInt64(x["UID"]) == petUid);
+    }
+
+    private static int PetMaxExpForLevel(int level)
+        => Math.Max(100, level * 100);
+
     public bool RenamePet(long accountId, long dbid, long petUid, string name)
     {
         var clean = (name ?? "").Trim();
