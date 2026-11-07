@@ -177,16 +177,28 @@ func _apply_current_festival_theme() -> Dictionary:
 			"changed": 0, 
 			"failed": 0, 
 		}
-	return FestivalThemeManager.apply_theme_to_map(current_map_node, current_festival_theme)
+	set_frame_gap_stage("festival_theme_apply")
+	var started_usec := Time.get_ticks_usec()
+	var result: Dictionary = FestivalThemeManager.apply_theme_to_map(current_map_node, current_festival_theme)
+	var elapsed_ms := float(Time.get_ticks_usec() - started_usec) / 1000.0
+	if elapsed_ms >= 50.0:
+		print("[INIT_TIMING] festival_theme_ms=%.2f" % elapsed_ms)
+	return result
 
 func _init_buildings_with_diagnostics(source_map_id: int, target_map_id: int) -> void :
 	if not BuildingManager:
 		return
+	await get_tree().process_frame
+	set_frame_gap_stage("building_init")
 	var started_usec: = Time.get_ticks_usec()
 	BuildingManager.init_buildings()
+	var duration_ms := float(Time.get_ticks_usec() - started_usec) / 1000.0
+	if duration_ms >= 50.0:
+		print("[INIT_TIMING] building_init_ms=%.2f" % duration_ms)
 	_trace_map_change("buildings_initialized", source_map_id, target_map_id, {
-		"duration_ms": float(Time.get_ticks_usec() - started_usec) / 1000.0, 
+		"duration_ms": duration_ms, 
 	})
+	set_frame_gap_stage("world_running")
 
 func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vector2, progress_callback: Callable = Callable()) -> bool:
 	var raw_num_str = map_id.replace("map", "")
@@ -261,7 +273,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	# initial-map critical path.
 	call_deferred("_apply_current_festival_theme")
 	if BuildingManager:
-		BuildingManager.call_deferred("init_buildings")
+		call_deferred("_init_buildings_with_diagnostics", 0, target_map_id)
 
 	_report_initial_loading_progress(progress_callback, 86.0, "建立角色")
 	await get_tree().process_frame
