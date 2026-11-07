@@ -121,6 +121,7 @@ public sealed class SqliteGameStore : IGameStore
         {
             ApplyClubFields(db, character);
             ApplyTitleFields(db, character);
+            ApplyTransformFields(db, character);
         }
 
         // The recovered client renders exactly three character slots and also
@@ -153,6 +154,7 @@ public sealed class SqliteGameStore : IGameStore
         {
             ApplyClubFields(db, character);
             ApplyTitleFields(db, character);
+            ApplyTransformFields(db, character);
         }
 
         return character;
@@ -285,6 +287,74 @@ public sealed class SqliteGameStore : IGameStore
             ["Quests"] = Array.Empty<object>(),
             ["Shortcuts"] = Array.Empty<object>()
         };
+    }
+
+    private static void ApplyTransformFields(
+        SqliteConnection db,
+        Dictionary<string, object> character)
+    {
+        var dbid = Convert.ToInt64(
+            character.GetValueOrDefault("DBID", 0L));
+
+        character["TransformAttackBonus"] = 0;
+        character["TransformDefenseBonus"] = 0;
+        character["TransformMagicAttackBonus"] = 0;
+        character["TransformMagicDefenseBonus"] = 0;
+        character["TransformHitBonus"] = 0;
+        character["TransformDodgeBonus"] = 0;
+        character["TransformSourceItemID"] = 0;
+        character["TransformStartedUtcMs"] = 0L;
+        character["TransformExpiresUtcMs"] = 0L;
+
+        if (dbid <= 0)
+            return;
+
+        var nowUtcMs =
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        using (var cleanup = db.CreateCommand())
+        {
+            cleanup.CommandText = """
+                DELETE FROM character_transform_state
+                 WHERE character_id=$id
+                   AND expires_utc_ms <= $now
+                """;
+            Arg(cleanup, "$id", dbid);
+            Arg(cleanup, "$now", nowUtcMs);
+            cleanup.ExecuteNonQuery();
+        }
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT transform_type,transform_id,color_index,
+                   source_item_id,started_utc_ms,expires_utc_ms,
+                   attack_bonus,defense_bonus,
+                   magic_attack_bonus,magic_defense_bonus,
+                   hit_bonus,dodge_bonus
+              FROM character_transform_state
+             WHERE character_id=$id
+               AND expires_utc_ms > $now
+             LIMIT 1
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$now", nowUtcMs);
+
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read())
+            return;
+
+        character["TransformType"] = reader.GetInt32(0);
+        character["TransformID"] = reader.GetString(1);
+        character["TransformColorIndex"] = reader.GetInt32(2);
+        character["TransformSourceItemID"] = reader.GetInt32(3);
+        character["TransformStartedUtcMs"] = reader.GetInt64(4);
+        character["TransformExpiresUtcMs"] = reader.GetInt64(5);
+        character["TransformAttackBonus"] = reader.GetInt32(6);
+        character["TransformDefenseBonus"] = reader.GetInt32(7);
+        character["TransformMagicAttackBonus"] = reader.GetInt32(8);
+        character["TransformMagicDefenseBonus"] = reader.GetInt32(9);
+        character["TransformHitBonus"] = reader.GetInt32(10);
+        character["TransformDodgeBonus"] = reader.GetInt32(11);
     }
 
     private static void ApplyTitleFields(
@@ -1477,6 +1547,202 @@ public sealed class SqliteGameStore : IGameStore
                 error = "不支援的資產類型";
                 return false;
         }
+    }
+
+    public CharacterTransformMutationResult ActivateTransformFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        CharacterTransformState state)
+    {
+        if (accountId <= 0 ||
+            dbid <= 0 ||
+            itemUid <= 0 ||
+            itemIndex <= 0 ||
+            state.TransformType <= 0 ||
+            string.IsNullOrWhiteSpace(state.TransformId) ||
+            state.ExpiresUtcMs <= state.StartedUtcMs)
+        {
+            return new(false, "變身資料無效", null);
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在", null);
+
+        using (var item = db.CreateCommand())
+        {
+            item.Transaction = tx;
+            item.CommandText = """
+                SELECT count
+                  FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND item_index=$item
+                   AND in_bank=0
+                   AND in_shop=0
+                 LIMIT 1
+                """;
+            Arg(item, "$uid", itemUid);
+            Arg(item, "$id", dbid);
+            Arg(item, "$item", itemIndex);
+
+            var raw = item.ExecuteScalar();
+            if (raw is null ||
+                raw == DBNull.Value ||
+                Convert.ToInt32(raw) <= 0)
+            {
+                return new(false, "找不到可使用的變身卷軸", null);
+            }
+        }
+
+        using (var upsert = db.CreateCommand())
+        {
+            upsert.Transaction = tx;
+            upsert.CommandText = """
+                INSERT INTO character_transform_state(
+                    character_id,transform_type,transform_id,color_index,
+                    source_item_id,started_utc_ms,expires_utc_ms,
+                    attack_bonus,defense_bonus,
+                    magic_attack_bonus,magic_defense_bonus,
+                    hit_bonus,dodge_bonus)
+                VALUES(
+                    $id,$type,$transform,$color,
+                    $source,$started,$expires,
+                    $attack,$defense,
+                    $magicAttack,$magicDefense,
+                    $hit,$dodge)
+                ON CONFLICT(character_id)
+                DO UPDATE SET
+                    transform_type=excluded.transform_type,
+                    transform_id=excluded.transform_id,
+                    color_index=excluded.color_index,
+                    source_item_id=excluded.source_item_id,
+                    started_utc_ms=excluded.started_utc_ms,
+                    expires_utc_ms=excluded.expires_utc_ms,
+                    attack_bonus=excluded.attack_bonus,
+                    defense_bonus=excluded.defense_bonus,
+                    magic_attack_bonus=excluded.magic_attack_bonus,
+                    magic_defense_bonus=excluded.magic_defense_bonus,
+                    hit_bonus=excluded.hit_bonus,
+                    dodge_bonus=excluded.dodge_bonus
+                """;
+            Arg(upsert, "$id", dbid);
+            Arg(upsert, "$type", state.TransformType);
+            Arg(upsert, "$transform", state.TransformId.Trim());
+            Arg(upsert, "$color", Math.Max(0, state.ColorIndex));
+            Arg(upsert, "$source", state.SourceItemId);
+            Arg(upsert, "$started", state.StartedUtcMs);
+            Arg(upsert, "$expires", state.ExpiresUtcMs);
+            Arg(upsert, "$attack", Math.Max(0, state.AttackBonus));
+            Arg(upsert, "$defense", Math.Max(0, state.DefenseBonus));
+            Arg(upsert, "$magicAttack", Math.Max(0, state.MagicAttackBonus));
+            Arg(upsert, "$magicDefense", Math.Max(0, state.MagicDefenseBonus));
+            Arg(upsert, "$hit", Math.Max(0, state.HitBonus));
+            Arg(upsert, "$dodge", Math.Max(0, state.DodgeBonus));
+
+            if (upsert.ExecuteNonQuery() != 1)
+                return new(false, "變身狀態儲存失敗", null);
+        }
+
+        ConsumeInventoryItem(
+            db,
+            tx,
+            dbid,
+            itemUid);
+
+        tx.Commit();
+        return new(true, "變身成功", state);
+    }
+
+    public CharacterTransformMutationResult ClearTransformFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex)
+    {
+        if (accountId <= 0 ||
+            dbid <= 0 ||
+            itemUid <= 0 ||
+            itemIndex <= 0)
+        {
+            return new(false, "還原資料無效", null);
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return new(false, "角色不存在", null);
+
+        var nowUtcMs =
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        using (var active = db.CreateCommand())
+        {
+            active.Transaction = tx;
+            active.CommandText = """
+                SELECT 1
+                  FROM character_transform_state
+                 WHERE character_id=$id
+                   AND expires_utc_ms > $now
+                 LIMIT 1
+                """;
+            Arg(active, "$id", dbid);
+            Arg(active, "$now", nowUtcMs);
+            if (active.ExecuteScalar() is null)
+                return new(false, "目前沒有可解除的變身效果", null);
+        }
+
+        using (var item = db.CreateCommand())
+        {
+            item.Transaction = tx;
+            item.CommandText = """
+                SELECT count
+                  FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND item_index=$item
+                   AND in_bank=0
+                   AND in_shop=0
+                 LIMIT 1
+                """;
+            Arg(item, "$uid", itemUid);
+            Arg(item, "$id", dbid);
+            Arg(item, "$item", itemIndex);
+
+            var raw = item.ExecuteScalar();
+            if (raw is null ||
+                raw == DBNull.Value ||
+                Convert.ToInt32(raw) <= 0)
+            {
+                return new(false, "找不到可使用的還原卷軸", null);
+            }
+        }
+
+        using (var delete = db.CreateCommand())
+        {
+            delete.Transaction = tx;
+            delete.CommandText = """
+                DELETE FROM character_transform_state
+                 WHERE character_id=$id
+                """;
+            Arg(delete, "$id", dbid);
+            if (delete.ExecuteNonQuery() != 1)
+                return new(false, "解除變身失敗", null);
+        }
+
+        ConsumeInventoryItem(
+            db,
+            tx,
+            dbid,
+            itemUid);
+
+        tx.Commit();
+        return new(true, "已恢復原本外觀", null);
     }
 
     public TimedEffectActivationResult ActivateTimedEffectFromItem(
