@@ -1223,6 +1223,12 @@ func _play_transient_skill_effect(
 	effect_node.position = Vector2.ZERO
 	effect_node.centered = false
 	effect_node.speed_scale = playback_speed
+	var effect_scale = frames.get_meta("effect_scale", Vector2.ONE)
+	if effect_scale is Vector2:
+		effect_node.scale = effect_scale
+	elif effect_scale is float or effect_scale is int:
+		var uniform_scale := float(effect_scale)
+		effect_node.scale = Vector2(uniform_scale, uniform_scale)
 	effect_node.set_meta("is_self_cast_effect", is_self_cast_effect)
 	add_child(effect_node)
 
