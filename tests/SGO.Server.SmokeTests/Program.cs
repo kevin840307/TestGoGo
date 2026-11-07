@@ -899,8 +899,10 @@ try
                   "\"Type\":\"MonsterTarget\"")) &&
           aiPackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
-                  "\"Type\":\"MoveEntity\"")),
-        "monster enters aggro and emits chase movement");
+                  "\"Type\":\"MoveEntity\"") &&
+              JsonSerializer.Serialize(x).Contains(
+                  "\"SpeedTime\":0.32")),
+        "monster enters aggro and emits overlapped smooth chase movement");
 
     var sawDeath = false;
 
@@ -941,6 +943,8 @@ try
     var playerDeathSeen = false;
     var aiNow = session.LastMonsterAiTick.AddSeconds(2);
 
+    var monsterAttackAnimationSeen = false;
+
     for (var i = 0; i < 100 && !playerDeathSeen; i++)
     {
         aiNow = aiNow.AddSeconds(2);
@@ -951,6 +955,14 @@ try
             monster.Y,
             aiNow);
 
+        monsterAttackAnimationSeen |= monsterAttackPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"SyncState\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"State\":\"attack\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                $"\"EntityID\":{monster.EntityId}"));
+
         playerDeathSeen = monsterAttackPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"EntityDeath\"") &&
@@ -959,6 +971,9 @@ try
     }
 
     selected = store.GetCharacter(account.Value, id);
+    Check(monsterAttackAnimationSeen,
+        "monster attack emits SyncState attack for existing client animation");
+
     Check(playerDeathSeen &&
           Convert.ToInt32(selected!["HP"]) == 0 &&
           selected["State"].ToString() == "death",
