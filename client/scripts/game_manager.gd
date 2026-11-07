@@ -269,12 +269,6 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		"add_child_ms": add_child_ms,
 	})
 
-	# Theme/building traversal can be expensive; keep them out of the blocking
-	# initial-map critical path.
-	call_deferred("_apply_current_festival_theme")
-	if BuildingManager:
-		call_deferred("_init_buildings_with_diagnostics", 0, target_map_id)
-
 	_report_initial_loading_progress(progress_callback, 86.0, "建立角色")
 	await get_tree().process_frame
 	var player_scene = ResourceLoader.load("res://player.tscn")
@@ -321,10 +315,36 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	if CursorManager:
 		CursorManager.set_cursor_state("normal")
 
-	_report_initial_loading_progress(progress_callback, 99.0, "完成最後初始化")
+	# Do not reveal the first world until every deferred/queued initialization
+	# task is really complete. The entry loading overlay stays visible while
+	# this readiness gate is running.
+	_report_initial_loading_progress(progress_callback, 97.5, "載入角色外觀")
+	while is_instance_valid(current_player) and current_player.has_method("is_initial_visual_ready") and not current_player.is_initial_visual_ready():
+		await get_tree().process_frame
+
+	_report_initial_loading_progress(progress_callback, 98.0, "初始化遊戲資料")
+	while is_instance_valid(current_hud) and current_hud.has_method("is_initial_hud_ready") and not current_hud.is_initial_hud_ready():
+		await get_tree().process_frame
+
+	_report_initial_loading_progress(progress_callback, 98.4, "套用地圖環境")
 	await get_tree().process_frame
-	set_frame_gap_stage("world_running")
-	AudioManager.play_map_bgm(map_id.to_int())
+	_apply_current_festival_theme()
+	await get_tree().process_frame
+
+	_report_initial_loading_progress(progress_callback, 98.8, "初始化地圖物件")
+	if BuildingManager:
+		await _init_buildings_with_diagnostics(0, target_map_id)
+	await get_tree().process_frame
+
+	_report_initial_loading_progress(progress_callback, 99.2, "同步地圖角色")
+	while NetworkEntityManager and NetworkEntityManager.has_method("is_initial_spawn_queue_idle") and not NetworkEntityManager.is_initial_spawn_queue_idle():
+		await get_tree().process_frame
+
+	_report_initial_loading_progress(progress_callback, 99.6, "載入背景音樂")
+	await get_tree().process_frame
+	await AudioManager.play_map_bgm(map_id.to_int())
+
+	set_frame_gap_stage("world_ready")
 	_trace_map_change("initial_enter_completed", 0, target_map_id, {
 		"total_ms": float(Time.get_ticks_usec() - initial_started_usec) / 1000.0,
 	})
