@@ -498,7 +498,8 @@ func _on_item_pickup_feedback_received(data: Dictionary) -> void :
 	if not message.is_empty():
 		show_system_message_flash(message)
 
-	if AudioManager:
+	var play_sound: bool = bool(data.get("PlaySound", true))
+	if play_sound and AudioManager:
 		AudioManager.play_se(ITEM_PICKUP_SE_ID)
 
 func show_system_message_flash(msg: String) -> void :
