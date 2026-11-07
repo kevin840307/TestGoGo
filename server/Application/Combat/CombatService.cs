@@ -30,17 +30,20 @@ public sealed class CombatService
     private readonly WorldDataService _world;
     private readonly CurrentClientDataCatalog _current;
     private readonly LegacyPlayerGrowthCatalog _growth;
+    private readonly EnemyDropCatalog _drops;
 
     public CombatService(
         IGameStore store,
         WorldDataService world,
         CurrentClientDataCatalog current,
-        LegacyPlayerGrowthCatalog growth)
+        LegacyPlayerGrowthCatalog growth,
+        EnemyDropCatalog drops)
     {
         _store = store;
         _world = world;
         _current = current;
         _growth = growth;
+        _drops = drops;
     }
 
     public IReadOnlyList<object> EnterMap(
@@ -495,6 +498,7 @@ public sealed class CombatService
 
     public IReadOnlyList<object> PetAttack(
         ClientSession session,
+        long accountId,
         long petUid,
         int petAttack,
         int targetEntityId,
@@ -576,6 +580,23 @@ public sealed class CombatService
                 EntityType = 1,
                 KillerID = petEntityId
             });
+
+            AddCharacterKillRewards(
+                session,
+                accountId,
+                monster,
+                packets);
+
+            AddMonsterDrops(
+                session,
+                monster,
+                packets);
+
+            AddMechaKillExperience(
+                session,
+                accountId,
+                monster,
+                packets);
         }
 
         return packets;
@@ -834,6 +855,11 @@ public sealed class CombatService
                         monster,
                         packets);
 
+                    AddMonsterDrops(
+                        session,
+                        monster,
+                        packets);
+
                     AddMechaKillExperience(
                         session,
                         accountId,
@@ -1025,6 +1051,11 @@ public sealed class CombatService
                 monster,
                 packets);
 
+            AddMonsterDrops(
+                session,
+                monster,
+                packets);
+
             AddMechaKillExperience(
                 session,
                 accountId,
@@ -1033,6 +1064,70 @@ public sealed class CombatService
         }
 
         return packets;
+    }
+
+    private void AddMonsterDrops(
+        ClientSession session,
+        MonsterRuntimeState monster,
+        List<object> packets)
+    {
+        if (!session.CharacterId.HasValue)
+            return;
+
+        monster.KillSequence++;
+
+        var drops = _drops.RollDrops(
+            monster.EnemyId,
+            monster.EntityId,
+            monster.KillSequence);
+
+        var offsetIndex = 0;
+        foreach (var drop in drops)
+        {
+            var entityId = session.NextGroundItemEntityId++;
+            var offsetX = ((offsetIndex % 5) - 2) * 12.0;
+            var offsetY = (((offsetIndex / 5) % 5) - 2) * 10.0;
+            offsetIndex++;
+
+            var ground = new GroundItemRuntime
+            {
+                EntityId = entityId,
+                MapId = monster.MapId,
+                TabType = drop.TabType,
+                ItemIndex = drop.ItemId,
+                Count = 1,
+                Damage = 0,
+                Color = 0,
+                Part = 255,
+                X = monster.X + offsetX,
+                Y = monster.Y + offsetY,
+                OwnerDbid = session.CharacterId.Value
+            };
+
+            session.GroundItems[entityId] = ground;
+
+            packets.Add(new
+            {
+                Type = "SpawnEntity",
+                EntityID = entityId,
+                EntityType = 3,
+                Name = drop.Name,
+                LocX = ground.X,
+                LocY = ground.Y,
+                ExtraData = new
+                {
+                    ItemIndex = ground.ItemIndex,
+                    Count = ground.Count,
+                    TabType = ground.TabType,
+                    Damage = ground.Damage,
+                    Color = ground.Color,
+                    Part = ground.Part,
+                    RemainingTime = 60.0,
+                    OwnerDBID = ground.OwnerDbid,
+                    ProtectTimeSeconds = 15.0
+                }
+            });
+        }
     }
 
     private void AddCharacterKillRewards(
