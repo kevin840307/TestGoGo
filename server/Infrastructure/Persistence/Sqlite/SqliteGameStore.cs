@@ -970,7 +970,8 @@ public sealed class SqliteGameStore : IGameStore
         int rewardItemIndex,
         AssetPurchaseKind rewardKind,
         int rewardCount = 1,
-        int rewardPart = 255)
+        int rewardPart = 255,
+        int rewardDamage = 0)
     {
         rewardCount = Math.Max(1, rewardCount);
 
@@ -1071,11 +1072,12 @@ public sealed class SqliteGameStore : IGameStore
                 add.CommandText = """
                     INSERT INTO equipment_items(
                         character_id,item_index,damage,color,part,in_bank,in_shop)
-                    VALUES($id,$idx,0,0,$part,0,0);
+                    VALUES($id,$idx,$damage,0,$part,0,0);
                     SELECT last_insert_rowid();
                     """;
                 Arg(add, "$id", dbid);
                 Arg(add, "$idx", rewardItemIndex);
+                Arg(add, "$damage", Math.Max(0, rewardDamage));
                 Arg(add, "$part", rewardPart);
                 rewardUid = Convert.ToInt64(add.ExecuteScalar());
                 break;
@@ -1088,11 +1090,12 @@ public sealed class SqliteGameStore : IGameStore
                 add.CommandText = """
                     INSERT INTO horse_equipment(
                         character_id,equip_index,horse_uid,damage,color,part,in_bank,in_shop)
-                    VALUES($id,$idx,-1,0,0,$part,0,0);
+                    VALUES($id,$idx,-1,$damage,0,$part,0,0);
                     SELECT last_insert_rowid();
                     """;
                 Arg(add, "$id", dbid);
                 Arg(add, "$idx", rewardItemIndex);
+                Arg(add, "$damage", Math.Max(0, rewardDamage));
                 Arg(add, "$part", rewardPart is >= 0 and <= 6
                     ? rewardPart
                     : 255);
@@ -2032,7 +2035,8 @@ public sealed class SqliteGameStore : IGameStore
         int itemIndex,
         int count,
         int unitPrice,
-        int itemPart = 255)
+        int itemPart = 255,
+        int itemDamage = 0)
     {
         count = Math.Max(1, count);
         unitPrice = Math.Max(0, unitPrice);
@@ -2087,11 +2091,12 @@ public sealed class SqliteGameStore : IGameStore
                 add.Transaction = tx;
                 add.CommandText = """
                     INSERT INTO equipment_items(character_id,item_index,damage,color,part)
-                    VALUES($id,$idx,0,0,255);
+                    VALUES($id,$idx,$damage,0,255);
                     SELECT last_insert_rowid();
                     """;
                 Arg(add, "$id", dbid);
                 Arg(add, "$idx", itemIndex);
+                Arg(add, "$damage", Math.Max(0, itemDamage));
                 uid = Convert.ToInt64(add.ExecuteScalar());
                 break;
             }
@@ -2118,11 +2123,12 @@ public sealed class SqliteGameStore : IGameStore
                 add.Transaction = tx;
                 add.CommandText = """
                     INSERT INTO horse_equipment(character_id,equip_index,horse_uid,damage,color,part)
-                    VALUES($id,$idx,-1,0,0,$part);
+                    VALUES($id,$idx,-1,$damage,0,$part);
                     SELECT last_insert_rowid();
                     """;
                 Arg(add, "$id", dbid);
                 Arg(add, "$idx", itemIndex);
+                Arg(add, "$damage", Math.Max(0, itemDamage));
                 Arg(add, "$part",
                     itemPart is >= 0 and <= 3
                         ? itemPart
