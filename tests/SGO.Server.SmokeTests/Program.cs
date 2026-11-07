@@ -1112,6 +1112,21 @@ try
         id,
         account.Value);
 
+    var openCreateClubPackets = club.Handle(
+        account.Value,
+        secondCharacterId,
+        "OpenCreate",
+        0,
+        "",
+        "",
+        0,
+        0);
+
+    Check(JsonSerializer.Serialize(
+              openCreateClubPackets)
+              .Contains("\"Type\":\"OpenCreateClubWindow\""),
+        "player without a club can request the create-club UI");
+
     var createClubPackets = club.Handle(
         account.Value,
         secondCharacterId,
@@ -1127,6 +1142,19 @@ try
           JsonSerializer.Serialize(createClubPackets)
               .Contains("\"ClubID\":"),
         "club creation persists leader membership and returns ClubSync");
+
+    Check(JsonSerializer.Serialize(
+              club.Handle(
+                  account.Value,
+                  secondCharacterId,
+                  "OpenCreate",
+                  0,
+                  "",
+                  "",
+                  0,
+                  0))
+              .Contains("你已經加入戰團"),
+        "existing club member cannot reopen create-club flow");
 
     var invitePackets = club.Handle(
         account.Value,
