@@ -166,12 +166,13 @@ public sealed class CurrentClientDataCatalog
                          "*.tres",
                          SearchOption.TopDirectoryOnly))
             {
-                if (!int.TryParse(
-                        Path.GetFileNameWithoutExtension(path),
-                        out var id))
-                    continue;
-
                 var text = File.ReadAllText(path);
+                var id = ReadInt(text, "id");
+                if (id <= 0 &&
+                    !int.TryParse(
+                        Path.GetFileNameWithoutExtension(path),
+                        out id))
+                    continue;
                 var item = new CurrentItemDefinition(
                     id,
                     ReadString(text, "item_name"),
@@ -218,12 +219,13 @@ public sealed class CurrentClientDataCatalog
                      "*.tres",
                      SearchOption.TopDirectoryOnly))
         {
-            if (!int.TryParse(
-                    Path.GetFileNameWithoutExtension(path),
-                    out var id))
-                continue;
-
             var text = File.ReadAllText(path);
+            var id = ReadInt(text, "id");
+            if (id <= 0 &&
+                !int.TryParse(
+                    Path.GetFileNameWithoutExtension(path),
+                    out id))
+                continue;
             var skill = new CurrentSkillDefinition(
                 id,
                 ReadString(text, "skill_name"));
