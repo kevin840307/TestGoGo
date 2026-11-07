@@ -30,6 +30,9 @@ var max_craftable_amount: int = 0
 var _search_debounce_timer: Timer
 var _request_generation: int = 0
 var _request_cooldown_active: bool = false
+var _static_tree_built: bool = false
+var _tree_items_by_recipe_id: Dictionary = {}
+var _recipe_entries: Array[Dictionary] = []
 
 func _ready() -> void :
 	_search_debounce_timer = Timer.new()
@@ -73,7 +76,121 @@ func _on_preview_mouse_exited() -> void :
 
 func set_recipe_data(recipes: Array) -> void :
 	all_recipes = recipes
-	_update_tree()
+	if _static_tree_built:
+		refresh_availability_async()
+	else:
+		_update_tree()
+
+func prepare_static_tree_async(recipes: Array) -> void :
+	all_recipes = recipes
+	_static_tree_built = false
+	_tree_items_by_recipe_id.clear()
+	_recipe_entries.clear()
+	recipe_tree.clear()
+	var root: TreeItem = recipe_tree.create_item()
+	recipe_tree.hide_root = true
+
+	var category_labels: Dictionary = {
+		"Equipment": "裝備合成",
+		"Weapon": "武器合成",
+		"Material": "材料合成",
+	}
+	var categories: Dictionary = {}
+	for category: String in ["Equipment", "Weapon", "Material"]:
+		var category_item: TreeItem = recipe_tree.create_item(root)
+		category_item.set_text(0, category_labels[category])
+		category_item.set_selectable(0, false)
+		categories[category] = category_item
+
+	var processed: int = 0
+	for recipe_value in all_recipes:
+		var recipe: Dictionary = recipe_value
+		if str(recipe.get("ActionType", "")) != "Craft":
+			continue
+		var outputs: Array = recipe.get("Outputs", [])
+		if outputs.is_empty():
+			continue
+		var output_id: int = int(outputs[0].get("ItemID", 0))
+		var item_name: String = str(ItemLoader.get_item_property(output_id, "item_name", "未知物品")) if ItemLoader else "未知物品"
+		var category: String = str(recipe.get("Category", "Material"))
+		if not categories.has(category):
+			category = "Material"
+		var tree_item: TreeItem = recipe_tree.create_item(categories[category])
+		tree_item.set_text(0, item_name)
+		tree_item.set_metadata(0, recipe)
+		tree_item.set_custom_color(0, Color.GRAY)
+		if ItemLoader:
+			var icon_id: int = int(ItemLoader.get_item_property(output_id, "icon_id", 1)) - 1
+			var icon_texture = ItemLoader.get_photo(icon_id)
+			if icon_texture:
+				var color_index: int = int(ItemLoader.get_item_property(output_id, "color_index", 0))
+				tree_item.set_icon(0, ITEM_ICON_TINT.get_tinted_icon(icon_texture, color_index))
+				tree_item.set_icon_max_width(0, 24)
+		var recipe_id: int = int(recipe.get("RecipeID", -1))
+		_tree_items_by_recipe_id[recipe_id] = tree_item
+		_recipe_entries.append({
+			"recipe": recipe,
+			"item_name": item_name,
+			"recipe_id": recipe_id,
+		})
+		processed += 1
+		if processed % 24 == 0:
+			await get_tree().process_frame
+
+	_static_tree_built = true
+
+func _build_inventory_count_cache() -> Dictionary:
+	var counts: Dictionary = {}
+	if not is_instance_valid(GameManager.current_player) or not "data_model" in GameManager.current_player:
+		return counts
+	for item_value in GameManager.current_player.data_model.inventory:
+		var item: Dictionary = item_value
+		if int(item.get("in_bank", 0)) != 0 or int(item.get("in_shop", 0)) != 0:
+			continue
+		var item_id: int = int(item.get("item_index", 0))
+		counts[item_id] = int(counts.get(item_id, 0)) + int(item.get("count", 0))
+	return counts
+
+func _calculate_max_craftable_cached(recipe: Dictionary, counts: Dictionary, money: int) -> int:
+	var max_craft: int = 9999
+	var cost: int = int(recipe.get("MoneyCost", 0))
+	if cost > 0:
+		max_craft = mini(max_craft, money / cost)
+	var inputs: Array = recipe.get("Inputs", []).duplicate(true)
+	if int(recipe.get("BlueprintID", 0)) > 0:
+		inputs.append({"ItemID": recipe.get("BlueprintID"), "Count": 1})
+	for req_value in inputs:
+		var req: Dictionary = req_value
+		var need: int = int(req.get("Count", 1))
+		if need <= 0:
+			continue
+		var has_count: int = int(counts.get(int(req.get("ItemID", 0)), 0))
+		max_craft = mini(max_craft, has_count / need)
+	return maxi(max_craft, 0)
+
+func refresh_availability_async() -> void :
+	if not _static_tree_built:
+		_update_tree()
+		return
+	var counts: Dictionary = _build_inventory_count_cache()
+	var money: int = int(GameManager.current_player.data_model.money) if is_instance_valid(GameManager.current_player) else 0
+	var processed: int = 0
+	for entry_value in _recipe_entries:
+		var entry: Dictionary = entry_value
+		var recipe: Dictionary = entry["recipe"]
+		var recipe_id: int = int(entry["recipe_id"])
+		var tree_item = _tree_items_by_recipe_id.get(recipe_id, null)
+		if tree_item == null:
+			continue
+		var max_can_do: int = _calculate_max_craftable_cached(recipe, counts, money)
+		var display_name: String = str(entry["item_name"])
+		if max_can_do > 0:
+			display_name += " (可製作：%d)" % max_can_do
+		tree_item.set_text(0, display_name)
+		tree_item.set_custom_color(0, AVAILABLE_ITEM_COLOR if max_can_do > 0 else Color.GRAY)
+		processed += 1
+		if processed % 64 == 0:
+			await get_tree().process_frame
 
 func _update_tree(filter_text: String = "", only_craftable: bool = false) -> void :
 	recipe_tree.clear()
@@ -275,18 +392,9 @@ func _draw_materials(batch_amount: int = 1) -> void :
 		material_container.add_child(vbox)
 
 func _calculate_max_craftable(recipe: Dictionary) -> int:
-	var max_craft = 9999
-	var money = GameManager.current_player.data_model.money if GameManager.current_player else 0
-	var cost = recipe.get("MoneyCost", 0)
-	if cost > 0: max_craft = min(max_craft, money / cost)
-	var inputs = recipe.get("Inputs", []).duplicate(true)
-	if recipe.get("BlueprintID", 0) > 0:
-		inputs.append({"ItemID": recipe.get("BlueprintID"), "Count": 1})
-	for req in inputs:
-		var has = _get_player_item_count(req.get("ItemID", 0))
-		var need = req.get("Count", 1)
-		if need > 0: max_craft = min(max_craft, has / need)
-	return max_craft if max_craft > 0 else 0
+	var counts: Dictionary = _build_inventory_count_cache()
+	var money: int = int(GameManager.current_player.data_model.money) if is_instance_valid(GameManager.current_player) else 0
+	return _calculate_max_craftable_cached(recipe, counts, money)
 
 func _get_player_item_count(item_id: int) -> int:
 	var count = 0
