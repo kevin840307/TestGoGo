@@ -226,6 +226,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 
 	await get_tree().process_frame
 	var instantiate_started_usec: int = Time.get_ticks_usec()
+	set_frame_gap_stage("initial_map_instantiate")
 	current_map_node = map_resource.instantiate()
 	var instantiate_ms: float = float(Time.get_ticks_usec() - instantiate_started_usec) / 1000.0
 	_trace_map_change("initial_map_instantiated", 0, target_map_id, {
@@ -234,6 +235,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 
 	await get_tree().process_frame
 	var add_child_started_usec: int = Time.get_ticks_usec()
+	set_frame_gap_stage("initial_map_add_child")
 	get_tree().root.add_child(current_map_node)
 	var add_child_ms: float = float(Time.get_ticks_usec() - add_child_started_usec) / 1000.0
 	_trace_map_change("initial_map_added", 0, target_map_id, {
@@ -248,6 +250,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		BuildingManager.call_deferred("init_buildings")
 
 	var player_scene = ResourceLoader.load("res://player.tscn")
+	set_frame_gap_stage("player_instantiate")
 	current_player = player_scene.instantiate()
 	if current_player.has_method("parse_login_server_data"):
 		current_player.parse_login_server_data(char_data)
@@ -256,6 +259,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	if "target_position" in current_player:
 		current_player.target_position = spawn_position
 
+	set_frame_gap_stage("player_add_child")
 	if current_map_node.has_node("Entities"):
 		current_map_node.get_node("Entities").add_child(current_player)
 	else:
@@ -271,13 +275,17 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	set_world_enhancement_enabled(_load_world_enhancement_setting())
 
 	var hud_scene = ResourceLoader.load("res://game_hud.tscn")
+	set_frame_gap_stage("hud_instantiate")
 	current_hud = hud_scene.instantiate()
+	set_frame_gap_stage("hud_add_child")
 	get_tree().root.add_child(current_hud)
+	set_frame_gap_stage("hud_initialize")
 	current_hud.initialize_hud(current_player)
 
 	if CursorManager:
 		CursorManager.set_cursor_state("normal")
 
+	set_frame_gap_stage("world_running")
 	AudioManager.play_map_bgm(map_id.to_int())
 	_trace_map_change("initial_enter_completed", 0, target_map_id, {
 		"total_ms": float(Time.get_ticks_usec() - initial_started_usec) / 1000.0,
