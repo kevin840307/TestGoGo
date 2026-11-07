@@ -43,6 +43,24 @@ REQUIRED = {
     ),
     "EntityDeath": ("EntityID", "EntityType", "KillerID"),
     "DespawnEntity": ("EntityID",),
+    "MallListResponse": ("Points", "Items", "Gifts"),
+    "MallPointsSync": ("Points",),
+    "PayPalDonationCreated": ("Success", "Message", "ApprovalUrl"),
+    "LegacyPointWithdrawalResponse": (
+        "Success", "Operation", "Message", "LegacyPoints"
+    ),
+    "CraftItemResponse": ("Success", "Message", "ResultItems"),
+    "DismantleItemResponse": ("Success", "Message", "ResultItems"),
+    "PartySync": ("PartyID", "LeaderDBID", "Members"),
+    "ClubSync": ("ClubID", "ClubName", "Members", "Researches"),
+    "TradeSync": (
+        "MyMoney", "OtherMoney", "MyItems", "OtherItems",
+        "MyLocked", "OtherLocked"
+    ),
+    "RankDataResponse": (
+        "RankType", "RankList", "Top1Message", "Top1Equips"
+    ),
+    "UpdateRankMessageResponse": ("Success", "Message"),
 }
 PACKET = re.compile(r'\bType\s*=\s*"([A-Za-z][A-Za-z0-9_]*)"')
 MEMBER = re.compile(r'(?:^|[,\n])\s*([A-Za-z][A-Za-z0-9_]*)\s*=')
