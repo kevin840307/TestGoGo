@@ -538,6 +538,71 @@ public sealed class SqliteGameStore : IGameStore
         return assets;
     }
 
+    public int GetQuestFlag(
+        long accountId,
+        long dbid,
+        string flagName)
+    {
+        if (string.IsNullOrWhiteSpace(flagName))
+            return 0;
+
+        using var db = Open();
+        if (!OwnsCharacter(db, accountId, dbid))
+            return 0;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT flag_value
+              FROM character_quest_flags
+             WHERE character_id=$id
+               AND flag_name=$name
+             LIMIT 1
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$name", flagName.Trim());
+
+        var raw = cmd.ExecuteScalar();
+        return raw is null || raw == DBNull.Value
+            ? 0
+            : Convert.ToInt32(raw);
+    }
+
+    public bool SetQuestFlag(
+        long accountId,
+        long dbid,
+        string flagName,
+        int value)
+    {
+        if (string.IsNullOrWhiteSpace(flagName) ||
+            flagName.Length > 128)
+            return false;
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return false;
+
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            INSERT INTO character_quest_flags(
+                character_id,flag_name,flag_value)
+            VALUES($id,$name,$value)
+            ON CONFLICT(character_id,flag_name)
+            DO UPDATE SET flag_value=excluded.flag_value
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$name", flagName.Trim());
+        Arg(cmd, "$value", value);
+
+        if (cmd.ExecuteNonQuery() != 1)
+            return false;
+
+        tx.Commit();
+        return true;
+    }
+
     public List<Dictionary<string, object>> GetShortcuts(
         long accountId,
         long dbid)
