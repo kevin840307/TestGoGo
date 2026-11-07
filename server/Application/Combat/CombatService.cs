@@ -163,7 +163,9 @@ public sealed class CombatService
                     monster.IsMoving = false;
                     monster.WanderCenterX = monster.X;
                     monster.WanderCenterY = monster.Y;
-                    monster.NextWanderAt = DateTimeOffset.MinValue;
+                    monster.NextWanderAt = now + NextWanderDelay(
+                        monster.EntityId,
+                        monster.WanderSequence);
 
                     packets.Add(new
                     {
@@ -171,6 +173,11 @@ public sealed class CombatService
                         EntityID = monster.EntityId,
                         HasTarget = false
                     });
+
+                    // Do not move on the same tick that the player dies.
+                    // The monster keeps its current world position and starts
+                    // local idle wandering on a later server tick.
+                    continue;
                 }
 
                 TryWander(monster, now, packets);
@@ -198,7 +205,9 @@ public sealed class CombatService
                 monster.IsMoving = false;
                 monster.WanderCenterX = monster.X;
                 monster.WanderCenterY = monster.Y;
-                monster.NextWanderAt = DateTimeOffset.MinValue;
+                monster.NextWanderAt = now + NextWanderDelay(
+                    monster.EntityId,
+                    monster.WanderSequence);
 
                 packets.Add(new
                 {
