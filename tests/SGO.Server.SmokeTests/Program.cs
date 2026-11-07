@@ -9,6 +9,7 @@ using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Shops;
+using SGO.Server.Application.World;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
 using SGO.Server.Infrastructure.GameData;
@@ -532,13 +533,19 @@ try
     Check(enemyDrops.OwnerProtectionSeconds == 15,
         "enemy.cfg OwnedDropItemTimeout drives server loot protection");
 
+    var broadcastHub = new ServerBroadcastHub();
+    var broadcastRegistration = broadcastHub.Register();
+    var worldRuntime = new WorldRuntimeService(world);
+
     var combat = new CombatService(
         store,
         world,
         currentCatalog,
         growth,
         battle,
-        enemyDrops);
+        enemyDrops,
+        worldRuntime,
+        broadcastHub);
     var shops = new ShopService(
         store,
         store,
@@ -568,8 +575,6 @@ try
     var recovery = new ResourceRecoveryService(store, config);
     config["Gameplay:Dolls:Happiness:AnnouncementRewardIds"] = "50102";
     config["Gameplay:Dolls:Happiness:AnnouncementMinimumPrice"] = "0";
-    var broadcastHub = new ServerBroadcastHub();
-    var broadcastRegistration = broadcastHub.Register();
     var dolls = new DollService(
         store,
         store,
@@ -591,6 +596,7 @@ try
         horseCardCatalog,
         currentCatalog,
         growth,
+        broadcastHub,
         NullLogger<PacketRouter>.Instance);
     var session = new ClientSession();
 
