@@ -35,7 +35,7 @@ public sealed class MonsterRuntimeState
     public long TargetPetUid { get; set; }
     public DateTimeOffset LastAiAt { get; set; }
     public DateTimeOffset LastActionAt { get; set; } = DateTimeOffset.MinValue;
-    public DateTimeOffset LastStallLogAt { get; set; } = DateTimeOffset.MinValue; = DateTimeOffset.MinValue;
+    public DateTimeOffset LastStallLogAt { get; set; } = DateTimeOffset.MinValue;
     public MonsterAiState AiState { get; set; } = MonsterAiState.Idle;
 
     // Compatibility mirrors while older tests/features migrate to AiState.
