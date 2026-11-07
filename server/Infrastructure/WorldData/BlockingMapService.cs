@@ -127,13 +127,19 @@ public sealed class BlockingMapService
         if (startX == goalX && startY == goalY)
             return true;
 
-        const int margin = 2;
-        const int maxExpandedCells = 64;
+        const int margin = 3;
+        const int maxSearchWindowCells = 50;
 
         var minX = Math.Min(startX, goalX) - margin;
         var maxX = Math.Max(startX, goalX) + margin;
         var minY = Math.Min(startY, goalY) - margin;
         var maxY = Math.Max(startY, goalY) + margin;
+
+        if (maxX - minX + 1 > maxSearchWindowCells ||
+            maxY - minY + 1 > maxSearchWindowCells)
+        {
+            return false;
+        }
 
         var queue = new Queue<(int X, int Y)>();
         var visited = new HashSet<(int X, int Y)>();
@@ -141,18 +147,15 @@ public sealed class BlockingMapService
         queue.Enqueue((startX, startY));
         visited.Add((startX, startY));
 
-        var expanded = 0;
         var directions = new (int X, int Y)[]
         {
             (1, 0), (-1, 0), (0, 1), (0, -1),
             (1, 1), (1, -1), (-1, 1), (-1, -1)
         };
 
-        while (queue.Count > 0 &&
-               expanded < maxExpandedCells)
+        while (queue.Count > 0)
         {
             var current = queue.Dequeue();
-            expanded++;
 
             foreach (var direction in directions)
             {
