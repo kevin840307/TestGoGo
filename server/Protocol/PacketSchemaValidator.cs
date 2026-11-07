@@ -152,7 +152,12 @@ public static class PacketSchemaValidator
                 new("MpThreshold", FieldType.Integer),
                 new("SpThreshold", FieldType.Integer)
             ],
-            ["ChatMessage"] = [new("Message", FieldType.Text)],
+            ["ChatMessage"] =
+            [
+                new("Message", FieldType.Text),
+                new("Channel", FieldType.Integer, false),
+                new("BubbleType", FieldType.Integer, false)
+            ],
             ["ClubAction"] = [new("Action", FieldType.NonEmptyText)],
             ["NpcOptionRequest"] = [new("EntityID", FieldType.Integer)],
             ["AbandonQuest"] = [new("QuestID", FieldType.Integer)],
