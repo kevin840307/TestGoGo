@@ -643,8 +643,6 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		action_state_started_ms = now_ms
 	else:
 		action_state_started_ms = 0
-		if new_state == "walk":
-		elif new_state in ["idle", "death", "die"]:
 
 	if new_state == "attack" and new_dir != "":
 		# Server computes attack facing from monster -> current target.
