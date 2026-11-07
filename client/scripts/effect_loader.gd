@@ -7,14 +7,18 @@ const AUDIO_LAST_FRAME_META = "se_event_last_frame"
 const AUDIO_PLAYED_FRAME_META = "se_event_played_frame"
 const ACT_TIMELINE_META = "act_timing_timeline"
 var _effect_cache: Dictionary = {}
+var _missing_effect_cache: Dictionary = {}
 
 func clear_runtime_cache() -> void :
 	_effect_cache.clear()
+	_missing_effect_cache.clear()
 
 func get_effect(sub_path: String) -> SpriteFrames:
 	var full_path = EFFECT_ROOT + sub_path + ".tres"
 	if _effect_cache.has(full_path):
 		return _effect_cache[full_path]
+	if _missing_effect_cache.has(full_path):
+		return null
 
 	if ResourceLoader.exists(full_path):
 		var source_frames = load(full_path) as SpriteFrames
@@ -24,6 +28,7 @@ func get_effect(sub_path: String) -> SpriteFrames:
 			_effect_cache[full_path] = frames
 			return frames
 
+	_missing_effect_cache[full_path] = true
 	push_warning("[EffectLoader] 找不到特效資源: " + full_path)
 	return null
 
