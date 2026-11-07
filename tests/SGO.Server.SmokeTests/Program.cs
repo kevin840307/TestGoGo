@@ -1351,6 +1351,11 @@ try
     {
         var responses = router.Handle(petAttack.RootElement, session);
         Check(monster.CurrentHp < hpBeforePetAttack &&
+              monster.HasTarget &&
+              session.PetTargets.TryGetValue(
+                  petUid,
+                  out var commandedTargetId) &&
+              commandedTargetId == monster.EntityId &&
               responses.Any(x =>
                   JsonSerializer.Serialize(x).Contains(
                       "\"Type\":\"SyncState\"") &&
@@ -1358,13 +1363,21 @@ try
                       "\"State\":\"attack\"")) &&
               responses.Any(x =>
                   JsonSerializer.Serialize(x).Contains(
-                      "\"Type\":\"EntityDamage\"")),
-            "CommandAttack makes summoned pet face and attack nearby monster");
+                      "\"Type\":\"EntityDamage\"")) &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"Type\":\"MonsterTarget\"") &&
+                  JsonSerializer.Serialize(x).Contains(
+                      "\"HasTarget\":true")),
+            "CommandAttack pins the pet target and pulls monster aggro onto the owner");
     }
 
     // Pet AI should independently acquire and attack a nearby monster.
     monster.CurrentHp = monster.MaxHp;
     monster.RespawnAt = null;
+    monster.HasTarget = false;
+    monster.HoldingAttackRange = false;
+    session.PetTargets.Clear();
     session.PetPositions[petUid] = (monster.X - 80, monster.Y);
     session.PetLastAttackAt[petUid] = DateTimeOffset.MinValue;
     session.LastPetFollowTick = DateTimeOffset.MinValue;
@@ -1374,6 +1387,11 @@ try
         DateTimeOffset.UtcNow.AddSeconds(5));
 
     Check(monster.CurrentHp < hpBeforeAutoPetAttack &&
+          monster.HasTarget &&
+          session.PetTargets.TryGetValue(
+              petUid,
+              out var autoTargetId) &&
+          autoTargetId == monster.EntityId &&
           autoPetPackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"SyncState\"") &&
@@ -1384,7 +1402,7 @@ try
           autoPetPackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"EntityDamage\"")),
-        "summoned pet automatically acquires and attacks nearby monster");
+        "summoned pet automatically acquires, sticks to and attacks nearby monster");
 
     // Owner leash must beat combat acquisition. Even if a monster is
     // near the pet, being >250 px from the owner teleports it back first.
@@ -1422,6 +1440,12 @@ try
             JsonSerializer.Serialize(x).Contains(
                 $"\"AttackerID\":{4_000_000L + petUid}")),
         "pet teleports back to owner beyond 250 range before chasing/attacking monsters");
+
+    Check(!session.PetTargets.ContainsKey(petUid),
+        "owner leash clears the pet combat target instead of immediately running back to a stale monster");
+
+    monster.HasTarget = false;
+    monster.HoldingAttackRange = false;
 
     var aiPackets = combat.TickAi(
         session,
