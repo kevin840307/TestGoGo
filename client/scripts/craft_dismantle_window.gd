@@ -10,12 +10,9 @@ const RECIPE_PATH: = "res://Assets/Recipe.json"
 @onready var crafting_panel = $Background / ContentContainer / CraftingPanel
 @onready var dismantling_panel = $Background / ContentContainer / DismantlingPanel
 
+var _initial_prepared: bool = false
+
 func _ready() -> void :
-	var recipe_data: = _load_recipe_data()
-	if crafting_panel and crafting_panel.has_method("set_recipe_data"):
-		crafting_panel.set_recipe_data(recipe_data)
-	if dismantling_panel and dismantling_panel.has_method("set_recipe_data"):
-		dismantling_panel.set_recipe_data(recipe_data)
 
 	if btn_close:
 		btn_close.pressed.connect( func():
@@ -34,7 +31,37 @@ func _ready() -> void :
 	if NetworkManager.has_signal("inventory_synced"):
 		NetworkManager.inventory_synced.connect(_on_inventory_synced)
 
-	_show_crafting()
+	_show_crafting(false)
+
+func prepare_initial_async() -> void :
+	if _initial_prepared:
+		return
+	var total_started_usec: int = Time.get_ticks_usec()
+	var recipe_data: Array = _load_recipe_data()
+
+	await get_tree().process_frame
+	var craft_started_usec: int = Time.get_ticks_usec()
+	if crafting_panel and crafting_panel.has_method("set_recipe_data"):
+		crafting_panel.set_recipe_data(recipe_data)
+	var craft_ms: float = float(Time.get_ticks_usec() - craft_started_usec) / 1000.0
+
+	await get_tree().process_frame
+	var dismantle_started_usec: int = Time.get_ticks_usec()
+	if dismantling_panel and dismantling_panel.has_method("set_recipe_data"):
+		dismantling_panel.set_recipe_data(recipe_data)
+	var dismantle_ms: float = float(Time.get_ticks_usec() - dismantle_started_usec) / 1000.0
+
+	await get_tree().process_frame
+	_initial_prepared = true
+	print("[CRAFT_INIT_TIMING] recipes=%d craft_ms=%.2f dismantle_ms=%.2f total_ms=%.2f" % [
+		recipe_data.size(),
+		craft_ms,
+		dismantle_ms,
+		float(Time.get_ticks_usec() - total_started_usec) / 1000.0,
+	])
+
+func is_initial_prepared() -> bool:
+	return _initial_prepared
 
 func _load_recipe_data() -> Array:
 	if not FileAccess.file_exists(RECIPE_PATH):
@@ -45,7 +72,7 @@ func _load_recipe_data() -> Array:
 	var parsed = JSON.parse_string(file.get_as_text())
 	return parsed if parsed is Array else []
 
-func _show_crafting() -> void :
+func _show_crafting(refresh_ui: bool = true) -> void :
 	if crafting_panel: crafting_panel.visible = true
 	if dismantling_panel: dismantling_panel.visible = false
 
@@ -53,7 +80,7 @@ func _show_crafting() -> void :
 	if btn_tab_craft: btn_tab_craft.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	if btn_tab_dismantle: btn_tab_dismantle.modulate = Color(0.5, 0.5, 0.5, 1.0)
 
-	if crafting_panel and crafting_panel.has_method("update_ui"):
+	if refresh_ui and crafting_panel and crafting_panel.has_method("update_ui"):
 		crafting_panel.update_ui()
 
 func _show_dismantling() -> void :
