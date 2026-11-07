@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Configuration;
 using SGO.Server.Application;
@@ -149,6 +150,18 @@ var currentCatalog = new CurrentClientDataCatalog(
         CurrentItem(
             2803,
             "大聲公",
+            "general",
+            price: 1),
+
+        CurrentItem(
+            2615,
+            "精靈之魂",
+            "general",
+            price: 1),
+
+        CurrentItem(
+            2617,
+            "精靈再生水晶",
             "general",
             price: 1),
 
@@ -929,8 +942,36 @@ Directory.CreateDirectory(temp);
 
 try
 {
-    var store = new SqliteGameStore(Path.Combine(temp, "game.db"));
+    var dbPath = Path.Combine(temp, "game.db");
+    var store = new SqliteGameStore(dbPath);
     var growth = new LegacyPlayerGrowthCatalog(gameDataRoot);
+    var petGrowth = new LegacyPetGrowthCatalog(gameDataRoot);
+    var petSkills = new PetSkillCatalog(
+        Path.Combine(
+            repoRoot,
+            "client",
+            "Assets",
+            "Pets",
+            "Config.json"));
+
+    Check(petGrowth.AllocationDelta(
+              "STR",
+              0,
+              0).Attack == 2 &&
+          petGrowth.AllocationDelta(
+              "DEX",
+              0,
+              0) is { Hit: 1, Dodge: 1 } &&
+          petGrowth.AllocationDelta(
+              "CON",
+              0,
+              0).MaxHp == 41 &&
+          petGrowth.AllocationDelta(
+              "WIS",
+              0,
+              0) is { MaxMp: 21, MagicAttack: 2 },
+        "legacy pet STR DEX CON WIS tables drive allocation stat deltas");
+
     Check(growth.ExperienceThresholdForLevel(1) == 2 &&
           growth.ExperienceThresholdForLevel(10) == 20000,
         "legacy Player_Up_Lv.csv drives character EXP thresholds");
@@ -1067,6 +1108,8 @@ try
         horseCardCatalog,
         currentCatalog,
         growth,
+        petGrowth,
+        petSkills,
         mall,
         broadcastHub,
         party,
@@ -1564,6 +1607,12 @@ try
         account.Value, id, 50102, 1);
     var recoveryUid = store.AddInventoryItem(
         account.Value, id, 1001, 1);
+    var petFeedUid = store.AddInventoryItem(
+        account.Value, id, 1001, 1);
+    var petLifeUid = store.AddInventoryItem(
+        account.Value, id, 2615, 1);
+    var petResetUid = store.AddInventoryItem(
+        account.Value, id, 2617, 1);
     var horseCardUid = store.AddInventoryItem(
         account.Value, id, 50001, 1);
     var happinessDollUid = store.AddInventoryItem(
@@ -1579,6 +1628,9 @@ try
           beastCardUid3 > 0 &&
           batteryUid > 0 &&
           recoveryUid > 0 &&
+          petFeedUid > 0 &&
+          petLifeUid > 0 &&
+          petResetUid > 0 &&
           horseCardUid > 0 &&
           happinessDollUid > 0,
         "seed persistent inventory equipment pet mecha and doll assets");
@@ -1644,6 +1696,184 @@ try
             "first select response enters world");
         Check(first.RootElement.Int("MapID") == 15,
             "enter world includes Map15");
+    }
+
+    var petBeforeLevel = store.GetCharacterAssets(
+            account.Value,
+            id)
+        .Pets.Single(x =>
+            Convert.ToInt64(x["UID"]) == petUid);
+
+    var leveledPet = store.AddPetExperience(
+        account.Value,
+        id,
+        petUid,
+        100)!;
+
+    Check(Convert.ToInt32(leveledPet["Level"]) == 2 &&
+          Convert.ToInt32(leveledPet["UseExp"]) ==
+              Convert.ToInt32(petBeforeLevel["UseExp"]) + 2,
+        "pet level-up grants two legacy ExpUse ability points");
+
+    var attackBeforePetStat =
+        Convert.ToInt32(leveledPet["Attack"]);
+    var useExpBeforePetStat =
+        Convert.ToInt32(leveledPet["UseExp"]);
+
+    using (var allocatePetStat = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "PetAction",
+            Action = "AllocateStat",
+            PetUID = petUid,
+            StatType = "STR"
+        })))
+    {
+        var responses = router.Handle(
+            allocatePetStat.RootElement,
+            session);
+        var updatedPet = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Pets.Single(x =>
+                Convert.ToInt64(x["UID"]) == petUid);
+
+        Check(
+            Convert.ToInt32(updatedPet["ExtraSTR"]) == 1 &&
+            Convert.ToInt32(updatedPet["UseExp"]) ==
+                useExpBeforePetStat - 1 &&
+            Convert.ToInt32(updatedPet["Attack"]) ==
+                attackBeforePetStat + 2 &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"PetSync\"")),
+            "PetAction AllocateStat consumes UseExp and applies legacy STR attack growth");
+    }
+
+    using (var db = new SqliteConnection(
+        $"Data Source={dbPath}"))
+    {
+        db.Open();
+        using var setupPet = db.CreateCommand();
+        setupPet.CommandText = """
+            UPDATE pets
+               SET feed_value=100,
+                   life_count=9,
+                   evol_id=2
+             WHERE uid=$pet
+            """;
+        setupPet.Parameters.AddWithValue(
+            "$pet",
+            petUid);
+        setupPet.ExecuteNonQuery();
+    }
+
+    using (var setMainSkill = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "PetAction",
+            Action = "SetMainSkill",
+            PetUID = petUid,
+            SkillID = 20102
+        })))
+    {
+        router.Handle(
+            setMainSkill.RootElement,
+            session);
+        var pet = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Pets.Single(x =>
+                Convert.ToInt64(x["UID"]) == petUid);
+
+        Check(Convert.ToInt32(
+                  pet["MainSkillID"]) == 20102,
+            "PetAction SetMainSkill accepts a skill from the current evolution config");
+    }
+
+    using (var feedPet = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "PetAction",
+            Action = "Feed",
+            PetUID = petUid,
+            ItemUID = petFeedUid
+        })))
+    {
+        var responses = router.Handle(
+            feedPet.RootElement,
+            session);
+        var pet = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Pets.Single(x =>
+                Convert.ToInt64(x["UID"]) == petUid);
+
+        Check(
+            Convert.ToInt32(pet["FeedValue"]) == 240 &&
+            !store.GetCharacterAssets(
+                account.Value,
+                id).Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    petFeedUid) &&
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"InventorySync\"")),
+            "PetAction Feed atomically consumes a recovery item and restores feed value");
+    }
+
+    using (var addLife = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "PetAction",
+            Action = "AddLife",
+            PetUID = petUid
+        })))
+    {
+        router.Handle(addLife.RootElement, session);
+        var pet = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Pets.Single(x =>
+                Convert.ToInt64(x["UID"]) == petUid);
+
+        Check(
+            Convert.ToInt32(pet["LifeCount"]) == 10 &&
+            !store.GetCharacterAssets(
+                account.Value,
+                id).Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    petLifeUid),
+            "PetAction AddLife consumes 精靈之魂 and restores one life");
+    }
+
+    using (var resetPet = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "PetAction",
+            Action = "ResetStat",
+            PetUID = petUid
+        })))
+    {
+        router.Handle(resetPet.RootElement, session);
+        var pet = store.GetCharacterAssets(
+                account.Value,
+                id)
+            .Pets.Single(x =>
+                Convert.ToInt64(x["UID"]) == petUid);
+
+        Check(
+            Convert.ToInt32(pet["ExtraSTR"]) == 0 &&
+            Convert.ToInt32(pet["UseExp"]) ==
+                useExpBeforePetStat &&
+            Convert.ToInt32(pet["Attack"]) ==
+                attackBeforePetStat &&
+            !store.GetCharacterAssets(
+                account.Value,
+                id).Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) ==
+                    petResetUid),
+            "PetAction ResetStat consumes 精靈再生水晶 and refunds allocated points");
     }
 
     var megaphoneUid = store.AddInventoryItem(
