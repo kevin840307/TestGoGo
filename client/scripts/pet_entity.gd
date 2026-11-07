@@ -33,6 +33,11 @@ const STATE_MAP = {
 }
 
 var move_tween: Tween
+var network_move_active: bool = false
+var network_move_speed: float = 0.0
+const NETWORK_MOVE_MIN_SPEED: float = 140.0
+const NETWORK_MOVE_MAX_SPEED: float = 300.0
+const NETWORK_MOVE_SNAP_EPSILON: float = 1.0
 var level_up_effect: AnimatedSprite2D = null
 var idle_speech_fade_tween: Tween = null
 
@@ -48,6 +53,32 @@ func _ready() -> void :
 	idle_speech_bubble.visible = false
 	if not idle_speech_timer.timeout.is_connected(_on_idle_speech_timer_timeout):
 		idle_speech_timer.timeout.connect(_on_idle_speech_timer_timeout)
+
+func _process(delta: float) -> void :
+	if not network_move_active or current_hp <= 0:
+		return
+	if current_state in ["attack", "hit", "death"]:
+		network_move_active = false
+		return
+
+	var remaining: float = global_position.distance_to(target_position)
+	if remaining <= NETWORK_MOVE_SNAP_EPSILON:
+		global_position = target_position
+		network_move_active = false
+		if current_state == "walk":
+			current_state = "idle"
+			sync_animation()
+		return
+
+	global_position = global_position.move_toward(
+		target_position,
+		network_move_speed * delta
+	)
+
+	if current_state != "walk":
+		current_state = "walk"
+		sync_animation()
+
 
 func _exit_tree() -> void :
 
@@ -135,45 +166,48 @@ func _on_idle_speech_timer_timeout() -> void :
 	idle_speech_fade_tween.tween_callback( func(): idle_speech_bubble.visible = false)
 
 func update_state(state: String, dir: String) -> void :
-	if current_hp <= 0 and state != "death": return
+	if current_hp <= 0 and state != "death":
+		return
 
 	current_dir = dir
 
-	if state == "idle" and current_state == "walk" and move_tween and move_tween.is_running():
-		return
+	if state in ["attack", "hit", "death"]:
+		network_move_active = false
 
 	current_state = state
 	sync_animation()
 
 func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
-	if current_hp <= 0: return
+	if current_hp <= 0:
+		return
 
 	target_position = new_pos
+	var remaining: float = global_position.distance_to(target_position)
 
-
-	if global_position.distance_to(target_position) > TELEPORT_DISTANCE or speed_time <= 0.01:
+	if remaining > TELEPORT_DISTANCE or speed_time <= 0.01:
 		global_position = target_position
+		network_move_active = false
+		network_move_speed = 0.0
 		current_state = "idle"
 		sprite.speed_scale = 1.0
 		sync_animation()
-
-		if move_tween and move_tween.is_valid(): move_tween.kill()
+		if move_tween and move_tween.is_valid():
+			move_tween.kill()
 		return
 
-	current_state = "walk"
-	sprite.speed_scale = 1.0
+	var requested_time: float = maxf(speed_time, 0.01)
+	network_move_speed = clampf(
+		remaining / requested_time,
+		NETWORK_MOVE_MIN_SPEED,
+		NETWORK_MOVE_MAX_SPEED
+	)
+	network_move_active = remaining > NETWORK_MOVE_SNAP_EPSILON
 
-	sync_animation()
-
-	if move_tween and move_tween.is_valid(): move_tween.kill()
-	move_tween = create_tween()
-	move_tween.tween_property(self, "global_position", target_position, speed_time)
-	move_tween.tween_callback( func():
-		if current_state == "walk":
-			current_state = "idle"
+	if network_move_active and current_state not in ["attack", "hit", "death"]:
+		if current_state != "walk":
+			current_state = "walk"
 			sprite.speed_scale = 1.0
 			sync_animation()
-	)
 
 func sync_animation() -> void :
 	if not sprite or not sprite.sprite_frames: return
