@@ -163,6 +163,8 @@ public sealed class CombatService
                 monster.TargetCharacterId = 0;
                 monster.TargetPetUid = 0;
                 monster.LastAiAt = DateTimeOffset.MinValue;
+                monster.LastMovePacketX = null;
+                monster.LastMovePacketY = null;
                 SetAiState(monster, MonsterAiState.Idle);
                 monster.X = monster.SpawnX;
                 monster.Y = monster.SpawnY;
@@ -864,17 +866,25 @@ public sealed class CombatService
                 var moveDx = nx - monster.X;
                 var moveDy = ny - monster.Y;
 
+                var oldX = monster.X;
+                var oldY = monster.Y;
                 monster.X = nx;
                 monster.Y = ny;
-                monster.LastActionAt = now;
 
-                packets.Add(BuildMovePacket(
+                TryAddMonsterMovePacket(
                     monster,
+                    packets,
+                    now,
+                    oldX,
+                    oldY,
                     nx,
                     ny,
                     MoveTweenSeconds,
                     moveDx,
-                    moveDy));
+                    moveDy,
+                    targetX,
+                    targetY,
+                    distance);
             }
         }
 
@@ -950,6 +960,8 @@ public sealed class CombatService
         monster.HasTarget = false;
         monster.TargetCharacterId = 0;
         monster.TargetPetUid = 0;
+        monster.LastMovePacketX = null;
+        monster.LastMovePacketY = null;
         SetAiState(monster, MonsterAiState.Idle);
         monster.WanderCenterX = monster.X;
         monster.WanderCenterY = monster.Y;
@@ -3369,7 +3381,7 @@ public sealed class CombatService
             Message = message
         };
 
-    private static void TryWander(
+    private void TryWander(
         MonsterRuntimeState monster,
         DateTimeOffset now,
         List<object> packets)
@@ -3439,21 +3451,100 @@ public sealed class CombatService
             return;
         }
 
+        var oldX = monster.X;
+        var oldY = monster.Y;
         monster.X = desiredX;
         monster.Y = desiredY;
-        monster.LastActionAt = now;
         SetAiState(monster, MonsterAiState.Wander);
         monster.NextWanderAt = now + NextWanderDelay(
             monster.EntityId,
             monster.WanderSequence);
 
-        packets.Add(BuildMovePacket(
+        TryAddMonsterMovePacket(
             monster,
+            packets,
+            now,
+            oldX,
+            oldY,
             desiredX,
             desiredY,
             MoveTweenSeconds,
             moveDx,
+            moveDy);
+    }
+
+    private bool TryAddMonsterMovePacket(
+        MonsterRuntimeState monster,
+        List<object> packets,
+        DateTimeOffset now,
+        double oldX,
+        double oldY,
+        double newX,
+        double newY,
+        double speedTime,
+        double moveDx,
+        double moveDy,
+        double? targetX = null,
+        double? targetY = null,
+        double? targetDistance = null)
+    {
+        const double epsilon = 0.01;
+
+        var actualDx = newX - oldX;
+        var actualDy = newY - oldY;
+        var actualDistanceSquared =
+            actualDx * actualDx +
+            actualDy * actualDy;
+
+        var repeatsLastPacket =
+            monster.LastMovePacketX.HasValue &&
+            monster.LastMovePacketY.HasValue &&
+            Math.Abs(
+                newX - monster.LastMovePacketX.Value) <= epsilon &&
+            Math.Abs(
+                newY - monster.LastMovePacketY.Value) <= epsilon;
+
+        if (actualDistanceSquared <= epsilon * epsilon ||
+            repeatsLastPacket)
+        {
+            if (monster.LastStallLogAt == DateTimeOffset.MinValue ||
+                now - monster.LastStallLogAt >= TimeSpan.FromSeconds(2))
+            {
+                monster.LastStallLogAt = now;
+                _log.LogWarning(
+                    "[MONSTER_AI_ZERO_MOVE] EntityID={EntityID} State={State} HasTarget={HasTarget} TargetCharacterID={TargetCharacterID} TargetPetUID={TargetPetUID} Old=({OldX:F2},{OldY:F2}) New=({NewX:F2},{NewY:F2}) LastPacket=({LastPacketX},{LastPacketY}) Target=({TargetX},{TargetY}) Distance={Distance}",
+                    monster.EntityId,
+                    monster.AiState,
+                    monster.HasTarget,
+                    monster.TargetCharacterId,
+                    monster.TargetPetUid,
+                    oldX,
+                    oldY,
+                    newX,
+                    newY,
+                    monster.LastMovePacketX,
+                    monster.LastMovePacketY,
+                    targetX,
+                    targetY,
+                    targetDistance);
+            }
+
+            return false;
+        }
+
+        monster.LastMovePacketX = newX;
+        monster.LastMovePacketY = newY;
+        monster.LastActionAt = now;
+
+        packets.Add(BuildMovePacket(
+            monster,
+            newX,
+            newY,
+            speedTime,
+            moveDx,
             moveDy));
+
+        return true;
     }
 
     private static TimeSpan NextWanderDelay(
