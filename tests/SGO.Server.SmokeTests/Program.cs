@@ -10,6 +10,7 @@ using SGO.Server.Application.Combat;
 using SGO.Server.Application.Crafting;
 using SGO.Server.Application.Club;
 using SGO.Server.Application.Rank;
+using SGO.Server.Application.Quest;
 using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
@@ -954,6 +955,37 @@ try
             "Pets",
             "Config.json"));
 
+    var questTrackingCatalog = new QuestTrackingCatalog(
+        Path.Combine(
+            repoRoot,
+            "client",
+            "Assets",
+            "Quest",
+            "QuestConfig.json"));
+    var questProgress = new QuestProgressService(
+        store,
+        store,
+        questTrackingCatalog);
+
+    Check(questTrackingCatalog.Count >= 50 &&
+          questTrackingCatalog.FindStep(
+              1004,
+              3) is
+              {
+                  TargetType: 1,
+                  TargetId: "噬魂之影",
+                  TargetCount: 1
+              } &&
+          questTrackingCatalog.FindStep(
+              1003,
+              4) is
+              {
+                  TargetType: 2,
+                  TargetId: "2614",
+                  TargetCount: 1
+              },
+        "QuestConfig loader exposes kill and collection tracker targets");
+
     Check(petGrowth.AllocationDelta(
               "STR",
               0,
@@ -1045,6 +1077,7 @@ try
         worldRuntime,
         broadcastHub,
         party,
+        questProgress,
         NullLogger<CombatService>.Instance);
     var shops = new ShopService(
         store,
@@ -1114,6 +1147,7 @@ try
         broadcastHub,
         party,
         rank,
+        questProgress,
         trade,
         NullLogger<PacketRouter>.Instance);
     var session = new ClientSession
@@ -1488,6 +1522,82 @@ try
               Convert.ToInt32(x["CurrentStep"]) == 1 &&
               Convert.ToInt32(x["StepProgress"]) == 12),
         "tracked quest state persists current step and progress");
+
+    Check(store.UpsertQuest(
+              account.Value,
+              id,
+              1004,
+              1,
+              3,
+              0),
+        "prepare active kill quest tracker step");
+
+    var killQuestPackets = questProgress.OnMonsterKilled(
+        account.Value,
+        id,
+        "噬魂之影");
+    var killQuest = store.GetQuests(
+            account.Value,
+            id)
+        .First(x =>
+            Convert.ToInt32(x["QuestID"]) == 1004);
+
+    Check(
+        Convert.ToInt32(killQuest["Status"]) == 1 &&
+        Convert.ToInt32(killQuest["CurrentStep"]) == 4 &&
+        Convert.ToInt32(killQuest["StepProgress"]) == 0 &&
+        killQuestPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"QuestUpdate\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"CurrentStep\":4")),
+        "monster kill advances only matching active quest to its next step");
+
+    Check(store.UpsertQuest(
+              account.Value,
+              id,
+              1003,
+              1,
+              4,
+              0),
+        "prepare final collection quest tracker step");
+
+    var questItemUid = store.AddInventoryItem(
+        account.Value,
+        id,
+        2614,
+        1);
+    var collectionPackets = questProgress.RefreshCollectedItems(
+        account.Value,
+        id,
+        2614);
+    var collectionQuest = store.GetQuests(
+            account.Value,
+            id)
+        .First(x =>
+            Convert.ToInt32(x["QuestID"]) == 1003);
+
+    Check(
+        questItemUid > 0 &&
+        Convert.ToInt32(collectionQuest["Status"]) == 2 &&
+        Convert.ToInt32(collectionQuest["CurrentStep"]) == 4 &&
+        Convert.ToInt32(collectionQuest["StepProgress"]) == 1 &&
+        collectionPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"QuestUpdate\"") &&
+            JsonSerializer.Serialize(x).Contains(
+                "\"Status\":2")),
+        "inventory collection marks a final active tracker step ready to report");
+
+    Check(store.AbandonQuest(
+              account.Value,
+              id,
+              1004) &&
+          store.AbandonQuest(
+              account.Value,
+              id,
+              1003),
+        "quest progress test state can be cleaned through normal abandon flow");
 
     Check(store.AbandonQuest(
               account.Value,
