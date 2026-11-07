@@ -956,18 +956,21 @@ public sealed class PacketRouter
                     now + TimeSpan.FromMilliseconds(750);
             }
 
-            packets.AddRange(
-                _combat.TickAi(
-                    state,
-                    accountId,
-                    state.LastX,
-                    state.LastY,
-                    now));
+            // Pet AI runs before monster AI so an active pet can
+            // acquire/attack nearby enemies even when the monster is already
+            // close enough to attack the player on the same server tick.
             packets.AddRange(
                 BuildPetFollowPackets(
                     state,
                     accountId,
                     dbid,
+                    state.LastX,
+                    state.LastY,
+                    now));
+            packets.AddRange(
+                _combat.TickAi(
+                    state,
+                    accountId,
                     state.LastX,
                     state.LastY,
                     now));
