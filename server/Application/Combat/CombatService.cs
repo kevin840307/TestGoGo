@@ -602,13 +602,16 @@ public sealed class CombatService
         double petY)
     {
         if (!session.CharacterId.HasValue ||
-            !session.Monsters.TryGetValue(
+            session.CurrentMapId <= 0)
+            return [];
+
+        var runtime = SyncSessionMonsters(session);
+        if (!session.Monsters.TryGetValue(
                 targetEntityId,
                 out var monster) ||
             monster.MapId != session.CurrentMapId)
             return [];
 
-        var runtime = _runtime.GetMap(session.CurrentMapId);
         var packets = new List<object>();
 
         lock (runtime.SyncRoot)
@@ -807,6 +810,9 @@ public sealed class CombatService
         MonsterRuntimeState? primaryMonster = null;
         double centerX = targetX;
         double centerY = targetY;
+
+        if (isAttack)
+            SyncSessionMonsters(session);
 
         if (isAttack)
         {
@@ -1106,7 +1112,11 @@ public sealed class CombatService
     {
         if (targetType != 1 ||
             !session.CharacterId.HasValue ||
-            !session.Monsters.TryGetValue(
+            session.CurrentMapId <= 0)
+            return [];
+
+        var runtime = SyncSessionMonsters(session);
+        if (!session.Monsters.TryGetValue(
                 targetEntityId,
                 out var monster) ||
             monster.MapId != session.CurrentMapId)
@@ -1136,7 +1146,6 @@ public sealed class CombatService
             80,
             effective.AttackRange);
 
-        var runtime = _runtime.GetMap(session.CurrentMapId);
         var packets = new List<object>();
 
         lock (runtime.SyncRoot)
