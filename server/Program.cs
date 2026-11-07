@@ -1,7 +1,7 @@
 using SGO.Server.Application;
 using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Infrastructure.Quest;
-using SGO.Server.Infrastructure.World;
+using SGO.Server.Infrastructure.WorldData;
 using SGO.Server.Infrastructure.Persistence;
 using SGO.Server.Transport.WebSockets;
 
