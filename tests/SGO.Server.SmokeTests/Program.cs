@@ -6053,6 +6053,11 @@ try
             "auto saint refuses characters without both recovered support skills");
     }
 
+    store.Revive(account.Value, id);
+    store.Revive(
+        account.Value,
+        secondCharacterId);
+
     session.WorldReady = true;
     peerSession.WorldReady = true;
     session.SkillReadyAt.Clear();
