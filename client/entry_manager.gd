@@ -28,7 +28,48 @@ func _ready() -> void :
 
 	_connect_character_select_signals()
 
+	# Prewarm heavy HUD scenes while the player is still on login / character
+	# selection screens. This keeps first in-world window opening free of disk
+	# and dependency loading stalls.
+	call_deferred("_prewarm_game_hud_resources")
+
 	_start_game_entry_flow()
+
+const GAME_HUD_PREWARM_PATHS: Array[String] = [
+	"res://quest_window.tscn",
+	"res://mall_window.tscn",
+	"res://announcement_window.tscn",
+	"res://game_info_window.tscn",
+	"res://craft_dismantle_window.tscn",
+	"res://big_map_window.tscn",
+	"res://world_map_window.tscn",
+]
+
+func _prewarm_game_hud_resources() -> void :
+	for path: String in GAME_HUD_PREWARM_PATHS:
+		if ResourceLoader.has_cached(path):
+			continue
+		var request_error: int = ResourceLoader.load_threaded_request(path)
+		if request_error != OK:
+			continue
+
+	# Poll in the background without blocking login input/rendering. Calling
+	# load_threaded_get once LOADED places the PackedScene and dependencies in
+	# ResourceLoader's cache for GameHUD to reuse later.
+	var pending: Array[String] = GAME_HUD_PREWARM_PATHS.duplicate()
+	while not pending.is_empty() and is_inside_tree():
+		for index: int in range(pending.size() - 1, -1, -1):
+			var path: String = pending[index]
+			if ResourceLoader.has_cached(path):
+				pending.remove_at(index)
+				continue
+			var status: int = ResourceLoader.load_threaded_get_status(path)
+			if status == ResourceLoader.THREAD_LOAD_LOADED:
+				ResourceLoader.load_threaded_get(path)
+				pending.remove_at(index)
+			elif status == ResourceLoader.THREAD_LOAD_FAILED or status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+				pending.remove_at(index)
+		await get_tree().process_frame
 
 func _start_game_entry_flow() -> void :
 	hide_loading_overlay()
