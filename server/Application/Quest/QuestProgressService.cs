@@ -132,7 +132,13 @@ public sealed class QuestProgressService
 
                 if (progress < targetCount)
                 {
-                    if (_quests.UpsertQuest(
+                    var previousProgress = Math.Max(
+                        0,
+                        Convert.ToInt32(
+                            quest["StepProgress"]));
+
+                    if (progress != previousProgress &&
+                        _quests.UpsertQuest(
                             accountId,
                             dbid,
                             questId,
