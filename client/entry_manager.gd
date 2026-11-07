@@ -265,7 +265,14 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 	)
 
 
-	var load_success = await GameManager.enter_game_world(server_full_data, map_id, spawn_pos)
+	var progress_callback := func(value: float, _stage: String) -> void:
+		if not is_instance_valid(overlay):
+			return
+		var progress_bar := overlay.get_node_or_null("LoadingBar") as ProgressBar
+		if progress_bar:
+			progress_bar.value = value
+
+	var load_success = await GameManager.enter_game_world(server_full_data, map_id, spawn_pos, progress_callback)
 
 	if not load_success:
 		show_error_popup("遊戲地圖資源遺失，無法切換場景！")
