@@ -128,12 +128,10 @@ func _ready() -> void :
 
 	# Most monsters spend the majority of their lifetime idle. Do not keep a
 	# per-frame callback alive until movement/combat actually needs it.
-	set_process(false)
 
-func _process(delta: float) -> void :
+func advance_network_runtime(delta: float) -> bool:
 	if current_hp <= 0:
-		set_process(false)
-		return
+		return false
 
 	if current_state in ["attack", "hit"] and action_state_started_ms > 0:
 		var action_elapsed_ms: int = Time.get_ticks_msec() - action_state_started_ms
@@ -146,30 +144,30 @@ func _process(delta: float) -> void :
 			if idle_elapsed_ms >= int(MOVE_IDLE_GRACE_SECONDS * 1000.0):
 				current_state = "idle"
 				sync_animation()
-				set_process(false)
-		return
+				return false
 
 	if current_state in ["attack", "hit", "death", "die"]:
 		network_move_active = false
-		return
+		return true
 
 	var remaining := global_position.distance_to(network_move_target)
 	if remaining <= NETWORK_MOVE_SNAP_EPSILON:
 		global_position = network_move_target
 		network_move_active = false
-		# Keep processing briefly while state is still WALK so the existing idle
-		# grace logic can settle the animation, then it disables itself.
-		return
+		# Keep the monster in the manager runtime set briefly while WALK settles
+		# back to IDLE through the existing grace logic.
+		return true
 
 	var step := network_move_speed * delta
 	if step <= 0.0:
-		return
+		return true
 
 	global_position = global_position.move_toward(network_move_target, step)
 	if current_state != "walk":
 		current_state = "walk"
 		sync_animation()
 
+	return true
 
 func _on_screen_entered() -> void :
 	_is_on_screen = true
@@ -625,13 +623,10 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 	current_state = new_state
 	if new_state in ["attack", "hit"]:
 		action_state_started_ms = now_ms
-		set_process(true)
 	else:
 		action_state_started_ms = 0
 		if new_state == "walk":
-			set_process(true)
 		elif new_state in ["idle", "death", "die"]:
-			set_process(false)
 
 	if new_state == "attack" and new_dir != "":
 		# Server computes attack facing from monster -> current target.
@@ -782,7 +777,6 @@ func _release_combat_action_state() -> void :
 	if has_recent_move:
 		network_move_active = true
 		current_state = "walk"
-		set_process(true)
 	else:
 		network_move_active = false
 		current_state = "idle"
