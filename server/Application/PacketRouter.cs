@@ -1233,6 +1233,75 @@ public sealed class PacketRouter
                         itemIndex);
                 }
 
+                if (itemIndex == 2000)
+                {
+                    const int capitalMapId = 15;
+                    const int capitalX = 9408;
+                    const int capitalY = 10336;
+
+                    var teleported =
+                        _store.UseTeleportItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            itemIndex,
+                            capitalMapId,
+                            capitalX,
+                            capitalY);
+
+                    if (!teleported.Success)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = teleported.Message
+                            }
+                        ];
+                    }
+
+                    state.CurrentMapId =
+                        teleported.MapId;
+                    state.LastX = teleported.X;
+                    state.LastY = teleported.Y;
+                    state.PositionDirty = false;
+                    state.LastPositionPersistAt =
+                        DateTimeOffset.UtcNow;
+                    state.PendingMapSpawn = true;
+                    state.WorldReady = false;
+                    state.LoadedMonsterMapId = 0;
+                    state.PetTargets.Clear();
+                    state.PetOutOfRangeSince.Clear();
+
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        new
+                        {
+                            Type = "ChangeMap",
+                            MapID = teleported.MapId,
+                            X = teleported.X,
+                            Y = teleported.Y
+                        },
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message =
+                                "已傳送回首都．尼尼亞皇城"
+                        }
+                    ];
+                }
+
                 var capacityExpansion = itemIndex switch
                 {
                     2302 => (
