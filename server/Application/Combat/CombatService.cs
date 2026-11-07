@@ -2851,6 +2851,23 @@ public sealed class CombatService
         var gainedExp = _battle.ExperienceForKill(
             oldLevel,
             monster.Level);
+
+        var expMultiplierPercent =
+            _store.GetTimedEffectValue(
+                accountId,
+                dbid,
+                "exp_multiplier_percent",
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+        if (expMultiplierPercent > 0)
+        {
+            gainedExp = (int)Math.Clamp(
+                (long)gainedExp *
+                expMultiplierPercent / 100L,
+                0L,
+                int.MaxValue);
+        }
+
         var gainedMoney = Math.Max(1, monster.Level);
 
         var rewarded = _store.AddRewards(
