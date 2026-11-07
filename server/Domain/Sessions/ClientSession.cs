@@ -16,6 +16,8 @@ public sealed class ClientSession
     public DateTimeOffset LastMonsterAiTick { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastPetFollowTick { get; set; } = DateTimeOffset.MinValue;
     public int PetCombatMode { get; set; } = 0;
+    public Dictionary<long, (double X, double Y)> PetPositions { get; } = new();
+    public Dictionary<long, DateTimeOffset> PetLastAttackAt { get; } = new();
 
     // Runtime entities are intentionally per session for now.
     // This prevents one local player's combat from mutating cached legacy definitions.
