@@ -1704,20 +1704,20 @@ public sealed class CombatService
         // prove whether the crash happens before any monster HP/death/reward work.
         if (isScreenAreaAttack)
         {
-            var refreshedAssets = _store.GetCharacterAssets(
+            var isolationAssets = _store.GetCharacterAssets(
                 accountId,
                 session.CharacterId.Value);
-            var refreshedStats = ApplyActiveSkillBuffs(
+            var isolationStats = ApplyActiveSkillBuffs(
                 CharacterStatCalculator.Calculate(
                     updated,
-                    refreshedAssets,
+                    isolationAssets,
                     _current),
                 session,
                 now);
 
             packets.Add(BuildPlayerStatusPacket(
                 updated,
-                refreshedStats));
+                isolationStats));
 
             session.SkillReadyAt[skillId] = now;
 
