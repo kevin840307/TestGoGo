@@ -199,19 +199,49 @@ public sealed class CombatService
                     continue;
                 }
 
-                // A targeted monster is driven only by the target player's
-                // connection. Other sockets share the same object but do not
-                // advance its AI a second time.
+                // A targeted monster is normally driven by the target
+                // player's connection. Presence alone is not enough to keep
+                // that ownership forever: reconnects/map transitions can leave
+                // a character nominally present while the monster is already
+                // far away or the target is dead. Validate the authoritative
+                // character state before skipping this connection, otherwise
+                // the monster can stand beside another player forever.
                 if (monster.HasTarget &&
                     monster.TargetCharacterId > 0 &&
                     monster.TargetCharacterId != currentCharacterId)
                 {
-                    if (_broadcasts.IsCharacterInMap(
-                            monster.TargetCharacterId,
-                            session.CurrentMapId))
+                    var targetPresence =
+                        _broadcasts.FindCharacter(
+                            monster.TargetCharacterId);
+
+                    var keepForeignTarget = false;
+                    if (targetPresence is not null &&
+                        targetPresence.MapId == session.CurrentMapId)
                     {
-                        continue;
+                        var targetCharacter = _store.GetCharacter(
+                            targetPresence.AccountId,
+                            monster.TargetCharacterId);
+
+                        if (targetCharacter is not null &&
+                            Convert.ToInt32(targetCharacter["HP"]) > 0)
+                        {
+                            var targetX =
+                                Convert.ToDouble(targetCharacter["LocX"]);
+                            var targetY =
+                                Convert.ToDouble(targetCharacter["LocY"]);
+                            var targetDx = targetX - monster.X;
+                            var targetDy = targetY - monster.Y;
+                            var targetDistance = Math.Sqrt(
+                                targetDx * targetDx +
+                                targetDy * targetDy);
+
+                            keepForeignTarget =
+                                targetDistance <= LoseTargetRadius;
+                        }
                     }
+
+                    if (keepForeignTarget)
+                        continue;
 
                     DropMonsterTarget(monster, now);
                     packets.Add(new
