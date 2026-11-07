@@ -36,6 +36,20 @@ public sealed record CurrentSkillDefinition(
     int SkillId,
     string Name);
 
+public sealed record CurrentSkillLevelDefinition(
+    int SkillId,
+    int Level,
+    int SkillType,
+    int DamageType,
+    int CastRange,
+    int AoeRadius,
+    int CostHp,
+    int CostMp,
+    int CostSp,
+    int BaseDamage,
+    int DamageMultiplier,
+    int CooldownSeconds);
+
 public sealed record CurrentPetEvolution(
     int EvolId,
     string Outlook,
@@ -65,6 +79,8 @@ public sealed class CurrentClientDataCatalog
     private readonly Dictionary<string, List<CurrentItemDefinition>> _itemsByName =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<int, CurrentSkillDefinition> _skills = new();
+    private readonly Dictionary<(int SkillId, int Level), CurrentSkillLevelDefinition>
+        _skillLevels = new();
     private readonly Dictionary<string, List<CurrentSkillDefinition>> _skillsByName =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<int, CurrentPetDefinition> _pets = new();
@@ -136,6 +152,21 @@ public sealed class CurrentClientDataCatalog
 
     public CurrentSkillDefinition? FindSkill(int id)
         => _skills.TryGetValue(id, out var skill) ? skill : null;
+
+    public CurrentSkillLevelDefinition? FindSkillLevel(
+        int skillId,
+        int level)
+    {
+        if (_skillLevels.TryGetValue((skillId, level), out var exact))
+            return exact;
+
+        return _skillLevels
+            .Where(x => x.Key.SkillId == skillId &&
+                        x.Key.Level <= level)
+            .OrderByDescending(x => x.Key.Level)
+            .Select(x => x.Value)
+            .FirstOrDefault();
+    }
 
     public CurrentSkillDefinition? FindSkillByName(string name)
     {
@@ -323,6 +354,40 @@ public sealed class CurrentClientDataCatalog
 
             _skills[id] = skill;
             AddByName(_skillsByName, skill.Name, skill);
+
+            var skillType = ReadInt(text, "skill_type");
+            var damageType = ReadInt(text, "damage_type");
+            var blocks = Regex.Matches(
+                text,
+                @"\[sub_resource[^\]]*\]\s*(.*?)(?=\r?\n\[sub_resource|\r?\n\[resource\])",
+                RegexOptions.Singleline);
+
+            foreach (Match match in blocks)
+            {
+                var block = match.Groups[1].Value;
+                if (!block.Contains("cast_range", StringComparison.OrdinalIgnoreCase) &&
+                    !block.Contains("cost_mp", StringComparison.OrdinalIgnoreCase) &&
+                    !block.Contains("base_damage", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var level = ReadInt(block, "level");
+                if (level <= 0)
+                    level = 1;
+
+                _skillLevels[(id, level)] = new CurrentSkillLevelDefinition(
+                    id,
+                    level,
+                    skillType,
+                    damageType,
+                    ReadInt(block, "cast_range"),
+                    ReadInt(block, "aoe_radius"),
+                    ReadInt(block, "cost_hp"),
+                    ReadInt(block, "cost_mp"),
+                    ReadInt(block, "cost_sp"),
+                    ReadInt(block, "base_damage"),
+                    ReadInt(block, "damage_multiplier"),
+                    ReadInt(block, "cooldown"));
+            }
         }
     }
 
