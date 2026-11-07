@@ -986,7 +986,7 @@ public sealed class PacketRouter
             {
                 if (!state.CharacterId.HasValue) return [];
 
-                var itemUid = req.Int("ItemUID");
+                var itemUid = req.Long("ItemUID");
                 var assetsBefore = _store.GetCharacterAssets(
                     accountId,
                     state.CharacterId.Value);
@@ -1459,7 +1459,7 @@ public sealed class PacketRouter
                 var success = _store.EquipItem(
                     accountId,
                     state.CharacterId.Value,
-                    req.Int("ItemUID"),
+                    req.Long("ItemUID"),
                     req.Int("TargetSlot", 255));
 
                 var assets = _store.GetCharacterAssets(
