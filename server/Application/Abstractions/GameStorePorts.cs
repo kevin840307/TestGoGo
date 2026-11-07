@@ -75,6 +75,12 @@ public interface ICharacterStore
         long dbid,
         int exp,
         int money);
+    Dictionary<string, object>? SetExperienceProgress(
+        long accountId,
+        long dbid,
+        int level,
+        int maxExp,
+        int abilityPointsToAdd);
     Dictionary<string, object>? AllocateStat(
         long accountId,
         long dbid,
