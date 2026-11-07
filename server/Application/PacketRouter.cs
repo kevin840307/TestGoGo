@@ -1339,6 +1339,139 @@ public sealed class PacketRouter
                     ];
                 }
 
+                if (itemIndex == 2616)
+                {
+                    var currentCharacter =
+                        _store.GetCharacter(
+                            accountId,
+                            state.CharacterId.Value);
+
+                    if (currentCharacter is null)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "角色資料不存在"
+                            }
+                        ];
+                    }
+
+                    var preview =
+                        new Dictionary<string, object>(
+                            currentCharacter)
+                        {
+                            ["Str"] = 1,
+                            ["Dex"] = 1,
+                            ["Con"] = 1,
+                            ["Wis"] = 1
+                        };
+
+                    var growth = _growth.Calculate(
+                        preview);
+
+                    var reset =
+                        _store.ResetCharacterStatsFromItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            itemIndex,
+                            1,
+                            1,
+                            1,
+                            1,
+                            growth.MaxHP,
+                            growth.MaxMP,
+                            growth.MaxSP,
+                            growth.Attack,
+                            growth.Defense,
+                            growth.MagicAttack,
+                            growth.MagicDefense,
+                            growth.Hit,
+                            growth.Dodge,
+                            growth.MoveSpeed);
+
+                    if (!reset.Success ||
+                        reset.Character is null)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = reset.Message
+                            }
+                        ];
+                    }
+
+                    var updated = reset.Character;
+                    var assets = _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+                    var effective =
+                        CharacterStatCalculator.Calculate(
+                            updated,
+                            assets,
+                            _current);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        new
+                        {
+                            Type = "AllocateStatResponse",
+                            Success = true,
+                            Message = reset.Message,
+                            ExpUse = updated["ExpUse"],
+                            STR = updated["Str"],
+                            DEX = updated["Dex"],
+                            CON = updated["Con"],
+                            WIS = updated["Wis"],
+                            MaxHP = updated["MaxHP"],
+                            MaxMP = updated["MaxMP"],
+                            MaxSP = updated["MaxSP"],
+                            Attack = effective.Attack,
+                            Defense = effective.Defense,
+                            MagicAttack =
+                                effective.MagicAttack,
+                            MagicDefense =
+                                effective.MagicDefense,
+                            Hit = effective.Hit,
+                            Dodge = effective.Dodge,
+                            Lucky = effective.Lucky,
+                            AttackSpeed =
+                                effective.AttackSpeed,
+                            AttackRange =
+                                effective.AttackRange,
+                            MoveSpeed =
+                                effective.MoveSpeed,
+                            CritRate =
+                                effective.CritRate,
+                            CritDamage =
+                                effective.CritDamage
+                        },
+                        BuildAndBroadcastEffectiveStatusPacket(
+                            state,
+                            accountId,
+                            state.CharacterId.Value,
+                            assets),
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = reset.Message
+                        }
+                    ];
+                }
+
                 var recovery = _recoveryItems.Find(itemIndex);
                 if (recovery is not null)
                 {
