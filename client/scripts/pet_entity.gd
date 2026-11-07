@@ -19,7 +19,10 @@ var move_path_index: int = 0
 const MIN_LERP_WEIGHT: float = 8.0
 const MAX_LERP_WEIGHT: float = 20.0
 const TELEPORT_DISTANCE: float = 900.0
-const PET_COLLISION_MASK: int = 17
+# Blocking.dat is authoritative for static map obstacles. Avoid adding the
+# pet body radius on top of each 16px blocking cell, which causes corner jitter.
+const PET_COLLISION_MASK: int = 0
+const PET_WAYPOINT_REACH_DISTANCE: float = 8.0
 const PET_STUCK_FRAME_LIMIT: int = 30
 
 var network_move_active: bool = false
@@ -230,21 +233,50 @@ func _physics_process(delta: float) -> void :
 	if not network_move_active or current_hp <= 0:
 		return
 
+	if move_path.is_empty() or move_path_index >= move_path.size():
+		_stop_network_move()
+		return
+
 	var step_distance: float = network_move_speed * delta
-	var stop_threshold: float = max(3.0, step_distance)
+	var stop_threshold: float = maxf(
+		PET_WAYPOINT_REACH_DISTANCE,
+		step_distance * 1.25
+	)
+	var map_id: int = 0
+	var owner_can_cross_special: bool = false
+	if GameManager and is_instance_valid(GameManager.current_player):
+		var owner_data = GameManager.current_player.get("data_model")
+		if owner_data:
+			map_id = int(owner_data.map_id)
+		owner_can_cross_special = bool(
+			GameManager.current_player.get("can_cross_special_terrain")
+		)
+
+	while move_path_index + 1 < move_path.size():
+		var next_waypoint: Vector2 = move_path[move_path_index + 1]
+		var close_to_current: bool = (
+			global_position.distance_to(target_position) <= stop_threshold
+		)
+		var next_is_visible: bool = LegacyPathfinder.is_segment_walkable(
+			map_id,
+			global_position,
+			next_waypoint,
+			owner_can_cross_special
+		)
+
+		if not close_to_current and not next_is_visible:
+			break
+
+		move_path_index += 1
+		target_position = move_path[move_path_index]
+
 	var to_target: Vector2 = target_position - global_position
 	var distance: float = to_target.length()
 
-	if distance <= stop_threshold:
-		if move_path_index + 1 < move_path.size():
-			move_path_index += 1
-			target_position = move_path[move_path_index]
-			to_target = target_position - global_position
-			distance = to_target.length()
-		else:
-			global_position = move_destination
-			_stop_network_move()
-			return
+	if move_path_index + 1 >= move_path.size() and distance <= stop_threshold:
+		global_position = target_position
+		_stop_network_move()
+		return
 
 	if distance <= 0.001:
 		return
@@ -254,7 +286,7 @@ func _physics_process(delta: float) -> void :
 
 	var old_position: Vector2 = global_position
 	move_and_slide()
-	if old_position.distance_to(global_position) >= 0.75:
+	if old_position.distance_to(global_position) >= maxf(0.25, step_distance * 0.1):
 		stuck_frames = 0
 		return
 
