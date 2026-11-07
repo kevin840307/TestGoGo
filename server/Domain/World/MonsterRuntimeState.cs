@@ -34,6 +34,7 @@ public sealed class MonsterRuntimeState
     // bound to TargetCharacterId for multiplayer tick arbitration.
     public long TargetPetUid { get; set; }
     public DateTimeOffset LastAiAt { get; set; }
+    public DateTimeOffset NextPathRetryAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastActionAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastStallLogAt { get; set; } = DateTimeOffset.MinValue;
     public double? LastMovePacketX { get; set; }
