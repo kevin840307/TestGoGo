@@ -228,18 +228,6 @@ public sealed class CombatService
         var assets = _store.GetCharacterAssets(
             accountId,
             currentCharacterId);
-        var activePet = assets.Pets.FirstOrDefault(x =>
-            Convert.ToInt32(x["State"]) == 1 &&
-            Convert.ToInt32(x["HP"]) > 0);
-        var activePetUid = activePet is null
-            ? 0L
-            : Convert.ToInt64(activePet["UID"]);
-        var activePetPosition = (X: 0.0, Y: 0.0);
-        var petAlive =
-            activePetUid > 0 &&
-            session.PetPositions.TryGetValue(
-                activePetUid,
-                out activePetPosition);
 
         var runtime = SyncSessionMonsters(session);
         var packets = new List<object>();
@@ -263,6 +251,58 @@ public sealed class CombatService
                     SetAiState(monster, MonsterAiState.Dead);
                     continue;
                 }
+
+                Dictionary<string, object>? activePet = null;
+                var activePetUid = 0L;
+                var activePetPosition =
+                    (X: 0.0, Y: 0.0);
+                var petDistanceSquared =
+                    double.MaxValue;
+
+                foreach (var candidatePet in
+                         assets.Pets.Where(x =>
+                             Convert.ToInt32(
+                                 x["State"]) == 1 &&
+                             Convert.ToInt32(
+                                 x["HP"]) > 0))
+                {
+                    var candidateUid =
+                        Convert.ToInt64(
+                            candidatePet["UID"]);
+
+                    if (!session.PetPositions.TryGetValue(
+                            candidateUid,
+                            out var candidatePosition))
+                    {
+                        continue;
+                    }
+
+                    var candidateDx =
+                        candidatePosition.X -
+                        monster.X;
+                    var candidateDy =
+                        candidatePosition.Y -
+                        monster.Y;
+                    var candidateDistanceSquared =
+                        candidateDx * candidateDx +
+                        candidateDy * candidateDy;
+
+                    if (candidateDistanceSquared >=
+                        petDistanceSquared)
+                    {
+                        continue;
+                    }
+
+                    activePet = candidatePet;
+                    activePetUid = candidateUid;
+                    activePetPosition =
+                        candidatePosition;
+                    petDistanceSquared =
+                        candidateDistanceSquared;
+                }
+
+                var petAlive =
+                    activePet is not null;
 
                 // Only the target owner's websocket advances an already-owned
                 // monster. For pet targets, the owner connection also owns the
@@ -405,18 +445,6 @@ public sealed class CombatService
                         playerDx * playerDx +
                         playerDy * playerDy;
 
-                    var petDistanceSquared = double.MaxValue;
-                    if (petAlive)
-                    {
-                        var petDx =
-                            activePetPosition.X - monster.X;
-                        var petDy =
-                            activePetPosition.Y - monster.Y;
-                        petDistanceSquared =
-                            petDx * petDx +
-                            petDy * petDy;
-                    }
-
                     var playerInAggro =
                         playerAlive &&
                         playerDistanceSquared <=
@@ -482,17 +510,11 @@ public sealed class CombatService
                         nearPlayerDx * nearPlayerDx +
                         nearPlayerDy * nearPlayerDy);
 
-                    var nearPetDistance = double.MaxValue;
-                    if (petAlive)
-                    {
-                        var nearPetDx =
-                            activePetPosition.X - monster.X;
-                        var nearPetDy =
-                            activePetPosition.Y - monster.Y;
-                        nearPetDistance = Math.Sqrt(
-                            nearPetDx * nearPetDx +
-                            nearPetDy * nearPetDy);
-                    }
+                    var nearPetDistance =
+                        petAlive
+                            ? Math.Sqrt(
+                                petDistanceSquared)
+                            : double.MaxValue;
 
                     if ((playerAlive &&
                          nearPlayerDistance <= AggroRadius) ||
