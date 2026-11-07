@@ -48,9 +48,7 @@ public sealed class SharedMapAiTicker : BackgroundService
     {
         lock (session)
         {
-            _sessions.TryRemove(
-                new KeyValuePair<Guid, ClientSession>(
-                    session.ConnectionId, session));
+            _sessions.TryRemove(session.ConnectionId, out _);
             session.SharedAiManaged = false;
         }
     }
@@ -75,7 +73,7 @@ public sealed class SharedMapAiTicker : BackgroundService
         {
             var didRespawn = false;
             var mapProcessed = false;
-            foreach (var session in group.OrderBy(s => s.CharacterId!.Value))
+            foreach (var session in group.OrderBy(s => s.CharacterId.GetValueOrDefault()))
             {
                 lock (session)
                 {
