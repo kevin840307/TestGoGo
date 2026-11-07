@@ -51,6 +51,8 @@ var _frame_gap_last_usec: int = 0
 var _frame_gap_stage: String = "startup"
 var _frame_gap_stage_since_usec: int = 0
 const FRAME_GAP_WARN_USEC: int = 100000
+const RENDER_STATS_INTERVAL_SECONDS: float = 2.0
+var _render_stats_elapsed: float = 0.0
 
 var _train_travel_active: bool = false
 var _train_travel_id: String = ""
@@ -66,7 +68,7 @@ func set_frame_gap_stage(stage: String) -> void :
 	_frame_gap_stage = stage
 	_frame_gap_stage_since_usec = Time.get_ticks_usec()
 
-func _process(_delta: float) -> void :
+func _process(delta: float) -> void :
 	var now_usec := Time.get_ticks_usec()
 	if _frame_gap_last_usec > 0:
 		var gap_usec := now_usec - _frame_gap_last_usec
@@ -81,6 +83,57 @@ func _process(_delta: float) -> void :
 			print(line)
 			_append_transition_log(line)
 	_frame_gap_last_usec = now_usec
+
+	_render_stats_elapsed += delta
+	if _render_stats_elapsed >= RENDER_STATS_INTERVAL_SECONDS:
+		_render_stats_elapsed = 0.0
+		_print_render_stats()
+
+func _print_render_stats() -> void :
+	if not is_instance_valid(current_map_node):
+		return
+
+	var visible_monsters := 0
+	var visible_players := 0
+	var visible_pets := 0
+	var paper_doll_layers := 0
+
+	if NetworkEntityManager:
+		for entity_id in NetworkEntityManager.active_entities.keys():
+			var entity = NetworkEntityManager.active_entities[entity_id]
+			if not is_instance_valid(entity) or not entity.is_inside_tree():
+				continue
+			var entity_type := int(NetworkEntityManager._active_entity_types.get(entity_id, -1))
+			var visible_runtime := true
+			if entity.has_method("is_render_visible"):
+				visible_runtime = bool(entity.is_render_visible())
+			elif entity.has_method("is_runtime_visible"):
+				visible_runtime = bool(entity.is_runtime_visible())
+			if not visible_runtime:
+				continue
+			match entity_type:
+				0: visible_players += 1
+				1: visible_monsters += 1
+				3: visible_pets += 1
+			if "doll_engine" in entity and is_instance_valid(entity.doll_engine):
+				paper_doll_layers += entity.doll_engine.doll_sprites.size()
+
+	if is_instance_valid(current_player) and "doll_engine" in current_player and is_instance_valid(current_player.doll_engine):
+		paper_doll_layers += current_player.doll_engine.doll_sprites.size()
+
+	print("[RENDER_STATS] fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d visible_players=%d visible_pets=%d paper_doll_layers=%d" % [
+		int(Performance.get_monitor(Performance.TIME_FPS)),
+		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
+		int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
+		int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)),
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+		float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
+		visible_monsters,
+		visible_players,
+		visible_pets,
+		paper_doll_layers,
+	])
 
 func _report_initial_loading_progress(progress_callback: Callable, value: float, stage: String) -> void :
 	if progress_callback.is_valid():
