@@ -13,60 +13,18 @@ builder.WebHost.UseUrls(
 
 builder.Services.AddGamePersistence(builder.Configuration);
 
-var gameDataRoot = Path.Combine(
-    AppContext.BaseDirectory,
-    "GameData");
-
-var configuredClientRoot =
-    builder.Configuration["Game:ClientRoot"]
-    ?? Environment.GetEnvironmentVariable("SGO_CLIENT_ROOT");
-
-var currentClientData =
-    new CurrentClientDataCatalog(configuredClientRoot);
-
-var configuredLegacyClientRoot =
-    builder.Configuration["Game:LegacyClientDataRoot"]
-    ?? Environment.GetEnvironmentVariable("SGO_LEGACY_CLIENT_ROOT")
-    ?? @"C:\SGO\Recovered\Old\ClientData";
-
-var legacyClientData =
-    new LegacyClientDataCatalog(configuredLegacyClientRoot);
-var legacyNpcVisuals =
-    new LegacyNpcVisualCatalog(configuredLegacyClientRoot);
-var worldData =
-    new WorldDataService(
-        gameDataRoot,
-        legacyNpcVisuals);
-
-builder.Services.AddSingleton(worldData);
-builder.Services.AddSingleton(legacyNpcVisuals);
-builder.Services.AddSingleton(currentClientData);
-builder.Services.AddSingleton(legacyClientData);
-builder.Services.AddSingleton(
-    new LegacyPlayerGrowthCatalog(gameDataRoot));
-
-var shopCatalog = new ShopCatalog(
-    gameDataRoot,
-    currentClientData,
-    legacyClientData);
-
-builder.Services.AddSingleton(shopCatalog);
-builder.Services.AddSingleton(
-    new HorseBatteryCatalog(currentClientData));
-builder.Services.AddSingleton(
-    new RecoveryItemCatalog(currentClientData));
-builder.Services.AddSingleton(
-    new HorseCardCatalog(currentClientData));
-builder.Services.AddSingleton(
-    new SkillCatalog(currentClientData));
-builder.Services.AddSingleton(sp =>
-    new QuestRuntime(
-        Path.Combine(gameDataRoot, "Quest"),
-        sp.GetRequiredService<ShopCatalog>()));
+builder.Services.AddGameData(builder.Configuration);
 
 builder.Services.AddGameFeatures(builder.Configuration);
 
 var app = builder.Build();
+
+var currentClientData =
+    app.Services.GetRequiredService<CurrentClientDataCatalog>();
+var legacyNpcVisuals =
+    app.Services.GetRequiredService<LegacyNpcVisualCatalog>();
+var shopCatalog =
+    app.Services.GetRequiredService<ShopCatalog>();
 
 if (!currentClientData.IsAvailable)
 {
@@ -83,8 +41,7 @@ else
         currentClientData.Pets.Count);
 
     app.Logger.LogInformation(
-        "[LEGACY_NPC_VISUALS] Root={Root} Mapped={Count}",
-        configuredLegacyClientRoot,
+        "[LEGACY_NPC_VISUALS] Mapped={Count}",
         legacyNpcVisuals.Count);
 
     foreach (var info in shopCatalog.MappingInfo)
