@@ -896,6 +896,153 @@ public sealed class SqliteGameStore : IGameStore
         return Convert.ToInt64(cmd.ExecuteScalar());
     }
 
+    public (bool Success, string Message, long RewardUid) OpenDoll(
+        long accountId,
+        long dbid,
+        long dollUid,
+        int dollItemIndex,
+        int rewardItemIndex,
+        AssetPurchaseKind rewardKind,
+        int rewardCount = 1,
+        int rewardPart = 255)
+    {
+        rewardCount = Math.Max(1, rewardCount);
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(db, accountId, dbid, tx))
+            return (false, "角色不存在", 0);
+
+        using (var source = db.CreateCommand())
+        {
+            source.Transaction = tx;
+            source.CommandText = """
+                SELECT count,item_index
+                  FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND in_bank=0
+                   AND in_shop=0
+                """;
+            Arg(source, "$uid", dollUid);
+            Arg(source, "$id", dbid);
+
+            using var r = source.ExecuteReader();
+            if (!r.Read() ||
+                r.GetInt32(0) <= 0 ||
+                r.GetInt32(1) != dollItemIndex)
+            {
+                return (false, "找不到可使用的娃娃", 0);
+            }
+        }
+
+        long rewardUid = 0;
+
+        switch (rewardKind)
+        {
+            case AssetPurchaseKind.General:
+            case AssetPurchaseKind.HorseBattery:
+            {
+                using var existing = db.CreateCommand();
+                existing.Transaction = tx;
+                existing.CommandText = """
+                    SELECT uid
+                      FROM inventory_items
+                     WHERE character_id=$id
+                       AND item_index=$idx
+                       AND in_bank=0
+                       AND in_shop=0
+                     ORDER BY uid
+                     LIMIT 1
+                    """;
+                Arg(existing, "$id", dbid);
+                Arg(existing, "$idx", rewardItemIndex);
+
+                var existingUid = existing.ExecuteScalar();
+                if (existingUid is not null && existingUid != DBNull.Value)
+                {
+                    rewardUid = Convert.ToInt64(existingUid);
+
+                    using var addCount = db.CreateCommand();
+                    addCount.Transaction = tx;
+                    addCount.CommandText = """
+                        UPDATE inventory_items
+                           SET count=count+$count
+                         WHERE uid=$uid
+                           AND character_id=$id
+                        """;
+                    Arg(addCount, "$count", rewardCount);
+                    Arg(addCount, "$uid", rewardUid);
+                    Arg(addCount, "$id", dbid);
+
+                    if (addCount.ExecuteNonQuery() != 1)
+                        return (false, "獎勵發放失敗", 0);
+                }
+                else
+                {
+                    using var add = db.CreateCommand();
+                    add.Transaction = tx;
+                    add.CommandText = """
+                        INSERT INTO inventory_items(
+                            character_id,item_index,count,in_bank,in_shop)
+                        VALUES($id,$idx,$count,0,0);
+                        SELECT last_insert_rowid();
+                        """;
+                    Arg(add, "$id", dbid);
+                    Arg(add, "$idx", rewardItemIndex);
+                    Arg(add, "$count", rewardCount);
+                    rewardUid = Convert.ToInt64(add.ExecuteScalar());
+                }
+
+                break;
+            }
+
+            case AssetPurchaseKind.Equipment:
+            {
+                using var add = db.CreateCommand();
+                add.Transaction = tx;
+                add.CommandText = """
+                    INSERT INTO equipment_items(
+                        character_id,item_index,damage,color,part,in_bank,in_shop)
+                    VALUES($id,$idx,0,0,$part,0,0);
+                    SELECT last_insert_rowid();
+                    """;
+                Arg(add, "$id", dbid);
+                Arg(add, "$idx", rewardItemIndex);
+                Arg(add, "$part", rewardPart);
+                rewardUid = Convert.ToInt64(add.ExecuteScalar());
+                break;
+            }
+
+            case AssetPurchaseKind.HorseEquipment:
+            {
+                using var add = db.CreateCommand();
+                add.Transaction = tx;
+                add.CommandText = """
+                    INSERT INTO horse_equipment(
+                        character_id,equip_index,horse_uid,damage,color,part,in_bank,in_shop)
+                    VALUES($id,$idx,-1,0,0,$part,0,0);
+                    SELECT last_insert_rowid();
+                    """;
+                Arg(add, "$id", dbid);
+                Arg(add, "$idx", rewardItemIndex);
+                Arg(add, "$part", rewardPart is >= 0 and <= 6
+                    ? rewardPart
+                    : 255);
+                rewardUid = Convert.ToInt64(add.ExecuteScalar());
+                break;
+            }
+
+            default:
+                return (false, "此娃娃獎勵類型尚未支援", 0);
+        }
+
+        ConsumeInventoryItem(db, tx, dbid, dollUid);
+        tx.Commit();
+        return (true, "抽獎成功", rewardUid);
+    }
+
     public long AddEquipment(long accountId, long dbid, int itemIndex, int part = 255, int damage = 0, int color = 0)
     {
         using var db = Open();
