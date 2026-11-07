@@ -238,6 +238,11 @@ public sealed record TeleportItemUseResult(
     int X,
     int Y);
 
+public sealed record PetSummonExpansionResult(
+    bool Success,
+    string Message,
+    int MaxSummon);
+
 public interface IInventoryStore : ICharacterAssetReader
 {
     long AddInventoryItem(
@@ -284,6 +289,12 @@ public interface IInventoryStore : ICharacterAssetReader
         int mapId,
         int x,
         int y);
+
+    PetSummonExpansionResult ExpandPetSummonCapacityFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex);
     (bool Success, string Message, long RewardUid) OpenDoll(
         long accountId,
         long dbid,
