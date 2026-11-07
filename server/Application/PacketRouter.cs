@@ -793,7 +793,7 @@ public sealed class PacketRouter
                         Type = "QuestSync",
                         Quests = _store.GetQuests(accountId, dbid)
                     },
-                    new { Type = "FestivalThemeSync", Theme = "normal", Festival = "" }
+                    BuildFestivalThemeSync()
                 ];
             }
 
@@ -4685,6 +4685,54 @@ public sealed class PacketRouter
         }
 
         return true;
+    }
+
+    private object BuildFestivalThemeSync()
+    {
+        var theme = (
+            _configuration?["Gameplay:Festival:Theme"] ??
+            "normal")
+            .Trim()
+            .ToLowerInvariant();
+
+        if (theme is not (
+                "normal" or
+                "mid_autumn" or
+                "easter" or
+                "halloween" or
+                "christmas" or
+                "lunar_new_year"))
+        {
+            theme = "normal";
+        }
+
+        var festival = (
+            _configuration?["Gameplay:Festival:Activity"] ??
+            "")
+            .Trim()
+            .ToLowerInvariant();
+
+        if (festival is not (
+                "" or
+                "lunar_new_year" or
+                "valentine" or
+                "white_valentine" or
+                "easter" or
+                "dragon_boat" or
+                "grand_hunt" or
+                "mid_autumn" or
+                "halloween" or
+                "christmas"))
+        {
+            festival = "";
+        }
+
+        return new
+        {
+            Type = "FestivalThemeSync",
+            Theme = theme,
+            Festival = festival
+        };
     }
 
     private object BuildTimedEffectSync(
