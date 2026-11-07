@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
+using SGO.Server.Application.Character;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Party;
 using SGO.Server.Application.Quest;
@@ -44,6 +45,7 @@ public sealed class CombatService
     private readonly WorldRuntimeService _runtime;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly PartyService _party;
+    private readonly PetEvolutionService _petEvolution;
     private readonly QuestProgressService _questProgress;
     private readonly ILogger<CombatService> _log;
 
@@ -80,6 +82,7 @@ public sealed class CombatService
         WorldRuntimeService runtime,
         ServerBroadcastHub broadcasts,
         PartyService party,
+        PetEvolutionService petEvolution,
         QuestProgressService questProgress,
         ILogger<CombatService> log)
     {
@@ -92,6 +95,7 @@ public sealed class CombatService
         _runtime = runtime;
         _broadcasts = broadcasts;
         _party = party;
+        _petEvolution = petEvolution;
         _questProgress = questProgress;
         _log = log;
     }
