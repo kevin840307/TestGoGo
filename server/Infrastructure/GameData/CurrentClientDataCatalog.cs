@@ -314,7 +314,7 @@ public sealed class CurrentClientDataCatalog
                     ReadString(text, "horse_type"),
                     ReadInt(text, "req_level"),
                     ReadInt(text, "durability"),
-                    ReadInt(text, "can_repair"));
+                    ReadInt(text, "can_repair", 1));
 
                 _items[id] = item;
                 AddByName(_itemsByName, item.Name, item);
@@ -508,7 +508,10 @@ public sealed class CurrentClientDataCatalog
             .Trim();
     }
 
-    private static int ReadInt(string text, string name)
+    private static int ReadInt(
+        string text,
+        string name,
+        int defaultValue = 0)
     {
         foreach (var raw in text.Split(
                      new[] { "\r\n", "\n" },
@@ -530,7 +533,7 @@ public sealed class CurrentClientDataCatalog
                 return parsed;
         }
 
-        return 0;
+        return defaultValue;
     }
 
     private static string ReadString(string text, string name)
