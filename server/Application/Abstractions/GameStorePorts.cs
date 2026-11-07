@@ -297,6 +297,38 @@ public interface IBankStore : ICharacterAssetReader
         bool toBank);
 }
 
+public sealed record DirectTransferResult(
+    bool Success,
+    string Message,
+    long SenderMoney,
+    long TargetMoney,
+    long TargetAccountId);
+
+public interface IDirectTransferStore
+{
+    DirectTransferResult TransferMoney(
+        long accountId,
+        long dbid,
+        long targetDbid,
+        long amount);
+}
+
+public sealed record RepairAssetResult(
+    bool Success,
+    string Message,
+    long Money);
+
+public interface IRepairStore : ICharacterAssetReader
+{
+    RepairAssetResult RepairAsset(
+        long accountId,
+        long dbid,
+        long uid,
+        bool isMechaEquipment,
+        int repairedDurability,
+        long cost);
+}
+
 public interface IItemDiscardStore : ICharacterAssetReader
 {
     (bool Success, string Message) DiscardAsset(
