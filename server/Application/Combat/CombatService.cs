@@ -3997,6 +3997,31 @@ public sealed class CombatService
             }
             if (!found)
             {
+                // A narrow corridor may not have room for a 95-175px
+                // wander segment, but still allows a short safe step.
+                for (var attempt = 0; attempt < 8 && !found; attempt++)
+                {
+                    var alternateAngle = angle + attempt * Math.PI / 4.0;
+                    var candidateX = monster.X +
+                        Math.Cos(alternateAngle) * MoveStep;
+                    var candidateY = monster.Y +
+                        Math.Sin(alternateAngle) * MoveStep;
+                    var centerDx = candidateX - monster.WanderCenterX;
+                    var centerDy = candidateY - monster.WanderCenterY;
+                    if (centerDx * centerDx + centerDy * centerDy >
+                        WanderRadius * WanderRadius ||
+                        !_navigation.IsDirectClear(
+                            monster.MapId, monster.X, monster.Y,
+                            candidateX, candidateY))
+                        continue;
+
+                    desiredX = candidateX;
+                    desiredY = candidateY;
+                    found = true;
+                }
+            }
+            if (!found)
+            {
                 monster.NextWanderAt = now + NextWanderDelay(
                     monster.EntityId, monster.WanderSequence);
                 return;
