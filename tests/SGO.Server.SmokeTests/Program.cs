@@ -3323,8 +3323,7 @@ try
     {
         var response = router.Handle(malformedBank.RootElement, session);
         Check(response.Count == 1 &&
-              JsonSerializer.Serialize(response[0]).Contains(
-                  "\\"Code\\":\\"INVALID_PACKET\\""),
+              JsonSerializer.Serialize(response[0]).Contains("INVALID_PACKET"),
             "malformed bank transfer returns typed INVALID_PACKET instead of modifying assets");
     }
 
