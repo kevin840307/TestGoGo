@@ -32,6 +32,11 @@ public static class GameDataServiceCollectionExtensions
             new LegacyPlayerGrowthCatalog(gameDataRoot));
         services.AddSingleton(
             new LegacyBattleRulesCatalog(gameDataRoot));
+        services.AddSingleton(
+            new RecipeCatalog(
+                Path.Combine(
+                    gameDataRoot,
+                    "Recipe.json")));
 
         services.AddSingleton(sp =>
             new WorldDataService(
