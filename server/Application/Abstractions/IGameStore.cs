@@ -15,6 +15,16 @@ public interface IGameStore
     List<Dictionary<string, object>> GetSkills(long accountId, long dbid);
     bool SetSkill(long accountId, long dbid, int skillId, int level);
     bool ClearSkills(long accountId, long dbid);
+    Dictionary<string, object>? SpendSkillResources(
+        long accountId,
+        long dbid,
+        int hpCost,
+        int mpCost,
+        int spCost);
+    Dictionary<string, object>? AllocateStat(
+        long accountId,
+        long dbid,
+        string statType);
 
     long AddInventoryItem(long accountId, long dbid, int itemIndex, int count);
     long AddEquipment(long accountId, long dbid, int itemIndex, int part = 255, int damage = 0, int color = 0);
