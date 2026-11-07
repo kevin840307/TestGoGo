@@ -27,6 +27,7 @@ public sealed class ClientSession
     public DateTimeOffset LastCompanionClientSyncAt { get; set; } = DateTimeOffset.MinValue;
     public int PetCombatMode { get; set; } = 0;
     public bool AutoSaintEnabled { get; set; }
+    public bool IsResting { get; set; }
     public bool CanCrossSpecialTerrain { get; set; }
     public bool PositionDirty { get; set; }
     public DateTimeOffset LastPositionPersistAt { get; set; } = DateTimeOffset.MinValue;
