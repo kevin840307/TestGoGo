@@ -85,6 +85,40 @@ using (var optionalSkillTarget = Json(
         "packet schema permits optional no-target skill fields");
 }
 
+using (var badDismantle = Json(
+    """{"Type":"DismantleItemRequest","ItemUIDs":{"uid":1},"ItemType":"Equip"}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              badDismantle.RootElement,
+              "DismantleItemRequest", out var badDismantleReason) &&
+          badDismantleReason.Contains("ItemUIDs"),
+        "packet schema rejects dismantle IDs that are not a JSON array");
+}
+using (var goodDismantle = Json(
+    """{"Type":"DismantleItemRequest","ItemUIDs":[10,11],"ItemType":"Equip"}"""))
+{
+    Check(PacketSchemaValidator.TryValidate(
+              goodDismantle.RootElement,
+              "DismantleItemRequest", out _),
+        "packet schema accepts client dismantle array payload");
+}
+using (var missingCraftBatch = Json(
+    """{"Type":"CraftItemRequest","RecipeID":5}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              missingCraftBatch.RootElement,
+              "CraftItemRequest", out var craftReason) &&
+          craftReason.Contains("BatchCount"),
+        "packet schema rejects incomplete craft requests");
+}
+using (var invalidAction = Json(
+    """{"Type":"ShopAction","Action":"   "}"""))
+{
+    Check(!PacketSchemaValidator.TryValidate(
+              invalidAction.RootElement, "ShopAction", out _),
+        "packet schema rejects blank dynamic shop actions");
+}
+
 var repoRoot = Directory.GetCurrentDirectory();
 var gameDataRoot = Path.Combine(repoRoot, "Old", "服務端", "Dat");
 var questRoot = Path.Combine(gameDataRoot, "Quest");
