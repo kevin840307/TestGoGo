@@ -36,7 +36,12 @@ CurrentItemDefinition CurrentItem(
     int canSell = 1,
     int atk = 0,
     int def = 0,
+    int matk = 0,
+    int mdef = 0,
+    int hit = 0,
+    int flee = 0,
     int moveSpeed = 0,
+    int maxHpBonus = 0,
     int equipSlot = 0,
     int attackRange = 0,
     int recoverHp = 0,
@@ -44,7 +49,8 @@ CurrentItemDefinition CurrentItem(
     int recoverSp = 0,
     int maxBattery = 0,
     int battery = 0,
-    string horseType = "")
+    string horseType = "",
+    int reqLevel = 0)
     => new(
         id,
         name,
@@ -53,16 +59,16 @@ CurrentItemDefinition CurrentItem(
         canSell,
         atk,
         def,
-        0, // MAtk
-        0, // MDef
-        0, // Hit
-        0, // Flee
+        matk,
+        mdef,
+        hit,
+        flee
         0, // Luk
         0, // Aspd
         moveSpeed,
         0, // CritRate
         0, // CritDamage
-        0, // MaxHpBonus
+        maxHpBonus,
         0, // MaxMpBonus
         0, // MaxSpBonus
         equipSlot,
@@ -72,7 +78,8 @@ CurrentItemDefinition CurrentItem(
         recoverSp,
         maxBattery,
         battery,
-        horseType);
+        horseType,
+        reqLevel);
 
 var currentCatalog = new CurrentClientDataCatalog(
     new[]
@@ -163,6 +170,21 @@ var currentCatalog = new CurrentClientDataCatalog(
             price: 100,
             moveSpeed: 100,
             equipSlot: 2),
+        CurrentItem(
+            51304,
+            "獸靈卡片",
+            "horseequip",
+            price: 100,
+            atk: 100,
+            def: 50,
+            matk: 100,
+            mdef: 50,
+            hit: 100,
+            flee: 100,
+            maxHpBonus: 500,
+            equipSlot: 3,
+            horseType: "MS",
+            reqLevel: 20),
         CurrentItem(
             50102,
             "魔靈電池",
