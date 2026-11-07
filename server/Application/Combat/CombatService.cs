@@ -2,7 +2,7 @@ using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
-using SGO.Server.Infrastructure.World;
+using SGO.Server.Infrastructure.WorldData;
 using SGO.Server.Infrastructure.GameData;
 
 namespace SGO.Server.Application.Combat;
