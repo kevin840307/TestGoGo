@@ -3914,7 +3914,6 @@ try
 
     while (speechPeer.Queue.TryDequeue(out _)) { }
 
-    statefulPetSpeech:
     session.PetPositions[petUid] =
         (session.LastX + 42, session.LastY + 24);
     session.PetTargets.Remove(petUid);
