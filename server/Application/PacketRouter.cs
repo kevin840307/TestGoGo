@@ -3192,6 +3192,7 @@ public sealed class PacketRouter
             var assetsChanged = false;
             var skillsChanged = false;
             var careerChanged = false;
+            var appearanceChanged = false;
             var dbid = state.CharacterId ?? 0;
             var questTeamMembers = dbid > 0
                 ? _party.GetMembers(dbid)
@@ -3397,6 +3398,21 @@ public sealed class PacketRouter
                             job);
                         careerChanged |= updated is not null;
                         return updated is not null;
+                    },
+                    SetData = (key, value) =>
+                    {
+                        if (dbid <= 0 ||
+                            !key.Equals(
+                                "Title",
+                                StringComparison.OrdinalIgnoreCase))
+                            return false;
+
+                        var success = _store.SetCurrentTitle(
+                            accountId,
+                            dbid,
+                            value);
+                        appearanceChanged |= success;
+                        return success;
                     }
                 });
 
@@ -3492,6 +3508,20 @@ public sealed class PacketRouter
                         accountId,
                         state.CharacterId.Value,
                         assets));
+
+                result.Packets.Add(
+                    BuildAndBroadcastAppearancePacket(
+                        state,
+                        accountId,
+                        state.CharacterId.Value,
+                        assets));
+            }
+            else if (appearanceChanged &&
+                     state.CharacterId.HasValue)
+            {
+                var assets = _store.GetCharacterAssets(
+                    accountId,
+                    state.CharacterId.Value);
 
                 result.Packets.Add(
                     BuildAndBroadcastAppearancePacket(
