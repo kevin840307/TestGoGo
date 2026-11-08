@@ -9308,7 +9308,8 @@ try
             account.Value,
             monster.X + 20,
             monster.Y,
-            aiNow);
+            aiNow,
+            [monster.EntityId]);
 
         monsterAttackAnimationSeen |= monsterAttackPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
@@ -9358,7 +9359,8 @@ try
         account.Value,
         monster.X + 20,
         monster.Y,
-        deadPlayerTickAt);
+        deadPlayerTickAt,
+        [monster.EntityId]);
 
     Check(!monster.HasTarget &&
           deadPlayerAiPackets.Any(x =>
