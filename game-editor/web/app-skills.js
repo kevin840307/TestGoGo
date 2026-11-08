@@ -15,7 +15,10 @@ function renderSkillList() {
   $$('tr[data-id]', body).forEach(row => row.onclick = () => openSkill(Number(row.dataset.id)));
 }
 async function openSkill(id) {
-  if (state.skillDirty && state.selectedSkill?.id !== id && !confirm('目前技能有尚未儲存的修改，確定要切換嗎？')) return;
+  if (state.skillDirty) {
+    if (state.selectedSkill?.id === id) return;
+    if (!confirm('目前技能有尚未儲存的修改，確定要切換嗎？')) return;
+  }
   state.selectedSkill = await api(`/api/skills/${id}`);
   state.skillDirty = false;
   renderSkillList();
