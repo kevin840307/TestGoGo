@@ -199,6 +199,45 @@ CurrentItemDefinition CurrentItem(
         0, // ColorIndex
         weaponStyle);
 
+static bool PacketTreeContainsString(
+    object? packet,
+    string expected)
+{
+    using var document = JsonDocument.Parse(
+        JsonSerializer.Serialize(packet));
+
+    static bool Contains(
+        JsonElement element,
+        string expectedText)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.String:
+                return element.GetString()?.Contains(
+                    expectedText,
+                    StringComparison.Ordinal) == true;
+            case JsonValueKind.Object:
+                foreach (var property in element.EnumerateObject())
+                {
+                    if (Contains(property.Value, expectedText))
+                        return true;
+                }
+                break;
+            case JsonValueKind.Array:
+                foreach (var item in element.EnumerateArray())
+                {
+                    if (Contains(item, expectedText))
+                        return true;
+                }
+                break;
+        }
+
+        return false;
+    }
+
+    return Contains(document.RootElement, expected);
+}
+
 var currentCatalog = new CurrentClientDataCatalog(
     new[]
     {
@@ -2869,8 +2908,10 @@ try
         var responses = router.Handle(
             invalidChatChannel.RootElement,
             clubLeaderSession);
-        Check(responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
+        Check(
+            responses.Any(x =>
+                PacketTreeContainsString(
+                    x,
                     "不支援的聊天頻道")),
             "unsupported private/wire chat channel is rejected instead of leaking to nearby players");
     }
@@ -2913,8 +2954,10 @@ try
             missingPrivateTarget.RootElement,
             clubMemberSession);
 
-        Check(responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
+        Check(
+            responses.Any(x =>
+                PacketTreeContainsString(
+                    x,
                     "找不到在線玩家")),
             "private message reports an offline/unknown target instead of leaking to another chat scope");
     }
@@ -2934,8 +2977,9 @@ try
             clubLeaderSession);
 
         Check(
-            JsonSerializer.Serialize(responses)
-                .Contains("團長無法直接退出戰團") &&
+            PacketTreeContainsString(
+                responses,
+                "團長無法直接退出戰團") &&
             store.GetClubIdForCharacter(
                 secondCharacterId) == clubId,
             "club leader cannot use /quit");
@@ -2971,8 +3015,9 @@ try
             clubMemberSession);
 
         Check(
-            JsonSerializer.Serialize(responses)
-                .Contains("已退出戰團") &&
+            PacketTreeContainsString(
+                responses,
+                "已退出戰團") &&
             store.GetClubIdForCharacter(id) == 0,
             "non-leader /quit removes membership persistently");
     }
@@ -3007,8 +3052,9 @@ try
             clubLeaderSession);
 
         Check(
-            JsonSerializer.Serialize(responses)
-                .Contains("移出戰團") &&
+            PacketTreeContainsString(
+                responses,
+                "移出戰團") &&
             store.GetClubIdForCharacter(id) == 0,
             "/fire removes only a lower-position club member");
     }
@@ -3021,8 +3067,9 @@ try
             clubLeaderSession);
 
         Check(
-            JsonSerializer.Serialize(responses)
-                .Contains("戰團已解散") &&
+            PacketTreeContainsString(
+                responses,
+                "戰團已解散") &&
             store.GetClubIdForCharacter(
                 secondCharacterId) == 0 &&
             store.GetClubIdForCharacter(id) == 0,
