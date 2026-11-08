@@ -113,6 +113,16 @@ func _test_right_click_preserves_player_interaction() -> void:
 	_check(not player.is_moving,
 		"right-click also stops an ordinary non-combat click-to-move path")
 
+	# A large-detour A* can still be in flight after a rejected direct path.
+	# Cancel its request ID as well as the visible movement so it cannot
+	# resurrect an old target after right-click.
+	player._navigation_fallback_running = true
+	var old_request: int = player._navigation_request_id
+	player._input(right)
+	_check(not player._navigation_fallback_running and
+		player._navigation_request_id > old_request,
+		"right-click invalidates an in-flight asynchronous detour")
+
 	# These handlers own player context menus. Our _input must not consume the
 	# event before NetworkPlayer._input_event sees the same right click.
 	var player_source: String = FileAccess.get_file_as_string("res://player.gd")
