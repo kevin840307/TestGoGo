@@ -8044,12 +8044,32 @@ try
 
     broadcastHub.Unregister(peerRegistration.ConnectionId);
 
+    // Auto-saint and earlier shared-map ticks intentionally advance the
+    // authoritative clock. Start the dedicated AI fixture after that time and
+    // clear inherited aggro/timers so wander behavior is tested in isolation.
+    var aiFixtureAt = autoSaintAt.AddMinutes(1);
+    foreach (var aiFixtureMonster in session.Monsters.Values)
+    {
+        aiFixtureMonster.CurrentHp = aiFixtureMonster.MaxHp;
+        aiFixtureMonster.RespawnAt = null;
+        aiFixtureMonster.HasTarget = false;
+        aiFixtureMonster.TargetCharacterId = 0;
+        aiFixtureMonster.TargetPetUid = 0;
+        aiFixtureMonster.AiState = MonsterAiState.Idle;
+        aiFixtureMonster.IsMoving = false;
+        aiFixtureMonster.HoldingAttackRange = false;
+        aiFixtureMonster.LastAiAt = DateTimeOffset.MinValue;
+        aiFixtureMonster.LastActionAt = DateTimeOffset.MinValue;
+        aiFixtureMonster.LastAttackAt = DateTimeOffset.MinValue;
+        aiFixtureMonster.NextWanderAt = DateTimeOffset.MinValue;
+    }
+
     var idleMonsters = session.Monsters.Values
         .Take(2)
         .ToArray();
     var wanderStartX = monster.X;
     var wanderStartY = monster.Y;
-    var wanderScheduleAt = DateTimeOffset.UtcNow.AddSeconds(1);
+    var wanderScheduleAt = aiFixtureAt;
 
     var initialWanderPackets = combat.TickAi(
         session,
@@ -8190,7 +8210,7 @@ try
     var hpBeforeAutoPetAttack = monster.CurrentHp;
     var autoPetPackets = router.Tick(
         session,
-        DateTimeOffset.UtcNow.AddSeconds(5));
+        aiFixtureAt.AddSeconds(5));
 
     Check(monster.CurrentHp < hpBeforeAutoPetAttack &&
           monster.HasTarget &&
@@ -8222,7 +8242,8 @@ try
     monster.LastAttackAt = DateTimeOffset.MinValue;
 
     session.PetTargets.Clear();
-    session.PetLastAttackAt[petUid] = DateTimeOffset.UtcNow;
+    session.PetLastAttackAt[petUid] =
+        aiFixtureAt.AddSeconds(5);
     session.PetPositions[petUid] =
         (monster.X + 60, monster.Y);
 
@@ -8277,7 +8298,8 @@ try
     session.LastPetFollowTick =
         DateTimeOffset.MinValue;
 
-    var leashStart = DateTimeOffset.UtcNow.AddSeconds(6);
+    var leashStart =
+        session.LastMonsterAiTick.AddSeconds(1);
     var gracePackets = router.Tick(
         session,
         leashStart);
@@ -8669,10 +8691,13 @@ try
                 "\"EffectName\":\"LevelUp\"")),
         "character level-up emits the existing client PlayEffect animation packet");
 
-    monster.RespawnAt = DateTimeOffset.UtcNow.AddMilliseconds(-1);
+    var respawnAt =
+        session.LastMonsterAiTick.AddSeconds(1);
+    monster.RespawnAt =
+        respawnAt.AddMilliseconds(-1);
     var respawnPackets = combat.TickRespawns(
         session,
-        DateTimeOffset.UtcNow);
+        respawnAt);
 
     Check(monster.CurrentHp == monster.MaxHp &&
           monster.RespawnAt is null &&
