@@ -1,44 +1,73 @@
 # SGO Client Performance Regression Checks
 
-## Login input startup smoothness (no credential logging)
+## Login input readiness and smoothness (2026-11-08)
 
-`login_screen.gd` previously rewrote every LineEdit's `text` and
-caret position on **every** text_changed event even when all typed
-characters were valid ASCII. It now sanitizes and rewrites **only if**
-an invalid character was actually removed. Existing allowed character
-rules, focus behavior, account suggestions and login request packets are
-unchanged.
+The previous login flow started the looping OGV while
+`LoginScreen.visible=false`, waited only **two process_frame signals**,
+then revealed the account/password form and immediately grabbed keyboard
+focus. Neither `VideoStreamPlayer.play()` nor two process frames guarantee
+the first decoded video frame or its GPU upload has been drawn. In
+`godot(20261108-045738).log`, the input form appeared while focus
+power-saving was still active at **10 FPS**; a later focused first-frame
+gap reached **149 ms**.
 
-The login background OGV previously began looping in `_ready()`
-before the account form was visible, consuming video decoding through
-the expensive craft/resource prewarm. The video now starts near the END
-of startup prewarm, while the existing LoadingOverlay is still covering
-the account form; the login BGM is also loaded/started there. Two
-process frames can render before the original one-second login fade
-reveals the editable form. Successful login stops unnecessary video
-decoding (failure keeps the login background working). No additional
-post-reveal heavy prewarm was added.
+The new startup policy:
 
-Debug builds emit `[LOGIN_STARTUP_FRAME_GAP]` for frames >=50 ms
-within the first six seconds after the account form is revealed, up to
-12 entries. This records only elapsed frame time, whether the
-background video is playing, whether a login input is focused, and
-existing focus/power-save state. **Do not log username/password text
-or individual keystrokes.** Compare focused samples only, and
-distinguish background FPS throttling from actual foreground stalls.
+- Keep the existing **opaque loading overlay and progress bar** visible.
+- Complete required item/skill/pet indexing, scene resource preloading,
+  non-crafting game-info preparation, and login BGM.
+- Make the actual login scene, including the background OGV and login
+  panel, visible **behind the overlay**. Lock account/password LineEdits,
+  Login and Register buttons: typing and login requests remain disabled.
+- Start background video and wait until `VideoStreamPlayer` has
+  actually advanced its stream position (not just `is_playing()`).
+- Repair a launch-time Windows focus notification lag only during
+  initial bootstrap, after 3 consistent `window_is_focused()` polls.
+  Never release input while the window is unfocused or still running
+  at the intentional 10 FPS background startup throttle.
+- Require **18 consecutive drawn foreground frames** with frame
+  intervals no longer than **42 ms**, resetting on any slower or
+  non-rendered frame. Count `Engine.get_frames_drawn()`, not just
+  `SceneTree.process_frame` ticks.
+- If OGV decoding fails to advance after 3.5s of **foreground** warmup,
+  or foreground render remains unstable after 6s, disable that video
+  and use the original static background. Video cannot block login
+  indefinitely by itself.
+- Only after visual readiness: animate the loading bar to 100%, unlock
+  the form, take account input focus, and finally hide the overlay.
+  Remove the unnecessary one-second login fade which previously hid the
+  editable form during its initial reveal.
+- Keep the original ASCII-only text validation, account suggestions,
+  remembered accounts, server login packets, map handling, and
+  on-demand crafting unchanged.
+
+Debug events:
+
+- `[LOGIN_VISUAL_READY] elapsed_ms=... stable_frames=18 video_fallback=...`
+  occurs **before** `checkpoint=login_screen_ready`.
+- `[LOGIN_VIDEO_FALLBACK]` only if the OGV is too slow or consistently
+  causes unstable foreground frames.
+- `[LOGIN_STARTUP_FRAME_GAP]` remains active for the first six
+  seconds after login reveal. It never prints credentials, their
+  lengths, or typed characters.
 
 ```powershell
+godot --headless --path client --script res://tests/login_visual_readiness_regression.gd
 godot --headless --path client --script res://tests/login_input_startup_regression.gd
 godot --headless --path client --script res://tests/startup_loading_regression.gd
-godot --headless --path client --script res://tests/smooth_loading_bar_regression.gd
 ```
 
-Manual check: cold startup -> loading bar -> username/password screen,
-type quickly immediately during the first six seconds, switch focus
-between account/password, submit invalid credentials then retry, and
-submit valid credentials to character select. Verify correct caret,
-ASCII input handling, account suggestions, login music, moving
-background video, and responsive typing; compare new startup-gap logs.
+**Manual required:** Cold-start with the window focused and in the
+background; after launching, press keys immediately, verify no account
+field accepts text while loading, and check responsive input only after
+`[LOGIN_VISUAL_READY]`. Test Alt+Tab during the last 100% loading bar,
+invalid login, registration, successful login, and 1/5/10 client launches.
+The overlay intentionally remains visible until visual readiness; when
+a client remains unfocused, it awaits foreground focus rather than
+showing an input-enabled form at 10 FPS.
+
+Runtime Godot 4.7.2 is unavailable in the tool environment: static
+GitHub checks do NOT prove the real rendering/timing test passed.
 
 ## Craft first-open lazy loading (2026-11-08)
 
