@@ -97,14 +97,59 @@ internal static class DollRewardSmokeTests
                 router.Handle(
                     use.RootElement,
                     session);
-            var json =
-                JsonSerializer.Serialize(
-                    packets);
+            var packetDocuments =
+                packets
+                    .Select(packet =>
+                        JsonDocument.Parse(
+                            JsonSerializer.Serialize(packet)))
+                    .ToArray();
 
-            Check(
-                json.Contains(
-                    "十二生肖帽娃娃送給你"),
-                "zodiac doll opens through the standard UseItemRequest path");
+            try
+            {
+                var types =
+                    packetDocuments
+                        .Select(x => x.RootElement)
+                        .Where(x =>
+                            x.TryGetProperty(
+                                "Type",
+                                out _))
+                        .Select(x =>
+                            x.GetProperty("Type").GetString())
+                        .Where(x => x is not null)
+                        .ToHashSet(StringComparer.Ordinal);
+
+                var message =
+                    packetDocuments
+                        .Select(x => x.RootElement)
+                        .Where(x =>
+                            x.TryGetProperty(
+                                "Type",
+                                out var type) &&
+                            type.GetString() ==
+                                "SystemMessageFlash")
+                        .Select(x =>
+                            x.TryGetProperty(
+                                "Message",
+                                out var value)
+                                ? value.GetString() ?? ""
+                                : "")
+                        .FirstOrDefault(x =>
+                            x.StartsWith(
+                                "十二生肖帽娃娃送給你：",
+                                StringComparison.Ordinal));
+
+                Check(
+                    types.Contains("InventorySync") &&
+                    types.Contains("EquipSync") &&
+                    types.Contains("PlayItemEffect") &&
+                    !string.IsNullOrWhiteSpace(message),
+                    "zodiac doll opens through the standard UseItemRequest path");
+            }
+            finally
+            {
+                foreach (var document in packetDocuments)
+                    document.Dispose();
+            }
         }
 
         var after =
@@ -143,16 +188,40 @@ internal static class DollRewardSmokeTests
                     accountId,
                     characterId);
 
-            Check(
-                packets.Any(x =>
-                    JsonSerializer.Serialize(x)
-                        .Contains(
-                            "找不到物品")) &&
-                afterReplay.Equips.Count(x =>
-                    Convert.ToInt32(
-                        x["ItemIdx"]) is >= 18089 and <= 18100) ==
-                    afterZodiac.Length,
-                "replaying a consumed doll UID cannot grant a second random reward");
+            var missingItemMessage =
+                packets
+                    .Select(packet =>
+                        JsonDocument.Parse(
+                            JsonSerializer.Serialize(packet)))
+                    .ToArray();
+
+            try
+            {
+                var hasMissingItemMessage =
+                    missingItemMessage
+                        .Select(x => x.RootElement)
+                        .Any(x =>
+                            x.TryGetProperty(
+                                "Message",
+                                out var value) &&
+                            value.ValueKind ==
+                                JsonValueKind.String &&
+                            value.GetString() ==
+                                "找不到物品");
+
+                Check(
+                    hasMissingItemMessage &&
+                    afterReplay.Equips.Count(x =>
+                        Convert.ToInt32(
+                            x["ItemIdx"]) is >= 18089 and <= 18100) ==
+                        afterZodiac.Length,
+                    "replaying a consumed doll UID cannot grant a second random reward");
+            }
+            finally
+            {
+                foreach (var document in missingItemMessage)
+                    document.Dispose();
+            }
         }
     }
 }
