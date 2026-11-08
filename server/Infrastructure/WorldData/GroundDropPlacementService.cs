@@ -148,6 +148,49 @@ public sealed class GroundDropPlacementService
     }
 
     /// <summary>
+    /// Repair old persisted drops whose cells were never validated in the
+    /// legacy server. Preserve a valid old location exactly; when invalid,
+    /// search a small radius around that original location, not the current
+    /// observer's location (which can be kilometres away on the map).
+    /// The original drop has no trustworthy navigation anchor, so this
+    /// certifies the target tile, not a specific player's path to it.
+    /// </summary>
+    public bool TryRecoverPersistedDrop(
+        int mapId, double originalX, double originalY,
+        out DropPlacement placement)
+    {
+        placement = default;
+        if (!double.IsFinite(originalX) || !double.IsFinite(originalY) ||
+            !_blocking.HasMap(mapId) ||
+            _blocking.GetFlags(mapId, originalX, originalY) == 0)
+            return false;
+
+        var cx = (int)Math.Floor(originalX / Cell);
+        var cy = (int)Math.Floor(originalY / Cell);
+        for (var ring = 1; ring <= SearchRadiusCells; ring++)
+        {
+            for (var dy = -ring; dy <= ring; dy++)
+            {
+                for (var dx = -ring; dx <= ring; dx++)
+                {
+                    if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != ring)
+                        continue;
+                    var x = (cx + dx) * (double)Cell + Cell / 2.0;
+                    var y = (cy + dy) * (double)Cell + Cell / 2.0;
+                    if (_blocking.GetFlags(mapId, x, y) != 0)
+                        continue;
+
+                    placement = new DropPlacement(
+                        x, y, Relocated: true, CollisionVerified: true);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// A legal item tile is not sufficient for pickup: a player standing on
     /// the opposite side of a wall could previously claim it from 100px away.
     /// This is a short bounded LOS check, never a full A* search.
