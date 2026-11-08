@@ -15,6 +15,7 @@ from typing import Any
 from sgo_editor.asset_repo import AssetRepository
 from sgo_editor.enemy_repo import EnemyRepository
 from sgo_editor.map_repo import MapRepository
+from sgo_editor.health_repo import HealthRepository
 from sgo_editor.paths import ProjectPaths
 from sgo_editor.quest_repo import QuestRepository
 from sgo_editor.skill_repo import SkillRepository
@@ -30,6 +31,7 @@ class EditorApplication:
         self.maps = MapRepository(paths, backups)
         self.quests = QuestRepository(paths, backups)
         self.assets = AssetRepository(paths, backups)
+        self.health = HealthRepository(paths, self.enemies, self.maps, self.quests, self.skills)
         self.web_root = Path(__file__).resolve().parent / "web"
 
 
@@ -95,6 +97,15 @@ class EditorHandler(BaseHTTPRequestHandler):
                     "scripts": len(self.app.quests.list()),
                     "assetFolders": self.app.assets.folders(),
                 })
+                return
+            if path == "/api/health":
+                force = query.get("refresh", ["0"])[0] in {"1", "true", "yes"}
+                self._send_json(self.app.health.scan(force=force))
+                return
+            if match := re.fullmatch(r"/api/references/(enemy|script)/(.+)", path):
+                kind = match.group(1)
+                key = urllib.parse.unquote(match.group(2))
+                self._send_json(self.app.health.references(kind, key))
                 return
             if path == "/api/skills":
                 self._send_json(self.app.skills.list(query.get("q", [""])[0]))
@@ -174,27 +185,53 @@ class EditorHandler(BaseHTTPRequestHandler):
                 skill_id = int(match.group(1))
                 if method == "DELETE":
                     self.app.skills.delete(skill_id)
-                    self._send_json({"ok": True})
+                    result = {"ok": True}
                 else:
-                    self._send_json(self.app.skills.save(skill_id, body))
+                    result = self.app.skills.save(skill_id, body)
+                self.app.health.invalidate()
+                self._send_json(result)
                 return
             if match := re.fullmatch(r"/api/enemies/(\d+)", path):
                 enemy_id = int(match.group(1))
                 if method == "DELETE":
                     self.app.enemies.delete(enemy_id)
-                    self._send_json({"ok": True})
+                    result = {"ok": True}
                 else:
-                    self._send_json(self.app.enemies.save(enemy_id, body))
+                    result = self.app.enemies.save(enemy_id, body)
+                self.app.health.invalidate()
+                self._send_json(result)
+                return
+            if match := re.fullmatch(r"/api/maps/(\d+)/validate", path):
+                if method == "DELETE":
+                    raise ValueError("不支援 DELETE")
+                map_id = int(match.group(1))
+                tab = str(body.get("tab", ""))
+                items = body.get("items", [])
+                if not isinstance(items, list):
+                    raise ValueError("items 必須是陣列")
+                self._send_json(self.app.health.validate_map_items(map_id, tab, items))
                 return
             if match := re.fullmatch(r"/api/maps/(\d+)/enemies", path):
                 if method == "DELETE":
                     raise ValueError("不支援直接 DELETE；請 PUT 新的出生點清單")
-                self._send_json(self.app.maps.save_enemy_spawns(int(match.group(1)), body if isinstance(body, list) else body.get("items", [])))
+                items = body if isinstance(body, list) else body.get("items", [])
+                report = self.app.health.validate_map_items(int(match.group(1)), "enemies", items)
+                if report["errors"]:
+                    raise ValueError("地圖驗證失敗：" + "；".join(x["message"] for x in report["errors"][:5]))
+                result = self.app.maps.save_enemy_spawns(int(match.group(1)), items)
+                self.app.health.invalidate()
+                self._send_json(result)
                 return
             if match := re.fullmatch(r"/api/maps/(\d+)/npcs", path):
                 if method == "DELETE":
                     raise ValueError("不支援直接 DELETE；請 PUT 新的 NPC 清單")
-                self._send_json(self.app.maps.save_npc_spawns(int(match.group(1)), body if isinstance(body, list) else body.get("items", [])))
+                items = body if isinstance(body, list) else body.get("items", [])
+                report = self.app.health.validate_map_items(int(match.group(1)), "npcs", items)
+                if report["errors"]:
+                    raise ValueError("地圖驗證失敗：" + "；".join(x["message"] for x in report["errors"][:5]))
+                result = self.app.maps.save_npc_spawns(int(match.group(1)), items)
+                self.app.health.invalidate()
+                self._send_json(result)
                 return
             if match := re.fullmatch(r"/api/maps/(\d+)/snap-points", path):
                 if method == "DELETE":
@@ -212,16 +249,20 @@ class EditorHandler(BaseHTTPRequestHandler):
                 name = urllib.parse.unquote(match.group(1))
                 if method == "DELETE":
                     self.app.quests.delete(name)
-                    self._send_json({"ok": True})
+                    result = {"ok": True}
                 else:
-                    self._send_json(self.app.quests.save(name, str(body.get("content", "")), bool(body.get("force", False))))
+                    result = self.app.quests.save(name, str(body.get("content", "")), bool(body.get("force", False)))
+                self.app.health.invalidate()
+                self._send_json(result)
                 return
             if path == "/api/assets" and method != "DELETE":
-                self._send_json(self.app.assets.replace(
+                result = self.app.assets.replace(
                     str(body.get("path", "")),
                     str(body.get("contentBase64", "")),
                     str(body.get("sourceName", "")) or None,
-                ))
+                )
+                self.app.health.invalidate()
+                self._send_json(result)
                 return
             self._send_json({"error": "找不到 API"}, 404)
         except Exception as exc:
