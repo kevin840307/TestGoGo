@@ -233,5 +233,15 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("replaying consumed lantern source cannot duplicate", source)
         self.assertIn("LanternTransformationSmokeTests.Run(", main)
 
+    def test_doll_reward_suite_guards_full_recovered_pools(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = SMOKE / "Integration" / "DollRewardSmokeTests.cs"
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("all nine recovered doll source IDs 2126..2134", source)
+        self.assertIn("zodiac doll atomically consumes one source", source)
+        self.assertIn("replaying a consumed doll UID cannot grant", source)
+        self.assertIn("DollRewardSmokeTests.Run(", main)
+
 if __name__ == "__main__":
     unittest.main()
