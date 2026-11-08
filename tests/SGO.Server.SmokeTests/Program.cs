@@ -7934,16 +7934,30 @@ try
             "GM item command refreshes inventory");
     }
 
+    session.WorldReady = true;
+    session.LoadedMonsterMapId = 15;
+    session.WorldSnapshotRetriesRemaining = 3;
+    session.PositionDirty = true;
+    session.PetTargets[123] = 9_000_001;
+    session.PetOutOfRangeSince[123] =
+        DateTimeOffset.UtcNow;
+
     using (var gmMap = Json(
         """{"Type":"ChatMessage","Channel":0,"Message":"/gm map 15 9408 10336","BubbleType":0}"""))
     {
         var responses = router.Handle(gmMap.RootElement, session);
         Check(session.CurrentMapId == 15 &&
               session.PendingMapSpawn &&
+              !session.WorldReady &&
+              session.LoadedMonsterMapId == 0 &&
+              session.WorldSnapshotRetriesRemaining == 0 &&
+              !session.PositionDirty &&
+              session.PetTargets.Count == 0 &&
+              session.PetOutOfRangeSince.Count == 0 &&
               responses.Any(x =>
                   JsonSerializer.Serialize(x).Contains(
                       "\"Type\":\"ChangeMap\"")),
-            "GM map command teleports and schedules world respawn");
+            "GM map command resets world snapshot and stale combat state before respawn");
     }
 
     using (var chat = Json(
