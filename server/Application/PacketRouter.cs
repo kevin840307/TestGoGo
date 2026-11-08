@@ -5399,11 +5399,17 @@ public sealed class PacketRouter
                     state.PositionDirty = false;
                     state.LastPositionPersistAt = now;
                     state.PendingMapSpawn = true;
-                state.WorldReady = false;
+                    state.WorldReady = false;
                     state.LoadedMonsterMapId = 0;
                     state.WorldSnapshotRetriesRemaining = 0;
                     state.PetTargets.Clear();
                     state.PetOutOfRangeSince.Clear();
+
+                    // Reconcile presence immediately instead of leaving this
+                    // connection in the old map AOI until the next 250 ms
+                    // transport tick. WorldReady=false keeps it out of the
+                    // destination AOI until the new scene is actually ready.
+                    SyncPresence(state);
                 }
             }
         }
