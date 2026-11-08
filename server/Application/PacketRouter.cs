@@ -5797,9 +5797,29 @@ public sealed class PacketRouter
     {
         state.GroundItems.Clear();
 
+        var groundItems =
+            _store.GetGroundItems(
+                    state.CurrentMapId)
+                .ToArray();
+        var authoritativeIds =
+            groundItems
+                .Select(x =>
+                    (long)x.EntityId)
+                .ToHashSet();
+
+        // GetGroundItems removes expired DB rows. Reconcile the in-memory AOI
+        // group before registering the current rows so a map that had no
+        // active players cannot resurrect an expired/picked-up ground item
+        // when somebody returns later.
+        PublishWorldAoiChanges(
+            _broadcasts.RemoveMissingWorldEntities(
+                state.CurrentMapId,
+                3,
+                authoritativeIds),
+            skipObserver: state.ConnectionId);
+
         foreach (var ground in
-                 _store.GetGroundItems(
-                     state.CurrentMapId))
+                 groundItems)
         {
             state.GroundItems[
                 ground.EntityId] = ground;
