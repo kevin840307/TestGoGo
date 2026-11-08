@@ -86,7 +86,8 @@ public sealed class EnemyDropCatalog
         int enemyId,
         int entityId,
         int killSequence,
-        int lucky)
+        int lucky,
+        double dropMultiplier = 1.0)
     {
         var drops = GetDrops(enemyId);
         if (drops.Count == 0)
@@ -102,13 +103,21 @@ public sealed class EnemyDropCatalog
 
             for (var attempt = 0; attempt < rollCount; attempt++)
             {
+                var effectiveChance = Math.Clamp(
+                    drop.Chance *
+                    (double.IsFinite(dropMultiplier)
+                        ? Math.Max(1.0, dropMultiplier)
+                        : 1.0),
+                    0.0,
+                    1.0);
+
                 if (Roll01(
                         enemyId,
                         entityId,
                         killSequence,
                         drop.ItemId,
                         i,
-                        attempt) >= drop.Chance)
+                        attempt) >= effectiveChance)
                     continue;
 
                 result.Add(drop);
