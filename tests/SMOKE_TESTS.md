@@ -28,11 +28,13 @@ tests/SGO.Server.SmokeTests/
     PreloginPacketSmokeTests.cs      # 直接呼叫 PacketRouter 驗證登入前錯誤／Pong
   World/
     BlockingMapSmokeTests.cs         # Blocking.dat、嚴格穿牆／斜角／A* 繞路
+  GameData/
+    CurrentClientCatalogSmokeTests.cs # 真實 Client skill/item/reward 對照
   Announcements/
     AnnouncementSmokeTests.cs        # Date/Title/Content 與清單過濾
 ```
 
-原本 `Program.cs` 約 **9,518 行**。本次先將上述相對獨立的測試抽走，包含 53 項獨立 Schema／公告斷言、6 項登入前 Router 斷言、12 項 Blocking.dat／尋路斷言；其餘世界整合測試的程式段落與執行順序保留。這是維護性改善的第一階段，不代表其餘單檔整合測試都已拆完。
+原本 `Program.cs` 約 **9,518 行**。目前已將相對獨立的測試抽走，包含 Schema／公告、登入前 Router、Blocking.dat／尋路，以及真實 Client skill/item/reward catalog 對照；其餘需要共用 SQLite／Session 狀態的整合測試仍分階段搬到 `Integration/`。這是維護性改善，不代表其餘單檔整合測試都已拆完。
 
 ## 新增測試規則
 
