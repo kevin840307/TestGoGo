@@ -30,6 +30,22 @@
   - Party-return 視覺。
   - 寵物/機甲等 owner companion 的 Spawn/Move/IdleSpeech/攻擊 `SyncState`。
 
+### Companion known-set
+
+寵物是獨立 Entity，不能只跟著 owner 的 Move 封包做距離裁切。ServerBroadcastHub 會保存每個 owner 目前 active companion 的完整 Spawn snapshot 與最新 X/Y：
+
+- pet Spawn 建立/刷新 snapshot。
+- pet Move 更新 snapshot X/Y。
+- pet Despawn 移除 snapshot。
+- owner 進入另一玩家 AOI：先送 owner Spawn，再送所有 active companion Spawn。
+- owner 離開 AOI：先送所有 companion Despawn，再送 owner Despawn。
+- local WorldReady 的 visible peer snapshot 也會帶 peer companions。
+- map change / logout / transport disconnect 會在舊 AOI despawn 完成後清掉 owner companion snapshot。
+
+因此新靠近的玩家不會先收到未知 pet 的 Move/Attack，也不會在 owner 離開後留下孤兒 pet。
+
+Server-side persisted map reconcile 也會在偵測到 map change 的同一 tick 立即清舊 Player/World AOI，而不是多等下一個 250ms transport tick；destination 在 `WorldReady=false` 期間仍不會對附近玩家曝光。
+
 ## 2. Monster / Ground World AOI
 
 `Application/Messaging/WorldEntitySpatialAoi.cs`
@@ -165,6 +181,12 @@ AOI 不是刪除資料，只決定某 connection 此刻是否需要收到世界 
   - map/disconnect。
   - 1000 sparse players。
   - concurrent movement。
+
+- `World/PlayerCompanionAoiSmokeTests.cs`
+  - companion Spawn tracking。
+  - Move 更新最新 snapshot。
+  - observer 只經 owner Player AOI 收 companion event。
+  - Despawn/map cleanup 不得讓 future AOI enter 復活孤兒 pet。
 
 - `World/WorldEntitySpatialAoiSmokeTests.cs`
   - monster/ground far suppression。
