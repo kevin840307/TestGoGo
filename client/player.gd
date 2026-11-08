@@ -418,6 +418,15 @@ func _finish_mouse_autorun_hold() -> void:
 		CursorManager.set_autorun_indicator(_mouse_autorun.latched)
 
 
+# _input executes before object picking. Cancel navigation without consuming
+# the right-click: NetworkPlayer's own _input_event must still open its
+# original player context menu, and right-click skill cancellation remains.
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
+		if _mouse_autorun.latched or is_mouse_holding:
+			cancel_autorun_tracking(true)
+
+
 func _unhandled_input(event: InputEvent) -> void :
 	if is_dead:
 		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
@@ -501,7 +510,7 @@ func _physics_process(_delta: float) -> void :
 		return
 
 	# Interactable clicks can consume mouse-up before Player receives it.
-	# Track the 500ms hold in physics so cursor changes while pressed.
+	# Track the two-second hold in physics so cursor changes while pressed.
 	if _mouse_autorun.holding:
 		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 			_finish_mouse_autorun_hold()
