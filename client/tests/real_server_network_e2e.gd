@@ -38,6 +38,7 @@ var _inventory_generation := 0
 var _last_inventory: Array = []
 var _ground_spawn_done := false
 var _ground_spawn_data: Dictionary = {}
+var _expected_ground_entity_id := 0
 var _pickup_done := false
 var _pickup_data: Dictionary = {}
 var _change_map_done := false
@@ -308,6 +309,7 @@ func _run() -> void:
 		return
 
 	var ground_entity_id := int(_ground_spawn_data.get("EntityID", 0))
+	_expected_ground_entity_id = ground_entity_id
 	_check(
 		ground_entity_id > 0,
 		"Godot receives authoritative ground EntityID before map change"
@@ -502,6 +504,10 @@ func _on_entity_spawned(data: Dictionary) -> void:
 		int(data.get("EntityType", -1)) == 3
 		and data.get("ExtraData", {}) is Dictionary
 		and int(data.get("ExtraData", {}).get("ItemIndex", 0)) == 1001
+		and (
+			_expected_ground_entity_id <= 0
+			or int(data.get("EntityID", 0)) == _expected_ground_entity_id
+		)
 	):
 		_ground_spawn_data = data.duplicate(true)
 		_ground_spawn_done = true
