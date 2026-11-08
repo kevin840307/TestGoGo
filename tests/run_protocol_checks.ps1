@@ -76,6 +76,12 @@ try {
         "-c", "Release", "--", "--output",
         (Join-Path $logRoot "item-use-coverage.json")
     )
+    Invoke-Checked "Historical mapping coverage report" "dotnet" @(
+        "run", "--project",
+        "tests/SGO.MappingCoverageReport/SGO.MappingCoverageReport.csproj",
+        "-c", "Release", "--", "--output",
+        (Join-Path $logRoot "mapping-coverage.json")
+    )
     Invoke-Checked ".NET game smoke test build" "dotnet" @(
         "build", "tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj",
         "-c", "Release"
