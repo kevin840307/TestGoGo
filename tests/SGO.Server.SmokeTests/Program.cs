@@ -34,8 +34,41 @@ using SGO.Server.SmokeTests.Protocol;
 using SGO.Server.SmokeTests.Announcements;
 using SGO.Server.SmokeTests.World;
 
+// Fast, independent suites can be run without loading legacy GameData or SQLite:
+// dotnet run --project tests/SGO.Server.SmokeTests -- --suite protocol
+// Accepted suites: protocol, announcements, world, all (default).
+if (args.Length != 0)
+{
+    if (args.Length != 2 || args[0] != "--suite")
+        throw new ArgumentException(
+            "Usage: --suite protocol|announcements|world|all");
+
+    switch (args[1].ToLowerInvariant())
+    {
+        case "protocol":
+            RequestSchemaSmokeTests.Run();
+            ActionSchemaSmokeTests.Run();
+            IdentitySchemaSmokeTests.Run();
+            Console.WriteLine("Protocol schema smoke passed.");
+            return;
+        case "announcements":
+            AnnouncementSmokeTests.Run();
+            Console.WriteLine("Announcement smoke passed.");
+            return;
+        case "world":
+            BlockingMapSmokeTests.Run();
+            Console.WriteLine("Blocking-map smoke passed.");
+            return;
+        case "all":
+            break;
+        default:
+            throw new ArgumentException(
+                "Unknown suite: " + args[1]);
+    }
+}
+
 // Domain-focused, dependency-free contract suites are maintained in
-// Protocol/*.cs and Announcements/*.cs, not in this world integration runner.
+// Protocol/*.cs, World/*.cs and Announcements/*.cs.
 RequestSchemaSmokeTests.Run();
 ActionSchemaSmokeTests.Run();
 IdentitySchemaSmokeTests.Run();
