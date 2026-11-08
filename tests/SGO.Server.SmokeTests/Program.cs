@@ -61,6 +61,7 @@ if (args.Length != 0)
             return;
         case "world":
             BlockingMapSmokeTests.Run();
+        GroundDropPlacementSmokeTests.Run();
             PlayerSpatialAoiSmokeTests.Run();
             WorldEntitySpatialAoiSmokeTests.Run();
             Console.WriteLine("World/AOI smoke passed.");
@@ -99,6 +100,7 @@ Check(Directory.Exists(gameDataRoot), "server data directory exists");
 var world = new WorldDataService(gameDataRoot);
 
 BlockingMapSmokeTests.Run();
+GroundDropPlacementSmokeTests.Run();
 PlayerSpatialAoiSmokeTests.Run();
 WorldEntitySpatialAoiSmokeTests.Run();
 ConcurrencySmokeTests.Run(repoRoot);
