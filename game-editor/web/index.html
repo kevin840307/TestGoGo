@@ -97,6 +97,11 @@
         <div class="panel-toolbar map-toolbar">
           <div class="field compact"><label>地圖</label><select id="map-select"></select></div>
           <div class="segmented"><button class="active" data-map-tab="enemies">怪物</button><button data-map-tab="npcs">NPC</button></div>
+          <div class="map-layer-controls">
+            <label class="toggle-chip"><input type="checkbox" id="map-show-blocking" checked /><span>阻擋區</span></label>
+            <label class="toggle-chip"><input type="checkbox" id="map-show-spawners" checked /><span>怪物區域</span></label>
+            <label class="toggle-chip"><input type="checkbox" id="map-snap-walkable" checked /><span>吸附可走區</span></label>
+          </div>
           <div class="toolbar-spacer"></div>
           <button class="button ghost" id="map-add">＋ 新增</button>
           <button class="button primary" id="map-save">儲存地圖</button>
@@ -120,7 +125,7 @@
           <div class="map-canvas-panel">
             <div class="map-stage-toolbar">
               <span id="map-stage-hint">選一隻怪物後點地圖新增；拖曳標記可移動。</span>
-              <span id="map-stage-coord">X — / Y —</span>
+              <span class="map-stage-legend"><i class="legend-blocked"></i>不可走 <i class="legend-special"></i>特殊地形 <span id="map-stage-coord">X — / Y —</span></span>
             </div>
             <div class="map-stage" id="map-stage">
               <div class="map-stage-empty" id="map-stage-empty">目前沒有資料，從左側選擇後點這裡新增。</div>
