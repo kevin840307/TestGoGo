@@ -1194,6 +1194,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 
 
 	is_changing_map = true
+	set_frame_gap_stage("map_transition_loading")
 	log_performance_checkpoint("map_transition_begin")
 
 
@@ -1234,6 +1235,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 		return
 
 
+	set_frame_gap_stage("map_transition_cleanup")
 	var clear_started_usec: = Time.get_ticks_usec()
 	var cleared_entities: Dictionary = {}
 	if NetworkEntityManager:
@@ -1322,6 +1324,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 	if not _is_map_transition_current(transition_id):
 		return
 
+	set_frame_gap_stage("map_transition_instantiate")
 	var instantiate_started_usec: = Time.get_ticks_usec()
 	current_map_node = map_resource.instantiate()
 	var instantiate_ms: = float(Time.get_ticks_usec() - instantiate_started_usec) / 1000.0
@@ -1347,6 +1350,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 	if not _is_map_transition_current(transition_id):
 		return
 
+	set_frame_gap_stage("map_transition_add_child")
 	var add_child_started_usec: = Time.get_ticks_usec()
 	get_tree().root.add_child(current_map_node)
 	var add_child_ms: = float(Time.get_ticks_usec() - add_child_started_usec) / 1000.0
@@ -1369,6 +1373,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 	if BuildingManager: call_deferred("_init_buildings_with_diagnostics", source_map_id, target_map_id)
 
 
+	set_frame_gap_stage("map_transition_player_reparent")
 	if is_instance_valid(current_player):
 		if current_map_node.has_node("Entities"):
 			current_map_node.get_node("Entities").add_child(current_player)
@@ -1400,6 +1405,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 	if CursorManager:
 		CursorManager.set_cursor_state("normal")
 
+	set_frame_gap_stage("map_transition_finalize")
 	var bgm_started_usec: = Time.get_ticks_usec()
 	AudioManager.play_map_bgm(target_map_id)
 	_trace_map_change("bgm_request_started", source_map_id, target_map_id, {
@@ -1434,6 +1440,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 	if is_instance_valid(current_hud) and current_hud.has_method("hide_map_loading"):
 		current_hud.hide_map_loading()
 	_trace_map_change("loading_hide_requested", source_map_id, target_map_id)
+	set_frame_gap_stage("world_running")
 	log_performance_checkpoint("map_transition_ready")
 	if _train_travel_active and _train_travel_phase == "loading_map":
 		await _finish_train_travel_after_map_change()
