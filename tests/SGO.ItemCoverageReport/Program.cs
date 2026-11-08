@@ -7,6 +7,9 @@ var repoRoot =
         Directory.GetCurrentDirectory());
 
 var output = ParseOutput(args);
+var strict = args.Contains(
+    "--strict",
+    StringComparer.Ordinal);
 var current =
     new CurrentClientDataCatalog(
         Path.Combine(
@@ -103,6 +106,16 @@ foreach (var row in rows.Where(x =>
     Console.WriteLine(
         $"{row.Status}: {row.ItemId} {row.Name} " +
         $"script={row.ScriptName}");
+}
+
+if (strict &&
+    rows.Any(x =>
+        x.Status ==
+        "UNKNOWN_SCRIPT_EFFECT"))
+{
+    Console.Error.WriteLine(
+        "FAIL: one or more scripted general items still have UNKNOWN_SCRIPT_EFFECT.");
+    Environment.ExitCode = 1;
 }
 
 CoverageRow Classify(
