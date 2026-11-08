@@ -441,6 +441,20 @@ class SmokeSuiteStructureTests(unittest.TestCase):
                 wiring,
             )
 
+    def test_dynamic_monster_ids_are_map_unique_for_world_aoi(self):
+        combat = (
+            ROOT / "server" / "Application" / "Combat" /
+            "CombatService.cs"
+        ).read_text(encoding="utf-8-sig")
+
+        start = combat.index("public IReadOnlyList<object> SpawnLegacyEnemy")
+        end = combat.index("public IReadOnlyList<object> PetAttack", start)
+        spawn = combat[start:end]
+
+        self.assertIn("9_000_000 +", spawn)
+        self.assertIn("session.CurrentMapId * 10_000", spawn)
+        self.assertIn("WorldEntitySpatialAoi uses EntityID", spawn)
+
     def test_world_entity_aoi_suite_is_modular_and_wired(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = (
