@@ -8,6 +8,12 @@ class_name AfkVisualCache
 var _resources: Array[Dictionary] = []
 var _map_ref: WeakRef = null
 var _skipped_unrestorable: int = 0
+var _last_scan_stats: Dictionary = {}
+
+
+func get_last_scan_stats() -> Dictionary:
+	return _last_scan_stats.duplicate()
+
 
 
 func tracked_map() -> Node:
@@ -18,6 +24,7 @@ func discard() -> void:
 	_resources.clear()
 	_map_ref = null
 	_skipped_unrestorable = 0
+	_last_scan_stats.clear()
 
 
 func suspended_count() -> int:
@@ -65,21 +72,40 @@ func suspend_static_map(map_node: Node) -> Dictionary:
 		_map_ref = weakref(map_node)
 	var released: int = 0
 	var skipped: int = 0
+	var visited: int = 0
+	var visual_candidates: int = 0
+	var resource_candidates: int = 0
+	var excluded_entities: int = 0
+	var excluded_collision: int = 0
+	var excluded_scripted: int = 0
+	var retained_embedded: int = 0
+	var retained_generated: int = 0
+	var retained_missing: int = 0
 	var pending: Array[Node] = [map_node]
 	while not pending.is_empty():
 		var node: Node = pending.pop_back()
 		if not is_instance_valid(node) or node.is_queued_for_deletion():
 			continue
-		# Do not traverse the live world entity container. Player movement,
-		# targeting, AOI, combat and loot logic continue during AFK.
-		if node != map_node and (
-			node.name == "Entities" or node is CollisionObject2D or node.get_script() != null
-		):
-			continue
+		visited += 1
+		# These subtrees are deliberately kept for movement, monster AI,
+		# networking, combat targeting, pickup and quest state.
+		if node != map_node:
+			if node.name == "Entities":
+				excluded_entities += 1
+				continue
+			if node is CollisionObject2D:
+				excluded_collision += 1
+				continue
+			if node.get_script() != null:
+				excluded_scripted += 1
+				continue
 		var property_name: String = _visual_property(node)
 		if property_name != "":
+			visual_candidates += 1
 			var current: Variant = node.get(property_name)
 			if current is Resource and is_instance_valid(current):
+				resource_candidates += 1
+				var resource_path: String = (current as Resource).resource_path
 				var path: String = _restorable_path(current)
 				if not path.is_empty():
 					var record: Dictionary = {
@@ -98,11 +124,33 @@ func suspend_static_map(map_node: Node) -> Dictionary:
 					released += 1
 				else:
 					skipped += 1
+					if resource_path.contains("::"):
+						retained_embedded += 1
+					elif resource_path.is_empty() or not resource_path.begins_with("res://"):
+						retained_generated += 1
+					else:
+						retained_missing += 1
 		for child in node.get_children():
 			if child is Node:
 				pending.append(child)
 	_skipped_unrestorable += skipped
-	return {"released": released, "tracked": _resources.size(), "skipped": skipped}
+	_last_scan_stats = {
+		"released": released,
+		"tracked": _resources.size(),
+		"skipped": skipped,
+		"visited_nodes": visited,
+		"visual_candidates": visual_candidates,
+		"resource_candidates": resource_candidates,
+		"excluded_entities": excluded_entities,
+		"excluded_collision": excluded_collision,
+		"excluded_scripted": excluded_scripted,
+		"retained_embedded": retained_embedded,
+		"retained_generated": retained_generated,
+		"retained_missing": retained_missing,
+	}
+	# Do not conflate released property references with reclaimed bytes:
+	# maps, ResourceLoader and other nodes may still hold shared resources.
+	return _last_scan_stats.duplicate()
 
 
 func restore_static_map(batch_size: int = 24) -> Dictionary:

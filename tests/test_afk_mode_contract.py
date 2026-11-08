@@ -90,6 +90,24 @@ class AfkModeContract(unittest.TestCase):
         self.assertNotIn('Engine.time_scale =', read("client/scripts/game_manager.gd"))
         self.assertNotIn('Engine.physics_ticks_per_second =', read("client/scripts/game_manager.gd"))
 
+    def test_afk_memory_logs_explain_why_ram_does_not_drop(self):
+        game = read("client/scripts/game_manager.gd")
+        cache = read("client/scripts/afk_visual_cache.gd")
+        hud = read("client/game_hud.gd")
+        self.assertIn("[AFK_MEMORY]", game)
+        self.assertIn("metric_scope=godot_not_windows_working_set", game)
+        self.assertIn("Performance.MEMORY_STATIC", game)
+        self.assertIn("Performance.RENDER_TEXTURE_MEM_USED", game)
+        self.assertIn("Performance.RENDER_VIDEO_MEM_USED", game)
+        self.assertIn("Performance.OBJECT_RESOURCE_COUNT", game)
+        self.assertIn("_log_afk_memory_after_settle", game)
+        self.assertIn("_afk_memory_baseline = _afk_memory_sample()", game)
+        self.assertIn('"retained_embedded": retained_embedded', cache)
+        self.assertIn('"retained_generated": retained_generated', cache)
+        self.assertIn('"excluded_scripted": excluded_scripted', cache)
+        self.assertIn('"visited_nodes": visited', cache)
+        self.assertIn('int(stats.get("retained_embedded", 0))', hud)
+
     def test_native_mouse_and_silent_afk_audio(self):
         cursor = read("client/scripts/cursor_manager.gd")
         manager = read("client/scripts/game_manager.gd")

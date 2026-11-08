@@ -48,6 +48,64 @@ var _afk_map_cache = AFK_VISUAL_CACHE.new()
 var _afk_saved_profile: Dictionary = {}
 var _afk_visual_stats: Dictionary = {}
 var _afk_master_was_muted_before: bool = false
+var _afk_memory_baseline: Dictionary = {}
+
+
+func _afk_memory_sample() -> Dictionary:
+	# These are Godot allocator/resource counters, NOT Windows working set
+	# and NOT OS-level process dedicated VRAM. Match pid to the Windows
+	# profiler to validate whether real process RAM ever falls.
+	return {
+		"godot_static_mb": float(Performance.get_monitor(Performance.MEMORY_STATIC)) / 1048576.0,
+		"godot_peak_mb": float(Performance.get_monitor(Performance.MEMORY_STATIC_MAX)) / 1048576.0,
+		"godot_texture_mb": float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
+		"godot_video_mb": float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+		"resource_objects": int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT)),
+		"node_objects": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+	}
+
+
+func _log_afk_memory(stage: String) -> void:
+	if not OS.is_debug_build():
+		return
+	var measured: Dictionary = _afk_memory_sample()
+	var before: Dictionary = _afk_memory_baseline
+	var stats: Dictionary = _afk_visual_stats
+	print("[AFK_MEMORY] stage=%s pid=%d godot_static_mb=%.2f delta_static_mb=%+.2f godot_static_peak_mb=%.2f godot_texture_mb=%.2f delta_texture_mb=%+.2f godot_video_mb=%.2f delta_video_mb=%+.2f resource_objects=%d delta_resources=%+d node_objects=%d released_refs=%d retained_embedded=%d retained_generated=%d retained_missing=%d excluded_scripted_subtrees=%d excluded_collision_subtrees=%d excluded_entity_subtrees=%d visited_nodes=%d visual_candidates=%d resource_candidates=%d metric_scope=godot_not_windows_working_set" % [
+		stage, OS.get_process_id(),
+		float(measured.get("godot_static_mb", 0.0)),
+		float(measured.get("godot_static_mb", 0.0)) - float(before.get("godot_static_mb", 0.0)),
+		float(measured.get("godot_peak_mb", 0.0)),
+		float(measured.get("godot_texture_mb", 0.0)),
+		float(measured.get("godot_texture_mb", 0.0)) - float(before.get("godot_texture_mb", 0.0)),
+		float(measured.get("godot_video_mb", 0.0)),
+		float(measured.get("godot_video_mb", 0.0)) - float(before.get("godot_video_mb", 0.0)),
+		int(measured.get("resource_objects", 0)),
+		int(measured.get("resource_objects", 0)) - int(before.get("resource_objects", 0)),
+		int(measured.get("node_objects", 0)),
+		int(stats.get("released", 0)),
+		int(stats.get("retained_embedded", 0)),
+		int(stats.get("retained_generated", 0)),
+		int(stats.get("retained_missing", 0)),
+		int(stats.get("excluded_scripted", 0)),
+		int(stats.get("excluded_collision", 0)),
+		int(stats.get("excluded_entities", 0)),
+		int(stats.get("visited_nodes", 0)),
+		int(stats.get("visual_candidates", 0)),
+		int(stats.get("resource_candidates", 0))
+	])
+
+
+func _log_afk_memory_after_settle(started_msec: int) -> void:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	await tree.create_timer(3.0).timeout
+	if not is_inside_tree() or not _afk_active or _afk_started_msec != started_msec:
+		return
+	_log_afk_memory("afk_settled_3s")
+
+
 var current_world_enhancement: CanvasLayer = null
 var current_day_night_overlay: CanvasLayer = null
 var world_enhancement_enabled: bool = GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
@@ -596,10 +654,12 @@ func begin_afk_mode() -> bool:
 		"players": current_simplify_players_mode,
 		"monsters": current_simplify_monsters_mode,
 	}
+	_afk_memory_baseline = _afk_memory_sample()
 	_afk_active = true
 	_afk_started_msec = Time.get_ticks_msec()
-	_enter_afk_audio_silence()
+	_log_afk_memory("enter_before")
 	_log_afk_state("enter_before")
+	_enter_afk_audio_silence()
 	# Phase 1: keep gameplay nodes alive and network/physics processing at
 	# their original rates; hide only world presentation.
 	if current_player.has_method("begin_afk_navigation_anchor"):
@@ -615,6 +675,9 @@ func begin_afk_mode() -> bool:
 	_clear_visual_runtime_caches()
 	_refresh_focus_render_policy()
 	_log_afk_state("enter_after", int(_afk_visual_stats.get("released", 0)))
+	_log_afk_memory("enter_after")
+	if OS.is_debug_build():
+		_log_afk_memory_after_settle(_afk_started_msec)
 	return true
 
 
@@ -661,6 +724,8 @@ func finish_afk_mode() -> bool:
 	_afk_visual_stats.clear()
 	_refresh_focus_render_policy()
 	_log_afk_state("restore_complete", int(restore_result.get("restored", 0)), int(restore_result.get("missing", 0)))
+	_log_afk_memory("restore_complete")
+	_afk_memory_baseline.clear()
 	return true
 
 
@@ -672,6 +737,7 @@ func _refresh_afk_map_visuals_after_change() -> void:
 	_afk_visual_stats = _afk_map_cache.suspend_static_map(current_map_node)
 	_clear_visual_runtime_caches()
 	_log_afk_state("map_changed_unloaded", int(_afk_visual_stats.get("released", 0)))
+	_log_afk_memory("afk_map_changed")
 
 
 func _reset_afk_mode() -> void:
@@ -682,6 +748,7 @@ func _reset_afk_mode() -> void:
 	_afk_saved_profile.clear()
 	_afk_visual_stats.clear()
 	_afk_map_cache.discard()
+	_afk_memory_baseline.clear()
 
 
 func _rebuild_performance_profile() -> void:

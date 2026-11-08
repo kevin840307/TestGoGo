@@ -1454,8 +1454,10 @@ func _refresh_afk_dashboard() -> void:
 		if failed > 0:
 			afk_resource_stats.text = "有 %d 筆貼圖無法還原，請再次點擊返回遊戲重試" % failed
 		else:
-			afk_resource_stats.text = "已卸載貼圖 %d 筆  ·  監控畫面 %d FPS" % [
-				int(stats.get("released", 0)), GameManager.AFK_MONITOR_FPS
+			afk_resource_stats.text = "卸載 %d 筆 · 保留子資源 %d 筆 · 監控 %d FPS" % [
+				int(stats.get("released", 0)),
+				int(stats.get("retained_embedded", 0)),
+				GameManager.AFK_MONITOR_FPS
 			]
 	if afk_btn_restore:
 		afk_btn_restore.disabled = GameManager.is_changing_map or GameManager.is_afk_mode_restoring()
