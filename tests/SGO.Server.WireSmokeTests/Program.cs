@@ -1277,6 +1277,35 @@ await AwaitType(
     "peer receives ground-item despawn after pickup",
     skipNonMatchingSameType: true);
 
+// A second pickup request may arrive after another socket or a map scene
+// already removed the entity. SQLite must remain authoritative, and the
+// requester needs a local Despawn even if its GroundItems cache was empty.
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "PickUpItemRequest",
+        EntityID = groundEntityId
+    });
+
+await AwaitType(
+    socket,
+    "DespawnEntity",
+    root =>
+        root.TryGetProperty("EntityID", out var entity) &&
+        entity.GetInt32() == groundEntityId,
+    "duplicate pickup returns local DespawnEntity for missing SQLite row",
+    skipNonMatchingSameType: true);
+
+await AwaitType(
+    socket,
+    "SystemMessageFlash",
+    root =>
+        root.TryGetProperty("Message", out var message) &&
+        message.GetString() == "物品已不存在",
+    "duplicate pickup reports row absent without re-granting item",
+    skipNonMatchingSameType: true);
+
 // Explicit choice reward boxes go through the actual encrypted wire path:
 // the initial use displays options without consuming; the server rejects a
 // forged choice and atomically grants only a whitelisted option once.
