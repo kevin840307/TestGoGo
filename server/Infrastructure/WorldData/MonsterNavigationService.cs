@@ -25,11 +25,22 @@ public sealed class MonsterNavigationService
     }
 
     private bool Walkable(int mapId, int x, int y)
-        => _blocking.GetFlags(mapId, x * Cell + Cell / 2.0,
-            y * Cell + Cell / 2.0) == 0;
+        => Walkable(mapId, x, y, canCrossSpecialTerrain: false);
+
+    // Only player pickup supplies canCrossSpecialTerrain=true when the
+    // authenticated character is riding a capable mecha. Monster movement
+    // and ordinary loot placement keep their original strict 0-only policy.
+    private bool Walkable(
+        int mapId, int x, int y, bool canCrossSpecialTerrain)
+    {
+        var flags = _blocking.GetFlags(
+            mapId, x * Cell + Cell / 2.0, y * Cell + Cell / 2.0);
+        return flags == 0 || (canCrossSpecialTerrain && flags == 3);
+    }
 
     public bool IsDirectClear(
-        int mapId, double fromX, double fromY, double toX, double toY)
+        int mapId, double fromX, double fromY, double toX, double toY,
+        bool canCrossSpecialTerrain = false)
     {
         if (!double.IsFinite(fromX) || !double.IsFinite(fromY) ||
             !double.IsFinite(toX) || !double.IsFinite(toY))
@@ -41,7 +52,7 @@ public sealed class MonsterNavigationService
         var count = Math.Max(1, (int)Math.Ceiling(distance / (Cell / 4.0)));
         var previousX = (int)Math.Floor(fromX / Cell);
         var previousY = (int)Math.Floor(fromY / Cell);
-        if (!Walkable(mapId, previousX, previousY))
+        if (!Walkable(mapId, previousX, previousY, canCrossSpecialTerrain))
             return false;
 
         for (var i = 1; i <= count; i++)
@@ -49,12 +60,12 @@ public sealed class MonsterNavigationService
             var ratio = (double)i / count;
             var x = (int)Math.Floor((fromX + dx * ratio) / Cell);
             var y = (int)Math.Floor((fromY + dy * ratio) / Cell);
-            if (!Walkable(mapId, x, y))
+            if (!Walkable(mapId, x, y, canCrossSpecialTerrain))
                 return false;
 
             if (x != previousX && y != previousY &&
-                (!Walkable(mapId, x, previousY) ||
-                 !Walkable(mapId, previousX, y)))
+                (!Walkable(mapId, x, previousY, canCrossSpecialTerrain) ||
+                 !Walkable(mapId, previousX, y, canCrossSpecialTerrain)))
                 return false;
 
             previousX = x;
