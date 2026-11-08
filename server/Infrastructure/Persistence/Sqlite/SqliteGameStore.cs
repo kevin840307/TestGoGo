@@ -1878,6 +1878,164 @@ public sealed class SqliteGameStore : IGameStore
         return new(true, "已恢復原本外觀", null);
     }
 
+    public IReadOnlyList<CharacterCosmeticOverride> GetCosmeticOverrides(
+        long accountId,
+        long dbid)
+    {
+        using var db = Open();
+
+        if (!OwnsCharacter(
+                db,
+                accountId,
+                dbid))
+        {
+            return Array.Empty<CharacterCosmeticOverride>();
+        }
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT part,item_index,color,source_item_id
+              FROM character_cosmetic_overrides
+             WHERE character_id=$id
+             ORDER BY part
+            """;
+        Arg(cmd, "$id", dbid);
+
+        using var reader = cmd.ExecuteReader();
+        var result = new List<CharacterCosmeticOverride>();
+        while (reader.Read())
+        {
+            result.Add(new(
+                reader.GetInt32(0),
+                reader.GetInt32(1),
+                reader.GetInt32(2),
+                reader.GetInt32(3)));
+        }
+
+        return result;
+    }
+
+    public CharacterCosmeticMutationResult ApplyCosmeticOverridesFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        IReadOnlyList<CharacterCosmeticOverride> overrides,
+        bool consumeSource)
+    {
+        var normalized = overrides
+            .Where(x =>
+                x.Part is >= 0 and <= 8 &&
+                x.ItemIndex > 0)
+            .GroupBy(x => x.Part)
+            .Select(group => group.Last())
+            .OrderBy(x => x.Part)
+            .ToArray();
+
+        if (accountId <= 0 ||
+            dbid <= 0 ||
+            itemUid <= 0 ||
+            itemIndex <= 0 ||
+            normalized.Length == 0)
+        {
+            return new(
+                false,
+                "換裝資料無效",
+                Array.Empty<CharacterCosmeticOverride>());
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(
+                db,
+                accountId,
+                dbid,
+                tx))
+        {
+            return new(
+                false,
+                "角色不存在",
+                Array.Empty<CharacterCosmeticOverride>());
+        }
+
+        using (var item = db.CreateCommand())
+        {
+            item.Transaction = tx;
+            item.CommandText = """
+                SELECT count
+                  FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND item_index=$item
+                   AND in_bank=0
+                   AND in_shop=0
+                 LIMIT 1
+                """;
+            Arg(item, "$uid", itemUid);
+            Arg(item, "$id", dbid);
+            Arg(item, "$item", itemIndex);
+
+            var raw = item.ExecuteScalar();
+            if (raw is null ||
+                raw == DBNull.Value ||
+                Convert.ToInt32(raw) <= 0)
+            {
+                return new(
+                    false,
+                    "找不到可使用的換裝變身器",
+                    Array.Empty<CharacterCosmeticOverride>());
+            }
+        }
+
+        foreach (var cosmetic in normalized)
+        {
+            using var upsert = db.CreateCommand();
+            upsert.Transaction = tx;
+            upsert.CommandText = """
+                INSERT INTO character_cosmetic_overrides(
+                    character_id,part,item_index,color,source_item_id)
+                VALUES($id,$part,$item,$color,$source)
+                ON CONFLICT(character_id,part)
+                DO UPDATE SET
+                    item_index=excluded.item_index,
+                    color=excluded.color,
+                    source_item_id=excluded.source_item_id
+                """;
+            Arg(upsert, "$id", dbid);
+            Arg(upsert, "$part", cosmetic.Part);
+            Arg(upsert, "$item", cosmetic.ItemIndex);
+            Arg(upsert, "$color", Math.Max(0, cosmetic.Color));
+            Arg(upsert, "$source", itemIndex);
+
+            if (upsert.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "換裝外觀儲存失敗",
+                    Array.Empty<CharacterCosmeticOverride>());
+            }
+        }
+
+        if (consumeSource)
+        {
+            ConsumeInventoryItem(
+                db,
+                tx,
+                dbid,
+                itemUid);
+        }
+
+        tx.Commit();
+
+        return new(
+            true,
+            consumeSource
+                ? "換裝成功"
+                : "換裝成功（永久變身器未消耗）",
+            normalized);
+    }
+
     public TimedEffectActivationResult ActivateTimedEffectFromItem(
         long accountId,
         long dbid,
