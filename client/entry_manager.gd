@@ -212,6 +212,19 @@ func _bootstrap_before_login() -> void :
 
 	_set_startup_loading_status("準備遊戲視窗…")
 	await _prewarm_game_hud_resources()
+
+	# A looping OGV/video decoder and synchronous login BGM load can hitch
+	# when they FIRST start in the same frame as account input appears.
+	# Warm both during the existing loading overlay, after the heavy recipe
+	# work has ended, so neither competes with the first typing frames.
+	_set_startup_loading_status("準備登入背景及音樂…")
+	if is_instance_valid(login_screen) and login_screen.has_method("warm_background_video"):
+		login_screen.warm_background_video()
+	if AudioManager and AudioManager.has_method("play_login_bgm"):
+		AudioManager.play_login_bgm()
+	await get_tree().process_frame
+	await get_tree().process_frame
+
 	_set_startup_loading_status("登入畫面準備完成")
 	_set_loading_progress(100.0)
 	await get_tree().process_frame
@@ -234,12 +247,13 @@ func _release_startup_render_after_login_reveal() -> void:
 
 func _show_login_screen() -> void :
 	_debug_perf_checkpoint("login_screen_ready")
-	if AudioManager and AudioManager.has_method("play_login_bgm"):
-		AudioManager.play_login_bgm()
-
+	# Audio/video were already prepared under the loading overlay. Avoid
+	# synchronous media initialization in the first editable login frame.
 	if login_screen:
 		login_screen.modulate.a = 0.0
 		login_screen.visible = true
+		if login_screen.has_method("mark_login_screen_revealed"):
+			login_screen.mark_login_screen_revealed()
 		var account_input: = login_screen.get_node_or_null("LoginPanel/AccountInput") as LineEdit
 		if account_input:
 			account_input.call_deferred("grab_focus")
