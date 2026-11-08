@@ -1037,7 +1037,7 @@ function handleMapKeyboard(event) {
 window.addEventListener('keydown', handleMapKeyboard);
 window.addEventListener('keyup', handleMapKeyboard);
 window.addEventListener('beforeunload', event => {
-  if (!state.mapDirty) return;
+  if (!(state.mapDirty || state.skillDirty || state.enemyDirty || state.scriptDirty)) return;
   event.preventDefault();
   event.returnValue = '';
 });
