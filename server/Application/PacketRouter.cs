@@ -2512,6 +2512,30 @@ public sealed class PacketRouter
             {
                 if (!state.CharacterId.HasValue) return [];
                 var horseUid = req.Long("HorseUID", -1);
+
+                // A mecha can stand on terrain its rider cannot traverse
+                // on foot. Do not remove that capability while the server's
+                // current position is not valid for walking: the player
+                // would be stuck and repeatedly receive PositionCorrection.
+                if (horseUid == -1 && state.CanCrossSpecialTerrain &&
+                    !_blocking.IsMoveAllowed(
+                        state.CurrentMapId,
+                        state.LastX, state.LastY,
+                        state.LastX, state.LastY,
+                        canCrossSpecialTerrain: false))
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "DriveMechaResponse",
+                            Success = false,
+                            HorseUID = -1,
+                            Message = "請先移動到可步行地面後再解除機甲"
+                        }
+                    ];
+                }
+
                 var success = _store.SetSummonedHorse(
                     accountId,
                     state.CharacterId.Value,
@@ -2528,6 +2552,12 @@ public sealed class PacketRouter
                         Type = "DriveMechaResponse",
                         Success = success,
                         HorseUID = success ? horseUid : -1,
+                        // The client must rebase its cached walkable position
+                        // when stepping out of a mecha. These are SERVER
+                        // coordinates, not a client-proposed move target.
+                        MapID = state.CurrentMapId,
+                        X = state.LastX,
+                        Y = state.LastY,
                         Message = success
                             ? (horseUid == -1 ? "已解除駕駛" : "開始駕駛")
                             : "無法駕駛此機甲"
@@ -5018,6 +5048,9 @@ public sealed class PacketRouter
                 Type = "DriveMechaResponse",
                 Success = true,
                 HorseUID = -1,
+                MapID = state.CurrentMapId,
+                X = state.LastX,
+                Y = state.LastY,
                 Message = "機甲能源耗盡，已自動解除駕駛"
             });
 
