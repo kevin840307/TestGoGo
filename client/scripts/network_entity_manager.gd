@@ -1094,6 +1094,10 @@ func _on_entity_death_received(data: Dictionary) -> void :
 		else:
 			_finalize_entity_death(entity, clear_hover_on_death)
 	if entity_type != 0:
+		# EntityDeath is also a terminal AOI incarnation boundary. A late
+		# MoveEntity from the dying monster must not override the fresh
+		# authoritative Respawn/SpawnEntity position.
+		_pending_aoi_moves.mark_despawned(entity_id, Time.get_ticks_msec())
 		active_entities.erase(entity_id)
 	if entity_type == 1:
 		_active_entity_types.erase(entity_id)
