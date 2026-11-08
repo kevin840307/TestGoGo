@@ -167,6 +167,10 @@ try {
             "--headless", "--path", "client",
             "--script", "res://tests/aoi_monster_snapshot_order_regression.gd"
         )
+        Invoke-Checked "Godot headless client regressions: Move before Spawn AOI order" $godotCommand @(
+            "--headless", "--path", "client",
+            "--script", "res://tests/aoi_pre_spawn_move_regression.gd"
+        )
         Invoke-Checked "Godot headless client regressions: multiclient render dedup" $godotCommand @(
             "--headless", "--path", "client",
             "--script", "res://tests/multiclient_render_dedup_regression.gd"
