@@ -53,8 +53,8 @@ internal static class MallExternalIntegrationSmokeTests
                 store,
                 configuration: null,
                 current: null,
-                payPal,
-                legacy);
+                payPal: payPal,
+                legacyPoints: legacy);
 
         var createOrder =
             mall.Handle(
