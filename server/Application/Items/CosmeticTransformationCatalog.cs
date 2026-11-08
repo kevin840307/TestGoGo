@@ -105,7 +105,7 @@ public static class CosmeticTransformationCatalog
         int itemId,
         int race)
     {
-        int[] targetItemIds;
+        int[]? targetItemIds;
         int? requiredRace;
 
         if (itemId == 2003)
@@ -154,7 +154,7 @@ public static class CosmeticTransformationCatalog
         }
 
         var overrides = new List<CharacterCosmeticOverride>();
-        foreach (var targetId in targetItemIds)
+        foreach (var targetId in targetItemIds!)
         {
             var target = current.FindItem(targetId);
             if (target is null ||
