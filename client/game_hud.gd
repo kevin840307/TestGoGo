@@ -1947,6 +1947,10 @@ func hide_map_loading() -> void :
 func _finish_map_loading() -> void :
 	if loading_overlay:
 		loading_overlay.visible = false
+	# Keep the 0.4-second loading fade drawable; switching maps must not
+	# pause the render loop until this callback has hidden the overlay.
+	if GameManager and GameManager.has_method("notify_world_loading_overlay_hidden"):
+		GameManager.notify_world_loading_overlay_hidden()
 	if NetworkManager and NetworkManager.has_method("send_world_ready"):
 		var map_id := 0
 		if is_instance_valid(target_player) and target_player.get("data_model"):
