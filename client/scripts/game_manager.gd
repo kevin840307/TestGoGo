@@ -487,11 +487,16 @@ func get_combat_render_mode() -> int:
 func _current_background_fps() -> int:
 	return maxi(1, int(current_performance_profile.get("background_fps", UNFOCUSED_MAX_FPS)))
 
+static func configured_foreground_fps(profile: Dictionary) -> int:
+	# Never derive the foreground cap from Engine.max_fps: the engine may
+	# currently be limited to 10/20 FPS by the background/startup policy.
+	return maxi(0, int(profile.get("foreground_fps", 0)))
+
+
 func _apply_performance_profile() -> void:
+	_focused_max_fps = configured_foreground_fps(current_performance_profile)
 	if _window_has_focus:
-		var foreground_fps := int(current_performance_profile.get("foreground_fps", 0))
-		Engine.max_fps = foreground_fps
-		_focused_max_fps = foreground_fps
+		Engine.max_fps = _focused_max_fps
 	else:
 		Engine.max_fps = STARTUP_UNFOCUSED_PROGRESS_FPS if _startup_loading_overlay_active else _current_background_fps()
 	performance_profile_changed.emit(get_performance_profile())
@@ -570,7 +575,9 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 	var caches_trimmed: bool = false
 
 	if not has_focus:
-		_focused_max_fps = Engine.max_fps
+		# Do not accidentally save a previously throttled 10/20 FPS as
+		# the future foreground cap when Windows rapidly toggles focus.
+		_focused_max_fps = configured_foreground_fps(current_performance_profile)
 		Engine.max_fps = STARTUP_UNFOCUSED_PROGRESS_FPS if _startup_loading_overlay_active else _current_background_fps()
 		RenderingServer.render_loop_enabled = _startup_loading_overlay_active
 		# RenderingServer alone stops GPU drawing but not HUD._process,
