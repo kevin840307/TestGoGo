@@ -347,11 +347,13 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 	if not has_focus:
 		_focused_max_fps = Engine.max_fps
 		Engine.max_fps = UNFOCUSED_MAX_FPS
+		RenderingServer.render_loop_enabled = false
 
 		if master_bus_index >= 0:
 			_master_bus_was_muted_before_focus_loss = AudioServer.is_bus_mute(master_bus_index)
 			AudioServer.set_bus_mute(master_bus_index, true)
 	else:
+		RenderingServer.render_loop_enabled = true
 		Engine.max_fps = _focused_max_fps
 
 		if master_bus_index >= 0:
