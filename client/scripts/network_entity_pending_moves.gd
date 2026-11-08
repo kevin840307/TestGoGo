@@ -11,6 +11,7 @@ const MAX_DESPAWNED: int = 512
 
 var _pending: Dictionary = {}
 var _despawned: Dictionary = {}
+var _last_prune_msec: int = -1
 
 
 func record_move(entity_id: int, packet: Dictionary, now_msec: int) -> void:
@@ -59,6 +60,7 @@ func mark_despawned(entity_id: int, now_msec: int) -> void:
 func clear() -> void:
 	_pending.clear()
 	_despawned.clear()
+	_last_prune_msec = -1
 
 
 func pending_count() -> int:
@@ -66,8 +68,11 @@ func pending_count() -> int:
 
 
 func _prune(now_msec: int) -> void:
-	# Bounded caches are tiny; prune on packet activity rather than every
-	# frame. Expiry prevents a delayed move surviving a long scene load.
+	# Pruning every incoming packet would create avoidable O(pending) work.
+	# Cache entries have their own expiry check when consumed.
+	if _last_prune_msec >= 0 and now_msec - _last_prune_msec < 500:
+		return
+	_last_prune_msec = now_msec
 	if _pending.size() > 0:
 		for entity_id in _pending.keys():
 			var entry: Dictionary = _pending[entity_id] as Dictionary
