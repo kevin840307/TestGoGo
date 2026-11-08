@@ -64,6 +64,35 @@ public static class CharacterStatCalculator
         critDamage += Convert.ToInt32(
             character.GetValueOrDefault("ClubTechCritDamage", 0));
 
+        maxHp += Convert.ToInt32(
+            character.GetValueOrDefault("TimedMaxHpBonus", 0));
+        maxMp += Convert.ToInt32(
+            character.GetValueOrDefault("TimedMaxMpBonus", 0));
+        maxSp += Convert.ToInt32(
+            character.GetValueOrDefault("TimedMaxSpBonus", 0));
+        attack += Convert.ToInt32(
+            character.GetValueOrDefault("TimedAttackBonus", 0));
+        defense += Convert.ToInt32(
+            character.GetValueOrDefault("TimedDefenseBonus", 0));
+        magicAttack += Convert.ToInt32(
+            character.GetValueOrDefault("TimedMagicAttackBonus", 0));
+        magicDefense += Convert.ToInt32(
+            character.GetValueOrDefault("TimedMagicDefenseBonus", 0));
+        hit += Convert.ToInt32(
+            character.GetValueOrDefault("TimedHitBonus", 0));
+        dodge += Convert.ToInt32(
+            character.GetValueOrDefault("TimedDodgeBonus", 0));
+        lucky += Convert.ToInt32(
+            character.GetValueOrDefault("TimedLuckyBonus", 0));
+        attackSpeed += Convert.ToInt32(
+            character.GetValueOrDefault("TimedAttackSpeedBonus", 0));
+        moveSpeed += Convert.ToInt32(
+            character.GetValueOrDefault("TimedMoveSpeedBonus", 0));
+        critRate += Convert.ToInt32(
+            character.GetValueOrDefault("TimedCritRateBonus", 0));
+        critDamage += Convert.ToInt32(
+            character.GetValueOrDefault("TimedCritDamageBonus", 0));
+
         attack += Convert.ToInt32(
             character.GetValueOrDefault("TransformAttackBonus", 0));
         defense += Convert.ToInt32(
