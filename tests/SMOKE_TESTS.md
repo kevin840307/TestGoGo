@@ -70,6 +70,7 @@ tests/SGO.Server.SmokeTests/
 - EnterWorld bootstrap、WorldReady、商城 list、登出。
 - 第二個真 WebSocket client 完成相同登入/進圖。
 - 經濟封包走真 wire：BankTransfer、DirectTransfer，以及玩家商店 AddItem → OpenShop → ViewShop → BuyItem，並驗證雙方金錢/物品/商店列表同步。
+- NPC 商店 `BuyNpcItem` 與製作 `CraftItemRequest` / `DismantleItemRequest` 也走真 wire；使用 100% 成功率的 Recipe 1291/1292，避免隨機 flaky。
 - Client A `SyncPosition` → Client B 收 `MoveEntity`。
 - Client A nearby `ChatMessage` → Client B 收 `ChatBroadcast`。
 - Party Invite → Accept → 雙方 `PartySync`。

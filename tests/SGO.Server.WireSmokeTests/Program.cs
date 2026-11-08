@@ -869,6 +869,188 @@ await AwaitType(
         items.GetArrayLength() == 0,
     "sold-out player shop publishes empty authoritative listing");
 
+// NPC shop and deterministic crafting/dismantling also exercise the exact
+// client packet names instead of only calling application services in-process.
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "ShopAction",
+        Action = "BuyNpcItem",
+        ShopID = 7,
+        ItemIndex = 4103,
+        Count = 2
+    });
+
+var npcShopMoney = await AwaitType(
+    socket,
+    "SyncMoney",
+    root =>
+        root.TryGetProperty("Money", out var money) &&
+        money.GetInt64() <
+            senderMoneyAfterTransfer + 7,
+    "NPC ShopAction BuyNpcItem debits authoritative money over real wire");
+
+await AwaitType(
+    socket,
+    "InventorySync",
+    root =>
+        root.TryGetProperty("Items", out var items) &&
+        items.ValueKind == JsonValueKind.Array &&
+        items.EnumerateArray()
+            .Where(item =>
+                item.TryGetProperty("ItemIndex", out var itemIndex) &&
+                itemIndex.GetInt32() == 4103 &&
+                item.TryGetProperty("InBank", out var inBank) &&
+                inBank.GetInt32() == 0)
+            .Sum(item =>
+                item.GetProperty("Count").GetInt32()) >= 2,
+    "NPC shop purchase persists mapped current-client item");
+
+var craftMoneySeed = await SendGm(
+    "money 250",
+    "SyncMoney",
+    root =>
+        root.TryGetProperty("Money", out var money) &&
+        money.GetInt64() >
+            npcShopMoney.GetProperty("Money").GetInt64(),
+    "GM seeds deterministic craft/dismantle costs");
+
+var craftMoneyBefore =
+    craftMoneySeed.GetProperty("Money").GetInt64();
+
+await SendGm(
+    "item 4051 20",
+    "InventorySync",
+    root =>
+        root.TryGetProperty("Items", out var items) &&
+        items.ValueKind == JsonValueKind.Array &&
+        items.EnumerateArray().Any(item =>
+            item.TryGetProperty("ItemIndex", out var itemIndex) &&
+            itemIndex.GetInt32() == 4051 &&
+            item.TryGetProperty("Count", out var count) &&
+            count.GetInt32() >= 20 &&
+            item.TryGetProperty("InBank", out var inBank) &&
+            inBank.GetInt32() == 0),
+    "GM seeds 20 iron ore for deterministic Recipe 1291");
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "CraftItemRequest",
+        RecipeID = 1291,
+        BatchCount = 1
+    });
+
+await AwaitType(
+    socket,
+    "CraftItemResponse",
+    root =>
+        root.TryGetProperty("Success", out var success) &&
+        success.ValueKind == JsonValueKind.True &&
+        root.TryGetProperty("ResultItems", out var resultItems) &&
+        resultItems.ValueKind == JsonValueKind.Array &&
+        resultItems.EnumerateArray().Any(item =>
+            item.TryGetProperty("ItemID", out var itemId) &&
+            itemId.GetInt32() == 4052 &&
+            item.TryGetProperty("Count", out var count) &&
+            count.GetInt32() == 1),
+    "CraftItemRequest consumes deterministic Recipe 1291 over real wire");
+
+await AwaitType(
+    socket,
+    "SyncMoney",
+    root =>
+        root.TryGetProperty("Money", out var money) &&
+        money.GetInt64() == craftMoneyBefore - 100,
+    "deterministic craft charges exact recipe money cost");
+
+var craftInventory = await AwaitType(
+    socket,
+    "InventorySync",
+    root =>
+        root.TryGetProperty("Items", out var items) &&
+        items.ValueKind == JsonValueKind.Array &&
+        items.EnumerateArray().Any(item =>
+            item.TryGetProperty("ItemIndex", out var itemIndex) &&
+            itemIndex.GetInt32() == 4052 &&
+            item.TryGetProperty("Count", out var count) &&
+            count.GetInt32() >= 1 &&
+            item.TryGetProperty("InBank", out var inBank) &&
+            inBank.GetInt32() == 0),
+    "deterministic craft replaces input material with iron block");
+
+var ironBlockUid =
+    craftInventory.GetProperty("Items")
+        .EnumerateArray()
+        .Where(item =>
+            item.GetProperty("ItemIndex").GetInt32() == 4052 &&
+            item.GetProperty("InBank").GetInt32() == 0)
+        .Select(item =>
+            item.GetProperty("ItemUID").GetInt64())
+        .Max();
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "DismantleItemRequest",
+        ItemUIDs = new[] { ironBlockUid },
+        ItemType = "Material"
+    });
+
+await AwaitType(
+    socket,
+    "DismantleItemResponse",
+    root =>
+        root.TryGetProperty("Success", out var success) &&
+        success.ValueKind == JsonValueKind.True &&
+        root.TryGetProperty("ResultItems", out var resultItems) &&
+        resultItems.ValueKind == JsonValueKind.Array &&
+        resultItems.EnumerateArray().Any(item =>
+            item.TryGetProperty("ItemID", out var itemId) &&
+            itemId.GetInt32() == 4051 &&
+            item.TryGetProperty("Count", out var count) &&
+            count.GetInt32() == 20),
+    "DismantleItemRequest executes deterministic Recipe 1292 over real wire");
+
+await AwaitType(
+    socket,
+    "SyncMoney",
+    root =>
+        root.TryGetProperty("Money", out var money) &&
+        money.GetInt64() == craftMoneyBefore - 150,
+    "deterministic dismantle charges exact recipe money cost");
+
+await AwaitType(
+    socket,
+    "InventorySync",
+    root =>
+    {
+        if (!root.TryGetProperty("Items", out var items) ||
+            items.ValueKind != JsonValueKind.Array)
+            return false;
+
+        var array = items.EnumerateArray().ToArray();
+        var ironBlocks = array
+            .Where(item =>
+                item.TryGetProperty("ItemIndex", out var itemIndex) &&
+                itemIndex.GetInt32() == 4052 &&
+                item.GetProperty("InBank").GetInt32() == 0)
+            .Sum(item => item.GetProperty("Count").GetInt32());
+        var ironOre = array
+            .Where(item =>
+                item.TryGetProperty("ItemIndex", out var itemIndex) &&
+                itemIndex.GetInt32() == 4051 &&
+                item.GetProperty("InBank").GetInt32() == 0)
+            .Sum(item => item.GetProperty("Count").GetInt32());
+
+        return ironBlocks == 0 &&
+               ironOre >= 20;
+    },
+    "dismantle removes iron block and restores 20 iron ore");
+
 // Seed through the normal privileged ChatMessage command path, then exercise
 // the actual gameplay packets. The isolated test server explicitly enables GM;
 // production defaults GM commands off.
