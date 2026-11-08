@@ -230,6 +230,7 @@ func _print_render_stats() -> void :
 	var visible_players := 0
 	var visible_pets := 0
 	var simplified_monsters := 0
+	var primitive_monsters := 0
 	var simplified_players := 0
 	var ground_items_total := 0
 	var ground_items_visible_nearby := 0
@@ -269,6 +270,8 @@ func _print_render_stats() -> void :
 					visible_monsters += 1
 					if entity.has_method("is_performance_simplified") and entity.is_performance_simplified():
 						simplified_monsters += 1
+					if entity.has_method("is_primitive_simplified") and entity.is_primitive_simplified():
+						primitive_monsters += 1
 				3:
 					ground_items_total += 1
 					if is_instance_valid(current_player) and entity.is_visible_in_tree():
@@ -297,7 +300,7 @@ func _print_render_stats() -> void :
 			ground_aoi_scans = int(ground_aoi.get("ground_full_scans", 0))
 			ground_aoi_skips = int(ground_aoi.get("ground_skipped_scans", 0))
 
-	print("[RENDER_STATS] mode=%s combat=%s fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d simplified_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d simplified_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d ground_known=%d ground_deferred=%d monster_aoi_scans=%d monster_aoi_skips=%d ground_aoi_scans=%d ground_aoi_skips=%d paper_doll_layers=%d minimap_world_redraws=%d minimap_world_skips=%d render_stats_valid=%s %s %s" % [
+	print("[RENDER_STATS] mode=%s combat=%s fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d simplified_monsters=%d primitive_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d simplified_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d ground_known=%d ground_deferred=%d monster_aoi_scans=%d monster_aoi_skips=%d ground_aoi_scans=%d ground_aoi_skips=%d paper_doll_layers=%d minimap_world_redraws=%d minimap_world_skips=%d render_stats_valid=%s %s %s" % [
 		ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
 		ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
 		int(Performance.get_monitor(Performance.TIME_FPS)),
@@ -309,6 +312,7 @@ func _print_render_stats() -> void :
 		float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
 		visible_monsters,
 		simplified_monsters,
+		primitive_monsters,
 		aoi_active_monsters,
 		aoi_deferred_monsters,
 		visible_players,
