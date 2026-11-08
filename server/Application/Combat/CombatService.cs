@@ -3110,16 +3110,12 @@ public sealed class CombatService
 
         var rateSnapshot = _globalRates.Snapshot();
         var now = DateTimeOffset.UtcNow;
-        var expToAdd = (int)Math.Clamp(
-            Math.Round(
-                totalExp * rateSnapshot.EffectiveExperience(now)),
-            0d,
-            int.MaxValue);
-        var moneyToAdd = (int)Math.Clamp(
-            Math.Round(
-                totalMoney * rateSnapshot.EffectiveMoney(now)),
-            0d,
-            int.MaxValue);
+        var expToAdd = GlobalRateMath.ApplyReward(
+            totalExp,
+            rateSnapshot.EffectiveExperience(now));
+        var moneyToAdd = GlobalRateMath.ApplyReward(
+            totalMoney,
+            rateSnapshot.EffectiveMoney(now));
 
         var rewarded = _store.AddRewards(
             accountId,
@@ -3451,19 +3447,13 @@ public sealed class CombatService
 
         var rateSnapshot = _globalRates.Snapshot();
         var now = DateTimeOffset.UtcNow;
-        gainedExp = (int)Math.Clamp(
-            Math.Round(
-                gainedExp *
-                rateSnapshot.EffectiveExperience(now)),
-            0d,
-            int.MaxValue);
+        gainedExp = GlobalRateMath.ApplyReward(
+            gainedExp,
+            rateSnapshot.EffectiveExperience(now));
 
-        var gainedMoney = (int)Math.Clamp(
-            Math.Round(
-                Math.Max(1, monster.Level) *
-                rateSnapshot.EffectiveMoney(now)),
-            0d,
-            int.MaxValue);
+        var gainedMoney = GlobalRateMath.ApplyReward(
+            Math.Max(1, monster.Level),
+            rateSnapshot.EffectiveMoney(now));
 
         var rewarded = _store.AddRewards(
             accountId,
