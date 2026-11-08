@@ -5262,6 +5262,7 @@ try
     session.CurrentMapId = combatMapId;
     session.PendingMapSpawn = false;
     router.SyncPresence(session);
+    MapReadySnapshotSmokeTests.Run(router, session, world);
 
     store.SetSkill(
         account.Value,
