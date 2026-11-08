@@ -70,6 +70,18 @@ internal static class GroundDropPlacementSmokeTests
               legacy.X == 56 && !legacy.CollisionVerified,
             "maps missing Blocking.dat use explicitly unverified legacy positioning");
 
+        Check(placement.TryResolve(1,
+                  56, 40, 56, 40, 40, 40, out var invalidMonsterOrigin) &&
+              invalidMonsterOrigin.CollisionVerified &&
+              blocking.GetFlags(1, invalidMonsterOrigin.X, invalidMonsterOrigin.Y) == 0 &&
+              nav.IsDirectClear(1, 40, 40, invalidMonsterOrigin.X, invalidMonsterOrigin.Y),
+            "monster dying inside a wall falls back to the player's safe side");
+
+        Check(placement.ShouldReportMissingMap(99) &&
+              !placement.ShouldReportMissingMap(99) &&
+              placement.ShouldReportMissingMap(100),
+            "missing Blocking.dat diagnostic is rate-limited once per map");
+
         var blockedFolder = Path.Combine(fixture.Root, "Map", "Map02");
         Directory.CreateDirectory(blockedFolder);
         using (var writer = new BinaryWriter(
