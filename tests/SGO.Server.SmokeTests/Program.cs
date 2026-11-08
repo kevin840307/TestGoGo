@@ -6824,6 +6824,28 @@ try
             id),
         "WorldReady nearby peers exchange SpawnEntity in both AOI directions");
 
+    var publicPlayerSpawnJson =
+        peerRegistration.Queue.ToArray()
+            .Where(packet =>
+                JsonSerializer.Serialize(packet).Contains(
+                    "\"EntityType\":0") &&
+                JsonSerializer.Serialize(packet).Contains(
+                    $"\"EntityID\":{id}"))
+            .Select(packet =>
+                JsonSerializer.Serialize(packet))
+            .FirstOrDefault() ?? "";
+
+    Check(
+        !string.IsNullOrWhiteSpace(publicPlayerSpawnJson) &&
+        !publicPlayerSpawnJson.Contains("\"CharacterPwd\"") &&
+        !publicPlayerSpawnJson.Contains("\"ACCID\"") &&
+        !publicPlayerSpawnJson.Contains("\"Money\"") &&
+        !publicPlayerSpawnJson.Contains("\"ExpAcc\"") &&
+        !publicPlayerSpawnJson.Contains("\"Inventory") &&
+        !publicPlayerSpawnJson.Contains("\"Shortcuts\"") &&
+        !publicPlayerSpawnJson.Contains("\"Quests\""),
+        "player AOI SpawnEntity excludes private account, progression, and asset fields");
+
     while (peerRegistration.Queue.TryDequeue(out _)) { }
 
     using (var publicStatusEquip = Json(
