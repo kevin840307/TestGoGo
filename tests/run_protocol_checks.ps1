@@ -238,6 +238,7 @@ try {
         "--sizes", "10,50,100",
         "--rounds", "2",
         "--setup-concurrency", "10",
+        "--mixed-seconds", "5",
         "--timeout-seconds", "20",
         "--output", (Join-Path $logRoot "wire-load-probe.json")
     )

@@ -85,7 +85,7 @@ jobs:
             exit 1
           fi
           dotnet run --no-build --project tests/SGO.Server.WireSmokeTests/SGO.Server.WireSmokeTests.csproj -c Release -- ws://127.0.0.1:5678/ 2>&1 | tee wire.log
-          dotnet run --no-build --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -c Release -- --url ws://127.0.0.1:5678/ --sizes 10,50,100 --rounds 2 --setup-concurrency 10 --timeout-seconds 20 --output wire-load-probe-report.json 2>&1 | tee wire-load-probe.log
+          dotnet run --no-build --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -c Release -- --url ws://127.0.0.1:5678/ --sizes 10,50,100 --rounds 2 --setup-concurrency 10 --mixed-seconds 5 --timeout-seconds 20 --output wire-load-probe-report.json 2>&1 | tee wire-load-probe.log
       - name: Upload diagnostic logs
         if: always()
         uses: actions/upload-artifact@v4

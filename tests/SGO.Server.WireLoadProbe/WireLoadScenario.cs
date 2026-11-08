@@ -104,6 +104,38 @@ internal sealed record WireCombatRaceResult(
             0);
 }
 
+internal sealed record WireMixedSoakResult(
+    int DurationSeconds,
+    int SeededMonsters,
+    int PositionRequests,
+    int ChatRequests,
+    int AttackRequests,
+    long MoveBroadcasts,
+    long ChatBroadcasts,
+    long CombatEvents,
+    long SentBytes,
+    long ReceivedBytes,
+    double ElapsedMs,
+    ServerRuntimeSummary Runtime,
+    string[] Errors)
+{
+    public static WireMixedSoakResult Empty()
+        => new(
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            ServerRuntimeSummary.Empty(),
+            []);
+}
+
 internal sealed record WireLoadScenarioResult(
     int Players,
     bool Success,
@@ -114,6 +146,7 @@ internal sealed record WireLoadScenarioResult(
     WirePhaseResult Movement,
     WirePhaseResult NearbyChat,
     WireCombatRaceResult CombatRace,
+    WireMixedSoakResult MixedSoak,
     string[] Errors);
 
 internal static class WireLoadScenario
@@ -123,6 +156,7 @@ internal static class WireLoadScenario
         int playerCount,
         int rounds,
         int setupConcurrency,
+        int mixedSeconds,
         TimeSpan timeout)
     {
         var clients =
@@ -248,13 +282,26 @@ internal static class WireLoadScenario
                     active,
                     timeout);
 
+            await Task.Delay(250);
+            foreach (var client in active)
+                client.ClearInbox();
+
+            var mixed =
+                await MeasureMixedSoakAsync(
+                    active,
+                    url,
+                    runId,
+                    mixedSeconds,
+                    timeout);
+
             var success =
                 movement.ActualDeliveries ==
                     movement.ExpectedDeliveries &&
                 chat.ActualDeliveries ==
                     chat.ExpectedDeliveries &&
                 combat.ActualDeathDeliveries ==
-                    combat.ExpectedDeathDeliveries;
+                    combat.ExpectedDeathDeliveries &&
+                mixed.Errors.Length == 0;
 
             if (!success)
             {
@@ -273,7 +320,10 @@ internal static class WireLoadScenario
                 movement,
                 chat,
                 combat,
-                errors.ToArray());
+                mixed,
+                errors
+                    .Concat(mixed.Errors)
+                    .ToArray());
         }
         finally
         {
@@ -572,6 +622,188 @@ internal static class WireLoadScenario
         }
     }
 
+    private static async Task<WireMixedSoakResult> MeasureMixedSoakAsync(
+        WireLoadClient[] clients,
+        string url,
+        string runId,
+        int mixedSeconds,
+        TimeSpan timeout)
+    {
+        if (mixedSeconds <= 0)
+            return WireMixedSoakResult.Empty();
+
+        var anchor = clients[0];
+        var monsterCount = Math.Min(
+            20,
+            Math.Max(
+                5,
+                clients.Length / 5));
+        var monsterIds =
+            new List<int>(monsterCount);
+
+        for (var i = 0;
+             i < monsterCount;
+             i++)
+        {
+            monsterIds.Add(
+                await anchor.SpawnMonsterAsync(
+                    245,
+                    anchor.X +
+                        20 +
+                        (i % 5) * 14,
+                    anchor.Y +
+                        (i / 5) * 14,
+                    timeout));
+        }
+
+        // Give the 250 ms SharedMapAiTicker at least one full pass so /health
+        // captures a real active-session/monster baseline before attacks start.
+        await Task.Delay(400);
+        foreach (var client in clients)
+            client.ClearInbox();
+
+        foreach (var client in clients)
+        {
+            client.StartMeasurement(
+                dropCombatNoise: true);
+        }
+
+        var duration =
+            TimeSpan.FromSeconds(
+                mixedSeconds);
+        var healthTask =
+            ServerHealthSampler.CaptureAsync(
+                url,
+                duration,
+                TimeSpan.FromMilliseconds(500),
+                TimeSpan.FromSeconds(
+                    Math.Clamp(
+                        timeout.TotalSeconds,
+                        1,
+                        5)));
+
+        var started =
+            Stopwatch.GetTimestamp();
+        var tick = 0;
+        var positionRequests = 0;
+        var chatRequests = 0;
+        var attackRequests = 0;
+
+        try
+        {
+            while (Stopwatch.GetElapsedTime(
+                       started) <
+                   duration)
+            {
+                await Task.WhenAll(
+                    clients.Select(
+                        x => x.SendPositionAsync(
+                            timeout)));
+                positionRequests +=
+                    clients.Length;
+
+                if (tick % 4 == 0)
+                {
+                    var chatters =
+                        clients.Take(
+                                Math.Min(
+                                    5,
+                                    clients.Length))
+                            .ToArray();
+                    await Task.WhenAll(
+                        chatters.Select(
+                            x => x.SendNearbyChatAsync(
+                                $"wire-mixed-{runId}-{tick:D4}-{x.Index:D3}",
+                                timeout)));
+                    chatRequests +=
+                        chatters.Length;
+                }
+
+                // Let monsters spend the first second in normal AI mode, then
+                // mix real player AttackEntity traffic into the same map.
+                if (tick >= 4 &&
+                    tick % 2 == 0)
+                {
+                    var attackers =
+                        clients.Take(
+                                Math.Min(
+                                    3,
+                                    clients.Length))
+                            .ToArray();
+                    var attacks =
+                        attackers.Select(
+                            (client, index) =>
+                                client.SendAttackAsync(
+                                    monsterIds[
+                                        (tick / 2 + index) %
+                                        monsterIds.Count],
+                                    timeout))
+                            .ToArray();
+                    await Task.WhenAll(attacks);
+                    attackRequests +=
+                        attacks.Length;
+                }
+
+                tick++;
+                await Task.Delay(250);
+            }
+
+            var health =
+                await healthTask;
+            var elapsed =
+                Stopwatch.GetElapsedTime(
+                    started);
+            var runtimeErrors =
+                new List<string>(
+                    health.Errors);
+
+            if (health.Summary.Samples < 2)
+            {
+                runtimeErrors.Add(
+                    $"health sampling returned only {health.Summary.Samples} sample(s)");
+            }
+
+            if (health.Summary.MaxActiveSessions <
+                clients.Length)
+            {
+                runtimeErrors.Add(
+                    $"shared AI observed only {health.Summary.MaxActiveSessions}/{clients.Length} active sessions");
+            }
+
+            if (health.Summary.MaxMonsterCount <
+                monsterCount)
+            {
+                runtimeErrors.Add(
+                    $"shared AI observed only {health.Summary.MaxMonsterCount}/{monsterCount} seeded monsters");
+            }
+
+            return new WireMixedSoakResult(
+                mixedSeconds,
+                monsterCount,
+                positionRequests,
+                chatRequests,
+                attackRequests,
+                clients.Sum(
+                    x => x.MoveBroadcasts),
+                clients.Sum(
+                    x => x.ChatBroadcasts),
+                clients.Sum(
+                    x => x.CombatEvents),
+                clients.Sum(
+                    x => x.SentBytes),
+                clients.Sum(
+                    x => x.ReceivedBytes),
+                elapsed.TotalMilliseconds,
+                health.Summary,
+                runtimeErrors.ToArray());
+        }
+        finally
+        {
+            foreach (var client in clients)
+                client.StopMeasurement();
+        }
+    }
+
     private static WirePhaseResult BuildPhase(
         string name,
         int rounds,
@@ -645,5 +877,6 @@ internal static class WireLoadScenario
             WirePhaseResult.Empty(
                 "ChatMessage->ChatBroadcast"),
             WireCombatRaceResult.Empty(),
+            WireMixedSoakResult.Empty(),
             errors.ToArray());
 }

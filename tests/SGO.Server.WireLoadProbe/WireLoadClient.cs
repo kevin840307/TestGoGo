@@ -35,7 +35,9 @@ internal sealed class WireLoadClient : IAsyncDisposable
     private long _moveBroadcasts;
     private long _chatBroadcasts;
     private long _combatDeaths;
+    private long _combatEvents;
     private long _combatTargetEntityId;
+    private volatile bool _dropCombatNoise;
     private long _sentBytes;
     private long _receivedBytes;
 
@@ -58,6 +60,9 @@ internal sealed class WireLoadClient : IAsyncDisposable
 
     public long CombatDeaths =>
         Interlocked.Read(ref _combatDeaths);
+
+    public long CombatEvents =>
+        Interlocked.Read(ref _combatEvents);
 
     public long SentBytes =>
         Interlocked.Read(ref _sentBytes);
@@ -107,7 +112,8 @@ internal sealed class WireLoadClient : IAsyncDisposable
     }
 
     public void StartMeasurement(
-        long combatTargetEntityId = 0)
+        long combatTargetEntityId = 0,
+        bool dropCombatNoise = false)
     {
         Interlocked.Exchange(
             ref _moveBroadcasts,
@@ -119,8 +125,13 @@ internal sealed class WireLoadClient : IAsyncDisposable
             ref _combatDeaths,
             0);
         Interlocked.Exchange(
+            ref _combatEvents,
+            0);
+        Interlocked.Exchange(
             ref _combatTargetEntityId,
             combatTargetEntityId);
+        _dropCombatNoise =
+            dropCombatNoise;
         Interlocked.Exchange(
             ref _sentBytes,
             0);
@@ -133,6 +144,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
     public void StopMeasurement()
     {
         _measure = false;
+        _dropCombatNoise = false;
         Interlocked.Exchange(
             ref _combatTargetEntityId,
             0);
@@ -641,12 +653,24 @@ internal sealed class WireLoadClient : IAsyncDisposable
                 }
 
                 if (_measure &&
-                    combatTarget > 0 &&
+                    (combatTarget > 0 ||
+                     _dropCombatNoise) &&
                     type is
                         "EntityDamage" or
                         "MonsterTarget" or
                         "SyncState")
                 {
+                    Interlocked.Increment(
+                        ref _combatEvents);
+                    continue;
+                }
+
+                if (_measure &&
+                    _dropCombatNoise &&
+                    type == "EntityDeath")
+                {
+                    Interlocked.Increment(
+                        ref _combatEvents);
                     continue;
                 }
 

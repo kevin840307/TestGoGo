@@ -12,6 +12,7 @@ class WireLoadProbeStructureTests(unittest.TestCase):
         program = (PROBE / "Program.cs").read_text(encoding="utf-8-sig")
         client = (PROBE / "WireLoadClient.cs").read_text(encoding="utf-8-sig")
         scenario = (PROBE / "WireLoadScenario.cs").read_text(encoding="utf-8-sig")
+        health = (PROBE / "ServerHealthSampler.cs").read_text(encoding="utf-8-sig")
 
         for marker in ("10,", "50,", "100"):
             self.assertIn(marker, program)
@@ -25,6 +26,8 @@ class WireLoadProbeStructureTests(unittest.TestCase):
         self.assertIn('"AttackEntity"', client)
         self.assertIn('"EntityDeath"', client)
         self.assertIn("CombatDeaths", client)
+        self.assertIn("CombatEvents", client)
+        self.assertIn("dropCombatNoise", client)
 
         self.assertIn("clients.Length - 1", scenario)
         self.assertIn("clients.Length *", scenario)
@@ -33,10 +36,20 @@ class WireLoadProbeStructureTests(unittest.TestCase):
         self.assertIn("combat death conservation failed", scenario)
         self.assertIn("MeasureCombatRaceAsync", scenario)
         self.assertIn("ExpectedDeathDeliveries", scenario)
+        self.assertIn("MeasureMixedSoakAsync", scenario)
+        self.assertIn("MixedSoak", scenario)
         self.assertIn("ReceivedBytesPerSecond", scenario)
         self.assertIn("P50", scenario)
         self.assertIn("P95", scenario)
         self.assertIn("P99", scenario)
+
+        self.assertIn('Path = "/health"', health)
+        self.assertIn("workingSetBytes", health)
+        self.assertIn("gcHeapBytes", health)
+        self.assertIn("cpuTotalMilliseconds", health)
+        self.assertIn("AiTickElapsedMs", health)
+        self.assertIn("CpuPercentOfMachine", health)
+        self.assertIn("MaxMonsterCount", health)
 
     def test_ci_and_local_runner_execute_wire_load_probe(self):
         workflow = (
@@ -49,6 +62,7 @@ class WireLoadProbeStructureTests(unittest.TestCase):
         for source in (workflow, runner):
             self.assertIn("SGO.Server.WireLoadProbe", source)
             self.assertIn("10,50,100", source)
+            self.assertIn("--mixed-seconds", source)
 
 
 if __name__ == "__main__":

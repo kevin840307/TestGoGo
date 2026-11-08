@@ -6,7 +6,7 @@ var results = new List<WireLoadScenarioResult>();
 foreach (var size in options.Sizes)
 {
     Console.Error.WriteLine(
-        $"[WIRE_LOAD] players={size} rounds={options.Rounds}");
+        $"[WIRE_LOAD] players={size} rounds={options.Rounds} mixed_seconds={options.MixedSeconds}");
 
     results.Add(
         await WireLoadScenario.RunAsync(
@@ -14,6 +14,7 @@ foreach (var size in options.Sizes)
             size,
             options.Rounds,
             options.SetupConcurrency,
+            options.MixedSeconds,
             TimeSpan.FromSeconds(
                 options.TimeoutSeconds)));
 }
@@ -27,6 +28,7 @@ var report = new
         options.Sizes,
         options.Rounds,
         options.SetupConcurrency,
+        options.MixedSeconds,
         options.TimeoutSeconds
     },
     Results = results,
@@ -36,6 +38,10 @@ var report = new
         "Movement expects one MoveEntity on every other same-map client for each accepted SyncPosition.",
         "Nearby chat expects one ChatBroadcast on every same-map client, including the sender response.",
         "Round latency is end-to-end fanout completion time, not an in-process router benchmark.",
+        "MixedSoak keeps movement/chat/AttackEntity traffic active while SharedMapAiTicker processes seeded monsters.",
+        "MixedSoak samples /health for server working set, GC heap, CPU total time and SharedMapAi tick latency.",
+        "CPU percent is normalized to the machine processor count; it is an observation, not a hard pass/fail threshold.",
+        "Use --mixed-seconds 600 or longer locally for soak; CI intentionally uses a short mixed smoke.",
         "This load probe is destructive only to its uniquely named throwaway test accounts."
     }
 };
@@ -67,6 +73,7 @@ internal sealed record Options(
     IReadOnlyList<int> Sizes,
     int Rounds,
     int SetupConcurrency,
+    int MixedSeconds,
     int TimeoutSeconds,
     string? Output)
 {
@@ -81,6 +88,7 @@ internal sealed record Options(
         };
         var rounds = 3;
         var setupConcurrency = 10;
+        var mixedSeconds = 5;
         var timeoutSeconds = 20;
         string? output = null;
 
@@ -117,6 +125,12 @@ internal sealed record Options(
                         int.Parse(args[++i]));
                     break;
 
+                case "--mixed-seconds" when i + 1 < args.Length:
+                    mixedSeconds = Math.Max(
+                        0,
+                        int.Parse(args[++i]));
+                    break;
+
                 case "--timeout-seconds" when i + 1 < args.Length:
                     timeoutSeconds = Math.Max(
                         5,
@@ -140,6 +154,7 @@ internal sealed record Options(
             sizes,
             rounds,
             setupConcurrency,
+            mixedSeconds,
             timeoutSeconds,
             output);
     }
