@@ -6008,9 +6008,9 @@ try
         Check(session.WorldReady &&
               readyPackets.Any(x =>
                   JsonSerializer.Serialize(x).Contains(
-                      "\\"Type\\":\\"WorldReadyResponse\\"") &&
+                      "\"Type\":\"WorldReadyResponse\"") &&
                   JsonSerializer.Serialize(x).Contains(
-                      "\\"Success\\":true")),
+                      "\"Success\":true")),
             "pet speech owner acknowledges WorldReady before AOI delivery");
     }
     router.SyncPresence(session);
@@ -6039,12 +6039,12 @@ try
         .ToArray();
     Check(
         peerSpawnPackets.Any(x =>
-            x.Contains("\\"Type\\":\\"SpawnEntity\\"") &&
-            x.Contains($"\\"EntityID\\":{id}")) &&
+            x.Contains("\"Type\":\"SpawnEntity\"") &&
+            x.Contains($"\"EntityID\":{id}")) &&
         peerSpawnPackets.Any(x =>
-            x.Contains("\\"Type\\":\\"SpawnEntity\\"") &&
+            x.Contains("\"Type\":\"SpawnEntity\"") &&
             x.Contains(
-                $"\\"EntityID\\":{4_000_000L + appearancePetUid}")),
+                $"\"EntityID\":{4_000_000L + appearancePetUid}")),
         "AOI peer sees owner and summoned pet before receiving pet speech");
 
     while (speechPeer.Queue.TryDequeue(out _)) { }
@@ -6065,17 +6065,17 @@ try
 
     var ownerSpeech = idleSpeechPackets.Any(x =>
         JsonSerializer.Serialize(x).Contains(
-            "\\"Type\\":\\"PetIdleSpeech\\"") &&
+            "\"Type\":\"PetIdleSpeech\"") &&
         JsonSerializer.Serialize(x).Contains(
-            $"\\"EntityID\\":{4_000_000L + appearancePetUid}"));
+            $"\"EntityID\":{4_000_000L + appearancePetUid}"));
     Check(ownerSpeech,
         "idle summoned pet emits configured speech to its owner");
 
     var observerSpeech = speechPeer.Queue.ToArray().Any(x =>
         JsonSerializer.Serialize(x).Contains(
-            "\\"Type\\":\\"PetIdleSpeech\\"") &&
+            "\"Type\":\"PetIdleSpeech\"") &&
         JsonSerializer.Serialize(x).Contains(
-            $"\\"EntityID\\":{4_000_000L + appearancePetUid}"));
+            $"\"EntityID\":{4_000_000L + appearancePetUid}"));
     Check(observerSpeech,
         "idle pet speech is broadcast only to ready and nearby AOI peers");
 
