@@ -102,14 +102,23 @@ internal static class WaspPackageSmokeTests
                 router.Handle(
                     use.RootElement,
                     session);
-            var json =
-                JsonSerializer.Serialize(
-                    packets);
+
+            var hasHorseSync =
+                packets.Any(packet =>
+                {
+                    using var document =
+                        JsonDocument.Parse(
+                            JsonSerializer.Serialize(packet));
+                    return document.RootElement.TryGetProperty(
+                               "Type",
+                               out var type) &&
+                           type.GetString() == "HorseSync";
+                });
 
             Check(
-                json.Contains(
-                    "\"Type\":\"HorseSync\"") &&
-                json.Contains(
+                hasHorseSync &&
+                PacketTreeContainsString(
+                    packets,
                     "魔裝黃蜂戰鬥機"),
                 "UseItemRequest activates magic snow wasp package");
         }
