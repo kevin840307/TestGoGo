@@ -337,6 +337,8 @@ tombstone 最多 512 個，所有資料在換圖時清除。
   後來的 Move 仍會套到真正 instantiate 時；
 - Despawn→延遲 Move→新 Spawn：
   舊的 Move 不得讓已離開 AOI 的物件復活；
+- Monster EntityDeath→延遲 Move→下一次 Respawn：
+  舊移動不能覆蓋新出生點；
 - 異常大量未知 Move 不能無限放大記憶體；
 - WorldReady／換圖需清除舊快取。
 
@@ -352,6 +354,12 @@ godot --headless --path client --script res://tests/aoi_pre_spawn_move_regressio
 `SystemMessageFlash`。`受掉落者保護`／距離太遠等
 非終止失敗不會移除物品；需要真 AES/WebSocket 的
 多人競速測試確認發送順序、UI 不留 ghost 與資產不複製。
+
+來源契約的 Python tests 已拆成
+`tests/test_client_aoi_order_contract.py` 與
+`tests/test_ground_pickup_visibility_contract.py`；
+正常 Windows runner 和 GitHub workflow 都會執行，
+但來源斷言仍不能取代 Godot/SQLite/真 Wire E2E。
 
 目前新增測試與程式碼均已提交但 **沒有 .NET／Godot
 實際 PASS 證據**，不得將 Python 結構檢查代替真實測試。
