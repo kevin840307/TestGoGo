@@ -18,6 +18,9 @@ The background policy is now intentionally conservative:
   reserves per loader (monster 12, pet 8, doll 12 per category, effects 8,
   item icons 48, ground icons 24, skill icons 24 and audio SE 32).
   Scene/HUD entities retain their own references and cannot lose textures.
+  Each per-loader sweep also has a 24-entry eviction budget (the paper-doll
+  family shares one 24-entry budget), avoiding a bulk GPU release in one
+  background frame. Remaining cold entries can be reclaimed on later sweeps.
 - **Still unfocused:** repeat at most once per 60 seconds so long background
   sessions can release stale map and effect art. No periodic content decoding
   or synchronous preload is initiated.

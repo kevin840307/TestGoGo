@@ -90,6 +90,15 @@ func _run() -> void:
 	removed = BG_CACHE_TRIM.trim_unused(recent_cache, 1)
 	_check(removed == 1 and not recent_cache.has("older") and recent_cache.has("newest"),
 		"most recent assets remain warmed even if otherwise unreferenced")
+	var large_idle_cache: Dictionary = {
+		"a": Resource.new(), "b": Resource.new(),
+		"c": Resource.new(), "d": Resource.new()
+	}
+	removed = BG_CACHE_TRIM.trim_unused(large_idle_cache, 0, 2)
+	_check(removed == 2 and large_idle_cache.size() == 2,
+		"background sweep evicts in bounded batches to avoid long frame stalls")
+	_check(BG_CACHE_TRIM.trim_unused(large_idle_cache, 0, 0) == 0,
+		"zero eviction budget never touches live resources")
 
 	# The background branch must stop visual-only work. Never pause
 	# networking, gameplay world updates or the entire SceneTree.

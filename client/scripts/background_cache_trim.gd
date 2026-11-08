@@ -4,11 +4,16 @@ extends RefCounted
 ## checking. An AnimatedSprite2D, Control, in-flight effect, etc. keeps a
 ## third reference and MUST survive, with no reload needed on focus-in.
 ## Newly inserted entries are kept as a small warm cache for instant recovery.
-static func trim_unused(cache: Dictionary, keep_newest: int = 8) -> int:
+static func trim_unused(
+		cache: Dictionary, keep_newest: int = 8, max_evictions: int = 24) -> int:
+	if max_evictions <= 0:
+		return 0
 	var keys: Array = cache.keys()
 	var oldest_count: int = maxi(0, keys.size() - maxi(0, keep_newest))
 	var removed: int = 0
 	for index in range(oldest_count):
+		if removed >= max_evictions:
+			break
 		var key: Variant = keys[index]
 		var resource: RefCounted = cache.get(key) as RefCounted
 		# Do not evict non-resource metadata or unknown reference types.

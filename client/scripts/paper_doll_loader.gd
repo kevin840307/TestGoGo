@@ -21,10 +21,14 @@ var _sr_effect_cache: Dictionary = {}
 func trim_unreferenced_runtime_cache() -> int:
 	var removed: int = 0
 	for category in _cache.keys():
+		if removed >= 24:
+			break
 		var category_cache: Dictionary = _cache.get(category, {})
-		removed += BG_CACHE_TRIM.trim_unused(category_cache, 12)
-	removed += BG_CACHE_TRIM.trim_unused(_sr_cache, 4)
-	removed += BG_CACHE_TRIM.trim_unused(_sr_effect_cache, 2)
+		removed += BG_CACHE_TRIM.trim_unused(category_cache, 12, 24 - removed)
+	if removed < 24:
+		removed += BG_CACHE_TRIM.trim_unused(_sr_cache, 4, 24 - removed)
+	if removed < 24:
+		removed += BG_CACHE_TRIM.trim_unused(_sr_effect_cache, 2, 24 - removed)
 	return removed
 
 
