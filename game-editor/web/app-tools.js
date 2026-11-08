@@ -141,8 +141,9 @@ async function saveScript() {
 async function deleteScript() {
   if (!state.selectedScript || state.selectedScript._new) return;
   const name = state.selectedScript.name;
-  if (!confirm(`確定刪除 NPC 腳本 ${name}？原檔會先備份。`)) return;
   try {
+    const impact = await referenceImpact('script', name);
+    if (!confirm(`確定刪除 NPC 腳本 ${name}？原檔會先備份。${formatReferenceImpact(impact)}`)) return;
     await api(`/api/scripts/${encodeURIComponent(name)}`, {method:'DELETE'});
     state.selectedScript = null;
     state.scriptDirty = false;
