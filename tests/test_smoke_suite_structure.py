@@ -30,6 +30,19 @@ class SmokeSuiteStructureTests(unittest.TestCase):
                 self.assertIn("public static void Run()", contents)
                 self.assertIn(f"{name}.Run();", main)
 
+    def test_prelogin_route_suite_has_explicit_context(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = SMOKE / "Protocol" / "PreloginPacketSmokeTests.cs"
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn(
+            "public static void Run(PacketRouter router, ClientSession session)",
+            source,
+        )
+        self.assertIn("PreloginPacketSmokeTests.Run(router, session);", main)
+        self.assertIn('AnnouncementListRequest', source)
+        self.assertIn('LoginRequest', source)
+
     def test_protocol_assertions_not_reintroduced_in_monolith(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         self.assertNotIn("PacketSchemaValidator.TryValidate(", main)
