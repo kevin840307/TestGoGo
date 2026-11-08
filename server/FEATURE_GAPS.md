@@ -25,7 +25,7 @@
 | P0-01 | TEST_GAP | **實際 Godot ↔ .NET 封包 E2E**：登入、角色建立／選取、WorldReady、切圖、怪物同步、技能、掉寶、拾取、交易、寵物／機甲、商城點數、登出 | `client/scripts/network_manager.gd`、`server/Application/PacketRouter.cs` | 真實 Client 逐項操作，兩端封包及資料一致；失敗案例有回應，不會無限等待 |
 | P0-02 | TEST_GAP | **多人同步與並行安全**：2／10 人同地圖、相同怪物同時擊殺、交易兩端同時確認、同一掉寶同時拾取、切圖與斷線 | `SharedMapAiTicker`、`CombatService`、`TradeService`、`PacketRouter` | 單怪更新一次、獎勵與物品不重複、角色位置不倒退，重連後狀態一致 |
 | P0-03 | TEST_GAP | **CI 真正執行**：GitHub Actions 過去多筆 Job 在取得 Runner 前失敗，尚無 Build／Smoke／Wire 全綠證據 | `.github/workflows/server-build.yml`、`tests/run_protocol_checks.ps1` | 取得有步驟的 CI run：Python 契約、.NET build、遊戲 Smoke、AES/WebSocket smoke 全 PASS |
-| P0-04 | TEST_GAP | **完整欄位契約**：目前僅涵蓋選定請求與關鍵回應的必要欄位；非固定 Dictionary、動態組裝、所有 Server → Client 欄位型別與錯誤分支仍需擴充 | `tests/packet_*_audit.py`、`server/Protocol/PacketSchemaValidator.cs` | 報告列出每個實際用到的 Type／Action、必要／選填欄位、型別、成功與失敗回應；無未分類路由 |
+| P0-04 | TEST_GAP | **完整欄位契約**：已補 Server → Client 巢狀 anonymous object 解析、`DriveMechaResponse` 明確 ACK 契約，以及 Godot `network_manager.gd` client ownership 回歸測試；仍缺非固定 Dictionary、動態組裝、全部欄位型別與錯誤分支 | `tests/packet_*_audit.py`、`tests/test_client_network_contract.py`、`server/Protocol/PacketSchemaValidator.cs` | 報告列出每個實際用到的 Type／Action、必要／選填欄位、型別、成功與失敗回應；無未分類路由 |
 
 ## P1 — 已知部分實作功能
 
@@ -57,6 +57,8 @@
   - `Announcements/AnnouncementSmokeTests.cs`
   - `Fixtures/TemporaryDirectoryFixture.cs`（測試暫存資料自動清理）
 - 共用 `SmokeAssert.cs`，仍由原 Smoke runner 呼叫，避免增加額外測試框架依賴。
+- 新增 `tests/test_client_network_contract.py`：直接檢查 Godot `network_manager.gd` 的封包責任邊界；目前鎖住機甲 ACK、`PlayerStatusSync` 能力值來源與商城 `Gifts` 消費欄位，CI 與 PowerShell runner 都會執行。
+- `packet_response_audit.py` 已改為平衡 C# anonymous initializer 大括號，避免 `MallListResponse` 這類巢狀 `new { ... }` 被第一個 `}` 截斷造成假缺欄位。
 - **2026-11-08 路由來源複核**：逐檔比對 95 個 Godot `.gd` 腳本及 Server 固定回傳 Type 的來源，未發現新的固定 Type 遺漏對接；`BankTransfer` 由 `BankPacketHandler` 模組處理，而不是 `PacketRouter.case`。此結論**不包含**動態組合的所有欄位、實際多人遊戲流程與外部服務可用性。
 - **待拆**的世界／交易／任務等大型整合案例需先建立可複用的 fixture（獨立 SQLite、地圖資料、Player sessions），然後分成不同測試模組；不可只把原本依賴同一個可變 Session 的程式碼切開，否則容易產生跨測試污染。
 - 新增測試請優先放進相關領域檔案；不要繼續往 `Program.cs` 最前面塞大量獨立 `using (Json(...))`。
