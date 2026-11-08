@@ -133,6 +133,31 @@ func _test_manager_packet_ordering() -> void:
 		float(monster.get("LocY", -1)) == 70.0,
 		"fresh AOI re-entry ignores stale movement after previous Despawn")
 
+	# EntityDeath, not just explicit DespawnEntity, terminates a monster
+	# incarnation. Late old movement must not spoil the next respawn.
+	var dying_id: int = 9300802
+	manager.call("_on_entity_spawned", {
+		"Type": "SpawnEntity", "EntityID": dying_id,
+		"EntityType": 1, "Name": "dying",
+		"LocX": 80, "LocY": 85, "ExtraData": {}
+	})
+	manager.call("_on_entity_death_received", {
+		"Type": "EntityDeath", "EntityID": dying_id, "EntityType": 1
+	})
+	manager.call("_on_entity_moved", {
+		"Type": "MoveEntity", "EntityID": dying_id,
+		"X": 5000, "Y": 6000
+	})
+	manager.call("_on_entity_spawned", {
+		"Type": "SpawnEntity", "EntityID": dying_id,
+		"EntityType": 1, "Name": "respawn",
+		"LocX": 44, "LocY": 55, "ExtraData": {}
+	})
+	var respawn: Dictionary = monster_templates.get(dying_id, {}) as Dictionary
+	_check(float(respawn.get("LocX", -1)) == 44.0 and
+		float(respawn.get("LocY", -1)) == 55.0,
+		"EntityDeath blocks late Move from corrupting next monster respawn")
+
 	manager.call("clear_map_entities")
 	_check(manager.get("_pending_aoi_moves").pending_count() == 0 and
 		monster_templates.is_empty() and
