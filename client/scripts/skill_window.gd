@@ -48,8 +48,13 @@ func _ready() -> void :
 
 
 func setup(player: CharacterBody2D) -> void :
+	# GameHUD installs this window hidden on world entry. Building SkillCards
+	# and loading all referenced .tres/icons here costs ~60ms and memory even
+	# when the user never opens the skill book (especially expensive for
+	# multiple background clients). GameHUD._toggle_window() already calls
+	# update_ui() immediately before each first/open, and SkillSync refreshes
+	# only an already visible window. Keep the authoritative model binding.
 	target_player = player
-	update_ui()
 
 
 func update_ui() -> void :
