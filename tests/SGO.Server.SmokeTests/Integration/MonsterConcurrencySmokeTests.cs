@@ -26,8 +26,10 @@ internal static class MonsterConcurrencySmokeTests
 
         for (var i = 0; i < 10; i++)
         {
+            // Registration enforces 3–40 characters. Preserve the full
+            // 32-digit GUID for test isolation with a short prefix (35 total).
             var username =
-                $"monster-race-{Guid.NewGuid():N}-{i}";
+                $"mr-{Guid.NewGuid():N}";
             var registered =
                 store.Register(
                     username,
@@ -36,7 +38,7 @@ internal static class MonsterConcurrencySmokeTests
 
             Check(
                 registered.Success,
-                $"register monster race player {i}");
+                $"register monster race player {i}: {registered.Message}");
 
             var accountId =
                 store.Login(
