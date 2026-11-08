@@ -343,6 +343,55 @@ internal static class MallExternalIntegrationSmokeTests
             store.GetMallPoints(
                 accountId.Value) == 700,
             "unsafe URL and provider exceptions fail closed without mutating mall balance");
+
+        var webhookProvider =
+            new VerifiedWebhookPayPalProvider(
+                accountId.Value);
+        var webhookMall =
+            new MallService(
+                store,
+                payPal:
+                    webhookProvider);
+        var webhookService =
+            new PayPalWebhookService(
+                webhookProvider,
+                webhookMall);
+
+        var webhookHeaders =
+            new Dictionary<string, string>
+            {
+                ["PayPal-Transmission-Id"] =
+                    "synthetic-transmission"
+            };
+
+        var firstWebhook =
+            webhookService.HandleAsync(
+                    webhookHeaders,
+                    "{\"event\":\"PAYMENT.CAPTURE.COMPLETED\"}",
+                    CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+
+        var repeatedWebhook =
+            webhookService.HandleAsync(
+                    webhookHeaders,
+                    "{\"event\":\"PAYMENT.CAPTURE.COMPLETED\"}",
+                    CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+
+        Check(
+            firstWebhook.Outcome ==
+                PayPalWebhookOutcome.Applied &&
+            repeatedWebhook.Outcome ==
+                PayPalWebhookOutcome.Duplicate &&
+            firstWebhook.NewBalance == 1200 &&
+            repeatedWebhook.NewBalance == 1200 &&
+            store.GetMallPoints(
+                accountId.Value) == 1200 &&
+            store.GetLifetimeDonation(
+                accountId.Value) == 1000,
+            "verified PayPal webhook applies once and duplicate delivery is idempotent");
     }
 
     private sealed class FakePayPalProvider :
@@ -367,6 +416,49 @@ internal static class MallExternalIntegrationSmokeTests
                 "https://www.paypal.com/checkoutnow?token=test",
                 "paypal-order-1");
         }
+
+        public Task<PayPalWebhookVerificationResult> VerifyWebhookAsync(
+            IReadOnlyDictionary<string, string> headers,
+            string body,
+            CancellationToken cancellationToken)
+            => Task.FromResult(
+                new PayPalWebhookVerificationResult(
+                    true,
+                    false,
+                    "此 fake 只測建單"));
+    }
+
+    private sealed class VerifiedWebhookPayPalProvider :
+        IPayPalDonationProvider
+    {
+        private readonly long _accountId;
+
+        public VerifiedWebhookPayPalProvider(
+            long accountId)
+        {
+            _accountId = accountId;
+        }
+
+        public PayPalDonationOrderResult CreateOrder(
+            long accountId,
+            int amount,
+            string requestId)
+            => new(
+                false,
+                "not used");
+
+        public Task<PayPalWebhookVerificationResult> VerifyWebhookAsync(
+            IReadOnlyDictionary<string, string> headers,
+            string body,
+            CancellationToken cancellationToken)
+            => Task.FromResult(
+                new PayPalWebhookVerificationResult(
+                    true,
+                    true,
+                    "verified",
+                    _accountId,
+                    "paypal-webhook-tx-1",
+                    500));
     }
 
     private sealed class UnsafePayPalProvider :
@@ -381,6 +473,16 @@ internal static class MallExternalIntegrationSmokeTests
                 "unsafe",
                 "https://evil.example/pay",
                 "unsafe-order");
+
+        public Task<PayPalWebhookVerificationResult> VerifyWebhookAsync(
+            IReadOnlyDictionary<string, string> headers,
+            string body,
+            CancellationToken cancellationToken)
+            => Task.FromResult(
+                new PayPalWebhookVerificationResult(
+                    true,
+                    false,
+                    "unsafe provider webhook rejected"));
     }
 
     private sealed class ThrowingLegacyProvider :
