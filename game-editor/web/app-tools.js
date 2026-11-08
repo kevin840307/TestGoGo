@@ -264,7 +264,13 @@ function emptyEditor(icon, title, desc) {
 // Events
 $$('.nav-item').forEach(b => b.onclick = () => go(b.dataset.view));
 $$('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
-$('#refresh-view').onclick = () => refreshCurrent().catch(e => toast(e.message, 'error'));
+$('#refresh-view').onclick = async () => {
+  if (state.view === 'maps' && state.mapDirty) {
+    if (!confirmDiscardMapChanges()) return;
+    state.mapDirty = false;
+  }
+  try { await refreshCurrent(); } catch (e) { toast(e.message, 'error'); }
+};
 
 $('#skill-search').oninput = debounce(() => loadSkills().catch(e => toast(e.message, 'error')));
 $('#skill-new').onclick = newSkill;
