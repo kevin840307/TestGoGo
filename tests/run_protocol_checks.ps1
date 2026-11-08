@@ -58,7 +58,14 @@ try {
         "build", "tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj",
         "-c", "Release"
     )
-    Invoke-Checked ".NET game smoke tests" "dotnet" @(
+    foreach ($suite in @("protocol", "announcements", "world")) {
+        Invoke-Checked ("Fast " + $suite + " smoke tests") "dotnet" @(
+            "run", "--no-build", "--project",
+            "tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj",
+            "-c", "Release", "--", "--suite", $suite
+        )
+    }
+    Invoke-Checked ".NET full game integration smoke" "dotnet" @(
         "run", "--no-build", "--project",
         "tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj",
         "-c", "Release"
