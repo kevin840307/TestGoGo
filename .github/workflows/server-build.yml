@@ -32,7 +32,13 @@ jobs:
           python3 tests/packet_response_audit.py --strict --output packet-response-report.json
           python3 tests/quest_host_audit.py --strict --output quest-host-report.json
       - name: Game editor tests
-        run: python3 -m unittest discover -s game-editor/tests -v
+        run: |
+          python3 -m py_compile game-editor/editor.py game-editor/sgo_editor/*.py
+          node --check game-editor/web/app-core.js
+          node --check game-editor/web/app-skills.js
+          node --check game-editor/web/app-world.js
+          node --check game-editor/web/app-tools.js
+          python3 -m unittest discover -s game-editor/tests -v
       - name: Build server
         run: |
           set -o pipefail
