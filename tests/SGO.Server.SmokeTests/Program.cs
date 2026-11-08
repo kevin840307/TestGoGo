@@ -105,6 +105,7 @@ ConcurrencySmokeTests.Run(repoRoot);
 EconomyConcurrencySmokeTests.Run();
 AssetMutationConcurrencySmokeTests.Run();
 CrossFeatureConcurrencySmokeTests.Run();
+PlayerShopAoiSmokeTests.Run(repoRoot);
 MallExternalIntegrationSmokeTests.Run();
 GlobalRateSmokeTests.Run();
 
