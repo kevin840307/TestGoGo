@@ -37,12 +37,27 @@ func _run() -> void:
 		"in-flight waypoint remains in the runtime update loop")
 	_check(monster.global_position.x > 0.0 and monster.global_position.x < 35.0,
 		"waypoint continues without teleporting")
-	_check(not monster.advance_network_runtime(0.16),
+	_check(not monster.advance_network_runtime(0.20),
 		"waypoint arrival allows manager to stop updating")
 	_check(is_equal_approx(monster.global_position.x, 35.0),
 		"waypoint reaches exact server-approved position")
 	_check(monster.current_state == "idle" and not monster.network_move_active,
 		"server idle applies immediately after arrival")
+
+	# At the normal 250ms server packet boundary, the preceding visual
+	# segment should still be moving for a few milliseconds. This prevents
+	# WALK -> IDLE -> WALK flicker when a new packet is slightly delayed.
+	var boundary_monster: MonsterEntity = MonsterEntity.new()
+	boundary_monster.network_move_to(Vector2(35.0, 0.0), 0.25)
+	boundary_monster.advance_network_runtime(0.25)
+	_check(boundary_monster.network_move_active
+		and boundary_monster.global_position.x < 35.0
+		and boundary_monster.current_state == "walk",
+		"250ms server tick boundary keeps visual walk in progress")
+	boundary_monster.network_move_to(Vector2(70.0, 0.0), 0.25)
+	_check(boundary_monster.current_state == "walk" and boundary_monster.network_move_active,
+		"next waypoint continues walk without re-entering idle")
+	boundary_monster.free()
 
 	# A newer MoveEntity must cancel the old deferred idle.
 	monster.network_move_to(Vector2(70.0, 0.0), 0.25)
