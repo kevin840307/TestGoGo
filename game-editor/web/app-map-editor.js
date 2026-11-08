@@ -87,6 +87,7 @@ async function switchMap(nextId) {
     return;
   }
   state.mapId = id;
+  saveEditorPreferences();
   await loadMapRows();
 }
 
@@ -97,7 +98,8 @@ async function switchMapTab(tab) {
     return;
   }
   state.mapTab = tab;
-  $$('[data-map-tab]').forEach(x => x.classList.toggle('active', x.dataset.mapTab === tab));
+  saveEditorPreferences();
+  $('[data-map-tab]').forEach(x => x.classList.toggle('active', x.dataset.mapTab === tab));
   await loadMapRows();
 }
 
@@ -116,9 +118,10 @@ async function loadMaps() {
   if (!state.enemies.length || $('#enemy-search').value.trim()) {
     state.enemies = await api('/api/enemies?q=');
   }
-  if (!state.mapSelectedEnemyId && state.enemies.length) {
-    state.mapSelectedEnemyId = state.enemies[0].id;
+  if (!state.mapSelectedEnemyId || !state.enemies.some(x => Number(x.id) === Number(state.mapSelectedEnemyId))) {
+    state.mapSelectedEnemyId = state.enemies[0]?.id || null;
   }
+  saveEditorPreferences();
 
   fillScriptMapSelect();
   await loadMapRows();
@@ -219,8 +222,9 @@ function renderEnemyPalette() {
       <span><b>${esc(e.name)}</b><small>#${e.id} · Lv.${e.level} · ${esc(e.sprite)}</small></span>
     </button>`).join('') || '<div class="helper">找不到怪物。</div>';
 
-  $$('.map-enemy-item', host).forEach(btn => btn.onclick = () => {
+  $('.map-enemy-item', host).forEach(btn => btn.onclick = () => {
     state.mapSelectedEnemyId = Number(btn.dataset.enemyId);
+    saveEditorPreferences();
     if (state.mapOnlySelectedType) setMapSelection([]);
     renderEnemyPalette();
     if (state.mapOnlySelectedType) renderMapVisual();
