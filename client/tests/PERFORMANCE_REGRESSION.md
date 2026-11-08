@@ -179,6 +179,33 @@ Map13 → Map15 → Map13, and a missing map path. Verify monotonic smooth fill,
 no abrupt 90→100 jumps, the same overlay teardown and exactly one original
 WorldReady handshake per transition.
 
+## Focused render-resource cleanup (no gameplay rule changes)
+
+The previous design allocated an invisible TargetIndicator AnimatedSprite2D
+for every monster during setup. Target indicators now create only after the
+first server-confirmed target state and pause while offscreen. This retains
+the existing icon, attack/click state and animation when visible.
+
+Ground items retain their own Area2D, Sprite2D, CollisionShape2D, item
+name and ownership UI. Identically sized icons now share one immutable
+RectangleShape2D; identically tinted drops share one palette ShaderMaterial
+(no per-instance shader uniforms are updated after initialization). Both
+preserve the old padded click area and the displayed colors.
+
+Run:
+```powershell
+godot --headless --path client --script res://tests/render_resource_regression.gd
+godot --headless --path client --script res://tests/perf_regression_smoke.gd
+```
+
+For gameplay acceptance, check Map13 with many monsters and ground drops:
+select/deselect monsters, leave/reenter the viewport with active aggro,
+test attack direction and skill effects, click/pick up items with distinct
+icon sizes and colors, check countdown/protection, then switch
+Map13 → Map15 → Map13. Record `[PERF_ANALYSIS]` and `[RENDER_STATS]` under
+the same population/viewpoint; do not claim RAM/FPS savings without
+comparative measurements.
+
 ## Manual end-to-end acceptance
 
 1. Startup prewarm → login form: mouse and login input are responsive; progress 0→100.
