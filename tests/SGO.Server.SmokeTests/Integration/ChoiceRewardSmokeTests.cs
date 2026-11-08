@@ -90,13 +90,13 @@ internal static class ChoiceRewardSmokeTests
 
             Check(
                 json.Contains(
-                    "\\\"Type\\\":\\\"ItemChoiceRequired\\\"") &&
+                    "\"Type\":\"ItemChoiceRequired\"") &&
                 json.Contains(
-                    "\\\"ItemIndex\\\":15112") &&
+                    "\"ItemIndex\":15112") &&
                 json.Contains(
-                    "\\\"ItemIndex\\\":15113") &&
+                    "\"ItemIndex\":15113") &&
                 json.Contains(
-                    "\\\"ItemIndex\\\":15114"),
+                    "\"ItemIndex\":15114"),
                 "using a choice box returns only its authoritative reward options");
         }
 
@@ -182,9 +182,9 @@ internal static class ChoiceRewardSmokeTests
 
             Check(
                 json.Contains(
-                    "\\\"Type\\\":\\\"InventorySync\\\"") &&
+                    "\"Type\":\"InventorySync\"") &&
                 json.Contains(
-                    "\\\"Type\\\":\\\"EquipSync\\\"") &&
+                    "\"Type\":\"EquipSync\"") &&
                 json.Contains(
                     "已選擇獎勵：聖殿騎士鎧甲．復仇"),
                 "valid choice consumes source and synchronizes the granted equipment");
