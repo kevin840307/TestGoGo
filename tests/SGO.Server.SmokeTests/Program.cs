@@ -376,7 +376,15 @@ var currentCatalog = new CurrentClientDataCatalog(
                 50012 or
                 50316 or
                 50330 or
-                50340)),
+                50340 or
+                2031 or
+                19330 or
+                2034 or
+                19334 or
+                19335 or
+                19336 or
+                19337 or
+                19338)),
     new[]
     {
         new CurrentSkillDefinition(20101, "Current Skill 20101"),
@@ -2929,6 +2937,15 @@ try
         currentCatalog);
 
     WaspPackageSmokeTests.Run(
+        router,
+        store,
+        session,
+        account.Value,
+        id,
+        currentCatalog,
+        realCurrentCatalog);
+
+    CosmeticTransformationSmokeTests.Run(
         router,
         store,
         session,
