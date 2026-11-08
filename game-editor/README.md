@@ -17,6 +17,7 @@
 - **變更歷史 / 還原**：直接瀏覽 `.backups` 內的 Editor 自動備份；文字檔顯示 unified diff，二進位檔顯示大小與 SHA256。還原前會再備份目前版本，避免「還原」本身成為不可逆操作。
 - **Health 篩選**：Project Health 支援關鍵字、Error/Warning、category 篩選，資料很多時不必人工捲整份清單。
 - **首次使用導引**：第一次開啟會顯示精簡流程與常用快捷鍵；之後可從右上角「? 使用說明」隨時叫出。
+- **安全偏好記憶**：記住上次地圖、怪物/NPC tab、目前怪物種類，以及背景 / Blocking / Spawn Zone / 名稱 / 吸附等純顯示偏好；刻意不儲存 `mapRows`、Undo/Redo、Clipboard 或 dirty 草稿，避免瀏覽器快取成為另一份資料來源。
 - **真實地圖背景**：可由 Godot 直接載入實際 `MapXX.scn`，依與 Editor 相同的 `map_bounds.json + 16px cell` 契約輸出 PNG；Editor 有圖就自動疊上，沒有圖仍安全退回 Blocking / 座標畫布。
 
 > NPC 腳本的即時檢查是 Editor 端的快速靜態檢查，用來提早抓常見錯誤；Server 執行時仍以 `QuestRuntime + MoonSharp` 為最終語意。
@@ -97,6 +98,7 @@ E2E 會建立獨立 temp SGO 專案並啟動真正的 `editor.py`，再由 Chrom
 - 首次使用 Help / 快捷鍵 UI、地圖 preview layer 與 preview endpoint
 - Godot MapXX.scn preview exporter 與 Editor bounds 契約一致性
 - Playwright Chromium 真實瀏覽器流程：新增 / 拖曳 / Undo / Redo / Save / Reload
+- Map view preference reload persistence，並驗證 localStorage 不含 mapRows / Undo / Redo / Clipboard / dirty 草稿
 
 ## 變更歷史與安全還原
 
