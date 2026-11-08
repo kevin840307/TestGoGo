@@ -263,6 +263,86 @@ internal static class MallExternalIntegrationSmokeTests
             blockedLegacy.Contains(
                 "\"Success\":false"),
             "null external providers fail closed without fake orders or balances");
+
+        var unknownAccountCredit =
+            store.CreditExternalMallPoints(
+                9_999_999,
+                "paypal",
+                "unknown-account-tx",
+                500,
+                500);
+
+        Check(
+            !unknownAccountCredit.Success &&
+            unknownAccountCredit.NewBalance == 0 &&
+            unknownAccountCredit.LifetimeDonation == 0,
+            "external settlement rejects unknown local account");
+
+        var unsafeMall =
+            new MallService(
+                store,
+                payPal:
+                    new UnsafePayPalProvider(),
+                legacyPoints:
+                    new ThrowingLegacyProvider());
+
+        var unsafePayPal =
+            JsonSerializer.Serialize(
+                unsafeMall.Handle(
+                    accountId.Value,
+                    0,
+                    "CreatePayPalDonation",
+                    0,
+                    1,
+                    500,
+                    0,
+                    requestId:
+                        "unsafe-url"));
+
+        var providerExceptionQuery =
+            JsonSerializer.Serialize(
+                unsafeMall.Handle(
+                    accountId.Value,
+                    0,
+                    "QueryLegacyPoints",
+                    0,
+                    1,
+                    0,
+                    0,
+                    legacyLoginName:
+                        "legacy-user",
+                    legacyPassword:
+                        "legacy-secret"));
+
+        var providerExceptionWithdraw =
+            JsonSerializer.Serialize(
+                unsafeMall.Handle(
+                    accountId.Value,
+                    0,
+                    "WithdrawLegacyPoints",
+                    0,
+                    1,
+                    100,
+                    0,
+                    legacyLoginName:
+                        "legacy-user",
+                    legacyPassword:
+                        "legacy-secret",
+                    requestId:
+                        "throwing-legacy"));
+
+        Check(
+            unsafePayPal.Contains(
+                "\"Success\":false") &&
+            !unsafePayPal.Contains(
+                "evil.example") &&
+            providerExceptionQuery.Contains(
+                "\"Success\":false") &&
+            providerExceptionWithdraw.Contains(
+                "\"Success\":false") &&
+            store.GetMallPoints(
+                accountId.Value) == 700,
+            "unsafe URL and provider exceptions fail closed without mutating mall balance");
     }
 
     private sealed class FakePayPalProvider :
@@ -287,6 +367,38 @@ internal static class MallExternalIntegrationSmokeTests
                 "https://www.paypal.com/checkoutnow?token=test",
                 "paypal-order-1");
         }
+    }
+
+    private sealed class UnsafePayPalProvider :
+        IPayPalDonationProvider
+    {
+        public PayPalDonationOrderResult CreateOrder(
+            long accountId,
+            int amount,
+            string requestId)
+            => new(
+                true,
+                "unsafe",
+                "https://evil.example/pay",
+                "unsafe-order");
+    }
+
+    private sealed class ThrowingLegacyProvider :
+        ILegacyPointProvider
+    {
+        public LegacyPointQueryResult Query(
+            string loginName,
+            string password)
+            => throw new TimeoutException(
+                "synthetic legacy timeout");
+
+        public LegacyPointWithdrawalResult Withdraw(
+            string loginName,
+            string password,
+            int amount,
+            string requestId)
+            => throw new TimeoutException(
+                "synthetic legacy timeout");
     }
 
     private sealed class FakeLegacyPointProvider :
