@@ -465,6 +465,7 @@ var _window_has_focus: bool = true
 var _focused_max_fps: int = 0
 var _master_bus_was_muted_before_focus_loss: bool = false
 var _startup_loading_overlay_active: bool = false
+var _world_ready_for_background_saving: bool = false
 var _startup_focus_observed_frames: int = 0
 var _last_background_cache_trim_msec: int = 0
 const BACKGROUND_CACHE_TRIM_COOLDOWN_MSEC: int = 60000
@@ -523,7 +524,9 @@ static func fps_cap_for_focus(profile: Dictionary, has_focus: bool, world_active
 
 
 func _has_active_world_visuals() -> bool:
-	return is_instance_valid(current_map_node) and is_instance_valid(current_player)
+	# Loading a character is not an active world yet; never disable rendering
+	# halfway through its first map/HUD initialization.
+	return _world_ready_for_background_saving and is_instance_valid(current_map_node) and is_instance_valid(current_player)
 
 
 func _refresh_focus_render_policy() -> void:
@@ -1006,6 +1009,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		current_hud.start_post_reveal_background_prewarm()
 
 	set_frame_gap_stage("world_ready")
+	_world_ready_for_background_saving = true
 	# Switch to background savings only after the initial world is ready.
 	_refresh_focus_render_policy()
 	_trace_map_change("initial_enter_completed", 0, target_map_id, {
@@ -1016,6 +1020,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	return true
 
 func cleanup_and_return_to_login() -> void :
+	_world_ready_for_background_saving = false
 	_cancel_active_map_transition("cleanup_and_return_to_login")
 	_cancel_train_travel("cleanup_and_return_to_login")
 	AudioManager.stop_bgm()
