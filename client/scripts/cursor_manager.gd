@@ -1,7 +1,11 @@
 
 extends CanvasLayer
 
-const AUTORUN_INDICATOR = preload("res://scripts/autorun_cursor_indicator.gd")
+# Ten transparent 32x32 frames, derived from C_NORMAL's fantasy blue/gold
+# pointer. Keep this as a regular imported texture; no per-frame drawing.
+const AUTORUN_SHEET_PATH = "res://ui/cursor/C_AUTOWALK.spr.png"
+const AUTORUN_FRAME_COUNT: int = 10
+const AUTORUN_FRAME_SIZE: Vector2i = Vector2i(32, 32)
 
 signal ctrl_state_changed(is_pressed: bool)
 
@@ -12,7 +16,6 @@ var current_hovered_entity: Node = null
 var _logical_cursor_state: String = "normal"
 var _is_game_window_hovered: bool = false
 var _autorun_enabled: bool = false
-var _autorun_indicator: Node2D = null
 
 
 var hovered_items: Array = []
@@ -21,13 +24,8 @@ var _last_ctrl_state: bool = false
 
 func _ready() -> void :
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+	_register_autorun_cursor_animation()
 	cursor_sprite.play("normal")
-
-	# Use a distinct teal double-chevron pointer while keeping recovered
-	# attack/NPC/skill cursor animations and their existing input rules.
-	_autorun_indicator = AUTORUN_INDICATOR.new()
-	_autorun_indicator.visible = false
-	add_child(_autorun_indicator)
 
 	tooltip_label = RichTextLabel.new()
 	tooltip_label.bbcode_enabled = true
@@ -45,8 +43,6 @@ func _ready() -> void :
 func _process(_delta: float) -> void :
 	var m_pos = cursor_sprite.get_global_mouse_position()
 	cursor_sprite.global_position = m_pos
-	if is_instance_valid(_autorun_indicator):
-		_autorun_indicator.global_position = m_pos + Vector2(20.0, 21.0)
 
 	if current_hovered_entity != null and not is_instance_valid(current_hovered_entity):
 		_refresh_cursor()
@@ -141,7 +137,35 @@ func set_autorun_indicator(enabled: bool) -> void:
 
 
 func is_autorun_indicator_visible() -> bool:
-	return is_instance_valid(_autorun_indicator) and _autorun_indicator.visible
+	return _autorun_enabled and cursor_sprite.animation == "autorun" and not _is_game_window_hovered
+
+
+func _register_autorun_cursor_animation() -> void:
+	# Original cursor sprites are loaded from cursor_manager.tscn. Add the
+	# generated animation at runtime so those original imported textures,
+	# frame durations and hit points remain exactly as before.
+	if not ResourceLoader.exists(AUTORUN_SHEET_PATH):
+		push_warning("Auto-walk cursor PNG is missing: " + AUTORUN_SHEET_PATH)
+		return
+	var atlas: Texture2D = load(AUTORUN_SHEET_PATH) as Texture2D
+	if atlas == null or atlas.get_width() != AUTORUN_FRAME_COUNT * AUTORUN_FRAME_SIZE.x or atlas.get_height() != AUTORUN_FRAME_SIZE.y:
+		push_warning("Auto-walk cursor sprite sheet must be 320x32 pixels.")
+		return
+
+	var frames: SpriteFrames = cursor_sprite.sprite_frames.duplicate(true) as SpriteFrames
+	if not frames.has_animation("autorun"):
+		frames.add_animation("autorun")
+	frames.set_animation_speed("autorun", 8.0)
+	frames.set_animation_loop("autorun", true)
+	for frame_index in range(AUTORUN_FRAME_COUNT):
+		var frame_texture := AtlasTexture.new()
+		frame_texture.atlas = atlas
+		frame_texture.region = Rect2(
+			Vector2(frame_index * AUTORUN_FRAME_SIZE.x, 0),
+			Vector2(AUTORUN_FRAME_SIZE)
+		)
+		frames.add_frame("autorun", frame_texture)
+	cursor_sprite.sprite_frames = frames
 
 
 func set_game_window_hovered(is_hovered: bool) -> void :
@@ -161,14 +185,14 @@ func set_game_window_hovered(is_hovered: bool) -> void :
 			current_hovered_entity._on_mouse_entered()
 
 func _apply_cursor_visual() -> void :
-	var visual_state: = "normal" if _is_game_window_hovered else _logical_cursor_state
+	var visual_state: String = "normal" if _is_game_window_hovered else _logical_cursor_state
+	# Keep all old skill/monster/NPC/player/item pointers ahead of autorun.
+	# Only replace the ordinary terrain pointer when walking is latched.
+	if _autorun_enabled and visual_state == "normal" and not _is_game_window_hovered:
+		if cursor_sprite.sprite_frames.has_animation("autorun"):
+			visual_state = "autorun"
 	if cursor_sprite.animation != visual_state:
 		cursor_sprite.play(visual_state)
-	if is_instance_valid(_autorun_indicator):
-		_autorun_indicator.visible = (
-			_autorun_enabled and visual_state == "normal"
-			and not _is_game_window_hovered
-		)
 
 func show_skill_target_tooltip(target_name: String, skill_name: String) -> void :
 	if not tooltip_label: return
