@@ -6392,10 +6392,10 @@ try
         session,
         account.Value);
 
-    // A previous combat smoke may legitimately leave some shared mobs dead.
-    // Test life drain against a living authoritative map target.
+    // Previous shared-map combat smokes may legitimately leave every mob
+    // dead. Select an authoritative fixture independent of prior survival
+    // state, then reset it below before exercising life drain.
     var monster = session.Monsters.Values
-        .Where(x => x.IsAlive)
         .OrderByDescending(x => x.MaxHp)
         .First();
     // Isolate this skill fixture from prior shared-map combat smokes.
