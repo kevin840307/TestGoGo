@@ -51,6 +51,7 @@ internal static class WorldEntitySpatialAoiSmokeTests
     {
         ObserverAndEntityMovementUseHysteresis();
         EntityRemovalNeverLeavesGhostKnownSets();
+        AuthoritativeMapReconciliationPurgesStaleGround();
         LatestSpawnFactoryWinsForLateObserver();
         SpatialIndexHandlesLargeSparseWorld();
         ConcurrentEntityMovementSettlesSymmetrically();
@@ -196,6 +197,42 @@ internal static class WorldEntitySpatialAoiSmokeTests
             silent.Count == 0 &&
             !aoi.IsVisible(first.ConnectionId, ground.EntityId),
             "world AOI terminal death can remove entity silently after death packet");
+    }
+
+    private static void AuthoritativeMapReconciliationPurgesStaleGround()
+    {
+        var aoi = new WorldEntitySpatialAoi();
+        var viewer = Observer(15, 13, 0, 0);
+        var keep = Entity(6_000_101, 3, 13, 100, 0);
+        var expired = Entity(6_000_102, 3, 13, 120, 0);
+
+        aoi.UpsertObserver(viewer);
+        aoi.UpsertEntity(keep);
+        aoi.UpsertEntity(expired);
+
+        Check(
+            aoi.VisibleEntities(viewer.ConnectionId).Count == 2,
+            "world AOI observer initially knows both persisted ground rows");
+
+        var removed = aoi.RemoveMissingEntities(
+            13,
+            3,
+            new HashSet<long>
+            {
+                keep.EntityId
+            });
+
+        Check(
+            removed.Count == 1 &&
+            removed[0].Entity.EntityId == expired.EntityId &&
+            !removed[0].Appeared,
+            "authoritative ground snapshot emits despawn for stale AOI row");
+
+        Check(
+            aoi.IsVisible(viewer.ConnectionId, keep.EntityId) &&
+            !aoi.IsVisible(viewer.ConnectionId, expired.EntityId) &&
+            aoi.VisibleEntities(viewer.ConnectionId).Count == 1,
+            "authoritative ground snapshot cannot resurrect expired ghost item");
     }
 
     private static void LatestSpawnFactoryWinsForLateObserver()
