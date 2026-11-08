@@ -3844,14 +3844,18 @@ theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
 selected = 0
-item_count = 3
+item_count = 5
 popup/item_0/text = "自動"
 popup/item_0/id = 0
 popup/item_1/text = "關閉"
 popup/item_1/id = 1
-popup/item_2/text = "開啟"
+popup/item_2/text = "像素 A"
 popup/item_2/id = 2
-tooltip_text = "自動會跟隨效能模式；關閉保留其他玩家原始外觀；開啟強制使用簡化外觀。自己與目前戰鬥目標不會被簡化。"
+popup/item_3/text = "像素 B"
+popup/item_3/id = 3
+popup/item_4/text = "極簡"
+popup/item_4/id = 4
+tooltip_text = "人物與怪物分開設定。像素模式使用內建繪製，不載入替代圖片；隊伍、社團、可攻擊與一般玩家會用不同亮色外框辨識。"
 
 [node name="LabelSimplifyMonsters" type="Label" parent="WindowsContainer/SettingsWindow"]
 layout_mode = 0
@@ -3877,14 +3881,18 @@ theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
 selected = 0
-item_count = 3
+item_count = 5
 popup/item_0/text = "自動"
 popup/item_0/id = 0
 popup/item_1/text = "關閉"
 popup/item_1/id = 1
-popup/item_2/text = "開啟（內建圖形）"
+popup/item_2/text = "像素 A"
 popup/item_2/id = 2
-tooltip_text = "自動會跟隨效能/戰鬥模式；只要進入簡化，就使用 Godot 內建 Primitive 圖形，不再載入通用怪物素材。戰鬥目標與重要怪物仍保留完整外觀。"
+popup/item_3/text = "像素 B"
+popup/item_3/id = 3
+popup/item_4/text = "極簡"
+popup/item_4/id = 4
+tooltip_text = "只用文字選項。像素模式以 Godot 內建 Primitive 繪製，不載入替代怪物圖片；攻擊、受擊與死亡都維持同一種簡化外觀。"
 
 [node name="BtnBackToLogin" type="Button" parent="WindowsContainer/SettingsWindow" unique_id=791546295]
 layout_mode = 0
