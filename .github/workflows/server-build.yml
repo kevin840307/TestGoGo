@@ -1,7 +1,7 @@
 name: Server build
 on:
   push:
-    paths: ['server/**', 'client/**/*.gd', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/SGO.ItemCoverageReport/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', 'tests/test_packet_log_privacy.py', 'tests/test_client_network_contract.py', 'tests/quest_host_audit.py', 'tests/test_quest_host_audit.py', 'tests/test_smoke_suite_structure.py', 'tests/test_feature_gap_tracker.py', '.github/workflows/server-build.yml']
+    paths: ['server/**', 'client/**/*.gd', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/SGO.ItemCoverageReport/**', 'tests/SGO.MappingCoverageReport/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', 'tests/test_packet_log_privacy.py', 'tests/test_client_network_contract.py', 'tests/quest_host_audit.py', 'tests/test_quest_host_audit.py', 'tests/test_smoke_suite_structure.py', 'tests/test_feature_gap_tracker.py', '.github/workflows/server-build.yml']
   pull_request:
     paths: ['server/**', 'client/**/*.gd', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/SGO.ItemCoverageReport/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', 'tests/test_packet_log_privacy.py', 'tests/test_client_network_contract.py', 'tests/quest_host_audit.py', 'tests/test_quest_host_audit.py', 'tests/test_smoke_suite_structure.py', 'tests/test_feature_gap_tracker.py', '.github/workflows/server-build.yml']
 jobs:
@@ -33,6 +33,10 @@ jobs:
         run: |
           set -o pipefail
           dotnet run --project tests/SGO.ItemCoverageReport/SGO.ItemCoverageReport.csproj -c Release -- --output item-use-coverage-report.json 2>&1 | tee item-coverage.log
+      - name: Historical mapping coverage report
+        run: |
+          set -o pipefail
+          dotnet run --project tests/SGO.MappingCoverageReport/SGO.MappingCoverageReport.csproj -c Release -- --output mapping-coverage-report.json 2>&1 | tee mapping-coverage.log
       - name: Fast domain smoke tests
         run: |
           set -o pipefail
@@ -89,4 +93,6 @@ jobs:
             quest-host-report.json
             item-use-coverage-report.json
             item-coverage.log
+            mapping-coverage-report.json
+            mapping-coverage.log
           if-no-files-found: ignore
