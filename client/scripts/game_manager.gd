@@ -46,6 +46,7 @@ var current_festival_theme: String = FestivalThemeManager.NORMAL
 var current_festival_activity: String = ""
 var current_performance_load_mode: int = ClientPerformanceProfile.LOAD_BALANCED
 var current_combat_render_mode: int = ClientPerformanceProfile.COMBAT_NORMAL
+var current_foreground_fps_limit: int = 60
 var current_simplify_players_mode: int = ClientPerformanceProfile.SIMPLIFY_AUTO
 var current_simplify_monsters_mode: int = ClientPerformanceProfile.SIMPLIFY_AUTO
 var current_performance_profile: Dictionary = ClientPerformanceProfile.apply_visual_overrides(
@@ -240,6 +241,8 @@ func _print_render_stats() -> void :
 	var monster_aoi_skips: int = 0
 	var ground_aoi_scans: int = 0
 	var ground_aoi_skips: int = 0
+	var monster_aoi_enter_radius: float = 0.0
+	var ground_aoi_enter_radius: float = 0.0
 	var paper_doll_layers := 0
 	var minimap_world_redraws: int = 0
 	var minimap_world_skips: int = 0
@@ -299,8 +302,10 @@ func _print_render_stats() -> void :
 			monster_aoi_skips = int(ground_aoi.get("monster_skipped_scans", 0))
 			ground_aoi_scans = int(ground_aoi.get("ground_full_scans", 0))
 			ground_aoi_skips = int(ground_aoi.get("ground_skipped_scans", 0))
+			monster_aoi_enter_radius = float(ground_aoi.get("monster_enter_radius", 0.0))
+			ground_aoi_enter_radius = float(ground_aoi.get("ground_enter_radius", 0.0))
 
-	print("[RENDER_STATS] mode=%s combat=%s fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d simplified_monsters=%d primitive_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d simplified_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d ground_known=%d ground_deferred=%d monster_aoi_scans=%d monster_aoi_skips=%d ground_aoi_scans=%d ground_aoi_skips=%d paper_doll_layers=%d minimap_world_redraws=%d minimap_world_skips=%d render_stats_valid=%s %s %s" % [
+	print("[RENDER_STATS] mode=%s combat=%s fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d simplified_monsters=%d primitive_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d simplified_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d ground_known=%d ground_deferred=%d monster_aoi_scans=%d monster_aoi_skips=%d ground_aoi_scans=%d ground_aoi_skips=%d monster_aoi_radius=%.0f ground_aoi_radius=%.0f paper_doll_layers=%d minimap_world_redraws=%d minimap_world_skips=%d render_stats_valid=%s %s %s" % [
 		ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
 		ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
 		int(Performance.get_monitor(Performance.TIME_FPS)),
@@ -326,6 +331,8 @@ func _print_render_stats() -> void :
 		monster_aoi_skips,
 		ground_aoi_scans,
 		ground_aoi_skips,
+		monster_aoi_enter_radius,
+		ground_aoi_enter_radius,
 		paper_doll_layers,
 		minimap_world_redraws,
 		minimap_world_skips,
@@ -366,7 +373,7 @@ func _print_performance_analysis(checkpoint: String) -> void:
 		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
 			deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
 
-	print("[PERF_ANALYSIS] mode=%s combat=%s checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d cpu_metric=frame_budget_ratio %s %s" % [
+	print("[PERF_ANALYSIS] mode=%s combat=%s checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d cpu_metric=frame_budget_ratio cpu_process_time_ms=%.3f quality_enhanced=%s %s %s" % [
 		ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
 		ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
 		checkpoint,
@@ -384,6 +391,8 @@ func _print_performance_analysis(checkpoint: String) -> void:
 		active_entities,
 		active_monsters,
 		deferred_monsters,
+		process_ms + physics_ms,
+		str(world_enhancement_enabled),
 		_focus_perf_context(),
 		_multiclient_gpu_context(),
 	])
@@ -497,11 +506,23 @@ func _rebuild_performance_profile() -> void:
 		current_simplify_players_mode,
 		current_simplify_monsters_mode
 	)
+	current_performance_profile["foreground_fps"] = current_foreground_fps_limit
+
+func set_foreground_fps_limit(value: int) -> void:
+	current_foreground_fps_limit = ClientPerformanceProfile.sanitize_fps_limit(value)
+	_rebuild_performance_profile()
+	_refresh_focus_render_policy()
+	if OS.is_debug_build():
+		print("[FPS_LIMIT] cap=%d mode=%s" % [current_foreground_fps_limit, ClientPerformanceProfile.load_mode_name(current_performance_load_mode)])
 
 func set_performance_modes(load_mode: int, combat_mode: int) -> void:
 	current_performance_load_mode = ClientPerformanceProfile.sanitize_load_mode(load_mode)
 	current_combat_render_mode = ClientPerformanceProfile.sanitize_combat_mode(combat_mode)
 	_rebuild_performance_profile()
+	if is_instance_valid(current_map_node):
+		set_world_enhancement_enabled(current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY)
+	else:
+		world_enhancement_enabled = current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY
 	_apply_performance_profile()
 
 func set_visual_simplification_modes(player_mode: int, monster_mode: int) -> void:
@@ -621,7 +642,7 @@ func _apply_performance_profile() -> void:
 	_refresh_focus_render_policy()
 	performance_profile_changed.emit(get_performance_profile())
 	if OS.is_debug_build():
-		print("[PERFORMANCE_PROFILE] mode=%s combat=%s player_simplify=%s monster_simplify=%s load=%d combat_id=%d foreground_fps=%d background_fps=%d players=%d monsters=%d effects=%d%%" % [
+		print("[PERFORMANCE_PROFILE] mode=%s combat=%s player_simplify=%s monster_simplify=%s load=%d combat_id=%d foreground_fps=%d background_fps=%d players=%d monsters=%d effects=%d%% quality_enhanced=%s monster_aoi_base=%.0f ground_aoi_base=%.0f" % [
 			ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
 			ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
 			ClientPerformanceProfile.simplify_mode_name(current_simplify_players_mode),
@@ -633,6 +654,9 @@ func _apply_performance_profile() -> void:
 			int(current_performance_profile.get("full_player_budget", 0)),
 			int(current_performance_profile.get("full_monster_budget", 0)),
 			int(current_performance_profile.get("effect_budget_percent", 100)),
+			str(current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY),
+			float(current_performance_profile.get("monster_aoi_enter_radius", 1800.0)),
+			float(current_performance_profile.get("ground_aoi_enter_radius", 2000.0)),
 		])
 
 func set_startup_loading_overlay_active(active: bool) -> void:
@@ -960,7 +984,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		camera.force_update_scroll()
 
 	_ensure_day_night_overlay()
-	set_world_enhancement_enabled(_load_world_enhancement_setting())
+	set_world_enhancement_enabled(current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY)
 
 	_report_initial_loading_progress(progress_callback, 54.0, "載入介面")
 	await get_tree().process_frame
@@ -1169,16 +1193,6 @@ func _remove_day_night_overlay() -> void :
 	if is_instance_valid(current_day_night_overlay):
 		current_day_night_overlay.queue_free()
 	current_day_night_overlay = null
-
-func _load_world_enhancement_setting() -> bool:
-	var config: = ConfigFile.new()
-	if config.load(GameConstants.CLIENT_SETTINGS_PATH) != OK:
-		return GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
-	return bool(config.get_value(
-		GameConstants.SETTING_SECTION_GAME, 
-		GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED, 
-		GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
-	))
 
 func set_world_enhancement_enabled(enabled: bool) -> void :
 	world_enhancement_enabled = enabled

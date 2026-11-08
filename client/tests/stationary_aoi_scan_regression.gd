@@ -52,7 +52,7 @@ func _run() -> void:
 	var source: String = FileAccess.get_file_as_string(
 		"res://scripts/network_entity_manager.gd"
 	)
-	_check(source.contains("if _is_monster_inside_aoi(cached, MONSTER_AOI_ENTER_RADIUS):")
+	_check(source.contains("if _is_monster_inside_aoi(cached, _monster_aoi_radii().x):")
 		and source.contains("_queue_cached_monster_spawn(entity_id)"),
 		"server MoveEntity can still awaken a deferred monster immediately")
 	_check(source.contains("_ground_spawn_templates[entity_id] = cached_ground")

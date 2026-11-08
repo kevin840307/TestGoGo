@@ -193,6 +193,11 @@ func _refresh_performance_visuals() -> void:
 
 func _on_performance_profile_changed(_profile: Dictionary) -> void:
 	_refresh_performance_visuals()
+	# Never alter packet subscriptions; re-evaluate scene nodes immediately.
+	_monster_aoi_last_observer = null
+	_ground_aoi_last_context = null
+	_monster_aoi_elapsed = MONSTER_AOI_UPDATE_INTERVAL
+	_ground_aoi_elapsed = GROUND_AOI_UPDATE_INTERVAL
 
 func get_aoi_active_monster_count() -> int:
 	var count: int = 0
@@ -231,6 +236,35 @@ func _monster_packet_position(data: Dictionary) -> Vector2:
 		float(data.get("LocY", data.get("Y", 0.0)))
 	)
 
+static func resolve_visual_aoi_radii(profile: Dictionary, is_monster: bool, camera_radius: float) -> Vector2:
+	# Reduce offscreen render nodes, not authoritative client data or gameplay.
+	var prefix: String = "monster" if is_monster else "ground"
+	var fallback_enter: float = MONSTER_AOI_ENTER_RADIUS if is_monster else GROUND_AOI_ENTER_RADIUS
+	var fallback_exit: float = MONSTER_AOI_EXIT_RADIUS if is_monster else GROUND_AOI_EXIT_RADIUS
+	var enter_radius: float = maxf(
+		float(profile.get(prefix + "_aoi_enter_radius", fallback_enter)), maxf(0.0, camera_radius)
+	)
+	var exit_radius: float = maxf(
+		float(profile.get(prefix + "_aoi_exit_radius", fallback_exit)), enter_radius + 400.0
+	)
+	return Vector2(enter_radius, exit_radius)
+
+
+func _monster_aoi_radii() -> Vector2:
+	var profile: Dictionary = GameManager.current_performance_profile if GameManager else {}
+	var required_radius: float = 0.0
+	var viewport: Viewport = get_viewport()
+	var camera: Camera2D = viewport.get_camera_2d() if is_instance_valid(viewport) else null
+	if is_instance_valid(camera):
+		var view_size: Vector2 = viewport.get_visible_rect().size
+		var zoom: float = maxf(0.05, minf(absf(camera.zoom.x), absf(camera.zoom.y)))
+		required_radius = view_size.length() * 0.5 / zoom + 360.0
+		var player_pos: Variant = _get_local_player_position()
+		if player_pos != null:
+			required_radius += camera.global_position.distance_to(player_pos as Vector2)
+	return resolve_visual_aoi_radii(profile, true, required_radius)
+
+
 static func is_ground_inside_aoi(data: Dictionary, center: Vector2, radius: float) -> bool:
 	var location := Vector2(float(data.get("LocX", 0.0)), float(data.get("LocY", 0.0)))
 	return location.distance_squared_to(center) <= radius * radius
@@ -238,15 +272,18 @@ static func is_ground_inside_aoi(data: Dictionary, center: Vector2, radius: floa
 
 func _ground_aoi_context() -> Dictionary:
 	var center: Variant = _get_local_player_position()
-	var enter_radius: float = GROUND_AOI_ENTER_RADIUS
-	# The camera, not the player, defines what should be drawable.
-	var camera: Camera2D = get_viewport().get_camera_2d()
+	var required_radius: float = 0.0
+	# Preserve original drop packets/timestamps while deferring visuals.
+	var viewport: Viewport = get_viewport()
+	var camera: Camera2D = viewport.get_camera_2d() if is_instance_valid(viewport) else null
 	if is_instance_valid(camera):
 		center = camera.global_position
-		var view_size: Vector2 = get_viewport().get_visible_rect().size
+		var view_size: Vector2 = viewport.get_visible_rect().size
 		var zoom: float = maxf(0.05, minf(absf(camera.zoom.x), absf(camera.zoom.y)))
-		enter_radius = maxf(enter_radius, view_size.length() * 0.5 / zoom + 512.0)
-	return {"center": center, "enter": enter_radius, "exit": maxf(GROUND_AOI_EXIT_RADIUS, enter_radius + 400.0)}
+		required_radius = view_size.length() * 0.5 / zoom + 420.0
+	var profile: Dictionary = GameManager.current_performance_profile if GameManager else {}
+	var radii: Vector2 = resolve_visual_aoi_radii(profile, false, required_radius)
+	return {"center": center, "enter": radii.x, "exit": radii.y}
 
 
 func get_ground_aoi_stats() -> Dictionary:
@@ -256,7 +293,9 @@ func get_ground_aoi_stats() -> Dictionary:
 		"ground_full_scans": _ground_aoi_full_scans,
 		"ground_skipped_scans": _ground_aoi_reused_scans,
 		"monster_full_scans": _monster_aoi_full_scans,
-		"monster_skipped_scans": _monster_aoi_reused_scans
+		"monster_skipped_scans": _monster_aoi_reused_scans,
+		"monster_enter_radius": _monster_aoi_radii().x,
+		"ground_enter_radius": float(_ground_aoi_context().get("enter", GROUND_AOI_ENTER_RADIUS))
 	}
 
 
@@ -455,7 +494,9 @@ func _update_monster_aoi(delta: float) -> void :
 		_monster_aoi_last_observer = null
 		return
 	var local_pos: Vector2 = player_pos as Vector2
-	var observer_changed: bool = _monster_aoi_last_observer == null or _monster_aoi_last_observer != local_pos
+	var radii: Vector2 = _monster_aoi_radii()
+	var observer: Dictionary = {"position": local_pos, "enter": radii.x, "exit": radii.y}
+	var observer_changed: bool = _monster_aoi_last_observer == null or _monster_aoi_last_observer != observer
 	if not observer_changed:
 		_monster_aoi_stationary_elapsed += check_elapsed
 	else:
@@ -465,18 +506,18 @@ func _update_monster_aoi(delta: float) -> void :
 	):
 		_monster_aoi_reused_scans += 1
 		return
-	_monster_aoi_last_observer = local_pos
+	_monster_aoi_last_observer = observer
 	_monster_aoi_stationary_elapsed = 0.0
 	_monster_aoi_full_scans += 1
-	var exit_radius_sq: float = MONSTER_AOI_EXIT_RADIUS * MONSTER_AOI_EXIT_RADIUS
-	var enter_radius_sq: float = MONSTER_AOI_ENTER_RADIUS * MONSTER_AOI_ENTER_RADIUS
+	var exit_radius_sq: float = radii.y * radii.y
+	var enter_radius_sq: float = radii.x * radii.x
 	for raw_id in _active_entity_types.keys():
 		var entity_id: int = int(raw_id)
 		if int(_active_entity_types.get(entity_id, -1)) != 1:
 			continue
 		var monster := get_active_entity(entity_id)
 		if is_instance_valid(monster) and local_pos.distance_squared_to(monster.global_position) > exit_radius_sq:
-			if not _is_combat_monster_revealed(entity_id):
+			if not _is_combat_monster_revealed(entity_id) and not _is_local_combat_target(monster):
 				_unload_monster_for_aoi(entity_id, monster)
 	for raw_id in _deferred_monster_spawns.keys():
 		var entity_id: int = int(raw_id)
@@ -591,7 +632,7 @@ func _on_entity_spawned(data: Dictionary) -> void :
 		if get_active_entity(entity_id):
 			_deferred_monster_spawns.erase(entity_id)
 			return
-		if not _can_spawn_monster(cached, MONSTER_AOI_ENTER_RADIUS):
+		if not _can_spawn_monster(cached, _monster_aoi_radii().x):
 			_defer_monster_spawn(cached)
 			return
 		_deferred_monster_spawns.erase(entity_id)
@@ -755,7 +796,7 @@ func _spawn_entity_now(data: Dictionary) -> void :
 		# Also preserve newer server MoveEntity coordinates in the template.
 		if not _monster_spawn_templates.has(entity_id):
 			_monster_spawn_templates[entity_id] = data.duplicate(true)
-		if not _can_spawn_monster(data, MONSTER_AOI_EXIT_RADIUS):
+		if not _can_spawn_monster(data, _monster_aoi_radii().y):
 			_defer_monster_spawn(data)
 			return
 
@@ -949,7 +990,7 @@ func _on_entity_moved(data: Dictionary) -> void :
 		_monster_spawn_templates[entity_id] = cached
 		if _deferred_monster_spawns.has(entity_id):
 			_deferred_monster_spawns[entity_id] = cached
-			if _is_monster_inside_aoi(cached, MONSTER_AOI_ENTER_RADIUS):
+			if _is_monster_inside_aoi(cached, _monster_aoi_radii().x):
 				_queue_cached_monster_spawn(entity_id)
 			return
 	var target_node = get_active_entity(entity_id)

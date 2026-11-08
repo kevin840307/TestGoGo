@@ -24,6 +24,20 @@ const SIMPLIFY_PIXEL_A := SIMPLIFY_SIMPLIFIED
 const SIMPLIFY_PIXEL_B := 3
 const SIMPLIFY_MINIMAL := 4
 
+static func sanitize_fps_limit(value: int) -> int:
+	if value == 0 or value == 144:
+		return value
+	return clampi(int(round(float(value) / 5.0)) * 5, 30, 120)
+
+
+static func fps_options() -> Array[int]:
+	var options: Array[int] = [0]
+	for fps: int in range(30, 121, 5):
+		options.append(fps)
+	options.append(144)
+	return options
+
+
 static func sanitize_load_mode(value: int) -> int:
 	return clampi(value, LOAD_QUALITY, LOAD_MULTIBOX)
 
@@ -105,12 +119,17 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 	var profile := {
 		"load_mode": load_mode,
 		"combat_mode": combat_mode,
-		"foreground_fps": 0,
-		"background_fps": 30,
+		"foreground_fps": 60,
+		"background_fps": 20,
 		"animation_interval": 0.0,
 		"full_player_budget": 24,
 		"full_monster_budget": 40,
 		"effect_budget_percent": 100,
+		# Client-side visual allocation only, NEVER changes network/server AOI.
+		"monster_aoi_enter_radius": 2200.0,
+		"monster_aoi_exit_radius": 2600.0,
+		"ground_aoi_enter_radius": 2400.0,
+		"ground_aoi_exit_radius": 2800.0,
 		"simplify_other_players": false,
 		"simplify_noncritical_monsters": false,
 		"use_primitive_monsters": false,
@@ -124,28 +143,34 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 		LOAD_QUALITY:
 			pass
 		LOAD_BALANCED:
-			profile["foreground_fps"] = 120
-			profile["background_fps"] = 20
 			profile["animation_interval"] = 1.0 / 30.0
 			profile["full_player_budget"] = 18
 			profile["full_monster_budget"] = 30
-			profile["effect_budget_percent"] = 80
+			profile["effect_budget_percent"] = 75
+			profile["monster_aoi_enter_radius"] = 1800.0
+			profile["monster_aoi_exit_radius"] = 2200.0
+			profile["ground_aoi_enter_radius"] = 2000.0
+			profile["ground_aoi_exit_radius"] = 2400.0
 		LOAD_LOW:
-			profile["foreground_fps"] = 60
-			profile["background_fps"] = 10
 			profile["animation_interval"] = 1.0 / 20.0
 			profile["full_player_budget"] = 12
 			profile["full_monster_budget"] = 18
-			profile["effect_budget_percent"] = 55
+			profile["effect_budget_percent"] = 35
+			profile["monster_aoi_enter_radius"] = 1250.0
+			profile["monster_aoi_exit_radius"] = 1650.0
+			profile["ground_aoi_enter_radius"] = 1450.0
+			profile["ground_aoi_exit_radius"] = 1850.0
 			profile["simplify_other_players"] = true
 			profile["simplify_noncritical_monsters"] = true
 		LOAD_MULTIBOX:
-			profile["foreground_fps"] = 45
-			profile["background_fps"] = 5
 			profile["animation_interval"] = 1.0 / 15.0
 			profile["full_player_budget"] = 8
 			profile["full_monster_budget"] = 10
-			profile["effect_budget_percent"] = 35
+			profile["effect_budget_percent"] = 15
+			profile["monster_aoi_enter_radius"] = 950.0
+			profile["monster_aoi_exit_radius"] = 1350.0
+			profile["ground_aoi_enter_radius"] = 1100.0
+			profile["ground_aoi_exit_radius"] = 1500.0
 			profile["simplify_other_players"] = true
 			profile["simplify_noncritical_monsters"] = true
 			profile["use_primitive_monsters"] = true
