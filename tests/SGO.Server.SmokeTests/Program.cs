@@ -6752,6 +6752,8 @@ try
     session.LastY = combatEnemy.Y;
     peerSession.LastX = combatEnemy.X + 40;
     peerSession.LastY = combatEnemy.Y;
+    router.SyncPresence(session);
+    router.SyncPresence(peerSession);
 
     while (peerRegistration.Queue.TryDequeue(out _)) { }
 
@@ -7292,6 +7294,7 @@ try
         combatEnemy.Y);
     peerSession.LastX = combatEnemy.X + 550;
     peerSession.LastY = combatEnemy.Y;
+    router.SyncPresence(peerSession);
 
     store.ApplyDamage(
         account.Value,
