@@ -293,9 +293,15 @@ func _reveal_combat_monster(entity_id: int, reason: String) -> void:
 	_combat_reveal_until_msec[entity_id] = Time.get_ticks_msec() + MONSTER_COMBAT_REVEAL_MSEC
 	var active_monster := get_active_entity(entity_id)
 	if is_instance_valid(active_monster):
-		# Reveal is an AOI/lifecycle concern only. Keep the current visual
-		# simplification state so attack/hit/skill/death animations do not
-		# flash back to the original monster artwork.
+		# Reveal is an AOI/lifecycle concern only. Re-apply the current
+		# visual policy instead of promoting every attacker back to its
+		# original artwork. An explicitly selected local target is still
+		# protected by _should_simplify_monster().
+		_apply_performance_visual_to_entity(
+			entity_id,
+			1,
+			active_monster
+		)
 		return
 	if not _queued_spawn_ids.has(entity_id):
 		_deferred_monster_spawns[entity_id] = _monster_spawn_templates[entity_id]
