@@ -53,6 +53,7 @@ public sealed class WorldEntitySpatialAoi
     {
         public WorldAoiEntity Entity = entity;
         public readonly long IndexedGeneration = indexedGeneration;
+        public long LastMutationGeneration = indexedGeneration;
         public readonly HashSet<Guid> Observers = new();
         public (int MapId, int CellX, int CellY) Cell =
             CellOf(entity.MapId, entity.X, entity.Y);
@@ -64,6 +65,82 @@ public sealed class WorldEntitySpatialAoi
     // Monotonic index generation makes DB snapshot reconciliation safe when
     // another socket drops an item between SELECT and AOI stale-row pruning.
     private long _entityGeneration;
+    // Retain removal generations only while at least one map snapshot is
+    // reading SQLite. No unbounded per-item tombstone history between loads.
+    private int _activeSnapshots;
+    private readonly Dictionary<long, long> _removedDuringSnapshots = new();
+
+    public sealed class SnapshotScope : IDisposable
+    {
+        private WorldEntitySpatialAoi? _owner;
+        internal SnapshotScope(WorldEntitySpatialAoi owner, long generation)
+        {
+            _owner = owner;
+            Generation = generation;
+        }
+
+        public long Generation { get; }
+
+        internal bool IsActiveFor(WorldEntitySpatialAoi owner)
+            => ReferenceEquals(_owner, owner);
+
+        public void Dispose()
+        {
+            var owner = Interlocked.Exchange(ref _owner, null);
+            owner?.EndSnapshot();
+        }
+    }
+
+    public SnapshotScope BeginSnapshot()
+    {
+        lock (_gate)
+        {
+            _activeSnapshots++;
+            return new SnapshotScope(this, _entityGeneration);
+        }
+    }
+
+    private void EndSnapshot()
+    {
+        lock (_gate)
+        {
+            _activeSnapshots--;
+            if (_activeSnapshots == 0)
+                _removedDuringSnapshots.Clear();
+        }
+    }
+
+    /// <summary>
+    /// A DB snapshot must never resurrect an entity removed after its SELECT
+    /// began, or overwrite a newer live move/state. Caller keeps the scope
+    /// alive until the snapshot has been fully reconciled.
+    /// </summary>
+    public bool TryUpsertEntityFromSnapshot(
+        WorldAoiEntity entity,
+        SnapshotScope snapshot,
+        out IReadOnlyList<Change> changes)
+    {
+        lock (_gate)
+        {
+            changes = [];
+            if (!snapshot.IsActiveFor(this))
+                throw new ObjectDisposedException(nameof(SnapshotScope));
+            if (_removedDuringSnapshots.TryGetValue(
+                    entity.EntityId, out var removedAt) &&
+                removedAt > snapshot.Generation)
+                return false;
+            if (_entities.TryGetValue(entity.EntityId, out var latest) &&
+                latest.LastMutationGeneration > snapshot.Generation)
+                return false;
+            if (entity.EntityId <= 0 || entity.MapId <= 0)
+                return false;
+
+            // The lock is re-entrant: validate and install atomically with
+            // respect to other threads' live Upsert/Remove operations.
+            changes = UpsertEntity(entity);
+            return true;
+        }
+    }
 
     private readonly Dictionary<
         (int MapId, int CellX, int CellY),
@@ -277,6 +354,7 @@ public sealed class WorldEntitySpatialAoi
                     entry.Entity.Y == entity.Y)
                 {
                     entry.Entity = entity;
+                    entry.LastMutationGeneration = ++_entityGeneration;
                     return [];
                 }
 
@@ -294,6 +372,7 @@ public sealed class WorldEntitySpatialAoi
                 // Always retain the newest factory/state even if the entity
                 // did not move. A later AOI enter must see current HP/timers.
                 entry.Entity = entity;
+                entry.LastMutationGeneration = ++_entityGeneration;
             }
 
             return ReconcileEntityLocked(
@@ -319,7 +398,7 @@ public sealed class WorldEntitySpatialAoi
                 group.Where(id =>
                         !authoritativeIds.Contains(id) &&
                         _entities.TryGetValue(id, out var entity) &&
-                        entity.IndexedGeneration <= snapshotGeneration)
+                        entity.LastMutationGeneration <= snapshotGeneration)
                     .ToArray();
 
             var changes =
@@ -497,6 +576,9 @@ public sealed class WorldEntitySpatialAoi
             return [];
 
         RemoveEntityCell(entry);
+        var removedAt = ++_entityGeneration;
+        if (_activeSnapshots > 0)
+            _removedDuringSnapshots[entityId] = removedAt;
 
         var changes =
             notifyObservers
