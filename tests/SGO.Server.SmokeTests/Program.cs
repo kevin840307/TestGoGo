@@ -1342,8 +1342,7 @@ try
         "legacy SetTargetFlag targets the current party member");
 
     Check(!teamResult.Packets.Any(x =>
-              JsonSerializer.Serialize(x).Contains(
-                  "NPC 腳本執行失敗")),
+              PacketTreeContainsString(x, "NPC 腳本執行失敗")),
         "legacy team iterator/data/position/emotion APIs execute without Lua errors");
 
     var runtimeHasTitle = false;
@@ -1427,8 +1426,7 @@ try
         "legacy SetCareer/AddSkill maps old skill 1103 by name to current skill 77701");
 
     Check(!careerSkillResult.Packets.Any(x =>
-              JsonSerializer.Serialize(x).Contains(
-                  "NPC 腳本執行失敗")),
+              PacketTreeContainsString(x, "NPC 腳本執行失敗")),
         "legacy HasSkill and GetCountItemCount APIs execute with safe current mappings");
 
     var randomOne = 0;
@@ -4245,10 +4243,8 @@ try
             broadcastRegistration.Queue.TryDequeue(out var announcement) &&
             JsonSerializer.Serialize(announcement).Contains(
                 "\"Type\":\"SystemMessageBroadcast\"") &&
-            JsonSerializer.Serialize(announcement).Contains(
-                "TestCharacter") &&
-            JsonSerializer.Serialize(announcement).Contains(
-                "魔靈電池"),
+            PacketTreeContainsString(announcement, "TestCharacter") &&
+            PacketTreeContainsString(announcement, "魔靈電池"),
             "rare Happiness Doll reward publishes global announcement");
     }
 
@@ -4755,7 +4751,7 @@ try
             sellHorseEquip.RootElement,
             session);
         Check(responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains("出售成功")) &&
+                PacketTreeContainsString(x, "出售成功")) &&
               !store.GetCharacterAssets(account.Value, id).HorseEquips.Any(x =>
                   Convert.ToInt64(x["EquipUID"]) == npcSellHorseEquipUid) &&
               Convert.ToInt64(
@@ -4799,7 +4795,7 @@ try
                 Convert.ToInt64(x["ItemUID"]) == npcSellBatteryUid);
 
         Check(responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains("出售成功")) &&
+                PacketTreeContainsString(x, "出售成功")) &&
               remainingBattery is not null &&
               Convert.ToInt32(remainingBattery["Count"]) ==
                   batteryCountBeforeSell - 1,
@@ -4837,7 +4833,7 @@ try
 
         Check(
             responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains("出售成功")) &&
+                PacketTreeContainsString(x, "出售成功")) &&
             !assetsAfterCardSale.Inventory.Any(x =>
                 Convert.ToInt64(x["ItemUID"]) ==
                     npcSellHorseCardUid) &&
@@ -5018,8 +5014,7 @@ try
                 Convert.ToInt64(x["ItemUID"]) ==
                     fullBatteryUid) &&
             responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "機甲能源已滿")),
+                PacketTreeContainsString(x, "機甲能源已滿")),
             "full mecha rejects battery use without consuming the battery");
     }
 
@@ -5181,8 +5176,7 @@ try
         Check(
             activeCount == 1 &&
             responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "召喚寵物空間已滿")),
+                PacketTreeContainsString(x, "召喚寵物空間已滿")),
             "a second pet cannot be summoned before using the expansion card");
     }
 
@@ -5337,8 +5331,7 @@ try
                 Convert.ToInt64(x["ItemUID"]) ==
                     rejectedPetExpansionUid) &&
             responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "已達上限")),
+                PacketTreeContainsString(x, "已達上限")),
             "third 2301 use is rejected at max three and does not consume the card");
     }
 
@@ -8749,8 +8742,7 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "此物品無法出售")) &&
             responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "出售成功")),
+                PacketTreeContainsString(x, "出售成功")),
             "NPC selling uses current client can_sell metadata instead of legacy catalog");
     }
 
