@@ -552,7 +552,8 @@ public interface IMechaStore : ICharacterAssetReader
         long accountId,
         long dbid,
         long equipUid,
-        long horseUid);
+        long horseUid,
+        int authoritativePart = -1);
     bool UnequipHorseItem(
         long accountId,
         long dbid,
