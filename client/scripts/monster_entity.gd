@@ -31,6 +31,9 @@ var move_idle_generation: int = 0
 var network_move_target: Vector2 = Vector2.ZERO
 var network_move_speed: float = 0.0
 var network_move_active: bool = false
+# The latest server-approved waypoint remains safe to finish when the server
+# changes state to idle before the renderer has finished interpolation.
+var _idle_after_last_waypoint: bool = false
 var last_move_packet_ms: int = 0
 var pending_move_dir: String = ""
 var pending_move_dir_count: int = 0
@@ -168,6 +171,11 @@ func advance_network_runtime(delta: float) -> bool:
 	if remaining <= NETWORK_MOVE_SNAP_EPSILON:
 		global_position = network_move_target
 		network_move_active = false
+		if _idle_after_last_waypoint:
+			_idle_after_last_waypoint = false
+			current_state = "idle"
+			sync_animation()
+			return false
 		# Keep the monster in the manager runtime set briefly while WALK settles
 		# back to IDLE through the existing grace logic.
 		return true
@@ -177,6 +185,13 @@ func advance_network_runtime(delta: float) -> bool:
 		return true
 
 	global_position = global_position.move_toward(network_move_target, step)
+	if _idle_after_last_waypoint and global_position.distance_to(network_move_target) <= NETWORK_MOVE_SNAP_EPSILON:
+		global_position = network_move_target
+		network_move_active = false
+		_idle_after_last_waypoint = false
+		current_state = "idle"
+		sync_animation()
+		return false
 	if current_state != "walk":
 		current_state = "walk"
 		sync_animation()
@@ -185,6 +200,10 @@ func advance_network_runtime(delta: float) -> bool:
 
 func is_runtime_visible() -> bool:
 	return _is_on_screen
+
+
+func is_finishing_last_move_before_idle() -> bool:
+	return _idle_after_last_waypoint and network_move_active
 
 func apply_offscreen_network_move(target_pos: Vector2, new_dir: String = "") -> void :
 	if current_hp <= 0:
@@ -651,6 +670,14 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		now_ms - last_visual_move_dir_ms <= 1500
 	)
 
+	# Do not discard a final already-authorized MoveEntity waypoint just
+	# because SyncState(idle) reached the client before the render position.
+	# This is only presentation: new movement/combat packets still override it.
+	if new_state == "idle" and current_state == "walk" and network_move_active 			and global_position.distance_to(network_move_target) > NETWORK_MOVE_SNAP_EPSILON:
+		_idle_after_last_waypoint = true
+		return
+
+	_idle_after_last_waypoint = false
 	if new_state != "walk":
 		move_idle_generation += 1
 		network_move_active = false
@@ -690,6 +717,7 @@ func _apply_network_target_direction(target_pos: Vector2) -> void :
 func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	if current_hp <= 0:
 		return
+	_idle_after_last_waypoint = false
 
 	# A late MoveEntity can arrive after SyncState/EntityDamage. While combat
 	# owns the animation, movement may update the buffered target/position but
