@@ -196,6 +196,15 @@ class EditorHandler(BaseHTTPRequestHandler):
                     raise ValueError("不支援直接 DELETE；請 PUT 新的 NPC 清單")
                 self._send_json(self.app.maps.save_npc_spawns(int(match.group(1)), body if isinstance(body, list) else body.get("items", [])))
                 return
+            if match := re.fullmatch(r"/api/maps/(\d+)/snap-points", path):
+                if method == "DELETE":
+                    raise ValueError("不支援 DELETE")
+                points = body.get("points", []) if isinstance(body, dict) else []
+                snap = bool(body.get("snap", True)) if isinstance(body, dict) else True
+                if not isinstance(points, list):
+                    raise ValueError("points 必須是陣列")
+                self._send_json(self.app.maps.snap_points(int(match.group(1)), points, snap))
+                return
             if path == "/api/scripts/validate" and method != "DELETE":
                 self._send_json(self.app.quests.validate(str(body.get("name", "draft.txt")), str(body.get("content", ""))))
                 return
