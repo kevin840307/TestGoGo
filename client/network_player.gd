@@ -23,7 +23,7 @@ var _observed_snapshot_speed: float = 0.0
 var _pending_idle: bool = false
 var _performance_simplified_visual: bool = false
 var _performance_simplified_style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
-const SIMPLIFIED_PLAYER_CLICK_SIZE := Vector2(96.0, 132.0)
+const SIMPLIFIED_PLAYER_CLICK_SIZE := Vector2(104.0, 136.0)
 const NORMAL_PLAYER_CLICK_SIZE := Vector2(80.0, 120.0)
 
 const SAFE_MAP_IDS: Array = [4, 9, 15, 17, 22, 39, 40, 53, 75, 93]
@@ -109,13 +109,16 @@ func _simplified_relation_color() -> Color:
 		if my_club > 0 and my_club == int(data_model.club_id):
 			return Color(0.32, 0.70, 1.0, 1.0)
 
-		var in_safe_zone := int(data_model.map_id) in SAFE_MAP_IDS
-		if (
+		var in_safe_zone := int(local_data.map_id) in SAFE_MAP_IDS
+		var attackable := (
 			int(local_data.pk_status) == 1
 			and int(data_model.pk_status) == 1
 			and int(data_model.hp) > 0
 			and not in_safe_zone
-		):
+		)
+		if attackable and local_player.has_method("can_attack"):
+			attackable = bool(local_player.can_attack())
+		if attackable:
 			return Color(1.0, 0.28, 0.30, 1.0)
 
 	return Color(0.82, 0.88, 0.98, 1.0)
@@ -253,9 +256,36 @@ func sync_animation() -> void:
 			doll_engine.visible = false
 		if is_instance_valid(transform_sprite):
 			transform_sprite.visible = false
+		if is_instance_valid(death_effect):
+			death_effect.visible = false
+			death_effect.stop()
 		queue_redraw()
 		return
 	super.sync_animation()
+
+
+func _play_death_effect() -> void:
+	if _performance_simplified_visual:
+		if is_instance_valid(doll_engine):
+			doll_engine.visible = false
+		if is_instance_valid(transform_sprite):
+			transform_sprite.visible = false
+		if is_instance_valid(death_effect):
+			death_effect.visible = false
+			death_effect.stop()
+		queue_redraw()
+		return
+	super._play_death_effect()
+
+
+func play_mecha_transform() -> void:
+	if _performance_simplified_visual:
+		# A simplified remote player remains the same procedural silhouette
+		# through mount/dismount instead of loading a full mecha transition.
+		queue_redraw()
+		return
+	super.play_mecha_transform()
+
 
 func _exit_tree() -> void :
 	if CursorManager:
@@ -366,6 +396,7 @@ func update_appearance_from_server(data: Dictionary) -> void :
 	if data.has("MechaType"):
 		data_model.mecha_type = str(data.get("MechaType", "MS"))
 
+	data_model.party_id = str(data.get("PartyID", data_model.party_id))
 	data_model.club_id = int(data.get("ClubID", data_model.club_id))
 	data_model.club_position = int(data.get("ClubPosition", data_model.club_position))
 	data_model.club_name = str(data.get("ClubName", data_model.club_name))
