@@ -22,6 +22,17 @@
 - 本文件是**靜態檢查**；沒有在本次任務執行舊客戶端、完整 .NET/Godot build、真 socket soak 或原始舊服資料庫。不要把證據不完整的判斷提升成確定性。
 - 稽核涵蓋**51 個檢查條目**：P0=11、P1=19、P2=11、P3=4、P-LAST=6。一個條目可能涵蓋多個 UI/封包/數據行為，不能用條目數當已還原百分比。
 
+### 1.1 2009 才新增的 UI 介面盤點（避免漏掉沒有新版封包的功能）
+
+將 **2009 `Client.exe` 的介面類別字串**和 **2004 `Paradise.exe` 有可辨識方法名稱的介面類別**做差集，額外發現 25 個 2009 介面名稱。這是**不同符號可見度下的啟發式盤點**，不是兩版本完整功能集合的數學差集，也不能證明這些介面一定被正式開放。
+
+- 收藏：`CCollectionSystemItf`、`CCollectionSystemSubItf` —— **V01**；是本次新增的明確 UI 線索。
+- Salon：`CSalonSystemItf` —— **V02／P-LAST**。
+- 社團與社交延伸：`CClubSysItf` 和 `CSociSysItf`、`CSociEventItf`、`CSociCreateAllyItf`、`CSociMemListItf`、`CSociMemOPItf`、`CSociFriendClubItf`、`CSociFriendClubOPItf`、`CSociDonateItf`、`CSociUpgradeRNDItf`、`CSociAttRNDItf`、`CSociInternalItf`、`CSociIntroItf`、`CSociMenuItf`、`CSociPageItf`、`CSociExtItf`、`CSociOpenRNDItf`、`CSociRNDListItf`、`CSociClubRankItf`、`CSociRankSayItf` —— **S05／S09／P-LAST**。目前已有戰團基本功能，暫不補舊介面。
+- 角色/任務 UI 變體：`CCharInfoLiteGItf`、`CQuestStatusItf` —— **A03／W05**。新版已存在角色與任務視窗，但這兩個精確 UI 變體尚未做視覺對照。
+
+**這個額外掃描特別重要**：2009 的大量新增類別集中在使用者要求暫緩的社交／收藏／Salon 領域，不代表 PvE 主流程都不需比對；其餘 2004/2009 共同存在的類別與新版實作仍由下方矩陣逐項追蹤。
+
 ## 2. 收藏系統：到底是哪一個 UI？（原始檔證據）
 
 **2009 `Client.exe` 明確載入的視窗資源：`..\\095_Collection.itf`。** 名稱可以先用「收藏簿／Collection Book」辨認，但無足夠畫面資訊確認遊戲中顯示的精確繁體中文標題或工具列按鈕位置。
