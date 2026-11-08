@@ -9304,10 +9304,13 @@ try
 
     var droppedEntityId = session.GroundItems.Keys.Last();
 
-    // Simulate a completely new login/session. Ground items must be restored
-    // from SQLite rather than relying on the old ClientSession dictionary.
+    // Simulate a completely new login/session. Pending-map bootstrap restores
+    // SQLite ground rows into authoritative runtime/AOI state, but current
+    // clients receive the reliable SpawnEntity only after WorldReady.
+    var reloggedRegistration = broadcastHub.Register();
     var reloggedSession = new ClientSession
     {
+        ConnectionId = reloggedRegistration.ConnectionId,
         AccountId = account.Value,
         CharacterId = id,
         CurrentMapId = 15,
@@ -9315,19 +9318,37 @@ try
         LastY = 11200,
         PendingMapSpawn = true
     };
+    router.SyncPresence(reloggedSession);
 
-    var relogPackets = router.Tick(
+    var relogBootstrapPackets = router.Tick(
         reloggedSession,
         DateTimeOffset.UtcNow.AddSeconds(30));
 
     Check(
         reloggedSession.GroundItems.ContainsKey(droppedEntityId) &&
-        relogPackets.Any(x =>
+        !relogBootstrapPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"EntityType\":3") &&
             JsonSerializer.Serialize(x).Contains(
                 $"\"EntityID\":{droppedEntityId}")),
-        "dropped ground item is restored from DB after relog");
+        "relog bootstrap restores dropped ground item authoritatively without sending a pre-WorldReady spawn");
+
+    using (var relogWorldReady = Json(
+        """{"Type":"WorldReady","MapID":15}"""))
+    {
+        var relogPackets = router.Handle(
+            relogWorldReady.RootElement,
+            reloggedSession);
+
+        Check(
+            reloggedSession.WorldReady &&
+            relogPackets.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"EntityType\":3") &&
+                JsonSerializer.Serialize(x).Contains(
+                    $"\"EntityID\":{droppedEntityId}")),
+            "WorldReady restores the persisted dropped ground item through the current AOI snapshot contract");
+    }
 
     using (var pickupItem = Json(JsonSerializer.Serialize(new
     {
@@ -9358,6 +9379,9 @@ try
                 "淺藍色初心褲子"),
             "PickUpItemRequest restores persisted equipment, removes ground row and emits pickup feedback");
     }
+
+    router.DisconnectPresence(reloggedSession);
+    broadcastHub.Unregister(reloggedRegistration.ConnectionId);
 
     var returnPeerRegistration = broadcastHub.Register();
     var returnPeerSession = new ClientSession
