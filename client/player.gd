@@ -540,7 +540,7 @@ func _physics_process(_delta: float) -> void :
 		return
 
 	# Interactable clicks can consume mouse-up before Player receives it.
-	# Track the two-second hold in physics so cursor changes while pressed.
+	# Track the one-second hold in physics so cursor changes while pressed.
 	if _mouse_autorun.holding:
 		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 			_finish_mouse_autorun_hold()
