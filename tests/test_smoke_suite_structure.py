@@ -53,6 +53,13 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertNotIn("static JsonDocument Json(", main)
         self.assertNotIn("static void Check(", main)
 
+    def test_fast_domain_suites_are_selectable(self):
+        source = PROGRAM.read_text(encoding="utf-8-sig")
+        for suite in ("protocol", "announcements", "world", "all"):
+            with self.subTest(suite=suite):
+                self.assertIn(f'case "{suite}":', source)
+        self.assertIn('args[0] != "--suite"', source)
+
     def test_common_assertions_stay_central(self):
         helpers = (SMOKE / "SmokeAssert.cs").read_text(encoding="utf-8-sig")
         main = PROGRAM.read_text(encoding="utf-8-sig")
