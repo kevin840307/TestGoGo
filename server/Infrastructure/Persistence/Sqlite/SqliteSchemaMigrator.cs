@@ -66,6 +66,10 @@ internal static class SqliteSchemaMigrator
         ApplyEnsureColumnDirectives(
             db,
             ResolveSqlPath("015_pet_summon_capacity.sql"));
+
+        ExecuteSqlFile(
+            db,
+            ResolveSqlPath("016_character_cosmetics.sql"));
     }
 
     private static void ExecuteSqlFile(
