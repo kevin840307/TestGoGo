@@ -5123,6 +5123,15 @@ try
             capacityAfter.HorseEquipMaxSize,
         "expanded capacities survive a fresh store instance/reconnect migration path");
 
+    // The original petUid was leveled to 2 by the pet progression tests
+    // above, while this character is still level 1. A level-2 pet cannot
+    // legally be summoned by a level-1 owner, so the capacity fixture must
+    // use fresh level-1 pets rather than reusing that progressed pet.
+    var firstMultiPetUid = store.AddPet(
+        account.Value,
+        id,
+        45001,
+        "MultiPet1");
     var secondMultiPetUid = store.AddPet(
         account.Value,
         id,
@@ -5134,23 +5143,49 @@ try
         45001,
         "MultiPet3");
 
+    var initialSummonAssets = store.GetCharacterAssets(
+        account.Value,
+        id);
+    var initialOwnerLevel = Convert.ToInt32(
+        store.GetCharacter(account.Value, id)!["Level"]);
+    var progressedPetLevel = Convert.ToInt32(
+        initialSummonAssets.Pets.Single(x =>
+            Convert.ToInt64(x["UID"]) == petUid)["Level"]);
     Check(
-        store.GetCharacterAssets(
-            account.Value,
-            id).PetSummonMax == 1,
-        "characters start with one simultaneous pet summon slot");
+        firstMultiPetUid > 0 &&
+        secondMultiPetUid > 0 &&
+        thirdMultiPetUid > 0 &&
+        initialSummonAssets.PetSummonMax == 1 &&
+        initialSummonAssets.Pets.Count(x =>
+            Convert.ToInt32(x["State"]) == 1) == 0,
+        "characters start with one simultaneous pet summon slot and no active pets");
+    Check(
+        progressedPetLevel > initialOwnerLevel,
+        "pet progression fixture is above owner level and cannot be reused as summon-capacity fixture");
 
     using (var summonFirstBeforeExpansion = Json(
         JsonSerializer.Serialize(new
         {
             Type = "PetAction",
             Action = "Summon",
-            PetUID = petUid
+            PetUID = firstMultiPetUid
         })))
     {
-        router.Handle(
+        var responses = router.Handle(
             summonFirstBeforeExpansion.RootElement,
             session);
+        var activePetUids = store.GetCharacterAssets(
+                account.Value,
+                id).Pets
+            .Where(x => Convert.ToInt32(x["State"]) == 1)
+            .Select(x => Convert.ToInt64(x["UID"]))
+            .ToArray();
+        Check(
+            activePetUids.Length == 1 &&
+            activePetUids[0] == firstMultiPetUid &&
+            responses.Any(x =>
+                PacketTreeContainsString(x, "寵物已召喚")),
+            "first eligible level-one pet is successfully summoned before testing capacity");
     }
 
     using (var blockedSecondBeforeExpansion = Json(
@@ -5172,9 +5207,13 @@ try
 
         Check(
             activeCount == 1 &&
+            store.GetCharacterAssets(account.Value, id).Pets
+                .Any(x =>
+                    Convert.ToInt64(x["UID"]) == secondMultiPetUid &&
+                    Convert.ToInt32(x["State"]) == 0) &&
             responses.Any(x =>
                 PacketTreeContainsString(x, "召喚寵物空間已滿")),
-            "a second pet cannot be summoned before using the expansion card");
+            "a second eligible pet is rejected at the unexpanded summon limit");
     }
 
     var firstPetExpansionUid =
@@ -5232,7 +5271,7 @@ try
             .ToHashSet();
 
         Check(
-            activeUids.Contains(petUid) &&
+            activeUids.Contains(firstMultiPetUid) &&
             activeUids.Contains(
                 secondMultiPetUid) &&
             activeUids.Count == 2 &&
@@ -5245,7 +5284,7 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"DespawnEntity\"") &&
                 JsonSerializer.Serialize(x).Contains(
-                    $"\"EntityID\":{4_000_000L + petUid}")),
+                    $"\"EntityID\":{4_000_000L + firstMultiPetUid}")),
             "summoning a second pet keeps the first pet active and visible");
     }
 
@@ -5334,7 +5373,7 @@ try
 
     foreach (var activePetUid in new[]
              {
-                 petUid,
+                 firstMultiPetUid,
                  secondMultiPetUid,
                  thirdMultiPetUid
              })
