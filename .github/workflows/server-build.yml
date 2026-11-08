@@ -1,9 +1,9 @@
 name: Server build
 on:
   push:
-    paths: ['server/**', 'client/**/*.gd', 'client/**/*.tscn', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/SGO.ItemCoverageReport/**', 'tests/SGO.MappingCoverageReport/**', 'tests/SGO.Server.LoadProbe/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', 'tests/test_packet_log_privacy.py', 'tests/test_client_network_contract.py', 'tests/test_gm_security.py', 'tests/test_mall_external_security.py', 'tests/quest_host_audit.py', 'tests/test_quest_host_audit.py', 'tests/test_smoke_suite_structure.py', 'tests/test_load_probe_structure.py', 'tests/test_feature_gap_tracker.py', '.github/workflows/server-build.yml']
+    paths: ['server/**', 'client/**/*.gd', 'client/**/*.tscn', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/SGO.Server.WireLoadProbe/**', 'tests/SGO.ItemCoverageReport/**', 'tests/SGO.MappingCoverageReport/**', 'tests/SGO.Server.LoadProbe/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', 'tests/test_packet_log_privacy.py', 'tests/test_client_network_contract.py', 'tests/test_gm_security.py', 'tests/test_mall_external_security.py', 'tests/quest_host_audit.py', 'tests/test_quest_host_audit.py', 'tests/test_smoke_suite_structure.py', 'tests/test_load_probe_structure.py', 'tests/test_wire_load_probe_structure.py', 'tests/test_feature_gap_tracker.py', '.github/workflows/server-build.yml']
   pull_request:
-    paths: ['server/**', 'client/**/*.gd', 'client/**/*.tscn', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/SGO.ItemCoverageReport/**', 'tests/SGO.MappingCoverageReport/**', 'tests/SGO.Server.LoadProbe/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', 'tests/test_packet_log_privacy.py', 'tests/test_client_network_contract.py', 'tests/test_gm_security.py', 'tests/test_mall_external_security.py', 'tests/quest_host_audit.py', 'tests/test_quest_host_audit.py', 'tests/test_smoke_suite_structure.py', 'tests/test_load_probe_structure.py', 'tests/test_feature_gap_tracker.py', '.github/workflows/server-build.yml']
+    paths: ['server/**', 'client/**/*.gd', 'client/**/*.tscn', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/SGO.Server.WireLoadProbe/**', 'tests/SGO.ItemCoverageReport/**', 'tests/SGO.MappingCoverageReport/**', 'tests/SGO.Server.LoadProbe/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', 'tests/test_packet_log_privacy.py', 'tests/test_client_network_contract.py', 'tests/test_gm_security.py', 'tests/test_mall_external_security.py', 'tests/quest_host_audit.py', 'tests/test_quest_host_audit.py', 'tests/test_smoke_suite_structure.py', 'tests/test_load_probe_structure.py', 'tests/test_wire_load_probe_structure.py', 'tests/test_feature_gap_tracker.py', '.github/workflows/server-build.yml']
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,6 +24,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_quest_host_audit.py' -v
           python3 -m unittest discover -s tests -p 'test_smoke_suite_structure.py' -v
           python3 -m unittest discover -s tests -p 'test_load_probe_structure.py' -v
+          python3 -m unittest discover -s tests -p 'test_wire_load_probe_structure.py' -v
           python3 -m unittest discover -s tests -p 'test_feature_gap_tracker.py' -v
           python3 tests/packet_contract_audit.py --strict --output packet-contract-report.json
           python3 tests/packet_schema_audit.py --strict --output packet-schema-report.json
@@ -56,8 +57,10 @@ jobs:
         run: |
           set -o pipefail
           dotnet run --no-build --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release 2>&1 | tee smoke.log
-      - name: Build encrypted WebSocket transport smoke
-        run: dotnet build tests/SGO.Server.WireSmokeTests/SGO.Server.WireSmokeTests.csproj -c Release
+      - name: Build encrypted WebSocket transport tests
+        run: |
+          dotnet build tests/SGO.Server.WireSmokeTests/SGO.Server.WireSmokeTests.csproj -c Release
+          dotnet build tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -c Release
       - name: Encrypted WebSocket transport smoke
         run: |
           set -o pipefail
@@ -82,6 +85,7 @@ jobs:
             exit 1
           fi
           dotnet run --no-build --project tests/SGO.Server.WireSmokeTests/SGO.Server.WireSmokeTests.csproj -c Release -- ws://127.0.0.1:5678/ 2>&1 | tee wire.log
+          dotnet run --no-build --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -c Release -- --url ws://127.0.0.1:5678/ --sizes 10,50,100 --rounds 2 --setup-concurrency 10 --timeout-seconds 20 --output wire-load-probe-report.json 2>&1 | tee wire-load-probe.log
       - name: Upload diagnostic logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -95,6 +99,8 @@ jobs:
             world-smoke.log
             concurrency-smoke.log
             wire.log
+            wire-load-probe.log
+            wire-load-probe-report.json
             server.log
             packet-contract-report.json
             packet-schema-report.json

@@ -1,0 +1,515 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+
+internal sealed record LatencySummary(
+    int Count,
+    double Min,
+    double P50,
+    double P95,
+    double P99,
+    double Max,
+    double Average)
+{
+    public static LatencySummary From(
+        IEnumerable<double> source)
+    {
+        var values =
+            source.OrderBy(x => x)
+                .ToArray();
+
+        if (values.Length == 0)
+        {
+            return new LatencySummary(
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0);
+        }
+
+        return new LatencySummary(
+            values.Length,
+            values[0],
+            Percentile(values, 0.50),
+            Percentile(values, 0.95),
+            Percentile(values, 0.99),
+            values[^1],
+            values.Average());
+    }
+
+    private static double Percentile(
+        double[] sorted,
+        double percentile)
+    {
+        var index =
+            (int)Math.Ceiling(
+                percentile *
+                sorted.Length) -
+            1;
+
+        return sorted[
+            Math.Clamp(
+                index,
+                0,
+                sorted.Length - 1)];
+    }
+}
+
+internal sealed record WirePhaseResult(
+    string Name,
+    int Rounds,
+    long ExpectedDeliveries,
+    long ActualDeliveries,
+    long SentBytes,
+    long ReceivedBytes,
+    double ElapsedMs,
+    double DeliveriesPerSecond,
+    double ReceivedBytesPerSecond,
+    LatencySummary RoundLatencyMs)
+{
+    public static WirePhaseResult Empty(
+        string name)
+        => new(
+            name,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            LatencySummary.From([]));
+}
+
+internal sealed record WireLoadScenarioResult(
+    int Players,
+    bool Success,
+    int SetupSuccesses,
+    int SetupFailures,
+    int MapId,
+    LatencySummary SetupLatencyMs,
+    WirePhaseResult Movement,
+    WirePhaseResult NearbyChat,
+    string[] Errors);
+
+internal static class WireLoadScenario
+{
+    public static async Task<WireLoadScenarioResult> RunAsync(
+        string url,
+        int playerCount,
+        int rounds,
+        int setupConcurrency,
+        TimeSpan timeout)
+    {
+        var clients =
+            new WireLoadClient?[playerCount];
+        var setupLatencies =
+            new ConcurrentBag<double>();
+        var errors =
+            new ConcurrentBag<string>();
+        var runId =
+            Guid.NewGuid()
+                .ToString("N")[..10];
+
+        using var setupGate =
+            new SemaphoreSlim(
+                Math.Max(
+                    1,
+                    setupConcurrency));
+
+        try
+        {
+            var setupTasks =
+                Enumerable.Range(
+                        0,
+                        playerCount)
+                    .Select(async index =>
+                    {
+                        await setupGate.WaitAsync();
+                        var started =
+                            Stopwatch.GetTimestamp();
+                        try
+                        {
+                            clients[index] =
+                                await WireLoadClient
+                                    .ConnectAndEnterAsync(
+                                        url,
+                                        runId,
+                                        index,
+                                        timeout);
+
+                            setupLatencies.Add(
+                                Stopwatch.GetElapsedTime(
+                                        started)
+                                    .TotalMilliseconds);
+                        }
+                        catch (Exception ex)
+                        {
+                            errors.Add(
+                                $"client={index}: {ex.Message}");
+                        }
+                        finally
+                        {
+                            setupGate.Release();
+                        }
+                    })
+                    .ToArray();
+
+            await Task.WhenAll(setupTasks);
+
+            var active =
+                clients
+                    .Where(x => x is not null)
+                    .Cast<WireLoadClient>()
+                    .ToArray();
+
+            if (active.Length != playerCount)
+            {
+                return Failure(
+                    playerCount,
+                    active,
+                    setupLatencies,
+                    errors);
+            }
+
+            var mapIds =
+                active
+                    .Select(x => x.MapId)
+                    .Distinct()
+                    .ToArray();
+
+            if (mapIds.Length != 1)
+            {
+                errors.Add(
+                    "clients did not enter one shared map: " +
+                    string.Join(
+                        ",",
+                        mapIds));
+
+                return Failure(
+                    playerCount,
+                    active,
+                    setupLatencies,
+                    errors);
+            }
+
+            // Let late presence/spawn packets drain before measurement starts.
+            await Task.Delay(500);
+            foreach (var client in active)
+                client.ClearInbox();
+
+            var movement =
+                await MeasureMovementAsync(
+                    active,
+                    rounds,
+                    timeout);
+
+            await Task.Delay(250);
+            foreach (var client in active)
+                client.ClearInbox();
+
+            var chat =
+                await MeasureChatAsync(
+                    active,
+                    runId,
+                    rounds,
+                    timeout);
+
+            var success =
+                movement.ActualDeliveries ==
+                    movement.ExpectedDeliveries &&
+                chat.ActualDeliveries ==
+                    chat.ExpectedDeliveries;
+
+            if (!success)
+            {
+                errors.Add(
+                    "wire fanout conservation mismatch");
+            }
+
+            return new WireLoadScenarioResult(
+                playerCount,
+                success,
+                active.Length,
+                playerCount - active.Length,
+                mapIds[0],
+                LatencySummary.From(
+                    setupLatencies),
+                movement,
+                chat,
+                errors.ToArray());
+        }
+        finally
+        {
+            var disposals =
+                clients
+                    .Where(x => x is not null)
+                    .Cast<WireLoadClient>()
+                    .Select(async x =>
+                        await x.DisposeAsync())
+                    .ToArray();
+
+            await Task.WhenAll(disposals);
+        }
+    }
+
+    private static async Task<WirePhaseResult> MeasureMovementAsync(
+        WireLoadClient[] clients,
+        int rounds,
+        TimeSpan timeout)
+    {
+        foreach (var client in clients)
+            client.StartMeasurement();
+
+        var roundLatencies =
+            new List<double>(rounds);
+        var phaseStarted =
+            Stopwatch.GetTimestamp();
+        var expectedPerRound =
+            (long)clients.Length *
+            Math.Max(
+                0,
+                clients.Length - 1);
+
+        try
+        {
+            for (var round = 0;
+                 round < rounds;
+                 round++)
+            {
+                var roundStarted =
+                    Stopwatch.GetTimestamp();
+
+                await Task.WhenAll(
+                    clients.Select(
+                        x => x.SendPositionAsync(
+                            timeout)));
+
+                var expected =
+                    expectedPerRound *
+                    (round + 1);
+
+                await WaitUntilAsync(
+                    () => clients.Sum(
+                        x => x.MoveBroadcasts),
+                    expected,
+                    timeout,
+                    "MoveEntity");
+
+                roundLatencies.Add(
+                    Stopwatch.GetElapsedTime(
+                            roundStarted)
+                        .TotalMilliseconds);
+
+                // PacketRouter intentionally broadcasts position at <=10 Hz.
+                if (round + 1 < rounds)
+                    await Task.Delay(120);
+            }
+
+            var elapsed =
+                Stopwatch.GetElapsedTime(
+                    phaseStarted);
+            var actual =
+                clients.Sum(
+                    x => x.MoveBroadcasts);
+            var sentBytes =
+                clients.Sum(
+                    x => x.SentBytes);
+            var receivedBytes =
+                clients.Sum(
+                    x => x.ReceivedBytes);
+            var expectedTotal =
+                expectedPerRound *
+                rounds;
+
+            if (actual != expectedTotal)
+            {
+                throw new InvalidOperationException(
+                    $"movement conservation failed expected={expectedTotal} actual={actual}");
+            }
+
+            return BuildPhase(
+                "SyncPosition->MoveEntity",
+                rounds,
+                expectedTotal,
+                actual,
+                sentBytes,
+                receivedBytes,
+                elapsed,
+                roundLatencies);
+        }
+        finally
+        {
+            foreach (var client in clients)
+                client.StopMeasurement();
+        }
+    }
+
+    private static async Task<WirePhaseResult> MeasureChatAsync(
+        WireLoadClient[] clients,
+        string runId,
+        int rounds,
+        TimeSpan timeout)
+    {
+        foreach (var client in clients)
+            client.StartMeasurement();
+
+        var roundLatencies =
+            new List<double>(rounds);
+        var phaseStarted =
+            Stopwatch.GetTimestamp();
+
+        // Nearby ChatMessage returns one ChatBroadcast to the sender and
+        // publishes one to every other same-map client.
+        var expectedPerRound =
+            (long)clients.Length *
+            clients.Length;
+
+        try
+        {
+            for (var round = 0;
+                 round < rounds;
+                 round++)
+            {
+                var roundStarted =
+                    Stopwatch.GetTimestamp();
+
+                await Task.WhenAll(
+                    clients.Select(
+                        x => x.SendNearbyChatAsync(
+                            $"wire-load-{runId}-{round:D2}-{x.Index:D3}",
+                            timeout)));
+
+                var expected =
+                    expectedPerRound *
+                    (round + 1);
+
+                await WaitUntilAsync(
+                    () => clients.Sum(
+                        x => x.ChatBroadcasts),
+                    expected,
+                    timeout,
+                    "ChatBroadcast");
+
+                roundLatencies.Add(
+                    Stopwatch.GetElapsedTime(
+                            roundStarted)
+                        .TotalMilliseconds);
+            }
+
+            var elapsed =
+                Stopwatch.GetElapsedTime(
+                    phaseStarted);
+            var actual =
+                clients.Sum(
+                    x => x.ChatBroadcasts);
+            var sentBytes =
+                clients.Sum(
+                    x => x.SentBytes);
+            var receivedBytes =
+                clients.Sum(
+                    x => x.ReceivedBytes);
+            var expectedTotal =
+                expectedPerRound *
+                rounds;
+
+            if (actual != expectedTotal)
+            {
+                throw new InvalidOperationException(
+                    $"chat conservation failed expected={expectedTotal} actual={actual}");
+            }
+
+            return BuildPhase(
+                "ChatMessage->ChatBroadcast",
+                rounds,
+                expectedTotal,
+                actual,
+                sentBytes,
+                receivedBytes,
+                elapsed,
+                roundLatencies);
+        }
+        finally
+        {
+            foreach (var client in clients)
+                client.StopMeasurement();
+        }
+    }
+
+    private static WirePhaseResult BuildPhase(
+        string name,
+        int rounds,
+        long expected,
+        long actual,
+        long sentBytes,
+        long receivedBytes,
+        TimeSpan elapsed,
+        IReadOnlyCollection<double> latencies)
+    {
+        var seconds =
+            elapsed.TotalSeconds;
+
+        return new WirePhaseResult(
+            name,
+            rounds,
+            expected,
+            actual,
+            sentBytes,
+            receivedBytes,
+            elapsed.TotalMilliseconds,
+            seconds <= 0
+                ? 0
+                : actual / seconds,
+            seconds <= 0
+                ? 0
+                : receivedBytes / seconds,
+            LatencySummary.From(
+                latencies));
+    }
+
+    private static async Task WaitUntilAsync(
+        Func<long> current,
+        long expected,
+        TimeSpan timeout,
+        string description)
+    {
+        var started =
+            Stopwatch.GetTimestamp();
+
+        while (current() < expected)
+        {
+            if (Stopwatch.GetElapsedTime(
+                    started) >= timeout)
+            {
+                throw new TimeoutException(
+                    $"{description} timed out expected={expected} actual={current()}");
+            }
+
+            await Task.Delay(5);
+        }
+    }
+
+    private static WireLoadScenarioResult Failure(
+        int playerCount,
+        IReadOnlyCollection<WireLoadClient> active,
+        IEnumerable<double> setupLatencies,
+        IEnumerable<string> errors)
+        => new(
+            playerCount,
+            false,
+            active.Count,
+            playerCount - active.Count,
+            active
+                .Select(x => x.MapId)
+                .FirstOrDefault(),
+            LatencySummary.From(
+                setupLatencies),
+            WirePhaseResult.Empty(
+                "SyncPosition->MoveEntity"),
+            WirePhaseResult.Empty(
+                "ChatMessage->ChatBroadcast"),
+            errors.ToArray());
+}

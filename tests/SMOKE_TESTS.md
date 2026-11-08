@@ -14,6 +14,7 @@
 | .NET domain smoke | `SGO.Server.SmokeTests/Protocol`、`World`、`Announcements`、`GameData` | 低耦合資料/協定規則 | 否 |
 | .NET integration smoke | `SGO.Server.SmokeTests/Integration` | SQLite、Session、交易、掉物、怪物、道具、重連與競態 | 否 |
 | 真 AES/WebSocket E2E | `SGO.Server.WireSmokeTests` | 透過真正運行中的 Server 發送加密封包 | 是 |
+| 真 AES/WebSocket load | `SGO.Server.WireLoadProbe` | 10/50/100 個同圖 client 的 fanout、延遲、bytes/sec 與 failure | 是 |
 | Godot headless regression | `client/tests/*.gd` | 怪物追擊/插值與 client hot-path regression | 否；需要 Godot executable |
 | 真 Godot Scene/UI E2E | 尚未完整自動化 | 切圖、戰鬥、掉寶、寵物/機甲與 UI 操作 | 是 |
 
@@ -79,6 +80,17 @@ tests/SGO.Server.SmokeTests/
 - 多人 server-push 允許 interleaved packet，不假設「下一包一定是 response」。
 
 `test_smoke_suite_structure.py` 會守住雙 Client、MoveEntity、ChatBroadcast、Party、Trade 等關鍵字，避免 E2E 不小心退回單人版本。
+
+## Wire Load Probe
+
+`tests/SGO.Server.WireLoadProbe/` 與 WireSmoke 分離，專門做多人容量驗證。預設依序建立 10、50、100 個真 AES/WebSocket client，全部完成註冊、登入、建角、選角、bootstrap 與 WorldReady 後，在同一張地圖執行：
+
+- `SyncPosition`：每一個 sender 每輪必須讓其餘 `N-1` 個 client 各收到一次 `MoveEntity`，不允許漏包或重複 fanout。
+- Nearby `ChatMessage`：每一個 sender 每輪預期全圖 `N` 個 client（含 sender response）各收到一次 `ChatBroadcast`。
+- 報告 setup 成功/失敗、每輪 fanout completion P50/P95/P99、deliveries/sec、實際 sent/received bytes 與 received bytes/sec。
+- CI/local runner 使用 `--sizes 10,50,100 --rounds 2`；若任一 client setup 失敗或 delivery conservation 不一致即非 0 exit code。
+
+`test_wire_load_probe_structure.py` 守住真 ClientProtocol、10/50/100、fanout conservation 與 CI/local runner wiring。
 
 ## Coverage / Audit 守門
 

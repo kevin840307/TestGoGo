@@ -58,6 +58,10 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_load_probe_structure.py", "-v"
     )
+    Invoke-Checked "Wire load probe structure tests" "python" @(
+        "-m", "unittest", "discover", "-s", "tests",
+        "-p", "test_wire_load_probe_structure.py", "-v"
+    )
     Invoke-Checked "Feature gap tracking regression" "python" @(
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_feature_gap_tracker.py", "-v"
@@ -121,6 +125,10 @@ try {
     )
     Invoke-Checked "AES WebSocket smoke test build" "dotnet" @(
         "build", "tests/SGO.Server.WireSmokeTests/SGO.Server.WireSmokeTests.csproj",
+        "-c", "Release"
+    )
+    Invoke-Checked "AES WebSocket load probe build" "dotnet" @(
+        "build", "tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj",
         "-c", "Release"
     )
 
@@ -217,6 +225,17 @@ try {
         "run", "--no-build", "--project",
         "tests/SGO.Server.WireSmokeTests/SGO.Server.WireSmokeTests.csproj",
         "-c", "Release", "--", "ws://127.0.0.1:5678/"
+    )
+    Invoke-Checked "Encrypted WebSocket 10/50/100 load probe" "dotnet" @(
+        "run", "--no-build", "--project",
+        "tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj",
+        "-c", "Release", "--",
+        "--url", "ws://127.0.0.1:5678/",
+        "--sizes", "10,50,100",
+        "--rounds", "2",
+        "--setup-concurrency", "10",
+        "--timeout-seconds", "20",
+        "--output", (Join-Path $logRoot "wire-load-probe.json")
     )
     Write-Host "[PASS] All local protocol checks passed." -ForegroundColor Green
 }

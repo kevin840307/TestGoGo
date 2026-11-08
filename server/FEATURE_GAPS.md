@@ -51,7 +51,7 @@
 | --- | --- | --- | --- | --- |
 | P2-01 | BLOCKED_EXTERNAL | **PayPal 付款**需要 provider credentials/API/Webhook endpoint | `CreatePayPalDonation` 明確失敗，不建立假的訂單或點數 | 真 provider sandbox：簽章、Webhook 冪等、退款/重送、可稽核入帳 |
 | P2-02 | BLOCKED_EXTERNAL | **舊服點數查詢/提領**需要真實 legacy account/point source | Query/Withdraw 明確失敗，不模擬舊服餘額 | 真來源身分驗證 + 原子單次轉移 + 重試不重複入帳 |
-| P2-03 | TECH_DEBT | **50/100 人性能容量**。正確性已有 10 人 race/shared-AI/economy coverage，SQLite 也已啟用 WAL + 5s busy timeout；LoadProbe 已分開量測 10/50/100 人 fanout、同 row worst-case contention、distinct-player SQLite 寫入 P50/P95/P99 與 final-state consistency。仍需有 runner 的實際報告，以及真 WebSocket/戰鬥負載下的 AI tick、CPU/RAM、bytes/sec | Shared AI 已由每 socket tick 改成每 map 單一 250ms scheduler；client hot-path/headless perf regressions已建立 | 10/50/100 人報告含 tick P50/P95/P99、DB latency、bytes/sec、CPU/RAM，依瓶頸再優化 |
+| P2-03 | TECH_DEBT | **50/100 人性能容量**。正確性已有 10 人 race/shared-AI/economy coverage，SQLite 也已啟用 WAL + 5s busy timeout；LoadProbe 已分開量測 10/50/100 人 fanout、同 row worst-case contention、distinct-player SQLite 寫入 P50/P95/P99 與 final-state consistency；另新增 WireLoadProbe，以 10/50/100 個真 AES/WebSocket client 同圖驗證 SyncPosition/ChatMessage fanout 守恆、每輪 P50/P95/P99、setup failure 與 wire bytes/sec。仍需有 runner 的實際報告，以及混合戰鬥/AI 負載下的 CPU/RAM/tick 指標 | Shared AI 已由每 socket tick 改成每 map 單一 250ms scheduler；client hot-path/headless perf regressions已建立 | 10/50/100 人報告含 tick P50/P95/P99、DB latency、bytes/sec、CPU/RAM，依瓶頸再優化 |
 | P2-04 | TECH_DEBT | **其他 DB Provider**。Domain/Application 已經透過 store interfaces 隔離，但目前 production persistence 只有 SQLite | 不宣稱 PostgreSQL/其他 DB 已支援 | 真有替換需求時新增 provider，跑同一組交易/掉物/資產/重連 contract tests |
 
 ## 已完成的測試結構
@@ -70,6 +70,7 @@
 - `Integration/SessionLifecycleSmokeTests.cs`：disconnect/reconnect/map transition race。
 - `Integration/BoosterSmokeTests.cs`、`RecoveredBoxSmokeTests.cs`、`ItemUseClassificationSmokeTests.cs`、`WaspPackageSmokeTests.cs`、`CosmeticTransformationSmokeTests.cs`。
 - `tests/SGO.Server.WireSmokeTests/`：真 AES/WebSocket，現已含兩 client Party/Trade。
+- `tests/SGO.Server.WireLoadProbe/`：10/50/100 個真 AES/WebSocket client，同圖移動/聊天 fanout conservation、round latency 與 wire throughput。
 - `client/tests/monster_chase_regression.gd`、`perf_regression_smoke.gd`：Godot headless regression；Windows runner 有 Godot 時自動執行。
 - `tests/SGO.ItemCoverageReport/`：scripted item 全量分類，`--strict` 未知效果守門。
 - `tests/SGO.MappingCoverageReport/`：歷史 ID/名稱 remap、collision、skipped/unmapped 報告。
