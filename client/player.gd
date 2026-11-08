@@ -461,12 +461,19 @@ func _unhandled_input(event: InputEvent) -> void :
 				combat_target = null
 				pending_skill_id = -1
 				is_emoting = false
+				# A fresh terrain click cancels latched autorun and returns
+				# to ordinary click-to-destination navigation.
+				var was_latched: bool = _mouse_autorun.terrain_press(
+					Time.get_ticks_msec()
+				)
+				if CursorManager and CursorManager.has_method("set_autorun_indicator"):
+					CursorManager.set_autorun_indicator(false)
 				_set_navigation_target(get_global_mouse_position())
-				is_mouse_holding = true
+				is_mouse_holding = not was_latched
 				if not is_action_locked:
 					current_state = "walk"
 		else:
-			is_mouse_holding = false
+			_finish_mouse_autorun_hold()
 
 	if event is InputEventKey and event.pressed and not event.is_echo() and event.keycode == KEY_ALT:
 		if is_action_locked: return
