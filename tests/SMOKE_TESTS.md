@@ -229,3 +229,38 @@ powershell -ExecutionPolicy Bypass -File tests/run_protocol_checks.ps1
 注意：結構測試通過不能替代 C# 編譯或實際
 10/50/100 客戶端壓測；沒有實際執行紀錄前都只標
 `IMPLEMENTED_UNVERIFIED`。
+
+## 2026-11-08 AOI／地面物／Client 回歸補充
+
+- `World/WorldEntityAoiStationaryRefreshSmokeTests.cs`：
+  不動座標只更新 factory 不重掃 observer；1000 次刷新不得
+  重複 Spawn，late observer 看最新快照；同 cell 移動超出
+  exit radius 一樣 Despawn，跨 map identity 不留下舊 known-set。
+- `World/WorldEntityAoiSnapshotRaceSmokeTests.cs`：
+  決定性重現舊快照競態 A(取得 AOI generation)→
+  B(提交/新增地面物 AOI)→A(清舊索引)。B 的物品必須保留，
+  但之後新的 authoritative snapshot 仍能正常清除它。
+  同時覆蓋 `ServerBroadcastHub` 的 generation 傳遞。
+- `Integration/GroundDropRequestGuardSmokeTests.cs`：
+  在獨立 SQLite 中測零/負/超過持有的丟物數量、
+  NaN 座標、裝備多件丟棄、正常部分丟物→撿回、
+  重複撿取的資產總數守恆。加入 `--suite concurrency` 和 full。
+- `client/tests/aoi_monster_snapshot_order_regression.gd`：
+  驗證 server 重複 Spawn 與較新的 Move 交錯時，
+  deferred/queued 怪物不倒退到舊 X/Y，
+  不重複排入實體；AOI exit 與切圖必清快取。
+  有 Godot 時由 `tests/run_protocol_checks.ps1` 執行。
+- `test_smoke_suite_structure.py`：
+  保護上述模組與主 Runner 的 wiring，
+  但**只驗證程式結構，不能替代真正的 .NET/Godot 執行**。
+
+此工作環境沒有 `dotnet` / `godot` 命令，且所查 GitHub
+Actions job 未取得 runner steps；新增測試仍屬
+`IMPLEMENTED_UNVERIFIED`。需在有 SDK/引擎的電腦執行：
+
+```powershell
+python -m unittest discover -s tests -p test_smoke_suite_structure.py -v
+dotnet run --project tests/SGO.Server.SmokeTests -c Release -- --suite world
+dotnet run --project tests/SGO.Server.SmokeTests -c Release -- --suite concurrency
+powershell -ExecutionPolicy Bypass -File tests/run_protocol_checks.ps1
+```
