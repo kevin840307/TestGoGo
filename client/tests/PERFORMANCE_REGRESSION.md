@@ -89,39 +89,32 @@ background client should allocate its entire recipe UI until specifically
 opened. **No Godot runtime is available in this tool environment, so
 tests require execution on the target system.**
 
-## Initial black-screen / craft prewarm loading bar
+## Initial loading screen (independent of optional crafting)
 
-The entry scene now shows the **existing LoadingOverlay, ProgressBar and a
-status message from its initial scene state**, even before EntryManager._ready.
-Heavy item/skill/pet indexing starts only after two process-frame signals,
-letting Godot present the loading UI before the synchronous indexing work.
+The entry scene still shows its LoadingOverlay, progress bar and status
+label from the initial scene state. Item/skill/pet indexing starts only
+after two process-frame signals so the initial loading surface can render
+before the synchronous indexing work.
 
-The craft window still prewarms its full static recipe tree *before login*
-so world entry does not inherit the 1453-row UI hitch. Its existing
-time-budgeted recipe batches emit real processed/total progress, mapped to
-60–85% of startup progress. Stage labels explain resource load, recipe
-construction, and readiness. This does not add artificial timeouts or
-remove the original login/input focus behavior.
+**Change from the previous implementation:** the login stage no longer
+constructs the full crafting recipe Tree. The old 60–85% startup
+"預先建立合成配方" steps are retired; craft progress is now
+shown only inside the crafting window on first use. Startup continues to
+prepare essential resources, game-info window, login video and BGM.
 
 ```powershell
 godot --headless --path client --script res://tests/startup_loading_regression.gd
 godot --headless --path client --script res://tests/smooth_loading_bar_regression.gd
-godot --headless --path client --script res://tests/npc_shop_close_and_crafting_regression.gd
+godot --headless --path client --script res://tests/craft_first_open_regression.gd
 ```
 
-Manual acceptance: launch in foreground and ensure the progress bar and
-"正在準備遊戲資源…" appear before prewarm; while recipes are building,
-the bar should advance in small increments and the stage label update.
-After 100% the account/password form should appear as before. Repeat on
-cold start, in Debug and exported builds. If Windows considers a newly launched window unfocused, the initial
-loading bar is temporarily rendered at **10 FPS** during bootstrap, otherwise
-the old background rendering shutdown would leave it black until focus
-returned. After the existing login fade finishes (without blocking input),
-the normal **30 FPS, render-loop-disabled, muted** background policy resumes.
-This narrow exception applies only to initial startup, not world/map loads
-or ordinary unfocused gameplay. Log context includes
-`startup_overlay=true/false` to distinguish these phases.
-
+On a cold start, the account/password screen must appear without any
+`[CRAFT_STATIC_PREWARM]` / `[LOGIN_HUD_PREWARM] kind=craft`
+before `login_screen_ready`. The startup overlay stays visible through
+essential initialization. If Windows initially treats the app as
+unfocused, the bootstrap loading surface can render at 10 FPS; after
+login reveal, the original 30 FPS background cap, render-loop-off,
+muted policy resumes. This exception does not affect world networking.
 
 ## Foreground/background performance diagnostics (focus-aware)
 
