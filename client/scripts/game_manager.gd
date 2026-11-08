@@ -131,9 +131,10 @@ func _focus_perf_context() -> String:
 	var focus_age_ms: int = -1
 	if _focus_last_change_usec > 0:
 		focus_age_ms = int((Time.get_ticks_usec() - _focus_last_change_usec) / 1000)
-	return "focus=%s focus_actual=%s power_save=%s fps_cap=%d render_loop=%s audio_muted=%s focus_age_ms=%d" % [
+	return "focus=%s focus_actual=%s power_save=%s fps_cap=%d render_loop=%s audio_muted=%s focus_age_ms=%d startup_overlay=%s" % [
 		focus_name, str(DisplayServer.window_is_focused()), str(not _window_has_focus),
 		Engine.max_fps, str(render_enabled), str(audio_muted), focus_age_ms,
+		str(_startup_loading_overlay_active),
 	]
 
 
@@ -391,7 +392,28 @@ func _trace_map_change(stage: String, source_map_id: int, target_map_id: int, de
 var _window_has_focus: bool = true
 var _focused_max_fps: int = 0
 var _master_bus_was_muted_before_focus_loss: bool = false
+var _startup_loading_overlay_active: bool = false
 const UNFOCUSED_MAX_FPS := 30
+const STARTUP_UNFOCUSED_PROGRESS_FPS := 10
+
+
+func set_startup_loading_overlay_active(active: bool) -> void:
+	# A completely disabled background render loop cannot display the first
+	# startup loading bar at all (the exact black-screen regression).
+	# Draw it at 10 FPS *only during bootstrap*, then restore the original
+	# render-disabled background policy as soon as login is ready.
+	if _startup_loading_overlay_active == active:
+		return
+	_startup_loading_overlay_active = active
+	if not _window_has_focus:
+		Engine.max_fps = STARTUP_UNFOCUSED_PROGRESS_FPS if active else UNFOCUSED_MAX_FPS
+		RenderingServer.render_loop_enabled = active
+	if OS.is_debug_build():
+		_log_focus_power_save("startup_overlay_on" if active else "startup_overlay_off")
+
+
+static func background_loading_display_fps(bootstrap_active: bool) -> int:
+	return STARTUP_UNFOCUSED_PROGRESS_FPS if bootstrap_active else UNFOCUSED_MAX_FPS
 
 func _notification(what: int) -> void :
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
@@ -413,8 +435,8 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 
 	if not has_focus:
 		_focused_max_fps = Engine.max_fps
-		Engine.max_fps = UNFOCUSED_MAX_FPS
-		RenderingServer.render_loop_enabled = false
+		Engine.max_fps = background_loading_display_fps(_startup_loading_overlay_active)
+		RenderingServer.render_loop_enabled = _startup_loading_overlay_active
 		_trim_unfocused_runtime_caches()
 
 		if master_bus_index >= 0:
