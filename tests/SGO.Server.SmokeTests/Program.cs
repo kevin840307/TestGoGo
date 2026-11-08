@@ -183,6 +183,110 @@ var currentCatalog = new CurrentClientDataCatalog(
             price: 1),
 
         CurrentItem(
+            2130,
+            "十二生肖帽娃娃",
+            "general",
+            price: 1,
+            scriptName: "十二生肖帽娃娃",
+            description: "十二生肖帽娃娃，會送您一款十二生肖頭飾，能找到你喜歡的一款嗎？"),
+
+        CurrentItem(
+            18089,
+            "鼠",
+            "equip",
+            price: 1,
+            equipSlot: 0,
+            durability: 50),
+
+        CurrentItem(
+            18090,
+            "牛",
+            "equip",
+            price: 1,
+            equipSlot: 0,
+            durability: 50),
+
+        CurrentItem(
+            18091,
+            "虎",
+            "equip",
+            price: 1,
+            equipSlot: 0,
+            durability: 50),
+
+        CurrentItem(
+            18092,
+            "兔",
+            "equip",
+            price: 1,
+            equipSlot: 0,
+            durability: 50),
+
+        CurrentItem(
+            18093,
+            "龍",
+            "equip",
+            price: 1,
+            equipSlot: 0,
+            durability: 50),
+
+        CurrentItem(
+            18094,
+            "蛇",
+            "equip",
+            price: 1,
+            equipSlot: 0,
+            durability: 50),
+
+        CurrentItem(
+            18095,
+            "馬",
+            "equip",
+            price: 1,
+            equipSlot: 0,
+            durability: 50),
+
+        CurrentItem(
+            18096,
+            "羊",
+            "equip",
+            price: 1,
+            equipSlot: 0,
+            durability: 50),
+
+        CurrentItem(
+            18097,
+            "猴",
+            "equip",
+            price: 1,
+            equipSlot: 0,
+            durability: 50),
+
+        CurrentItem(
+            18098,
+            "雞",
+            "equip",
+            price: 1,
+            equipSlot: 0,
+            durability: 50),
+
+        CurrentItem(
+            18099,
+            "狗",
+            "equip",
+            price: 1,
+            equipSlot: 0,
+            durability: 50),
+
+        CurrentItem(
+            18100,
+            "豬",
+            "equip",
+            price: 1,
+            equipSlot: 0,
+            durability: 50),
+
+        CurrentItem(
             2109,
             "堅固的鑰匙",
             "general",
@@ -3032,6 +3136,15 @@ try
         Check(first.RootElement.Int("MapID") == 15,
             "enter world includes Map15");
     }
+
+    DollRewardSmokeTests.Run(
+        router,
+        store,
+        session,
+        account.Value,
+        id,
+        currentCatalog,
+        realCurrentCatalog);
 
     BoosterSmokeTests.Run(
         router,
