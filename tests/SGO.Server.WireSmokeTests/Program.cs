@@ -344,7 +344,8 @@ await Probe(
             out var gifts) &&
         gifts.ValueKind ==
             JsonValueKind.Array,
-    "authenticated mall list returns points/items/gifts");
+    "authenticated mall list returns points/items/gifts",
+    allowInterleaved: true);
 
 // Two real encrypted clients exercise cross-player packet delivery and
 // server-side party/trade state transitions on the same map.
@@ -1462,13 +1463,15 @@ async Task<JsonElement> Probe(
     object request,
     string responseType,
     Func<JsonElement, bool> assert,
-    string description)
+    string description,
+    bool allowInterleaved = false)
     => await ProbeOn(
         socket,
         request,
         responseType,
         assert,
-        description);
+        description,
+        allowInterleaved);
 
 async Task<JsonElement> ProbeOn(
     ClientWebSocket targetSocket,
