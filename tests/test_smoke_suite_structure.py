@@ -48,6 +48,17 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("ResolveExperienceCard(2460)", source)
         self.assertIn("ResolveSkillBook(3701)", source)
 
+    def test_concurrency_suite_has_explicit_isolated_context(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = SMOKE / "Integration" / "ConcurrencySmokeTests.cs"
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("public static void Run(string repoRoot)", source)
+        self.assertIn("ConcurrentGroundPickup(", source)
+        self.assertIn("ConcurrentTradeFinalConfirm(", source)
+        self.assertIn("ConcurrencySmokeTests.Run(", main)
+        self.assertIn('case "concurrency":', main)
+
     def test_prelogin_route_suite_has_explicit_context(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = SMOKE / "Protocol" / "PreloginPacketSmokeTests.cs"
@@ -72,7 +83,7 @@ class SmokeSuiteStructureTests(unittest.TestCase):
 
     def test_fast_domain_suites_are_selectable(self):
         source = PROGRAM.read_text(encoding="utf-8-sig")
-        for suite in ("protocol", "announcements", "world", "all"):
+        for suite in ("protocol", "announcements", "world", "concurrency", "all"):
             with self.subTest(suite=suite):
                 self.assertIn(f'case "{suite}":', source)
         self.assertIn('args[0] != "--suite"', source)
