@@ -179,6 +179,20 @@ Map13 → Map15 → Map13, and a missing map path. Verify monotonic smooth fill,
 no abrupt 90→100 jumps, the same overlay teardown and exactly one original
 WorldReady handshake per transition.
 
+## Daytime zero-opacity overlay culling
+
+The day/night shader mathematically outputs alpha=0 when
+`night_strength == 0`. The daylight phase no longer draws its fullscreen
+ColorRect or recomputes the player screen UV each frame. Dawn/dusk/night
+immediately re-enable the original shader as soon as night strength exceeds
+zero; the original calendar time rules and visual uniforms are untouched.
+This optimization does not disable the player's environment effects.
+
+`render_resource_regression.gd` checks daylight / dusk / night toggles.
+Manual visual test: start during daylight, then verify shader output at
+dusk/night and that walking moves the lit radial region as before.
+Compare Draw Calls and CPU with the same map/time before and after.
+
 ## Focused render-resource cleanup (no gameplay rule changes)
 
 The previous design allocated an invisible TargetIndicator AnimatedSprite2D
