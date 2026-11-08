@@ -341,6 +341,55 @@ func _update_monster_aoi(delta: float) -> void :
 		):
 			_queue_cached_monster_spawn(entity_id)
 
+func _queue_deferred_ground_spawn(entity_id: int) -> void:
+	if _queued_spawn_ids.has(entity_id) or get_active_entity(entity_id):
+		return
+	var snapshot: Dictionary = _ground_spawn_data_at_current_time(entity_id)
+	if snapshot.is_empty():
+		_deferred_ground_spawns.erase(entity_id)
+		return
+	_queued_spawn_ids[entity_id] = true
+	_enqueue_spawn_by_priority(snapshot)
+	_deferred_ground_spawns.erase(entity_id)
+	_last_spawn_enqueue_usec = Time.get_ticks_usec()
+
+
+func _update_ground_aoi(delta: float) -> void:
+	_ground_aoi_elapsed += delta
+	if _ground_aoi_elapsed < GROUND_AOI_UPDATE_INTERVAL:
+		return
+	_ground_aoi_elapsed = 0.0
+	var aoi: Dictionary = _ground_aoi_context()
+	if aoi["center"] == null:
+		return
+	var center: Vector2 = aoi["center"] as Vector2
+	var enter_radius: float = float(aoi["enter"])
+	var exit_radius_sq: float = float(aoi["exit"]) * float(aoi["exit"])
+	for raw_id in _active_entity_types.keys():
+		var entity_id: int = int(raw_id)
+		if int(_active_entity_types.get(entity_id, -1)) != 3:
+			continue
+		var drop: Node2D = get_active_entity(entity_id)
+		if not is_instance_valid(drop) or not _ground_spawn_templates.has(entity_id):
+			continue
+		if center.distance_squared_to(drop.global_position) <= exit_radius_sq:
+			continue
+		# The player may be walking to pick up an item outside the screen.
+		# Keep the target alive until its pending pickup request resolves.
+		if bool(drop.get_meta("is_requesting", false)):
+			continue
+		_unregister_entity_hover(drop)
+		drop.queue_free()
+		active_entities.erase(entity_id)
+		_active_entity_types.erase(entity_id)
+		_deferred_ground_spawns[entity_id] = _ground_spawn_templates[entity_id]
+	for raw_id in _deferred_ground_spawns.keys():
+		var entity_id: int = int(raw_id)
+		var cached: Dictionary = _deferred_ground_spawns.get(entity_id, {})
+		if is_ground_inside_aoi(cached, center, enter_radius):
+			_queue_deferred_ground_spawn(entity_id)
+
+
 func _on_entity_spawned(data: Dictionary) -> void :
 	var entity_id := int(data.get("EntityID", 0))
 	if entity_id <= 0:
