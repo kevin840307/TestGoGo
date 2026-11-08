@@ -61,6 +61,23 @@ func _run() -> void:
 		"no tween animates ground-item Area2D position")
 	_check(not entity_source.contains('floor_pos = start_pos + Vector2(randf_range'),
 		"old random land-outside-Blocking.dat bounce was removed")
+
+	# Hidden skill book should not decode skills or allocate cards until
+	# GameHUD opens it; shortcut and gameplay skill paths remain separate.
+	var skill_source: String = FileAccess.get_file_as_string("res://scripts/skill_window.gd")
+	var setup_start: int = skill_source.find("func setup(player: CharacterBody2D)")
+	var update_start: int = skill_source.find("func update_ui()", setup_start)
+	_check(setup_start >= 0 and update_start > setup_start,
+		"SkillWindow retains separate setup and refresh functions")
+	if setup_start >= 0 and update_start > setup_start:
+		var setup_body: String = skill_source.substr(setup_start, update_start - setup_start)
+		_check(setup_body.contains("target_player = player") and not setup_body.contains("update_ui()"),
+			"hidden skill window binds player without eagerly rebuilding skill cards")
+	var hud_source: String = FileAccess.get_file_as_string("res://game_hud.gd")
+	_check(hud_source.contains('if target_window.has_method("update_ui"): target_window.update_ui()'),
+		"opening any hidden window still rebuilds its current UI")
+	_check(hud_source.contains('if skill_window and skill_window.visible and skill_window.has_method("update_ui"):'),
+		"SkillSync still refreshes an already open skill window")
 	print("[RENDER_OPT_REGRESSION] %s" % (
 		"ALL PASS" if _failures == 0 else "FAILURES=%d" % _failures
 	))
