@@ -32,6 +32,7 @@ using System.Text.Json;
 using static SGO.Server.SmokeTests.SmokeAssert;
 using SGO.Server.SmokeTests.Protocol;
 using SGO.Server.SmokeTests.Announcements;
+using SGO.Server.SmokeTests.World;
 
 // Domain-focused, dependency-free contract suites are maintained in
 // Protocol/*.cs and Announcements/*.cs, not in this world integration runner.
@@ -48,147 +49,7 @@ Check(Directory.Exists(gameDataRoot), "server data directory exists");
 
 var world = new WorldDataService(gameDataRoot);
 
-var blockingTestRoot = Path.Combine(
-    Path.GetTempPath(),
-    "sgo-blocking-" + Guid.NewGuid().ToString("N"));
-var blockingMapRoot = Path.Combine(
-    blockingTestRoot,
-    "Map",
-    "Map01");
-Directory.CreateDirectory(blockingMapRoot);
-
-var blockingTestPath = Path.Combine(
-    blockingMapRoot,
-    "Blocking.dat");
-using (var writer = new BinaryWriter(
-           File.Open(
-               blockingTestPath,
-               FileMode.Create,
-               FileAccess.Write,
-               FileShare.None)))
-{
-    writer.Write(5);
-    writer.Write(1);
-    writer.Write(new byte[] { 0, 0, 1, 0, 3 });
-}
-
-var blocking = new BlockingMapService(blockingTestRoot);
-Check(blocking.HasMap(1),
-    "Blocking.dat parser loads original 8-byte header grid");
-Check(blocking.IsMoveAllowed(
-          1, 8, 8, 24, 8, false),
-    "Blocking.dat movement accepts clear cells");
-Check(!blocking.IsMoveAllowed(
-          1, 8, 8, 40, 8, false),
-    "Blocking.dat movement rejects a segment crossing blocked cell");
-
-var cornerRoot = Path.Combine(
-    Path.GetTempPath(),
-    "sgo-blocking-corner-" + Guid.NewGuid().ToString("N"));
-var cornerMapRoot = Path.Combine(
-    cornerRoot,
-    "Map",
-    "Map01");
-Directory.CreateDirectory(cornerMapRoot);
-
-using (var writer = new BinaryWriter(
-           File.Open(
-               Path.Combine(cornerMapRoot, "Blocking.dat"),
-               FileMode.Create,
-               FileAccess.Write,
-               FileShare.None)))
-{
-    writer.Write(3);
-    writer.Write(3);
-    writer.Write(new byte[]
-    {
-        0, 1, 0,
-        0, 0, 0,
-        0, 0, 0
-    });
-}
-
-var cornerBlocking = new BlockingMapService(cornerRoot);
-Check(cornerBlocking.IsMoveAllowed(
-          1,
-          8,
-          8,
-          40,
-          8,
-          false),
-    "Blocking.dat server validation allows a short legal route around a corner");
-
-Directory.Delete(
-    cornerRoot,
-    recursive: true);
-
-// Monster movement must use strict line segments, not ValidateMove's
-// permissive local-route rule for received player positions.
-var navigator = new MonsterNavigationService(blocking);
-Check(!navigator.IsDirectClear(1, 8, 8, 40, 8),
-    "monster cannot cross a blocked cell even if a local detour exists");
-Check(!navigator.IsDirectClear(1, 56, 8, 72, 8),
-    "monster cannot cross special-terrain flag 3");
-Check(!navigator.TryNextStep(1, 56, 8, 72, 8, 16, out _, out _),
-    "monster cannot route into special terrain without permission");
-Check(!navigator.IsDirectClear(99, 8, 8, 24, 8),
-    "monster movement fails closed when Blocking.dat is missing");
-
-// A vertical wall with an opening at the bottom forces an A* detour.
-// Deliberately test the diagonal edge beside the wall too.
-var navMapRoot = Path.Combine(blockingTestRoot, "Map", "Map02");
-Directory.CreateDirectory(navMapRoot);
-using (var writer = new BinaryWriter(
-           File.Create(Path.Combine(navMapRoot, "Blocking.dat"))))
-{
-    writer.Write(7);
-    writer.Write(5);
-    writer.Write(new byte[]
-    {
-        0,0,0,1,0,0,0,
-        0,0,0,1,0,0,0,
-        0,0,0,1,0,0,0,
-        0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0
-    });
-}
-Check(!navigator.IsDirectClear(2, 40, 24, 56, 24) &&
-      !navigator.IsDirectClear(2, 40, 24, 56, 40),
-    "monster cannot step through a wall or cut its diagonal corner");
-var navX = 24.0;
-var navY = 24.0;
-var followedValidRoute = true;
-for (var i = 0; i < 40 &&
-                 Math.Sqrt(Math.Pow(88 - navX, 2) +
-                           Math.Pow(24 - navY, 2)) > 1; i++)
-{
-    var oldX = navX;
-    var oldY = navY;
-    if (!navigator.TryNextStep(2, oldX, oldY, 88, 24, 16,
-                              out navX, out navY) ||
-        !navigator.IsDirectClear(2, oldX, oldY, navX, navY))
-    {
-        followedValidRoute = false;
-        break;
-    }
-}
-Check(followedValidRoute &&
-      Math.Abs(navX - 88) <= 1 &&
-      Math.Abs(navY - 24) <= 1,
-    "monster A-star chase walks around a wall without clipping through it");
-
-Check(!blocking.IsMoveAllowed(
-          1, 56, 8, 72, 8, false) &&
-      blocking.IsMoveAllowed(
-          1, 56, 8, 72, 8, true),
-    "Blocking flag 3 requires special-terrain capability");
-Check(!blocking.IsMoveAllowed(
-          99, 8, 8, 24, 8, false),
-    "missing Blocking.dat fails closed");
-
-Directory.Delete(
-    blockingTestRoot,
-    recursive: true);
+BlockingMapSmokeTests.Run();
 
 var realCurrentCatalog = new CurrentClientDataCatalog(
     Path.Combine(repoRoot, "client"));
