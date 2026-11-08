@@ -65,6 +65,8 @@ var _emotion_tween: Tween
 @onready var option_quality_enhancement: Control = $WindowsContainer / SettingsWindow / OptionQualityEnhancement
 @onready var option_performance_load: Control = $WindowsContainer / SettingsWindow / OptionPerformanceLoad
 @onready var option_combat_render: Control = $WindowsContainer / SettingsWindow / OptionCombatRender
+@onready var option_simplify_players: Control = $WindowsContainer / SettingsWindow / OptionSimplifyPlayers
+@onready var option_simplify_monsters: Control = $WindowsContainer / SettingsWindow / OptionSimplifyMonsters
 var mall_window: Control = null
 var announcement_window: Control = null
 var game_info_window: Control = null
@@ -244,6 +246,8 @@ var current_pet_combat_mode: int = 1
 var current_quality_enhancement_enabled: bool = GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
 var current_performance_load_mode: int = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
 var current_combat_render_mode: int = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
+var current_simplify_players_mode: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE
+var current_simplify_monsters_mode: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE
 
 
 func _ready() -> void :
@@ -783,6 +787,22 @@ func _setup_window_manager() -> void :
 			option_combat_render.focus_mode = Control.FOCUS_NONE
 			if not option_combat_render.gui_input.is_connected(_on_option_gui_input):
 				option_combat_render.gui_input.connect(_on_option_gui_input.bind(option_combat_render))
+
+		if option_simplify_players is OptionButton:
+			option_simplify_players.select(current_simplify_players_mode)
+			if not option_simplify_players.item_selected.is_connected(_on_opt_simplify_players_item_selected):
+				option_simplify_players.item_selected.connect(_on_opt_simplify_players_item_selected)
+			option_simplify_players.focus_mode = Control.FOCUS_NONE
+			if not option_simplify_players.gui_input.is_connected(_on_option_gui_input):
+				option_simplify_players.gui_input.connect(_on_option_gui_input.bind(option_simplify_players))
+
+		if option_simplify_monsters is OptionButton:
+			option_simplify_monsters.select(current_simplify_monsters_mode)
+			if not option_simplify_monsters.item_selected.is_connected(_on_opt_simplify_monsters_item_selected):
+				option_simplify_monsters.item_selected.connect(_on_opt_simplify_monsters_item_selected)
+			option_simplify_monsters.focus_mode = Control.FOCUS_NONE
+			if not option_simplify_monsters.gui_input.is_connected(_on_option_gui_input):
+				option_simplify_monsters.gui_input.connect(_on_option_gui_input.bind(option_simplify_monsters))
 
 	if btn_quest and not btn_quest.pressed.is_connected(_toggle_lazy_window.bind("quest")):
 		btn_quest.pressed.connect(_toggle_lazy_window.bind("quest"))
@@ -2763,16 +2783,40 @@ func _load_game_settings() -> void :
 				GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
 			)
 		)))
+		current_simplify_players_mode = ClientPerformanceProfile.sanitize_simplify_mode(int(config.get_value(
+			section,
+			GameConstants.SETTING_KEY_SIMPLIFY_PLAYERS_MODE,
+			config.get_value(
+				fallback_section,
+				GameConstants.SETTING_KEY_SIMPLIFY_PLAYERS_MODE,
+				GameConstants.SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE
+			)
+		)))
+		current_simplify_monsters_mode = ClientPerformanceProfile.sanitize_simplify_mode(int(config.get_value(
+			section,
+			GameConstants.SETTING_KEY_SIMPLIFY_MONSTERS_MODE,
+			config.get_value(
+				fallback_section,
+				GameConstants.SETTING_KEY_SIMPLIFY_MONSTERS_MODE,
+				GameConstants.SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE
+			)
+		)))
 	else:
 		current_pet_combat_mode = GameConstants.SETTING_DEFAULT_PET_COMBAT_MODE
 		current_quality_enhancement_enabled = GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
 		current_performance_load_mode = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
 		current_combat_render_mode = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
+		current_simplify_players_mode = GameConstants.SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE
+		current_simplify_monsters_mode = GameConstants.SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE
 
 	if GameManager:
 		GameManager.set_performance_modes(
 			current_performance_load_mode,
 			current_combat_render_mode
+		)
+		GameManager.set_visual_simplification_modes(
+			current_simplify_players_mode,
+			current_simplify_monsters_mode
 		)
 
 func _save_game_settings() -> void :
@@ -2798,6 +2842,16 @@ func _save_game_settings() -> void :
 		section,
 		GameConstants.SETTING_KEY_COMBAT_RENDER_MODE,
 		current_combat_render_mode
+	)
+	config.set_value(
+		section,
+		GameConstants.SETTING_KEY_SIMPLIFY_PLAYERS_MODE,
+		current_simplify_players_mode
+	)
+	config.set_value(
+		section,
+		GameConstants.SETTING_KEY_SIMPLIFY_MONSTERS_MODE,
+		current_simplify_monsters_mode
 	)
 	config.save(GameConstants.CLIENT_SETTINGS_PATH)
 
@@ -2832,6 +2886,24 @@ func _on_opt_combat_render_item_selected(index: int) -> void:
 		GameManager.set_performance_modes(
 			current_performance_load_mode,
 			current_combat_render_mode
+		)
+
+func _on_opt_simplify_players_item_selected(index: int) -> void:
+	current_simplify_players_mode = ClientPerformanceProfile.sanitize_simplify_mode(index)
+	_save_game_settings()
+	if GameManager:
+		GameManager.set_visual_simplification_modes(
+			current_simplify_players_mode,
+			current_simplify_monsters_mode
+		)
+
+func _on_opt_simplify_monsters_item_selected(index: int) -> void:
+	current_simplify_monsters_mode = ClientPerformanceProfile.sanitize_simplify_mode(index)
+	_save_game_settings()
+	if GameManager:
+		GameManager.set_visual_simplification_modes(
+			current_simplify_players_mode,
+			current_simplify_monsters_mode
 		)
 
 
