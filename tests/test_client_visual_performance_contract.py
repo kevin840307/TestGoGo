@@ -120,6 +120,30 @@ class ClientVisualPerformanceContractTests(unittest.TestCase):
         self.assertIn('not GameManager.should_render_combat_effects()', floating)
         self.assertIn('_try_finish_buff_animation()', actor)
 
+    def test_render_and_focus_savings_never_throttle_network_or_fixed_simulation(self):
+        manager = source("client/scripts/game_manager.gd")
+        network = source("client/scripts/network_manager.gd")
+        profile = source("client/scripts/client_performance_profile.gd")
+
+        # Server<->client delivery is fixed-physics driven, not render-frame driven.
+        self.assertIn("func _physics_process(delta: float) -> void :", network)
+        self.assertIn("socket.poll()", network)
+        self.assertIn("IN_WORLD_PACKET_LIMIT_PER_FRAME", network)
+        self.assertIn("IN_WORLD_PACKET_TIME_BUDGET_USEC", network)
+
+        # Rendering/background/AFK policies may touch presentation only.
+        self.assertNotIn("NetworkManager.set_process(", manager)
+        self.assertNotIn("NetworkManager.set_physics_process(", manager)
+        self.assertNotIn("Engine.physics_ticks_per_second =", manager)
+        self.assertNotIn("NetworkManager", profile)
+
+        focus_start = manager.index("func _refresh_focus_render_policy() -> void:")
+        focus_end = manager.index("\nfunc ", focus_start + 1)
+        focus_policy = manager[focus_start:focus_end]
+        self.assertNotIn("NetworkManager", focus_policy)
+        self.assertNotIn("physics_ticks_per_second =", focus_policy)
+        self.assertIn("RenderingServer.render_loop_enabled", focus_policy)
+
     def test_removed_last_preset_migrates_to_responsive_low_resource(self):
         profile = source("client/scripts/client_performance_profile.gd")
         scene = source("client/game_hud.tscn")
