@@ -248,7 +248,7 @@ public sealed class MallService
             }];
         }
 
-        if (external.TransferredPoints <= 0 ||
+        if (external.TransferredPoints != amount ||
             string.IsNullOrWhiteSpace(
                 external.ExternalTransactionId))
         {
