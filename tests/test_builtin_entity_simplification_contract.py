@@ -87,6 +87,11 @@ require(
     "doll_engine.visible = false",
     "simplified players must hide the layered paper doll",
 )
+require(
+    network_player,
+    "doll_engine.clear_dolls()",
+    "switching to simplified players must release existing paper-doll layers",
+)
 for relation in ("party_id", "club_id", "pk_status"):
     require(
         network_player,
