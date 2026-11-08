@@ -2141,14 +2141,22 @@ public sealed class CombatService
                     var appliedDamage = damage;
                     if (isScreenAreaAttack)
                     {
-                        var variancePercent = Random.Shared.Next(
-                            -10,
-                            11);
-                        appliedDamage = (int)Math.Clamp(
-                            screenDamageBase +
-                            screenDamageBase * variancePercent / 100L,
+                        // Roll a continuous value inside the same ±10% range
+                        // instead of choosing one of 21 whole-percent steps.
+                        // This keeps the expected damage unchanged while
+                        // avoiding artificial-looking 000/0000 endings.
+                        var minDamage = Math.Clamp(
+                            screenDamageBase * 90L / 100L,
                             1L,
-                            int.MaxValue);
+                            (long)int.MaxValue);
+                        var maxDamage = Math.Clamp(
+                            screenDamageBase * 110L / 100L,
+                            minDamage,
+                            (long)int.MaxValue);
+
+                        appliedDamage = (int)Random.Shared.NextInt64(
+                            minDamage,
+                            maxDamage + 1L);
                     }
 
                     var hpBeforeDamage = monster.CurrentHp;
