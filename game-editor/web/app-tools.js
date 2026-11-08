@@ -299,6 +299,7 @@ $('#enemy-new').onclick = newEnemy;
 $('#map-select').onchange = e => switchMap(e.target.value).catch(err => toast(err.message, 'error'));
 $$('[data-map-tab]').forEach(b => b.onclick = () => switchMapTab(b.dataset.mapTab).catch(err => toast(err.message, 'error')));
 $('#map-enemy-search').oninput = debounce(renderEnemyPalette, 100);
+$('#map-show-preview').onchange = e => { state.mapShowPreview = e.target.checked; renderMapVisual(); };
 $('#map-show-blocking').onchange = e => { state.mapShowBlocking = e.target.checked; renderMapVisual(); };
 $('#map-show-spawners').onchange = e => { state.mapShowSpawners = e.target.checked; renderMapVisual(); };
 $('#map-show-labels').onchange = e => { state.mapShowLabels = e.target.checked; renderMapVisual(); };
