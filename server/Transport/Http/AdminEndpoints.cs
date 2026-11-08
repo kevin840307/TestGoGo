@@ -177,12 +177,13 @@ public static class AdminEndpoints
    <div class="section-title">
     <h2>診斷事件</h2>
     <div class="toolbar">
-     <select id="eventLevel" onchange="renderEvents()"><option value="">全部 Level</option><option>Error</option><option>Warning</option><option>Information</option></select>
-     <input id="eventSearch" oninput="renderEvents()" placeholder="搜尋 Category / Message" style="width:210px">
+     <select id="eventLevel" onchange="renderEvents()"><option value="">全部 Level</option><option>Critical</option><option>Error</option><option>Warning</option><option>Information</option></select>
+     <button id="anomalyOnly" class="secondary" onclick="toggleAnomaly()">只看異常</button>
+     <input id="eventSearch" oninput="renderEvents()" placeholder="搜尋分類 / 訊息 / 玩家 / 地圖" style="width:240px">
      <button class="secondary" onclick="refresh()">立即更新</button>
     </div>
    </div>
-   <div class="scroll"><table><thead><tr><th>Time</th><th>Level</th><th>Category</th><th>Message</th><th>Elapsed</th></tr></thead><tbody id="events"></tbody></table></div>
+   <div class="scroll"><table><thead><tr><th>Time</th><th>Level</th><th>Category</th><th>Context</th><th>Message</th><th>Elapsed</th></tr></thead><tbody id="events"></tbody></table></div>
   </section>
  </div>
 
@@ -214,29 +215,49 @@ public static class AdminEndpoints
   </section>
  </aside>
 </div>
-<div class="footer">SGO Server Console · loopback access only · auto refresh 2s</div>
+<div class="footer">SGO Server Console · loopback access only · low-impact refresh 10s · paused while hidden</div>
 </div>
 
 <script>
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let latestEvents=[];
 let refreshing=false;
+let anomalyOnly=false;
 const fmtUptime=s=>{s=Math.max(0,Math.floor(Number(s)||0));const d=Math.floor(s/86400);s%=86400;const h=Math.floor(s/3600);s%=3600;const m=Math.floor(s/60);return (d?d+'d ':'')+(h?h+'h ':'')+m+'m'};
 const metric=(label,value,foot='',kind='')=>'<div class="card metric-card '+kind+'"><div class="metric-label">'+esc(label)+'</div><div class="metric-value">'+esc(value)+'</div><div class="metric-foot">'+esc(foot)+'</div></div>';
 function row(k,v,cls=''){return '<div>'+esc(k)+'</div><div class="'+cls+'">'+esc(v)+'</div>'}
+function eventContext(x){
+ const parts=[];
+ if(x.characterId!=null)parts.push('Char:'+x.characterId);
+ if(x.accountId!=null)parts.push('Acc:'+x.accountId);
+ if(x.mapId!=null)parts.push('Map:'+x.mapId);
+ if(x.connectionId)parts.push('Conn:'+String(x.connectionId).slice(0,8));
+ return parts.join(' · ');
+}
+function toggleAnomaly(){
+ anomalyOnly=!anomalyOnly;
+ const b=document.getElementById('anomalyOnly');
+ b.textContent=anomalyOnly?'顯示全部':'只看異常';
+ renderEvents();
+}
 function renderEvents(){
  const level=document.getElementById('eventLevel').value.toLowerCase();
  const q=document.getElementById('eventSearch').value.trim().toLowerCase();
- const rows=latestEvents.filter(x=>(!level||String(x.level).toLowerCase()===level)&&(!q||(String(x.category)+' '+String(x.message)).toLowerCase().includes(q)));
+ const rows=latestEvents.filter(x=>{
+   const lv=String(x.level||'Information').toLowerCase();
+   const abnormal=lv==='critical'||lv==='error'||lv==='warning';
+   const hay=(String(x.category)+' '+String(x.message)+' '+eventContext(x)).toLowerCase();
+   return (!anomalyOnly||abnormal)&&(!level||lv===level)&&(!q||hay.includes(q));
+ });
  document.getElementById('events').innerHTML=rows.length?rows.map(x=>{
    const lv=String(x.level||'Information').toLowerCase();
-   return '<tr><td class="mono">'+esc(new Date(x.timestamp).toLocaleTimeString())+'</td><td><span class="level level-'+esc(lv)+'">'+esc(x.level)+'</span></td><td>'+esc(x.category)+'</td><td>'+esc(x.message)+'</td><td class="mono">'+esc(x.elapsedMilliseconds==null?'':Number(x.elapsedMilliseconds).toFixed(1)+' ms')+'</td></tr>'
- }).join(''):'<tr><td colspan="5" class="empty">沒有符合條件的事件</td></tr>';
+   return '<tr><td class="mono">#'+esc(x.sequence)+' · '+esc(new Date(x.timestamp).toLocaleTimeString())+'</td><td><span class="level level-'+esc(lv)+'">'+esc(x.level)+'</span></td><td>'+esc(x.category)+'</td><td class="mono">'+esc(eventContext(x)||'-')+'</td><td>'+esc(x.message)+'</td><td class="mono">'+esc(x.elapsedMilliseconds==null?'':Number(x.elapsedMilliseconds).toFixed(1)+' ms')+'</td></tr>'
+ }).join(''):'<tr><td colspan="6" class="empty">沒有符合條件的事件</td></tr>';
 }
 async function refresh(){
  if(refreshing)return; refreshing=true;
  try{
-  const [sr,er]=await Promise.all([fetch('/admin/api/status',{cache:'no-store'}),fetch('/admin/api/events?count=250',{cache:'no-store'})]);
+  const [sr,er]=await Promise.all([fetch('/admin/api/status',{cache:'no-store'}),fetch('/admin/api/events?count=150',{cache:'no-store'})]);
   if(!sr.ok||!er.ok)throw new Error('HTTP '+sr.status+'/'+er.status);
   const s=await sr.json(); latestEvents=await er.json();
 
@@ -297,7 +318,9 @@ async function sendBroadcast(){
  }catch(e){out.textContent='送出失敗：'+e.message}
 }
 document.getElementById('broadcast').addEventListener('keydown',e=>{if(e.key==='Enter')sendBroadcast()});
-refresh();setInterval(refresh,2000);
+refresh();
+setInterval(()=>{if(!document.hidden)refresh()},10000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
 </script>
 </body>
 </html>
