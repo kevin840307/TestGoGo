@@ -19,6 +19,10 @@ const SETTING_KEY_PERFORMANCE_LOAD_MODE = "performance_load_mode"
 const SETTING_DEFAULT_PERFORMANCE_LOAD_MODE = ClientPerformanceProfile.LOAD_BALANCED
 const SETTING_KEY_COMBAT_RENDER_MODE = "combat_render_mode"
 const SETTING_DEFAULT_COMBAT_RENDER_MODE = ClientPerformanceProfile.COMBAT_NORMAL
+const SETTING_KEY_SIMPLIFY_PLAYERS_MODE = "simplify_players_mode"
+const SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE = ClientPerformanceProfile.SIMPLIFY_AUTO
+const SETTING_KEY_SIMPLIFY_MONSTERS_MODE = "simplify_monsters_mode"
+const SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE = ClientPerformanceProfile.SIMPLIFY_AUTO
 
 
 const DEFAULT_MAP_ID = "map15"
