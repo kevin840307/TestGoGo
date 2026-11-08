@@ -42,6 +42,7 @@
 | M-09 | IMPLEMENTED_UNVERIFIED | 修正 `WorldReady` 舊 DB ground snapshot 與多人新丟物交錯時，舊快照錯誤刪掉新 ground AOI entity 的 race。AOI entity 建立時紀錄單調遞增 generation，DB SELECT 前擷取 version；舊 snapshot 只能清理擷取時已存在的 index。新增 `WorldEntityAoiSnapshotRaceSmokeTests.cs`，重現 A 查快照→B 丟物→A 清理的順序，並驗證後續新快照仍能移除真正過期物。 | World + full + Wire E2E，真多人交錯丟物／WorldReady／回圖；DB 物品/Client AOI known-set 一致 |
 | M-10 | IMPLEMENTED_UNVERIFIED | Godot `network_entity_manager.gd` 針對 queued/deferred 怪物的 MoveEntity 記錄已收到移動標記；較舊的重複 SpawnEntity 不再覆蓋最新 LocX/LocY。新增 `client/tests/aoi_monster_snapshot_order_regression.gd`，覆蓋 Spawn→Move→重複 Spawn、Queue 去重、Despawn、重新進 AOI、換圖清理，並加入 Windows 正常 runner。 | Godot headless + 真 WebSocket／Scene UI 實跑，確認 monster 不跳回舊位置、無幽靈實體 |
 | M-11 | IMPLEMENTED_UNVERIFIED | `DropAssetToGround` 持久層與 `DropItemRequest` 拒絕 count<=0、非單件裝備 count!=1，持久層另拒絕無效 UID/map/NaN 座標，避免非法請求悄悄消耗一件裝備。新增 `GroundDropRequestGuardSmokeTests.cs`，驗證錯誤請求不改 DB、合法部分丟棄、撿回及重複撿取的總數守恆。 | Concurrency + full + AES/WebSocket + Godot 實跑，物品總數不增不減 |
+| M-12 | TEST_GAP | Player/World AOI 已有 known-set 與在 enqueue 前檢查目前可見性；但 Spawn 與 Move/Despawn 可能由不同 socket/ticker 並行投遞，尚缺強制交錯排序的真傳輸壓力測試，不能僅憑 unit tests 推論所有情境「一定先 Spawn」。Client 現已防護「已知 queued monster 在重複 Spawn 時不可覆蓋 newer Move」，對第一個 Spawn 之前就到達的 Move 仍需驗證 Server queue 順序及補同步策略。 | 真兩 socket 受控 barrier：enter→同時 move / exit / reenter / disconnect / map-change，檢查接收端逐封包先 Spawn 再 delta、最終 entity count 與 authoritative map 快照一致，並跑 50/100 人 soak |
 
 本輪不新增偽裝成功的未支援封包：已實作項目依
 `packet_*_audit.py`、真 Wire、Godot E2E 交叉驗證，
