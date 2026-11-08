@@ -26,11 +26,18 @@ for mode in (
 ):
     require(profile, mode, f"missing simplification mode: {mode}")
 
-for label in ('"像素 A"', '"像素 B"', '"極簡"'):
-    if hud_scene.count(label) < 2:
-        raise AssertionError(
-            f"both player and monster selectors must expose {label}"
-        )
+for label in (
+    '"像素人"',
+    '"裝甲人"',
+    '"像素魔物"',
+    '"像素獸"',
+    '"棋子"',
+):
+    require(
+        hud_scene,
+        label,
+        f"missing compact text-only simplification choice: {label}",
+    )
 
 if "開啟（內建圖形）" in hud_scene:
     raise AssertionError(
@@ -71,6 +78,10 @@ if "GENERIC_PLAYER_RACE" in network_player:
     raise AssertionError(
         "simplified players must not construct a generic paper doll"
     )
+if "set_performance_simplified(false)" in network_player:
+    raise AssertionError(
+        "targeting a simplified player must not restore the full paper doll"
+    )
 require(
     network_player,
     "doll_engine.visible = false",
@@ -86,6 +97,11 @@ require(
     network_player,
     "SIMPLIFIED_PLAYER_CLICK_SIZE",
     "simplified players must keep an enlarged click target",
+)
+require(
+    network_player,
+    "func _play_death_effect() -> void:",
+    "simplified player death must stay on the procedural renderer",
 )
 
 require(
