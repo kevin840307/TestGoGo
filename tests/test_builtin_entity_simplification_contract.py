@@ -39,7 +39,8 @@ for option in ("OptionSimplifyPlayers", "OptionSimplifyMonsters"):
     assert "popup/item_3/" not in block and "popup/item_4/" not in block
 
 require(monster, "func _draw_simplified_monster")
-require(monster, "for i in range(8):")
+require(monster, "SIMPLIFIED_ORB_CACHE.monster_texture()")
+require(monster, "draw_texture(")
 require(monster, "sprite.sprite_frames = null")
 require(monster, 'if state in ["death", "die"]:')
 require(monster, "var primitive_enabled := enabled")
@@ -48,6 +49,8 @@ assert "func _draw_pixel_monster_" not in monster
 
 require(player, "func _draw_simplified_player_orb")
 require(player, "func _simplified_relation_color")
+require(player, "SIMPLIFIED_ORB_CACHE.player_texture()")
+require(player, "draw_texture(")
 require(player, "SIMPLIFIED_PLAYER_CLICK_SIZE")
 require(player, "doll_engine.visible = false")
 require(player, "doll_engine.clear_dolls()")
@@ -64,4 +67,9 @@ for name in ('"player_simplify_style"', '"monster_simplify_style"',
 require(skill_card, 'get_node("Margin/Content") as HBoxContainer')
 assert "$Margin / Content" not in skill_card
 
-print("PASS: three compact selectors, shared orb visuals, relation colors, hitboxes and no original sprite fallback")
+cache = read("client/scripts/simplified_orb_cache.gd")
+require(cache, "static var _monster_texture: Texture2D")
+require(cache, "static var _player_texture: Texture2D")
+require(cache, "ImageTexture.create_from_image(image)")
+assert cache.count("ImageTexture.create_from_image(image)") == 1
+print("PASS: three selectors, one cached ImageTexture per entity type, relation colors, hitboxes and no original sprite fallback")
