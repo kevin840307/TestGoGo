@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://bcdtxl4r645pj"]
-
-[ext_resource type="Script" uid="uid://lsl03kn4nkll" path="res://scripts/paper_doll_engine.gd" id="1_fymj8"]
-
-[node name="PaperDollEngine" type="Node2D" unique_id=1372204366]
-script = ExtResource("1_fymj8")
