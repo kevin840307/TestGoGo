@@ -2559,6 +2559,37 @@ public sealed class PacketRouter
                     ];
                 }
 
+                var keyedChest =
+                    LegacyKeyedChestCatalog.Resolve(
+                        _current,
+                        itemIndex);
+
+                if (keyedChest is not null)
+                {
+                    var hasKey =
+                        assetsBefore.Inventory.Any(x =>
+                            Convert.ToInt32(
+                                x["ItemIndex"]) ==
+                                keyedChest.KeyItemId &&
+                            Convert.ToInt32(
+                                x["Count"]) > 0 &&
+                            Convert.ToInt32(
+                                x["InBank"]) == 0 &&
+                            Convert.ToInt32(
+                                x["InShop"]) == 0);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = hasKey
+                                ? $"已找到{keyedChest.KeyName}，但原始寶箱獎勵表尚未恢復；為避免錯誤發獎，寶箱與鑰匙均未消耗"
+                                : $"開啟{keyedChest.ChestName}需要{keyedChest.KeyName}，未消耗寶箱"
+                        }
+                    ];
+                }
+
                 if (AmbiguousRewardCatalog.IsAmbiguous(
                         _current,
                         itemIndex))
@@ -2575,7 +2606,10 @@ public sealed class PacketRouter
                 }
 
                 if (scriptedItem is not null &&
-                    IsCraftingMaterialItem(scriptedItem))
+                    (IsCraftingMaterialItem(scriptedItem) ||
+                     CraftingArtifactCatalog.Resolve(
+                         _current,
+                         itemIndex) is not null))
                 {
                     return
                     [
