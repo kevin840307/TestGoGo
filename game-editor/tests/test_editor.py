@@ -185,6 +185,27 @@ class WebStructureTests(unittest.TestCase):
             self.assertTrue((web / script).is_file())
         self.assertTrue((web / "app.css").is_file())
 
+    def test_intuitive_map_editor_is_wired(self) -> None:
+        web = GAME_EDITOR_ROOT / "web"
+        index = (web / "index.html").read_text(encoding="utf-8")
+        world = (web / "app-world.js").read_text(encoding="utf-8")
+        self.assertIn('id="map-stage"', index)
+        self.assertIn('id="map-enemy-search"', index)
+        self.assertIn("startMapMarkerDrag", world)
+        self.assertIn("addMapRowAt", world)
+        self.assertIn("duplicateMapRow", world)
+
+    def test_friendly_shortcuts_are_wired(self) -> None:
+        web = GAME_EDITOR_ROOT / "web"
+        index = (web / "index.html").read_text(encoding="utf-8")
+        skills = (web / "app-skills.js").read_text(encoding="utf-8")
+        tools = (web / "app-tools.js").read_text(encoding="utf-8")
+        self.assertIn('id="script-snippet"', index)
+        self.assertIn("SCRIPT_SNIPPETS", tools)
+        self.assertIn("dragover", tools)
+        self.assertIn("COMMON_LEVEL_FIELDS", skills)
+        self.assertIn("ADVANCED_LEVEL_FIELDS", skills)
+
     def test_editor_defaults_to_localhost_only(self) -> None:
         source = (GAME_EDITOR_ROOT / "editor.py").read_text(encoding="utf-8")
         self.assertIn('default="127.0.0.1"', source)
