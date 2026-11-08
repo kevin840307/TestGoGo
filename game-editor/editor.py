@@ -111,6 +111,19 @@ class EditorHandler(BaseHTTPRequestHandler):
             if path == "/api/maps":
                 self._send_json(self.app.maps.list_maps())
                 return
+            if match := re.fullmatch(r"/api/maps/(\d+)/editor-meta", path):
+                self._send_json(self.app.maps.get_editor_meta(int(match.group(1))))
+                return
+            if match := re.fullmatch(r"/api/maps/(\d+)/blocking\.png", path):
+                payload = self.app.maps.blocking_overlay_png(int(match.group(1)))
+                self._send_bytes(payload, "image/png", cache="private, max-age=15")
+                return
+            if match := re.fullmatch(r"/api/maps/(\d+)/terrain", path):
+                map_id = int(match.group(1))
+                x = float(query.get("x", ["0"])[0])
+                y = float(query.get("y", ["0"])[0])
+                self._send_json(self.app.maps.get_terrain(map_id, x, y))
+                return
             if match := re.fullmatch(r"/api/maps/(\d+)/enemies", path):
                 self._send_json(self.app.maps.get_enemy_spawns(int(match.group(1))))
                 return
