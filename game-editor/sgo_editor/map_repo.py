@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import binascii
+import json
+import math
 import re
 import struct
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -31,13 +35,18 @@ class _NpcRaw:
 
 class MapRepository:
     ENEMY_TAIL_SIZE = 207
+    CELL_SIZE = 16
+    BLOCKING_MASK = 0x07
+    SPECIAL_TERRAIN_FLAG = 0x03
 
     def __init__(self, paths: ProjectPaths, backups: BackupManager):
         self.paths = paths
         self.backups = backups
+        self._blocking_png_cache: dict[int, tuple[tuple[Any, ...], bytes]] = {}
 
     def list_maps(self) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = []
+        map_names = self._map_names()
         for path in sorted(self.paths.maps.glob("Map*"), key=lambda p: p.name):
             if not path.is_dir():
                 continue
@@ -47,7 +56,8 @@ class MapRepository:
             map_id = int(match.group(1))
             result.append({
                 "id": map_id,
-                "name": path.name,
+                "name": map_names.get(map_id) or path.name,
+                "technicalName": path.name,
                 "enemyCount": len(self._read_enemies(path / "Enemy.dat")) if (path / "Enemy.dat").exists() else 0,
                 "npcCount": len(self._read_npcs(path / "NPC.dat")) if (path / "NPC.dat").exists() else 0,
             })
@@ -58,6 +68,276 @@ class MapRepository:
         if not path.exists():
             raise FileNotFoundError(f"找不到地圖 Map{int(map_id):02d}")
         return path
+
+    def _spawn_config_path(self) -> Path:
+        return self.paths.assets / "GameInfo" / "MapSpawnConfig.json"
+
+    def _bounds_path(self) -> Path:
+        return self.paths.root / "client" / "maps" / "map_bounds.json"
+
+    @staticmethod
+    def _read_json(path: Path) -> dict[str, Any]:
+        if not path.exists():
+            return {}
+        try:
+            value = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            return {}
+        return value if isinstance(value, dict) else {}
+
+    def _map_names(self) -> dict[int, str]:
+        config = self._read_json(self._spawn_config_path())
+        result: dict[int, str] = {}
+        for raw_id, item in config.items():
+            if not isinstance(item, dict):
+                continue
+            try:
+                map_id = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            name = str(item.get("MapName", "")).strip()
+            if name:
+                result[map_id] = name
+        return result
+
+    def _read_blocking(self, map_id: int) -> tuple[int, int, bytes, Path] | None:
+        path = self._map_dir(map_id) / "Blocking.dat"
+        if not path.exists():
+            return None
+        data = path.read_bytes()
+        if len(data) < 8:
+            raise ValueError(f"Blocking.dat 太短: {path}")
+        width, height = struct.unpack_from("<ii", data, 0)
+        if width <= 0 or height <= 0:
+            raise ValueError(f"Blocking.dat 尺寸異常: {width}x{height}")
+        cell_count = width * height
+        if cell_count > 50_000_000 or len(data) < 8 + cell_count:
+            raise ValueError(f"Blocking.dat 資料不完整: {width}x{height}")
+        return width, height, data[8:8 + cell_count], path
+
+    def _editor_bounds(self, map_id: int, blocking: tuple[int, int, bytes, Path] | None = None) -> dict[str, int]:
+        bounds_data = self._read_json(self._bounds_path())
+        raw = bounds_data.get(str(map_id))
+        if isinstance(raw, dict):
+            try:
+                min_x = int(raw["min_x"])
+                min_y = int(raw["min_y"])
+                max_x = int(raw["max_x"])
+                max_y = int(raw["max_y"])
+                if max_x > min_x and max_y > min_y:
+                    # Align to Blocking.dat cells so the collision overlay and world
+                    # coordinates map pixel-perfectly in the editor.
+                    return {
+                        "minX": math.floor(min_x / self.CELL_SIZE) * self.CELL_SIZE,
+                        "minY": math.floor(min_y / self.CELL_SIZE) * self.CELL_SIZE,
+                        "maxX": math.ceil(max_x / self.CELL_SIZE) * self.CELL_SIZE,
+                        "maxY": math.ceil(max_y / self.CELL_SIZE) * self.CELL_SIZE,
+                        "contentMinX": min_x,
+                        "contentMinY": min_y,
+                        "contentMaxX": max_x,
+                        "contentMaxY": max_y,
+                    }
+            except (KeyError, TypeError, ValueError):
+                pass
+
+        if blocking is not None:
+            width, height, _, _ = blocking
+            return {
+                "minX": 0,
+                "minY": 0,
+                "maxX": width * self.CELL_SIZE,
+                "maxY": height * self.CELL_SIZE,
+                "contentMinX": 0,
+                "contentMinY": 0,
+                "contentMaxX": width * self.CELL_SIZE,
+                "contentMaxY": height * self.CELL_SIZE,
+            }
+
+        rows = self.get_enemy_spawns(map_id) + self.get_npc_spawns(map_id)
+        if rows:
+            xs = [int(x["x"]) for x in rows]
+            ys = [int(x["y"]) for x in rows]
+            return {
+                "minX": min(xs) - 256,
+                "minY": min(ys) - 256,
+                "maxX": max(xs) + 256,
+                "maxY": max(ys) + 256,
+                "contentMinX": min(xs),
+                "contentMinY": min(ys),
+                "contentMaxX": max(xs),
+                "contentMaxY": max(ys),
+            }
+
+        return {
+            "minX": 0, "minY": 0, "maxX": 4096, "maxY": 4096,
+            "contentMinX": 0, "contentMinY": 0, "contentMaxX": 4096, "contentMaxY": 4096,
+        }
+
+    def get_editor_meta(self, map_id: int) -> dict[str, Any]:
+        blocking = self._read_blocking(map_id)
+        bounds = self._editor_bounds(map_id, blocking)
+        config = self._read_json(self._spawn_config_path())
+        map_config = config.get(str(map_id), {})
+        if not isinstance(map_config, dict):
+            map_config = {}
+
+        spawners: list[dict[str, Any]] = []
+        raw_spawners = map_config.get("Spawners", [])
+        if isinstance(raw_spawners, list):
+            for raw in raw_spawners:
+                if not isinstance(raw, dict):
+                    continue
+                rect = raw.get("Rect", {})
+                if not isinstance(rect, dict):
+                    continue
+                try:
+                    x1 = int(rect.get("X1", 0))
+                    y1 = int(rect.get("Y1", 0))
+                    x2 = int(rect.get("X2", 0))
+                    y2 = int(rect.get("Y2", 0))
+                except (TypeError, ValueError):
+                    continue
+                if x2 <= x1 or y2 <= y1:
+                    continue
+                spawners.append({
+                    "name": str(raw.get("ZoneName", "")).strip(),
+                    "monsterName": str(raw.get("MonsterName", "")).strip(),
+                    "maxCount": int(raw.get("MaxCount", 0) or 0),
+                    "respawnTime": int(raw.get("RespawnTime", 0) or 0),
+                    "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+                })
+
+        blocking_meta: dict[str, Any] = {
+            "hasBlocking": blocking is not None,
+            "cellSize": self.CELL_SIZE,
+        }
+        if blocking is not None:
+            width, height, _, _ = blocking
+            blocking_meta.update({"width": width, "height": height})
+
+        return {
+            "id": int(map_id),
+            "name": str(map_config.get("MapName", "")).strip() or f"Map{int(map_id):02d}",
+            "bounds": bounds,
+            "blocking": blocking_meta,
+            "spawners": spawners,
+        }
+
+    def get_terrain(self, map_id: int, world_x: float, world_y: float) -> dict[str, Any]:
+        blocking = self._read_blocking(map_id)
+        if blocking is None:
+            return {
+                "hasBlocking": False,
+                "walkable": True,
+                "special": False,
+                "flags": 0,
+                "x": world_x,
+                "y": world_y,
+            }
+
+        width, height, cells, _ = blocking
+        cell_x = math.floor(world_x / self.CELL_SIZE)
+        cell_y = math.floor(world_y / self.CELL_SIZE)
+
+        def flags_at(x: int, y: int) -> int:
+            if x < 0 or y < 0 or x >= width or y >= height:
+                return 255
+            return cells[y * width + x] & self.BLOCKING_MASK
+
+        flags = flags_at(cell_x, cell_y)
+        result: dict[str, Any] = {
+            "hasBlocking": True,
+            "cellX": cell_x,
+            "cellY": cell_y,
+            "flags": flags,
+            "walkable": flags == 0,
+            "special": flags == self.SPECIAL_TERRAIN_FLAG,
+        }
+        if flags == 0:
+            result["nearest"] = {
+                "x": int(world_x),
+                "y": int(world_y),
+                "cellX": cell_x,
+                "cellY": cell_y,
+            }
+            return result
+
+        # Editor placement helper only: find the nearest ordinary walkable cell.
+        # This does not change server movement semantics.
+        for radius in range(1, 17):
+            candidates: list[tuple[int, int]] = []
+            for dx in range(-radius, radius + 1):
+                candidates.append((cell_x + dx, cell_y - radius))
+                candidates.append((cell_x + dx, cell_y + radius))
+            for dy in range(-radius + 1, radius):
+                candidates.append((cell_x - radius, cell_y + dy))
+                candidates.append((cell_x + radius, cell_y + dy))
+            for x, y in candidates:
+                if flags_at(x, y) == 0:
+                    result["nearest"] = {
+                        "x": x * self.CELL_SIZE + self.CELL_SIZE // 2,
+                        "y": y * self.CELL_SIZE + self.CELL_SIZE // 2,
+                        "cellX": x,
+                        "cellY": y,
+                    }
+                    return result
+        result["nearest"] = None
+        return result
+
+    @staticmethod
+    def _png_chunk(kind: bytes, payload: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(payload))
+            + kind
+            + payload
+            + struct.pack(">I", binascii.crc32(kind + payload) & 0xFFFFFFFF)
+        )
+
+    def blocking_overlay_png(self, map_id: int) -> bytes:
+        blocking = self._read_blocking(map_id)
+        if blocking is None:
+            raise FileNotFoundError(f"Map{int(map_id):02d} 沒有 Blocking.dat")
+
+        width, height, cells, path = blocking
+        bounds = self._editor_bounds(map_id, blocking)
+        start_x = max(0, int(bounds["minX"]) // self.CELL_SIZE)
+        start_y = max(0, int(bounds["minY"]) // self.CELL_SIZE)
+        end_x = min(width, math.ceil(int(bounds["maxX"]) / self.CELL_SIZE))
+        end_y = min(height, math.ceil(int(bounds["maxY"]) / self.CELL_SIZE))
+        out_w = max(1, end_x - start_x)
+        out_h = max(1, end_y - start_y)
+
+        cache_key = (
+            path.stat().st_mtime_ns,
+            start_x, start_y, end_x, end_y,
+        )
+        cached = self._blocking_png_cache.get(int(map_id))
+        if cached is not None and cached[0] == cache_key:
+            return cached[1]
+
+        raw = bytearray()
+        for y in range(start_y, end_y):
+            raw.append(0)  # PNG filter: None
+            base = y * width
+            for x in range(start_x, end_x):
+                flags = cells[base + x] & self.BLOCKING_MASK
+                if flags == 0:
+                    raw.extend((0, 0, 0, 0))
+                elif flags == self.SPECIAL_TERRAIN_FLAG:
+                    raw.extend((244, 198, 107, 105))
+                else:
+                    raw.extend((255, 112, 122, 145))
+
+        signature = b"\x89PNG\r\n\x1a\n"
+        ihdr = struct.pack(">IIBBBBB", out_w, out_h, 8, 6, 0, 0, 0)
+        png = (
+            signature
+            + self._png_chunk(b"IHDR", ihdr)
+            + self._png_chunk(b"IDAT", zlib.compress(bytes(raw), 6))
+            + self._png_chunk(b"IEND", b"")
+        )
+        self._blocking_png_cache[int(map_id)] = (cache_key, png)
+        return png
 
     @staticmethod
     def _read_cstring(data: bytes, offset: int, encoding: str) -> tuple[str, bytes, int]:
