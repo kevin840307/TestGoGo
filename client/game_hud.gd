@@ -174,6 +174,7 @@ const RANK_WINDOW_SCENE = preload("res://rank_window.tscn")
 var current_rank_window: Control = null
 
 var craft_dismantle_window: Control = null
+var _craft_window_initial_opening: bool = false
 var big_map_window: Control = null
 var world_map_window: Control = null
 
@@ -895,7 +896,8 @@ func prepare_lazy_windows_before_reveal(progress_callback: Callable = Callable()
 		"mall",
 		"announcement",
 		"game_info",
-		"craft",
+		# Craft uses first-open, time-budgeted recipe construction with a
+		# visible in-window progress indicator; not part of map reveal.
 		"big_map",
 		"world_map",
 	]
@@ -908,8 +910,6 @@ func prepare_lazy_windows_before_reveal(progress_callback: Callable = Callable()
 		if is_instance_valid(window):
 			window.visible = false
 			window.modulate.a = 0.0
-			if kind == "craft" and window.has_method("prepare_initial_async"):
-				await window.prepare_initial_async()
 		if progress_callback.is_valid():
 			progress_callback.call(index + 1, total, kind)
 		await get_tree().process_frame
@@ -939,12 +939,32 @@ func _prewarm_lazy_window_scenes() -> void :
 		await get_tree().process_frame
 
 func _toggle_lazy_window(kind: String) -> void :
+	# Optional crafting recipes are intentionally not built at login or map
+	# reveal. Open the actual window BEFORE any expensive work, then display
+	# first-use progress inside it. A second click must not spawn a second
+	# 1453-row Tree build.
+	if kind == "craft":
+		if _craft_window_initial_opening:
+			return
+		_craft_window_initial_opening = true
+		var crafting_window := await _ensure_lazy_window(kind)
+		if not is_instance_valid(crafting_window):
+			_craft_window_initial_opening = false
+			return
+		if crafting_window.has_method("is_initial_prepared") and not bool(crafting_window.is_initial_prepared()):
+			_open_window(crafting_window)
+			if crafting_window.has_method("prepare_initial_with_progress_async"):
+				await crafting_window.prepare_initial_with_progress_async()
+			elif crafting_window.has_method("prepare_initial_async"):
+				await crafting_window.prepare_initial_async()
+			_craft_window_initial_opening = false
+			return
+		_craft_window_initial_opening = false
+		_toggle_window(crafting_window)
+		return
 	var window := await _ensure_lazy_window(kind)
 	if not is_instance_valid(window):
 		return
-	if kind == "craft" and window.has_method("is_initial_prepared") and not bool(window.is_initial_prepared()):
-		if window.has_method("prepare_initial_async"):
-			await window.prepare_initial_async()
 	_toggle_window(window)
 
 func start_post_reveal_background_prewarm() -> void :
