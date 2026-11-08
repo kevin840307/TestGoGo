@@ -9,6 +9,7 @@ import unittest
 ROOT = Path(__file__).resolve().parent.parent
 SMOKE = ROOT / "tests" / "SGO.Server.SmokeTests"
 PROGRAM = SMOKE / "Program.cs"
+WIRE_SMOKE = ROOT / "tests" / "SGO.Server.WireSmokeTests" / "Program.cs"
 
 MODULES = {
     "Protocol/RequestSchemaSmokeTests.cs": "RequestSchemaSmokeTests",
@@ -133,6 +134,18 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("map transition despawns player from the old map", source)
         self.assertIn("stale dirty position never overwrites", source)
         self.assertIn("SessionLifecycleSmokeTests.Run(", main)
+
+    def test_wire_smoke_keeps_real_two_client_party_and_trade_flow(self):
+        source = WIRE_SMOKE.read_text(encoding="utf-8-sig")
+        self.assertIn("using var peerSocket = new ClientWebSocket();", source)
+        self.assertIn('"PartyInvite"', source)
+        self.assertIn('"PartySync"', source)
+        self.assertIn('"TradeInvite"', source)
+        self.assertIn('"TradeStart"', source)
+        self.assertIn('"TradeFinalConfirmReq"', source)
+        self.assertIn('"TradeSuccess"', source)
+        self.assertIn("allowInterleaved: true", source)
+        self.assertIn("AwaitType(", source)
 
     def test_prelogin_route_suite_has_explicit_context(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
