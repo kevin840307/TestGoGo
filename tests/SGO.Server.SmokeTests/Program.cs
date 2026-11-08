@@ -181,6 +181,35 @@ var currentCatalog = new CurrentClientDataCatalog(
             price: 1),
 
         CurrentItem(
+            2109,
+            "堅固的鑰匙",
+            "general",
+            price: 1),
+
+        CurrentItem(
+            2118,
+            "堅固的寶箱",
+            "general",
+            price: 1,
+            scriptName: "堅固的寶箱",
+            description: "需要對應的鑰匙才能打開的寶箱。"),
+
+        CurrentItem(
+            3131,
+            "保護銀盾魔卡",
+            "general",
+            price: 1,
+            scriptName: "保護銀盾魔卡"),
+
+        CurrentItem(
+            19266,
+            "保護銀盾",
+            "equip",
+            price: 1,
+            equipSlot: 6,
+            durability: 50),
+
+        CurrentItem(
             2000,
             "封測傳送器",
             "general",
@@ -3034,7 +3063,8 @@ try
         session,
         account.Value,
         id,
-        currentCatalog);
+        currentCatalog,
+        realCurrentCatalog);
 
     WaspPackageSmokeTests.Run(
         router,
