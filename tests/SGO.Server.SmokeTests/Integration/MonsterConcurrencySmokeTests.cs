@@ -150,11 +150,17 @@ internal static class MonsterConcurrencySmokeTests
                     "\"Type\":\"EntityDeath\"")) == 1,
             "exactly one of ten concurrent attacks settles monster death");
 
+        // System.Text.Json escapes CJK characters as \\uXXXX by default.
+        // Compare the decoded packet string values rather than searching
+        // the raw JSON text, preserving the nine-loser concurrency contract.
+        var alreadyDeadReplies = serialized.Count(json =>
+            JsonTreeContainsString(json, "目標已死亡"));
         Check(
-            serialized.Count(json =>
-                json.Contains(
-                    "目標已死亡")) == 9,
-            "nine losing concurrent attacks observe the already-dead shared monster");
+            alreadyDeadReplies == 9,
+            "nine losing concurrent attacks observe the already-dead shared monster" +
+            (alreadyDeadReplies == 9
+                ? ""
+                : $" (actual: {alreadyDeadReplies}/9; responses: {string.Join(" | ", serialized)})"));
 
         Check(
             target.CurrentHp == 0 &&
