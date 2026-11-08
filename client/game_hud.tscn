@@ -3779,16 +3779,14 @@ theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
 selected = 1
-item_count = 4
+item_count = 3
 popup/item_0/text = "畫質優先"
 popup/item_0/id = 0
 popup/item_1/text = "一般"
 popup/item_1/id = 1
-popup/item_2/text = "低負載"
+popup/item_2/text = "低資源"
 popup/item_2/id = 2
-popup/item_3/text = "多開"
-popup/item_3/id = 3
-tooltip_text = "畫質優先會啟用畫質增強；一般不增強；低負載與多開減少特效與畫面外渲染。FPS 由上方獨立設定。"
+tooltip_text = "低資源：簡化怪物和其他玩家、關閉非必要戰鬥特效及日夜畫面效果，保留戰鬥與操作反應。FPS 獨立設定。"
 
 [node name="LabelCombatRender" type="Label" parent="WindowsContainer/SettingsWindow"]
 layout_mode = 0
@@ -3814,14 +3812,12 @@ theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
 selected = 0
-item_count = 3
+item_count = 2
 popup/item_0/text = "一般"
 popup/item_0/id = 0
 popup/item_1/text = "反應優先"
 popup/item_1/id = 1
-popup/item_2/text = "大型戰鬥"
-popup/item_2/id = 2
-tooltip_text = "反應優先適合 PK、Boss；大型戰鬥會關閉所有非必要的戰鬥特效（技能、命中、武器、投射物），保留傷害數字與戰鬥邏輯。"
+tooltip_text = "反應優先適合 PK、Boss；若想進一步節省資源，選擇效能模式的「低資源」即可關閉非必要戰鬥特效。"
 
 [node name="LabelSimplifyPlayers" type="Label" parent="WindowsContainer/SettingsWindow"]
 layout_mode = 0
