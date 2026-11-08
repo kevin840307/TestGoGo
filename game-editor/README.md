@@ -68,7 +68,30 @@ python -m unittest discover -s game-editor/tests -v
 - `map_bounds.json` / `Blocking.dat` 解析、阻擋層 PNG、不可走格最近可走位置計算
 - Blocking cache 來源檔變更刷新、batch snap、5000 點 request guard
 - 地圖 Undo/Redo、多選、框選、複製貼上、縮放、批量放置、獨立 `app-map-editor.js` wiring
+- Client / Server / Editor 三邊 16px grid contract、真實 MapXX 座標、Map13 byte-identical round-trip
+- 瀏覽器 world↔pixel / world→cell / cell-center 數學測試
 - NPC 範本、素材拖放、技能常用/進階欄位 UI 是否有正確掛載
+
+## 座標與遊戲格契約
+
+Editor 不自己發明一套座標規則，而是與 Client / Server 共用同一個 Blocking grid 契約：
+
+- Cell Size：`16`
+- 世界座標轉格：`floor(world / 16)`
+- Blocking mask：`0x07`
+- 特殊地形 flag：`3`
+- 格中心：`cell * 16 + 8`
+
+**既有 Enemy/NPC 的 X/Y 不會被強制改成格中心。** 遊戲本來就允許任意世界座標，再用 `floor(x/16), floor(y/16)` 找所在格。只有當 Editor 新增 / 拖曳到不可走格、且「吸附可走區」開啟時，才會把位置修正到最近合法格中心，避免把原始位置無謂量化造成偏移。
+
+CI 會額外跑：
+
+- Client `legacy_pathfinder.gd`、Server `BlockingMapService.cs`、Editor constants / formula 契約比對
+- 所有實際 `MapXX/Blocking.dat` header 與 `map_bounds.json` 世界範圍檢查
+- 所有可解析的實際 `Enemy.dat / NPC.dat` 座標 → Blocking cell / flags 一致性檢查
+- 真實 Blocking blocked cell → Editor snap → `16n+8` 合法格中心檢查
+- Map13 真實 `Enemy.dat / NPC.dat` 複製到 temp 後，無修改 round-trip 必須 byte-identical
+- 瀏覽器畫布 `world ↔ pixel` round-trip、world→cell、cell center 與批量散佈數學測試
 
 ## 地圖編輯快捷操作
 
