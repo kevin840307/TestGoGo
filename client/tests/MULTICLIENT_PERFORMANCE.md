@@ -56,9 +56,9 @@ equal Windows per-process dedicated GPU memory.
 Verify:
 
 ```powershell
-godot --headless --path client --script res://tests/multiclient_render_dedup_regression.gd
-godot --headless --path client --script res://tests/focus_performance_regression.gd
-godot --headless --path client --script res://tests/render_resource_regression.gd
+run_godot_client_tests.bat render (Windows; imports project and runs scene)
+run_godot_client_tests.bat focus (Windows; imports project and runs scene)
+run_godot_client_tests.bat resources (Windows; imports project and runs scene)
 ```
 
 For live tests, compare cumulative `minimap_world_redraws` and
@@ -200,8 +200,8 @@ Focused client smoke test:
 
 ```powershell
 godot --headless --path client --script res://tests/multiclient_gpu_regression.gd
-godot --headless --path client --script res://tests/focus_performance_regression.gd
-godot --headless --path client --script res://tests/render_resource_regression.gd
+run_godot_client_tests.bat focus (Windows; imports project and runs scene)
+run_godot_client_tests.bat resources (Windows; imports project and runs scene)
 ```
 
 **The current environment cannot execute Godot or Windows PowerShell**.
