@@ -270,5 +270,42 @@ internal static class ChoiceRewardSmokeTests
                     beforeRewardCount + 1,
                 "replaying a consumed choice UID cannot duplicate the selected reward");
         }
+        // Concurrent duplicate submissions are a separate failure mode from
+        // replaying an already consumed UID in sequence.
+        var racingUid = store.AddInventoryItem(
+            accountId, characterId, 2209, 1);
+        Check(racingUid > 0, "seed choice box for ten concurrent claims");
+
+        var beforeRacing = store.GetCharacterAssets(accountId, characterId)
+            .Equips.Count(x => Convert.ToInt32(x["ItemIdx"]) == 15113);
+
+        var racingAttempts = Enumerable.Range(0, 10)
+            .Select(_ => Task.Run(() =>
+            {
+                using var request = Json(JsonSerializer.Serialize(new
+                {
+                    Type = "UseItemChoiceRequest",
+                    ItemUID = racingUid,
+                    ItemIndex = 15113
+                }));
+                return JsonSerializer.Serialize(
+                    router.Handle(request.RootElement, session));
+            }))
+            .ToArray();
+
+        Task.WaitAll(racingAttempts);
+
+        var racingResults = racingAttempts.Select(x => x.Result).ToArray();
+        var afterRacing = store.GetCharacterAssets(accountId, characterId);
+
+        Check(
+            racingResults.Count(x => x.Contains("已選擇獎勵")) == 1 &&
+            racingResults.Count(x => x.Contains("找不到可使用的選擇型道具")) == 9 &&
+            !afterRacing.Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) == racingUid) &&
+            afterRacing.Equips.Count(x =>
+                Convert.ToInt32(x["ItemIdx"]) == 15113) == beforeRacing + 1,
+            "ten concurrent choice requests consume one box and grant one reward only");
+
     }
 }
