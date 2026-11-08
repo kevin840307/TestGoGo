@@ -281,7 +281,7 @@ internal static class ConcurrencySmokeTests
             .Select(x => JsonSerializer.Serialize(x))
             .ToArray();
         var secondPackets = secondReg.Queue
-            .Select(JsonSerializer.Serialize)
+            .Select(x => JsonSerializer.Serialize(x))
             .ToArray();
 
         Check(
