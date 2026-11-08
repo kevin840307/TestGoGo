@@ -140,7 +140,9 @@ func _should_simplify_player(entity: Node2D) -> bool:
 	if not GameManager or not is_instance_valid(entity):
 		return false
 	var profile: Dictionary = GameManager.get_performance_profile()
-	return bool(profile.get("simplify_other_players", false)) and not _is_local_combat_target(entity)
+	# Simplified players stay simplified while targeted. Relationship/hostility
+	# is shown by the built-in outline instead of loading the full paper doll.
+	return bool(profile.get("simplify_other_players", false))
 
 func _should_simplify_monster(_entity_id: int, entity: Node2D) -> bool:
 	if not GameManager or not is_instance_valid(entity):
@@ -150,30 +152,31 @@ func _should_simplify_monster(_entity_id: int, entity: Node2D) -> bool:
 		return false
 	if entity.has_method("can_use_performance_simplification") and not entity.can_use_performance_simplification():
 		return false
-	# Combat reveal keeps an authoritative monster alive in AOI, but it must
-	# not silently change the user's visual-simplification preference.
-	# Only the player's explicitly selected combat target is promoted back
-	# to its original sprite.
-	if _is_local_combat_target(entity):
-		return false
+	# Combat targeting, attacks, hits and death are lifecycle/state changes,
+	# not reasons to reload the original monster artwork.
 	return true
 
 func _apply_performance_visual_to_entity(entity_id: int, entity_type: int, entity: Node2D) -> void:
 	if not is_instance_valid(entity) or not entity.has_method("set_performance_simplified"):
 		return
+	var profile: Dictionary = GameManager.get_performance_profile() if GameManager else {}
 	match entity_type:
 		0:
-			entity.set_performance_simplified(_should_simplify_player(entity))
+			entity.set_performance_simplified(
+				_should_simplify_player(entity),
+				int(profile.get(
+					"player_simplify_style",
+					ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+				))
+			)
 		1:
 			var simplify_monster := _should_simplify_monster(entity_id, entity)
-			var profile: Dictionary = GameManager.get_performance_profile() if GameManager else {}
-			var use_primitive := (
-				simplify_monster
-				and bool(profile.get("use_primitive_monsters", false))
-			)
 			entity.set_performance_simplified(
 				simplify_monster,
-				use_primitive
+				int(profile.get(
+					"monster_simplify_style",
+					ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+				))
 			)
 
 func _refresh_performance_visuals() -> void:
@@ -305,9 +308,8 @@ func _reveal_combat_monster(entity_id: int, reason: String) -> void:
 	var active_monster := get_active_entity(entity_id)
 	if is_instance_valid(active_monster):
 		# Reveal is an AOI/lifecycle concern only. Re-apply the current
-		# visual policy instead of promoting every attacker back to its
-		# original artwork. An explicitly selected local target is still
-		# protected by _should_simplify_monster().
+		# visual policy instead of promoting attackers or selected targets
+		# back to their original artwork.
 		_apply_performance_visual_to_entity(
 			entity_id,
 			1,
@@ -785,14 +787,14 @@ func _spawn_entity_now(data: Dictionary) -> void :
 			new_entity = MONSTER_SCENE.instantiate()
 			var spawn_profile: Dictionary = GameManager.get_performance_profile() if GameManager else {}
 			var pre_simplified := bool(spawn_profile.get("simplify_noncritical_monsters", false))
-			var pre_primitive := (
-				pre_simplified
-				and bool(spawn_profile.get("use_primitive_monsters", false))
-			)
+			var pre_style := int(spawn_profile.get(
+				"monster_simplify_style",
+				ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+			))
 			if new_entity.has_method("prepare_performance_visual"):
 				new_entity.prepare_performance_visual(
 					pre_simplified,
-					pre_primitive
+					pre_style
 				)
 			var monster_instantiate_ms: float = float(Time.get_ticks_usec() - monster_instantiate_started_usec) / 1000.0
 
