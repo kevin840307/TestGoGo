@@ -14,12 +14,8 @@ var _loading_progress_value: float = 0.0
 var __login_select_session_id_id: int = -1
 var _world_loading_session_id: int = -1
 
-# The account form stays locked until this many truly rendered foreground
-# frames pass without a long first-use shader/video/UI spike.
-const LOGIN_REVEAL_STABLE_FRAMES: int = 18
-const LOGIN_REVEAL_MAX_FRAME_USEC: int = 42000
-const LOGIN_VIDEO_READY_TIMEOUT_USEC: int = 3500000
-const LOGIN_SETTLE_VIDEO_FALLBACK_USEC: int = 6000000
+# Login readiness is asset/UI preparation, NOT a consecutive FPS benchmark.
+# A low FPS cap or Windows focus changes must never lock the login form.
 
 func _begin_loading_session() -> int:
 	_loading_session_id += 1
@@ -178,87 +174,6 @@ func _prewarm_game_hud_resources() -> void :
 			print("[LOGIN_HUD_PREWARM] kind=%s total_ms=%.2f" % [kind, elapsed_ms])
 		await get_tree().process_frame
 
-static func is_login_frame_stable(focused: bool, rendering: bool, drawn: bool, frame_usec: int) -> bool:
-	return focused and rendering and drawn and frame_usec > 0 and frame_usec <= LOGIN_REVEAL_MAX_FRAME_USEC
-
-
-static func can_count_login_stable_frame(focused: bool, rendering: bool, drawn: bool, video_ready: bool, frame_usec: int) -> bool:
-	return video_ready and is_login_frame_stable(focused, rendering, drawn, frame_usec)
-
-
-static func can_reveal_login(focused: bool, video_ready: bool, stable_frames: int) -> bool:
-	return focused and video_ready and stable_frames >= LOGIN_REVEAL_STABLE_FRAMES
-
-
-func _wait_for_login_visual_ready() -> void:
-	var started_usec: int = Time.get_ticks_usec()
-	var foreground_started_usec: int = 0
-	var previous_usec: int = started_usec
-	var previous_drawn: int = Engine.get_frames_drawn()
-	var stable_frames: int = 0
-	var fallback_used: bool = false
-	var previous_status: String = ""
-	while is_inside_tree():
-		# The signal runs before a frame is drawn; measure the preceding
-		# complete frame, not merely the VideoStreamPlayer.play() call.
-		await get_tree().process_frame
-		var now_usec: int = Time.get_ticks_usec()
-		var frame_usec: int = now_usec - previous_usec
-		previous_usec = now_usec
-		if GameManager and GameManager.has_method("reconcile_startup_window_focus"):
-			GameManager.reconcile_startup_window_focus()
-		var focused: bool = DisplayServer.window_is_focused()
-		if GameManager:
-			focused = focused and bool(GameManager.get("_window_has_focus"))
-		if focused:
-			if foreground_started_usec == 0:
-				foreground_started_usec = now_usec
-		else:
-			foreground_started_usec = 0
-		var foreground_elapsed_usec: int = now_usec - foreground_started_usec if foreground_started_usec > 0 else 0
-		var drawn: int = Engine.get_frames_drawn()
-		var advanced: bool = drawn > previous_drawn
-		previous_drawn = drawn
-		var video_ready: bool = true
-		if is_instance_valid(login_screen) and login_screen.has_method("is_background_video_frame_ready"):
-			video_ready = bool(login_screen.call("is_background_video_frame_ready"))
-		var elapsed_usec: int = now_usec - started_usec
-		if not fallback_used and focused and (
-			(not video_ready and foreground_elapsed_usec >= LOGIN_VIDEO_READY_TIMEOUT_USEC)
-			or (stable_frames < LOGIN_REVEAL_STABLE_FRAMES and foreground_elapsed_usec >= LOGIN_SETTLE_VIDEO_FALLBACK_USEC)
-		):
-			fallback_used = true
-			if is_instance_valid(login_screen) and login_screen.has_method("use_static_background_after_video_timeout"):
-				login_screen.call("use_static_background_after_video_timeout")
-			video_ready = true
-			stable_frames = 0
-			if OS.is_debug_build():
-				print("[LOGIN_VIDEO_FALLBACK] elapsed_ms=%.1f" % (float(elapsed_usec) / 1000.0))
-		# Stable frames counted before the first decoded OGV frame do not
-		# establish video/UI readiness. Begin the consecutive-frame gate
-		# only AFTER media is ready (or the static fallback is selected).
-		if can_count_login_stable_frame(focused, RenderingServer.render_loop_enabled, advanced, video_ready, frame_usec):
-			stable_frames += 1
-		else:
-			stable_frames = 0
-		var status: String
-		if not focused:
-			status = "載入完成，等待切回遊戲視窗…"
-		elif not video_ready:
-			status = "正在解碼登入背景畫面…"
-		else:
-			status = "正在確認登入畫面流暢度… %d/%d" % [stable_frames, LOGIN_REVEAL_STABLE_FRAMES]
-		if status != previous_status:
-			_set_startup_loading_status(status)
-			previous_status = status
-		if can_reveal_login(focused, video_ready, stable_frames):
-			if OS.is_debug_build():
-				print("[LOGIN_VISUAL_READY] elapsed_ms=%.1f stable_frames=%d video_fallback=%s frame_ms=%.2f" % [
-					float(elapsed_usec) / 1000.0, stable_frames, str(fallback_used), float(frame_usec) / 1000.0,
-				])
-			return
-
-
 func _bootstrap_before_login() -> void :
 	var overlay = get_node_or_null("%LoadingOverlay")
 	if overlay:
@@ -287,9 +202,9 @@ func _bootstrap_before_login() -> void :
 	_set_startup_loading_status("準備遊戲視窗…")
 	await _prewarm_game_hud_resources()
 
-	# Render the real video and login layout BEHIND the opaque loading
-	# overlay while the fields remain locked. Two process frames alone
-	# never guaranteed a decoded video frame or recovered 60 FPS focus.
+	# Prepare the real login controls behind the opaque loading overlay.
+	# Do NOT wait for an arbitrary 18 fast frames or the first decoded OGV
+	# frame: a 20 FPS cap alone would make a 42ms frame gate impossible.
 	_set_loading_progress(95.0)
 	_set_startup_loading_status("準備登入背景及音樂…")
 	if is_instance_valid(login_screen):
@@ -297,30 +212,28 @@ func _bootstrap_before_login() -> void :
 			login_screen.call("prepare_form_behind_loading")
 		if login_screen.has_method("warm_background_video"):
 			login_screen.call("warm_background_video")
+		if login_screen.has_method("start_login_video_fallback_watchdog"):
+			login_screen.call("start_login_video_fallback_watchdog")
 	if AudioManager and AudioManager.has_method("play_login_bgm"):
 		AudioManager.play_login_bgm()
 	_set_loading_progress(99.0)
-	await _wait_for_login_visual_ready()
+	# One process frame gives the login layout a chance to initialize;
+	# drawing/video/focus are never prerequisites for user interaction.
+	await get_tree().process_frame
 	if not is_inside_tree():
 		return
 	_set_startup_loading_status("登入畫面準備完成")
 	_set_loading_progress(100.0)
-	# Keep the loading overlay visible while the bar completes its tween.
-	await get_tree().create_timer(0.30).timeout
-	if not is_inside_tree():
-		return
-	var final_foreground: bool = DisplayServer.window_is_focused() and RenderingServer.render_loop_enabled
-	if GameManager:
-		final_foreground = final_foreground and bool(GameManager.get("_window_has_focus"))
-	if not final_foreground:
-		await _wait_for_login_visual_ready()
+	# Allow the loading bar to finish its tween without a foreground-only
+	# loop. Background clients will draw normally when refocused.
+	await get_tree().create_timer(0.15).timeout
 	if is_inside_tree():
 		_start_game_entry_flow()
 
 
 func _start_game_entry_flow() -> void :
-	# The form has been laid out and rendered for stable foreground frames.
-	# The input stays locked until this final hand-off.
+	# Assets and the login controls have been initialized. Unblock input
+	# immediately; video decoding and frame-rate sampling are optional.
 	_show_login_screen()
 	hide_loading_overlay()
 	if GameManager and GameManager.has_method("set_startup_loading_overlay_active"):
