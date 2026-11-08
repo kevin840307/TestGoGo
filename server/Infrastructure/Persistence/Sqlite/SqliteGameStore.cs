@@ -1861,7 +1861,7 @@ public sealed class SqliteGameStore : IGameStore
                     return false;
                 }
 
-                var part = itemPart is >= 0 and <= 3
+                var part = itemPart is >= 0 and <= 6
                     ? itemPart
                     : ResolveHorseEquipPart(itemIndex);
 
@@ -5785,7 +5785,7 @@ public sealed class SqliteGameStore : IGameStore
                     Arg(add, "$idx", reward.ItemIndex);
                     Arg(add, "$damage", Math.Max(0, reward.Damage));
                     Arg(add, "$part",
-                        reward.Part is >= 0 and <= 3
+                        reward.Part is >= 0 and <= 6
                             ? reward.Part
                             : ResolveHorseEquipPart(
                                 reward.ItemIndex));
@@ -5893,7 +5893,7 @@ public sealed class SqliteGameStore : IGameStore
         Arg(cmd, "$horse", horseUid);
         Arg(cmd, "$damage", Math.Max(0, damage));
         Arg(cmd, "$color", Math.Max(0, color));
-        Arg(cmd, "$part", part is >= 0 and <= 3
+        Arg(cmd, "$part", part is >= 0 and <= 6
             ? part
             : ResolveHorseEquipPart(equipIndex));
         return Convert.ToInt64(cmd.ExecuteScalar());
@@ -6544,7 +6544,12 @@ public sealed class SqliteGameStore : IGameStore
             .FirstOrDefault(x => Convert.ToInt64(x["HorseUID"]) == horseUid);
     }
 
-    public bool EquipHorseItem(long accountId, long dbid, long equipUid, long horseUid)
+    public bool EquipHorseItem(
+        long accountId,
+        long dbid,
+        long equipUid,
+        long horseUid,
+        int authoritativePart = -1)
     {
         using var db = Open();
         using var tx = db.BeginTransaction();
@@ -6565,7 +6570,14 @@ public sealed class SqliteGameStore : IGameStore
             part = Convert.ToInt32(raw);
         }
 
-        if (part is < 0 or > 6)
+        if (authoritativePart is >= 0 and <= 6)
+        {
+            // GameData is authoritative for the equipment slot. This also
+            // repairs rows created by older builds that collapsed slots 4-6
+            // into reinforcement slot 3.
+            part = authoritativePart;
+        }
+        else if (part is < 0 or > 6)
         {
             using var getIndex = db.CreateCommand();
             getIndex.Transaction = tx;
@@ -8897,7 +8909,7 @@ public sealed class SqliteGameStore : IGameStore
                 Arg(add, "$idx", itemIndex);
                 Arg(add, "$damage", Math.Max(0, itemDamage));
                 Arg(add, "$part",
-                    itemPart is >= 0 and <= 3
+                    itemPart is >= 0 and <= 6
                         ? itemPart
                         : 255);
                 uid = Convert.ToInt64(add.ExecuteScalar());
