@@ -47,7 +47,24 @@ internal static class GroundDropPlacementSmokeTests
             "pickup cannot claim an item previously left inside a blocked tile");
         Check(placement.CheckPickup(1, 40, 56, 40, 72) ==
               GroundPickupReachability.Blocked,
-            "pickup cannot cross a mecha-only special terrain cell");
+            "pickup cannot claim an item stored on a mecha-only terrain cell");
+        Check(placement.CheckPickup(1, 40, 72, 40, 56) ==
+              GroundPickupReachability.Blocked,
+            "on-foot pickup cannot start from a special terrain cell");
+        Check(placement.CheckPickup(1, 40, 72, 40, 56,
+                  canCrossSpecialTerrain: true) ==
+              GroundPickupReachability.Allowed,
+            "a player riding an authorized mecha can pick up an adjacent normal tile");
+        Check(placement.CheckPickup(1, 40, 56, 40, 88) ==
+              GroundPickupReachability.Blocked &&
+              placement.CheckPickup(1, 40, 56, 40, 88,
+                  canCrossSpecialTerrain: true) ==
+              GroundPickupReachability.Allowed,
+            "only a permitted mecha can reach across special-terrain cells");
+        Check(placement.CheckPickup(1, 40, 56, 88, 56,
+                  canCrossSpecialTerrain: true) ==
+              GroundPickupReachability.Blocked,
+            "mecha permission never allows ground pickup through a solid wall");
         Check(placement.CheckPickup(1, 40, 40, 40, 141) ==
               GroundPickupReachability.TooFar,
             "existing 100px pickup range is unchanged");
