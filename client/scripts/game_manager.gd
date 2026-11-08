@@ -437,6 +437,10 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 		_focused_max_fps = Engine.max_fps
 		Engine.max_fps = background_loading_display_fps(_startup_loading_overlay_active)
 		RenderingServer.render_loop_enabled = _startup_loading_overlay_active
+		# RenderingServer alone stops GPU drawing but not HUD._process,
+		# minimap/cursor scanning and day-night screen-UV updates.
+		# Pause visuals only; network, timers and server world state continue.
+		_set_background_visual_processing(true)
 		_trim_unfocused_runtime_caches()
 
 		if master_bus_index >= 0:
