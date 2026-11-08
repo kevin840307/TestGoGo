@@ -9653,30 +9653,13 @@ public sealed class SqliteGameStore : IGameStore
         if (!OwnsCharacter(db, accountId, dbid, tx))
             return new(false, "角色不存在", 0);
 
-        long money;
-        using (var getMoney = db.CreateCommand())
-        {
-            getMoney.Transaction = tx;
-            getMoney.CommandText = """
-                SELECT money
-                  FROM characters
-                 WHERE id=$id AND account_id=$a
-                """;
-            Arg(getMoney, "$id", dbid);
-            Arg(getMoney, "$a", accountId);
-            var raw = getMoney.ExecuteScalar();
-            if (raw is null || raw == DBNull.Value)
-                return new(false, "角色不存在", 0);
-            money = Convert.ToInt64(raw);
-        }
-
-        if (money < cost)
-            return new(false, "金錢不足", money);
-
         var table = isMechaEquipment
             ? "horse_equipment"
             : "equipment_items";
 
+        // Make the equipment mutation the first write in this transaction.
+        // SQLite then serializes concurrent repairs before any money value is
+        // observed, avoiding the old read -> calculate -> absolute-write race.
         using (var updateItem = db.CreateCommand())
         {
             updateItem.Transaction = tx;
@@ -9693,23 +9676,62 @@ public sealed class SqliteGameStore : IGameStore
             Arg(updateItem, "$id", dbid);
 
             if (updateItem.ExecuteNonQuery() != 1)
-                return new(false, "找不到可維修的裝備", money);
+                return new(false, "找不到可維修的裝備", 0);
         }
 
-        var newMoney = money - cost;
-        using (var updateMoney = db.CreateCommand())
+        using (var debit = db.CreateCommand())
         {
-            updateMoney.Transaction = tx;
-            updateMoney.CommandText = """
+            debit.Transaction = tx;
+            debit.CommandText = """
                 UPDATE characters
-                   SET money=$money
-                 WHERE id=$id AND account_id=$a
+                   SET money=money-$cost
+                 WHERE id=$id
+                   AND account_id=$account
+                   AND money >= $cost
                 """;
-            Arg(updateMoney, "$money", newMoney);
-            Arg(updateMoney, "$id", dbid);
-            Arg(updateMoney, "$a", accountId);
-            if (updateMoney.ExecuteNonQuery() != 1)
-                return new(false, "扣款失敗", money);
+            Arg(debit, "$cost", cost);
+            Arg(debit, "$id", dbid);
+            Arg(debit, "$account", accountId);
+
+            if (debit.ExecuteNonQuery() != 1)
+            {
+                using var current = db.CreateCommand();
+                current.Transaction = tx;
+                current.CommandText = """
+                    SELECT money
+                      FROM characters
+                     WHERE id=$id
+                       AND account_id=$account
+                    """;
+                Arg(current, "$id", dbid);
+                Arg(current, "$account", accountId);
+                var raw = current.ExecuteScalar();
+                var money = raw is null || raw == DBNull.Value
+                    ? 0
+                    : Convert.ToInt64(raw);
+
+                // No commit: disposing the transaction rolls back the
+                // equipment mutation together with the failed debit.
+                return new(false, "金錢不足", money);
+            }
+        }
+
+        long newMoney;
+        using (var money = db.CreateCommand())
+        {
+            money.Transaction = tx;
+            money.CommandText = """
+                SELECT money
+                  FROM characters
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(money, "$id", dbid);
+            Arg(money, "$account", accountId);
+            var raw = money.ExecuteScalar();
+            if (raw is null || raw == DBNull.Value)
+                return new(false, "角色不存在", 0);
+            newMoney = Convert.ToInt64(raw);
         }
 
         tx.Commit();
