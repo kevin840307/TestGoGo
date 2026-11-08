@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SGO Game Editor</title>
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">SG</div>
+      <div><strong>SGO Editor</strong><span>Game Data Studio</span></div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" data-view="dashboard"><span class="nav-icon">⌂</span><span>總覽</span></button>
+      <button class="nav-item" data-view="skills"><span class="nav-icon">✦</span><span>技能</span></button>
+      <button class="nav-item" data-view="enemies"><span class="nav-icon">♜</span><span>怪物</span></button>
+      <button class="nav-item" data-view="maps"><span class="nav-icon">⌘</span><span>地圖實體</span></button>
+      <button class="nav-item" data-view="scripts"><span class="nav-icon">{ }</span><span>NPC 腳本</span></button>
+      <button class="nav-item" data-view="assets"><span class="nav-icon">▧</span><span>素材</span></button>
+    </nav>
+    <div class="sidebar-note">
+      <div class="status-dot"></div>
+      <div><strong>Local only</strong><span>只監聽 127.0.0.1</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">SGO / LOCAL TOOLS</p>
+        <h1 id="view-title">專案總覽</h1>
+        <p id="view-subtitle">集中管理遊戲資料、舊格式與素材。</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="project-pill"><span class="status-dot"></span><span id="project-root">Loading...</span></div>
+        <button class="button ghost" id="refresh-view">重新整理</button>
+      </div>
+    </header>
+
+    <section class="view active" id="view-dashboard">
+      <div class="metric-grid">
+        <article class="metric-card"><span>技能</span><strong id="metric-skills">—</strong><small>client/Skills</small></article>
+        <article class="metric-card"><span>怪物</span><strong id="metric-enemies">—</strong><small>Enemy_Data.csv</small></article>
+        <article class="metric-card"><span>地圖</span><strong id="metric-maps">—</strong><small>MapXX</small></article>
+        <article class="metric-card"><span>NPC 腳本</span><strong id="metric-scripts">—</strong><small>Dat/Quest</small></article>
+      </div>
+      <div class="dashboard-grid">
+        <article class="panel hero-panel">
+          <div><p class="eyebrow">SAFE WORKFLOW</p><h2>編輯原始資料，不碰遊戲 Runtime</h2></div>
+          <p>每次寫入前會自動備份；技能、CP950 CSV、Enemy.dat、NPC.dat、Quest script 都由各自的 adapter 處理，避免格式互相污染。</p>
+          <div class="badge-row"><span class="badge good">Atomic write</span><span class="badge good">Auto backup</span><span class="badge good">Path guard</span><span class="badge neutral">No runtime hook</span></div>
+        </article>
+        <article class="panel quick-panel">
+          <div class="panel-title"><div><p class="eyebrow">QUICK ACCESS</p><h2>常用工作</h2></div></div>
+          <button class="quick-action" data-go="skills"><b>建立 / 調整技能</b><span>等級、傷害、MP、CD、特效</span></button>
+          <button class="quick-action" data-go="maps"><b>調整地圖怪物</b><span>出生點、Enemy ID、座標</span></button>
+          <button class="quick-action" data-go="scripts"><b>修改 NPC 腳本</b><span>Function outline、callback 檢查</span></button>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" id="view-skills">
+      <div class="workspace two-column">
+        <article class="panel list-panel">
+          <div class="panel-toolbar">
+            <div class="search"><span>⌕</span><input id="skill-search" placeholder="搜尋技能 ID / 名稱" /></div>
+            <button class="button primary" id="skill-new">新增</button>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>ID</th><th>技能</th><th>類型</th><th>Lv</th></tr></thead><tbody id="skill-list"></tbody></table></div>
+        </article>
+        <article class="panel editor-panel" id="skill-editor">
+          <div class="empty-state"><div class="empty-icon">✦</div><h3>選擇一個技能</h3><p>右側會顯示技能資訊與每級參數。</p></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" id="view-enemies">
+      <div class="workspace two-column">
+        <article class="panel list-panel">
+          <div class="panel-toolbar">
+            <div class="search"><span>⌕</span><input id="enemy-search" placeholder="搜尋怪物 ID / 名稱 / Sprite" /></div>
+            <button class="button primary" id="enemy-new">新增</button>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>ID</th><th>怪物</th><th>Lv</th><th>HP</th></tr></thead><tbody id="enemy-list"></tbody></table></div>
+        </article>
+        <article class="panel editor-panel" id="enemy-editor">
+          <div class="empty-state"><div class="empty-icon">♜</div><h3>選擇一隻怪物</h3><p>只改常用欄位，其他 legacy CSV 欄位會保留。</p></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" id="view-maps">
+      <article class="panel map-panel">
+        <div class="panel-toolbar map-toolbar">
+          <div class="field compact"><label>地圖</label><select id="map-select"></select></div>
+          <div class="segmented"><button class="active" data-map-tab="enemies">怪物出生點</button><button data-map-tab="npcs">NPC</button></div>
+          <div class="toolbar-spacer"></div>
+          <button class="button ghost" id="map-add">新增一筆</button>
+          <button class="button primary" id="map-save">儲存地圖資料</button>
+        </div>
+        <div class="map-meta" id="map-meta"></div>
+        <div class="table-wrap map-table"><table><thead id="map-head"></thead><tbody id="map-body"></tbody></table></div>
+      </article>
+    </section>
+
+    <section class="view" id="view-scripts">
+      <div class="workspace script-workspace">
+        <article class="panel script-browser">
+          <div class="panel-toolbar">
+            <div class="search"><span>⌕</span><input id="script-search" placeholder="搜尋 .txt 腳本" /></div>
+            <button class="button primary" id="script-new">新增</button>
+          </div>
+          <div class="script-list" id="script-list"></div>
+        </article>
+        <article class="panel code-panel">
+          <div class="code-toolbar">
+            <div><strong id="script-title">尚未選擇腳本</strong><span id="script-encoding"></span></div>
+            <div class="code-actions"><button class="button danger" id="script-delete" disabled>刪除</button><button class="button ghost" id="script-validate" disabled>驗證</button><button class="button primary" id="script-save" disabled>儲存</button></div>
+          </div>
+          <textarea id="script-editor" class="code-editor" spellcheck="false" disabled placeholder="選擇左側腳本開始編輯"></textarea>
+          <div class="code-status"><span id="cursor-status">Ln 1, Col 1</span><span>Legacy Lua / Quest Script</span></div>
+        </article>
+        <aside class="panel script-inspector">
+          <div class="inspector-section"><p class="eyebrow">VALIDATION</p><div id="script-validation" class="validation-box muted">尚未驗證</div></div>
+          <div class="inspector-section"><p class="eyebrow">FUNCTION OUTLINE</p><div id="script-functions" class="function-list"><span class="muted">—</span></div></div>
+          <div class="inspector-section"><p class="eyebrow">MAP NPC</p><div class="field compact"><select id="script-map-select"></select></div><div id="script-map-npcs" class="npc-link-list"></div></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="view" id="view-assets">
+      <article class="panel asset-panel">
+        <div class="panel-toolbar">
+          <div class="field compact"><label>分類</label><select id="asset-folder"></select></div>
+          <div class="search wide"><span>⌕</span><input id="asset-search" placeholder="搜尋素材檔名或路徑" /></div>
+          <div class="toolbar-spacer"></div><span class="muted" id="asset-count"></span>
+        </div>
+        <div class="asset-grid" id="asset-grid"></div>
+      </article>
+    </section>
+  </main>
+</div>
+<input type="file" id="asset-file-input" hidden />
+<div class="toast-stack" id="toast-stack"></div>
+<script src="/app-core.js"></script>
+<script src="/app-skills.js"></script>
+<script src="/app-world.js"></script>
+<script src="/app-tools.js"></script>
+</body>
+</html>
