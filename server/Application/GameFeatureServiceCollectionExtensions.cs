@@ -33,6 +33,8 @@ public static class GameFeatureServiceCollectionExtensions
         services.AddSingleton<ResourceRecoveryService>();
         services.AddSingleton<ServerBroadcastHub>();
         services.AddSingleton<AccountSessionRegistry>();
+        services.AddSingleton<IPayPalDonationProvider, NullPayPalDonationProvider>();
+        services.AddSingleton<ILegacyPointProvider, NullLegacyPointProvider>();
         services.AddSingleton<MallService>();
         services.AddSingleton<PartyService>();
         services.AddSingleton<RankService>();
