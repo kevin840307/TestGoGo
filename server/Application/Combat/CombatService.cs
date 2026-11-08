@@ -3132,7 +3132,7 @@ public sealed class CombatService
         {
             Type = "ItemPickupFeedback",
             Message =
-                $"獲得經驗值 {expToAdd:N0}",
+                $"獲得經驗值 {expToAdd:N0}（擊殺 {monsters.Count:N0} 隻）",
             PlaySound = false
         });
 
