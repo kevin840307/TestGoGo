@@ -176,6 +176,18 @@ class MapRepositoryTests(EditorFixture):
         png = repo.blocking_overlay_png(13)
         self.assertTrue(png.startswith(b"\x89PNG\r\n\x1a\n"))
 
+        preview_dir = self.root / "game-editor" / ".generated" / "map-previews"
+        preview_dir.mkdir(parents=True)
+        preview = bytearray(b"\x89PNG\r\n\x1a\n" + bytes(8))
+        preview += struct.pack(">II", 320, 240)
+        (preview_dir / "Map13.png").write_bytes(bytes(preview))
+        meta = repo.get_editor_meta(13)
+        self.assertTrue(meta["preview"]["available"])
+        self.assertEqual(meta["preview"]["width"], 320)
+        self.assertEqual(meta["preview"]["height"], 240)
+        self.assertEqual(meta["preview"]["url"], "/api/maps/13/preview.png")
+        self.assertEqual(repo.preview_file(13).name, "Map13.png")
+
 
 class QuestRepositoryTests(EditorFixture):
     def test_validation_outline_callback_and_include(self) -> None:
@@ -258,6 +270,7 @@ class WebStructureTests(unittest.TestCase):
             "app-world.js",
             "app-map-editor.js",
             "app-history.js",
+            "app-help.js",
             "app-tools.js",
         ):
             source = (web / script_name).read_text(encoding="utf-8")
@@ -282,7 +295,7 @@ class WebStructureTests(unittest.TestCase):
     def test_frontend_entrypoints_are_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
         index = (web / "index.html").read_text(encoding="utf-8")
-        for script in ("app-core.js", "app-health.js", "app-skills.js", "app-world.js", "app-map-math.js", "app-map-editor.js", "app-history.js", "app-tools.js"):
+        for script in ("app-core.js", "app-health.js", "app-skills.js", "app-world.js", "app-map-math.js", "app-map-editor.js", "app-history.js", "app-help.js", "app-tools.js"):
             self.assertIn(f'src="/{script}"', index)
             self.assertTrue((web / script).is_file())
         self.assertTrue((web / "app.css").is_file())
@@ -394,6 +407,29 @@ class WebStructureTests(unittest.TestCase):
         self.assertIn("health-search", health)
         self.assertIn("health-severity", health)
         self.assertIn("health-category", health)
+
+    def test_onboarding_preview_and_browser_e2e_are_wired(self) -> None:
+        web = GAME_EDITOR_ROOT / "web"
+        index = (web / "index.html").read_text(encoding="utf-8")
+        help_js = (web / "app-help.js").read_text(encoding="utf-8")
+        map_editor = (web / "app-map-editor.js").read_text(encoding="utf-8")
+        tools = (web / "app-tools.js").read_text(encoding="utf-8")
+        editor = (GAME_EDITOR_ROOT / "editor.py").read_text(encoding="utf-8")
+        workflow = (GAME_EDITOR_ROOT.parent / ".github" / "workflows" / "server-build.yml").read_text(encoding="utf-8")
+        exporter = (GAME_EDITOR_ROOT.parent / "client" / "tools" / "export_map_previews.gd").read_text(encoding="utf-8")
+        e2e = (GAME_EDITOR_ROOT / "tests" / "e2e" / "editor.spec.js").read_text(encoding="utf-8")
+
+        for control_id in ("help-open", "help-modal", "help-dont-show", "map-preview-toggle", "map-show-preview"):
+            self.assertIn(f'id="{control_id}"', index)
+        self.assertIn("HELP_STORAGE_KEY", help_js)
+        self.assertIn("maybeShowFirstRunHelp", help_js)
+        self.assertIn("map-preview-layer", map_editor)
+        self.assertIn("state.mapShowPreview", tools)
+        self.assertIn("/preview.png", editor)
+        self.assertIn("Map%02d.scn", exporter)
+        self.assertIn("map_bounds.json", exporter)
+        self.assertIn("playwright", workflow.lower())
+        self.assertIn("map add drag undo redo save and reload", e2e)
 
     def test_collision_aware_map_ui_is_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
