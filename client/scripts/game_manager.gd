@@ -110,6 +110,19 @@ func classify_frame_gap(gap_usec: int, has_focus: bool, fps_cap: int) -> String:
 	return "background_stall"
 
 
+static func focus_transition_within_interval(start_ms: int, end_ms: int, change_ms: int) -> bool:
+	# Packet timestamps use Time.get_ticks_msec(); the last focus transition
+	# uses the same monotonic clock. A resumed chase packet should identify
+	# that it spans a background interval instead of implying network lag.
+	return start_ms > 0 and change_ms >= start_ms and change_ms <= end_ms
+
+
+func did_focus_change_during_interval(start_ms: int, end_ms: int) -> bool:
+	return focus_transition_within_interval(
+		start_ms, end_ms, int(_focus_last_change_usec / 1000)
+	)
+
+
 func _focus_perf_context() -> String:
 	var focus_name: String = "foreground" if _window_has_focus else "background"
 	var render_enabled: bool = RenderingServer.render_loop_enabled
@@ -127,8 +140,12 @@ func _focus_perf_context() -> String:
 func _log_focus_power_save(event_name: String, trimmed_caches: bool = false) -> void:
 	if not OS.is_debug_build():
 		return
-	print("[FOCUS_POWER_SAVE] event=%s %s focus_changes=%d caches_trimmed=%s" % [
-		event_name, _focus_perf_context(), _focus_change_count, str(trimmed_caches),
+	# OS window-focus queries may lag a notification by one event/frame.
+	# Keep both readings, explicitly marking this transition-time race.
+	var query_disagrees: bool = DisplayServer.window_is_focused() != _window_has_focus
+	print("[FOCUS_POWER_SAVE] event=%s %s focus_changes=%d caches_trimmed=%s focus_query_disagrees=%s" % [
+		event_name, _focus_perf_context(), _focus_change_count,
+		str(trimmed_caches), str(query_disagrees),
 	])
 
 
