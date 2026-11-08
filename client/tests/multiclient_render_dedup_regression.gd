@@ -56,7 +56,9 @@ func _run() -> void:
 	var kept: Dictionary = templates.get(monster_id, {})
 	_check(kept.get("Name") == "newer" and float(kept.get("LocX", 0)) == 200.0,
 		"spawn queue preserves latest server monster coordinates and identity")
-	_check(((kept.get("ExtraData", {}) as Dictionary).get("Items", []) as Array)[0]["ID"] == 123,
+	var kept_extra: Dictionary = kept.get("ExtraData", {}) as Dictionary
+	var kept_items: Array = kept_extra.get("Items", []) as Array
+	_check(not kept_items.is_empty() and int((kept_items[0] as Dictionary).get("ID", 0)) == 123,
 		"canonical monster metadata is not overwritten by queued data")
 
 	# Defensive compatibility path: direct first-time creation still copies
