@@ -13,7 +13,7 @@ public sealed class GroundDropPlacementService
     private const int SearchRadiusCells = 5;
     // Bound requests from the client (including malicious coordinates)
     // while leaving normal drag-on-world item placement intact.
-    private const double MaxRequestedDistance = 512.0;
+    private const double MaxRequestedDistance = 1024.0;
     private const double MaxRequestedDistanceSquared =
         MaxRequestedDistance * MaxRequestedDistance;
 
