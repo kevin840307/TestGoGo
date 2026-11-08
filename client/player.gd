@@ -1249,11 +1249,26 @@ func is_skill_aoe_center_toggle_available(skill_id: int) -> bool:
 	return false
 
 
-func _can_reuse_combat_target_for_attack_skill(skill) -> bool:
+func _can_reuse_combat_target_for_attack_skill(skill, skill_id: int) -> bool:
 	if not is_instance_valid(combat_target) or not skill:
 		return false
-	if int(skill.skill_type) not in [0, 1]:
+
+	var skill_type := int(skill.skill_type)
+	var is_offensive := skill_type in [0, 1]
+	if skill_type == 7:
+		var level_data = skill.get_level_data(_learned_skill_level(skill_id))
+		if not level_data:
+			level_data = skill.get_level_data(1)
+		is_offensive = (
+			level_data
+			and (
+				int(level_data.base_damage) != 0
+				or int(level_data.damage_multiplier) != 0
+			)
+		)
+	if not is_offensive:
 		return false
+
 	# Current authoritative attack-skill path targets monsters. Do not reuse
 	# a player/pet target until those server target types explicitly support it.
 	return (
@@ -1304,7 +1319,7 @@ func prepare_skill(skill_id: int) -> void :
 			# Attack skills reuse the already selected combat target. This
 			# removes the old "press skill, then click the same monster again"
 			# step while preserving the target after the cast.
-			if _can_reuse_combat_target_for_attack_skill(skill):
+			if _can_reuse_combat_target_for_attack_skill(skill, skill_id):
 				ready_to_cast_skill_id = -1
 				begin_targeted_skill(
 					combat_target,
