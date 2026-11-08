@@ -560,6 +560,403 @@ await AwaitType(
             nearbyText,
     "peer receives nearby chat from first player over map broadcast");
 
+// Seed through the normal privileged ChatMessage command path, then exercise
+// the actual gameplay packets. The isolated test server explicitly enables GM;
+// production defaults GM commands off.
+await SendGm(
+    "level 255",
+    "PlayerStatusSync",
+    root =>
+        root.TryGetProperty(
+            "MaxHP",
+            out var maxHp) &&
+        maxHp.GetInt32() > 0,
+    "GM seed raises first player level for deterministic combat");
+
+await SendGm(
+    "maxstats",
+    "AllocateStatResponse",
+    root =>
+        root.TryGetProperty(
+            "Success",
+            out var success) &&
+        success.ValueKind ==
+            JsonValueKind.True,
+    "GM seed prepares deterministic combat stats");
+
+// Inventory drop/pickup through real gameplay packets.
+var seededInventory = await SendGm(
+    "item 1001 1",
+    "InventorySync",
+    root =>
+        root.TryGetProperty(
+            "Items",
+            out var items) &&
+        items.ValueKind ==
+            JsonValueKind.Array &&
+        items.EnumerateArray().Any(item =>
+            item.TryGetProperty(
+                "ItemIndex",
+                out var itemIndex) &&
+            itemIndex.GetInt32() == 1001),
+    "GM seed adds real recovery item 1001");
+
+var wireItem =
+    seededInventory.GetProperty(
+            "Items")
+        .EnumerateArray()
+        .First(item =>
+            item.GetProperty(
+                    "ItemIndex")
+                .GetInt32() == 1001);
+var wireItemUid =
+    wireItem.GetProperty(
+            "ItemUID")
+        .GetInt64();
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "DropItemRequest",
+        TabType = 0,
+        ItemUID = wireItemUid,
+        Count = 1,
+        DropX = firstX,
+        DropY = firstY
+    });
+
+var groundSpawn = await AwaitType(
+    socket,
+    "SpawnEntity",
+    root =>
+        root.TryGetProperty(
+            "EntityType",
+            out var entityType) &&
+        entityType.GetInt32() == 3 &&
+        root.TryGetProperty(
+            "ExtraData",
+            out var extra) &&
+        extra.TryGetProperty(
+            "ItemIndex",
+            out var itemIndex) &&
+        itemIndex.GetInt32() == 1001,
+    "DropItemRequest creates authoritative ground item",
+    skipNonMatchingSameType: true);
+
+var groundEntityId =
+    groundSpawn.GetProperty(
+            "EntityID")
+        .GetInt32();
+
+await AwaitType(
+    peerSocket,
+    "SpawnEntity",
+    root =>
+        root.TryGetProperty(
+            "EntityID",
+            out var entity) &&
+        entity.GetInt32() ==
+            groundEntityId &&
+        root.TryGetProperty(
+            "EntityType",
+            out var entityType) &&
+        entityType.GetInt32() == 3,
+    "peer receives dropped ground item",
+    skipNonMatchingSameType: true);
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "PickUpItemRequest",
+        EntityID = groundEntityId
+    });
+
+await AwaitType(
+    socket,
+    "ItemPickupFeedback",
+    root =>
+        root.TryGetProperty(
+            "ItemIndex",
+            out var itemIndex) &&
+        itemIndex.GetInt32() == 1001 &&
+        root.TryGetProperty(
+            "Count",
+            out var count) &&
+        count.GetInt32() == 1,
+    "owner picks up persisted ground item through normal request");
+
+await AwaitType(
+    peerSocket,
+    "DespawnEntity",
+    root =>
+        root.TryGetProperty(
+            "EntityID",
+            out var entity) &&
+        entity.GetInt32() ==
+            groundEntityId,
+    "peer receives ground-item despawn after pickup",
+    skipNonMatchingSameType: true);
+
+// Pet creation is test seeding; summon and command attack are normal PetAction.
+var petSync = await SendGm(
+    "pet 45001 WirePet",
+    "PetSync",
+    root =>
+        root.TryGetProperty(
+            "Pets",
+            out var pets) &&
+        pets.ValueKind ==
+            JsonValueKind.Array &&
+        pets.EnumerateArray().Any(pet =>
+            pet.TryGetProperty(
+                "PETID",
+                out var petId) &&
+            petId.GetInt32() == 45001),
+    "GM seed adds real PetID 45001");
+
+var wirePet =
+    petSync.GetProperty(
+            "Pets")
+        .EnumerateArray()
+        .First(pet =>
+            pet.GetProperty(
+                    "PETID")
+                .GetInt32() == 45001);
+var wirePetUid =
+    wirePet.GetProperty(
+            "UID")
+        .GetInt64();
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "PetAction",
+        Action = "Summon",
+        PetUID = wirePetUid
+    });
+
+await AwaitType(
+    socket,
+    "PetSync",
+    root =>
+        root.GetProperty(
+                "Pets")
+            .EnumerateArray()
+            .Any(pet =>
+                pet.GetProperty(
+                        "UID")
+                    .GetInt64() ==
+                    wirePetUid &&
+                pet.GetProperty(
+                        "State")
+                    .GetInt32() == 1),
+    "PetAction Summon persists active pet state");
+
+await AwaitType(
+    socket,
+    "SpawnEntity",
+    root =>
+        root.TryGetProperty(
+            "EntityID",
+            out var entity) &&
+        entity.GetInt64() ==
+            4_000_000L +
+            wirePetUid &&
+        root.TryGetProperty(
+            "EntityType",
+            out var entityType) &&
+        entityType.GetInt32() == 4,
+    "summoned pet spawns through normal entity packet",
+    skipNonMatchingSameType: true);
+
+// Spawn one real legacy monster near the player and command the pet to attack.
+var petTargetSpawn = await SendGm(
+    $"spawn 245 {firstX + 60} {firstY}",
+    "SpawnEntity",
+    root =>
+        root.TryGetProperty(
+            "EntityType",
+            out var entityType) &&
+        entityType.GetInt32() == 1,
+    "GM seed spawns EnemyID 245 for pet combat",
+    skipNonMatchingSameType: true);
+
+var petTargetId =
+    petTargetSpawn.GetProperty(
+            "EntityID")
+        .GetInt32();
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "PetAction",
+        Action = "CommandAttack",
+        TargetEntityID = petTargetId
+    });
+
+await AwaitType(
+    socket,
+    "EntityDamage",
+    root =>
+        root.TryGetProperty(
+            "TargetID",
+            out var target) &&
+        target.GetInt32() ==
+            petTargetId &&
+        root.TryGetProperty(
+            "AttackerID",
+            out var attacker) &&
+        attacker.GetInt64() ==
+            4_000_000L +
+            wirePetUid,
+    "summoned pet damages target through PetAction CommandAttack",
+    skipNonMatchingSameType: true);
+
+// Mecha creation is seeding; DriveMechaRequest is the actual gameplay contract.
+var horseSync = await SendGm(
+    "mecha 50001",
+    "HorseSync",
+    root =>
+        root.TryGetProperty(
+            "Horses",
+            out var horses) &&
+        horses.ValueKind ==
+            JsonValueKind.Array &&
+        horses.EnumerateArray().Any(horse =>
+            horse.TryGetProperty(
+                "HorseIdx",
+                out var horseIdx) &&
+            horseIdx.GetInt32() == 50001),
+    "GM seed adds real mecha 50001");
+
+var wireHorse =
+    horseSync.GetProperty(
+            "Horses")
+        .EnumerateArray()
+        .First(horse =>
+            horse.GetProperty(
+                    "HorseIdx")
+                .GetInt32() == 50001);
+var wireHorseUid =
+    wireHorse.GetProperty(
+            "HorseUID")
+        .GetInt64();
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "DriveMechaRequest",
+        HorseUID = wireHorseUid
+    });
+
+await AwaitType(
+    socket,
+    "DriveMechaResponse",
+    root =>
+        root.TryGetProperty(
+            "Success",
+            out var success) &&
+        success.ValueKind ==
+            JsonValueKind.True &&
+        root.TryGetProperty(
+            "HorseUID",
+            out var horseUid) &&
+        horseUid.GetInt64() ==
+            wireHorseUid,
+    "DriveMechaRequest mounts seeded mecha through authoritative ACK");
+
+// Player combat uses a separately spawned monster so the pet test cannot
+// accidentally consume the same death transition.
+var combatSpawn = await SendGm(
+    $"spawn 245 {firstX + 20} {firstY}",
+    "SpawnEntity",
+    root =>
+        root.TryGetProperty(
+            "EntityType",
+            out var entityType) &&
+        entityType.GetInt32() == 1,
+    "GM seed spawns EnemyID 245 for player combat",
+    skipNonMatchingSameType: true);
+
+var combatTargetId =
+    combatSpawn.GetProperty(
+            "EntityID")
+        .GetInt32();
+var combatKilled = false;
+
+for (var attempt = 0;
+     attempt < 20 && !combatKilled;
+     attempt++)
+{
+    await SendPacket(
+        socket,
+        new
+        {
+            Type = "AttackEntity",
+            TargetEntityID =
+                combatTargetId,
+            TargetType = 1
+        });
+
+    var damage = await AwaitType(
+        socket,
+        "EntityDamage",
+        root =>
+            root.TryGetProperty(
+                "TargetID",
+                out var target) &&
+            target.GetInt32() ==
+                combatTargetId,
+        $"AttackEntity damages seeded monster (attempt {attempt + 1})",
+        skipNonMatchingSameType: true);
+
+    combatKilled =
+        damage.TryGetProperty(
+            "CurrentHP",
+            out var currentHp) &&
+        currentHp.GetInt32() == 0;
+}
+
+if (!combatKilled)
+{
+    throw new Exception(
+        "AttackEntity did not kill seeded low-level monster within 20 hits");
+}
+
+await AwaitType(
+    socket,
+    "EntityDeath",
+    root =>
+        root.TryGetProperty(
+            "EntityID",
+            out var entity) &&
+        entity.GetInt32() ==
+            combatTargetId &&
+        root.TryGetProperty(
+            "KillerID",
+            out var killer) &&
+        killer.GetInt64() ==
+            dbid,
+    "player receives authoritative monster death",
+    skipNonMatchingSameType: true);
+
+await AwaitType(
+    peerSocket,
+    "EntityDeath",
+    root =>
+        root.TryGetProperty(
+            "EntityID",
+            out var entity) &&
+        entity.GetInt32() ==
+            combatTargetId,
+    "peer receives same monster death broadcast",
+    skipNonMatchingSameType: true);
+
 // Party invite/accept over two live sockets.
 await SendPacket(
     socket,
@@ -867,11 +1264,37 @@ async Task<JsonElement> ProbeOn(
         $"{description}: no expected packet received");
 }
 
+async Task<JsonElement> SendGm(
+    string command,
+    string responseType,
+    Func<JsonElement, bool> assert,
+    string description,
+    bool skipNonMatchingSameType = false)
+{
+    await SendPacket(
+        socket,
+        new
+        {
+            Type = "ChatMessage",
+            Channel = 0,
+            Message = "/gm " + command,
+            BubbleType = 0
+        });
+
+    return await AwaitType(
+        socket,
+        responseType,
+        assert,
+        description,
+        skipNonMatchingSameType);
+}
+
 async Task<JsonElement> AwaitType(
     ClientWebSocket targetSocket,
     string responseType,
     Func<JsonElement, bool> assert,
-    string description)
+    string description,
+    bool skipNonMatchingSameType = false)
 {
     for (var attempts = 0;
          attempts < 160;
@@ -907,6 +1330,9 @@ async Task<JsonElement> AwaitType(
 
         if (!assert(response))
         {
+            if (skipNonMatchingSameType)
+                continue;
+
             throw new Exception(
                 $"{description}: wrong response fields: " +
                 response.GetRawText());
