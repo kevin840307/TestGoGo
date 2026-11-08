@@ -54,6 +54,18 @@ class ClientNetworkContractTests(unittest.TestCase):
         fields = set(FIELD_READ.findall(block))
         self.assertTrue({"Points", "Items", "Gifts"} <= fields)
 
+    def test_router_forwards_external_mall_credentials_and_request_id(self):
+        router = (
+            ROOT / "server" / "Application" / "PacketRouter.cs"
+        ).read_text(encoding="utf-8-sig")
+        mall_call = router[
+            router.index("return _mall.Handle("):
+            router.index("case \"TrainTravelReady\"")
+        ]
+        self.assertIn('req.Str("LoginName")', mall_call)
+        self.assertIn('req.Str("Password")', mall_call)
+        self.assertIn('req.Str("RequestID")', mall_call)
+
     def test_external_mall_mutations_send_idempotency_keys(self):
         source = MALL_WINDOW.read_text(encoding="utf-8-sig")
         self.assertIn(
