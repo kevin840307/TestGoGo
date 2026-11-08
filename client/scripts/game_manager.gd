@@ -210,6 +210,25 @@ func did_focus_change_during_interval(start_ms: int, end_ms: int) -> bool:
 	)
 
 
+static func foreground_from_window_state(focused: bool, minimized: bool) -> bool:
+	# Minimized must behave exactly like an unfocused window for rendering,
+	# visual processing and audio. Keep this pure helper covered by headless tests.
+	return focused and not minimized
+
+
+func _is_main_window_minimized() -> bool:
+	if DisplayServer.get_name() == "headless":
+		return false
+	return DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_MINIMIZED
+
+
+func _observe_window_foreground() -> bool:
+	return foreground_from_window_state(
+		DisplayServer.window_is_focused(),
+		_is_main_window_minimized()
+	)
+
+
 func _focus_perf_context() -> String:
 	var focus_name: String = "foreground" if _window_has_focus else "background"
 	var render_enabled: bool = RenderingServer.render_loop_enabled
@@ -218,10 +237,11 @@ func _focus_perf_context() -> String:
 	var focus_age_ms: int = -1
 	if _focus_last_change_usec > 0:
 		focus_age_ms = int((Time.get_ticks_usec() - _focus_last_change_usec) / 1000)
-	return "focus=%s focus_actual=%s power_save=%s fps_cap=%d render_loop=%s audio_muted=%s vsync=%d focus_age_ms=%d startup_overlay=%s" % [
-		focus_name, str(DisplayServer.window_is_focused()), str(not _window_has_focus),
-		Engine.max_fps, str(render_enabled), str(audio_muted), DisplayServer.window_get_vsync_mode() if DisplayServer.get_name() != "headless" else -1, focus_age_ms,
-		str(_startup_loading_overlay_active),
+	return "focus=%s focus_actual=%s minimized=%s power_save=%s fps_cap=%d render_loop=%s audio_muted=%s vsync=%d focus_age_ms=%d startup_overlay=%s" % [
+		focus_name, str(DisplayServer.window_is_focused()), str(_is_main_window_minimized()),
+		str(not _window_has_focus), Engine.max_fps, str(render_enabled), str(audio_muted),
+		DisplayServer.window_get_vsync_mode() if DisplayServer.get_name() != "headless" else -1,
+		focus_age_ms, str(_startup_loading_overlay_active),
 	]
 
 
@@ -230,7 +250,7 @@ func _log_focus_power_save(event_name: String, trimmed_caches: bool = false) -> 
 		return
 	# OS window-focus queries may lag a notification by one event/frame.
 	# Keep both readings, explicitly marking this transition-time race.
-	var query_disagrees: bool = DisplayServer.window_is_focused() != _window_has_focus
+	var query_disagrees: bool = _observe_window_foreground() != _window_has_focus
 	print("[FOCUS_POWER_SAVE] event=%s %s focus_changes=%d caches_trimmed=%s focus_query_disagrees=%s" % [
 		event_name, _focus_perf_context(), _focus_change_count,
 		str(trimmed_caches), str(query_disagrees),
@@ -856,9 +876,10 @@ func get_combat_render_mode() -> int:
 func _current_background_fps() -> int:
 	return maxi(1, int(current_performance_profile.get("background_fps", UNFOCUSED_MAX_FPS)))
 
-static func should_throttle_background_visuals(has_focus: bool, world_active: bool) -> bool:
-	# Login and character selection never use the background FPS limiter.
-	return not has_focus and world_active
+static func should_throttle_background_visuals(has_focus: bool, _world_active: bool) -> bool:
+	# Global policy: login, character select, world and AFK all treat
+	# unfocused/minimized windows as background presentation.
+	return not has_focus
 
 
 static func should_draw_afk_dashboard(has_focus: bool) -> bool:
@@ -918,7 +939,7 @@ func _reconcile_world_render_policy(delta: float) -> void:
 	if _focus_policy_poll_elapsed < WORLD_FOCUS_POLL_INTERVAL_SECONDS:
 		return
 	_focus_policy_poll_elapsed = 0.0
-	var observed_focus: bool = DisplayServer.window_is_focused()
+	var observed_focus: bool = _observe_window_foreground()
 	if observed_focus == _focus_poll_last_observed:
 		_focus_poll_same_readings += 1
 	else:
@@ -1001,8 +1022,7 @@ func _apply_performance_profile() -> void:
 		])
 
 func set_startup_loading_overlay_active(active: bool) -> void:
-	# Login and character select stay at the configured foreground FPS,
-	# regardless of focus transitions or loading-overlay visibility.
+	# Startup/login obey the same background/minimized presentation policy.
 	if _startup_loading_overlay_active == active:
 		return
 	_startup_loading_overlay_active = active
@@ -1019,7 +1039,7 @@ func set_startup_loading_overlay_active(active: bool) -> void:
 func reconcile_startup_window_focus() -> void:
 	if not _startup_loading_overlay_active:
 		return
-	var observed_focus: bool = DisplayServer.window_is_focused()
+	var observed_focus: bool = _observe_window_foreground()
 	if observed_focus == _window_has_focus:
 		_startup_focus_observed_frames = 0
 		return
@@ -1035,7 +1055,9 @@ func _notification(what: int) -> void :
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		_set_window_focus_power_save(false)
 	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
-		_set_window_focus_power_save(true)
+		# A restored/minimized Windows notification can arrive before the
+		# window mode settles. Never treat MINIMIZED as foreground.
+		_set_window_focus_power_save(_observe_window_foreground())
 
 static func should_trim_background_caches(has_world: bool, last_trim_msec: int, now_msec: int) -> bool:
 	return has_world and (last_trim_msec <= 0 or now_msec - last_trim_msec >= BACKGROUND_CACHE_TRIM_COOLDOWN_MSEC)
@@ -1238,7 +1260,7 @@ func _trim_unfocused_runtime_caches() -> int:
 	return removed
 
 func _ready() -> void :
-	_window_has_focus = DisplayServer.window_is_focused()
+	_window_has_focus = _observe_window_foreground()
 	_focused_max_fps = Engine.max_fps
 	if DisplayServer.get_name() != "headless":
 		_saved_vsync_mode = DisplayServer.window_get_vsync_mode()
