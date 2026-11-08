@@ -236,7 +236,18 @@ public sealed class QuestRuntime
         script.Globals["GetRealTime"] = (Func<int>)(() =>
             checked((int)DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
         script.Globals["Color"] = DynValue.NewCallback((ctx, args) =>
-            DynValue.NewString(""));
+        {
+            if (args.Count < 3 ||
+                args[0].Type != DataType.Number ||
+                args[1].Type != DataType.Number ||
+                args[2].Type != DataType.Number)
+                return DynValue.NewString("");
+
+            return DynValue.NewString(DialogFormatter.ColorToken(
+                (int)args[0].Number,
+                (int)args[1].Number,
+                (int)args[2].Number));
+        });
         script.Globals["HasTitle"] = (Func<int,int>)(titleId =>
             bindings?.HasTitle?.Invoke(titleId) == true
                 ? 1
@@ -567,15 +578,18 @@ public sealed class QuestRuntime
                 return DynValue.Nil;
             }
 
-            var text = DialogFormatter.CleanText(rawText);
+            var dialog = DialogFormatter.Parse(rawText, speaker);
             var next = args.Count > 1 ? args[1].CastToString() : "";
             result.Packets.Add(new {
                 Type = "NpcDialogResponse",
                 EntityID = entityId,
                 ScriptName = scriptName,
                 DialogType = "ActionDialog",
-                Text = text,
-                Speaker = speaker,
+                Text = dialog.Text,
+                PlainText = dialog.PlainText,
+                LegacyPrefix = dialog.Prefix,
+                DialogLayout = dialog.Layout,
+                Speaker = dialog.Speaker,
                 BubbleType = 0,
                 NextNode = next
             });
@@ -586,7 +600,7 @@ public sealed class QuestRuntime
         {
             if (args.Count < 2) return DynValue.Nil;
 
-            var text = DialogFormatter.CleanText(args[0].CastToString());
+            var dialog = DialogFormatter.Parse(args[0].CastToString(), speaker);
             var target = args[args.Count - 1].CastToString();
             var options = new List<object>();
 
@@ -603,8 +617,11 @@ public sealed class QuestRuntime
                 EntityID = entityId,
                 ScriptName = scriptName,
                 DialogType = "Dialog",
-                Text = text,
-                Speaker = speaker,
+                Text = dialog.Text,
+                PlainText = dialog.PlainText,
+                LegacyPrefix = dialog.Prefix,
+                DialogLayout = dialog.Layout,
+                Speaker = dialog.Speaker,
                 BubbleType = 0,
                 Options = options
             });

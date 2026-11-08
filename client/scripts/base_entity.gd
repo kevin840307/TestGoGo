@@ -2,6 +2,8 @@
 extends CharacterBody2D
 class_name BaseEntity
 
+const LEGACY_DIALOG_BUBBLE = preload("res://scripts/legacy_dialog_bubble.gd")
+
 
 var data_model: PlayerData = PlayerData.new()
 
@@ -1368,11 +1370,11 @@ func play_mecha_transform() -> void :
 	else:
 		print("[Mecha過場-網路玩家] ❌ 錯誤：mecha_transform_effect 節點未建立或已損毀！")
 
-func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = {}) -> void :
+func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = {}, rich_text: bool = false) -> void :
 	if not chat_bubble_bg or not chat_bubble_label: return
 	var tex_path = "res://ui/BG_BUBBLE_%02d.png" % clamp(bubble_type + 1, 1, 7)
 	chat_bubble_bg.texture = load(tex_path)
-	chat_bubble_label.text = text
+	# Leave ordinary messages on the original Label.
 
 	var fixed_bubble_size = Vector2(64, 48)
 	if chat_bubble_bg.texture: fixed_bubble_size = chat_bubble_bg.texture.get_size()
@@ -1388,6 +1390,7 @@ func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = 
 
 	chat_bubble_label.size = Vector2(fixed_bubble_size.x - m_left - m_right, fixed_bubble_size.y - m_top - m_bottom)
 	chat_bubble_label.position = Vector2(m_left, m_top)
+	LEGACY_DIALOG_BUBBLE.display(chat_bubble_bg, chat_bubble_label, text, rich_text)
 
 	if bubble_fade_tween and bubble_fade_tween.is_running(): bubble_fade_tween.kill()
 	chat_bubble_bg.modulate.a = 1.0

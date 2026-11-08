@@ -1,6 +1,8 @@
 
 extends Area2D
 
+const LEGACY_DIALOG_BUBBLE = preload("res://scripts/legacy_dialog_bubble.gd")
+
 static var _offset_cache: Dictionary = {}
 static var _offset_file_read_count: int = 0
 static var _offset_cache_hit_count: int = 0
@@ -203,7 +205,7 @@ func _input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) -> vo
 				})
 
 
-func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = {}) -> void :
+func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = {}, rich_text: bool = false) -> void :
 	if not chat_bubble_bg or not chat_bubble_label: return
 
 	match bubble_type:
@@ -215,7 +217,7 @@ func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = 
 		5: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_06.png")
 		6: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_07.png")
 
-	chat_bubble_label.text = text
+	# Leave ordinary messages on the original Label.
 
 	var fixed_bubble_size = Vector2(64, 48)
 	if chat_bubble_bg.texture: fixed_bubble_size = chat_bubble_bg.texture.get_size()
@@ -245,6 +247,7 @@ func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = 
 
 	chat_bubble_label.size = Vector2(fixed_bubble_size.x - m_left - m_right, fixed_bubble_size.y - m_top - m_bottom)
 	chat_bubble_label.position = Vector2(m_left, m_top)
+	LEGACY_DIALOG_BUBBLE.display(chat_bubble_bg, chat_bubble_label, text, rich_text)
 
 	if bubble_fade_tween and bubble_fade_tween.is_running(): bubble_fade_tween.kill()
 	chat_bubble_bg.modulate.a = 1.0

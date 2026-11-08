@@ -1593,6 +1593,12 @@ func _on_npc_dialog_received(data: Dictionary) -> void :
 	var bubble_type = int(data.get("BubbleType", 0))
 	var speaker = str(data.get("Speaker", "NPC"))
 	var options = data.get("Options", [])
+	var legacy_prefix = str(data.get("LegacyPrefix", ""))
+	var dialog_layout = str(data.get("DialogLayout", "Default"))
+	var bubble_text = text
+	# Legacy n7/p7 are narrative events rather than ordinary spoken lines.
+	if dialog_layout == "Narration":
+		bubble_text = "[i][color=#596777]" + text + "[/color][/i]"
 
 
 	if is_instance_valid(target_player):
@@ -1607,20 +1613,20 @@ func _on_npc_dialog_received(data: Dictionary) -> void :
 	if dialog_type == "ActionDialog":
 		_next_dialog_node = str(data.get("NextNode", ""))
 
-		if text != "": _trigger_npc_bubble(_current_npc_entity_id, text, bubble_type, speaker)
+		if text != "": _trigger_npc_bubble(_current_npc_entity_id, bubble_text, bubble_type, speaker, true)
 		if npc_dialog_panel: npc_dialog_panel.visible = false
 		return
 
 	_next_dialog_node = ""
 	if options.is_empty():
 
-		if text != "": _trigger_npc_bubble(_current_npc_entity_id, text, bubble_type, speaker)
+		if text != "": _trigger_npc_bubble(_current_npc_entity_id, bubble_text, bubble_type, speaker, true)
 		if npc_dialog_panel: npc_dialog_panel.visible = false
 		return
 
 	if is_instance_valid(npc_dialog_panel) and npc_dialog_panel.has_method("show_dialog"):
 		var was_visible = npc_dialog_panel.visible
-		npc_dialog_panel.show_dialog(text, options)
+		npc_dialog_panel.show_dialog(text, options, legacy_prefix, dialog_layout)
 		if not was_visible:
 			_play_interface_activation_feedback(npc_dialog_panel)
 
@@ -1677,13 +1683,13 @@ func _on_npc_dialog_closed() -> void :
 	if is_instance_valid(target_player):
 		target_player.set("is_interacting_with_npc", false)
 
-func _trigger_npc_bubble(entity_id: int, text: String, bubble_type: int, speaker: String = "NPC") -> void :
+func _trigger_npc_bubble(entity_id: int, text: String, bubble_type: int, speaker: String = "NPC", rich_text: bool = false) -> void :
 	var margins = BUBBLE_TEXT_MARGINS.get(bubble_type, BUBBLE_TEXT_MARGINS[0])
 
 
 	if speaker == "Player":
 		if is_instance_valid(target_player) and target_player.has_method("show_chat_bubble"):
-			target_player.show_chat_bubble(text, bubble_type, margins)
+			target_player.show_chat_bubble(text, bubble_type, margins, rich_text)
 		return
 
 
@@ -1691,7 +1697,7 @@ func _trigger_npc_bubble(entity_id: int, text: String, bubble_type: int, speaker
 		if "active_entities" in NetworkEntityManager and NetworkEntityManager.active_entities.has(entity_id):
 			var entity = NetworkEntityManager.active_entities[entity_id]
 			if is_instance_valid(entity) and entity.has_method("show_chat_bubble"):
-				entity.show_chat_bubble(text, bubble_type, margins)
+				entity.show_chat_bubble(text, bubble_type, margins, rich_text)
 
 
 

@@ -51,6 +51,7 @@ if (args.Length != 0)
             RequestSchemaSmokeTests.Run();
             ActionSchemaSmokeTests.Run();
             IdentitySchemaSmokeTests.Run();
+            QuestDialogSmokeTests.Run();
             Console.WriteLine("Protocol schema smoke passed.");
             return;
         case "announcements":
@@ -79,6 +80,7 @@ if (args.Length != 0)
 RequestSchemaSmokeTests.Run();
 ActionSchemaSmokeTests.Run();
 IdentitySchemaSmokeTests.Run();
+QuestDialogSmokeTests.Run();
 AnnouncementSmokeTests.Run();
 
 var repoRoot = Directory.GetCurrentDirectory();

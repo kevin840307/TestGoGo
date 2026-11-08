@@ -106,7 +106,7 @@ See `ARCHITECTURE.md`. The server is now split into:
 
 To add MySQL later, implement `MySqlGameStore : IGameStore` under `Infrastructure/Persistence/MySql/` and register the provider. No game-flow, WebSocket, map or Lua code should need changes.
 
-Dialog presentation prefixes such as `n`, `n1`, `p7`, and `s` are stripped before sending dialog text to the recovered client.
+Legacy dialogue prefixes and RGB color directives are now preserved as presentation metadata and Godot BBCode while leaving packet navigation unchanged; see [LEGACY_DIALOG_FORMAT.md](LEGACY_DIALOG_FORMAT.md) for verified mappings, known visual limitations, and regression commands.
 
 
 ## Current-client GameData alignment

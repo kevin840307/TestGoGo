@@ -10,9 +10,19 @@ signal option_selected(target_node: String)
 @onready var options_container: VBoxContainer = $ScrollContainer / OptionsContainer
 
 
-func show_dialog(question_text: String, options: Array) -> void :
+var _legacy_caption: Label = null
+
+
+func show_dialog(question_text: String, options: Array, legacy_prefix: String = "", dialog_layout: String = "Default") -> void :
 	self.visible = true
+	var help_mode := dialog_layout == "Help" or legacy_prefix.begins_with("h") or legacy_prefix.begins_with("b")
+	question_label.bbcode_enabled = true
+	question_label.scroll_active = true
+	question_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP if help_mode else VERTICAL_ALIGNMENT_CENTER
+	question_label.add_theme_font_size_override("normal_font_size", 13 if help_mode else 14)
 	question_label.text = question_text
+	question_label.scroll_to_line(0)
+	_update_legacy_caption(legacy_prefix, dialog_layout)
 
 
 	for child in options_container.get_children():
@@ -53,3 +63,27 @@ func show_dialog(question_text: String, options: Array) -> void :
 		)
 
 		options_container.add_child(btn)
+
+
+func _update_legacy_caption(prefix: String, layout: String) -> void:
+	var caption := ""
+	if layout == "Help" or prefix.begins_with("h") or prefix.begins_with("b"):
+		caption = "說明"
+	elif layout == "Narration" or prefix.ends_with("7"):
+		caption = "事件"
+	elif prefix.begins_with("p"):
+		caption = "玩家"
+	elif prefix.begins_with("s"):
+		caption = "特殊對話"
+
+	if not is_instance_valid(_legacy_caption):
+		_legacy_caption = Label.new()
+		_legacy_caption.name = "LegacyCaption"
+		_legacy_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_legacy_caption.position = Vector2(24, 8)
+		_legacy_caption.add_theme_color_override("font_color", Color(0.29, 0.34, 0.46))
+		_legacy_caption.add_theme_font_size_override("font_size", 12)
+		background.add_child(_legacy_caption)
+
+	_legacy_caption.text = caption
+	_legacy_caption.visible = caption != ""
