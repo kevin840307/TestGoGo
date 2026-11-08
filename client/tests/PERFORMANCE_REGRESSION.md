@@ -22,6 +22,30 @@ viewport-edge interpolation and render-only smoothing of a 70px
 the authoritative position immediately. Large corrections (over 96px) and
 death should not retain a visual offset.
 
+## Player navigation and old-map rollback regression
+
+Run this independent, server-free regression after importing the project:
+
+```powershell
+godot --headless --path client --script res://tests/player_map_movement_regression.gd
+```
+
+Expect `[PLAYER_MOVE_TEST] ALL PASS`. This covers switching from Map15
+`(1268,317)` to Map13 `(3104,2918)`, invalidating the old cached walkable
+position immediately, and resetting `data_model.map_id`, movement targets,
+and the per-map position anchor for the new scene. A failed pathfinding query
+must no longer issue `SyncPosition` using the old anchor.
+
+**Manual acceptance:** enter Map13 and click a nearby walkable tile; the
+player must move smoothly without `[MOVE_BLOCKED] ... To=(1268,317)`.
+Then cross Map13 → Map15 → Map13 repeatedly and test the first click after
+each transition. Also test an unreachable/blocking tile to confirm the
+player stops without an out-of-map coordinate rollback.
+
+Check Client `[PLAYER_MAP_NAV_RESET]`, `[PLAYER_MAP_ID_REPAIR]`, and
+`[PLAYER_SYNC_SKIPPED]` (Debug builds), along with Server `[MOVE_BLOCKED]`.
+The server's collision and anti-wall validation must remain unchanged.
+
 It is **not** an end-to-end game test. In this editing environment Godot was unavailable; these tests have not been executed.
 
 ## Manual end-to-end acceptance
