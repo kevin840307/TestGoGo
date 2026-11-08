@@ -106,20 +106,27 @@ func update_ui() -> void :
 	_update_skill_count(learned_skills.size())
 	_update_category_buttons(category_counts)
 
+	var added_cards := 0
 	for skill_entry in display_skills:
-		_add_skill_card(skill_entry)
+		if _add_skill_card(skill_entry):
+			added_cards += 1
 
 	if display_skills.is_empty():
 		_show_empty_state(
 			"目前沒有技能" if learned_skills.is_empty() else "此分類沒有技能", 
 			_get_empty_description()
 		)
+	elif added_cards == 0:
+		_show_empty_state(
+			"技能卡載入失敗",
+			"技能資料仍在；請查看 [SkillWindow] 錯誤訊息"
+		)
 	else:
 		content_scroll.visible = true
 		empty_state.visible = false
 
 
-func _add_skill_card(skill_entry: Dictionary) -> void :
+func _add_skill_card(skill_entry: Dictionary) -> bool :
 	var skill_id: = int(skill_entry.get("skill_id", 0))
 	var skill_level: = int(skill_entry.get("level", 1))
 	var skill_resource: = skill_entry.get("resource") as Resource
@@ -135,7 +142,7 @@ func _add_skill_card(skill_entry: Dictionary) -> void :
 		push_error("[SkillWindow] SkillCard scene/script failed to load")
 		if is_instance_valid(card):
 			card.queue_free()
-		return
+		return false
 
 	skill_grid.add_child(card)
 	var show_aoe_center_toggle := (
@@ -183,6 +190,8 @@ func _add_skill_card(skill_entry: Dictionary) -> void :
 			"mouse_exited",
 			Callable(self, "_hide_skill_tooltip")
 		)
+
+	return true
 
 
 func _clear_skill_grid() -> void :
