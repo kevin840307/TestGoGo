@@ -39,6 +39,7 @@ jobs:
           node --check game-editor/web/app-core.js
           node --check game-editor/web/app-skills.js
           node --check game-editor/web/app-world.js
+          node --check game-editor/web/app-map-editor.js
           node --check game-editor/web/app-tools.js
           python3 -m unittest discover -s game-editor/tests -v
       - name: Build server
