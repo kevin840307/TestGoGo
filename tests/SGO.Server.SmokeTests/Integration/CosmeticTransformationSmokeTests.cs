@@ -3,6 +3,7 @@ using SGO.Server.Application;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Items;
 using SGO.Server.Domain.Sessions;
+using SGO.Server.Domain.Assets;
 using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Infrastructure.Persistence.Sqlite;
 
@@ -21,6 +22,38 @@ internal static class CosmeticTransformationSmokeTests
         CurrentClientDataCatalog current,
         CurrentClientDataCatalog realCurrent)
     {
+        var expectedWafuu =
+            new Dictionary<int, int[]>
+            {
+                [0] = [19272, 19276, 19280, 19284],
+                [1] = [19273, 19277, 19281, 19285],
+                [2] = [19274, 19278, 19282, 19286],
+                [3] = [19275, 19279, 19283, 19287]
+            };
+
+        foreach (var pair in expectedWafuu)
+        {
+            var resolved =
+                CosmeticTransformationCatalog.Resolve(
+                    realCurrent,
+                    2003,
+                    pair.Key);
+
+            Check(
+                resolved is not null &&
+                resolved.Overrides
+                    .Select(x => x.ItemIndex)
+                    .OrderBy(x => x)
+                    .SequenceEqual(
+                        pair.Value.OrderBy(x => x)) &&
+                resolved.Overrides
+                    .Select(x => x.Part)
+                    .OrderBy(x => x)
+                    .SequenceEqual(
+                        new[] { 1, 2, 3, 4 }),
+                $"Wafuu transformation resolves exact four-piece appearance for race {pair.Key}");
+        }
+
         for (var itemId = 2004;
              itemId <= 2036;
              itemId++)
@@ -50,8 +83,55 @@ internal static class CosmeticTransformationSmokeTests
         Check(
             !CosmeticTransformationCatalog.Supports(2001) &&
             !CosmeticTransformationCatalog.Supports(2002) &&
-            !CosmeticTransformationCatalog.Supports(2003),
-            "ambiguous lantern/flower-ball/wafuu transformation devices are not guessed");
+            CosmeticTransformationCatalog.Supports(2003),
+            "flower-ball remains unresolved while Wafuu is mapped and lantern uses its dedicated resolver");
+
+        CharacterAssets AssetsWithWeapon(
+            int itemId)
+        {
+            var assets =
+                new CharacterAssets();
+            assets.Equips.Add(
+                new Dictionary<string, object>
+                {
+                    ["ItemID"] = 1L,
+                    ["ItemIdx"] = itemId,
+                    ["Damage"] = 0,
+                    ["Color"] = 0,
+                    ["Part"] = 5,
+                    ["InBank"] = 0,
+                    ["InShop"] = 0
+                });
+            return assets;
+        }
+
+        var lanternMelee =
+            LanternTransformationCatalog.Resolve(
+                realCurrent,
+                AssetsWithWeapon(30371));
+        var lanternTwin =
+            LanternTransformationCatalog.Resolve(
+                realCurrent,
+                AssetsWithWeapon(31214));
+        var lanternGun =
+            LanternTransformationCatalog.Resolve(
+                realCurrent,
+                AssetsWithWeapon(31139));
+
+        Check(
+            lanternMelee?.Overrides.Single().ItemIndex ==
+                LanternTransformationCatalog.MeleeLanternItemId &&
+            lanternTwin?.Overrides.Single().ItemIndex ==
+                LanternTransformationCatalog.TwinGunLanternItemId &&
+            lanternGun?.Overrides.Single().ItemIndex ==
+                LanternTransformationCatalog.GunLanternItemId,
+            "lantern transformer maps melee twin-gun and single-gun weapon styles to exact current-client visuals");
+
+        Check(
+            LanternTransformationCatalog.Resolve(
+                realCurrent,
+                new CharacterAssets()) is null,
+            "lantern transformer refuses use when no weapon is equipped");
 
         var beforeCharacter =
             store.GetCharacter(
