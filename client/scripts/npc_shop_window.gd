@@ -16,6 +16,9 @@ const COLOR_INDEX_TO_DEGREES = {0: 0.0, 1: 90.0, 2: 180.0, 3: 270.0, 4: 45.0, 5:
 var _shop_id: int = 0
 var _target_player: CharacterBody2D = null
 var _npc_shop_items: Array = []
+# Reuse palette materials across repeated shop list redraws; the uniforms
+# are fixed for each color/effect combination and never changed per item.
+var _palette_mat_cache: Dictionary = {}
 
 func _ready():
 	if btn_close:
@@ -31,6 +34,9 @@ func _ready():
 		])
 		shared_inventory.item_clicked.connect(_on_my_inventory_clicked)
 		shared_inventory.tab_changed.connect(_on_inventory_tab_changed)
+		# The inventory is the right half of the same NPC shop. Both X
+		# buttons must close the whole transaction, not only the left panel.
+		shared_inventory.closed.connect(_on_close_pressed)
 
 func setup(shop_id: int, shop_name: String, items: Array) -> void :
 	_shop_id = shop_id
@@ -259,11 +265,16 @@ func _on_my_inventory_clicked(event: InputEvent, item_data: Dictionary, tab: int
 
 
 func _get_palette_mat(color_idx: int, effect_type: int = 0) -> Material:
-	if color_idx <= 0 and effect_type <= 0: return null
-	var mat = ShaderMaterial.new()
+	if color_idx <= 0 and effect_type <= 0:
+		return null
+	var cache_key: Vector2i = Vector2i(color_idx, effect_type)
+	if _palette_mat_cache.has(cache_key):
+		return _palette_mat_cache[cache_key]
+	var mat := ShaderMaterial.new()
 	mat.shader = PALETTE_SHADER
 	mat.set_shader_parameter("effect_type", effect_type)
 	mat.set_shader_parameter("hue_shift", COLOR_INDEX_TO_DEGREES.get(color_idx, 0.0))
+	_palette_mat_cache[cache_key] = mat
 	return mat
 
 func _show_item_tooltip(item_index: int, tab_type: int, item_data: Dictionary = {}) -> void :
