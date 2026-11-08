@@ -2063,24 +2063,45 @@ public sealed class PacketRouter
                     var preset = _current.FindHorsePreset(
                         horseCard.HorseIndex);
 
-                    if (preset is not null)
-                    {
-                        foreach (var equipIndex in new[]
-                                 {
-                                     preset.BodyId,
-                                     preset.WeaponId,
-                                     preset.EngineId
-                                 }.Where(x => x > 0).Distinct())
+                    var packageEquipment =
+                        new[]
                         {
-                            var equip = _current.FindItem(equipIndex);
-                            _store.AddHorseEquipment(
-                                accountId,
-                                state.CharacterId.Value,
-                                equipIndex,
-                                activatedHorseUid,
-                                equip?.EquipSlot ?? 255,
-                                equip?.Durability ?? 0);
+                            horseCard.BodyId,
+                            horseCard.WeaponId,
+                            horseCard.EngineId
                         }
+                        .Where(x => x > 0)
+                        .Distinct()
+                        .ToArray();
+
+                    var equipmentToCreate =
+                        packageEquipment.Length > 0
+                            ? packageEquipment
+                            : preset is null
+                                ? Array.Empty<int>()
+                                : new[]
+                                {
+                                    preset.BodyId,
+                                    preset.WeaponId,
+                                    preset.EngineId
+                                }
+                                .Where(x => x > 0)
+                                .Distinct()
+                                .ToArray();
+
+                    foreach (var equipIndex in equipmentToCreate)
+                    {
+                        var equip =
+                            _current.FindItem(
+                                equipIndex);
+
+                        _store.AddHorseEquipment(
+                            accountId,
+                            state.CharacterId.Value,
+                            equipIndex,
+                            activatedHorseUid,
+                            equip?.EquipSlot ?? 255,
+                            equip?.Durability ?? 0);
                     }
 
                     var assets = _store.GetCharacterAssets(
@@ -2108,7 +2129,7 @@ public sealed class PacketRouter
                         new
                         {
                             Type = "SystemMessageFlash",
-                            Message = preset is null
+                            Message = equipmentToCreate.Length == 0
                                 ? $"已啟用機甲：{horseCard.Name}"
                                 : $"已啟用機甲：{horseCard.Name}（含預設裝備）"
                         }
