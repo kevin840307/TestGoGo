@@ -414,7 +414,9 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 				target_indicator.sprite_frames = frames
 				var anim_name = "default" if frames.has_animation("default") else frames.get_animation_names()[0]
 				target_indicator.animation = anim_name
-				target_indicator.play(anim_name)
+				# This indicator starts invisible. Playing hundreds of invisible
+				# AnimatedSprite2Ds wastes per-frame animation work; selection starts
+				# playback on demand in set_target_indicator().
 
 
 	if is_instance_valid(target_indicator):
@@ -807,8 +809,12 @@ func _on_animation_finished() -> void :
 func set_target_indicator(has_target: bool) -> void :
 	if is_instance_valid(target_indicator):
 		target_indicator.visible = has_target
-		if has_target and not target_indicator.is_playing():
-			target_indicator.play()
+		if has_target:
+			if not target_indicator.is_playing():
+				target_indicator.play()
+		elif target_indicator.is_playing():
+			# A deselected monster must not animate an invisible target marker.
+			target_indicator.stop()
 
 
 func update_level_icon() -> void :
