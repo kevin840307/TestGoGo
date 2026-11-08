@@ -31,6 +31,7 @@ const VALID_FESTIVAL_ACTIVITIES: = [
 ]
 
 signal festival_activity_changed(festival: String)
+signal performance_profile_changed(profile: Dictionary)
 
 var current_map_node: Node2D = null
 var current_player: CharacterBody2D = null
@@ -40,6 +41,12 @@ var current_day_night_overlay: CanvasLayer = null
 var world_enhancement_enabled: bool = GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
 var current_festival_theme: String = FestivalThemeManager.NORMAL
 var current_festival_activity: String = ""
+var current_performance_load_mode: int = ClientPerformanceProfile.LOAD_BALANCED
+var current_combat_render_mode: int = ClientPerformanceProfile.COMBAT_NORMAL
+var current_performance_profile: Dictionary = ClientPerformanceProfile.resolve(
+	current_performance_load_mode,
+	current_combat_render_mode
+)
 
 var is_changing_map: bool = false
 var max_recorded_progress: float = 0.0
@@ -445,6 +452,46 @@ const UNFOCUSED_MAX_FPS := 30
 const STARTUP_UNFOCUSED_PROGRESS_FPS := 10
 
 
+func set_performance_modes(load_mode: int, combat_mode: int) -> void:
+	current_performance_load_mode = ClientPerformanceProfile.sanitize_load_mode(load_mode)
+	current_combat_render_mode = ClientPerformanceProfile.sanitize_combat_mode(combat_mode)
+	current_performance_profile = ClientPerformanceProfile.resolve(
+		current_performance_load_mode,
+		current_combat_render_mode
+	)
+	_apply_performance_profile()
+
+func get_performance_profile() -> Dictionary:
+	return current_performance_profile.duplicate(true)
+
+func get_performance_load_mode() -> int:
+	return current_performance_load_mode
+
+func get_combat_render_mode() -> int:
+	return current_combat_render_mode
+
+func _current_background_fps() -> int:
+	return maxi(1, int(current_performance_profile.get("background_fps", UNFOCUSED_MAX_FPS)))
+
+func _apply_performance_profile() -> void:
+	if _window_has_focus:
+		var foreground_fps := int(current_performance_profile.get("foreground_fps", 0))
+		Engine.max_fps = foreground_fps
+		_focused_max_fps = foreground_fps
+	else:
+		Engine.max_fps = STARTUP_UNFOCUSED_PROGRESS_FPS if _startup_loading_overlay_active else _current_background_fps()
+	performance_profile_changed.emit(get_performance_profile())
+	if OS.is_debug_build():
+		print("[PERFORMANCE_PROFILE] load=%d combat=%d foreground_fps=%d background_fps=%d players=%d monsters=%d effects=%d%%" % [
+			current_performance_load_mode,
+			current_combat_render_mode,
+			int(current_performance_profile.get("foreground_fps", 0)),
+			int(current_performance_profile.get("background_fps", 30)),
+			int(current_performance_profile.get("full_player_budget", 0)),
+			int(current_performance_profile.get("full_monster_budget", 0)),
+			int(current_performance_profile.get("effect_budget_percent", 100)),
+		])
+
 func set_startup_loading_overlay_active(active: bool) -> void:
 	# A completely disabled background render loop cannot display the first
 	# startup loading bar at all (the exact black-screen regression).
@@ -454,7 +501,7 @@ func set_startup_loading_overlay_active(active: bool) -> void:
 		return
 	_startup_loading_overlay_active = active
 	if not _window_has_focus:
-		Engine.max_fps = STARTUP_UNFOCUSED_PROGRESS_FPS if active else UNFOCUSED_MAX_FPS
+		Engine.max_fps = STARTUP_UNFOCUSED_PROGRESS_FPS if active else _current_background_fps()
 		RenderingServer.render_loop_enabled = active
 	if OS.is_debug_build():
 		_log_focus_power_save("startup_overlay_on" if active else "startup_overlay_off")
@@ -508,7 +555,7 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 
 	if not has_focus:
 		_focused_max_fps = Engine.max_fps
-		Engine.max_fps = background_loading_display_fps(_startup_loading_overlay_active)
+		Engine.max_fps = STARTUP_UNFOCUSED_PROGRESS_FPS if _startup_loading_overlay_active else _current_background_fps()
 		RenderingServer.render_loop_enabled = _startup_loading_overlay_active
 		# RenderingServer alone stops GPU drawing but not HUD._process,
 		# minimap/cursor scanning and day-night screen-UV updates.
@@ -568,6 +615,7 @@ func _trim_unfocused_runtime_caches() -> void :
 func _ready() -> void :
 	_window_has_focus = DisplayServer.window_is_focused()
 	_focused_max_fps = Engine.max_fps
+	_apply_performance_profile()
 	_focus_last_change_usec = Time.get_ticks_usec()
 	if not _window_has_focus:
 		_window_has_focus = true
