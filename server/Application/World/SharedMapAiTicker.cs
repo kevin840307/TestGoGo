@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Combat;
+using SGO.Server.Application.Diagnostics;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Domain.Sessions;
 
@@ -31,6 +32,8 @@ public sealed class SharedMapAiTicker : BackgroundService
     private readonly ServerBroadcastHub _broadcasts;
     private readonly AccountSessionRegistry _accounts;
     private readonly ILogger<SharedMapAiTicker> _log;
+    private readonly ServerDiagnostics? _diagnostics;
+    private readonly ConcurrentDictionary<int, DateTimeOffset> _lastMapPressureWarning = new();
     private SharedMapAiTickDiagnostics _lastDiagnostics =
         new(
             DateTimeOffset.MinValue,
@@ -50,7 +53,8 @@ public sealed class SharedMapAiTicker : BackgroundService
         ICharacterStore characters,
         ServerBroadcastHub broadcasts,
         AccountSessionRegistry accounts,
-        ILogger<SharedMapAiTicker> log)
+        ILogger<SharedMapAiTicker> log,
+        ServerDiagnostics? diagnostics = null)
     {
         _combat = combat;
         _world = world;
@@ -58,6 +62,7 @@ public sealed class SharedMapAiTicker : BackgroundService
         _broadcasts = broadcasts;
         _accounts = accounts;
         _log = log;
+        _diagnostics = diagnostics;
     }
 
     public void Register(ClientSession session)
@@ -116,9 +121,11 @@ public sealed class SharedMapAiTicker : BackgroundService
             // Empty city/maps need no player HP queries and no monster AI.
             // GM-spawned monsters still cause normal processing.
             var map = _world.GetMap(group.Key);
+            var mapMonsterCount = 0;
             lock (map.SyncRoot)
             {
-                monsterCount += map.Monsters.Count;
+                mapMonsterCount = map.Monsters.Count;
+                monsterCount += mapMonsterCount;
                 if (map.Monsters.Count == 0)
                 {
                     tickedMaps++;
@@ -155,6 +162,24 @@ public sealed class SharedMapAiTicker : BackgroundService
             if (players.Count == 0)
                 continue;
 
+            if ((players.Count >= 50 || mapMonsterCount >= 500) &&
+                (!_lastMapPressureWarning.TryGetValue(group.Key, out var lastPressure) ||
+                 now - lastPressure >= TimeSpan.FromSeconds(30)))
+            {
+                _lastMapPressureWarning[group.Key] = now;
+                _diagnostics?.MapPressureWarning();
+                _diagnostics?.Record(
+                    "Warning",
+                    "MapPressure",
+                    $"Players={players.Count} Monsters={mapMonsterCount}",
+                    mapId: group.Key);
+                _log.LogWarning(
+                    "[MAP_PRESSURE] Map={MapID} Players={Players} Monsters={Monsters}",
+                    group.Key,
+                    players.Count,
+                    mapMonsterCount);
+            }
+
             players.Sort((a, b) => a.CharacterId.CompareTo(b.CharacterId));
 
             // Respawn once per map, before distributing newly alive monsters.
@@ -173,6 +198,12 @@ public sealed class SharedMapAiTicker : BackgroundService
                     }
                     catch (Exception ex)
                     {
+                        _diagnostics?.WorldTickFailure();
+                        _diagnostics?.Record(
+                            "Error",
+                            "MapAiRespawn",
+                            ex.GetType().Name,
+                            mapId: group.Key);
                         _log.LogError(ex,
                             "[MAP_AI_RESPAWN_FAILED] Map={MapID}", group.Key);
                     }
@@ -275,6 +306,15 @@ public sealed class SharedMapAiTicker : BackgroundService
                     }
                     catch (Exception ex)
                     {
+                        _diagnostics?.WorldTickFailure();
+                        _diagnostics?.Record(
+                            "Error",
+                            "MapAiTick",
+                            ex.GetType().Name,
+                            session.ConnectionId,
+                            session.AccountId,
+                            session.CharacterId,
+                            group.Key);
                         _log.LogError(ex,
                             "[MAP_AI_TICK_FAILED] Map={MapID} Character={CharacterID}",
                             group.Key, session.CharacterId);
@@ -329,9 +369,17 @@ public sealed class SharedMapAiTicker : BackgroundService
                 TickOnce(tickStartedAt);
                 var elapsed = Stopwatch.GetElapsedTime(start);
                 if (elapsed > Interval)
+                {
+                    _diagnostics?.MapAiSlowTick();
+                    _diagnostics?.Record(
+                        "Warning",
+                        "MapAiSlowTick",
+                        $"ActiveSessions={_lastDiagnostics.ActiveSessions} ActiveMaps={_lastDiagnostics.ActiveMaps} Monsters={_lastDiagnostics.MonsterCount}",
+                        elapsedMilliseconds: elapsed.TotalMilliseconds);
                     _log.LogWarning(
                         "[MAP_AI_SLOW_TICK] ElapsedMs={ElapsedMs:F1}",
                         elapsed.TotalMilliseconds);
+                }
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
