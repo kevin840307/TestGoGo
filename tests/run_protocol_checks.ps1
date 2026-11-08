@@ -66,7 +66,7 @@ try {
         "build", "tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj",
         "-c", "Release"
     )
-    foreach ($suite in @("protocol", "announcements", "world")) {
+    foreach ($suite in @("protocol", "announcements", "world", "concurrency")) {
         Invoke-Checked ("Fast " + $suite + " smoke tests") "dotnet" @(
             "run", "--no-build", "--project",
             "tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj",
