@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import math
 import re
 import sys
@@ -376,6 +377,32 @@ class RealGameDataContractTests(unittest.TestCase):
         map_repo = (
             GAME_EDITOR_ROOT / "sgo_editor" / "map_repo.py"
         ).read_text(encoding="utf-8")
+        manifest = json.loads(
+            (REPO_ROOT / "client" / "maps" / "map_generated_manifest.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        bounds = json.loads(
+            (REPO_ROOT / "client" / "maps" / "map_bounds.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        scene_ids = {
+            int(match.group(1))
+            for raw in manifest.get("scenes", [])
+            if (match := re.search(r"Map(\\d+)\\.scn$", str(raw)))
+        }
+        missing_bounds = sorted(
+            map_id for map_id in scene_ids if str(map_id) not in bounds
+        )
+
+        self.assertTrue(scene_ids)
+        for map_id in scene_ids:
+            if str(map_id) not in bounds:
+                continue
+            item = bounds[str(map_id)]
+            self.assertGreater(float(item["max_x"]), float(item["min_x"]))
+            self.assertGreater(float(item["max_y"]), float(item["min_y"]))
 
         self.assertIn('const BOUNDS_PATH := "res://maps/map_bounds.json"', exporter)
         self.assertIn('const MANIFEST_PATH := "res://maps/map_generated_manifest.json"', exporter)
@@ -383,6 +410,14 @@ class RealGameDataContractTests(unittest.TestCase):
         self.assertIn('"res://maps/Map%02d.scn"', exporter)
         self.assertIn('get("scenes", [])', exporter)
         self.assertIn("generated MapXX.scn files are absent", exporter)
+        self.assertIn("if bounds_by_id.has(str(map_id))", exporter)
+        self.assertIn(
+            "var failed := 0 if _requested_ids.is_empty() else missing_bounds_count",
+            exporter,
+        )
+        self.assertIn("missing_bounds=%d", exporter)
+        if missing_bounds:
+            self.assertIn("map bounds missing", exporter)
         self.assertIn("floorf(float(data[\"min_x\"]) / CELL_SIZE) * CELL_SIZE", exporter)
         self.assertIn("ceilf(float(data[\"max_x\"]) / CELL_SIZE) * CELL_SIZE", exporter)
         self.assertIn("image.save_png(output_path)", exporter)
