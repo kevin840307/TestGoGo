@@ -584,6 +584,93 @@ await SendGm(
             JsonValueKind.True,
     "GM seed prepares deterministic combat stats");
 
+await SendGm(
+    "heal",
+    "PlayerStatusSync",
+    root =>
+        root.TryGetProperty(
+            "HP",
+            out var hp) &&
+        root.TryGetProperty(
+            "MaxHP",
+            out var maxHp) &&
+        hp.GetInt32() ==
+            maxHp.GetInt32(),
+    "GM seed restores resources before skill wire test");
+
+await SendGm(
+    "skill 23108 1",
+    "SkillSync",
+    root =>
+        root.TryGetProperty(
+            "Skills",
+            out var skills) &&
+        skills.ValueKind ==
+            JsonValueKind.Array &&
+        skills.EnumerateArray().Any(skill =>
+            skill.TryGetProperty(
+                "SkillID",
+                out var skillId) &&
+            skillId.GetInt32() == 23108),
+    "GM seed learns real buff skill 23108");
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "UseSkill",
+        SkillID = 23108,
+        TargetID = dbid,
+        TargetType = 0,
+        TargetX = firstX,
+        TargetY = firstY
+    });
+
+await AwaitType(
+    socket,
+    "SkillCast",
+    root =>
+        root.TryGetProperty(
+            "CasterID",
+            out var caster) &&
+        caster.GetInt64() ==
+            dbid &&
+        root.TryGetProperty(
+            "SkillID",
+            out var skillId) &&
+        skillId.GetInt32() == 23108 &&
+        root.TryGetProperty(
+            "SkillLevel",
+            out var level) &&
+        level.GetInt32() == 1,
+    "UseSkill broadcasts authoritative SkillCast for learned buff");
+
+await AwaitType(
+    socket,
+    "SyncBuffs",
+    root =>
+        root.TryGetProperty(
+            "Buffs",
+            out var buffs) &&
+        buffs.ValueKind ==
+            JsonValueKind.Array &&
+        buffs.EnumerateArray().Any(buff =>
+            buff.TryGetProperty(
+                "SkillID",
+                out var skillId) &&
+            skillId.GetInt32() == 23108),
+    "UseSkill publishes active buff state");
+
+await AwaitType(
+    socket,
+    "PlayerStatusSync",
+    root =>
+        root.TryGetProperty(
+            "Attack",
+            out var attack) &&
+        attack.GetInt32() > 0,
+    "UseSkill refreshes effective player stats after buff");
+
 // Inventory drop/pickup through real gameplay packets.
 var seededInventory = await SendGm(
     "item 1001 1",
