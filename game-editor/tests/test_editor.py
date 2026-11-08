@@ -475,16 +475,18 @@ class WebStructureTests(unittest.TestCase):
         self.assertIn("其他 Editor 分頁或程序修改", editor)
         self.assertIn("spawn_revision", map_repo)
 
-    def test_no_frontend_single_selector_is_used_with_foreach(self) -> None:
+    def test_no_frontend_single_selector_uses_collection_api(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
-        pattern = re.compile(r"(\$+)\([^\n;]+?\)\.forEach")
+        pattern = re.compile(
+            r"(?<!\\$)\\$\\([^)\\n]*\\)\\."
+            r"(?:forEach|map|filter|some|every|reduce|findIndex|slice|includes|at|length)\\b"
+        )
         offenders: list[str] = []
         for path in sorted(web.glob("app-*.js")):
             source = path.read_text(encoding="utf-8")
             for match in pattern.finditer(source):
-                if match.group(1) != "$":
-                    offenders.append(f"{path.name}: {match.group(0)}")
-        self.assertEqual(offenders, [], "\n".join(offenders))
+                offenders.append(f"{path.name}: {match.group(0)}")
+        self.assertEqual(offenders, [], "\\n".join(offenders))
 
     def test_collision_aware_map_ui_is_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
