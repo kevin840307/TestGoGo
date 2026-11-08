@@ -113,6 +113,49 @@ func _run() -> void:
 		"legacy offscreen move helper also avoids direct position snapping")
 	offscreen_monster.free()
 
+	# Verify rendering and authoritative positions are separated during an
+	# attack-entry SpeedTime=0 correction. The sprite/UI may ease, but the
+	# collision body must immediately use the exact server coordinate.
+	var visual_scene: PackedScene = load("res://monster_entity.tscn") as PackedScene
+	_check(visual_scene != null, "monster visual scene is available")
+	if visual_scene != null:
+		var visual_monster: MonsterEntity = visual_scene.instantiate() as MonsterEntity
+		get_root().add_child(visual_monster)
+		visual_monster.global_position = Vector2(350.0, 400.0)
+		visual_monster.current_state = "walk"
+		visual_monster._is_on_screen = true
+		var initial_sprite_pos: Vector2 = visual_monster.sprite.position
+		var initial_ui_pos: Vector2 = visual_monster.ui_container.position
+		visual_monster.network_move_to(Vector2(280.0, 400.0), 0.0)
+		_check(visual_monster.global_position.is_equal_approx(Vector2(280.0, 400.0)),
+			"attack correction immediately updates authoritative collision body")
+		_check(visual_monster.sprite.position.is_equal_approx(initial_sprite_pos + Vector2(70.0, 0.0)),
+			"sprite visual starts at its previous world position")
+		_check(visual_monster.ui_container.position.is_equal_approx(initial_ui_pos + Vector2(70.0, 0.0)),
+			"name and health display stay aligned with sprite")
+		await create_timer(0.22).timeout
+		_check(visual_monster.sprite.position.is_equal_approx(initial_sprite_pos),
+			"sprite visual settles to authoritative location")
+		_check(visual_monster.ui_container.position.is_equal_approx(initial_ui_pos),
+			"UI visual settles with sprite")
+
+		# Intentional large server relocations must never be interpolated.
+		visual_monster.current_state = "walk"
+		visual_monster.network_move_to(Vector2(600.0, 400.0), 0.0)
+		_check(visual_monster.sprite.position.is_equal_approx(initial_sprite_pos)
+			and visual_monster.global_position.is_equal_approx(Vector2(600.0, 400.0)),
+			"large authoritative corrections still snap")
+
+		# Death must restore visual anchors and cancel any pending correction.
+		visual_monster.current_state = "walk"
+		visual_monster.network_move_to(Vector2(540.0, 400.0), 0.0)
+		visual_monster.apply_network_state("death", "1")
+		_check(visual_monster.sprite.position.is_equal_approx(initial_sprite_pos)
+			and visual_monster.ui_container.position.is_equal_approx(initial_ui_pos),
+			"death clears any in-flight render-only compensation")
+		visual_monster.queue_free()
+		await process_frame
+
 	# Guard the actual network dispatcher as well, rather than only the
 	# MonsterEntity movement helper above.
 	var entity_manager_script: String = FileAccess.get_file_as_string(
