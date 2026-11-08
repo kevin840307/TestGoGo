@@ -26,10 +26,16 @@ jobs:
         run: |
           set -o pipefail
           dotnet build server/SGO.Server.csproj -c Release 2>&1 | tee build.log
-      - name: Smoke tests
+      - name: Fast domain smoke tests
         run: |
           set -o pipefail
-          dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release 2>&1 | tee smoke.log
+          dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite protocol 2>&1 | tee protocol-smoke.log
+          dotnet run --no-build --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite announcements 2>&1 | tee announcement-smoke.log
+          dotnet run --no-build --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite world 2>&1 | tee world-smoke.log
+      - name: Full game integration smoke
+        run: |
+          set -o pipefail
+          dotnet run --no-build --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release 2>&1 | tee smoke.log
       - name: Build encrypted WebSocket transport smoke
         run: dotnet build tests/SGO.Server.WireSmokeTests/SGO.Server.WireSmokeTests.csproj -c Release
       - name: Encrypted WebSocket transport smoke
@@ -63,6 +69,9 @@ jobs:
           path: |
             build.log
             smoke.log
+            protocol-smoke.log
+            announcement-smoke.log
+            world-smoke.log
             wire.log
             server.log
             packet-contract-report.json
