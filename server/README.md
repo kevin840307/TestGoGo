@@ -1,5 +1,7 @@
 # SGO Local Server (.NET 8 + SQLite)
 
+**要決定哪些舊版功能要做？** 請先看 [53 項功能選擇清單](LEGACY_FEATURE_SELECTION.md)：47 項待決定、6 項依使用者意願維持現況或暫緩；技術稽核不構成開發授權。
+
 An **in-development** localhost-oriented .NET 8 game server matching the recovered Godot client's WebSocket protocol. Feature implementations and automated test programs exist, but end-to-end gameplay reliability and multiplayer load capacity are not yet fully verified.
 
 ## 2026-11-08 功能與驗證狀態
