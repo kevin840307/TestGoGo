@@ -1,5 +1,46 @@
 # SGO Client Performance Regression Checks
 
+## Foreground/background performance diagnostics (focus-aware)
+
+Godot's focus power-save behavior is **intentional**: on focus loss the client
+sets `Engine.max_fps = 5`, disables the RenderingServer loop, mutes the Master
+audio bus, and trims selected transient caches. On refocus it restores the
+previous FPS setting, rendering, and the previous mute state. This change adds
+**debug-only telemetry**, not new game/application throttling.
+
+- `[FOCUS_POWER_SAVE]`: emitted once at startup and at each focus transition.
+  Reports `event`, `focus`, `focus_actual`, `power_save`, `fps_cap`,
+  `render_loop`, `audio_muted`, `focus_age_ms`, `focus_changes`, and
+  whether caches were trimmed.
+- `[PERF_ANALYSIS]`: adds the same focus context to every checkpoint/periodic
+  sample, plus `cpu_metric=frame_budget_ratio`. **cpu_frame_pct is NOT Windows
+  process CPU utilization**: it is a game-thread frame-budget estimate.
+- `[RENDER_STATS]`: adds the same focus context and
+  `render_stats_valid=false` when the render loop is disabled. Draw calls
+  recorded during that period may be stale; do **not** compare them to
+  foreground rendering.
+- `[FRAME_GAP]`: expected 5 FPS background intervals (~200 ms) are
+  **not** emitted as stalls. Unexpectedly long background gaps remain logged
+  as `kind=background_stall`; focused stalls are
+  `kind=foreground_stall`. Focus transitions reset the frame-gap timestamp
+  so intentional background sleep is not blamed on the foreground.
+- Memory can remain high after focus loss because shared textures/resources
+  or allocator reservations are retained. Compare memory only at the same
+  phase, map, population, and focus state, not based on whether FPS fell.
+
+Run:
+```powershell
+godot --headless --path client --script res://tests/focus_performance_regression.gd
+```
+
+Manually verify: in-game foreground → Alt+Tab away for 10 seconds → return,
+and repeat during a map transition. Expect one `focus_out` and one
+`focus_in` event per transition, no repetitive 200 ms `FRAME_GAP` spam,
+a 5 FPS cap/render-loop-off/muted report while unfocused, and restored
+foreground settings and sound on return. Confirm skill, monster, dropped item,
+map transition and network behavior are unchanged. Never compare focused
+and unfocused samples as if they represented identical rendering workloads.
+
 ## Automated, server-free smoke test
 
 After Godot has imported the project, run from the repository root:
