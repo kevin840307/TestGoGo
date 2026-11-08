@@ -75,6 +75,51 @@ class ClientNetworkContractTests(unittest.TestCase):
         fields = set(FIELD_READ.findall(block))
         self.assertTrue({"Points", "Items", "Gifts"} <= fields)
 
+    def test_choice_reward_packet_and_authoritative_reply(self):
+        response = packet_block(self.source, "ItemChoiceRequired")
+        fields = set(FIELD_READ.findall(response))
+        self.assertTrue(
+            {"ItemUID", "ItemIndex", "Title", "Options"} <= fields
+        )
+        self.assertIn("item_choice_required_received.emit(", response)
+
+        self.assertIn(
+            'signal item_choice_required_received(',
+            self.source,
+        )
+        self.assertIn(
+            'func send_item_choice_request(item_uid: int, item_index: int)',
+            self.source,
+        )
+        self.assertIn('"Type": "UseItemChoiceRequest"', self.source)
+        self.assertIn('"ItemUID": item_uid', self.source)
+        self.assertIn('"ItemIndex": item_index', self.source)
+
+    def test_choice_reward_ui_attaches_to_hud(self):
+        hud = (ROOT / "client" / "game_hud.gd").read_text(
+            encoding="utf-8-sig"
+        )
+        scene = ROOT / "client" / "item_choice_window.tscn"
+        script = ROOT / "client" / "scripts" / "item_choice_window.gd"
+        headless = ROOT / "client" / "tests" / "item_choice_regression.gd"
+        self.assertTrue(scene.is_file())
+        self.assertTrue(script.is_file())
+        self.assertTrue(headless.is_file())
+        self.assertIn(
+            'preload("res://item_choice_window.tscn")', hud
+        )
+        self.assertIn(
+            "item_choice_required_received.connect(", hud
+        )
+        self.assertIn(
+            "ITEM_CHOICE_WINDOW_SCENE.instantiate()", hud
+        )
+
+        widget = script.read_text(encoding="utf-8-sig")
+        self.assertIn("func setup(item_uid: int, title: String, options: Array)", widget)
+        self.assertIn("_selection_sent", widget)
+        self.assertIn("send_item_choice_request(_item_uid, item_index)", widget)
+
     def test_router_forwards_external_mall_credentials_and_request_id(self):
         router = (
             ROOT / "server" / "Application" / "PacketRouter.cs"
