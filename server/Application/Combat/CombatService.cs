@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Character;
+using SGO.Server.Application.Gm;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Party;
 using SGO.Server.Application.Quest;
@@ -59,6 +60,7 @@ public sealed class CombatService
     private readonly PartyService _party;
     private readonly PetEvolutionService _petEvolution;
     private readonly QuestProgressService _questProgress;
+    private readonly GlobalRateService _globalRates;
     private readonly ILogger<CombatService> _log;
 
     private sealed record PendingRevive(
@@ -97,6 +99,7 @@ public sealed class CombatService
         PartyService party,
         PetEvolutionService petEvolution,
         QuestProgressService questProgress,
+        GlobalRateService globalRates,
         ILogger<CombatService> log)
     {
         _store = store;
@@ -112,6 +115,7 @@ public sealed class CombatService
         _party = party;
         _petEvolution = petEvolution;
         _questProgress = questProgress;
+        _globalRates = globalRates;
         _log = log;
     }
 
@@ -2972,11 +2976,14 @@ public sealed class CombatService
 
         monster.KillSequence++;
 
+        var rateSnapshot = _globalRates.Snapshot();
+        var dropMultiplier = rateSnapshot.EffectiveDrop(DateTimeOffset.UtcNow);
         var drops = _drops.RollDrops(
             monster.EnemyId,
             monster.EntityId,
             monster.KillSequence,
-            lucky);
+            lucky,
+            dropMultiplier);
 
         var offsetIndex = 0;
         foreach (var drop in drops)
@@ -3101,13 +3108,17 @@ public sealed class CombatService
             totalMoney += Math.Max(1, monster.Level);
         }
 
+        var rateSnapshot = _globalRates.Snapshot();
+        var now = DateTimeOffset.UtcNow;
         var expToAdd = (int)Math.Clamp(
-            totalExp,
-            0L,
+            Math.Round(
+                totalExp * rateSnapshot.EffectiveExperience(now)),
+            0d,
             int.MaxValue);
         var moneyToAdd = (int)Math.Clamp(
-            totalMoney,
-            0L,
+            Math.Round(
+                totalMoney * rateSnapshot.EffectiveMoney(now)),
+            0d,
             int.MaxValue);
 
         var rewarded = _store.AddRewards(
@@ -3438,7 +3449,21 @@ public sealed class CombatService
             0L,
             int.MaxValue);
 
-        var gainedMoney = Math.Max(1, monster.Level);
+        var rateSnapshot = _globalRates.Snapshot();
+        var now = DateTimeOffset.UtcNow;
+        gainedExp = (int)Math.Clamp(
+            Math.Round(
+                gainedExp *
+                rateSnapshot.EffectiveExperience(now)),
+            0d,
+            int.MaxValue);
+
+        var gainedMoney = (int)Math.Clamp(
+            Math.Round(
+                Math.Max(1, monster.Level) *
+                rateSnapshot.EffectiveMoney(now)),
+            0d,
+            int.MaxValue);
 
         var rewarded = _store.AddRewards(
             accountId,
