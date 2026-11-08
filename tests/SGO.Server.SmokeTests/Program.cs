@@ -5421,7 +5421,9 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     $"\"EntityID\":{4_000_000L + activePetUid}")) &&
             !session.PetPositions.ContainsKey(activePetUid) &&
-            !session.PetTargets.ContainsKey(activePetUid),
+            !session.PetTargets.ContainsKey(activePetUid) &&
+            !broadcastHub.PlayerCompanionEntityIds(
+                session.ConnectionId).Contains(4_000_000L + activePetUid),
             "capacity fixture recall removes pet state, AOI entity and session tracking");
     }
 
@@ -6101,7 +6103,9 @@ try
                     "\"Type\":\"DespawnEntity\"")) &&
             store.GetCharacterAssets(account.Value, id).Pets.Any(x =>
                 Convert.ToInt64(x["UID"]) == appearancePetUid &&
-                Convert.ToInt32(x["State"]) == 0),
+                Convert.ToInt32(x["State"]) == 0) &&
+            !broadcastHub.PlayerCompanionEntityIds(
+                session.ConnectionId).Contains(4_000_000L + appearancePetUid),
             "map-transition pet fixture is recalled before multi-pet combat setup");
     }
 
