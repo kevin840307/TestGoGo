@@ -1,6 +1,7 @@
-extends SceneTree
+extends Node
 
-# godot --headless --path client --script res://tests/focus_performance_regression.gd
+# Godot CLI project-mode test (autoload globals work):
+# godot --headless --path client --scene res://tests/focus_performance_regression.tscn
 # These tests do not actually change window focus, FPS cap, rendering, or audio.
 var _failures: int = 0
 
@@ -13,7 +14,7 @@ func _check(ok: bool, description: String) -> void:
 		push_error("[FOCUS_PERF_FAIL] " + description)
 
 
-func _initialize() -> void:
+func _ready() -> void:
 	call_deferred("_run")
 
 
@@ -71,4 +72,4 @@ func _run() -> void:
 	print("[FOCUS_PERF_REGRESSION] %s" % (
 		"ALL PASS" if _failures == 0 else "FAILURES=%d" % _failures
 	))
-	quit(0 if _failures == 0 else 1)
+	get_tree().quit(0 if _failures == 0 else 1)
