@@ -2497,6 +2497,22 @@ try
               .Contains("\"Type\":\"OpenCreateClubWindow\""),
         "player without a club can request the create-club UI");
 
+    // System.Text.Json escapes non-ASCII text by default. Never search
+    // localized Chinese messages inside the serialized JSON wire string.
+    // Read the actual packet Message value instead.
+    bool ClubPacketsHaveMessage(
+        IReadOnlyList<object> packets,
+        string expectedSubstring)
+    {
+        using var json = JsonDocument.Parse(
+            JsonSerializer.Serialize(packets));
+        return json.RootElement.EnumerateArray().Any(packet =>
+            packet.TryGetProperty("Message", out var message) &&
+            message.ValueKind == JsonValueKind.String &&
+            message.GetString()!.Contains(
+                expectedSubstring, StringComparison.Ordinal));
+    }
+
     var rejectedClubCreate = club.Handle(
         account.Value,
         secondCharacterId,
@@ -2510,8 +2526,7 @@ try
     Check(
         store.GetClubIdForCharacter(
             secondCharacterId) == 0 &&
-        JsonSerializer.Serialize(rejectedClubCreate)
-            .Contains("30 級"),
+        ClubPacketsHaveMessage(rejectedClubCreate, "30 級"),
         "club creation rejects characters below the original level requirement");
 
     Check(store.SetLevel(
@@ -2601,7 +2616,7 @@ try
                   2562) + 1,
         "club creation atomically consumes 500k and all three signed documents");
 
-    Check(JsonSerializer.Serialize(
+    Check(ClubPacketsHaveMessage(
               club.Handle(
                   account.Value,
                   secondCharacterId,
@@ -2610,8 +2625,8 @@ try
                   "",
                   "",
                   0,
-                  0))
-              .Contains("你已經加入戰團"),
+                  0),
+              "你已經加入戰團"),
         "existing club member cannot reopen create-club flow");
 
     var invitePackets = club.Handle(
@@ -2624,8 +2639,8 @@ try
         0,
         0);
 
-    Check(JsonSerializer.Serialize(invitePackets)
-              .Contains("戰團邀請已送出") &&
+    Check(ClubPacketsHaveMessage(
+              invitePackets, "戰團邀請已送出") &&
           clubMemberRegistration.Queue.ToArray().Any(x =>
               JsonSerializer.Serialize(x)
                   .Contains("\"Type\":\"ClubInvite\"")),
