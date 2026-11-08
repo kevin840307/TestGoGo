@@ -403,9 +403,9 @@ func parse_login_server_data(json_packet: Dictionary) -> void :
 			sync_animation()
 
 
-# Terrain long-hold latches cursor-follow walking; next terrain click cancels
-# latch and performs one normal pathfinding request. Other interactables
-# call this to suspend autorun before starting their own navigation.
+# Terrain long-hold latches cursor-follow walking. The first subsequent
+# left OR right click stops the latch immediately; the second normal
+# terrain click can start a new route. Other interactions keep priority.
 func cancel_autorun_tracking(stop_movement: bool = false) -> void:
 	_mouse_autorun.cancel()
 	is_mouse_holding = false
@@ -516,8 +516,9 @@ func _unhandled_input(event: InputEvent) -> void :
 				pending_skill_id = -1
 				_pending_skill_preserve_combat_target = false
 				is_emoting = false
-				# A fresh terrain click cancels latched autorun and returns
-				# to ordinary click-to-destination navigation.
+				# A normal click starts one route. The first press after
+				# a latched hold was already intercepted above and cannot
+				# reach this terrain-routing branch.
 				var was_latched: bool = _mouse_autorun.terrain_press(
 					Time.get_ticks_msec()
 				)
