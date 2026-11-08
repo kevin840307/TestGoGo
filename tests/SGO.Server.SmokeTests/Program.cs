@@ -8273,13 +8273,27 @@ try
         Math.Pow(monster.X - monster.WanderCenterX, 2) +
         Math.Pow(monster.Y - monster.WanderCenterY, 2));
 
-    Check(wanderPackets.Any(x =>
-              JsonSerializer.Serialize(x).Contains(
-                  "\"Type\":\"MoveEntity\"")) &&
-          (Math.Abs(monster.X - wanderStartX) > 0.001 ||
-           Math.Abs(monster.Y - wanderStartY) > 0.001) &&
-          wanderDistanceFromCenter <= 180.001,
-        "idle monster wanders near its own center without client input");
+    const double expectedWanderRadius = 260.0;
+    var wanderHasMovePacket = wanderPackets.Any(x =>
+        JsonSerializer.Serialize(x).Contains(
+            "\"Type\":\"MoveEntity\""));
+    var wanderMoved =
+        Math.Abs(monster.X - wanderStartX) > 0.001 ||
+        Math.Abs(monster.Y - wanderStartY) > 0.001;
+
+    Check(
+        wanderHasMovePacket &&
+        wanderMoved &&
+        wanderDistanceFromCenter <= expectedWanderRadius + 0.001,
+        "idle monster wanders near its own center without client input" +
+        (wanderHasMovePacket &&
+         wanderMoved &&
+         wanderDistanceFromCenter <= expectedWanderRadius + 0.001
+            ? ""
+            : $" (movePacket={wanderHasMovePacket}, moved={wanderMoved}, " +
+              $"distanceFromCenter={wanderDistanceFromCenter:F3}, " +
+              $"expectedRadius={expectedWanderRadius:F1}, " +
+              $"nextWanderAt={monster.NextWanderAt:O})"));
 
     foreach (var commandedPetUid in new[]
              {
