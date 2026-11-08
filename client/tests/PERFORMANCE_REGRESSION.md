@@ -246,7 +246,7 @@ previous FPS setting, rendering, and the previous mute state. This change adds
 
 Run:
 ```powershell
-godot --headless --path client --script res://tests/focus_performance_regression.gd
+run_godot_client_tests.bat focus (Windows; imports project and runs scene)
 ```
 
 Manually verify: in-game foreground → Alt+Tab away for 10 seconds → return,
@@ -465,7 +465,7 @@ preserve the old padded click area and the displayed colors.
 
 Run:
 ```powershell
-godot --headless --path client --script res://tests/render_resource_regression.gd
+run_godot_client_tests.bat resources (Windows; imports project and runs scene)
 godot --headless --path client --script res://tests/perf_regression_smoke.gd
 ```
 
@@ -592,7 +592,7 @@ Python regression walks every skill `.tres` and flags mismatches.
 ```powershell
 python client/tests/resource_uid_reference_regression.py
 godot --headless --path client --script res://tests/render_optimization_regression.gd
-godot --headless --path client --script res://tests/render_resource_regression.gd
+run_godot_client_tests.bat resources (Windows; imports project and runs scene)
 ```
 
 Manual verification: kill a monster at the wall and observe a short
