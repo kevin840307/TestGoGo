@@ -235,10 +235,15 @@ function chooseAsset(i) {
 async function replaceAsset(file) {
   if (!state.assetTarget || !file) return;
   if (file.size > 25 * 1024 * 1024) return toast('素材不可超過 25 MB', 'error');
+  const targetExt = String(state.assetTarget.extension || '').toLowerCase().replace('.jpeg', '.jpg');
+  const sourceExt = (file.name.match(/\.[^.]+$/)?.[0] || '').toLowerCase().replace('.jpeg', '.jpg');
+  if (targetExt !== sourceExt) {
+    return toast(`素材格式不一致：目標 ${state.assetTarget.extension || '未知'}，來源 ${sourceExt || '無副檔名'}`, 'error');
+  }
   if (!confirm(`用 ${file.name} 替換\n${state.assetTarget.path}\n\n原檔會先備份。`)) return;
   try {
     const data = await fileToBase64(file);
-    await api('/api/assets', {method:'PUT', body:{path:state.assetTarget.path, contentBase64:data}});
+    await api('/api/assets', {method:'PUT', body:{path:state.assetTarget.path, contentBase64:data, sourceName:file.name}});
     toast('素材已替換');
     await loadAssets();
   } catch (e) { toast(e.message, 'error'); }
