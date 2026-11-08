@@ -9690,6 +9690,7 @@ public sealed class SqliteGameStore : IGameStore
                    AND character_id=$id
                    AND in_bank=0
                    AND in_shop=0
+                   AND damage < $damage
                 """;
             Arg(updateItem, "$damage", repairedDurability);
             Arg(updateItem, "$uid", uid);
