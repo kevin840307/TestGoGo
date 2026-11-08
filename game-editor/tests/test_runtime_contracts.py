@@ -15,7 +15,7 @@ from sgo_editor.enemy_repo import EnemyRepository
 from sgo_editor.map_repo import MapRepository
 from sgo_editor.paths import ProjectPaths
 from sgo_editor.quest_repo import QuestRepository
-from sgo_editor.skill_repo import SkillRepository
+from sgo_editor.skill_repo import LEVEL_FIELDS, ROOT_FIELDS, SkillRepository
 from sgo_editor.storage import BackupManager
 
 
@@ -228,6 +228,52 @@ class RealGameDataContractTests(unittest.TestCase):
             "\nQuest scripts unreadable as UTF-8/CP950:\n"
             + "\n".join(decode_errors[:30]),
         )
+
+    def test_skill_editor_schema_matches_godot_resource_exports(self) -> None:
+        skill_data = (
+            REPO_ROOT / "client" / "scripts" / "skill_data.gd"
+        ).read_text(encoding="utf-8")
+        level_data = (
+            REPO_ROOT / "client" / "scripts" / "skill_level_data.gd"
+        ).read_text(encoding="utf-8")
+
+        root_exports = set(
+            re.findall(r"@export var ([A-Za-z_][A-Za-z0-9_]*)", skill_data)
+        )
+        level_exports = set(
+            re.findall(r"@export var ([A-Za-z_][A-Za-z0-9_]*)", level_data)
+        )
+
+        expected_root = set(ROOT_FIELDS) | {"levels"}
+        self.assertEqual(
+            root_exports,
+            expected_root,
+            f"SkillData schema drift: editor={sorted(expected_root)} "
+            f"client={sorted(root_exports)}",
+        )
+        self.assertEqual(
+            level_exports,
+            set(LEVEL_FIELDS),
+            f"SkillLevelData schema drift: editor={sorted(LEVEL_FIELDS)} "
+            f"client={sorted(level_exports)}",
+        )
+
+    def test_quest_editor_encoding_fallback_matches_server_runtime(self) -> None:
+        runtime = (
+            REPO_ROOT
+            / "server"
+            / "Infrastructure"
+            / "Quest"
+            / "QuestRuntime.cs"
+        ).read_text(encoding="utf-8")
+        editor = (
+            GAME_EDITOR_ROOT / "sgo_editor" / "quest_repo.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("new UTF8Encoding(false, true)", runtime)
+        self.assertIn("Encoding.GetEncoding(950)", runtime)
+        self.assertIn('data.decode("utf-8")', editor)
+        self.assertIn('data.decode("cp950")', editor)
 
     def test_runtime_dat_reader_layout_still_matches_editor_layout(self) -> None:
         enemy_reader = (
