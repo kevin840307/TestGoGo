@@ -112,11 +112,13 @@ async function saveEnemy() {
     await loadEnemies();
     renderEnemyEditor();
     await loadStatus();
+    loadHealth(true).catch(() => {});
   } catch (e) { toast(e.message, 'error'); }
 }
 async function deleteEnemy() {
-  if (!confirm(`確定刪除怪物 ${state.selectedEnemy.id}？地圖若仍引用它會失效。`)) return;
   try {
+    const impact = await referenceImpact('enemy', String(state.selectedEnemy.id));
+    if (!confirm(`確定刪除怪物 ${state.selectedEnemy.id}？${formatReferenceImpact(impact)}`)) return;
     await api(`/api/enemies/${state.selectedEnemy.id}`, {method:'DELETE'});
     state.selectedEnemy = null;
     state.enemyDirty = false;

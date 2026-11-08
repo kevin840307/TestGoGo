@@ -48,9 +48,11 @@ public sealed class WorldEntitySpatialAoi
     }
 
     private sealed class EntityEntry(
-        WorldAoiEntity entity)
+        WorldAoiEntity entity,
+        long indexedGeneration)
     {
         public WorldAoiEntity Entity = entity;
+        public readonly long IndexedGeneration = indexedGeneration;
         public readonly HashSet<Guid> Observers = new();
         public (int MapId, int CellX, int CellY) Cell =
             CellOf(entity.MapId, entity.X, entity.Y);
@@ -59,6 +61,9 @@ public sealed class WorldEntitySpatialAoi
     private readonly object _gate = new();
     private readonly Dictionary<Guid, ObserverEntry> _observers = new();
     private readonly Dictionary<long, EntityEntry> _entities = new();
+    // Monotonic index generation makes DB snapshot reconciliation safe when
+    // another socket drops an item between SELECT and AOI stale-row pruning.
+    private long _entityGeneration;
 
     private readonly Dictionary<
         (int MapId, int CellX, int CellY),
@@ -80,6 +85,12 @@ public sealed class WorldEntitySpatialAoi
     public int EntityCount
     {
         get { lock (_gate) return _entities.Count; }
+    }
+
+    public long CaptureEntityGeneration()
+    {
+        lock (_gate)
+            return _entityGeneration;
     }
 
     public IReadOnlyList<Change> UpsertObserver(
@@ -248,7 +259,7 @@ public sealed class WorldEntitySpatialAoi
 
             if (entry is null)
             {
-                entry = new EntityEntry(entity);
+                entry = new EntityEntry(entity, ++_entityGeneration);
                 _entities.Add(
                     entity.EntityId,
                     entry);
@@ -293,7 +304,8 @@ public sealed class WorldEntitySpatialAoi
     public IReadOnlyList<Change> RemoveMissingEntities(
         int mapId,
         int entityType,
-        IReadOnlySet<long> authoritativeIds)
+        IReadOnlySet<long> authoritativeIds,
+        long snapshotGeneration = long.MaxValue)
     {
         lock (_gate)
         {
@@ -305,7 +317,9 @@ public sealed class WorldEntitySpatialAoi
 
             var stale =
                 group.Where(id =>
-                        !authoritativeIds.Contains(id))
+                        !authoritativeIds.Contains(id) &&
+                        _entities.TryGetValue(id, out var entity) &&
+                        entity.IndexedGeneration <= snapshotGeneration)
                     .ToArray();
 
             var changes =
@@ -395,7 +409,7 @@ public sealed class WorldEntitySpatialAoi
     private IReadOnlyList<Change> UpsertEntityLocked(
         WorldAoiEntity entity)
     {
-        var entry = new EntityEntry(entity);
+        var entry = new EntityEntry(entity, ++_entityGeneration);
         _entities.Add(
             entity.EntityId,
             entry);

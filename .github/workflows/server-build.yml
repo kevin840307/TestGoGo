@@ -37,6 +37,7 @@ jobs:
         run: |
           python3 -m py_compile game-editor/editor.py game-editor/sgo_editor/*.py
           node --check game-editor/web/app-core.js
+          node --check game-editor/web/app-health.js
           node --check game-editor/web/app-skills.js
           node --check game-editor/web/app-world.js
           node --check game-editor/web/app-map-math.js

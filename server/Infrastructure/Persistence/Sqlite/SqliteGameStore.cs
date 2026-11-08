@@ -9204,7 +9204,13 @@ public sealed class SqliteGameStore : IGameStore
         double x,
         double y)
     {
-        count = Math.Max(1, count);
+        // Never change a malformed zero/negative drop into an actual item
+        // removal. Equipment and mecha equipment are indivisible rows.
+        // Reject invalid coordinates before mutating any inventory row.
+        if (uid <= 0 || count <= 0 || mapId <= 0 ||
+            !double.IsFinite(x) || !double.IsFinite(y) ||
+            (tabType is 1 or 3 && count != 1))
+            return null;
 
         using var db = Open();
         using var tx = db.BeginTransaction();

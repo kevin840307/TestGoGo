@@ -59,6 +59,18 @@
           <button class="quick-action" data-go="maps"><b>視覺化放置怪物 / NPC</b><span>搜尋名稱、點地圖新增、拖曳改位置</span></button>
           <button class="quick-action" data-go="scripts"><b>修改 NPC 腳本</b><span>函式導覽、範本、即時檢查</span></button>
         </article>
+        <article class="panel health-panel">
+          <div class="panel-title">
+            <div><p class="eyebrow">PROJECT HEALTH</p><h2>資料健康檢查</h2></div>
+            <button class="button ghost" id="health-refresh">重新掃描</button>
+          </div>
+          <div class="health-summary" id="health-summary">
+            <div class="health-stat"><span>Errors</span><strong id="health-errors">—</strong></div>
+            <div class="health-stat"><span>Warnings</span><strong id="health-warnings">—</strong></div>
+            <div class="health-stat"><span>Issues</span><strong id="health-total">—</strong></div>
+          </div>
+          <div class="health-list" id="health-list"><span class="muted">正在檢查跨檔案引用與地圖資料…</span></div>
+        </article>
       </div>
     </section>
 
@@ -215,8 +227,22 @@
   </main>
 </div>
 <input type="file" id="asset-file-input" hidden />
+<div class="modal-backdrop" id="map-validation-modal" hidden>
+  <div class="modal-card validation-modal-card">
+    <div class="modal-head">
+      <div><p class="eyebrow">PRE-SAVE VALIDATION</p><h2>儲存前檢查</h2></div>
+      <button class="icon-button" id="map-validation-close">×</button>
+    </div>
+    <div class="modal-body" id="map-validation-body"></div>
+    <div class="modal-actions">
+      <button class="button ghost" id="map-validation-cancel">取消</button>
+      <button class="button primary" id="map-validation-confirm">仍然儲存</button>
+    </div>
+  </div>
+</div>
 <div class="toast-stack" id="toast-stack"></div>
 <script src="/app-core.js"></script>
+<script src="/app-health.js"></script>
 <script src="/app-skills.js"></script>
 <script src="/app-world.js"></script>
 <script src="/app-map-math.js"></script>

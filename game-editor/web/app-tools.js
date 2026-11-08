@@ -136,13 +136,15 @@ async function saveScript() {
     toast('NPC 腳本已儲存');
     await loadScripts();
     await loadStatus();
+    loadHealth(true).catch(() => {});
   } catch (e) { toast(e.message, 'error'); }
 }
 async function deleteScript() {
   if (!state.selectedScript || state.selectedScript._new) return;
   const name = state.selectedScript.name;
-  if (!confirm(`確定刪除 NPC 腳本 ${name}？原檔會先備份。`)) return;
   try {
+    const impact = await referenceImpact('script', name);
+    if (!confirm(`確定刪除 NPC 腳本 ${name}？原檔會先備份。${formatReferenceImpact(impact)}`)) return;
     await api(`/api/scripts/${encodeURIComponent(name)}`, {method:'DELETE'});
     state.selectedScript = null;
     state.scriptDirty = false;
@@ -158,6 +160,7 @@ async function deleteScript() {
     renderFunctions([]);
     await loadScripts();
     await loadStatus();
+    loadHealth(true).catch(() => {});
     toast('NPC 腳本已刪除');
   } catch (e) { toast(e.message, 'error'); }
 }
@@ -256,6 +259,7 @@ async function replaceAsset(file) {
     await api('/api/assets', {method:'PUT', body:{path:state.assetTarget.path, contentBase64:data, sourceName:file.name}});
     toast('素材已替換');
     await loadAssets();
+    loadHealth(true).catch(() => {});
   } catch (e) { toast(e.message, 'error'); }
 }
 function fileToBase64(file) {
@@ -343,7 +347,7 @@ $('#asset-file-input').onchange = e => replaceAsset(e.target.files?.[0]);
 
 (async function boot() {
   try {
-    await loadStatus();
+    await Promise.all([loadStatus(), loadHealth()]);
     await go('dashboard');
   } catch (e) {
     toast(`Editor 啟動失敗：${e.message}`, 'error');

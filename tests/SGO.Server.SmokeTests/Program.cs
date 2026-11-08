@@ -67,6 +67,7 @@ if (args.Length != 0)
             PlayerCompanionAoiSmokeTests.Run();
             WorldEntitySpatialAoiSmokeTests.Run();
             WorldEntityAoiStationaryRefreshSmokeTests.Run();
+            WorldEntityAoiSnapshotRaceSmokeTests.Run();
             MapAiOwnerSpatialIndexSmokeTests.Run();
             Console.WriteLine("World/AOI smoke passed.");
             return;
@@ -110,6 +111,7 @@ PlayerSpatialAoiSmokeTests.Run();
 PlayerCompanionAoiSmokeTests.Run();
 WorldEntitySpatialAoiSmokeTests.Run();
 WorldEntityAoiStationaryRefreshSmokeTests.Run();
+WorldEntityAoiSnapshotRaceSmokeTests.Run();
 MapAiOwnerSpatialIndexSmokeTests.Run();
 ConcurrencySmokeTests.Run(repoRoot);
 EconomyConcurrencySmokeTests.Run();

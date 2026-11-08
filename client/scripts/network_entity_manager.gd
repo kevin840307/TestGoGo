@@ -402,6 +402,16 @@ func _on_entity_spawned(data: Dictionary) -> void :
 	var entity_type: int = int(data.get("EntityType", -1))
 	if entity_type == 1:
 		var cached: Dictionary = data.duplicate(true)
+		# The server can send another WorldReady snapshot while a monster is
+		# still queued/deferred. A newer MoveEntity already updated the
+		# authoritative local coordinates: never overwrite that position with
+		# an older repeated SpawnEntity, or the monster will visually teleport
+		# backward when the queue finally instantiates it.
+		var previous: Dictionary = _monster_spawn_templates.get(entity_id, {}) as Dictionary
+		if bool(previous.get("_aoi_has_move", false)):
+			cached["LocX"] = previous.get("LocX", cached.get("LocX", 0.0))
+			cached["LocY"] = previous.get("LocY", cached.get("LocY", 0.0))
+			cached["_aoi_has_move"] = true
 		_monster_spawn_templates[entity_id] = cached
 		# Repeated authoritative snapshots must not move an existing render
 		# entity into the deferred queue while it is still on the map.
@@ -721,6 +731,7 @@ func _on_entity_moved(data: Dictionary) -> void :
 		var cached: Dictionary = (_monster_spawn_templates[entity_id] as Dictionary).duplicate()
 		cached["LocX"] = float(data.get("X", cached.get("LocX", 0.0)))
 		cached["LocY"] = float(data.get("Y", cached.get("LocY", 0.0)))
+		cached["_aoi_has_move"] = true
 		_monster_spawn_templates[entity_id] = cached
 		if _deferred_monster_spawns.has(entity_id):
 			_deferred_monster_spawns[entity_id] = cached

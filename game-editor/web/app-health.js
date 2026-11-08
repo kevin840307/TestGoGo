@@ -1,0 +1,174 @@
+// Project health / cross-file validation
+async function loadHealth(force=false) {
+  const host = $('#health-list');
+  if (host) host.innerHTML = '<span class="muted">正在掃描跨檔案引用、Blocking 與腳本…</span>';
+  try {
+    state.health = await api(`/api/health${force ? '?refresh=1' : ''}`);
+    renderHealth();
+    return state.health;
+  } catch (e) {
+    if (host) host.innerHTML = `<div class="health-empty bad">健康檢查失敗：${esc(e.message)}</div>`;
+    throw e;
+  }
+}
+
+function renderHealth() {
+  const health = state.health;
+  if (!health) return;
+  $('#health-errors').textContent = health.summary.errors;
+  $('#health-warnings').textContent = health.summary.warnings;
+  $('#health-total').textContent = health.summary.issues;
+
+  const host = $('#health-list');
+  if (!host) return;
+  if (!health.issues.length) {
+    host.innerHTML = '<div class="health-empty good">✓ 目前沒有發現跨檔案資料問題。</div>';
+    return;
+  }
+
+  host.innerHTML = health.issues.slice(0, 120).map((issue, i) => {
+    const target = issue.target || {};
+    const canOpen = !!target.view;
+    const repair = issue.suggestion
+      ? `<div class="health-repair">建議：(${issue.suggestion.from.x}, ${issue.suggestion.from.y}) → (${issue.suggestion.to.x}, ${issue.suggestion.to.y})</div>`
+      : '';
+    return `
+      <div class="health-issue ${esc(issue.severity)}">
+        <div class="health-issue-main">
+          <span class="health-severity">${issue.severity === 'error' ? 'ERROR' : 'WARN'}</span>
+          <div>
+            <b>${esc(issue.title)}</b>
+            <span>${esc(issue.detail || '')}</span>
+            ${repair}
+          </div>
+        </div>
+        ${canOpen ? `<button class="button ghost health-open" data-i="${i}">前往</button>` : ''}
+      </div>`;
+  }).join('') + (health.truncated ? '<div class="helper">問題過多，清單已截斷；Summary 仍包含完整數量。</div>' : '');
+
+  $$('.health-open', host).forEach(button => {
+    button.onclick = () => openHealthIssue(Number(button.dataset.i));
+  });
+}
+
+async function openHealthIssue(index) {
+  const issue = state.health?.issues?.[index];
+  const target = issue?.target;
+  if (!target) return;
+
+  if (target.view === 'maps') {
+    state.mapId = Number(target.mapId);
+    state.mapTab = target.tab || 'enemies';
+    const changed = await go('maps');
+    if (changed === false) return;
+    $$('[data-map-tab]').forEach(x => x.classList.toggle('active', x.dataset.mapTab === state.mapTab));
+    if (Number.isInteger(Number(target.index))) {
+      const rowIndex = Number(target.index);
+      if (rowIndex >= 0 && rowIndex < state.mapRows.length) {
+        setMapSelection([rowIndex], rowIndex);
+        renderMapTable();
+        renderMapVisual();
+      }
+    }
+    return;
+  }
+
+  if (target.view === 'scripts' && target.script) {
+    const changed = await go('scripts');
+    if (changed === false) return;
+    await openScript(target.script);
+    return;
+  }
+
+  if (target.view === 'skills') {
+    const changed = await go('skills');
+    if (changed === false) return;
+    if (target.id) await openSkill(Number(target.id));
+  }
+}
+
+async function referenceImpact(kind, key) {
+  return api(`/api/references/${encodeURIComponent(kind)}/${encodeURIComponent(key)}`);
+}
+
+function formatReferenceImpact(report) {
+  if (!report?.count) return '';
+  const examples = report.references.slice(0, 6).map(ref => {
+    if (ref.type === 'map_enemy') return `Map${String(ref.mapId).padStart(2,'0')} Enemy #${ref.index + 1} (${ref.x},${ref.y})`;
+    if (ref.type === 'map_npc') return `Map${String(ref.mapId).padStart(2,'0')} ${ref.name || 'NPC'} (${ref.x},${ref.y})`;
+    if (ref.type === 'quest_include') return `${ref.script} #include`;
+    return ref.type;
+  });
+  const suffix = report.count > examples.length ? `\n…另有 ${report.count - examples.length} 筆` : '';
+  return `\n\n目前仍有 ${report.count} 筆引用：\n- ${examples.join('\n- ')}${suffix}`;
+}
+
+function validationChangeText(changes={}) {
+  return `新增 ${changes.added || 0} · 刪除 ${changes.deleted || 0} · 移動 ${changes.moved || 0} · 修改 ${changes.changed || 0} · 總數 ${changes.total || 0}`;
+}
+
+function showMapValidation(report) {
+  return new Promise(resolve => {
+    const modal = $('#map-validation-modal');
+    const body = $('#map-validation-body');
+    const confirmButton = $('#map-validation-confirm');
+    const cancelButton = $('#map-validation-cancel');
+    const closeButton = $('#map-validation-close');
+
+    const errors = report.errors || [];
+    const warnings = report.warnings || [];
+    const suggestions = report.suggestions || [];
+    body.innerHTML = `
+      <div class="validation-change-summary">${esc(validationChangeText(report.changes))}</div>
+      ${errors.length ? `
+        <div class="validation-group bad">
+          <h3>必須先修正（${errors.length}）</h3>
+          ${errors.slice(0,12).map(x => `<div class="validation-row"><b>Row ${Number(x.rowIndex)+1}</b><span>${esc(x.message)}</span></div>`).join('')}
+        </div>` : ''}
+      ${warnings.length ? `
+        <div class="validation-group warn">
+          <h3>警告（${warnings.length}）</h3>
+          ${warnings.slice(0,12).map(x => `<div class="validation-row"><b>Row ${Number(x.rowIndex)+1}</b><span>${esc(x.message)}</span></div>`).join('')}
+        </div>` : ''}
+      ${suggestions.length ? `
+        <div class="validation-group neutral">
+          <h3>修復預覽</h3>
+          ${suggestions.slice(0,12).map(x => `<div class="validation-row"><b>Row ${Number(x.rowIndex)+1}</b><span>(${x.from.x}, ${x.from.y}) → (${x.to.x}, ${x.to.y})</span></div>`).join('')}
+        </div>` : ''}
+      ${!errors.length && !warnings.length ? '<div class="health-empty good">✓ 驗證通過，可以安全儲存。</div>' : ''}
+    `;
+
+    confirmButton.hidden = errors.length > 0;
+    confirmButton.textContent = warnings.length ? '接受警告並儲存' : '儲存';
+    cancelButton.textContent = errors.length ? '返回修正' : '取消';
+    modal.hidden = false;
+
+    const finish = value => {
+      modal.hidden = true;
+      confirmButton.onclick = null;
+      cancelButton.onclick = null;
+      closeButton.onclick = null;
+      modal.onclick = null;
+      resolve(value);
+    };
+    confirmButton.onclick = () => finish(true);
+    cancelButton.onclick = () => finish(false);
+    closeButton.onclick = () => finish(false);
+    modal.onclick = e => { if (e.target === modal) finish(false); };
+  });
+}
+
+async function validateMapBeforeSave() {
+  const report = await api(`/api/maps/${state.mapId}/validate`, {
+    method:'POST',
+    body:{tab:state.mapTab, items:state.mapRows},
+  });
+  if ((report.errors || []).length || (report.warnings || []).length) {
+    return (await showMapValidation(report)) ? report : null;
+  }
+  return report;
+}
+
+$('#health-refresh')?.addEventListener('click', () => {
+  loadHealth(true).catch(e => toast(e.message, 'error'));
+});

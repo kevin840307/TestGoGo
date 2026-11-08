@@ -965,6 +965,8 @@ function deleteMapRow(index) {
 
 async function saveMap() {
   try {
+    const report = await validateMapBeforeSave();
+    if (!report) return;
     state.mapRows = await api(`/api/maps/${state.mapId}/${state.mapTab}`, {
       method:'PUT',
       body:state.mapRows,
@@ -972,6 +974,7 @@ async function saveMap() {
     resetMapHistory();
     toast('地圖資料已儲存');
     await loadMaps();
+    loadHealth(true).catch(() => {});
   } catch (e) {
     toast(e.message, 'error');
   }
