@@ -31,6 +31,23 @@ class SmokeSuiteStructureTests(unittest.TestCase):
                 self.assertIn("public static void Run()", contents)
                 self.assertIn(f"{name}.Run();", main)
 
+    def test_current_client_catalog_suite_has_explicit_catalog_context(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = SMOKE / "GameData" / "CurrentClientCatalogSmokeTests.cs"
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn(
+            "public static void Run(CurrentClientDataCatalog catalog)",
+            source,
+        )
+        self.assertIn(
+            "CurrentClientCatalogSmokeTests.Run(realCurrentCatalog);",
+            main,
+        )
+        self.assertNotIn("var festivalRewards =", main)
+        self.assertIn("ResolveExperienceCard(2460)", source)
+        self.assertIn("ResolveSkillBook(3701)", source)
+
     def test_prelogin_route_suite_has_explicit_context(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = SMOKE / "Protocol" / "PreloginPacketSmokeTests.cs"
