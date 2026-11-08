@@ -497,6 +497,22 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 	_lock_ui_position()
 	_update_sprite_offset()
 	_generate_dynamic_collision_shape()
+	_play_spawn_transition()
+
+
+func _play_spawn_transition() -> void :
+	# Purely visual and intentionally lightweight: one short alpha tween,
+	# no particles, shaders or collision/scale changes. Background clients
+	# skip it entirely because their render loop is disabled.
+	if not RenderingServer.render_loop_enabled:
+		modulate.a = 1.0
+		return
+
+	modulate.a = 0.0
+	var spawn_tween := create_tween()
+	spawn_tween.set_trans(Tween.TRANS_QUAD)
+	spawn_tween.set_ease(Tween.EASE_OUT)
+	spawn_tween.tween_property(self, "modulate:a", 1.0, 0.16)
 
 
 func _lock_ui_position() -> void :
