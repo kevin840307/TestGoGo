@@ -899,6 +899,11 @@ public sealed class PacketRouter
                 // Replaces up to eight redundant periodic full-map snapshots.
                 state.WorldSnapshotRetriesRemaining = 0;
                 state.NextWorldSnapshotAt = DateTimeOffset.MinValue;
+                _log.LogDebug(
+                    "[WORLD_READY_SNAPSHOT] Map={MapID} Packets={Count} GroundItems={GroundItems}",
+                    state.CurrentMapId,
+                    worldReadyPackets.Count,
+                    state.GroundItems.Count);
                 return worldReadyPackets;
             }
 
