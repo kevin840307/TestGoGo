@@ -197,6 +197,9 @@ func _input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) -> vo
 				return
 
 		get_viewport().set_input_as_handled()
+		# Terrain autorun must not resume and override a selected NPC.
+		if is_instance_valid(player) and player.has_method("cancel_autorun_tracking"):
+			player.cancel_autorun_tracking(true)
 
 		if NetworkManager:
 			if NetworkManager.has_method("send_secure_packet"):
