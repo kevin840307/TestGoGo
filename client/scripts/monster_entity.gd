@@ -19,6 +19,7 @@ var _performance_simplified_visual: bool = false
 var _primitive_simplified_visual: bool = false
 var _performance_simplified_style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
 var _performance_visual_protected: bool = false
+var _afk_visual_suspended: bool = false
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 var ui_container: Control = null
@@ -625,6 +626,36 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 	_play_spawn_transition()
 
 
+
+func set_afk_visual_suspended(suspended: bool) -> void:
+	if _afk_visual_suspended == suspended:
+		return
+	_afk_visual_suspended = suspended
+	if suspended:
+		if is_instance_valid(sprite):
+			sprite.stop()
+			sprite.visible = false
+			sprite.sprite_frames = null
+			sprite.material = null
+		for visual in [target_indicator, skill_use_effect, skill_hit_effect]:
+			if is_instance_valid(visual):
+				visual.stop()
+				visual.sprite_frames = null
+				visual.material = null
+				visual.visible = false
+		if is_instance_valid(bg_texture_rect):
+			bg_texture_rect.texture = null
+		queue_redraw()
+		return
+	_apply_performance_sprite()
+	sync_animation()
+	queue_redraw()
+
+
+func is_afk_visual_suspended() -> bool:
+	return _afk_visual_suspended
+
+
 func set_performance_simplified(
 	enabled: bool,
 	style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
@@ -655,6 +686,12 @@ func can_use_performance_simplification() -> bool:
 
 func _apply_performance_sprite() -> void:
 	if not is_instance_valid(sprite):
+		return
+	if _afk_visual_suspended:
+		sprite.stop()
+		sprite.visible = false
+		sprite.sprite_frames = null
+		sprite.material = null
 		return
 
 	if _primitive_simplified_visual:
@@ -1117,7 +1154,7 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 		sync_animation()
 
 func sync_animation() -> void :
-	if _primitive_simplified_visual:
+	if _primitive_simplified_visual or _afk_visual_suspended:
 		queue_redraw()
 		if current_state.to_lower() in ["attack", "hit"]:
 			fallback_action_generation += 1

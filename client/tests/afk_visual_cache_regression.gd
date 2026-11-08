@@ -1,5 +1,7 @@
 extends SceneTree
 
+const AFK_RENDER_SHELL = preload("res://scripts/afk_render_shell.gd")
+
 # godot --headless --path client --script res://tests/afk_visual_cache_regression.gd
 # Real Godot integration checks, not a source-string-only assertion.
 class TickProbe:
@@ -123,6 +125,47 @@ func _run() -> void:
 	var second_restore: Dictionary = await cache.restore_static_map(1)
 	check(int(second_restore.get("restored", 0)) == 1 and second_sprite.texture != null,
 		"only the new map is restored after map change")
+
+	# Full low-memory shell test: static map nodes are actually freed, while
+	# the exact dynamic subtree (and its physics timer/state identity) survives.
+	var shell_map := Node2D.new()
+	shell_map.name = "Map13"
+	root.add_child(shell_map)
+	var static_branch := Node2D.new()
+	static_branch.name = "LargeStaticPresentation"
+	shell_map.add_child(static_branch)
+	for i in range(64):
+		var visual := Sprite2D.new()
+		visual.texture = texture
+		static_branch.add_child(visual)
+	var live_entities := Node2D.new()
+	live_entities.name = "Entities"
+	shell_map.add_child(live_entities)
+	var live_probe := TickProbe.new()
+	live_probe.name = "ServerOwnedLogicalEntity"
+	live_entities.add_child(live_probe)
+	var entity_id_before: int = live_probe.get_instance_id()
+	var render_shell = AFK_RENDER_SHELL.new()
+	var shell_stats: Dictionary = render_shell.enter(shell_map, live_entities)
+	check(bool(shell_stats.get("ok", false)) and int(shell_stats.get("freed_static_nodes", 0)) >= 65,
+		"AFK shell truly frees the static map scene instead of only hiding it")
+	check(live_probe.get_instance_id() == entity_id_before and live_probe.is_inside_tree(),
+		"AFK shell preserves the exact dynamic entity object and runtime identity")
+	var ticks_before_shell: int = live_probe.physics_ticks
+	await create_timer(0.25).timeout
+	check(live_probe.physics_ticks > ticks_before_shell,
+		"dynamic gameplay physics continues while the static map no longer exists")
+	var restored_map := Node2D.new()
+	restored_map.name = "Map13"
+	var empty_entities := Node2D.new()
+	empty_entities.name = "Entities"
+	restored_map.add_child(empty_entities)
+	var attach_stats: Dictionary = render_shell.attach_to_restored_map(restored_map)
+	check(bool(attach_stats.get("ok", false)) and live_probe.get_instance_id() == entity_id_before,
+		"restoring presentation reparents the same dynamic subtree without respawning entities")
+	restored_map.queue_free()
+	await process_frame
+
 	Engine.max_fps = cap_before
 	second_map.queue_free()
 	map_root.queue_free()

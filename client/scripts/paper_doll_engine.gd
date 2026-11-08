@@ -135,6 +135,13 @@ static func get_shared_palette_material(color_index: int, effect_type: int) -> S
 static func get_shared_palette_material_count() -> int:
 	return _shared_palette_materials.size()
 
+
+static func clear_visual_runtime_cache() -> int:
+	var removed: int = _shared_controller_timed_frames_cache.size() + _shared_palette_materials.size()
+	_shared_controller_timed_frames_cache.clear()
+	_shared_palette_materials.clear()
+	return removed
+
 const ACT_CONTROLLER_TIMELINES_META = "act_controller_timelines"
 const USE_RESOURCE_MECHA_HEAD_ANCHORS: = true
 const MS_HEAD_ANCHOR_ROOT: = "res://Assets/MS/HeadOffset/"

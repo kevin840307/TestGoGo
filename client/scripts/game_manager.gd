@@ -15,6 +15,7 @@ const TRAIN_TRAVEL_MAP_TIMEOUT_SECONDS: = 15.0
 const TRAIN_VIDEO_TIMEOUT_SECONDS: = 120.0
 const WORLD_ENHANCEMENT_SCENE: = preload("res://world_enhancement.tscn")
 const AFK_VISUAL_CACHE = preload("res://scripts/afk_visual_cache.gd")
+const AFK_RENDER_SHELL = preload("res://scripts/afk_render_shell.gd")
 const AFK_MONITOR_FPS: int = 20
 const DAY_NIGHT_OVERLAY_SCENE: = preload("res://day_night_overlay.tscn")
 const TRAIN_VIDEO_PATHS: = {
@@ -45,6 +46,8 @@ var _afk_active: bool = false
 var _afk_restoring: bool = false
 var _afk_started_msec: int = 0
 var _afk_map_cache = AFK_VISUAL_CACHE.new()
+var _afk_render_shell = AFK_RENDER_SHELL.new()
+var _afk_map_path: String = ""
 var _afk_saved_profile: Dictionary = {}
 var _afk_visual_stats: Dictionary = {}
 var _afk_master_was_muted_before: bool = false
@@ -669,6 +672,109 @@ func _leave_afk_audio_silence(restart_map_music: bool) -> void:
 			AudioManager.play_map_bgm(current_player.data_model.map_id)
 
 
+
+func _afk_current_map_path() -> String:
+	if is_instance_valid(current_player) and current_player.data_model:
+		var map_id: int = int(current_player.data_model.map_id)
+		if map_id > 0:
+			return "res://maps/Map%02d.scn" % map_id
+	return ""
+
+
+func _afk_dynamic_container() -> Node2D:
+	if not is_instance_valid(current_map_node):
+		return null
+	var container := current_map_node.get_node_or_null("Entities") as Node2D
+	if not is_instance_valid(container):
+		container = current_map_node.get_node_or_null("ObjectContainer") as Node2D
+	if not is_instance_valid(container):
+		container = Node2D.new()
+		container.name = "Entities"
+		current_map_node.add_child(container)
+
+	if is_instance_valid(current_player) and not container.is_ancestor_of(current_player):
+		current_player.reparent(container, true)
+	if NetworkEntityManager:
+		for entity in NetworkEntityManager.active_entities.values():
+			if is_instance_valid(entity) and not container.is_ancestor_of(entity):
+				entity.reparent(container, true)
+	return container
+
+
+func _set_afk_dynamic_visuals_suspended(suspended: bool) -> int:
+	var changed: int = 0
+	if is_instance_valid(current_player) and current_player.has_method("set_afk_visual_suspended"):
+		current_player.set_afk_visual_suspended(suspended)
+		changed += 1
+	if NetworkEntityManager:
+		for entity in NetworkEntityManager.active_entities.values():
+			if is_instance_valid(entity) and entity.has_method("set_afk_visual_suspended"):
+				entity.set_afk_visual_suspended(suspended)
+				changed += 1
+	return changed
+
+
+func _enter_afk_render_shell() -> Dictionary:
+	var container: Node2D = _afk_dynamic_container()
+	if not is_instance_valid(container):
+		return {"ok": false, "reason": "missing_dynamic_container"}
+	_afk_map_path = _afk_current_map_path()
+	if _afk_map_path.is_empty() or not ResourceLoader.exists(_afk_map_path):
+		return {"ok": false, "reason": "missing_map_path"}
+	var result: Dictionary = _afk_render_shell.enter(current_map_node, container)
+	if bool(result.get("ok", false)):
+		current_map_node = _afk_render_shell.current_shell()
+	return result
+
+
+func _restore_afk_render_shell() -> Dictionary:
+	if not _afk_render_shell.is_active():
+		return {"ok": true, "restored_static_map": false}
+	var path: String = _afk_map_path
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return {"ok": false, "reason": "missing_map_resource"}
+
+	var request_error: int = ResourceLoader.load_threaded_request(path)
+	if request_error != OK and request_error != ERR_BUSY:
+		return {"ok": false, "reason": "load_request", "error": request_error}
+	var packed: PackedScene = null
+	while true:
+		var progress: Array = []
+		var status: int = ResourceLoader.load_threaded_get_status(path, progress)
+		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			await get_tree().process_frame
+			continue
+		if status == ResourceLoader.THREAD_LOAD_LOADED:
+			packed = ResourceLoader.load_threaded_get(path) as PackedScene
+			break
+		return {"ok": false, "reason": "load_failed", "status": status}
+	if packed == null:
+		return {"ok": false, "reason": "null_packed_scene"}
+
+	var restored := packed.instantiate() as Node2D
+	if not is_instance_valid(restored):
+		return {"ok": false, "reason": "instantiate_failed"}
+	for collision_name: String in ["CollisionContainer", "CollisionLayer"]:
+		var legacy := restored.get_node_or_null(collision_name)
+		if is_instance_valid(legacy):
+			restored.remove_child(legacy)
+			legacy.free()
+
+	var attached: Dictionary = _afk_render_shell.attach_to_restored_map(restored)
+	if not bool(attached.get("ok", false)):
+		restored.free()
+		return attached
+	current_map_node = restored
+	_apply_current_festival_theme()
+	if BuildingManager:
+		await _init_buildings_with_diagnostics(
+			int(current_player.data_model.map_id) if is_instance_valid(current_player) and current_player.data_model else 0,
+			int(current_player.data_model.map_id) if is_instance_valid(current_player) and current_player.data_model else 0
+		)
+	attached["restored_static_map"] = true
+	return attached
+
+
 func begin_afk_mode() -> bool:
 	if _afk_active or _afk_restoring or is_changing_map:
 		return false
@@ -694,11 +800,16 @@ func begin_afk_mode() -> bool:
 	current_map_node.visible = false
 	_remove_day_night_overlay()
 	_remove_world_enhancement()
-	# Phase 2: shed full remote paper-doll/monster assets, and restoreable
-	# static map textures, without unloading live combat/collision nodes.
+	# Phase 2: keep the dynamic gameplay subtree alive, but discard the
+	# complete static map scene and full entity artwork. Networking, packet
+	# cadence, fixed physics, collision, timers and authoritative entity
+	# identity are untouched.
 	set_performance_modes(ClientPerformanceProfile.LOAD_MULTIBOX, ClientPerformanceProfile.COMBAT_MASS)
 	set_visual_simplification_modes(ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED, ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
-	_afk_visual_stats = _afk_map_cache.suspend_static_map(current_map_node)
+	var suspended_entities: int = _set_afk_dynamic_visuals_suspended(true)
+	_afk_visual_stats = _enter_afk_render_shell()
+	_afk_visual_stats["suspended_entity_visuals"] = suspended_entities
+	_afk_visual_stats["released"] = int(_afk_visual_stats.get("freed_static_nodes", 0))
 	_clear_visual_runtime_caches()
 	_refresh_focus_render_policy()
 	_log_afk_state("enter_after", int(_afk_visual_stats.get("released", 0)))
@@ -715,19 +826,11 @@ func finish_afk_mode() -> bool:
 		return false
 	_afk_restoring = true
 	_log_afk_state("restore_begin")
-	var original_map: Node = current_map_node
-	var restore_result: Dictionary = await _afk_map_cache.restore_static_map(24)
-	# If a map transition began during incremental restore, retain AFK mode
-	# and let the new map's handoff build its own render snapshot.
-	if is_changing_map or original_map != current_map_node:
+	var restore_result: Dictionary = await _restore_afk_render_shell()
+	if is_changing_map or not bool(restore_result.get("ok", false)):
 		_afk_restoring = false
-		_log_afk_state("restore_deferred_map_change")
-		return false
-	if int(restore_result.get("missing", 0)) > 0:
-		# Keep the dashboard visible rather than revealing missing graphics.
-		_afk_restoring = false
-		_afk_visual_stats["restore_missing"] = int(restore_result["missing"])
-		_log_afk_state("restore_retry_needed", 0, int(restore_result["missing"]))
+		_afk_visual_stats["restore_error"] = str(restore_result.get("reason", "map_change"))
+		_log_afk_state("restore_retry_needed")
 		return false
 	_afk_active = false
 	_afk_restoring = false
@@ -744,13 +847,14 @@ func finish_afk_mode() -> bool:
 		int(_afk_saved_profile.get("players", ClientPerformanceProfile.SIMPLIFY_AUTO)),
 		int(_afk_saved_profile.get("monsters", ClientPerformanceProfile.SIMPLIFY_AUTO))
 	)
+	_set_afk_dynamic_visuals_suspended(false)
 	_apply_low_resource_world_visual_policy()
 	if is_instance_valid(current_map_node):
 		current_map_node.visible = true
 	_afk_saved_profile.clear()
 	_afk_visual_stats.clear()
 	_refresh_focus_render_policy()
-	_log_afk_state("restore_complete", int(restore_result.get("restored", 0)), int(restore_result.get("missing", 0)))
+	_log_afk_state("restore_complete", int(restore_result.get("restored_entity_nodes", 0)), 0)
 	_log_afk_memory("restore_complete")
 	_afk_memory_baseline.clear()
 	return true
@@ -760,8 +864,12 @@ func _refresh_afk_map_visuals_after_change() -> void:
 	if not _afk_active or not is_instance_valid(current_map_node):
 		return
 	_afk_map_cache.discard()
+	_afk_render_shell.discard()
 	current_map_node.visible = false
-	_afk_visual_stats = _afk_map_cache.suspend_static_map(current_map_node)
+	var suspended_entities: int = _set_afk_dynamic_visuals_suspended(true)
+	_afk_visual_stats = _enter_afk_render_shell()
+	_afk_visual_stats["suspended_entity_visuals"] = suspended_entities
+	_afk_visual_stats["released"] = int(_afk_visual_stats.get("freed_static_nodes", 0))
 	_clear_visual_runtime_caches()
 	_log_afk_state("map_changed_unloaded", int(_afk_visual_stats.get("released", 0)))
 	_log_afk_memory("afk_map_changed")
@@ -775,6 +883,8 @@ func _reset_afk_mode() -> void:
 	_afk_saved_profile.clear()
 	_afk_visual_stats.clear()
 	_afk_map_cache.discard()
+	_afk_render_shell.discard()
+	_afk_map_path = ""
 	_afk_memory_baseline.clear()
 
 
@@ -1680,6 +1790,23 @@ func _clear_visual_runtime_caches() -> void :
 		EffectLoader.clear_runtime_cache()
 	if PetLoader and PetLoader.has_method("clear_runtime_cache"):
 		PetLoader.clear_runtime_cache()
+	if ItemLoader and ItemLoader.has_method("clear_runtime_cache"):
+		ItemLoader.clear_runtime_cache()
+	if SkillLoader and SkillLoader.has_method("clear_runtime_cache"):
+		SkillLoader.clear_runtime_cache()
+	if AudioManager and AudioManager.has_method("clear_runtime_cache"):
+		AudioManager.clear_runtime_cache()
+	if PaperDollEngine and PaperDollEngine.has_method("clear_visual_runtime_cache"):
+		PaperDollEngine.clear_visual_runtime_cache()
+	if FestivalThemeManager and FestivalThemeManager.has_method("clear_texture_cache"):
+		FestivalThemeManager.clear_texture_cache()
+	for kind in _prewarmed_hud_windows.keys().duplicate():
+		var window = _prewarmed_hud_windows.get(kind, null)
+		if is_instance_valid(window):
+			window.free()
+	_prewarmed_hud_windows.clear()
+	if is_instance_valid(current_hud) and current_hud.has_method("release_afk_visual_preloads"):
+		current_hud.release_afk_visual_preloads()
 
 func _apply_low_resource_world_visual_policy() -> void:
 	# Day/night is purely visual; the server's world clock and player actions
@@ -2131,12 +2258,6 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 
 	if is_instance_valid(current_hud) and current_hud.has_method("update_map_info"):
 		current_hud.update_map_info(target_map_id, current_map_node.name)
-	# Festival/building initialization uses call_deferred above; run the
-	# visual strip AFTER it so new festival textures are included.
-	# The new root was already hidden before the player was reparented.
-	if _afk_active:
-		call_deferred("_refresh_afk_map_visuals_after_change")
-
 	if CursorManager:
 		CursorManager.set_cursor_state("normal")
 
@@ -2160,6 +2281,8 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 		NetworkManager.note_map_loading_complete(_active_map_transition_id, target_map_id)
 	is_changing_map = false
 	_trace_map_change("resumed", source_map_id, target_map_id)
+	if _afk_active:
+		call_deferred("_refresh_afk_map_visuals_after_change")
 
 
 	var loading_elapsed_seconds: = float(Time.get_ticks_usec() - _map_transition_started_usec) / 1000000.0

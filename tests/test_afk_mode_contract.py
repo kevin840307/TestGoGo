@@ -41,6 +41,10 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('current_map_node.visible = false', game)
         self.assertIn('current_map_node.visible = true', game)
         self.assertIn('AFK_VISUAL_CACHE.new()', game)
+        self.assertIn('AFK_RENDER_SHELL.new()', game)
+        self.assertIn('_enter_afk_render_shell()', game)
+        self.assertIn('_restore_afk_render_shell()', game)
+        self.assertIn('_set_afk_dynamic_visuals_suspended(true)', game)
         self.assertIn('_clear_visual_runtime_caches()', game)
         self.assertIn('AFKOverlay / UpdateTimer', hud)
         self.assertIn('_refresh_afk_dashboard()', hud)
@@ -131,6 +135,28 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('"excluded_scripted": excluded_scripted', cache)
         self.assertIn('"visited_nodes": visited', cache)
         self.assertIn('int(stats.get("retained_embedded", 0))', hud)
+
+    def test_afk_low_memory_shell_is_render_only(self):
+        shell = read("client/scripts/afk_render_shell.gd")
+        game = read("client/scripts/game_manager.gd")
+        entities = read("client/scripts/network_entity_manager.gd")
+        base = read("client/scripts/base_entity.gd")
+        monster = read("client/scripts/monster_entity.gd")
+        self.assertIn("map_node.free()", shell)
+        self.assertIn("entities.reparent(shell, true)", shell)
+        self.assertIn("_entities.reparent(restored_map, true)", shell)
+        self.assertNotIn("NetworkManager", shell)
+        self.assertNotIn("send_secure_packet", shell)
+        self.assertNotIn("send_world_ready", shell)
+        begin = game[game.index("func begin_afk_mode()"):game.index("func finish_afk_mode()")]
+        self.assertNotIn("clear_map_entities()", begin)
+        self.assertNotIn("NetworkManager.", begin)
+        self.assertIn("current_player.reparent(container, true)", game)
+        self.assertIn("NetworkEntityManager.active_entities.values()", game)
+        self.assertIn("set_afk_visual_suspended", base)
+        self.assertIn("set_afk_visual_suspended", monster)
+        self.assertIn("GameManager.is_afk_mode_active()", entities)
+
 
     def test_native_mouse_and_silent_afk_audio(self):
         cursor = read("client/scripts/cursor_manager.gd")

@@ -950,6 +950,8 @@ func _spawn_entity_now(data: Dictionary) -> void :
 		active_entities[entity_id] = new_entity
 		_active_entity_types[entity_id] = entity_type
 		_apply_performance_visual_to_entity(entity_id, entity_type, new_entity)
+		if GameManager and GameManager.is_afk_mode_active() and new_entity.has_method("set_afk_visual_suspended"):
+			new_entity.set_afk_visual_suspended(true)
 
 func _unregister_entity_hover(entity: Node) -> void :
 	if CursorManager and is_instance_valid(entity):

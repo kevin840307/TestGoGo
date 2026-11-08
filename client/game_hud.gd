@@ -856,7 +856,22 @@ func _setup_window_manager() -> void :
 	if btn_mall:
 		btn_mall.focus_mode = Control.FOCUS_NONE
 
-func _assign_lazy_window(kind: String, window: Control) -> void :
+
+func release_afk_visual_preloads() -> int:
+	var released: int = 0
+	for kind_value in LAZY_WINDOW_PATHS.keys():
+		var kind: String = str(kind_value)
+		var window: Control = _get_lazy_window(kind)
+		if is_instance_valid(window) and not window.visible:
+			window.free()
+			_assign_lazy_window(kind, null)
+			released += 1
+	_lazy_window_scenes.clear()
+	_lazy_window_requests.clear()
+	return released
+
+
+func _assign_lazy_window(kind: String, window: Control = null) -> void :
 	match kind:
 		"quest": quest_window = window
 		"mall": mall_window = window

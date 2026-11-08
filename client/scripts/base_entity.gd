@@ -41,6 +41,7 @@ var shop_owner_label: Label = null
 
 var current_state: String = "idle"
 var _render_visible: bool = true
+var _afk_visual_suspended: bool = false
 var _render_notifier: VisibleOnScreenNotifier2D = null
 const RENDER_VISIBILITY_RECT: Rect2 = Rect2(-220.0, -280.0, 440.0, 500.0)
 var current_dir: String = "1"
@@ -145,6 +146,48 @@ func _on_render_screen_exited() -> void :
 
 func is_render_visible() -> bool:
 	return _render_visible
+
+
+func set_afk_visual_suspended(suspended: bool) -> void:
+	if _afk_visual_suspended == suspended:
+		return
+	_afk_visual_suspended = suspended
+	if suspended:
+		if is_instance_valid(doll_engine) and doll_engine.has_method("clear_dolls"):
+			doll_engine.clear_dolls()
+			doll_engine.visible = false
+		if is_instance_valid(transform_sprite):
+			transform_sprite.stop()
+			transform_sprite.sprite_frames = null
+			transform_sprite.material = null
+			transform_sprite.visible = false
+		for effect in [
+			mecha_recover_effect, level_up_effect, mecha_transform_effect,
+			death_effect, item_effect, mecha_bullet_effect_l,
+			mecha_bullet_effect_r, weapon_attack_effect
+		]:
+			if is_instance_valid(effect):
+				effect.stop()
+				effect.sprite_frames = null
+				effect.material = null
+				effect.visible = false
+		for transient in _active_transient_skill_effects.duplicate():
+			if is_instance_valid(transient):
+				transient.queue_free()
+		_active_transient_skill_effects.clear()
+		if is_instance_valid(ui_container):
+			ui_container.visible = false
+		return
+
+	if is_instance_valid(ui_container):
+		ui_container.visible = _render_visible
+	setup_layered_paper_dolls()
+	sync_animation()
+
+
+func is_afk_visual_suspended() -> bool:
+	return _afk_visual_suspended
+
 
 func is_entity_moving() -> bool:
 	return false
@@ -457,6 +500,8 @@ func is_riding_mecha() -> bool:
 	return "summoned_horse_uid" in data_model and data_model.summoned_horse_uid != -1
 
 func setup_layered_paper_dolls_initial_async() -> void :
+	if _afk_visual_suspended:
+		return
 	if data_model.transform_type > 0:
 		setup_layered_paper_dolls()
 		return
@@ -549,6 +594,8 @@ func setup_layered_paper_dolls_initial_async() -> void :
 	_refresh_appearance_visibility()
 
 func setup_layered_paper_dolls() -> void :
+	if _afk_visual_suspended:
+		return
 
 	if data_model.transform_type > 0:
 		_ensure_transform_sprite()
@@ -693,6 +740,8 @@ func update_paper_doll_part(part_index: int, new_item_id: int) -> void :
 	sync_animation()
 
 func sync_animation() -> void :
+	if _afk_visual_suspended:
+		return
 	if not is_instance_valid(doll_engine) or not doll_engine.has_method("update_animation"): return
 
 
@@ -1026,6 +1075,8 @@ func _ensure_name_tag() -> void :
 		add_child(chat_bubble_timer)
 
 func _ensure_effects() -> void :
+	if _afk_visual_suspended:
+		return
 	if not is_instance_valid(mecha_recover_effect):
 		mecha_recover_effect = AnimatedSprite2D.new()
 		mecha_recover_effect.name = "MechaRecoverEffect"
