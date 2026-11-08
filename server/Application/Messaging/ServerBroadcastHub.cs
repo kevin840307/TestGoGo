@@ -263,12 +263,27 @@ public sealed class ServerBroadcastHub
     /// Keeps world chat, party, private responses and commerce independent
     /// from proximity filtering.</summary>
     public void PublishToPlayerObservers(
-        Guid sourceConnectionId, object packet)
+        Guid sourceConnectionId,
+        object packet,
+        Guid exceptConnectionId = default)
     {
-        foreach (var observer in _playerAoi.ObserversOf(sourceConnectionId))
+        foreach (var observer in
+                 _playerAoi.ObserversOf(
+                     sourceConnectionId))
+        {
+            if (observer == exceptConnectionId)
+                continue;
+
             // A simultaneous AOI exit may invalidate a copied recipient list.
-            if (_playerAoi.IsVisible(observer, sourceConnectionId))
-                PublishToConnection(observer, packet);
+            if (_playerAoi.IsVisible(
+                    observer,
+                    sourceConnectionId))
+            {
+                PublishToConnection(
+                    observer,
+                    packet);
+            }
+        }
     }
 
     public void PublishToWorldEntityObservers(
