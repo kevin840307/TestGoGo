@@ -21,7 +21,9 @@ func _ready() -> void:
 	assert(int(multibox["background_fps"]) < int(balanced["background_fps"]))
 	assert(int(multibox["full_monster_budget"]) < int(balanced["full_monster_budget"]))
 	assert(bool(multibox["simplify_other_players"]))
+	assert(bool(multibox["use_primitive_monsters"]))
 	assert(bool(multibox["hide_far_noncombat_monsters"]))
+	assert(not bool(balanced["use_primitive_monsters"]))
 
 	assert(int(pvp["full_player_budget"]) >= int(balanced["full_player_budget"]))
 	assert(int(pvp["full_monster_budget"]) <= int(balanced["full_monster_budget"]))
@@ -45,6 +47,7 @@ func _ready() -> void:
 	)
 	assert(not bool(forced_off["simplify_other_players"]))
 	assert(not bool(forced_off["simplify_noncritical_monsters"]))
+	assert(not bool(forced_off["use_primitive_monsters"]))
 
 	var forced_on := ClientPerformanceProfile.apply_visual_overrides(
 		balanced,
@@ -53,5 +56,6 @@ func _ready() -> void:
 	)
 	assert(bool(forced_on["simplify_other_players"]))
 	assert(bool(forced_on["simplify_noncritical_monsters"]))
+	assert(not bool(forced_on["use_primitive_monsters"]))
 
 	print("PASS: client performance profiles preserve player-first combat priorities and visual overrides")
