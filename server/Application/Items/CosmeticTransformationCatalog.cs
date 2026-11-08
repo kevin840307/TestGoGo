@@ -112,7 +112,7 @@ public static class CosmeticTransformationCatalog
         {
             if (!WafuuByRace.TryGetValue(
                     race,
-                    out targetItemIds!))
+                    out targetItemIds))
             {
                 return null;
             }
