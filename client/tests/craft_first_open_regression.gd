@@ -65,15 +65,31 @@ func _run() -> void:
 	) as Control
 	await crafting_panel.prepare_static_tree_async([])
 	var tree: Tree = crafting_panel.get_node("RecipeTree") as Tree
-	var old_root: TreeItem = tree.get_root()
+	var old_root_id: int = tree.get_root().get_instance_id()
 	crafting_panel.call("update_ui")
-	_check(tree.get_root() == old_root,
+	_check(tree.get_root().get_instance_id() == old_root_id,
 		"reopening with no filter refreshes availability without rebuilding cached Tree")
 	var search: LineEdit = crafting_panel.get_node("SearchInput") as LineEdit
 	search.text = "deliberate_filter"
 	crafting_panel.call("update_ui")
-	_check(tree.get_root() != old_root,
+	_check(tree.get_root().get_instance_id() != old_root_id,
 		"an explicit search can still rebuild the filtered Tree")
+
+	# Exercise the asynchronous first-use state machine without reading
+	# the real Recipe.json or touching network packets.
+	craft.set("_static_prepared", true)
+	craft.set("_cached_recipe_data", [])
+	await craft.prepare_initial_with_progress_async()
+	_check(bool(craft.is_initial_prepared()),
+		"first-open build reaches prepared state when content is ready")
+	_check(not bool(craft.is_initial_preparing()),
+		"first-open progress task clears its in-progress flag")
+	_check(not overlay.visible,
+		"first-open progress panel hides after successful initialization")
+	var completed_root_id: int = tree.get_root().get_instance_id()
+	await craft.prepare_initial_with_progress_async()
+	_check(tree.get_root().get_instance_id() == completed_root_id,
+		"subsequent opening skips static initialization")
 
 	# Protect both former eager paths against future regressions.
 	# They should neither preload the craft scene during login nor build the
