@@ -1310,6 +1310,101 @@ public sealed class PacketRouter
                     ];
                 }
 
+                var recoveredBox =
+                    RecoveredBoxCatalog.Resolve(
+                        _current,
+                        itemIndex);
+
+                if (recoveredBox is not null)
+                {
+                    var grants = recoveredBox.Rewards
+                        .Select(reward =>
+                            new FixedRewardGrant(
+                                reward.ItemIndex,
+                                reward.Kind,
+                                1,
+                                reward.Part,
+                                reward.Damage))
+                        .ToArray();
+
+                    var opened =
+                        _store.OpenFixedRewardBundle(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            itemIndex,
+                            grants);
+
+                    if (!opened.Success)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = opened.Message
+                            }
+                        ];
+                    }
+
+                    var assets =
+                        _store.GetCharacterAssets(
+                            accountId,
+                            state.CharacterId.Value);
+
+                    var packets = new List<object>
+                    {
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        }
+                    };
+
+                    if (recoveredBox.Rewards.Any(x =>
+                            x.Kind == AssetPurchaseKind.Equipment))
+                    {
+                        packets.Add(new
+                        {
+                            Type = "EquipSync",
+                            Equips = assets.Equips,
+                            MaxSize = assets.EquipMaxSize
+                        });
+                    }
+
+                    if (recoveredBox.Rewards.Any(x =>
+                            x.Kind == AssetPurchaseKind.HorseEquipment))
+                    {
+                        packets.Add(new
+                        {
+                            Type = "HorseSync",
+                            Horses = assets.Horses,
+                            HorseEquips = assets.HorseEquips,
+                            MaxHorseEquipSize =
+                                assets.HorseEquipMaxSize
+                        });
+                    }
+
+                    packets.Add(
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex));
+
+                    packets.Add(new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message =
+                            "開箱獲得：" +
+                            string.Join(
+                                "、",
+                                recoveredBox.Rewards
+                                    .Select(x => x.Name))
+                    });
+
+                    return packets;
+                }
+
                 if (itemIndex == 2301)
                 {
                     var expanded =
