@@ -73,6 +73,7 @@ if (args.Length != 0)
             ConcurrencySmokeTests.Run(
                 Directory.GetCurrentDirectory());
             EconomyConcurrencySmokeTests.Run();
+            EconomyRequestGuardSmokeTests.Run();
             AssetMutationConcurrencySmokeTests.Run();
             CrossFeatureConcurrencySmokeTests.Run();
             Console.WriteLine("Concurrency smoke passed.");
@@ -110,6 +111,7 @@ WorldEntitySpatialAoiSmokeTests.Run();
 MapAiOwnerSpatialIndexSmokeTests.Run();
 ConcurrencySmokeTests.Run(repoRoot);
 EconomyConcurrencySmokeTests.Run();
+EconomyRequestGuardSmokeTests.Run();
 AssetMutationConcurrencySmokeTests.Run();
 CrossFeatureConcurrencySmokeTests.Run();
 PlayerShopAoiSmokeTests.Run(repoRoot);
