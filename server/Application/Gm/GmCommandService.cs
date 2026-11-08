@@ -156,7 +156,15 @@ public sealed class GmCommandService
         session.CurrentMapId = mapId;
         session.LastX = x;
         session.LastY = y;
+        session.PositionDirty = false;
+        session.LastPositionPersistAt =
+            DateTimeOffset.UtcNow;
         session.PendingMapSpawn = true;
+        session.WorldReady = false;
+        session.LoadedMonsterMapId = 0;
+        session.WorldSnapshotRetriesRemaining = 0;
+        session.PetTargets.Clear();
+        session.PetOutOfRangeSince.Clear();
         session.Monsters.Clear();
 
         return
