@@ -5,6 +5,7 @@ import json
 import mimetypes
 import re
 import sys
+import threading
 import traceback
 import urllib.parse
 from http import HTTPStatus
@@ -34,6 +35,7 @@ class EditorApplication:
         self.assets = AssetRepository(paths, backups)
         self.health = HealthRepository(paths, self.enemies, self.maps, self.quests, self.skills)
         self.history = HistoryRepository(paths, backups)
+        self.mutation_lock = threading.RLock()
         self.web_root = Path(__file__).resolve().parent / "web"
 
 
@@ -76,6 +78,8 @@ class EditorHandler(BaseHTTPRequestHandler):
 
     def _json_body(self) -> Any:
         length = int(self.headers.get("Content-Length") or 0)
+        if length < 0:
+            raise ValueError("Content-Length 不可為負數")
         if length > 30 * 1024 * 1024:
             raise ValueError("Request 太大")
         raw = self.rfile.read(length) if length else b"{}"
@@ -178,10 +182,24 @@ class EditorHandler(BaseHTTPRequestHandler):
                 self._send_json(self.app.maps.get_terrain(map_id, x, y))
                 return
             if match := re.fullmatch(r"/api/maps/(\d+)/enemies", path):
-                self._send_json(self.app.maps.get_enemy_spawns(int(match.group(1))))
+                map_id = int(match.group(1))
+                with self.app.mutation_lock:
+                    items = self.app.maps.get_enemy_spawns(map_id)
+                    revision = self.app.maps.spawn_revision(map_id, "enemies")
+                if query.get("envelope", ["0"])[0] in {"1", "true", "yes"}:
+                    self._send_json({"items": items, "revision": revision})
+                else:
+                    self._send_json(items)
                 return
             if match := re.fullmatch(r"/api/maps/(\d+)/npcs", path):
-                self._send_json(self.app.maps.get_npc_spawns(int(match.group(1))))
+                map_id = int(match.group(1))
+                with self.app.mutation_lock:
+                    items = self.app.maps.get_npc_spawns(map_id)
+                    revision = self.app.maps.spawn_revision(map_id, "npcs")
+                if query.get("envelope", ["0"])[0] in {"1", "true", "yes"}:
+                    self._send_json({"items": items, "revision": revision})
+                else:
+                    self._send_json(items)
                 return
             if path == "/api/scripts":
                 self._send_json(self.app.quests.list(query.get("q", [""])[0]))
@@ -201,6 +219,9 @@ class EditorHandler(BaseHTTPRequestHandler):
                 rel = query.get("path", [""])[0]
                 file_path, mime = self.app.assets.get_file(rel)
                 self._send_bytes(file_path.read_bytes(), mime, cache="private, max-age=30")
+                return
+            if path.startswith("/api/"):
+                self._send_json({"error": "找不到 API"}, 404)
                 return
             self._serve_static(path)
         except Exception as exc:
@@ -272,24 +293,46 @@ class EditorHandler(BaseHTTPRequestHandler):
             if match := re.fullmatch(r"/api/maps/(\d+)/enemies", path):
                 if method == "DELETE":
                     raise ValueError("不支援直接 DELETE；請 PUT 新的出生點清單")
+                map_id = int(match.group(1))
+                envelope = isinstance(body, dict)
                 items = body if isinstance(body, list) else body.get("items", [])
-                report = self.app.health.validate_map_items(int(match.group(1)), "enemies", items)
-                if report["errors"]:
-                    raise ValueError("地圖驗證失敗：" + "；".join(x["message"] for x in report["errors"][:5]))
-                result = self.app.maps.save_enemy_spawns(int(match.group(1)), items)
+                expected_revision = str(body.get("expectedRevision", "")) if envelope else ""
+                with self.app.mutation_lock:
+                    current_revision = self.app.maps.spawn_revision(map_id, "enemies")
+                    if expected_revision and expected_revision != current_revision:
+                        raise ValueError(
+                            "此地圖怪物資料已被其他 Editor 分頁或程序修改；"
+                            "請先重新整理地圖，再重新套用本次修改"
+                        )
+                    report = self.app.health.validate_map_items(map_id, "enemies", items)
+                    if report["errors"]:
+                        raise ValueError("地圖驗證失敗：" + "；".join(x["message"] for x in report["errors"][:5]))
+                    result = self.app.maps.save_enemy_spawns(map_id, items)
+                    revision = self.app.maps.spawn_revision(map_id, "enemies")
                 self.app.health.invalidate()
-                self._send_json(result)
+                self._send_json({"items": result, "revision": revision} if envelope else result)
                 return
             if match := re.fullmatch(r"/api/maps/(\d+)/npcs", path):
                 if method == "DELETE":
                     raise ValueError("不支援直接 DELETE；請 PUT 新的 NPC 清單")
+                map_id = int(match.group(1))
+                envelope = isinstance(body, dict)
                 items = body if isinstance(body, list) else body.get("items", [])
-                report = self.app.health.validate_map_items(int(match.group(1)), "npcs", items)
-                if report["errors"]:
-                    raise ValueError("地圖驗證失敗：" + "；".join(x["message"] for x in report["errors"][:5]))
-                result = self.app.maps.save_npc_spawns(int(match.group(1)), items)
+                expected_revision = str(body.get("expectedRevision", "")) if envelope else ""
+                with self.app.mutation_lock:
+                    current_revision = self.app.maps.spawn_revision(map_id, "npcs")
+                    if expected_revision and expected_revision != current_revision:
+                        raise ValueError(
+                            "此地圖 NPC 資料已被其他 Editor 分頁或程序修改；"
+                            "請先重新整理地圖，再重新套用本次修改"
+                        )
+                    report = self.app.health.validate_map_items(map_id, "npcs", items)
+                    if report["errors"]:
+                        raise ValueError("地圖驗證失敗：" + "；".join(x["message"] for x in report["errors"][:5]))
+                    result = self.app.maps.save_npc_spawns(map_id, items)
+                    revision = self.app.maps.spawn_revision(map_id, "npcs")
                 self.app.health.invalidate()
-                self._send_json(result)
+                self._send_json({"items": result, "revision": revision} if envelope else result)
                 return
             if match := re.fullmatch(r"/api/maps/(\d+)/snap-points", path):
                 if method == "DELETE":
