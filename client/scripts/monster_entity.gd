@@ -240,11 +240,16 @@ func _on_screen_entered() -> void :
 	if is_instance_valid(sprite):
 		if not sprite.is_playing():
 			sprite.play()
+	if is_instance_valid(target_indicator) and target_indicator.visible:
+		if not target_indicator.is_playing():
+			target_indicator.play()
 
 func _on_screen_exited() -> void :
 	_is_on_screen = false
 	if is_instance_valid(sprite) and sprite.is_playing():
 		sprite.pause()
+	if is_instance_valid(target_indicator) and target_indicator.is_playing():
+		target_indicator.pause()
 
 func _exit_tree() -> void :
 	_clear_authoritative_visual_correction()
@@ -447,30 +452,8 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 			bg_texture_rect.visible = false
 
 
-	if not is_instance_valid(target_indicator):
-		target_indicator = AnimatedSprite2D.new()
-		target_indicator.name = "TargetIndicator"
-		target_indicator.visible = false
-		target_indicator.z_index = 80
-		if is_instance_valid(ui_container):
-			ui_container.add_child(target_indicator)
-
-		if EffectLoader:
-			var frames = EffectLoader.get_effect("Enemy_Icon/ENEMY_ICON_00")
-			if frames:
-				target_indicator.sprite_frames = frames
-				var anim_name = "default" if frames.has_animation("default") else frames.get_animation_names()[0]
-				target_indicator.animation = anim_name
-				# This indicator starts invisible. Playing hundreds of invisible
-				# AnimatedSprite2Ds wastes per-frame animation work; selection starts
-				# playback on demand in set_target_indicator().
-
-
-	if is_instance_valid(target_indicator):
-		target_indicator.centered = true
-
-		if is_instance_valid(ui_container):
-			target_indicator.position = Vector2(ui_container.size.x / 2.0, -25.0)
+	# Delay creating the invisible target icon until the monster actually
+	# becomes a target. Most map monsters never need an icon node.
 
 	if extra_data.has("MaxHP") and extra_data.has("CurrentHP"):
 		max_hp = extra_data["MaxHP"]
@@ -971,7 +954,27 @@ func _on_animation_finished() -> void :
 	if (sprite.animation.begins_with("HIT") or sprite.animation.begins_with("ATTACK")) and current_hp > 0:
 		_release_combat_action_state()
 
+func _ensure_target_indicator() -> void:
+	if is_instance_valid(target_indicator) or not is_instance_valid(ui_container):
+		return
+	target_indicator = AnimatedSprite2D.new()
+	target_indicator.name = "TargetIndicator"
+	target_indicator.visible = false
+	target_indicator.z_index = 80
+	target_indicator.centered = true
+	target_indicator.position = Vector2(ui_container.size.x / 2.0, -25.0)
+	ui_container.add_child(target_indicator)
+	if EffectLoader:
+		var frames = EffectLoader.get_effect("Enemy_Icon/ENEMY_ICON_00")
+		if frames:
+			target_indicator.sprite_frames = frames
+			var anim_name = "default" if frames.has_animation("default") else frames.get_animation_names()[0]
+			target_indicator.animation = anim_name
+
+
 func set_target_indicator(has_target: bool) -> void :
+	if has_target and not is_instance_valid(target_indicator):
+		_ensure_target_indicator()
 	if is_instance_valid(target_indicator):
 		if OS.is_debug_build() and target_indicator.visible != has_target:
 			# Keep the first-move latency distinct from a chase packet gap.
@@ -979,7 +982,7 @@ func set_target_indicator(has_target: bool) -> void :
 			_debug_aggro_started_ms = Time.get_ticks_msec() if has_target else 0
 		target_indicator.visible = has_target
 		if has_target:
-			if not target_indicator.is_playing():
+			if _is_on_screen and not target_indicator.is_playing():
 				target_indicator.play()
 		elif target_indicator.is_playing():
 			# A deselected monster must not animate an invisible target marker.
