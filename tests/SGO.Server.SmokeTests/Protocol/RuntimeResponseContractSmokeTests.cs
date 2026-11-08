@@ -343,7 +343,13 @@ internal static class RuntimeResponseContractSmokeTests
             actualRequestType == requestType &&
             actualCode == code &&
             !string.IsNullOrWhiteSpace(message),
-            description);
+            description +
+            (actualRequestType == requestType &&
+             actualCode == code &&
+             !string.IsNullOrWhiteSpace(message)
+                ? ""
+                : $" (expectedType={requestType}, actualType={actualRequestType}, " +
+                  $"expectedCode={code}, actualCode={actualCode}, message={message})"));
     }
 
     private static JsonElement FindPacket(
