@@ -4877,6 +4877,39 @@ public sealed class SqliteGameStore : IGameStore
         return (true, "抽獎成功", rewardUid);
     }
 
+    public (bool Success, string Message, long RewardUid) OpenFixedRewardBox(
+        long accountId,
+        long dbid,
+        long boxUid,
+        int boxItemIndex,
+        int rewardItemIndex,
+        AssetPurchaseKind rewardKind,
+        int rewardCount = 1,
+        int rewardPart = 255,
+        int rewardDamage = 0)
+    {
+        var result = OpenDoll(
+            accountId,
+            dbid,
+            boxUid,
+            boxItemIndex,
+            rewardItemIndex,
+            rewardKind,
+            rewardCount,
+            rewardPart,
+            rewardDamage);
+
+        if (result.Success)
+            return (true, "開箱成功", result.RewardUid);
+
+        return (
+            false,
+            result.Message
+                .Replace("娃娃", "寶箱", StringComparison.Ordinal)
+                .Replace("抽獎", "開箱", StringComparison.Ordinal),
+            result.RewardUid);
+    }
+
     public long AddEquipment(long accountId, long dbid, int itemIndex, int part = 255, int damage = 0, int color = 0)
     {
         using var db = Open();
