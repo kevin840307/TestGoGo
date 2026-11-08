@@ -82,8 +82,51 @@ func _run() -> void:
 	if is_instance_valid(skill_card_node):
 		skill_card_node.free()
 
+	# Synthetic adjacent atlas cells: transparent HIT corners must not
+	# sample the opaque neighboring frame, even on the very first hit.
+	var atlas_image := Image.create(4, 2, false, Image.FORMAT_RGBA8)
+	atlas_image.fill(Color(0, 0, 0, 0))
+	atlas_image.set_pixel(1, 1, Color(1, 0, 0, 1))
+	for y in range(2):
+		for x in range(2, 4):
+			atlas_image.set_pixel(x, y, Color(0, 1, 0, 1))
+	var source_atlas: ImageTexture = ImageTexture.create_from_image(atlas_image)
+	var clipped_hit: AtlasTexture = MonsterLoader.make_clipped_frame_texture(
+		source_atlas, Rect2(0, 0, 2, 2), Vector2(3, 7)
+	)
+	_check(clipped_hit.filter_clip and clipped_hit.region == Rect2(0, 0, 2, 2),
+		"monster HIT atlas region clips neighboring frame colors")
+	_check(clipped_hit.get_meta("old_offset", Vector2.ZERO) == Vector2(3, 7),
+		"clipped HIT frame retains original recovered SPR origin")
+	var hit_image: Image = clipped_hit.get_image()
+	_check(hit_image != null and hit_image.get_width() == 2 and
+		hit_image.get_height() == 2 and
+		hit_image.get_pixel(0, 0).a < 0.01 and
+		hit_image.get_pixel(1, 1).r > 0.9,
+		"monster HIT atlas crop retains transparency and foreground color")
+	# Local client PNGs are intentionally excluded by Git. Exercise
+	# production HIT frames as well when the full media set is installed.
+	if ResourceLoader.exists("res://Assets/Monsters/EN004A.png"):
+		var recovered: SpriteFrames = MonsterLoader.get_monster_frames("EN004A", true)
+		_check(recovered != null, "local recovered monster atlas loads")
+		if recovered:
+			var checked_hits: int = 0
+			for anim in recovered.get_animation_names():
+				if not str(anim).begins_with("HIT_"):
+					continue
+				for frame_id in range(recovered.get_frame_count(anim)):
+					var hit_frame := recovered.get_frame_texture(anim, frame_id) as AtlasTexture
+					_check(hit_frame != null and hit_frame.filter_clip,
+						"recovered %s HIT frame %d clips adjacent atlas pixels" % [anim, frame_id])
+					checked_hits += 1
+			_check(checked_hits > 0, "local monster atlas contains HIT frames")
+	else:
+		print("[RENDER_RESOURCE_NOTE] Monster PNG not in Git; local HIT alpha pixels require asset-enabled test")
+
 	var monster: MonsterEntity = MONSTER_SCENE.instantiate() as MonsterEntity
 	get_tree().root.add_child(monster)
+	_check(monster.sprite.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST,
+		"monster pixel sprite uses nearest-neighbor filtering to avoid atlas edge bleed")
 	_check(not is_instance_valid(monster.target_indicator),
 		"idle monster allocates no hidden target AnimatedSprite2D")
 	monster.set_target_indicator(false)
