@@ -1840,7 +1840,8 @@ public sealed class PacketRouter
                         accountId,
                         state.CharacterId.Value,
                         itemUid,
-                        horseCard.ItemIndex,
+                        horseCard.SourceItemIndex,
+                        horseCard.HorseIndex,
                         horseCard.Name,
                         horseCard.HorseType,
                         horseCard.MaxBattery);
@@ -1851,7 +1852,7 @@ public sealed class PacketRouter
                     var activatedHorseUid =
                         Convert.ToInt64(horse["HorseUID"]);
                     var preset = _current.FindHorsePreset(
-                        horseCard.ItemIndex);
+                        horseCard.HorseIndex);
 
                     if (preset is not null)
                     {
