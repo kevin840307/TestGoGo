@@ -355,6 +355,23 @@ class HealthRepository:
         added = moved = changed = 0
         duplicate_keys: dict[tuple[Any, ...], list[int]] = defaultdict(list)
 
+        def int32_field(row_index: int, value: Any, label: str) -> tuple[int, bool]:
+            try:
+                parsed = int(value)
+            except (TypeError, ValueError):
+                self._validation_issue(
+                    errors, row_index, "invalid_integer",
+                    f"{label} 必須是整數",
+                )
+                return 0, False
+            if parsed < MapRepository.INT32_MIN or parsed > MapRepository.INT32_MAX:
+                self._validation_issue(
+                    errors, row_index, "invalid_int32",
+                    f"{label} 超出 int32 範圍：{parsed}",
+                )
+                return 0, False
+            return parsed, True
+
         for row_index, row in enumerate(items):
             try:
                 source_index = int(row.get("index", -1))
@@ -382,8 +399,9 @@ class HealthRepository:
                     seen_source_indexes.add(source_index)
                     seen_existing.add(source_index)
 
-            x = int(row.get("x", 0))
-            y = int(row.get("y", 0))
+            x, x_valid = int32_field(row_index, row.get("x", 0), "X")
+            y, y_valid = int32_field(row_index, row.get("y", 0), "Y")
+            coordinates_valid = x_valid and y_valid
             if old is None:
                 added += 1
             else:
@@ -393,9 +411,20 @@ class HealthRepository:
                     changed += 1
 
             if tab == "enemies":
-                enemy_id = int(row.get("enemyId", 0))
+                enemy_id, enemy_id_valid = int32_field(row_index, row.get("enemyId", 0), "Enemy ID")
+                source_flags, source_flags_valid = int32_field(
+                    row_index,
+                    row.get("sourceFlags", old.get("sourceFlags", 0) if old else 0),
+                    "Enemy sourceFlags",
+                )
+                _ = source_flags, source_flags_valid
                 duplicate_keys[(enemy_id, x, y)].append(row_index)
-                if enemy_id not in enemy_ids:
+                if enemy_id_valid and enemy_id <= 0:
+                    self._validation_issue(
+                        errors, row_index, "invalid_enemy_id",
+                        "Enemy ID 必須大於 0",
+                    )
+                elif enemy_id_valid and enemy_id not in enemy_ids:
                     historical = bool(old and int(old.get("enemyId", 0)) == enemy_id)
                     self._validation_issue(
                         warnings if historical else errors,
@@ -404,18 +433,52 @@ class HealthRepository:
                         f"Enemy {enemy_id} 不存在於 Enemy_Data.csv",
                     )
             else:
+                npc_type_id, npc_type_valid = int32_field(row_index, row.get("npcTypeId", 0), "NPC Type ID")
                 script = str(row.get("script", "")).strip()
-                duplicate_keys[(int(row.get("npcTypeId", 0)), x, y, script.casefold())].append(row_index)
-                if script.casefold() not in scripts:
+                name = str(row.get("name", "")).strip()
+                duplicate_keys[(npc_type_id, x, y, script.casefold())].append(row_index)
+
+                if npc_type_valid and npc_type_id <= 0:
+                    self._validation_issue(
+                        errors, row_index, "invalid_npc_type",
+                        "NPC Type ID 必須大於 0",
+                    )
+                if not script or not name:
+                    self._validation_issue(
+                        errors, row_index, "invalid_npc_text",
+                        "NPC Script 與 Name 不可為空",
+                    )
+                elif "\x00" in script or "\x00" in name:
+                    self._validation_issue(
+                        errors, row_index, "invalid_npc_text",
+                        "NPC Script 與 Name 不可包含 NUL 字元",
+                    )
+                else:
+                    try:
+                        script.encode("ascii")
+                    except UnicodeEncodeError:
+                        self._validation_issue(
+                            errors, row_index, "invalid_npc_encoding",
+                            "NPC Script 必須可用 ASCII 編碼",
+                        )
+                    try:
+                        name.encode("cp950")
+                    except UnicodeEncodeError:
+                        self._validation_issue(
+                            errors, row_index, "invalid_npc_encoding",
+                            "NPC Name 必須可用 CP950 編碼",
+                        )
+
+                if script and script.casefold() not in scripts:
                     historical = bool(old and str(old.get("script", "")).strip().casefold() == script.casefold())
                     self._validation_issue(
                         warnings if historical else errors,
                         row_index,
                         "missing_npc_script",
-                        f"NPC Script {script or '(empty)'} 不存在",
+                        f"NPC Script {script} 不存在",
                     )
 
-            if blocking is not None:
+            if blocking is not None and coordinates_valid:
                 terrain = self.maps._terrain_from_blocking(blocking, x, y)
                 if not terrain.get("walkable"):
                     historical = bool(
