@@ -41,6 +41,7 @@ tests/SGO.Server.SmokeTests/
   Integration/
     ConcurrencySmokeTests.cs
     EconomyConcurrencySmokeTests.cs
+    MarketplaceResponseContractSmokeTests.cs
     TradeTerminalRaceSmokeTests.cs
     MonsterConcurrencySmokeTests.cs
     SharedMapAiConcurrencySmokeTests.cs
@@ -58,10 +59,13 @@ Protocol 動態 action 也已獨立化：`DynamicActionSchemaCoverageSmokeTests`
 
 動態 Server→Client payload 也不再只靠 source grep：`RuntimeResponseContractSmokeTests` 會對真 Router/SQLite 產生的 LoginResponse 與角色 bootstrap 做 JSON runtime 型別驗證，涵蓋 Inventory/Equip/Pet/Horse/Skill/Club/Buff/Quest 的 Dictionary/array 欄位；AUTH_REQUIRED、INVALID_PACKET、WORLD_REQUIRED、UNHANDLED_PACKET 四種失敗也統一驗證為 typed `PacketError`。
 
+多人交易/玩家商店的動態 Dictionary 另外由 `MarketplaceResponseContractSmokeTests` 驗證：TradeSync 的雙方視角與 lock/money state、ShopSync/ShopViewResponse 的 listing 欄位與寵物 nested ExtraData 都走真 service runtime；Client headless AES dispatcher 也餵入相同類型的 Trade/Shop payload，避免 Server 正確但 Godot 消費型別退化。
+
 重要的多人情境已獨立化：
 
 - `ConcurrencySmokeTests`：10 人同時撿同一掉物只能成功 1 人；重複/並行 FinalConfirm 交易只提交一次；重複 Lock 不會清除已確認狀態。
 - `EconomyConcurrencySmokeTests`：10 個並發請求覆蓋 NPC 購買不得超額扣款/生物品、同 UID 出售只入帳一次、銀行同堆疊搬移守恆、玩家商店 10 人搶 5 件商品只成交 5 次、直接轉帳金額守恆。
+- `MarketplaceResponseContractSmokeTests`：真 TradeService/PlayerShopService + SQLite + broadcast queue；驗證 TradeSync 雙方 My/Other 動態 view、ShopSync/ShopViewResponse 一般物品與寵物 ExtraData，並在 Service 層再做 10 buyer 搶 5 件的競態、金錢/物品守恆與售罄自動關店。
 - `TradeTerminalRaceSmokeTests`：用 DispatchProxy 暫停 DB commit，模擬取消與斷線撞上提交；終態僅能是一次成功，不能先發 Cancel 後發 Success。
 - `ChoiceRewardSmokeTests`：已知 2209 選項驗證、偽造拒絕、重放 UID、10 請求同時領同一寶箱只能成功一次。
 - `MonsterConcurrencySmokeTests`：10 人同時攻擊同一怪物，死亡/掉寶/獎勵不重複。

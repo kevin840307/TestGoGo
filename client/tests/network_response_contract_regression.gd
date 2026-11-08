@@ -17,6 +17,10 @@ var _equip_seen := false
 var _pet_seen := false
 var _horse_seen := false
 var _packet_error_seen := false
+var _trade_seen := false
+var _shop_sync_seen := false
+var _shop_view_seen := false
+var _shop_board_seen := false
 
 
 func _check(ok: bool, description: String) -> void:
@@ -39,6 +43,10 @@ func _run() -> void:
 	NetworkManager.pet_synced.connect(_on_pet_synced)
 	NetworkManager.horse_synced.connect(_on_horse_synced)
 	NetworkManager.system_message_flash_received.connect(_on_system_message)
+	NetworkManager.trade_sync_received.connect(_on_trade_sync)
+	NetworkManager.shop_sync_received.connect(_on_shop_sync)
+	NetworkManager.shop_view_response_received.connect(_on_shop_view)
+	NetworkManager.sync_shop_board_received.connect(_on_shop_board)
 
 	# MaxSize is intentionally omitted: the recovered client must retain the
 	# documented fallback while preserving dynamic item dictionaries.
@@ -105,6 +113,65 @@ func _run() -> void:
 		"MaxHorseEquipSize": 100,
 	})
 	_check(_horse_seen, "HorseSync preserves horse/equipment arrays")
+
+	var general_listing := {
+		"TabType": 0,
+		"UID": 601,
+		"ItemUID": 601,
+		"ItemIndex": 4103,
+		"Count": 2,
+		"Price": 25,
+		"Name": "ContractItem",
+		"InBank": 0,
+		"InShop": 1,
+	}
+	var pet_listing := {
+		"TabType": 2,
+		"UID": 701,
+		"ItemIndex": 45001,
+		"Count": 1,
+		"Price": 40,
+		"Name": "ContractPet",
+		"ExtraData": {
+			"UID": 701,
+			"PETID": 45001,
+			"Name": "ContractPet",
+			"State": 0,
+		},
+	}
+
+	_feed({
+		"Type": "TradeSync",
+		"MyMoney": 35,
+		"OtherMoney": 12,
+		"MyItems": [general_listing, pet_listing],
+		"OtherItems": [],
+		"MyLocked": true,
+		"OtherLocked": false,
+	})
+	_check(_trade_seen, "TradeSync dynamic views reach typed client signal")
+
+	_feed({
+		"Type": "ShopSync",
+		"Items": [general_listing, pet_listing],
+	})
+	_check(_shop_sync_seen, "ShopSync dynamic listings reach client signal")
+
+	_feed({
+		"Type": "ShopViewResponse",
+		"ShopName": "Contract Shop",
+		"OwnerDBID": 88,
+		"Items": [general_listing, pet_listing],
+	})
+	_check(_shop_view_seen, "ShopViewResponse preserves dynamic listings")
+
+	_feed({
+		"Type": "SyncShopBoard",
+		"EntityID": 88,
+		"IsOpen": true,
+		"ShopName": "Contract Shop",
+	})
+	_check(_shop_board_seen, "SyncShopBoard preserves public shop state")
 
 	_feed({
 		"Type": "LoginResponse",
@@ -184,6 +251,62 @@ func _on_horse_synced(horses: Array, horse_equips: Array, max_size: int) -> void
 		"HorseSync dynamic HorseIdx is preserved")
 	_check(horse_equips.size() == 1 and int(horse_equips[0].get("EquipIdx", 0)) == 50293,
 		"HorseSync dynamic EquipIdx is preserved")
+
+
+func _listing(items: Array, tab_type: int) -> Dictionary:
+	for item in items:
+		if item is Dictionary and int(item.get("TabType", -1)) == tab_type:
+			return item
+	return {}
+
+
+func _on_trade_sync(
+		my_money: int,
+		other_money: int,
+		my_items: Array,
+		other_items: Array,
+		my_locked: bool,
+		other_locked: bool) -> void:
+	_trade_seen = true
+	_check(my_money == 35 and other_money == 12,
+		"TradeSync numeric money values are preserved")
+	_check(my_locked and not other_locked,
+		"TradeSync lock booleans are preserved")
+	_check(my_items.size() == 2 and other_items.is_empty(),
+		"TradeSync MyItems/OtherItems perspective is preserved")
+	var general := _listing(my_items, 0)
+	var pet := _listing(my_items, 2)
+	_check(int(general.get("UID", 0)) == 601 and int(general.get("Count", 0)) == 2,
+		"TradeSync general listing identity/count are preserved")
+	_check(int(pet.get("ItemIndex", 0)) == 45001,
+		"TradeSync pet listing identity is preserved")
+	_check(int(pet.get("ExtraData", {}).get("PETID", 0)) == 45001,
+		"TradeSync nested pet ExtraData is preserved")
+
+
+func _on_shop_sync(items: Array) -> void:
+	_shop_sync_seen = true
+	_check(items.size() == 2, "ShopSync keeps heterogeneous listing count")
+	var general := _listing(items, 0)
+	var pet := _listing(items, 2)
+	_check(int(general.get("Price", 0)) == 25 and int(general.get("InShop", 0)) == 1,
+		"ShopSync general listing price/source state are preserved")
+	_check(int(pet.get("Price", 0)) == 40 and int(pet.get("ExtraData", {}).get("UID", 0)) == 701,
+		"ShopSync pet price/nested data are preserved")
+
+
+func _on_shop_view(shop_name: String, owner_dbid: int, items: Array) -> void:
+	_shop_view_seen = true
+	_check(shop_name == "Contract Shop" and owner_dbid == 88,
+		"ShopViewResponse owner identity is preserved")
+	_check(items.size() == 2 and int(_listing(items, 0).get("UID", 0)) == 601,
+		"ShopViewResponse listing payload is preserved")
+
+
+func _on_shop_board(entity_id: int, is_open: bool, shop_name: String) -> void:
+	_shop_board_seen = true
+	_check(entity_id == 88 and is_open and shop_name == "Contract Shop",
+		"SyncShopBoard entity/open/name values are preserved")
 
 
 func _on_system_message(message: String) -> void:

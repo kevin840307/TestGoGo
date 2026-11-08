@@ -86,6 +86,9 @@ internal static class ConcurrencySmokeTests
             store,
             accounts,
             characters);
+
+        MarketplaceResponseContractSmokeTests.Run(
+            repoRoot);
     }
 
     private static void ConcurrentGroundPickup(

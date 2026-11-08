@@ -174,6 +174,28 @@ class SmokeSuiteStructureTests(unittest.TestCase):
                 self.assertIn(f"{name}.Run(", main)
                 self.assertIn(evidence, source)
 
+    def test_marketplace_response_contracts_are_modular_and_concurrent(self):
+        concurrency = (
+            SMOKE / "Integration" / "ConcurrencySmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
+        module = (
+            SMOKE / "Integration" /
+            "MarketplaceResponseContractSmokeTests.cs"
+        )
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn(
+            "MarketplaceResponseContractSmokeTests.Run(",
+            concurrency,
+        )
+        self.assertIn("TradeSyncUsesSymmetricRuntimeViews", source)
+        self.assertIn("PlayerShopViewsPreserveDynamicListings", source)
+        self.assertIn("TenBuyerPlayerShopRaceConservesAssetsAndMoney", source)
+        self.assertIn("TradeSync exposes the same two offers", source)
+        self.assertIn("nested authoritative ExtraData", source)
+        self.assertIn("ten buyers racing five player-shop items", source)
+        self.assertIn("sold-out player shop closes atomically", source)
+
     def test_session_lifecycle_suite_covers_position_and_presence_races(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = SMOKE / "Integration" / "SessionLifecycleSmokeTests.cs"
