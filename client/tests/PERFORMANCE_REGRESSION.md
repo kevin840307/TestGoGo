@@ -1,5 +1,45 @@
 # SGO Client Performance Regression Checks
 
+## Login input startup smoothness (no credential logging)
+
+`login_screen.gd` previously rewrote every LineEdit's `text` and
+caret position on **every** text_changed event even when all typed
+characters were valid ASCII. It now sanitizes and rewrites **only if**
+an invalid character was actually removed. Existing allowed character
+rules, focus behavior, account suggestions and login request packets are
+unchanged.
+
+The login background OGV previously began looping in `_ready()`
+before the account form was visible, consuming video decoding through
+the expensive craft/resource prewarm. The video now starts near the END
+of startup prewarm, while the existing LoadingOverlay is still covering
+the account form; the login BGM is also loaded/started there. Two
+process frames can render before the original one-second login fade
+reveals the editable form. Successful login stops unnecessary video
+decoding (failure keeps the login background working). No additional
+post-reveal heavy prewarm was added.
+
+Debug builds emit `[LOGIN_STARTUP_FRAME_GAP]` for frames >=50 ms
+within the first six seconds after the account form is revealed, up to
+12 entries. This records only elapsed frame time, whether the
+background video is playing, whether a login input is focused, and
+existing focus/power-save state. **Do not log username/password text
+or individual keystrokes.** Compare focused samples only, and
+distinguish background FPS throttling from actual foreground stalls.
+
+```powershell
+godot --headless --path client --script res://tests/login_input_startup_regression.gd
+godot --headless --path client --script res://tests/startup_loading_regression.gd
+godot --headless --path client --script res://tests/smooth_loading_bar_regression.gd
+```
+
+Manual check: cold startup -> loading bar -> username/password screen,
+type quickly immediately during the first six seconds, switch focus
+between account/password, submit invalid credentials then retry, and
+submit valid credentials to character select. Verify correct caret,
+ASCII input handling, account suggestions, login music, moving
+background video, and responsive typing; compare new startup-gap logs.
+
 ## Initial black-screen / craft prewarm loading bar
 
 The entry scene now shows the **existing LoadingOverlay, ProgressBar and a
