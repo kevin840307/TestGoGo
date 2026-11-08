@@ -181,6 +181,10 @@ func request_pickup() -> void :
 		if player.get("is_dead") or player.get("is_action_locked") or (player.get("data_model") and player.data_model.get("is_shop_open")):
 			return
 
+	# Ground-item pickup may start its own approach navigation. Stop
+	# cursor-follow walking first so it cannot immediately repath away.
+	if is_instance_valid(player) and player.has_method("cancel_autorun_tracking"):
+		player.cancel_autorun_tracking(true)
 	set_meta("is_requesting", true)
 
 
