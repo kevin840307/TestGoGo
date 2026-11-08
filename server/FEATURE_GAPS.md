@@ -39,13 +39,18 @@
 | M-06 | TECH_DEBT | `SqliteGameStore.cs` 與 `SmokeTests/Program.cs` 仍偏大。先分小模組/Fixture，待 CI 稳定且交易 contract PASS 後再按領域拆 store。 | 不改原封包/SQL 語意的逐模組重構，後續必須有全套 regression |
 | M-07 | IMPLEMENTED_UNVERIFIED | `BuyAsset/SellAsset` 的持久層邊界現在拒絕無效數量/負價格，不再把 0 或負數購售量自動改成 1；一般品項 9999 上限、非堆疊品項 1 件上限；購買總價用 long 計算防整數溢位。新增獨立 `Integration/EconomyRequestGuardSmokeTests.cs` 測合法/非法/超量/重放出售與物品、金錢守恆。 | `--suite concurrency` + full + true AES/WebSocket NPC Shop Purchase/Sell 回歸 PASS |
 
+| M-08 | IMPLEMENTED_UNVERIFIED | `WorldEntitySpatialAoi.UpsertEntity` 在位置未變時只更新最新 Spawn factory/state，不重新掃描周圍 observer。持續移動或跨 cell 時仍走完整 enter/exit reconcile。新增 `WorldEntityAoiStationaryRefreshSmokeTests.cs`，覆蓋 1000 次重複狀態更新、後進玩家取得最新資料、同 cell 移動、切圖。 | World suite 真 PASS；量測 50/100 人、500+ 怪物的 AOI update CPU / Tick P95 |
+| M-09 | IMPLEMENTED_UNVERIFIED | 修正 `WorldReady` 舊 DB ground snapshot 與多人新丟物交錯時，舊快照錯誤刪掉新 ground AOI entity 的 race。AOI entity 建立時紀錄單調遞增 generation，DB SELECT 前擷取 version；舊 snapshot 只能清理擷取時已存在的 index。新增 `WorldEntityAoiSnapshotRaceSmokeTests.cs`，重現 A 查快照→B 丟物→A 清理的順序，並驗證後續新快照仍能移除真正過期物。 | World + full + Wire E2E，真多人交錯丟物／WorldReady／回圖；DB 物品/Client AOI known-set 一致 |
+| M-10 | IMPLEMENTED_UNVERIFIED | Godot `network_entity_manager.gd` 針對 queued/deferred 怪物的 MoveEntity 記錄已收到移動標記；較舊的重複 SpawnEntity 不再覆蓋最新 LocX/LocY。新增 `client/tests/aoi_monster_snapshot_order_regression.gd`，覆蓋 Spawn→Move→重複 Spawn、Queue 去重、Despawn、重新進 AOI、換圖清理，並加入 Windows 正常 runner。 | Godot headless + 真 WebSocket／Scene UI 實跑，確認 monster 不跳回舊位置、無幽靈實體 |
+| M-11 | IMPLEMENTED_UNVERIFIED | `DropAssetToGround` 持久層與 `DropItemRequest` 拒絕 count<=0、非單件裝備 count!=1，持久層另拒絕無效 UID/map/NaN 座標，避免非法請求悄悄消耗一件裝備。新增 `GroundDropRequestGuardSmokeTests.cs`，驗證錯誤請求不改 DB、合法部分丟棄、撿回及重複撿取的總數守恆。 | Concurrency + full + AES/WebSocket + Godot 實跑，物品總數不增不減 |
+
 本輪不新增偽裝成功的未支援封包：已實作項目依
 `packet_*_audit.py`、真 Wire、Godot E2E 交叉驗證，
 PayPal/舊服點數仍為 `BLOCKED_EXTERNAL`。
 CI 最新可讀到的 push run
 [42457284437](https://github.com/kevin840307/SGO/actions/runs/42457284437)
 仍是 job `steps=null`，表示未取得 dotnet/Godot 的執行結果；
-**所有本輪新增 C# 程式和測試仍標記 IMPLEMENTED_UNVERIFIED**。
+**所有本輪新增 C# 程式和測試仍標記 IMPLEMENTED_UNVERIFIED**。最新分支也已追加 M-08～M-11；CI Runner 仍無步驟紀錄，不能推定已通過。
 
 ## P0 — 協定、多人一致性、實際驗證
 
