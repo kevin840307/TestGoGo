@@ -6350,12 +6350,36 @@ try
             Convert.ToInt32(sealAfter["MaxHP"]),
         "生命聖印 restores the caster to full HP");
 
+    // EnterMap now shares the authoritative monster runtime with the socket,
+    // but deliberately returns only static NPC packets. Monster SpawnEntity
+    // packets are scoped to nearby WorldReady clients by WorldEntitySpatialAoi.
+    // Requiring a monster packet in EnterMap would reintroduce full-map
+    // broadcasts and undermine the AOI regression tested above.
     var combatSpawns = combat.EnterMap(session, combatMapId);
+    var sharedCombatMonsters = worldRuntime.GetMap(combatMapId).Monsters;
+    Check(sharedCombatMonsters.Count > 0 &&
+          session.Monsters.Count == sharedCombatMonsters.Count &&
+          session.Monsters.All(pair =>
+              sharedCombatMonsters.TryGetValue(pair.Key, out var shared) &&
+              ReferenceEquals(pair.Value, shared)),
+        "monster map sessions reference server-owned shared combat entities");
 
-    Check(session.Monsters.Count > 0 &&
-          combatSpawns.Any(x =>
-              JsonSerializer.Serialize(x).Contains("\"EntityType\":1")),
-        "monster map initializes server-shared combat entities");
+    var visibleCombatMonsters = broadcastHub
+        .VisibleWorldEntities(session.ConnectionId)
+        .Where(entity =>
+            entity.MapId == combatMapId &&
+            entity.EntityType == 1)
+        .ToArray();
+    Check(combatSpawns.Count == world.GetNpcs(combatMapId).Count &&
+          combatSpawns.All(packet =>
+              JsonSerializer.Serialize(packet).Contains(
+                  "\"EntityType\":2")) &&
+          visibleCombatMonsters.Any(entity =>
+              session.Monsters.TryGetValue((int)entity.EntityId, out var monster) &&
+              monster.IsAlive &&
+              JsonSerializer.Serialize(entity.SpawnPacketFactory()).Contains(
+                  "\"EntityType\":1")),
+        "monster map sends NPCs directly and nearby monsters via world AOI");
 
     MonsterConcurrencySmokeTests.Run(
         combat,
