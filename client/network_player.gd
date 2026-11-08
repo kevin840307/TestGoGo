@@ -123,15 +123,6 @@ func _simplified_relation_color() -> Color:
 
 	return Color(0.82, 0.88, 0.98, 1.0)
 
-func _simplified_body_color() -> Color:
-	match _performance_simplified_style:
-		ClientPerformanceProfile.SIMPLIFY_PIXEL_B:
-			return Color(0.28, 0.50, 0.72, 1.0)
-		ClientPerformanceProfile.SIMPLIFY_MINIMAL:
-			return Color(0.62, 0.68, 0.78, 1.0)
-		_:
-			return Color(0.36, 0.62, 0.82, 1.0)
-
 func _simplified_direction_vector() -> Vector2:
 	match current_dir:
 		"1": return Vector2(0.0, 1.0)
@@ -144,59 +135,57 @@ func _simplified_direction_vector() -> Vector2:
 		"8": return Vector2(-0.707, 0.707)
 	return Vector2.DOWN
 
-func _draw_relation_glow(center: Vector2, color: Color) -> void:
-	# Three cheap alpha layers imitate a bright gradient without shaders,
-	# textures or per-player materials.
-	var glow_1 := Color(color.r, color.g, color.b, 0.10)
-	var glow_2 := Color(color.r, color.g, color.b, 0.18)
-	var glow_3 := Color(color.r, color.g, color.b, 0.34)
-	draw_rect(Rect2(center + Vector2(-28, -40), Vector2(56, 76)), glow_1)
-	draw_rect(Rect2(center + Vector2(-24, -36), Vector2(48, 68)), glow_2)
-	draw_rect(Rect2(center + Vector2(-20, -32), Vector2(40, 60)), glow_3, false, 2.0)
 
-func _draw_pixel_human_a(center: Vector2, body: Color, relation: Color, attacking: bool) -> void:
-	var dark := body.darkened(0.38)
-	var skin := Color(0.96, 0.78, 0.62, 1.0)
-	var hair := Color(0.16, 0.20, 0.28, 1.0)
-	_draw_relation_glow(center, relation)
-	draw_rect(Rect2(center + Vector2(-12, -32), Vector2(24, 20)), skin)
-	draw_rect(Rect2(center + Vector2(-12, -36), Vector2(24, 8)), hair)
-	draw_rect(Rect2(center + Vector2(-16, -12), Vector2(32, 28)), body)
-	draw_rect(Rect2(center + Vector2(-20, -8), Vector2(8, 24)), dark)
-	draw_rect(Rect2(center + Vector2(12, -8), Vector2(8, 24)), dark)
-	draw_rect(Rect2(center + Vector2(-12, 16), Vector2(8, 20)), dark)
-	draw_rect(Rect2(center + Vector2(4, 16), Vector2(8, 20)), dark)
-	draw_rect(Rect2(center + Vector2(-8, -24), Vector2(4, 4)), Color(0.05, 0.06, 0.08, 1.0))
-	draw_rect(Rect2(center + Vector2(4, -24), Vector2(4, 4)), Color(0.05, 0.06, 0.08, 1.0))
+func _draw_simplified_player_orb(
+	center: Vector2,
+	relation: Color,
+	attacking: bool,
+	hit: bool
+) -> void:
+	# One elongated, faceted light core for every remote player. The entire
+	# orb (not just its outline) inherits the live party/club/PvP color.
+	# No shader, texture, SpriteFrames or animation timer is required.
+	draw_circle(center, 33.0, Color(relation.r, relation.g, relation.b, 0.10))
+	draw_colored_polygon(
+		PackedVector2Array([
+			center + Vector2(0.0, -36.0),
+			center + Vector2(17.0, -20.0),
+			center + Vector2(22.0, 5.0),
+			center + Vector2(12.0, 24.0),
+			center + Vector2(0.0, 34.0),
+			center + Vector2(-12.0, 24.0),
+			center + Vector2(-22.0, 5.0),
+			center + Vector2(-17.0, -20.0)
+		]),
+		Color(relation.r, relation.g, relation.b, 0.54)
+	)
+	draw_colored_polygon(
+		PackedVector2Array([
+			center + Vector2(0.0, -30.0),
+			center + Vector2(13.0, -17.0),
+			center + Vector2(17.0, 5.0),
+			center + Vector2(9.0, 20.0),
+			center + Vector2(0.0, 27.0),
+			center + Vector2(-9.0, 20.0),
+			center + Vector2(-17.0, 5.0),
+			center + Vector2(-13.0, -17.0)
+		]),
+		relation.lightened(0.22)
+	)
+	var core := Color(1.0, 0.73, 0.70, 1.0) if hit else relation.lightened(0.55)
+	draw_circle(center + Vector2(-1.0, -3.0), 14.0, core)
+	draw_circle(center + Vector2(-5.0, -9.0), 8.0, Color(1.0, 1.0, 1.0, 0.90))
+	draw_rect(Rect2(center + Vector2(-11.0, -17.0), Vector2(5.0, 3.0)), Color.WHITE)
+	draw_rect(Rect2(center + Vector2(8.0, 11.0), Vector2(4.0, 4.0)), relation.darkened(0.18))
 	if attacking:
 		var direction := _simplified_direction_vector()
-		var arm_center := center + direction * 12.0
-		draw_rect(Rect2(arm_center + Vector2(-4, -4), Vector2(8, 20)), relation)
+		draw_line(
+			center + direction * 17.0,
+			center + direction * 30.0,
+			relation.lightened(0.48),
+			4.0
+		)
 
-func _draw_pixel_human_b(center: Vector2, body: Color, relation: Color, attacking: bool) -> void:
-	var dark := body.darkened(0.42)
-	var light := body.lightened(0.28)
-	_draw_relation_glow(center, relation)
-	# More armored/chibi silhouette while keeping exactly the same relation cue.
-	draw_rect(Rect2(center + Vector2(-16, -34), Vector2(32, 16)), dark)
-	draw_rect(Rect2(center + Vector2(-12, -30), Vector2(24, 16)), light)
-	draw_rect(Rect2(center + Vector2(-20, -14), Vector2(40, 28)), body)
-	draw_rect(Rect2(center + Vector2(-24, -8), Vector2(8, 20)), dark)
-	draw_rect(Rect2(center + Vector2(16, -8), Vector2(8, 20)), dark)
-	draw_rect(Rect2(center + Vector2(-14, 14), Vector2(10, 22)), dark)
-	draw_rect(Rect2(center + Vector2(4, 14), Vector2(10, 22)), dark)
-	draw_rect(Rect2(center + Vector2(-4, -34), Vector2(8, 8)), relation)
-	if attacking:
-		var direction := _simplified_direction_vector()
-		var tip := center + direction * 24.0
-		draw_rect(Rect2(tip + Vector2(-3, -3), Vector2(6, 18)), relation.lightened(0.2))
-
-func _draw_minimal_human(center: Vector2, body: Color, relation: Color) -> void:
-	_draw_relation_glow(center, relation)
-	draw_rect(Rect2(center + Vector2(-10, -30), Vector2(20, 20)), body.lightened(0.18))
-	draw_rect(Rect2(center + Vector2(-14, -10), Vector2(28, 28)), body)
-	draw_rect(Rect2(center + Vector2(-10, 18), Vector2(8, 18)), body.darkened(0.4))
-	draw_rect(Rect2(center + Vector2(2, 18), Vector2(8, 18)), body.darkened(0.4))
 
 func _draw() -> void:
 	if not _performance_simplified_visual:
@@ -204,30 +193,27 @@ func _draw() -> void:
 
 	var state := current_state.to_lower()
 	var relation := _simplified_relation_color()
-	var body := _simplified_body_color()
-	if state.begins_with("hit"):
-		body = body.lerp(Color(1.0, 0.32, 0.32, 1.0), 0.58)
-
 	var center := Vector2(0.0, -50.0)
-	var attacking := state.begins_with("attack")
+	var dead := is_dead or state == "death"
+	var attacking := state.begins_with("attack") and not dead
 	if attacking:
 		center += _simplified_direction_vector() * 5.0
 
-	if is_dead or state == "death":
-		draw_set_transform(center + Vector2(0, 24), 0.0, Vector2(1.30, 0.34))
-	else:
+	if dead:
+		# Death is a squashed version of the SAME procedural orb. Never
+		# fall back to the layered character sprites.
+		draw_set_transform(center + Vector2(0.0, 24.0), 0.0, Vector2(1.30, 0.34))
+		_draw_simplified_player_orb(Vector2.ZERO, relation.darkened(0.25), false, false)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		return
 
-	match _performance_simplified_style:
-		ClientPerformanceProfile.SIMPLIFY_PIXEL_B:
-			_draw_pixel_human_b(center if not is_dead else Vector2.ZERO, body, relation, attacking)
-		ClientPerformanceProfile.SIMPLIFY_MINIMAL:
-			_draw_minimal_human(center if not is_dead else Vector2.ZERO, body, relation)
-		_:
-			_draw_pixel_human_a(center if not is_dead else Vector2.ZERO, body, relation, attacking)
+	_draw_simplified_player_orb(
+		center,
+		relation,
+		attacking,
+		state.begins_with("hit")
+	)
 
-	if is_dead or state == "death":
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func setup_layered_paper_dolls() -> void:
 	if not _performance_simplified_visual:
