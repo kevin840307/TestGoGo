@@ -42,9 +42,11 @@ var _login_startup_gap_reports: int = 0
 var _startup_form_interactive: bool = false
 var _startup_video_fallback: bool = false
 var _startup_video_first_frame_seen: bool = false
+var _startup_video_watchdog_scheduled: bool = false
 const LOGIN_STARTUP_MONITOR_SECONDS: float = 6.0
 const LOGIN_STARTUP_GAP_WARN_SECONDS: float = 0.05
 const LOGIN_STARTUP_MAX_GAP_REPORTS: int = 12
+const LOGIN_VIDEO_WATCHDOG_SECONDS: float = 4.0
 
 
 var ascii_regex: RegEx = RegEx.new()
@@ -91,8 +93,8 @@ func use_static_background_after_video_timeout() -> void:
 
 
 func reveal_form_after_warmup() -> void:
-	# No input was possible while the opaque loading overlay covered the
-	# scene. Enable it only after focus, video and rendered frames settle.
+	# Asset/UI preparation is complete. Video FPS, decode readiness and
+	# window focus do NOT block login input.
 	_startup_form_interactive = true
 	user_edit.editable = true
 	password_edit.editable = true
@@ -111,6 +113,29 @@ func warm_background_video() -> void:
 		bg_video.play()
 	else:
 		bg_video.paused = false
+
+
+# Background video failure must never block the login form. Give the
+# decoder a short independent window to produce its first frame, then fall
+# back to the existing static background if it cannot.
+func start_login_video_fallback_watchdog() -> void:
+	if _startup_video_watchdog_scheduled or _startup_video_fallback:
+		return
+	if not is_inside_tree() or not is_instance_valid(bg_video) or bg_video.stream == null:
+		return
+	_startup_video_watchdog_scheduled = true
+	get_tree().create_timer(LOGIN_VIDEO_WATCHDOG_SECONDS).timeout.connect(_on_login_video_watchdog_timeout)
+
+
+func _on_login_video_watchdog_timeout() -> void:
+	_startup_video_watchdog_scheduled = false
+	if not is_inside_tree() or not visible or not _startup_form_interactive:
+		return
+	if is_background_video_frame_ready():
+		return
+	use_static_background_after_video_timeout()
+	if OS.is_debug_build():
+		print("[LOGIN_VIDEO_FALLBACK] reason=no_decoded_frame after_seconds=%.1f nonblocking=true" % LOGIN_VIDEO_WATCHDOG_SECONDS)
 
 
 func stop_background_video() -> void:
