@@ -223,6 +223,9 @@ $previous.Clear()
   Start-Sleep -Milliseconds 1000
  }
 }
+if (-not (Test-Path -LiteralPath $hardwareFile)) {
+ throw "No samples were captured. Ensure the Godot game process stays running and retry."
+}
 $metadata=[ordered]@{
  schema_version=1;run_id=$runId;scenario=$Scenario;target_count=$count
  started_utc=$startedUtc.ToString("o");finished_utc=[DateTime]::UtcNow.ToString("o")
