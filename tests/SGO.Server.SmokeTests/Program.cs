@@ -8452,11 +8452,12 @@ try
     var autoPetHasTarget = session.PetTargets.TryGetValue(
         petCombatUid,
         out var autoTargetId);
+    MonsterRuntimeState? autoTargetMonster = null;
     var autoPetTargetExists =
         autoPetHasTarget &&
         session.Monsters.TryGetValue(
             autoTargetId,
-            out var autoTargetMonster);
+            out autoTargetMonster);
     var autoPetDamagedSelectedTarget =
         autoPetTargetExists &&
         autoPetHpBefore.TryGetValue(
