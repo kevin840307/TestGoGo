@@ -31,6 +31,25 @@ class GroundPickupVisibilityContractTests(unittest.TestCase):
         self.assertIn('Type = "SystemMessageFlash"', handling)
         self.assertIn("if (groundGone)", handling)
 
+    def test_no_cache_missing_item_returns_local_despawn_only_for_ground_ids(self):
+        router = read("server/Application/PacketRouter.cs")
+        start = router.index('            case "PickUpItemRequest":')
+        end = router.index("                var pickupTerrain =", start)
+        fallback = router[start:end]
+        self.assertIn("state.GroundItems.Remove(entityId);", fallback)
+        self.assertIn("entityId >= 6_000_000", fallback)
+        self.assertIn("entityId < 9_000_000", fallback)
+        self.assertIn('Type = "DespawnEntity"', fallback)
+        self.assertIn('Message = "物品已不存在"', fallback)
+
+        wire = read("tests/SGO.Server.WireSmokeTests/Program.cs")
+        self.assertIn(
+            "duplicate pickup returns local DespawnEntity", wire
+        )
+        self.assertIn(
+            "duplicate pickup reports row absent without re-granting", wire
+        )
+
     def test_worldready_snapshot_cannot_recreate_consumed_drop(self):
         aoi = read("server/Application/Messaging/WorldEntitySpatialAoi.cs")
         router = read("server/Application/PacketRouter.cs")
