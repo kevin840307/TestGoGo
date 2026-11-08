@@ -371,7 +371,12 @@ var currentCatalog = new CurrentClientDataCatalog(
                 2256 or
                 15230 or
                 15243 or
-                3239)),
+                3239 or
+                2410 or
+                50012 or
+                50316 or
+                50330 or
+                50340)),
     new[]
     {
         new CurrentSkillDefinition(20101, "Current Skill 20101"),
@@ -2922,6 +2927,15 @@ try
         account.Value,
         id,
         currentCatalog);
+
+    WaspPackageSmokeTests.Run(
+        router,
+        store,
+        session,
+        account.Value,
+        id,
+        currentCatalog,
+        realCurrentCatalog);
 
     var petBeforeLevel = store.GetCharacterAssets(
             account.Value,
