@@ -123,7 +123,9 @@ func _defer_monster_spawn(data: Dictionary) -> void :
 	var entity_id: int = int(data.get("EntityID", 0))
 	if entity_id <= 0:
 		return
-	var cached: Dictionary = data.duplicate(true)
+	# Spawn packets were already copied on receipt. Preserve immutable nested
+	# metadata (ExtraData) by reference instead of recursively cloning it again.
+	var cached: Dictionary = data.duplicate()
 	_monster_spawn_templates[entity_id] = cached
 	_deferred_monster_spawns[entity_id] = cached
 	_queued_spawn_ids.erase(entity_id)
@@ -134,7 +136,7 @@ func _remove_queued_spawn(entity_id: int) -> void :
 		if int(_spawn_queue[index].get("EntityID", 0)) == entity_id:
 			_spawn_queue.remove_at(index)
 
-func _spawn_priority(data: Dictionary) -> float:
+func _spawn_priority(data: Dictionary, player_pos: Variant) -> float:
 	var entity_type: int = int(data.get("EntityType", -1))
 	# Ground items are authoritative interactables and should appear first.
 	if entity_type == 3:
@@ -146,16 +148,18 @@ func _spawn_priority(data: Dictionary) -> float:
 		return -250000000.0
 	if entity_type != 1:
 		return 0.0
-	var player_pos = _get_local_player_position()
 	if player_pos == null:
 		return 0.0
 	return (player_pos as Vector2).distance_squared_to(_monster_packet_position(data))
 
 func _enqueue_spawn_by_priority(data: Dictionary) -> void :
-	var priority: float = _spawn_priority(data)
+	# All comparisons in a single insertion use the same player position. In
+	# large snapshots this avoids repeated GameManager/SceneTree lookups.
+	var player_pos: Variant = _get_local_player_position()
+	var priority: float = _spawn_priority(data, player_pos)
 	var insert_index: int = _spawn_queue.size()
 	for index: int in range(_spawn_queue.size()):
-		if priority < _spawn_priority(_spawn_queue[index]):
+		if priority < _spawn_priority(_spawn_queue[index], player_pos):
 			insert_index = index
 			break
 	_spawn_queue.insert(insert_index, data)
@@ -463,7 +467,9 @@ func _on_entity_despawned(data: Dictionary) -> void :
 func _on_entity_moved(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
 	if _monster_spawn_templates.has(entity_id):
-		var cached: Dictionary = (_monster_spawn_templates[entity_id] as Dictionary).duplicate(true)
+		# Only LocX/LocY change on MoveEntity. A deep clone of ExtraData for every
+		# movement packet is both unnecessary and expensive in crowded maps.
+		var cached: Dictionary = (_monster_spawn_templates[entity_id] as Dictionary).duplicate()
 		cached["LocX"] = float(data.get("X", cached.get("LocX", 0.0)))
 		cached["LocY"] = float(data.get("Y", cached.get("LocY", 0.0)))
 		_monster_spawn_templates[entity_id] = cached
