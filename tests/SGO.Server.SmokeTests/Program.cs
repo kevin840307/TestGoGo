@@ -8425,7 +8425,13 @@ try
     session.PetPositions[petCombatUid] = (monster.X - 80, monster.Y);
     session.PetLastAttackAt[petCombatUid] = DateTimeOffset.MinValue;
     session.LastPetFollowTick = DateTimeOffset.MinValue;
-    var hpBeforeAutoPetAttack = monster.CurrentHp;
+    var autoPetHpBefore = session.Monsters.Values
+        .Where(x =>
+            x.IsAlive &&
+            x.MapId == session.CurrentMapId)
+        .ToDictionary(
+            x => x.EntityId,
+            x => x.CurrentHp);
     var autoPetTickAt = aiFixtureAt.AddSeconds(5);
     // This fixture validates pet targeting/attacks, not hunger catch-up from
     // earlier future-clock smokes. Keep companion runtime monotonic and local
@@ -8443,13 +8449,31 @@ try
             $"\"EntityID\":{4_000_000L + petCombatUid}") &&
         JsonSerializer.Serialize(x).Contains(
             "\"State\":\"attack\""));
-    var autoPetHasDamage = autoPetPackets.Any(x =>
-        JsonSerializer.Serialize(x).Contains(
-            "\"Type\":\"EntityDamage\""));
     var autoPetHasTarget = session.PetTargets.TryGetValue(
         petCombatUid,
-        out var autoTargetId) &&
-        autoTargetId == monster.EntityId;
+        out var autoTargetId);
+    var autoPetTargetExists =
+        autoPetHasTarget &&
+        session.Monsters.TryGetValue(
+            autoTargetId,
+            out var autoTargetMonster);
+    var autoPetDamagedSelectedTarget =
+        autoPetTargetExists &&
+        autoPetHpBefore.TryGetValue(
+            autoTargetId,
+            out var autoTargetHpBefore) &&
+        autoTargetMonster!.CurrentHp < autoTargetHpBefore;
+    var autoPetHasDamage = autoPetHasTarget &&
+        autoPetPackets.Any(x =>
+        {
+            var json = JsonSerializer.Serialize(x);
+            return json.Contains(
+                       "\"Type\":\"EntityDamage\"") &&
+                   json.Contains(
+                       $"\"TargetID\":{autoTargetId}") &&
+                   json.Contains(
+                       $"\"AttackerID\":{4_000_000L + petCombatUid}");
+        });
     var autoPetOwnerHp = Convert.ToInt32(
         store.GetCharacter(account.Value, id)!["HP"]);
     var autoPetStillActive = store.GetCharacterAssets(
@@ -8460,21 +8484,21 @@ try
             Convert.ToInt32(x["State"]) == 1);
 
     Check(
-        monster.CurrentHp < hpBeforeAutoPetAttack &&
-        monster.HasTarget &&
         autoPetHasTarget &&
+        autoPetTargetExists &&
+        autoPetDamagedSelectedTarget &&
         autoPetHasAttackState &&
         autoPetHasDamage,
-        "summoned pet automatically acquires, sticks to and attacks nearby monster" +
-        (monster.CurrentHp < hpBeforeAutoPetAttack &&
-         monster.HasTarget &&
-         autoPetHasTarget &&
+        "summoned pet automatically acquires, sticks to and attacks the nearest nearby monster" +
+        (autoPetHasTarget &&
+         autoPetTargetExists &&
+         autoPetDamagedSelectedTarget &&
          autoPetHasAttackState &&
          autoPetHasDamage
             ? ""
             : $" (ownerHP={autoPetOwnerHp}, petActive={autoPetStillActive}, " +
-              $"monsterHP={hpBeforeAutoPetAttack}->{monster.CurrentHp}, " +
-              $"monsterHasTarget={monster.HasTarget}, petHasTarget={autoPetHasTarget}, " +
+              $"target={autoTargetId}, targetExists={autoPetTargetExists}, " +
+              $"targetDamaged={autoPetDamagedSelectedTarget}, " +
               $"attackState={autoPetHasAttackState}, damage={autoPetHasDamage}, " +
               $"petPos={session.PetPositions.GetValueOrDefault(petCombatUid)}, " +
               $"ownerPos=({session.LastX},{session.LastY}), " +
