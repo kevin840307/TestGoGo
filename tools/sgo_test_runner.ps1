@@ -60,6 +60,7 @@ function Run-WireProbe([int]$players, [string]$dotnetPath) {
     $stdoutPath = Join-Path $wireDir 'server.stdout.log'
     $stderrPath = Join-Path $wireDir 'server.stderr.log'
     $consolePath = Join-Path $wireDir 'wire.console.txt'
+    $probeStderr = Join-Path $wireDir 'wire.stderr.txt'
     $jsonPath = Join-Path $wireDir ("wire-aoi-" + $players + '.json')
     $serverDll = Join-Path $repoRoot 'server\bin\Release\net8.0\SGO.Server.dll'
     if (-not (Test-Path -LiteralPath $serverDll)) {
@@ -134,13 +135,22 @@ function Run-WireProbe([int]$players, [string]$dotnetPath) {
             '--output', $jsonPath
         )
 
-        # The tool emits a large JSON report on stdout. Capture it on disk
-        # rather than flood a double-clicked cmd window.
-        & $dotnetPath @probeArgs > $consolePath 2>&1
-        $probeExit = $LASTEXITCODE
+        # The tool emits large JSON to stdout and phase progress to
+        # stderr. Run it as a separate process so PowerShell 5.1's
+        # ErrorActionPreference=Stop cannot turn native stderr progress
+        # into a NativeCommandError during the load test.
+        $quoteArguments = foreach ($arg in $probeArgs) {
+            if ($arg -match '[\s"]') {
+                '"' + $arg.Replace('"', '\"') + '"'
+            } else { $arg }
+        }
+        $probe = Start-Process -FilePath $dotnetPath -ArgumentList ($quoteArguments -join ' ') -WorkingDirectory $repoRoot -RedirectStandardOutput $consolePath -RedirectStandardError $probeStderr -PassThru -Wait -WindowStyle Hidden
+        $probeExit = $probe.ExitCode
         if ($probeExit -ne 0) {
-            Write-Host "Probe output (last 45 lines): $consolePath" -ForegroundColor Yellow
-            Get-Content $consolePath -Tail 45 | Out-Host
+            Write-Host "Probe progress/errors (last 35 lines): $probeStderr" -ForegroundColor Yellow
+            if (Test-Path $probeStderr) { Get-Content $probeStderr -Tail 35 | Out-Host }
+            Write-Host "Probe output (last 35 lines): $consolePath" -ForegroundColor Yellow
+            if (Test-Path $consolePath) { Get-Content $consolePath -Tail 35 | Out-Host }
             throw "Wire probe failed for $players players (exit $probeExit)."
         }
         if (-not (Test-Path -LiteralPath $jsonPath)) {
