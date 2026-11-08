@@ -15,10 +15,10 @@ class GodotClientBatContract(unittest.TestCase):
         cls.bat = SCRIPT.read_text(encoding="ascii")
 
     def test_launch_menu_and_valid_modes(self):
-        for name in ("all", "render", "focus", "resources", "login", "import", "configure"):
+        for name in ("all", "render", "focus", "resources", "login", "import", "configure", "perf-single", "perf-multi", "perf-report"):
             with self.subTest(mode=name):
                 self.assertIn('"%RUN_MODE%"=="' + name + '"', self.bat)
-        self.assertIn("choice /C 123456PQ /N", self.bat)
+        self.assertIn("choice /C 123456789PQ /N", self.bat)
 
     def test_remembers_user_executable_without_git_tracking(self):
         for token in (
@@ -53,6 +53,20 @@ class GodotClientBatContract(unittest.TestCase):
             ),
             2,
         )
+
+    def test_hardware_benchmark_modes_and_report(self):
+        self.assertIn("if errorlevel 9 goto :perf_report", self.bat)
+        self.assertIn("if errorlevel 8 goto :perf_multi", self.bat)
+        self.assertIn("if errorlevel 7 goto :perf_single", self.bat)
+        self.assertIn("collect_metrics.ps1", self.bat)
+        self.assertIn("generate_report.py", self.bat)
+        self.assertIn("-Scenario", self.bat)
+        self.assertIn('-GodotExe "%GODOT_EXE%"', self.bat)
+        self.assertIn('-ClientPath "%CLIENT%"', self.bat)
+        self.assertIn(r"test-results\performance", self.bat)
+        self.assertIn("start \"\" \"%PERF_ROOT%\\report.html\"", self.bat)
+        self.assertNotIn(" --headless --log-file", self.bat)
+        self.assertIn("exit /b %errorlevel%", self.bat)
 
     def test_failure_does_not_report_pass(self):
         self.assertIn('start "" /wait', self.bat)
