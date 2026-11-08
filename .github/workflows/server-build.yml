@@ -1,9 +1,9 @@
 name: Server build
 on:
   push:
-    paths: ['server/**', 'client/**/*.gd', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/SGO.ItemCoverageReport/**', 'tests/SGO.MappingCoverageReport/**', 'tests/SGO.Server.LoadProbe/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', 'tests/test_packet_log_privacy.py', 'tests/test_client_network_contract.py', 'tests/test_gm_security.py', 'tests/quest_host_audit.py', 'tests/test_quest_host_audit.py', 'tests/test_smoke_suite_structure.py', 'tests/test_load_probe_structure.py', 'tests/test_feature_gap_tracker.py', '.github/workflows/server-build.yml']
+    paths: ['server/**', 'client/**/*.gd', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/SGO.ItemCoverageReport/**', 'tests/SGO.MappingCoverageReport/**', 'tests/SGO.Server.LoadProbe/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', 'tests/test_packet_log_privacy.py', 'tests/test_client_network_contract.py', 'tests/test_gm_security.py', 'tests/test_mall_external_security.py', 'tests/quest_host_audit.py', 'tests/test_quest_host_audit.py', 'tests/test_smoke_suite_structure.py', 'tests/test_load_probe_structure.py', 'tests/test_feature_gap_tracker.py', '.github/workflows/server-build.yml']
   pull_request:
-    paths: ['server/**', 'client/**/*.gd', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/SGO.ItemCoverageReport/**', 'tests/SGO.MappingCoverageReport/**', 'tests/SGO.Server.LoadProbe/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', 'tests/test_packet_log_privacy.py', 'tests/test_client_network_contract.py', 'tests/test_gm_security.py', 'tests/quest_host_audit.py', 'tests/test_quest_host_audit.py', 'tests/test_smoke_suite_structure.py', 'tests/test_load_probe_structure.py', 'tests/test_feature_gap_tracker.py', '.github/workflows/server-build.yml']
+    paths: ['server/**', 'client/**/*.gd', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/SGO.ItemCoverageReport/**', 'tests/SGO.MappingCoverageReport/**', 'tests/SGO.Server.LoadProbe/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', 'tests/test_packet_log_privacy.py', 'tests/test_client_network_contract.py', 'tests/test_gm_security.py', 'tests/test_mall_external_security.py', 'tests/quest_host_audit.py', 'tests/test_quest_host_audit.py', 'tests/test_smoke_suite_structure.py', 'tests/test_load_probe_structure.py', 'tests/test_feature_gap_tracker.py', '.github/workflows/server-build.yml']
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,6 +20,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_packet_log_privacy.py' -v
           python3 -m unittest discover -s tests -p 'test_client_network_contract.py' -v
           python3 -m unittest discover -s tests -p 'test_gm_security.py' -v
+          python3 -m unittest discover -s tests -p 'test_mall_external_security.py' -v
           python3 -m unittest discover -s tests -p 'test_quest_host_audit.py' -v
           python3 -m unittest discover -s tests -p 'test_smoke_suite_structure.py' -v
           python3 -m unittest discover -s tests -p 'test_load_probe_structure.py' -v
