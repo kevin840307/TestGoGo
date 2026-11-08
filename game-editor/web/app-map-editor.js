@@ -170,20 +170,11 @@ function mapBounds(rows=state.mapRows) {
 }
 
 function worldToPercent(x, y, bounds) {
-  return {
-    left: ((Number(x) - bounds.minX) / (bounds.maxX - bounds.minX)) * 100,
-    top: ((Number(y) - bounds.minY) / (bounds.maxY - bounds.minY)) * 100,
-  };
+  return SGOMapMath.worldToPercent(x, y, bounds);
 }
 
 function clientToWorld(clientX, clientY, stage, bounds) {
-  const rect = stage.getBoundingClientRect();
-  const px = Math.max(0, Math.min(1, (clientX - rect.left) / Math.max(1, rect.width)));
-  const py = Math.max(0, Math.min(1, (clientY - rect.top) / Math.max(1, rect.height)));
-  return {
-    x: Math.round(bounds.minX + px * (bounds.maxX - bounds.minX)),
-    y: Math.round(bounds.minY + py * (bounds.maxY - bounds.minY)),
-  };
+  return SGOMapMath.clientToWorld(clientX, clientY, stage.getBoundingClientRect(), bounds);
 }
 
 function setMapSelection(indexes, primary=null) {
@@ -845,17 +836,7 @@ async function addMapRowAt(x, y) {
 }
 
 function generateScatterPoints(centerX, centerY, count, radius) {
-  const points = [];
-  const golden = Math.PI * (3 - Math.sqrt(5));
-  for (let i=0; i<count; i++) {
-    const ratio = Math.sqrt((i + .5) / Math.max(1,count));
-    const angle = i * golden;
-    points.push({
-      x:centerX + Math.cos(angle) * radius * ratio,
-      y:centerY + Math.sin(angle) * radius * ratio,
-    });
-  }
-  return points;
+  return SGOMapMath.generateScatterPoints(centerX, centerY, count, radius);
 }
 
 function armBatchPlacement() {
