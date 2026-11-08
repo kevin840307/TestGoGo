@@ -135,8 +135,61 @@ internal static class SessionIdentityCleanupSmokeTests
                 second),
             "LogoutRequest releases player-shop reservations before identity reset");
 
+        // Simulate persistence left behind by a process crash: the in-memory
+        // shop is gone, but one DB row is still marked InShop=1.
+        const int staleItemIndex = 4103;
+        var staleUid = store.AddInventoryItem(
+            second.AccountId,
+            second.CharacterId,
+            staleItemIndex,
+            1);
+        Check(
+            staleUid > 0,
+            "seed orphaned player-shop row for restart recovery");
+
+        var reserved = store.SetPlayerShopAssetState(
+            second.AccountId,
+            second.CharacterId,
+            staleUid,
+            0,
+            1,
+            true);
+        Check(
+            reserved.Success &&
+            HasReservedShopRows(
+                store,
+                second),
+            "simulate crash leaving durable InShop reservation without memory shop");
+
         broadcasts.Unregister(
             registration.ConnectionId);
+
+        var recoveryRegistration =
+            broadcasts.Register();
+        var recoverySession =
+            new ClientSession
+            {
+                ConnectionId =
+                    recoveryRegistration.ConnectionId
+            };
+
+        LoginAndSelect(
+            router,
+            recoverySession,
+            second);
+
+        Check(
+            !HasReservedShopRows(
+                store,
+                second) &&
+            !playerShop.GetPublicState(
+                second.CharacterId).IsOpen,
+            "character bootstrap recovers orphaned player-shop reservations after restart");
+
+        router.DisconnectPresence(
+            recoverySession);
+        broadcasts.Unregister(
+            recoveryRegistration.ConnectionId);
     }
 
     private static void LoginAndSelect(
