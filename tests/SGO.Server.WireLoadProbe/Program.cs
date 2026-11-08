@@ -16,7 +16,8 @@ foreach (var size in options.Sizes)
             options.SetupConcurrency,
             options.MixedSeconds,
             TimeSpan.FromSeconds(
-                options.TimeoutSeconds)));
+                options.TimeoutSeconds),
+            options.MovePixels));
 }
 
 var report = new
@@ -29,6 +30,7 @@ var report = new
         options.Rounds,
         options.SetupConcurrency,
         options.MixedSeconds,
+        options.MovePixels,
         options.TimeoutSeconds
     },
     Results = results,
@@ -36,6 +38,8 @@ var report = new
     {
         "Uses the same ClientProtocol AES/WebSocket transport as the recovered Godot client.",
         "Movement expects MoveEntity only on ready nearby PlayerSpatialAoi peers, not every same-map client.",
+        "Set --move-pixels 4 to send actual +/-4 pixel SyncPosition changes every round and during MixedSoak; unlike default origin-only SyncPosition this exercises map movement validation.",
+        "Any PositionCorrection in moving mode is a test failure, not a successful movement. Move-pixels should be small enough for the server-authoritative start tile.",
         "Nearby chat expects the sender response plus ready nearby PlayerSpatialAoi peers.",
         "WorldAoi splits every 10/50/100-client run into near/far groups: monster SpawnEntity must reach the near group, leak to zero far clients, then appear when a far client re-enters range.",
         "Round latency is end-to-end fanout completion time, not an in-process router benchmark.",
@@ -75,6 +79,7 @@ internal sealed record Options(
     int Rounds,
     int SetupConcurrency,
     int MixedSeconds,
+    int MovePixels,
     int TimeoutSeconds,
     string? Output)
 {
@@ -90,6 +95,7 @@ internal sealed record Options(
         var rounds = 3;
         var setupConcurrency = 10;
         var mixedSeconds = 5;
+        var movePixels = 0;
         var timeoutSeconds = 20;
         string? output = null;
 
@@ -131,6 +137,9 @@ internal sealed record Options(
                         0,
                         int.Parse(args[++i]));
                     break;
+                case "--move-pixels" when i + 1 < args.Length:
+                    movePixels = Math.Clamp(int.Parse(args[++i]), 0, 8);
+                    break;
 
                 case "--timeout-seconds" when i + 1 < args.Length:
                     timeoutSeconds = Math.Max(
@@ -156,6 +165,7 @@ internal sealed record Options(
             rounds,
             setupConcurrency,
             mixedSeconds,
+            movePixels,
             timeoutSeconds,
             output);
     }
