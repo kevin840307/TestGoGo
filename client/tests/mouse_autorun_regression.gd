@@ -71,7 +71,11 @@ func _test_existing_cursor_precedence() -> void:
 		"locked walk replaces ordinary mouse sprite instead of adding an overlay")
 	_check(CursorManager.is_autorun_indicator_visible(),
 		"latched movement has a distinct animated cursor")
-	_check(CursorManager.get("_autorun_status_label") == null,
+	var has_autorun_text_label: bool = false
+	for child in CursorManager.get_children():
+		if child is Label:
+			has_autorun_text_label = true
+	_check(not has_autorun_text_label,
 		"autorun animation has no text badge or extra input surface")
 	_check(CursorManager.cursor_sprite.scale.x > 1.0,
 		"only locked walking increases sprite visibility")
