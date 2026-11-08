@@ -7,6 +7,8 @@ const state = {
   skills: [], selectedSkill: null,
   enemies: [], selectedEnemy: null,
   maps: [], mapId: null, mapTab: 'enemies', mapRows: [],
+  mapMeta: null, mapSelectedIndex: null, mapSelectedEnemyId: null,
+  mapShowBlocking: true, mapShowSpawners: true, mapSnapWalkable: true,
   scripts: [], selectedScript: null,
   assets: [], assetTarget: null,
 };
@@ -15,7 +17,7 @@ const VIEW_META = {
   dashboard: ['專案總覽', '集中管理遊戲資料、舊格式與素材。'],
   skills: ['技能編輯器', 'CRUD 技能與每級數值；保留未知的 TRES 欄位。'],
   enemies: ['怪物資料', '編輯 Enemy_Data.csv 常用欄位；其他 legacy 欄位保留。'],
-  maps: ['地圖實體', '管理每張地圖的怪物出生點與 NPC 關聯。'],
+  maps: ['視覺化地圖編輯器', '使用遊戲座標、Blocking.dat 與怪物區域直接放置怪物 / NPC。'],
   scripts: ['NPC 腳本編輯器', '編輯 Quest Lua、檢查 callback 與 #include，並從地圖 NPC 直接跳轉。'],
   assets: ['素材管理', '預覽並替換 client/Assets 素材；寫入前自動備份。'],
 };
