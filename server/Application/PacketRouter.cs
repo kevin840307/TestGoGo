@@ -4132,8 +4132,14 @@ public sealed class PacketRouter
 
                 if (!picked)
                 {
-                    if (message.Contains("不存在", StringComparison.Ordinal) ||
-                        message.Contains("消失", StringComparison.Ordinal))
+                    // Only a *terminal* persisted-row failure means the
+                    // ground entity is gone. "Protected" and "Too far"
+                    // must keep the drop. In particular, a generic
+                    // Contains("不存在") incorrectly also matched
+                    // "角色不存在" and could hide an existing item.
+                    var groundGone = message is
+                        "物品已不存在" or "物品已消失";
+                    if (groundGone)
                     {
                         _diagnostics.PickupConflict();
                         _diagnostics.Record(
@@ -4144,6 +4150,31 @@ public sealed class PacketRouter
                             state.AccountId,
                             state.CharacterId,
                             state.CurrentMapId);
+
+                        // The item may have been picked up by another
+                        // connection just before this one. Ensure the stale
+                        // local pickup target and every AOI known-set agree
+                        // with SQLite, even if the winning socket's
+                        // broadcast was missed during map load.
+                        state.GroundItems.Remove(entityId);
+                        PublishWorldAoiChanges(
+                            _broadcasts.RemoveWorldEntity(
+                                entityId,
+                                notifyObservers: true),
+                            skipObserver: state.ConnectionId);
+                        return
+                        [
+                            new
+                            {
+                                Type = "DespawnEntity",
+                                EntityID = entityId
+                            },
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = message
+                            }
+                        ];
                     }
 
                     return
