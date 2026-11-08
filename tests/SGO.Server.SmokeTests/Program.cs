@@ -6586,10 +6586,6 @@ try
     var lifeDrainDamageDealt = Math.Max(
         0,
         lifeDrainMonsterHpBefore - monster.CurrentHp);
-    var lifeDrainRecovered = Math.Max(
-        0,
-        Convert.ToInt32(lifeDrainAfter["HP"]) -
-        lifeDrainHpBefore);
     var lifeDrainPacketElements = lifeDrainPackets
         .Select(packet => JsonSerializer.SerializeToElement(packet))
         .ToArray();
@@ -6600,13 +6596,50 @@ try
         skillId.GetInt32() == 25104 &&
         packet.TryGetProperty("TargetID", out var targetId) &&
         targetId.GetInt32() == monster.EntityId);
-    var lifeDrainHasHeal = lifeDrainPacketElements.Any(packet =>
-        packet.TryGetProperty("Type", out var type) &&
-        type.GetString() == "EntityHeal" &&
-        packet.TryGetProperty("SkillID", out var skillId) &&
-        skillId.GetInt32() == 25104 &&
-        packet.TryGetProperty("Amount", out var amount) &&
-        amount.GetInt32() == lifeDrainRecovered);
+
+    int? lifeDrainPreHealHp = null;
+    int? lifeDrainHealAmount = null;
+    int? lifeDrainHealCurrentHp = null;
+    foreach (var packet in lifeDrainPacketElements)
+    {
+        if (!packet.TryGetProperty("Type", out var type))
+            continue;
+
+        if (type.GetString() == "PlayerStatusSync" &&
+            packet.TryGetProperty("HP", out var statusHp))
+        {
+            // Kill rewards (including a level-up) settle before 25104 heals.
+            lifeDrainPreHealHp = statusHp.GetInt32();
+            continue;
+        }
+
+        if (type.GetString() != "EntityHeal" ||
+            !packet.TryGetProperty("SkillID", out var skillId) ||
+            skillId.GetInt32() != 25104)
+        {
+            continue;
+        }
+
+        if (packet.TryGetProperty("Amount", out var amount))
+            lifeDrainHealAmount = amount.GetInt32();
+        if (packet.TryGetProperty("CurrentHP", out var currentHp))
+            lifeDrainHealCurrentHp = currentHp.GetInt32();
+        break;
+    }
+
+    var lifeDrainFinalHp = Convert.ToInt32(
+        lifeDrainAfter["HP"]);
+    var lifeDrainHealBaseHp =
+        lifeDrainPreHealHp ?? lifeDrainHpBefore;
+    var lifeDrainRecovered = Math.Max(
+        0,
+        lifeDrainFinalHp - lifeDrainHealBaseHp);
+    var lifeDrainExpectedHeal = Math.Min(
+        lifeDrainDamageDealt,
+        94);
+    var lifeDrainHasHeal =
+        lifeDrainHealAmount == lifeDrainExpectedHeal &&
+        lifeDrainHealCurrentHp == lifeDrainFinalHp;
     // Assert full resource/target validity as well as the original 94 cap.
     // A failed prerequisite must be diagnosed, not mistaken for broken healing.
     var lifeDrainReady =
@@ -6620,7 +6653,7 @@ try
         lifeDrainReady &&
         lifeDrainDamageDealt > 0 &&
         lifeDrainRecovered ==
-            Math.Min(lifeDrainDamageDealt, 94) &&
+            lifeDrainExpectedHeal &&
         Convert.ToInt32(lifeDrainAfter["HP"]) <=
             Convert.ToInt32(lifeDrainAfter["MaxHP"]) &&
         lifeDrainHasDamage &&
@@ -6628,15 +6661,17 @@ try
         "生命吸收 Lv1 restores min(actual damage, original 94 HP cap)" +
         (lifeDrainReady &&
          lifeDrainDamageDealt > 0 &&
-         lifeDrainRecovered == Math.Min(lifeDrainDamageDealt, 94) &&
+         lifeDrainRecovered == lifeDrainExpectedHeal &&
          lifeDrainHasDamage && lifeDrainHasHeal
             ? ""
             : $" (ready={lifeDrainReady}, HP={lifeDrainHpBefore}/{lifeDrainMaxHp}, " +
               $"SP={lifeDrainSpBefore}, costSP={lifeDrainLevel?.CostSp}, " +
               $"monsterHP={lifeDrainMonsterHpBefore}->{monster.CurrentHp}, " +
-              $"damage={lifeDrainDamageDealt}, expectedHeal={Math.Min(lifeDrainDamageDealt, 94)}, " +
-              $"actualHeal={lifeDrainRecovered}, damagePacket={lifeDrainHasDamage}, " +
-              $"healPacket={lifeDrainHasHeal}, packets={JsonSerializer.Serialize(lifeDrainPackets)})"));
+              $"damage={lifeDrainDamageDealt}, expectedHeal={lifeDrainExpectedHeal}, " +
+              $"preHealHP={lifeDrainPreHealHp}, finalHP={lifeDrainFinalHp}, " +
+              $"actualHeal={lifeDrainRecovered}, packetHeal={lifeDrainHealAmount}, " +
+              $"damagePacket={lifeDrainHasDamage}, healPacket={lifeDrainHasHeal}, " +
+              $"packets={JsonSerializer.Serialize(lifeDrainPackets)})"));
 
     store.SetSkill(
         account.Value,

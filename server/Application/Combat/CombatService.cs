@@ -2591,7 +2591,15 @@ public sealed class CombatService
                     totalDamageDealt,
                     cureCap);
 
-                var beforeHeal = updated;
+                // Kill rewards can level the character before life drain is
+                // settled. Refresh the persisted HP after rewards so the heal
+                // packet reports only HP restored by 25104, not HP gained by
+                // level-up growth during the same attack.
+                var beforeHeal =
+                    _store.GetCharacter(
+                        accountId,
+                        session.CharacterId.Value) ??
+                    updated;
                 var healed = _store.RecoverResources(
                     accountId,
                     session.CharacterId.Value,
