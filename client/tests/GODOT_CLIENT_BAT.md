@@ -181,3 +181,22 @@ python -m unittest tests/test_client_perf_report.py tests/test_godot_client_bat_
 ```
 
 已新增報表的中位數／每秒 PID 加總、空白 GPU、有效前景事件、離線 HTML 生成等單元測試。實際 Windows Godot／WDDM 指標仍需在使用者電腦上實測。
+
+## 怪物回屏 default 動畫與技能視窗 Parse error 回歸
+
+如果 Godot 顯示：
+
+- `monster_entity.gd @ _on_screen_entered(): There is no animation with name 'default'`
+- `Failed to load script "res://scripts/skill_window.gd" with error "Parse error"`
+
+請先 `git pull --ff-only origin feature/local-server-net8`，再執行：
+
+```bat
+run_godot_client_tests.bat resources
+```
+
+此回歸測試會 **preload 真實的技能視窗與技能卡腳本**，驗證其可被 Godot 編譯與建立；也會在沒有 `default` 的怪物 `SpriteFrames` 上測試離屏暫停、回屏恢復 `IDLE_1`、簡化怪物無圖幀，以及缺少目標指示器圖幀的情況。測試最後應印出 `[RENDER_RESOURCE_REGRESSION] ALL PASS`。
+
+修正不會改動怪物的 Server 狀態、AOI 邏輯、攻擊方向、碰撞或技能資料；只防止沒有可用動畫時呼叫 Godot 的 `AnimatedSprite2D.play()`。
+
+如果技能視窗仍有 Parse error，請提供最先出現的 **`SCRIPT ERROR: Parse Error: ...` 與 `at: GDScript::reload (res://scripts/skill_window.gd:行號)`**，因為 `Failed to load script` 本身只是後續總結訊息，不包含實際錯誤行號。
