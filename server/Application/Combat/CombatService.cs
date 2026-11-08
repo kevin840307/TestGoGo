@@ -2119,16 +2119,10 @@ public sealed class CombatService
                               Math.Pow(x.Y - centerY, 2) <=
                               radius * radius));
 
-                // Stellar Shock keeps its gameplay cap, but uses the exact
-                // same AOE execution and settlement pipeline as other skills.
-                var targets = isScreenAreaAttack
-                    ? targetQuery
-                        .OrderBy(x =>
-                            Math.Pow(x.X - centerX, 2) +
-                            Math.Pow(x.Y - centerY, 2))
-                        .Take(32)
-                        .ToArray()
-                    : targetQuery.ToArray();
+                // Stellar Shock uses the same uncapped AOE target selection
+                // as other area skills: every alive monster inside the radius
+                // is included in the shared batch settlement pipeline.
+                var targets = targetQuery.ToArray();
 
                 packets[0] = new
                 {
