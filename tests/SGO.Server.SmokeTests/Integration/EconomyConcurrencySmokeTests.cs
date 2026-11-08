@@ -32,15 +32,9 @@ internal static class EconomyConcurrencySmokeTests
         SqliteGameStore store)
     {
         var player = CreatePlayer(store, "npcbuyer");
-        var startingMoney = Money(store, player);
-        var normalizeDelta = checked((int)(100 - startingMoney));
-        Check(
-            store.AdjustMoney(
-                player.AccountId,
-                player.CharacterId,
-                normalizeDelta) is not null &&
-            Money(store, player) == 100,
-            "normalize NPC-shop concurrency money to exactly 100");
+        ExactMoneyFixture.Set(
+            store, player.AccountId, player.CharacterId, 100,
+            "ten simultaneous NPC purchases");
 
         const int itemIndex = 999_920;
         var attempts = Enumerable.Range(0, 10)
@@ -174,15 +168,13 @@ internal static class EconomyConcurrencySmokeTests
                 $"pbuyer{i:D2}"))
             .ToArray();
 
+        ExactMoneyFixture.Set(
+            store, seller.AccountId, seller.CharacterId, 0,
+            "player-shop race seller");
         foreach (var buyer in buyers)
-        {
-            Check(
-                store.AdjustMoney(
-                    buyer.AccountId,
-                    buyer.CharacterId,
-                    100) is not null,
-                "seed player-shop buyer money");
-        }
+            ExactMoneyFixture.Set(
+                store, buyer.AccountId, buyer.CharacterId, 100,
+                "player-shop race buyer");
 
         const int itemIndex = 999_923;
         var uid = store.AddInventoryItem(
@@ -237,12 +229,12 @@ internal static class EconomyConcurrencySmokeTests
     {
         var sender = CreatePlayer(store, "sender");
         var receiver = CreatePlayer(store, "receiver");
-        Check(
-            store.AdjustMoney(
-                sender.AccountId,
-                sender.CharacterId,
-                100) is not null,
-            "seed direct-transfer money");
+        ExactMoneyFixture.Set(
+            store, sender.AccountId, sender.CharacterId, 100,
+            "ten simultaneous direct transfers sender");
+        ExactMoneyFixture.Set(
+            store, receiver.AccountId, receiver.CharacterId, 0,
+            "ten simultaneous direct transfers receiver");
 
         var attempts = Enumerable.Range(0, 10)
             .Select(_ => Task.Run(() =>
@@ -272,10 +264,12 @@ internal static class EconomyConcurrencySmokeTests
     {
         var first = CreatePlayer(store, "cross_a");
         var second = CreatePlayer(store, "cross_b");
-        Check(
-            store.AdjustMoney(first.AccountId, first.CharacterId, 1000) is not null &&
-            store.AdjustMoney(second.AccountId, second.CharacterId, 1000) is not null,
-            "seed both accounts for bidirectional-transfer race");
+        ExactMoneyFixture.Set(
+            store, first.AccountId, first.CharacterId, 1000,
+            "bidirectional transfers A");
+        ExactMoneyFixture.Set(
+            store, second.AccountId, second.CharacterId, 1000,
+            "bidirectional transfers B");
 
         using var ready = new CountdownEvent(20);
         using var start = new ManualResetEventSlim(false);
