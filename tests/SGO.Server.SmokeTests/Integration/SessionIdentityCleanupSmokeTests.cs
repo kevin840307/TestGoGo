@@ -327,8 +327,11 @@ internal static class SessionIdentityCleanupSmokeTests
         SqliteGameStore store,
         string suffix)
     {
+        var unique =
+            Guid.NewGuid()
+                .ToString("N")[..8];
         var username =
-            $"identity_{suffix}_{Guid.NewGuid():N}";
+            $"id_{suffix}_{unique}";
         var password = "test-password";
 
         var registered = store.Register(
@@ -337,7 +340,8 @@ internal static class SessionIdentityCleanupSmokeTests
             "");
         Check(
             registered.Success,
-            $"register identity-cleanup player {suffix}");
+            $"register identity-cleanup player {suffix} " +
+            $"(username={username}, message={registered.Message})");
 
         var accountId = store.Login(
             username,
