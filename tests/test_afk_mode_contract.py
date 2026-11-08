@@ -43,7 +43,7 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('AFK_VISUAL_CACHE.new()', game)
         self.assertIn('AFK_RENDER_SHELL.new()', game)
         self.assertIn('_enter_afk_render_shell()', game)
-        self.assertIn('_restore_afk_render_shell()', game)
+        self.assertIn('await _restore_afk_render_shell(progress_callback)', game)
         self.assertIn('_set_afk_dynamic_visuals_suspended(true)', game)
         self.assertIn('_clear_visual_runtime_caches()', game)
         self.assertIn('await GameManager.begin_afk_mode(', hud)
@@ -224,7 +224,13 @@ class AfkModeContract(unittest.TestCase):
             game.index("func finish_afk_mode(progress_callback: Callable = Callable())")
         ]
         self.assertNotIn("clear_map_entities()", begin)
-        self.assertNotIn("NetworkManager.", begin)
+        # A read-only debug check may verify that network physics stayed alive;
+        # AFK itself must never pause, disconnect, or mutate network processing.
+        self.assertIn("NetworkManager.is_physics_processing()", begin)
+        self.assertNotIn("NetworkManager.set_process(", begin)
+        self.assertNotIn("NetworkManager.set_physics_process(", begin)
+        self.assertNotIn("NetworkManager.disconnect", begin)
+        self.assertNotIn("NetworkManager.close", begin)
         self.assertIn("current_player.reparent(container, true)", game)
         self.assertNotIn('current_map_node.get_node_or_null("ObjectContainer")', game)
         self.assertIn("NetworkEntityManager.active_entities.values()", game)
