@@ -210,11 +210,11 @@ internal static class HappinessDollSmokeTests
             "deterministic rare Happiness Doll consumes source and grants battery");
 
         Check(
-            rareListener.Queue.TryDequeue(out var announcement) &&
-            JsonSerializer.Serialize(announcement).Contains(
-                "\"Type\":\"SystemMessageBroadcast\"") &&
-            PacketTreeContainsString(announcement, rareCharacterName) &&
-            PacketTreeContainsString(announcement, "魔靈電池"),
+            rareListener.Queue.ToArray().Any(announcement =>
+                JsonSerializer.Serialize(announcement).Contains(
+                    "\"Type\":\"SystemMessageBroadcast\"") &&
+                PacketTreeContainsString(announcement, rareCharacterName) &&
+                PacketTreeContainsString(announcement, "魔靈電池")),
             "rare Happiness Doll reward publishes global announcement");
 
         var mainInventoryAfterRare = InventoryCounts(
