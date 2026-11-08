@@ -114,6 +114,16 @@ class SmokeSuiteStructureTests(unittest.TestCase):
                 self.assertIn(f"{name}.Run(", main)
                 self.assertIn(evidence, source)
 
+    def test_session_lifecycle_suite_covers_position_and_presence_races(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = SMOKE / "Integration" / "SessionLifecycleSmokeTests.cs"
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("disconnect persists the final dirty in-memory position", source)
+        self.assertIn("map transition despawns player from the old map", source)
+        self.assertIn("stale dirty position never overwrites", source)
+        self.assertIn("SessionLifecycleSmokeTests.Run(", main)
+
     def test_prelogin_route_suite_has_explicit_context(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = SMOKE / "Protocol" / "PreloginPacketSmokeTests.cs"
