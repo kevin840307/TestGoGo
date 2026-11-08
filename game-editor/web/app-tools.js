@@ -344,7 +344,7 @@ $('#asset-file-input').onchange = e => replaceAsset(e.target.files?.[0]);
 
 (async function boot() {
   try {
-    await loadStatus();
+    await Promise.all([loadStatus(), loadHealth()]);
     await go('dashboard');
   } catch (e) {
     toast(`Editor 啟動失敗：${e.message}`, 'error');
