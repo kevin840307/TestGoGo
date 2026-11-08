@@ -75,6 +75,8 @@ internal static class EconomyConcurrencySmokeTests
         SqliteGameStore store)
     {
         var player = CreatePlayer(store, "seller");
+        var moneyBeforeSell = Money(store, player);
+
         const int itemIndex = 999_921;
         var uid = store.AddInventoryItem(
             player.AccountId,
@@ -100,11 +102,20 @@ internal static class EconomyConcurrencySmokeTests
 
         Task.WaitAll(attempts);
 
+        var successCount =
+            attempts.Count(x => x.Result);
+        var moneyAfterSell =
+            Money(store, player);
+        var copiesAfterSell =
+            CountInventory(store, player, itemIndex);
+
         Check(
-            attempts.Count(x => x.Result) == 1 &&
-            Money(store, player) == 17 &&
-            CountInventory(store, player, itemIndex) == 0,
-            "ten concurrent sells of one UID pay exactly once");
+            successCount == 1 &&
+            moneyAfterSell == moneyBeforeSell + 17 &&
+            copiesAfterSell == 0,
+            $"ten concurrent sells of one UID pay exactly once " +
+            $"(success={successCount}, moneyBefore={moneyBeforeSell}, " +
+            $"moneyAfter={moneyAfterSell}, items={copiesAfterSell})");
     }
 
     private static void ConcurrentBankTransferConservesStack(
