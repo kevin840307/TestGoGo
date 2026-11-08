@@ -590,6 +590,7 @@ class MapRepository:
             raise ValueError("單張地圖怪物出生點不可超過 10000")
         path = self._map_dir(map_id) / "Enemy.dat"
         old = self._read_enemies(path)
+        self._validate_source_indexes(items, len(old), "Enemy.dat")
         records: list[_EnemyRaw] = []
         for item in items:
             idx = int(item.get("index", -1))
@@ -607,6 +608,28 @@ class MapRepository:
             payload += r.tail
         self.backups.atomic_write_bytes(path, bytes(payload), "map_enemy")
         return self.get_enemy_spawns(map_id)
+
+    @staticmethod
+    def _validate_source_indexes(items: list[dict[str, Any]], old_count: int, label: str) -> None:
+        seen: set[int] = set()
+        for row_index, item in enumerate(items):
+            try:
+                source_index = int(item.get("index", -1))
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"{label} row {row_index + 1} index 必須是整數") from exc
+            if source_index == -1:
+                continue
+            if source_index < 0 or source_index >= old_count:
+                raise ValueError(
+                    f"{label} row {row_index + 1} source index 超出範圍: {source_index}；"
+                    f"合法值為 -1 或 0..{max(-1, old_count - 1)}"
+                )
+            if source_index in seen:
+                raise ValueError(
+                    f"{label} 有重複 source index {source_index}；"
+                    "這可能錯用 legacy opaque/reserved metadata"
+                )
+            seen.add(source_index)
 
     def _read_npcs(self, path: Path) -> list[_NpcRaw]:
         if not path.exists():
@@ -650,6 +673,7 @@ class MapRepository:
             raise ValueError("單張地圖 NPC 不可超過 10000")
         path = self._map_dir(map_id) / "NPC.dat"
         old = self._read_npcs(path)
+        self._validate_source_indexes(items, len(old), "NPC.dat")
         payload = bytearray(struct.pack("<i", len(items)))
         for item in items:
             idx = int(item.get("index", -1))
