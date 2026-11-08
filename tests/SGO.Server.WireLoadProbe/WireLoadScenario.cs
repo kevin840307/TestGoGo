@@ -137,6 +137,34 @@ internal sealed record WireMixedSoakResult(
             []);
 }
 
+internal sealed record WireWorldAoiResult(
+    int NearClients,
+    int FarClients,
+    int TargetEntityId,
+    int ExpectedNearSpawns,
+    int ActualNearSpawns,
+    int FarSpawnLeaks,
+    bool ReentrySpawnReceived,
+    long SentBytes,
+    long ReceivedBytes,
+    double ElapsedMs,
+    string[] Errors)
+{
+    public static WireWorldAoiResult Empty()
+        => new(
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            false,
+            0,
+            0,
+            0,
+            []);
+}
+
 internal sealed record WireLoadScenarioResult(
     int Players,
     bool Success,
@@ -147,6 +175,7 @@ internal sealed record WireLoadScenarioResult(
     WirePhaseResult Movement,
     WirePhaseResult NearbyChat,
     WireCombatRaceResult CombatRace,
+    WireWorldAoiResult WorldAoi,
     WireMixedSoakResult MixedSoak,
     string[] Errors);
 
@@ -287,6 +316,15 @@ internal static class WireLoadScenario
             foreach (var client in active)
                 client.ClearInbox();
 
+            var worldAoi =
+                await MeasureWorldAoiAsync(
+                    active,
+                    timeout);
+
+            await Task.Delay(250);
+            foreach (var client in active)
+                client.ClearInbox();
+
             var mixed =
                 await MeasureMixedSoakAsync(
                     active,
@@ -302,6 +340,7 @@ internal static class WireLoadScenario
                     chat.ExpectedDeliveries &&
                 combat.ActualDeathDeliveries ==
                     combat.ExpectedDeathDeliveries &&
+                worldAoi.Errors.Length == 0 &&
                 mixed.Errors.Length == 0;
 
             if (!success)
@@ -321,8 +360,10 @@ internal static class WireLoadScenario
                 movement,
                 chat,
                 combat,
+                worldAoi,
                 mixed,
                 errors
+                    .Concat(worldAoi.Errors)
                     .Concat(mixed.Errors)
                     .ToArray());
         }
@@ -641,6 +682,188 @@ internal static class WireLoadScenario
         }
     }
 
+    private static async Task<WireWorldAoiResult> MeasureWorldAoiAsync(
+        WireLoadClient[] clients,
+        TimeSpan timeout)
+    {
+        var anchor = clients[0];
+        var nearCount =
+            Math.Max(
+                1,
+                clients.Length / 2);
+        var near =
+            clients.Take(nearCount)
+                .ToArray();
+        var far =
+            clients.Skip(nearCount)
+                .ToArray();
+
+        var baseX = anchor.X;
+        var baseY = anchor.Y;
+        var mapId = anchor.MapId;
+        var farX =
+            baseX >= 6_000
+                ? baseX - 5_000
+                : baseX + 5_000;
+
+        // Put every client in a deterministic near/far group through the real
+        // encrypted GM teleport path. This avoids depending on map collision
+        // routing for a synthetic load-test position.
+        await Task.WhenAll(
+            near.Select(
+                (client, index) =>
+                    client.TeleportAsync(
+                        mapId,
+                        baseX +
+                            (index % 8) * 20,
+                        baseY +
+                            (index / 8) * 10,
+                        timeout)));
+
+        await Task.WhenAll(
+            far.Select(
+                (client, index) =>
+                    client.TeleportAsync(
+                        mapId,
+                        farX +
+                            (index % 8) * 20,
+                        baseY +
+                            (index / 8) * 10,
+                        timeout)));
+
+        await Task.Delay(200);
+        foreach (var client in clients)
+        {
+            client.ClearInbox();
+            client.StartMeasurement();
+        }
+
+        var started =
+            Stopwatch.GetTimestamp();
+        var errors =
+            new List<string>();
+        var targetEntityId = 0;
+        var expectedNearSpawns =
+            Math.Max(
+                0,
+                near.Length - 1);
+        var actualNearSpawns = 0;
+        var farLeaks = 0;
+        var reentrySpawn = false;
+
+        try
+        {
+            targetEntityId =
+                await anchor.SpawnMonsterAsync(
+                    245,
+                    baseX + 80,
+                    baseY,
+                    timeout);
+
+            var nearResults =
+                await Task.WhenAll(
+                    near.Skip(1)
+                        .Select(
+                            x => x.TryWaitForEntityPacketAsync(
+                                "SpawnEntity",
+                                targetEntityId,
+                                timeout)));
+
+            actualNearSpawns =
+                nearResults.Count(x => x);
+
+            var absenceWindow =
+                TimeSpan.FromMilliseconds(
+                    Math.Clamp(
+                        timeout.TotalMilliseconds / 5,
+                        500,
+                        1_500));
+
+            var farResults =
+                await Task.WhenAll(
+                    far.Select(
+                        x => x.TryWaitForEntityPacketAsync(
+                            "SpawnEntity",
+                            targetEntityId,
+                            absenceWindow)));
+
+            farLeaks =
+                farResults.Count(x => x);
+
+            if (actualNearSpawns !=
+                expectedNearSpawns)
+            {
+                errors.Add(
+                    $"world AOI near spawn mismatch expected={expectedNearSpawns} actual={actualNearSpawns}");
+            }
+
+            if (farLeaks != 0)
+            {
+                errors.Add(
+                    $"world AOI leaked target spawn to {farLeaks}/{far.Length} distant clients");
+            }
+
+            if (far.Length > 0)
+            {
+                var returning =
+                    far[0];
+
+                await returning.TeleportAsync(
+                    mapId,
+                    baseX + 120,
+                    baseY,
+                    timeout);
+
+                reentrySpawn =
+                    await returning.TryWaitForEntityPacketAsync(
+                        "SpawnEntity",
+                        targetEntityId,
+                        timeout);
+
+                if (!reentrySpawn)
+                {
+                    errors.Add(
+                        "world AOI distant client did not receive monster spawn after entering range");
+                }
+            }
+
+            return new WireWorldAoiResult(
+                near.Length,
+                far.Length,
+                targetEntityId,
+                expectedNearSpawns,
+                actualNearSpawns,
+                farLeaks,
+                reentrySpawn,
+                clients.Sum(
+                    x => x.SentBytes),
+                clients.Sum(
+                    x => x.ReceivedBytes),
+                Stopwatch.GetElapsedTime(
+                        started)
+                    .TotalMilliseconds,
+                errors.ToArray());
+        }
+        finally
+        {
+            foreach (var client in clients)
+                client.StopMeasurement();
+
+            // Restore one compact group before the normal mixed combat soak so
+            // its historical workload remains comparable across AOI changes.
+            await Task.WhenAll(
+                clients.Select(
+                    (client, index) =>
+                        client.TeleportAsync(
+                            mapId,
+                            baseX +
+                                (index % 10) * 18,
+                            baseY +
+                                (index / 10) * 10,
+                            timeout)));
+        }
+    }
+
     private static async Task<WireMixedSoakResult> MeasureMixedSoakAsync(
         WireLoadClient[] clients,
         string url,
@@ -896,6 +1119,7 @@ internal static class WireLoadScenario
             WirePhaseResult.Empty(
                 "ChatMessage->ChatBroadcast"),
             WireCombatRaceResult.Empty(),
+            WireWorldAoiResult.Empty(),
             WireMixedSoakResult.Empty(),
             errors.ToArray());
 }
