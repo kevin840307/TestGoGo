@@ -142,13 +142,17 @@ func _should_simplify_player(entity: Node2D) -> bool:
 	var profile: Dictionary = GameManager.get_performance_profile()
 	return bool(profile.get("simplify_other_players", false)) and not _is_local_combat_target(entity)
 
-func _should_simplify_monster(entity_id: int, entity: Node2D) -> bool:
+func _should_simplify_monster(_entity_id: int, entity: Node2D) -> bool:
 	if not GameManager or not is_instance_valid(entity):
 		return false
 	var profile: Dictionary = GameManager.get_performance_profile()
 	if not bool(profile.get("simplify_noncritical_monsters", false)):
 		return false
-	if _is_combat_monster_revealed(entity_id) or _is_local_combat_target(entity):
+	# Combat reveal keeps an authoritative monster alive in AOI, but it must
+	# not silently change the user's visual-simplification preference.
+	# Only the player's explicitly selected combat target is promoted back
+	# to its original sprite.
+	if _is_local_combat_target(entity):
 		return false
 	return true
 
@@ -289,8 +293,9 @@ func _reveal_combat_monster(entity_id: int, reason: String) -> void:
 	_combat_reveal_until_msec[entity_id] = Time.get_ticks_msec() + MONSTER_COMBAT_REVEAL_MSEC
 	var active_monster := get_active_entity(entity_id)
 	if is_instance_valid(active_monster):
-		if active_monster.has_method("set_performance_simplified"):
-			active_monster.set_performance_simplified(false)
+		# Reveal is an AOI/lifecycle concern only. Keep the current visual
+		# simplification state so attack/hit/skill/death animations do not
+		# flash back to the original monster artwork.
 		return
 	if not _queued_spawn_ids.has(entity_id):
 		_deferred_monster_spawns[entity_id] = _monster_spawn_templates[entity_id]
