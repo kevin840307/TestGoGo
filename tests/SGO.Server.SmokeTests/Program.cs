@@ -9095,6 +9095,20 @@ try
     var sawDeath = false;
     IReadOnlyList<object> deathPackets = Array.Empty<object>();
 
+    // Isolate progression from earlier combat smokes. Character EXP is
+    // intentionally boosted 10,000,000x in the current design, so reusing the
+    // long-lived fixture can leave it at Lv255 where battle rules correctly
+    // award 0 EXP and a level-up regression is impossible to exercise.
+    var rewardFixture = store.SetLevel(
+        account.Value,
+        id,
+        1);
+    Check(
+        rewardFixture is not null &&
+        Convert.ToInt32(rewardFixture["Level"]) == 1 &&
+        Convert.ToInt32(rewardFixture["ExpAcc"]) == 0,
+        "prepare non-max-level character for kill reward progression smoke");
+
     var rewardBeforeKill = store.GetCharacter(
         account.Value,
         id)!;
