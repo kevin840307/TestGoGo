@@ -75,9 +75,19 @@ func _run() -> void:
 	GameManager.set_performance_modes(ClientPerformanceProfile.LOAD_LOW, ClientPerformanceProfile.COMBAT_NORMAL)
 	check(Engine.max_fps == 45,
 		"switching to Low does not override selected foreground FPS")
+	GameManager.set_foreground_fps_limit(0)
+	check(Engine.max_fps == 0 and GameManager.current_foreground_fps_limit == 0,
+		"zero FPS cap is actually unlimited in Engine.max_fps")
+	check(GameManager.needs_vsync_disabled(0, 60.0),
+		"unlimited FPS requires disabling VSync")
+	check(GameManager.needs_vsync_disabled(144, 60.0) and not GameManager.needs_vsync_disabled(60, 60.0),
+		"high custom FPS uncaps VSync only if display refresh would throttle it")
 	GameManager.set_foreground_fps_limit(60)
 	check(Engine.max_fps == 60,
 		"FPS limit updates immediately without restarting client")
+	GameManager.set_performance_modes(ClientPerformanceProfile.LOAD_BALANCED, ClientPerformanceProfile.COMBAT_MASS)
+	check(not GameManager.should_render_combat_effects() and int(GameManager.current_performance_profile.get("effect_budget_percent", -1)) == 0,
+		"Mass combat hides combat effect resources without limiting FPS")
 	GameManager.set_performance_modes(original_load, original_combat)
 	GameManager.set_foreground_fps_limit(original_cap)
 	var game_manager_source: String = FileAccess.get_file_as_string("res://scripts/game_manager.gd")

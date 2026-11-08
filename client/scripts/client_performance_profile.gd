@@ -139,6 +139,7 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 		"full_player_budget": 24,
 		"full_monster_budget": 40,
 		"effect_budget_percent": 100,
+		"combat_effects_enabled": true,
 		# Client-side visual allocation only, NEVER changes network/server AOI.
 		"monster_aoi_enter_radius": 2200.0,
 		"monster_aoi_exit_radius": 2600.0,
@@ -205,7 +206,10 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 		COMBAT_MASS:
 			profile["full_player_budget"] = maxi(int(profile["full_player_budget"]), 20)
 			profile["full_monster_budget"] = mini(int(profile["full_monster_budget"]), 8)
-			profile["effect_budget_percent"] = mini(int(profile["effect_budget_percent"]), 45)
+			# Zero means skip constructing combat-effect nodes and loading FX textures.
+			# Gameplay packets, skill direction, action state, and damage labels continue.
+			profile["effect_budget_percent"] = 0
+			profile["combat_effects_enabled"] = false
 			profile["simplify_other_players"] = true
 			profile["simplify_noncritical_monsters"] = true
 			profile["hide_far_noncombat_monsters"] = true

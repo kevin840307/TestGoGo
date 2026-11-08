@@ -1281,6 +1281,13 @@ func _ensure_skill_use_effect() -> void :
 			skill_use_effect.frame_changed.connect(_on_effect_frame_changed.bind(skill_use_effect))
 
 
+func stop_combat_visual_effects() -> void:
+	for node in [skill_use_effect, skill_hit_effect]:
+		if is_instance_valid(node):
+			node.stop()
+			node.visible = false
+
+
 func execute_skill_visuals(skill_id: int, _skill_level: int, target_node: Node2D = null, aoe_targets: Array = []) -> void :
 	if is_instance_valid(target_node):
 		_apply_visual_direction_from_vector(
@@ -1290,6 +1297,10 @@ func execute_skill_visuals(skill_id: int, _skill_level: int, target_node: Node2D
 	current_state = "attack"
 	action_state_started_ms = Time.get_ticks_msec()
 	sync_animation()
+	# The attack state still runs and releases normally, but no FX resource is
+	# loaded and no FX node is created for Mass mode.
+	if GameManager and not GameManager.should_render_combat_effects():
+		return
 
 	if SkillLoader:
 		var s_res = SkillLoader.get_skill_data(skill_id)
@@ -1357,6 +1368,8 @@ func _ensure_skill_hit_effect() -> void :
 
 
 func _play_skill_hit(fx_hit: String) -> void :
+	if GameManager and not GameManager.should_render_combat_effects():
+		return
 	if fx_hit == "": return
 	_ensure_skill_hit_effect()
 	var effect_name = ""

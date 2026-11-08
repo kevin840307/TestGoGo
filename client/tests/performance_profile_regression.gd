@@ -50,7 +50,9 @@ func _ready() -> void:
 	assert(bool(response["hide_far_noncombat_monsters"]))
 
 	assert(int(mass["full_player_budget"]) >= int(response["full_player_budget"]))
-	assert(int(mass["effect_budget_percent"]) <= int(response["effect_budget_percent"]))
+	assert(int(mass["effect_budget_percent"]) == 0)
+	assert(not bool(mass["combat_effects_enabled"]))
+	assert(bool(response["combat_effects_enabled"]))
 	assert(ClientPerformanceProfile.combat_mode_name(
 		ClientPerformanceProfile.COMBAT_RESPONSE
 	) == "response")

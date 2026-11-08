@@ -3741,7 +3741,7 @@ value = 60.0
 rounded = true
 editable = true
 suffix = " FPS"
-tooltip_text = "上下鍵每次加減 5 FPS，也可輸入；0 = 不限制，支援 30～120（每 5 FPS）與 144。切換畫質不影響此設定。"
+tooltip_text = "上下鍵每次加減 5 FPS，也可輸入；0 = 不限制（會關閉 VSync），支援 30～120（每 5 FPS）與 144。切換畫質不影響此設定。"
 
 [node name="LabelFpsLimit" type="Label" parent="WindowsContainer/SettingsWindow" unique_id=663293368]
 layout_mode = 0
@@ -3821,7 +3821,7 @@ popup/item_1/text = "反應優先"
 popup/item_1/id = 1
 popup/item_2/text = "大型戰鬥"
 popup/item_2/id = 2
-tooltip_text = "反應優先適合 PK、Boss 與少量目標戰鬥；大型戰鬥適合大量怪物、世界 Boss 多人戰或高密度混戰，會更積極限制非必要視覺負擔。"
+tooltip_text = "反應優先適合 PK、Boss；大型戰鬥會關閉所有非必要的戰鬥特效（技能、命中、武器、投射物），保留傷害數字與戰鬥邏輯。"
 
 [node name="LabelSimplifyPlayers" type="Label" parent="WindowsContainer/SettingsWindow"]
 layout_mode = 0

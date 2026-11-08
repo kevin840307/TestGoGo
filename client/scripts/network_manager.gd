@@ -209,7 +209,9 @@ func _force_exit_game(reason: String = "forced_exit") -> void :
 	if socket: socket.close()
 	get_tree().quit()
 
-func _process(delta: float) -> void :
+# Keep network delivery, disconnect checks and timer prediction on fixed physics ticks,
+# not per-render-frame: 30/45/60/144 FPS must not change gameplay update cadence.
+func _physics_process(delta: float) -> void :
 	socket.poll()
 	var state = socket.get_ready_state()
 

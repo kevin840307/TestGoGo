@@ -41,3 +41,10 @@ godot --headless --path client --script res://tests/aoi_monster_snapshot_order_r
 ```
 
 Manually test a full combat session in all modes: autofight, loot, moving/zooming, changing map, swapping presets and background focus. No Godot executable or live user client was available to this execution environment, so these scripts are **added but not claimed executed**. A measurable gain is **not yet proven**; verify with collected per-process Windows metrics.
+
+## 2026-11-08: unlimited FPS and Mass combat FX-off
+
+- 0 FPS means **unlimited**. `Engine.max_fps=0` plus disabling VSync when the chosen cap exceeds the monitor refresh or is unlimited; prior VSync policy is restored at supported lower caps. `[FPS_VSYNC]` logs requested cap, refresh Hz and the effective VSync mode. On drivers with additional FPS throttles (e.g. power/driver settings), 0 cannot force hardware beyond those limits. Unlimited can increase GPU usage and cause tearing.
+- Mass combat enforces `effect_budget_percent=0`, `combat_effects_enabled=false`. Skill cast/hit/extra FX, projectiles, weapon FX sprites, ordinary hit/miss textures and item FX are skipped client-side. Damage/MISS numbers, character/monster body state, buffs, equipment transformations, hit points, pickup and server packets are untouched.
+- FPS does **not** set `Engine.time_scale` nor `Engine.physics_ticks_per_second`. Local movement/attack remains in fixed `_physics_process`; the WebSocket poll, packet budget and per-second item/horse/pet prediction are also moved to that fixed tick, so lowering the *render cap* does not lower network poll cadence. This cannot guarantee identical visual latency under CPU overload: measure both state and frame latency.
+- Regression: `performance_ui_settings_regression.gd` asserts 0 FPS and VSync policy; `performance_profile_regression.gd` checks Mass profile. Tests require real Godot runtime to be considered PASS.

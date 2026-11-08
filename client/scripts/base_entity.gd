@@ -754,7 +754,7 @@ func sync_animation() -> void :
 			mecha_recover_effect.stop()
 
 	if is_instance_valid(mecha_bullet_effect_l) and is_instance_valid(mecha_bullet_effect_r):
-		if is_riding_mecha() and current_state.begins_with("attack_") and data_model.transform_type == 0:
+		if (not GameManager or GameManager.should_render_combat_effects()) and is_riding_mecha() and current_state.begins_with("attack_") and data_model.transform_type == 0:
 			if not mecha_bullet_effect_l.get_meta("attack_triggered", false):
 				mecha_bullet_effect_l.set_meta("attack_triggered", true)
 				mecha_bullet_effect_r.set_meta("attack_triggered", true)
@@ -876,7 +876,7 @@ func sync_animation() -> void :
 
 
 	if is_instance_valid(weapon_attack_effect):
-		if not is_riding_mecha() and current_state.begins_with("attack_") and data_model.transform_type == 0:
+		if (not GameManager or GameManager.should_render_combat_effects()) and not is_riding_mecha() and current_state.begins_with("attack_") and data_model.transform_type == 0:
 			if not weapon_attack_effect.get_meta("attack_triggered", false):
 				weapon_attack_effect.set_meta("attack_triggered", true)
 
@@ -1205,6 +1205,16 @@ func _on_effect_frame_changed(effect_node: AnimatedSprite2D) -> void :
 	var actual_offset_x = tex_w - offset_val.x if effect_node.flip_h else offset_val.x
 	effect_node.offset = Vector2( - actual_offset_x, - offset_val.y)
 
+func stop_combat_visual_effects() -> void:
+	# Visual cleanup only: never reset combat targets, movement, HP or packet state.
+	_clear_transient_skill_effects()
+	_clear_mecha_bullet_effects()
+	if is_instance_valid(weapon_attack_effect):
+		weapon_attack_effect.stop()
+		weapon_attack_effect.visible = false
+		weapon_attack_effect.set_meta("attack_triggered", false)
+
+
 func _play_transient_skill_effect(
 	frames: SpriteFrames, 
 	animation_name: StringName, 
@@ -1213,6 +1223,8 @@ func _play_transient_skill_effect(
 	playback_speed: float, 
 	is_self_cast_effect: bool = false
 ) -> AnimatedSprite2D:
+	if GameManager and not GameManager.should_render_combat_effects():
+		return null
 	if not frames or not frames.has_animation(animation_name):
 		return null
 
@@ -1613,6 +1625,11 @@ func execute_skill_visuals(skill_id: int, skill_level: int, target_node: Node2D 
 					trigger_combat_action("buff")
 
 
+		# Preserve action timing/direction above. In Mass mode skill, hit
+		# and extra effects never load textures or spawn transient nodes.
+		if GameManager and not GameManager.should_render_combat_effects():
+			return
+
 		var fx_use = s_res.fx_use
 		if fx_use != "":
 			var r_prefix = "B"
@@ -1696,6 +1713,8 @@ func execute_skill_visuals(skill_id: int, skill_level: int, target_node: Node2D 
 
 
 func _play_skill_hit(fx_hit: String, is_self_cast_effect: bool = false) -> void :
+	if GameManager and not GameManager.should_render_combat_effects():
+		return
 	var effect_name = ""
 	if fx_hit.begins_with("Normal"):
 		effect_name = "Normal_Effect/%s" % fx_hit
@@ -1744,6 +1763,8 @@ static func preferred_extra_effect_path(fx_extra: String) -> String:
 
 
 func _play_skill_extra(fx_extra: String) -> void :
+	if GameManager and not GameManager.should_render_combat_effects():
+		return
 	var effect_name: String = preferred_extra_effect_path(fx_extra)
 	var loaded_res = EffectLoader.get_effect(effect_name)
 
@@ -1772,6 +1793,8 @@ func _play_skill_extra(fx_extra: String) -> void :
 		_play_transient_skill_effect(loaded_res, anim_to_play, eff_flip, 61, p_spd, true)
 
 func _play_item_effect(item_index: int) -> void :
+	if GameManager and not GameManager.should_render_combat_effects():
+		return
 	if not ItemLoader: return
 
 	var note_1 = str(ItemLoader.get_item_property(item_index, "note_1", "")).strip_edges()

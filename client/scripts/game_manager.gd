@@ -148,9 +148,9 @@ func _focus_perf_context() -> String:
 	var focus_age_ms: int = -1
 	if _focus_last_change_usec > 0:
 		focus_age_ms = int((Time.get_ticks_usec() - _focus_last_change_usec) / 1000)
-	return "focus=%s focus_actual=%s power_save=%s fps_cap=%d render_loop=%s audio_muted=%s focus_age_ms=%d startup_overlay=%s" % [
+	return "focus=%s focus_actual=%s power_save=%s fps_cap=%d render_loop=%s audio_muted=%s vsync=%d focus_age_ms=%d startup_overlay=%s" % [
 		focus_name, str(DisplayServer.window_is_focused()), str(not _window_has_focus),
-		Engine.max_fps, str(render_enabled), str(audio_muted), focus_age_ms,
+		Engine.max_fps, str(render_enabled), str(audio_muted), DisplayServer.window_get_vsync_mode() if DisplayServer.get_name() != "headless" else -1, focus_age_ms,
 		str(_startup_loading_overlay_active),
 	]
 
@@ -373,7 +373,7 @@ func _print_performance_analysis(checkpoint: String) -> void:
 		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
 			deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
 
-	print("[PERF_ANALYSIS] mode=%s combat=%s checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d cpu_metric=frame_budget_ratio cpu_process_time_ms=%.3f quality_enhanced=%s %s %s" % [
+	print("[PERF_ANALYSIS] mode=%s combat=%s checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d combat_fx_enabled=%s cpu_metric=frame_budget_ratio cpu_process_time_ms=%.3f quality_enhanced=%s %s %s" % [
 		ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
 		ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
 		checkpoint,
@@ -391,6 +391,7 @@ func _print_performance_analysis(checkpoint: String) -> void:
 		active_entities,
 		active_monsters,
 		deferred_monsters,
+		str(should_render_combat_effects()),
 		process_ms + physics_ms,
 		str(world_enhancement_enabled),
 		_focus_perf_context(),
@@ -482,6 +483,7 @@ func _trace_map_change(stage: String, source_map_id: int, target_map_id: int, de
 
 var _window_has_focus: bool = true
 var _focused_max_fps: int = 0
+var _saved_vsync_mode: int = -1
 var _master_bus_was_muted_before_focus_loss: bool = false
 var _startup_loading_overlay_active: bool = false
 var _world_ready_for_background_saving: bool = false
@@ -507,6 +509,43 @@ func _rebuild_performance_profile() -> void:
 		current_simplify_monsters_mode
 	)
 	current_performance_profile["foreground_fps"] = current_foreground_fps_limit
+
+static func needs_vsync_disabled(cap: int, refresh_hz: float) -> bool:
+	# Engine.max_fps=0 alone does not unlock FPS when VSync is on.
+	return cap == 0 or (refresh_hz > 0.0 and float(cap) > refresh_hz + 0.5)
+
+
+func _refresh_fps_vsync_policy() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	if _saved_vsync_mode < 0:
+		_saved_vsync_mode = DisplayServer.window_get_vsync_mode()
+	var cap: int = configured_foreground_fps(current_performance_profile)
+	var refresh_hz: float = DisplayServer.screen_get_refresh_rate(DisplayServer.window_get_current_screen())
+	var preferred_mode: int = DisplayServer.VSYNC_DISABLED if needs_vsync_disabled(cap, refresh_hz) else _saved_vsync_mode
+	if DisplayServer.window_get_vsync_mode() != preferred_mode:
+		DisplayServer.window_set_vsync_mode(preferred_mode)
+		if OS.is_debug_build():
+			print("[FPS_VSYNC] cap=%d refresh_hz=%.1f vsync=%d original=%d" % [
+				cap, refresh_hz, preferred_mode, _saved_vsync_mode
+			])
+
+
+func should_render_combat_effects() -> bool:
+	return bool(current_performance_profile.get("combat_effects_enabled", true))
+
+
+func _stop_combat_effects_for_mass_mode() -> void:
+	# Called on preset changes, never per frame; do not stop combat logic.
+	if is_instance_valid(current_player) and current_player.has_method("stop_combat_visual_effects"):
+		current_player.stop_combat_visual_effects()
+	if NetworkEntityManager:
+		for actor in NetworkEntityManager.active_entities.values():
+			if is_instance_valid(actor) and actor.has_method("stop_combat_visual_effects"):
+				actor.stop_combat_visual_effects()
+	if FloatingTextManager and FloatingTextManager.has_method("stop_combat_visual_effects"):
+		FloatingTextManager.stop_combat_visual_effects()
+
 
 func set_foreground_fps_limit(value: int) -> void:
 	current_foreground_fps_limit = ClientPerformanceProfile.sanitize_fps_limit(value)
@@ -627,6 +666,7 @@ func _refresh_focus_render_policy() -> void:
 		_window_has_focus, _has_active_world_visuals())
 	Engine.max_fps = fps_cap_for_focus(
 		current_performance_profile, _window_has_focus, _has_active_world_visuals())
+	_refresh_fps_vsync_policy()
 	RenderingServer.render_loop_enabled = not world_background
 	_set_background_visual_processing(world_background)
 
@@ -640,9 +680,11 @@ static func configured_foreground_fps(profile: Dictionary) -> int:
 func _apply_performance_profile() -> void:
 	_focused_max_fps = configured_foreground_fps(current_performance_profile)
 	_refresh_focus_render_policy()
+	if not should_render_combat_effects():
+		_stop_combat_effects_for_mass_mode()
 	performance_profile_changed.emit(get_performance_profile())
 	if OS.is_debug_build():
-		print("[PERFORMANCE_PROFILE] mode=%s combat=%s player_simplify=%s monster_simplify=%s load=%d combat_id=%d foreground_fps=%d background_fps=%d players=%d monsters=%d effects=%d%% quality_enhanced=%s monster_aoi_base=%.0f ground_aoi_base=%.0f" % [
+		print("[PERFORMANCE_PROFILE] mode=%s combat=%s player_simplify=%s monster_simplify=%s load=%d combat_id=%d foreground_fps=%d background_fps=%d players=%d monsters=%d effects=%d%% combat_fx_enabled=%s quality_enhanced=%s monster_aoi_base=%.0f ground_aoi_base=%.0f" % [
 			ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
 			ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
 			ClientPerformanceProfile.simplify_mode_name(current_simplify_players_mode),
@@ -654,6 +696,7 @@ func _apply_performance_profile() -> void:
 			int(current_performance_profile.get("full_player_budget", 0)),
 			int(current_performance_profile.get("full_monster_budget", 0)),
 			int(current_performance_profile.get("effect_budget_percent", 100)),
+			str(should_render_combat_effects()),
 			str(current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY),
 			float(current_performance_profile.get("monster_aoi_enter_radius", 1800.0)),
 			float(current_performance_profile.get("ground_aoi_enter_radius", 2000.0)),
@@ -765,6 +808,8 @@ func _trim_unfocused_runtime_caches() -> void :
 func _ready() -> void :
 	_window_has_focus = DisplayServer.window_is_focused()
 	_focused_max_fps = Engine.max_fps
+	if DisplayServer.get_name() != "headless":
+		_saved_vsync_mode = DisplayServer.window_get_vsync_mode()
 	_apply_performance_profile()
 	_focus_last_change_usec = Time.get_ticks_usec()
 	if not _window_has_focus:
