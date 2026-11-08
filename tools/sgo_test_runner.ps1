@@ -158,8 +158,16 @@ function Run-WireProbe([int]$players, [string]$dotnetPath) {
         }
 
         $report = Get-Content -LiteralPath $jsonPath -Raw | ConvertFrom-Json
+        if (@($report.Results).Count -ne 1) {
+            throw "Expected one wire result for $players players; see $jsonPath"
+        }
         foreach ($result in @($report.Results)) {
-            if (-not $result.Success -or $result.SetupFailures -ne 0 -or $result.WorldAoi.FarSpawnLeaks -ne 0) {
+            if (-not $result.Success -or $result.Players -ne $players -or
+                $result.SetupSuccesses -ne $players -or
+                $result.SetupFailures -ne 0 -or
+                $result.Movement.ExpectedDeliveries -ne $result.Movement.ActualDeliveries -or
+                $result.WorldAoi.FarSpawnLeaks -ne 0 -or
+                -not $result.WorldAoi.ReentrySpawnReceived) {
                 throw "Wire report failed correctness checks for $players players; see $jsonPath"
             }
             Write-Host ("PASS: players={0}; received moves={1}; P95={2} ms; far leaks={3}" -f $result.Players,$result.Movement.ActualDeliveries,$result.Movement.RoundLatencyMs.P95,$result.WorldAoi.FarSpawnLeaks) -ForegroundColor Green
@@ -230,7 +238,7 @@ try {
                 (Join-Path $repoRoot 'tests\SGO.Server.SmokeTests\SGO.Server.SmokeTests.csproj'),
                 '--', '--suite', 'all'
             )
-            $pythonChecks = @('tests\test_admin_ui_structure.py','tests\test_global_rate_contract.py')
+            $pythonChecks = @('tests\test_admin_ui_structure.py','tests\test_global_rate_contract.py','tests\test_windows_runner_contract.py')
             $existingChecks = @($pythonChecks | Where-Object { Test-Path -LiteralPath (Join-Path $repoRoot $_) })
             if ($existingChecks.Count -gt 0) {
                 $pythonTool = Get-Command py -ErrorAction SilentlyContinue
