@@ -166,6 +166,18 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("allowInterleaved: true", source)
         self.assertIn("AwaitType(", source)
 
+    def test_mall_external_suite_guards_provider_and_idempotent_settlement(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = SMOKE / "Integration" / "MallExternalIntegrationSmokeTests.cs"
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("PayPal order creation forwards request id", source)
+        self.assertIn("PayPal settlement is idempotent", source)
+        self.assertIn("legacy query forwards exact credentials", source)
+        self.assertIn("replayed legacy withdrawal", source)
+        self.assertIn("null external providers fail closed", source)
+        self.assertIn("MallExternalIntegrationSmokeTests.Run();", main)
+
     def test_prelogin_route_suite_has_explicit_context(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = SMOKE / "Protocol" / "PreloginPacketSmokeTests.cs"
