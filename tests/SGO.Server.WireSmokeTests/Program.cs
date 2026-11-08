@@ -826,6 +826,107 @@ await AwaitType(
     "peer receives ground-item despawn after pickup",
     skipNonMatchingSameType: true);
 
+// Explicit choice reward boxes go through the actual encrypted wire path:
+// the initial use displays options without consuming; the server rejects a
+// forged choice and atomically grants only a whitelisted option once.
+var choiceSeed = await SendGm(
+    "item 2209 1",
+    "InventorySync",
+    root =>
+        root.TryGetProperty("Items", out var items) &&
+        items.ValueKind == JsonValueKind.Array &&
+        items.EnumerateArray().Any(item =>
+            item.TryGetProperty("ItemIndex", out var itemIndex) &&
+            itemIndex.GetInt32() == 2209),
+    "GM seeds real 2209 explicit-choice equipment box");
+
+var choiceItemUid = choiceSeed.GetProperty("Items")
+    .EnumerateArray()
+    .First(item => item.GetProperty("ItemIndex").GetInt32() == 2209)
+    .GetProperty("ItemUID")
+    .GetInt64();
+
+await SendPacket(
+    socket,
+    new { Type = "UseItemRequest", ItemUID = choiceItemUid });
+
+await AwaitType(
+    socket,
+    "ItemChoiceRequired",
+    root =>
+        root.GetProperty("ItemUID").GetInt64() == choiceItemUid &&
+        root.GetProperty("ItemIndex").GetInt32() == 2209 &&
+        root.TryGetProperty("Options", out var options) &&
+        options.ValueKind == JsonValueKind.Array &&
+        options.GetArrayLength() == 3 &&
+        options.EnumerateArray()
+            .Select(option => option.GetProperty("ItemIndex").GetInt32())
+            .OrderBy(id => id)
+            .SequenceEqual(new[] { 15112, 15113, 15114 }),
+    "UseItemRequest returns three authoritative choices without consuming");
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "UseItemChoiceRequest",
+        ItemUID = choiceItemUid,
+        ItemIndex = 999999
+    });
+
+await AwaitType(
+    socket,
+    "SystemMessageFlash",
+    root =>
+        root.TryGetProperty("Message", out var message) &&
+        (message.GetString() ?? "").Contains("獎勵選項已失效"),
+    "forged choice is rejected without reward");
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "UseItemChoiceRequest",
+        ItemUID = choiceItemUid,
+        ItemIndex = 15113
+    });
+
+await AwaitType(
+    socket,
+    "InventorySync",
+    root =>
+        root.TryGetProperty("Items", out var items) &&
+        !items.EnumerateArray().Any(item =>
+            item.GetProperty("ItemUID").GetInt64() == choiceItemUid),
+    "selected choice consumes source item exactly once");
+
+await AwaitType(
+    socket,
+    "EquipSync",
+    root =>
+        root.TryGetProperty("Equips", out var equips) &&
+        equips.ValueKind == JsonValueKind.Array &&
+        equips.EnumerateArray().Any(equip =>
+            equip.GetProperty("ItemIdx").GetInt32() == 15113),
+    "selected armor is granted through equipment sync");
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "UseItemChoiceRequest",
+        ItemUID = choiceItemUid,
+        ItemIndex = 15113
+    });
+
+await AwaitType(
+    socket,
+    "SystemMessageFlash",
+    root =>
+        root.TryGetProperty("Message", out var message) &&
+        (message.GetString() ?? "").Contains("找不到可使用的選擇型道具"),
+    "replayed choice UID cannot grant a second reward");
+
 // Pet creation is test seeding; summon and command attack are normal PetAction.
 var petSync = await SendGm(
     "pet 45001 WirePet",
