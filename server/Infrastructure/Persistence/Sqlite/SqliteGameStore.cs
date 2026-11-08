@@ -9970,6 +9970,31 @@ public sealed class SqliteGameStore : IGameStore
         using var db = Open();
         using var tx = db.BeginTransaction();
 
+        // Player-shop purchase touches buyer money, seller money and asset
+        // ownership. Take SQLite's writer slot before reading any of them so
+        // a concurrent Trade/transfer cannot invalidate a deferred snapshot.
+        using (var serialize = db.CreateCommand())
+        {
+            serialize.Transaction = tx;
+            serialize.CommandText = """
+                UPDATE characters
+                   SET money=money
+                 WHERE id=$id
+                   AND account_id=$account
+                """;
+            Arg(serialize, "$id", buyerDbid);
+            Arg(serialize, "$account", buyerAccountId);
+            if (serialize.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    "角色不存在",
+                    0,
+                    0,
+                    false);
+            }
+        }
+
         long ReadMoney(
             long accountId,
             long dbid)
