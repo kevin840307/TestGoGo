@@ -4089,6 +4089,32 @@ public sealed class PacketRouter
 
                     if (ground is null)
                     {
+                        // A peer may have received the ground SpawnEntity
+                        // after its own WorldReady snapshot. If someone else
+                        // already picked it up, the DB is authoritative:
+                        // send a local Despawn even though this connection
+                        // never had an entry in state.GroundItems. Limit
+                        // this recovery to the reserved ground-item range so
+                        // forged requests cannot despawn local monsters.
+                        state.GroundItems.Remove(entityId);
+                        if (entityId >= 6_000_000 &&
+                            entityId < 9_000_000)
+                        {
+                            return
+                            [
+                                new
+                                {
+                                    Type = "DespawnEntity",
+                                    EntityID = entityId
+                                },
+                                new
+                                {
+                                    Type = "SystemMessageFlash",
+                                    Message = "物品已不存在"
+                                }
+                            ];
+                        }
+
                         return
                         [
                             new
