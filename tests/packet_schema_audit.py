@@ -119,8 +119,17 @@ def scan(root: Path) -> dict:
                 # The trade helper sends Action as the packet Type.
                 samples.setdefault(name, []).append(entry)
             elif kind in ("shop", "mall"):
+                # Shared shop/mall helpers always add the base wire Type and
+                # Action field before merging the literal payload. Model that
+                # guarantee here just like PartyAction/PetAction helpers, so a
+                # caller fixture does not need to duplicate helper internals.
+                packet_type = "ShopAction" if kind == "shop" else "MallAction"
+                samples.setdefault(packet_type, []).append({
+                    "path": entry["path"],
+                    "fields": set(entry["fields"]) | {"Action"}
+                })
                 action_samples.setdefault(
-                    ("ShopAction:" if kind == "shop" else "MallAction:") + name,
+                    packet_type + ":" + name,
                     []).append(entry)
 
         for literal in dictionary_literals(source):
