@@ -172,6 +172,9 @@ class AfkModeContract(unittest.TestCase):
 
         self.assertIn("func release_afk_rebuildable_ui_batched", hud)
         self.assertIn("release_rebuildable_visual_state_batched", hud)
+        game = read("client/scripts/game_manager.gd")
+        self.assertIn('current_hud.has_method("release_afk_rebuildable_ui_batched")', game)
+        self.assertIn("[AFK_UI_RELEASE]", game)
         self.assertIn('get_node_or_null("ContentScroll/SkillGrid")', hud)
         self.assertIn('get_node_or_null("GridContainer")', hud)
         self.assertIn("SubViewport.UPDATE_DISABLED", hud)

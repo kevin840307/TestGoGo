@@ -879,6 +879,14 @@ func _set_afk_dynamic_visuals_suspended_batched(
 func _clear_visual_runtime_caches_batched(
 	progress_callback: Callable = Callable()
 ) -> void:
+	var released_hud_nodes: int = 0
+	if is_instance_valid(current_hud) and current_hud.has_method("release_afk_rebuildable_ui_batched"):
+		_emit_afk_restore_progress(progress_callback, 65.0, "卸載可重建介面")
+		released_hud_nodes = int(await current_hud.call("release_afk_rebuildable_ui_batched"))
+		if OS.is_debug_build():
+			print("[AFK_UI_RELEASE] rebuildable_nodes=%d" % released_hud_nodes)
+		await get_tree().process_frame
+
 	if DollLoader:
 		if DollLoader.has_method("clear_runtime_cache_batched"):
 			await DollLoader.clear_runtime_cache_batched()
