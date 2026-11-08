@@ -9,9 +9,9 @@ func _ready() -> void:
 		ClientPerformanceProfile.LOAD_MULTIBOX,
 		ClientPerformanceProfile.COMBAT_NORMAL
 	)
-	var pvp := ClientPerformanceProfile.resolve(
+	var response := ClientPerformanceProfile.resolve(
 		ClientPerformanceProfile.LOAD_BALANCED,
-		ClientPerformanceProfile.COMBAT_PVP
+		ClientPerformanceProfile.COMBAT_RESPONSE
 	)
 	var mass := ClientPerformanceProfile.resolve(
 		ClientPerformanceProfile.LOAD_BALANCED,
@@ -25,12 +25,12 @@ func _ready() -> void:
 	assert(bool(multibox["hide_far_noncombat_monsters"]))
 	assert(not bool(balanced["use_primitive_monsters"]))
 
-	assert(int(pvp["full_player_budget"]) >= int(balanced["full_player_budget"]))
-	assert(int(pvp["full_monster_budget"]) <= int(balanced["full_monster_budget"]))
-	assert(bool(pvp["hide_far_noncombat_monsters"]))
+	assert(int(response["full_player_budget"]) >= int(balanced["full_player_budget"]))
+	assert(int(response["full_monster_budget"]) <= int(balanced["full_monster_budget"]))
+	assert(bool(response["hide_far_noncombat_monsters"]))
 
-	assert(int(mass["full_player_budget"]) >= int(pvp["full_player_budget"]))
-	assert(int(mass["effect_budget_percent"]) <= int(pvp["effect_budget_percent"]))
+	assert(int(mass["full_player_budget"]) >= int(response["full_player_budget"]))
+	assert(int(mass["effect_budget_percent"]) <= int(response["effect_budget_percent"]))
 
 	var auto_profile := ClientPerformanceProfile.apply_visual_overrides(
 		multibox,
