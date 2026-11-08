@@ -82,7 +82,7 @@ internal static class EconomyConcurrencySmokeTests
                     AssetPurchaseKind.General,
                     1,
                     17,
-                    out _);
+                    out long _);
                 return success;
             }))
             .ToArray();
