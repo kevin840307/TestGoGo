@@ -179,11 +179,16 @@ public static class AdminEndpoints
                 "GlobalRate",
                 $"EXP={rate.ExperienceMultiplier:0.##}x Money={rate.MoneyMultiplier:0.##}x Drop={rate.DropMultiplier:0.##}x Start={rate.StartsAt:O} End={rate.ExpiresAt:O}");
 
+            var scheduled =
+                rate.StartsAt > DateTimeOffset.UtcNow.AddSeconds(5);
+            var rateMessage = scheduled
+                ? $"[全服加倍] 已排程：{rate.StartsAt.ToLocalTime():yyyy-MM-dd HH:mm} 開始，經驗 {rate.ExperienceMultiplier:0.##}x / 金錢 {rate.MoneyMultiplier:0.##}x / 掉寶 {rate.DropMultiplier:0.##}x，持續 {body.DurationMinutes} 分鐘"
+                : $"[全服加倍] 已開始：經驗 {rate.ExperienceMultiplier:0.##}x / 金錢 {rate.MoneyMultiplier:0.##}x / 掉寶 {rate.DropMultiplier:0.##}x，持續 {body.DurationMinutes} 分鐘";
+
             broadcasts.Publish(new
             {
                 Type = "SystemMessageBroadcast",
-                Message =
-                    $"[全服加倍] 經驗 {rate.ExperienceMultiplier:0.##}x / 金錢 {rate.MoneyMultiplier:0.##}x / 掉寶 {rate.DropMultiplier:0.##}x，持續 {body.DurationMinutes} 分鐘"
+                Message = rateMessage
             });
 
             return Results.Ok(rate);
