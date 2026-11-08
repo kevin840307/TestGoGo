@@ -8570,6 +8570,7 @@ try
         (monster.X - 20, monster.Y);
     session.PetLastAttackAt[petCombatUid] =
         DateTimeOffset.MinValue;
+    session.PetOutOfRangeSince.Remove(petCombatUid);
     session.LastPetFollowTick =
         DateTimeOffset.MinValue;
 
@@ -8579,12 +8580,30 @@ try
         session,
         leashStart);
 
+    var leashGraceStarted =
+        session.PetOutOfRangeSince.ContainsKey(petCombatUid);
+    var graceHardReturn = gracePackets.Any(x =>
+    {
+        var json = JsonSerializer.Serialize(x);
+        return json.Contains(
+                   "\"Type\":\"MoveEntity\"") &&
+               json.Contains(
+                   $"\"EntityID\":{4_000_000L + petCombatUid}") &&
+               json.Contains(
+                   "\"SpeedTime\":0.01");
+    });
+
     Check(
-        session.PetOutOfRangeSince.ContainsKey(petCombatUid) &&
-        !gracePackets.Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                "\"SpeedTime\":0.01")),
-        "pet beyond 900px starts owner-leash grace instead of teleporting immediately");
+        leashGraceStarted &&
+        !graceHardReturn,
+        "pet beyond 900px starts owner-leash grace instead of teleporting immediately" +
+        (leashGraceStarted && !graceHardReturn
+            ? ""
+            : $" (graceStarted={leashGraceStarted}, hardReturn={graceHardReturn}, " +
+              $"outOfRangeSince={session.PetOutOfRangeSince.GetValueOrDefault(petCombatUid):O}, " +
+              $"petPos={session.PetPositions.GetValueOrDefault(petCombatUid)}, " +
+              $"ownerPos=({session.LastX},{session.LastY}), " +
+              $"packets={JsonSerializer.Serialize(gracePackets)})"));
 
     session.LastPetFollowTick =
         DateTimeOffset.MinValue;
