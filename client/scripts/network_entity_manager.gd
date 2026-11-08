@@ -489,12 +489,12 @@ func _on_entity_despawned(data: Dictionary) -> void :
 func _on_entity_moved(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
 	if _monster_spawn_templates.has(entity_id):
-		# Only LocX/LocY change on MoveEntity. A deep clone of ExtraData for every
-		# movement packet is both unnecessary and expensive in crowded maps.
-		var cached: Dictionary = (_monster_spawn_templates[entity_id] as Dictionary).duplicate()
+		# These spawn templates are already private owned copies.
+		# MoveEntity only changes top-level coordinates. Reuse the Dictionary
+		# rather than allocating one for every monster network packet.
+		var cached: Dictionary = _monster_spawn_templates[entity_id] as Dictionary
 		cached["LocX"] = float(data.get("X", cached.get("LocX", 0.0)))
 		cached["LocY"] = float(data.get("Y", cached.get("LocY", 0.0)))
-		_monster_spawn_templates[entity_id] = cached
 		if _deferred_monster_spawns.has(entity_id):
 			_deferred_monster_spawns[entity_id] = cached
 			if _is_monster_inside_aoi(cached, MONSTER_AOI_ENTER_RADIUS):

@@ -74,6 +74,28 @@ checks the special-terrain dismount invariant without requiring a live server.
 
 It is **not** an end-to-end game test. In this editing environment Godot was unavailable; these tests have not been executed.
 
+## Rare corner jitter while casting during movement
+
+Run `player_map_movement_regression.gd` for walking/buff sync,
+waypoint-step clamping, preserved skill locks and targeted-skill ownership.
+Run `perf_regression_smoke.gd` for zero-allocation template position updates.
+
+Manually test in matching Client + Server Debug sessions:
+
+1. Hold left mouse to move along straight paths, cast a buff/self skill.
+   Character movement/animations and `SyncPosition` should remain normal.
+2. Follow a route around a tight wall corner while targeting a monster
+   using a skill. No repeat ±5px corner oscillation.
+3. Repeat after dismount and through Map13 → Map15 → Map13. Avoid any new
+   collision bypass, blocked movement, or attack/cast-range regression.
+4. Check ordinary attack, monster direction, NPC clicks, pickup, skill effects,
+   UI and nearby entities for unchanged behavior.
+
+`[PLAYER_POSITION_CORRECTION]` prints only in Debug builds and is limited
+to once per second during repeated corrections. Compare client messages to
+server `[MOVE_BLOCKED]` for the same session. A client-only file cannot
+fully identify why the server rejected a position.
+
 ## Manual end-to-end acceptance
 
 1. Startup prewarm → login form: mouse and login input are responsive; progress 0→100.

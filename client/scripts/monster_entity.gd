@@ -341,8 +341,7 @@ func _input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) -> vo
 
 
 			if "ready_to_cast_skill_id" in player and player.ready_to_cast_skill_id > 0:
-				player.pending_skill_id = player.ready_to_cast_skill_id
-				player.combat_target = self
+				player.begin_targeted_skill(self, player.ready_to_cast_skill_id)
 				player.ready_to_cast_skill_id = -1
 
 				if CursorManager:

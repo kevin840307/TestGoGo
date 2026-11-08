@@ -47,6 +47,9 @@ var navigation_repath_cooldown: float = 0.0
 var _navigation_request_id: int = 0
 var _navigation_fallback_running: bool = false
 var _navigation_fallback_destination: Vector2 = Vector2.ZERO
+# Rate-limited correction diagnostics; never print in Release.
+var _position_correction_count: int = 0
+var _last_position_correction_log_msec: int = 0
 
 
 
@@ -462,6 +465,11 @@ func _physics_process(_delta: float) -> void :
 		_handle_death_timer(_delta)
 		return
 
+	# A monster click can consume mouse-up before the player handles it.
+	# Keep mouse-hold navigation from fighting skill/combat tracking.
+	if is_mouse_holding and is_instance_valid(combat_target):
+		is_mouse_holding = false
+
 	if is_mouse_holding:
 
 		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
@@ -581,7 +589,7 @@ func _handle_combat_tracking() -> void :
 		var combat_destination: Vector2 = combat_target.global_position
 		if move_destination.distance_to(combat_destination) >= 16.0 or not is_moving:
 			_set_navigation_target(combat_destination)
-		if current_state != "walk":
+		if is_moving and not is_action_locked and current_state != "walk":
 			current_state = "walk"
 			sync_animation()
 	else:
@@ -718,7 +726,10 @@ func _handle_movement(delta: float) -> void :
 	if distance <= 0.001:
 		return
 
-	velocity = dir_vector.normalized() * current_real_speed
+	# Do not overshoot a 3/4, 1/2, or 1/4 corner-steering probe.
+	# An unclamped frame can jump past that probe and reverse next frame,
+	# creating the observed few-pixel corner oscillation.
+	velocity = _calculate_step_velocity(dir_vector, current_real_speed, delta)
 	update_direction_8way(velocity)
 
 	var old_position: Vector2 = global_position
@@ -732,6 +743,15 @@ func _handle_movement(delta: float) -> void :
 	stuck_frames += 1
 	if stuck_frames >= MAX_STUCK_FRAMES:
 		_stop_movement()
+
+static func _calculate_step_velocity(to_target: Vector2, speed: float, delta: float) -> Vector2:
+	if delta <= 0.0 or speed <= 0.0:
+		return Vector2.ZERO
+	var remaining_distance: float = to_target.length()
+	if remaining_distance <= 0.001:
+		return Vector2.ZERO
+	return to_target / remaining_distance * minf(speed, remaining_distance / delta)
+
 
 func reset_map_navigation_state(map_id: int, authoritative_position: Vector2) -> void:
 	# Called for initial world entry AND every map swap. This prevents a
@@ -783,7 +803,10 @@ func _get_navigation_map_id() -> int:
 
 
 func _handle_network_sync(delta: float) -> void :
-	if current_state != "walk":
+	# Casting/attacking can change the animation state while movement
+	# continues. Synchronize actual movement to avoid a rejected jump
+	# after the animation ends, especially around Blocking.dat corners.
+	if not is_moving:
 		return
 
 	sync_timer += delta
@@ -887,6 +910,19 @@ func _set_navigation_target(destination: Vector2) -> void :
 
 
 func apply_position_correction(corrected_position: Vector2) -> void :
+	if OS.is_debug_build():
+		var correction_distance: float = global_position.distance_to(corrected_position)
+		if correction_distance >= 2.0:
+			_position_correction_count += 1
+			var now_msec: int = Time.get_ticks_msec()
+			if _last_position_correction_log_msec == 0 or now_msec - _last_position_correction_log_msec >= 1000:
+				print("[PLAYER_POSITION_CORRECTION] from=%s to=%s diff=%.1f count=%d moving=%s state=%s target=%s" % [
+					str(global_position), str(corrected_position), correction_distance,
+					_position_correction_count, str(is_moving), current_state,
+					str(is_instance_valid(combat_target))
+				])
+				_last_position_correction_log_msec = now_msec
+				_position_correction_count = 0
 	_navigation_request_id += 1
 	_navigation_fallback_running = false
 	global_position = corrected_position
@@ -917,7 +953,9 @@ func _stop_movement(send_final_position: bool = true) -> void :
 	move_path_index = 0
 	move_destination = global_position
 	target_position = global_position
-	current_state = "idle"
+	# Stopping at the waypoint must not interrupt a locked skill animation.
+	if not is_action_locked and not is_dead:
+		current_state = "idle"
 	stuck_frames = 0
 	if NetworkManager.is_connected_to_server:
 		var map_id: int = _get_navigation_map_id()
@@ -1015,6 +1053,18 @@ func _on_equip_response(success: bool, _message: String, data: Dictionary) -> vo
 			hud.update_status_panel()
 
 
+func begin_targeted_skill(target: Node2D, skill_id: int) -> void:
+	if not is_instance_valid(target) or skill_id <= 0:
+		return
+	# A target click supersedes held-mouse navigation and any pending
+	# asynchronous fallback path, but does not change cast/range rules.
+	is_mouse_holding = false
+	if is_moving or _navigation_fallback_running or not move_path.is_empty():
+		_stop_movement()
+	combat_target = target
+	pending_skill_id = skill_id
+
+
 func prepare_skill(skill_id: int) -> void :
 	if not can_attack():
 		if GameManager.current_hud and GameManager.current_hud.has_method("show_rejection_message_flash"):
@@ -1081,8 +1131,7 @@ func _on_click_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: 
 						can_self_cast = true
 
 				if can_self_cast:
-					combat_target = self
-					pending_skill_id = ready_to_cast_skill_id
+					begin_targeted_skill(self, ready_to_cast_skill_id)
 					ready_to_cast_skill_id = -1
 					if CursorManager:
 						if CursorManager.has_method("cancel_skill_state"):
