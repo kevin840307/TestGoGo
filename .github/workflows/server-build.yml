@@ -34,6 +34,7 @@ jobs:
           dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite protocol 2>&1 | tee protocol-smoke.log
           dotnet run --no-build --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite announcements 2>&1 | tee announcement-smoke.log
           dotnet run --no-build --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite world 2>&1 | tee world-smoke.log
+          dotnet run --no-build --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite concurrency 2>&1 | tee concurrency-smoke.log
       - name: Full game integration smoke
         run: |
           set -o pipefail
@@ -74,6 +75,7 @@ jobs:
             protocol-smoke.log
             announcement-smoke.log
             world-smoke.log
+            concurrency-smoke.log
             wire.log
             server.log
             packet-contract-report.json
