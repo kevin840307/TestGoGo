@@ -173,7 +173,11 @@ func _defer_monster_spawn(data: Dictionary) -> void :
 	var cached: Dictionary = data.duplicate()
 	_monster_spawn_templates[entity_id] = cached
 	_deferred_monster_spawns[entity_id] = cached
-	_queued_spawn_ids.erase(entity_id)
+	# Deferral must cancel any stale queue entry as well as its ID marker.
+	# Otherwise repeated WorldReady snapshots can create phantom / duplicate
+	# monsters that later jump when authoritative MoveEntity arrives.
+	if _queued_spawn_ids.has(entity_id):
+		_remove_queued_spawn(entity_id)
 
 func _remove_queued_spawn(entity_id: int) -> void :
 	_queued_spawn_ids.erase(entity_id)
@@ -291,6 +295,11 @@ func _on_entity_spawned(data: Dictionary) -> void :
 	if entity_type == 1:
 		var cached: Dictionary = data.duplicate(true)
 		_monster_spawn_templates[entity_id] = cached
+		# Repeated authoritative snapshots must not move an existing render
+		# entity into the deferred queue while it is still on the map.
+		if get_active_entity(entity_id):
+			_deferred_monster_spawns.erase(entity_id)
+			return
 		if not _can_spawn_monster(cached, MONSTER_AOI_ENTER_RADIUS):
 			_defer_monster_spawn(cached)
 			return
