@@ -747,6 +747,28 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 				p_data.summoned_horse_uid = h_uid
 				p_data.rider_state["SummonedHorseUID"] = h_uid
 
+				# A successful dismount changes the server's walkability
+				# rules. Cancel any in-flight client path and rebase to the
+				# server's current map/position BEFORE new SyncPosition packets
+				# can carry a stale pre-dismount coordinate. This is also used
+				# when the mecha automatically runs out of energy.
+				if (
+					h_uid == -1
+					and data.has("MapID") and data.has("X") and data.has("Y")
+					and not GameManager.is_changing_map
+					and int(data["MapID"]) == int(p_data.map_id)
+				):
+					var player = GameManager.current_player
+					var authoritative_pos := Vector2(float(data["X"]), float(data["Y"]))
+					if OS.is_debug_build():
+						print("[MECHA_DISMOUNT_REBASE] map=%d client=%s server=%s diff=%.1f" % [
+							int(p_data.map_id), str(player.global_position),
+							str(authoritative_pos),
+							player.global_position.distance_to(authoritative_pos)
+						])
+					if player.has_method("apply_position_correction"):
+						player.apply_position_correction(authoritative_pos)
+
 				if GameManager.current_hud and GameManager.current_hud.has_method("_refresh_inventory_if_open"):
 					GameManager.current_hud._refresh_inventory_if_open()
 
