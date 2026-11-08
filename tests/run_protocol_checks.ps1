@@ -50,6 +50,10 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_smoke_suite_structure.py", "-v"
     )
+    Invoke-Checked "Load probe structure tests" "python" @(
+        "-m", "unittest", "discover", "-s", "tests",
+        "-p", "test_load_probe_structure.py", "-v"
+    )
     Invoke-Checked "Feature gap tracking regression" "python" @(
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_feature_gap_tracker.py", "-v"
