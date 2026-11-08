@@ -60,7 +60,7 @@ function applyEditorPreferencesToControls() {
     const control = document.getElementById(id);
     if (control) control.checked = !!state[key];
   }
-  $('.segmented [data-map-tab]').forEach(button => {
+  $('[data-map-tab]').forEach(button => {
     button.classList.toggle('active', button.dataset.mapTab === state.mapTab);
   });
 }
