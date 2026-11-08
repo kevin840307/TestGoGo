@@ -29,7 +29,10 @@ public sealed class SqliteGameStore : IGameStore
         var db = new SqliteConnection(_connectionString);
         db.Open();
         using var pragma = db.CreateCommand();
-        pragma.CommandText = "PRAGMA foreign_keys=ON;";
+        pragma.CommandText = """
+            PRAGMA foreign_keys=ON;
+            PRAGMA busy_timeout=5000;
+            """;
         pragma.ExecuteNonQuery();
         return db;
     }
@@ -8589,19 +8592,21 @@ public sealed class SqliteGameStore : IGameStore
         if (!OwnsCharacter(db, accountId, dbid, tx))
             return (false, "角色不存在", null);
 
+        // Claim the row atomically. Concurrent pickup attempts cannot both
+        // observe and later delete the same ground item.
         GroundItemRuntime item;
-        using (var get = db.CreateCommand())
+        using (var claim = db.CreateCommand())
         {
-            get.Transaction = tx;
-            get.CommandText = """
-                SELECT id,map_id,owner_dbid,tab_type,item_index,count,
-                       damage,color,part,x,y,
-                       created_utc_ms,protect_until_utc_ms,expires_utc_ms
-                  FROM ground_items
+            claim.Transaction = tx;
+            claim.CommandText = """
+                DELETE FROM ground_items
                  WHERE id=$id
+                RETURNING id,map_id,owner_dbid,tab_type,item_index,count,
+                          damage,color,part,x,y,
+                          created_utc_ms,protect_until_utc_ms,expires_utc_ms
                 """;
-            Arg(get, "$id", groundItemId);
-            using var reader = get.ExecuteReader();
+            Arg(claim, "$id", groundItemId);
+            using var reader = claim.ExecuteReader();
             if (!reader.Read())
                 return (false, "物品已不存在", null);
             item = ReadGroundItem(reader);
@@ -8610,18 +8615,16 @@ public sealed class SqliteGameStore : IGameStore
         var now = DateTimeOffset.UtcNow;
         if (item.IsExpired(now))
         {
-            using var expire = db.CreateCommand();
-            expire.Transaction = tx;
-            expire.CommandText =
-                "DELETE FROM ground_items WHERE id=$id";
-            Arg(expire, "$id", groundItemId);
-            expire.ExecuteNonQuery();
             tx.Commit();
             return (false, "物品已消失", item);
         }
 
         if (item.IsProtectedFor(dbid, now))
+        {
+            // Returning without commit rolls the claim back, preserving the
+            // ground item for its owner/protection window.
             return (false, "物品目前受掉落者保護", item);
+        }
 
         using (var add = db.CreateCommand())
         {
@@ -8665,16 +8668,6 @@ public sealed class SqliteGameStore : IGameStore
             Arg(add, "$char", dbid);
             Arg(add, "$item", item.ItemIndex);
             if (add.ExecuteNonQuery() != 1)
-                return (false, "撿取失敗", item);
-        }
-
-        using (var del = db.CreateCommand())
-        {
-            del.Transaction = tx;
-            del.CommandText =
-                "DELETE FROM ground_items WHERE id=$id";
-            Arg(del, "$id", groundItemId);
-            if (del.ExecuteNonQuery() != 1)
                 return (false, "撿取失敗", item);
         }
 
