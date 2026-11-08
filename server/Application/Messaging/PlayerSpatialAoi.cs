@@ -55,6 +55,11 @@ public sealed class PlayerSpatialAoi
                 entry = null;
             }
 
+            // SyncPresence runs every 250ms per socket even without
+            // movement; unchanged records must be O(1), not scan cells.
+            if (entry is not null && entry.Player == player)
+                return changes;
+
             if (entry is null)
             {
                 entry = new Entry(player);
@@ -182,9 +187,9 @@ public sealed class PlayerSpatialAoi
                 continue;
             peer.Visible.Remove(connectionId);
             changes.Add(new Change(peerId, entry.Player, false));
-            // The departing client may still be connected during a
-            // same-map teleport; send its own reciprocal despawn too.
-            changes.Add(new Change(connectionId, peer.Player, false));
+            // The departing client is loading a different map, or closing.
+            // It will receive a fresh WorldReady snapshot for its new map.
+            // Never enqueue stale-map despawns to its new scene.
         }
         entry.Visible.Clear();
     }
