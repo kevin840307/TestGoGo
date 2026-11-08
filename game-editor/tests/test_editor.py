@@ -244,11 +244,12 @@ class AssetRepositoryTests(EditorFixture):
 
 
 class WebStructureTests(unittest.TestCase):
-    def test_all_static_frontend_id_selectors_exist_in_html(self) -> None:
+    def test_all_static_frontend_id_selectors_exist_in_rendered_sources(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
         index = (web / "index.html").read_text(encoding="utf-8")
-        html_ids = set(re.findall(r'\bid="([^"]+)"', index))
+        known_ids = set(re.findall(r'\bid="([A-Za-z0-9_-]+)"', index))
         missing: list[str] = []
+        sources: dict[str, str] = {}
 
         for script_name in (
             "app-core.js",
@@ -258,13 +259,18 @@ class WebStructureTests(unittest.TestCase):
             "app-tools.js",
         ):
             source = (web / script_name).read_text(encoding="utf-8")
-            for selector_id in re.findall(r"\$\('#([^']+)'\)", source):
-                if selector_id not in html_ids:
+            sources[script_name] = source
+            # Editors render some controls dynamically with innerHTML/template strings.
+            known_ids.update(re.findall(r'\bid="([A-Za-z0-9_-]+)"', source))
+
+        for script_name, source in sources.items():
+            for selector_id in re.findall(r"\$\('#([A-Za-z0-9_-]+)'\)", source):
+                if selector_id not in known_ids:
                     missing.append(f"{script_name}: #{selector_id}")
 
         self.assertFalse(
             missing,
-            "\nStatic JS selectors missing from index.html:\n"
+            "\nStatic JS id selectors missing from HTML/template sources:\n"
             + "\n".join(sorted(set(missing))),
         )
 
