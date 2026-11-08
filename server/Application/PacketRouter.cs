@@ -879,9 +879,26 @@ public sealed class PacketRouter
                         MapID = state.CurrentMapId
                     }
                 };
+                // Late authoritative snapshot: async client map teardown can
+                // discard early NPC/monster spawns. Reconcile all world entities
+                // only when the new Godot scene is confirmed ready.
+                worldReadyPackets.AddRange(
+                    _combat.BuildCurrentMapSnapshot(state));
                 worldReadyPackets.AddRange(
                     BuildGroundItemSnapshotPackets(state));
+                worldReadyPackets.AddRange(
+                    BuildOtherPlayerSnapshotPackets(state));
+                worldReadyPackets.AddRange(
+                    BuildActivePetSnapshotPackets(
+                        state,
+                        accountId,
+                        state.CharacterId.Value,
+                        state.LastX,
+                        state.LastY));
 
+                // Replaces up to eight redundant periodic full-map snapshots.
+                state.WorldSnapshotRetriesRemaining = 0;
+                state.NextWorldSnapshotAt = DateTimeOffset.MinValue;
                 return worldReadyPackets;
             }
 
