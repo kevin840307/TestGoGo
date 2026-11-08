@@ -62,7 +62,7 @@ var _emotion_tween: Tween
 @onready var option_volume_bg: Control = $WindowsContainer / SettingsWindow / OptionVolumeBg
 @onready var option_volume_effect: Control = $WindowsContainer / SettingsWindow / OptionVolumeEffect
 @onready var option_auto_saint: Control = $WindowsContainer / SettingsWindow / OptionAutoSaint
-@onready var option_quality_enhancement: Control = $WindowsContainer / SettingsWindow / OptionQualityEnhancement
+@onready var option_fps_limit: Control = $WindowsContainer / SettingsWindow / OptionFpsLimit
 @onready var option_performance_load: Control = $WindowsContainer / SettingsWindow / OptionPerformanceLoad
 @onready var option_combat_render: Control = $WindowsContainer / SettingsWindow / OptionCombatRender
 @onready var option_simplify_players: Control = $WindowsContainer / SettingsWindow / OptionSimplifyPlayers
@@ -243,7 +243,7 @@ var _is_hud_hidden: bool = false
 var _hud_tween: Tween
 var _sys_msg_tween: Tween
 var current_pet_combat_mode: int = 1
-var current_quality_enhancement_enabled: bool = GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
+var current_fps_limit: int = GameConstants.SETTING_DEFAULT_FOREGROUND_FPS_LIMIT
 var current_performance_load_mode: int = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
 var current_combat_render_mode: int = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
 var current_simplify_players_mode: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE
@@ -763,14 +763,19 @@ func _setup_window_manager() -> void :
 			if not option_auto_saint.gui_input.is_connected(_on_option_gui_input):
 				option_auto_saint.gui_input.connect(_on_option_gui_input.bind(option_auto_saint))
 
-		if option_quality_enhancement is OptionButton:
-			option_quality_enhancement.select(1 if current_quality_enhancement_enabled else 0)
-			if not option_quality_enhancement.item_selected.is_connected(_on_opt_quality_enhancement_item_selected):
-				option_quality_enhancement.item_selected.connect(_on_opt_quality_enhancement_item_selected)
-			option_quality_enhancement.focus_mode = Control.FOCUS_NONE
-
-			if not option_quality_enhancement.gui_input.is_connected(_on_option_gui_input):
-				option_quality_enhancement.gui_input.connect(_on_option_gui_input.bind(option_quality_enhancement))
+		if option_fps_limit is OptionButton:
+			option_fps_limit.clear()
+			for fps_value: int in ClientPerformanceProfile.fps_options():
+				option_fps_limit.add_item("不限制" if fps_value == 0 else "%d FPS" % fps_value, fps_value)
+			for fps_index: int in range(option_fps_limit.item_count):
+				if option_fps_limit.get_item_id(fps_index) == current_fps_limit:
+					option_fps_limit.select(fps_index)
+					break
+			if not option_fps_limit.item_selected.is_connected(_on_opt_fps_limit_item_selected):
+				option_fps_limit.item_selected.connect(_on_opt_fps_limit_item_selected)
+			option_fps_limit.focus_mode = Control.FOCUS_NONE
+			if not option_fps_limit.gui_input.is_connected(_on_option_gui_input):
+				option_fps_limit.gui_input.connect(_on_option_gui_input.bind(option_fps_limit))
 
 		if option_performance_load is OptionButton:
 			option_performance_load.select(current_performance_load_mode)
@@ -809,7 +814,7 @@ func _setup_window_manager() -> void :
 			option_volume_bg,
 			option_volume_effect,
 			option_auto_saint,
-			option_quality_enhancement,
+			option_fps_limit,
 			option_performance_load,
 			option_combat_render,
 			option_simplify_players,
@@ -2794,15 +2799,15 @@ func _load_game_settings() -> void :
 				GameConstants.SETTING_DEFAULT_PET_COMBAT_MODE
 			)
 		))
-		current_quality_enhancement_enabled = bool(config.get_value(
+		current_fps_limit = ClientPerformanceProfile.sanitize_fps_limit(int(config.get_value(
 			section,
-			GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED,
+			GameConstants.SETTING_KEY_FOREGROUND_FPS_LIMIT,
 			config.get_value(
 				fallback_section,
-				GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED,
-				GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
+				GameConstants.SETTING_KEY_FOREGROUND_FPS_LIMIT,
+				GameConstants.SETTING_DEFAULT_FOREGROUND_FPS_LIMIT
 			)
-		))
+		)))
 		current_performance_load_mode = ClientPerformanceProfile.sanitize_load_mode(int(config.get_value(
 			section,
 			GameConstants.SETTING_KEY_PERFORMANCE_LOAD_MODE,
@@ -2841,13 +2846,14 @@ func _load_game_settings() -> void :
 		)))
 	else:
 		current_pet_combat_mode = GameConstants.SETTING_DEFAULT_PET_COMBAT_MODE
-		current_quality_enhancement_enabled = GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
+		current_fps_limit = GameConstants.SETTING_DEFAULT_FOREGROUND_FPS_LIMIT
 		current_performance_load_mode = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
 		current_combat_render_mode = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
 		current_simplify_players_mode = GameConstants.SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE
 		current_simplify_monsters_mode = GameConstants.SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE
 
 	if GameManager:
+		GameManager.set_foreground_fps_limit(current_fps_limit)
 		GameManager.set_performance_modes(
 			current_performance_load_mode,
 			current_combat_render_mode
@@ -2866,11 +2872,7 @@ func _save_game_settings() -> void :
 		GameConstants.SETTING_KEY_PET_COMBAT_MODE,
 		current_pet_combat_mode
 	)
-	config.set_value(
-		section,
-		GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED,
-		current_quality_enhancement_enabled
-	)
+	config.set_value(section, GameConstants.SETTING_KEY_FOREGROUND_FPS_LIMIT, current_fps_limit)
 	config.set_value(
 		section,
 		GameConstants.SETTING_KEY_PERFORMANCE_LOAD_MODE,
@@ -2902,11 +2904,13 @@ func _on_opt_pet_mode_item_selected(index: int) -> void :
 	if NetworkManager and NetworkManager.has_method("send_set_global_pet_mode"):
 		NetworkManager.send_set_global_pet_mode(current_pet_combat_mode)
 
-func _on_opt_quality_enhancement_item_selected(index: int) -> void :
-	current_quality_enhancement_enabled = (index == 1)
+func _on_opt_fps_limit_item_selected(index: int) -> void:
+	if not option_fps_limit is OptionButton:
+		return
+	current_fps_limit = ClientPerformanceProfile.sanitize_fps_limit(option_fps_limit.get_item_id(index))
 	_save_game_settings()
 	if GameManager:
-		GameManager.set_world_enhancement_enabled(current_quality_enhancement_enabled)
+		GameManager.set_foreground_fps_limit(current_fps_limit)
 
 func _on_opt_performance_load_item_selected(index: int) -> void:
 	current_performance_load_mode = ClientPerformanceProfile.sanitize_load_mode(index)

@@ -3722,7 +3722,7 @@ text = "自動聖靈"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="OptionQualityEnhancement" type="OptionButton" parent="WindowsContainer/SettingsWindow" unique_id=37759114]
+[node name="OptionFpsLimit" type="OptionButton" parent="WindowsContainer/SettingsWindow" unique_id=37759114]
 layout_mode = 0
 offset_left = 150.0
 offset_top = 248.0
@@ -3733,14 +3733,8 @@ theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
-selected = 0
-item_count = 2
-popup/item_0/text = "關閉"
-popup/item_0/id = 0
-popup/item_1/text = "開啟"
-popup/item_1/id = 1
 
-[node name="LabelQualityEnhancement" type="Label" parent="WindowsContainer/SettingsWindow" unique_id=663293368]
+[node name="LabelFpsLimit" type="Label" parent="WindowsContainer/SettingsWindow" unique_id=663293368]
 layout_mode = 0
 offset_left = 22.0
 offset_top = 246.0
@@ -3748,7 +3742,7 @@ offset_right = 142.0
 offset_bottom = 274.0
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
-text = "畫質增強"
+text = "畫面 FPS"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -3779,13 +3773,13 @@ selected = 1
 item_count = 4
 popup/item_0/text = "畫質優先"
 popup/item_0/id = 0
-popup/item_1/text = "平衡"
+popup/item_1/text = "一般"
 popup/item_1/id = 1
 popup/item_2/text = "低負載"
 popup/item_2/id = 2
 popup/item_3/text = "多開"
 popup/item_3/id = 3
-tooltip_text = "控制 CPU/GPU/記憶體負擔；多開模式會大幅降低背景與非必要視覺更新。"
+tooltip_text = "畫質優先會啟用畫質增強；一般不增強；低負載與多開減少特效與畫面外渲染。FPS 由上方獨立設定。"
 
 [node name="LabelCombatRender" type="Label" parent="WindowsContainer/SettingsWindow"]
 layout_mode = 0
