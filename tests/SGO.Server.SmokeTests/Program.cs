@@ -8564,6 +8564,11 @@ try
 
     // Owner leash uses a grace period. Falling far behind should not
     // immediately teleport the pet; only sustained off-screen distance does.
+    // Live WebSockets use SharedMapAiTicker; keep this leash-only fixture from
+    // also running the standalone local monster AI in the same router tick,
+    // which can kill/remove the pet before the grace assertion is observed.
+    var sharedAiManagedBeforeLeash = session.SharedAiManaged;
+    session.SharedAiManaged = true;
     session.LastX = monster.X - 1200;
     session.LastY = monster.Y;
     session.PetPositions[petCombatUid] =
@@ -8637,6 +8642,8 @@ try
 
     Check(!session.PetTargets.ContainsKey(petCombatUid),
         "hard owner return clears the pet combat target");
+
+    session.SharedAiManaged = sharedAiManagedBeforeLeash;
 
     // A monster may retain a target whose websocket presence is still on the
     // map even though that character is already far outside aggro range. It
