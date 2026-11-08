@@ -206,11 +206,24 @@ levels = Array[ExtResource("1_level")]([SubResource("Resource_level")])
         enemy = self.health.references("enemy", "1")
         self.assertEqual(enemy["count"], 2)
         self.assertTrue(all(x["type"] == "map_enemy" for x in enemy["references"]))
+        self.assertEqual(len(enemy["token"]), 64)
+        self.assertEqual(
+            enemy["token"],
+            self.health.references("enemy", "1")["token"],
+        )
+
+        rows = self.maps.get_enemy_spawns(13)
+        rows.append({"index": -1, "enemyId": 1, "x": 72, "y": 72, "sourceFlags": 0})
+        self.maps.save_enemy_spawns(13, rows)
+        changed = self.health.references("enemy", "1")
+        self.assertEqual(changed["count"], 3)
+        self.assertNotEqual(changed["token"], enemy["token"])
 
         script = self.health.references("script", "NpcOk.txt")
         types = [x["type"] for x in script["references"]]
         self.assertIn("map_npc", types)
         self.assertIn("quest_include", types)
+        self.assertEqual(len(script["token"]), 64)
 
     def test_skill_effect_validation_matches_runtime_fallbacks(self) -> None:
         report = self.health.scan(force=True)
