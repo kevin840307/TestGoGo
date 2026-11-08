@@ -348,7 +348,7 @@ class WebStructureTests(unittest.TestCase):
 
         for control_id in (
             "health-refresh", "health-errors", "health-warnings", "health-list",
-            "map-validation-modal", "map-validation-confirm",
+            "map-validation-modal", "map-validation-apply", "map-validation-confirm",
         ):
             self.assertIn(f'id="{control_id}"', index)
         self.assertIn("/api/health", editor)
@@ -356,6 +356,8 @@ class WebStructureTests(unittest.TestCase):
         self.assertIn("/validate", editor)
         self.assertIn("validateMapBeforeSave", health)
         self.assertIn("showMapValidation", health)
+        self.assertIn("套用", health)
+        self.assertIn("commitMapEdit", health)
         self.assertIn("validateMapBeforeSave", map_editor)
         self.assertIn("app-health.js", workflow)
 
@@ -387,6 +389,11 @@ class WebStructureTests(unittest.TestCase):
         self.assertIn("state.enemyDirty", enemies)
         self.assertIn("state.scriptDirty", tools)
         self.assertIn("beforeunload", map_editor)
+
+    def test_map_tab_buttons_bind_with_query_all_not_single_query(self) -> None:
+        tools = (GAME_EDITOR_ROOT / "web" / "app-tools.js").read_text(encoding="utf-8")
+        self.assertIn("$('[data-map-tab]').forEach", tools)
+        self.assertNotIn("$('[data-map-tab]').forEach", tools)
 
     def test_asset_drag_drop_sends_source_name_for_format_guard(self) -> None:
         tools = (GAME_EDITOR_ROOT / "web" / "app-tools.js").read_text(encoding="utf-8")
