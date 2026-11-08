@@ -517,17 +517,23 @@ class WebStructureTests(unittest.TestCase):
             with self.subTest(raw=raw):
                 self.assertEqual(EditorHandler._parse_host_header(raw), expected)
 
-        rejected = (
-            "evil.example",
-            "evil.example:8765",
-            "[2001:db8::1]:8765",
-            "[::evil]:8765",
+        non_local = {
+            "evil.example": "evil.example",
+            "evil.example:8765": "evil.example",
+            "[2001:db8::1]:8765": "2001:db8::1",
+            "[::evil]:8765": "::evil",
+        }
+        for raw, expected in non_local.items():
+            with self.subTest(raw=raw):
+                self.assertEqual(EditorHandler._parse_host_header(raw), expected)
+
+        malformed = (
             "[::1]evil",
             "[::1]:abc",
             "2001:db8::1",
             "[",
         )
-        for raw in rejected:
+        for raw in malformed:
             with self.subTest(raw=raw):
                 self.assertIsNone(EditorHandler._parse_host_header(raw))
 
@@ -535,7 +541,7 @@ class WebStructureTests(unittest.TestCase):
         for raw in accepted:
             handler.headers = {"Host": raw}
             self.assertTrue(handler._local_host_only(), raw)
-        for raw in rejected:
+        for raw in (*non_local.keys(), *malformed):
             handler.headers = {"Host": raw}
             self.assertFalse(handler._local_host_only(), raw)
 
