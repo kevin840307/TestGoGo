@@ -45,7 +45,7 @@ func _run() -> void:
 	check(low == migrated, "legacy multibox visual radii migrate to low resource")
 	var camera_monster: Vector2 = ENTITY_MANAGER.resolve_visual_aoi_radii(low, true, 3000.0)
 	check(camera_monster.x >= 3000.0, "large camera still shows onscreen monsters")
-	var camera_ground: Vector2 = ENTITY_MANAGER.resolve_visual_aoi_radii(multibox, false, 2800.0)
+	var camera_ground: Vector2 = ENTITY_MANAGER.resolve_visual_aoi_radii(low, false, 2800.0)
 	check(camera_ground.x >= 2800.0, "large camera still shows clickable drops")
 
 	var manager: Node = ENTITY_MANAGER.new()
