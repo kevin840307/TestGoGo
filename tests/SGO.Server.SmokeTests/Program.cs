@@ -78,6 +78,7 @@ if (args.Length != 0)
             EconomyConcurrencySmokeTests.Run();
             EconomyRequestGuardSmokeTests.Run();
             GroundDropRequestGuardSmokeTests.Run();
+            GroundSnapshotPersistenceRaceSmokeTests.Run();
             AssetMutationConcurrencySmokeTests.Run();
             CrossFeatureConcurrencySmokeTests.Run();
             Console.WriteLine("Concurrency smoke passed.");
@@ -120,6 +121,7 @@ ConcurrencySmokeTests.Run(repoRoot);
 EconomyConcurrencySmokeTests.Run();
 EconomyRequestGuardSmokeTests.Run();
 GroundDropRequestGuardSmokeTests.Run();
+GroundSnapshotPersistenceRaceSmokeTests.Run();
 AssetMutationConcurrencySmokeTests.Run();
 CrossFeatureConcurrencySmokeTests.Run();
 PlayerShopAoiSmokeTests.Run(repoRoot);
