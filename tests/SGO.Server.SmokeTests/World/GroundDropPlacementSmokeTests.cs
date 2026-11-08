@@ -191,5 +191,12 @@ internal static class GroundDropPlacementSmokeTests
         Check(!placement.TryResolve(2,
                   8, 8, 24, 24, 8, 8, out _),
             "all-blocked map rejects player drop BEFORE inventory is deducted");
+        Check(!placement.TryRecoverPersistedDrop(2, 8, 8, out _) &&
+              placement.HasVerifiedBlockedPosition(2, 8, 8) &&
+              placement.ShouldReportUnrepairableMap(2) &&
+              !placement.ShouldReportUnrepairableMap(2),
+            "fully blocked legacy map keeps item data and logs one diagnosis only");
+        Check(!placement.HasVerifiedBlockedPosition(99, 8, 8),
+            "missing map data is not incorrectly diagnosed as verified blocked");
     }
 }
