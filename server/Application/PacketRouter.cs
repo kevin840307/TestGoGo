@@ -2289,6 +2289,20 @@ public sealed class PacketRouter
                     ];
                 }
 
+                if (scriptedItem is not null &&
+                    IsCraftingMaterialItem(scriptedItem))
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message =
+                                "此物品是製作材料／藍圖，請在製作介面使用"
+                        }
+                    ];
+                }
+
                 return
                 [
                     new
@@ -7003,6 +7017,20 @@ public sealed class PacketRouter
         character["MoveSpeed"] = stats.MoveSpeed;
         character["CritRate"] = stats.CritRate;
         character["CritDamage"] = stats.CritDamage;
+    }
+
+    private static bool IsCraftingMaterialItem(
+        CurrentItemDefinition item)
+    {
+        if (string.IsNullOrWhiteSpace(item.Description))
+            return false;
+
+        return item.Description.Contains(
+                   "合成",
+                   StringComparison.Ordinal) &&
+               item.Description.Contains(
+                   "材料",
+                   StringComparison.Ordinal);
     }
 
     private static object? GetCharacterData(
