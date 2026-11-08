@@ -37,6 +37,7 @@ var _request_cooldown_active: bool = false
 var _static_tree_built: bool = false
 var _tree_items_by_recipe_id: Dictionary = {}
 var _recipe_entries: Array[Dictionary] = []
+var _availability_refresh_generation: int = 0
 
 func _ready() -> void :
 	_search_debounce_timer = Timer.new()
@@ -95,6 +96,7 @@ static func recipe_preload_progress(completed: int, total: int) -> float:
 
 func prepare_static_tree_async(recipes: Array, progress_callback: Callable = Callable()) -> void :
 	all_recipes = recipes
+	_availability_refresh_generation += 1
 	_static_tree_built = false
 	_tree_items_by_recipe_id.clear()
 	_recipe_entries.clear()
@@ -204,8 +206,12 @@ func _calculate_max_craftable_cached(recipe: Dictionary, counts: Dictionary, mon
 
 func refresh_availability_async() -> void :
 	if not _static_tree_built:
-		_update_tree()
+		# Search/filters rebuild a different Tree. Preserve that filter and
+		# never use stale cached TreeItem references from the original layout.
+		_apply_current_filter()
 		return
+	_availability_refresh_generation += 1
+	var this_generation: int = _availability_refresh_generation
 	var counts: Dictionary = _build_inventory_count_cache()
 	var money: int = int(GameManager.current_player.data_model.money) if is_instance_valid(GameManager.current_player) else 0
 	var processed: int = 0
@@ -225,8 +231,16 @@ func refresh_availability_async() -> void :
 		processed += 1
 		if processed % 64 == 0:
 			await get_tree().process_frame
+			if this_generation != _availability_refresh_generation or not is_inside_tree():
+				return
 
 func _update_tree(filter_text: String = "", only_craftable: bool = false) -> void :
+	# Once a filtered/dynamic Tree replaces the static default Tree,
+	# references saved during first-open preparation are invalidated.
+	_availability_refresh_generation += 1
+	_static_tree_built = false
+	_tree_items_by_recipe_id.clear()
+	_recipe_entries.clear()
 	recipe_tree.clear()
 	var root = recipe_tree.create_item()
 	recipe_tree.hide_root = true
@@ -506,5 +520,11 @@ func _clear_right_panel() -> void :
 
 func update_ui() -> void :
 	_search_debounce_timer.stop()
-	_apply_current_filter()
+	# Most opens and inventory changes use the default list. Recompute only
+	# counts/colors in small batches; don't allocate a fresh 1453-row Tree
+	# (and new icons) every time the player toggles the crafting window.
+	if _static_tree_built and search_input.text.is_empty() and not check_craftable.button_pressed:
+		refresh_availability_async()
+	else:
+		_apply_current_filter()
 	_refresh_right_panel()
