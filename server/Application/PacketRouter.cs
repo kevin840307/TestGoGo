@@ -3837,10 +3837,9 @@ public sealed class PacketRouter
                     Title = titleId
                 };
 
-                _broadcasts.PublishToMap(
-                    state.CurrentMapId,
-                    titlePacket,
-                    state.ConnectionId);
+                _broadcasts.PublishToPlayerObservers(
+                    state.ConnectionId,
+                    titlePacket);
 
                 return [titlePacket];
             }
