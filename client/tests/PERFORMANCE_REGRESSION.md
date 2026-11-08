@@ -40,6 +40,55 @@ submit valid credentials to character select. Verify correct caret,
 ASCII input handling, account suggestions, login music, moving
 background video, and responsive typing; compare new startup-gap logs.
 
+## Craft first-open lazy loading (2026-11-08)
+
+Previously, login startup instantiated CraftDismantleWindow and built
+**1,453 Tree recipes** before the account/password form appeared. In the
+`godot(20261108-045738).log` cold-run observation, that work took
+**17,990.66 ms** in background startup mode (10 FPS). The same window was
+also a mandatory part of GameHUD's before-world-reveal path, meaning
+removing ONLY the login prewarm would shift the stall to world entry.
+
+Now:
+- `EntryManager` does **not** thread-load or instantiate the craft window
+  during login; other essential resource indexing and loading stages remain.
+- `GameHUD.prepare_lazy_windows_before_reveal` excludes `craft`.
+  World creation/character movement no longer waits for 1,453 recipes.
+- The first **actual click** on the craft menu or Ctrl+G opens the craft
+  window and displays a content-area progress panel **before** building.
+  It reuses the existing time-budgeted, frame-yielded recipe builder,
+  showing recipe progress from 0–90%, then player inventory availability
+  progress from 90–100%.
+- The window retains its built Tree and cached recipes; subsequent
+  openings do not rebuild static recipe rows. The existing on-demand
+  dismantle tab remains independent. Repeated first-open clicks,
+  inventory-sync refreshes and dismantle-tab changes are guarded against
+  concurrent static Tree construction.
+- The title/close button remain accessible while the progress indicator
+  covers the unfinished content, and no gameplay networking/server logic
+  is paused.
+- Debug log `[CRAFT_FIRST_OPEN] recipes=1453 total_ms=...` identifies
+  the lazy-load cost. The historical `[CRAFT_STATIC_PREWARM]` name can
+  still appear on the *first use* (method name retained for compatibility);
+  it must no longer appear **before** `login_screen_ready`.
+
+Test without a server:
+
+```powershell
+godot --headless --path client --script res://tests/craft_first_open_regression.gd
+godot --headless --path client --script res://tests/npc_shop_close_and_crafting_regression.gd
+godot --headless --path client --script res://tests/startup_loading_regression.gd
+```
+
+Manual check: cold-start -> account input (no recipe progress/18-second
+wait), select character -> initial world load (no craft creation), first
+click crafting (visible progress), close/reopen crafting (instant reuse),
+switch to dismantle and back, change inventory, verify available recipe
+quantities and normal packets. Also validate 5/10 client startup; no
+background client should allocate its entire recipe UI until specifically
+opened. **No Godot runtime is available in this tool environment, so
+tests require execution on the target system.**
+
 ## Initial black-screen / craft prewarm loading bar
 
 The entry scene now shows the **existing LoadingOverlay, ProgressBar and a
