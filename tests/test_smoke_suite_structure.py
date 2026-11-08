@@ -441,6 +441,95 @@ class SmokeSuiteStructureTests(unittest.TestCase):
                 wiring,
             )
 
+    def test_world_entity_aoi_suite_is_modular_and_wired(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = (
+            SMOKE / "World" /
+            "WorldEntitySpatialAoiSmokeTests.cs"
+        )
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        hub = (
+            ROOT / "server" / "Application" / "Messaging" /
+            "ServerBroadcastHub.cs"
+        ).read_text(encoding="utf-8-sig")
+        router = (
+            ROOT / "server" / "Application" /
+            "PacketRouter.cs"
+        ).read_text(encoding="utf-8-sig")
+        combat = (
+            ROOT / "server" / "Application" / "Combat" /
+            "CombatService.cs"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn(
+            "WorldEntitySpatialAoiSmokeTests.Run();",
+            main,
+        )
+        self.assertIn(
+            "indexes 1000 distant dynamic entities",
+            source,
+        )
+        self.assertIn(
+            "1000-observer grid discovers only nearby viewer",
+            source,
+        )
+        self.assertIn(
+            "concurrent monster movement settles all nearby known entities",
+            source,
+        )
+        self.assertIn("_worldAoi", hub)
+        self.assertIn("PublishToWorldEntityObservers(", hub)
+        self.assertIn("ReconcileWorldAoi(", router)
+        self.assertIn("UpsertWorldEntity(", router)
+        self.assertIn("RegisterMonsterAoi(", combat)
+        self.assertIn("PublishToWorldEntityObservers(", combat)
+
+    def test_high_frequency_public_events_do_not_regress_to_full_map_fanout(self):
+        router = (
+            ROOT / "server" / "Application" /
+            "PacketRouter.cs"
+        ).read_text(encoding="utf-8-sig")
+        shop = (
+            ROOT / "server" / "Application" / "Shops" /
+            "PlayerShopService.cs"
+        ).read_text(encoding="utf-8-sig")
+        party = (
+            ROOT / "server" / "Application" / "Party" /
+            "PartyService.cs"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn(
+            "_broadcasts.PublishToPlayerObservers(",
+            router,
+        )
+        self.assertIn(
+            "_broadcasts.IsPlayerAoiVisible(",
+            shop,
+        )
+        self.assertNotIn(
+            "_broadcasts.PublishToMap(",
+            shop,
+        )
+        self.assertIn(
+            "_broadcasts.PublishToPlayerObservers(",
+            party,
+        )
+
+    def test_client_aoi_regressions_are_in_normal_runner(self):
+        runner = (
+            ROOT / "tests" / "run_protocol_checks.ps1"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn(
+            "ground_item_aoi_regression.gd",
+            runner,
+        )
+        self.assertIn(
+            "multiclient_render_dedup_regression.gd",
+            runner,
+        )
+
     def test_protocol_assertions_not_reintroduced_in_monolith(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         self.assertNotIn("PacketSchemaValidator.TryValidate(", main)
