@@ -4,6 +4,8 @@
 > **需求優先順序**：好友（含黑名單、離線訊息）、複合機器人、Salon、社團／社交進階**全部放在最後（P-LAST，暫不開發）**；社團目前基本功能維持即可。它們不是目前發布阻塞。  
 > 詳細執行缺口仍見 [FEATURE_GAPS.md](FEATURE_GAPS.md)；封包基線見 [PACKET_CONTRACT.md](../tests/PACKET_CONTRACT.md)。
 
+> 文件修訂：2026-11-08。待做與明確暫緩範圍由使用者決定；此為靜態資料比對，未執行舊客戶端與真 Godot E2E。
+
 ## 0. 審查結論
 
 1. **現在不能宣稱「功能 100% 等於舊版 EXE」**。即使 `packet_*_audit.py` 全部 `ROUTED`，那也只表示 Godot 已產生的 Type/Action 可找到 Handler，不能推出舊版 EXE 上另有的畫面／互動／資料語意都存在。
@@ -20,18 +22,18 @@
 - **判讀原則**：2004 與 2009 **不是同一版**。2004 有函式只能證明該版編譯過該函式，不能保證 2009 一定有一樣的語意；2009 字串能證明資源/接口線索，不保證正式伺服器當年開放該畫面。
 - **狀態**：「已有程式」≠ E2E PASS；「部分還原」= 功能有一部分但未達舊語意；「缺少」= 已查到舊功能且新版主要工作流無對應；「疑似」= IDA/新版資訊不足，待實際畫面或素材確認；「P-LAST」= 使用者**明確暫不開發**。
 - 本文件是**靜態檢查**；沒有在本次任務執行舊客戶端、完整 .NET/Godot build、真 socket soak 或原始舊服資料庫。不要把證據不完整的判斷提升成確定性。
-- 稽核涵蓋**51 個檢查條目**：P0=11、P1=19、P2=11、P3=4、P-LAST=6。一個條目可能涵蓋多個 UI/封包/數據行為，不能用條目數當已還原百分比。
+- 稽核涵蓋**53 個檢查條目**：P0=11、P1=19、P2=12、P3=5、P-LAST=6。一個條目可能涵蓋多個 UI/封包/數據行為，不能用條目數當已還原百分比。
 
-### 1.1 2009 才新增的 UI 介面盤點（避免漏掉沒有新版封包的功能）
+### 1.1 2009 年客戶端 UI 介面補充盤點（避免漏掉沒有新版封包的功能）
 
-將 **2009 `Client.exe` 的介面類別字串**和 **2004 `Paradise.exe` 有可辨識方法名稱的介面類別**做差集，額外發現 25 個 2009 介面名稱。這是**不同符號可見度下的啟發式盤點**，不是兩版本完整功能集合的數學差集，也不能證明這些介面一定被正式開放。
+本次額外從 2009 反組譯的 `.text` 逐一統計載入 `.itf` 的資源字串，共 **105 種不同檔名**。完整檔名與 IDA 行號見 [2009 舊 UI 資源索引](LEGACY_EXE_UI_RESOURCE_INDEX.md)。不同版本符號可見度不同，不能簡單把不在 2004 的類別都解讀為 2009 新增且對玩家可用的功能。
 
 - 收藏：`CCollectionSystemItf`、`CCollectionSystemSubItf` —— **V01**；是本次新增的明確 UI 線索。
 - Salon：`CSalonSystemItf` —— **V02／P-LAST**。
 - 社團與社交延伸：`CClubSysItf` 和 `CSociSysItf`、`CSociEventItf`、`CSociCreateAllyItf`、`CSociMemListItf`、`CSociMemOPItf`、`CSociFriendClubItf`、`CSociFriendClubOPItf`、`CSociDonateItf`、`CSociUpgradeRNDItf`、`CSociAttRNDItf`、`CSociInternalItf`、`CSociIntroItf`、`CSociMenuItf`、`CSociPageItf`、`CSociExtItf`、`CSociOpenRNDItf`、`CSociRNDListItf`、`CSociClubRankItf`、`CSociRankSayItf` —— **S05／S09／P-LAST**。目前已有戰團基本功能，暫不補舊介面。
 - 角色/任務 UI 變體：`CCharInfoLiteGItf`、`CQuestStatusItf` —— **A03／W05**。新版已存在角色與任務視窗，但這兩個精確 UI 變體尚未做視覺對照。
 
-**這個額外掃描特別重要**：2009 的大量新增類別集中在使用者要求暫緩的社交／收藏／Salon 領域，不代表 PvE 主流程都不需比對；其餘 2004/2009 共同存在的類別與新版實作仍由下方矩陣逐項追蹤。
+**這個額外掃描特別重要**：2009 包含大量社團進階介面，但使用者已明確暫緩；另外 `098_Refund.itf`、`046_Rename.itf` 與 `007_HOTKEY_yl.itf` 仍需要辨識舊版操作語意，不能只憑檔名宣稱新版功能缺漏。
 
 ## 2. 收藏系統：到底是哪一個 UI？（原始檔證據）
 
@@ -108,17 +110,20 @@ Get-ChildItem 'C:\SGO' -Recurse -File -ErrorAction SilentlyContinue |
 | S04 | 隊伍邀請／踢人／解散／組隊任務 | 2004 CTeamItf、CReqMenuItf::OnTeam | PartyService、party_window.gd | 已有程式／待 E2E | P1 | 10 人組隊與擊殺、跨圖、隊長掉線、任務隊伍旗標 |
 | S05 | 戰團基本功能 | 2004/2009 CClubSysItf、CToolBarItf::OnClub | ClubService Create/Invite/Accept/Donate/Research + clan_window.gd | 已有主要流程 | P3 | 目前維持，不為追求全部舊版社交功能重寫 |
 | S06 | 排行榜／榜首宣言 | 2004 CRankMainItf、CRankSayItf | RankService、rank_window.gd | 已有主要流程 | P2 | 資料來源、排名類型、榜首展示與宣言權限 |
-| S07 | 好友名單／邀請／忽略名單 | 2004 CFriendItf::OnAddFriendEntry/OnAddIgnoreEntry；2009 CFriendItf | 目前無 friend UI/Store/Request | 明確缺少，暫緩 | P-LAST | 使用者目前不打算加入，不排入近期 Roadmap |
-| S08 | 好友 P2P 歷史／離線留言 | 2004 CFriendMsgItf、CFriendItf::ArchiveP2PHistory/OnSuccessSendOffline；2009 CFriendMsgItf | 新版僅在線密語，無好友專用儲存 | 明確缺少，暫緩 | P-LAST | 與好友功能一起最後處理 |
-| S09 | 高階社團/社交活動/聯盟 | 2009 CSociSysItf/CSociEventItf；2004 CClubSysItf | ClubService 已夠目前需求；舊進階介面未對等 | 部分還原，暫緩 | P-LAST | 保留現有戰團基本功能，不擴進階系統 |
 | V01 | 收藏圖鑑／Collection Book | 2009 CCollectionSystemItf、CCollectionSystemSubItf；`095_Collection.itf`、`095_Collection_...`、`B_COLLECTION_ICON.spr`、`Item\Collection.itd`、`FlagCollectionData.dat`、`ItemCollectionData.dat` | 新版未找到 Collection 視窗及對應資產，舊物件不等於任務拾取 | 舊 UI 證據明確／新版未找到 | P2 | 先找原畫面與資料、搞清楚收藏分類與解鎖，確定是否需要開發 |
-| V02 | Salon 系統 | 2009 CSalonSystemItf | 新版未找到對應 UI | 舊版存在，暫緩 | P-LAST | 使用者不打算加入 |
-| V03 | 複合機器人／Robot Complex | 2004 CRobotComplexInfoItf::OnBreak/OnSkillUse、2009 CRobotComplexInfoItf / `085_COMPLEX_INFO.itf` | 一般機甲≠複合機器人專用介面 | 疑似缺口，暫緩 | P-LAST | 使用者不打算加入 |
 | V04 | BGM/SFX、設定與畫質 | 2004 CSystemMenuItf::OnBGM*/OnSFX*/On25FPS/On50FPS | client/game_hud.gd SettingsWindow、audio_manager.gd | 已有主要 UI／待比較 | P3 | 設定持久化、音量、失焦與多開資源消耗 |
 | V05 | 新 Server 管理後台與網頁編輯器 | 舊版沒有相同 .NET/Godot 管理工具需求 | server/AdminUi、game-editor/ | 新版加值，不列作舊版缺口 | P3 | 管理 API 只允 loopback；素材與座標編輯測試 |
 | T01 | 固定 Client↔Server 封包契約 | 舊 exe 原有的 2004/2009 不同協定並非現在 Godot WebSocket 協定 | packet_contract_audit、packet_schema_audit、packet_response_audit | 對新版封包有靜態守門，不等於舊版完整 | P0 | 每項老功能必須追 UI→request→response→Store→E2E |
 | T02 | 多人競態與 AOI 容量 | 舊 EXE 不提供新版 .NET 8 性能保證 | SGO.Server.SmokeTests、WireSmokeTests、WireLoadProbe | 已有測試程式，缺實際驗收 | P0 | 10/50/100 人測試＋近遠 AOI + 30-60min soak，檢查資產守恆 |
 | T03 | CI／編譯／Godot E2E 真實結果 | 舊 EXE 僅供功能參考 | server/FEATURE_GAPS.md 記載 CI steps=null；現有工作流程不能視為 PASS | 實際驗證缺口 | P0 | 必須取得可讀 Actions steps，所有有執行的 Suite PASS |
+| UX01 | 舊版快捷欄分頁（Page1/Page2） | 2004 `CHotKeyItf::OnPage1/OnPage2`；2009 `007_HOTKEY_yl.itf`（行 135109） | 新版 `client/game_hud.gd` 有 F1～F12 與快捷儲存，尚未找到同等頁切換 UI | 部分還原／需求待確認 | P2 | 先比對舊 UI 頁數與目前 12 格需求；若要補，測切頁、保存、重登、使用中切圖 |
+| UX02 | 舊版 Refund 視窗（未知用途） | 2009 `098_Refund.itf`，IDA 行 345287，VA `004D9D58` | 現有商城/付款服務與舊 UI 不能直接判等；用途未明 | 僅識別 UI 資源，暫不推定缺功能 | P3 | 取得舊視窗截圖/操作入口、找呼叫者與送出封包，才決定是否需另開工作 |
+<!-- 以下條目均為使用者指定暫不開發，僅供舊版功能溯源，不得移入近期開發排程。 -->
+| S07 | 好友名單／邀請／忽略名單 | 2004 CFriendItf::OnAddFriendEntry/OnAddIgnoreEntry；2009 CFriendItf | 目前無 friend UI/Store/Request | 明確缺少，暫緩 | P-LAST | 使用者目前不打算加入，不排入近期 Roadmap |
+| S08 | 好友 P2P 歷史／離線留言 | 2004 CFriendMsgItf、CFriendItf::ArchiveP2PHistory/OnSuccessSendOffline；2009 CFriendMsgItf | 新版僅在線密語，無好友專用儲存 | 明確缺少，暫緩 | P-LAST | 與好友功能一起最後處理 |
+| S09 | 高階社團/社交活動/聯盟 | 2009 CSociSysItf/CSociEventItf；2004 CClubSysItf | ClubService 已夠目前需求；舊進階介面未對等 | 部分還原，暫緩 | P-LAST | 保留現有戰團基本功能，不擴進階系統 |
+| V02 | Salon 系統 | 2009 CSalonSystemItf | 新版未找到對應 UI | 舊版存在，暫緩 | P-LAST | 使用者不打算加入 |
+| V03 | 複合機器人／Robot Complex | 2004 CRobotComplexInfoItf::OnBreak/OnSkillUse、2009 CRobotComplexInfoItf / `085_COMPLEX_INFO.itf` | 一般機甲≠複合機器人專用介面 | 疑似缺口，暫緩 | P-LAST | 使用者不打算加入 |
 | T04 | 外部付款／舊服點數 | 不是本地遊戲基本單機功能；涉及外部實際提供者 | MallService、外部 provider 介面但未接通 | 外部依賴阻塞 | P-LAST | 未要啟用時保持明確失敗，不偽造儲值或轉入 |
 
 ## 4. 直接由程式碼確認的重要差異（不是猜的）
@@ -203,3 +208,14 @@ Get-ChildItem 'C:\SGO' -Recurse -File -ErrorAction SilentlyContinue |
 - [Godot 寵物](../client/scripts/pet_window.gd)
 
 > 此次交付是文件與差異盤點，**不修改遊戲程式、不宣稱已跑 .NET/Godot**。
+## 8. 2009 原版 105 個 UI 檔案索引與額外待確認項目
+
+已補上完整的 [LEGACY_EXE_UI_RESOURCE_INDEX.md](LEGACY_EXE_UI_RESOURCE_INDEX.md)：由上傳的 2009 EXE IDA `.lst` 的 `.text` 資源載入參照去重取得 105 種 `.itf`，分成 11 類，包含每個檔名、原始 IDA 行號、相應 Godot UI 候選與狀態。
+
+這不是 105 個未開發功能。特別標記以下新發現：
+
+- **`007_HOTKEY_yl.itf`**：2004 舊 `CHotKeyItf` 有兩頁熱鍵操作，現版使用 F1～F12 與快捷鍵保存，是否需要保留「兩頁」尚未確認（UX01，P2）。
+- **`098_Refund.itf`**：可確認 EXE 會載入介面資源，但目前無法確認這個 Refund 是哪種物品/點數/交易退還（UX02，P3）。在未找到舊操作或 handler 前不得猜測功能，也不等同 PayPal refund。
+- **`046_Rename.itf`**：舊 EXE 多處參照，可能是共用改名介面；新版有寵物 Rename，但角色、機甲與相關帳號更新需要分開驗證。A06 目前仍保留缺少專用「角色改名」流程的判定；但**舊視窗的直接對應對象還不能由此檔名確認**。
+- **`003_Select_Server.itf`**：2009 多服選擇畫面存在；新版定位是單機本地 Server，不保留選服頁可能是刻意取捨，不能直接列作發行阻塞。
+
