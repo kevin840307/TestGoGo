@@ -66,7 +66,6 @@ visible = false
 
 [node name="LoadingOverlay" type="CanvasLayer" parent="." unique_id=2120118666]
 unique_name_in_owner = true
-visible = false
 layer = 100
 
 [node name="BlackBackground" type="ColorRect" parent="LoadingOverlay"]
@@ -110,6 +109,24 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 20
 theme_override_styles/fill = SubResource("StyleBoxFlat_1n7w4")
+
+[node name="StatusLabel" type="Label" parent="LoadingOverlay"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -290.0
+offset_top = 31.0
+offset_right = 290.0
+offset_bottom = 62.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.88, 0.93, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "正在準備遊戲資源…"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="ErrorDialog" type="Panel" parent="." unique_id=811950560]
 unique_name_in_owner = true
