@@ -7,8 +7,11 @@ const state = {
   skills: [], selectedSkill: null,
   enemies: [], selectedEnemy: null,
   maps: [], mapId: null, mapTab: 'enemies', mapRows: [],
-  mapMeta: null, mapSelectedIndex: null, mapSelectedEnemyId: null,
-  mapShowBlocking: true, mapShowSpawners: true, mapSnapWalkable: true,
+  mapMeta: null, mapSelectedIndex: null, mapSelectedIndexes: [], mapSelectedEnemyId: null,
+  mapShowBlocking: true, mapShowSpawners: true, mapShowLabels: true,
+  mapOnlySelectedType: false, mapSnapWalkable: true,
+  mapZoom: 1, mapClipboard: [], mapUndo: [], mapRedo: [], mapDirty: false,
+  mapBatchArmed: false, mapSuppressClick: false, mapSpaceDown: false,
   scripts: [], selectedScript: null,
   assets: [], assetTarget: null,
 };
