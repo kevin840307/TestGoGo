@@ -85,6 +85,21 @@ class EditorHandler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length) if length else b"{}"
         return json.loads(raw.decode("utf-8"))
 
+    @staticmethod
+    def _map_mutation_payload(body: Any) -> tuple[list[dict[str, Any]], str, bool]:
+        # Legacy callers may still PUT a raw list. New editor callers use an
+        # envelope so stale-tab protection cannot be accidentally omitted.
+        if isinstance(body, list):
+            return body, "", False
+        if not isinstance(body, dict):
+            raise ValueError("地圖儲存 payload 必須是陣列或物件")
+        if "items" not in body or not isinstance(body.get("items"), list):
+            raise ValueError("地圖儲存 payload 必須包含 items 陣列")
+        expected_revision = str(body.get("expectedRevision", "")).strip()
+        if not expected_revision:
+            raise ValueError("地圖儲存 payload 缺少 expectedRevision；請重新載入地圖後再儲存")
+        return body["items"], expected_revision, True
+
     def _send_json(self, payload: Any, status: int = 200) -> None:
         body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         self.send_response(status)
@@ -294,9 +309,7 @@ class EditorHandler(BaseHTTPRequestHandler):
                 if method == "DELETE":
                     raise ValueError("不支援直接 DELETE；請 PUT 新的出生點清單")
                 map_id = int(match.group(1))
-                envelope = isinstance(body, dict)
-                items = body if isinstance(body, list) else body.get("items", [])
-                expected_revision = str(body.get("expectedRevision", "")) if envelope else ""
+                items, expected_revision, envelope = self._map_mutation_payload(body)
                 with self.app.mutation_lock:
                     current_revision = self.app.maps.spawn_revision(map_id, "enemies")
                     if expected_revision and expected_revision != current_revision:
@@ -316,9 +329,7 @@ class EditorHandler(BaseHTTPRequestHandler):
                 if method == "DELETE":
                     raise ValueError("不支援直接 DELETE；請 PUT 新的 NPC 清單")
                 map_id = int(match.group(1))
-                envelope = isinstance(body, dict)
-                items = body if isinstance(body, list) else body.get("items", [])
-                expected_revision = str(body.get("expectedRevision", "")) if envelope else ""
+                items, expected_revision, envelope = self._map_mutation_payload(body)
                 with self.app.mutation_lock:
                     current_revision = self.app.maps.spawn_revision(map_id, "npcs")
                     if expected_revision and expected_revision != current_revision:
