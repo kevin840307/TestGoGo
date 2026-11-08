@@ -218,7 +218,7 @@ class WebStructureTests(unittest.TestCase):
     def test_frontend_entrypoints_are_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
         index = (web / "index.html").read_text(encoding="utf-8")
-        for script in ("app-core.js", "app-skills.js", "app-world.js", "app-tools.js"):
+        for script in ("app-core.js", "app-skills.js", "app-world.js", "app-map-editor.js", "app-tools.js"):
             self.assertIn(f'src="/{script}"', index)
             self.assertTrue((web / script).is_file())
         self.assertTrue((web / "app.css").is_file())
@@ -226,12 +226,12 @@ class WebStructureTests(unittest.TestCase):
     def test_intuitive_map_editor_is_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
         index = (web / "index.html").read_text(encoding="utf-8")
-        world = (web / "app-world.js").read_text(encoding="utf-8")
+        map_editor = (web / "app-map-editor.js").read_text(encoding="utf-8")
         self.assertIn('id="map-stage"', index)
         self.assertIn('id="map-enemy-search"', index)
-        self.assertIn("startMapMarkerDrag", world)
-        self.assertIn("addMapRowAt", world)
-        self.assertIn("duplicateMapRow", world)
+        self.assertIn("startMapMarkerDrag", map_editor)
+        self.assertIn("addMapRowAt", map_editor)
+        self.assertIn("duplicateMapRows", map_editor)
 
     def test_friendly_shortcuts_are_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
@@ -244,16 +244,34 @@ class WebStructureTests(unittest.TestCase):
         self.assertIn("COMMON_LEVEL_FIELDS", skills)
         self.assertIn("ADVANCED_LEVEL_FIELDS", skills)
 
+    def test_advanced_map_editor_commands_are_wired(self) -> None:
+        web = GAME_EDITOR_ROOT / "web"
+        index = (web / "index.html").read_text(encoding="utf-8")
+        map_editor = (web / "app-map-editor.js").read_text(encoding="utf-8")
+        workflow = (GAME_EDITOR_ROOT.parent / ".github" / "workflows" / "server-build.yml").read_text(encoding="utf-8")
+        for control_id in (
+            "map-undo", "map-redo", "map-zoom-in", "map-zoom-out", "map-zoom-fit",
+            "map-batch-arm", "map-batch-count", "map-batch-radius", "map-stage-scroller",
+        ):
+            self.assertIn(f'id="{control_id}"', index)
+        for symbol in (
+            "undoMapEdit", "redoMapEdit", "copyMapSelection", "pasteMapSelection",
+            "startMarqueeSelection", "setMapZoom", "addMapBatchAt", "handleMapKeyboard",
+        ):
+            self.assertIn(symbol, map_editor)
+        self.assertIn("app-map-editor.js", workflow)
+        self.assertNotIn("// Maps", (web / "app-world.js").read_text(encoding="utf-8"))
+
     def test_collision_aware_map_ui_is_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
         index = (web / "index.html").read_text(encoding="utf-8")
-        world = (web / "app-world.js").read_text(encoding="utf-8")
+        map_editor = (web / "app-map-editor.js").read_text(encoding="utf-8")
         editor = (GAME_EDITOR_ROOT / "editor.py").read_text(encoding="utf-8")
         for control_id in ("map-show-blocking", "map-show-spawners", "map-snap-walkable"):
             self.assertIn(f'id="{control_id}"', index)
-        self.assertIn("normalizeMapPoint", world)
-        self.assertIn("renderSpawnerZones", world)
-        self.assertIn("/blocking.png", world)
+        self.assertIn("normalizeMapPoint", map_editor)
+        self.assertIn("renderSpawnerZones", map_editor)
+        self.assertIn("/blocking.png", map_editor)
         self.assertIn("/editor-meta", editor)
         self.assertIn("/terrain", editor)
 
