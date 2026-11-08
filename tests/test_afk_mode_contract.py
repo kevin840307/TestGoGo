@@ -31,7 +31,10 @@ class AfkModeContract(unittest.TestCase):
         game = read("client/scripts/game_manager.gd")
         hud = read("client/game_hud.gd")
         self.assertIn('const AFK_MONITOR_FPS: int = 20', game)
-        self.assertIn('RenderingServer.render_loop_enabled = true', game)
+        self.assertIn(
+            'RenderingServer.render_loop_enabled = should_draw_afk_dashboard(_window_has_focus)',
+            game,
+        )
         self.assertIn('Engine.max_fps = AFK_MONITOR_FPS', game)
         self.assertIn('func begin_afk_mode() -> bool:', game)
         self.assertIn('func finish_afk_mode() -> bool:', game)
@@ -47,6 +50,23 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('loading_overlay.visible = false', hud)
         self.assertIn('HP %d / %d', hud)
         self.assertIn('[AFK_MODE]', game)
+
+    def test_unfocused_afk_stops_gpu_and_visual_updates_only(self):
+        game = read("client/scripts/game_manager.gd")
+        hud = read("client/game_hud.gd")
+        focus_test = read("client/tests/afk_focus_render_regression.gd")
+        self.assertIn('static func should_draw_afk_dashboard(has_focus: bool) -> bool:', game)
+        self.assertIn('return has_focus', game)
+        self.assertIn('should_pause = not should_draw_afk_dashboard(_window_has_focus)', game)
+        self.assertIn('RenderingServer.render_loop_enabled = should_draw_afk_dashboard(_window_has_focus)', game)
+        self.assertIn('current_hud.set_background_visuals_paused(paused or _afk_active)', game)
+        self.assertIn('current_hud.set_afk_dashboard_updates_enabled(_afk_active and _window_has_focus)', game)
+        self.assertIn('func set_afk_dashboard_updates_enabled(enabled: bool)', hud)
+        self.assertIn('afk_update_timer.stop()', hud)
+        self.assertIn('afk_update_timer.start()', hud)
+        self.assertIn('if not GameManager.is_game_window_focused():', hud)
+        self.assertIn('AFK_FOCUS_RENDER_REGRESSION', focus_test)
+        self.assertNotIn('if _afk_active:\\n\\t\\t# AFK status dashboard must remain visible even when unfocused.', game)
 
     def test_no_character_or_collision_nodes_freed(self):
         cache = read("client/scripts/afk_visual_cache.gd")
@@ -128,6 +148,7 @@ class AfkModeContract(unittest.TestCase):
     def test_godot_test_runs_from_ci(self):
         suite = read("client/tests/afk_visual_cache_regression.gd")
         workflow = read(".github/workflows/server-build.yml")
+        self.assertIn('afk_focus_render_regression.gd', workflow)
         self.assertIn('afk_visual_cache_regression.gd', workflow)
         self.assertIn('afk_cursor_audio_regression.gd', workflow)
         self.assertIn('AFK_CURSOR_AUDIO_REGRESSION', read("client/tests/afk_cursor_audio_regression.gd"))
