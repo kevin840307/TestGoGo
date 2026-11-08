@@ -5868,8 +5868,9 @@ public sealed class PacketRouter
         // drop/commit an item after this query starts but before we prune
         // stale index entries. Never purge an entity indexed after the query
         // boundary, even if this snapshot could not yet see its DB row.
-        var snapshotGeneration =
-            _broadcasts.CaptureWorldEntityGeneration();
+        using var worldSnapshot =
+            _broadcasts.BeginWorldEntitySnapshot();
+        var snapshotGeneration = worldSnapshot.Generation;
         var groundItems =
             _store.GetGroundItems(
                     state.CurrentMapId)
@@ -5931,11 +5932,12 @@ public sealed class PacketRouter
                     ground.MapId, ground.EntityId, ground.X, ground.Y);
             }
 
-            state.GroundItems[resolvedGround.EntityId] = resolvedGround;
-            // The snapshot factory closes over the persisted, reconciled
-            // location so new AOI observers never see the blocked old tile.
-            PublishWorldAoiChanges(
-                _broadcasts.UpsertWorldEntity(
+            // The SELECT above may have completed before another socket
+            // picked up this row or updated its position. Atomic generation
+            // checks against the in-flight snapshot lease prevent a stale
+            // row from resurrecting a consumed item or replacing new data.
+            // Do not cache a rejected row in this client's pickup targets.
+            if (!_broadcasts.TryUpsertWorldEntityFromSnapshot(
                     new WorldAoiEntity(
                         resolvedGround.EntityId,
                         3,
@@ -5944,8 +5946,14 @@ public sealed class PacketRouter
                         resolvedGround.Y,
                         () => BuildGroundItemSpawnPacket(
                             resolvedGround,
-                            isSnapshot: true))),
-                skipObserver: state.ConnectionId);
+                            isSnapshot: true)),
+                    worldSnapshot,
+                    out var changes))
+                continue;
+
+            state.GroundItems[resolvedGround.EntityId] = resolvedGround;
+            PublishWorldAoiChanges(
+                changes, skipObserver: state.ConnectionId);
         }
 
         // The local WorldReady response gets only entities inside AOI from
