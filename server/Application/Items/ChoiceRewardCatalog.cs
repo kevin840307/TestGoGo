@@ -88,47 +88,42 @@ public static partial class ChoiceRewardCatalog
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        if (names.Length < 2)
+        if (names.Length == 0)
             return null;
 
         var options =
-            new List<ChoiceRewardOption>(
-                names.Length);
+            new List<ChoiceRewardOption>();
 
         foreach (var name in names)
         {
-            var reward =
-                current.FindItemByName(name);
+            var resolved =
+                ResolveNamedOptions(
+                    current,
+                    source,
+                    name,
+                    description);
 
-            if (reward is null ||
-                reward.ItemId == itemIndex ||
-                !TryResolveKind(
-                    reward,
-                    out var kind,
-                    out var part))
-            {
+            if (resolved.Count == 0)
                 return null;
-            }
 
-            options.Add(new(
-                reward.ItemId,
-                reward.Name,
-                kind,
-                part,
-                Math.Max(
-                    0,
-                    reward.Durability)));
+            options.AddRange(resolved);
         }
 
-        return options
-            .Select(x => x.ItemIndex)
-            .Distinct()
-            .Count() == options.Count
-                ? new(
-                    source.ItemId,
-                    source.Name,
-                    options)
-                : null;
+        options = options
+            .GroupBy(x => x.ItemIndex)
+            .Select(x => x.First())
+            .OrderBy(x =>
+                current.FindItem(
+                    x.ItemIndex)?.ReqLevel ?? 0)
+            .ThenBy(x => x.ItemIndex)
+            .ToList();
+
+        return options.Count >= 2
+            ? new(
+                source.ItemId,
+                source.Name,
+                options)
+            : null;
     }
 
     private static bool TryResolveKind(
