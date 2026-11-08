@@ -935,10 +935,8 @@ func _reconcile_world_render_policy(delta: float) -> void:
 	var should_pause: bool = should_throttle_background_visuals(
 		_window_has_focus, _has_active_world_visuals())
 	var desired_rendering: bool = should_draw_afk_dashboard(_window_has_focus) if _afk_active else not should_pause
-	var desired_fps: int = AFK_MONITOR_FPS if _afk_active and _window_has_focus else (
-		Engine.max_fps if _afk_active else fps_cap_for_focus(
-			current_performance_profile, _window_has_focus, _has_active_world_visuals())
-	)
+	var desired_fps: int = AFK_MONITOR_FPS if _afk_active else fps_cap_for_focus(
+		current_performance_profile, _window_has_focus, _has_active_world_visuals())
 	if RenderingServer.render_loop_enabled != desired_rendering or Engine.max_fps != desired_fps:
 		_refresh_focus_render_policy()
 		if OS.is_debug_build():
@@ -951,10 +949,11 @@ func _reconcile_world_render_policy(delta: float) -> void:
 
 func _refresh_focus_render_policy() -> void:
 	if _afk_active:
-		# Focused AFK: low-cost 20 FPS status dashboard.
-		# Unfocused AFK: zero rendering. Gameplay/network/fixed physics continue.
+		# AFK always caps the main loop at 20 FPS. Focused mode renders the
+		# low-cost dashboard; unfocused mode stops GPU rendering completely.
+		# Gameplay/network/fixed 60 Hz physics remain independent.
+		Engine.max_fps = AFK_MONITOR_FPS
 		if _window_has_focus:
-			Engine.max_fps = AFK_MONITOR_FPS
 			RenderingServer.render_loop_enabled = true
 		else:
 			RenderingServer.render_loop_enabled = false
