@@ -9442,6 +9442,7 @@ public sealed class SqliteGameStore : IGameStore
                    SET x=$newX, y=$newY
                  WHERE id=$id AND map_id=$map
                    AND x=$oldX AND y=$oldY
+                   AND (expires_utc_ms=0 OR expires_utc_ms>$now)
                 """;
             Arg(update, "$id", groundItemId);
             Arg(update, "$map", mapId);
@@ -9449,6 +9450,7 @@ public sealed class SqliteGameStore : IGameStore
             Arg(update, "$oldY", expectedY);
             Arg(update, "$newX", newX);
             Arg(update, "$newY", newY);
+            Arg(update, "$now", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
             update.ExecuteNonQuery();
         }
 
@@ -9465,8 +9467,10 @@ public sealed class SqliteGameStore : IGameStore
                        created_utc_ms,protect_until_utc_ms,expires_utc_ms
                   FROM ground_items
                  WHERE id=$id AND map_id=$map
+                   AND (expires_utc_ms=0 OR expires_utc_ms>$now)
                 """;
             Arg(query, "$id", groundItemId);
+            Arg(query, "$now", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
             Arg(query, "$map", mapId);
             using var reader = query.ExecuteReader();
             if (reader.Read())
