@@ -660,7 +660,10 @@ func _handle_movement(delta: float) -> void :
 		WAYPOINT_REACH_DISTANCE,
 		step_distance * 1.25
 	)
-	var map_id: int = int(data_model.map_id) if data_model else 0
+	var map_id: int = _get_navigation_map_id()
+	if map_id <= 0:
+		_stop_movement(false)
+		return
 
 	# Promote whole waypoints whenever the next node is directly visible.
 	# Use the actual waypoint for reach checks; target_position may temporarily
@@ -824,7 +827,7 @@ func _set_navigation_target(destination: Vector2) -> void :
 	if map_id <= 0:
 		# Do not run Map00 pathfinding or send a stale position when no active
 		# world has been established yet.
-		_stop_movement()
+		_stop_movement(false)
 		return
 	var route: PackedVector2Array = LegacyPathfinder.find_path(
 		map_id,
@@ -854,7 +857,7 @@ func _set_navigation_target(destination: Vector2) -> void :
 		if request_id != _navigation_request_id:
 			return
 		if route.is_empty():
-			_stop_movement()
+			_stop_movement(false)
 			return
 
 		# If another gameplay event moved/corrected the player while the fallback
@@ -870,7 +873,7 @@ func _set_navigation_target(destination: Vector2) -> void :
 			route,
 			can_cross_special_terrain
 		):
-			_stop_movement()
+			_stop_movement(false)
 			return
 
 	if request_id != _navigation_request_id:
@@ -905,7 +908,7 @@ func apply_position_correction(corrected_position: Vector2) -> void :
 		sync_animation()
 
 
-func _stop_movement() -> void :
+func _stop_movement(send_final_position: bool = true) -> void :
 	_navigation_request_id += 1
 	_navigation_fallback_running = false
 	velocity = Vector2.ZERO
@@ -935,12 +938,12 @@ func _stop_movement() -> void :
 			sync_position = last_walkable_sync_position
 			send_position = true
 
-		if send_position:
+		if send_position and send_final_position:
 			NetworkManager.send_sync_position(
 				int(sync_position.x),
 				int(sync_position.y)
 			)
-		elif OS.is_debug_build():
+		elif OS.is_debug_build() and send_final_position:
 			print("[PLAYER_SYNC_SKIPPED] map=%d position=%s anchor_map=%d" % [
 				map_id, str(global_position), _last_walkable_sync_map_id
 			])
