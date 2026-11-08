@@ -12,10 +12,14 @@ const DEBUG_MONSTER_NETWORK_LOGS: bool = false
 const MONSTER_AOI_ENTER_RADIUS: float = 1800.0
 const MONSTER_AOI_EXIT_RADIUS: float = 2200.0
 const MONSTER_AOI_UPDATE_INTERVAL: float = 0.20
+# Server MoveEntity/SpawnEntity events update queues immediately. If the
+# local observer has not moved, full-map scans can be reduced safely.
+const MONSTER_AOI_STATIONARY_SCAN_INTERVAL: float = 1.0
 # Defer distant ground-drop scenes but always retain server snapshots.
 const GROUND_AOI_ENTER_RADIUS: float = 2000.0
 const GROUND_AOI_EXIT_RADIUS: float = 2400.0
 const GROUND_AOI_UPDATE_INTERVAL: float = 0.25
+const GROUND_AOI_STATIONARY_SCAN_INTERVAL: float = 1.0
 # Keep server-confirmed combat monsters present even across AOI boundaries.
 const MONSTER_COMBAT_REVEAL_MSEC: int = 12000
 
@@ -39,9 +43,23 @@ var _initial_spawn_boost: bool = false
 var _monster_spawn_templates: Dictionary = {}
 var _deferred_monster_spawns: Dictionary = {}
 var _monster_aoi_elapsed: float = 0.0
+var _monster_aoi_last_observer: Variant = null
+var _monster_aoi_stationary_elapsed: float = 0.0
+var _monster_aoi_full_scans: int = 0
+var _monster_aoi_reused_scans: int = 0
 var _ground_spawn_templates: Dictionary = {}
 var _deferred_ground_spawns: Dictionary = {}
 var _ground_aoi_elapsed: float = 0.0
+var _ground_aoi_last_context: Variant = null
+var _ground_aoi_stationary_elapsed: float = 0.0
+var _ground_aoi_full_scans: int = 0
+var _ground_aoi_reused_scans: int = 0
+
+
+static func should_run_stationary_aoi_scan(
+	context_changed: bool, elapsed_stationary: float, max_idle_interval: float
+) -> bool:
+	return context_changed or elapsed_stationary >= max_idle_interval
 var _combat_reveal_until_msec: Dictionary = {}
 var _pending_aoi_moves = PENDING_AOI_MOVES.new()
 
@@ -75,9 +93,17 @@ func clear_map_entities() -> Dictionary:
 	_combat_reveal_until_msec.clear()
 	_pending_aoi_moves.clear()
 	_monster_aoi_elapsed = 0.0
+	_monster_aoi_last_observer = null
+	_monster_aoi_stationary_elapsed = 0.0
+	_monster_aoi_full_scans = 0
+	_monster_aoi_reused_scans = 0
 	_ground_spawn_templates.clear()
 	_deferred_ground_spawns.clear()
 	_ground_aoi_elapsed = 0.0
+	_ground_aoi_last_context = null
+	_ground_aoi_stationary_elapsed = 0.0
+	_ground_aoi_full_scans = 0
+	_ground_aoi_reused_scans = 0
 	return {"total": cleared_total, "by_type": cleared_by_type}
 
 func _ready() -> void :
@@ -154,7 +180,14 @@ func _ground_aoi_context() -> Dictionary:
 
 
 func get_ground_aoi_stats() -> Dictionary:
-	return {"known": _ground_spawn_templates.size(), "deferred": _deferred_ground_spawns.size()}
+	return {
+		"known": _ground_spawn_templates.size(),
+		"deferred": _deferred_ground_spawns.size(),
+		"ground_full_scans": _ground_aoi_full_scans,
+		"ground_skipped_scans": _ground_aoi_reused_scans,
+		"monster_full_scans": _monster_aoi_full_scans,
+		"monster_skipped_scans": _monster_aoi_reused_scans
+	}
 
 
 func _ground_spawn_data_at_current_time(entity_id: int) -> Dictionary:
@@ -336,11 +369,26 @@ func _update_monster_aoi(delta: float) -> void :
 	_monster_aoi_elapsed += delta
 	if _monster_aoi_elapsed < MONSTER_AOI_UPDATE_INTERVAL:
 		return
+	var check_elapsed: float = _monster_aoi_elapsed
 	_monster_aoi_elapsed = 0.0
 	var player_pos = _get_local_player_position()
 	if player_pos == null:
+		_monster_aoi_last_observer = null
 		return
 	var local_pos: Vector2 = player_pos as Vector2
+	var observer_changed: bool = _monster_aoi_last_observer == null or _monster_aoi_last_observer != local_pos
+	if not observer_changed:
+		_monster_aoi_stationary_elapsed += check_elapsed
+	else:
+		_monster_aoi_stationary_elapsed = 0.0
+	if not should_run_stationary_aoi_scan(
+		observer_changed, _monster_aoi_stationary_elapsed, MONSTER_AOI_STATIONARY_SCAN_INTERVAL
+	):
+		_monster_aoi_reused_scans += 1
+		return
+	_monster_aoi_last_observer = local_pos
+	_monster_aoi_stationary_elapsed = 0.0
+	_monster_aoi_full_scans += 1
 	var exit_radius_sq: float = MONSTER_AOI_EXIT_RADIUS * MONSTER_AOI_EXIT_RADIUS
 	var enter_radius_sq: float = MONSTER_AOI_ENTER_RADIUS * MONSTER_AOI_ENTER_RADIUS
 	for raw_id in _active_entity_types.keys():
@@ -377,11 +425,31 @@ func _update_ground_aoi(delta: float) -> void:
 	_ground_aoi_elapsed += delta
 	if _ground_aoi_elapsed < GROUND_AOI_UPDATE_INTERVAL:
 		return
+	var check_elapsed: float = _ground_aoi_elapsed
 	_ground_aoi_elapsed = 0.0
 	var aoi: Dictionary = _ground_aoi_context()
 	if aoi["center"] == null:
+		_ground_aoi_last_context = null
 		return
 	var center: Vector2 = aoi["center"] as Vector2
+	var context_changed: bool = (
+		_ground_aoi_last_context == null
+		or _ground_aoi_last_context["center"] != center
+		or _ground_aoi_last_context["enter"] != aoi["enter"]
+		or _ground_aoi_last_context["exit"] != aoi["exit"]
+	)
+	if not context_changed:
+		_ground_aoi_stationary_elapsed += check_elapsed
+	else:
+		_ground_aoi_stationary_elapsed = 0.0
+	if not should_run_stationary_aoi_scan(
+		context_changed, _ground_aoi_stationary_elapsed, GROUND_AOI_STATIONARY_SCAN_INTERVAL
+	):
+		_ground_aoi_reused_scans += 1
+		return
+	_ground_aoi_last_context = {"center": center, "enter": aoi["enter"], "exit": aoi["exit"]}
+	_ground_aoi_stationary_elapsed = 0.0
+	_ground_aoi_full_scans += 1
 	var enter_radius: float = float(aoi["enter"])
 	var exit_radius_sq: float = float(aoi["exit"]) * float(aoi["exit"])
 	for raw_id in _active_entity_types.keys():
@@ -517,6 +585,8 @@ func _process(delta: float) -> void :
 		_ground_spawn_templates.clear()
 		_deferred_ground_spawns.clear()
 		_ground_aoi_elapsed = 0.0
+		_monster_aoi_last_observer = null
+		_ground_aoi_last_context = null
 		return
 
 	_update_monster_aoi(delta)
