@@ -11,7 +11,6 @@ var current_state: String = "idle"
 var current_dir: String = "1"
 var is_action_locked: bool = false
 var entity_scale: float = 1.0
-const GENERIC_MONSTER_SPRITE := "EN032A"
 const GENERIC_MONSTER_CLICK_SIZE := Vector2(112.0, 136.0)
 const FAST_MONSTER_BODY_RADIUS: float = 29.0
 const FAST_MONSTER_COLORS := [
@@ -169,9 +168,11 @@ func _resolve_ui_nodes() -> void :
 		level_icon = ui_container.get_node_or_null("TextureRect/LevelIcon") as TextureRect
 
 
-func prepare_performance_visual(simplified: bool, use_primitive: bool = false) -> void:
+func prepare_performance_visual(simplified: bool, _use_primitive: bool = true) -> void:
+	# Monster simplification is intentionally texture-free. Keep the second
+	# parameter only for source compatibility with older callers.
 	_performance_simplified_visual = simplified
-	_primitive_simplified_visual = simplified and use_primitive
+	_primitive_simplified_visual = simplified
 
 func is_primitive_simplified() -> bool:
 	return _primitive_simplified_visual
@@ -612,8 +613,10 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 	_play_spawn_transition()
 
 
-func set_performance_simplified(enabled: bool, use_primitive: bool = false) -> void:
-	var primitive_enabled := enabled and use_primitive
+func set_performance_simplified(enabled: bool, _use_primitive: bool = true) -> void:
+	# A simplified monster always uses the built-in _draw() primitive path.
+	# Never fall back to loading a generic SPR/texture.
+	var primitive_enabled := enabled
 	if (
 		_performance_simplified_visual == enabled
 		and _primitive_simplified_visual == primitive_enabled
@@ -648,15 +651,12 @@ func _apply_performance_sprite() -> void:
 	sprite.visible = true
 	if not MonsterLoader:
 		return
-	var sprite_name := GENERIC_MONSTER_SPRITE if _performance_simplified_visual else _original_sprite_name
-	if sprite_name.is_empty():
+	if _original_sprite_name.is_empty():
 		return
-	var frames = MonsterLoader.get_monster_frames(sprite_name, true)
+	var frames = MonsterLoader.get_monster_frames(_original_sprite_name, true)
 	if frames:
 		sprite.sprite_frames = frames
-	if _performance_simplified_visual:
-		sprite.material = null
-	elif _original_color_index > 0:
+	if _original_color_index > 0:
 		sprite.material = get_shared_monster_palette_material(_original_color_index)
 	else:
 		sprite.material = null
