@@ -2753,18 +2753,18 @@ func _bind_option_popup_cursor(option_button: OptionButton) -> void:
 	var popup := option_button.get_popup()
 	if popup == null:
 		return
-	if not popup.about_to_popup.is_connected(_on_system_option_popup_opened):
-		popup.about_to_popup.connect(_on_system_option_popup_opened)
-	if not popup.popup_hide.is_connected(_on_system_option_popup_closed):
-		popup.popup_hide.connect(_on_system_option_popup_closed)
+	if not popup.about_to_popup.is_connected(_on_system_option_popup_opened.bind(popup)):
+		popup.about_to_popup.connect(_on_system_option_popup_opened.bind(popup))
+	if not popup.popup_hide.is_connected(_on_system_option_popup_closed.bind(popup)):
+		popup.popup_hide.connect(_on_system_option_popup_closed.bind(popup))
 
-func _on_system_option_popup_opened() -> void:
-	if CursorManager and CursorManager.has_method("push_native_popup_cursor"):
-		CursorManager.push_native_popup_cursor()
+func _on_system_option_popup_opened(popup: PopupMenu) -> void:
+	if CursorManager and CursorManager.has_method("show_popup_game_cursor"):
+		CursorManager.show_popup_game_cursor(popup)
 
-func _on_system_option_popup_closed() -> void:
-	if CursorManager and CursorManager.has_method("pop_native_popup_cursor"):
-		CursorManager.pop_native_popup_cursor()
+func _on_system_option_popup_closed(popup: PopupMenu) -> void:
+	if CursorManager and CursorManager.has_method("hide_popup_game_cursor"):
+		CursorManager.hide_popup_game_cursor(popup)
 
 
 func _game_settings_section() -> String:
