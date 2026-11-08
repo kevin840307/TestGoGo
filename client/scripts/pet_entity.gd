@@ -139,26 +139,35 @@ func initialize_pet(data: Dictionary, extra: Dictionary) -> void :
 	_update_sprite_offset()
 
 func _lock_ui_position() -> void :
-	if not sprite or not sprite.sprite_frames or not ui_container: return
+	if not is_instance_valid(sprite) or not is_instance_valid(sprite.sprite_frames) or not is_instance_valid(ui_container):
+		return
+	var scene_tree: SceneTree = get_tree()
+	if scene_tree == null:
+		return
+	await scene_tree.process_frame
+	if not is_instance_valid(self) or not is_inside_tree():
+		return
+	if not is_instance_valid(sprite) or not is_instance_valid(ui_container):
+		return
+	# Pet resources can be released/missing while awaiting the next frame.
+	var frames: SpriteFrames = sprite.sprite_frames
+	if not is_instance_valid(frames):
+		return
 
-	await get_tree().process_frame
-	if not is_instance_valid(self): return
+	var fixed_head_y: float = -80.0
+	var base_anim: String = "IDLE_1"
+	if not frames.has_animation(base_anim):
+		var anims: PackedStringArray = frames.get_animation_names()
+		if anims.size() > 0:
+			base_anim = anims[0]
 
-	var fixed_head_y = -80.0
+	if frames.has_animation(base_anim) and frames.get_frame_count(base_anim) > 0:
+		var tex: Texture2D = frames.get_frame_texture(base_anim, 0)
+		if is_instance_valid(tex):
+			var offset: Vector2 = tex.get_meta("old_offset") if tex.has_meta("old_offset") else Vector2.ZERO
+			fixed_head_y = -offset.y - 55.0
 
-	var base_anim = "IDLE_1"
-	if not sprite.sprite_frames.has_animation(base_anim):
-		var anims = sprite.sprite_frames.get_animation_names()
-		if anims.size() > 0: base_anim = anims[0]
-
-	if sprite.sprite_frames.has_animation(base_anim):
-		var tex = sprite.sprite_frames.get_frame_texture(base_anim, 0)
-		if tex:
-			var offset = tex.get_meta("old_offset") if tex.has_meta("old_offset") else Vector2.ZERO
-			fixed_head_y = - offset.y - 55
-
-
-	ui_container.position = Vector2( - ui_container.size.x / 2.0, fixed_head_y)
+	ui_container.position = Vector2(-ui_container.size.x / 2.0, fixed_head_y)
 
 func show_idle_speech_bubble(text: String) -> void :
 	if not idle_speech_bubble or not idle_speech_label or not idle_speech_timer:

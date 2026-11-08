@@ -45,6 +45,7 @@ var network_move_active: bool = false
 var _authoritative_visual_tween: Tween = null
 var _sprite_visual_base: Vector2 = Vector2.ZERO
 var _ui_visual_base: Vector2 = Vector2.ZERO
+var _ui_position_generation: int = 0
 # The latest server-approved waypoint remains safe to finish when the server
 # changes state to idle before the renderer has finished interpolation.
 var _idle_after_last_waypoint: bool = false
@@ -694,33 +695,49 @@ func _play_spawn_transition() -> void :
 
 
 func _lock_ui_position() -> void :
-	if not ui_container:
+	# May be called repeatedly while render presets change. A previous call
+	# can resume after one frame and must not overwrite the newer layout.
+	_ui_position_generation += 1
+	var requested_generation: int = _ui_position_generation
+	if not is_instance_valid(ui_container):
 		return
 	if _primitive_simplified_visual:
 		ui_container.position = Vector2(-ui_container.size.x / 2.0, -105.0)
 		_ui_visual_base = ui_container.position
 		return
-	if not sprite or not sprite.sprite_frames:
+	if not is_instance_valid(sprite) or not is_instance_valid(sprite.sprite_frames):
 		return
 
-	await get_tree().process_frame
-	if not is_instance_valid(self): return
+	var scene_tree: SceneTree = get_tree()
+	if scene_tree == null:
+		return
+	await scene_tree.process_frame
+	if not is_instance_valid(self) or not is_inside_tree():
+		return
+	if requested_generation != _ui_position_generation or _primitive_simplified_visual:
+		return
+	if not is_instance_valid(ui_container) or not is_instance_valid(sprite):
+		return
+	# Simplification intentionally releases SpriteFrames; a frame-level
+	# null guard BEFORE await is not enough.
+	var frames: SpriteFrames = sprite.sprite_frames
+	if not is_instance_valid(frames):
+		return
 
-	var fixed_head_y = -80.0
+	var fixed_head_y: float = -80.0
+	var base_anim: String = "IDLE_1"
+	if not frames.has_animation(base_anim):
+		var anims: PackedStringArray = frames.get_animation_names()
+		if anims.size() > 0:
+			base_anim = anims[0]
 
-	var base_anim = "IDLE_1"
-	if not sprite.sprite_frames.has_animation(base_anim):
-		var anims = sprite.sprite_frames.get_animation_names()
-		if anims.size() > 0: base_anim = anims[0]
+	if frames.has_animation(base_anim) and frames.get_frame_count(base_anim) > 0:
+		var tex: Texture2D = frames.get_frame_texture(base_anim, 0)
+		if is_instance_valid(tex):
+			var offset: Vector2 = tex.get_meta("old_offset") if tex.has_meta("old_offset") else Vector2.ZERO
+			fixed_head_y = -offset.y - 55.0
 
-	if sprite.sprite_frames.has_animation(base_anim):
-		var tex = sprite.sprite_frames.get_frame_texture(base_anim, 0)
-		if tex:
-			var offset = tex.get_meta("old_offset") if tex.has_meta("old_offset") else Vector2.ZERO
-			fixed_head_y = - offset.y - 55
-
-
-	ui_container.position = Vector2( - ui_container.size.x / 2.0, fixed_head_y)
+	ui_container.position = Vector2(-ui_container.size.x / 2.0, fixed_head_y)
 	_ui_visual_base = ui_container.position
 
 

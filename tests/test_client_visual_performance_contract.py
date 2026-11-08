@@ -95,6 +95,21 @@ class ClientVisualPerformanceContractTests(unittest.TestCase):
         self.assertIn('not GameManager.should_render_combat_effects()', floating)
         self.assertIn('_try_finish_buff_animation()', actor)
 
+    def test_async_sprite_layout_rechecks_after_frame_await(self):
+        monster = source("client/scripts/monster_entity.gd")
+        pet = source("client/scripts/pet_entity.gd")
+        base = source("client/scripts/base_entity.gd")
+        self.assertIn('var _ui_position_generation: int = 0', monster)
+        self.assertIn('requested_generation != _ui_position_generation', monster)
+        self.assertIn('var frames: SpriteFrames = sprite.sprite_frames', monster)
+        self.assertIn('if not is_instance_valid(frames):', monster)
+        self.assertIn('frames.get_frame_count(base_anim) > 0', monster)
+        self.assertIn('var frames: SpriteFrames = sprite.sprite_frames', pet)
+        self.assertIn('if not is_instance_valid(frames):', pet)
+        self.assertIn('if data_model.transform_type <= 0 or not is_instance_valid(transform_sprite) or not is_instance_valid(transform_sprite.sprite_frames):', base)
+        self.assertNotIn('if not sprite.sprite_frames.has_animation(base_anim):', monster)
+        self.assertNotIn('if not sprite.sprite_frames.has_animation(base_anim):', pet)
+
     def test_behavioral_scripts_wired_to_runner(self):
         runner = source("tests/run_protocol_checks.ps1")
         for test in (

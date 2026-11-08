@@ -1932,8 +1932,15 @@ func _refresh_identity_labels() -> void :
 
 func _lock_ui_position_for_transform() -> void :
 	if data_model.transform_type > 0 and transform_sprite and transform_sprite.sprite_frames:
-		await get_tree().process_frame
-		if not is_instance_valid(self): return
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			return
+		await tree.process_frame
+		if not is_instance_valid(self) or not is_inside_tree():
+			return
+		# Transform can end or its SpriteFrames can change during await.
+		if data_model.transform_type <= 0 or not is_instance_valid(transform_sprite) or not is_instance_valid(transform_sprite.sprite_frames):
+			return
 
 		var fixed_head_y = -80.0
 		var base_anim = "IDLE_1"
