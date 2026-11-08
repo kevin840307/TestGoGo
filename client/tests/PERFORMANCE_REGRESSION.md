@@ -96,6 +96,46 @@ to once per second during repeated corrections. Compare client messages to
 server `[MOVE_BLOCKED]` for the same session. A client-only file cannot
 fully identify why the server rejected a position.
 
+## Critical regression: invisible monsters after returning to a map
+
+The Godot loading-overlay completion sends `WorldReady` after each map
+transition. The server previously responded with **only ground items**, even
+though the client can discard early NPC/monster packets while tearing down
+the previous scene. Server now responds with the authoritative NPC, monster,
+ground-item, player and active-pet snapshot, and cancels remaining periodic
+full-map retries. This is required to ensure a visible, clickable target exists.
+
+Client also temporarily prioritizes cached monster creation if the server
+reports its aggro, attack, skill cast or combat damage while the monster is
+AOI-deferred. This avoids invisible attackers without disabling distant-monster
+AOI culling, weakening walls or changing combat range.
+
+Run:
+```powershell
+godot --headless --path client --script res://tests/perf_regression_smoke.gd
+dotnet run --project tests/SGO.Server.SmokeTests
+```
+
+The server integration suite includes `MapReadySnapshotSmokeTests.cs` and
+must confirm the NPC and monster snapshot plus cancellation of redundant
+full-map retries.
+
+**Manual acceptance (both Client and Server Debug):**
+
+1. From Map13, switch to Map31 and return to Map13. Repeat with
+   Map13 → Map15 → Map13 at least five times.
+2. Let a monster target and damage the player; it must be rendered and
+   selectable. Test normal attack, targeted skill, non-targeted AoE, death
+   and respawn, as well as NPCs, pets, and ground items.
+3. Confirm `[MONSTER_COMBAT_REVEAL]` appears for any previously deferred
+   attacker and never continuously requeues the same monster.
+4. Compare `[RENDER_STATS]` active/deferred/visible monsters with server
+   map presence. Check stable FPS, no new missing-entity states or repeated
+   snapshot packet storms.
+
+Regression tests are added but **not claimed as executed** in an
+environment without local Godot/.NET runtime.
+
 ## Manual end-to-end acceptance
 
 1. Startup prewarm → login form: mouse and login input are responsive; progress 0→100.
