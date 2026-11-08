@@ -94,7 +94,7 @@ async function switchMap(nextId) {
 async function switchMapTab(tab) {
   if (tab === state.mapTab) return;
   if (!confirmDiscardMapChanges()) {
-    $$('[data-map-tab]').forEach(x => x.classList.toggle('active', x.dataset.mapTab === state.mapTab));
+    $$$('[data-map-tab]').forEach(x => x.classList.toggle('active', x.dataset.mapTab === state.mapTab));
     return;
   }
   state.mapTab = tab;
@@ -222,7 +222,7 @@ function renderEnemyPalette() {
       <span><b>${esc(e.name)}</b><small>#${e.id} · Lv.${e.level} · ${esc(e.sprite)}</small></span>
     </button>`).join('') || '<div class="helper">找不到怪物。</div>';
 
-  $('.map-enemy-item', host).forEach(btn => btn.onclick = () => {
+  $$('.map-enemy-item', host).forEach(btn => btn.onclick = () => {
     state.mapSelectedEnemyId = Number(btn.dataset.enemyId);
     saveEditorPreferences();
     if (state.mapOnlySelectedType) setMapSelection([]);
