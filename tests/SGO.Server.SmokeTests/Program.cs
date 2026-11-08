@@ -3414,22 +3414,45 @@ try
               Convert.ToInt32(x["QuestID"]) == 1002),
         "active quest can be abandoned persistently");
 
-    Check(store.GetMallPoints(account.Value) == 0 &&
-          store.AdjustMallPoints(
-              account.Value,
-              250,
-              out var mallPoints) &&
-          mallPoints == 250 &&
-          JsonSerializer.Serialize(
-              mall.Handle(
-                  account.Value,
-                  id,
-                  "OpenMall",
-                  0,
-                  1,
-                  0,
-                  0))
-              .Contains("\"Points\":250"),
+    var mallPointsBeforePersistenceCheck =
+        store.GetMallPoints(account.Value);
+
+    Check(
+        store.AdjustMallPoints(
+            account.Value,
+            250,
+            out var mallPoints) &&
+        mallPoints ==
+            mallPointsBeforePersistenceCheck + 250,
+        "mall point balance persists after additive adjustment");
+
+    using var persistedMallPointsDocument =
+        JsonDocument.Parse(
+            JsonSerializer.Serialize(
+                mall.Handle(
+                    account.Value,
+                    id,
+                    "OpenMall",
+                    0,
+                    1,
+                    0,
+                    0)));
+
+    var persistedMallPointsResponse =
+        persistedMallPointsDocument.RootElement
+            .EnumerateArray()
+            .Single(x =>
+                x.TryGetProperty(
+                    "Type",
+                    out var type) &&
+                type.GetString() ==
+                    "MallListResponse");
+
+    Check(
+        persistedMallPointsResponse
+            .GetProperty("Points")
+            .GetInt64() ==
+            mallPointsBeforePersistenceCheck + 250,
         "mall point balance persists and OpenMall returns safe current balance");
 
     Check(JsonSerializer.Serialize(
