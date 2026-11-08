@@ -134,6 +134,26 @@ class AfkModeContract(unittest.TestCase):
         self.assertNotIn('Engine.time_scale =', read("client/scripts/game_manager.gd"))
         self.assertNotIn('Engine.physics_ticks_per_second =', read("client/scripts/game_manager.gd"))
 
+    def test_windows_working_set_trim_is_post_teardown_only(self):
+        game = read("client/scripts/game_manager.gd")
+        self.assertIn("func _request_windows_working_set_trim(reason: String) -> int:", game)
+        self.assertIn('OS.get_name() != "Windows"', game)
+        self.assertIn("EmptyWorkingSet", game)
+        self.assertIn('OS.create_process("powershell.exe"', game)
+        self.assertIn("RenderingServer.force_sync()", game)
+        self.assertIn('await _settle_renderer_and_trim_working_set("afk_settled_3s")', game)
+        self.assertIn('await _settle_renderer_and_trim_working_set("logout_settled")', game)
+
+        trim_start = game.index("func _request_windows_working_set_trim(reason: String) -> int:")
+        trim_end = game.index("\nfunc ", trim_start + 1)
+        trim = game[trim_start:trim_end]
+        self.assertNotIn("NetworkManager", trim)
+        self.assertNotIn("set_physics_process", trim)
+        self.assertNotIn("Engine.physics_ticks_per_second", trim)
+        self.assertIn("current_static_mb > 220.0", trim)
+        self.assertIn("peak_static_mb - current_static_mb < 64.0", trim)
+
+
     def test_afk_memory_logs_explain_why_ram_does_not_drop(self):
         game = read("client/scripts/game_manager.gd")
         cache = read("client/scripts/afk_visual_cache.gd")

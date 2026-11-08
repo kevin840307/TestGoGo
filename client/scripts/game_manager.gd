@@ -99,6 +99,65 @@ func log_world_visual_audit(phase: String) -> void:
 	])
 
 
+func _request_windows_working_set_trim(reason: String) -> int:
+	# Godot's resource counters can return to the login baseline while Windows
+	# still keeps released allocator/driver pages resident in this process.
+	# EmptyWorkingSet asks Windows to evict only those resident pages; it does
+	# not pause networking, physics, combat, or mutate authoritative game data.
+	if OS.get_name() != "Windows":
+		return -1
+
+	var measured: Dictionary = _afk_memory_sample()
+	var current_static_mb: float = float(measured.get("godot_static_mb", 0.0))
+	var peak_static_mb: float = float(measured.get("godot_peak_mb", 0.0))
+	# Do not trim during ordinary gameplay or startup. This is intentionally
+	# limited to cases where a large world allocation has already been freed.
+	if current_static_mb > 220.0 or peak_static_mb - current_static_mb < 64.0:
+		if OS.is_debug_build():
+			print("[WORKING_SET_TRIM] reason=%s skipped=true current_static_mb=%.2f peak_static_mb=%.2f" % [
+				reason, current_static_mb, peak_static_mb,
+			])
+		return -1
+
+	var target_pid: int = OS.get_process_id()
+	var ps_command: String = (
+		"$ErrorActionPreference='SilentlyContinue';"
+		+ "$sig='[System.Runtime.InteropServices.DllImport(\"psapi.dll\")] "
+		+ "public static extern bool EmptyWorkingSet(System.IntPtr hProcess);';"
+		+ "Add-Type -MemberDefinition $sig -Name NativeMethods -Namespace SgoMemory "
+		+ "-ErrorAction SilentlyContinue;"
+		+ "$p=Get-Process -Id %d -ErrorAction SilentlyContinue;" % target_pid
+		+ "if($null -ne $p){[SgoMemory.NativeMethods]::EmptyWorkingSet($p.Handle)|Out-Null}"
+	)
+	var args := PackedStringArray([
+		"-NoLogo",
+		"-NoProfile",
+		"-NonInteractive",
+		"-WindowStyle", "Hidden",
+		"-Command", ps_command,
+	])
+	var helper_pid: int = OS.create_process("powershell.exe", args, false)
+	if OS.is_debug_build():
+		print("[WORKING_SET_TRIM] reason=%s target_pid=%d helper_pid=%d requested=%s current_static_mb=%.2f peak_static_mb=%.2f" % [
+			reason, target_pid, helper_pid, str(helper_pid > 0),
+			current_static_mb, peak_static_mb,
+		])
+	return helper_pid
+
+
+func _settle_renderer_and_trim_working_set(reason: String) -> void:
+	# Node/resource frees are deferred and the rendering server may process them
+	# asynchronously. Let both queues settle before asking Windows to trim the
+	# already-released pages from the process working set.
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	await tree.process_frame
+	RenderingServer.force_sync()
+	await tree.process_frame
+	_request_windows_working_set_trim(reason)
+
+
 func _audit_login_after_logout() -> void:
 	# The freed world and a newly instantiated EntryManager do not settle in
 	# the same frame. Record after deferred Node destruction has completed.
@@ -107,6 +166,7 @@ func _audit_login_after_logout() -> void:
 	await get_tree().create_timer(0.5).timeout
 	log_world_visual_audit("logout_settled")
 	_log_afk_memory_audit("logout_settled")
+	await _settle_renderer_and_trim_working_set("logout_settled")
 
 
 func _afk_memory_sample() -> Dictionary:
@@ -231,6 +291,7 @@ func _log_afk_memory_after_settle(started_msec: int) -> void:
 	_log_afk_memory("afk_settled_3s")
 	log_world_visual_audit("afk_settled_3s")
 	_log_afk_memory_audit("afk_settled_3s")
+	await _settle_renderer_and_trim_working_set("afk_settled_3s")
 
 
 var current_world_enhancement: CanvasLayer = null
