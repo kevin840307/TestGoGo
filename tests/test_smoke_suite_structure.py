@@ -516,6 +516,55 @@ class SmokeSuiteStructureTests(unittest.TestCase):
             party,
         )
 
+    def test_player_shop_aoi_suite_guards_far_packet_mutation(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = (
+            SMOKE / "Integration" /
+            "PlayerShopAoiSmokeTests.cs"
+        )
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+
+        self.assertIn(
+            "far player cannot view or buy invisible player shop",
+            source,
+        )
+        self.assertIn(
+            "far rejected shop packets cannot mutate money or assets",
+            source,
+        )
+        self.assertIn(
+            "approaching shop owner creates player AOI spawn edge",
+            source,
+        )
+        self.assertIn(
+            "AOI-authorized purchase transfers money and item exactly once",
+            source,
+        )
+        self.assertIn(
+            "PlayerShopAoiSmokeTests.Run(repoRoot);",
+            main,
+        )
+
+    def test_wire_load_probe_has_real_world_aoi_near_far_phase(self):
+        scenario = (
+            ROOT / "tests" / "SGO.Server.WireLoadProbe" /
+            "WireLoadScenario.cs"
+        ).read_text(encoding="utf-8-sig")
+        client = (
+            ROOT / "tests" / "SGO.Server.WireLoadProbe" /
+            "WireLoadClient.cs"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn("MeasureWorldAoiAsync(", scenario)
+        self.assertIn("world AOI leaked target spawn", scenario)
+        self.assertIn(
+            "distant client did not receive monster spawn after entering range",
+            scenario,
+        )
+        self.assertIn("TeleportAsync(", client)
+        self.assertIn("TryWaitForEntityPacketAsync(", client)
+
     def test_client_aoi_regressions_are_in_normal_runner(self):
         runner = (
             ROOT / "tests" / "run_protocol_checks.ps1"
