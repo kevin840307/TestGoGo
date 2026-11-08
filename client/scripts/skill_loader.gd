@@ -23,13 +23,6 @@ func trim_unreferenced_runtime_cache() -> int:
 func clear_runtime_cache() -> void :
 	_icon_cache.clear()
 
-
-func clear_world_data() -> void:
-	clear_runtime_cache()
-	_skill_database.clear()
-	_skill_path_map.clear()
-	_is_data_loaded = false
-
 func preload_all_skill_data() -> void :
 	if _is_data_loaded: return
 	var dir = DirAccess.open(SKILL_DATA_PATH)
@@ -47,8 +40,6 @@ func preload_all_skill_data() -> void :
 
 
 func get_skill_data(skill_id: int) -> Resource:
-	if not _is_data_loaded:
-		preload_all_skill_data()
 
 	if _skill_database.has(skill_id):
 		return _skill_database[skill_id]

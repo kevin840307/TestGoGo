@@ -1,21 +1,17 @@
 
 extends Node
 
-const NETWORK_PLAYER_SCENE_PATH: String = "res://network_player.tscn"
-const MONSTER_SCENE_PATH: String = "res://monster_entity.tscn"
-const NPC_SCENE_PATH: String = "res://npc_entity.tscn"
-const GROUND_ITEM_SCENE_PATH: String = "res://ground_item_entity.tscn"
-const PET_SCENE_PATH: String = "res://pet_entity.tscn"
+const NETWORK_PLAYER_SCENE = preload("res://network_player.tscn")
+const MONSTER_SCENE = preload("res://monster_entity.tscn")
+const NPC_SCENE = preload("res://npc_entity.tscn")
+const GROUND_ITEM_SCENE = preload("res://ground_item_entity.tscn")
+const PET_SCENE = preload("res://pet_entity.tscn")
 const PENDING_AOI_MOVES = preload("res://scripts/network_entity_pending_moves.gd")
 const DYNAMIC_ENTITY_VISIBILITY_LAYER: = 1 << 1
 const DEBUG_MONSTER_NETWORK_LOGS: bool = false
 const MONSTER_AOI_ENTER_RADIUS: float = 1800.0
 const MONSTER_AOI_EXIT_RADIUS: float = 2200.0
 const MONSTER_AOI_UPDATE_INTERVAL: float = 0.20
-# AFK compacts only client-side MonsterEntity scenes. Server AOI and packet
-# cadence stay unchanged; canonical Spawn/Move/HP/State snapshots remain live.
-const AFK_MONSTER_AOI_ENTER_RADIUS: float = 360.0
-const AFK_MONSTER_AOI_EXIT_RADIUS: float = 520.0
 # Server MoveEntity/SpawnEntity events update queues immediately. If the
 # local observer has not moved, full-map scans can be reduced safely.
 const MONSTER_AOI_STATIONARY_SCAN_INTERVAL: float = 1.0
@@ -30,7 +26,6 @@ const MONSTER_COMBAT_REVEAL_MSEC: int = 12000
 var active_entities: Dictionary = {}
 var _last_skill_casts: Dictionary = {}
 var _active_entity_types: Dictionary = {}
-var _entity_scene_cache: Dictionary = {}
 
 # Initial map sync can deliver dozens of entities back-to-back. Instantiating
 # every scene immediately makes all _ready()/texture/animation work land in the
@@ -65,59 +60,8 @@ static func should_run_stationary_aoi_scan(
 	context_changed: bool, elapsed_stationary: float, max_idle_interval: float
 ) -> bool:
 	return context_changed or elapsed_stationary >= max_idle_interval
-
-
-static func afk_monster_aoi_radii() -> Vector2:
-	return Vector2(AFK_MONSTER_AOI_ENTER_RADIUS, AFK_MONSTER_AOI_EXIT_RADIUS)
-
-
-static func should_reveal_monster_during_afk(
-	reason: String, is_local_target: bool, is_nearby: bool
-) -> bool:
-	# Current local target and a monster actually damaging the local player
-	# must stay materialized. Unrelated distant combat stays data-only.
-	return is_local_target or is_nearby or reason == "player_damaged"
-
-
-func _is_afk_visual_compaction_active() -> bool:
-	return GameManager and GameManager.is_afk_mode_active()
-
-
 var _combat_reveal_until_msec: Dictionary = {}
 var _pending_aoi_moves = PENDING_AOI_MOVES.new()
-
-func _entity_scene_path(entity_type: int) -> String:
-	match entity_type:
-		0: return NETWORK_PLAYER_SCENE_PATH
-		1: return MONSTER_SCENE_PATH
-		2: return NPC_SCENE_PATH
-		3: return GROUND_ITEM_SCENE_PATH
-		4: return PET_SCENE_PATH
-	return ""
-
-
-func _get_entity_scene(entity_type: int) -> PackedScene:
-	if _entity_scene_cache.has(entity_type):
-		return _entity_scene_cache[entity_type] as PackedScene
-	var path: String = _entity_scene_path(entity_type)
-	if path.is_empty():
-		return null
-	var scene := ResourceLoader.load(path) as PackedScene
-	if scene != null:
-		_entity_scene_cache[entity_type] = scene
-	return scene
-
-
-func _instantiate_entity_scene(entity_type: int) -> Node2D:
-	var scene: PackedScene = _get_entity_scene(entity_type)
-	return scene.instantiate() as Node2D if scene != null else null
-
-
-func release_entity_scene_cache() -> int:
-	var released: int = _entity_scene_cache.size()
-	_entity_scene_cache.clear()
-	return released
-
 
 func get_active_entity(entity_id: int) -> Node2D:
 	var entity = active_entities.get(entity_id)
@@ -128,15 +72,12 @@ func get_active_entity(entity_id: int) -> Node2D:
 		return null
 	return entity
 
-func clear_map_entities(immediate: bool = false) -> Dictionary:
+func clear_map_entities() -> Dictionary:
 	var cleared_by_type: = {}
 	for entity in active_entities.values():
 		if is_instance_valid(entity):
 			_unregister_entity_hover(entity)
-			if immediate:
-				entity.free()
-			else:
-				entity.queue_free()
+			entity.queue_free()
 	for entity_type in _active_entity_types.values():
 		var type_key: = str(int(entity_type))
 		cleared_by_type[type_key] = int(cleared_by_type.get(type_key, 0)) + 1
@@ -310,8 +251,6 @@ static func resolve_visual_aoi_radii(profile: Dictionary, is_monster: bool, came
 
 
 func _monster_aoi_radii() -> Vector2:
-	if _is_afk_visual_compaction_active():
-		return afk_monster_aoi_radii()
 	var profile: Dictionary = GameManager.current_performance_profile if GameManager else {}
 	var required_radius: float = 0.0
 	var viewport: Viewport = get_viewport()
@@ -403,23 +342,6 @@ func _reveal_combat_monster(entity_id: int, reason: String) -> void:
 	# the current map, preserving its appearance and latest coordinates.
 	if entity_id <= 0 or not _monster_spawn_templates.has(entity_id):
 		return
-	if _is_afk_visual_compaction_active():
-		var afk_node := get_active_entity(entity_id)
-		var local_target: bool = (
-			is_instance_valid(afk_node) and _is_local_combat_target(afk_node)
-		)
-		var afk_snapshot: Dictionary = _monster_spawn_templates.get(entity_id, {})
-		var nearby: bool = (
-			not afk_snapshot.is_empty()
-			and _is_monster_inside_aoi(
-				afk_snapshot, AFK_MONSTER_AOI_EXIT_RADIUS
-			)
-		)
-		if not should_reveal_monster_during_afk(
-			reason, local_target, nearby
-		):
-			_combat_reveal_until_msec.erase(entity_id)
-			return
 	var already_revealed: bool = _is_combat_monster_revealed(entity_id)
 	_combat_reveal_until_msec[entity_id] = Time.get_ticks_msec() + MONSTER_COMBAT_REVEAL_MSEC
 	var active_monster := get_active_entity(entity_id)
@@ -605,110 +527,6 @@ func _update_monster_aoi(delta: float) -> void :
 			or _is_combat_monster_revealed(entity_id)
 		):
 			_queue_cached_monster_spawn(entity_id)
-
-func enter_afk_monster_compaction() -> Dictionary:
-	# Render-memory operation only. The existing canonical dictionaries keep
-	# receiving normal server packets while far MonsterEntity nodes are absent.
-	var player_pos: Variant = _get_local_player_position()
-	if player_pos == null:
-		return {"unloaded": 0, "queued_cancelled": 0}
-	var center: Vector2 = player_pos as Vector2
-	var radii: Vector2 = afk_monster_aoi_radii()
-	var enter_sq: float = radii.x * radii.x
-	var exit_sq: float = radii.y * radii.y
-	var unloaded: int = 0
-	var kept_nearby: int = 0
-	var kept_target: int = 0
-
-	for raw_id in _combat_reveal_until_msec.keys().duplicate():
-		var reveal_id: int = int(raw_id)
-		var reveal_node := get_active_entity(reveal_id)
-		if is_instance_valid(reveal_node) and _is_local_combat_target(reveal_node):
-			continue
-		var snapshot: Dictionary = _monster_spawn_templates.get(reveal_id, {})
-		if (
-			not snapshot.is_empty()
-			and center.distance_squared_to(
-				_monster_packet_position(snapshot)
-			) <= enter_sq
-		):
-			continue
-		_combat_reveal_until_msec.erase(reveal_id)
-
-	for raw_id in _active_entity_types.keys():
-		var entity_id: int = int(raw_id)
-		if int(_active_entity_types.get(entity_id, -1)) != 1:
-			continue
-		var monster := get_active_entity(entity_id)
-		if not is_instance_valid(monster):
-			continue
-		if _is_local_combat_target(monster):
-			kept_target += 1
-			continue
-		if center.distance_squared_to(monster.global_position) <= exit_sq:
-			kept_nearby += 1
-			continue
-		_combat_reveal_until_msec.erase(entity_id)
-		_unload_monster_for_aoi(entity_id, monster)
-		unloaded += 1
-
-	var queued_cancelled: int = 0
-	for raw_id in _queued_spawn_ids.keys().duplicate():
-		var entity_id: int = int(raw_id)
-		if not _monster_spawn_templates.has(entity_id):
-			continue
-		var snapshot: Dictionary = _monster_spawn_templates[entity_id]
-		if center.distance_squared_to(_monster_packet_position(snapshot)) <= enter_sq:
-			continue
-		_deferred_monster_spawns[entity_id] = snapshot
-		_remove_queued_spawn(entity_id)
-		queued_cancelled += 1
-
-	_monster_aoi_last_observer = null
-	_monster_aoi_stationary_elapsed = 0.0
-	_monster_aoi_elapsed = MONSTER_AOI_UPDATE_INTERVAL
-	if OS.is_debug_build():
-		print("[AFK_MONSTER_COMPACTION] enter unloaded=%d queued_cancelled=%d kept_nearby=%d kept_target=%d active=%d deferred=%d radius=%.0f/%.0f transport_unchanged=true" % [
-			unloaded, queued_cancelled, kept_nearby, kept_target,
-			get_aoi_active_monster_count(), get_aoi_deferred_monster_count(),
-			radii.x, radii.y
-		])
-	return {
-		"unloaded": unloaded,
-		"queued_cancelled": queued_cancelled,
-		"kept_nearby": kept_nearby,
-		"kept_target": kept_target,
-		"enter_radius": radii.x,
-		"exit_radius": radii.y,
-	}
-
-
-func exit_afk_monster_compaction() -> Dictionary:
-	_monster_aoi_last_observer = null
-	_monster_aoi_stationary_elapsed = 0.0
-	_monster_aoi_elapsed = MONSTER_AOI_UPDATE_INTERVAL
-	var normal_radii: Vector2 = _monster_aoi_radii()
-	var queued: int = 0
-	for raw_id in _deferred_monster_spawns.keys():
-		var entity_id: int = int(raw_id)
-		var cached = _deferred_monster_spawns.get(entity_id, null)
-		if cached is Dictionary and (
-			_is_monster_inside_aoi(cached, normal_radii.x)
-			or _is_combat_monster_revealed(entity_id)
-		):
-			if not _queued_spawn_ids.has(entity_id):
-				_queue_cached_monster_spawn(entity_id)
-				queued += 1
-	if OS.is_debug_build():
-		print("[AFK_MONSTER_COMPACTION] exit queued=%d active=%d deferred=%d radius=%.0f transport_unchanged=true" % [
-			queued, get_aoi_active_monster_count(),
-			get_aoi_deferred_monster_count(), normal_radii.x
-		])
-	return {
-		"queued_for_visual_restore": queued,
-		"normal_enter_radius": normal_radii.x,
-	}
-
 
 func _queue_deferred_ground_spawn(entity_id: int) -> void:
 	if _queued_spawn_ids.has(entity_id) or get_active_entity(entity_id):
@@ -1013,9 +831,7 @@ func _spawn_entity_now(data: Dictionary) -> void :
 
 	match entity_type:
 		0:
-			new_entity = _instantiate_entity_scene(0)
-			if not is_instance_valid(new_entity):
-				return
+			new_entity = NETWORK_PLAYER_SCENE.instantiate()
 			var player_spawn_profile: Dictionary = GameManager.get_performance_profile() if GameManager else {}
 			var pre_simplify_player := bool(player_spawn_profile.get("simplify_other_players", false))
 			var pre_player_style := int(player_spawn_profile.get(
@@ -1034,9 +850,7 @@ func _spawn_entity_now(data: Dictionary) -> void :
 		1:
 			var monster_spawn_started_usec: int = Time.get_ticks_usec()
 			var monster_instantiate_started_usec: int = monster_spawn_started_usec
-			new_entity = _instantiate_entity_scene(1)
-			if not is_instance_valid(new_entity):
-				return
+			new_entity = MONSTER_SCENE.instantiate()
 			var spawn_profile: Dictionary = GameManager.get_performance_profile() if GameManager else {}
 			var pre_simplified := bool(spawn_profile.get("simplify_noncritical_monsters", false))
 			var pre_style := int(spawn_profile.get(
@@ -1058,11 +872,6 @@ func _spawn_entity_now(data: Dictionary) -> void :
 			var monster_setup_started_usec: int = Time.get_ticks_usec()
 			if new_entity.has_method("setup"):
 				new_entity.setup(entity_id, data.get("Name", "未知怪物"), data.get("ExtraData", {}))
-			if data.has("_aoi_state") and new_entity.has_method("apply_network_state"):
-				new_entity.apply_network_state(
-					str(data.get("_aoi_state", "idle")),
-					str(data.get("_aoi_dir", "1"))
-				)
 			var monster_setup_ms: float = float(Time.get_ticks_usec() - monster_setup_started_usec) / 1000.0
 
 			if OS.is_debug_build():
@@ -1076,17 +885,13 @@ func _spawn_entity_now(data: Dictionary) -> void :
 						monster_total_ms
 					])
 		2:
-			new_entity = _instantiate_entity_scene(2)
-			if not is_instance_valid(new_entity):
-				return
+			new_entity = NPC_SCENE.instantiate()
 			target_parent.add_child(new_entity)
 			new_entity.global_position = spawn_pos
 			if new_entity.has_method("initialize_npc"):
 				new_entity.initialize_npc(data)
 		3:
-			new_entity = _instantiate_entity_scene(3)
-			if not is_instance_valid(new_entity):
-				return
+			new_entity = GROUND_ITEM_SCENE.instantiate()
 			target_parent.add_child(new_entity)
 			new_entity.global_position = spawn_pos
 
@@ -1134,9 +939,7 @@ func _spawn_entity_now(data: Dictionary) -> void :
 					visual_tween.tween_property(drop_sprite, "position", landing_offset, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 				)
 		4:
-			new_entity = _instantiate_entity_scene(4)
-			if not is_instance_valid(new_entity):
-				return
+			new_entity = PET_SCENE.instantiate()
 			target_parent.add_child(new_entity)
 			new_entity.global_position = spawn_pos
 			if new_entity.has_method("initialize_pet"):
@@ -1242,13 +1045,6 @@ func _on_entity_moved(data: Dictionary) -> void :
 				_runtime_monster_ids[entity_id] = true
 
 func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String) -> void :
-	if _monster_spawn_templates.has(entity_id):
-		var cached_state: Dictionary = (_monster_spawn_templates[entity_id] as Dictionary).duplicate()
-		cached_state["_aoi_state"] = new_state
-		cached_state["_aoi_dir"] = new_dir
-		_monster_spawn_templates[entity_id] = cached_state
-		if _deferred_monster_spawns.has(entity_id):
-			_deferred_monster_spawns[entity_id] = cached_state
 	if new_state == "attack" or new_state.begins_with("attack_"):
 		_reveal_combat_monster(entity_id, "attack_state")
 	var target_node = get_active_entity(entity_id)

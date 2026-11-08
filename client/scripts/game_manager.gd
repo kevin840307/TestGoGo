@@ -13,12 +13,11 @@ const MAP_LOADING_FINALIZE_PROGRESS: = 99.0
 const INITIAL_SPAWN_GATE_MAX_MSEC: int = 12000
 const TRAIN_TRAVEL_MAP_TIMEOUT_SECONDS: = 15.0
 const TRAIN_VIDEO_TIMEOUT_SECONDS: = 120.0
-const WORLD_ENHANCEMENT_SCENE_PATH: String = "res://world_enhancement.tscn"
+const WORLD_ENHANCEMENT_SCENE: = preload("res://world_enhancement.tscn")
 const AFK_VISUAL_CACHE = preload("res://scripts/afk_visual_cache.gd")
 const AFK_RENDER_SHELL = preload("res://scripts/afk_render_shell.gd")
-const AFK_MONITOR_SCRIPT = preload("res://scripts/afk_monitor_overlay.gd")
 const AFK_MONITOR_FPS: int = 20
-const DAY_NIGHT_OVERLAY_SCENE_PATH: String = "res://day_night_overlay.tscn"
+const DAY_NIGHT_OVERLAY_SCENE: = preload("res://day_night_overlay.tscn")
 const TRAIN_VIDEO_PATHS: = {
 	"train_depart_king.ogv": "res://train_depart_king.ogv", 
 	"train_depart_knight.ogv": "res://train_depart_knight.ogv", 
@@ -54,8 +53,6 @@ var _afk_visual_stats: Dictionary = {}
 var _afk_master_was_muted_before: bool = false
 var _afk_memory_baseline: Dictionary = {}
 var _afk_forced_draw_count: int = 0
-var _afk_monitor: CanvasLayer = null
-var _afk_hud_compacted: bool = false
 
 
 func _afk_memory_sample() -> Dictionary:
@@ -785,65 +782,6 @@ func _restore_afk_render_shell() -> Dictionary:
 	return attached
 
 
-
-func _free_afk_monitor() -> void:
-	if is_instance_valid(_afk_monitor):
-		_afk_monitor.free()
-	_afk_monitor = null
-
-
-func _compact_hud_for_afk() -> void:
-	if not _afk_active or _afk_restoring or _afk_hud_compacted:
-		return
-	if not is_instance_valid(_afk_monitor):
-		_afk_monitor = AFK_MONITOR_SCRIPT.new() as CanvasLayer
-		get_tree().root.add_child(_afk_monitor)
-		if _afk_monitor.has_method("setup"):
-			_afk_monitor.setup(_afk_started_msec)
-
-	var old_hud: CanvasLayer = current_hud
-	current_hud = null
-	if is_instance_valid(old_hud):
-		old_hud.free()
-	_afk_hud_compacted = true
-
-	# The now-dead HUD was the last strong owner of many embedded window
-	# resources. Sweep visual caches only after freeing it.
-	_clear_visual_runtime_caches()
-	if OS.is_debug_build():
-		print("[AFK_HUD_COMPACT] freed_full_hud=true nodes=%d static_mb=%.2f transport_unchanged=true" % [
-			int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
-			_get_process_memory_mb()
-		])
-
-
-func _restore_hud_after_afk() -> bool:
-	if is_instance_valid(current_hud):
-		return true
-	var hud_scene := ResourceLoader.load("res://game_hud.tscn") as PackedScene
-	if hud_scene == null:
-		return false
-	var rebuilt := hud_scene.instantiate() as CanvasLayer
-	if rebuilt == null:
-		return false
-	rebuilt.visible = false
-	get_tree().root.add_child(rebuilt)
-	current_hud = rebuilt
-	if rebuilt.has_method("initialize_hud"):
-		# restore_only prevents pet-mode/announcement network requests.
-		rebuilt.initialize_hud(current_player, true)
-
-	var deadline: int = Time.get_ticks_msec() + 1800
-	while (
-		is_instance_valid(rebuilt)
-		and rebuilt.has_method("is_initial_hud_ready")
-		and not rebuilt.is_initial_hud_ready()
-		and Time.get_ticks_msec() < deadline
-	):
-		await get_tree().process_frame
-	return is_instance_valid(rebuilt)
-
-
 func begin_afk_mode() -> bool:
 	if _afk_active or _afk_restoring or is_changing_map:
 		return false
@@ -875,14 +813,9 @@ func begin_afk_mode() -> bool:
 	# identity are untouched.
 	set_performance_modes(ClientPerformanceProfile.LOAD_MULTIBOX, ClientPerformanceProfile.COMBAT_MASS)
 	set_visual_simplification_modes(ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED, ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
-	var monster_compaction: Dictionary = {}
-	if NetworkEntityManager and NetworkEntityManager.has_method("enter_afk_monster_compaction"):
-		monster_compaction = NetworkEntityManager.enter_afk_monster_compaction()
 	var suspended_entities: int = _set_afk_dynamic_visuals_suspended(true)
 	_afk_visual_stats = _enter_afk_render_shell()
 	_afk_visual_stats["suspended_entity_visuals"] = suspended_entities
-	_afk_visual_stats["compacted_monsters"] = int(monster_compaction.get("unloaded", 0))
-	_afk_visual_stats["cancelled_monster_spawns"] = int(monster_compaction.get("queued_cancelled", 0))
 	_afk_visual_stats["released"] = int(_afk_visual_stats.get("freed_static_nodes", 0))
 	_clear_visual_runtime_caches()
 	_refresh_focus_render_policy()
@@ -890,10 +823,6 @@ func begin_afk_mode() -> bool:
 	_log_afk_memory("enter_after")
 	if OS.is_debug_build():
 		_log_afk_memory_after_settle(_afk_started_msec)
-	# begin_afk_mode() is called from GameHUD. Freeing that HUD inside its
-	# own button callback would invalidate the current stack frame, so compact
-	# it on the next idle turn.
-	call_deferred("_compact_hud_for_afk")
 	return true
 
 
@@ -910,18 +839,8 @@ func finish_afk_mode() -> bool:
 		_afk_visual_stats["restore_error"] = str(restore_result.get("reason", "map_change"))
 		_log_afk_state("restore_retry_needed")
 		return false
-	if _afk_hud_compacted and not await _restore_hud_after_afk():
-		_afk_restoring = false
-		_afk_visual_stats["restore_error"] = "hud_restore_failed"
-		_log_afk_state("restore_retry_needed")
-		return false
 	_afk_active = false
 	_afk_restoring = false
-	if NetworkEntityManager and NetworkEntityManager.has_method("exit_afk_monster_compaction"):
-		var monster_restore: Dictionary = NetworkEntityManager.exit_afk_monster_compaction()
-		_afk_visual_stats["monster_visuals_requeued"] = int(
-			monster_restore.get("queued_for_visual_restore", 0)
-		)
 	_leave_afk_audio_silence(true)
 	if is_instance_valid(current_player) and current_player.has_method("end_afk_navigation_anchor"):
 		current_player.end_afk_navigation_anchor()
@@ -939,10 +858,6 @@ func finish_afk_mode() -> bool:
 	_apply_low_resource_world_visual_policy()
 	if is_instance_valid(current_map_node):
 		current_map_node.visible = true
-	if is_instance_valid(current_hud):
-		current_hud.visible = true
-	_afk_hud_compacted = false
-	_free_afk_monitor()
 	_afk_saved_profile.clear()
 	_afk_visual_stats.clear()
 	_refresh_focus_render_policy()
@@ -958,14 +873,9 @@ func _refresh_afk_map_visuals_after_change() -> void:
 	_afk_map_cache.discard()
 	_afk_render_shell.discard()
 	current_map_node.visible = false
-	var monster_compaction: Dictionary = {}
-	if NetworkEntityManager and NetworkEntityManager.has_method("enter_afk_monster_compaction"):
-		monster_compaction = NetworkEntityManager.enter_afk_monster_compaction()
 	var suspended_entities: int = _set_afk_dynamic_visuals_suspended(true)
 	_afk_visual_stats = _enter_afk_render_shell()
 	_afk_visual_stats["suspended_entity_visuals"] = suspended_entities
-	_afk_visual_stats["compacted_monsters"] = int(monster_compaction.get("unloaded", 0))
-	_afk_visual_stats["cancelled_monster_spawns"] = int(monster_compaction.get("queued_cancelled", 0))
 	_afk_visual_stats["released"] = int(_afk_visual_stats.get("freed_static_nodes", 0))
 	_clear_visual_runtime_caches()
 	_log_afk_state("map_changed_unloaded", int(_afk_visual_stats.get("released", 0)))
@@ -975,8 +885,6 @@ func _refresh_afk_map_visuals_after_change() -> void:
 func _reset_afk_mode() -> void:
 	if _afk_active:
 		_leave_afk_audio_silence(false)
-	_free_afk_monitor()
-	_afk_hud_compacted = false
 	_afk_active = false
 	_afk_restoring = false
 	_afk_saved_profile.clear()
@@ -1847,33 +1755,35 @@ func cleanup_and_return_to_login() -> void :
 	_cancel_train_travel("cleanup_and_return_to_login")
 	AudioManager.stop_bgm()
 
-	if NetworkEntityManager:
-		NetworkEntityManager.clear_map_entities(true)
 
 	if is_instance_valid(current_player):
-		current_player.free()
-	current_player = null
-	if is_instance_valid(current_hud):
-		current_hud.free()
-	current_hud = null
-	if is_instance_valid(current_map_node):
-		current_map_node.free()
-	current_map_node = null
+		current_player.queue_free()
+		current_player = null
 
+
+	if is_instance_valid(current_map_node):
+		current_map_node.queue_free()
+		current_map_node = null
+
+
+	if is_instance_valid(current_hud):
+		current_hud.queue_free()
+		current_hud = null
 	_remove_day_night_overlay()
 	_remove_world_enhancement()
+
+
+	if NetworkEntityManager:
+		NetworkEntityManager.clear_map_entities()
 	_clear_visual_runtime_caches()
-	if ItemLoader and ItemLoader.has_method("clear_world_data"):
-		ItemLoader.clear_world_data()
-	if SkillLoader and SkillLoader.has_method("clear_world_data"):
-		SkillLoader.clear_world_data()
-	if PetLoader and PetLoader.has_method("clear_world_data"):
-		PetLoader.clear_world_data()
+
 
 	if GlobalTempData:
 		GlobalTempData.selected_player_data = {}
 		GlobalTempData.character_list = []
 
+
+	# Returning to login restores smooth controls even if unfocused.
 	_world_presented_msec = 0
 	_refresh_focus_render_policy()
 	get_tree().change_scene_to_file("res://entry_manager.tscn")
@@ -1893,8 +1803,6 @@ func _clear_visual_runtime_caches() -> void :
 		SkillLoader.clear_runtime_cache()
 	if AudioManager and AudioManager.has_method("clear_runtime_cache"):
 		AudioManager.clear_runtime_cache()
-	if NetworkEntityManager and NetworkEntityManager.has_method("release_entity_scene_cache"):
-		NetworkEntityManager.release_entity_scene_cache()
 	PaperDollEngine.clear_visual_runtime_cache()
 	FestivalThemeManager.clear_texture_cache()
 	for kind in _prewarmed_hud_windows.keys().duplicate():
@@ -1918,8 +1826,7 @@ func _apply_low_resource_world_visual_policy() -> void:
 
 func _ensure_day_night_overlay() -> void :
 	if not is_instance_valid(current_day_night_overlay):
-		var day_night_scene := ResourceLoader.load(DAY_NIGHT_OVERLAY_SCENE_PATH) as PackedScene
-		current_day_night_overlay = day_night_scene.instantiate() as CanvasLayer if day_night_scene else null
+		current_day_night_overlay = DAY_NIGHT_OVERLAY_SCENE.instantiate() as CanvasLayer
 		if current_day_night_overlay:
 			get_tree().root.add_child(current_day_night_overlay)
 	if is_instance_valid(current_day_night_overlay) and current_day_night_overlay.has_method("set_tracked_player"):
@@ -1940,8 +1847,7 @@ func set_world_enhancement_enabled(enabled: bool) -> void :
 func _ensure_world_enhancement() -> void :
 	if is_instance_valid(current_world_enhancement):
 		return
-	var enhancement_scene := ResourceLoader.load(WORLD_ENHANCEMENT_SCENE_PATH) as PackedScene
-	current_world_enhancement = enhancement_scene.instantiate() as CanvasLayer if enhancement_scene else null
+	current_world_enhancement = WORLD_ENHANCEMENT_SCENE.instantiate() as CanvasLayer
 	if current_world_enhancement:
 		get_tree().root.add_child(current_world_enhancement)
 

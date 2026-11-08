@@ -1,7 +1,6 @@
 extends SceneTree
 
 const AFK_RENDER_SHELL = preload("res://scripts/afk_render_shell.gd")
-const NETWORK_ENTITY_MANAGER_SCRIPT = preload("res://scripts/network_entity_manager.gd")
 
 # godot --headless --path client --script res://tests/afk_visual_cache_regression.gd
 # Real Godot integration checks, not a source-string-only assertion.
@@ -28,22 +27,6 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	var afk_monster_radii: Vector2 = NETWORK_ENTITY_MANAGER_SCRIPT.afk_monster_aoi_radii()
-	check(afk_monster_radii == Vector2(360.0, 520.0),
-		"AFK monster scene AOI is compact and independent of server AOI")
-	check(NETWORK_ENTITY_MANAGER_SCRIPT.should_reveal_monster_during_afk(
-			"player_damaged", false, false),
-		"monster damaging local player still materializes")
-	check(NETWORK_ENTITY_MANAGER_SCRIPT.should_reveal_monster_during_afk(
-			"monster_damaged", true, false),
-		"current local combat target remains materialized")
-	check(not NETWORK_ENTITY_MANAGER_SCRIPT.should_reveal_monster_during_afk(
-			"attack_state", false, false),
-		"unrelated distant combat stays data-only during AFK")
-	check(NETWORK_ENTITY_MANAGER_SCRIPT.should_reveal_monster_during_afk(
-			"aggro", false, true),
-		"nearby monster may still materialize")
-
 	var texture: Texture2D = load("res://ui/cursor/C_AUTOWALK.spr.png") as Texture2D
 	check(is_instance_valid(texture), "real existing map-compatible texture imports")
 	if not is_instance_valid(texture):

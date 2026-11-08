@@ -13,7 +13,7 @@ enum DisplayMode{FULL_INVENTORY, SIMPLE_LIST}
 enum TabType{GENERAL = 0, EQUIP = 1, PET = 2, MECHA = 3}
 
 const INVENTORY_ROW_SCENE = preload("res://inventory_item_row.tscn")
-const PLAYER_SCENE_PATH: String = "res://player.tscn"
+const PLAYER_SCENE = preload("res://player.tscn")
 const PALETTE_SHADER = preload("res://palette_swap.gdshader")
 const COLOR_INDEX_TO_DEGREES = {0: 0.0, 1: 90.0, 2: 180.0, 3: 270.0, 4: 45.0, 5: 135.0, 6: 225.0, 7: 315.0}
 var _palette_mat_cache: Dictionary = {}
@@ -452,11 +452,7 @@ func _build_equip_preview_async(data_model = null) -> void :
 		return
 
 	var started_usec: int = Time.get_ticks_usec()
-	var player_scene := ResourceLoader.load(PLAYER_SCENE_PATH) as PackedScene
-	if player_scene == null:
-		_equip_preview_building = false
-		return
-	var player_preview = player_scene.instantiate()
+	var player_preview = PLAYER_SCENE.instantiate()
 	player_preview.name = "EquipPreview"
 	panel_equip_detailed.add_child(player_preview)
 	player_preview.position = Vector2(178, 180)

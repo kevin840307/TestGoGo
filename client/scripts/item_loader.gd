@@ -43,13 +43,6 @@ func clear_runtime_cache() -> void :
 	_photo_cache.clear()
 	_ground_cache.clear()
 
-
-func clear_world_data() -> void:
-	clear_runtime_cache()
-	_item_database.clear()
-	_item_path_map.clear()
-	_is_data_loaded = false
-
 func _safe_get(obj: Object, property: String, default_value: Variant) -> Variant:
 	var val = obj.get(property)
 	return val if val != null else default_value
@@ -76,8 +69,6 @@ func preload_all_item_data() -> void :
 
 
 func get_item_data(item_id: int) -> Resource:
-	if not _is_data_loaded:
-		preload_all_item_data()
 
 	if _item_database.has(item_id):
 		return _item_database[item_id]
