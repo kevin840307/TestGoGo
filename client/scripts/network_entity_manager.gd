@@ -261,16 +261,21 @@ func _spawn_priority(data: Dictionary, player_pos: Variant) -> float:
 	return (player_pos as Vector2).distance_squared_to(_monster_packet_position(data))
 
 func _enqueue_spawn_by_priority(data: Dictionary) -> void :
-	# All comparisons in a single insertion use the same player position. In
-	# large snapshots this avoids repeated GameManager/SceneTree lookups.
+	# The queue remains sorted by priority. The former linear scan called
+	# _spawn_priority for every queued entry whenever a packet arrived:
+	# hundreds of map-snapshot drops made this quadratic CPU work.
+	# Binary insertion preserves stable ordering for equal priorities.
 	var player_pos: Variant = _get_local_player_position()
 	var priority: float = _spawn_priority(data, player_pos)
-	var insert_index: int = _spawn_queue.size()
-	for index: int in range(_spawn_queue.size()):
-		if priority < _spawn_priority(_spawn_queue[index], player_pos):
-			insert_index = index
-			break
-	_spawn_queue.insert(insert_index, data)
+	var low: int = 0
+	var high: int = _spawn_queue.size()
+	while low < high:
+		var mid: int = (low + high) / 2
+		if priority < _spawn_priority(_spawn_queue[mid], player_pos):
+			high = mid
+		else:
+			low = mid + 1
+	_spawn_queue.insert(low, data)
 
 func _get_current_queued_spawn_data(data: Dictionary) -> Dictionary:
 	# Movement packets may arrive while a monster is waiting in the spawn
