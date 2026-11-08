@@ -65,6 +65,29 @@ public sealed class PlayerShopService
         }
     }
 
+    public void RecoverStaleReservations(
+        long accountId,
+        long characterId)
+    {
+        if (accountId <= 0 ||
+            characterId <= 0)
+            return;
+
+        lock (_sync)
+        {
+            // If an in-memory shop exists, its reserved rows are live state
+            // and must not be cleared. Missing memory state with InShop rows
+            // can only be orphaned persistence (for example after a crash).
+            if (_shops.ContainsKey(
+                    characterId))
+                return;
+
+            _store.ClearPlayerShopAssets(
+                accountId,
+                characterId);
+        }
+    }
+
     public IReadOnlyList<object> Handle(
         ClientSession session,
         long accountId,
