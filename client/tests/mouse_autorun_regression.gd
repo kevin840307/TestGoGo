@@ -80,8 +80,10 @@ func _test_existing_cursor_precedence() -> void:
 	_check(CursorManager.cursor_sprite.scale.x > 1.0,
 		"only locked walking increases sprite visibility")
 	_check(CursorManager.cursor_sprite.sprite_frames.get_frame_texture(
-		"autorun", 0).get_width() == 32,
-		"cursor atlas keeps its actual 320x32 PNG layout without scaling mismatch")
+		"autorun", 0).get_width() == 48 and
+		CursorManager.cursor_sprite.sprite_frames.get_frame_texture(
+			"autorun", 0).get_height() == 48,
+		"cursor atlas keeps the 480x48 PNG frame dimensions without cropping")
 	CursorManager.set_cursor_state("attack")
 	_check(not CursorManager.is_autorun_indicator_visible() and
 		CursorManager.cursor_sprite.animation == "attack" and

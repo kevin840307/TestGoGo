@@ -4,6 +4,7 @@ Behavior is exercised in client/tests/mouse_autorun_regression.gd. These
 assertions protect source wiring on CI hosts without a Godot binary.
 """
 from pathlib import Path
+import struct
 import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -53,19 +54,25 @@ class MouseAutorunContractTests(unittest.TestCase):
         cursor = read("client/scripts/cursor_manager.gd")
         sheet = ROOT / "client" / "ui" / "cursor" / "C_AUTOWALK.spr.png"
         self.assertTrue(sheet.is_file(), "Generated cursor PNG is committed")
-        self.assertEqual(sheet.read_bytes()[:8], bytes.fromhex("89504e470d0a1a0a"))
+        png = sheet.read_bytes()
+        self.assertEqual(png[:8], bytes.fromhex("89504e470d0a1a0a"))
+        # PNG IHDR width/height must match the SpriteFrames atlas.
+        self.assertEqual(struct.unpack(">II", png[16:24]), (480, 48))
+        # Palette transparency (tRNS) or RGBA preserves alpha.
+        self.assertTrue(png[25] == 6 or (png[25] == 3 and b"tRNS" in png))
         self.assertIn('AUTORUN_FRAME_COUNT: int = 10', cursor)
-        self.assertIn('AUTORUN_FRAME_SIZE: Vector2i = Vector2i(32, 32)', cursor)
+        self.assertIn('AUTORUN_FRAME_SIZE: Vector2i = Vector2i(48, 48)', cursor)
         self.assertIn("AtlasTexture.new()", cursor)
+        self.assertIn('frames.set_animation_speed("autorun", 10.0)', cursor)
         self.assertIn('frames.add_frame("autorun", frame_texture)', cursor)
-        self.assertIn('AUTORUN_VISUAL_SCALE: float = 1.35', cursor)
+        self.assertIn('AUTORUN_VISUAL_SCALE: float = 1.10', cursor)
         self.assertIn('cursor_sprite.scale = _original_cursor_scale', cursor)
         self.assertIn('cursor_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST', cursor)
         self.assertNotIn("_autorun_status_label", cursor)
         self.assertNotIn("自動走路 ON", cursor)
         self.assertNotIn("右鍵停止", cursor)
         self.assertIn("cursor_sprite.scale = _original_cursor_scale", cursor)
-        self.assertIn('Auto-walk cursor sprite sheet must be 320x32 pixels.', cursor)
+        self.assertIn('Auto-walk cursor sprite sheet must be 480x48 pixels.', cursor)
         self.assertIn("set_autorun_indicator(", cursor)
         self.assertIn('visual_state == "normal"', cursor)
         self.assertIn("not _is_game_window_hovered", cursor)

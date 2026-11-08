@@ -1,12 +1,12 @@
 
 extends CanvasLayer
 
-# Ten transparent 32x32 frames, derived from C_NORMAL's fantasy blue/gold
-# pointer. Keep this as a regular imported texture; no per-frame drawing.
+# Ten transparent 48x48 frames from the selected classic-style autorun
+# sprite sheet. Preserve the original cursor for all other interactions.
 const AUTORUN_SHEET_PATH = "res://ui/cursor/C_AUTOWALK.spr.png"
 const AUTORUN_FRAME_COUNT: int = 10
-const AUTORUN_FRAME_SIZE: Vector2i = Vector2i(32, 32)
-const AUTORUN_VISUAL_SCALE: float = 1.35
+const AUTORUN_FRAME_SIZE: Vector2i = Vector2i(48, 48)
+const AUTORUN_VISUAL_SCALE: float = 1.10
 
 signal ctrl_state_changed(is_pressed: bool)
 
@@ -166,13 +166,13 @@ func _register_autorun_cursor_animation() -> void:
 		return
 	var atlas: Texture2D = load(AUTORUN_SHEET_PATH) as Texture2D
 	if atlas == null or atlas.get_width() != AUTORUN_FRAME_COUNT * AUTORUN_FRAME_SIZE.x or atlas.get_height() != AUTORUN_FRAME_SIZE.y:
-		push_warning("Auto-walk cursor sprite sheet must be 320x32 pixels.")
+		push_warning("Auto-walk cursor sprite sheet must be 480x48 pixels.")
 		return
 
 	var frames: SpriteFrames = cursor_sprite.sprite_frames.duplicate(true) as SpriteFrames
 	if not frames.has_animation("autorun"):
 		frames.add_animation("autorun")
-	frames.set_animation_speed("autorun", 8.0)
+	frames.set_animation_speed("autorun", 10.0)
 	frames.set_animation_loop("autorun", true)
 	for frame_index in range(AUTORUN_FRAME_COUNT):
 		var frame_texture := AtlasTexture.new()
