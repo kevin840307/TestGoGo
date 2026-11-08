@@ -23,6 +23,7 @@ const SETTING_KEY_SIMPLIFY_PLAYERS_MODE = "simplify_players_mode"
 const SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE = ClientPerformanceProfile.SIMPLIFY_AUTO
 const SETTING_KEY_SIMPLIFY_MONSTERS_MODE = "simplify_monsters_mode"
 const SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE = ClientPerformanceProfile.SIMPLIFY_AUTO
+const SETTING_KEY_SKILL_AOE_SELF_CENTER_PREFIX = "skill_aoe_self_center_"
 
 
 const DEFAULT_MAP_ID = "map15"
