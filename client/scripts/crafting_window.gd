@@ -204,11 +204,13 @@ func _calculate_max_craftable_cached(recipe: Dictionary, counts: Dictionary, mon
 		max_craft = mini(max_craft, int(has_count / need))
 	return maxi(max_craft, 0)
 
-func refresh_availability_async() -> void :
+func refresh_availability_async(progress_callback: Callable = Callable()) -> void :
 	if not _static_tree_built:
 		# Search/filters rebuild a different Tree. Preserve that filter and
 		# never use stale cached TreeItem references from the original layout.
 		_apply_current_filter()
+		if progress_callback.is_valid():
+			progress_callback.call(1.0)
 		return
 	_availability_refresh_generation += 1
 	var this_generation: int = _availability_refresh_generation
@@ -230,9 +232,13 @@ func refresh_availability_async() -> void :
 		tree_item.set_custom_color(0, AVAILABLE_ITEM_COLOR if max_can_do > 0 else Color.GRAY)
 		processed += 1
 		if processed % 64 == 0:
+			if progress_callback.is_valid():
+				progress_callback.call(recipe_preload_progress(processed, _recipe_entries.size()))
 			await get_tree().process_frame
 			if this_generation != _availability_refresh_generation or not is_inside_tree():
 				return
+	if progress_callback.is_valid():
+		progress_callback.call(1.0)
 
 func _update_tree(filter_text: String = "", only_craftable: bool = false) -> void :
 	# Once a filtered/dynamic Tree replaces the static default Tree,
