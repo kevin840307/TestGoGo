@@ -7553,12 +7553,12 @@ public sealed class SqliteGameStore : IGameStore
         }
 
         var newMoney = money - moneyCost;
-        if (!WriteCharacterMoney(
+        if (!DebitCharacterMoney(
                 db,
                 tx,
                 accountId,
                 dbid,
-                newMoney))
+                moneyCost))
         {
             return new(
                 false,
@@ -7724,12 +7724,12 @@ public sealed class SqliteGameStore : IGameStore
         }
 
         var newMoney = money - moneyCost;
-        if (!WriteCharacterMoney(
+        if (!DebitCharacterMoney(
                 db,
                 tx,
                 accountId,
                 dbid,
-                newMoney))
+                moneyCost))
         {
             return new(
                 false,
@@ -7767,22 +7767,26 @@ public sealed class SqliteGameStore : IGameStore
             : Convert.ToInt64(raw);
     }
 
-    private static bool WriteCharacterMoney(
+    private static bool DebitCharacterMoney(
         SqliteConnection db,
         SqliteTransaction tx,
         long accountId,
         long dbid,
-        long money)
+        long amount)
     {
+        if (amount < 0)
+            return false;
+
         using var cmd = db.CreateCommand();
         cmd.Transaction = tx;
         cmd.CommandText = """
             UPDATE characters
-               SET money=$money
+               SET money=money-$amount
              WHERE id=$id
                AND account_id=$account
+               AND money >= $amount
             """;
-        Arg(cmd, "$money", money);
+        Arg(cmd, "$amount", amount);
         Arg(cmd, "$id", dbid);
         Arg(cmd, "$account", accountId);
         return cmd.ExecuteNonQuery() == 1;
