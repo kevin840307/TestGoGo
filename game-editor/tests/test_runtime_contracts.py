@@ -369,5 +369,27 @@ class RealGameDataContractTests(unittest.TestCase):
         )
 
 
+    def test_map_preview_exporter_matches_editor_world_bounds_contract(self) -> None:
+        exporter = (
+            REPO_ROOT / "client" / "tools" / "export_map_previews.gd"
+        ).read_text(encoding="utf-8")
+        map_repo = (
+            GAME_EDITOR_ROOT / "sgo_editor" / "map_repo.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('const BOUNDS_PATH := "res://maps/map_bounds.json"', exporter)
+        self.assertIn("const CELL_SIZE := 16", exporter)
+        self.assertIn('"res://maps/Map%02d.scn"', exporter)
+        self.assertIn("floorf(float(data[\"min_x\"]) / CELL_SIZE) * CELL_SIZE", exporter)
+        self.assertIn("ceilf(float(data[\"max_x\"]) / CELL_SIZE) * CELL_SIZE", exporter)
+        self.assertIn("image.save_png(output_path)", exporter)
+
+        self.assertIn("CELL_SIZE = 16", map_repo)
+        self.assertIn("math.floor(min_x / self.CELL_SIZE) * self.CELL_SIZE", map_repo)
+        self.assertIn("math.ceil(max_x / self.CELL_SIZE) * self.CELL_SIZE", map_repo)
+        self.assertIn(".generated", map_repo)
+        self.assertIn("map-previews", map_repo)
+
+
 if __name__ == "__main__":
     unittest.main()
