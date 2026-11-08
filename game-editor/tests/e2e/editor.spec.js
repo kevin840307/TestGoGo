@@ -260,6 +260,56 @@ test('stale second browser tab cannot overwrite newer map data', async ({ contex
   await pageB.close();
 });
 
+test('stale force-delete confirmation is rejected when references change', async ({ page }) => {
+  await page.goto(baseUrl);
+
+  const before = await page.evaluate(async () => {
+    const response = await fetch('/api/references/enemy/1');
+    return response.json();
+  });
+  expect(before.count).toBeGreaterThan(0);
+  expect(before.token).toBeTruthy();
+
+  const payload = await page.evaluate(async () => {
+    const response = await fetch('/api/maps/13/enemies?envelope=1');
+    return response.json();
+  });
+  const nextX = 160 + payload.items.length * 16;
+  const nextItems = [...payload.items, {index:-1, enemyId:1, x:nextX, y:96, sourceFlags:0}];
+  const save = await page.evaluate(async ({items, revision}) => {
+    const response = await fetch('/api/maps/13/enemies', {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({items, expectedRevision:revision}),
+    });
+    return {status:response.status, body:await response.json()};
+  }, {items:nextItems, revision:payload.revision});
+  expect(save.status).toBe(200);
+
+  const after = await page.evaluate(async () => {
+    const response = await fetch('/api/references/enemy/1');
+    return response.json();
+  });
+  expect(after.token).not.toBe(before.token);
+
+  const staleDelete = await page.evaluate(async token => {
+    const response = await fetch(
+      '/api/enemies/1?force=1&referenceToken=' + encodeURIComponent(token),
+      {method:'DELETE'}
+    );
+    return {status:response.status, body:await response.json()};
+  }, before.token);
+  expect(staleDelete.status).toBe(400);
+  expect(staleDelete.body.error).toContain('引用在確認刪除後已發生變化');
+
+  const stillExists = await page.evaluate(async () => {
+    const response = await fetch('/api/enemies/1');
+    return {status:response.status, body:await response.json()};
+  });
+  expect(stillExists.status).toBe(200);
+  expect(stillExists.body.id).toBe(1);
+});
+
 test('first-run help can be dismissed and remembered', async ({ page }) => {
   await page.goto(baseUrl);
   await expect(page.locator('#help-modal')).toBeVisible();
