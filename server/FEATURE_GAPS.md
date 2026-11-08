@@ -37,6 +37,7 @@
 | M-04 | TEST_GAP | Monster AI 每個 tick 仍需逐玩家讀取 `GetCharacter`，且 Combat Tick/pathfinding、DB write lock、transport queue、Client 渲染成本需 profile；不可把 AOI CPU 節省當成 100 人實測。 | 10/50/100 真 socket，near/far/進出 AOI、bytes/sec、AI tick p50/p95/p99、CPU/RAM/GC、10 分鐘及 1 小時 soak |
 | M-05 | TEST_GAP | 真正的 Godot Scene/UI 串接以及同怪/同物/交易壓力下 Client 消失/重複物件和顯示一致性仍待實跑。 | Client headless + Scene/UI、斷線/重連、撿物/交易/換圖完整 E2E |
 | M-06 | TECH_DEBT | `SqliteGameStore.cs` 與 `SmokeTests/Program.cs` 仍偏大。先分小模組/Fixture，待 CI 稳定且交易 contract PASS 後再按領域拆 store。 | 不改原封包/SQL 語意的逐模組重構，後續必須有全套 regression |
+| M-07 | IMPLEMENTED_UNVERIFIED | `BuyAsset/SellAsset` 的持久層邊界現在拒絕無效數量/負價格，不再把 0 或負數購售量自動改成 1；一般品項 9999 上限、非堆疊品項 1 件上限；購買總價用 long 計算防整數溢位。新增獨立 `Integration/EconomyRequestGuardSmokeTests.cs` 測合法/非法/超量/重放出售與物品、金錢守恆。 | `--suite concurrency` + full + true AES/WebSocket NPC Shop Purchase/Sell 回歸 PASS |
 
 本輪不新增偽裝成功的未支援封包：已實作項目依
 `packet_*_audit.py`、真 Wire、Godot E2E 交叉驗證，
