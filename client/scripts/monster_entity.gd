@@ -23,6 +23,7 @@ var _original_sprite_name: String = ""
 var _original_color_index: int = 0
 var _performance_simplified_visual: bool = false
 var _primitive_simplified_visual: bool = false
+var _performance_simplified_style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
 var _performance_visual_protected: bool = false
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
@@ -168,14 +169,22 @@ func _resolve_ui_nodes() -> void :
 		level_icon = ui_container.get_node_or_null("TextureRect/LevelIcon") as TextureRect
 
 
-func prepare_performance_visual(simplified: bool, _use_primitive: bool = true) -> void:
-	# Monster simplification is intentionally texture-free. Keep the second
-	# parameter only for source compatibility with older callers.
+func prepare_performance_visual(
+	simplified: bool,
+	style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+) -> void:
 	_performance_simplified_visual = simplified
 	_primitive_simplified_visual = simplified
+	_performance_simplified_style = _normalize_simplified_style(style)
 
 func is_primitive_simplified() -> bool:
 	return _primitive_simplified_visual
+
+func _normalize_simplified_style(style: int) -> int:
+	var normalized := ClientPerformanceProfile.sanitize_simplify_mode(style)
+	if normalized < ClientPerformanceProfile.SIMPLIFY_PIXEL_A:
+		return ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+	return normalized
 
 func _primitive_direction_vector() -> Vector2:
 	match current_dir:
@@ -189,6 +198,57 @@ func _primitive_direction_vector() -> Vector2:
 		"8": return Vector2(-0.707, 0.707)
 	return Vector2.DOWN
 
+func _draw_pixel_monster_a(center: Vector2, color: Color) -> void:
+	var dark := color.darkened(0.34)
+	var light := color.lightened(0.28)
+	var eye := Color(0.06, 0.08, 0.11, 1.0)
+
+	# Rounded toy/creature silhouette built only from 4px-aligned rectangles.
+	draw_rect(Rect2(center + Vector2(-24, -12), Vector2(48, 28)), dark)
+	draw_rect(Rect2(center + Vector2(-20, -20), Vector2(40, 36)), color)
+	draw_rect(Rect2(center + Vector2(-12, -28), Vector2(24, 8)), light)
+	draw_rect(Rect2(center + Vector2(-28, -8), Vector2(8, 20)), color)
+	draw_rect(Rect2(center + Vector2(20, -8), Vector2(8, 20)), color)
+	draw_rect(Rect2(center + Vector2(-20, 16), Vector2(12, 8)), dark)
+	draw_rect(Rect2(center + Vector2(8, 16), Vector2(12, 8)), dark)
+	draw_rect(Rect2(center + Vector2(-12, -8), Vector2(8, 8)), eye)
+	draw_rect(Rect2(center + Vector2(4, -8), Vector2(8, 8)), eye)
+	draw_rect(Rect2(center + Vector2(-8, 8), Vector2(16, 4)), dark)
+
+func _draw_pixel_monster_b(center: Vector2, color: Color) -> void:
+	var dark := color.darkened(0.38)
+	var light := color.lightened(0.24)
+	var accent := Color(0.96, 0.63, 0.22, 1.0)
+	var facing := -1.0 if _primitive_direction_vector().x < -0.15 else 1.0
+
+	# Small beast silhouette: low body, head, crest, legs and tail.
+	draw_rect(Rect2(center + Vector2(-24, -12), Vector2(40, 28)), color)
+	draw_rect(Rect2(center + Vector2(12 * facing - 8, -20), Vector2(20, 24)), light)
+	draw_rect(Rect2(center + Vector2(16 * facing - 4, -28), Vector2(8, 8)), accent)
+	draw_rect(Rect2(center + Vector2(8 * facing - 4, -28), Vector2(8, 8)), accent)
+	draw_rect(Rect2(center + Vector2(-20, 16), Vector2(8, 12)), dark)
+	draw_rect(Rect2(center + Vector2(8, 16), Vector2(8, 12)), dark)
+	draw_rect(Rect2(center + Vector2(-32 * facing - 4, -8), Vector2(12, 8)), dark)
+	draw_rect(Rect2(center + Vector2(-40 * facing - 4, -16), Vector2(8, 8)), accent)
+	draw_rect(Rect2(center + Vector2(18 * facing - 2, -12), Vector2(4, 4)), Color(0.04, 0.06, 0.08, 1.0))
+
+func _draw_minimal_monster(center: Vector2, color: Color) -> void:
+	var dark := color.darkened(0.42)
+	draw_rect(Rect2(center + Vector2(-16, -16), Vector2(32, 32)), dark)
+	draw_rect(Rect2(center + Vector2(-12, -20), Vector2(24, 40)), color)
+	draw_rect(Rect2(center + Vector2(-20, -12), Vector2(40, 24)), color)
+	draw_rect(Rect2(center + Vector2(-8, -4), Vector2(4, 4)), Color.WHITE)
+	draw_rect(Rect2(center + Vector2(4, -4), Vector2(4, 4)), Color.WHITE)
+
+func _draw_simplified_monster(center: Vector2, color: Color) -> void:
+	match _performance_simplified_style:
+		ClientPerformanceProfile.SIMPLIFY_PIXEL_B:
+			_draw_pixel_monster_b(center, color)
+		ClientPerformanceProfile.SIMPLIFY_MINIMAL:
+			_draw_minimal_monster(center, color)
+		_:
+			_draw_pixel_monster_a(center, color)
+
 func _draw() -> void:
 	if not _primitive_simplified_visual:
 		return
@@ -196,45 +256,23 @@ func _draw() -> void:
 	var state := current_state.to_lower()
 	var body_color: Color = FAST_MONSTER_COLORS[abs(entity_id) % FAST_MONSTER_COLORS.size()]
 	if state == "hit":
-		body_color = body_color.lerp(Color(1.0, 0.30, 0.30, 1.0), 0.55)
+		body_color = body_color.lerp(Color(1.0, 0.28, 0.28, 1.0), 0.62)
 
-	var center := Vector2(0.0, -43.0)
+	var center := Vector2(0.0, -48.0)
+	if state == "walk":
+		center.y += 2.0 if ((Time.get_ticks_msec() / 180) as int) % 2 == 0 else 0.0
 	if state == "attack":
-		center += _primitive_direction_vector() * 7.0
+		center += _primitive_direction_vector() * 8.0
 
-	# One texture-free primitive body. The actual click area remains the
-	# shared 112x136 collision rectangle, so it is much easier to click than
-	# the visible blob suggests.
+	# Death remains in the same built-in visual family; never reload original
+	# SpriteFrames merely to play a death animation.
 	if state in ["death", "die"]:
-		draw_set_transform(center + Vector2(0.0, 16.0), 0.0, Vector2(1.25, 0.32))
-		draw_circle(Vector2.ZERO, FAST_MONSTER_BODY_RADIUS, body_color)
+		draw_set_transform(center + Vector2(0.0, 18.0), 0.0, Vector2(1.2, 0.34))
+		_draw_simplified_monster(Vector2.ZERO, body_color.darkened(0.12))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		return
 
-	draw_circle(center, FAST_MONSTER_BODY_RADIUS, body_color)
-	draw_circle(center + Vector2(-20.0, 16.0), 9.0, body_color.darkened(0.12))
-	draw_circle(center + Vector2(20.0, 16.0), 9.0, body_color.darkened(0.12))
-	draw_circle(center + Vector2(-10.0, -6.0), 4.2, Color(0.06, 0.08, 0.11, 1.0))
-	draw_circle(center + Vector2(10.0, -6.0), 4.2, Color(0.06, 0.08, 0.11, 1.0))
-	draw_circle(center + Vector2(-8.7, -7.3), 1.25, Color.WHITE)
-	draw_circle(center + Vector2(11.3, -7.3), 1.25, Color.WHITE)
-	if state == "attack":
-		draw_line(
-			center + Vector2(-8.0, 9.0),
-			center + Vector2(8.0, 9.0),
-			Color(0.15, 0.08, 0.10, 1.0),
-			3.0
-		)
-	else:
-		draw_arc(
-			center + Vector2(0.0, 5.0),
-			8.0,
-			0.15,
-			PI - 0.15,
-			10,
-			Color(0.15, 0.08, 0.10, 1.0),
-			2.0
-		)
+	_draw_simplified_monster(center, body_color)
 
 func _ready() -> void :
 	_resolve_ui_nodes()
@@ -631,17 +669,22 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 	_play_spawn_transition()
 
 
-func set_performance_simplified(enabled: bool, _use_primitive: bool = true) -> void:
-	# A simplified monster always uses the built-in _draw() primitive path.
-	# Never fall back to loading a generic SPR/texture.
+func set_performance_simplified(
+	enabled: bool,
+	style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+) -> void:
+	# A simplified monster always uses the built-in _draw() pixel path.
 	var primitive_enabled := enabled
+	var normalized_style := _normalize_simplified_style(style)
 	if (
 		_performance_simplified_visual == enabled
 		and _primitive_simplified_visual == primitive_enabled
+		and _performance_simplified_style == normalized_style
 	):
 		return
 	_performance_simplified_visual = enabled
 	_primitive_simplified_visual = primitive_enabled
+	_performance_simplified_style = normalized_style
 	_apply_performance_sprite()
 	_lock_ui_position()
 	_generate_dynamic_collision_shape()
