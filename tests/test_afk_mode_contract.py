@@ -153,6 +153,7 @@ class AfkModeContract(unittest.TestCase):
         self.assertNotIn("clear_map_entities()", begin)
         self.assertNotIn("NetworkManager.", begin)
         self.assertIn("current_player.reparent(container, true)", game)
+        self.assertNotIn('current_map_node.get_node_or_null("ObjectContainer")', game)
         self.assertIn("NetworkEntityManager.active_entities.values()", game)
         self.assertIn("set_afk_visual_suspended", base)
         self.assertIn("set_afk_visual_suspended", monster)

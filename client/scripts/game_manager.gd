@@ -685,8 +685,10 @@ func _afk_dynamic_container() -> Node:
 	if not is_instance_valid(current_map_node):
 		return null
 	var container: Node = current_map_node.get_node_or_null("Entities")
-	if not is_instance_valid(container):
-		container = current_map_node.get_node_or_null("ObjectContainer")
+	# Never preserve an old ObjectContainer wholesale: legacy maps can mix
+	# hundreds/thousands of static decorative nodes into it. If there is no
+	# dedicated Entities node, create a clean runtime-only container and move
+	# only the player + authoritative NetworkEntityManager entities below.
 	if not is_instance_valid(container):
 		container = Node2D.new()
 		container.name = "Entities"
