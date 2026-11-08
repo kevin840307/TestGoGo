@@ -114,11 +114,11 @@ class SmokeSuiteStructureTests(unittest.TestCase):
             "WorldEntityAoiStationaryRefreshSmokeTests.cs"
         ).read_text(encoding="utf-8-sig")
 
-        self.assertIn("entity.IndexedGeneration <= snapshotGeneration", aoi)
+        self.assertIn("entity.LastMutationGeneration <= snapshotGeneration", aoi)
         self.assertIn("CaptureEntityGeneration()", aoi)
         self.assertIn("entry.Entity.X == entity.X", aoi)
         self.assertIn("CaptureWorldEntityGeneration()", hub)
-        self.assertIn("_broadcasts.CaptureWorldEntityGeneration();", router)
+        self.assertIn("_broadcasts.BeginWorldEntitySnapshot();", router)
         self.assertIn("authoritativeIds,\n                snapshotGeneration)", router)
         self.assertEqual(
             main.count("WorldEntityAoiSnapshotRaceSmokeTests.Run();"), 2
