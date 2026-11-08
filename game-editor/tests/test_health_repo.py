@@ -162,6 +162,34 @@ levels = Array[ExtResource("1_level")]([SubResource("Resource_level")])
         self.assertFalse(report["ok"])
         self.assertTrue(any(x["category"] == "invalid_source_index" for x in report["errors"]))
 
+    def test_pre_save_validation_rejects_legacy_binary_incompatible_fields(self) -> None:
+        enemy_rows = self.maps.get_enemy_spawns(13)
+
+        overflow = [dict(row) for row in enemy_rows]
+        overflow[0]["x"] = 2 ** 31
+        report = self.health.validate_map_items(13, "enemies", overflow)
+        self.assertFalse(report["ok"])
+        self.assertTrue(any(x["category"] == "invalid_int32" for x in report["errors"]))
+
+        bad_flags = [dict(row) for row in enemy_rows]
+        bad_flags[0]["sourceFlags"] = "not-a-number"
+        report = self.health.validate_map_items(13, "enemies", bad_flags)
+        self.assertFalse(report["ok"])
+        self.assertTrue(any(x["category"] == "invalid_integer" for x in report["errors"]))
+
+        npc_rows = self.maps.get_npc_spawns(13)
+        nul_name = [dict(row) for row in npc_rows]
+        nul_name[0]["name"] = "NPC\x00Injected"
+        report = self.health.validate_map_items(13, "npcs", nul_name)
+        self.assertFalse(report["ok"])
+        self.assertTrue(any(x["category"] == "invalid_npc_text" for x in report["errors"]))
+
+        non_ascii_script = [dict(row) for row in npc_rows]
+        non_ascii_script[0]["script"] = "腳本.txt"
+        report = self.health.validate_map_items(13, "npcs", non_ascii_script)
+        self.assertFalse(report["ok"])
+        self.assertTrue(any(x["category"] == "invalid_npc_encoding" for x in report["errors"]))
+
     def test_pre_save_validation_returns_blocking_repair_preview(self) -> None:
         rows = self.maps.get_enemy_spawns(13)
         rows[0] = {**rows[0], "x": 24, "y": 24}
