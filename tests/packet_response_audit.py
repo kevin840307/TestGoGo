@@ -24,6 +24,7 @@ REQUIRED = {
     "AnnouncementListResponse": ("Success", "Announcements"),
     "WorldReadyResponse": ("Success", "MapID"),
     "UpdateShortcutResponse": ("Success", "SlotIndex", "ShortcutType", "TargetID"),
+    "DriveMechaResponse": ("Success", "HorseUID", "Message"),
     "InventorySync": ("Items", "MaxSize"),
     "EquipSync": ("Equips", "MaxSize"),
     "PetSync": ("Pets", "MaxSize"),
@@ -80,6 +81,86 @@ MEMBER = re.compile(r'(?:^|[,\n])\s*([A-Za-z][A-Za-z0-9_]*)\s*=')
 GODOT_CASE = re.compile(r'^\s*"([A-Za-z][A-Za-z0-9_]*)"\s*:', re.M)
 
 
+def _anonymous_initializer_body(source: str, packet_match: re.Match[str]):
+    """Return the complete packet initializer body.
+
+    The previous audit stopped at the first closing brace after Type. That
+    truncated packets containing nested anonymous objects, including the mall
+    item projection inside MallListResponse.
+    """
+    start = source.rfind("{", 0, packet_match.start())
+    if start < 0:
+        return None
+
+    depth = 0
+    quote = ""
+    escaped = False
+    verbatim = False
+    line_comment = False
+    block_comment = False
+    i = start
+    while i < len(source):
+        char = source[i]
+        nxt = source[i + 1] if i + 1 < len(source) else ""
+
+        if line_comment:
+            if char == "\n":
+                line_comment = False
+            i += 1
+            continue
+        if block_comment:
+            if char == "*" and nxt == "/":
+                block_comment = False
+                i += 2
+            else:
+                i += 1
+            continue
+        if quote:
+            if verbatim:
+                if char == '"' and nxt == '"':
+                    i += 2
+                    continue
+                if char == '"':
+                    quote = ""
+                    verbatim = False
+                i += 1
+                continue
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = ""
+            i += 1
+            continue
+
+        if char == "/" and nxt == "/":
+            line_comment = True
+            i += 2
+            continue
+        if char == "/" and nxt == "*":
+            block_comment = True
+            i += 2
+            continue
+        if char == "@" and nxt == '"':
+            quote = '"'
+            verbatim = True
+            i += 2
+            continue
+        if char in ('"', "'"):
+            quote = char
+            i += 1
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return source[packet_match.end():i]
+        i += 1
+    return None
+
+
 def scan(root: Path) -> dict:
     source_root = root / "server"
     client_file = root / "client/scripts/network_manager.gd"
@@ -98,13 +179,11 @@ def scan(root: Path) -> dict:
             name = match.group(1)
             if name not in REQUIRED:
                 continue
-            # The protocol objects use 'Type' first and the remaining
-            # properties appear before the closing initializer brace.
-            # This deliberately does not attempt to parse all C# syntax.
-            end = source.find("}", match.end())
-            if end < 0:
+            # Type is first in these protocol objects. Balance the complete
+            # initializer so nested anonymous objects do not truncate fields.
+            body = _anonymous_initializer_body(source, match)
+            if body is None:
                 continue
-            body = source[match.end():end]
             found = set(MEMBER.findall(body))
             declarations[name].append({
                 "path": path.relative_to(root).as_posix(),
@@ -138,6 +217,7 @@ def scan(root: Path) -> dict:
         "issues": [x for x in checks if x["status"] != "MATCHED"],
         "limits": [
             "Only selected literal anonymous C# response packet shapes.",
+            "Nested anonymous initializers are brace-balanced, but this is not a full C# parser.",
             "Cannot infer all dynamic object/dictionary fields.",
             "Checks presence, not value types or correct runtime ordering.",
             "Must complement real WebSocket and Godot multiplayer E2E tests."
