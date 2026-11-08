@@ -1,5 +1,7 @@
 # SGO Client ↔ Server 功能缺口與驗收清單
 
+> **功能做／不做由使用者決定**：請先看 [舊版功能選擇清單](LEGACY_FEATURE_SELECTION.md)；除已明確暫緩的項目外，其餘目前均「待你決定」。本文件的技術缺口／優先級不是開發授權。好友、複合機器人、Salon、社團進階暫緩；社團基本功能維持原樣。
+
 > **舊版 EXE（2004 Paradise / 2009 Client）完整功能對照**：見 [LEGACY_EXE_PARITY_AUDIT.md](LEGACY_EXE_PARITY_AUDIT.md)（53 項，包含原始 IDA 符號／資源、Godot/Server 對應與驗收）。
 > **使用者暫緩開發**：好友／黑名單／離線訊息、複合機器人、Salon、社團／社交進階一律列為 **P-LAST**；目前戰團基本功能維持，不因舊版有功能就視為本輪 release blocker。舊版收藏簿 UI 對應 `095_Collection.itf`，詳細證據與查找方式見上述報告 §2；[2009 原版 105 個 UI 資源索引](LEGACY_EXE_UI_RESOURCE_INDEX.md)另列每個 `.itf` 與 IDA 行號。
 
