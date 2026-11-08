@@ -208,19 +208,13 @@ func is_finishing_last_move_before_idle() -> bool:
 	return _idle_after_last_waypoint and network_move_active
 
 func apply_offscreen_network_move(target_pos: Vector2, new_dir: String = "") -> void :
-	if current_hp <= 0:
-		return
-	last_move_packet_ms = Time.get_ticks_msec()
-	network_move_target = target_pos
-	network_move_speed = 0.0
-	network_move_active = false
-	if current_state not in ["attack", "hit", "death", "die"]:
-		_apply_network_target_direction(target_pos)
-		if new_dir != "":
-			pending_move_dir = ""
-			pending_move_dir_count = 0
-		global_position = target_pos
-		current_state = "idle"
+	# Compatibility entry point for any existing callers outside the main
+	# NetworkEntityManager path. Do not restore the old global_position snap:
+	# monsters can cross into the viewport between visibility notifications.
+	if new_dir != "":
+		pending_move_dir = ""
+		pending_move_dir_count = 0
+	network_move_to(target_pos, 0.25)
 
 func _on_screen_entered() -> void :
 	_is_on_screen = true
