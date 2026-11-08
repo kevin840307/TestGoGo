@@ -68,6 +68,7 @@ if (args.Length != 0)
                 Directory.GetCurrentDirectory());
             EconomyConcurrencySmokeTests.Run();
             AssetMutationConcurrencySmokeTests.Run();
+            CrossFeatureConcurrencySmokeTests.Run();
             Console.WriteLine("Concurrency smoke passed.");
             return;
         case "all":
@@ -99,6 +100,7 @@ BlockingMapSmokeTests.Run();
 ConcurrencySmokeTests.Run(repoRoot);
 EconomyConcurrencySmokeTests.Run();
 AssetMutationConcurrencySmokeTests.Run();
+CrossFeatureConcurrencySmokeTests.Run();
 MallExternalIntegrationSmokeTests.Run();
 
 var realCurrentCatalog = new CurrentClientDataCatalog(
