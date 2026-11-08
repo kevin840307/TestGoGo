@@ -2,7 +2,7 @@ extends RefCounted
 class_name AfkRenderShell
 
 var _shell: Node2D = null
-var _entities: Node2D = null
+var _entities: Node = null
 var _map_name: String = ""
 var _container_name: String = ""
 
@@ -15,7 +15,7 @@ func current_shell() -> Node2D:
 	return _shell if is_active() else null
 
 
-func preserved_entities() -> Node2D:
+func preserved_entities() -> Node:
 	return _entities if is_active() else null
 
 
@@ -26,7 +26,7 @@ func discard() -> void:
 	_container_name = ""
 
 
-func enter(map_node: Node2D, entities: Node2D) -> Dictionary:
+func enter(map_node: Node2D, entities: Node) -> Dictionary:
 	if not is_instance_valid(map_node) or not is_instance_valid(entities):
 		return {"ok": false, "reason": "invalid_map_or_entities"}
 	if entities == map_node or not map_node.is_ancestor_of(entities):

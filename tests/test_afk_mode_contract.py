@@ -144,6 +144,7 @@ class AfkModeContract(unittest.TestCase):
         monster = read("client/scripts/monster_entity.gd")
         self.assertIn("map_node.free()", shell)
         self.assertIn("entities.reparent(shell, true)", shell)
+        self.assertIn("var _entities: Node = null", shell)
         self.assertIn("_entities.reparent(restored_map, true)", shell)
         self.assertNotIn("NetworkManager", shell)
         self.assertNotIn("send_secure_packet", shell)

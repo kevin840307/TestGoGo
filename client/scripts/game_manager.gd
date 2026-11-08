@@ -681,12 +681,12 @@ func _afk_current_map_path() -> String:
 	return ""
 
 
-func _afk_dynamic_container() -> Node2D:
+func _afk_dynamic_container() -> Node:
 	if not is_instance_valid(current_map_node):
 		return null
-	var container := current_map_node.get_node_or_null("Entities") as Node2D
+	var container: Node = current_map_node.get_node_or_null("Entities")
 	if not is_instance_valid(container):
-		container = current_map_node.get_node_or_null("ObjectContainer") as Node2D
+		container = current_map_node.get_node_or_null("ObjectContainer")
 	if not is_instance_valid(container):
 		container = Node2D.new()
 		container.name = "Entities"
@@ -715,7 +715,7 @@ func _set_afk_dynamic_visuals_suspended(suspended: bool) -> int:
 
 
 func _enter_afk_render_shell() -> Dictionary:
-	var container: Node2D = _afk_dynamic_container()
+	var container: Node = _afk_dynamic_container()
 	if not is_instance_valid(container):
 		return {"ok": false, "reason": "missing_dynamic_container"}
 	_afk_map_path = _afk_current_map_path()
@@ -734,9 +734,14 @@ func _restore_afk_render_shell() -> Dictionary:
 	if path.is_empty() or not ResourceLoader.exists(path):
 		return {"ok": false, "reason": "missing_map_resource"}
 
-	var request_error: int = ResourceLoader.load_threaded_request(path)
-	if request_error != OK and request_error != ERR_BUSY:
-		return {"ok": false, "reason": "load_request", "error": request_error}
+	var existing_status: int = ResourceLoader.load_threaded_get_status(path)
+	if existing_status not in [
+		ResourceLoader.THREAD_LOAD_IN_PROGRESS,
+		ResourceLoader.THREAD_LOAD_LOADED
+	]:
+		var request_error: int = ResourceLoader.load_threaded_request(path)
+		if request_error != OK:
+			return {"ok": false, "reason": "load_request", "error": request_error}
 	var packed: PackedScene = null
 	while true:
 		var progress: Array = []
@@ -1796,10 +1801,8 @@ func _clear_visual_runtime_caches() -> void :
 		SkillLoader.clear_runtime_cache()
 	if AudioManager and AudioManager.has_method("clear_runtime_cache"):
 		AudioManager.clear_runtime_cache()
-	if PaperDollEngine and PaperDollEngine.has_method("clear_visual_runtime_cache"):
-		PaperDollEngine.clear_visual_runtime_cache()
-	if FestivalThemeManager and FestivalThemeManager.has_method("clear_texture_cache"):
-		FestivalThemeManager.clear_texture_cache()
+	PaperDollEngine.clear_visual_runtime_cache()
+	FestivalThemeManager.clear_texture_cache()
 	for kind in _prewarmed_hud_windows.keys().duplicate():
 		var window = _prewarmed_hud_windows.get(kind, null)
 		if is_instance_valid(window):
