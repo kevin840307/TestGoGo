@@ -15,6 +15,9 @@ var _icon_cache: Dictionary = {}
 var _is_data_loaded: bool = false
 
 
+func clear_runtime_cache() -> void :
+	_icon_cache.clear()
+
 func preload_all_skill_data() -> void :
 	if _is_data_loaded: return
 	var dir = DirAccess.open(SKILL_DATA_PATH)
