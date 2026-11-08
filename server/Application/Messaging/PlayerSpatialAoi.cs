@@ -176,6 +176,22 @@ public sealed class PlayerSpatialAoi
                 observer.Visible.Contains(sourceConnectionId);
     }
 
+    /// <summary>Identity-aware visibility: a connection may switch
+    /// characters while a pending old-character DespawnEntity is delivered.
+    /// Do not suppress the old despawn just because the new character is
+    /// already visible under the same socket identifier.</summary>
+    public bool IsVisibleAs(
+        Guid observerConnectionId,
+        Guid sourceConnectionId,
+        long subjectCharacterId)
+    {
+        lock (_gate)
+            return _players.TryGetValue(observerConnectionId, out var observer) &&
+                observer.Visible.Contains(sourceConnectionId) &&
+                _players.TryGetValue(sourceConnectionId, out var subject) &&
+                subject.Player.CharacterId == subjectCharacterId;
+    }
+
     private void RemoveLocked(Guid connectionId, List<Change> changes)
     {
         if (!_players.Remove(connectionId, out var entry))
