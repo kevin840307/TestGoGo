@@ -100,9 +100,14 @@
           <div class="map-layer-controls">
             <label class="toggle-chip"><input type="checkbox" id="map-show-blocking" checked /><span>阻擋區</span></label>
             <label class="toggle-chip"><input type="checkbox" id="map-show-spawners" checked /><span>怪物區域</span></label>
+            <label class="toggle-chip"><input type="checkbox" id="map-show-labels" checked /><span>名稱</span></label>
+            <label class="toggle-chip"><input type="checkbox" id="map-only-selected-type" /><span>只看選中怪物</span></label>
             <label class="toggle-chip"><input type="checkbox" id="map-snap-walkable" checked /><span>吸附可走區</span></label>
           </div>
           <div class="toolbar-spacer"></div>
+          <span class="map-selection-count" id="map-selection-count"></span>
+          <button class="button ghost compact-button" id="map-undo" title="Ctrl+Z" disabled>↶</button>
+          <button class="button ghost compact-button" id="map-redo" title="Ctrl+Y" disabled>↷</button>
           <button class="button ghost" id="map-add">＋ 新增</button>
           <button class="button primary" id="map-save">儲存地圖</button>
         </div>
@@ -113,7 +118,14 @@
             <div id="map-enemy-palette">
               <p class="eyebrow">MONSTER PALETTE</p>
               <div class="search compact-search"><span>⌕</span><input id="map-enemy-search" placeholder="搜尋怪物名稱" /></div>
-              <p class="helper">選怪物後，直接點地圖就能放置。拖曳地圖上的標記可移動。</p>
+              <p class="helper">選怪物後點地圖放置。Shift 拖曳可框選，多選後可整組移動。</p>
+              <div class="map-batch-box">
+                <div class="map-batch-row">
+                  <label>批量數量 <input id="map-batch-count" type="number" min="2" max="100" value="10" /></label>
+                  <label>半徑 <input id="map-batch-radius" type="number" min="16" max="3000" value="320" /></label>
+                </div>
+                <button class="button ghost" id="map-batch-arm">批量放置：點地圖選中心</button>
+              </div>
               <div class="map-enemy-list" id="map-enemy-list"></div>
             </div>
             <div id="map-npc-palette" hidden>
@@ -125,10 +137,19 @@
           <div class="map-canvas-panel">
             <div class="map-stage-toolbar">
               <span id="map-stage-hint">選一隻怪物後點地圖新增；拖曳標記可移動。</span>
-              <span class="map-stage-legend"><i class="legend-blocked"></i>不可走 <i class="legend-special"></i>特殊地形 <span id="map-stage-coord">X — / Y —</span></span>
+              <span class="map-stage-tools">
+                <span class="map-stage-legend"><i class="legend-blocked"></i>不可走 <i class="legend-special"></i>特殊地形</span>
+                <button class="zoom-button" id="map-zoom-out" title="縮小">−</button>
+                <span id="map-zoom-label">100%</span>
+                <button class="zoom-button" id="map-zoom-in" title="放大">＋</button>
+                <button class="zoom-button fit" id="map-zoom-fit" title="符合畫面">Fit</button>
+                <span id="map-stage-coord">X — / Y —</span>
+              </span>
             </div>
-            <div class="map-stage" id="map-stage">
-              <div class="map-stage-empty" id="map-stage-empty">目前沒有資料，從左側選擇後點這裡新增。</div>
+            <div class="map-stage-scroller" id="map-stage-scroller">
+              <div class="map-stage" id="map-stage">
+                <div class="map-stage-empty" id="map-stage-empty">目前沒有資料，從左側選擇後點這裡新增。</div>
+              </div>
             </div>
           </div>
 
@@ -198,6 +219,7 @@
 <script src="/app-core.js"></script>
 <script src="/app-skills.js"></script>
 <script src="/app-world.js"></script>
+<script src="/app-map-editor.js"></script>
 <script src="/app-tools.js"></script>
 </body>
 </html>
