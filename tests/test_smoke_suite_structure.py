@@ -480,6 +480,9 @@ class SmokeSuiteStructureTests(unittest.TestCase):
 
     def test_player_shop_lifecycle_suite_covers_disconnect_vs_buy(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
+        concurrency = (
+            SMOKE / "Integration" / "ConcurrencySmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
         module = (
             SMOKE / "Integration" /
             "PlayerShopLifecycleConcurrencySmokeTests.cs"
@@ -489,7 +492,11 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("RaceBuyAgainstDisconnect(", source)
         self.assertIn("buy versus {terminalName} terminates", source)
         self.assertIn("{terminalName} leaves no reserved inventory rows", source)
-        self.assertIn("PlayerShopLifecycleConcurrencySmokeTests.Run(", main)
+        self.assertIn(
+            "PlayerShopLifecycleConcurrencySmokeTests.Run(",
+            concurrency,
+        )
+        self.assertIn("ConcurrencySmokeTests.Run(", main)
 
     def test_wire_smoke_keeps_real_two_client_party_and_trade_flow(self):
         source = WIRE_SMOKE.read_text(encoding="utf-8-sig")
