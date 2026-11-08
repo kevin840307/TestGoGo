@@ -168,6 +168,47 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("AOI exit removes both cached and queued", regression)
         self.assertIn("aoi_monster_snapshot_order_regression.gd", runner)
 
+    def test_ground_snapshot_lease_blocks_stale_reappearance(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        aoi = (
+            ROOT / "server" / "Application" / "Messaging" /
+            "WorldEntitySpatialAoi.cs"
+        ).read_text(encoding="utf-8-sig")
+        router = (
+            ROOT / "server" / "Application" / "PacketRouter.cs"
+        ).read_text(encoding="utf-8-sig")
+        hub = (
+            ROOT / "server" / "Application" / "Messaging" /
+            "ServerBroadcastHub.cs"
+        ).read_text(encoding="utf-8-sig")
+        race = (
+            SMOKE / "World" /
+            "WorldEntityAoiSnapshotLeaseSmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
+        persisted_race = (
+            SMOKE / "Integration" /
+            "GroundSnapshotPersistenceRaceSmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn("_removedDuringSnapshots[entityId]", aoi)
+        self.assertIn("LastMutationGeneration > snapshot.Generation", aoi)
+        self.assertIn("RemoveEntityLocked(", aoi)
+        self.assertIn("TryUpsertEntityFromSnapshot(", aoi)
+        self.assertIn("BeginWorldEntitySnapshot()", hub)
+        self.assertIn("TryUpsertWorldEntityFromSnapshot(", hub)
+        self.assertIn("using var worldSnapshot =", router)
+        self.assertIn("worldSnapshot,\n                    out var changes", router)
+        self.assertIn("PickupBeforeFirstAoiInsertStillBlocksOldSnapshot", race)
+        self.assertIn("OverlappingSnapshotsKeepTombstonesUntilLastReader", race)
+        self.assertIn("store.PickUpGroundItem(", persisted_race)
+        self.assertIn("inventoryCount == 2", persisted_race)
+        self.assertEqual(
+            main.count("WorldEntityAoiSnapshotLeaseSmokeTests.Run();"), 2
+        )
+        self.assertEqual(
+            main.count("GroundSnapshotPersistenceRaceSmokeTests.Run();"), 2
+        )
+
     def test_dynamic_action_schema_runtime_covers_every_action_rule(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = (
