@@ -455,6 +455,56 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("session.CurrentMapId * 10_000", spawn)
         self.assertIn("WorldEntitySpatialAoi uses EntityID", spawn)
 
+    def test_player_companion_aoi_edges_carry_spawn_and_despawn_snapshots(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = (
+            SMOKE / "World" /
+            "PlayerCompanionAoiSmokeTests.cs"
+        )
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        router = (
+            ROOT / "server" / "Application" /
+            "PacketRouter.cs"
+        ).read_text(encoding="utf-8-sig")
+        hub = (
+            ROOT / "server" / "Application" / "Messaging" /
+            "ServerBroadcastHub.cs"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn(
+            "PlayerCompanionAoiSmokeTests.Run();",
+            main,
+        )
+        self.assertIn(
+            "companion snapshot follows latest authoritative movement",
+            source,
+        )
+        self.assertIn(
+            "companion despawn removes snapshot",
+            source,
+        )
+        self.assertIn(
+            "PlayerCompanionSnapshots(",
+            router,
+        )
+        self.assertIn(
+            "PlayerCompanionEntityIds(",
+            router,
+        )
+        self.assertIn(
+            "TrackPlayerCompanionPacket(",
+            router,
+        )
+        self.assertIn(
+            "TrackPlayerCompanionPacket(",
+            hub,
+        )
+        self.assertIn(
+            "ClearPlayerCompanions(",
+            router,
+        )
+
     def test_world_entity_aoi_suite_is_modular_and_wired(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = (
