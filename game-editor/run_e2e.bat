@@ -9,7 +9,7 @@ if errorlevel 1 (
 )
 
 echo [1/3] Installing pinned Playwright dependency...
-call npm install --no-audit --no-fund
+call npm install --no-audit --no-fund --no-package-lock
 if errorlevel 1 exit /b 1
 
 echo [2/3] Ensuring Chromium is installed...
