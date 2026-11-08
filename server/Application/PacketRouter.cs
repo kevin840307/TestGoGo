@@ -5900,18 +5900,15 @@ public sealed class PacketRouter
         var shopState =
             _playerShop.GetPublicState(dbid);
 
-        var extra = new Dictionary<string, object>(
-            character)
-        {
-            ["State"] =
-                character.GetValueOrDefault(
-                    "State",
-                    "idle"),
-            ["Dir"] = "1",
-            ["PartyID"] = _party.GetPartyId(dbid),
-            ["IsShopOpen"] = shopState.IsOpen,
-            ["ShopName"] = shopState.ShopName
-        };
+        var extra = BuildPublicPlayerData(character);
+        extra["State"] =
+            character.GetValueOrDefault(
+                "State",
+                "idle");
+        extra["Dir"] = "1";
+        extra["PartyID"] = _party.GetPartyId(dbid);
+        extra["IsShopOpen"] = shopState.IsOpen;
+        extra["ShopName"] = shopState.ShopName;
         if (runtimeX.HasValue && runtimeY.HasValue)
         {
             extra["LocX"] = runtimeX.Value;
@@ -8023,13 +8020,87 @@ public sealed class PacketRouter
             accountId,
             dbid);
 
-        var packet = new Dictionary<string, object>(character)
-        {
-            ["Type"] = "UpdateAppearance",
-            ["EntityID"] = dbid
-        };
+        var packet = BuildPublicPlayerData(character);
+        packet["Type"] = "UpdateAppearance";
+        packet["EntityID"] = dbid;
+        packet["PartyID"] = _party.GetPartyId(dbid);
 
         return packet;
+    }
+
+    // Packets delivered to another player must never inherit the complete
+    // persistence/bootstrap dictionary. Keep this explicit allowlist aligned
+    // with fields the remote Godot player renderer and public SyncStatus use.
+    private static Dictionary<string, object> BuildPublicPlayerData(
+        Dictionary<string, object> character)
+    {
+        var result =
+            new Dictionary<string, object>(StringComparer.Ordinal);
+
+        foreach (var field in new[]
+        {
+            "Race",
+            "Hair",
+            "HairColor",
+            "Title",
+            "RedMan",
+            "RedManKillLeft",
+            "PKStatus",
+            "Level",
+            "HP",
+            "MaxHP",
+            "MP",
+            "MaxMP",
+            "SP",
+            "MaxSP",
+            "Attack",
+            "Defense",
+            "MagicAttack",
+            "MagicDefense",
+            "Hit",
+            "Dodge",
+            "Lucky",
+            "MoveSpeed",
+            "AttackSpeed",
+            "AttackRange",
+            "CritRate",
+            "CritDamage",
+            "SummonedHorseUID",
+            "MechaType",
+            "MechaBody",
+            "MechaWeapon",
+            "MechaEngine",
+            "ClubID",
+            "ClubPosition",
+            "ClubName",
+            "TransformType",
+            "TransformID",
+            "TransformColorIndex",
+            "Bonnet",
+            "Left_hand",
+            "Right_hand",
+            "Upper_armor",
+            "Lower_armor",
+            "Weapon",
+            "Shield",
+            "Back",
+            "Amulet",
+            "EquipColor0",
+            "EquipColor1",
+            "EquipColor2",
+            "EquipColor3",
+            "EquipColor4",
+            "EquipColor5",
+            "EquipColor6",
+            "EquipColor7",
+            "EquipColor8"
+        })
+        {
+            if (character.TryGetValue(field, out var value))
+                result[field] = value;
+        }
+
+        return result;
     }
 
     private void ApplyCosmeticOverrides(
