@@ -32,12 +32,15 @@ internal static class EconomyConcurrencySmokeTests
         SqliteGameStore store)
     {
         var player = CreatePlayer(store, "npcbuyer");
+        var startingMoney = Money(store, player);
+        var normalizeDelta = checked((int)(100 - startingMoney));
         Check(
             store.AdjustMoney(
                 player.AccountId,
                 player.CharacterId,
-                100) is not null,
-            "seed NPC-shop concurrency money");
+                normalizeDelta) is not null &&
+            Money(store, player) == 100,
+            "normalize NPC-shop concurrency money to exactly 100");
 
         const int itemIndex = 999_920;
         var attempts = Enumerable.Range(0, 10)
@@ -53,11 +56,19 @@ internal static class EconomyConcurrencySmokeTests
 
         Task.WaitAll(attempts);
 
+        var successCount =
+            attempts.Count(x => x.Result.Success);
+        var remainingMoney =
+            Money(store, player);
+        var purchasedCopies =
+            CountInventory(store, player, itemIndex);
+
         Check(
-            attempts.Count(x => x.Result.Success) == 3 &&
-            Money(store, player) == 10 &&
-            CountInventory(store, player, itemIndex) == 3,
-            "ten concurrent NPC purchases cannot overspend or mint items");
+            successCount == 3 &&
+            remainingMoney == 10 &&
+            purchasedCopies == 3,
+            $"ten concurrent NPC purchases cannot overspend or mint items " +
+            $"(success={successCount}, money={remainingMoney}, items={purchasedCopies})");
     }
 
     private static void ConcurrentSellPaysOnce(
