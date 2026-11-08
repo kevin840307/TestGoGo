@@ -119,7 +119,8 @@ async function deleteEnemy() {
   try {
     const impact = await referenceImpact('enemy', String(state.selectedEnemy.id));
     if (!confirm(`確定刪除怪物 ${state.selectedEnemy.id}？${formatReferenceImpact(impact)}`)) return;
-    await api(`/api/enemies/${state.selectedEnemy.id}`, {method:'DELETE'});
+    const force = impact.count ? '?force=1' : '';
+    await api(`/api/enemies/${state.selectedEnemy.id}${force}`, {method:'DELETE'});
     state.selectedEnemy = null;
     state.enemyDirty = false;
     $('#enemy-editor').innerHTML = emptyEditor('♜','選擇一隻怪物','名稱與預覽優先；Legacy 欄位仍會完整保留。');
