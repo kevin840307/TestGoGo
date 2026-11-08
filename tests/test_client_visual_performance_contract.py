@@ -65,6 +65,30 @@ class ClientVisualPerformanceContractTests(unittest.TestCase):
         self.assertIn("ground_aoi_radius=", manager)
         self.assertIn("gpu_memory_metric=godot_resources", manager)
 
+    def test_minimized_matches_unfocused_globally_and_mutes_audio(self):
+        manager = source("client/scripts/game_manager.gd")
+        self.assertIn(
+            "static func foreground_from_window_state(focused: bool, minimized: bool) -> bool:",
+            manager,
+        )
+        self.assertIn("return focused and not minimized", manager)
+        self.assertIn(
+            "DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_MINIMIZED",
+            manager,
+        )
+        self.assertIn("var observed_focus: bool = _observe_window_foreground()", manager)
+        self.assertIn(
+            "static func should_throttle_background_visuals(has_focus: bool, _world_active: bool) -> bool:",
+            manager,
+        )
+        self.assertIn("return not has_focus", manager)
+        self.assertIn("AudioServer.set_bus_mute(master_bus_index, true)", manager)
+        self.assertIn(
+            "_set_window_focus_power_save(_observe_window_foreground())",
+            manager,
+        )
+        self.assertIn("minimized=%s", manager)
+
     def test_packet_paths_are_preserved(self):
         manager = source("client/scripts/network_entity_manager.gd")
         self.assertIn("_monster_spawn_templates[entity_id] = cached", manager)
