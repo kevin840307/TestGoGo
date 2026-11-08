@@ -1248,35 +1248,57 @@ public sealed class SqliteGameStore : IGameStore
 
         if (!inserted)
         {
-            using var existing = db.CreateCommand();
-            existing.Transaction = tx;
-            existing.CommandText = """
-                SELECT account_id,points,lifetime_donation
-                  FROM external_mall_credits
-                 WHERE source=$source
-                   AND external_transaction_id=$tx
-                """;
-            Arg(existing, "$source", source);
-            Arg(existing, "$tx", externalTransactionId);
+            long existingAccountId;
+            long existingPoints;
+            long existingDonation;
 
-            using var reader = existing.ExecuteReader();
-            if (!reader.Read() ||
-                reader.GetInt64(0) != accountId ||
-                reader.GetInt64(1) != points ||
-                reader.GetInt64(2) != lifetimeDonation)
+            using (var existing = db.CreateCommand())
             {
-                return new(
-                    false,
-                    false,
-                    "外部交易編號與既有入帳資料衝突",
-                    ReadBalance("points"),
-                    ReadBalance("lifetime_donation"));
+                existing.Transaction = tx;
+                existing.CommandText = """
+                    SELECT account_id,points,lifetime_donation
+                      FROM external_mall_credits
+                     WHERE source=$source
+                       AND external_transaction_id=$tx
+                    """;
+                Arg(existing, "$source", source);
+                Arg(existing, "$tx", externalTransactionId);
+
+                using var reader = existing.ExecuteReader();
+                if (!reader.Read())
+                {
+                    return new(
+                        false,
+                        false,
+                        "找不到既有外部交易紀錄",
+                        0,
+                        0);
+                }
+
+                existingAccountId =
+                    reader.GetInt64(0);
+                existingPoints =
+                    reader.GetInt64(1);
+                existingDonation =
+                    reader.GetInt64(2);
             }
 
             var currentPoints =
                 ReadBalance("points");
             var currentDonation =
                 ReadBalance("lifetime_donation");
+
+            if (existingAccountId != accountId ||
+                existingPoints != points ||
+                existingDonation != lifetimeDonation)
+            {
+                return new(
+                    false,
+                    false,
+                    "外部交易編號與既有入帳資料衝突",
+                    currentPoints,
+                    currentDonation);
+            }
 
             tx.Commit();
             return new(
