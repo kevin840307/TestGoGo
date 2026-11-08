@@ -14,16 +14,20 @@ function renderEnemyList() {
   $$('tr[data-id]', body).forEach(row => row.onclick = () => openEnemy(Number(row.dataset.id)));
 }
 async function openEnemy(id) {
+  if (state.enemyDirty && state.selectedEnemy?.id !== id && !confirm('目前怪物有尚未儲存的修改，確定要切換嗎？')) return;
   state.selectedEnemy = await api(`/api/enemies/${id}`);
+  state.enemyDirty = false;
   renderEnemyList();
   renderEnemyEditor();
 }
 function newEnemy() {
+  if (state.enemyDirty && !confirm('目前怪物有尚未儲存的修改，確定要建立新怪物嗎？')) return;
   const max = Math.max(0, ...state.enemies.map(x => x.id));
   state.selectedEnemy = {
     id: max + 1, name: '新怪物', level: 1, sprite: '', maxHp: 100,
     cloneFromId: state.enemies[0]?.id || '', _new: true
   };
+  state.enemyDirty = true;
   renderEnemyList();
   renderEnemyEditor();
 }
@@ -62,6 +66,7 @@ function renderEnemyEditor() {
         </div>
       </div>
     </div>`;
+  $('#enemy-editor').oninput = () => { state.enemyDirty = true; };
   $('#enemy-save').onclick = saveEnemy;
   $('#enemy-delete').onclick = deleteEnemy;
   $('#enemy-sprite').addEventListener('change', () => loadEnemyPreview($('#enemy-sprite').value.trim()));
@@ -99,6 +104,7 @@ async function saveEnemy() {
       cloneFromId: e._new ? ($('#enemy-clone')?.value || null) : null,
     };
     state.selectedEnemy = await api(`/api/enemies/${id}`, {method:'PUT', body:doc});
+    state.enemyDirty = false;
     toast('怪物已儲存');
     await loadEnemies();
     renderEnemyEditor();
@@ -110,6 +116,7 @@ async function deleteEnemy() {
   try {
     await api(`/api/enemies/${state.selectedEnemy.id}`, {method:'DELETE'});
     state.selectedEnemy = null;
+    state.enemyDirty = false;
     $('#enemy-editor').innerHTML = emptyEditor('♜','選擇一隻怪物','名稱與預覽優先；Legacy 欄位仍會完整保留。');
     await loadEnemies();
     toast('怪物已刪除');
