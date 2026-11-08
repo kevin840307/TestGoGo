@@ -360,14 +360,32 @@ func apply_offscreen_network_move(target_pos: Vector2, new_dir: String = "") -> 
 		pending_move_dir_count = 0
 	network_move_to(target_pos, 0.25)
 
+static func has_resumable_animation(animated_sprite: AnimatedSprite2D) -> bool:
+	# Simplification intentionally releases SpriteFrames. A notifier can
+	# still fire when that texture-free monster crosses the viewport.
+	if not is_instance_valid(animated_sprite):
+		return false
+	var frames: SpriteFrames = animated_sprite.sprite_frames
+	if not is_instance_valid(frames):
+		return false
+	var anim_name: StringName = animated_sprite.animation
+	return frames.has_animation(anim_name) and frames.get_frame_count(anim_name) > 0
+
+
 func _on_screen_entered() -> void :
 	_is_on_screen = true
-	if is_instance_valid(sprite):
-		if not sprite.is_playing():
-			sprite.play()
-	if is_instance_valid(target_indicator) and target_indicator.visible:
-		if not target_indicator.is_playing():
-			target_indicator.play()
+	if not _primitive_simplified_visual and is_instance_valid(sprite) and not sprite.is_playing():
+		if has_resumable_animation(sprite):
+			# Resume the last real IDLE/WALK/ATTACK animation, not the
+			# default name (which most recovered SPR files do not have).
+			sprite.play(sprite.animation)
+		elif is_instance_valid(sprite.sprite_frames):
+			# When a new frameset replaced the old animation, pick the
+			# correct state/direction using the existing fallback logic.
+			sync_animation()
+	if is_instance_valid(target_indicator) and target_indicator.visible and not target_indicator.is_playing():
+		if has_resumable_animation(target_indicator):
+			target_indicator.play(target_indicator.animation)
 
 func _on_screen_exited() -> void :
 	_is_on_screen = false
@@ -1133,7 +1151,7 @@ func sync_animation() -> void :
 		var all_anims = sprite.sprite_frames.get_animation_names()
 		if all_anims.size() > 0: anim_to_play = all_anims[0]
 
-	if anim_to_play != "":
+	if anim_to_play != "" and sprite.sprite_frames.get_frame_count(anim_to_play) > 0:
 		var requested_state: String = current_state.to_lower()
 		var requested_prefix: String = str(mapped_prefix) + "_"
 		var has_requested_animation: bool = anim_to_play.begins_with(requested_prefix)
@@ -1199,9 +1217,12 @@ func _ensure_target_indicator() -> void:
 	if EffectLoader:
 		var frames = EffectLoader.get_effect("Enemy_Icon/ENEMY_ICON_00")
 		if frames:
-			target_indicator.sprite_frames = frames
-			var anim_name = "default" if frames.has_animation("default") else frames.get_animation_names()[0]
-			target_indicator.animation = anim_name
+			var names: PackedStringArray = frames.get_animation_names()
+			if not names.is_empty():
+				var anim_name: StringName = &"default" if frames.has_animation(&"default") else StringName(names[0])
+				if frames.get_frame_count(anim_name) > 0:
+					target_indicator.sprite_frames = frames
+					target_indicator.animation = anim_name
 
 
 func set_target_indicator(has_target: bool) -> void :
@@ -1214,8 +1235,8 @@ func set_target_indicator(has_target: bool) -> void :
 			_debug_aggro_started_ms = Time.get_ticks_msec() if has_target else 0
 		target_indicator.visible = has_target
 		if has_target:
-			if _is_on_screen and not target_indicator.is_playing():
-				target_indicator.play()
+			if _is_on_screen and not target_indicator.is_playing() and has_resumable_animation(target_indicator):
+				target_indicator.play(target_indicator.animation)
 		elif target_indicator.is_playing():
 			# A deselected monster must not animate an invisible target marker.
 			target_indicator.stop()
