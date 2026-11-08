@@ -18,6 +18,8 @@
 ```text
 tests/SGO.Server.SmokeTests/
   SmokeAssert.cs                     # Check/Json 共用工具
+  Fixtures/
+    TemporaryDirectoryFixture.cs     # 測試地圖目錄自動清理（包括斷言失敗）
   Program.cs                         # 目前剩餘大型遊戲整合測試；逐步縮減
   Protocol/
     RequestSchemaSmokeTests.cs       # 請求必填／型別
@@ -30,7 +32,7 @@ tests/SGO.Server.SmokeTests/
     AnnouncementSmokeTests.cs        # Date/Title/Content 與清單過濾
 ```
 
-原本 `Program.cs` 約 **9,518 行**。本次先將上述相對獨立的測試抽走，保留原本呼叫時序與世界測試內容。這是維護性改善的第一階段，不代表其餘單檔整合測試都已拆完。
+原本 `Program.cs` 約 **9,518 行**。本次先將上述相對獨立的測試抽走，包含 53 項獨立 Schema／公告斷言、6 項登入前 Router 斷言、12 項 Blocking.dat／尋路斷言；其餘世界整合測試的程式段落與執行順序保留。這是維護性改善的第一階段，不代表其餘單檔整合測試都已拆完。
 
 ## 新增測試規則
 
