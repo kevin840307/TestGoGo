@@ -978,6 +978,15 @@ public interface IWorldGroundItemStore
 
     IReadOnlyList<GroundItemRuntime> GetGroundItems(int mapId);
 
+    // Migration of previously persisted blocked drop positions. Atomic
+    // compare-and-swap: concurrent WorldReady requests cannot repeatedly
+    // overwrite an item that another session already moved or picked up.
+    // Returns the current DB row (or null if removed in the meantime).
+    GroundItemRuntime? RelocateGroundItemIfUnchanged(
+        long groundItemId, int mapId,
+        double expectedX, double expectedY,
+        double newX, double newY);
+
     (bool Success, string Message, GroundItemRuntime? Item)
         PickUpGroundItem(
             long accountId,
