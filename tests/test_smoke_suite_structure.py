@@ -222,6 +222,38 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("sgo-wire-load-", batch)
         self.assertNotIn("git reset --hard", batch)
 
+    def test_client_pending_aoi_moves_have_bounded_lifecycle_regression(self):
+        helper = (
+            ROOT / "client" / "scripts" /
+            "network_entity_pending_moves.gd"
+        ).read_text(encoding="utf-8-sig")
+        manager = (
+            ROOT / "client" / "scripts" /
+            "network_entity_manager.gd"
+        ).read_text(encoding="utf-8-sig")
+        regression = (
+            ROOT / "client" / "tests" /
+            "aoi_pre_spawn_move_regression.gd"
+        ).read_text(encoding="utf-8-sig")
+        runner = (
+            ROOT / "tests" / "run_protocol_checks.ps1"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn("MAX_PENDING: int = 256", helper)
+        self.assertIn("PENDING_TTL_MSEC: int = 3000", helper)
+        self.assertIn("mark_despawned(", helper)
+        self.assertIn("consume_spawn_move(", helper)
+        self.assertIn("if _despawned.has(entity_id):", helper)
+        self.assertIn("network_entity_pending_moves.gd", manager)
+        self.assertIn("_pending_aoi_moves.record_move(", manager)
+        self.assertIn("_pending_aoi_moves.consume_spawn_move(", manager)
+        self.assertIn("_pending_aoi_moves.mark_despawned(", manager)
+        self.assertIn("_pending_aoi_moves.clear()", manager)
+        self.assertIn("Move before first Spawn wins", regression)
+        self.assertIn("queued player also receives most recent position", regression)
+        self.assertIn("malicious unknown-entity move burst", regression)
+        self.assertIn("aoi_pre_spawn_move_regression.gd", runner)
+
     def test_dynamic_action_schema_runtime_covers_every_action_rule(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = (
