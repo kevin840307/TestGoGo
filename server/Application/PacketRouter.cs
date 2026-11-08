@@ -5,6 +5,7 @@ using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Crafting;
+using SGO.Server.Application.Diagnostics;
 using SGO.Server.Application.Club;
 using SGO.Server.Application.Character;
 using SGO.Server.Application.Gm;
@@ -73,6 +74,7 @@ public sealed class PacketRouter
     private readonly RankService _rank;
     private readonly QuestProgressService _questProgress;
     private readonly TradeService _trade;
+    private readonly ServerDiagnostics _diagnostics;
     private readonly ILogger<PacketRouter> _log;
     private readonly IConfiguration? _configuration;
 
@@ -106,6 +108,7 @@ public sealed class PacketRouter
         RankService rank,
         QuestProgressService questProgress,
         TradeService trade,
+        ServerDiagnostics diagnostics,
         ILogger<PacketRouter> log,
         IConfiguration? configuration = null)
     {
@@ -140,6 +143,7 @@ public sealed class PacketRouter
         _rank = rank;
         _questProgress = questProgress;
         _trade = trade;
+        _diagnostics = diagnostics;
         _log = log;
         _configuration = configuration;
     }
@@ -398,7 +402,15 @@ public sealed class PacketRouter
 
         if (!state.AccountId.HasValue)
         {
-            _log.LogWarning("Unauthenticated request: {Type}", type);
+            _diagnostics.Record(
+                "Warning",
+                "Auth",
+                $"Unauthenticated request: {type}",
+                state.ConnectionId);
+            _log.LogWarning(
+                "[UNAUTHENTICATED_REQUEST] Type={Type} Connection={ConnectionID}",
+                type,
+                state.ConnectionId);
             return
             [
                 new
@@ -427,9 +439,23 @@ public sealed class PacketRouter
 
         if (!PacketSchemaValidator.TryValidate(req, type, out var schemaError))
         {
+            _diagnostics.PacketError();
+            _diagnostics.Record(
+                "Warning",
+                "InvalidPacket",
+                $"{type}: {schemaError}",
+                state.ConnectionId,
+                state.AccountId,
+                state.CharacterId,
+                state.CurrentMapId);
             _log.LogWarning(
-                "[INVALID_PACKET] Type={Type} Reason={Reason}",
-                type, schemaError);
+                "[INVALID_PACKET] Type={Type} Reason={Reason} Connection={ConnectionID} Account={AccountID} Character={CharacterID} Map={MapID}",
+                type,
+                schemaError,
+                state.ConnectionId,
+                state.AccountId,
+                state.CharacterId,
+                state.CurrentMapId);
             return
             [
                 new
@@ -5070,9 +5096,22 @@ public sealed class PacketRouter
             default:
                 // Do not log request JSON; account/password actions can
                 // carry secrets even when Type is unsupported.
+                _diagnostics.PacketError();
+                _diagnostics.Record(
+                    "Warning",
+                    "UnhandledPacket",
+                    type,
+                    state.ConnectionId,
+                    state.AccountId,
+                    state.CharacterId,
+                    state.CurrentMapId);
                 _log.LogWarning(
-                    "[UNHANDLED_PACKET] Type={Type}",
-                    type);
+                    "[UNHANDLED_PACKET] Type={Type} Connection={ConnectionID} Account={AccountID} Character={CharacterID} Map={MapID}",
+                    type,
+                    state.ConnectionId,
+                    state.AccountId,
+                    state.CharacterId,
+                    state.CurrentMapId);
                 return
                 [
                     new
