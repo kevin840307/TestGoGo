@@ -24,6 +24,7 @@ var _pending_idle: bool = false
 var _performance_simplified_visual: bool = false
 var _performance_simplified_style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
 const SIMPLIFIED_PLAYER_CLICK_SIZE := Vector2(104.0, 136.0)
+const SIMPLIFIED_ORB_CACHE = preload("res://scripts/simplified_orb_cache.gd")
 const NORMAL_PLAYER_CLICK_SIZE := Vector2(80.0, 120.0)
 
 const SAFE_MAP_IDS: Array = [4, 9, 15, 17, 22, 39, 40, 53, 75, 93]
@@ -142,50 +143,18 @@ func _draw_simplified_player_orb(
 	attacking: bool,
 	hit: bool
 ) -> void:
-	# One elongated, faceted light core for every remote player. The entire
-	# orb (not just its outline) inherits the live party/club/PvP color.
-	# No shader, texture, SpriteFrames or animation timer is required.
-	draw_circle(center, 33.0, Color(relation.r, relation.g, relation.b, 0.10))
-	draw_colored_polygon(
-		PackedVector2Array([
-			center + Vector2(0.0, -36.0),
-			center + Vector2(17.0, -20.0),
-			center + Vector2(22.0, 5.0),
-			center + Vector2(12.0, 24.0),
-			center + Vector2(0.0, 34.0),
-			center + Vector2(-12.0, 24.0),
-			center + Vector2(-22.0, 5.0),
-			center + Vector2(-17.0, -20.0)
-		]),
-		Color(relation.r, relation.g, relation.b, 0.54)
+	# One shared, slightly taller star-orb texture for ALL remote players.
+	# Party/club/PvP changes only modulate its tint; no separate GPU textures.
+	var tint: Color = relation
+	if hit:
+		tint = Color(1.0, 0.53, 0.53, 1.0)
+	elif attacking:
+		tint = relation.lightened(0.15)
+	draw_texture(
+		SIMPLIFIED_ORB_CACHE.player_texture(),
+		center - SIMPLIFIED_ORB_CACHE.HALF_SIZE,
+		tint
 	)
-	draw_colored_polygon(
-		PackedVector2Array([
-			center + Vector2(0.0, -30.0),
-			center + Vector2(13.0, -17.0),
-			center + Vector2(17.0, 5.0),
-			center + Vector2(9.0, 20.0),
-			center + Vector2(0.0, 27.0),
-			center + Vector2(-9.0, 20.0),
-			center + Vector2(-17.0, 5.0),
-			center + Vector2(-13.0, -17.0)
-		]),
-		relation.lightened(0.22)
-	)
-	var core := Color(1.0, 0.73, 0.70, 1.0) if hit else relation.lightened(0.55)
-	draw_circle(center + Vector2(-1.0, -3.0), 14.0, core)
-	draw_circle(center + Vector2(-5.0, -9.0), 8.0, Color(1.0, 1.0, 1.0, 0.90))
-	draw_rect(Rect2(center + Vector2(-11.0, -17.0), Vector2(5.0, 3.0)), Color.WHITE)
-	draw_rect(Rect2(center + Vector2(8.0, 11.0), Vector2(4.0, 4.0)), relation.darkened(0.18))
-	if attacking:
-		var direction := _simplified_direction_vector()
-		draw_line(
-			center + direction * 17.0,
-			center + direction * 30.0,
-			relation.lightened(0.48),
-			4.0
-		)
-
 
 func _draw() -> void:
 	if not _performance_simplified_visual:
