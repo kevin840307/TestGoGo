@@ -1,6 +1,8 @@
 
 extends CanvasLayer
 
+const AUTORUN_INDICATOR = preload("res://scripts/autorun_cursor_indicator.gd")
+
 signal ctrl_state_changed(is_pressed: bool)
 
 @onready var cursor_sprite: AnimatedSprite2D = $CursorSprite
@@ -9,6 +11,8 @@ var tooltip_label: RichTextLabel = null
 var current_hovered_entity: Node = null
 var _logical_cursor_state: String = "normal"
 var _is_game_window_hovered: bool = false
+var _autorun_enabled: bool = false
+var _autorun_indicator: Node2D = null
 
 
 var hovered_items: Array = []
@@ -18,6 +22,12 @@ var _last_ctrl_state: bool = false
 func _ready() -> void :
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
 	cursor_sprite.play("normal")
+
+	# Use a distinct teal double-chevron pointer while keeping recovered
+	# attack/NPC/skill cursor animations and their existing input rules.
+	_autorun_indicator = AUTORUN_INDICATOR.new()
+	_autorun_indicator.visible = false
+	add_child(_autorun_indicator)
 
 	tooltip_label = RichTextLabel.new()
 	tooltip_label.bbcode_enabled = true
@@ -35,8 +45,8 @@ func _ready() -> void :
 func _process(_delta: float) -> void :
 	var m_pos = cursor_sprite.get_global_mouse_position()
 	cursor_sprite.global_position = m_pos
-
-
+	if is_instance_valid(_autorun_indicator):
+		_autorun_indicator.global_position = m_pos + Vector2(20.0, 21.0)
 
 	if current_hovered_entity != null and not is_instance_valid(current_hovered_entity):
 		_refresh_cursor()
@@ -121,6 +131,19 @@ func set_cursor_state(state_name: String) -> void :
 
 	_apply_cursor_visual()
 
+# Player controls navigation state; this module owns cursor presentation.
+# Existing skill, NPC, attack, pickup and UI cursor priorities win.
+func set_autorun_indicator(enabled: bool) -> void:
+	if _autorun_enabled == enabled:
+		return
+	_autorun_enabled = enabled
+	_apply_cursor_visual()
+
+
+func is_autorun_indicator_visible() -> bool:
+	return is_instance_valid(_autorun_indicator) and _autorun_indicator.visible
+
+
 func set_game_window_hovered(is_hovered: bool) -> void :
 	if _is_game_window_hovered == is_hovered:
 		return
@@ -141,6 +164,11 @@ func _apply_cursor_visual() -> void :
 	var visual_state: = "normal" if _is_game_window_hovered else _logical_cursor_state
 	if cursor_sprite.animation != visual_state:
 		cursor_sprite.play(visual_state)
+	if is_instance_valid(_autorun_indicator):
+		_autorun_indicator.visible = (
+			_autorun_enabled and visual_state == "normal"
+			and not _is_game_window_hovered
+		)
 
 func show_skill_target_tooltip(target_name: String, skill_name: String) -> void :
 	if not tooltip_label: return
