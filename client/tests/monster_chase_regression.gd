@@ -74,5 +74,33 @@ func _run() -> void:
 		"idle without in-flight movement is unchanged")
 	idle_monster.free()
 
+	# An offscreen monster that is already instantiated in AOI must still
+	# interpolate normal movement. The previous dispatch would directly set
+	# global_position, making monsters jump when they crossed the viewport.
+	var offscreen_monster: MonsterEntity = MonsterEntity.new()
+	offscreen_monster._is_on_screen = false
+	offscreen_monster.global_position = Vector2(10.0, 0.0)
+	offscreen_monster.network_move_to(Vector2(45.0, 0.0), 0.25)
+	_check(is_equal_approx(offscreen_monster.global_position.x, 10.0),
+		"offscreen regular movement does not immediately snap to destination")
+	_check(offscreen_monster.network_move_active,
+		"offscreen monster keeps its normal movement interpolation")
+	offscreen_monster.advance_network_runtime(0.10)
+	_check(offscreen_monster.global_position.x > 10.0
+		and offscreen_monster.global_position.x < 45.0,
+		"offscreen monster advances smoothly toward destination")
+	offscreen_monster.network_move_to(Vector2(100.0, 0.0), 0.0)
+	_check(is_equal_approx(offscreen_monster.global_position.x, 100.0),
+		"explicit server zero-duration correction stays authoritative")
+	offscreen_monster.free()
+
+	# Guard the actual network dispatcher as well, rather than only the
+	# MonsterEntity movement helper above.
+	var entity_manager_script: String = FileAccess.get_file_as_string(
+		"res://scripts/network_entity_manager.gd"
+	)
+	_check(not entity_manager_script.contains("target_node.apply_offscreen_network_move("),
+		"network dispatcher cannot reintroduce viewport-edge direct snapping")
+
 	print("[MONSTER_MOVE_TEST] ", "ALL PASS" if failed == 0 else "%d FAILURES" % failed)
 	quit(0 if failed == 0 else 1)
