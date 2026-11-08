@@ -14,7 +14,10 @@ function renderEnemyList() {
   $$('tr[data-id]', body).forEach(row => row.onclick = () => openEnemy(Number(row.dataset.id)));
 }
 async function openEnemy(id) {
-  if (state.enemyDirty && state.selectedEnemy?.id !== id && !confirm('目前怪物有尚未儲存的修改，確定要切換嗎？')) return;
+  if (state.enemyDirty) {
+    if (state.selectedEnemy?.id === id) return;
+    if (!confirm('目前怪物有尚未儲存的修改，確定要切換嗎？')) return;
+  }
   state.selectedEnemy = await api(`/api/enemies/${id}`);
   state.enemyDirty = false;
   renderEnemyList();
