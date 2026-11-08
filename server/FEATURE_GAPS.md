@@ -1,5 +1,9 @@
 # SGO Client ↔ Server 功能缺口與驗收清單
 
+> **舊版 EXE（2004 Paradise / 2009 Client）完整功能對照**：見 [LEGACY_EXE_PARITY_AUDIT.md](LEGACY_EXE_PARITY_AUDIT.md)（51 項，包含原始 IDA 符號／資源、Godot/Server 對應與驗收）。
+> **使用者暫緩開發**：好友／黑名單／離線訊息、複合機器人、Salon、社團／社交進階一律列為 **P-LAST**；目前戰團基本功能維持，不因舊版有功能就視為本輪 release blocker。舊版收藏簿 UI 對應 `095_Collection.itf`，詳細證據與查找方式見上述報告 §2。
+
+
 > 基準：`feature/local-server-net8`，2026-11-08 持續重新核對。
 > **本文件是待完成項目的唯一人工維護清單**；Type／Action／欄位完整清單以
 > `tests/packet_contract_audit.py`、`tests/packet_schema_audit.py`、
