@@ -6,6 +6,8 @@ extends BaseEntity
 var sync_timer: float = 0.0
 var last_walkable_sync_position: Vector2 = Vector2.ZERO
 var has_last_walkable_sync_position: bool = false
+# The last walkable coordinate must NEVER be reused after a map transition.
+var _last_walkable_sync_map_id: int = 0
 const SYNC_RATE: float = 0.05
 var _movement_state_reported: bool = false
 var _initial_visual_ready: bool = false
@@ -232,6 +234,12 @@ func _update_special_terrain_collision(horse_uid: int) -> void :
 	collision_mask = SPECIAL_MECHA_COLLISION_MASK if can_cross_special_terrain else DEFAULT_COLLISION_MASK
 
 func _on_change_map_received(_map_id: int, _target_x: float, _target_y: float) -> void :
+	# Invalidate the old map's known-good position immediately. The actual
+	# new position is installed by GameManager once the new scene is ready.
+	has_last_walkable_sync_position = false
+	_last_walkable_sync_map_id = 0
+	_navigation_request_id += 1
+	_navigation_fallback_running = false
 	is_moving = false
 	_movement_state_reported = false
 	is_mouse_holding = false
@@ -722,6 +730,55 @@ func _handle_movement(delta: float) -> void :
 	if stuck_frames >= MAX_STUCK_FRAMES:
 		_stop_movement()
 
+func reset_map_navigation_state(map_id: int, authoritative_position: Vector2) -> void:
+	# Called for initial world entry AND every map swap. This prevents a
+	# pathfinder failure on Map13 from sending an old Map15 coordinate to the
+	# server through _stop_movement().
+	_navigation_request_id += 1
+	_navigation_fallback_running = false
+	is_mouse_holding = false
+	is_moving = false
+	move_path = PackedVector2Array()
+	move_path_index = 0
+	velocity = Vector2.ZERO
+	move_destination = authoritative_position
+	target_position = authoritative_position
+	stuck_frames = 0
+	sync_timer = 0.0
+	_movement_state_reported = false
+	has_last_walkable_sync_position = map_id > 0
+	_last_walkable_sync_map_id = map_id if map_id > 0 else 0
+	last_walkable_sync_position = authoritative_position
+	if data_model and map_id > 0:
+		data_model.map_id = map_id
+	if OS.is_debug_build():
+		print("[PLAYER_MAP_NAV_RESET] map=%d pos=%s" % [map_id, str(authoritative_position)])
+
+
+func _get_navigation_map_id() -> int:
+	# During a transition the Player can still exist under the old map while
+	# the network's new MapID is already known. Never pathfind/send movement
+	# until the scene swap finishes.
+	if GameManager and GameManager.is_changing_map:
+		return 0
+	var model_map_id: int = int(data_model.map_id) if data_model else 0
+	if GameManager and is_instance_valid(GameManager.current_map_node):
+		var map_name: String = GameManager.current_map_node.name
+		if map_name.begins_with("Map"):
+			var scene_map_id: int = map_name.substr(3).to_int()
+			if scene_map_id > 0 and scene_map_id != model_map_id:
+				if OS.is_debug_build():
+					print("[PLAYER_MAP_ID_REPAIR] model=%d scene=%d" % [model_map_id, scene_map_id])
+				if data_model:
+					data_model.map_id = scene_map_id
+				# Never reuse an earlier cached position when map identity
+				# changes unexpectedly; wait for new valid walkable samples.
+				has_last_walkable_sync_position = false
+				_last_walkable_sync_map_id = 0
+				return scene_map_id
+	return model_map_id if model_map_id > 0 else 0
+
+
 func _handle_network_sync(delta: float) -> void :
 	if current_state != "walk":
 		return
@@ -734,7 +791,9 @@ func _handle_network_sync(delta: float) -> void :
 	if not NetworkManager.is_connected_to_server:
 		return
 
-	var map_id: int = int(data_model.map_id) if data_model else 0
+	var map_id: int = _get_navigation_map_id()
+	if map_id <= 0:
+		return
 	if LegacyPathfinder.is_walkable(
 		map_id,
 		global_position,
@@ -742,6 +801,7 @@ func _handle_network_sync(delta: float) -> void :
 	):
 		last_walkable_sync_position = global_position
 		has_last_walkable_sync_position = true
+		_last_walkable_sync_map_id = map_id
 		NetworkManager.send_sync_position(
 			int(global_position.x),
 			int(global_position.y)
@@ -760,7 +820,12 @@ func _set_navigation_target(destination: Vector2) -> void :
 	var request_start: Vector2 = global_position
 	move_destination = destination
 
-	var map_id: int = int(data_model.map_id) if data_model else 0
+	var map_id: int = _get_navigation_map_id()
+	if map_id <= 0:
+		# Do not run Map00 pathfinding or send a stale position when no active
+		# world has been established yet.
+		_stop_movement()
+		return
 	var route: PackedVector2Array = LegacyPathfinder.find_path(
 		map_id,
 		request_start,
@@ -823,7 +888,9 @@ func apply_position_correction(corrected_position: Vector2) -> void :
 	_navigation_fallback_running = false
 	global_position = corrected_position
 	last_walkable_sync_position = corrected_position
-	has_last_walkable_sync_position = true
+	var corrected_map_id: int = _get_navigation_map_id()
+	has_last_walkable_sync_position = corrected_map_id > 0
+	_last_walkable_sync_map_id = corrected_map_id if corrected_map_id > 0 else 0
 	velocity = Vector2.ZERO
 	is_moving = false
 	is_mouse_holding = false
@@ -850,22 +917,33 @@ func _stop_movement() -> void :
 	current_state = "idle"
 	stuck_frames = 0
 	if NetworkManager.is_connected_to_server:
-		var map_id: int = int(data_model.map_id) if data_model else 0
-		var sync_position := global_position
-		if LegacyPathfinder.is_walkable(
+		var map_id: int = _get_navigation_map_id()
+		var send_position: bool = false
+		var sync_position: Vector2 = global_position
+		if map_id > 0 and LegacyPathfinder.is_walkable(
 			map_id,
 			global_position,
 			can_cross_special_terrain
 		):
 			last_walkable_sync_position = global_position
 			has_last_walkable_sync_position = true
-		elif has_last_walkable_sync_position:
+			_last_walkable_sync_map_id = map_id
+			send_position = true
+		elif map_id > 0 and has_last_walkable_sync_position and _last_walkable_sync_map_id == map_id:
+			# Only fall back to a position proved walkable on THIS map.
+			# Never send an old-map coordinate after teleport/respawn.
 			sync_position = last_walkable_sync_position
+			send_position = true
 
-		NetworkManager.send_sync_position(
-			int(sync_position.x),
-			int(sync_position.y)
-		)
+		if send_position:
+			NetworkManager.send_sync_position(
+				int(sync_position.x),
+				int(sync_position.y)
+			)
+		elif OS.is_debug_build():
+			print("[PLAYER_SYNC_SKIPPED] map=%d position=%s anchor_map=%d" % [
+				map_id, str(global_position), _last_walkable_sync_map_id
+			])
 		if _movement_state_reported:
 			NetworkManager.send_secure_packet({"Type": "SyncState", "State": "idle", "Dir": current_dir})
 	_movement_state_reported = false
