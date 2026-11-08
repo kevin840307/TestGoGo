@@ -41,7 +41,7 @@ function Run-External([string]$label, [string]$exe, [string[]]$arguments) {
 }
 
 function Check-TcpPortFree([int]$port) {
-    $listener = New-Object System.Net.Sockets.TcpListener(
+    $listener = [System.Net.Sockets.TcpListener]::new(
         [System.Net.IPAddress]::Loopback, $port)
     try {
         $listener.Start()
