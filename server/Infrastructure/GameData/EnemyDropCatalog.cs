@@ -1,3 +1,4 @@
+using SGO.Server.Application.Gm;
 using System.Buffers.Binary;
 using System.Globalization;
 using System.Text;
@@ -103,13 +104,10 @@ public sealed class EnemyDropCatalog
 
             for (var attempt = 0; attempt < rollCount; attempt++)
             {
-                var effectiveChance = Math.Clamp(
-                    drop.Chance *
-                    (double.IsFinite(dropMultiplier)
-                        ? Math.Max(1.0, dropMultiplier)
-                        : 1.0),
-                    0.0,
-                    1.0);
+                var effectiveChance =
+                    GlobalRateMath.ApplyDropChance(
+                        drop.Chance,
+                        dropMultiplier);
 
                 if (Roll01(
                         enemyId,
