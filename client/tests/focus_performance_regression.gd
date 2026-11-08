@@ -47,6 +47,17 @@ func _run() -> void:
 	_check(not GameManager.focus_transition_within_interval(10000, 24000, 25000),
 		"future focus transitions cannot explain an earlier packet gap")
 
+	# The background branch must stop visual-only work. Never pause
+	# networking, gameplay world updates or the entire SceneTree.
+	var cursor_was_processing: bool = CursorManager.is_processing()
+	GameManager._set_background_visual_processing(true)
+	_check(not CursorManager.is_processing(),
+		"unfocused visual pause disables cursor animation/scanning")
+	GameManager._set_background_visual_processing(false)
+	_check(CursorManager.is_processing(),
+		"refocus resumes visual cursor processing")
+	CursorManager.set_process(cursor_was_processing)
+
 	var context: String = GameManager._focus_perf_context()
 	_check(context.contains("focus=") and context.contains("focus_actual="),
 		"the log contains requested and actual focus state")
