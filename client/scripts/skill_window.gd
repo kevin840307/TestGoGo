@@ -126,8 +126,27 @@ func _add_skill_card(skill_entry: Dictionary) -> void :
 
 	var card: = SKILL_CARD_SCENE.instantiate()
 	skill_grid.add_child(card)
-	card.setup(skill_resource, skill_id, skill_level, icon_texture, _get_skill_label_color(skill_resource))
+	var show_aoe_center_toggle := (
+		is_instance_valid(target_player)
+		and target_player.has_method("is_skill_aoe_center_toggle_available")
+		and target_player.is_skill_aoe_center_toggle_available(skill_id)
+	)
+	var self_center := (
+		show_aoe_center_toggle
+		and target_player.has_method("is_skill_aoe_self_center")
+		and target_player.is_skill_aoe_self_center(skill_id)
+	)
+	card.setup(
+		skill_resource,
+		skill_id,
+		skill_level,
+		icon_texture,
+		_get_skill_label_color(skill_resource),
+		show_aoe_center_toggle,
+		self_center
+	)
 	card.skill_clicked.connect(_on_skill_clicked)
+	card.aoe_center_mode_changed.connect(_on_aoe_center_mode_changed)
 	card.mouse_entered.connect(_show_skill_tooltip.bind(skill_id, skill_level, icon_texture))
 	card.mouse_exited.connect(_hide_skill_tooltip)
 
@@ -249,6 +268,17 @@ func _get_empty_description() -> String:
 func _on_skill_clicked(skill_id: int) -> void :
 	if is_instance_valid(target_player) and target_player.has_method("prepare_skill"):
 		target_player.prepare_skill(skill_id)
+
+
+func _on_aoe_center_mode_changed(skill_id: int, self_center: bool) -> void:
+	if (
+		is_instance_valid(target_player)
+		and target_player.has_method("set_skill_aoe_self_center")
+	):
+		target_player.set_skill_aoe_self_center(
+			skill_id,
+			self_center
+		)
 
 
 func _show_skill_tooltip(skill_id: int, level: int, icon_texture: Texture2D) -> void :
