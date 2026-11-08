@@ -46,6 +46,7 @@ public static class WebSocketEndpoint
             var broadcastConnectionId = broadcastRegistration.ConnectionId;
             var broadcastQueue = broadcastRegistration.Queue;
             var lastBroadcastBacklogWarning = DateTimeOffset.MinValue;
+            var lastBroadcastBacklogCheck = DateTimeOffset.MinValue;
             state.ConnectionId = broadcastConnectionId;
             diagnostics.WebSocketConnected();
             diagnostics.Record(
@@ -162,27 +163,34 @@ public static class WebSocketEndpoint
 
                         if (!broadcastQueue.IsEmpty)
                         {
-                            var backlogCount = broadcastQueue.Count;
-                            if (backlogCount >= 500 &&
-                                now - lastBroadcastBacklogWarning >= TimeSpan.FromSeconds(10))
+                            // ConcurrentQueue.Count can be non-trivial under a
+                            // large backlog. Never run that diagnostic scan on
+                            // every 250 ms world tick.
+                            if (now - lastBroadcastBacklogCheck >= TimeSpan.FromSeconds(2))
                             {
-                                lastBroadcastBacklogWarning = now;
-                                diagnostics.BroadcastBacklogWarning();
-                                diagnostics.Record(
-                                    "Warning",
-                                    "BroadcastBacklog",
-                                    $"Queued={backlogCount}",
-                                    state.ConnectionId,
-                                    state.AccountId,
-                                    state.CharacterId,
-                                    state.CurrentMapId);
-                                log.LogWarning(
-                                    "[BROADCAST_BACKLOG] Queued={Queued} Connection={ConnectionID} Account={AccountID} Character={CharacterID} Map={MapID}",
-                                    backlogCount,
-                                    state.ConnectionId,
-                                    state.AccountId,
-                                    state.CharacterId,
-                                    state.CurrentMapId);
+                                lastBroadcastBacklogCheck = now;
+                                var backlogCount = broadcastQueue.Count;
+                                if (backlogCount >= 500 &&
+                                    now - lastBroadcastBacklogWarning >= TimeSpan.FromSeconds(10))
+                                {
+                                    lastBroadcastBacklogWarning = now;
+                                    diagnostics.BroadcastBacklogWarning();
+                                    diagnostics.Record(
+                                        "Warning",
+                                        "BroadcastBacklog",
+                                        $"Queued={backlogCount}",
+                                        state.ConnectionId,
+                                        state.AccountId,
+                                        state.CharacterId,
+                                        state.CurrentMapId);
+                                    log.LogWarning(
+                                        "[BROADCAST_BACKLOG] Queued={Queued} Connection={ConnectionID} Account={AccountID} Character={CharacterID} Map={MapID}",
+                                        backlogCount,
+                                        state.ConnectionId,
+                                        state.AccountId,
+                                        state.CharacterId,
+                                        state.CurrentMapId);
+                                }
                             }
 
                             var broadcastPackets = new List<object>();
