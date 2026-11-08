@@ -1888,7 +1888,7 @@ try
           mallProducts[0].Count == 2,
         "configured mall catalog resolves a current-client item");
 
-    var mallOpenJson = JsonSerializer.Serialize(
+    var mallOpenPackets =
         configuredMall.Handle(
             account.Value,
             id,
@@ -1896,10 +1896,38 @@ try
             0,
             0,
             0,
-            0));
-    Check(mallOpenJson.Contains("\"MallID\":9001") &&
-          mallOpenJson.Contains("\"ItemIndex\":1001") &&
-          mallOpenJson.Contains("\"Name\":\"商城小藥水\""),
+            0);
+
+    using var mallOpenDocument =
+        JsonDocument.Parse(
+            JsonSerializer.Serialize(mallOpenPackets));
+
+    var mallListResponse =
+        mallOpenDocument.RootElement
+            .EnumerateArray()
+            .First(x =>
+                x.TryGetProperty(
+                    "Type",
+                    out var type) &&
+                type.GetString() ==
+                    "MallListResponse");
+
+    var mallItem =
+        mallListResponse
+            .GetProperty("Items")
+            .EnumerateArray()
+            .Single();
+
+    Check(
+        mallItem.GetProperty("MallID").GetInt32() == 9001 &&
+        mallItem.GetProperty("ItemIndex").GetInt32() == 1001 &&
+        mallItem.GetProperty("Name").GetString() == "商城小藥水" &&
+        mallItem.GetProperty("Category").GetString() == "消耗品" &&
+        mallItem.GetProperty("Price").GetInt32() == 25 &&
+        mallItem.GetProperty("OriginalPrice").GetInt32() == 30 &&
+        mallItem.GetProperty("Tag").GetString() == "HOT" &&
+        mallItem.GetProperty("Count").GetInt32() == 2 &&
+        mallItem.GetProperty("IsActive").GetBoolean(),
         "OpenMall returns configured catalog fields expected by Godot UI");
 
     Check(store.AdjustMallPoints(
