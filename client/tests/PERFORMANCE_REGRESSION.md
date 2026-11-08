@@ -1,3 +1,7 @@
+- `CharacterSelectLayer` is no longer embedded in `entry_manager.tscn`.
+  The login screen does not load character-select textures/paper-doll code at
+  startup; the layer is instantiated only after a successful login.
+
 ## 2026-11-08 — Cold-login / logout lifetime cleanup
 
 The target is Windows process memory, not only Godot's static counter. World

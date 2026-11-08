@@ -2,7 +2,6 @@
 
 [ext_resource type="Script" uid="uid://1ybsd5tsjsl" path="res://entry_manager.gd" id="1_vw1st"]
 [ext_resource type="PackedScene" uid="uid://up2wsogbtjhw" path="res://LoginScreen.tscn" id="2_qcu7r"]
-[ext_resource type="PackedScene" uid="uid://bbyywqosexgyt" path="res://character_select.tscn" id="3_da4uh"]
 [ext_resource type="Texture2D" uid="uid://cmdeoenkg40uh" path="res://ui/BG_LOADING.png" id="4_da4uh"]
 [ext_resource type="Script" path="res://scripts/smooth_loading_bar.gd" id="sgo_smoothbar"]
 
@@ -60,9 +59,6 @@ script = ExtResource("1_vw1st")
 
 [node name="LoginScreen" parent="." unique_id=1694084688 instance=ExtResource("2_qcu7r")]
 layout_mode = 1
-
-[node name="CharacterSelectLayer" parent="." unique_id=1268632609 instance=ExtResource("3_da4uh")]
-visible = false
 
 [node name="LoadingOverlay" type="CanvasLayer" parent="." unique_id=2120118666]
 unique_name_in_owner = true

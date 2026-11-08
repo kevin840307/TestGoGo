@@ -2,7 +2,8 @@
 extends Control
 
 @onready var login_screen: Control = $LoginScreen
-@onready var character_select_layer: CanvasLayer = $CharacterSelectLayer
+const CHARACTER_SELECT_SCENE_PATH: String = "res://character_select.tscn"
+var character_select_layer: CanvasLayer = null
 
 
 @onready var error_dialog: Control = %ErrorDialog
@@ -13,6 +14,25 @@ var _loading_session_id: int = 0
 var _loading_progress_value: float = 0.0
 var __login_select_session_id_id: int = -1
 var _world_loading_session_id: int = -1
+
+
+func _ensure_character_select_layer() -> CanvasLayer:
+	if is_instance_valid(character_select_layer):
+		return character_select_layer
+	var scene := ResourceLoader.load(CHARACTER_SELECT_SCENE_PATH) as PackedScene
+	if scene == null:
+		push_error("[EntryManager] 無法載入角色選擇畫面")
+		return null
+	character_select_layer = scene.instantiate() as CanvasLayer
+	if character_select_layer == null:
+		return null
+	character_select_layer.visible = false
+	add_child(character_select_layer)
+	_connect_character_select_signals()
+	if OS.is_debug_build():
+		print("[ENTRY_LAZY_UI] character_select instantiated after login success")
+	return character_select_layer
+
 
 # Login readiness is asset/UI preparation, NOT a consecutive FPS benchmark.
 # A low FPS cap or Windows focus changes must never lock the login form.
@@ -238,6 +258,10 @@ func _connect_character_select_signals() -> void :
 
 func _on_global_login_finished(success: bool, _msg: String) -> void :
 	if success:
+		var select_layer := _ensure_character_select_layer()
+		if not is_instance_valid(select_layer):
+			show_error_popup("角色選擇畫面載入失敗")
+			return
 		# Independent loading session #1 starts when the user presses Login.
 		# Continue that same session here instead of resetting it on success.
 		var overlay = get_node_or_null("%LoadingOverlay")
@@ -259,6 +283,8 @@ func _on_global_login_finished(success: bool, _msg: String) -> void :
 		)
 
 func _start_character_selection_load() -> void :
+	if not is_instance_valid(_ensure_character_select_layer()):
+		return
 	_set_loading_progress(8.0)
 	await get_tree().process_frame
 	_set_loading_progress(12.0)

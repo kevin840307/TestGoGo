@@ -34,3 +34,12 @@ def test_optional_hud_scenes_are_lazy():
     assert "func _instantiate_lazy_hud_scene(path: String)" in hud
     for scene in ["bank_window.tscn","pet_window.tscn","rank_window.tscn","trade_window.tscn"]:
         assert f'preload("res://{scene}")' not in hud
+
+def test_character_select_is_lazy_after_login():
+    entry = read("client/entry_manager.gd")
+    scene = read("client/entry_manager.tscn")
+    assert 'CHARACTER_SELECT_SCENE_PATH: String = "res://character_select.tscn"' in entry
+    assert "func _ensure_character_select_layer()" in entry
+    assert "_ensure_character_select_layer()" in entry[entry.index("func _on_global_login_finished"):]
+    assert 'path="res://character_select.tscn"' not in scene
+    assert 'name="CharacterSelectLayer"' not in scene
