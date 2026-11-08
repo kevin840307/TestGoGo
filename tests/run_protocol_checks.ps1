@@ -86,6 +86,15 @@ try {
         "-c", "Release", "--", "--output",
         (Join-Path $logRoot "mapping-coverage.json")
     )
+    Invoke-Checked "Server 10/50/100 capacity probe" "dotnet" @(
+        "run", "--project",
+        "tests/SGO.Server.LoadProbe/SGO.Server.LoadProbe.csproj",
+        "-c", "Release", "--",
+        "--sizes", "10,50,100",
+        "--fanout-iterations", "200",
+        "--db-ops", "2",
+        "--output", (Join-Path $logRoot "load-probe.json")
+    )
     Invoke-Checked ".NET game smoke test build" "dotnet" @(
         "build", "tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj",
         "-c", "Release"
