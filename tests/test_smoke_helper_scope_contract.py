@@ -46,6 +46,14 @@ class SmokeHelperScopeContractTests(unittest.TestCase):
                     source,
                 )
                 self.assertIn("PacketTreeContainsString(", source)
+                # An explicit type-qualified call cannot accidentally bind
+                # a local top-level Program helper (CS8801) after refactors.
+                self.assertEqual(
+                    source.count("PacketTreeContainsString("),
+                    source.count(
+                        "SGO.Server.SmokeTests.SmokeAssert.PacketTreeContainsString("
+                    ),
+                )
                 self.assertNotRegex(
                     source,
                     r"\bstatic\s+bool\s+PacketTreeContainsString\s*\(",
