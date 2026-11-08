@@ -6423,18 +6423,56 @@ try
         combatEnemy.Y,
         berserkerAt);
 
+    var berserkerSkillLevel =
+        currentCatalog.FindSkillLevel(23108, 1);
     var expectedBerserkerAttack =
         berserkerBase.Attack +
         berserkerBase.Attack * 50 / 100;
-    var berserkerJson =
-        JsonSerializer.Serialize(
-            berserkerPackets);
+
+    // System.Text.Json escapes Chinese text in serialized JSON. Compare
+    // decoded packet fields so a real skill buff and its resulting ATK are
+    // both required, rather than passing on an unrelated numeric substring.
+    var berserkerPacketElements = berserkerPackets
+        .Select(packet => JsonSerializer.SerializeToElement(packet))
+        .ToArray();
+
+    var berserkerBuffActive = berserkerPacketElements.Any(packet =>
+        packet.TryGetProperty("Type", out var type) &&
+        type.GetString() == "SyncBuffs" &&
+        packet.TryGetProperty("Buffs", out var buffs) &&
+        buffs.ValueKind == JsonValueKind.Array &&
+        buffs.EnumerateArray().Any(buff =>
+            buff.TryGetProperty("BuffName", out var name) &&
+            name.GetString() == "狂戰士體" &&
+            buff.TryGetProperty("Value", out var skillId) &&
+            skillId.GetInt32() == 23108));
+
+    var actualBerserkerAttack = berserkerPacketElements
+        .Where(packet =>
+            packet.TryGetProperty("Type", out var type) &&
+            type.GetString() == "PlayerStatusSync")
+        .Select(packet =>
+            packet.TryGetProperty("Attack", out var attack)
+                ? (int?)attack.GetInt32()
+                : null)
+        .FirstOrDefault();
 
     Check(
-        berserkerJson.Contains("狂戰士體") &&
-        berserkerJson.Contains(
-            $"\"Attack\":{expectedBerserkerAttack}"),
-        "狂戰士體 +50% attack is applied to effective combat stats");
+        berserkerSkillLevel?.AtkBonusPercent == 50 &&
+        berserkerBase.Attack > 0 &&
+        berserkerBuffActive &&
+        actualBerserkerAttack == expectedBerserkerAttack,
+        "狂戰士體 +50% attack is applied to effective combat stats" +
+        (berserkerBuffActive &&
+         actualBerserkerAttack == expectedBerserkerAttack &&
+         berserkerSkillLevel?.AtkBonusPercent == 50
+            ? ""
+            : $" (bonus={berserkerSkillLevel?.AtkBonusPercent}, " +
+              $"base={berserkerBase.Attack}, " +
+              $"expected={expectedBerserkerAttack}, " +
+              $"actual={actualBerserkerAttack}, " +
+              $"buff={berserkerBuffActive}, " +
+              $"packets={JsonSerializer.Serialize(berserkerPackets)})"));
 
     var berserkerExpired = JsonSerializer.Serialize(
         combat.TickBuffs(
