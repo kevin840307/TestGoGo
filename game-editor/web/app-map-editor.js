@@ -304,7 +304,7 @@ function renderMapVisual() {
     const p = worldToPercent(row.x, row.y, bounds);
     const enemy = enemyMode ? getEnemyById(row.enemyId) : null;
     const label = enemyMode ? (enemy?.name || `Enemy #${row.enemyId}`) : (row.name || `NPC #${i + 1}`);
-    const invalid = invalidIndexes.has(i);
+    const invalid = Number(row.index) >= 0 && invalidIndexes.has(Number(row.index));
     const title = invalid ? `⚠ Blocking 衝突 · ${label}` : label;
     return `<button class="map-marker ${enemyMode ? 'monster' : 'npc'} ${selected.has(i) ? 'selected' : ''} ${invalid ? 'invalid' : ''} ${state.mapShowLabels ? '' : 'labels-hidden'}" data-map-index="${i}" style="left:${p.left}%;top:${p.top}%;" title="${esc(title)} · (${row.x}, ${row.y})">
       <span>${enemyMode ? '♜' : '●'}</span><b>${esc(label)}</b>
