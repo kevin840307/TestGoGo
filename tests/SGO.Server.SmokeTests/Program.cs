@@ -993,9 +993,30 @@ var addGiftResult = quests.Execute(
     0,
     _ => 0);
 
-Check(addGiftResult.Packets.Any(x =>
-        JsonSerializer.Serialize(x).Contains(
-            "你沒有未領取的虛擬道具")),
+Check(addGiftResult.Packets.Any(packet =>
+    {
+        using var document =
+            JsonDocument.Parse(
+                JsonSerializer.Serialize(packet));
+        var root = document.RootElement;
+
+        if (!root.TryGetProperty(
+                "Type",
+                out var type) ||
+            type.GetString() !=
+                "NpcDialogResponse")
+        {
+            return false;
+        }
+
+        return root.TryGetProperty(
+                   "PlainText",
+                   out var plainText) &&
+               (plainText.GetString() ?? "")
+                   .Contains(
+                       "你沒有未領取的虛擬道具",
+                       StringComparison.Ordinal);
+    }),
     "legacy AddGift safely dispatches None callback when no gift provider is configured");
 
 var tsPortal = quests.Execute(
