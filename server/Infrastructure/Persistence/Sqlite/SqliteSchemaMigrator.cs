@@ -70,6 +70,10 @@ internal static class SqliteSchemaMigrator
         ExecuteSqlFile(
             db,
             ResolveSqlPath("016_character_cosmetics.sql"));
+
+        ExecuteSqlFile(
+            db,
+            ResolveSqlPath("017_external_mall_credits.sql"));
     }
 
     private static void ExecuteSqlFile(
