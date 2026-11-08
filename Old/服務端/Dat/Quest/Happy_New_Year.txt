@@ -1,0 +1,9 @@
+--天馬行空#011活動
+
+function start()
+	Say("p7祝你新年快樂！等級步步高升！")
+	Say("p7得到388星幣。")
+	Say("p7得到大利大桔頭飾。","End")
+AddItem(10434)
+AddItem(10435)
+end

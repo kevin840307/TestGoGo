@@ -4,9 +4,21 @@ extends Node
 const MAP_LOADING_FADE_IN_SECONDS: = 0.3
 const MAP_LOADING_COVER_DELAY_SECONDS: = 0.35
 const MAP_LOADING_MIN_VISIBLE_SECONDS: = 0.55
+const MAP_LOADING_RESOURCE_PROGRESS_MAX: = 90.0
+const MAP_LOADING_INSTANTIATE_PROGRESS: = 94.0
+const MAP_LOADING_ADD_CHILD_PROGRESS: = 97.0
+const MAP_LOADING_FINALIZE_PROGRESS: = 99.0
+# Loading must not wait forever for a continuously refilled spawn queue.
+# Remaining entities stay in the live queue and continue spawning normally.
+const INITIAL_SPAWN_GATE_MAX_MSEC: int = 12000
 const TRAIN_TRAVEL_MAP_TIMEOUT_SECONDS: = 15.0
 const TRAIN_VIDEO_TIMEOUT_SECONDS: = 120.0
 const WORLD_ENHANCEMENT_SCENE: = preload("res://world_enhancement.tscn")
+const AFK_VISUAL_CACHE = preload("res://scripts/afk_visual_cache.gd")
+const AFK_RENDER_SHELL = preload("res://scripts/afk_render_shell.gd")
+const WORLD_VISUAL_AUDIT = preload("res://scripts/world_visual_audit.gd")
+const AFK_MEMORY_AUDIT = preload("res://scripts/afk_memory_audit.gd")
+const AFK_MONITOR_FPS: int = 20
 const DAY_NIGHT_OVERLAY_SCENE: = preload("res://day_night_overlay.tscn")
 const TRAIN_VIDEO_PATHS: = {
 	"train_depart_king.ogv": "res://train_depart_king.ogv", 
@@ -27,15 +39,217 @@ const VALID_FESTIVAL_ACTIVITIES: = [
 ]
 
 signal festival_activity_changed(festival: String)
+signal performance_profile_changed(profile: Dictionary)
 
 var current_map_node: Node2D = null
 var current_player: CharacterBody2D = null
 var current_hud: CanvasLayer = null
+var _afk_active: bool = false
+var _afk_restoring: bool = false
+var _afk_started_msec: int = 0
+var _afk_map_cache = AFK_VISUAL_CACHE.new()
+var _afk_render_shell = AFK_RENDER_SHELL.new()
+var _afk_map_path: String = ""
+var _afk_saved_profile: Dictionary = {}
+var _afk_visual_stats: Dictionary = {}
+var _afk_master_was_muted_before: bool = false
+var _afk_memory_baseline: Dictionary = {}
+var _afk_forced_draw_count: int = 0
+var _last_world_map_audit_path: String = ""
+
+
+
+func log_world_visual_audit(phase: String) -> void:
+	if not OS.is_debug_build():
+		return
+	var map_data: Dictionary = WORLD_VISUAL_AUDIT.snapshot(current_map_node)
+	var hud_data: Dictionary = WORLD_VISUAL_AUDIT.snapshot(current_hud)
+	var player_data: Dictionary = WORLD_VISUAL_AUDIT.snapshot(current_player)
+	var entry_data: Dictionary = WORLD_VISUAL_AUDIT.snapshot(get_tree().current_scene)
+	var active_entities: int = NetworkEntityManager.active_entities.size() if NetworkEntityManager else 0
+	var cached_map: bool = (
+		not _last_world_map_audit_path.is_empty()
+		and ResourceLoader.has_cached(_last_world_map_audit_path)
+	)
+	print("[WORLD_VISUAL_AUDIT] phase=%s pid=%d map_nodes=%d map_sprite=%d map_animated=%d map_texture_nodes=%d map_unique_textures=%d map_sprite_frames=%d hud_nodes=%d hud_controls=%d hud_viewports=%d hud_texture_nodes=%d player_nodes=%d player_animated=%d entry_nodes=%d active_entities=%d prewarmed_windows=%d cached_map=%s cached_player=%s cached_hud=%s godot_static_mb=%.2f godot_texture_mb=%.2f godot_video_mb=%.2f metric_scope=godot_not_windows_working_set" % [
+		phase, OS.get_process_id(),
+		int(map_data["nodes"]), int(map_data["sprite2d"]),
+		int(map_data["animated_sprites"]), int(map_data["texture_rects"]),
+		int(map_data["unique_textures"]), int(map_data["unique_sprite_frames"]),
+		int(hud_data["nodes"]), int(hud_data["controls"]), int(hud_data["subviewports"]),
+		int(hud_data["texture_rects"]),
+		int(player_data["nodes"]), int(player_data["animated_sprites"]),
+		int(entry_data["nodes"]), active_entities,
+		_prewarmed_hud_windows.size(),
+		str(cached_map),
+		str(ResourceLoader.has_cached("res://player.tscn")),
+		str(ResourceLoader.has_cached("res://game_hud.tscn")),
+		_get_process_memory_mb(),
+		float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
+		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+	])
+	# A named list of top retained visual resource paths makes the next
+	# memory profile actionable without changing render or network behavior.
+	print("[WORLD_VISUAL_ASSETS] phase=%s map=%s hud=%s player=%s entry=%s" % [
+		phase,
+		WORLD_VISUAL_AUDIT.top_live_visual_resources(current_map_node),
+		WORLD_VISUAL_AUDIT.top_live_visual_resources(current_hud),
+		WORLD_VISUAL_AUDIT.top_live_visual_resources(current_player),
+		WORLD_VISUAL_AUDIT.top_live_visual_resources(get_tree().current_scene)
+	])
+
+
+func _audit_login_after_logout() -> void:
+	# The freed world and a newly instantiated EntryManager do not settle in
+	# the same frame. Record after deferred Node destruction has completed.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().create_timer(0.5).timeout
+	log_world_visual_audit("logout_settled")
+	_log_afk_memory_audit("logout_settled")
+
+
+func _afk_memory_sample() -> Dictionary:
+	# These are Godot allocator/resource counters, NOT Windows working set
+	# and NOT OS-level process dedicated VRAM. Match pid to the Windows
+	# profiler to validate whether real process RAM ever falls.
+	return {
+		"godot_static_mb": float(Performance.get_monitor(Performance.MEMORY_STATIC)) / 1048576.0,
+		"godot_peak_mb": float(Performance.get_monitor(Performance.MEMORY_STATIC_MAX)) / 1048576.0,
+		"godot_texture_mb": float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
+		"godot_video_mb": float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+		"resource_objects": int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT)),
+		"node_objects": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+	}
+
+
+func _log_afk_memory(stage: String) -> void:
+	if not OS.is_debug_build():
+		return
+	var measured: Dictionary = _afk_memory_sample()
+	var before: Dictionary = _afk_memory_baseline
+	var stats: Dictionary = _afk_visual_stats
+	print("[AFK_MEMORY] stage=%s pid=%d godot_static_mb=%.2f delta_static_mb=%+.2f godot_static_peak_mb=%.2f godot_texture_mb=%.2f delta_texture_mb=%+.2f godot_video_mb=%.2f delta_video_mb=%+.2f resource_objects=%d delta_resources=%+d node_objects=%d released_refs=%d retained_embedded=%d retained_generated=%d retained_missing=%d excluded_scripted_subtrees=%d excluded_collision_subtrees=%d excluded_entity_subtrees=%d visited_nodes=%d visual_candidates=%d resource_candidates=%d metric_scope=godot_not_windows_working_set" % [
+		stage, OS.get_process_id(),
+		float(measured.get("godot_static_mb", 0.0)),
+		float(measured.get("godot_static_mb", 0.0)) - float(before.get("godot_static_mb", 0.0)),
+		float(measured.get("godot_peak_mb", 0.0)),
+		float(measured.get("godot_texture_mb", 0.0)),
+		float(measured.get("godot_texture_mb", 0.0)) - float(before.get("godot_texture_mb", 0.0)),
+		float(measured.get("godot_video_mb", 0.0)),
+		float(measured.get("godot_video_mb", 0.0)) - float(before.get("godot_video_mb", 0.0)),
+		int(measured.get("resource_objects", 0)),
+		int(measured.get("resource_objects", 0)) - int(before.get("resource_objects", 0)),
+		int(measured.get("node_objects", 0)),
+		int(stats.get("released", 0)),
+		int(stats.get("retained_embedded", 0)),
+		int(stats.get("retained_generated", 0)),
+		int(stats.get("retained_missing", 0)),
+		int(stats.get("excluded_scripted", 0)),
+		int(stats.get("excluded_collision", 0)),
+		int(stats.get("excluded_entities", 0)),
+		int(stats.get("visited_nodes", 0)),
+		int(stats.get("visual_candidates", 0)),
+		int(stats.get("resource_candidates", 0))
+	])
+
+
+func _afk_memory_audit_cache_sources() -> Array:
+	var sources: Array = [
+		{"name": "GameManager._prewarmed_hud_windows", "value": _prewarmed_hud_windows},
+	]
+	for spec in [
+		["MonsterLoader._cache", MonsterLoader, "_cache"],
+		["DollLoader._cache", DollLoader, "_cache"],
+		["DollLoader._sr_cache", DollLoader, "_sr_cache"],
+		["DollLoader._sr_effect_cache", DollLoader, "_sr_effect_cache"],
+		["PetLoader._frames_cache", PetLoader, "_frames_cache"],
+		["EffectLoader._effect_cache", EffectLoader, "_effect_cache"],
+		["ItemLoader._icon_cache", ItemLoader, "_icon_cache"],
+		["ItemLoader._photo_cache", ItemLoader, "_photo_cache"],
+		["ItemLoader._ground_cache", ItemLoader, "_ground_cache"],
+		["SkillLoader._icon_cache", SkillLoader, "_icon_cache"],
+		["AudioManager.se_cache", AudioManager, "se_cache"],
+		["AudioManager._map_bgm_cache", AudioManager, "_map_bgm_cache"],
+	]:
+		var owner: Object = spec[1] as Object
+		if is_instance_valid(owner):
+			sources.append({"name": str(spec[0]), "value": owner.get(str(spec[2]))})
+	sources.append({
+		"name": "PaperDollEngine.visual_runtime",
+		"value": PaperDollEngine.visual_runtime_cache_for_audit(),
+	})
+	sources.append({
+		"name": "FestivalThemeManager._texture_cache",
+		"value": FestivalThemeManager.texture_cache_for_audit(),
+	})
+	return sources
+
+
+func _log_afk_memory_audit(stage: String) -> void:
+	if not OS.is_debug_build():
+		return
+	var roots: Dictionary = {
+		"map": current_map_node,
+		"hud": current_hud,
+		"player": current_player,
+		"scene": get_tree().current_scene,
+	}
+	var report: Dictionary = AFK_MEMORY_AUDIT.capture(
+		roots, _afk_memory_audit_cache_sources(), 16
+	)
+	print("[AFK_MEMORY_AUDIT] stage=%s pid=%d resources=%d textures=%d sprite_frames=%d estimated_texture_mb=%.2f note=uncompressed_texture_estimate_not_windows_working_set" % [
+		stage, OS.get_process_id(),
+		int(report.get("resources", 0)),
+		int(report.get("texture_resources", 0)),
+		int(report.get("sprite_frame_resources", 0)),
+		float(report.get("estimated_texture_mb", 0.0)),
+	])
+	var rank: int = 0
+	for raw_entry in report.get("top", []):
+		var entry: Dictionary = raw_entry
+		rank += 1
+		print("[AFK_MEMORY_AUDIT] stage=%s rank=%d kind=%s class=%s estimated_mb=%.2f refs=%d source_count=%d path=%s owners=%s" % [
+			stage, rank,
+			str(entry.get("kind", "resource")),
+			str(entry.get("class", "Resource")),
+			float(entry.get("estimated_bytes", 0)) / 1048576.0,
+			int(entry.get("reference_count", 0)),
+			int(entry.get("reference_sources", 0)),
+			str(entry.get("path", "")),
+			str(entry.get("owners", [])),
+		])
+
+
+func _log_afk_memory_after_settle(started_msec: int) -> void:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	await tree.create_timer(3.0).timeout
+	if not is_inside_tree() or not _afk_active or _afk_started_msec != started_msec:
+		return
+	_log_afk_memory("afk_settled_3s")
+	_log_afk_memory_audit("afk_settled_3s")
+
+
 var current_world_enhancement: CanvasLayer = null
 var current_day_night_overlay: CanvasLayer = null
 var world_enhancement_enabled: bool = GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
 var current_festival_theme: String = FestivalThemeManager.NORMAL
 var current_festival_activity: String = ""
+var current_performance_load_mode: int = ClientPerformanceProfile.LOAD_BALANCED
+var current_combat_render_mode: int = ClientPerformanceProfile.COMBAT_NORMAL
+var current_foreground_fps_limit: int = 60
+var current_simplify_players_mode: int = ClientPerformanceProfile.SIMPLIFY_AUTO
+var current_simplify_monsters_mode: int = ClientPerformanceProfile.SIMPLIFY_AUTO
+var current_performance_profile: Dictionary = ClientPerformanceProfile.apply_visual_overrides(
+	ClientPerformanceProfile.resolve(
+		current_performance_load_mode,
+		current_combat_render_mode
+	),
+	current_simplify_players_mode,
+	current_simplify_monsters_mode
+)
 
 var is_changing_map: bool = false
 var max_recorded_progress: float = 0.0
@@ -43,6 +257,19 @@ var _map_transition_serial: int = 0
 var _active_map_transition_id: int = 0
 var _map_transition_started_usec: int = 0
 var _map_transition_last_stage_usec: int = 0
+var _frame_gap_last_usec: int = 0
+var _frame_gap_stage: String = "startup"
+var _frame_gap_stage_since_usec: int = 0
+const FRAME_GAP_WARN_USEC: int = 100000
+const RENDER_STATS_INTERVAL_SECONDS: float = 2.0
+const PERF_ANALYSIS_INTERVAL_SECONDS: float = 5.0
+var _render_stats_elapsed: float = 0.0
+var _perf_analysis_elapsed: float = 0.0
+var _last_physics_tick_count: int = -1
+var _last_physics_tick_sample_msec: int = 0
+var _focus_last_change_usec: int = 0
+var _focus_change_count: int = 0
+var _prewarmed_hud_windows: Dictionary = {}
 
 var _train_travel_active: bool = false
 var _train_travel_id: String = ""
@@ -54,10 +281,381 @@ var _train_video_finished: bool = false
 var _train_player_process_state: Dictionary = {}
 var _train_hud_process_state: Dictionary = {}
 
+func cache_prewarmed_hud_window(kind: String, window: Control) -> void :
+	if kind.is_empty() or not is_instance_valid(window):
+		return
+	var existing = _prewarmed_hud_windows.get(kind, null)
+	if is_instance_valid(existing):
+		window.queue_free()
+		return
+	window.visible = false
+	window.modulate.a = 0.0
+	add_child(window)
+	_prewarmed_hud_windows[kind] = window
+
+func take_prewarmed_hud_window(kind: String) -> Control:
+	var window = _prewarmed_hud_windows.get(kind, null)
+	if not is_instance_valid(window):
+		_prewarmed_hud_windows.erase(kind)
+		return null
+	_prewarmed_hud_windows.erase(kind)
+	if window.get_parent() != null:
+		window.get_parent().remove_child(window)
+	return window
+
+func has_prewarmed_hud_window(kind: String) -> bool:
+	return is_instance_valid(_prewarmed_hud_windows.get(kind, null))
+
+func set_frame_gap_stage(stage: String) -> void :
+	_frame_gap_stage = stage
+	_frame_gap_stage_since_usec = Time.get_ticks_usec()
+
+# Background FPS caps intentionally increase frame intervals (e.g., 30 FPS = ~33ms).
+# Distinguish that normal throttling from genuinely stalled background frames.
+func classify_frame_gap(gap_usec: int, has_focus: bool, fps_cap: int) -> String:
+	if has_focus:
+		return "foreground_stall"
+	if fps_cap > 0:
+		var expected_usec: float = 1000000.0 / float(fps_cap)
+		if float(gap_usec) <= expected_usec * 1.8:
+			return "background_throttle"
+	return "background_stall"
+
+
+static func focus_transition_within_interval(start_ms: int, end_ms: int, change_ms: int) -> bool:
+	# Packet timestamps use Time.get_ticks_msec(); the last focus transition
+	# uses the same monotonic clock. A resumed chase packet should identify
+	# that it spans a background interval instead of implying network lag.
+	return start_ms > 0 and change_ms >= start_ms and change_ms <= end_ms
+
+
+func did_focus_change_during_interval(start_ms: int, end_ms: int) -> bool:
+	return focus_transition_within_interval(
+		start_ms, end_ms, int(_focus_last_change_usec / 1000)
+	)
+
+
+static func foreground_from_window_state(focused: bool, minimized: bool) -> bool:
+	# Minimized must behave exactly like an unfocused window for rendering,
+	# visual processing and audio. Keep this pure helper covered by headless tests.
+	return focused and not minimized
+
+
+func _is_main_window_minimized() -> bool:
+	if DisplayServer.get_name() == "headless":
+		return false
+	return DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_MINIMIZED
+
+
+func _observe_window_foreground() -> bool:
+	return foreground_from_window_state(
+		DisplayServer.window_is_focused(),
+		_is_main_window_minimized()
+	)
+
+
+func _focus_perf_context() -> String:
+	var focus_name: String = "foreground" if _window_has_focus else "background"
+	var render_enabled: bool = RenderingServer.render_loop_enabled
+	var master_bus_index: int = AudioServer.get_bus_index("Master")
+	var audio_muted: bool = master_bus_index >= 0 and AudioServer.is_bus_mute(master_bus_index)
+	var focus_age_ms: int = -1
+	if _focus_last_change_usec > 0:
+		focus_age_ms = int((Time.get_ticks_usec() - _focus_last_change_usec) / 1000)
+	return "focus=%s focus_actual=%s minimized=%s power_save=%s fps_cap=%d render_loop=%s audio_muted=%s vsync=%d focus_age_ms=%d startup_overlay=%s" % [
+		focus_name, str(DisplayServer.window_is_focused()), str(_is_main_window_minimized()),
+		str(not _window_has_focus), Engine.max_fps, str(render_enabled), str(audio_muted),
+		DisplayServer.window_get_vsync_mode() if DisplayServer.get_name() != "headless" else -1,
+		focus_age_ms, str(_startup_loading_overlay_active),
+	]
+
+
+func _log_focus_power_save(event_name: String, trimmed_caches: bool = false) -> void:
+	if not OS.is_debug_build():
+		return
+	# OS window-focus queries may lag a notification by one event/frame.
+	# Keep both readings, explicitly marking this transition-time race.
+	var query_disagrees: bool = _observe_window_foreground() != _window_has_focus
+	print("[FOCUS_POWER_SAVE] event=%s %s focus_changes=%d caches_trimmed=%s focus_query_disagrees=%s" % [
+		event_name, _focus_perf_context(), _focus_change_count,
+		str(trimmed_caches), str(query_disagrees),
+	])
+
+
+func _process(delta: float) -> void :
+	# Focus/render recovery also runs in release exports. RenderingServer
+	# can stay disabled after a missed Windows focus notification otherwise.
+	_reconcile_world_render_policy(delta)
+	# Diagnostics are intentionally excluded from release exports.
+	if not OS.is_debug_build():
+		return
+
+	var now_usec := Time.get_ticks_usec()
+	if _frame_gap_last_usec > 0:
+		var gap_usec := now_usec - _frame_gap_last_usec
+		if gap_usec >= FRAME_GAP_WARN_USEC:
+			var gap_kind: String = classify_frame_gap(gap_usec, _window_has_focus, Engine.max_fps)
+			# A normal background frame interval is intentional, not a stall.
+			# Preserve unusually long background gaps as real diagnostics.
+			if gap_kind != "background_throttle":
+				var stage_age_ms := float(now_usec - _frame_gap_stage_since_usec) / 1000.0 if _frame_gap_stage_since_usec > 0 else -1.0
+				var line := "[FRAME_GAP] gap_ms=%.2f stage=%s stage_age_ms=%.2f memory_mb=%.2f kind=%s %s" % [
+					float(gap_usec) / 1000.0,
+					_frame_gap_stage,
+					stage_age_ms,
+					_get_process_memory_mb(),
+					gap_kind,
+					_focus_perf_context(),
+				]
+				print(line)
+				_append_transition_log(line)
+	_frame_gap_last_usec = now_usec
+
+	_render_stats_elapsed += delta
+	if _render_stats_elapsed >= RENDER_STATS_INTERVAL_SECONDS:
+		_render_stats_elapsed = 0.0
+		_print_render_stats()
+
+	_perf_analysis_elapsed += delta
+	if _perf_analysis_elapsed >= PERF_ANALYSIS_INTERVAL_SECONDS:
+		_perf_analysis_elapsed = 0.0
+		_print_performance_analysis("periodic")
+
+func _multiclient_gpu_context() -> String:
+	# Performance.RENDER_VIDEO_MEM_USED is Godot's resource allocation metric,
+	# not GPU utilization or a Windows/WDDM process-VRAM measurement.
+	# Include PID and resolution so 1/5/10 open-client logs can be matched
+	# against OS-level CPU, GPU Engine and dedicated GPU memory counters.
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	return "pid=%d window=%dx%d paper_palette_materials=%d monster_palette_materials=%d gpu_memory_metric=godot_resources" % [
+		OS.get_process_id(),
+		window_size.x,
+		window_size.y,
+		PaperDollEngine.get_shared_palette_material_count(),
+		MonsterEntity.get_shared_monster_palette_material_count(),
+	]
+
+
+func _print_render_stats() -> void :
+	if not OS.is_debug_build():
+		return
+	if not is_instance_valid(current_map_node):
+		return
+
+	var visible_monsters := 0
+	var visible_players := 0
+	var visible_pets := 0
+	var simplified_monsters := 0
+	var primitive_monsters := 0
+	var simplified_players := 0
+	var ground_items_total := 0
+	var ground_items_visible_nearby := 0
+	var ground_known: int = 0
+	var ground_deferred: int = 0
+	var monster_aoi_scans: int = 0
+	var monster_aoi_skips: int = 0
+	var ground_aoi_scans: int = 0
+	var ground_aoi_skips: int = 0
+	var monster_aoi_enter_radius: float = 0.0
+	var ground_aoi_enter_radius: float = 0.0
+	var paper_doll_layers := 0
+	var minimap_world_redraws: int = 0
+	var minimap_world_skips: int = 0
+	if is_instance_valid(current_hud) and current_hud.has_method("get_minimap_world_redraw_stats"):
+		var minimap_stats: Dictionary = current_hud.get_minimap_world_redraw_stats()
+		minimap_world_redraws = int(minimap_stats.get("redraws", 0))
+		minimap_world_skips = int(minimap_stats.get("skipped", 0))
+
+	if NetworkEntityManager:
+		for entity_id in NetworkEntityManager.active_entities.keys():
+			var entity = NetworkEntityManager.active_entities[entity_id]
+			if not is_instance_valid(entity) or not entity.is_inside_tree():
+				continue
+			var entity_type := int(NetworkEntityManager._active_entity_types.get(entity_id, -1))
+			var visible_runtime := true
+			if entity.has_method("is_render_visible"):
+				visible_runtime = bool(entity.is_render_visible())
+			elif entity.has_method("is_runtime_visible"):
+				visible_runtime = bool(entity.is_runtime_visible())
+			if not visible_runtime:
+				continue
+			match entity_type:
+				0:
+					visible_players += 1
+					if entity.has_method("is_performance_simplified") and entity.is_performance_simplified():
+						simplified_players += 1
+				1:
+					visible_monsters += 1
+					if entity.has_method("is_performance_simplified") and entity.is_performance_simplified():
+						simplified_monsters += 1
+					if entity.has_method("is_primitive_simplified") and entity.is_primitive_simplified():
+						primitive_monsters += 1
+				3:
+					ground_items_total += 1
+					if is_instance_valid(current_player) and entity.is_visible_in_tree():
+						if entity.global_position.distance_squared_to(current_player.global_position) <= 900.0 * 900.0:
+							ground_items_visible_nearby += 1
+				4: visible_pets += 1
+			if "doll_engine" in entity and is_instance_valid(entity.doll_engine):
+				paper_doll_layers += entity.doll_engine.doll_sprites.size()
+
+	if is_instance_valid(current_player) and "doll_engine" in current_player and is_instance_valid(current_player.doll_engine):
+		paper_doll_layers += current_player.doll_engine.doll_sprites.size()
+
+	var aoi_active_monsters: int = 0
+	var aoi_deferred_monsters: int = 0
+	if NetworkEntityManager:
+		if NetworkEntityManager.has_method("get_aoi_active_monster_count"):
+			aoi_active_monsters = int(NetworkEntityManager.get_aoi_active_monster_count())
+		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
+			aoi_deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
+		if NetworkEntityManager.has_method("get_ground_aoi_stats"):
+			var ground_aoi: Dictionary = NetworkEntityManager.get_ground_aoi_stats()
+			ground_known = int(ground_aoi.get("known", 0))
+			ground_deferred = int(ground_aoi.get("deferred", 0))
+			monster_aoi_scans = int(ground_aoi.get("monster_full_scans", 0))
+			monster_aoi_skips = int(ground_aoi.get("monster_skipped_scans", 0))
+			ground_aoi_scans = int(ground_aoi.get("ground_full_scans", 0))
+			ground_aoi_skips = int(ground_aoi.get("ground_skipped_scans", 0))
+			monster_aoi_enter_radius = float(ground_aoi.get("monster_enter_radius", 0.0))
+			ground_aoi_enter_radius = float(ground_aoi.get("ground_enter_radius", 0.0))
+
+	print("[RENDER_STATS] mode=%s combat=%s fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d simplified_monsters=%d primitive_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d simplified_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d ground_known=%d ground_deferred=%d monster_aoi_scans=%d monster_aoi_skips=%d ground_aoi_scans=%d ground_aoi_skips=%d monster_aoi_radius=%.0f ground_aoi_radius=%.0f paper_doll_layers=%d minimap_world_redraws=%d minimap_world_skips=%d render_stats_valid=%s %s %s" % [
+		ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
+		ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
+		int(Performance.get_monitor(Performance.TIME_FPS)),
+		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
+		int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
+		int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)),
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+		float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
+		visible_monsters,
+		simplified_monsters,
+		primitive_monsters,
+		aoi_active_monsters,
+		aoi_deferred_monsters,
+		visible_players,
+		simplified_players,
+		visible_pets,
+		ground_items_total,
+		ground_items_visible_nearby,
+		ground_known,
+		ground_deferred,
+		monster_aoi_scans,
+		monster_aoi_skips,
+		ground_aoi_scans,
+		ground_aoi_skips,
+		monster_aoi_enter_radius,
+		ground_aoi_enter_radius,
+		paper_doll_layers,
+		minimap_world_redraws,
+		minimap_world_skips,
+		str(_window_has_focus and RenderingServer.render_loop_enabled),
+		_focus_perf_context(),
+		_multiclient_gpu_context(),
+	])
+
+func _print_performance_analysis(checkpoint: String) -> void:
+	if not OS.is_debug_build():
+		return
+
+	var fps: float = float(Performance.get_monitor(Performance.TIME_FPS))
+	var process_ms: float = float(Performance.get_monitor(Performance.TIME_PROCESS)) * 1000.0
+	var physics_ms: float = float(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS)) * 1000.0
+	var target_frame_ms: float = 1000.0 / maxf(fps, 1.0)
+	var cpu_frame_pct: float = clampf(
+		((process_ms + physics_ms) / maxf(target_frame_ms, 0.001)) * 100.0,
+		0.0,
+		999.0
+	)
+
+	var static_mem_mb: float = float(OS.get_static_memory_usage()) / 1048576.0
+	var static_peak_mb: float = float(OS.get_static_memory_peak_usage()) / 1048576.0
+	var texture_mem_mb: float = float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0
+	var video_mem_mb: float = float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0
+	var object_count: int = int(Performance.get_monitor(Performance.OBJECT_COUNT))
+	var node_count: int = int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))
+	var orphan_count: int = int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT))
+
+	var active_entities: int = 0
+	var active_monsters: int = 0
+	var deferred_monsters: int = 0
+	if NetworkEntityManager:
+		active_entities = NetworkEntityManager.active_entities.size()
+		if NetworkEntityManager.has_method("get_aoi_active_monster_count"):
+			active_monsters = int(NetworkEntityManager.get_aoi_active_monster_count())
+		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
+			deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
+
+	print("[PERF_ANALYSIS] mode=%s combat=%s checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d combat_fx_enabled=%s cpu_metric=frame_budget_ratio cpu_process_time_ms=%.3f quality_enhanced=%s %s %s" % [
+		ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
+		ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
+		checkpoint,
+		fps,
+		process_ms,
+		physics_ms,
+		cpu_frame_pct,
+		static_mem_mb,
+		static_peak_mb,
+		video_mem_mb,
+		texture_mem_mb,
+		object_count,
+		node_count,
+		orphan_count,
+		active_entities,
+		active_monsters,
+		deferred_monsters,
+		str(should_render_combat_effects()),
+		process_ms + physics_ms,
+		str(world_enhancement_enabled),
+		_focus_perf_context(),
+		_multiclient_gpu_context(),
+	])
+	# FPS is presentation. Compare physics ticks per real second to catch
+	# accidental simulation slowdowns when switching 30/60/unlimited.
+	var tick_now_msec: int = Time.get_ticks_msec()
+	var tick_now_count: int = Engine.get_physics_frames()
+	if _last_physics_tick_count >= 0:
+		var tick_elapsed_msec: int = tick_now_msec - _last_physics_tick_sample_msec
+		if tick_elapsed_msec >= 1000:
+			var measured_hz: float = float(tick_now_count - _last_physics_tick_count) * 1000.0 / float(tick_elapsed_msec)
+			print("[PHYSICS_CADENCE] pid=%d fps_cap=%d configured_hz=%d measured_hz=%.1f sample_ms=%d physics_ticks=%d network_fixed_tick=%s" % [
+				OS.get_process_id(), Engine.max_fps, Engine.physics_ticks_per_second,
+				measured_hz, tick_elapsed_msec, tick_now_count,
+				str(NetworkManager.is_physics_processing()) if NetworkManager else "false",
+			])
+			_last_physics_tick_count = tick_now_count
+			_last_physics_tick_sample_msec = tick_now_msec
+	else:
+		_last_physics_tick_count = tick_now_count
+		_last_physics_tick_sample_msec = tick_now_msec
+
+
+func log_performance_checkpoint(checkpoint: String) -> void:
+	if not OS.is_debug_build():
+		return
+	_print_performance_analysis(checkpoint)
+
+
+var _initial_loading_progress_value: float = 0.0
+
+func _report_initial_loading_progress(progress_callback: Callable, value: float, stage: String) -> void :
+	# A loading operation must never visually move backwards. Keep a monotonic
+	# floor so later async readiness gates cannot undo progress already shown.
+	_initial_loading_progress_value = maxf(
+		_initial_loading_progress_value,
+		clampf(value, 0.0, 100.0)
+	)
+	if progress_callback.is_valid():
+		progress_callback.call(_initial_loading_progress_value, stage)
+
 func _get_process_memory_mb() -> float:
 	return float(Performance.get_monitor(Performance.MEMORY_STATIC)) / 1048576.0
 
 func _append_transition_log(line: String) -> void :
+	if not OS.is_debug_build():
+		return
 	var log_path: = "user://map_transition_%d.log" % OS.get_process_id()
 	var file: = FileAccess.open(log_path, FileAccess.READ_WRITE)
 	if file == null:
@@ -116,7 +714,869 @@ func _trace_map_change(stage: String, source_map_id: int, target_map_id: int, de
 
 
 
+var _window_has_focus: bool = true
+var _focused_max_fps: int = 0
+var _saved_vsync_mode: int = -1
+var _master_bus_was_muted_before_focus_loss: bool = false
+var _startup_loading_overlay_active: bool = false
+var _world_ready_for_background_saving: bool = false
+var _world_presented_msec: int = 0
+var _focus_policy_poll_elapsed: float = 0.0
+var _focus_poll_last_observed: bool = true
+var _focus_poll_same_readings: int = 0
+const WORLD_RENDER_GRACE_MSEC: int = 1200
+const WORLD_FOCUS_POLL_INTERVAL_SECONDS: float = 0.25
+var _startup_focus_observed_frames: int = 0
+var _last_background_cache_trim_msec: int = 0
+var _background_focus_lost_msec: int = 0
+var _background_memory_checkpoint_stage: int = 0
+const BACKGROUND_CACHE_TRIM_DELAY_MSEC: int = 12000
+const BACKGROUND_CACHE_TRIM_COOLDOWN_MSEC: int = 60000
+const UNFOCUSED_MAX_FPS := 30
+
+
+func is_afk_mode_active() -> bool:
+	return _afk_active
+
+
+func is_game_window_focused() -> bool:
+	return _window_has_focus
+
+
+func is_afk_mode_restoring() -> bool:
+	return _afk_restoring
+
+
+func afk_visual_stats() -> Dictionary:
+	return _afk_visual_stats.duplicate()
+
+
+func _log_afk_state(event_name: String, released: int = 0, missing: int = 0) -> void:
+	if not OS.is_debug_build():
+		return
+	print("[AFK_MODE] event=%s active=%s restoring=%s map_textures_released=%d missing=%d tracked=%d memory_mb=%.1f video_mem_mb=%.1f nodes=%d fps_cap=%d render_loop=%s forced_draws=%d physics_hz=%d connected=%s" % [
+		event_name, str(_afk_active), str(_afk_restoring), released, missing,
+		_afk_map_cache.suspended_count(), _get_process_memory_mb(),
+		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), Engine.max_fps,
+		str(RenderingServer.render_loop_enabled), _afk_forced_draw_count,
+		Engine.physics_ticks_per_second,
+		str(NetworkManager.is_connected_to_server) if NetworkManager else "false"
+	])
+
+
+func _enter_afk_audio_silence() -> void:
+	var bus: int = AudioServer.get_bus_index("Master")
+	if bus >= 0:
+		_afk_master_was_muted_before = (
+			AudioServer.is_bus_mute(bus) if _window_has_focus
+			else _master_bus_was_muted_before_focus_loss
+		)
+		AudioServer.set_bus_mute(bus, true)
+	if AudioManager and AudioManager.has_method("set_afk_silent"):
+		AudioManager.set_afk_silent(true)
+
+
+func _leave_afk_audio_silence(restart_map_music: bool) -> void:
+	if AudioManager and AudioManager.has_method("set_afk_silent"):
+		AudioManager.set_afk_silent(false)
+	var bus: int = AudioServer.get_bus_index("Master")
+	if bus >= 0:
+		if _window_has_focus:
+			AudioServer.set_bus_mute(bus, _afk_master_was_muted_before)
+		else:
+			# Focus-out must stay silent; the next focus-in restores the
+			# original pre-AFK user mute preference, not the forced mute.
+			_master_bus_was_muted_before_focus_loss = _afk_master_was_muted_before
+			AudioServer.set_bus_mute(bus, true)
+	if restart_map_music and AudioManager and is_instance_valid(current_player):
+		if current_player.data_model:
+			AudioManager.play_map_bgm(current_player.data_model.map_id)
+
+
+
+func _afk_current_map_path() -> String:
+	if is_instance_valid(current_player) and current_player.data_model:
+		var map_id: int = int(current_player.data_model.map_id)
+		if map_id > 0:
+			return "res://maps/Map%02d.scn" % map_id
+	return ""
+
+
+func _afk_dynamic_container() -> Node:
+	if not is_instance_valid(current_map_node):
+		return null
+	var container: Node = current_map_node.get_node_or_null("Entities")
+	# Never preserve an old ObjectContainer wholesale: legacy maps can mix
+	# hundreds/thousands of static decorative nodes into it. If there is no
+	# dedicated Entities node, create a clean runtime-only container and move
+	# only the player + authoritative NetworkEntityManager entities below.
+	if not is_instance_valid(container):
+		container = Node2D.new()
+		container.name = "Entities"
+		current_map_node.add_child(container)
+
+	if is_instance_valid(current_player) and not container.is_ancestor_of(current_player):
+		current_player.reparent(container, true)
+	if NetworkEntityManager:
+		for entity in NetworkEntityManager.active_entities.values():
+			if is_instance_valid(entity) and not container.is_ancestor_of(entity):
+				entity.reparent(container, true)
+	return container
+
+
+func _set_afk_dynamic_visuals_suspended(suspended: bool) -> int:
+	var changed: int = 0
+	if is_instance_valid(current_player) and current_player.has_method("set_afk_visual_suspended"):
+		current_player.set_afk_visual_suspended(suspended)
+		changed += 1
+	if NetworkEntityManager:
+		for entity in NetworkEntityManager.active_entities.values():
+			if is_instance_valid(entity) and entity.has_method("set_afk_visual_suspended"):
+				entity.set_afk_visual_suspended(suspended)
+				changed += 1
+	return changed
+
+
+func _enter_afk_render_shell() -> Dictionary:
+	var container: Node = _afk_dynamic_container()
+	if not is_instance_valid(container):
+		return {"ok": false, "reason": "missing_dynamic_container"}
+	_afk_map_path = _afk_current_map_path()
+	if _afk_map_path.is_empty() or not ResourceLoader.exists(_afk_map_path):
+		return {"ok": false, "reason": "missing_map_path"}
+	var result: Dictionary = _afk_render_shell.enter(current_map_node, container)
+	if bool(result.get("ok", false)):
+		current_map_node = _afk_render_shell.current_shell()
+	return result
+
+
+func _emit_afk_restore_progress(callback: Callable, percent: float, stage: String) -> void:
+	# UI-only reporting. The callback never sends packets or pauses physics.
+	if callback.is_valid():
+		callback.call(clampf(percent, 0.0, 100.0), stage)
+
+
+func _restore_afk_entity_visuals_batched(callback: Callable) -> void:
+	# Restore the exact existing scene/physics objects. Recreating entities
+	# here would change their identity and potentially break target/loot state.
+	var entities: Array[Node] = []
+	if is_instance_valid(current_player):
+		entities.append(current_player)
+	if NetworkEntityManager:
+		for entity in NetworkEntityManager.active_entities.values():
+			if is_instance_valid(entity):
+				entities.append(entity)
+	var total: int = entities.size()
+	var restored: int = 0
+	var batch_started_usec: int = Time.get_ticks_usec()
+	for node in entities:
+		if is_instance_valid(node) and node.has_method("set_afk_visual_suspended"):
+			node.set_afk_visual_suspended(false)
+		restored += 1
+		if restored % 4 == 0 or Time.get_ticks_usec() - batch_started_usec >= 6000:
+			_emit_afk_restore_progress(callback,
+				86.0 + 12.0 * float(restored) / float(maxi(1, total)),
+				"恢復角色、怪物與特效 (%d/%d)" % [restored, total])
+			await get_tree().process_frame
+			batch_started_usec = Time.get_ticks_usec()
+	_emit_afk_restore_progress(callback, 98.0, "角色視覺恢復完成")
+
+
+func _restore_afk_render_shell(progress_callback: Callable = Callable()) -> Dictionary:
+	if not _afk_render_shell.is_active():
+		return {"ok": true, "restored_static_map": false}
+	var path: String = _afk_map_path
+	_emit_afk_restore_progress(progress_callback, 4.0, "確認地圖資源")
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return {"ok": false, "reason": "missing_map_resource"}
+
+	var existing_status: int = ResourceLoader.load_threaded_get_status(path)
+	if existing_status not in [
+		ResourceLoader.THREAD_LOAD_IN_PROGRESS,
+		ResourceLoader.THREAD_LOAD_LOADED
+	]:
+		var request_error: int = ResourceLoader.load_threaded_request(
+			path, "", false, ResourceLoader.CACHE_MODE_IGNORE_DEEP
+		)
+		if request_error != OK:
+			return {"ok": false, "reason": "load_request", "error": request_error}
+	var packed: PackedScene = null
+	while true:
+		var progress: Array = []
+		var status: int = ResourceLoader.load_threaded_get_status(path, progress)
+		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			_emit_afk_restore_progress(progress_callback,
+				8.0 + 57.0 * (float(progress[0]) if not progress.is_empty() else 0.0),
+				"載入地圖貼圖與場景")
+			await get_tree().process_frame
+			continue
+		if status == ResourceLoader.THREAD_LOAD_LOADED:
+			_emit_afk_restore_progress(progress_callback, 65.0, "地圖資源載入完成")
+			packed = ResourceLoader.load_threaded_get(path) as PackedScene
+			break
+		return {"ok": false, "reason": "load_failed", "status": status}
+	if packed == null:
+		return {"ok": false, "reason": "null_packed_scene"}
+
+	_emit_afk_restore_progress(progress_callback, 68.0, "重建地圖視覺")
+	await get_tree().process_frame
+	var restored := packed.instantiate() as Node2D
+	if not is_instance_valid(restored):
+		return {"ok": false, "reason": "instantiate_failed"}
+	for collision_name: String in ["CollisionContainer", "CollisionLayer"]:
+		var legacy := restored.get_node_or_null(collision_name)
+		if is_instance_valid(legacy):
+			restored.remove_child(legacy)
+			legacy.free()
+
+	var attached: Dictionary = _afk_render_shell.attach_to_restored_map(restored)
+	if not bool(attached.get("ok", false)):
+		restored.free()
+		return attached
+	current_map_node = restored
+	_emit_afk_restore_progress(progress_callback, 76.0, "還原角色節點與地圖")
+	_apply_current_festival_theme()
+	if BuildingManager:
+		_emit_afk_restore_progress(progress_callback, 81.0, "初始化地圖裝飾")
+		await _init_buildings_with_diagnostics(
+			int(current_player.data_model.map_id) if is_instance_valid(current_player) and current_player.data_model else 0,
+			int(current_player.data_model.map_id) if is_instance_valid(current_player) and current_player.data_model else 0
+		)
+	attached["restored_static_map"] = true
+	_emit_afk_restore_progress(progress_callback, 85.0, "地圖視覺完成")
+	return attached
+
+
+func begin_afk_mode() -> bool:
+	if _afk_active or _afk_restoring or is_changing_map:
+		return false
+	if not is_instance_valid(current_map_node) or not is_instance_valid(current_player):
+		return false
+	_afk_saved_profile = {
+		"load": current_performance_load_mode,
+		"combat": current_combat_render_mode,
+		"players": current_simplify_players_mode,
+		"monsters": current_simplify_monsters_mode,
+	}
+	_afk_memory_baseline = _afk_memory_sample()
+	log_world_visual_audit("afk_enter_before")
+	_log_afk_memory_audit("afk_enter_before")
+	_afk_forced_draw_count = 0
+	_afk_active = true
+	_afk_started_msec = Time.get_ticks_msec()
+	_log_afk_memory("enter_before")
+	_log_afk_state("enter_before")
+	_enter_afk_audio_silence()
+	# Phase 1: keep gameplay nodes alive and network/physics processing at
+	# their original rates; hide only world presentation.
+	if current_player.has_method("begin_afk_navigation_anchor"):
+		current_player.begin_afk_navigation_anchor()
+	current_map_node.visible = false
+	_remove_day_night_overlay()
+	_remove_world_enhancement()
+	# Phase 2: keep the dynamic gameplay subtree alive, but discard the
+	# complete static map scene and full entity artwork. Networking, packet
+	# cadence, fixed physics, collision, timers and authoritative entity
+	# identity are untouched.
+	set_performance_modes(ClientPerformanceProfile.LOAD_MULTIBOX, ClientPerformanceProfile.COMBAT_MASS)
+	set_visual_simplification_modes(ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED, ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
+	var suspended_entities: int = _set_afk_dynamic_visuals_suspended(true)
+	_afk_visual_stats = _enter_afk_render_shell()
+	_afk_visual_stats["suspended_entity_visuals"] = suspended_entities
+	_afk_visual_stats["released"] = int(_afk_visual_stats.get("freed_static_nodes", 0))
+	_clear_visual_runtime_caches()
+	_refresh_focus_render_policy()
+	_log_afk_state("enter_after", int(_afk_visual_stats.get("released", 0)))
+	_log_afk_memory("enter_after")
+	log_world_visual_audit("afk_enter_after")
+	_log_afk_memory_audit("afk_enter_after")
+	if OS.is_debug_build():
+		_log_afk_memory_after_settle(_afk_started_msec)
+	return true
+
+
+func finish_afk_mode(progress_callback: Callable = Callable()) -> bool:
+	if not _afk_active or _afk_restoring or is_changing_map:
+		return false
+	if not is_instance_valid(current_map_node) or not is_instance_valid(current_player):
+		return false
+	_afk_restoring = true
+	_log_afk_state("restore_begin")
+	_emit_afk_restore_progress(progress_callback, 1.0, "準備恢復畫面")
+	var restore_result: Dictionary = await _restore_afk_render_shell(progress_callback)
+	if is_changing_map or not bool(restore_result.get("ok", false)):
+		_afk_restoring = false
+		_afk_visual_stats["restore_error"] = str(restore_result.get("reason", "map_change"))
+		_log_afk_state("restore_retry_needed")
+		return false
+	_afk_active = false
+	_afk_restoring = false
+	_leave_afk_audio_silence(true)
+	if is_instance_valid(current_player) and current_player.has_method("end_afk_navigation_anchor"):
+		current_player.end_afk_navigation_anchor()
+	# Restore user selection, not a hard-coded normal mode. The HUD's
+	# persistent per-account FPS setting was never modified.
+	set_performance_modes(
+		int(_afk_saved_profile.get("load", ClientPerformanceProfile.LOAD_BALANCED)),
+		int(_afk_saved_profile.get("combat", ClientPerformanceProfile.COMBAT_NORMAL))
+	)
+	set_visual_simplification_modes(
+		int(_afk_saved_profile.get("players", ClientPerformanceProfile.SIMPLIFY_AUTO)),
+		int(_afk_saved_profile.get("monsters", ClientPerformanceProfile.SIMPLIFY_AUTO))
+	)
+	await _restore_afk_entity_visuals_batched(progress_callback)
+	_apply_low_resource_world_visual_policy()
+	if is_instance_valid(current_map_node):
+		current_map_node.visible = true
+	_emit_afk_restore_progress(progress_callback, 99.0, "顯示遊戲畫面")
+	await get_tree().process_frame
+	_afk_saved_profile.clear()
+	_afk_visual_stats.clear()
+	_refresh_focus_render_policy()
+	_log_afk_state("restore_complete", int(restore_result.get("restored_entity_nodes", 0)), 0)
+	_log_afk_memory("restore_complete")
+	log_world_visual_audit("afk_restore_complete")
+	_log_afk_memory_audit("afk_restore_complete")
+	_afk_memory_baseline.clear()
+	_emit_afk_restore_progress(progress_callback, 100.0, "畫面已恢復")
+	return true
+
+
+func _refresh_afk_map_visuals_after_change() -> void:
+	if not _afk_active or not is_instance_valid(current_map_node):
+		return
+	_afk_map_cache.discard()
+	_afk_render_shell.discard()
+	current_map_node.visible = false
+	var suspended_entities: int = _set_afk_dynamic_visuals_suspended(true)
+	_afk_visual_stats = _enter_afk_render_shell()
+	_afk_visual_stats["suspended_entity_visuals"] = suspended_entities
+	_afk_visual_stats["released"] = int(_afk_visual_stats.get("freed_static_nodes", 0))
+	_clear_visual_runtime_caches()
+	_log_afk_state("map_changed_unloaded", int(_afk_visual_stats.get("released", 0)))
+	_log_afk_memory("afk_map_changed")
+
+
+func _reset_afk_mode() -> void:
+	if _afk_active:
+		_leave_afk_audio_silence(false)
+	_afk_active = false
+	_afk_restoring = false
+	_afk_saved_profile.clear()
+	_afk_visual_stats.clear()
+	_afk_map_cache.discard()
+	_afk_render_shell.discard()
+	_afk_map_path = ""
+	_afk_memory_baseline.clear()
+
+
+func _rebuild_performance_profile() -> void:
+	current_performance_profile = ClientPerformanceProfile.apply_visual_overrides(
+		ClientPerformanceProfile.resolve(
+			current_performance_load_mode,
+			current_combat_render_mode
+		),
+		current_simplify_players_mode,
+		current_simplify_monsters_mode
+	)
+	current_performance_profile["foreground_fps"] = current_foreground_fps_limit
+
+static func needs_vsync_disabled(cap: int, refresh_hz: float) -> bool:
+	# Engine.max_fps=0 alone does not unlock FPS when VSync is on.
+	return cap == 0 or (refresh_hz > 0.0 and float(cap) > refresh_hz + 0.5)
+
+
+func _refresh_fps_vsync_policy() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	if _saved_vsync_mode < 0:
+		_saved_vsync_mode = DisplayServer.window_get_vsync_mode()
+	var cap: int = configured_foreground_fps(current_performance_profile)
+	var refresh_hz: float = DisplayServer.screen_get_refresh_rate(DisplayServer.window_get_current_screen())
+	var preferred_mode: int = DisplayServer.VSYNC_DISABLED if needs_vsync_disabled(cap, refresh_hz) else _saved_vsync_mode
+	if DisplayServer.window_get_vsync_mode() != preferred_mode:
+		DisplayServer.window_set_vsync_mode(preferred_mode)
+		if OS.is_debug_build():
+			print("[FPS_VSYNC] cap=%d refresh_hz=%.1f vsync=%d original=%d" % [
+				cap, refresh_hz, preferred_mode, _saved_vsync_mode
+			])
+
+
+func should_render_combat_effects() -> bool:
+	return bool(current_performance_profile.get("combat_effects_enabled", true))
+
+
+func _stop_nonessential_combat_effects() -> void:
+	# Called on preset changes, never per frame; do not stop combat logic.
+	if is_instance_valid(current_player) and current_player.has_method("stop_combat_visual_effects"):
+		current_player.stop_combat_visual_effects()
+	if NetworkEntityManager:
+		for actor in NetworkEntityManager.active_entities.values():
+			if is_instance_valid(actor) and actor.has_method("stop_combat_visual_effects"):
+				actor.stop_combat_visual_effects()
+	if FloatingTextManager and FloatingTextManager.has_method("stop_combat_visual_effects"):
+		FloatingTextManager.stop_combat_visual_effects()
+
+
+func set_foreground_fps_limit(value: int) -> void:
+	current_foreground_fps_limit = ClientPerformanceProfile.sanitize_fps_limit(value)
+	_rebuild_performance_profile()
+	_refresh_focus_render_policy()
+	if OS.is_debug_build():
+		print("[FPS_LIMIT] cap=%d mode=%s" % [current_foreground_fps_limit, ClientPerformanceProfile.load_mode_name(current_performance_load_mode)])
+
+func set_performance_modes(load_mode: int, combat_mode: int) -> void:
+	var previously_low: bool = current_performance_load_mode == ClientPerformanceProfile.LOAD_LOW
+	current_performance_load_mode = ClientPerformanceProfile.sanitize_load_mode(load_mode)
+	current_combat_render_mode = ClientPerformanceProfile.sanitize_combat_mode(combat_mode)
+	_rebuild_performance_profile()
+	if is_instance_valid(current_map_node):
+		set_world_enhancement_enabled(current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY)
+	else:
+		world_enhancement_enabled = current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY
+	_apply_performance_profile()
+	# The visual simplification signal above has already detached SpriteFrames
+	# from ordinary monsters. Drop unreferenced animation/effect cache entries
+	# on entering low-resource mode, not on every frame or FPS change.
+	if current_performance_load_mode == ClientPerformanceProfile.LOAD_LOW and not previously_low:
+		if MonsterLoader and MonsterLoader.has_method("clear_runtime_cache"):
+			MonsterLoader.clear_runtime_cache()
+		if EffectLoader and EffectLoader.has_method("clear_runtime_cache"):
+			EffectLoader.clear_runtime_cache()
+
+func set_visual_simplification_modes(player_mode: int, monster_mode: int) -> void:
+	current_simplify_players_mode = ClientPerformanceProfile.sanitize_simplify_mode(player_mode)
+	current_simplify_monsters_mode = ClientPerformanceProfile.sanitize_simplify_mode(monster_mode)
+	_rebuild_performance_profile()
+	_apply_performance_profile()
+
+func get_simplify_players_mode() -> int:
+	return current_simplify_players_mode
+
+func get_simplify_monsters_mode() -> int:
+	return current_simplify_monsters_mode
+
+func get_performance_profile() -> Dictionary:
+	return current_performance_profile.duplicate(true)
+
+func get_performance_load_mode() -> int:
+	return current_performance_load_mode
+
+func get_combat_render_mode() -> int:
+	return current_combat_render_mode
+
+func _current_background_fps() -> int:
+	return maxi(1, int(current_performance_profile.get("background_fps", UNFOCUSED_MAX_FPS)))
+
+static func should_throttle_background_visuals(has_focus: bool, _world_active: bool) -> bool:
+	# Global policy: login, character select, world and AFK all treat
+	# unfocused/minimized windows as background presentation.
+	return not has_focus
+
+
+static func should_draw_afk_dashboard(has_focus: bool) -> bool:
+	# AFK never runs a continuous render loop. This only decides whether the
+	# focused dashboard may request an occasional manual frame.
+	return has_focus
+
+
+func request_afk_dashboard_frame() -> bool:
+	# Compatibility hook for HUD/tests. AFK focused mode uses a normal 20 FPS
+	# render loop; unfocused mode renders nothing.
+	return _afk_active and _window_has_focus
+
+
+static func fps_cap_for_focus(profile: Dictionary, has_focus: bool, world_active: bool) -> int:
+	if should_throttle_background_visuals(has_focus, world_active):
+		return maxi(1, int(profile.get("background_fps", UNFOCUSED_MAX_FPS)))
+	return configured_foreground_fps(profile)
+
+
+static func may_suspend_world_rendering(
+	presentation_finished: bool, has_map: bool, has_player: bool,
+	is_loading: bool, time_since_presentation_msec: int) -> bool:
+	# The render loop must stay alive while a black/loading overlay is
+	# fading, during the first world warmup, and throughout map changes.
+	return presentation_finished and has_map and has_player \
+		and not is_loading and time_since_presentation_msec >= WORLD_RENDER_GRACE_MSEC
+
+
+func _has_active_world_visuals() -> bool:
+	var since_presented: int = Time.get_ticks_msec() - _world_presented_msec \
+		if _world_presented_msec > 0 else 0
+	return may_suspend_world_rendering(
+		_world_ready_for_background_saving,
+		is_instance_valid(current_map_node), is_instance_valid(current_player),
+		is_changing_map or _startup_loading_overlay_active, since_presented)
+
+
+func notify_world_loading_overlay_hidden() -> void:
+	# Called ONLY after EntryManager/HUD has actually removed its opaque
+	# loading surface. Do not stop GPU drawing at the GameManager 100% mark.
+	if is_changing_map or not is_instance_valid(current_map_node) \
+		or not is_instance_valid(current_player):
+		return
+	_world_ready_for_background_saving = true
+	_world_presented_msec = Time.get_ticks_msec()
+	_refresh_focus_render_policy()
+	if OS.is_debug_build():
+		print("[WORLD_PRESENTED] render_loop=%s focus_internal=%s focus_os=%s grace_ms=%d" % [
+			str(RenderingServer.render_loop_enabled), str(_window_has_focus),
+			str(DisplayServer.window_is_focused()), WORLD_RENDER_GRACE_MSEC
+		])
+
+
+func _reconcile_world_render_policy(delta: float) -> void:
+	_focus_policy_poll_elapsed += delta
+	if _focus_policy_poll_elapsed < WORLD_FOCUS_POLL_INTERVAL_SECONDS:
+		return
+	_focus_policy_poll_elapsed = 0.0
+	var observed_focus: bool = _observe_window_foreground()
+	if observed_focus == _focus_poll_last_observed:
+		_focus_poll_same_readings += 1
+	else:
+		_focus_poll_last_observed = observed_focus
+		_focus_poll_same_readings = 1
+	# Missing/reordered Win32 focus notifications must not strand the
+	# renderer disabled until the player manually Alt+Tabs twice.
+	if observed_focus != _window_has_focus and _focus_poll_same_readings >= 2:
+		_set_window_focus_power_save(observed_focus)
+		if OS.is_debug_build():
+			_log_focus_power_save("focus_poll_reconciled")
+	# AFK dashboard renders at 20 FPS only while focused. Losing focus stops
+	# the render loop completely; simulation/network/fixed physics keep running.
+	var should_pause: bool = should_throttle_background_visuals(
+		_window_has_focus, _has_active_world_visuals())
+	var desired_rendering: bool = should_draw_afk_dashboard(_window_has_focus) if _afk_active else not should_pause
+	var desired_fps: int = AFK_MONITOR_FPS if _afk_active else fps_cap_for_focus(
+		current_performance_profile, _window_has_focus, _has_active_world_visuals())
+	if RenderingServer.render_loop_enabled != desired_rendering or Engine.max_fps != desired_fps:
+		_refresh_focus_render_policy()
+		if OS.is_debug_build():
+			_log_focus_power_save("render_policy_reconciled")
+	# Never do a cache sweep in the focus event. A brief Alt+Tab must keep
+	# all existing assets warm. Idle-only reclamation happens after 12s.
+	_try_trim_idle_background_caches()
+	_log_background_memory_checkpoint()
+
+
+func _refresh_focus_render_policy() -> void:
+	if _afk_active:
+		# AFK always caps the main loop at 20 FPS. Focused mode renders the
+		# low-cost dashboard; unfocused mode stops GPU rendering completely.
+		# Gameplay/network/fixed 60 Hz physics remain independent.
+		Engine.max_fps = AFK_MONITOR_FPS
+		if _window_has_focus:
+			RenderingServer.render_loop_enabled = true
+		else:
+			RenderingServer.render_loop_enabled = false
+		_set_background_visual_processing(not _window_has_focus)
+		return
+	var world_background: bool = should_throttle_background_visuals(
+		_window_has_focus, _has_active_world_visuals())
+	Engine.max_fps = fps_cap_for_focus(
+		current_performance_profile, _window_has_focus, _has_active_world_visuals())
+	_refresh_fps_vsync_policy()
+	RenderingServer.render_loop_enabled = not world_background
+	_set_background_visual_processing(world_background)
+
+
+static func configured_foreground_fps(profile: Dictionary) -> int:
+	# Never derive the foreground cap from Engine.max_fps: the engine may
+	# currently be limited to 10/20 FPS by the background/startup policy.
+	return maxi(0, int(profile.get("foreground_fps", 0)))
+
+
+func _apply_performance_profile() -> void:
+	_focused_max_fps = configured_foreground_fps(current_performance_profile)
+	_refresh_focus_render_policy()
+	if not should_render_combat_effects():
+		_stop_nonessential_combat_effects()
+	performance_profile_changed.emit(get_performance_profile())
+	_apply_low_resource_world_visual_policy()
+	if OS.is_debug_build():
+		print("[PERFORMANCE_PROFILE] mode=%s combat=%s player_simplify=%s monster_simplify=%s load=%d combat_id=%d foreground_fps=%d background_fps=%d players=%d monsters=%d effects=%d%% combat_fx_enabled=%s quality_enhanced=%s monster_aoi_base=%.0f ground_aoi_base=%.0f" % [
+			ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
+			ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
+			ClientPerformanceProfile.simplify_mode_name(current_simplify_players_mode),
+			ClientPerformanceProfile.simplify_mode_name(current_simplify_monsters_mode),
+			current_performance_load_mode,
+			current_combat_render_mode,
+			int(current_performance_profile.get("foreground_fps", 0)),
+			int(current_performance_profile.get("background_fps", 30)),
+			int(current_performance_profile.get("full_player_budget", 0)),
+			int(current_performance_profile.get("full_monster_budget", 0)),
+			int(current_performance_profile.get("effect_budget_percent", 100)),
+			str(should_render_combat_effects()),
+			str(current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY),
+			float(current_performance_profile.get("monster_aoi_enter_radius", 1800.0)),
+			float(current_performance_profile.get("ground_aoi_enter_radius", 2000.0)),
+		])
+
+func set_startup_loading_overlay_active(active: bool) -> void:
+	# Startup/login obey the same background/minimized presentation policy.
+	if _startup_loading_overlay_active == active:
+		return
+	_startup_loading_overlay_active = active
+	_refresh_focus_render_policy()
+	if OS.is_debug_build():
+		_log_focus_power_save("startup_overlay_on" if active else "startup_overlay_off")
+
+
+# Some Windows launches deliver a focus-out notification while
+# window_is_focused() already reports true. Until focus-in is delivered the
+# new window is incorrectly capped at startup 10 FPS, making typing feel
+# delayed. Reconcile only during bootstrap, requiring three consistent OS
+# reads to avoid single-frame notification/query ordering races.
+func reconcile_startup_window_focus() -> void:
+	if not _startup_loading_overlay_active:
+		return
+	var observed_focus: bool = _observe_window_foreground()
+	if observed_focus == _window_has_focus:
+		_startup_focus_observed_frames = 0
+		return
+	_startup_focus_observed_frames += 1
+	if _startup_focus_observed_frames >= 3:
+		_startup_focus_observed_frames = 0
+		_set_window_focus_power_save(observed_focus)
+		if OS.is_debug_build():
+			_log_focus_power_save("startup_focus_reconciled")
+
+
+func _notification(what: int) -> void :
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_set_window_focus_power_save(false)
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		# A restored/minimized Windows notification can arrive before the
+		# window mode settles. Never treat MINIMIZED as foreground.
+		_set_window_focus_power_save(_observe_window_foreground())
+
+static func should_trim_background_caches(has_world: bool, last_trim_msec: int, now_msec: int) -> bool:
+	return has_world and (last_trim_msec <= 0 or now_msec - last_trim_msec >= BACKGROUND_CACHE_TRIM_COOLDOWN_MSEC)
+
+
+static func should_run_background_cache_sweep(
+		has_focus: bool, has_world: bool, unfocused_ms: int,
+		last_trim_msec: int, now_msec: int) -> bool:
+	return not has_focus and unfocused_ms >= BACKGROUND_CACHE_TRIM_DELAY_MSEC \
+		and should_trim_background_caches(has_world, last_trim_msec, now_msec)
+
+
+
+# These snapshots are observability only. They do not evict/retain resources.
+# get_reference_count() is indicative, not proof that Windows freed memory.
+static func inspect_background_cache(cache: Dictionary, keep_recent: int) -> Dictionary:
+	var keys: Array = cache.keys()
+	var older: int = maxi(0, keys.size() - maxi(0, keep_recent))
+	var stats: Dictionary = {
+		"entries": keys.size(), "warm": keys.size() - older,
+		"held": 0, "idle": 0, "unknown": 0
+	}
+	for i in range(older):
+		var resource: RefCounted = cache.get(keys[i]) as RefCounted
+		if resource == null:
+			stats["unknown"] += 1
+		elif resource.get_reference_count() <= 2:
+			stats["idle"] += 1
+		else:
+			stats["held"] += 1
+	return stats
+
+
+func _background_memory_cache_report() -> Dictionary:
+	var sources: Array = [
+		["monster", MonsterLoader, "_cache", 12],
+		["doll", DollLoader, "_cache", 12],
+		["sr", DollLoader, "_sr_cache", 4],
+		["sr_effect", DollLoader, "_sr_effect_cache", 2],
+		["pet", PetLoader, "_frames_cache", 8],
+		["effect", EffectLoader, "_effect_cache", 8],
+		["icon", ItemLoader, "_icon_cache", 48],
+		["photo", ItemLoader, "_photo_cache", 8],
+		["ground", ItemLoader, "_ground_cache", 24],
+		["skill", SkillLoader, "_icon_cache", 24],
+		["sound", AudioManager, "se_cache", 32],
+		["bgm", AudioManager, "_map_bgm_cache", 3],
+	]
+	var totals: Dictionary = {"entries": 0, "warm": 0, "held": 0, "idle": 0}
+	var labels: PackedStringArray = []
+	for spec in sources:
+		var node: Node = spec[1] as Node
+		if not is_instance_valid(node):
+			continue
+		var value: Variant = node.get(str(spec[2]))
+		if not value is Dictionary:
+			continue
+		var cache: Dictionary = value
+		var current: Dictionary = {"entries": 0, "warm": 0, "held": 0, "idle": 0}
+		if str(spec[0]) == "doll":
+			for category in cache.values():
+				if category is Dictionary:
+					var nested: Dictionary = inspect_background_cache(category, int(spec[3]))
+					for field in current.keys():
+						current[field] += int(nested[field])
+		else:
+			current = inspect_background_cache(cache, int(spec[3]))
+		for field in totals.keys():
+			totals[field] += int(current[field])
+		labels.append("%s:%d/%d/%d/%d" % [
+			str(spec[0]), int(current["entries"]), int(current["warm"]),
+			int(current["held"]), int(current["idle"])
+		])
+	totals["detail"] = ",".join(labels)
+	return totals
+
+
+func _log_background_memory(event_name: String, removed: int = 0) -> void:
+	if not OS.is_debug_build():
+		return
+	var info: Dictionary = _background_memory_cache_report()
+	var age_ms: int = Time.get_ticks_msec() - _background_focus_lost_msec \
+		if _background_focus_lost_msec > 0 else 0
+	var entities: int = NetworkEntityManager.active_entities.size() \
+		if NetworkEntityManager else 0
+	print("[BACKGROUND_MEMORY] pid=%d event=%s age_ms=%d focus=%s world=%s afk=%s fps=%d render=%s static_mb=%.2f static_peak_mb=%.2f texture_mb=%.2f video_mb=%.2f objects=%d nodes=%d entities=%d cache_entries=%d cache_warm=%d cache_held=%d cache_idle=%d removed=%d loader_counts=%s" % [
+		OS.get_process_id(), event_name, age_ms,
+		str(_window_has_focus), str(_has_active_world_visuals()),
+		str(_afk_active), Engine.max_fps, str(RenderingServer.render_loop_enabled),
+		_get_process_memory_mb(),
+		float(OS.get_static_memory_peak_usage()) / 1048576.0,
+		float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
+		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+		int(Performance.get_monitor(Performance.OBJECT_COUNT)),
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+		entities, int(info["entries"]), int(info["warm"]),
+		int(info["held"]), int(info["idle"]), removed, str(info["detail"])
+	])
+
+
+func _log_background_memory_checkpoint() -> void:
+	if not OS.is_debug_build() or _window_has_focus or _background_focus_lost_msec <= 0:
+		return
+	var elapsed: int = Time.get_ticks_msec() - _background_focus_lost_msec
+	var thresholds: Array[int] = [15000, 60000, 180000]
+	if _background_memory_checkpoint_stage >= thresholds.size():
+		return
+	var threshold: int = thresholds[_background_memory_checkpoint_stage]
+	if elapsed >= threshold:
+		_log_background_memory("background_%ds" % int(threshold / 1000))
+		_background_memory_checkpoint_stage += 1
+
+
+func _try_trim_idle_background_caches() -> void:
+	if _background_focus_lost_msec <= 0 or _window_has_focus:
+		return
+	var now_msec: int = Time.get_ticks_msec()
+	if not should_run_background_cache_sweep(
+			_window_has_focus, _has_active_world_visuals(),
+			now_msec - _background_focus_lost_msec,
+			_last_background_cache_trim_msec, now_msec):
+		return
+	_last_background_cache_trim_msec = now_msec
+	_log_background_memory("trim_before")
+	var before_mb: float = _get_process_memory_mb()
+	var removed: int = _trim_unfocused_runtime_caches()
+	_log_background_memory("trim_after", removed)
+	# This counts released cache entries, NOT reclaimed process RAM. The
+	# allocator/OS may retain pages; never infer MB saved from this count.
+	if OS.is_debug_build():
+		print("[BACKGROUND_CACHE_TRIM] removed_entries=%d before_static_mb=%.2f after_static_mb=%.2f focus_age_ms=%d" % [
+			removed, before_mb, _get_process_memory_mb(),
+			now_msec - _background_focus_lost_msec
+		])
+
+
+func _set_window_focus_power_save(has_focus: bool) -> void :
+	if _window_has_focus == has_focus:
+		return
+	_window_has_focus = has_focus
+	_focus_last_change_usec = Time.get_ticks_usec()
+	_focus_change_count += 1
+	# The frame spanning focus-in/out includes the intentional background FPS cap.
+	# It cannot be assigned to foreground lag: restart the gap window.
+	_frame_gap_last_usec = _focus_last_change_usec
+
+	var master_bus_index := AudioServer.get_bus_index("Master")
+	if not has_focus:
+		_background_focus_lost_msec = Time.get_ticks_msec()
+		_background_memory_checkpoint_stage = 0
+		_focused_max_fps = configured_foreground_fps(current_performance_profile)
+		_refresh_focus_render_policy()
+		# Leave all animation, HUD, map, BGM and recently used assets warm.
+		# No synchronous unloading is permitted in an Alt+Tab handler.
+		_log_background_memory("focus_out")
+		if master_bus_index >= 0:
+			if not _afk_active:
+				_master_bus_was_muted_before_focus_loss = AudioServer.is_bus_mute(master_bus_index)
+			AudioServer.set_bus_mute(master_bus_index, true)
+	else:
+		_log_background_memory("focus_in_before")
+		_background_focus_lost_msec = 0
+		_refresh_focus_render_policy()
+		_log_background_memory("focus_in_after")
+
+		if master_bus_index >= 0:
+			AudioServer.set_bus_mute(
+				master_bus_index,
+				_afk_active or _master_bus_was_muted_before_focus_loss
+			)
+
+	_log_focus_power_save("focus_in" if has_focus else "focus_out")
+
+func _set_background_visual_processing(paused: bool) -> void :
+	if CursorManager:
+		# AFK keeps only the tiny custom cursor process alive while the focused
+		# dashboard is visible. World/minimap/effect processing stays suspended.
+		CursorManager.set_afk_custom_cursor_enabled(_afk_active)
+		CursorManager.set_process(_afk_active or not paused)
+	if is_instance_valid(current_day_night_overlay):
+		current_day_night_overlay.set_process(not paused)
+	if is_instance_valid(current_hud):
+		# AFK never needs the 2D world minimap. Only the focused dashboard
+		# itself may refresh; background focus suspends its timer entirely.
+		if current_hud.has_method("set_background_visuals_paused"):
+			current_hud.set_background_visuals_paused(paused or _afk_active)
+		if current_hud.has_method("set_afk_dashboard_updates_enabled"):
+			current_hud.set_afk_dashboard_updates_enabled(_afk_active and _window_has_focus)
+
+func _release_background_optional_ui() -> int:
+	# Unfocused is intentionally lighter than AFK. Keep the active map,
+	# entities and live textures warm, but discard optional hidden windows.
+	var released: int = 0
+	if is_instance_valid(current_hud) and current_hud.has_method("release_afk_visual_preloads"):
+		released += int(current_hud.release_afk_visual_preloads())
+	for kind in _prewarmed_hud_windows.keys().duplicate():
+		var window: Control = _prewarmed_hud_windows.get(kind, null) as Control
+		if is_instance_valid(window):
+			window.free()
+			released += 1
+		_prewarmed_hud_windows.erase(kind)
+	return released
+
+
+func _trim_unfocused_runtime_caches() -> int:
+	# Leave map/entity presentation, inventory data, networking and combat
+	# simulation alone. AFK is the only mode that strips live presentation.
+	var removed: int = _release_background_optional_ui()
+	for loader in [DollLoader, MonsterLoader, PetLoader, EffectLoader,
+			ItemLoader, SkillLoader, AudioManager]:
+		if loader and loader.has_method("trim_unreferenced_runtime_cache"):
+			removed += int(loader.trim_unreferenced_runtime_cache())
+	return removed
+
 func _ready() -> void :
+	_window_has_focus = _observe_window_foreground()
+	_focused_max_fps = Engine.max_fps
+	if DisplayServer.get_name() != "headless":
+		_saved_vsync_mode = DisplayServer.window_get_vsync_mode()
+	_apply_performance_profile()
+	_focus_last_change_usec = Time.get_ticks_usec()
+	if not _window_has_focus:
+		_window_has_focus = true
+		_set_window_focus_power_save(false)
+	else:
+		_log_focus_power_save("initial")
 
 	if NetworkManager:
 		NetworkManager.change_map_received.connect(_on_change_map_received)
@@ -145,46 +1605,181 @@ func _apply_current_festival_theme() -> Dictionary:
 			"changed": 0, 
 			"failed": 0, 
 		}
-	return FestivalThemeManager.apply_theme_to_map(current_map_node, current_festival_theme)
+	set_frame_gap_stage("festival_theme_apply")
+	var started_usec := Time.get_ticks_usec()
+	var result: Dictionary = FestivalThemeManager.apply_theme_to_map(current_map_node, current_festival_theme)
+	var elapsed_ms := float(Time.get_ticks_usec() - started_usec) / 1000.0
+	if elapsed_ms >= 50.0:
+		print("[INIT_TIMING] festival_theme_ms=%.2f" % elapsed_ms)
+	return result
 
 func _init_buildings_with_diagnostics(source_map_id: int, target_map_id: int) -> void :
 	if not BuildingManager:
 		return
+	await get_tree().process_frame
+	set_frame_gap_stage("building_init")
 	var started_usec: = Time.get_ticks_usec()
 	BuildingManager.init_buildings()
+	var duration_ms := float(Time.get_ticks_usec() - started_usec) / 1000.0
+	if duration_ms >= 50.0:
+		print("[INIT_TIMING] building_init_ms=%.2f" % duration_ms)
 	_trace_map_change("buildings_initialized", source_map_id, target_map_id, {
-		"duration_ms": float(Time.get_ticks_usec() - started_usec) / 1000.0, 
+		"duration_ms": duration_ms, 
 	})
+	set_frame_gap_stage("world_running")
 
-func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vector2) -> bool:
+static func should_release_initial_spawn_gate(elapsed_msec: int) -> bool:
+	return elapsed_msec >= INITIAL_SPAWN_GATE_MAX_MSEC
+
+
+func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vector2, progress_callback: Callable = Callable()) -> bool:
+	# Reset inherited background state before the first visible loading
+	# frame: a previous focus-out must not black out this startup overlay.
+	_world_ready_for_background_saving = false
+	_world_presented_msec = 0
+	_refresh_focus_render_policy()
+	_initial_loading_progress_value = 0.0
 	var raw_num_str = map_id.replace("map", "")
-	var formatted_map_name = "Map%02d" % int(raw_num_str)
+	var target_map_id: int = int(raw_num_str)
+	var formatted_map_name = "Map%02d" % target_map_id
 	var map_path = "res://maps/" + formatted_map_name + ".scn"
+	_last_world_map_audit_path = map_path
+	var initial_started_usec: int = Time.get_ticks_usec()
+	# Network entity packets may arrive immediately, but instantiating dozens of
+	# monsters while the first map/player/PaperDoll/HUD are initializing creates
+	# main-thread contention. Queue them now and drain only after the critical
+	# first-world setup is complete.
+	if NetworkEntityManager and NetworkEntityManager.has_method("set_spawn_queue_paused"):
+		NetworkEntityManager.set_spawn_queue_paused(true)
+
+	_trace_map_change("initial_enter_started", 0, target_map_id)
+	_report_initial_loading_progress(progress_callback, 5.0, "準備載入地圖")
+	await get_tree().process_frame
 
 	if not ResourceLoader.exists(map_path):
+		_trace_map_change("initial_map_missing", 0, target_map_id)
 		printerr("❌ [GameManager] 嚴重錯誤！找不到地圖檔案：", map_path)
+		if NetworkEntityManager and NetworkEntityManager.has_method("set_spawn_queue_paused"):
+			NetworkEntityManager.set_spawn_queue_paused(false)
 		return false
 
-	var map_resource: = load(map_path) as PackedScene
+	var request_error: int = ResourceLoader.load_threaded_request(
+		map_path, "", false, ResourceLoader.CACHE_MODE_IGNORE_DEEP
+	)
+	if request_error != OK:
+		_trace_map_change("initial_load_request_error", 0, target_map_id, {"error": request_error})
+		if NetworkEntityManager and NetworkEntityManager.has_method("set_spawn_queue_paused"):
+			NetworkEntityManager.set_spawn_queue_paused(false)
+		return false
+
+	var map_resource: PackedScene = null
+	while true:
+		var progress: Array = []
+		var status: int = ResourceLoader.load_threaded_get_status(map_path, progress)
+		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			var threaded_progress := float(progress[0]) if not progress.is_empty() else 0.0
+			_report_initial_loading_progress(progress_callback, 5.0 + threaded_progress * 18.0, "載入地圖資源")
+			await get_tree().process_frame
+			continue
+		if status == ResourceLoader.THREAD_LOAD_LOADED:
+			var load_get_started_usec: int = Time.get_ticks_usec()
+			map_resource = ResourceLoader.load_threaded_get(map_path) as PackedScene
+			_trace_map_change("initial_load_completed", 0, target_map_id, {
+				"load_get_ms": float(Time.get_ticks_usec() - load_get_started_usec) / 1000.0,
+			})
+			_report_initial_loading_progress(progress_callback, 23.0, "地圖資源載入完成")
+			await get_tree().process_frame
+			break
+		_trace_map_change("initial_load_failed", 0, target_map_id, {"status": status})
+		if NetworkEntityManager and NetworkEntityManager.has_method("set_spawn_queue_paused"):
+			NetworkEntityManager.set_spawn_queue_paused(false)
+		return false
+
 	if map_resource == null:
 		printerr("[GameManager] 地圖資源載入失敗（可能有缺少或無法載入的相依資源）: ", map_path)
+		if NetworkEntityManager and NetworkEntityManager.has_method("set_spawn_queue_paused"):
+			NetworkEntityManager.set_spawn_queue_paused(false)
 		return false
 
+	await get_tree().process_frame
+	var instantiate_started_usec: int = Time.get_ticks_usec()
+	_report_initial_loading_progress(progress_callback, 26.0, "建立地圖")
+	await get_tree().process_frame
+	set_frame_gap_stage("initial_map_instantiate")
 	current_map_node = map_resource.instantiate()
+
+	# Blocking.dat is the authoritative navigation/collision source. Older map
+	# scenes may still contain a huge legacy CollisionContainer TileMapLayer.
+	# Remove it before the map enters SceneTree so Godot does not register/build
+	# thousands of unused collision cells during initial add_child().
+	var removed_collision_nodes: Array[String] = []
+	for collision_name: String in ["CollisionContainer", "CollisionLayer"]:
+		var legacy_collision := current_map_node.get_node_or_null(collision_name)
+		if is_instance_valid(legacy_collision):
+			current_map_node.remove_child(legacy_collision)
+			legacy_collision.free()
+			removed_collision_nodes.append(collision_name)
+	if OS.is_debug_build() and not removed_collision_nodes.is_empty():
+		print("[MAP_INIT_OPT] removed_collision_nodes=%s" % ",".join(removed_collision_nodes))
+
+	# Keep the first world completely hidden while its nodes initialize.
+	# The entry loading overlay remains the only visible surface until the
+	# readiness gate at the end of this function has completed.
+	current_map_node.visible = false
+	var instantiate_ms: float = float(Time.get_ticks_usec() - instantiate_started_usec) / 1000.0
+	_trace_map_change("initial_map_instantiated", 0, target_map_id, {
+		"instantiate_ms": instantiate_ms,
+	})
+
+	await get_tree().process_frame
+	var add_child_started_usec: int = Time.get_ticks_usec()
+	_report_initial_loading_progress(progress_callback, 33.0, "初始化地圖")
+	await get_tree().process_frame
+
+	set_frame_gap_stage("initial_map_add_child")
+	var root_add_started_usec: int = Time.get_ticks_usec()
 	get_tree().root.add_child(current_map_node)
-	_apply_current_festival_theme()
+	var add_child_ms: float = float(Time.get_ticks_usec() - root_add_started_usec) / 1000.0
+	if OS.is_debug_build():
+		print("[MAP_INIT_TIMING] add_child_ms=%.2f" % add_child_ms)
+	_trace_map_change("initial_map_added", 0, target_map_id, {
+		"instantiate_ms": instantiate_ms,
+		"add_child_ms": add_child_ms,
+	})
 
-	if BuildingManager: BuildingManager.call_deferred("init_buildings")
+	# Blocking.dat is authoritative for navigation. Do not rebuild a huge
+	# TileMapLayer collision grid here; the player runtime collision mask does
+	# not use those map collision layers.
+	_report_initial_loading_progress(progress_callback, 38.0, "準備角色")
+	await get_tree().process_frame
 
-	var player_scene = ResourceLoader.load("res://player.tscn", "", ResourceLoader.CACHE_MODE_REPLACE)
+	_report_initial_loading_progress(progress_callback, 42.0, "建立角色")
+	await get_tree().process_frame
+	var player_scene = ResourceLoader.load("res://player.tscn")
+	set_frame_gap_stage("player_instantiate")
 	current_player = player_scene.instantiate()
 	if current_player.has_method("parse_login_server_data"):
 		current_player.parse_login_server_data(char_data)
 
+	# SkillSync can arrive immediately after EnterWorldSuccess, before the
+	# Player/HUD has been instantiated. Replay the cached authoritative list
+	# now that PlayerData exists instead of losing the one-shot signal.
+	if NetworkManager and NetworkManager.has_latest_skill_sync and "data_model" in current_player:
+		current_player.data_model.update_skills(
+			NetworkManager.latest_skill_sync
+		)
+
 	current_player.global_position = spawn_position
-	if "target_position" in current_player:
+	if current_player.has_method("reset_map_navigation_state"):
+		# EnterWorld's MapID is authoritative. Keep player navigation, cached
+		# walkable position and loaded map in sync from the first world frame.
+		current_player.reset_map_navigation_state(target_map_id, spawn_position)
+	elif "target_position" in current_player:
 		current_player.target_position = spawn_position
 
+	_report_initial_loading_progress(progress_callback, 47.0, "初始化角色")
+	await get_tree().process_frame
+	set_frame_gap_stage("player_add_child")
 	if current_map_node.has_node("Entities"):
 		current_map_node.get_node("Entities").add_child(current_player)
 	else:
@@ -196,26 +1791,170 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		camera.reset_smoothing()
 		camera.force_update_scroll()
 
-	_ensure_day_night_overlay()
-	set_world_enhancement_enabled(_load_world_enhancement_setting())
+	_apply_low_resource_world_visual_policy()
+	set_world_enhancement_enabled(current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY)
 
-	var hud_scene = ResourceLoader.load("res://game_hud.tscn", "", ResourceLoader.CACHE_MODE_REPLACE)
+	_report_initial_loading_progress(progress_callback, 54.0, "載入介面")
+	await get_tree().process_frame
+	var hud_scene = ResourceLoader.load("res://game_hud.tscn")
+	set_frame_gap_stage("hud_instantiate")
 	current_hud = hud_scene.instantiate()
+	current_hud.visible = false
+	_report_initial_loading_progress(progress_callback, 59.0, "建立遊戲介面")
+	await get_tree().process_frame
+	set_frame_gap_stage("hud_add_child")
 	get_tree().root.add_child(current_hud)
+	_report_initial_loading_progress(progress_callback, 64.0, "初始化遊戲介面")
+	await get_tree().process_frame
+	set_frame_gap_stage("hud_initialize")
 	current_hud.initialize_hud(current_player)
 
+	if CursorManager:
+		CursorManager.set_cursor_state("normal")
 
-	if CursorManager: CursorManager.set_cursor_state("normal")
+	# Do not reveal the first world until every deferred/queued initialization
+	# task is really complete. The entry loading overlay stays visible while
+	# this readiness gate is running.
+	_report_initial_loading_progress(progress_callback, 68.0, "載入角色外觀")
+	var visual_wait_started_usec: int = Time.get_ticks_usec()
+	while is_instance_valid(current_player) and current_player.has_method("is_initial_visual_ready") and not current_player.is_initial_visual_ready():
+		var visual_elapsed_ms: float = float(Time.get_ticks_usec() - visual_wait_started_usec) / 1000.0
+		_report_initial_loading_progress(
+			progress_callback,
+			minf(72.0, 68.0 + visual_elapsed_ms / 180.0),
+			"載入角色外觀"
+		)
+		await get_tree().process_frame
 
-	AudioManager.play_map_bgm(map_id.to_int())
+	_report_initial_loading_progress(progress_callback, 73.0, "初始化遊戲資料")
+	var hud_wait_started_usec: int = Time.get_ticks_usec()
+	while is_instance_valid(current_hud) and current_hud.has_method("is_initial_hud_ready") and not current_hud.is_initial_hud_ready():
+		var hud_elapsed_ms: float = float(Time.get_ticks_usec() - hud_wait_started_usec) / 1000.0
+		_report_initial_loading_progress(
+			progress_callback,
+			minf(76.0, 73.0 + hud_elapsed_ms / 220.0),
+			"初始化遊戲資料"
+		)
+		await get_tree().process_frame
 
+	# Heavy optional windows are instantiated while the loading overlay is still
+	# covering the world, one per frame. Their scenes were already prewarmed on
+	# login/character-select screens, so first user opening is only a visibility
+	# toggle instead of a first-load hitch.
+	if is_instance_valid(current_hud) and current_hud.has_method("prepare_lazy_windows_before_reveal"):
+		_report_initial_loading_progress(progress_callback, 77.0, "預先準備遊戲視窗")
+		await current_hud.prepare_lazy_windows_before_reveal()
+
+	_report_initial_loading_progress(progress_callback, 79.0, "套用地圖環境")
+	await get_tree().process_frame
+	_apply_current_festival_theme()
+	await get_tree().process_frame
+
+	_report_initial_loading_progress(progress_callback, 81.0, "初始化地圖物件")
+	if BuildingManager:
+		await _init_buildings_with_diagnostics(0, target_map_id)
+	await get_tree().process_frame
+
+	_report_initial_loading_progress(progress_callback, 83.0, "同步地圖角色")
+	var initial_spawn_total: int = 0
+	if NetworkEntityManager:
+		if NetworkEntityManager.has_method("get_spawn_queue_remaining_count"):
+			initial_spawn_total = int(NetworkEntityManager.get_spawn_queue_remaining_count())
+		if NetworkEntityManager.has_method("set_initial_spawn_boost"):
+			NetworkEntityManager.set_initial_spawn_boost(true)
+		if NetworkEntityManager.has_method("set_spawn_queue_paused"):
+			NetworkEntityManager.set_spawn_queue_paused(false)
+	await get_tree().process_frame
+
+	var spawn_gate_started_msec: int = Time.get_ticks_msec()
+	while NetworkEntityManager and NetworkEntityManager.has_method("is_initial_spawn_queue_idle") and not NetworkEntityManager.is_initial_spawn_queue_idle():
+		if should_release_initial_spawn_gate(Time.get_ticks_msec() - spawn_gate_started_msec):
+			var still_queued: int = int(NetworkEntityManager.get_spawn_queue_remaining_count()) \
+				if NetworkEntityManager.has_method("get_spawn_queue_remaining_count") else -1
+			push_warning("[INITIAL_SPAWN_GATE_TIMEOUT] pending=%d elapsed_ms=%d; presenting world and draining existing queue without dropping entities" % [
+				still_queued, Time.get_ticks_msec() - spawn_gate_started_msec
+			])
+			break
+		var remaining_spawns: int = 0
+		if NetworkEntityManager.has_method("get_spawn_queue_remaining_count"):
+			remaining_spawns = int(NetworkEntityManager.get_spawn_queue_remaining_count())
+			initial_spawn_total = maxi(initial_spawn_total, remaining_spawns)
+
+		if remaining_spawns > 0:
+			var spawn_progress: float = 0.0
+			if initial_spawn_total > 0:
+				spawn_progress = 1.0 - float(remaining_spawns) / float(initial_spawn_total)
+			_report_initial_loading_progress(
+				progress_callback,
+				83.0 + clampf(spawn_progress, 0.0, 1.0) * 8.0,
+				"同步地圖角色"
+			)
+		else:
+			var settle_progress: float = 0.0
+			if NetworkEntityManager.has_method("get_initial_spawn_settle_progress"):
+				settle_progress = float(NetworkEntityManager.get_initial_spawn_settle_progress())
+			_report_initial_loading_progress(
+				progress_callback,
+				91.0 + clampf(settle_progress, 0.0, 1.0) * 3.0,
+				"確認地圖同步"
+			)
+		await get_tree().process_frame
+
+	_report_initial_loading_progress(progress_callback, 94.0, "地圖角色同步完成")
+	if NetworkEntityManager and NetworkEntityManager.has_method("set_initial_spawn_boost"):
+		NetworkEntityManager.set_initial_spawn_boost(false)
+
+	# Warm the first rendered world frame while EntryManager's loading overlay
+	# still covers the screen. Setting these visible only at the final reveal
+	# concentrated CanvasItem/render registration into a 200-260 ms hitch.
+	_report_initial_loading_progress(progress_callback, 96.0, "預熱畫面")
+	set_frame_gap_stage("world_render_warmup")
+	if is_instance_valid(current_map_node):
+		current_map_node.visible = true
+	if is_instance_valid(current_hud):
+		current_hud.visible = true
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	_report_initial_loading_progress(progress_callback, 98.0, "載入背景音樂")
+	await AudioManager.play_map_bgm(map_id.to_int())
+
+	# The world has already rendered behind the loading overlay. Keep this stage
+	# as a diagnostic marker; the eventual overlay fade should now be cheap.
+	set_frame_gap_stage("world_reveal")
+	await get_tree().process_frame
+
+	# Optional heavy reference UI is no longer part of time-to-world. Warm it in
+	# small batches only after the player can already see and control the world.
+	if is_instance_valid(current_hud) and current_hud.has_method("start_post_reveal_background_prewarm"):
+		current_hud.start_post_reveal_background_prewarm()
+
+	set_frame_gap_stage("world_ready")
+	# GameManager has built the world, but EntryManager still owns the black
+	# loading overlay and must send WorldReady / fade it out. Keep rendering
+	# enabled until notify_world_loading_overlay_hidden() is called.
+	_trace_map_change("initial_enter_completed", 0, target_map_id, {
+		"total_ms": float(Time.get_ticks_usec() - initial_started_usec) / 1000.0,
+	})
+	_report_initial_loading_progress(progress_callback, 100.0, "載入完成")
+	await get_tree().process_frame
+	log_world_visual_audit("world_enter_ready")
 	return true
 
-
 func cleanup_and_return_to_login() -> void :
+	log_world_visual_audit("logout_before")
+	_log_afk_memory_audit("logout_before")
+	_reset_afk_mode()
+	# Break large dynamic visual references before queue_free reaches the
+	# frame boundary. Logical entity state is untouched.
+	_set_afk_dynamic_visuals_suspended(true)
+	_world_ready_for_background_saving = false
 	_cancel_active_map_transition("cleanup_and_return_to_login")
 	_cancel_train_travel("cleanup_and_return_to_login")
-	AudioManager.stop_bgm()
+	if AudioManager and AudioManager.has_method("release_world_audio_for_login"):
+		AudioManager.release_world_audio_for_login()
+	else:
+		AudioManager.stop_bgm()
 
 
 	if is_instance_valid(current_player):
@@ -245,7 +1984,12 @@ func cleanup_and_return_to_login() -> void :
 		GlobalTempData.character_list = []
 
 
+	# Returning to login restores smooth controls even if unfocused.
+	_world_presented_msec = 0
+	_refresh_focus_render_policy()
+	log_world_visual_audit("logout_cleanup_scheduled")
 	get_tree().change_scene_to_file("res://entry_manager.tscn")
+	call_deferred("_audit_login_after_logout")
 
 func _clear_visual_runtime_caches() -> void :
 	if DollLoader and DollLoader.has_method("clear_runtime_cache"):
@@ -256,6 +2000,32 @@ func _clear_visual_runtime_caches() -> void :
 		EffectLoader.clear_runtime_cache()
 	if PetLoader and PetLoader.has_method("clear_runtime_cache"):
 		PetLoader.clear_runtime_cache()
+	if ItemLoader and ItemLoader.has_method("clear_runtime_cache"):
+		ItemLoader.clear_runtime_cache()
+	if SkillLoader and SkillLoader.has_method("clear_runtime_cache"):
+		SkillLoader.clear_runtime_cache()
+	if AudioManager and AudioManager.has_method("clear_runtime_cache"):
+		AudioManager.clear_runtime_cache()
+	PaperDollEngine.clear_visual_runtime_cache()
+	FestivalThemeManager.clear_texture_cache()
+	for kind in _prewarmed_hud_windows.keys().duplicate():
+		var window = _prewarmed_hud_windows.get(kind, null)
+		if is_instance_valid(window):
+			window.free()
+	_prewarmed_hud_windows.clear()
+	if is_instance_valid(current_hud) and current_hud.has_method("release_afk_visual_preloads"):
+		current_hud.release_afk_visual_preloads()
+
+func _apply_low_resource_world_visual_policy() -> void:
+	# Day/night is purely visual; the server's world clock and player actions
+	# continue unchanged. Do not instantiate its overlay in low-resource mode.
+	if not is_instance_valid(current_map_node):
+		return
+	if current_performance_load_mode == ClientPerformanceProfile.LOAD_LOW:
+		_remove_day_night_overlay()
+	else:
+		_ensure_day_night_overlay()
+
 
 func _ensure_day_night_overlay() -> void :
 	if not is_instance_valid(current_day_night_overlay):
@@ -269,16 +2039,6 @@ func _remove_day_night_overlay() -> void :
 	if is_instance_valid(current_day_night_overlay):
 		current_day_night_overlay.queue_free()
 	current_day_night_overlay = null
-
-func _load_world_enhancement_setting() -> bool:
-	var config: = ConfigFile.new()
-	if config.load(GameConstants.CLIENT_SETTINGS_PATH) != OK:
-		return GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
-	return bool(config.get_value(
-		GameConstants.SETTING_SECTION_GAME, 
-		GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED, 
-		GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
-	))
 
 func set_world_enhancement_enabled(enabled: bool) -> void :
 	world_enhancement_enabled = enabled
@@ -492,6 +2252,13 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 
 
 	is_changing_map = true
+	# The HUD loading overlay and its 0.4s fade must remain drawable even
+	# for a previously-unfocused client. Re-enable savings after HUD hides.
+	_world_ready_for_background_saving = false
+	_world_presented_msec = 0
+	_refresh_focus_render_policy()
+	set_frame_gap_stage("map_transition_loading")
+	log_performance_checkpoint("map_transition_begin")
 
 
 	if is_instance_valid(current_player):
@@ -509,6 +2276,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 
 	var formatted_map_name = "Map%02d" % target_map_id
 	var map_path = "res://maps/" + formatted_map_name + ".scn"
+	_last_world_map_audit_path = map_path
 
 	if not ResourceLoader.exists(map_path):
 		_trace_map_change("map_missing", source_map_id, target_map_id)
@@ -520,7 +2288,9 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 		return
 
 
-	var load_request_error: = ResourceLoader.load_threaded_request(map_path)
+	var load_request_error: = ResourceLoader.load_threaded_request(
+		map_path, "", false, ResourceLoader.CACHE_MODE_IGNORE_DEEP
+	)
 	_trace_map_change("load_requested", source_map_id, target_map_id)
 	if load_request_error != OK:
 		_trace_map_change("load_request_error", source_map_id, target_map_id, {"error": load_request_error})
@@ -531,6 +2301,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 		return
 
 
+	set_frame_gap_stage("map_transition_cleanup")
 	var clear_started_usec: = Time.get_ticks_usec()
 	var cleared_entities: Dictionary = {}
 	if NetworkEntityManager:
@@ -553,8 +2324,11 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 				max_recorded_progress = progress[0]
 
 
-			if is_instance_valid(current_hud) and current_hud.loading_bar:
-				current_hud.loading_bar.value = max_recorded_progress * 100.0
+			if is_instance_valid(current_hud) and current_hud.has_method("set_map_loading_progress"):
+				current_hud.set_map_loading_progress(minf(
+					MAP_LOADING_RESOURCE_PROGRESS_MAX,
+					max_recorded_progress * MAP_LOADING_RESOURCE_PROGRESS_MAX
+				))
 
 			await get_tree().process_frame
 			if not _is_map_transition_current(transition_id):
@@ -568,8 +2342,8 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 				"load_get_ms": float(Time.get_ticks_usec() - load_get_started_usec) / 1000.0, 
 				"progress": max_recorded_progress, 
 			})
-			if is_instance_valid(current_hud) and current_hud.loading_bar:
-				current_hud.loading_bar.value = 100.0
+			if is_instance_valid(current_hud) and current_hud.has_method("set_map_loading_progress"):
+				current_hud.set_map_loading_progress(MAP_LOADING_RESOURCE_PROGRESS_MAX)
 			break
 
 		else:
@@ -603,31 +2377,71 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 	await get_tree().process_frame
 	if not _is_map_transition_current(transition_id):
 		return
-	_clear_visual_runtime_caches()
+	# Keep reusable visual caches across normal map transitions. Clearing them
+	# here forces large SpriteFrames/Texture rebuilds on the next map and can
+	# stall the render driver while add_child/_ready runs.
 	_trace_map_change("old_map_teardown_completed", source_map_id, target_map_id, {
 		"old_map_still_valid": is_instance_valid(old_map), 
 	})
 
+	if is_instance_valid(current_hud) and current_hud.has_method("set_map_loading_progress"):
+		current_hud.set_map_loading_progress(MAP_LOADING_INSTANTIATE_PROGRESS)
+	await get_tree().process_frame
+	if not _is_map_transition_current(transition_id):
+		return
+
+	set_frame_gap_stage("map_transition_instantiate")
 	var instantiate_started_usec: = Time.get_ticks_usec()
 	current_map_node = map_resource.instantiate()
 	var instantiate_ms: = float(Time.get_ticks_usec() - instantiate_started_usec) / 1000.0
+
+	# Match the first-map loading path: Blocking.dat is authoritative, so the
+	# legacy collision TileMapLayers are unused. Remove them BEFORE add_child
+	# to avoid registering thousands of unnecessary physics cells on teleport.
+	var removed_legacy_layers: Array[String] = []
+	for collision_name: String in ["CollisionContainer", "CollisionLayer"]:
+		var legacy_collision := current_map_node.get_node_or_null(collision_name)
+		if is_instance_valid(legacy_collision):
+			current_map_node.remove_child(legacy_collision)
+			legacy_collision.free()
+			removed_legacy_layers.append(collision_name)
+	if OS.is_debug_build() and not removed_legacy_layers.is_empty():
+		print("[MAP_TRANSITION_OPT] map=%d removed_collision_nodes=%s" % [
+			target_map_id, ",".join(removed_legacy_layers)
+		])
+
+	if is_instance_valid(current_hud) and current_hud.has_method("set_map_loading_progress"):
+		current_hud.set_map_loading_progress(MAP_LOADING_ADD_CHILD_PROGRESS)
+	await get_tree().process_frame
+	if not _is_map_transition_current(transition_id):
+		return
+
+	set_frame_gap_stage("map_transition_add_child")
 	var add_child_started_usec: = Time.get_ticks_usec()
 	get_tree().root.add_child(current_map_node)
+	if _afk_active:
+		current_map_node.visible = false
 	var add_child_ms: = float(Time.get_ticks_usec() - add_child_started_usec) / 1000.0
 	_trace_map_change("new_map_added", source_map_id, target_map_id, {
 		"instantiate_ms": instantiate_ms, 
 		"add_child_ms": add_child_ms, 
 	})
-	var theme_started_usec: = Time.get_ticks_usec()
-	var theme_result: = _apply_current_festival_theme()
-	_trace_map_change("festival_theme_applied", source_map_id, target_map_id, {
-		"duration_ms": float(Time.get_ticks_usec() - theme_started_usec) / 1000.0, 
-		"result": theme_result, 
-	})
+	log_performance_checkpoint("map_transition_map_added")
+
+	if is_instance_valid(current_hud) and current_hud.has_method("set_map_loading_progress"):
+		current_hud.set_map_loading_progress(MAP_LOADING_FINALIZE_PROGRESS)
+	await get_tree().process_frame
+	if not _is_map_transition_current(transition_id):
+		return
+
+	# Festival replacement may traverse a large map tree. Keep it out of the
+	# blocking map-transition critical path so the loading UI remains responsive.
+	call_deferred("_apply_current_festival_theme")
 
 	if BuildingManager: call_deferred("_init_buildings_with_diagnostics", source_map_id, target_map_id)
 
 
+	set_frame_gap_stage("map_transition_player_reparent")
 	if is_instance_valid(current_player):
 		if current_map_node.has_node("Entities"):
 			current_map_node.get_node("Entities").add_child(current_player)
@@ -642,7 +2456,9 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 				current_player.current_state = "idle"
 			current_player.velocity = Vector2.ZERO
 
-		if "data_model" in current_player and current_player.data_model:
+		if current_player.has_method("reset_map_navigation_state"):
+			current_player.reset_map_navigation_state(target_map_id, new_pos)
+		elif "data_model" in current_player and current_player.data_model:
 			current_player.data_model.map_id = target_map_id
 
 		var camera = current_player.get_node_or_null("Camera2D")
@@ -653,10 +2469,10 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 
 	if is_instance_valid(current_hud) and current_hud.has_method("update_map_info"):
 		current_hud.update_map_info(target_map_id, current_map_node.name)
-
 	if CursorManager:
 		CursorManager.set_cursor_state("normal")
 
+	set_frame_gap_stage("map_transition_finalize")
 	var bgm_started_usec: = Time.get_ticks_usec()
 	AudioManager.play_map_bgm(target_map_id)
 	_trace_map_change("bgm_request_started", source_map_id, target_map_id, {
@@ -676,6 +2492,8 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 		NetworkManager.note_map_loading_complete(_active_map_transition_id, target_map_id)
 	is_changing_map = false
 	_trace_map_change("resumed", source_map_id, target_map_id)
+	if _afk_active:
+		call_deferred("_refresh_afk_map_visuals_after_change")
 
 
 	var loading_elapsed_seconds: = float(Time.get_ticks_usec() - _map_transition_started_usec) / 1000000.0
@@ -691,5 +2509,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 	if is_instance_valid(current_hud) and current_hud.has_method("hide_map_loading"):
 		current_hud.hide_map_loading()
 	_trace_map_change("loading_hide_requested", source_map_id, target_map_id)
+	set_frame_gap_stage("world_running")
+	log_performance_checkpoint("map_transition_ready")
 	if _train_travel_active and _train_travel_phase == "loading_map":
 		await _finish_train_travel_after_map_change()

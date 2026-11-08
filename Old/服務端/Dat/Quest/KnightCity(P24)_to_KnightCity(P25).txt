@@ -1,0 +1,13 @@
+--KnightCity(P24) to KnightCity(P25)
+
+function start()
+	Ask("n要進入塔第八層嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(7936,1856,23)
+	end
+	QuestEnd()
+end

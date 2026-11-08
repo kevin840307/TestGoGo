@@ -1,0 +1,5 @@
+--People01 艾爾薩斯
+
+function start()
+	Say("n1你覺得什麼才是真正的和平？我覺得，只要內心的平靜已經足夠。","End")
+end

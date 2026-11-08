@@ -1,0 +1,37 @@
+--Learn_Skill_9203(攻擊物品鍛治)
+
+function start()
+	Giveback()
+	if GetData("Career") == 9 then
+	CheckOther()
+	else
+	Say("p7只有道具使才可學習攻擊物品鍛治。","End")
+	end
+end
+
+function CheckOther()
+	if GetData("Level") < 50 then
+	Say("p7你的等級仍未可學習攻擊物品鍛治啊。","End")
+	elseif HasSkill(9203)==1 then
+	Say("p7你已經學會了攻擊物品鍛治。","End")
+	else
+	Say("p7你的眼前出現一道白光，你看到了創造之神的形象，這時祂對你說．．．")
+		Ask("p你要學習攻擊物品鍛治嗎?","是的。","不是。","Teach")
+	end
+end
+
+function Teach()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("p7我現在就將攻擊物品鍛治傳授給你．．．")
+		Say("p7你已經學會了攻擊物品鍛治。","End")
+		RemoveItem(10350)
+		AddSkill(9203)
+	else
+	Say("p7需要學習攻擊物品鍛治時，可以再次召喚我。","End")
+	end
+end
+
+function Giveback()
+	AddItem(10350)
+end

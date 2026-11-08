@@ -1,0 +1,253 @@
+--皇宮侍衛(1) (MS006_A)
+
+--MS006_Task
+-- 1: title shown
+-- 2: quest started
+-- 3: quest completed
+
+--MS006_LostItem
+-- 1: lose item 10299
+-- 2: lose item 10300
+
+--MS006_Done
+-- 1: quest completed
+
+--MS007_Task
+-- 1: quest started
+-- 2: go to find lolosie
+-- 3: get the flower, go to find prince
+-- 4: found prince, got the water
+-- 5: get the report
+-- 6: give the report to prince
+
+function start()
+	if GetFlag("MS005_Done")~=1 then
+		dialogue_01()
+	elseif GetFlag("MS006_Done")~=1 then
+		status = GetFlag("MS006_Task")
+		if status >=3 then
+			dialogue_07()
+		elseif status >=2 then
+			go_check_status_2()
+		else
+			dialogue_02()
+		end
+	else
+		status = GetFlag("MS007_Task")
+		if status>=6 then
+			dialogue_7_04()
+		elseif status>=5 and GetCountItemCount(10331)>=1 then
+			dialogue_7_03()
+		elseif status>=1 then
+			dialogue_7_02()
+		else
+			dialogue_7_01()
+		end
+	end
+end
+
+function dialogue_01()
+	Say("n1大皇子偉爾他為人溫文、善良，未來皇國由他管理，大家也很放心。","End")
+end
+
+--玩家已完成MS005
+function dialogue_02()
+	Say("n1看你的衣著，你就是騎士普頓所說的熱心軍人嗎？")
+	Ask("n普頓在大皇子面前提及過你，現在正是皇子用人之際，他對你的事十分感興趣，你願意去參見王子嗎？","這個當然願意。","對不起，恐怕現在不行。","reply_02")
+end
+
+function reply_02()
+	choice = GetChoice()
+	if choice == 0 then
+		dialogue_03()
+	else
+		dialogue_04()
+	end
+end
+
+--玩家完成MS006_A－Step02_Choice1
+function dialogue_03()
+	Say("n1現在我馬上帶你去參見大皇子，請你跟我來。","action_03")
+end
+function action_03()
+	MovePlayer(10944,7136,16)
+	QuestEnd()
+end
+
+--玩家完成MS006_A－Step02_Choice2
+function dialogue_04()
+	Say("n1你．．．居然王子的邀請你也拒絕．．．","End")
+end
+
+
+function go_check_status_2()
+	if GetCountItemCount(10301)>=1 and GetCountItemCount(10302)>=1 then
+		dialogue_06()
+	else
+		letter_1 = GetCountItemCount(10299)
+		letter_2 = GetCountItemCount(10300)
+		if letter_1<=0 and letter_2<=0 then
+			dialogue_08()
+		elseif letter_1<=0 then
+			dialogue_08a()
+		elseif letter_2<=0 then
+			dialogue_08b()
+		else
+			dialogue_05()
+		end
+	end
+end
+
+--玩家完成MS006_C－Step02
+function dialogue_05()
+	Say("n1皇子已對我們有所交代，請你快去把兩封信給兩個校長，並把回信拿回來。")
+	Say("n1還有，騎士和魔法學校只有它們的學生才能進入，所以你必須找一個伙伴替你把信送去另一所學校，再由他把回信交給你。","End")
+end
+
+--手持「古洛尼給大皇子的信」和「古加尼給大皇子的信」
+function dialogue_06()
+	Ask("n你要馬上進見大皇子嗎？","對，我已把兩位校長的信拿回來。","對不起，恐怕現在不行。","reply_06")
+end
+function reply_06()
+	choice = GetChoice()
+	if choice == 0 then
+		action_03()
+	end
+	QuestEnd()
+end
+
+--END
+function dialogue_07()
+	Say("n1請你繼續努力，王子對你有很大的期望。","End")
+end
+
+--接受任務MS006_C－Step02 
+--失去「給古加尼的信」/失去「給古洛尼的信」
+function dialogue_08()
+	Ask("n看你的樣子很苦惱似的，不是遺失了大皇子的信吧？","．．．對不起，給你猜中了，我失去了“給古加尼的信”。","．．．對不起，給你猜中了，我失去了“給古洛尼的信”。","對不起，恐怕現在不行。","reply_08")
+end
+function reply_08()
+	choice = GetChoice()
+	if choice == 0 then
+		SetFlag("MS006_LostItem",1)
+		dialogue_09()
+	elseif choice ==1 then
+		SetFlag("MS006_LostItem",2)
+		dialogue_09()
+	end
+	QuestEnd()	
+end
+function dialogue_08a()
+	Ask("n看你的樣子很苦惱似的，不是遺失了大皇子的信吧？","．．．對不起，給你猜中了，我失去了“給古加尼的信”。","對不起，恐怕現在不行。","reply_08a")
+end
+function reply_08a()
+	choice = GetChoice()
+	if choice == 0 then
+		SetFlag("MS006_LostItem",1)
+		dialogue_09()
+	end
+	QuestEnd()	
+end
+function dialogue_08b()
+	Ask("n看你的樣子很苦惱似的，不是遺失了大皇子的信吧？","．．．對不起，給你猜中了，我失去了“給古洛尼的信”。","對不起，恐怕現在不行。","reply_08b")
+end
+function reply_08b()
+	choice = GetChoice()
+	if choice == 0 then
+		SetFlag("MS006_LostItem",2)
+		dialogue_09()
+	end
+	QuestEnd()	
+end
+
+--玩家完成MS006_A－Step07-Choice1
+function dialogue_09()
+	Ask("n你．．．！這樣吧，你給我8000星幣，我便硬著頭皮向王子請求再寫一封信給你吧。","好吧．．．請你幫忙了。","你是在搶劫嗎？我才不會給你。","reply_09")
+end
+
+function reply_09()
+	choice = GetChoice()
+	if choice == 0 then
+		if GetData("Money")>=8000 then
+			dialogue_10()
+		else
+			Say("n1唔...似乎你沒有8000元，我不能幫你了。")
+		end
+	end
+	QuestEnd()	
+end
+
+function dialogue_10()
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7失去8000元")
+		ModifyData("Money", -8000)
+
+		Say("n1你先等一會，我馬上侯回來。")
+		Say("n7皇宮侍衛匆忙地走進皇宮")
+		Say("n7．．．．．．")
+		Say("n7．．．．．．")
+		Say("n7皇宮侍衛匆忙地從皇宮出來")
+		Say("n1幸好大皇子十分大方，這是你要的信件。","dialogue_12")
+	end
+end
+
+
+function dialogue_12()
+	if GetFlag("MS006_LostItem") == 1 then
+		Say("p7得到“給古加尼的信”")
+		AddItem(10299)
+	else
+		Say("p7得到“給古洛尼的信”")
+		AddItem(10300)
+	end
+	QuestEnd()
+end
+
+--AFTER JP TRANSLATION PART 2
+--MS007
+function dialogue_7_01()
+	Say("m#STORY_NAME_06A.spr#STORY_NAME_06B.spr#030.mp3#", "dialogue_7_01b")
+end
+
+function dialogue_7_01b()
+	Say("n1遇上你便好了，大皇子有個新任務給你，就是找"..Color(0,45,198).."魔法學園的導師娜姬"..Color(0,0,0).."．連特，協助她調查兩所學園的紛爭，至於詳細內容，娜姬．連特會告訴你。")
+	Say("p1明白了，我馬上便去找她。","End")
+	SetFlag("MS007_Task", 1)
+end
+
+function dialogue_7_02()
+	Say("n1娜姬老師就住在"..Color(0,45,198).."魔法之都古尼爾"..Color(0,0,0).."，你還不馬上找她？","End")
+end
+
+function dialogue_7_03()
+	Say("n1？")
+	Say("p1這是娜姬導師給大皇子的報告，請你馬上交給大皇子吧。")
+	Say("n1明白了。")
+	Say("n7皇宮侍衛匆匆的進入皇宮")
+	Say("n7．．．．．．")
+	Say("n7皇宮侍衛匆匆的從皇宮出來")
+	Say("n1大皇子說你們做得很好，這是他給你的一點獎勵，希望你日後更加努力。","dialogue_7_03b")
+end
+
+function dialogue_7_03b()
+	if ItemListCountLeft(0)<1 and (GetCountItemCount(10262)<1 or GetCountItemCount(10262)>=300) then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	elseif ItemListCountLeft(4)<1 and (GetCountItemCount(6904)<1 or GetCountItemCount(6904)>=300) then
+	    Say("n1對不起，你身上的機甲裝備太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7失去“娜姬的報告書”")
+		Say("p7得到“星之徽章”")
+		Say("p7得到“魔靈電池改”","End")
+		SetFlag("MS007_Task", 6)
+		SetFlag("MS007_Done", 1)
+		RemoveItem(10331)
+		AddItem(6904)
+		AddItem(10262)
+	end
+end
+
+function dialogue_7_04()
+	Say("n1大皇子正在詳細地研究報告，暫時還沒有進一步的消息。","End")
+end

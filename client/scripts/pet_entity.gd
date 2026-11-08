@@ -13,9 +13,21 @@ var current_dir: String = "1"
 var level: int = 1
 
 var target_position: Vector2 = Vector2.ZERO
+var move_destination: Vector2 = Vector2.ZERO
+var move_path: PackedVector2Array = PackedVector2Array()
+var move_path_index: int = 0
 const MIN_LERP_WEIGHT: float = 8.0
 const MAX_LERP_WEIGHT: float = 20.0
-const TELEPORT_DISTANCE: float = 250.0
+const TELEPORT_DISTANCE: float = 900.0
+# Blocking.dat is authoritative for static map obstacles. Avoid adding the
+# pet body radius on top of each 16px blocking cell, which causes corner jitter.
+const PET_COLLISION_MASK: int = 0
+const PET_WAYPOINT_REACH_DISTANCE: float = 8.0
+const PET_STUCK_FRAME_LIMIT: int = 30
+
+var network_move_active: bool = false
+var network_move_speed: float = 0.0
+var stuck_frames: int = 0
 
 @onready var sprite = $AnimatedSprite2D
 @onready var ui_container = $UIContainer
@@ -35,8 +47,22 @@ const STATE_MAP = {
 var move_tween: Tween
 var level_up_effect: AnimatedSprite2D = null
 var idle_speech_fade_tween: Tween = null
+var _render_visible: bool = true
+var _render_notifier: VisibleOnScreenNotifier2D = null
+var _afk_visual_suspended: bool = false
+var _visual_outlook: String = ""
+var _visual_color_index: int = 0
+const RENDER_VISIBILITY_RECT: Rect2 = Rect2(-180.0, -220.0, 360.0, 380.0)
 
 func _ready() -> void :
+	collision_layer = 8
+	collision_mask = PET_COLLISION_MASK
+	var body_collision: CollisionShape2D = get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if body_collision and body_collision.shape == null:
+		var body_shape := CircleShape2D.new()
+		body_shape.radius = 7.0
+		body_collision.shape = body_shape
+
 	if not sprite.animation_finished.is_connected(_on_animation_finished):
 		sprite.animation_finished.connect(_on_animation_finished)
 
@@ -48,6 +74,31 @@ func _ready() -> void :
 	idle_speech_bubble.visible = false
 	if not idle_speech_timer.timeout.is_connected(_on_idle_speech_timer_timeout):
 		idle_speech_timer.timeout.connect(_on_idle_speech_timer_timeout)
+
+	_render_notifier = VisibleOnScreenNotifier2D.new()
+	_render_notifier.rect = RENDER_VISIBILITY_RECT
+	add_child(_render_notifier)
+	_render_notifier.screen_entered.connect(_on_render_screen_entered)
+	_render_notifier.screen_exited.connect(_on_render_screen_exited)
+
+func _on_render_screen_entered() -> void :
+	_render_visible = true
+	if _afk_visual_suspended:
+		return
+	if is_instance_valid(sprite) and not sprite.is_playing():
+		sprite.play()
+	if is_instance_valid(ui_container):
+		ui_container.visible = true
+
+func _on_render_screen_exited() -> void :
+	_render_visible = false
+	if is_instance_valid(sprite) and sprite.is_playing():
+		sprite.pause()
+	if is_instance_valid(ui_container):
+		ui_container.visible = false
+
+func is_render_visible() -> bool:
+	return _render_visible
 
 func _exit_tree() -> void :
 
@@ -62,6 +113,9 @@ func initialize_pet(data: Dictionary, extra: Dictionary) -> void :
 	var spawn_pos = Vector2(float(data.get("LocX", 0)), float(data.get("LocY", 0)))
 	global_position = spawn_pos
 	target_position = spawn_pos
+	move_destination = spawn_pos
+	move_path = PackedVector2Array()
+	move_path_index = 0
 
 	max_hp = int(extra.get("MaxHP", 100))
 	current_hp = int(extra.get("CurrentHP", max_hp))
@@ -70,48 +124,100 @@ func initialize_pet(data: Dictionary, extra: Dictionary) -> void :
 	name_label.text = pet_name
 
 
-	var outlook = str(extra.get("Sprite", ""))
-	if MonsterLoader and outlook != "":
-		var sf = MonsterLoader.get_monster_frames(outlook)
-		if sf:
-			sprite.sprite_frames = sf
+	_visual_outlook = str(extra.get("Sprite", ""))
+	_visual_color_index = int(extra.get("ColorIndex", 0))
+	if GameManager and GameManager.is_afk_mode_active():
+		set_afk_visual_suspended(true)
+		return
 
-
-	var color_idx = int(extra.get("ColorIndex", 0))
-	if color_idx > 0:
-		var mat = ShaderMaterial.new()
-		mat.shader = PALETTE_SHADER
-		mat.set_shader_parameter("effect_type", 0)
-		mat.set_shader_parameter("hue_shift", COLOR_INDEX_TO_DEGREES.get(color_idx, 0.0))
-		sprite.material = mat
-
-	sync_animation()
+	_restore_visual_resources()
 	_lock_ui_position()
 	_update_sprite_offset()
 
+
+func set_afk_visual_suspended(suspended: bool) -> void:
+	if _afk_visual_suspended == suspended:
+		return
+	_afk_visual_suspended = suspended
+	if suspended:
+		if is_instance_valid(sprite):
+			sprite.stop()
+			sprite.sprite_frames = null
+			sprite.material = null
+			sprite.visible = false
+		if is_instance_valid(level_up_effect):
+			level_up_effect.stop()
+			level_up_effect.sprite_frames = null
+			level_up_effect.material = null
+			level_up_effect.visible = false
+		if is_instance_valid(idle_speech_bubble):
+			idle_speech_bubble.visible = false
+		if is_instance_valid(ui_container):
+			ui_container.visible = false
+		return
+	_restore_visual_resources()
+
+
+func is_afk_visual_suspended() -> bool:
+	return _afk_visual_suspended
+
+
+func _restore_visual_resources() -> void:
+	if not is_instance_valid(sprite):
+		return
+	sprite.sprite_frames = null
+	if MonsterLoader and not _visual_outlook.is_empty():
+		var frames: SpriteFrames = MonsterLoader.get_monster_frames(_visual_outlook)
+		if frames:
+			sprite.sprite_frames = frames
+	if _visual_color_index > 0:
+		var material := ShaderMaterial.new()
+		material.shader = PALETTE_SHADER
+		material.set_shader_parameter("effect_type", 0)
+		material.set_shader_parameter("hue_shift", COLOR_INDEX_TO_DEGREES.get(_visual_color_index, 0.0))
+		sprite.material = material
+	else:
+		sprite.material = null
+	sprite.visible = _render_visible
+	if is_instance_valid(ui_container):
+		ui_container.visible = _render_visible
+	sync_animation()
+
+
 func _lock_ui_position() -> void :
-	if not sprite or not sprite.sprite_frames or not ui_container: return
+	if not is_instance_valid(sprite) or not is_instance_valid(sprite.sprite_frames) or not is_instance_valid(ui_container):
+		return
+	var scene_tree: SceneTree = get_tree()
+	if scene_tree == null:
+		return
+	await scene_tree.process_frame
+	if not is_instance_valid(self) or not is_inside_tree():
+		return
+	if not is_instance_valid(sprite) or not is_instance_valid(ui_container):
+		return
+	# Pet resources can be released/missing while awaiting the next frame.
+	var frames: SpriteFrames = sprite.sprite_frames
+	if not is_instance_valid(frames):
+		return
 
-	await get_tree().process_frame
-	if not is_instance_valid(self): return
+	var fixed_head_y: float = -80.0
+	var base_anim: String = "IDLE_1"
+	if not frames.has_animation(base_anim):
+		var anims: PackedStringArray = frames.get_animation_names()
+		if anims.size() > 0:
+			base_anim = anims[0]
 
-	var fixed_head_y = -80.0
+	if frames.has_animation(base_anim) and frames.get_frame_count(base_anim) > 0:
+		var tex: Texture2D = frames.get_frame_texture(base_anim, 0)
+		if is_instance_valid(tex):
+			var offset: Vector2 = tex.get_meta("old_offset") if tex.has_meta("old_offset") else Vector2.ZERO
+			fixed_head_y = -offset.y - 55.0
 
-	var base_anim = "IDLE_1"
-	if not sprite.sprite_frames.has_animation(base_anim):
-		var anims = sprite.sprite_frames.get_animation_names()
-		if anims.size() > 0: base_anim = anims[0]
-
-	if sprite.sprite_frames.has_animation(base_anim):
-		var tex = sprite.sprite_frames.get_frame_texture(base_anim, 0)
-		if tex:
-			var offset = tex.get_meta("old_offset") if tex.has_meta("old_offset") else Vector2.ZERO
-			fixed_head_y = - offset.y - 55
-
-
-	ui_container.position = Vector2( - ui_container.size.x / 2.0, fixed_head_y)
+	ui_container.position = Vector2(-ui_container.size.x / 2.0, fixed_head_y)
 
 func show_idle_speech_bubble(text: String) -> void :
+	if _afk_visual_suspended:
+		return
 	if not idle_speech_bubble or not idle_speech_label or not idle_speech_timer:
 		return
 
@@ -146,34 +252,153 @@ func update_state(state: String, dir: String) -> void :
 	sync_animation()
 
 func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
-	if current_hp <= 0: return
+	if current_hp <= 0:
+		return
 
-	target_position = new_pos
+	move_destination = new_pos
+	var distance: float = global_position.distance_to(move_destination)
 
-
-	if global_position.distance_to(target_position) > TELEPORT_DISTANCE or speed_time <= 0.01:
-		global_position = target_position
+	if distance > TELEPORT_DISTANCE or speed_time <= 0.01:
+		global_position = move_destination
+		target_position = move_destination
+		move_path = PackedVector2Array()
+		move_path_index = 0
+		velocity = Vector2.ZERO
+		network_move_active = false
+		network_move_speed = 0.0
+		stuck_frames = 0
 		current_state = "idle"
 		sprite.speed_scale = 1.0
 		sync_animation()
-
-		if move_tween and move_tween.is_valid(): move_tween.kill()
+		if move_tween and move_tween.is_valid():
+			move_tween.kill()
 		return
 
+	var map_id: int = 0
+	if GameManager and is_instance_valid(GameManager.current_player):
+		var owner_data = GameManager.current_player.get("data_model")
+		if owner_data:
+			map_id = int(owner_data.map_id)
+
+	var owner_can_cross_special: bool = false
+	if GameManager and is_instance_valid(GameManager.current_player):
+		owner_can_cross_special = bool(
+			GameManager.current_player.get("can_cross_special_terrain")
+		)
+
+	var route: PackedVector2Array = LegacyPathfinder.find_path(
+		map_id,
+		global_position,
+		move_destination,
+		owner_can_cross_special
+	)
+
+	if route.is_empty():
+		_stop_network_move()
+		return
+
+	move_path = route
+	move_path_index = 0
+	target_position = move_path[0]
+
+	if move_tween and move_tween.is_valid():
+		move_tween.kill()
+
+	network_move_speed = distance / max(speed_time, 0.01)
+	network_move_active = true
+	stuck_frames = 0
 	current_state = "walk"
 	sprite.speed_scale = 1.0
-
 	sync_animation()
 
-	if move_tween and move_tween.is_valid(): move_tween.kill()
-	move_tween = create_tween()
-	move_tween.tween_property(self, "global_position", target_position, speed_time)
-	move_tween.tween_callback( func():
-		if current_state == "walk":
-			current_state = "idle"
-			sprite.speed_scale = 1.0
-			sync_animation()
+
+func _physics_process(delta: float) -> void :
+	if not network_move_active or current_hp <= 0:
+		return
+
+	if move_path.is_empty() or move_path_index >= move_path.size():
+		_stop_network_move()
+		return
+
+	var step_distance: float = network_move_speed * delta
+	var stop_threshold: float = maxf(
+		PET_WAYPOINT_REACH_DISTANCE,
+		step_distance * 1.25
 	)
+	var map_id: int = 0
+	var owner_can_cross_special: bool = false
+	if GameManager and is_instance_valid(GameManager.current_player):
+		var owner_data = GameManager.current_player.get("data_model")
+		if owner_data:
+			map_id = int(owner_data.map_id)
+		owner_can_cross_special = bool(
+			GameManager.current_player.get("can_cross_special_terrain")
+		)
+
+	while move_path_index + 1 < move_path.size():
+		var next_waypoint: Vector2 = move_path[move_path_index + 1]
+		var close_to_current: bool = (
+			global_position.distance_to(target_position) <= stop_threshold
+		)
+		var next_is_visible: bool = LegacyPathfinder.is_segment_walkable(
+			map_id,
+			global_position,
+			next_waypoint,
+			owner_can_cross_special
+		)
+
+		if not close_to_current and not next_is_visible:
+			break
+
+		move_path_index += 1
+		target_position = move_path[move_path_index]
+
+	var to_target: Vector2 = target_position - global_position
+	var distance: float = to_target.length()
+
+	if move_path_index + 1 >= move_path.size() and distance <= stop_threshold:
+		global_position = target_position
+		_stop_network_move()
+		return
+
+	if distance <= 0.001:
+		return
+
+	velocity = to_target.normalized() * network_move_speed
+	_update_direction_from_velocity(velocity)
+
+	var old_position: Vector2 = global_position
+	move_and_slide()
+	if old_position.distance_to(global_position) >= maxf(0.25, step_distance * 0.1):
+		stuck_frames = 0
+		return
+
+	stuck_frames += 1
+	if stuck_frames >= PET_STUCK_FRAME_LIMIT:
+		_stop_network_move()
+
+
+func _stop_network_move() -> void :
+	velocity = Vector2.ZERO
+	move_path = PackedVector2Array()
+	move_path_index = 0
+	move_destination = global_position
+	target_position = global_position
+	network_move_active = false
+	network_move_speed = 0.0
+	stuck_frames = 0
+	if current_state == "walk":
+		current_state = "idle"
+		sync_animation()
+
+
+func _update_direction_from_velocity(move_velocity: Vector2) -> void :
+	if move_velocity == Vector2.ZERO:
+		return
+	var angle_deg: float = posmod(rad_to_deg(move_velocity.angle()), 360.0)
+	var index_raw: int = int(round(angle_deg / 45.0))
+	current_dir = GameConstants.DIR_STRINGS[index_raw % 8]
+	sync_animation()
 
 func sync_animation() -> void :
 	if not sprite or not sprite.sprite_frames: return
@@ -232,7 +457,13 @@ func _on_animation_finished() -> void :
 
 func update_hp(new_hp: int, hit_delay: float = 0.3, is_miss: bool = false) -> void :
 	if hit_delay > 0:
-		await get_tree().create_timer(hit_delay).timeout
+		if not is_instance_valid(self) or not is_inside_tree():
+			return
+		var tree := get_tree()
+		if tree == null:
+			return
+		var timer := tree.create_timer(hit_delay)
+		await timer.timeout
 
 	if not is_instance_valid(self) or not is_inside_tree():
 		return
@@ -245,6 +476,8 @@ func update_hp(new_hp: int, hit_delay: float = 0.3, is_miss: bool = false) -> vo
 		sync_animation()
 
 func show_damage_number(damage: int, is_crit: bool = false, hit_delay: float = 0.3, split_count: int = 1, skill_id: int = 0, is_primary: bool = true) -> void :
+	if _afk_visual_suspended:
+		return
 	if FloatingTextManager:
 		FloatingTextManager.show_damage(self, damage, is_crit, hit_delay, split_count, skill_id, is_primary)
 
@@ -272,6 +505,8 @@ func _die(hit_delay: float = 0.0) -> void :
 	fade_tween.tween_callback(queue_free)
 
 func show_level_up(is_mecha: bool = false) -> void :
+	if _afk_visual_suspended:
+		return
 	if not is_instance_valid(level_up_effect):
 		level_up_effect = AnimatedSprite2D.new()
 		level_up_effect.name = "LevelUpEffect"

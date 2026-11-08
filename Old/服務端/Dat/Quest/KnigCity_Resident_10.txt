@@ -1,0 +1,6 @@
+--People01 蘿拉
+
+function start()
+	Say("n1嗯？我正在看書。")
+	Say("n1這兒真好，有很多書可以看。","End")
+end

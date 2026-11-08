@@ -1,0 +1,100 @@
+--MQ001_A 烏藍
+
+function DoSick(sick)
+	if sick == 1 then
+		Say("n1我妹妹突然生了一個怪病，每到晚上就會看不見東西．．．")
+		Say("n1最近就算是白天，視力也好像越來越差．．．")
+		Say("n1要是沒有藥的話，我妹妹可能就會變成瞎子了！")
+		Say("n1求求你！想辦法救救我的妹妹吧！")
+	elseif sick == 2 then
+		Say("n1我妹妹前天突然發高燒．．．")
+		Say("n1我們又沒有錢找醫生．．．")
+		Say("n1可憐的妹妹完全沒有退燒的跡象．．．")
+		Say("n1求求你！想辦法救救我的妹妹吧！")
+	elseif sick == 3 then
+		Say("n1我妹妹好像被下了咒一樣，由今早開始便哭個沒完．．．")
+		Say("n1雙眼都紅腫得非常嚴重，這樣下去我怕她會哭成瞎子呢！")
+		Say("n1求求你！想辦法救救我的妹妹吧！")
+	elseif sick == 4 then
+		Say("n1我妹妹前幾天還是好端端的，今早卻全身長滿了大毒瘡．．．")
+		Say("n1她好像很痛苦的樣子，要是來不及醫治的話．．．")
+		Say("n1我自己一個怎麼過？求求你！想辦法救救我的妹妹吧！")
+	else
+		Say("n1我的妹妹好像患上了失心症，整天都呆呆滯滯的樣子．．．")
+		Say("n1我永遠再聽不到她的說話、她的聲音了嗎？")
+		Say("n1求求你！想辦法救救我的妹妹吧！")
+	end
+	Ask("p可是．．．如果幫他的話，好可能會錯過今次魔法學校的入學試．．．", "不用擔心，我會想辦法幫你！", "不好意思！我還有事情要辦，你找其他人幫忙吧！", "Step3")
+	SetFlag("MQ_001_1", sick)
+end
+
+function start()
+	lv = GetData("Level")
+	sick = GetFlag("MQ_001_1")
+	if GetData("Career")>0 and GetData("Career")<5 or GetData("Career")==9 then
+	Knight()
+	elseif GetFlag("MQ_001_Start")==-1 then
+		Say("n7烏藍抬頭呆看著你．．．")
+		Say("n1怎麼辦．．．魔藥的材料再拿不到的話，妹妹就．．．")
+		Say("n7他搖了搖頭，又再低頭沈思．．．", "End")		
+	elseif GetFlag("MQ_002_End") > 0 then
+		Say("n1小伙子，你已經是騎士學校的一份子了！好好努力吧！", "End")		
+	elseif GetFlag("MQ_001_Teacher_Part")==1 then
+		Say("n1嗯．．．不錯不錯！果然儒子可教！", "End")
+	elseif sick > 5 then						-- Quest already started
+		 -- let's said 10001 is 火光種子 10002 ~ 10005 are quest items
+		if  (sick == 6 and RemoveItem(10001) == 1) or  
+			(sick == 7 and RemoveItem(10002) == 1) or			
+			(sick == 8 and RemoveItem(10003) == 1) or
+			(sick == 9 and RemoveItem(10004) == 1) or
+			(sick == 10 and RemoveItem(10005) == 1) then
+			SetFlag("MQ_OO1A_End", 1)
+			Say("p1我把藥帶來了！快來幫忙！", "Success")
+		else
+			Say("n1妹妹的病還未有好轉。求求你，請救一下我的妹妹…", "End")
+		end
+	elseif sick > 0 then
+		DoSick(sick)
+	else
+		Say("n7烏藍抬頭呆看著你．．．")
+		Say("n1怎麼辦．．．魔藥的材料再拿不到的話，妹妹就．．．")
+		Ask("n朋友，可以幫忙一下嗎？","當然可以．．．","我正在忙呢！", "Step2")
+	end
+end
+
+function Step2()
+	choice = GetChoice()
+	if choice == 0 then
+		sick = random(4)
+		if sick == 2 then
+			sick = 5
+		end
+		DoSick(sick)
+	else
+		Say("n1是這樣嗎．．．抱歉打擾你了！", "End")		
+	end
+end
+
+function Step3()
+	choice = GetChoice()
+	if choice == 0 then
+		sick = GetFlag("MQ_001_1")
+		SetFlag("MQ_001_1", sick + 5)
+		Say("n1真的嗎！？太好了！我等你的好消息！希望妹妹可以平安無事吧！", "End")
+	else
+		Say("n1是這樣嗎．．．抱歉打擾你了！", "End")
+	end
+end
+
+function Success()
+	Say("n7你把藥材拿給烏藍，並叫他照著柏爾的方法製藥．．．")
+	Say("n7烏藍微笑一下，慢條斯理地把藥材放在一旁．．．")
+	Say("n1很好！恭喜你！你通過了德爾莫亞魔法學院的入學試了！")
+	Say("n1我是魔法學院的導師，這次試煉是用來評估你有否足夠的魔法知識和仁愛成為我們的學員呢！")
+	Say("n1要進入德爾莫亞就向守衛說『智慧比力量更重要』．．．")
+	SetFlag("MQ_001_Teacher_Part", 1)
+end
+
+function Knight()
+	Say("n1怎麼辦．．．魔藥的材料再拿不到的話，妹妹就．．．","End")
+end

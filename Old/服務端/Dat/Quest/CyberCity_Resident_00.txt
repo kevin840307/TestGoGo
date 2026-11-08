@@ -1,0 +1,5 @@
+--People01 何薩
+
+function start()
+	Say("n1你知道嗎？尼尼亞皇室的三公主，好像出走了！","End")
+end

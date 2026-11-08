@@ -1,0 +1,19 @@
+--LS_23102_5 "ØP§ı√zºC°E§≠Ø≈"
+
+function GetSkillData()
+	return 23102,5,40,31368,"ØP§ı√zºC°E§≠Ø≈","ØP§ı√zºC°E•|Ø≈","∆F∞´§h"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 1 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

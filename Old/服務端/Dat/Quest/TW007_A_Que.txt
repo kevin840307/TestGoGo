@@ -1,0 +1,420 @@
+--TW007_A_Que
+
+--public
+
+function RandomQuestion1()
+	--return 0, '題目： 新嫁娘詞　　_____\n三日入廚下，洗手作羹湯。 未諳翁食性，先遣小姑嘗。','A. 王建', 'B. 王維', 'C. 李白', 'D. 李商隱'
+	ans =GetFlag("TW007_Debug")
+	if ans<=0 then
+		ans = random(26)
+	end
+	
+	if ans>13 then
+		if ans>19 then
+			if ans==20 then
+				return 3, 1, '慈母手中線，遊子身上衣；\n臨行密密縫，意恐遲遲歸。\n誰言寸草心，報得三春暉 ?','A. 王維','B. 蘇軾','C. 孟浩然','D. 孟郊'
+			elseif ans==21 then
+				return 0, 1, '在天願作比翼鳥，在地願為連理枝\n天長地久有時盡，此恨綿綿無絕期','A. 白居易','B. 蘇軾','C. 孟浩然','D. 孟郊'
+			elseif ans==22 then
+				return 1, 0, '鐘鼓饌玉不足貴，但願長醉不願醒\n古來聖賢皆寂寞，惟有飲者留其名','A. 將近酒','B. 將進酒','C. 講進酒','D. 將進久'
+			elseif ans==23 then
+				return 2, 0, '慈母手中線，遊子身上衣；\n臨行密密縫，意恐遲遲歸。\n誰言寸草心，報得三春暉 ?','A. 遊子心','B. 遊子想','C. 遊子吟','D. 遊子曲'
+			elseif ans==24 then
+				return 3, 0, '故人具雞黍，邀我至田家。\n綠樹村邊合，青山郭外斜。','A. 故人人莊','B. 故人山莊','C. 過故山莊','D. 過故人莊'
+			elseif ans==25 then
+				return 0, 1, '風急天高猿嘯哀，渚清沙白鳥飛回\n無邊落木蕭蕭下，不盡長江滾滾來','A. 杜甫','B. 陸遊','C. 蘇軾','D. 白居易'
+			else
+				return 3, 1, '千山鳥飛絕，萬徑人蹤滅，\n孤舟蓑笠翁，獨釣寒江雪。','A. 杜甫','B. 陸遊','C. 蘇軾','D. 柳宗元'
+			end
+		else
+			if ans==14 then
+				return 2, 0, '君為女蘿草，妾作菟絲花。\n輕條不自引，為逐春風斜。','A. 春風','B. 愜意','C. 古意','D. 春天'
+			elseif ans==15 then
+				return 3, 0, '人生不相見，動如參與商。\n今夕複何夕，共此燈燭光。','A.八處士','B. 贈八戰士','C. 贈十兵衛','D. 贈衛八處士'
+			elseif ans==16 then
+				return 0, 1, '下馬飲君酒，問君何所之。\n君言不得意，歸臥南山陲。','A. 王維','B. 杜甫','C. 李白','D. 白居易'
+			elseif ans==17 then
+				return 1, 1, '故人具雞黍，邀我至田家。\n綠樹村邊合，青山郭外斜。','A. 王維','B. 孟浩然','C. 李白','D. 白居易'
+			elseif ans==18 then
+				return 2, 1, '八月湖水平，涵虛混太清。\n氣蒸雲夢澤，波撼岳陽城。','A. 王維','B. 陸遊','C. 孟浩然','D. 白居易'
+			else
+				return 3, 1, '久為簪組累，幸此南夷謫。\n閑依農圃鄰，偶似山林客。','A. 王維','B. 蘇軾','C. 孟浩然','D. 柳宗元'
+			end
+		end
+	else
+		if ans > 6 then
+			if ans==7 then
+				return 3, 1, '春宵一刻值千金，花有清香月有陰\n歌管樓臺聲細細，鞦韆院落夜沈沈','A. 李白','B. 王維','C. 柳宗元','D. 蘇軾'
+			elseif ans==8 then
+				return 2, 1, '大弦嘈嘈如急雨，小弦切切如私語\n嘈嘈切切錯雜彈，大珠小珠落玉盤','A. 李白','B. 柳宗元','C. 白居易','D. 蘇軾'
+			elseif ans==9 then
+				return 0, 1, '文章憎命達，魑魅喜人過。\n應共冤魂語，投詩贈汨羅。','A. 杜甫','B. 柳宗元','C. 白居易','D. 蘇軾'
+			elseif ans==10 then
+				return 3, 1, '橫看成嶺側成峰　遠近高低各不同\n不識廬山真面目　只緣身在此山中','A. 杜甫','B. 柳宗元','C. 白居易','D. 蘇軾'
+			elseif ans==11 then
+				return 2, 1, '劍外忽傳收薊北　初聞涕淚滿衣裳\n卻看妻子愁何在　漫卷詩書喜欲狂\n白日放歌須縱酒　青春作伴好還鄉\n即從巴峽穿巫峽　便下襄陽向洛陽','A. 陸遊','B. 柳宗元','C. 杜甫','D. 蘇軾'
+			elseif ans==12 then
+				return 0, 1, '長歌吟松風，曲盡河星稀。\n我醉君復樂，陶然共忘機。','A. 李白','B. 王維','C. 杜甫','D. 蘇軾'
+			else
+				return 1, 1, '夜投佛寺上高閣，星月掩映雲朣朧\n猿鳴鐘動不知曙，杲杲寒日生於東','A. 白居易','B. 韓愈','C. 柳宗元','D. 蘇軾'
+			end
+		else
+			if ans==1 then
+				return 0, 1, '三日入廚下，洗手作羹湯。\n未諳翁食性，先遣小姑嘗。','A. 王建', 'B. 王維', 'C. 李白', 'D. 李商隱'
+			elseif ans==2 then
+				return 1, 0, '功蓋三分國，名成八陣圖。\n江流石不轉，遺恨失吞吳。','A. 八仙圖','B. 八陣圖','C. 三國志','D. 三分國'
+			elseif ans==3 then
+				return 2, 0, '妾髮初覆額，折花門前劇；\n郎騎竹馬來，遶床弄青梅。\n同居長干里，兩小無嫌猜。','A. 長相思','B. 長干里','C. 長干行','D. 長風行'
+			elseif ans==4 then
+				return 3, 0, '國破山河在　城春草木深，\n感時花濺淚　恨別鳥驚心\n烽火連三月　家書抵萬金，\n白頭搔更短　渾欲不勝簪','A. 烽火','B. 國破','C. 戰爭','D. 春望'
+			elseif ans==5 then
+				return 1, 1, '君自故鄉來，應知故鄉事。\n來日綺窗前，寒梅著花未','A. 李白','B. 王維','C. 杜甫','D. 蘇軾'
+			else
+				return 2, 1, '清明時節雨紛紛，路上行人欲斷魂，\n借問酒家何處有？牧童遙指杏花村。','A. 李白','B. 王維','C. 杜牧','D. 蘇軾'
+			end
+		end
+	end
+end
+
+function RandomQuestion2()
+	return random(51)
+end
+function GetQuestion2(id)
+	id=id-1
+	if id<24 then
+		if id<12 then
+			if id<6 then
+				if id<3 then
+					if id==0 then
+						return '紅豆生南國，春來發幾枝？\n願君多采擷，此__最相思。'
+					elseif id==1 then
+						return '白日依山盡，黃__入海流。\n欲窮千里目，更上一層樓。'
+					else
+						return '春眠不覺曉，處處聞啼鳥。\n夜來____聲，花落知多少。'
+					end
+				else
+					if id==3 then
+						return '君自故鄉來，應知故鄉事。\n來日__窗前，寒梅著花未。'
+					elseif id==4 then
+						return '朝辭白帝彩雲間，千里江陵__日還\n兩岸猿聲啼不住，輕舟已過萬重山'
+					else
+						return '故人西辭黃鶴樓，煙花__月下揚洲\n孤帆遠影碧空盡，惟見長江天際流'
+					end
+				end
+			else
+				if id<9 then
+					if id==6 then
+						return '____捲珠簾，深坐蹙蛾眉；\n但見淚痕濕，不知心恨誰？'
+					elseif id==7 then
+						return '國破山河在　城春草木深　\n感時花濺淚　恨別鳥驚心　\n烽火連三月　____抵萬金　\n白頭搔更短　渾欲不勝簪'
+					else
+						return '三日入廚下，洗手作羹湯。\n未諳翁食性，先遣____嘗。'
+					end
+				else
+					if id==9 then
+						return '春宵一刻值__金，花有清香月有陰\n歌管樓臺聲細細，鞦韆院落夜沈沈'
+					elseif id==10 then
+						return '文章憎命達，魑魅喜人過。\n應共冤魂語，投詩贈____。'
+					else
+						return '橫看成嶺側成峰　遠近高低各不同\n不識____真面目　只緣身在此山中'
+					end
+				end
+			end
+		else
+			if id<18 then
+				if id<15 then
+					if id==12 then
+						return '劍外忽傳收薊北　初聞涕淚滿衣裳\n卻看妻子愁何在　漫卷詩書喜欲狂\n白日放歌須縱酒　青春作伴好還鄉\n即從__峽穿巫峽　便下襄陽向洛陽'
+					elseif id==13 then
+						return '長歌吟松風，曲盡河___稀。\n我醉君復樂，陶然共忘機。'
+					else
+						return '夜投佛寺上高閣，__月掩映雲朣朧。\n猿鳴鐘動不知曙，杲杲寒日生於東。'
+					end
+				else
+					if id==15 then
+						return '花間一壺酒，獨酌無相親。\n舉杯邀明月，對影成___人。'
+					elseif id==16 then
+						return '人生不相見，動如參與商。\n今夕複何__，共此燈燭光。'
+					else
+						return '君為女蘿草，妾作菟絲花。\n輕條不自引，為逐____斜。'
+					end
+				end
+			else					
+				if id<21 then
+					if id==18 then
+						return '下馬飲君酒，問君何所之。\n君言不得意，歸臥___陲。'
+					elseif id==19 then
+						return '故人具雞黍，邀我至田家。\n綠樹村邊合，__山郭外斜。\n'
+					else
+						return '離離原上草，一歲一枯榮。\n____燒不盡，春風吹又生。'
+					end
+				else					
+					if id==21 then
+						return '慈母手中線，遊子身上衣；\n臨行密密縫，意恐遲遲歸。\n誰言寸草__，報得三春暉 ?'
+					elseif id==22 then
+						return '在天願作比翼__，在地願為連理枝\n天長地久有時盡，此恨綿綿無絕期'
+					else
+						return '故人西辭黃鶴樓　煙花三月下揚州\n孤帆遠影碧空盡　惟見____天際流'
+					end
+				end
+			end
+		end
+	else
+		if id<36 then	
+			if id<30 then	
+				if id<27 then	
+					if id==24 then
+						return '花間一壺酒，獨酌無相親。\n舉杯邀__月，對影成三人。'
+					elseif id==25 then
+						return '__日入廚下，洗手作羹湯。\n未諳翁食性，先遣小姑嘗。'
+					else
+						return '故人西辭黃鶴樓，煙花__月下揚州\n孤帆遠影碧空盡，惟見長江天際流'
+					end
+				else
+					if id==27 then
+						return '鳳凰臺上鳳凰遊，鳳去台空江自流\n__宮花草埋幽徑，晉代衣冠成古丘'
+					elseif id==28 then
+						return '鳳凰臺上鳳凰遊，鳳去台空江自流\n吳宮花草埋幽徑，晉代衣冠成古__'
+					else
+						return '白__搗藥秋復春，嫦娥孤棲與誰鄰\n今人不見古時月，今月曾經照古人'
+					end
+				end
+			else
+				if id<33 then	
+					if id==30 then
+						return '朝辭白帝彩雲間，千里江陵一日還\n兩岸猿聲啼不住，輕舟已過__重山'
+					elseif id==31 then
+						return '白兔搗藥秋復春，嫦娥孤棲與誰鄰\n今人不見古時月，今月曾經照__人'
+					else
+						return '慈烏失其母，啞啞吐哀音。\n晝夜不飛去，經年守故__。'
+					end
+				else					
+					if id==33 then
+						return '月落烏啼霜滿天，江楓漁火對愁眠\n姑蘇城外____寺，夜半鐘聲到客船'
+					elseif id==34 then
+						return '月落烏啼霜滿天，江楓漁火對愁眠\n姑蘇城外寒山寺，夜半__聲到客船'
+					else
+						return '向晚意不適，驅車登古原。\n__陽無限好，只是近黃昏。'
+					end
+				end
+			end
+		else
+			if id<42 then	
+				if id<39 then	
+					if id==36 then
+						return '向晚意不適，驅車登__原。\n夕陽無限好，只是近黃昏。'
+					elseif id==37 then
+						return '空山新雨後，天氣晚來秋。\n明月松間照，清泉__上流。'
+					else
+						return '白兔搗藥秋復__，嫦娥孤棲與誰鄰\n今人不見古時月，今月曾經照古人'
+					end
+				else					
+					if id==39 then
+						return '__豆生南國，春來發幾枝？\n願君多采擷，此物最相思。'
+					elseif id==40 then
+						return '國破山河在，城春草木深。\n感時__濺淚，恨別鳥驚心。'
+					else
+						return '煮豆燃豆萁，__在釜中泣。\n本是同根生，相煎何太急！'
+					end
+				end
+			elseif id<48 then
+				if id<45 then
+					if id==42 then
+						return '白日依山盡，____入海流，\n欲窮千里目，更上一層樓。'
+					elseif id==43 then
+						return '千山鳥飛絕，萬徑人蹤滅，\n孤__蓑笠翁，獨釣寒江雪。'
+					else
+						return '朝辭白帝彩雲間，千里江陵一日還\n__岸猿聲啼不住，輕舟已過萬重山'
+					end
+				else
+					if id==45 then
+						return '少小離家老大回，鄉音無改鬢毛摧\n兒童相見不相識，__問客從何處來'
+					elseif id==46 then
+						return '在天願作比翼鳥，在__願為連理枝\n天長地久有時盡，此恨綿綿無絕期'
+					else
+						return '煮豆燃豆萁，豆在釜中泣。\n__是同根生，相煎何太急！'
+					end
+				end
+			else
+				if id==48 then
+					return '朝辭白帝彩雲間，__里江陵一日還\n兩岸猿聲啼不住，輕舟已過萬重山'
+				elseif id==49 then
+					return '紅豆生南國，春來發幾枝？\n願君多采擷，此__最相思。'
+				else
+					return '清明時節雨紛紛，路上行人欲斷魂\n借問酒家何處有？牧童遙指____村'
+				end
+			end
+		end
+	end
+end
+function GetQnA2(id)
+	qid = id
+	id = id-1
+	if id<24 then
+		if id<12 then
+			if id<6 then
+				if id<3 then
+					if id==0 then
+						return 1, GetQuestion2(qid), 'A. 心','B. 物','C. 豆','D. 情'
+					elseif id==1 then
+						return 3, GetQuestion2(qid), 'A. 海','B. 水','C. 江','D. 河'
+					else
+						return 2, GetQuestion2(qid), 'A. 巴掌','B. 流水','C. 風雨','D. 鳥啼'
+					end
+				else
+					if id==3 then
+						return 0, GetQuestion2(qid), 'A. 綺','B. 倚','C. 你','D. 我'
+					elseif id==4 then
+						return 1, GetQuestion2(qid), 'A. 綺','B. 一','C. 你','D. 我'
+					else
+						return 3, GetQuestion2(qid), 'A. 二','B. 一','C. 五','D. 三'
+					end
+				end
+			else
+				if id<9 then
+					if id==6 then
+						return 2, GetQuestion2(qid),'A. 佳人','B. 小姑','C. 美人','D. 姑娘'
+					elseif id==7 then
+						return 0, GetQuestion2(qid), 'A. 家書','B. 國書','C. 煙火','D. 戰書'
+					else
+						return 1, GetQuestion2(qid), 'A. 婆婆','B. 小姑','C. 夫君','D. 姑娘'
+					end
+				else
+					if id==9 then
+						return 2, GetQuestion2(qid), 'A. 萬','B. 百','C. 千','D. 億'
+					elseif id==10 then
+						return 3, GetQuestion2(qid), 'A. 黃河','B. 長江','C. 黑龍江','D. 汨羅'
+					else
+						return 0, GetQuestion2(qid), 'A. 廬山','B. 泰山','C. 蜀山','D. 合歡山'
+					end
+				end
+			end
+		else
+			if id<18 then
+				if id<15 then
+					if id==12 then
+						return 1, GetQuestion2(qid), 'A. 三','B. 巴','C. 巫','D. 大'
+					elseif id==13 then
+						return 2, GetQuestion2(qid), 'A. 魚','B. 月','C. 星','D. 日'
+					else
+						return 3, GetQuestion2(qid), 'A. 彎','B. 明','C. 日','D. 星'
+					end
+				else
+					if id==15 then
+						return 2, GetQuestion2(qid), 'A. 一','B. 二','C. 三','D. 四'
+					elseif id==16 then
+						return 3, GetQuestion2(qid), 'A. 日','B. 月','C. 年','D. 夕'
+					else
+						return 0, GetQuestion2(qid), 'A. 春風','B. 夏風','C. 秋風','D. 東風'
+					end
+				end
+			else					
+				if id<21 then
+					if id==18 then
+						return 1, GetQuestion2(qid), 'A. 北山','B. 南山','C. 西山','D. 東山'
+					elseif id==19 then
+						return 2, GetQuestion2(qid), 'A. 萬','B. 深','C. 青','D. 火'
+					else
+						return 3, GetQuestion2(qid), 'A. 青火','B. 縱火','C. 放火','D. 野火'
+					end
+				else					
+					if id==21 then
+						return 0, GetQuestion2(qid), 'A. 心','B. 青','C. 情','D. 香'
+					elseif id==22 then
+						return 1, GetQuestion2(qid), 'A. 鶴','B. 鳥','C. 鵲','D. 鴿'
+					else
+						return 2, GetQuestion2(qid), 'A. 黃河','B. 濁水','C. 長江','D. 江水'
+					end
+				end
+			end
+		end
+	else
+		if id<36 then	
+			if id<30 then	
+				if id<27 then	
+					if id==24 then
+						return 3, GetQuestion2(qid), 'A. 星','B. 日','C. 彎','D. 明'
+					elseif id==25 then
+						return 1, GetQuestion2(qid), 'A. 四','B. 三','C. 二','D. 一'
+					else
+						return 1, GetQuestion2(qid), 'A. 五','B. 三','C. 八','D. 六'
+					end
+				else
+					if id==27 then
+						return 0, GetQuestion2(qid), 'A. 吳','B. 宋','C. 武','D. 唐'
+					elseif id==28 then
+						return 1, GetQuestion2(qid), 'A. 井','B. 丘','C. 屋','D. 城'
+					else
+						return 2, GetQuestion2(qid), 'A. 蛇','B. 馬','C. 兔','D. 羊'
+					end
+				end
+			else
+				if id<33 then	
+					if id==30 then
+						return 1, GetQuestion2(qid), 'A. 千','B. 萬','C. 三','D. 一'
+					elseif id==31 then
+						return 3, GetQuestion2(qid), 'A. 舊','B. 來','C. 今','D. 古'
+					else
+						return 0, GetQuestion2(qid), 'A. 林','B. 樹','C. 鳥','D. 木'
+					end
+				else					
+					if id==33 then
+						return 1, GetQuestion2(qid), 'A. 少林','B. 寒山','C. 宗禪','D. 龍山'
+					elseif id==34 then
+						return 2, GetQuestion2(qid), 'A. 鈴','B. 雨','C. 鐘','D. 風'
+					else
+						return 3, GetQuestion2(qid), 'A. 太','B. 日','C. 光','D. 夕'
+					end
+				end
+			end
+		else
+			if id<42 then	
+				if id<39 then	
+					if id==36 then
+						return 0, GetQuestion2(qid), 'A. 古','B. 草','C. 平','D. 高'
+					elseif id==37 then
+						return 1, GetQuestion2(qid), 'A. 水','B. 石','C. 陸','D. 向'
+					else
+						return 2, GetQuestion2(qid), 'A. 夏','B. 秋','C. 春','D. 東'
+					end
+				else					
+					if id==39 then
+						return 3, GetQuestion2(qid), 'A. 綠','B. 青','C. 彎','D. 紅'
+					elseif id==40 then
+						return 2, GetQuestion2(qid), 'A. 人','B. 物','C. 花','D. 草'
+					else
+						return 1, GetQuestion2(qid), 'A. 心','B. 豆','C. 花','D. 草'
+					end
+				end
+			elseif id<48 then
+				if id<45 then
+					if id==42 then
+						return 2, GetQuestion2(qid), 'A. 黑龍江','B. 長江','C. 黃河','D. 淡水河'
+					elseif id==43 then
+						return 3, GetQuestion2(qid), 'A. 帆','B. 輪','C. 船','D. 舟'
+					else
+						return 2, GetQuestion2(qid), 'A. 一','B. 三','C. 兩','D. 四'
+					end
+				else
+					if id==45 then
+						return 3, GetQuestion2(qid), 'A. 想','B. 哭','C. 咦','D. 笑'
+					elseif id==46 then
+						return 1, GetQuestion2(qid), 'A. 林','B. 地','C. 陸','D. 海'
+					else
+						return 1, GetQuestion2(qid), 'A. 可','B. 本','C. 就','D. 原'
+					end
+				end
+			else
+				if id==48 then
+					return 0, GetQuestion2(qid), 'A. 千','B. 萬','C. 三','D. 一'
+				elseif id==49 then
+					return 3, GetQuestion2(qid), 'A. 豆','B. 情','C. 品','D. 物'
+				else
+					return 1, GetQuestion2(qid), 'A. 梅花','B. 杏花','C. 蘭花','D. 桂花'
+				end
+			end
+		end
+	end
+end
+
+--private

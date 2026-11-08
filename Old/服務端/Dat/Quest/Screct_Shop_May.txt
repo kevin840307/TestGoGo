@@ -1,0 +1,20 @@
+--五月的神秘商店
+--Screct_Shop_May
+
+function lGetItemID()
+	return 10602
+end
+
+function lGetOpenPrice()
+	return 10000
+end
+
+function lGetItemDetail()
+	return lGetItemID(), "五月", "等級50-70的合成裝備", lGetOpenPrice()
+end
+
+function lGetShopDetail()
+	return 32
+end
+
+#include "Screct_Shop_Comm.txt"

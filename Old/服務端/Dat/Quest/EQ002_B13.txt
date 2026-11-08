@@ -1,0 +1,4 @@
+#include "EQ002_Common.txt"
+function start()
+	AtMidWay(13)
+end

@@ -1,22 +1,65 @@
 
 extends CanvasLayer
 
+# Ten crisp 32x32 frames, pre-downsampled and sharpened from the approved
+# higher-resolution animation; preserve all other native cursor animations.
+const AUTORUN_SHEET_PATH = "res://ui/cursor/C_AUTOWALK.spr.png"
+const AUTORUN_FRAME_COUNT: int = 10
+const AUTORUN_FRAME_SIZE: Vector2i = Vector2i(32, 32)
+const AUTORUN_VISUAL_SCALE: float = 1.0
+
 signal ctrl_state_changed(is_pressed: bool)
 
 @onready var cursor_sprite: AnimatedSprite2D = $CursorSprite
 
 var tooltip_label: RichTextLabel = null
+var _original_cursor_scale: Vector2 = Vector2.ONE
+var _original_cursor_texture_filter: int = CanvasItem.TEXTURE_FILTER_PARENT_NODE
 var current_hovered_entity: Node = null
 var _logical_cursor_state: String = "normal"
 var _is_game_window_hovered: bool = false
+var _autorun_enabled: bool = false
+var _native_popup_cursor_depth: int = 0
+var _popup_cursor_window: Window = null
+var _popup_cursor_layer: CanvasLayer = null
+var _popup_cursor_sprite: AnimatedSprite2D = null
 
 
 var hovered_items: Array = []
 
 var _last_ctrl_state: bool = false
+var _afk_custom_cursor_enabled: bool = false
+
+
+func set_afk_custom_cursor_enabled(enabled: bool) -> void:
+	# Keep the game's own pointer during AFK. It is a single small sprite and
+	# costs far less than the world/minimap/effects we suspend. AFK forces the
+	# ordinary cursor animation and skips hover/combat/tooltip work.
+	if _afk_custom_cursor_enabled == enabled:
+		return
+	_afk_custom_cursor_enabled = enabled
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+	if is_instance_valid(cursor_sprite):
+		cursor_sprite.visible = true
+	if is_instance_valid(tooltip_label):
+		tooltip_label.visible = false
+	if enabled:
+		if is_instance_valid(cursor_sprite) and cursor_sprite.sprite_frames.has_animation("normal"):
+			cursor_sprite.play("normal")
+	else:
+		_refresh_cursor()
+		_apply_cursor_visual()
+
+
+func is_afk_custom_cursor_enabled() -> bool:
+	return _afk_custom_cursor_enabled
+
 
 func _ready() -> void :
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+	_register_autorun_cursor_animation()
+	_original_cursor_scale = cursor_sprite.scale
+	_original_cursor_texture_filter = cursor_sprite.texture_filter
 	cursor_sprite.play("normal")
 
 	tooltip_label = RichTextLabel.new()
@@ -33,11 +76,24 @@ func _ready() -> void :
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 func _process(_delta: float) -> void :
+	# Root and PopupMenu are separate viewports. The root cursor stays alive
+	# while a popup is open so leaving the popup never creates an invisible
+	# pointer region.
 	var m_pos = cursor_sprite.get_global_mouse_position()
 	cursor_sprite.global_position = m_pos
-
-
-
+	if _afk_custom_cursor_enabled:
+		# AFK dashboard only needs pointer position. Do not evaluate world hover,
+		# Ctrl combat state, autorun animation or tooltips every frame.
+		return
+	if (
+		is_instance_valid(_popup_cursor_window)
+		and is_instance_valid(_popup_cursor_sprite)
+		and _popup_cursor_window.visible
+	):
+		# PopupMenu is its own Window/Viewport. Draw the same in-game pointer
+		# inside that viewport so it stays above the dropdown instead of being
+		# covered by the popup surface.
+		_popup_cursor_sprite.position = _popup_cursor_window.get_mouse_position()
 	if current_hovered_entity != null and not is_instance_valid(current_hovered_entity):
 		_refresh_cursor()
 
@@ -121,6 +177,129 @@ func set_cursor_state(state_name: String) -> void :
 
 	_apply_cursor_visual()
 
+# Player controls navigation state; this module owns cursor presentation.
+# Existing skill, NPC, attack, pickup and UI cursor priorities win.
+func set_autorun_indicator(enabled: bool) -> void:
+	if _autorun_enabled == enabled:
+		return
+	_autorun_enabled = enabled
+	_apply_cursor_visual()
+
+
+func is_autorun_indicator_visible() -> bool:
+	return _autorun_enabled and cursor_sprite.animation == "autorun" and not _is_game_window_hovered and not is_native_popup_cursor_active()
+
+
+func _register_autorun_cursor_animation() -> void:
+	# Original cursor sprites are loaded from cursor_manager.tscn. Add the
+	# generated animation at runtime so those original imported textures,
+	# frame durations and hit points remain exactly as before.
+	if not ResourceLoader.exists(AUTORUN_SHEET_PATH):
+		push_warning("Auto-walk cursor PNG is missing: " + AUTORUN_SHEET_PATH)
+		return
+	var atlas: Texture2D = load(AUTORUN_SHEET_PATH) as Texture2D
+	if atlas == null or atlas.get_width() != AUTORUN_FRAME_COUNT * AUTORUN_FRAME_SIZE.x or atlas.get_height() != AUTORUN_FRAME_SIZE.y:
+		push_warning("Auto-walk cursor sprite sheet must be 320x32 pixels.")
+		return
+
+	var frames: SpriteFrames = cursor_sprite.sprite_frames.duplicate(true) as SpriteFrames
+	if not frames.has_animation("autorun"):
+		frames.add_animation("autorun")
+	frames.set_animation_speed("autorun", 10.0)
+	frames.set_animation_loop("autorun", true)
+	for frame_index in range(AUTORUN_FRAME_COUNT):
+		var frame_texture := AtlasTexture.new()
+		frame_texture.atlas = atlas
+		frame_texture.region = Rect2(
+			Vector2(frame_index * AUTORUN_FRAME_SIZE.x, 0),
+			Vector2(AUTORUN_FRAME_SIZE)
+		)
+		frames.add_frame("autorun", frame_texture)
+	cursor_sprite.sprite_frames = frames
+
+
+func show_popup_game_cursor(popup_window: Window) -> void:
+	if not is_instance_valid(popup_window):
+		return
+
+	if is_instance_valid(_popup_cursor_window) and _popup_cursor_window != popup_window:
+		hide_popup_game_cursor(_popup_cursor_window)
+
+	_native_popup_cursor_depth = 1
+	_popup_cursor_window = popup_window
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+
+	# PopupMenu is rendered in a separate Window/Viewport. Keep the main
+	# cursor visible in the root viewport and render a second cursor in the
+	# popup viewport. This gives seamless handoff when the pointer crosses
+	# the popup bounds instead of disappearing outside the select list.
+	if is_instance_valid(cursor_sprite):
+		cursor_sprite.visible = true
+	if is_instance_valid(tooltip_label):
+		tooltip_label.visible = false
+
+	if is_instance_valid(_popup_cursor_layer):
+		_popup_cursor_layer.queue_free()
+
+	_popup_cursor_layer = CanvasLayer.new()
+	_popup_cursor_layer.name = "GameCursorOverlay"
+	_popup_cursor_layer.layer = 4096
+	popup_window.add_child(_popup_cursor_layer)
+
+	_popup_cursor_sprite = AnimatedSprite2D.new()
+	_popup_cursor_sprite.name = "GameCursorSprite"
+	_popup_cursor_sprite.centered = false
+	_popup_cursor_sprite.sprite_frames = cursor_sprite.sprite_frames
+	_popup_cursor_sprite.scale = _original_cursor_scale
+	_popup_cursor_sprite.texture_filter = _original_cursor_texture_filter
+	_popup_cursor_layer.add_child(_popup_cursor_sprite)
+
+	# System dropdowns are UI interactions, so always use the ordinary
+	# C_NORMAL-style pointer instead of combat/skill/autorun states.
+	var popup_animation := "normal"
+	if not _popup_cursor_sprite.sprite_frames.has_animation(popup_animation):
+		popup_animation = str(cursor_sprite.animation)
+	_popup_cursor_sprite.play(popup_animation)
+	_popup_cursor_sprite.position = popup_window.get_mouse_position()
+
+
+func hide_popup_game_cursor(popup_window: Window = null) -> void:
+	if (
+		is_instance_valid(popup_window)
+		and is_instance_valid(_popup_cursor_window)
+		and popup_window != _popup_cursor_window
+	):
+		return
+
+	_native_popup_cursor_depth = 0
+	if is_instance_valid(_popup_cursor_layer):
+		_popup_cursor_layer.queue_free()
+	_popup_cursor_layer = null
+	_popup_cursor_sprite = null
+	_popup_cursor_window = null
+
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+	if is_instance_valid(cursor_sprite):
+		cursor_sprite.visible = true
+	_apply_cursor_visual()
+
+
+# Backward-compatible wrappers for callers from older scene/script revisions.
+func push_native_popup_cursor() -> void:
+	_native_popup_cursor_depth += 1
+
+func pop_native_popup_cursor() -> void:
+	_native_popup_cursor_depth = maxi(0, _native_popup_cursor_depth - 1)
+	if _native_popup_cursor_depth == 0 and not is_instance_valid(_popup_cursor_window):
+		Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+		if is_instance_valid(cursor_sprite):
+			cursor_sprite.visible = true
+		_apply_cursor_visual()
+
+func is_native_popup_cursor_active() -> bool:
+	return _native_popup_cursor_depth > 0 or is_instance_valid(_popup_cursor_window)
+
+
 func set_game_window_hovered(is_hovered: bool) -> void :
 	if _is_game_window_hovered == is_hovered:
 		return
@@ -138,9 +317,22 @@ func set_game_window_hovered(is_hovered: bool) -> void :
 			current_hovered_entity._on_mouse_entered()
 
 func _apply_cursor_visual() -> void :
-	var visual_state: = "normal" if _is_game_window_hovered else _logical_cursor_state
+	var visual_state: String = "normal" if (_afk_custom_cursor_enabled or _is_game_window_hovered) else _logical_cursor_state
+	# Keep all old skill/monster/NPC/player/item pointers ahead of autorun.
+	# Only replace the ordinary terrain pointer when walking is latched.
+	if _autorun_enabled and visual_state == "normal" and not _is_game_window_hovered:
+		if cursor_sprite.sprite_frames.has_animation("autorun"):
+			visual_state = "autorun"
 	if cursor_sprite.animation != visual_state:
 		cursor_sprite.play(visual_state)
+	# Scale only locked cursor, preserving all legacy cursor dimensions.
+	# Hotspot stays at this uncentered sprite's upper-left corner.
+	if visual_state == "autorun":
+		cursor_sprite.scale = _original_cursor_scale * AUTORUN_VISUAL_SCALE
+		cursor_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	else:
+		cursor_sprite.scale = _original_cursor_scale
+		cursor_sprite.texture_filter = _original_cursor_texture_filter
 
 func show_skill_target_tooltip(target_name: String, skill_name: String) -> void :
 	if not tooltip_label: return

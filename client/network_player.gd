@@ -21,6 +21,11 @@ var _last_snapshot_target_position: Vector2 = Vector2.ZERO
 var _has_snapshot_target: bool = false
 var _observed_snapshot_speed: float = 0.0
 var _pending_idle: bool = false
+var _performance_simplified_visual: bool = false
+var _performance_simplified_style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+const SIMPLIFIED_PLAYER_CLICK_SIZE := Vector2(104.0, 136.0)
+const SIMPLIFIED_ORB_CACHE = preload("res://scripts/simplified_orb_cache.gd")
+const NORMAL_PLAYER_CLICK_SIZE := Vector2(80.0, 120.0)
 
 const SAFE_MAP_IDS: Array = [4, 9, 15, 17, 22, 39, 40, 53, 75, 93]
 
@@ -57,6 +62,216 @@ func _ready() -> void :
 	if is_instance_valid(doll_engine) and doll_engine.get("doll_sprites") != null and doll_engine.doll_sprites.is_empty():
 		setup_layered_paper_dolls()
 		sync_animation()
+
+func _normalize_simplified_style(style: int) -> int:
+	var normalized := ClientPerformanceProfile.sanitize_simplify_mode(style)
+	if normalized < ClientPerformanceProfile.SIMPLIFY_PIXEL_A:
+		return ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+	return normalized
+
+func prepare_performance_visual(
+	simplified: bool,
+	style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+) -> void:
+	# Called before add_child() so simplified network players never need to
+	# build the full layered paper doll during spawn.
+	_performance_simplified_visual = simplified
+	_performance_simplified_style = _normalize_simplified_style(style)
+
+func set_performance_simplified(
+	enabled: bool,
+	style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+) -> void:
+	var normalized_style := _normalize_simplified_style(style)
+	if (
+		_performance_simplified_visual == enabled
+		and _performance_simplified_style == normalized_style
+	):
+		return
+	_performance_simplified_visual = enabled
+	_performance_simplified_style = normalized_style
+	setup_layered_paper_dolls()
+	_apply_interact_area_size()
+	sync_animation()
+	queue_redraw()
+
+func is_performance_simplified() -> bool:
+	return _performance_simplified_visual
+
+func _simplified_relation_color() -> Color:
+	var local_player = GameManager.current_player if GameManager else null
+	if is_instance_valid(local_player) and "data_model" in local_player:
+		var local_data = local_player.data_model
+		var my_party := str(local_data.party_id)
+		if my_party not in ["", "0", "-1"] and my_party == str(data_model.party_id):
+			return Color(0.28, 1.0, 0.56, 1.0)
+
+		var my_club := int(local_data.club_id)
+		if my_club > 0 and my_club == int(data_model.club_id):
+			return Color(0.32, 0.70, 1.0, 1.0)
+
+		var in_safe_zone := int(local_data.map_id) in SAFE_MAP_IDS
+		var attackable := (
+			int(local_data.pk_status) == 1
+			and int(data_model.pk_status) == 1
+			and int(data_model.hp) > 0
+			and not in_safe_zone
+		)
+		if attackable and local_player.has_method("can_attack"):
+			attackable = bool(local_player.can_attack())
+		if attackable:
+			return Color(1.0, 0.28, 0.30, 1.0)
+
+	return Color(0.82, 0.88, 0.98, 1.0)
+
+func _simplified_direction_vector() -> Vector2:
+	match current_dir:
+		"1": return Vector2(0.0, 1.0)
+		"2": return Vector2(0.707, 0.707)
+		"3": return Vector2(1.0, 0.0)
+		"4": return Vector2(0.707, -0.707)
+		"5": return Vector2(0.0, -1.0)
+		"6": return Vector2(-0.707, -0.707)
+		"7": return Vector2(-1.0, 0.0)
+		"8": return Vector2(-0.707, 0.707)
+	return Vector2.DOWN
+
+
+func _draw_simplified_player_orb(
+	center: Vector2,
+	relation: Color,
+	attacking: bool,
+	hit: bool
+) -> void:
+	# One shared, slightly taller star-orb texture for ALL remote players.
+	# Party/club/PvP changes only modulate its tint; no separate GPU textures.
+	var tint: Color = relation
+	if hit:
+		tint = Color(1.0, 0.53, 0.53, 1.0)
+	elif attacking:
+		tint = relation.lightened(0.15)
+	draw_texture(
+		SIMPLIFIED_ORB_CACHE.player_texture(),
+		center - SIMPLIFIED_ORB_CACHE.HALF_SIZE,
+		tint
+	)
+
+func _draw() -> void:
+	if not _performance_simplified_visual:
+		return
+
+	var state := current_state.to_lower()
+	var relation := _simplified_relation_color()
+	var center := Vector2(0.0, -50.0)
+	var dead := is_dead or state == "death"
+	var attacking := state.begins_with("attack") and not dead
+	if attacking:
+		center += _simplified_direction_vector() * 5.0
+
+	if dead:
+		# Death is a squashed version of the SAME procedural orb. Never
+		# fall back to the layered character sprites.
+		draw_set_transform(center + Vector2(0.0, 24.0), 0.0, Vector2(1.30, 0.34))
+		_draw_simplified_player_orb(Vector2.ZERO, relation.darkened(0.25), false, false)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		return
+
+	_draw_simplified_player_orb(
+		center,
+		relation,
+		attacking,
+		state.begins_with("hit")
+	)
+
+
+func setup_layered_paper_dolls() -> void:
+	if not _performance_simplified_visual:
+		super.setup_layered_paper_dolls()
+		return
+
+	if is_instance_valid(transform_sprite):
+		transform_sprite.visible = false
+	if is_instance_valid(doll_engine):
+		# A player that was already rendered in full detail may still own many
+		# AnimatedSprite2D layers. Release those nodes when switching to the
+		# procedural mode; switching simplification off rebuilds them normally.
+		if doll_engine.has_method("clear_dolls"):
+			doll_engine.clear_dolls()
+		doll_engine.visible = false
+
+	if name_label:
+		name_label.position.y = -112.0
+		name_label.visible = not data_model.is_shop_open
+	if title_label:
+		title_label.position.y = -132.0
+	if club_label:
+		club_label.position.y = -152.0
+	queue_redraw()
+
+func sync_animation() -> void:
+	if _performance_simplified_visual:
+		# State/direction still change authoritatively; only the expensive
+		# layered SpriteFrames animation is replaced by one redraw.
+		if is_instance_valid(doll_engine):
+			doll_engine.visible = false
+		if is_instance_valid(transform_sprite):
+			transform_sprite.visible = false
+		if is_instance_valid(death_effect):
+			death_effect.visible = false
+			death_effect.stop()
+		queue_redraw()
+		return
+	super.sync_animation()
+
+
+func _play_death_effect() -> void:
+	if _performance_simplified_visual:
+		if is_instance_valid(doll_engine):
+			doll_engine.visible = false
+		if is_instance_valid(transform_sprite):
+			transform_sprite.visible = false
+		if is_instance_valid(death_effect):
+			death_effect.visible = false
+			death_effect.stop()
+		queue_redraw()
+		return
+	super._play_death_effect()
+
+
+func play_mecha_transform() -> void:
+	if _performance_simplified_visual:
+		# A simplified remote player remains the same procedural silhouette
+		# through mount/dismount instead of loading a full mecha transition.
+		queue_redraw()
+		return
+	super.play_mecha_transform()
+
+
+func _on_party_sync_received(p_id: String, leader_id: int, members: Array) -> void:
+	super._on_party_sync_received(p_id, leader_id, members)
+	if _performance_simplified_visual:
+		queue_redraw()
+
+
+func _on_entity_name_color_updated(
+	p_entity_id: int,
+	color_state: int,
+	pk_status: int = -1,
+	red_man_kill_left: int = -1,
+	party_id: String = ""
+) -> void:
+	super._on_entity_name_color_updated(
+		p_entity_id,
+		color_state,
+		pk_status,
+		red_man_kill_left,
+		party_id
+	)
+	# Even when this packet belongs to the local player, its PK/party state
+	# can change how every simplified remote player should be outlined.
+	if _performance_simplified_visual:
+		queue_redraw()
+
 
 func _exit_tree() -> void :
 	if CursorManager:
@@ -167,12 +382,15 @@ func update_appearance_from_server(data: Dictionary) -> void :
 	if data.has("MechaType"):
 		data_model.mecha_type = str(data.get("MechaType", "MS"))
 
+	data_model.party_id = str(data.get("PartyID", data_model.party_id))
 	data_model.club_id = int(data.get("ClubID", data_model.club_id))
 	data_model.club_position = int(data.get("ClubPosition", data_model.club_position))
 	data_model.club_name = str(data.get("ClubName", data_model.club_name))
 	data_model.transform_type = int(data.get("TransformType", data_model.transform_type))
 	data_model.transform_id = str(data.get("TransformID", data_model.transform_id))
 	data_model.transform_color_index = int(data.get("TransformColorIndex", data_model.transform_color_index))
+	if _performance_simplified_visual:
+		queue_redraw()
 
 	var mecha_parts_changed = false
 	if data.has("MechaBody") or data.has("MechaWeapon") or data.has("MechaEngine") or old_mecha_type != data_model.mecha_type:
@@ -294,6 +512,8 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		return
 	_pending_idle = false
 	current_state = new_state
+	if _performance_simplified_visual:
+		queue_redraw()
 	if new_state.begins_with("emote_"):
 		is_emoting = true
 		if is_instance_valid(doll_engine):
@@ -439,11 +659,15 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 				GameManager.current_hud.show_player_context_menu(data_model.db_id, data_model.character_name)
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_LEFT:
+			# Targeting does not reload the full paper doll. Hostility/relationship
+			# stays visible through the built-in outline.
 			var local_player = GameManager.current_player if GameManager else null
 			if local_player and is_instance_valid(local_player):
 				var in_safe_zone = data_model.map_id in SAFE_MAP_IDS
 
 				if "ready_to_cast_skill_id" in local_player and local_player.ready_to_cast_skill_id > 0:
+					if local_player.has_method("cancel_autorun_tracking"):
+						local_player.cancel_autorun_tracking(true)
 					local_player.pending_skill_id = local_player.ready_to_cast_skill_id
 					local_player.combat_target = self
 					local_player.ready_to_cast_skill_id = -1
@@ -458,6 +682,8 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 						if local_player.has_method("can_attack") and not local_player.can_attack():
 							return
 
+						if local_player.has_method("cancel_autorun_tracking"):
+							local_player.cancel_autorun_tracking(true)
 						local_player.pending_skill_id = -1
 						local_player.combat_target = self
 						get_viewport().set_input_as_handled()
@@ -467,7 +693,11 @@ func _setup_interact_area() -> void :
 	interact_area.name = "InteractArea"
 	var collision = CollisionShape2D.new()
 	var rect = RectangleShape2D.new()
-	rect.size = Vector2(80, 120)
+	rect.size = (
+		SIMPLIFIED_PLAYER_CLICK_SIZE
+		if _performance_simplified_visual
+		else NORMAL_PLAYER_CLICK_SIZE
+	)
 	collision.shape = rect
 	collision.position = Vector2(0, -40)
 	interact_area.add_child(collision)
@@ -481,6 +711,20 @@ func _setup_interact_area() -> void :
 	self.input_pickable = false
 
 
+func _apply_interact_area_size() -> void:
+	if not is_instance_valid(interact_area) or interact_area.get_child_count() == 0:
+		return
+	var collision := interact_area.get_child(0) as CollisionShape2D
+	if not is_instance_valid(collision):
+		return
+	var rect := collision.shape as RectangleShape2D
+	if not is_instance_valid(rect):
+		return
+	rect.size = (
+		SIMPLIFIED_PLAYER_CLICK_SIZE
+		if _performance_simplified_visual
+		else NORMAL_PLAYER_CLICK_SIZE
+	)
 
 
 func adjust_interact_area_for_death(is_dead_state: bool) -> void :

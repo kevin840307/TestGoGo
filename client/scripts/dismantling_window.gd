@@ -75,6 +75,123 @@ func _on_preview_mouse_exited() -> void :
 	if GameManager and GameManager.current_hud and GameManager.current_hud.has_node("SharedTooltip"):
 		GameManager.current_hud.shared_tooltip.hide_tooltip()
 
+func set_recipe_data_initial_async(recipes: Array) -> void :
+	dismantle_recipes.clear()
+	for recipe_value in recipes:
+		var recipe: Dictionary = recipe_value
+		if str(recipe.get("ActionType", "")) == "Dismantle":
+			var inputs: Array = recipe.get("Inputs", [])
+			if not inputs.is_empty():
+				var input_id: int = int(inputs[0].get("ItemID", 0))
+				dismantle_recipes[input_id] = recipe
+
+	var previously_selected_key = null
+	var current_sel = item_tree.get_selected()
+	if current_sel and current_sel.get_metadata(0):
+		var selected_meta: Dictionary = current_sel.get_metadata(0)
+		previously_selected_key = _get_selection_key(selected_meta)
+
+	item_tree.clear()
+	var root: TreeItem = item_tree.create_item()
+	item_tree.hide_root = true
+
+	var owned_items: Dictionary = {}
+	if is_instance_valid(GameManager.current_player) and "data_model" in GameManager.current_player:
+		var p_data = GameManager.current_player.data_model
+		for eq_value in p_data.equip_list:
+			var eq: Dictionary = eq_value
+			if int(eq.get("in_bank", 0)) == 0 and int(eq.get("in_shop", 0)) == 0 and int(eq.get("part", 255)) == 255:
+				var idx: int = int(eq.get("item_idx", 0))
+				if dismantle_recipes.has(idx):
+					if not owned_items.has(idx):
+						owned_items[idx] = []
+					owned_items[idx].append({"uid": eq.get("item_id", 0), "item_index": idx, "item_data": eq, "is_equip": true, "owned": true})
+		for inv_value in p_data.inventory:
+			var inv: Dictionary = inv_value
+			if int(inv.get("in_bank", 0)) != 0 or int(inv.get("in_shop", 0)) != 0:
+				continue
+			var idx: int = int(inv.get("item_index", 0))
+			if not dismantle_recipes.has(idx):
+				continue
+			var recipe: Dictionary = dismantle_recipes[idx]
+			var inputs: Array = recipe.get("Inputs", [])
+			var req_count: int = int(inputs[0].get("Count", 1)) if not inputs.is_empty() else 1
+			if int(inv.get("count", 0)) >= req_count:
+				if not owned_items.has(idx):
+					owned_items[idx] = []
+				owned_items[idx].append({"uid": inv.get("item_uid", 0), "item_index": idx, "item_data": inv, "is_equip": false, "owned": true})
+
+	var category_labels: Dictionary = {
+		"Equipment": "可分解裝備",
+		"Weapon": "可分解武器",
+		"Material": "可分解材料",
+	}
+	var categories: Dictionary = {}
+	for category: String in ["Equipment", "Weapon", "Material"]:
+		var category_item: TreeItem = item_tree.create_item(root)
+		category_item.set_text(0, category_labels[category])
+		category_item.set_selectable(0, false)
+		categories[category] = category_item
+
+	var processed: int = 0
+	var target_tree_item: TreeItem = null
+	var first_available_tree_item: TreeItem = null
+	for item_idx_value in dismantle_recipes.keys():
+		var item_idx: int = int(item_idx_value)
+		var recipe: Dictionary = dismantle_recipes[item_idx]
+		var item_name: String = str(ItemLoader.get_item_property(item_idx, "item_name", "未知物品")) if ItemLoader else "未知物品"
+		var category: String = str(recipe.get("Category", "Material"))
+		if not categories.has(category):
+			category = "Material"
+		var is_equip: bool = category == "Equipment" or category == "Weapon"
+		var rows: Array = owned_items.get(item_idx, [])
+		if rows.is_empty():
+			rows = [{"uid": 0, "item_index": item_idx, "item_data": {}, "is_equip": is_equip, "owned": false}]
+
+		for metadata_value in rows:
+			var metadata: Dictionary = metadata_value
+			var display_name: String = item_name
+			if bool(metadata.get("owned", false)):
+				if bool(metadata.get("is_equip", false)):
+					var item_data: Dictionary = metadata.get("item_data", {})
+					var upgrade: int = int(item_data.get("Upgrade", item_data.get("upgrade", 0)))
+					if upgrade > 0:
+						display_name += " +%d" % upgrade
+				else:
+					var count: int = int(metadata.get("item_data", {}).get("count", 1))
+					display_name += " (持有：%d)" % count
+
+			var tree_item: TreeItem = item_tree.create_item(categories[category])
+			tree_item.set_text(0, display_name)
+			tree_item.set_metadata(0, metadata)
+			if ItemLoader:
+				var icon_id: int = int(ItemLoader.get_item_property(item_idx, "icon_id", 1)) - 1
+				var icon_texture = ItemLoader.get_photo(icon_id)
+				if icon_texture:
+					var item_data: Dictionary = metadata.get("item_data", {})
+					var color_index: int = int(item_data.get("Color", item_data.get("color", ItemLoader.get_item_property(item_idx, "color_index", 0))))
+					tree_item.set_icon(0, ITEM_ICON_TINT.get_tinted_icon(icon_texture, color_index))
+					tree_item.set_icon_max_width(0, 24)
+			var available: bool = bool(metadata.get("owned", false))
+			tree_item.set_custom_color(0, AVAILABLE_ITEM_COLOR if available else Color.GRAY)
+			if available and first_available_tree_item == null:
+				first_available_tree_item = tree_item
+			if previously_selected_key != null and _get_selection_key(metadata) == previously_selected_key:
+				target_tree_item = tree_item
+
+			processed += 1
+			if processed % 8 == 0:
+				await get_tree().process_frame
+
+	if target_tree_item:
+		item_tree.set_block_signals(true)
+		target_tree_item.select(0)
+		item_tree.set_block_signals(false)
+		item_tree.scroll_to_item(target_tree_item)
+		_on_item_selected()
+	elif previously_selected_key != null:
+		_clear_right_panel()
+
 func set_recipe_data(recipes: Array) -> void :
 	dismantle_recipes.clear()
 	for recipe in recipes:

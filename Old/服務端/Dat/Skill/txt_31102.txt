@@ -1,0 +1,96 @@
+
+function TXT_AskBasic()
+	return "要將基本材料加工嗎？"
+end
+
+function TXT_Yes()
+	return "．是。"
+end
+
+function TXT_No()
+	return "．我只是按錯，不用了。"
+end
+
+function TXT_Which()
+	return "要加工那一個材料？"
+end
+
+function TXT_Iron()
+	return "．鐵礦。"
+end
+
+function TXT_Crystal()
+	return "．晶石碎片。"
+end
+
+function TXT_Grass()
+	return "．魔靈草。"
+end
+
+function TXT_Wood()
+	return "．木頭。"
+end
+
+function TXT_Fur()
+	return "．毛皮。"
+end
+
+function TXT_Fruit()
+	return "．星果。"
+end
+
+function TXT_Shell()
+	return "．甲殼。"
+end	
+
+function TXT_Feather()
+	return "．羽毛。"
+end
+
+function TXT_Leave()
+	return "．還是不加工了。"
+end
+
+function TXT_Other()
+	return "．其他。"
+end
+
+function TXT_05()
+	BeforeConagulateName		= "鐵礦"
+	AfterConagulateName			= "鐵塊"
+end
+
+function TXT_06()
+	BeforeConagulateName		= "晶石碎片"
+	AfterConagulateName			= "晶石"
+end
+
+function TXT_07()	
+	BeforeConagulateName		= "魔靈草"
+	AfterConagulateName			= "魔靈葉"
+end
+
+function TXT_08()
+	BeforeConagulateName		= "木頭"
+	AfterConagulateName			= "木塊"
+end
+
+function TXT_09()
+	BeforeConagulateName		= "毛皮"
+	AfterConagulateName			= "皮革"
+end
+
+function TXT_10()
+	BeforeConagulateName		= "星果"
+	AfterConagulateName			= "星果醬"
+end
+
+function TXT_11()
+	BeforeConagulateName		= "甲殼"
+	AfterConagulateName			= "甲殼片"
+end
+
+function TXT_12()
+	BeforeConagulateName		= "羽毛"
+	AfterConagulateName			= "白羽毛"
+end

@@ -1,0 +1,68 @@
+--SKC31J105
+function start()
+	MinHit=2
+	MinHitDelta=3
+	BlockByShield = 1
+	consume = "MP"
+	other_consume = "Money"
+--	conTotal = 20
+	APcount = "AP"
+	DPcount = "DP"
+	varyDelta = 20
+
+	defender=GetTargetPtr()
+	attackType=GetType()
+	defenderType=GetTargetType(defender)
+	skillinfo = GetSkillInfo()
+	skillLv = GetTargetData(skillinfo, "Lv")
+	effect = GetPara(skillLv)
+	
+	conTotal = GetConTotal(skillLv)
+	other_conTotal = GetConTotal_Other(skillLv)
+		
+	Attack_2_Consume()
+end
+
+function GetPara(lv)
+	if lv == 1 then
+		return 25
+	elseif lv == 2 then
+		return 37
+	elseif lv == 3 then
+		return 50
+	elseif lv == 4 then
+		return 67
+	else
+		return 85
+	end
+end
+
+function GetConTotal(lv)
+	if lv == 1 then
+		return 20
+	elseif lv == 2 then
+		return 28
+	elseif lv == 3 then
+		return 37
+	elseif lv == 4 then
+		return 48
+	else
+		return 60
+	end
+end
+
+function GetConTotal_Other(lv)
+	if lv == 1 then
+		return 50
+	elseif lv == 2 then
+		return 100
+	elseif lv == 3 then
+		return 150
+	elseif lv == 4 then
+		return 200
+	else
+		return 250
+	end
+end
+
+#include "skillcommon.txt"

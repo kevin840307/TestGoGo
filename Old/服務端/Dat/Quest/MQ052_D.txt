@@ -1,0 +1,66 @@
+--MQ052_D 魔風彈
+
+function start()
+	AddItem(10234)
+	Say("p1這粒子彈……什麼用的啊？")
+	Say("p1把它放到手心看看……")
+	ans=random(4)
+	if ans==1 then
+		dialogue_01()
+	elseif ans==2 then
+		dialogue_02()
+	elseif ans==3 then
+		dialogue_03()
+	else
+		dialogue_04()
+	end
+end
+
+function dialogue_01()
+	Say("p3啊！爆炸了！！")
+	Say("p1哎呀呀呀呀……","End")
+	tmpHP = GetData("HP")/2
+	if tmpHP <= 1 then
+		tmpHP = 1
+	end
+	SetData("HP", tmpHP)
+end
+
+function dialogue_02()
+	Say("p1好像聽到風的聲音耶……")
+	Say("p3什麼我的手腳好像被風拉著了！","End")
+	--＜緩慢２級＞
+end
+
+function dialogue_03()
+	Say("p1什麼會爆開了！？咳咳咳！","End")
+	--＜中毒１級＞
+end
+
+function dialogue_04()
+	Say("p1嗯……聽到風和雷的呼喚似的。")
+	Say("p1是時候練習了！")
+	if GetData("Career")==3 then
+		if HasSkill(3103)~=1 then
+			Say("p7習得“暴風閃劍”")
+			AddSkill(3103)
+			Say("p7得到3000EXP","End")
+			gainexp(3000)
+		end
+	else
+		if HasSkill(4103)~=1 then
+			Say("p7習得“鐵彈擊”")
+			AddSkill(4103)
+			Say("p7得到3000EXP","End")
+			gainexp(3000)
+		end
+	end
+	QuestEnd()
+end
+
+function gainexp(exp)
+
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+
+end

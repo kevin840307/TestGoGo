@@ -1,0 +1,45 @@
+--NQ013_G  奇怪的雪地
+
+--statue(NQ013_Task) =1 : receive the mission
+--		     =2 : need to find 泊裘斯
+--		     =3 : after talking/finding 泊裘斯
+--		     =4 : need to find 蘑菇探測鏡
+--		     =5 : NQ013_Task is completed
+
+
+
+function start()
+
+	if CheckItem(10209)>0 then 
+		if CheckItem(10210)>0 then
+			Say("p1嗯～可以回去了～","End")
+		else
+			Say("p1咦？蘑菇探測鏡有反應！")
+			Say("p1好像在這個雪地內…小心的搬起雪才行……")
+			if ItemListCountLeft(0)<1 then
+				Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				Say("p7得到"..Color(0,45,198).."雪山紅菇"..Color(0,0,0).."")
+				AddItem(10210)
+				if GetFlag("NQ015_Done")~=1 then
+					Say("p7	得到520EXP")	
+					gainexp(520)
+				end
+				Say("p1嗯～可以回去了～","End")
+			end
+		end
+	
+	else
+		Say("n1…好像有些什麼在雪下似的。","End")
+	end
+
+end
+
+
+function gainexp(exp)
+
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+
+
+end

@@ -1,0 +1,16 @@
+--King_City 復活點設定
+
+function start()
+--AFTER JP TRANSLATION PART 2
+	Ask("s要在尼尼亞皇城設定復活點嗎？","好的。","不需要了。","set")
+end
+
+function set()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("s已經在這裡設定了復活點。","End")
+		SetRebornLocation(9408,10336,15)
+	else
+		QuestEnd()
+	end
+end

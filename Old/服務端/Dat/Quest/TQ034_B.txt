@@ -1,0 +1,81 @@
+--秘書‧塞莉
+--(TQ034_B)
+
+function start()
+	state = GetFlag("TQ034_Task")
+
+	if state >= 6 then
+		dia_06()
+	elseif state >= 5 then
+		dia_05()
+	elseif state >= 3 then
+		dia_04()
+	elseif state >= 2 then
+		dia_03()
+	elseif state >= 1 then
+		dia_02()
+	else
+		dia_01()
+	end
+end
+
+function dia_01()
+	Say("p7卡奇頓大臣正在責罵他的秘書．．．")
+	Say("n3妳是在做什麼的！～")
+	Say("n3少少事也做不好！！！～")
+	Say("n3還有．．．")
+	Say("p1卡奇頓大臣，發生什麼事了？")
+	Say("n3我罵人跟你有什麼關係，你這麼多事．．．")
+	Say("n3％＄＃＠＃＃＠＄＃！！！．．．（下省10000字）","End")
+end
+
+
+--＜After TQ034_A Step01＞
+function dia_02()
+	Say("p7卡奇頓大臣正在責罵他的秘書．．．")
+	Say("n3妳是在做什麼的！～")
+	Say("n3少少事也做不好！！！～")
+	Say("n3還有．．．")
+	Say("p7這時秘書‧塞莉對你打了個眼色，交了一張字條給你．．．")
+	if ItemListCountLeft(0)<1 then
+		dia_02b()
+	else
+		Say("p7得到塞莉的字條","End")
+		AddItem(10643)
+		SetFlag("TQ034_Task",2)
+	end
+end
+
+function dia_02b()
+	Say("p7身上沒有足夠的物品空間啊．．．先整理一下好了。","End")
+end
+
+--＜After TQ034_B Step02＞
+function dia_03()
+	Say("p7卡奇頓大臣正在責罵他的秘書．．．")
+	Say("n3妳是在做什麼的！～")
+	Say("n3少少事也做不好！！！～")
+	Say("n3還有．．．")
+	Say("p1卡奇頓大臣，發生什麼事了？")
+	Say("n3我罵人跟你有什麼關係，你這麼多事．．．")
+	Say("n3％＄＃＠＃＃＠＄＃！！！．．．（下省10000字）","End")
+end
+
+--＜After TQ034_C Step01＞
+function dia_04()
+	Say("p7卡奇頓大臣正在責罵他的秘書．．．")
+	Say("n3妳是在做什麼的！～")
+	Say("n3少少事也做不好！！！～")
+	Say("n3還有．．．")
+	Say("p5我還是快點去騎士之城找藥師‧柯尼，取一些可使人冷靜一下的藥物。不然塞莉就要給他繼續罵．．．","End")
+end
+
+--＜After TQ034_A Step04＞
+function dia_05()
+	Say("n1請你幫我們查出今次事件發生的原因，拜託你了．．．","End")
+end
+
+--＜After TQ034_A Step08＞
+function dia_06()
+	Say("n1感謝你幫我們查出事實的真相！","End")
+end

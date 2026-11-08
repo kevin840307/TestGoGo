@@ -1,0 +1,44 @@
+-- NQ002_C 魔法師米斯堤
+
+function start()
+	statue=GetFlag("NQ002_Task")
+
+	if statue ==1  then
+		Say("n1煙絲好像不大夠用的樣子。")
+		Say("p1請問你有蘿蔔種子嗎？我是幫米奧拿的。")
+		Ask("n啊？有啊……不過你可以先幫我去森林小店買一些煙絲回來嗎？","好吧！","什麼那麼麻煩啊？","Step2")
+
+	elseif statue ==3 then
+		Say("n1謝謝你的煙絲啊。","End")
+
+	elseif statue==2 then
+		if GetCountItemCount(10010) >= 1 then
+			if ItemListCountLeft(0)<1 then
+				Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				Say("n1很好！真是麻煩你了，這包南瓜種子就交給你吧！")
+				Say("p3南瓜種子？不是啊！我要的要蘿蔔種子！")
+				Say("n2什麼？蘿蔔種子？什麼不一早說啊？我只有南瓜種子而已。你不要就算了。")
+				Say("p3我要！我要！", "End")
+				RemoveItem(10010)
+				AddItem(10024, 1)
+				SetFlag("NQ002_Task",3)
+			end
+		else
+			Say("n1記著要上好的煙絲！","End")
+		end
+
+	else 	
+		Say("n1煙絲好像不大夠用的樣子。", "End")
+	
+	end
+end
+
+function Step2()
+	if GetChoice() == 0 then
+		Say("n1記著要上好的煙絲！","End")
+		SetFlag("NQ002_Task", 2)
+	else
+		Say("n1你不想要種子就算了。", "End")
+	end
+end

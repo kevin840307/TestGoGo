@@ -1,0 +1,6 @@
+--Debug用NPC01
+
+function start()
+	Say("n1加一件小紅晶石","End")
+	AddItem(1,1)
+end

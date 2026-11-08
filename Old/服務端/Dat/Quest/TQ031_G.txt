@@ -1,0 +1,15 @@
+--火鳳魔鳥
+--(TQ031_G)
+
+function start()
+
+	if CheckItem(10647)>0 then
+		QuestEnd()
+	elseif ItemListCountLeft(0)<1 then
+		Say("p7身上沒有足夠的物品空間啊．．．先整理一下好了。","End")
+	else
+		Say("p7得到魔鳥之爪。")
+		Say("p7這玩意好像很鋒利似的。","End")
+		AddItem(10647)
+	end
+end

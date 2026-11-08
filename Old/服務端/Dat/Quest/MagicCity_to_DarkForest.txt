@@ -1,0 +1,17 @@
+--Magic City to Dark Forest
+
+function start()
+	Say("n1封印之地嚴禁進入","End")
+end
+
+function nouse()
+	Ask("n要進入黑暗森林嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(1792,2624,1)
+	end
+	QuestEnd()
+end

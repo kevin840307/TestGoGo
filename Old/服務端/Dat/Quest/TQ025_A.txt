@@ -1,0 +1,16 @@
+--婚禮場地傳送器(TQ025_A)
+
+function start()
+	AddItem(10502)
+	Ask("p幸福的人，你要前往舉行婚禮的場地或是回到尼尼亞皇城呢？","我要前往舉行婚禮的場地。","我要回到尼尼亞皇城。","不需要了。","reply")
+end
+
+function reply()
+	ans = GetChoice()
+	if ans==0 then
+		MovePlayer(4533,2183,5)
+	elseif ans==1 then
+		MovePlayer(9408,10336,15)
+	end
+	QuestEnd()
+end

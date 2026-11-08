@@ -1,22 +1,59 @@
 
 extends BaseEntity
 
+const MOUSE_AUTORUN_STATE = preload("res://scripts/mouse_autorun_state.gd")
+
 @export var move_speed: float = 200.0
 
 var sync_timer: float = 0.0
+var last_walkable_sync_position: Vector2 = Vector2.ZERO
+var has_last_walkable_sync_position: bool = false
+# The last walkable coordinate must NEVER be reused after a map transition.
+var _last_walkable_sync_map_id: int = 0
 const SYNC_RATE: float = 0.05
 var _movement_state_reported: bool = false
-const DEFAULT_COLLISION_MASK: int = 21
-const SPECIAL_MECHA_COLLISION_MASK: int = 5
+var _initial_visual_ready: bool = false
+# Blocking.dat is authoritative for map obstacles. Keep Godot collision only
+# for non-map interaction/detection layers so the player's physical capsule
+# does not artificially enlarge every 16px blocking cell at corners.
+const DEFAULT_COLLISION_MASK: int = 4
+const SPECIAL_MECHA_COLLISION_MASK: int = 4
+const NAVIGATION_REPATH_INTERVAL: float = 0.08
+const NAVIGATION_REPATH_DISTANCE: float = 24.0
+const WAYPOINT_REACH_DISTANCE: float = 10.0
+const CORNER_STEER_SAMPLES: int = 4
 
 
 var target_position: Vector2 = Vector2.ZERO
+var move_destination: Vector2 = Vector2.ZERO
+var move_path: PackedVector2Array = PackedVector2Array()
+var move_path_index: int = 0
 var is_moving: bool = false
 var is_interacting_with_npc: bool = false
 var is_mouse_holding: bool = false
+var _mouse_autorun = MOUSE_AUTORUN_STATE.new()
+# A click that stopped latched walking must not immediately restart
+# terrain navigation in _unhandled_input on the very same mouse press.
+var _autorun_left_press_cancelled: bool = false
+var _autorun_blocked_retry_seconds: float = 0.0
+var _afk_navigation_anchor: Vector2 = Vector2.ZERO
+var _afk_navigation_anchor_active: bool = false
+
+
+func begin_afk_navigation_anchor() -> void:
+	# Latched mouse autorun must not follow the pointer over the AFK overlay.
+	_afk_navigation_anchor = move_destination if is_moving else get_global_mouse_position()
+	_afk_navigation_anchor_active = true
+
+
+func end_afk_navigation_anchor() -> void:
+	_afk_navigation_anchor_active = false
+
+
+const AUTORUN_BLOCKED_RETRY_INTERVAL: float = 0.4
 
 var stuck_frames: int = 0
-const MAX_STUCK_FRAMES: int = 5
+const MAX_STUCK_FRAMES: int = 30
 var action_lock_timer: float = 0.0
 var death_timer: float = 0.0
 var _last_death_display_second: int = -1
@@ -26,15 +63,27 @@ var attack_cooldown: float = 0.0
 var attack_speed: float = 1.0
 var ready_to_cast_skill_id: int = -1
 var pending_skill_id: int = -1
+var _pending_skill_preserve_combat_target: bool = false
+var _skill_aoe_self_center_cache: Dictionary = {}
 var confirmed_summoned_horse_uid: int = -1
+var can_cross_special_terrain: bool = false
+var navigation_repath_cooldown: float = 0.0
+var _navigation_request_id: int = 0
+var _navigation_fallback_running: bool = false
+var _navigation_fallback_destination: Vector2 = Vector2.ZERO
+# Rate-limited correction diagnostics; never print in Release.
+var _position_correction_count: int = 0
+var _last_position_correction_log_msec: int = 0
 
 
 
 func _ready() -> void :
 	super._ready()
 
-	if is_inside_tree() and is_instance_valid(doll_engine) and doll_engine.doll_sprites.is_empty():
-		setup_layered_paper_dolls()
+	# Building the layered paper doll can synchronously decode/create many
+	# textures on first login. Defer it until the world has rendered at least
+	# one frame so it no longer blocks the map-entry critical path.
+	call_deferred("_initialize_player_paper_doll")
 
 	if is_dead or data_model.hp <= 0:
 		is_dead = false
@@ -75,6 +124,32 @@ func _ready() -> void :
 	click_area.mouse_entered.connect(_on_mouse_entered)
 	click_area.mouse_exited.connect(_on_mouse_exited)
 
+func _initialize_player_paper_doll() -> void :
+	if not is_inside_tree() or not is_instance_valid(doll_engine):
+		_initial_visual_ready = true
+		return
+	if not doll_engine.doll_sprites.is_empty():
+		_initial_visual_ready = true
+		return
+	await get_tree().process_frame
+	if not is_inside_tree() or not is_instance_valid(doll_engine):
+		_initial_visual_ready = true
+		return
+	if not doll_engine.doll_sprites.is_empty():
+		_initial_visual_ready = true
+		return
+	if GameManager:
+		GameManager.set_frame_gap_stage("player_paper_doll")
+	var started_usec: int = Time.get_ticks_usec()
+	await setup_layered_paper_dolls_initial_async()
+	var elapsed_ms: float = float(Time.get_ticks_usec() - started_usec) / 1000.0
+	_initial_visual_ready = true
+	if elapsed_ms >= 50.0:
+		print("[PLAYER_INIT_TIMING] paper_doll_ms=%.2f" % elapsed_ms)
+
+func is_initial_visual_ready() -> bool:
+	return _initial_visual_ready
+
 func _exit_tree() -> void :
 	if CursorManager:
 		CursorManager.unregister_hover(self)
@@ -99,7 +174,7 @@ func _die() -> void :
 
 	is_moving = false
 	_movement_state_reported = false
-	is_mouse_holding = false
+	cancel_autorun_tracking()
 	combat_target = null
 	if CursorManager:
 		CursorManager.unregister_hover(self)
@@ -171,7 +246,7 @@ func _on_drive_mecha_response_received(success: bool, horse_uid: int, _message: 
 	_update_special_terrain_collision(confirmed_summoned_horse_uid)
 
 func _update_special_terrain_collision(horse_uid: int) -> void :
-	var can_cross_special_terrain: = false
+	can_cross_special_terrain = false
 	if horse_uid != -1:
 		for horse_equip in data_model.horse_equip_list:
 			if int(horse_equip.get("horse_uid", -1)) != horse_uid:
@@ -186,9 +261,19 @@ func _update_special_terrain_collision(horse_uid: int) -> void :
 	collision_mask = SPECIAL_MECHA_COLLISION_MASK if can_cross_special_terrain else DEFAULT_COLLISION_MASK
 
 func _on_change_map_received(_map_id: int, _target_x: float, _target_y: float) -> void :
+	# Invalidate the old map's known-good position immediately. The actual
+	# new position is installed by GameManager once the new scene is ready.
+	has_last_walkable_sync_position = false
+	_last_walkable_sync_map_id = 0
+	_navigation_request_id += 1
+	_navigation_fallback_running = false
 	is_moving = false
 	_movement_state_reported = false
-	is_mouse_holding = false
+	cancel_autorun_tracking()
+	move_path = PackedVector2Array()
+	move_path_index = 0
+	move_destination = global_position
+	target_position = global_position
 	velocity = Vector2.ZERO
 	combat_target = null
 
@@ -332,6 +417,69 @@ func parse_login_server_data(json_packet: Dictionary) -> void :
 			sync_animation()
 
 
+# Terrain long-hold latches cursor-follow walking. The first subsequent
+# left OR right click stops the latch immediately; the second normal
+# terrain click can start a new route. Other interactions keep priority.
+func cancel_autorun_tracking(stop_movement: bool = false) -> void:
+	_mouse_autorun.cancel()
+	is_mouse_holding = false
+	_autorun_blocked_retry_seconds = 0.0
+	if CursorManager and CursorManager.has_method("set_autorun_indicator"):
+		CursorManager.set_autorun_indicator(false)
+	if stop_movement and (is_moving or _navigation_fallback_running):
+		_stop_movement()
+
+
+func _finish_mouse_autorun_hold() -> void:
+	_mouse_autorun.terrain_release(Time.get_ticks_msec())
+	is_mouse_holding = false
+	if CursorManager and CursorManager.has_method("set_autorun_indicator"):
+		CursorManager.set_autorun_indicator(_mouse_autorun.latched)
+
+
+# Object / GUI interactions keep their original event handlers. This
+# predicate remains useful for interactions outside autorun; click-to-stop
+# itself no longer depends on what lies under the pointer.
+func _autorun_click_has_priority(hovered_entity: Node, hovered_ui: Control) -> bool:
+	if is_instance_valid(hovered_entity):
+		return true
+	if not is_instance_valid(hovered_ui):
+		return false
+	# MOUSE_FILTER_PASS can belong to a full-screen HUD overlay, which
+	# should not make every bare-ground click behave like a UI click.
+	return hovered_ui.mouse_filter == Control.MOUSE_FILTER_STOP or (
+		hovered_ui is BaseButton and hovered_ui.mouse_filter != Control.MOUSE_FILTER_IGNORE
+	)
+
+
+# _input sees the press before entity/UI handlers. Both mouse buttons
+# stop latched walking immediately, but neither press is consumed: the
+# original NPC, skill, PvP context menu and UI events still work.
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if not event.pressed:
+			_autorun_left_press_cancelled = false
+		elif _mouse_autorun.latched:
+			_autorun_left_press_cancelled = true
+			cancel_autorun_tracking(true)
+		elif _mouse_autorun.holding:
+			# A click on another interactable takes priority over held
+			# walking; do not interrupt an ordinary click on the terrain.
+			var hovered_entity: Node = CursorManager.current_hovered_entity if CursorManager else null
+			var hovered_ui: Control = get_viewport().gui_get_hovered_control() if is_inside_tree() else null
+			if _autorun_click_has_priority(hovered_entity, hovered_ui):
+				_autorun_left_press_cancelled = true
+				cancel_autorun_tracking(true)
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
+		if _mouse_autorun.latched or is_mouse_holding or (
+			(is_moving or _navigation_fallback_running)
+			and not is_instance_valid(combat_target)
+		):
+			# Also stop an ordinary ground click route. Preserve combat
+			# tracking and let normal right-click handlers continue.
+			cancel_autorun_tracking(true)
+
+
 func _unhandled_input(event: InputEvent) -> void :
 	if is_dead:
 		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
@@ -354,6 +502,12 @@ func _unhandled_input(event: InputEvent) -> void :
 
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
+			# The same left press already stopped a latched autorun in
+			# _input; never start a new A* destination on this press.
+			# This returns only from Player's terrain handler; it does
+			# not mark the event handled or block entity/UI click code.
+			if _autorun_left_press_cancelled:
+				return
 			if CursorManager:
 
 				if CursorManager.cursor_sprite.animation == "skill":
@@ -374,14 +528,22 @@ func _unhandled_input(event: InputEvent) -> void :
 			if current_state != "death":
 				combat_target = null
 				pending_skill_id = -1
+				_pending_skill_preserve_combat_target = false
 				is_emoting = false
-				target_position = get_global_mouse_position()
-				is_moving = true
-				is_mouse_holding = true
+				# A normal click starts one route. The first press after
+				# a latched hold was already intercepted above and cannot
+				# reach this terrain-routing branch.
+				var was_latched: bool = _mouse_autorun.terrain_press(
+					Time.get_ticks_msec()
+				)
+				if CursorManager and CursorManager.has_method("set_autorun_indicator"):
+					CursorManager.set_autorun_indicator(false)
+				_set_navigation_target(get_global_mouse_position())
+				is_mouse_holding = not was_latched
 				if not is_action_locked:
 					current_state = "walk"
 		else:
-			is_mouse_holding = false
+			_finish_mouse_autorun_hold()
 
 	if event is InputEventKey and event.pressed and not event.is_echo() and event.keycode == KEY_ALT:
 		if is_action_locked: return
@@ -396,20 +558,56 @@ func _unhandled_input(event: InputEvent) -> void :
 			if NetworkManager.is_connected_to_server: NetworkManager.send_secure_packet({"Type": "SyncState", "State": "crouch", "Dir": current_dir})
 
 func _physics_process(_delta: float) -> void :
+	navigation_repath_cooldown = maxf(
+		0.0,
+		navigation_repath_cooldown - _delta
+	)
+	_autorun_blocked_retry_seconds = maxf(
+		0.0, _autorun_blocked_retry_seconds - _delta
+	)
+
 	if is_dead:
 		_handle_death_timer(_delta)
 		return
 
-	if is_mouse_holding:
-
+	# Interactable clicks can consume mouse-up before Player receives it.
+	# Track the one-second hold in physics so cursor changes while pressed.
+	if _mouse_autorun.holding:
 		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			_finish_mouse_autorun_hold()
+		elif _mouse_autorun.poll_long_hold(Time.get_ticks_msec()):
+			if CursorManager and CursorManager.has_method("set_autorun_indicator"):
+				CursorManager.set_autorun_indicator(true)
+
+	if (is_mouse_holding or _mouse_autorun.latched) and (
+		is_instance_valid(combat_target) or data_model.is_shop_open
+		or is_interacting_with_npc or data_model.is_auto_saint_on
+	):
+		cancel_autorun_tracking()
+
+	if is_mouse_holding or _mouse_autorun.latched:
+		if not _mouse_autorun.latched and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 			is_mouse_holding = false
 		elif current_state != "death" and not data_model.is_shop_open and not is_interacting_with_npc and not data_model.is_auto_saint_on:
-			var mouse_pos = get_global_mouse_position()
-
+			var mouse_pos: Vector2 = _afk_navigation_anchor if _afk_navigation_anchor_active else get_global_mouse_position()
 			if global_position.distance_to(mouse_pos) > 10.0:
-				target_position = mouse_pos
-				is_moving = true
+				var destination_changed: bool = (
+					move_destination.distance_to(mouse_pos) >= NAVIGATION_REPATH_DISTANCE
+				)
+				var should_repath: bool = (
+					(not is_moving and (
+						not _mouse_autorun.latched
+						or _autorun_blocked_retry_seconds <= 0.0
+					)) or (
+						is_moving and destination_changed
+						and navigation_repath_cooldown <= 0.0
+					)
+				)
+				if should_repath:
+					if _mouse_autorun.latched and not is_moving:
+						# Rejected paths must not restart expensive A* every frame.
+						_autorun_blocked_retry_seconds = AUTORUN_BLOCKED_RETRY_INTERVAL
+					_set_navigation_target(mouse_pos)
 				if not is_action_locked and current_state != "walk":
 					current_state = "walk"
 
@@ -510,9 +708,10 @@ func _handle_combat_tracking() -> void :
 				required_range = float(s_lv.cast_range)
 
 	if dist > required_range:
-		target_position = combat_target.global_position
-		is_moving = true
-		if current_state != "walk":
+		var combat_destination: Vector2 = combat_target.global_position
+		if move_destination.distance_to(combat_destination) >= 16.0 or not is_moving:
+			_set_navigation_target(combat_destination)
+		if is_moving and not is_action_locked and current_state != "walk":
 			current_state = "walk"
 			sync_animation()
 	else:
@@ -522,8 +721,11 @@ func _handle_combat_tracking() -> void :
 
 			if pending_skill_id > 0:
 				_send_skill_request(pending_skill_id, target_id, target_type)
+				var preserve_target := _pending_skill_preserve_combat_target
 				pending_skill_id = -1
-				combat_target = null
+				_pending_skill_preserve_combat_target = false
+				if not preserve_target:
+					combat_target = null
 			elif attack_cooldown <= 0:
 
 
@@ -581,41 +783,333 @@ func _handle_action_lock(delta: float) -> void :
 		sync_animation()
 
 func _handle_movement(delta: float) -> void :
-	var dir_vector = (target_position - global_position)
-	var distance = dir_vector.length()
-	var current_real_speed = get_real_move_speed()
-	var step_distance = current_real_speed * delta
-	var stop_threshold = max(4.0, step_distance)
-
-	if distance <= stop_threshold:
+	if move_path.is_empty() or move_path_index >= move_path.size():
 		_stop_movement()
-	else:
-		velocity = dir_vector.normalized() * current_real_speed
-		update_direction_8way(velocity)
-		var old_position = global_position
-		move_and_slide()
+		return
 
-		if old_position.distance_to(global_position) < 1.5 and get_slide_collision_count() > 0:
-			stuck_frames += 1
-			if stuck_frames >= MAX_STUCK_FRAMES: _stop_movement()
-		else: stuck_frames = 0
+	var current_real_speed: float = get_real_move_speed()
+	var step_distance: float = current_real_speed * delta
+	var stop_threshold: float = maxf(
+		WAYPOINT_REACH_DISTANCE,
+		step_distance * 1.25
+	)
+	var map_id: int = _get_navigation_map_id()
+	if map_id <= 0:
+		_stop_movement(false)
+		return
+
+	# Promote whole waypoints whenever the next node is directly visible.
+	# Use the actual waypoint for reach checks; target_position may temporarily
+	# be a corner-steering probe between two nodes.
+	while move_path_index + 1 < move_path.size():
+		var current_waypoint: Vector2 = move_path[move_path_index]
+		var next_waypoint: Vector2 = move_path[move_path_index + 1]
+		var close_to_current: bool = (
+			global_position.distance_to(current_waypoint) <= stop_threshold
+		)
+		var next_is_visible: bool = LegacyPathfinder.is_segment_walkable(
+			map_id,
+			global_position,
+			next_waypoint,
+			can_cross_special_terrain
+		)
+
+		if not close_to_current and not next_is_visible:
+			break
+
+		move_path_index += 1
+
+	var final_waypoint: Vector2 = move_path[move_path_index]
+	var final_distance: float = global_position.distance_to(final_waypoint)
+	if move_path_index + 1 >= move_path.size() and final_distance <= stop_threshold:
+		global_position = final_waypoint
+		_stop_movement()
+		return
+
+	# Tight stairs/corners feel jerky if movement must hit the exact 16px cell
+	# centre before turning. Probe forward along the next route segment and
+	# steer toward the furthest currently-visible point. Every probe is checked
+	# against Blocking.dat, so this smooths the turn without cutting a wall.
+	target_position = final_waypoint
+	if move_path_index + 1 < move_path.size():
+		var next_waypoint: Vector2 = move_path[move_path_index + 1]
+		for sample_index: int in range(CORNER_STEER_SAMPLES - 1, 0, -1):
+			var ratio: float = float(sample_index) / float(CORNER_STEER_SAMPLES)
+			var probe: Vector2 = final_waypoint.lerp(next_waypoint, ratio)
+			if LegacyPathfinder.is_segment_walkable(
+				map_id,
+				global_position,
+				probe,
+				can_cross_special_terrain
+			):
+				target_position = probe
+				break
+
+	var dir_vector: Vector2 = target_position - global_position
+	var distance: float = dir_vector.length()
+
+	if distance <= 0.001:
+		return
+
+	# Do not overshoot a 3/4, 1/2, or 1/4 corner-steering probe.
+	# An unclamped frame can jump past that probe and reverse next frame,
+	# creating the observed few-pixel corner oscillation.
+	velocity = _calculate_step_velocity(dir_vector, current_real_speed, delta)
+	update_direction_8way(velocity)
+
+	var old_position: Vector2 = global_position
+	move_and_slide()
+	var moved_distance: float = old_position.distance_to(global_position)
+
+	if moved_distance >= maxf(0.25, step_distance * 0.1):
+		stuck_frames = 0
+		return
+
+	stuck_frames += 1
+	if stuck_frames >= MAX_STUCK_FRAMES:
+		_stop_movement()
+
+func _calculate_step_velocity(to_target: Vector2, speed: float, delta: float) -> Vector2:
+	if delta <= 0.0 or speed <= 0.0:
+		return Vector2.ZERO
+	var remaining_distance: float = to_target.length()
+	if remaining_distance <= 0.001:
+		return Vector2.ZERO
+	return to_target / remaining_distance * minf(speed, remaining_distance / delta)
+
+
+func reset_map_navigation_state(map_id: int, authoritative_position: Vector2) -> void:
+	# Called for initial world entry AND every map swap. This prevents a
+	# pathfinder failure on Map13 from sending an old Map15 coordinate to the
+	# server through _stop_movement().
+	_navigation_request_id += 1
+	_navigation_fallback_running = false
+	cancel_autorun_tracking()
+	is_moving = false
+	move_path = PackedVector2Array()
+	move_path_index = 0
+	velocity = Vector2.ZERO
+	move_destination = authoritative_position
+	target_position = authoritative_position
+	stuck_frames = 0
+	sync_timer = 0.0
+	_movement_state_reported = false
+	has_last_walkable_sync_position = map_id > 0
+	_last_walkable_sync_map_id = map_id if map_id > 0 else 0
+	last_walkable_sync_position = authoritative_position
+	if data_model and map_id > 0:
+		data_model.map_id = map_id
+	if OS.is_debug_build():
+		print("[PLAYER_MAP_NAV_RESET] map=%d pos=%s" % [map_id, str(authoritative_position)])
+
+
+func _get_navigation_map_id() -> int:
+	# During a transition the Player can still exist under the old map while
+	# the network's new MapID is already known. Never pathfind/send movement
+	# until the scene swap finishes.
+	if GameManager and GameManager.is_changing_map:
+		return 0
+	var model_map_id: int = int(data_model.map_id) if data_model else 0
+	if GameManager and is_instance_valid(GameManager.current_map_node):
+		var map_name: String = GameManager.current_map_node.name
+		if map_name.begins_with("Map"):
+			var scene_map_id: int = map_name.substr(3).to_int()
+			if scene_map_id > 0 and scene_map_id != model_map_id:
+				if OS.is_debug_build():
+					print("[PLAYER_MAP_ID_REPAIR] model=%d scene=%d" % [model_map_id, scene_map_id])
+				if data_model:
+					data_model.map_id = scene_map_id
+				# Never reuse an earlier cached position when map identity
+				# changes unexpectedly; wait for new valid walkable samples.
+				has_last_walkable_sync_position = false
+				_last_walkable_sync_map_id = 0
+				return scene_map_id
+	return model_map_id if model_map_id > 0 else 0
+
 
 func _handle_network_sync(delta: float) -> void :
-	if current_state == "walk":
-		sync_timer += delta
-		if sync_timer >= SYNC_RATE:
-			sync_timer = 0.0
-			if NetworkManager.is_connected_to_server:
-				NetworkManager.send_sync_position(int(global_position.x), int(global_position.y))
+	# Casting/attacking can change the animation state while movement
+	# continues. Synchronize actual movement to avoid a rejected jump
+	# after the animation ends, especially around Blocking.dat corners.
+	if not is_moving:
+		return
 
-func _stop_movement() -> void :
+	sync_timer += delta
+	if sync_timer < SYNC_RATE:
+		return
+	sync_timer = 0.0
+
+	if not NetworkManager.is_connected_to_server:
+		return
+
+	var map_id: int = _get_navigation_map_id()
+	if map_id <= 0:
+		return
+	if LegacyPathfinder.is_walkable(
+		map_id,
+		global_position,
+		can_cross_special_terrain
+	):
+		last_walkable_sync_position = global_position
+		has_last_walkable_sync_position = true
+		_last_walkable_sync_map_id = map_id
+		NetworkManager.send_sync_position(
+			int(global_position.x),
+			int(global_position.y)
+		)
+
+func _set_navigation_target(destination: Vector2) -> void :
+	# Holding the mouse can request a repath every ~80ms. If a large-detour
+	# fallback is already solving essentially the same destination, let it finish
+	# instead of cancelling and restarting expensive work.
+	if _navigation_fallback_running and _navigation_fallback_destination.distance_to(destination) < NAVIGATION_REPATH_DISTANCE:
+		move_destination = destination
+		return
+
+	_navigation_request_id += 1
+	var request_id: int = _navigation_request_id
+	var request_start: Vector2 = global_position
+	move_destination = destination
+
+	var map_id: int = _get_navigation_map_id()
+	if map_id <= 0:
+		# Do not run Map00 pathfinding or send a stale position when no active
+		# world has been established yet.
+		_stop_movement(false)
+		return
+	var route: PackedVector2Array = LegacyPathfinder.find_path(
+		map_id,
+		request_start,
+		destination,
+		can_cross_special_terrain
+	)
+
+	if route.is_empty():
+		# Preserve the proven fast path for normal movement. Only when it cannot
+		# find a route do we start the frame-budgeted large-detour fallback.
+		velocity = Vector2.ZERO
+		is_moving = false
+		current_state = "idle"
+		_navigation_fallback_running = true
+		_navigation_fallback_destination = destination
+		route = await LegacyPathfinder.find_large_detour_path_async(
+			map_id,
+			request_start,
+			destination,
+			can_cross_special_terrain
+		)
+		_navigation_fallback_running = false
+
+		# A newer click/repath supersedes this search. Never let an old async
+		# result move the player toward a stale destination.
+		if request_id != _navigation_request_id:
+			return
+		if route.is_empty():
+			_stop_movement(false)
+			return
+
+		# If another gameplay event moved/corrected the player while the fallback
+		# was yielding, discard the route rather than starting from stale cells.
+		if global_position.distance_to(request_start) > 24.0:
+			return
+
+		# Final safety gate: a fallback path is accepted only if every segment is
+		# still legal according to the same Blocking.dat used by movement.
+		if not LegacyPathfinder.validate_world_path(
+			map_id,
+			global_position,
+			route,
+			can_cross_special_terrain
+		):
+			_stop_movement(false)
+			return
+
+	if request_id != _navigation_request_id:
+		return
+
+	move_path = route
+	move_path_index = 0
+	target_position = move_path[0]
+	is_moving = true
+	navigation_repath_cooldown = NAVIGATION_REPATH_INTERVAL
+
+
+func apply_position_correction(corrected_position: Vector2) -> void :
+	if OS.is_debug_build():
+		var correction_distance: float = global_position.distance_to(corrected_position)
+		if correction_distance >= 2.0:
+			_position_correction_count += 1
+			var now_msec: int = Time.get_ticks_msec()
+			if _last_position_correction_log_msec == 0 or now_msec - _last_position_correction_log_msec >= 1000:
+				print("[PLAYER_POSITION_CORRECTION] from=%s to=%s diff=%.1f count=%d moving=%s state=%s target=%s" % [
+					str(global_position), str(corrected_position), correction_distance,
+					_position_correction_count, str(is_moving), current_state,
+					str(is_instance_valid(combat_target))
+				])
+				_last_position_correction_log_msec = now_msec
+				_position_correction_count = 0
+	_navigation_request_id += 1
+	_navigation_fallback_running = false
+	global_position = corrected_position
+	last_walkable_sync_position = corrected_position
+	var corrected_map_id: int = _get_navigation_map_id()
+	has_last_walkable_sync_position = corrected_map_id > 0
+	_last_walkable_sync_map_id = corrected_map_id if corrected_map_id > 0 else 0
 	velocity = Vector2.ZERO
 	is_moving = false
+	cancel_autorun_tracking()
+	move_path = PackedVector2Array()
+	move_path_index = 0
+	move_destination = corrected_position
+	target_position = corrected_position
+	stuck_frames = 0
+	_movement_state_reported = false
+	if not is_action_locked and not is_dead:
+		current_state = "idle"
+		sync_animation()
+
+
+func _stop_movement(send_final_position: bool = true) -> void :
+	_navigation_request_id += 1
+	_navigation_fallback_running = false
+	velocity = Vector2.ZERO
+	is_moving = false
+	move_path = PackedVector2Array()
+	move_path_index = 0
+	move_destination = global_position
 	target_position = global_position
-	current_state = "idle"
+	# Stopping at the waypoint must not interrupt a locked skill animation.
+	if not is_action_locked and not is_dead:
+		current_state = "idle"
 	stuck_frames = 0
 	if NetworkManager.is_connected_to_server:
-		NetworkManager.send_sync_position(int(global_position.x), int(global_position.y))
+		var map_id: int = _get_navigation_map_id()
+		var send_position: bool = false
+		var sync_position: Vector2 = global_position
+		if send_final_position and map_id > 0 and LegacyPathfinder.is_walkable(
+			map_id,
+			global_position,
+			can_cross_special_terrain
+		):
+			last_walkable_sync_position = global_position
+			has_last_walkable_sync_position = true
+			_last_walkable_sync_map_id = map_id
+			send_position = true
+		elif send_final_position and map_id > 0 and has_last_walkable_sync_position and _last_walkable_sync_map_id == map_id:
+			# Only fall back to a position proved walkable on THIS map.
+			# Never send an old-map coordinate after teleport/respawn.
+			sync_position = last_walkable_sync_position
+			send_position = true
+
+		if send_position and send_final_position:
+			NetworkManager.send_sync_position(
+				int(sync_position.x),
+				int(sync_position.y)
+			)
+		elif OS.is_debug_build() and send_final_position:
+			print("[PLAYER_SYNC_SKIPPED] map=%d position=%s anchor_map=%d" % [
+				map_id, str(global_position), _last_walkable_sync_map_id
+			])
 		if _movement_state_reported:
 			NetworkManager.send_secure_packet({"Type": "SyncState", "State": "idle", "Dir": current_dir})
 	_movement_state_reported = false
@@ -684,6 +1178,135 @@ func _on_equip_response(success: bool, _message: String, data: Dictionary) -> vo
 			hud.update_status_panel()
 
 
+func begin_targeted_skill(
+	target: Node2D,
+	skill_id: int,
+	preserve_combat_target: bool = false
+) -> void:
+	if not is_instance_valid(target) or skill_id <= 0:
+		return
+	# A target click supersedes held-mouse navigation and any pending
+	# asynchronous fallback path, but does not change cast/range rules.
+	cancel_autorun_tracking()
+	if is_moving or _navigation_fallback_running or not move_path.is_empty():
+		_stop_movement()
+	combat_target = target
+	pending_skill_id = skill_id
+	_pending_skill_preserve_combat_target = preserve_combat_target
+
+
+func _skill_cast_preferences_section() -> String:
+	var account := ""
+	if GlobalTempData:
+		account = str(GlobalTempData.login_user).strip_edges().to_lower()
+	if account.is_empty():
+		return GameConstants.SETTING_SECTION_GAME
+	return "%s:%s" % [
+		GameConstants.SETTING_SECTION_GAME,
+		account
+	]
+
+
+func _skill_aoe_preference_key(skill_id: int) -> String:
+	return "%s%d" % [
+		GameConstants.SETTING_KEY_SKILL_AOE_SELF_CENTER_PREFIX,
+		skill_id
+	]
+
+
+func is_skill_aoe_self_center(skill_id: int) -> bool:
+	if skill_id <= 0:
+		return false
+	if _skill_aoe_self_center_cache.has(skill_id):
+		return bool(_skill_aoe_self_center_cache[skill_id])
+
+	var config := ConfigFile.new()
+	var enabled := false
+	if config.load(GameConstants.CLIENT_SETTINGS_PATH) == OK:
+		enabled = bool(config.get_value(
+			_skill_cast_preferences_section(),
+			_skill_aoe_preference_key(skill_id),
+			false
+		))
+	_skill_aoe_self_center_cache[skill_id] = enabled
+	return enabled
+
+
+func set_skill_aoe_self_center(skill_id: int, enabled: bool) -> void:
+	if skill_id <= 0:
+		return
+	_skill_aoe_self_center_cache[skill_id] = enabled
+	var config := ConfigFile.new()
+	config.load(GameConstants.CLIENT_SETTINGS_PATH)
+	config.set_value(
+		_skill_cast_preferences_section(),
+		_skill_aoe_preference_key(skill_id),
+		enabled
+	)
+	config.save(GameConstants.CLIENT_SETTINGS_PATH)
+
+
+func _learned_skill_level(skill_id: int) -> int:
+	if data_model and "skill_list" in data_model:
+		for learned_skill in data_model.skill_list:
+			if int(learned_skill.get("skill_id", 0)) == skill_id:
+				return maxi(1, int(learned_skill.get("level", 1)))
+	return 1
+
+
+func is_skill_aoe_center_toggle_available(skill_id: int) -> bool:
+	if not SkillLoader or skill_id <= 0:
+		return false
+	var skill = SkillLoader.get_skill_data(skill_id)
+	if not skill:
+		return false
+	if "special_skill" in skill and str(skill.special_skill) == "畫面範圍攻擊":
+		return false
+
+	var level_data = skill.get_level_data(_learned_skill_level(skill_id))
+	if not level_data:
+		level_data = skill.get_level_data(1)
+	if not level_data or int(level_data.aoe_radius) <= 0:
+		return false
+
+	var skill_type := int(skill.skill_type)
+	if skill_type in [0, 1]:
+		return true
+	if skill_type == 7:
+		return int(level_data.base_damage) != 0 or int(level_data.damage_multiplier) != 0
+	return false
+
+
+func _can_reuse_combat_target_for_attack_skill(skill, skill_id: int) -> bool:
+	if not is_instance_valid(combat_target) or not skill:
+		return false
+
+	var skill_type := int(skill.skill_type)
+	var is_offensive := skill_type in [0, 1]
+	if skill_type == 7:
+		var level_data = skill.get_level_data(_learned_skill_level(skill_id))
+		if not level_data:
+			level_data = skill.get_level_data(1)
+		is_offensive = (
+			level_data
+			and (
+				int(level_data.base_damage) != 0
+				or int(level_data.damage_multiplier) != 0
+			)
+		)
+	if not is_offensive:
+		return false
+
+	# Current authoritative attack-skill path targets monsters. Do not reuse
+	# a player/pet target until those server target types explicitly support it.
+	return (
+		"current_hp" in combat_target
+		and "entity_id" in combat_target
+		and not (combat_target is PetEntity)
+		and int(combat_target.current_hp) > 0
+	)
+
+
 func prepare_skill(skill_id: int) -> void :
 	if not can_attack():
 		if GameManager.current_hud and GameManager.current_hud.has_method("show_rejection_message_flash"):
@@ -706,7 +1329,33 @@ func prepare_skill(skill_id: int) -> void :
 				if s_lv and s_lv.cast_range > 0:
 					require_target = true
 
+		var self_center_aoe := (
+			is_skill_aoe_center_toggle_available(skill_id)
+			and is_skill_aoe_self_center(skill_id)
+		)
+		if self_center_aoe:
+			ready_to_cast_skill_id = -1
+			_pending_skill_preserve_combat_target = false
+			_send_skill_request(
+				skill_id,
+				int(data_model.db_id),
+				0
+			)
+			return
+
 		if require_target:
+			# Attack skills reuse the already selected combat target. This
+			# removes the old "press skill, then click the same monster again"
+			# step while preserving the target after the cast.
+			if _can_reuse_combat_target_for_attack_skill(skill, skill_id):
+				ready_to_cast_skill_id = -1
+				begin_targeted_skill(
+					combat_target,
+					skill_id,
+					true
+				)
+				return
+
 			ready_to_cast_skill_id = skill_id
 			if CursorManager:
 				CursorManager.set_cursor_state("skill")
@@ -716,7 +1365,7 @@ func prepare_skill(skill_id: int) -> void :
 					if hovered.has_method("_on_mouse_entered"):
 						hovered._on_mouse_entered()
 		else:
-
+			_pending_skill_preserve_combat_target = false
 			_send_skill_request(skill_id, -1, 1)
 
 func _send_skill_request(skill_id: int, target_id: int, target_type: int) -> void :
@@ -750,8 +1399,7 @@ func _on_click_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: 
 						can_self_cast = true
 
 				if can_self_cast:
-					combat_target = self
-					pending_skill_id = ready_to_cast_skill_id
+					begin_targeted_skill(self, ready_to_cast_skill_id)
 					ready_to_cast_skill_id = -1
 					if CursorManager:
 						if CursorManager.has_method("cancel_skill_state"):

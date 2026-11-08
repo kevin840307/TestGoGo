@@ -1,0 +1,87 @@
+--NQ009_C  鑑定家邦奇
+
+
+function start()
+
+	statue=GetFlag("NQ009_Task")
+	
+	if statue==2 and CheckItem(10177)>0 then
+		Say("n1有什麼不知明的古董拿給我鑑定就對了。")
+		Say("p1嗯～你看看這個壺～")
+		Ask("n沒問題～鑑定價是1000元。","好吧。","不用了。","response1")
+	
+	else 
+		Say("n1有什麼不知明的古董拿給我鑑定就對了。","End")
+
+	end
+	
+
+
+end
+
+
+function response1()
+	if GetChoice()==0 then
+		
+		if GetData("Money")>=1000 then
+			RemoveItem(10177)
+			ModifyData("Money",-1000)
+			Speech1()
+		else
+			NotEnoughMoney()
+		end
+
+		
+
+	else
+
+		Say("n1……唉，鑑定這個工作果然很難賺錢……","End")
+
+	end
+
+
+
+end
+
+function response2()
+	gainexp(250)
+	RemoveItem(10177)
+	if GetChoice()==0 then
+		Say("n1來，這些錢給你吧！")
+		Say("n13200元～！謝謝！")
+		Say("p7得到3200元")
+		Say("p7得到250Exp","End")
+		ModifyData("Money",3200)
+		SetFlag("NQ009_Done",1)
+		--SetFlag("NQ009_Task",0)
+		
+	else
+		Say("n1好吧，那這個壺我還給你好了。")
+		AddItem(10178)
+		Say("p7得到里歐石的壺","End")
+		SetFlag("NQ009_Task",3)
+	end
+	
+end
+
+function NotEnoughMoney()
+	Say("n1是1000元啦，你是不是不夠錢啊？","End")
+end
+
+function Speech1()
+
+
+	Say("p1甚樣？果然是垃圾吧～？")
+	Say("n1咦？咦？為什麼你會有這個壺的？")
+	Say("p1不關你的事～")
+	Say("n1這個壺……是用里歐石所造，價值很高！")
+	Ask("n不如這樣吧，你把這個壺讓給我好嗎？3200元好嗎？","嗯～成交！","不行，那麼貴重的東西我不讓人～","response2")
+
+end
+
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+
+end

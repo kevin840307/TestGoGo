@@ -1,0 +1,19 @@
+--LS_25103_4 "追蹤目標‧四級"
+
+function GetSkillData()
+	return 25103,4,40,31442,"追蹤目標‧四級","追蹤目標‧三級","聖劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 3 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

@@ -1,0 +1,36 @@
+
+function pull_start(use_MP)
+	defender=GetTargetPtr()
+	attackType=GetType()
+	defenderType=GetTargetType(defender)
+	skillinfo = GetSkillInfo()
+	skillLv = GetTargetData(skillinfo, "Lv")
+	
+	pull_one(use_MP)
+end
+
+function pull_range(requestmp)
+	if GetData(consume) >= requestmp then
+		ModifyData(consume,-requestmp)
+		hasdefender, defender = GetVisEnemyList_First(AttackRange)
+		while hasdefender ~= 0 do
+			defenderType=GetTargetType(defender)
+			pull_enemy(50)
+		hasdefender, defender = GetVisList_Next()
+		end
+	end
+end
+
+function pull_one(requestmp)
+	if GetData(consume) >= requestmp then
+		ModifyData(consume,-requestmp)
+		pull_enemy(80)
+	end
+end
+
+function pull_enemy(percent)
+	if defenderType == 3 then
+		SetSkillDefender(defender)
+		Pull_Enemy(defender, percent)
+	end
+end

@@ -1,0 +1,181 @@
+function start()
+	if GetData("Bonnet") ~= 10699 then
+		Step14()
+	else
+		Step01()
+	end
+end
+
+function Step01()
+
+--//AddItem(10728)
+--//(P1)使用高級劍擊比賽大會‧參加表格！
+--//＜如WorldFlag (EQ006= 2)＞→Step02
+--//＜如WorldFlag (EQ006= 3或4)＞→Step07
+--//＜如WorldFlag (EQ006= 5)＞→Step04
+--//＜如WorldFlag (EQ006= 6)＞→Step08
+--//(P1)現在不是比賽的時間，參加表格會被回收。
+--//Remove Item(10728)
+	AddItem(10728)
+	Say("p1使用高級劍擊比賽大會‧參加表格！")
+
+	if GetData("Level") <= 50 then
+		Say("p1對不起，高級劍擊比賽大會只接受等級50以上的玩家參與。")
+		Say("p1參加表格會被回收。")
+		RemoveItem(10728)
+	else	
+		if GetWorldFlag("EQ006") == 1 then
+			Step10()
+		elseif GetWorldFlag("EQ006") == 2 then
+			Step10()
+		elseif GetWorldFlag("EQ006") == 3 then
+			Step02()	
+		elseif GetWorldFlag("EQ006") == 4 then
+			Step07()
+		elseif GetWorldFlag("EQ006") == 5 then
+			Step04()
+		elseif GetWorldFlag("EQ006") == 6 then
+			Step08()
+		else
+			Say("p1現在不是比賽的時間，參加表格會被回收。")
+			RemoveItem(10728)
+		end		
+	end
+end
+
+function Step02()
+
+--//＜玩家正身處Map75＞→Step03
+--//(P)你現在就要進入星空高級劍擊比賽大會的比賽場地嗎？
+--//＜選擇＞
+--//‧是的。→Move Player (10000,10000,75) →Quest End
+--//‧我還沒有準備好啊！→Quest End
+	if GetData("MapID") == 75 then
+		Step03()
+	else
+		Ask("p你現在就要進入星空高級劍擊比賽大會的比賽場地嗎？","是的。","我還沒有準備好啊！","Step02_Handler")
+	end
+end
+
+function Step02_Handler()
+	if GetChoice() == 0 then
+		MovePlayer(10000,10000,75)
+	else
+		QuestEnd()
+	end
+end
+
+function Step03()
+--//(P1)你已經進入了比賽場地了。
+	Say("p1你已經進入了比賽場地了。")
+end
+
+function Step04()
+	con1 = GetData("ComplexType")
+--	con2 = GetSummonedPet() 
+	con3, conDummy = GetTeamList_First()
+--	con4 = GetSummonedHorse(GetCallerPtr())
+	if GetData("MapID") == 75 then
+		if con1~=0 then
+			Step06()
+		elseif HasSummonedPet()==1 then
+			Step11()
+		elseif con3~=0 then
+			Step12()
+		elseif HasSummonedHorse(GetCallerPtr())==1 then
+			Step13()
+		else
+			Step05()
+		end
+	else
+		Step09()
+	end
+--//＜如玩家是合體中、組隊中或召喚戰鬥精靈中＞→Step06
+--//＜玩家正身處Map75＞→Step05
+
+end
+
+function Step05()
+--//(P1)星空高級劍擊比賽大會正式開始，進入PvP模式，祝你好運！
+--//＜打開PvP模式＞
+--//Remove Item(10728)
+	Say("p1星空高級劍擊比賽大會正式開始，進入PvP模式，祝你好運！")
+	MPKSet(1)
+	RemoveItem(10728)
+end
+
+function Step06()
+
+--//如你是在合體中、組隊中或召喚戰鬥精靈中是不能進入PvP模式的。
+	--Say("p1如你使用機甲中、是在合體中、組隊中或召喚戰鬥精靈中是不能進入PvP模式的。")
+	Say("p1在合體中是不能進入PvP模式的。")
+
+end
+
+function Step07()
+
+--//＜玩家正身處Map75＞→Step03
+--//(P1)進場時間已經中止了，參加表格會被回收。
+--//Remove Item(10728)
+	if GetData("MapID") == 75 then
+		Step03()
+	else
+		Say("p1進場時間已經中止了，參加表格會被回收。")
+		RemoveItem(10728)
+	end
+end
+
+function Step08()
+
+--//＜玩家不是身處Map75＞→Step09
+--//轉換PvP模式的時限已過，參加表格會被回收。
+--//你將被傳送至尼尼亞皇城。
+--//Remove Item(10728)
+--//Move Player (10000,10000,15)
+	if GetData("MapID") ~= 75 then
+		Step09()
+	else
+		Say("p1轉換PvP模式的時限已過，參加表格會被回收。")
+		Say("p1你將被傳送至尼尼亞皇城。")
+		RemoveItem(10728)
+		MovePlayer(10000,10000,15)
+	end
+end
+
+function Step09()
+
+--//(P1)現在不是比賽的時間，參加表格會被回收。
+--//Remove Item(10728)
+	Say("p1現在不是比賽的時間，參加表格會被回收。")
+	RemoveItem(10728)
+end
+
+function Step10()
+	Say("p1現在不是進場的時間，請留意GM公告。")
+end
+
+function Step11()
+
+--//如你是在合體中、組隊中或召喚戰鬥精靈中是不能進入PvP模式的。
+	--Say("p1如你使用機甲中、是在合體中、組隊中或召喚戰鬥精靈中是不能進入PvP模式的。")
+	Say("p1召喚戰鬥精靈中是不能進入PvP模式的。")
+
+end
+function Step12()
+
+--//如你是在合體中、組隊中或召喚戰鬥精靈中是不能進入PvP模式的。
+	--Say("p1如你使用機甲中、是在合體中、組隊中或召喚戰鬥精靈中是不能進入PvP模式的。")
+	Say("p1組隊中是不能進入PvP模式的。")
+
+end
+function Step13()
+
+--//如你是在合體中、組隊中或召喚戰鬥精靈中是不能進入PvP模式的。
+	--Say("p1如你使用機甲中、是在合體中、組隊中或召喚戰鬥精靈中是不能進入PvP模式的。")
+	Say("p1使用機甲中是不能進入PvP模式的。")
+
+end
+
+function Step14()
+	Say("p1你必需配帶世運第4環，才可參加初級劍擊比賽。")
+end

@@ -1,0 +1,72 @@
+function start()
+	if GetFlag("TW008_A_Step") >= 2 then
+		if GetFlag("TW008_C_Step") >= 2 then
+			if GetFlag("TW008_D_Step") >= 7 then
+				if GetFlag("TW008_C_Step") >= 4 then
+					Step07()
+				else
+					Step04()
+				end
+			else
+				Step03()
+			end
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("p7這位先生好像滿懷心事似的．．．")
+	Say("n1真心小姐啊，我好想念妳啊．．．")	
+	SetFlag("TW008_C_Step",1)
+end
+function Step02()
+--<After TW008_A Step 02>
+	Say("p7這位先生好像滿懷心事似的．．．")
+	Say("n1真心小姐啊，我好想念妳啊．．．")
+	Say("n1請問你可不可以幫我去找真心小姐，對她說我很掛念她，而且想跟她去星之湖那裡約會？")
+	Say("p1這小事就包在我身上吧！")
+	Say("n1但是希望你更能表達我的誠意，請找多3人在你身後表現出對真心小姐的愛意。")
+	Say("p6這人真是得寸進尺>.<")
+	SetFlag("TW008_C_Step",2)
+end
+function Step03()
+--<After TW008_C Step 02>
+	Say("n1真心小姐答應了我的約會了嗎？")
+	Say("n1你要找多3人在你身後表現出對真心小姐的愛意才可啊～")
+	SetFlag("TW008_C_Step",3)
+end
+function Step04()
+--<After TW008_D Step 07>
+--<玩家身上沒有真心小姐的花(10707)＞→Step05
+	if CheckItem(10707) ~= 1 then
+		Step05()
+	elseif ItemListCountLeft(0) < 1 then
+--＜玩家身上物品空間少於1＞→Step06
+		Step06()
+	else
+		Say("n1真心小姐答應了我的約會了嗎？")
+		Say("p1是啊，幾經辛苦終於得到她的答應了～這花是她送給你的．．．")
+		Say("p7交出真心小姐的花。")
+		Say("n1嘩～她竟然送花給我！真的太好了！")
+		Say("p7這時你在真心先生身上得到了一點真心。")
+		RemoveItem(10707)
+		AddItem(10705)
+		SetFlag("TW008_C_Step",4)
+	end
+end
+function Step05()
+	Say("n6忘記了帶真心小姐的花來．．．一定會給這古怪的人罵死=.=")
+end
+function Step06()
+	Say("p7身上的物品太多了，還是先整理一下。")
+end
+function Step07()
+--<After TW008_C Step 04> 
+	Say("n1嘩～她竟然送花給我！真的太好了！")
+	Say("n1謝謝你的幫忙啊～")
+	SetFlag("TW008_C_Step",7)
+end

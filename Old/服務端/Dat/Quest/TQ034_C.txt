@@ -1,0 +1,10 @@
+--塞莉的字條
+--(TQ034_C)
+
+function start()
+	Say("p7朋友，請你幫一幫忙，卡奇頓大臣不知怎麼行為異常的，拜託你去騎士之城找藥師‧柯尼，取一些可使人冷靜一下的藥物。拜託了！！","End")
+	AddItem(10643)
+	if GetFlag("TQ034_Task")==2 then
+		SetFlag("TQ034_Task",3)
+	end
+end

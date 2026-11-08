@@ -1,0 +1,57 @@
+--Snow_Right_Hand 冰雪上身裝備卡(10373)
+
+function start()
+	dialogue_01()
+end
+
+function dialogue_01()
+	level = GetData("Level")
+	item_id1, item_name1, item_id2, item_name2, desb_1, desb_2 = get_item_data(level)
+	if level<10 then
+		get_item(item_id1, item_name1)
+	else
+		Ask("p請選擇你想要的裝備：", desb_1..item_name1, desb_2..item_name2, "reply_01")
+	end
+	QuestEnd()
+end
+
+function reply_01()
+	level = GetData("Level")
+	item_id1, item_name1, item_id2, item_name2, desb_1, desb_2 = get_item_data(level)
+	ans = GetChoice()
+	if ans == 0 then
+		get_item(item_id1, item_name1)
+	else
+		get_item(item_id2, item_name2)
+	end
+end
+
+function get_item(id, name)
+	if ItemListCountLeft(1)<1 then
+		Say("p7對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+		AddItem(10373)
+	else
+		AddItem(id)
+		Say("p7得到"..name, "End")
+	end
+end
+
+function get_item_data(level)
+	if level < 10 then
+		return 23001, "「寒雪上裝」", 23001, "「寒雪上裝」", "等級10的裝備", "等級10的裝備"
+	elseif level < 20 then
+		return 23001, "「寒雪上裝」", 23002, "「雪崩上裝」", "等級10的裝備", "等級20的裝備"
+	elseif level < 30 then
+		return 23002, "「雪崩上裝」", 23003, "「雪龍上裝」", "等級20的裝備", "等級30的裝備"
+	elseif level < 40 then
+		return 23003, "「雪龍上裝」", 23004, "「雪戰龍上裝」", "等級30的裝備", "等級40的裝備"
+	elseif level < 50 then
+		return 23004, "「雪戰龍上裝」", 23005, "「雪龍王上裝」", "等級40的裝備", "等級50的裝備"
+	elseif level < 60 then
+		return 23005, "「雪龍王上裝」", 23006, "「雪戰神上裝」", "等級50的裝備", "等級60的裝備"
+	elseif level < 70 then
+		return 23006, "「雪戰神上裝」", 23007, "「寒雪戰神上裝」", "等級60的裝備", "等級70的裝備"
+	else
+		return 23007, "「寒雪戰神上裝」", 23008, "「雪龍神上裝」", "等級70的裝備", "等級80的裝備"
+	end
+end

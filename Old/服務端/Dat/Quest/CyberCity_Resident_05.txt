@@ -1,0 +1,6 @@
+--People01 朵斯
+
+function start()
+	Say("n1你聽說過把花改造的科技了嗎？")
+	Say("n1只要把花改造，植物就可以長年長出花來囉。","End")
+end

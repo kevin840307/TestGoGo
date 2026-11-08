@@ -1,0 +1,96 @@
+--MS002_B 皇家事務長
+
+--MS002_Task:
+-- 1: quest started, go to fing 事務長
+-- 2: go to find 拉潔
+-- 3: go to find 科吉 for doll
+-- 4: get the doll, find 拉潔
+-- 5: go to find 公主
+-- 6: talked with 公主 once
+-- 7: talked with 公主 twice
+-- 8: back to 事務長
+-- 9: quest completed
+
+--MS002_Done
+-- 1: quest completed at least once
+
+function start()
+	status = GetFlag("MS002_Task")
+	if status<1 or GetFlag("MS002_Done")==1 then
+		dialogue_AllTimes()
+	elseif status==1 then
+		dialogue_01()
+	elseif RemoveItem(10252)==1 then
+		dialogue_03()
+	else
+		dialogue_02()
+	end
+end
+
+function dialogue_AllTimes()
+	Say("n1皇室的事務真繁重。")
+	if GetFlag("MS002_Done")~=1 then
+		Say("n1咦？你是誰？快離開這裡！")
+	end
+	QuestEnd()
+end
+
+function dialogue_01()
+	SetFlag("MS002_Task", 2)
+
+	Say("p1事務長，你在找我嗎？")
+	Say("n1是的。"..GetName().."，你有聽過奧拉公主的事嗎？")
+	Say("p1嗯，聽說她是國王最寵愛的公主，可惜於數年前離奇地失蹤了，當時所有國民都為她哀哭……")
+	Say("n1實情是，公主於三年前偷偷離開了皇宮……")
+	Say("p3什麼？")
+	Say("n1請你不要那麼吵，這可是皇室一項重大的秘密啊！我現在還未能告訴你詳細的情形，……")
+	Say("n1但最近有報告指出公主可能身處魔法之都。")
+	Say("p1魔法之都……")
+	dialogue_01_title()
+	Say("n1現我謹奉尼尼亞王國國王旨意，命令你前往魔法之都，查探奧拉公主的下落！")
+	Say("p1屬下遵命！")
+	dialogue_02()
+end
+
+function dialogue_01_title()
+	careerType = GetData("Career")
+	if careerType<=3 then
+		Say("n1王國軍麾下格靈騎士團團員"..GetName().."聽命！")
+	elseif careerType==4 or careerType==8 then
+		Say("n1王國軍麾下絲蘭狙擊兵團團員"..GetName().."聽命！")
+	elseif careerType<=7 then
+		Say("n1王國軍麾下古尼爾魔法軍團團員"..GetName().."聽命！")
+	elseif careerType==10 then
+		Say("n1王國軍麾下皇家精靈戰團團員"..GetName().."聽命！")
+	else
+		Say("n1王國軍麾下尼尼亞補給團團員"..GetName().."聽命！")
+	end
+end
+
+function dialogue_02()
+	Say("n1你可以向門外的科吉大叔查詢更多有關公主出現於魔法之都的情報。希望你早日完成任務。")
+	Say("n1切記，要保守秘密。","End")
+end
+
+function dialogue_03()
+	Say("p1報告事務長，屬下經已完成任務。")
+	Say("n1怎樣？有公主的下落嗎？")
+	Say("p1我見到公主，她要我把這封信轉交給國王。")
+	Say("p7交出“奧拉公主的信”")
+	Say("n1這…這真是奧拉公主的信啊！太好了，國王與王子知道後一定會很高興。")
+	Say("n1"..GetName().."，今次你做得非常好！")
+	Say("p1能夠為王國效力，是我的光榮。")
+	Say("n1這把皇家小刀是專為王室成員而鑄的，王子殿下吩咐我要把這刀送給能打聽到公主下落的人。現在這是你的了。")
+	Say("p7得到“皇家小刀”")
+	AddItem(10253)
+	Say("p7得到3000EXP")
+	gainexp(3000)
+	Say("n1希望你繼續磨練自己，為王國效力。","End")
+	SetFlag("MS002_Task", 9)
+	SetFlag("MS002_Done", 1)
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end

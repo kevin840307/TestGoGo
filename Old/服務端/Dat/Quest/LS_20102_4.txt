@@ -1,0 +1,19 @@
+--LS_20102_4 "強力衝擊‧四級"
+
+function GetSkillData()
+	return 20102,4,20,31332,"強力衝擊‧四級","強力衝擊‧三級","見習靈鬥士、見習守護劍士、見習聖劍士、見習銃戰士或見習道具使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 1 or career == 2 or career == 3 or career == 4 or career == 9 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

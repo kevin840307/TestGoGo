@@ -1,0 +1,91 @@
+--NQ007_B  羅尼斯
+
+--statue 1 : receive the mission
+--statue 2 : 與羅尼斯對話後,去找治療藥水
+--statue 3 : 找到治療藥水後,得到普通的藥水
+--statue 4 : 與汀蘭對話後,得到小鋤頭
+
+function start()
+	statue=GetFlag("NQ007_Task")
+	if statue==4 then
+		Say("n1嗯～～謝謝你，這下我可以再挖下去了……")
+		Say("p7得到 250Exp","End")
+		gainexp(250)
+		RemoveItem(10175)
+		SetFlag("NQ007_Task",0)
+		SetFlag("NQ007_Done",1)
+
+	elseif statue==3 then
+
+		Say("n1你不是去找我媽媽嗎？","End")
+	
+	elseif statue==2 then
+		if CheckItem(72)>0 then
+			if ItemListCountLeft(0)<1 then
+				Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				RemoveItem(72)
+				speech1()
+				AddItem(10176)
+				SetFlag("NQ007_Task",3)
+			end
+		else
+			Say("p6這種傷勢的話…我想應該用治療特效藥吧…","End")
+		end
+
+	elseif statue==1 then
+		if GetFlag("NQ007_Done")==1 then
+			Say("n1哎呀！好痛！")
+			Say("p1你又掉下來了？")
+			Say("n1是啊……哎呀！")
+			Say("p1你不要動，我拿藥水來給你！")
+			Say("n1謝謝你啊……")
+			Say("p6這種傷勢的話…我想應該用治療特效藥吧…","End")
+		
+		else
+			Say("n1你是誰？哎呀！好痛！")
+			Say("p1你是……汀蘭大嬸的兒子嗎？")
+			Say("n1對……嗚……好痛啊……")
+			Say("p1你什麼了？")
+			Say("n1我由山崖那兒掉了下來……哎呀！")
+			Say("p1你不要動，我拿藥水來給你！")
+			Say("n1謝謝你啊……")
+			Say("p6這種傷勢的話…我想應該用治療特效藥吧…","End")
+		end
+		
+		SetFlag("NQ007_Task",2)
+	
+	elseif GetFlag("NQ007_Done")==1 then
+		Say("n1我一定要拿到～～！","End")
+
+	else
+		Say("n1這兒有我想要的……藥草，可是太高了，我伸起手都拿不了……","End")
+
+	end
+
+end
+
+function speech1()
+	Say("n1嗚……痛死了……")
+	Say("p1不要亂動喔……我來幫你包紮……")
+	Say("n1謝謝……")
+	Say("n7……")
+	Say("n7……")
+	Say("n7……")
+	Say("p1好了！")
+	Say("n1嗯……你可以再幫我一次嗎？其實我想要拿到山崖上的那個藥草……")
+	Say("p1沒問題…吧。")
+	Say("n1你先拿這藥草回去找我的母親，說她知道我沒有問題吧，順便向她拿一個小鋤頭喔！")
+	Say("n1要挖這種藥草一定要連根挖起！")
+	Say("p1好……不過你記著不要亂動！")
+	Say("p7得到普通藥草","End")
+
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end
+
+
+

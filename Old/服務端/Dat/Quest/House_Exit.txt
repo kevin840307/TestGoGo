@@ -1,0 +1,14 @@
+--離開私人房屋
+
+function start()
+	Ask("n要回到尼尼亞皇城嗎？","是的。","不要了。","set")
+end
+
+function set()
+	choice = GetChoice()
+	if choice == 0 then
+	MovePlayer(9408,10336,15)
+	else
+	QuestEnd()
+	end
+end

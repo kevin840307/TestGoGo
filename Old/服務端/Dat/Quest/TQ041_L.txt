@@ -1,0 +1,13 @@
+--神團聖殿出口
+
+function start()
+	Ask("n你要離開神團聖殿嗎？","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(6883,4558,4)	
+	end
+	QuestEnd()
+end

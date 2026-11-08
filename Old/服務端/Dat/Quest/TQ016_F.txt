@@ -1,0 +1,65 @@
+--篴(TQ016F)
+
+--TQ016_TaskE
+-- 1: send the card to SiuWing
+-- 2: already given the card to SiuWing
+
+function start()
+	status = GetFlag("TQ016_TaskE")
+	if status >= 2 then
+		dialogue_03()
+	elseif status >=1 and GetCountItemCount(10420)>0 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1е竧较竊竧较е贾","End")
+end
+
+function dialogue_02()
+	Say("p1硂琌竧较弘艶癳倒竧较°")
+	Say("p1琌砆褐眔竧较")
+	Say("n1谅谅°и癳眎"..Color(0,45,198).."┋褐竧较"..Color(0,0,0).."^^")
+
+	if all_done()==1 then
+		Say("p7眔┋褐竧较")
+		Say("n1临Τ硂眎"..Color(0,45,198).."琍竧较"..Color(0,0,0).."㎝"..Color(0,45,198).."竧较碪"..Color(0,0,0).."琌癳倒竧较搂")
+		Say("p7眔琍竧较")
+		Say("p7眔竧较碪","get_both")
+	else
+		Say("p7眔┋褐竧较","get_item")
+	end
+
+	QuestEnd()
+end
+
+function get_both()
+	get_item()
+	SetFlag("TQ016_Done", 1)
+	AddItem(10426)
+	AddItem(10427)
+end
+
+function get_item()
+	RemoveItem(10420)
+	AddItem(10424)
+	SetFlag("TQ016_TaskE", 2)
+end
+
+function dialogue_03()
+		Say("n1谅谅竧较竧较е贾","End")
+end
+
+function all_done()
+	if GetFlag("TQ016_TaskA")<2 then
+		return 0
+	elseif GetFlag("TQ016_TaskC")<2 then
+		return 0
+	elseif GetFlag("TQ016_TaskG")<2 then
+		return 0
+	end
+	return 1
+end

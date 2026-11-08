@@ -1,0 +1,18 @@
+--NQ026_S3 藍魔空間入口
+
+function start()
+    if CheckItem(10545) ~= 1 then
+        Say("p7沒有合適的鎖匙，不能進入。")
+    else
+        Ask("p要使用藍魔空間之匙進入藍魔空間嗎?","是的","不是","ans_handler")
+    end    
+end 
+
+function ans_handler()
+    if GetChoice()==0 then
+        RemoveItem(10545)
+        MovePlayer(3520,13856,59)
+    else
+        QuestEnd()
+    end
+end

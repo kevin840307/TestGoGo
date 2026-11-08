@@ -1,0 +1,11 @@
+--NQ026_P8
+
+function start()
+    if GetFlag("NQ026_KILL_SEQ") == 8 then
+        Say("p7體內出現了一道桃色的小型魔獸能量。")
+        SetFlag("NQ026_KILL_SEQ",16)
+    elseif GetFlag("NQ026_KILL_SEQ") ~= -1 then        
+        Say("p7體內的魔獸能量消失了！")
+        SetFlag("NQ026_KILL_SEQ",-1)
+    end        
+end

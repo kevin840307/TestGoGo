@@ -1,0 +1,54 @@
+--TQ012 重陽避難日
+--TQ012_A 重陽騎士
+
+--TQ012_Done
+-- 1: quest completed
+
+function start()
+	if GetFlag("TQ012_Done")==1 then
+		dialogue_03()
+	elseif RemoveItem(10236)==1 then
+		SetFlag("TQ012_Done", 1)
+		top10=GetWorldFlag("TQ012_Total")
+		if top10<9 then
+			SetWorldFlag("TQ012_Total",top10+1)
+			dialogue_02a()
+		else
+			dialogue_02b()
+		end
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1傳說中每年都會來襲擊村莊的魔鳥－"..Color(0,45,198).."卡瑪魔鳥王"..Color(0,0,0).."將會再次出現，現正徵召勇士將之擊退！")
+	Say("n1消滅卡瑪魔鳥王的人要手持"..Color(0,45,198).."300個卡瑪魔鳥之葉"..Color(0,0,0).."，在打倒牠之時用葉封印牠的靈魂，否則牠再轉世的時候會變得更加凶猛！")
+	Say("n1首10個將卡瑪魔鳥王之魂，帶回給我的人，國家會可頒發一個"..Color(0,45,198).."榮譽勳章"..Color(0,0,0).."以表揚其英勇表現。")
+	Say("n1這是一個可隨時返回尼尼亞皇城的傳送器。\n遲來的勇士，則可得5000星幣賞金。","End")
+end
+
+function dialogue_02a()
+	Say("n1為了表揚你的英勇表現，現頒發一個榮譽勳章給你！")
+	Say("n1希望你能繼續為國家努力！")
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到“榮譽勳章”","End")
+		AddItem(10235)
+	end
+end
+
+function dialogue_02b()
+	Say("n1為了答謝你的擊退了卡瑪魔鳥王，現頒發5000星幣賞金給你！")
+	Say("n1希望你能繼續為國家努力！")
+	Say("p7得到5000元","End")
+	ModifyData("Money", 5000)
+end
+
+function dialogue_03()
+	Say("n1感謝你為國家擊退了卡瑪魔鳥王，我代表尼尼亞國的人民多謝你！")
+	Say("n1希望你能繼續為國家努力！","End")
+end
+
+

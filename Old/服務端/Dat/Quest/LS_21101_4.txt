@@ -1,0 +1,19 @@
+--LS_21101_4 "赤之星‧四級"
+
+function GetSkillData()
+	return 21101,4,40,31337,"赤之星‧四級","赤之星‧三級","靈鬥士、守護劍士或聖劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 1 or career == 2 or career == 3 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

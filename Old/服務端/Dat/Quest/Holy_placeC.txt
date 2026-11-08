@@ -1,0 +1,5 @@
+--People01 迪奧．薩加
+
+function start()
+	Say("n1發動戰爭這麼可怕的事，我們是堅決反對的。","End")
+end

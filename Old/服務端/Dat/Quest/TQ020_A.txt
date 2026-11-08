@@ -1,0 +1,144 @@
+--電遊人第九號當鋪(TQ020A)
+
+function start()
+	if GetCountItemCount(10442)>0 then
+		dia_01()
+	else
+		dia_09()
+	end
+end
+
+function dia_01()
+	Ask("n歡迎！這裡是電遊人第九號當鋪，如果你找到以下物品，可能跟我換取不同的強化水。","30個波奇鳥羽毛。","30個波奇鳥甲殼。","30個機動偶靈件。","其他選擇。","reply_01")
+end
+function reply_01()
+	ans = GetChoice()
+	if ans==0 then
+		dia_03()
+	elseif ans==1 then
+		dia_04()
+	elseif ans==2 then
+		dia_05()
+	else
+		dia_02()
+	end
+end
+
+function dia_02()
+	Ask("n如果你找到以下物品，可能跟我換取不同的強化水。","30個索爾魔怪毛皮。","30個索爾魔怪甲殼。","其他選擇。","還是不要了。","reply_02")
+end
+function reply_02()
+	ans = GetChoice()
+	if ans==0 then
+		dia_06()
+	elseif ans==1 then
+		dia_07()
+	elseif ans==2 then
+		dia_01()
+	else
+		QuestEnd()
+	end
+end
+
+function dia_03()
+	if GetCountItemCount(10060)<30 then
+		dia_08()
+	else
+		Say("n1這5枝生命強化水是給你的。")
+		Say("n1交出30個波奇鳥羽毛。","dia_03b")
+	end
+end
+function dia_03b()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到5枝生命強化水。","remove_letter")
+		RemoveItem(10060,30)
+		AddItem(220,5)
+	end
+end
+
+function dia_04()
+	if GetCountItemCount(10046)<30 then
+		dia_08()
+	else
+		Say("n1這5枝魔力強化水是給你的。")
+		Say("n1交出30個波奇鳥甲殼。","dia_04b")
+	end
+end
+function dia_04b()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到5枝魔力強化水。","remove_letter")
+		RemoveItem(10046,30)
+		AddItem(225,5)
+	end
+end
+
+function dia_05()
+	if GetCountItemCount(10121)<30 then
+		dia_08()
+	else
+		Say("n1這5枝攻擊強化水是給你的。")
+		Say("n1交出30個機動偶靈件。","dia_05b")
+	end
+end
+function dia_05b()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到5枝攻擊強化水。","remove_letter")
+		RemoveItem(10121,30)
+		AddItem(230,5)
+	end
+end
+
+function dia_06()
+	if GetCountItemCount(10103)<30 then
+		dia_08()
+	else
+		Say("n1這5枝防制強化水是給你的。")
+		Say("n1交出30個索爾魔怪毛皮。","dia_06b")
+	end
+end
+function dia_06b()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到5枝防制強化水。","remove_letter")
+		RemoveItem(10103,30)
+		AddItem(235,5)
+	end
+end
+
+function dia_07()
+	if GetCountItemCount(10047)<30 then
+		dia_08()
+	else
+		Say("n1這5枝神力強化水是給你的。")
+		Say("n1交出30個索爾魔怪甲殼。","dia_07b")
+	end
+end
+function dia_07b()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到5枝神力強化水。","remove_letter")
+		RemoveItem(10047,30)
+		AddItem(240,5)
+	end
+end
+
+function dia_08()
+	Say("n1你沒有足夠的物品和我交易啊！下次再來吧！","End")
+end
+
+function dia_09()
+	Say("n1你要有星空九號當鋪邀請函，才可以和我交易啊！","End")
+end
+
+function remove_letter()
+	RemoveItem(10442)
+	QuestEnd()
+end

@@ -1,0 +1,13 @@
+--Magic School to Magic City
+
+function start()
+	Ask("n要離開學園嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(4352,2368,9)
+	end
+	QuestEnd()
+end

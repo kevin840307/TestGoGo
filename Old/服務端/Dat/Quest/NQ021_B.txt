@@ -1,0 +1,15 @@
+--競技場大使(NQ021_B)
+
+function start()
+	Ask("n閣下要觀看大競技場的賽程表，還是王者排行榜呢？","觀看大競技場的賽程表。","觀看王者排行榜。","暫時不用觀看了。","reply_01")
+end
+
+function reply_01()
+	ans = GetChoice()
+	if ans == 0 then
+		PKFixtureTable()
+	elseif ans == 1 then
+		PKShowPlayerRankCurr()
+	end
+	QuestEnd()
+end

@@ -1,0 +1,144 @@
+--MS002_E 奧拉公主 
+
+--MS002_Task:
+-- 1: quest started, go to fing 事務長
+-- 2: go to find 拉潔
+-- 3: go to find 科吉 for doll
+-- 4: get the doll, find 拉潔
+-- 5: go to find 公主
+-- 6: talked with 公主 once
+-- 7: talked with 公主 twice
+-- 8: back to 事務長
+-- 9: quest completed
+
+--MS002_Done
+-- 1: quest completed at least once
+
+--MS007_Task
+-- 1: quest started
+-- 2: go to find lolosie
+-- 3: get the flower, go to find prince
+-- 4: found prince, got the water
+-- 5: get the report
+-- 6: give the report to prince
+
+function start()
+	status=GetFlag("MS002_Task")
+	statusD2=GetFlag("MS002_Done")
+	status7=GetFlag("MS007_Task")
+
+	if status>=8 or statusD2==1 then
+		if status7>=5 then
+			dialogue_ms7_03()
+		elseif status7>=4 then
+			dialogue_ms7_02()
+		elseif status7>=3 then
+			dialogue_ms7_01()
+		else
+			dialogue_AllTimes()
+		end
+	elseif status==7 then
+		dialogue_03()
+	elseif status==6 then
+		dialogue_02()
+	elseif status==5 then
+		dialogue_01()
+	else
+		dialogue_AllTimes()
+	end
+end
+
+function dialogue_AllTimes()
+	Say("n1家，這裡就是我的家。","End")
+end
+
+function dialogue_01()
+	Say("n1家，這裡就是我的家。")
+	Say("p1請問你是住在這裡的嗎？")
+	Say("n1沒錯，這裡就是我的家。有甚麼事嗎？")
+	Say("p1我正在尋找一個由王城出來的少女，你認識她嗎？")
+	Say("n1…王城…對了，三年前流星之河氾濫，把那少女溺斃了。")
+	Say("p6三年前？","End")
+	SetFlag("MS002_Task", 6)
+end
+
+function dialogue_02()
+	Say("p1我正在尋找一個由王城出來的少女，請問你認識她嗎？")
+	Say("n1…三年前流星之河氾濫，她被河水溺斃了。")
+	Say("p6三年前？這與小妹妹所說的不一樣……","End")
+	SetFlag("MS002_Task", 7)
+end
+
+function dialogue_03()
+	Say("p1嗯，你住在這裡，不擔心流星之河氾濫，淹沒你的家嗎？")
+	Say("n1不用擔心，這裡是河的上游，從來都不氾濫。")
+	Say("p1可是，你不是說流星之河曾於三年前氾濫，溺斃一個由王城出來的少女嗎？")
+	Say("n1…是嗎？…我已不大記得了。")
+	Say("p6她的說話前後矛盾，十分古怪。")
+	Say("p6難道她就是公主？讓我試一試你吧！")
+	Say("p1唉，真可惜。我原本是要通知那少女，她的父親快要死了。")
+	Say("n1不愛護家人的人，死不足惜。")
+	Say("p6…想不到她竟如此冷淡……")
+	Say("p6試試這樣說吧。")
+	Say("p1要是國王真的死了，整個王國都會陷入混亂。難道公主殿下真的不擔心？")
+	Say("n3你不要再說王國，亦不要再說我父王的事了！\n王國王國！連家庭也不關心，說甚麼王國！")
+	Say("p1你真是公主殿下囉！(Bingo)")
+	Say("n1哼！是又怎樣？你究竟是誰？")
+	dialogue_03_title()
+	Say("n1荒謬！我是不會回王城的。")
+	Say("p1可是國王和王子都會擔心你。")
+	Say("n1三年了，現在才來擔心我？太遲了……")
+	Say("p6看來公主是個十分重視家庭的人…")
+	Say("p1…公主啊！如果不回王城，我便不能完成任務，我和我的家人都有禍了！")
+	Say("n1哼！我是不會回去的。……")
+	Say("n1這樣吧，你把這封信帶回去給我父王，他會明白的。")
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到“奧拉公主的信”","End")
+		AddItem(10252)
+		SetFlag("MS002_Task", 8)
+	end
+end
+
+function dialogue_03_title()
+	careerType = GetData("Career")
+	if careerType<=3 then
+		Say("p1屬下是王國軍麾下格靈騎士團團員"..GetName().."，奉命來迎接公主返回王城。")
+	elseif careerType==4 or careerType==8 then
+		Say("p1屬下是王國軍麾下絲蘭狙擊兵團團員"..GetName().."，奉命來迎接公主返回王城。")
+	elseif careerType<=7 then
+		Say("p1屬下是王國軍麾下古尼爾魔法軍團團員"..GetName().."，奉命來迎接公主返回王城。")
+	elseif careerType==10 then
+		Say("p1屬下是王國軍麾下皇家精靈戰團團員"..GetName().."，奉命來迎接公主返回王城。")
+	else
+		Say("p1屬下是王國軍麾下尼尼亞補給團團員"..GetName().."，奉命來迎接公主返回王城。")
+	end
+end
+
+--AFTER JP TRANSLATION PART 2
+function dialogue_ms7_01()
+	Say("n1你是？")
+	Say("p1你忘了我嗎？我是那名來找你的皇國軍，我現在有個請求，請你把天空之露水交給我可以嗎？．．．(把詳細情況道出。)")
+	Say("n1當然沒有問題，可是我要找找看，因為我已不知把它放在那裡了。")
+	Say("n7公主正在不斷四處找尋東西")
+	Say("n1有了，就是這個瓶子裡的東西嗎？")
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到“天空之露水”。","End")
+		AddItem(10330)
+		SetFlag("MS007_Task",4)
+	end
+end
+
+function dialogue_ms7_02()
+	Say("n1你還不快些把星晨花和天空之露水帶給娜姬？","End")
+end
+
+function dialogue_ms7_03()
+	Say("n1國家的事就等皇兄他們想好了，反正他們只腦中只想這些。","End")
+end
+
+
+

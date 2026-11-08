@@ -1,0 +1,61 @@
+--技能捲軸common
+
+function start()
+	skillID, skillLv, playerLV, itemID, itemName, preSkillName, careerName = GetSkillData()
+	AddItem(itemID)
+	
+	Ask("p你是不是要學習"..itemName.."呢？", "是", "不是", "reply")
+end
+
+function reply()
+	if GetChoice() == 0 then
+		skillID, skillLv, playerLV, itemID, itemName, preSkillName, careerName = GetSkillData()
+		playerCareer = GetData("Career")
+		playerJob = GetData("Job")
+		
+		playerSkillLv = 0
+		if HasSkill(skillID)==1 then
+			playerSkillLv = GetTargetData(GetThisSkill(skillID), "Lv")
+		end
+		
+		if GetData("Level") < playerLV then
+			wrong_1()
+		elseif CheckCareer(playerCareer, playerJob) == 0 then
+			wrong_2()
+		elseif playerSkillLv >= skillLv then
+			wrong_3()
+		elseif playerSkillLv ~= skillLv-1 then
+			wrong_4()
+		else
+			RemoveItem(itemID)
+			if skillLv == 1 then
+				AddSkill(skillID)
+			else
+				SetTargetData(GetThisSkill(skillID), "Lv", skillLv)
+				SendSkillList()
+			end
+			ok()
+		end
+	end
+	QuestEnd()
+end
+
+function ok()
+	Say("p7你已經學會了"..itemName.."。")
+end
+
+function wrong_1()
+	Say("p7你的等級仍未可學習"..itemName.."啊。")
+end
+
+function wrong_2()
+	Say("p7只有"..careerName.."才可學習"..itemName.."。")
+end
+
+function wrong_3()
+	Say("p7你已經學會了"..itemName.."，不用再學。")
+end
+
+function wrong_4()
+	Say("p7要學習"..itemName.."之前，你必須先學會"..preSkillName.."啊。")
+end

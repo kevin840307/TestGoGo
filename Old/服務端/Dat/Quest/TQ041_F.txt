@@ -1,0 +1,17 @@
+function start()
+
+	Say("n1打開星之門！！")
+	Say("n1一道藍光包圍著你！這時你聽到一把聲音問…")
+	Ask("n你要進入星之道還是回到尼尼亞皇城？","我要進入星之道。","我要回到尼尼亞皇城。","我要再考慮一下。","Step01_Handler")
+
+end
+
+function Step01_Handler()
+	if GetChoice() == 0 then
+		MovePlayer(10048,2528,68)	
+	elseif GetChoice() == 1 then
+		MovePlayer(10000,10000,15)
+	else
+		QuestEnd()
+	end
+end

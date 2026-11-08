@@ -1,0 +1,32 @@
+--Gun_Shop_Basic
+
+function start()
+	Career = GetData("Career")
+	if Career == 9 then
+		CheapShop()
+	else
+	Ask("n歡迎光臨，想看看什麼貨品呢？","銃砲","子彈","check")
+	end
+end
+
+function check()
+	choice = GetChoice()
+	if choice == 0 then
+		OpenShop (11,100)
+	elseif choice == 1 then
+		OpenShop (9,100)
+	end
+end
+
+function CheapShop()
+	Ask("n歡迎光臨，想看看什麼貨品呢？","銃砲","子彈","checkC")
+end
+
+function checkC()
+	choice = GetChoice()
+	if choice == 0 then
+		OpenShop (11,80)
+	elseif choice == 1 then
+		OpenShop (9,100)
+	end
+end

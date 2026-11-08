@@ -1,0 +1,37 @@
+--Learn_Skill_8103(魂彈擊)
+
+function start()
+	Giveback()
+	if GetData("Career") == 8 then
+	CheckOther()
+	else
+	Say("p7只有魔銃使才可學習魂彈擊。","End")
+	end
+end
+
+function CheckOther()
+	if GetData("Level") < 20 then
+	Say("p7你的等級仍未可學習魂彈擊啊。","End")
+	elseif HasSkill(8103)==1 then
+	Say("p7你已經學會了魂彈擊。","End")
+	else
+	Say("p7你的眼前出現一道白光，你看到了聖光雷獸的形象，這時祂對你說．．．")
+		Ask("p你要學習魂彈擊嗎?","是的。","不是。","Teach")
+	end
+end
+
+function Teach()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("p7我現在就將魂彈擊傳授給你．．．")
+		Say("p7你已經學會了魂彈擊。","End")
+		RemoveItem(10339)
+		AddSkill(8103)
+	else
+	Say("p7需要學習魂彈擊時，可以再次召喚我。","End")
+	end
+end
+
+function Giveback()
+	AddItem(10339)
+end

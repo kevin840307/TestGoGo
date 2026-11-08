@@ -1,0 +1,13 @@
+--Underground(P05) to Underground(P07)
+
+function start()
+	Ask("n要進入地下神殿房間?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(14208,10176,33)
+	end 
+	QuestEnd()
+end

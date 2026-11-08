@@ -1,0 +1,6 @@
+--People01 利博
+
+function start()
+	Say("n1賭博是一個壞習慣……")
+	Say("n1我以前就是因為常常賭博，所以我的錢都用光了。","End")
+end

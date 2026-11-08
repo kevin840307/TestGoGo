@@ -1,0 +1,123 @@
+function start()
+	if GetFlag("TW008_A_Step") >= 2 then
+		if GetFlag("TW008_E_Step")>= 02 or GetFlag("TW008_E_Step")>= 07 then
+			if GetFlag("TW008_F_Step") >= 2 then
+				if GetFlag("TW008_E_Step") >= 9 then
+					Step11()
+				else	
+					Step09()
+				end
+			else
+				Step04()			
+			end
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("n1我做的飯團是很美味的啊．．．")
+end
+
+function Step02()
+--<After TW008_A Step 02>
+--<玩家身上沒有善良(10704)和真心(10705)＞→Step03
+--<玩家身上物品空間小於1＞→Step06
+	if CheckItem(10704) ~= 1 and CheckItem(10705) ~= 1 then
+		Step03()
+	elseif ItemListCountLeft(0) < 1 then
+		Step06()
+	else	
+		Say("n1我做的飯團是很美味的啊，我剛做了一個想給我太太．．．")
+		Say("n1不過我看你好像會偷吃～我不會將它交給你啊～")
+		Say("p1才不會啦，你看看我的善良和真心~")
+		Say("n1啊～好吧，你就把這美味飯糰幫我交給信任婆婆。")
+		Say("p1包在我身上吧！")
+		Say("p7得到美味飯糰。")
+		AddItem(10708)
+		SetFlag("TW008_E_Step",2)
+	end
+end
+function Step03()
+	Say("n1我做的飯團是很美味的啊，我剛做了一個想給我太太．．．")
+	Say("n1不過我看你好像會偷吃～我不會將它交給你啊～")
+end
+function Step04()
+--<After TW008_E Step 02> 或　<After TW008_E Step 07>
+--<玩家身上沒有美味飯糰(10708)＞→Step05
+	if CheckItem(10708) ~= 1 then
+		Step05()
+	else
+		Say("n1你快把美味飯糰幫我交給信任婆婆吧。")
+		SetFlag("TW008_E_Step",4)
+	end
+end
+function Step05()
+--<玩家身上物品空間小於1＞→Step06
+	if ItemListCountLeft(0) < 1 then
+		Step06()
+	else	
+		Say("n3你竟然真的偷吃飯糰！？")
+		Say("p1對不起啦，飯糰真的很香，多給我一次機會好嗎？")
+		Say("n3飯糰售價1000元！")
+		Ask("n你要不要買？","這裡1000元","這麼貴，不要啦！","Step05_Handler")
+	end
+--＜選項＞
+--．這裡1000元→Step07
+--．這麼貴，不要啦！→Quest End
+end
+function Step05_Handler()
+	if GetChoice() == 0 then
+		Step07()
+	else
+		QuestEnd()
+	end
+end
+function Step06()
+	Say("p7身上的物品太多了，還是先整理一下。")
+end
+function Step07()
+--<玩家身上沒有1000元>→Step08
+	if GetData("Money") < 1000 then 
+		Step08()
+	else
+		Say("n1不要再偷吃啊！")
+		Say("p7得到美味飯糰。")
+		AddItem(10708)
+		SetFlag("TW008_E_Step",7)
+	end
+end
+function Step08()
+	Say("n3你偷吃了飯糰，沒有1000元我是不會再給你的！")
+end
+function Step09()
+--<After TW008_F Step 02>
+--<玩家身上沒有美味飯糰收據(10709)＞→Step10
+--<玩家身上物品空間小於1＞→Step06
+	if CheckItem(10709) ~= 1 then
+		Step10()
+	elseif ItemListCountLeft(0) < 1 then
+		Step06()		
+	else
+		Say("p7將美味飯糰收據交給老伯。")
+		Say("n1很少人能夠抵受得了美味飯糰的啊～")
+		Say("n1你果然是一個可信的人！！")
+		Say("p7這時你在信任老伯身上得到了一點信任。")
+		RemoveItem(10709)
+		AddItem(10706)
+		SetFlag("TW008_E_Step",9)
+	end
+end
+function Step10()
+	Say("p6沒有美味飯糰收據，老伯一定會以我偷吃飯糰的啊～")
+	SetFlag("TW008_E_Step",10)
+end
+function Step11()
+--<After TW008_E Step 09>
+	Say("n1很少人能夠抵受得了美味飯糰的啊～")
+	Say("n1你果然是一個可信的人！！")
+	SetFlag("TW008_E_Step",11)
+end

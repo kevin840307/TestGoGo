@@ -1,0 +1,32 @@
+function start()
+	if GetFlag("TQ041_B_Step") >= 1 then
+		if GetFlag("TQ041_K_Step") >= 1 then
+			Step03()
+		else
+			Step02()
+		end	
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("p1參見大皇子殿下！")
+	Say("s你的名字已經在皇室成為話題了～")
+	Say("p1星之門終於完成了，真叫人興奮。")
+	Say("s不過我認為和亞斯人展開正面的戰爭，對雙方也沒有好處，我們應該用和平的手段去拯救在加米蘭特同胞，是否要重奪加米蘭特已經不重要。")
+	SetFlag("TQ041_C_Step",1)
+end
+
+function Step02()
+--//＜After TQ041_B．Step01＞
+	Say("s探索星之道的任務就交給你了，希望你可以找到拯救在加米蘭特同胞的方法。")
+	Say("s戰爭只會帶來痛苦，要盡量避免無謂的戰爭。")
+	SetFlag("TQ041_C_Step",2)
+end
+
+function Step03()
+--//＜After TQ041_K．Step01＞
+	Say("s你去過神團聖殿請教聖女回來了嗎？聖女殿下別來無恙嗎？")
+	SetFlag("TQ041_C_Step",3)
+end

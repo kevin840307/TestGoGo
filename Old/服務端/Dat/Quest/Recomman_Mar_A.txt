@@ -1,0 +1,18 @@
+--Recomman_Mar_A 星擊號機甲囊
+
+function start()
+	if GetHorseEquipCountLeft()<3 then
+		step02()
+	else
+	Say("p1換取星擊號機甲。")
+	Say("p1得到星擊號、星擊號武裝和星擊號二足引擎。","End")
+	AddItem(6636)
+	AddItem(6637)
+	AddItem(6638)
+	end
+end
+
+function step02()
+	Say("p7對不起，你身上的坐騎裝備太多了，請清除一些坐騎裝備再來。","End")
+	AddItem(10517)
+end

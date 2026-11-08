@@ -1,0 +1,60 @@
+--王者獅鷲
+--TQ030_B2
+
+function get_data()
+	return "王者獅鷲", "王者獅鷲之魂", 10580
+end
+
+function start()
+	enemyname, itemname, itemid = get_data()
+	if CheckItem(itemid) == 1 then
+		if GetCountItemCount(itemid)<300 then
+			dia_01()
+		else
+			Say("p7對不起，你身上的"..itemname.."太多了，請整理一下吧！","End")
+		end
+	elseif ItemListCountLeft(0)>=1 then
+		dia_01() 
+	else
+		Say("p7對不起，你身上的物品太多了，請整理一下吧！","End")
+	end
+end
+
+function dia_01()
+	Say("p7打倒"..enemyname.."。")
+	Say("p7得到"..itemname.."。")
+
+	counter = GetFlag("TQ030_Count")
+	if counter > 10 or counter < 0 then
+		MovePlayer(10000,10000,15)
+		QuestEnd()
+	else
+		counter = counter + 1
+		countleft = 10 - counter
+		if countleft <= 0 then
+			Say("p7你的獵殺限額已經滿了。")
+	--		Say("p7今次封封印山洞仙級團旅程已經結束，你將會回到尼尼亞皇城。","Move")
+			Say("p7今次封封印山洞仙級團旅程已經結束，你將會回到尼尼亞皇城。")
+			GoAddItem()
+			MovePlayer(10000,10000,15)
+			QuestEnd()
+		else
+			GoAddItem()
+			Say("p7你還有"..countleft.."個獵殺限額。","End")
+		end
+	end
+end
+
+function Move()
+	GoAddItem()
+	MovePlayer(10000,10000,15)
+	QuestEnd()
+end
+
+function GoAddItem()
+	enemyname, itemname, itemid = get_data()
+	AddItem(itemid)
+	counter = GetFlag("TQ030_Count")
+	counter = counter + 1
+	SetFlag("TQ030_Count",counter)
+end

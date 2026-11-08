@@ -1,0 +1,72 @@
+--Screct_Shop_Comm
+
+function start()
+	itemID, month, shopDesc, openPrice = lGetItemDetail()
+	if GetCountItemCount(itemID)>299 then
+		Say("p7使用"..month.."的神秘商店，神秘商店只可使用一次，本月商品是"..shopDesc.."，開啟神秘商店的費用是"..openPrice.."星幣！","dia_01")
+	else
+		Say("p7使用"..month.."的神秘商店，神秘商店只可使用一次，本月商品是"..shopDesc.."，開啟神秘商店的費用是"..openPrice.."星幣！")
+		dia_01()
+	end
+end
+
+function dia_01()
+	itemID = lGetItemID()
+	AddItem(itemID)
+	Ask("p確定要使用神秘商店嗎？","是的。","不是。","reply_01")
+end
+
+function no_money()
+	Say("p7沒有足夠的金錢啊！","End")
+end
+
+function lOpenShop(shopid)
+	openPrice = lGetOpenPrice()
+	if GetData("Money") < openPrice then
+		no_money()
+	else
+		ModifyData("Money", -10000)
+		itemID = lGetItemID()
+		shopID = lGetShopDetail()
+		RemoveItem(itemID)
+		OpenShop(shopid,100)
+	end
+end
+
+function reply_01()
+	if GetChoice()==0 then
+		dia_03()
+	end
+	QuestEnd()
+end
+
+function dia_03()
+	Ask("p要選購什麼種類的裝備呢？","左手。","右手。","上身。","更多選擇。","reply_03")
+end
+function reply_03()
+	if GetChoice()==0 then
+		lOpenShop(32)
+	elseif GetChoice()==1 then
+		lOpenShop(33)
+	elseif GetChoice()==2 then
+		lOpenShop(34)
+	else
+		dia_04()
+	end
+end
+
+function dia_04()
+	Ask("p要選購什麼種類的裝備呢？","下身。","盾牌。","更多選擇。","不需要了。", "reply_04")
+end
+function reply_04()
+	if GetChoice()==0 then
+		lOpenShop(35)
+	elseif GetChoice()==1 then
+		lOpenShop(36)
+	elseif GetChoice()==2 then
+		dia_03()
+	else
+		QuestEnd()
+	end
+end
+

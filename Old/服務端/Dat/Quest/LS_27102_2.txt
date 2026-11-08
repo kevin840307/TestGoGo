@@ -1,0 +1,19 @@
+--LS_27102_2 "魔法屏障‧二級"
+
+function GetSkillData()
+	return 27102,2,25,31510,"魔法屏障‧二級","魔法屏障‧一級","見習守護使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 6 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

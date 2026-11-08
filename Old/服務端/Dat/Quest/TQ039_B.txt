@@ -1,0 +1,16 @@
+--混戰區入口 (TQ039_B)
+
+function start()
+	Ask("n要進入混戰區？","是的。","我要離開預備區。","reply")
+end
+function reply()
+	if GetChoice()==0 then
+		if MPKJoin()==0 then
+			Say("n1如你是用機甲中、合體中、組隊中或召喚戰鬥精靈中是不能進入混區的。")
+		end
+	else
+		MovePlayer(9400,10600,15)
+	end
+	QuestEnd()
+end
+

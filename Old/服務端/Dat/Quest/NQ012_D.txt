@@ -1,0 +1,35 @@
+--NQ012_D  莎萊
+--statue(NQ012_Task) =1 : receive the mission
+-- =2 : after talking with 凱兒
+-- =3 : need to find 金妮露
+-- =4 : after finding the 金妮露
+-- =5 : NQ012_Task is completed
+
+--statue(NQ014_Task) =1 : receive the mission
+--		     =2 : can go to find 福爾
+
+
+function start()
+	
+	statue=GetFlag("NQ012_Task")
+	statue13=GetFlag("NQ013_Task")
+	statue14=GetFlag("NQ014_Task")
+
+	if statue14>=1 then
+		Say("n1院長…？我不知道啊～")
+		Say("n1你問立波利吧～莎姬～～來幫我搥骨～～","End")
+
+	elseif statue13>=1 and statue13<5 then
+		Say("n1……嗚…泊裘斯不會有事吧……","End")
+	
+	elseif statue==3 then
+		Say("n1咦…什麼辦…金妮露她…嗚…嗚……","End")
+
+	else
+
+		Say("n1唷～～我想吃東～西！")
+		Say("n7莎姬：～～快煮飯～～")
+		Say("n7莎姬：哥哥！媽媽她還沒有回來啦～～","End")
+	end
+
+end

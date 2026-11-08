@@ -1,0 +1,13 @@
+--食人蝙蝠-Lv50 (TQ015C)
+
+function start()
+	if GetFlag("TQ015_Task")==2 then
+		Say("p7打倒女巫所化身的食人蝙蝠！","GetApple")
+	end
+	QuestEnd()
+end
+
+function GetApple()
+	Say("p7得到“女巫的糖果”。")
+	AddItem(10278)
+end

@@ -1,0 +1,17 @@
+--NQ026_R7
+
+function start()
+    if GetFlag("NQ026_KILL_SEQ") == 24 then
+        if ItemListCountLeft(0) < 1 then 
+            Say("p7身上的物品太多了，清除一些物品再來吧！")
+        else
+            Say("p7體內的桃色的魔獸能量化成了一條鎖匙。")
+            Say("p7得到桃魔空間之匙。")
+            AddItem(10550)
+            SetFlag("NQ026_KILL_SEQ",-1)
+        end            
+    elseif GetFlag("NQ026_KILL_SEQ") ~= -1 then        
+        Say("p7體內的魔獸能量消失了！")
+        SetFlag("NQ026_KILL_SEQ",-1)
+    end        
+end

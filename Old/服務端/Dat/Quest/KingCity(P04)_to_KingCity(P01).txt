@@ -1,0 +1,13 @@
+--KingCity(P04) to KingCity(P01)
+
+function start()
+	Ask("n要離開法庭嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(8768,8864,15)
+	end
+	QuestEnd()
+end

@@ -43,8 +43,10 @@ func clear_slot(from_user: bool = false) -> void :
 		lbl_amount.text = ""
 
 	if from_user and NetworkManager:
+		# Keep data_model.shortcuts authoritative until the server ACK arrives.
+		# The visual slot may change optimistically, but a rejected request can
+		# then be restored from the last acknowledged model.
 		NetworkManager.send_update_shortcut_request(slot_index, 0, 0)
-		_update_local_data(0, 0)
 
 func set_slot(type: String, id: int, tex: Texture2D, mat: Material = null, amount: int = -1, from_user: bool = false) -> void :
 	shortcut_type = type
@@ -63,30 +65,9 @@ func set_slot(type: String, id: int, tex: Texture2D, mat: Material = null, amoun
 		elif type == "SKILL": type_int = 2
 		elif type == "PET": type_int = 3
 		elif type == "MECHA": type_int = 4
+		# Do not update data_model.shortcuts before UpdateShortcutResponse.
 		NetworkManager.send_update_shortcut_request(slot_index, type_int, id)
-		_update_local_data(type_int, id)
 
-
-func _update_local_data(type_int: int, t_id: int) -> void :
-	if GameManager and is_instance_valid(GameManager.current_player) and "data_model" in GameManager.current_player:
-		var p_data = GameManager.current_player.data_model
-		if "shortcuts" in p_data:
-			var shortcuts = p_data.shortcuts
-			var found = false
-
-			for i in range(shortcuts.size() - 1, -1, -1):
-				if int(shortcuts[i].get("SlotIndex", -1)) == slot_index:
-					if type_int == 0:
-						shortcuts.remove_at(i)
-					else:
-						shortcuts[i]["ShortcutType"] = type_int
-						shortcuts[i]["TargetID"] = t_id
-					found = true
-					break
-
-
-			if not found and type_int > 0:
-				shortcuts.append({"SlotIndex": slot_index, "ShortcutType": type_int, "TargetID": t_id})
 
 func trigger_slot() -> void :
 	if shortcut_type != "" and target_id > 0:

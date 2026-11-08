@@ -1,0 +1,19 @@
+--LS_22102_1 "光之盾‧一級"
+
+function GetSkillData()
+	return 22102,1,10,31354,"光之盾‧一級","","見習魔動使、見習守護使或見習聖靈使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 5 or career == 6 or career == 7 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

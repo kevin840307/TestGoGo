@@ -1,0 +1,5 @@
+--People01 艾奇亞
+
+function start()
+	Say("n1來到這兒之後……我常常迷路，這兒太大了。","End")
+end

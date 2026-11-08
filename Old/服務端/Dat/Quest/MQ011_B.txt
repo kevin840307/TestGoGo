@@ -1,0 +1,93 @@
+--MQ011_B  帕絲
+
+--statue=1 :任務開始時
+--statue=2 :任務進行中
+--statue=3 :和西法說過話後
+--statue=4 :任務完成後
+--statue=other :任務未開始
+
+function start()
+
+	statue=GetFlag("MQ011_Task")
+	if  statue==1  then
+		begin()	
+
+	elseif statue==3  then
+		
+		if  CheckItem(10033)>0  then
+			Say("n1快拿去給老師試試看啊！","End")		
+
+
+		elseif  GetCountItemCount(16)>=2 and GetFlag("MQ011_Known")==1  then
+			MakeTrueMedic()
+		
+		else
+		
+			Say("n1這不是嗎……哈哈……你等等，我查一下書……嗯……有了！")
+			Say("n1原來要兩個小綠晶石的……你把兩個小綠晶石拿給我吧……哈…哈……")
+			Say("p1……","End")
+			SetFlag("MQ011_Known",1)
+		end
+	
+	elseif  statue==4 then
+		Say("n1嗯！我的合成技巧不錯吧，哈……","End")
+
+	elseif  CheckItem(10032)<1 and Materials_Completed()==1 then
+		Say("n1你等等喔！我這下就幫你合成出來……")
+		if ItemListCountLeft(0)<1 then
+			Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			Say("p1這真的是透明藥劑……？")
+			Say("n1我就說是嘛！你信我就好了，哇哈哈…哈……","End")
+			Say("p7得到\“奇怪的藥水\”")
+			AddItem(10032)
+		end	
+ 	elseif  statue==2 and CheckItem(10032)<1 then
+		Say("n1把小藍晶石一個、小紫晶石一個及一張藥物合成卡拿給我喔？")
+		Say("n1這樣我就幫你合成出“透明藥劑”！","End")
+
+	else
+		not_yet_begin()
+	end
+
+end	
+
+function not_yet_begin()
+	Say("n1嗯，魔藥好像又變壞了！")
+end
+
+function begin()
+
+	Say("n1嗯？什麼了？")
+	Say("p1請問你知道什麼是“透明藥劑”嗎？")
+	Say("n1透明藥劑喔？你要成為見習道具使吧？")
+	Say("p7 "..GetName().."點點頭")
+	Say("n1嗯嗯嗯……你等等喔，我想一想……透明藥劑好像要小藍晶石一個、小紫晶石一個及一張藥物合成卡似的……")
+	Say("p1真…真的嗎？")
+	Say("n1嗯……應該是吧……哈…哈哈…")	
+	SetFlag("MQ011_Task",2)
+
+end
+
+function Materials_Completed()
+	if CheckItem(11)>0 and CheckItem(21)>0 and CheckItem (52)>0  then
+		RemoveItem(11)
+		RemoveItem(21)
+		RemoveItem(52)
+		return 1
+	else
+		return 0
+	end
+end
+
+function MakeTrueMedic()
+	Say("n1這次一定沒錯了吧，你等等喔……")
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("n7帕絲很努力地把小綠晶石磨碎，之後加入一些奇怪的水……")
+		Say("p7得到\“透明藥劑\”","End")
+		RemoveItem(16,2)
+		AddItem(10033)
+	end
+end

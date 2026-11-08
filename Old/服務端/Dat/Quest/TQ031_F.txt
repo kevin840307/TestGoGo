@@ -1,0 +1,54 @@
+--消沉之石
+--(TQ031_F)
+
+function start()
+	if CheckItem(10634)>0 then
+		dia_04()
+	elseif CheckItem(10647)>0 then
+		dia_02()
+	else
+		dia_01()
+	end
+end
+
+function dia_01()
+	Say("p1就是這石頭使人意志消沉的吧！")
+	Say("p3好！就讓我們來打碎它！！")
+	Say("p3看我的！！")
+	Say("p3砰！！")
+	Say("p1它太堅固了，打不碎．．．","End")
+end
+
+
+--＜玩家身上持有魔鳥之爪(10647)＞
+function dia_02()
+--＜玩家身上沒有足夠空間得到烈火岩(10634)＞→Step03
+	if ItemListCountLeft(0)<1 then
+		dia_03()
+	else
+		Say("p1就是這石頭使人意志消沉的吧！")
+		Say("p3好！就讓我們來打碎它！！")
+		Say("p3看我的！！")
+		Say("p3砰！！")
+		Say("p1它太堅固了，打不碎．．．")
+		Say("p1呀！我想可以用魔鳥之爪將它打碎！")
+		Say("p3嚇！！")
+		Say("p3砰！！砰！！砰！！")
+		Say("p7打碎了消沉之石．．．")
+		Say("p7發現烈火岩。","End")
+		RemoveItem(10647)
+		AddItem(10634)
+	end
+end
+
+function dia_03()
+	Say("p7身上沒有足夠的物品空間啊．．．先整理一下好了。","End")
+end
+
+
+--＜玩家身上持有烈火岩(10634)＞
+function dia_04()
+	Say("p7碎掉了的消沉之石。","End")
+end
+
+

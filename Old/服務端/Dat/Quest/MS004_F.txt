@@ -1,0 +1,85 @@
+--能源研究員‧迪爾(MS004_F)
+
+--MS004_Task
+-- 1: quest start, go to 泰雲
+-- 2: go to 依加魯穩定器
+-- 3: go to 迪爾
+-- 4: go to 資訊大樓
+-- 5: go to 嘉迪尼事務長
+-- 6: go to 格靈森林
+-- 7: got the 野花電子卡
+-- 8: 基地destoryed
+-- 9: quest completed
+
+function start()
+	status = GetFlag("MS004_Task")
+	if status >= 5 then
+		dialogue_06()
+	elseif status>=4 then
+		dialogue_05()
+	elseif status>=3 and GetCountItemCount(10272)>=1 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1我正在收集大氣中的依加魯能量濃度的數據，沒有什麼事就不要妨礙我吧。","End")
+end
+
+--玩家完成了MS004E－Step02並手持依加魯能量液樣本
+function dialogue_02()
+	Say("p1我有一些關於依加魯能量液的問題想請教一下。")
+	Ask("n什麼事啊？你看不見我正忙著的嗎？","對不起，我有一些問題想請教你","我還以為只有大名鼎鼎的能源研究博士‧迪爾才能解答這問題．．．","你只是怕我的問題會難倒你吧！？","沒事了．．．","reply_02")
+end
+
+function reply_02()
+	ans = GetChoice()
+	if ans == 2 then
+		dialogue_04()
+	elseif ans == 3 then
+		QuestEnd()
+	else
+		dialogue_03()
+	end
+end
+
+function dialogue_03()
+	Say("n1都說了我現在很忙的了！快走吧！","End")
+end
+
+function dialogue_04()
+	Say("n1什麼！？這有什麼了不起！快說來聽聽！")
+	Say("p7你向迪爾說出有關穩定器爆炸的事。")
+	Say("p1現我有一些依加魯能量液樣本，想知道世上有沒有方法可以使有雜質的能量液變成藍色的？")
+	Say("n1方法當然有，你看！只要先這樣．．．")
+	Say("n1然後再這樣．．．")
+	Say("n1便可以暫時讓能量液變成藍色！")
+	Say("n1不過會使用這技術的人並不多，只要有這能量液樣本應該很容易就找出是誰做的。","dialogue_04a")
+end
+
+function dialogue_04a()
+	Say("p7這時一個黑影飛過，搶走了你手中的能量液樣本。")
+	RemoveItem(10272)
+	Say("p3是誰！別走！")
+	Say("n1慢著，你看看！這人很大意，竟然掉下了一張電腦卡。","dialogue_04b")
+end
+
+function dialogue_04b()
+	Say("p7得到“電腦卡－X105”")
+	AddItem(10273)
+	Say("n1你去"..Color(0,45,198).."資訊大樓"..Color(0,0,0).."中應該可以查出你想要的資料。","End")
+	SetFlag("MS004_Task", 4)
+end
+
+--玩家完成了MS004F－Step03B
+function dialogue_05()
+	Say("n1你去"..Color(0,45,198).."資訊大樓"..Color(0,0,0).."中應該可以查出你想要的資料。","End")
+end
+
+function dialogue_06()
+	Say("n1我正在收集大氣中的依加魯能量濃度的數據，沒有什麼事就不要妨礙我吧。","End")
+end
+
+

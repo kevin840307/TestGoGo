@@ -1,0 +1,18 @@
+--StarlLake(P01) to StarIsland
+
+function start()
+Say("n1封印之地嚴禁進入","End")
+end
+
+function notuse()
+--下面句子層於13-11-03作出地名修改
+	Ask("n要前往星之眼嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(6848,5280,31)
+	end
+	QuestEnd()
+end

@@ -1,0 +1,79 @@
+--瑚玲(MQ005_B)
+
+--MQ005_Task
+--1 quest start
+--2 already talked with student
+--3 quest done
+
+function start()
+	status = GetFlag("MQ005_Task")
+	status6 = GetFlag("MQ006_Task")
+	if status6>0 then
+		if status>=3 then
+			dialogue_05()
+		elseif status>=2 then
+			if GetCountItemCount(10026)>=1 then
+				dialogue_04()
+			else
+				dialogue_03()
+			end
+		else
+			dialogue_02()
+		end	
+	elseif status>0 then
+		if status>=3 then
+			dialogue_05()
+		elseif status>=2 then
+			if GetCountItemCount(10026)>=1 then
+				dialogue_04()
+			else
+				dialogue_03()
+			end
+		else
+			dialogue_02()
+		end	
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1新生要面對的難題太多了，有什麼問題，都歡迎來找我喔。","End")
+end
+
+function dialogue_02()
+	Say("p1學…學姐！")
+	Say("n1呵呵…什麼啦？")
+	Say("p1請問你知道什麼是“靈金彈”嗎？")
+	Say("n1靈金彈…？是轉職用的物品耶！")
+	Say("p7玩家點點頭")
+	Say("n1靈金彈嘛…在"..Color(0,45,198).."靈金獸"..Color(0,0,0).."的身上會有的，前陣子我在"..Color(0,45,198).."流星之河"..Color(0,0,0).."好像見到有靈金獸出沒，你不妨去找找喔？")
+	Say("p1好的！")
+	Say("n1還有唷，靈金彈可是有一個聖靈在內的，必須要有一個東西把它鎖起來才行！我送你一個"..Color(0,45,198).."靈魂錠"..Color(0,0,0).."吧，這應該就可以鎖著聖靈了。")
+	Say("p1嗯！謝謝你！","dialogue_02b")
+end
+function dialogue_02b()
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到「靈魂錠」","End")
+		if GetFlag("MQ005_Task")>0 then
+			SetFlag("MQ005_Task", 2)
+		else
+			SetFlag("MQ006_Task", 2)
+		end
+		AddItem(10027)
+	end
+end
+
+function dialogue_03()
+	Say("n1靈金彈可以在"..Color(0,45,198).."靈金獸"..Color(0,0,0).."身上找到，前陣子我在"..Color(0,45,198).."流星之河"..Color(0,0,0).."好像見到有靈金獸出沒，你去看看喔？","End")
+end
+
+function dialogue_04()
+	Say("n1快交給老師吧！","End")
+end
+
+function dialogue_05()
+	Say("n1恭喜你轉職了喔！","End")
+end

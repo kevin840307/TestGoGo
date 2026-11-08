@@ -1,0 +1,90 @@
+--MQ003_A 娜蒂
+
+function start()
+	Career=GetData("Career")
+	Race=GetData("Race")
+	if GetFlag("闇黑魔法使就職完成")==1 then
+		Done()
+	elseif Career==0 and Race==3 then
+		Get_Job()
+	elseif Career<>0 then
+		Job_Not_Match()
+	elseif Race<>3 then
+		Race_Not_Robot()
+	elseif RemoveItem(10006,1) and RemoveItem(10007,1) and GetFlag("闇黑魔法使就職")==1
+		FinalAsk()
+	elseif GetFlag("闇黑魔法使就職")==1 then
+		Say("n1努力去找“暗之光”和“魔物之血”回來吧，好好加油喔……呼呵呵……","End")
+	else
+		Job_Not_Match()
+	end
+end
+
+function Get_Job()
+	Say("p7眼前是一位美艷女子，她就是學院的闇黑魔法使老師，娜蒂小姐，看來她似乎正在忙一些東西。")
+	Say("p1老師的工作是什麼樣的呢？")
+	Say("n1老師是當闇黑魔法使的啊……這個工作可好玩的很呢，呵呵。")
+	Say("n1闇黑魔法使可以操縱黑暗的力量，有著闇黑魔獸守護著，很酷吧對不？")
+	Say("p7你點點頭。")
+	Say("n1闇黑魔法使的魔法攻擊力可是很強的唷，沒有什麼可以抵抗我們呢！")
+	Say("n1但是唯一的缺點，就是我們的物理防禦上比較弱，不過我們應該可以在別人衝過來前已經殺了他才對……嘿嘿嘿。")
+	Ask("n順帶說明唷，我們魔法力的來源是大氣中的“黑暗依加魯能量微粒”的。說起來？什麼突然問起我啦？呵呵。","我想成為闇黑魔法使！","沒什麼事，只是來看看老師。","Q1_Get_Choice")
+end
+	
+function Q1_Get_Choice()
+	choice = GetChoice()
+	if choice == 0 then
+		Teach()
+	else
+		Say("n1你有這個心真好……老師很高興喔。","End")
+	end
+end
+
+function
+
+function Teach()
+	Say("n1呵呵……真是太好了，我很高興聽你這樣說呢……要成為闇黑魔法使，必須先成為魔雲術士，而且要舉行一個儀式呢。而這個儀式嘛，需要有“暗之光”和“魔物之血”。"
+	Say("p1嗯？這是什麼？")
+	Say("n1自己努力去找吧，好好加油喔……不過呢，給你一個提示吧，我想學校內一定會有學生知道的，你去問問學長們喔，呼呼……","End")
+	SetFlag("闇黑魔法使就職", 1)
+end
+
+function Job_Not_Match()
+	Say("n1你想要研究黑暗的魔法嗎？呼呵呵呵。~奇異的笑聲~")
+	Say("p7心驚")
+	Say("p1不、不用了。")
+	Say("p7老師又再做起自己的事來，不理你了。","End")
+end
+
+function Race_Not_Robot()
+	Say("n1嗯…你並不能成為闇黑魔法使唷…只有機動靈才可以成為這個職業呢。")
+	Say("n1而你又不像我這麼有天份，真的很可惜唷。","End")
+end
+
+function FinalAsk()
+	Ask("n你確定要成為魔雲術士了嗎……？呼呵呵…","是的！","我要再考慮一下。","Q1_Get_Choice")
+end
+
+function Q1_Get_Choice()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("p7把魔物之血和暗之光交出去。")
+		Say("n1嗯……很好。你看著唷。")
+		Say("n7只見娜蒂把魔物之血滴了滴在暗之光上，本來平平無奇的石頭竟然在此時，發出奇異的光芒！")
+		Say("p7你感覺到被黑暗依加魯能量微粒包圍著。")
+		Say("n1嗯，好了，你已經是魔雲術士了唷……以後要加油喔！呼呵呵……這把黑木杖，就送給你吧，當作是獎勵你的努力。","End")
+		AddItem(350,1)
+		AddTittle(5)
+		ModifyData("Career",1)
+		ModifyData("Career",1)
+		ModifyData("ExpUse",850)
+		ModifyData("ExpAcc",850)
+	SetFlag("闇黑魔法使就職完成", 1)
+	else
+		Say("n1呵呵……好好考慮清楚喔，我等你的答覆唷……","End")
+	end
+end
+
+function Done()
+	Say("n1呵呵…什麼了嗎？要是有闇黑魔法的問題，一定要問我唷……呼呼。","End")
+end

@@ -1,29 +1,46 @@
 
 extends Node
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
 const EFFECT_ROOT = "res://Assets/Effects/"
 const AUDIO_RESOURCE_PATH_META = "se_event_resource_path"
 const AUDIO_LAST_FRAME_META = "se_event_last_frame"
 const AUDIO_PLAYED_FRAME_META = "se_event_played_frame"
 const ACT_TIMELINE_META = "act_timing_timeline"
 var _effect_cache: Dictionary = {}
+var _missing_effect_cache: Dictionary = {}
+
+func trim_unreferenced_runtime_cache() -> int:
+	return BG_CACHE_TRIM.trim_unused(_effect_cache, 8)
+
 
 func clear_runtime_cache() -> void :
 	_effect_cache.clear()
+	_missing_effect_cache.clear()
 
 func get_effect(sub_path: String) -> SpriteFrames:
 	var full_path = EFFECT_ROOT + sub_path + ".tres"
 	if _effect_cache.has(full_path):
 		return _effect_cache[full_path]
+	if _missing_effect_cache.has(full_path):
+		# Assets may be added or replaced while developing. Re-check the
+		# filesystem instead of permanently returning a stale miss.
+		if ResourceLoader.exists(full_path):
+			_missing_effect_cache.erase(full_path)
+		else:
+			return null
 
 	if ResourceLoader.exists(full_path):
-		var source_frames = load(full_path) as SpriteFrames
+		var source_frames = ResourceLoader.load(
+			full_path, "", ResourceLoader.CACHE_MODE_IGNORE_DEEP
+		) as SpriteFrames
 		if source_frames:
 			var frames = _build_timed_frames(source_frames, full_path)
 			frames.set_meta(AUDIO_RESOURCE_PATH_META, full_path)
 			_effect_cache[full_path] = frames
 			return frames
 
+	_missing_effect_cache[full_path] = true
 	push_warning("[EffectLoader] 找不到特效資源: " + full_path)
 	return null
 

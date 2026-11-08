@@ -1,0 +1,11 @@
+--給小榮的聖誕卡(TQ016K)
+
+function start()
+	Say("p7聖誕快樂！")
+	Say("p7這是被祝福的人才得到的聖誕卡。","showcard")
+	AddItem(10420)
+end
+
+function showcard()
+	Say("m#X_mas_card\\X_MAS_CARD03.spr#na##","End")
+end

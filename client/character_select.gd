@@ -125,13 +125,25 @@ func _ready() -> void :
 
 	if back_button: back_button.pressed.connect(_on_back_button_pressed)
 
+func _report_character_loading_progress(value: float) -> void :
+	var main_entry = get_tree().current_scene
+	if main_entry and main_entry.has_method("_set_loading_progress"):
+		main_entry._set_loading_progress(clampf(value, 0.0, 100.0))
+
+
 func request_character_list() -> void :
-	_render_character_slots()
+	_report_character_loading_progress(15.0)
+	await _render_character_slots()
+
 
 func _render_character_slots() -> void :
 	var server_chars = GlobalTempData.character_list
+	_report_character_loading_progress(22.0)
 
 	for i in range(3):
+		# Character previews are the expensive part of login -> character select.
+		# Give each slot a real progress slice instead of leaving the bar static.
+		_report_character_loading_progress(25.0 + float(i) * 20.0)
 		var slot_node = slots[i]
 		if not slot_node: continue
 
@@ -229,7 +241,17 @@ func _render_character_slots() -> void :
 
 			slot_node.gui_input.connect(_on_slot_gui_input.bind(i, {}))
 
+		_report_character_loading_progress(45.0 + float(i) * 20.0)
+
+	_report_character_loading_progress(88.0)
+	await get_tree().process_frame
+	_report_character_loading_progress(94.0)
+	await get_tree().process_frame
+
 	var main_entry = get_tree().current_scene
+	if main_entry and main_entry.has_method("_set_loading_progress"):
+		main_entry._set_loading_progress(100.0)
+	await get_tree().process_frame
 	if main_entry and main_entry.has_method("hide_loading_overlay"):
 		main_entry.hide_loading_overlay()
 

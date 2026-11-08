@@ -1,0 +1,19 @@
+--LS_31108_2 "地動山移‧二級"
+
+function GetSkillData()
+	return 31108,2,50,31683,"地動山移‧二級","地動山移‧一級","道具使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 9 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

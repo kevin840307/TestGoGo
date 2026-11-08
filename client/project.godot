@@ -38,6 +38,7 @@ FloatingTextManager="*uid://o4mwdccqvhu1"
 SkillLoader="*uid://bomelrk1s4yvv"
 PetLoader="*uid://4pxea1c72jfd"
 QuestLoader="*uid://cv200unw74r1k"
+LegacyPathfinder="*res://scripts/legacy_pathfinder.gd"
 
 [display]
 
@@ -70,7 +71,8 @@ text_editor/behavior/indent/size=4
 
 [rendering]
 
-rendering_device/driver.windows="d3d12"
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_s3tc_bptc=true
 textures/vram_compression/import_etc2_astc=true
 environment/defaults/default_clear_color=Color(0, 0, 0, 1)

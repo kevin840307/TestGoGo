@@ -1,0 +1,190 @@
+function start()
+	if GetFlag("TQ041_Done") == 1 then
+		if GetFlag("TQ043_A_Step")>=2 then
+			if GetFlag("TQ043_A_Step") >= 3 then
+				if GetFlag("TQ043_C_Step") >= 1 then
+					if GetFlag("TQ043_A_Step") >= 7 then
+						if GetFlag("TQ043_D_Step") >= 2 then
+							if GetFlag("TQ043_C_Step") >= 3 then
+								if GetFlag("TQ043_E_Step")>= 7 then
+									if GetFlag("TQ043_A_Step")>= 11 then
+										if GetFlag("TQ043_A_Step")>=13 then
+											Step15()
+										else
+											if (GetRealTime() - GetFlag("TQ043_A_TC")) < 5400 then
+												Step12()
+											else
+												Step13()
+											end
+										end
+									else
+										Step11()
+									end
+								else
+									Step10()
+								end
+							else
+								Step09()
+							end
+						else
+							Step08()
+						end
+					else
+						Step06()
+					end
+				else
+					Step04()
+				end
+			else
+				Step03()	
+			end
+		else
+			Step02()		
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("n1牠們的力量太大了，平凡人都難以承受。")
+	SetFlag("TQ043_A_TC",0)
+end
+
+function Step02()
+--＜玩家已經完成TQ041（首步曲‧不能打開的星空之門）＞
+	Say("p1你怎麼會傷得這麼重啊？快找醫師。")
+	Say("n1我的名字是豆貝斯，剛由天空島逃出來的人，本來，一共有四人一起和我到天空島，但現在．．．")
+	Say("p1其他人怎麼了？天空島一直也很平靜的，怎會令到你們受傷。")
+	Say("n1啊！我的同伴都已經離我而去了，嗚嗚。那些聖獸侵襲我們，就只有我一個人有幸逃出來。")
+	Say("p1是聖獸？怎麼會．．．哎呀，他暈死去了，要快找道具使朋友買瓶超級治療藥水來救他。")
+	SetFlag("TQ043_A_TC",0)
+	SetFlag("TQ043_A_Step",2)
+end	
+function Step03()
+--＜After TQ043_A．Step02＞
+--＜玩家持有超級治療藥水(135)＞
+--＜玩家身上沒有超級治療藥水(135)＞→Step05
+	if CheckItem(135) ~= 1 then 
+		Step05()
+	else		
+		Say("p1豆貝斯，先吃下這些藥吧。")
+	--＜收去玩家一個超級治療藥水(135)＞
+		Say("n6唔，這裡就是天堂嗎？我也死了吧。")
+		Say("p3醒過來啊，豆貝斯，這裡還未是天堂，你還活著。")
+		Say("p1請告訴我，發生了什麼事？天空島內的情況怎樣？事態很嚴重了吧。")
+		Say("n6天空島內的聖獸突然襲擊人民，而且還有其他魔物出現，快．．．快通知皇城。")
+		Say("p1不是吧，那麼嚴重．．．還是先向基斯將軍回報情況。")
+		Say("p1豆貝斯，你先好好休息，事件我會替你回報，別擔心。")
+		RemoveItem(135)
+		SetFlag("TQ043_A_Step",3)
+	end
+end	
+
+function Step04()
+--＜After TQ043_A．Step03＞
+	Say("p1你先好好休息，我會替你向基斯將軍回報，別擔心。")
+end
+
+function Step05()
+	Say("p1他好像快要不行了，還是先找道具使朋友買瓶超級治療藥水來救他。")
+end
+
+function Step06()
+--＜After TQ043_C．Step01＞
+	Say("p1豆貝斯先生，我已向國王回報說明了一切，而國王亦要求我代他向你問好，你別再擔心了。")
+	Say("n1謝國王陛下。經過你的急救，及休息了一會，已經感覺好了很多，真的謝謝你。")
+	Say("n1我剛剛想起，在天空島昏迷前，隱約知道是一個貌似天使的人將我送出來的。")
+	Say("p6天使？豆貝斯他是不是還未康復．．．")
+	Say("p1在天空島那裡看到？我進去調查一下。")
+	Ask("n不要進入天空島，太危險了，我是不會告訴你的。","其實我自己也怕，還是聽你的話。","不可以，此事很嚴重，一定要調查清楚。","Step06_Handler")
+--＜選項＞
+--．其實我自己也怕，還是聽你的話。→Quest End
+--．不可以，此事很嚴重，一定要調查清楚。→Step07
+end 
+
+function Step06_Handler()
+	if GetChoice()==0 then
+		QuestEnd()
+	else
+		SetFlag("TQ043_A_Step",6)
+		Step07()
+	end
+end
+
+function Step07()
+	Say("n1你說的也是，但當時我也很糊塗，只記得有位天使，而位置也不太知道了。")
+	Say("p1豆貝斯，謝謝你的關心。我現在先到天空島查看，若果三天後我還沒回來，請替我將事情告訴基斯將軍。")
+	Say("n1我會一直在這裡等你回來，你一定一定要回來啊。")
+	SetFlag("TQ043_A_Step",7)
+end
+
+function Step08()
+--＜After TQ043_A．Step07＞
+	Say("n1不論你有沒有在天空島上找到天使，你也要早去早回啊，記得要小心島上魔物的攻擊。")
+	SetFlag("TQ043_A_Step",8)
+end
+
+function Step09()
+--＜After TQ043_D．Step02＞
+	Say("p1我回來了，最近有沒有發生什麼事？")
+	Say("n1最近大家都人心惶惶，看來事情還是要快些解決。")
+	Say("n1對了，這次到天空島，有沒有什麼收獲？")
+	Say("p1我找到了一個很像天使的人，他的說話我聽不懂，但我在他身邊撿到了一封信。")
+	Say("n1那麼你快快去向將軍回報吧，我繼續再這裡留意情況。")
+	SetFlag("TQ043_A_Step",9)
+end
+
+function Step10()
+--＜After TQ043_C．Step03＞
+	Say("p1我會繼續和天使聯絡，若有需要，我會再要求你協助。")
+	Say("n1好的。")
+	SetFlag("TQ043_A_Step",10)
+end
+
+function Step11()
+--		＜After TQ043_E．Step07＞
+	Say("p1豆貝斯，你在這裡居住那麼久，有沒有聽說過蝙蝠之吻？")
+	Say("n1有，我們所有人都知道這件事。")
+	Say("p1有沒有方法可以替我取得蝙蝠之吻？")
+	Say("n1我也不太敢對你說肯定可以，這樣吧，我試試看，但很可能要等比較久。")
+	Say("p1這個也沒有辦法吧。")
+	Say("n1那麼你於一小時三十分鐘後再來吧。")
+	SetFlag("TQ043_A_Step",11)
+	SetFlag("TQ043_A_TC", GetRealTime())
+	--＜開始計時一小時三十分鐘＞
+end
+
+--＜開始計時一小時三十分鐘＞
+function Step12()
+--＜After TQ043_A．Step11＞
+--＜計時後未足一小時三十分鐘＞
+	Say("n1我還未準備好啊，請遲一會再來找我。")
+end
+
+function Step13()
+--＜After TQ043_A．Step11＞
+--＜計時後已過一小時三十分鐘＞
+--＜玩家身上沒有足夠空間得到蝙蝠之吻(10748)＞→Step14
+	if ItemListCountLeft(0) < 1 then
+		Step14()
+	else
+		Say("p1怎樣，成功嗎？")
+		Say("n1還好吧，你要的東西我給你取到了。")
+		Say("p7得到『蝙蝠之吻』")
+		Say("p1豆貝斯，你是怎樣取得這個『蝙蝠之吻』的？")
+		Say("n1這個是秘密，我是不會告訴你的。")
+		Say("p1．．．．．．")
+		AddItem(10748)
+		SetFlag("TQ043_A_Step",13)
+	end
+end
+
+function Step14()
+	Say("p7身上沒有足夠的物品空間啊．．．先整理一下好了。")
+end
+function Step15()
+--＜After TQ043_A．Step13＞
+	Say("n1最近發生的事太多了，我要好好休息一下。")
+	SetFlag("TQ043_A_Step",15)
+end

@@ -1,0 +1,159 @@
+--大臣‧卡奇頓
+--(TQ034_A)
+
+#include "CommComplex.txt"
+
+function start()
+	--if GetFlag("TQ035_Done")==1 and GetFlag("TQ034_Done")==1 then
+	--	RemoveFlag("TQ034_Task")
+	--	RemoveFlag("TQ034_Done")
+	--end
+
+	state = GetFlag("TQ034_Task")
+
+	if state>=6 then
+		dia_10()
+	elseif state>=5 then
+		equip, color = GetComplexArray()
+		if CheckItem(10644)>0 then
+			dia_08()
+		elseif CheckItem(10642)>0 and equip==1 and color==4 then
+			dia_06()
+		else
+			dia_05()
+		end
+	elseif state >= 3 then
+		if CheckItem(10642)>0 then
+			dia_04()
+		else
+			dia_03()
+		end
+	elseif GetData("Level")>=50 then
+		dia_01()
+	else
+		dia_02()
+	end
+end
+
+--＜玩家等級低於50＞→Step02
+function dia_01()
+	Say("p7卡奇頓大臣正在責罵他的秘書．．．")
+	Say("n3妳是在做什麼的！～")
+	Say("n3少少事也做不好！！！～")
+	Say("n3還有．．．")
+	Say("p1卡奇頓大臣，發生什麼事了？")
+	Say("n3我罵人跟你有什麼關係，你這麼多事．．．")
+	Say("n3％＄＃＠＃＃＠＄＃！！！．．．（下省10000字）")
+	if GetFlag("TQ034_Task")>1 then
+		Say("p7在旁的秘書‧塞莉對你打了個眼色")
+		Say("p5唔．．．我還是快點看看塞莉給我的字條好了。","End")
+	else
+		Say("p7在旁的秘書‧塞莉對你打了個眼色，好像有東西想交給你．．．","End")
+		SetFlag("TQ034_Task",1)
+	end
+end
+
+function dia_02()
+	Say("p7卡奇頓大臣正在責罵他的秘書．．．")
+	Say("n3妳是在做什麼的！～")
+	Say("n3少少事也做不好！！！～")
+	Say("n3還有．．．")
+	Say("p1卡奇頓大臣，發生什麼事了？")
+	Say("n3我罵人跟你有什麼關係，你這麼多事．．．")
+	Say("n3％＄＃＠＃＃＠＄＃！！！．．．（下省10000字）","End")
+end
+
+
+--＜After TQ034_C Step01＞
+function dia_03()
+	Say("p7卡奇頓大臣正在責罵他的秘書．．．")
+	Say("n3妳是在做什麼的！～")
+	Say("n3少少事也做不好！！！～")
+	Say("n3還有．．．")
+	Say("p5我還是快點去騎士之城找藥師‧柯尼，取一些可使人冷靜一下的藥物。不然塞莉就要給他繼續罵．．．","End")
+end
+
+
+--＜玩家身上持有冷靜蘑菇(10642)＞
+function dia_04()
+	Say("p1卡奇頓大臣，你罵人罵了這麼久，不如先吃點東西吧！？")
+	Say("n3呀！這又與你何干．．．")
+	Say("n5咕．．．咕．．．")
+	Say("n3也好！快點拿食物給我！！")
+	Say("p7讓卡奇頓大臣吃下冷靜蘑菇．．．")
+	Say("n1啊！．．．這裡是！？")
+	Say("n7塞莉向卡奇頓大臣說出事件的詳情．．．")
+	Say("n1"..GetName().."，謝謝你的幫忙！我記得我之前是跟隨考察從寒流冰窟考察冰之依加魯結晶回來，回來之後就變得脾氣暴躁。")
+	Say("n1你可不可以幫我查出事情的真相和取得冰之依加魯結晶？")
+	Say("p1大人放心，我一定會辦好這件事的！")
+	Say("n1好！那就拜託你了！可是寒流冰窟的低溫，不是一般人可以抵受得了，而且那地方好像受了詛咒的令人脾氣暴躁．．．")
+	Say("n1你可嘗試用皇國寒冰戰魂以抵抗寒冷的氣溫，並以冷靜蘑菇保持冷靜的頭腦。")
+	Say("n1你準備好再來找我吧！","End")
+	RemoveItem(10642)
+	SetFlag("TQ034_Task",5)
+end
+
+--＜After TQ034_A Step04＞
+--＜玩家不符合下列要求＞
+--1．皇國寒冰戰魂形態
+--2．持有冷靜蘑菇(10642)
+function dia_05()
+	Say("n1寒流冰窟的低溫，不是一般人可以抵受得了，而且那地方好像受了詛咒的令人脾氣暴躁．．．")
+	Say("n1你可嘗試用皇國寒冰戰魂以抵抗寒冷的氣溫，並以冷靜蘑菇保持冷靜的頭腦。")
+	Say("n1你準備好再來找我吧！","End")
+end
+
+
+--＜After TQ034_A Step04＞
+--＜玩家符合下列要求＞
+--1．皇國寒冰戰魂形態
+--2．持有冷靜蘑菇(10642)
+function dia_06()
+	Ask("n你已經準備好前往寒流冰窟了嗎？","是的。","不是。","reply_06")
+end
+
+function reply_06()
+	if GetChoice()==0 then
+		dia_07()
+	end
+	QuestEnd()
+end
+
+function dia_07()
+	MovePlayer(7360,8608,61)
+	Say("p7使用冷靜蘑菇保持冷靜。","End")
+	RemoveItem(10642)
+end
+
+--＜玩家身上持有冰之依加魯結晶(10644)＞
+function dia_08()
+	if ItemListCountLeft(1)<2 then
+		dia_09()
+	else
+		Say("n1啊！這真的是冰之依加魯結晶！！原來是冰窟魔鳥在作怪．．．")
+		Say("n1太感謝你了！我就將這對寒流護手送給你吧！")
+		Say("p7得到寒流左護手")
+		Say("p7得到寒流右護手")
+		Say("p7得到30000Exp","End")
+		RemoveItem(10644)
+		AddItem(10645)
+		AddItem(10646)
+		gainexp(30000)
+		SetFlag("TQ034_Task",6)
+		SetFlag("TQ034_Done",1)
+	end
+end
+
+function dia_09()
+	Say("p7身上沒有足夠的裝備空間啊．．．先整理一下好了。","End")
+end
+
+--＜After TQ034_A Step08＞
+function dia_10()
+	Say("n1感謝你幫我們找到冰之依加魯結晶和查出事實的真相！","End")
+end
+
+function gainexp(value)
+	ModifyData("ExpUse", value)
+	ModifyData("ExpAcc", value)
+end

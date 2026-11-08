@@ -1,0 +1,13 @@
+--MagicSchool(P03) to 1st_Magic_Class_Room(P04)
+
+function start()
+	Ask("n要進入初班課室嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(4288,12320,10)
+	end
+	QuestEnd()
+end

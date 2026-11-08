@@ -1,0 +1,13 @@
+--LionHill(P01) to Frake 往冰花山谷
+
+function start()
+	Ask("n要進入冰花山谷嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(7616,4320,45)
+	end
+	QuestEnd()
+end

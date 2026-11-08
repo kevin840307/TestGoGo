@@ -1,0 +1,13 @@
+--Desert(P07) to Desert(P03)
+
+function start()
+	Ask("n要進入精靈之墓室嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(6272,6336,35)
+	end
+	QuestEnd()
+end

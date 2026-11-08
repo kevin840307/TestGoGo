@@ -1,0 +1,106 @@
+--MQ011_A  西法
+
+
+--statue=1 :任務開始時
+--statue=2 :任務進行中
+--statue=3 :和西法說過話後
+--statue=4 :任務完成後
+--statue=other :任務未開始
+
+function start()
+	lv = GetData("Level")
+	crr= GetData("Career")
+	statue=GetFlag("MQ011_Task")
+	
+	if  statue==4  then
+		Completed()
+
+	elseif  lv<40 or crr~=9  then
+		Say("n1嘿嘿，你想試試我調配的藥水嗎？","End")
+
+	elseif  statue==3 then
+		if  CheckItem(10033)>0 then	
+			Ask("n嗯，這次沒錯了！這才像話的嘛，什麼樣？要成為道具使嗎？","是的！","我要再考慮一下。","response2")
+		
+		else 
+				
+			Say("n1這個？這個藥水才不是透明藥劑，你還是快點去找多一次吧！","End")
+		end
+
+	elseif  statue==1 or statue==2 then
+		if RemoveItem(10032)==1 then
+			Say("p7交出\“奇怪的藥水\”")
+			Say("n1這個？這個藥水才不是透明藥劑，你還是快點去找多一次吧！","End")
+			SetFlag("MQ011_Task",3)
+		else
+			Say("n1合成之後交給我吧。","End")
+		end
+
+	else 
+		match_the_job()	
+	
+	end
+end
+
+function match_the_job()
+	Say("n7他是很對研究魔藥有點狂熱的老師，名叫西法，應該就是道具使沒錯。")
+	Say("p1老師，請問道具使有什麼職責呢？")
+	Say("n1我們可不像普通的戰士，我們可說是負責補助戰士們的吧？")
+	Say("n1我想，我們的工作是可以合成出道具，之後交給戰士們用的，只有我們這個職業才可以這樣做，")
+	Ask("n不過當然地，強力的道具不什麼易得到就是。","我想成為道具使！","想來知道道具使的工作而已。", "response1" )	
+
+end
+
+
+function response1()
+	choice=GetChoice()
+	if  choice==0  then
+		
+		Say("n1那你把透明藥劑交給我，我就認定你是道具使了。")
+		Say("p1透明藥劑？")
+		Say("n1這是一種帶有風之依加魯能量的藥劑…你去問問學長們就會知道了。","End")
+		SetFlag("MQ011_Task",1)
+
+	else
+		
+		Say("n1原來如此…我也要工作去了。","End")
+	end
+
+end
+
+function Completed()
+	Say("n1嗯……紫晶石和紅晶石加起來會變得什麼樣呢？","End")
+end
+
+
+function response2()
+	choice=GetChoice()
+	if choice==0  then
+		if ItemListCountLeft(1)<1 then
+			Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+		else
+			RemoveItem(10033)
+			Say("n1嗯，不錯，我認可你成為道具使了，要好好的加油！這個")
+			Say("n7西法把透明藥劑放在掌心，突然\“翹\”的一聲，你就發現透明藥劑在你身上快速的圍繞著，")
+			Say("n7你感覺到一股風之依加魯力量在你身上產生……")
+			Say("n1你是道具使了！這把屠龍巨劍就送給你吧。")
+			Say("n7得850Exp")
+			Say("n7得到\“屠龍巨劍\”")
+			Say("n7得到\“道具使\”的稱號","End")
+			AddItem(8348,1)
+			gainExp(850)
+			AddJob(2)
+			AddTitle(21)
+			SetFlag("MQ011_Done" ,1 )
+			SetFlag("MQ011_Task",4)
+		end		
+	else
+			
+		Say("n1嗯。","End")
+	end
+end
+
+function gainExp(x)
+	ModifyData("ExpUse",x)
+	ModifyData("ExpAcc",x)
+end

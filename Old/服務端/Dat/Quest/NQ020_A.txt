@@ -1,0 +1,193 @@
+--星空新手指導員(NQ020_A)
+
+--NQ020_Task
+-- 1: go to find battle guide
+-- 2: go to find shop guide
+-- 3: back from shop guide
+-- 4: go to buy shield
+-- 5: go to beat bird
+-- 6: go to send letter
+-- 7: waiting for one hour
+-- 8: quest completed
+
+-- NQ020_Time
+-- Marking the time for 1 hour
+
+-- NQ020_Done
+
+function start()
+	status = GetFlag("NQ020_Task")
+	if status >= 8 then
+		Say("n1歡迎進入星空之門的世界","End")
+	elseif status >= 7 then
+		if GetGameHours()-GetFlag("NQ020_Time")>12 then
+			dia_13()
+		else
+			dia_12b()
+		end
+	elseif status >= 6 then
+			dia_12()
+	elseif status >= 5 then
+		if GetCountItemCount(31024)>=2 then
+			dia_11()
+		else
+			dia_10()
+		end
+	elseif status >= 4 then
+		if CheckItem(8493) >0 then
+			dia_09()
+		else
+			dia_08()
+		end
+	elseif status >= 3 then
+		dia_05()
+	elseif status >= 2 then
+		dia_04b()
+	elseif status >= 1 then
+		dia_04()
+	else
+		dia_01()
+	end
+end
+
+function dia_01()
+	Say("n1歡迎進入星空之門的世界，你將會在這世界面對一連串奇幻的冒險旅程，認識在生命中難忘的朋友，一同製造動人的回憶。")
+	Ask("n現在，我先講解你身處的這個世界是什麼吧。","好啊！","不用了，我已很了解","reply_01")
+end
+function reply_01()
+	if GetChoice()==0 then
+		dia_02()
+	else
+		dia_03()
+	end
+end
+
+function dia_02()
+	Say("n1你身處的星球，便是尼路亞星了，她在尼尼亞皇族的統治下不論經濟、科學還是魔法也得到非凡的發展。所以在尼路亞星上各處也柔合了科學和魔法。")
+	Say("n1除了首都尼尼亞皇城外，尼路亞星上還有三大城市，他們分別是魔法之都－古尼爾、騎士之城－格靈和機械之城絲蘭。")
+	Ask("n若你想再進一步了解尼路亞星的歷史，只要找個星空詩人，他便會訴說給你聽了。","明白了。","dia_03")
+end
+
+function dia_03()
+	Say("n1那麼我開始說說基本的介面操作吧，在畫面的正下方是頻道視窗，你可以用左方的按鈕開關收看的頻道，右方第一個按鈕選擇發出訊息的頻道。")
+	Say("n1但你要記著你要有一定的等級才能在公頻發言啊！")
+	Say("n1右下方的是好友系統視窗，你只需以滑鼠右鍵點選其他角色，便可以利用在小選單把他加入好友名單中。")
+	Say("n1而左下方的是角色狀態視窗，在這裡可以看到角色的生命、魔力和星幣等等有關資訊。")
+	Say("n1在右上方，你可以找到小地圖和基本操作指令介面。")
+	Say("n1在基本操作指令介面內，你可以找到角色資料、技能、系統等等的有關按鈕。")
+	Say("n1基本的介面已介紹過，但在尼路亞上你還要面對敵人的攻擊，所以你必須找找戰鬥指導員，教導你作戰的技巧。","dia_03b")
+end
+function dia_03b()
+	SetFlag("NQ020_Task",1)
+	QuestEnd()
+end
+
+function dia_04()
+	Say("n1你先去找戰鬥指導員，了解作戰的技巧吧。","End")
+end
+
+function dia_04b()
+	Say("n1你去找營商指導員學習如何交易。","End")
+end
+
+function dia_05()
+	Ask("n既然你已有了初步的了解，我有一個簡單的任務，你可以替我完成嗎？","當然可以！","我還未作好準備。","reply_05")
+end
+function reply_05()
+	if GetChoice()==0 then
+		dia_06()
+	else
+		QuestEnd()
+	end
+end
+
+function dia_06()
+	Ask("n你可以替我去盾牌坊買下一個「基質盾牌」嗎？","當然可以了，但盾牌坊在那兒呢？","我還未作好準備。","reply_06")
+end
+function reply_06()
+	if GetChoice()==0 then
+		dia_07()
+	else
+		QuestEnd()
+	end
+end
+
+
+function dia_07()
+	Say("n1我這兒有一本「星空新手指南」，它記錄了基本的遊戲操作和商店在各城的位置，只要你詳細翻看和留意小地圖，便能找出盾牌坊的位置。")
+	Ask("n還有，當你想回來時找星空大使她便會帶你回來。","明白了，我馬上便出發。","dia_07b")
+end
+function dia_07b()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到了10元星幣和星空新手指南","End")
+		ModifyData("Money", 10)
+		AddItem(10458)
+		SetFlag("NQ020_Task",4)
+	end
+end
+
+function dia_08()
+	Say("n1你忘了嗎？去盾牌坊買下一個「基質盾牌」，回來時找星空大使她便會帶你到這兒。","End")
+end
+
+function dia_09()
+	Say("n1很好，你已把基質盾牌拿回來了，我這兒有柄小鐵劍就送給你吧。")
+	Ask("n接下來，你可以出城外戰鬥，收集2個甲殼回來嗎？","當然沒有問題了。","dia_09b")
+end
+function dia_09b()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到了「小鐵劍」","End")
+		AddItem(1587)
+		SetFlag("NQ020_Task",5)
+	end
+end
+
+function dia_10()
+	Say("n1你忘了嗎？出城外戰鬥，收集2個甲殼回來。","End")
+end
+
+function dia_11()
+	Say("n1看來你已完全了解如何戰鬥了，我先去準備一份禮物給你，你一小時後再回來吧。")
+	Ask("n還有，我這兒有一封信，你可以替我交給地理博士卡比嗎？","就交給我吧。","dia_11b")
+end
+function dia_11b()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("n1這兒有一張尼路亞星的魔法地圖，對你未來的歷險應該有幫助啊。","End")
+		RemoveItem(31024,2)
+		AddItem(10459)
+		SetFlag("NQ020_Task",6)
+		SetFlag("NQ020_Time", GetGameHours())
+	end
+end
+
+function dia_12()
+	Say("n1請盡快把信交給地理博士卡比。","End")
+end
+function dia_12b()
+	Say("n1唔...你的禮物我還未準備好，請你再耐心等一等。","End")
+end
+
+function dia_13()
+	Say("n1我已準備好給你的禮物了，請你收下吧！願佳雅祝福你製造一斷難忘的回憶。","dia_13b")
+end
+function dia_13b()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到了100元星幣、星之徽章、初心者機甲、測試用魔靈電池、赤色光彈‧一級及強力衝擊‧一級","End")
+		ModifyData("Money", 100)
+		AddItem(10262)
+		AddItem(6007)
+		AddItem(6910)
+		AddItem(31324)
+		AddItem(31329)
+		SetFlag("NQ020_Task",8)
+		SetFlag("NQ020_Done",1)
+	end
+end

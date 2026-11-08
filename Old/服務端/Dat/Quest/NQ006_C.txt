@@ -1,0 +1,41 @@
+--NQ006_C  巡禮官員
+
+
+
+function start()
+
+	statue=GetFlag("NQ006_Task")
+	
+	if GetFlag("NQ006_Delay")==1 then
+		Say("n1你還在這兒嗎？依凱路？不去練習嗎？","End")
+		Say("p6看來我還是先去告訴依凱路巡禮延遲了的事……","End")
+		
+		
+	elseif statue==3 or statue==4 then
+		
+		if GetData("Bonnet")==10170 then
+			Say("n1等一下就會有巡遊了！真教人心情緊張……你還沒有去準備嗎？依凱路！")
+			Say("p1呃……我不是……")
+			Say("n3其實我騙你的啦，你不用準備太急！")
+			Say("p1嗯？")
+			Say("n1呵呵…巡禮延遲了。")
+			Say("p1咦？真的？原來是這樣…","End")
+			SetFlag("NQ006_Delay",1)
+
+		else
+			Say("n1等一下就會有巡遊了！真教人心情緊張……")
+			Say("p1請問你是負責巡遊的官員嗎？我有事要找你！")
+			Say("n1你有什麼事？我在忙！別吵我！")
+			Say("p1先生！等等呀！")
+			Say("n7他別個頭去忙了……","End")		
+		end
+
+	else
+
+		Say("n1等一下就會有巡遊了！真教人心情緊張……","End")
+	end
+	
+
+end
+
+

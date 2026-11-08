@@ -702,6 +702,19 @@ var _festival_buttons: Dictionary = {}
 var _festival_data: Dictionary = {}
 var _festival_load_error: = ""
 var _selected_festival_id: = ""
+var _pet_evolution_catalog_loaded: bool = false
+const PET_EVOLUTION_BATCH_MAX_FAMILIES: int = 2
+const PET_EVOLUTION_BATCH_BUDGET_USEC: int = 1800
+
+static func should_yield_pet_evolution_batch(families_since_yield: int, elapsed_usec: int) -> bool:
+	return families_since_yield >= PET_EVOLUTION_BATCH_MAX_FAMILIES or elapsed_usec >= PET_EVOLUTION_BATCH_BUDGET_USEC
+var _skill_catalog_loaded: bool = false
+var _engraving_catalog_loaded: bool = false
+var _monster_drop_catalog_loaded: bool = false
+var _doll_categories_loaded: bool = false
+var _club_pages_loaded: bool = false
+var _world_boss_rows_loaded: bool = false
+var _transform_rows_loaded: bool = false
 
 func _ready() -> void :
 	for category in CATEGORIES:
@@ -725,22 +738,14 @@ func _ready() -> void :
 	_build_race_rows()
 	_build_job_rows()
 	_build_royal_territory_war_page()
-	_load_skill_catalog()
-	_build_skill_info_page()
-	_load_engraving_catalog()
-	_build_engraving_info_page()
-	_load_monster_drop_catalog()
+	# Heavy reference catalogs are intentionally lazy-loaded from _select_category()
+	# so entering the game world does not synchronously scan/load hidden pages.
 	_build_pet_guide()
-	_build_pet_evolution_catalog()
-	_build_doll_categories()
-	_build_club_pages()
 	_load_festival_data()
 	_build_festival_skeleton()
 	if GameManager:
 		GameManager.festival_activity_changed.connect(_on_festival_activity_changed)
 		_update_festival_activity_display(GameManager.current_festival_activity)
-	_build_world_boss_rows()
-	_build_transform_rows()
 	visibility_changed.connect(_on_window_visibility_changed)
 	_select_category(CATEGORIES[0])
 
@@ -763,13 +768,42 @@ func _select_category(category: String) -> void :
 	content_scroll.visible = category != "快捷鍵" and category != "種族" and category != "職業" and category != "皇家領地戰" and category != "技能" and category != "刻紋" and category != "裝備" and category != "寵物" and category != "戰團" and category != "怪物掉落" and category != "獻寶娃娃" and category != "節日活動" and category != "世界王" and category != "變身卷軸"
 	_hide_doll_item_tooltip()
 	if category == "技能":
+		if not _skill_catalog_loaded:
+			_skill_catalog_loaded = true
+			_load_skill_catalog()
+			_build_skill_info_page()
 		skill_info_scroll.scroll_vertical = 0
 	if category == "刻紋":
+		if not _engraving_catalog_loaded:
+			_engraving_catalog_loaded = true
+			_load_engraving_catalog()
+			_build_engraving_info_page()
 		refresh_engraving_requirements()
 		engraving_detail_scroll.scroll_vertical = 0
 	if category == "裝備":
 		equipment_scroll.scroll_vertical = 0
 		_ensure_equipment_catalog_loaded()
+	if category == "寵物" and not _pet_evolution_catalog_loaded:
+		_pet_evolution_catalog_loaded = true
+		pet_family_title.text = "正在整理寵物進化資料…"
+		pet_roadmap_empty_state.text = "正在整理寵物進化資料…"
+		pet_roadmap_empty_state.visible = true
+		call_deferred("_build_pet_evolution_catalog")
+	if category == "怪物掉落" and not _monster_drop_catalog_loaded:
+		_monster_drop_catalog_loaded = true
+		_load_monster_drop_catalog()
+	if category == "獻寶娃娃" and not _doll_categories_loaded:
+		_doll_categories_loaded = true
+		_build_doll_categories()
+	if category == "戰團" and not _club_pages_loaded:
+		_club_pages_loaded = true
+		_build_club_pages()
+	if category == "世界王" and not _world_boss_rows_loaded:
+		_world_boss_rows_loaded = true
+		_build_world_boss_rows()
+	if category == "變身卷軸" and not _transform_rows_loaded:
+		_transform_rows_loaded = true
+		_build_transform_rows()
 	if category == "皇家領地戰":
 		royal_territory_war_scroll.scroll_vertical = 0
 	if content_scroll.visible:
@@ -2709,7 +2743,11 @@ func _build_pet_evolution_catalog() -> void :
 		pet_ids.append(int(raw_pet_id))
 	pet_ids.sort()
 
+	var families_since_yield: int = 0
+	var batch_started_usec: int = Time.get_ticks_usec()
 	for pet_id in pet_ids:
+		if not is_inside_tree():
+			return
 		var pet_config: Dictionary = all_configs.get(pet_id, {})
 		var graph: = _build_pet_evolution_graph(pet_id, pet_config)
 		_pet_evolution_graphs[pet_id] = graph
@@ -2723,6 +2761,15 @@ func _build_pet_evolution_catalog() -> void :
 		button.pressed.connect(_select_pet_family.bind(pet_id))
 		pet_family_list.add_child(button)
 		_pet_family_buttons[pet_id] = button
+		if _selected_pet_family_id < 0:
+			_select_pet_family(pet_id)
+		families_since_yield += 1
+		if should_yield_pet_evolution_batch(families_since_yield, Time.get_ticks_usec() - batch_started_usec):
+			await get_tree().process_frame
+			if not is_inside_tree():
+				return
+			families_since_yield = 0
+			batch_started_usec = Time.get_ticks_usec()
 
 	if pet_ids.is_empty():
 		pet_family_title.text = "沒有可顯示的寵物"
@@ -2731,7 +2778,9 @@ func _build_pet_evolution_catalog() -> void :
 		pet_roadmap_empty_state.visible = true
 		return
 
-	_select_pet_family(pet_ids[0])
+	# Retain user-selected family while remaining graphs are built.
+	if OS.is_debug_build():
+		print("[PET_EVOLUTION_CATALOG_READY] families=%d" % pet_ids.size())
 
 func _build_pet_evolution_graph(pet_id: int, pet_config: Dictionary) -> Dictionary:
 	var nodes: Dictionary = {}

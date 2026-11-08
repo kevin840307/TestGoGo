@@ -2,6 +2,7 @@
 extends Node
 
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
 const ICON_PATH = "res://Assets/Items/Icons/Icon%04d.png"
 const PHOTO_PATH = "res://Assets/Items/Photos/Photo%04d.png"
 const GROUND_PATH = "res://Assets/Items/Grounds/Ground%04d.png"
@@ -28,6 +29,19 @@ var _photo_cache: Dictionary = {}
 var _ground_cache: Dictionary = {}
 
 
+
+func trim_unreferenced_runtime_cache() -> int:
+	var removed: int = 0
+	removed += BG_CACHE_TRIM.trim_unused(_icon_cache, 48)
+	removed += BG_CACHE_TRIM.trim_unused(_photo_cache, 8)
+	removed += BG_CACHE_TRIM.trim_unused(_ground_cache, 24)
+	return removed
+
+
+func clear_runtime_cache() -> void :
+	_icon_cache.clear()
+	_photo_cache.clear()
+	_ground_cache.clear()
 
 func _safe_get(obj: Object, property: String, default_value: Variant) -> Variant:
 	var val = obj.get(property)
@@ -107,7 +121,9 @@ func get_icon(icon_id: int) -> Texture2D:
 	if _icon_cache.has(icon_id): return _icon_cache[icon_id]
 	var path = ICON_PATH % icon_id
 	if ResourceLoader.exists(path):
-		var tex = load(path) as Texture2D
+		var tex = ResourceLoader.load(
+			path, "", ResourceLoader.CACHE_MODE_IGNORE
+		) as Texture2D
 		_icon_cache[icon_id] = tex
 		return tex
 	return null
@@ -117,7 +133,9 @@ func get_photo(photo_id: int) -> Texture2D:
 	if _photo_cache.has(photo_id): return _photo_cache[photo_id]
 	var path = PHOTO_PATH % photo_id
 	if ResourceLoader.exists(path):
-		var tex = load(path) as Texture2D
+		var tex = ResourceLoader.load(
+			path, "", ResourceLoader.CACHE_MODE_IGNORE
+		) as Texture2D
 		_photo_cache[photo_id] = tex
 		return tex
 	return null
@@ -127,7 +145,9 @@ func get_ground(ground_id: int) -> Texture2D:
 	if _ground_cache.has(ground_id): return _ground_cache[ground_id]
 	var path = GROUND_PATH % ground_id
 	if ResourceLoader.exists(path):
-		var tex = load(path) as Texture2D
+		var tex = ResourceLoader.load(
+			path, "", ResourceLoader.CACHE_MODE_IGNORE
+		) as Texture2D
 		_ground_cache[ground_id] = tex
 		return tex
 	return null

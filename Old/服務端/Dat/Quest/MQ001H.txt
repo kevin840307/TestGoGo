@@ -1,0 +1,25 @@
+--MQ001_H 古可
+
+function start()
+	kill = GetFlag("MQ_001_KillBug")
+	if kill >= 10 then
+		QuestEnd()
+	elseif kill < 0 then
+		QuestEnd()
+	else
+		kill = kill + 1
+		Say("p7你已經打倒了"..kill.."隻"..Color(0,45,198).."古可"..Color(0,0,0).."．．．","CheckEnough")
+	end
+end
+
+function CheckEnough()
+	kill = GetFlag("MQ_001_KillBug")
+	kill = kill + 1
+	SetFlag("MQ_001_KillBug", kill)
+	if kill >= 10 then
+		Say("p6差不多消滅了所有"..Color(0,45,198).."古可"..Color(0,0,0).."，先回去找老伯吧！","End")
+		SetFlag("MQ_001_Kill10",1)
+	else 
+		QuestEnd()
+	end
+end

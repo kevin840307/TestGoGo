@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://scripts/skill_level_data.gd" id="1_level"]
+[ext_resource type="Script" path="res://scripts/skill_data.gd" id="2_skill"]
+
+[sub_resource type="Resource" id="Resource_global_aoe"]
+script = ExtResource("1_level")
+level = 1
+cast_range = 0
+aoe_radius = 900
+cost_mp = 1
+base_damage = 1000
+damage_multiplier = 100
+cooldown = 0
+tick_count = 1
+
+[resource]
+script = ExtResource("2_skill")
+id = 99001
+skill_name = "星界震盪"
+description = "釋放強烈能量震盪，以自身為中心攻擊畫面範圍內的大量敵人。"
+skill_type = 7
+damage_type = 1
+icon_id = 42
+fx_use = "Skill_Use_100"
+fx_hit = "Skill_Hit_100"
+fx_extra = ""
+special_skill = "畫面範圍攻擊"
+levels = Array[ExtResource("1_level")]([SubResource("Resource_global_aoe")])

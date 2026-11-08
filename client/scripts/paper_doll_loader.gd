@@ -1,6 +1,7 @@
 
 extends Node
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
 const ASSET_ROOT = "res://Assets/Player/%s/materials/"
 const MECHA_ASSET_ROOT = "res://Assets/MS/%s/materials/"
 const MA_ASSET_ROOT = "res://Assets/MA/%s/materials/"
@@ -15,6 +16,20 @@ const SR_EFFECT_FILES = {
 var _cache: Dictionary = {}
 var _sr_cache: Dictionary = {}
 var _sr_effect_cache: Dictionary = {}
+
+
+func trim_unreferenced_runtime_cache() -> int:
+	var removed: int = 0
+	for category in _cache.keys():
+		if removed >= 24:
+			break
+		var category_cache: Dictionary = _cache.get(category, {})
+		removed += BG_CACHE_TRIM.trim_unused(category_cache, 12, 24 - removed)
+	if removed < 24:
+		removed += BG_CACHE_TRIM.trim_unused(_sr_cache, 4, 24 - removed)
+	if removed < 24:
+		removed += BG_CACHE_TRIM.trim_unused(_sr_effect_cache, 2, 24 - removed)
+	return removed
 
 
 func clear_runtime_cache() -> void :
@@ -51,7 +66,9 @@ func _load_sr_atlas(base_path: String, allow_looping: bool) -> SpriteFrames:
 	if not ResourceLoader.exists(png_path) or not FileAccess.file_exists(json_path):
 		return null
 
-	var big_texture = load(png_path) as Texture2D
+	var big_texture = ResourceLoader.load(
+		png_path, "", ResourceLoader.CACHE_MODE_IGNORE
+	) as Texture2D
 	if not big_texture:
 		return null
 	var json_file = FileAccess.open(json_path, FileAccess.READ)
@@ -133,7 +150,9 @@ func get_sprite_frames(category: String, part_name: String) -> SpriteFrames:
 			return get_sprite_frames(boy_category, boy_part_name)
 		return null
 
-	var big_texture = load(png_path) as Texture2D
+	var big_texture = ResourceLoader.load(
+		png_path, "", ResourceLoader.CACHE_MODE_IGNORE
+	) as Texture2D
 	var json_text = FileAccess.open(json_path, FileAccess.READ).get_as_text()
 	var atlas_data: Dictionary = JSON.parse_string(json_text)
 

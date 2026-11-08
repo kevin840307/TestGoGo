@@ -1,0 +1,19 @@
+--LS_29109_3 "集中精神‧三級"
+
+function GetSkillData()
+	return 29109,3,55,31622,"集中精神‧三級","集中精神‧二級","銃戰士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 4 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

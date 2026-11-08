@@ -1,0 +1,34 @@
+--地埋博士卡比（NQ020_E）
+
+function start()
+	status = GetFlag("NQ020_Task")
+	if status>=7 then
+		dia_04()
+	elseif status>=6 and GetCountItemCount(10459)>0 then
+		dia_01()
+	else
+		dia_03()
+	end
+end
+
+function dia_01()
+	Ask("n你找我有事嗎？","這兒有一封信，是新手指導員給你的。","dia_02")
+end
+function dia_02()
+	Say("n1啊！真是勞煩你了，我替你的地圖上追加新資料作為謝禮吧！")
+	Say("p7失去尼路亞星魔法地圖","dia_02b")
+end
+function dia_02b()
+	Say("p7得到尼路亞星魔法大地圖","End")
+	SetFlag("NQ020_Task",7)
+	RemoveItem(10459)
+	AddItem(10460)
+end
+
+function dia_03()
+	Say("n1我正為各主城而製造地圖。","End")
+end
+
+function dia_04()
+	Say("n1有了新的地圖，以後多加留心了。","End")
+end

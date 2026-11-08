@@ -1,0 +1,13 @@
+--KingCity(P01) to Lonely_Mountain孤寂山區
+
+function start()
+	Ask("n要進入孤寂山區嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(2496,7520,42)
+	end
+	QuestEnd()
+end

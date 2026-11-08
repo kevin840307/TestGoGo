@@ -6,6 +6,7 @@ var current_map_id: int = -1
 var current_bgm_volume_pct: float = GameConstants.SETTING_DEFAULT_BGM_VOLUME
 var current_se_volume_pct: float = GameConstants.SETTING_DEFAULT_SE_VOLUME
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
 const SE_BASE_PATH = "res://Assets/Audio/SE/"
 const SE_EVENT_MANIFEST_PATH = "res://Assets/Audio/SEEventManifest.json"
 const SE_PLAYER_POOL_SIZE = 16
@@ -26,12 +27,37 @@ var _missing_se_names: Dictionary = {}
 var _se_player_play_order: Dictionary = {}
 var _se_player_volume_scales: Dictionary = {}
 var _next_se_play_order: int = 0
+var _last_se_played_at_msec: Dictionary = {}
+const SE_REPEAT_COOLDOWN_MSEC = 90
+const SE_REPEAT_COOLDOWN_UI_MSEC = 20
 var _se_event_index: Dictionary = {}
 var _se_controller_event_index: Dictionary = {}
 var _map_bgm_cache: Dictionary = {}
 var _map_bgm_cache_order: Array[String] = []
 var _bgm_request_serial: int = 0
 var _pending_bgm_path: String = ""
+var _afk_silent: bool = false
+
+
+func set_afk_silent(enabled: bool) -> void:
+	if _afk_silent == enabled:
+		return
+	_afk_silent = enabled
+	if enabled:
+		# Stop decoding and releasing audio from players; the map-change
+		# handler cannot start BGM again until this mode is disabled.
+		stop_bgm()
+		stop_all_se()
+		if is_instance_valid(bgm_player):
+			bgm_player.stream = null
+		for player in se_players:
+			if is_instance_valid(player):
+				player.stream = null
+
+
+func is_afk_silent() -> bool:
+	return _afk_silent
+
 
 const LOGIN_BGM_PATH = "res://Assets/Audio/BGM/Silent_Memory.mp3"
 
@@ -359,8 +385,19 @@ func play_se(se_id: int, volume_scale: float = 1.0, pitch_scale: float = 1.0) ->
 	return play_se_by_name("SE%04d" % se_id, volume_scale, pitch_scale)
 
 func play_se_by_name(se_name: String, volume_scale: float = 1.0, pitch_scale: float = 1.0) -> bool:
+	if _afk_silent:
+		return false
 	var normalized_name = _normalize_se_name(se_name)
 	if normalized_name.is_empty():
+		return false
+
+	var now_msec := Time.get_ticks_msec()
+	var repeat_cooldown := SE_REPEAT_COOLDOWN_MSEC
+	if normalized_name in ["SE%04d" % UI_HOVER_SE_ID, "SE%04d" % UI_BUTTON_PRESS_SE_ID, "SE%04d" % UI_INTERFACE_ACTIVATION_SE_ID]:
+		repeat_cooldown = SE_REPEAT_COOLDOWN_UI_MSEC
+
+	var last_played := int(_last_se_played_at_msec.get(normalized_name, -1000000))
+	if now_msec - last_played < repeat_cooldown:
 		return false
 
 	var stream = _load_se_by_name(normalized_name)
@@ -381,9 +418,12 @@ func play_se_by_name(se_name: String, volume_scale: float = 1.0, pitch_scale: fl
 	_next_se_play_order += 1
 	_se_player_play_order[player] = _next_se_play_order
 	player.play()
+	_last_se_played_at_msec[normalized_name] = now_msec
 	return true
 
 func play_se_candidates(candidates: Array[String], volume_scale: float = 1.0, pitch_scale: float = 1.0) -> bool:
+	if _afk_silent:
+		return false
 	var available_candidates: Array[String] = []
 	for candidate in candidates:
 		var normalized_name = _normalize_se_name(candidate)
@@ -423,6 +463,32 @@ func stop_all_se() -> void :
 func clear_se_cache() -> void :
 	se_cache.clear()
 	_missing_se_names.clear()
+	_last_se_played_at_msec.clear()
+
+func trim_unreferenced_runtime_cache() -> int:
+	# Do NOT stop SE players or flush current/prefetched BGM on focus
+	# changes. Only old, unreferenced one-shot sound clips can go.
+	return BG_CACHE_TRIM.trim_unused(se_cache, 32)
+
+
+func clear_runtime_cache() -> void :
+	stop_all_se()
+	clear_se_cache()
+	_map_bgm_cache.clear()
+	_map_bgm_cache_order.clear()
+
+
+func release_world_audio_for_login() -> void:
+	# stop() does not release the AudioStream referenced by a player. Keep
+	# original login bootstrap intact; it will start the login BGM normally.
+	stop_bgm()
+	if is_instance_valid(bgm_player):
+		bgm_player.stream = null
+	for player in se_players:
+		if is_instance_valid(player):
+			player.stop()
+			player.stream = null
+	clear_runtime_cache()
 
 func set_se_volume(percentage: float) -> void :
 	current_se_volume_pct = clampf(percentage, 0.0, 100.0)
@@ -533,7 +599,9 @@ func _load_se_by_name(se_name: String) -> AudioStream:
 		_missing_se_names[se_name] = true
 		return null
 
-	var stream = load(se_path) as AudioStream
+	var stream = ResourceLoader.load(
+		se_path, "AudioStream", ResourceLoader.CACHE_MODE_IGNORE
+	) as AudioStream
 	if stream == null:
 		push_warning("[AudioManager] 無法載入音效檔案: %s" % se_path)
 		_missing_se_names[se_name] = true
@@ -574,6 +642,8 @@ func _apply_se_player_volume(player: AudioStreamPlayer) -> void :
 
 
 func play_login_bgm() -> void :
+	if _afk_silent:
+		return
 	_bgm_request_serial += 1
 	_pending_bgm_path = ""
 	var stream = load(LOGIN_BGM_PATH) as AudioStream
@@ -592,6 +662,8 @@ func play_login_bgm() -> void :
 
 
 func play_map_bgm(map_id: int) -> void :
+	if _afk_silent:
+		return
 	_bgm_request_serial += 1
 	var request_id: = _bgm_request_serial
 	var load_started_usec: = Time.get_ticks_usec()
@@ -623,7 +695,9 @@ func play_map_bgm(map_id: int) -> void :
 		return
 
 	_pending_bgm_path = bgm_path
-	var request_error: = ResourceLoader.load_threaded_request(bgm_path, "AudioStream")
+	var request_error: = ResourceLoader.load_threaded_request(
+		bgm_path, "AudioStream", false, ResourceLoader.CACHE_MODE_IGNORE
+	)
 	if request_error != OK:
 		var existing_status: = ResourceLoader.load_threaded_get_status(bgm_path)
 		if existing_status != ResourceLoader.THREAD_LOAD_IN_PROGRESS and existing_status != ResourceLoader.THREAD_LOAD_LOADED:
@@ -652,6 +726,8 @@ func play_map_bgm(map_id: int) -> void :
 		return
 
 func _play_loaded_map_bgm(map_id: int, bgm_path: String, stream: AudioStream, request_id: int, load_started_usec: int, cache_hit: bool) -> void :
+	if _afk_silent:
+		return
 	if request_id != _bgm_request_serial or not is_instance_valid(bgm_player) or stream == null:
 		return
 	bgm_player.stream = stream

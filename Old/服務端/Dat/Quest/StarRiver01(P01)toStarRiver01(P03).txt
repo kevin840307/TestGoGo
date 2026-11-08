@@ -1,0 +1,18 @@
+--StarRiver01(P01) to StarRiver01(P03)
+
+function start()
+Say("n1封印之地嚴禁進入","End")
+end
+
+function notuse()
+--下面句子層於13-11-03作出地名修改
+	Ask("n要進入星精靈祭壇嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(8256,6304,28)
+	end
+	QuestEnd()
+end

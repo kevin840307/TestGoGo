@@ -1,0 +1,15 @@
+--NQ026_E (研究所通訊員‧蘿莎)
+
+function start()
+    if GetFlag("NQ026_Y_STEP") >= 2 then
+        Say("n1是我操作傳送光線把你從基地的大爆炸中救出來的！\n快點謝謝我吧！^_^\n多謝你拯救了尼尼亞王國！")
+    else
+        if GetFlag("NQ026_G_STEP") < 1 then
+            Say("n1你就是新加入的成員嗎？")
+            Say("p1是啊，請多多指教。")
+            Say("n1嗯！我們一起來為世界的和平而努力吧！")
+        else
+            Say("n1你準備好出發了嗎？準備好出發之後，你透過傳送器便可去到火山島之中！")
+        end        
+    end
+end

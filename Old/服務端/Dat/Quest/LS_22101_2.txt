@@ -1,0 +1,19 @@
+--LS_22101_2 "暗之力‧二級"
+
+function GetSkillData()
+	return 22101,2,20,31350,"暗之力‧二級","暗之力‧一級","見習魔動使、見習守護使或見習聖靈使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 5 or career == 6 or career == 7 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

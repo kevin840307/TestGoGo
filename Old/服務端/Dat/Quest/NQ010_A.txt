@@ -1,0 +1,105 @@
+--NQ010_A  蕭瑟
+
+--statue 1 接下任務
+--statue 2 這次要＜？＞個小藍晶石
+--statue 3 找天使手環
+
+function start()
+	lv=GetData("Level")
+	statue=GetFlag("NQ010_Task")
+
+	if lv<10 then
+		Say("n1別來煩著我～我正在做實驗！","End")
+
+
+	elseif statue==3 then
+		if ItemListCountLeft(0)<1 then
+			Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			if CheckItem(10179)>0 and GetData("Left_hand")~=10179 and CheckItem(10180)>0 and GetData("Right_hand")~=10180 then
+				RemoveItem(10179)
+				RemoveItem(10180)
+				Speech1()
+				AddItem(10181)
+				SetFlag("NQ010_Done",1)
+				SetFlag("NQ010_Task",0)
+			else
+				Say("n1天使手環應該很易就會找到吧……！")
+				Say("p3那你什麼自己不去找！？")
+				Say("n1我在忙嘛…呵呵…","End")
+			end
+		end
+	elseif statue==2 then
+		if RemoveItem(11,GetFlag("RequiredMedicine3"))==1 then
+			Say("n1對了對了，就是這些……呵呵……")
+			Say("p1我要寶物～！")
+			Say("n1等等啊～我還差一樣東西呢！")
+			Say("p1又是什麼啊……")
+			Say("n1天使手環！就是"..Color(0,45,198).."天使手環"..Color(0,0,0).."！只要你可以把這個東西拿來給我，我就把寶物送給你～呵呵……")
+			Say("p3（可惡啊啊啊！）","End")
+			SetFlag("NQ010_Task",3)
+		else
+			Total=GetFlag("RequiredMedicine3")
+			Say("n1你不是去拿"..Total.."個小藍晶石給我嗎？","End")
+	
+		end
+
+	elseif statue==1 then
+		if RemoveItem(72,5)==1 then
+			Total=GetCountItemCount(11)+1
+			if Total>20 then
+				Total=20
+			end
+			SetFlag("RequiredMedicine3",Total)
+			Say("n1好！這次要"..Total.."個"..Color(0,45,198).."小藍晶石"..Color(0,0,0).."！快點給我找來，非．常．緊．急！")
+			Say("p3什麼嘛！我又不是你的傭人！")
+			Say("n1那你不要寶物了？")
+			Say("p1……","End")
+			SetFlag("NQ010_Task",2)
+		
+		else
+			Say("n1你幫我去五個治療特效藥回來！非常緊急喔！","End")
+		end
+	
+	else
+		if GetFlag("NQ010_Done")== 1 then
+			Say("n1又是你？我的實驗還沒成功\！你幫我去"..Color(0,45,198).."五個治療特效藥"..Color(0,0,0).."回來！")
+			Say("p1什麼又是我？")
+			Say("n1什麼又是你的……快去快去！","End")
+
+		
+		else
+			Say("n1別來煩著我～我正在做實驗！")
+			Say("n1對了！你，幫我去拿"..Color(0,45,198).."五個治療特效藥"..Color(0,0,0).."回來！")
+			Say("p1什麼跟什麼啊？")
+			Say("n1快去快去，回來時給你一個神奇至寶！")
+			Say("p1咦？這樣的話還好，等等吧！","End")
+		end
+		SetFlag("NQ010_Task",1)
+	end
+
+		
+
+end
+
+
+
+function Speech1()
+	done=GetFlag("NQ010_Done")
+	Say("n1啊啊啊！這就是我夢寐以求的天使手環！要趕快研究才行！")
+	Say("p1寶物啊！給我寶物！")
+	if done~=1 then
+		Say("n1嗯～給你了。")
+	end
+	Say("p7得到破爛的時鐘")
+	if done==1 then
+		Say("p1又是這種爛東西！？")
+	else
+		Say("p1這個爛東西是什麼～？")
+	end
+	Say("n1別少看它啊～我每天都是靠它叫我起床的呢！對我來說是一個寶物啊！")
+	if done~=1 then
+		Say("p3就是這個爛東西！天啊～～～～！")
+	end
+	Say("n1啊！實驗失敗了啊！","End")
+end

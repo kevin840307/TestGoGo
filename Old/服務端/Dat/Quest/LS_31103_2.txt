@@ -1,0 +1,20 @@
+--LS_31103_2 "防具製造‧二級"
+
+function GetSkillData()
+	return 31103,2,30,31668,"防具製造‧二級","防具製造‧一級","道具使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 9
+ then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

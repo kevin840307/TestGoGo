@@ -1,0 +1,5 @@
+--People01 路比
+
+function start()
+	Say("n1呼……在城中閒逛也是一種享受。","End")
+end

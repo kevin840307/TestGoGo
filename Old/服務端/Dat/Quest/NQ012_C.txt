@@ -1,0 +1,44 @@
+--NQ012_C  金妮露
+
+--statue(NQ012_Task) =1 : receive the mission
+-- =2 : after talking with 凱兒
+-- =3 : need to find 金妮露
+-- =4 : after finding the 金妮露
+-- =5 : NQ012_Task is completed
+
+
+function start()
+
+	done15=GetFlag("NQ015_Done")
+	statue=GetFlag("NQ012_Task")
+	
+	if statue==4 then
+		Say("n1你快回去吧！我怕他可能會擔心到撒尿喔！","End")
+
+	elseif statue==3 then
+		if done15==1 then
+			Say("p1你又跑出來了？還是你跟本沒有回去啊？")
+			Say("n1我．沒．事．啦！")
+			Say("n1你叫立波利不用擔心好了～","End")
+
+		else
+
+			Say("p1咦？你就是金妮露？快跟我回去吧！有很多人都在擔心你！")
+			Say("n1嗯？不用啦，我比較想在這兒看風景！這兒美極了！")
+			Say("p1可是你在這兒很危險的！")
+			Say("n1我一點都不怕啦，反正森林的動物都不會傷害我的！")
+			Say("p6似乎是真的…")
+			Say("p1那你看完就要自己回去喔！")
+			Say("n1好的！","End")
+
+
+		end
+		SetFlag("NQ012_Task",4)
+	else
+
+		Say("n1我在這兒看風景～呼，感覺還不錯嘛！","End")
+	end
+
+
+end
+

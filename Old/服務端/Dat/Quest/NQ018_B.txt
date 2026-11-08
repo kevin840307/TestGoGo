@@ -1,0 +1,79 @@
+--NQ018_B 亞爾士
+
+-- NQ018_Task_1		機動靈任務
+-- 1: Got the pen
+-- 2: used the pen
+
+function start()
+	if GetCountItemCount(10264)>=1 then
+		if GetData("Race")~=3 then
+			dialogue_02()
+		elseif GetFlag("NQ018_Task_1")~=1 then
+			dialogue_03()
+		else
+			dialogue_06()
+		end
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1……好煩惱啊。")
+	Say("n1每天都想很多東西，我的頭髮快掉光了。","End")
+end
+
+function dialogue_02()
+	Say("n1嗯？")
+	Say("p1這本書上叫我來找你！先生！可以麻煩你幫我看看這個要如何寫嗎？")
+	Say("p7亞爾士拿起書看了看，又給它送回給你。")
+	Say("n1這本是叫機動靈計策報告吧？")
+	Say("n1那你應該找一個機動靈和我說才行。","End")
+end
+
+function dialogue_03()
+	Say("n1嗯？")
+	Say("p1這本書上叫我來找你！先生！可以麻煩你幫我看看這個要如何寫嗎？")
+	Say("p7亞爾士拿起書看了看，又給它送回給你。")
+	Say("n1呵呵，沒問題。")
+	Say("n1寫這個不難，可是用你這個頭腦，我想你想一輩子也想不出一些好的點子呢！")
+	Say("p6這是什麼意思？我要生氣了。")
+	Say("p1那應該什麼辦才好呢？")
+	Ask("n給我5000元，我就教你如何寫～","給就給，好好接著！","那麼貴，搶劫啊？","reply_03")
+end
+
+function reply_03()
+	if GetChoice()==0 and GetData("Money")>=5000 then
+		dialogue_05()
+	else
+		dialogue_04()
+	end
+end
+
+function dialogue_04()
+	Say("n1沒關係啊，不給就不給～我也可以好好休息～","End")
+end
+
+function dialogue_05()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		ModifyData("Money", -5000)
+		Say("p7交出5000元")
+		Say("n1呵～拿著這個。")
+		Say("p7得到“靈感之筆”")
+		Say("p1這是什麼？用它來寫就行？")
+		Say("n1是的！這支筆來頭可厲害了，它會把你想到的點子都完全紀錄下來喔，我有一段時間都是靠它的了。")
+		Say("p1那麼你現在為什麼不要了？")
+		Say("n1這當然有原因的，是因為用這支筆時太傷神了。它會一下子就把你的魔力吸得一乾二淨！")
+		Say("n1使用這個時你的魔力一定要非常充實喔！不然被它吸死了也別怪我沒有說過～")
+		Say("p1真是可怕的東西…")
+		Say("n1順便我教你這個申請書的格式吧，之後你用靈感之筆寫好它！","End")
+		SetFlag("NQ018_Task_1", 1)
+		AddItem(10271)
+	end
+end
+
+function dialogue_06()
+	Say("n1如何？報告寫好了嗎？", "End")
+end

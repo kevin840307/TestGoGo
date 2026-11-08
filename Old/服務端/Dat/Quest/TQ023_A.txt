@@ -1,0 +1,64 @@
+--密技星空情人(TQ023A)
+
+--TQ023_Done
+
+function start()
+	if GetFlag("TQ023_Done")>0 then
+		dia_05()
+	elseif GetCountItemCount(10446)>0 then
+		dia_01()
+	else
+		dia_04()
+	end
+end
+
+function dia_01()
+	Say("n1哈囉！我是密技總動員星空大使，你只要答對一個簡單的問題，就可以得到今次的活動物品金魚帽子了。")
+	Ask("n問題：在星空之門的世界中，有多少種族讓玩家選擇？","2個。","3個。","4個。","我不清楚啊，我先去找一下資料。","reply_01")
+end
+function reply_01()
+	ans = GetChoice()
+	if ans == 0 then
+		dia_03()
+	elseif ans == 1 then
+		dia_02()
+	elseif ans == 2 then
+		dia_03()
+	else
+		QuestEnd()
+	end
+end
+
+function dia_02()
+	Say("n1你答對了    ^_^")
+	Say("p7交出「金魚帽子券」","dia_02b")
+end
+function dia_02b()
+	if ItemListCountLeft(1)<1 then
+		Say("p7對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+	else
+		Say("p7得到「金魚帽子」","End")
+		RemoveItem(10446)
+		AddItem(10447)
+		SetFlag("TQ023_Done",1)
+	end
+end
+
+function dia_03()
+	Say("n1真可惜，你答錯了/.\\")
+	Say("n1祝你下之好運。","dia_03b")
+end
+function dia_03b()
+	Say("p7交出「金魚帽子券」","End")
+	RemoveItem(10446)
+	SetFlag("TQ023_Done",1)
+end
+
+function dia_04()
+	Say("n1哈囉！我是密技總動員星空大使，你只要答對一個簡單的問題，就可以得到今次的活動物品金魚帽子了。")
+	Say("n1參加今次的活動需要金魚帽子券啊！","End")
+end
+
+function dia_05()
+	Say("n1哈囉！我是密技總動員星空大使，多謝你支持今次的金魚帽子活動      ^_^","End")
+end

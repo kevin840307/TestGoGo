@@ -2,18 +2,32 @@ class_name SkillCard
 extends PanelContainer
 
 signal skill_clicked(skill_id: int)
+signal aoe_center_mode_changed(skill_id: int, self_center: bool)
 
-@onready var icon_rect: TextureRect = $Margin / Content / IconCenter / Icon
-@onready var name_label: Label = $Margin / Content / NameRow / Name
-@onready var level_label: Label = $Margin / Content / NameRow / Level
-@onready var type_label: Label = $Margin / Content / Type
-@onready var summary_label: Label = $Margin / Content / Summary
+@onready var icon_rect: TextureRect = get_node("Margin/Content/IconCenter/Icon") as TextureRect
+@onready var name_label: Label = get_node("Margin/Content/NameRow/Name") as Label
+@onready var level_label: Label = get_node("Margin/Content/NameRow/Level") as Label
+@onready var type_label: Label = get_node("Margin/Content/Type") as Label
+@onready var summary_label: Label = get_node("Margin/Content/Summary") as Label
+@onready var content_row: HBoxContainer = get_node("Margin/Content") as HBoxContainer
 
 var _skill_id: int = 0
+var _aoe_center_toggle: CheckButton = null
 
 
 func _ready() -> void :
 	gui_input.connect(_on_gui_input)
+	_aoe_center_toggle = CheckButton.new()
+	_aoe_center_toggle.name = "AoeSelfCenter"
+	_aoe_center_toggle.text = "自身中心"
+	_aoe_center_toggle.tooltip_text = "開啟：以自己為範圍中心；關閉：以目前戰鬥目標為中心。"
+	_aoe_center_toggle.custom_minimum_size = Vector2(92.0, 0.0)
+	_aoe_center_toggle.focus_mode = Control.FOCUS_NONE
+	_aoe_center_toggle.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_aoe_center_toggle.add_theme_font_size_override("font_size", 12)
+	_aoe_center_toggle.visible = false
+	_aoe_center_toggle.toggled.connect(_on_aoe_center_toggled)
+	content_row.add_child(_aoe_center_toggle)
 
 
 func setup(
@@ -21,11 +35,16 @@ func setup(
 	skill_id: int, 
 	skill_level: int, 
 	icon_texture: Texture2D, 
-	category_color: Color
+	category_color: Color,
+	show_aoe_center_toggle: bool = false,
+	self_center: bool = false
 ) -> void :
 	_skill_id = skill_id
 	icon_rect.texture = icon_texture
 	_apply_type_color(category_color)
+	if is_instance_valid(_aoe_center_toggle):
+		_aoe_center_toggle.visible = show_aoe_center_toggle
+		_aoe_center_toggle.set_pressed_no_signal(self_center)
 
 	if not skill_resource:
 		name_label.text = "未知技能(%d)" % skill_id
@@ -117,6 +136,12 @@ func _build_summary(level_data: Resource, skill_type: int) -> String:
 		parts.append("持續 %d秒" % duration)
 
 	return "　｜　".join(parts)
+
+
+func _on_aoe_center_toggled(enabled: bool) -> void:
+	if _skill_id <= 0:
+		return
+	aoe_center_mode_changed.emit(_skill_id, enabled)
 
 
 func _on_gui_input(event: InputEvent) -> void :

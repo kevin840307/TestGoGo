@@ -1,0 +1,19 @@
+--LS_22102_5 "光之盾‧五級"
+
+function GetSkillData()
+	return 22102,5,50,31358,"光之盾‧五級","光之盾‧四級","魔動使、守護使或聖靈使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 5 or career == 6 or career == 7 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

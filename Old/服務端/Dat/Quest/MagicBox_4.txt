@@ -1,0 +1,35 @@
+function start()
+	if satisfy()>0 then
+		RemoveItem(10045)
+		if ItemListCountLeft(0)<1 then
+			Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。")
+		elseif ItemListCountLeft(1)<1 then
+			Say("p7對不起，你身上的裝備太多了，請清除一些物品後再來。")
+		else
+			Say("n7使用 黑桃之匙 開啟了寶箱!!")
+			num=random(100)
+			if num>=1 and num<=30 then
+				Say("p3糟！爆炸了！走不掉了！")
+				SetData("HP", 1)
+				SetData("MP", 1)
+			elseif num>=31 and num<=94 then
+				Say("n7得到 治療藥水")
+				AddItem(31202)
+			elseif num>=95 and num<=99 then
+				Say("n7得到 卡斯杖")
+				AddItem(1643)
+			else
+				Say("n7得到 卡斯魔杖")
+				AddItem(1644)
+			end
+		end
+	else
+		Say("n7沒有這個寶箱所需的鑰匙!!")
+	end
+	QuestEnd()
+end
+
+
+function satisfy()
+	return CheckItem(10045) 
+end

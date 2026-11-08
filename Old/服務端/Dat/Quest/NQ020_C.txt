@@ -1,0 +1,49 @@
+--營商指導員（NQ020_C）
+
+function start()
+	status = GetFlag("NQ020_Task")
+	if status >= 3 then
+		dia_03()
+	elseif status>=2 then
+		dia_02()
+	else
+		dia_01()
+	end
+end
+
+function dia_01()
+	Say("n1請你先找其他指導員，了解遊戲基本操作吧。","End")
+end
+
+function dia_02()
+	Say("n1交易可分為和城中商人交易以及和玩家交易兩種，和城中商人交易只需和商人對話，便可以選擇開啟商店，")
+	Say("n1開啟商店介面後，角色可以點選物品欄或商店欄的物品，再輸入數量，便能買賣物品。")
+	Say("n1和玩家交易，相方也必須把物品加入物品欄中，待相方也就交易內容不作出更改時便可按確定進行交易。","dia_02b")
+end
+function dia_02b()
+	Say("n1有關交易的價格，就要看看你營商的本領了。新手指導員已預備好幾道難題給你，看看你究竟學習了多少，你快去找他吧。","End")
+	SetFlag("NQ020_Task", 3)
+end
+
+function dia_03()
+	Ask("n你要再聽聽交易的技巧嗎？","我想了解如何和城中商人交易。","我想了解如何和其他玩家交易。","我已很了解了。","reply_03")
+end
+
+function reply_03()
+	ans = GetChoice()
+	if ans == 0 then
+		dia_03b()
+	elseif ans==1 then
+		dia_03c()
+	else
+		QuestEnd()
+	end
+end
+
+function dia_03b()
+	Say("n1和城中商人交易只需和商人對話，便可以選擇開啟商店，開啟商店介面後，角色可以點選物品欄或商店欄的物品，再輸入數量，便能買賣物品。","dia_03")
+end
+
+function dia_03c()
+	Say("n1和玩家交易，相方也必須把物品加入物品欄中，待相方也就交易內容不作出更改時便可按確定進行交易。","dia_03")
+end

@@ -1,0 +1,17 @@
+--Desert(P01) to Underground(P01)
+
+function start()
+Say("n1封印之地嚴禁進入","End")
+end
+
+function notuse()
+	Ask("n要進入地下神殿嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(3520,2656,33)
+	end
+	QuestEnd()
+end

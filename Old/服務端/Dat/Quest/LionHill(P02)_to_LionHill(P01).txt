@@ -1,0 +1,14 @@
+--LionHill(P02) to LionHill(P01)
+
+function start()
+--AFTER JP TRANSLATION PART 2
+	Ask("n要進入獅鷲山腰嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(5248,2112,12)
+	end
+	QuestEnd()
+end

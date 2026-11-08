@@ -1,0 +1,190 @@
+function start()
+	if GetFlag("EQ004_Step") >= 9 then
+		Step12()
+	else
+		if GetData("Bonnet") == 10698 then
+			if GetFlag("EQ004_Step") >= 3 then
+				if GetFlag("EQ004_Step") >= 4 then
+					if GetFlag("EQ004_Step") >= 9 then
+						Step12()
+					else
+						Step06()
+					end
+				else
+					Step04()
+				end
+			else
+				Step02()
+			end
+		else
+			Step01()
+		end
+	end
+end
+
+function GetEmotionById(id)
+	if id==13 then 
+		return "揮手"
+	elseif id==7 then 
+		return "憤怒"
+	elseif id==12 then 
+		return "勝利"
+	elseif id==6 then 
+		return "頭暈"
+	elseif id==11 then 
+		return "示愛"
+	elseif id==5 then 
+		return "道歉"
+	elseif id==10 then 
+		return "高興"
+	elseif id==4 then 
+		return "睡覺"
+	elseif id==9 then 
+		return "跳舞"
+	elseif id==3 then 
+		return "跳土風舞"
+	elseif id==8 then 
+		return "哭泣"
+	elseif id==2 then 
+		return "擺攤子"
+	else
+		return " "
+	end
+end
+
+function Step01()
+	Say("n1這裡是體操比賽的報名處。你必需配帶世運第3環，才可參加體操比賽。")
+end
+
+function Step02()
+--＜如玩家已裝備世運第3環(10698)＞
+Say("n1這裡是射擊比賽的報名處！")
+Say("n1讓我跟你說明一下比賽的規則吧。")
+Say("n1首先你要找一個拍檔，組隊回來找我。")
+Say("n1之後我會告訴你一個動作，之後你就要叫你的拍檔做出我指定的動作。")
+Say("n1然後你再找我確定你的拍檔動作動作是否正確。")
+Say("n1正確的話，可得一分。")
+Say("n1共有10個動作要做，得到10分才可完成體操比賽。")
+Ask("n你要報名參加體操比賽嗎？","是的。","不是。","Step02_Handler")
+--＜選項＞
+--．是的。→Step03
+--．不是。→Quest End
+end
+
+function Step02_Handler()
+	if GetChoice() == 0 then
+		Step03()
+	else
+		QuestEnd()
+	end
+end
+
+function Step03()
+	Say("n1那麼你現在先去找一個拍檔，然後組隊回來找我。")
+	SetFlag("EQ004_Step",3)
+end
+
+function Step04()
+--<After EQ004_A Step03>
+--＜玩家團隊成員小於一人＞→Step05
+--＜玩家團隊成員多於一人＞→Step05
+	if GetTeamTotal()~= 1 then
+		Step05()
+	else
+		id = random(11)+2
+		Say("n1好～那麼開始了！")
+		Say("n1第一個動作是"..GetEmotionById(id).."。")
+		SetFlag("EQ004_Next",id)
+		SetFlag("EQ004_Score",0)
+		SetFlag("EQ004_Step",4)
+		SetFlag("EQ004_Act",0)
+	end
+end
+
+function Step05()
+	Say("n1你現在先去找一個拍檔，然後組隊回來找我。")
+end
+
+function Step06()
+--<After EQ004_A Step04>
+--＜玩家身上物品空間少於1＞→Step11
+--＜玩家團隊成員小於一人＞→Step07
+--＜玩家團隊成員多於一人＞→Step07
+--＜玩家團隊成員的動作不正確＞→Step08
+--(分數+1)
+--＜玩家已完成10次動作＞→Step09
+	if GetTeamTotal()~= 1 then
+		Step07()
+	else
+		if GetFlag("EQ004_Act") < 10 then
+			if GetTeamEmotion(GetFlag("EQ004_Next")) > 0 then
+				id = random(11)+2
+				Say("n1好～下一個動作是"..GetEmotionById(id).."。")
+				SetFlag("EQ004_Next",id)
+				SetFlag("EQ004_Score",GetFlag("EQ004_Score")+1)
+				SetFlag("EQ004_Act",GetFlag("EQ004_Act")+1)
+			else
+				Step08()
+			end
+		else
+			Step09()
+		end
+	end
+end
+function Step07()
+	Say("n1你的團隊人數不對啊～我是叫你帶一個拍檔來的，對吧！？")
+	Say("n1比賽重新開始。")
+--<取消玩家分數，已完成動作次數的記錄，重設任務由至完成Step 03>
+	SetFlag("EQ004_Score",0)
+	SetFlag("EQ004_Step",3)
+	SetFlag("EQ004_Act",0)
+end
+
+function Step08()
+--＜玩家已完成10次動作＞→Step09
+	if GetFlag("EQ004_Act") < 10 then
+		id = random(11)+2
+		Say("n1好～下一個動作是"..GetEmotionById(id).."。")
+		SetFlag("EQ004_Next",id)
+		SetFlag("EQ004_Act",GetFlag("EQ004_Act")+1)
+	else
+		Step09()
+	end
+end
+
+function Step09()
+--<如玩家分數少於10＞→Step10
+	if GetFlag("EQ004_Score") < 10 then
+		Step10()
+	else	
+		if ItemListCountLeft(1) < 1 then
+			Step11()
+		else		
+			Say("n1恭喜你～你的分數是10分！！")
+			Say("n1恭喜你完成了星空體操比賽！")
+			Say("n1這個世運第4環，這是你可以參加下一個項目的證明。")
+			Say("p7得到世運第4環。")
+			AddItem(10699)
+			SetFlag("EQ004_Step",9)
+		end
+	end
+end
+
+function Step10()
+	Say("n1你只有"..GetFlag("EQ004_Score").."分，未符合完成比賽的要求，再來一次吧！")
+	--<取消玩家分數，已完成動作次數的記錄，重設任務由至完成Step 03>
+	SetFlag("EQ004_Score",0)
+	SetFlag("EQ004_Step",3)
+	SetFlag("EQ004_Act",0)
+end
+
+function Step11()
+	Say("p7身上的裝備太多了，還是先整理一下吧！")
+end
+
+function Step12()
+--<After EQ004_A Step09>
+	Say("n1星空世運會的選手啊！你已然完成了星空體操比賽了！你可以為參加下一個項目準備一下。")
+end
+
+#include "CommTeam.txt"

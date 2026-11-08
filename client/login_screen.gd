@@ -35,10 +35,135 @@ var remembered_accounts: Array[Dictionary] = []
 var submitted_username: String = ""
 var submitted_password: String = ""
 
+# Small debug-only window measuring the first seconds of the login UI.
+# Never emit account/password text or individual input events to logs.
+var _login_reveal_started_usec: int = 0
+var _login_startup_gap_reports: int = 0
+var _startup_form_interactive: bool = false
+var _startup_video_fallback: bool = false
+var _startup_video_first_frame_seen: bool = false
+var _startup_video_watchdog_scheduled: bool = false
+const LOGIN_STARTUP_MONITOR_SECONDS: float = 6.0
+const LOGIN_STARTUP_GAP_WARN_SECONDS: float = 0.05
+const LOGIN_STARTUP_MAX_GAP_REPORTS: int = 12
+const LOGIN_VIDEO_WATCHDOG_SECONDS: float = 4.0
+
 
 var ascii_regex: RegEx = RegEx.new()
 var alphanumeric_regex: RegEx = RegEx.new()
 var email_regex: RegEx = RegEx.new()
+
+static func needs_non_ascii_rewrite(original: String, sanitized: String) -> bool:
+	return original != sanitized
+
+
+func prepare_form_behind_loading() -> void:
+	# Show and layout the *real* login scene while EntryManager's opaque
+	# loading overlay is above it. A video cannot be considered warmed if
+	# its parent was invisible during the supposed startup prewarm.
+	_startup_form_interactive = false
+	visible = true
+	modulate.a = 1.0
+	login_panel.visible = true
+	register_panel.visible = false
+	user_edit.editable = false
+	password_edit.editable = false
+	login_button.disabled = true
+	go_register_button.disabled = true
+	_hide_account_suggestions()
+
+
+func is_background_video_frame_ready() -> bool:
+	if _startup_video_fallback or not is_instance_valid(bg_video) or bg_video.stream == null:
+		return true
+	# Playing alone is insufficient: the first actual OGV frame may still
+	# require expensive decoding/texture allocation on the render thread.
+	# Latch readiness: looping videos rewind to 0s on every loop, which
+	# must not reset a successfully completed startup warmup.
+	if bg_video.is_playing() and bg_video.get_stream_position() >= 0.12:
+		_startup_video_first_frame_seen = true
+	return _startup_video_first_frame_seen
+
+
+func use_static_background_after_video_timeout() -> void:
+	# A failed/slow codec must not hold the login form hostage indefinitely.
+	# The existing black ColorRect is a safe fallback, not a broken video.
+	_startup_video_fallback = true
+	stop_background_video()
+
+
+func reveal_form_after_warmup() -> void:
+	# Asset/UI preparation is complete. Video FPS, decode readiness and
+	# window focus do NOT block login input.
+	_startup_form_interactive = true
+	user_edit.editable = true
+	password_edit.editable = true
+	login_button.disabled = false
+	go_register_button.disabled = false
+	login_panel.visible = true
+
+
+func warm_background_video() -> void:
+	# The parent starts OGV only after preparing the actual scene behind
+	# the opaque loading overlay. No optional crafting prewarm occurs here.
+	if not is_instance_valid(bg_video) or bg_video.stream == null:
+		return
+	bg_video.loop = true
+	if not bg_video.is_playing():
+		bg_video.play()
+	else:
+		bg_video.paused = false
+
+
+# Background video failure must never block the login form. Give the
+# decoder a short independent window to produce its first frame, then fall
+# back to the existing static background if it cannot.
+func start_login_video_fallback_watchdog() -> void:
+	if _startup_video_watchdog_scheduled or _startup_video_fallback:
+		return
+	if not is_inside_tree() or not is_instance_valid(bg_video) or bg_video.stream == null:
+		return
+	_startup_video_watchdog_scheduled = true
+	get_tree().create_timer(LOGIN_VIDEO_WATCHDOG_SECONDS).timeout.connect(_on_login_video_watchdog_timeout)
+
+
+func _on_login_video_watchdog_timeout() -> void:
+	_startup_video_watchdog_scheduled = false
+	if not is_inside_tree() or not visible or not _startup_form_interactive:
+		return
+	if is_background_video_frame_ready():
+		return
+	use_static_background_after_video_timeout()
+	if OS.is_debug_build():
+		print("[LOGIN_VIDEO_FALLBACK] reason=no_decoded_frame after_seconds=%.1f nonblocking=true" % LOGIN_VIDEO_WATCHDOG_SECONDS)
+
+
+func stop_background_video() -> void:
+	if is_instance_valid(bg_video) and bg_video.is_playing():
+		bg_video.stop()
+
+
+func mark_login_screen_revealed() -> void:
+	_login_reveal_started_usec = Time.get_ticks_usec()
+	_login_startup_gap_reports = 0
+
+
+func _process(delta: float) -> void:
+	if not OS.is_debug_build() or _login_reveal_started_usec <= 0:
+		return
+	var age_seconds: float = float(Time.get_ticks_usec() - _login_reveal_started_usec) / 1000000.0
+	if age_seconds > LOGIN_STARTUP_MONITOR_SECONDS:
+		_login_reveal_started_usec = 0
+		return
+	if delta >= LOGIN_STARTUP_GAP_WARN_SECONDS and _login_startup_gap_reports < LOGIN_STARTUP_MAX_GAP_REPORTS:
+		_login_startup_gap_reports += 1
+		var video_active: bool = is_instance_valid(bg_video) and bg_video.is_playing() and not bg_video.paused
+		var input_focused: bool = (is_instance_valid(user_edit) and user_edit.has_focus()) or (is_instance_valid(password_edit) and password_edit.has_focus())
+		print("[LOGIN_STARTUP_FRAME_GAP] frame_ms=%.2f age_s=%.2f video_playing=%s input_focused=%s %s" % [
+			delta * 1000.0, age_seconds, str(video_active), str(input_focused),
+			GameManager._focus_perf_context() if GameManager else "",
+		])
+
 
 func _ready() -> void :
 
@@ -54,9 +179,9 @@ func _ready() -> void :
 	register_panel.visible = false
 
 
-	if bg_video and bg_video.stream != null:
-		bg_video.loop = true
-		bg_video.play()
+	# EntryManager starts the video at the END of startup prewarm, while
+	# the loading overlay still covers this screen. Do not waste CPU/GPU
+	# decoding during item/skill/recipe indexing.
 
 
 	_setup_input_fields()
@@ -94,9 +219,14 @@ func _setup_input_fields() -> void :
 		if edit:
 			edit.focus_entered.connect( func(): DisplayServer.window_set_ime_active(false))
 			edit.text_changed.connect( func(new_text: String):
-				var caret_pos = edit.get_caret_column()
-				edit.text = _clean_non_ascii(new_text)
-				edit.set_caret_column(caret_pos)
+				var sanitized: String = _clean_non_ascii(new_text)
+				# Most account/password keystrokes are already ASCII. Reassigning
+				# identical LineEdit.text every key forces needless layout/caret
+				# changes and can interfere with IME/focus input responsiveness.
+				if needs_non_ascii_rewrite(new_text, sanitized):
+					var caret_pos: int = edit.get_caret_column()
+					edit.text = sanitized
+					edit.set_caret_column(mini(caret_pos, sanitized.length()))
 			)
 
 
@@ -116,7 +246,8 @@ func _on_login_button_pressed() -> void :
 	_commit_login_flow()
 
 func _commit_login_flow() -> void :
-	if is_submitting: return
+	if not _startup_form_interactive or is_submitting:
+		return
 
 	var username = user_edit.text.strip_edges()
 	var password = password_edit.text.strip_edges()
@@ -141,6 +272,7 @@ func _commit_login_flow() -> void :
 
 func _on_login_result_received(success: bool, msg: String) -> void :
 	if success:
+		stop_background_video()
 		_remember_successful_login(submitted_username, submitted_password)
 	else:
 		_stop_loading_animation()
@@ -204,16 +336,21 @@ func _on_register_account_response(success: bool, msg: String) -> void :
 
 func _start_loading_animation() -> void :
 	is_submitting = true
-	if loading_overlay:
+	# Loading progress is authoritative in EntryManager. Do not run a fake
+	# 0->95 looping tween here; it races every real loading stage and was the
+	# reason the bar repeatedly appeared stuck at 95%.
+	var main_entry = get_tree().current_scene
+	if main_entry and main_entry.has_method("_begin_login_select_loading_session"):
+		main_entry._begin_login_select_loading_session()
+	elif loading_overlay:
 		loading_overlay.visible = true
-		loading_bar.value = 0
-		loading_tween = create_tween()
-		loading_tween.set_loops()
-		loading_tween.tween_property(loading_bar, "value", 95.0, 2.0).set_trans(Tween.TRANS_LINEAR)
+		if loading_bar:
+			loading_bar.value = 0.0
 
 func _stop_loading_animation() -> void :
 	if loading_tween and loading_tween.is_valid():
 		loading_tween.kill()
+	loading_tween = null
 	if loading_overlay:
 		loading_overlay.visible = false
 	is_submitting = false

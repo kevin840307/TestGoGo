@@ -1,0 +1,14 @@
+--BornPlace(Magic) to MagicCity
+
+function start()
+	Say("n7你只要找城中的星空大使，便可再回來初心者之間。")
+	Ask("n要往魔法之都嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(2018,3452,9)
+	end
+	QuestEnd()
+end

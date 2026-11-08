@@ -1,0 +1,54 @@
+--NQ013_F  達力博士
+
+
+--statue(NQ013_Task) =1 : receive the mission
+--		     =2 : need to find 泊裘斯
+--		     =3 : after talking/finding 泊裘斯
+--		     =4 : need to find 蘑菇探測鏡
+--		     =5 : NQ013_Task is completed
+
+
+
+function start()
+	statue=GetFlag("NQ013_Task")
+	if statue==4 then
+		if CheckItem(10209)>0 then
+			Say("n1我要先看這種菌類，還未可以離開……","End")
+		else
+			Say("n1我喜歡觀察蘑菇…你要用蘑菇探測鏡看看嗎？")
+			Say("p1請把它賣給我！")
+			Ask("n沒問題……不過這個要4000元喔。","緊急的！好吧！","這個好貴！","response1")
+		end
+
+	else
+		Say("n1我喜歡觀察蘑菇…你要用蘑菇探測鏡看看嗎？","End")
+		
+	end
+
+
+end
+
+
+function response1()
+
+
+	if GetChoice()==0 then
+		if GetData("Money")>=4000 then
+			if ItemListCountLeft(0)<1 then
+				Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				ModifyData("Money",-4000)
+				Say("n1嗯，謝謝你。看來我要買一個新的了…")
+				Say("p7得到"..Color(0,45,198).."蘑菇探測鏡"..Color(0,0,0).."","End")
+				AddItem(10209)
+			end
+		else
+			Say("n1這個…你的錢不是還未夠嗎？","End")
+		end
+	else
+
+		Say("n1是嗎…嗯…那沒法子了…","End")
+	end
+
+
+end

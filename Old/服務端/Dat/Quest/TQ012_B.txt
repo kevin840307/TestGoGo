@@ -1,0 +1,12 @@
+--TQ012 重陽避難日
+--TQ012_B 卡瑪魔鳥王
+
+function start()
+	if RemoveItem(10237, 300)==1 then
+		Say("p7得到卡瑪魔鳥王之魂。","End")
+		AddItem(10236)
+	else
+		QuestEnd()
+	end
+end
+

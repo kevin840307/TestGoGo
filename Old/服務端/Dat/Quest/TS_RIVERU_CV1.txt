@@ -1,0 +1,14 @@
+function start()
+	CanMove()
+end
+
+function GetLocName()
+	return "流星之河．上游"
+end
+
+function GetLoc()
+	return 6272,4160,27
+
+end
+
+#include "TS_Common.txt"

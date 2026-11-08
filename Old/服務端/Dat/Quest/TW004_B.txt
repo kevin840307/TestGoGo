@@ -1,0 +1,89 @@
+--TW004_B
+--圖示未更新
+
+function start()
+    Say("m#event_photo\\EVENT_CARD06.spr#na##","main")
+end
+
+function main()
+    if ItemListCountLeft(0) < 1 then
+        step02_dia()    
+    elseif ItemListCountLeft(1) < 1 then
+        step03_dia()    
+    elseif ItemListCountLeft(2) < 1 then
+        step04_dia()    
+    elseif GetCountItemCount(146) > 295 then
+        step05_dia()    
+    elseif GetCountItemCount(131) > 295 then
+        step06_dia()    
+    else
+        Say("p7刮．．．")
+        Say("p7刮刮．．．")
+        Say("p7刮刮刮．．．","get_item")        
+    end        
+end
+
+function get_item()
+    randResult = random(100)
+    if randResult >= 0 and randResult <= 1 then
+        Say("p7得到天使光合金杖x1")
+        AddItem(2511)
+    elseif randResult >= 2 and randResult <= 3 then
+        Say("p7得到天使光合金銃x1")
+        AddItem(2512)
+    elseif randResult >= 4 and randResult <= 9 then
+        Say("p7得到雷爆合金矛x1")
+        AddItem(2500)
+    elseif randResult >= 10 and randResult <= 19 then
+        Say("p7得到精靈哈密x1")
+        AddItem(5011)
+    elseif randResult >= 20 and randResult <= 29 then
+        Say("p7得到科學怪人頭飾x1")
+        AddItem(10570)
+    elseif randResult >= 30 and randResult <= 39 then
+        Say("p7得到骷髏頭飾 x1")
+        AddItem(10571)
+    elseif randResult >= 40 and randResult <= 49 then
+        Say("p7得到南瓜頭飾 x1")
+        AddItem(10572)
+    elseif randResult >= 50 and randResult <= 64 then
+        Say("p7得到超級特效藥劑x5")
+        AddItem(146,5)
+    elseif randResult >= 65 and randResult <= 79 then
+        Say("p7得到改良特效藥劑x5")
+        AddItem(131,5)
+    elseif randResult >= 80 and randResult <= 99 then
+        Say("p7得到棒棒糖x1")
+        AddItem(10573)
+    end
+end
+
+function step02_dia()
+    Say("p7對不起，你身上的物品太多了，請整理一下再來找我吧。")
+    AddItem(10569)
+    QuestEnd()
+end
+
+function step03_dia()
+    Say("p7對不起，你身上的裝備太多了，請整理一下再來找我吧。")
+    AddItem(10569)
+    QuestEnd()
+end
+
+function step04_dia()
+    Say("p7對不起，你身上的戰鬥精靈太多了，請整理一下再來找我吧。")
+    AddItem(10569)
+    QuestEnd()
+end
+
+function step05_dia()
+    Say("p7對不起，你身上的超級特效藥太多了，請整理一下再來找我吧。")
+    AddItem(10569)
+    QuestEnd()
+end
+
+function step06_dia()
+    Say("p7對不起，你身上的改良特效藥太多了，請整理一下再來找我吧。")
+    AddItem(10569)
+    QuestEnd()
+end

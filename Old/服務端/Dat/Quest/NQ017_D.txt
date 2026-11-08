@@ -1,0 +1,55 @@
+--NQ017_D 史堤芬妮(女)
+
+--NQ017_TaskType
+-- 1: 簽名版工作
+-- 2: 送信工作
+
+--NQ017_Task
+-- 1: quest start, do NQ017_TaskType
+-- 2: task finished, go back to get battery
+-- 3: quest completed
+
+--NQ017_SignB
+-- 1: 拉達已簽名
+
+--NQ017_SignC
+-- 1: 沙菈已簽名
+
+--NQ017_SignD
+-- 1: 史堤芬妮已簽名
+
+function start()
+	status = GetFlag("NQ017_Task")
+	taskType = GetFlag("NQ017_TaskType")
+	if taskType==1 then
+		if GetFlag("NQ017_SignD")~=1 and CheckItem(10217)>0 then
+			dialogue_02()
+		else
+			dialogue_01()
+		end
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1幫助議會得到應有的數據，是我們國民的責任。不是嗎？","End")
+end
+
+function dialogue_02()
+	Say("n1又是議會的那個簽名板嗎？其實我有點搞不清楚為什麼要簽啦，可是應該會有它的用處。")
+	SetFlag("NQ017_SignD", 1)
+	if GetFlag("NQ017_SignB")==1 and GetFlag("NQ017_SignC")==1 then
+		Say("n1嗯，簽好了～")
+		dialogue_03()
+	else
+		Say("n1嗯，簽好了～","End")
+	end
+end
+
+function dialogue_03()
+	Say("p1謝謝你，我的工作完了囉。","End")
+	RemoveItem(10217)
+	AddItem(10218)
+	SetFlag("NQ017_Task", 2)
+end

@@ -1,0 +1,157 @@
+function start()
+	if GetFlag("TW008_C_Step") >= 2 then
+		if GetFlag("TW008_D_Step") >=2 then
+			if GetFlag("TW008_D_Step") >=4 then
+				if GetFlag("TW008_D_Step") >=6 then
+					if GetFlag("TW008_D_Step") >=7 then
+						Step08()
+					else	
+						Step07()
+					end
+				else
+					Step06()
+				end
+			else	
+				Step04()
+			end
+		else
+			Step02()
+		end
+	else
+		Step01()	
+	end
+end
+
+function Step01()
+	Say("n1真心先生啊，人家好想念你啊．．．")
+end
+
+function Step02()
+--<After TW008_C Step 02>
+--<玩家沒有３個隊員在附近做出示愛的表情＞→Step03
+	hasmember, teammember = GetTeamList_First()
+	total = 0
+	while hasmember == 1 do
+		if GetTargetEmotion(teammember) == 11 then
+			total = total + 1
+		end
+		hasmember, teammember = GetTeamList_Next()
+	end
+	if total < 3 then
+		Step03()
+	else
+		Say("p1真心小姐～我是．．．")
+		Say("n3你在幹什麼！？我已然有心上人了，快走開！！")
+		Say("p6她好像很生氣的樣子．．．還是晚一點再來～")
+		SetFlag("TW008_D_Step",2)
+		SetFlag("TW008_Angry", GetRealTime())
+	end
+end
+
+function Step03()
+	Say("p7真心先生說要有3人在我身後代他表現出對真心小姐的愛意啊～")
+end
+
+function Step04()
+--<After TW008_D Step 02>
+--<完成時間在完成TW008_D Step 02一分鐘內>→Step05
+--<玩家沒有３個隊員在附近做出示愛的表情＞→Step03
+	if (GetRealTime() - GetFlag("TW008_Angry")) < 60 then	
+		Step05()
+	else
+		hasmember, teammember = GetTeamList_First()
+		total = 0
+		while hasmember == 1 do
+			if GetTargetEmotion(teammember) == 11 then
+				total = total + 1
+			end
+			hasmember, teammember = GetTeamList_Next()
+		end
+		if total < 3 then
+			Step03()
+		else
+			Say("p1真心小姐～請聽我說．．．")
+			Say("n3你在幹什麼！？我已然有心上人了，快走開！！")
+			Say("p6她好像很生氣的樣子．．．還是晚一點再來～")
+			SetFlag("TW008_D_Step",4)
+			SetFlag("TW008_Angry", GetRealTime())
+		end
+	end
+end
+
+function Step05()
+	Say("p6她好像很生氣的樣子．．．還是晚一點再來～")
+end
+
+function Step06()
+--<After TW008_D Step 04>
+--<完成時間在完成TW008_D Step 04一分鐘內>→Step05
+--<玩家沒有３個隊員在附近做出示愛的表情＞→Step03
+	if (GetRealTime() - GetFlag("TW008_Angry") < 60) then
+		Step05()
+	else
+		hasmember, teammember = GetTeamList_First()
+		total = 0
+		while hasmember == 1 do
+			if GetTargetEmotion(teammember) == 11 then
+				total = total + 1
+			end
+			hasmember, teammember = GetTeamList_Next()
+		end
+		if total < 3 then
+			Step03()
+		else
+			Say("p1真心小姐～有一件很重要的事．．．")
+			Say("n3你在幹什麼！？我已然有心上人了，快走開！！")
+			Say("p6她好像很生氣的樣子．．．還是晚一點再來～")
+			SetFlag("TW008_D_Step",6)
+			SetFlag("TW008_Angry", GetRealTime())
+		end
+	end
+end
+function Step07()
+--<After TW008_D Step 06>
+--<完成時間在完成TW008_D Step 06一分鐘內>→Step05
+--<玩家沒有３個隊員在附近做出示愛的表情＞→Step03
+--＜玩家身上物品空間少於1＞→Step08
+	if (GetRealTime() - GetFlag("TW008_Angry") < 60) then
+		Step05()
+	else
+		hasmember, teammember = GetTeamList_First()
+		total = 0
+		while hasmember == 1 do
+			if GetTargetEmotion(teammember) == 11 then
+				total = total + 1
+			end
+			hasmember, teammember = GetTeamList_Next()
+		end
+		if total < 3 then
+			Step03()
+		else
+			if ItemListCountLeft(0) < 1 then			
+				Step08()
+			else
+				Say("p1真心小姐～真心先生他．．．")
+				Say("n3真心先生他怎麼了！？他出了什麼事嗎？要是他有什麼事，我也不想活了～")
+				Say("p7這對戀人真的很奇怪=.=")
+				Say("p1真心小姐～妳冷靜一點，只是真心先生他叫我邀請妳去星之湖那裡約會，妳會應承他吧！？")
+				Say("n1嘻嘻～真的嗎？")
+				Say("p1真的啊～")
+				Say("n1我這麼應承他，好像不太好吧！？")
+				Say("p1沒有這樣的事啦～")
+				Say("n1那麼好吧，就請你幫我將這花帶回給真心先生吧～")
+				Say("p7得到真心小姐的花。")
+				Say("p7這對戀人真的很奇怪=.=")
+				AddItem(10707)
+				SetFlag("TW008_D_Step",7)
+			end
+		end
+	end
+end
+function Step08()
+--<After TW008_D Step 07> 
+	Say("n1謝謝你的幫忙啊～好期待跟真心先生的約會！")
+end
+function Step09()
+	Say("p7身上的物品太多了，還是先整理一下。")
+end

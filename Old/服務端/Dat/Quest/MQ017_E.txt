@@ -1,0 +1,106 @@
+--MQ017_E  瑪麗
+
+-- statue (MQ017_Task") == 3 : After talking with 達力
+-- statue==4: After defeat the Enemy 夢魘魔
+-- statue==5: Mission is accomplished ( go back and talk with 娜姬．連特)
+
+function start()
+	statue=GetFlag("MQ017_Task")
+
+	if statue==5 then
+		Say("n1你好！")
+		Say("p1還在收集花兒？")
+		Say("n2嗯！上次的事謝謝你。","End")
+	
+	elseif statue==4 then
+		Say("n1謝謝你。","End")
+
+	elseif GetFlag("MQ017_F")==1 then
+		Say("p1你…沒什麼了吧？")
+		Say("n1你是誰？我有什麼事？")
+		Say("p1你之前，好像有夢遊症呢？你記得你晚上做過什麼了嗎？")
+		Say("n1人家哪有夢遊症啦！我可健康得很呢！")
+		Say("p6看到她的樣子，病情應該好了。")
+		Say("p1依路里他…")
+		Say("n3他有什麼事了！？")
+		Say("n7此時瑪麗低頭不語，知道自己說溜了嘴。")
+		Say("p1他是你的男朋友吧？")
+		Say("n7瑪麗的臉泛起了紅暈。")
+		Say("n1請你一定不要說給老師們知道…！你也知道學校不可以這樣的吧…可是我…可是我……")
+		Say("p1你放心好了，我不會說給別人知道的。")
+		Say("n1謝謝你。","End")
+		SetFlag("MQ017_Task",4)
+
+	elseif statue==3 then
+		speech2()	
+
+	else
+		speech1()
+
+	end
+
+end
+
+
+function speech1()
+
+	time=GetGameHours()
+	time=mod(time,24)
+
+	if (time>=0 and time<=6) or (time>=22 and time<=24) then
+		Say("n1……")
+		Say("p6這個人為什麼完全沒有反應的？","End")
+
+	else
+		Say("n1你好！")
+		Say("p1你在幹什麼呢？")
+		Say("n1正在找花兒當藥材啊！先別和我說話！","End")
+
+	end
+
+end
+
+
+function speech2()
+	time=GetGameHours()
+	time=mod(time,24)
+
+	if (time>=0 and time<=6) or (time>=22 and time<=24) then
+		Say("n1……")
+		Say("p6這個人為什麼完全沒有反應的？")
+		Say("n1…依路里……嗚…")
+		Say("p7瑪麗哭著，突然很奇怪地不停抓著地上的草放入背包中")
+		Say("p1你…你沒事吧？")
+		Say("n3誰！！！")
+--		MovePlayer(森林(02)P03)
+		Say("p1MovePlayer(森林(02)P03)","End")
+	else
+		Say("n1你好！")
+		Say("p1你在幹什麼呢？")
+		Say("n1正在找花兒當藥材啊！先別和我說話！")
+		Say("p6看來要等她找完才可以和她說話了…")
+		timing=Time(time)
+		Say("p6現在才"..Color(0,45,198)..""..timing..""..Color(0,0,0).."不如"..Color(0,45,198).."深夜"..Color(0,0,0).."再來吧！","End") 
+	end
+end
+
+function Time(Time1)
+	if Time1<=12 then
+		return "早上"
+
+	elseif 	Time1<=17 then
+	
+		return "中午"
+	
+	
+	elseif  Time1<=19 then 
+	
+		return "黃昏"
+	
+	else
+		
+		return "晚間"
+
+	end
+
+end

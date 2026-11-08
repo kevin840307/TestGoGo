@@ -1,0 +1,135 @@
+-- MS003_A 祖加尼‧馬奇
+
+-- MS003_Task
+-- 0: ShowTitle
+-- 1: quest start
+-- 2: get the blood, go to get metal
+-- 3: get the metal, not the passport yet
+-- 4: get the passport
+
+function start()
+	status = GetFlag("MS003_Task")
+	if GetFlag("MS001_Done")~=1 then
+		dialogue_01()
+	elseif status >= 4 then
+		dialogue_09()
+	elseif status >= 3 then
+		dialogue_06()
+	elseif status >= 2 then
+		if RemoveItem(10261)==1 then
+			dialogue_05()
+		else
+			dialogue_04()
+		end
+	elseif status >= 1 then
+		if GetCountItemCount(10257)>=1 then
+			dialogue_03()
+		else
+			dialogue_02b()
+		end
+	else
+		Say("m#STORY_NAME_02A.spr#STORY_NAME_02B.spr#030.mp3#","dialogue_02")
+	end
+end
+
+function dialogue_01()
+	Say("n1為了準備好第二次星之戰爭的來臨，星之門的興建工程以經刻不容緩了．．．呵欠～咳．咳咳．")
+	Say("p1祖加尼先生，你的精神很差啊！")
+	Say("p1是睡眠不足嗎？")
+end
+
+function dialogue_02()
+	dialogue_01()
+	Say("n3尼爾歌：「叔叔！你再不休息是不行的，你已經三個星期沒有睡覺了，你會支持不了的．．．」")
+	Say("n1我不知道！．．．咳．")
+	Say("n1我只知道如果我不能盡快找到烏洛特金屬，星之門的興建進度就會延誤了，這關係到在加米蘭特同胞的生命，就算我再辛苦，也要去完成的．．．咳．")
+	Say("n3尼爾歌：「叔叔．．．」")
+	Say("p1祖加尼先生，我是"..get_title_name().."的成員，為了在加米蘭特同胞，我也原意為建造星之門而出一分力！")
+	Say("p1烏洛特金屬的事請交給我去辦吧！")
+	Say("n1不行，這事情太過危險了，我知道你的好意，可是我不能讓你去冒這個險的．．．咳．")
+	Say("n3尼爾歌：「叔叔．．．你不要這樣固執吧．．．」")
+	Say("p1祖加尼先生，你要怎樣才相信我有能力拿到烏洛特金屬？")
+	Say("n1好吧！你如果能把卡瑪魔甲龍的血帶回來，我就把得到烏洛特金屬的方法告訴你．．．")
+	Say("p1祖加尼先生，等我的好消息吧！","End")
+	SetFlag("MS003_Task", 1)
+end
+
+function dialogue_02b()
+	Say("n1你如果能把卡瑪魔甲龍的血帶回來，我就把得到烏洛特金屬的方法告訴你．．．咳．","End")
+end
+
+function dialogue_03()
+	Say("n1好！小子，既然你有能力拿到卡瑪魔甲龍的血回來，我就遵守承諾，把烏洛特金屬的事交託給你。")
+	Say("n1烏洛特金屬是由三種金屬鑄成，它們分別是烏比金屬、洛卡金屬和特迪金屬．．．")
+	Say("n1它們是一種生化金屬，生長在三種龍甲獸身上。不過這三種金屬是很容易氧化的，採集時要立即塗上魔甲龍血作保存．咳．．．")
+	Say("n1最後你找一個道具使，用初級裝備製造，便可將之合成為烏洛特金屬．咳．咳．．．")
+	Say("n1我想我現在可以有一點點休息時間了．．．")
+	Say("n4Z．Z．Z．．","End")
+	SetFlag("MS003_Task", 2)
+end
+
+function dialogue_04()
+	Say("n4Z．Z．Z．．")
+	Say("n4烏洛特金屬是由三種金屬鑄成，它們分別是"..Color(0,45,198).."烏比金屬"..Color(0,0,0).."、"..Color(0,45,198).."洛卡金屬"..Color(0,0,0).."和"..Color(0,45,198).."特迪金屬"..Color(0,0,0).."，．．．")
+	Say("n4它們是一種生化金屬，生長在三種龍甲獸身上。不過這三種金屬是很容易氧化的，採集時要立即塗上"..Color(0,45,198).."魔甲龍血"..Color(0,0,0).."作保存．Z．．．")
+	Say("n4最後你找一個道具使，用初級裝備製造，便可將之合成為烏洛特金屬．Z．Z．．．")
+	Say("p1祖加尼先生連造夢也擔心重建星之門的事，我一定要幫他找到烏洛特金屬回來。","End")
+end
+
+function dialogue_05()
+	Say("p1祖加尼先生，我已經取得烏洛特金屬了！")
+	Say("n3什麼？真的找到烏洛特金屬了嗎？")
+	Say("n1小子！幹得好！我終於可以找到一個可信賴的人助我一起去建造星之門，這個星之徽章是給你的酬勞，多點收集星之徽章吧，日後對你會很有幫助的。")
+	Say("p7失去“烏洛特金屬”")
+	Say("p7得到“星之徽章”")
+	AddItem(10262)
+	dialogue_06()
+	SetFlag("MS003_Task", 3)
+end
+
+function dialogue_06()
+	Ask("n小子！你願意幫我一起去建造星之門嗎？","當然願意！","我可以再考慮一下嗎？","reply_06")
+end
+
+function reply_06()
+	if GetChoice()==0 then
+		dialogue_07()
+	else
+		dialogue_08()
+	end
+end
+
+function dialogue_07()
+	Say("n1這是星之門通行証，你之後就可以自由出入星之門的建造場。")
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到“星之門通行証”","End")
+		AddItem(10263)
+		SetFlag("MS003_Task", 4)
+		SetFlag("MS003_Done", 1)
+	end
+end
+
+function dialogue_08()
+	Say("n1為了準備好第二次星之戰爭的來臨，星之門的興建工程以經刻不容緩了，不要考慮太久啊！","End")
+end
+
+function dialogue_09()
+	Say("n1為了準備好第二次星之戰爭的來臨，星之門的興建工程以經刻不容緩了。","End")
+end
+
+function get_title_name()
+	careerType = GetData("Career")
+	if careerType<=3 then
+		return "格靈騎士團"
+	elseif careerType==4 or careerType==8 then
+		return "絲蘭狙擊兵團"
+	elseif careerType<=7 then
+		return "古尼爾魔法軍團"
+	elseif careerType==10 then
+		return "皇家精靈戰團"
+	else
+		return "尼尼亞補給團"
+	end
+end

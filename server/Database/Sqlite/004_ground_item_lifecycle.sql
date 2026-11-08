@@ -1,0 +1,4 @@
+-- Ground item lifecycle compatibility migration.
+-- @ensure-column ground_items created_utc_ms INTEGER NOT NULL DEFAULT 0
+-- @ensure-column ground_items protect_until_utc_ms INTEGER NOT NULL DEFAULT 0
+-- @ensure-column ground_items expires_utc_ms INTEGER NOT NULL DEFAULT 0

@@ -1,0 +1,12 @@
+--皇城鐵道助理(NQ024_I)
+
+function start()
+	Ask("n你要離開魔法之都－古尼爾的火車站嗎？","離開魔法之都－古尼爾火車站。","只是剛巧路過。","dia_02")
+end
+
+function dia_02()
+	if GetChoice()==0 then
+		MovePlayer(4010,2201,9)
+	end
+	QuestEnd()
+end

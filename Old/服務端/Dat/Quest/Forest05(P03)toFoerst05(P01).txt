@@ -1,0 +1,14 @@
+--Forest05(P03) to Forest05(P01)
+
+function start()
+--下面句子層於13-11-03作出地名修改
+	Ask("n要離開嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(7104,4448,25)
+	end
+	QuestEnd()
+end

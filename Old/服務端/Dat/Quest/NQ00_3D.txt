@@ -1,0 +1,20 @@
+--NQ003_D 大福立普
+
+
+
+function start()
+	kill = GetFlag("NQ_001_KillBug")
+
+	if kill==1 then
+		if ItemListCountLeft(1)<1 then
+			Say("p7對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+		else
+			SetFlag("NQ_001_KillBug", 0)
+			Say("p7得到"..Color(0,45,198).."大福盾"..Color(0,0,0).."")
+			Say("p6原來有這個東西呢！嗯～真是不錯。", "End")
+			AddItem(10017)
+		end
+	else 
+		QuestEnd()
+	end
+end

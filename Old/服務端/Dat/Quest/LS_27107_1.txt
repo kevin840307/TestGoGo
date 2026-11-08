@@ -1,0 +1,19 @@
+--LS_27107_1 "敏捷術‧一級"
+
+function GetSkillData()
+	return 27107,1,35,31530,"敏捷術‧一級","","守護使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 6 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

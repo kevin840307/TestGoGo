@@ -1,0 +1,23 @@
+--NQ026_L (基地大門)
+
+function start()
+    Say("p7門上有一個七色的凹口，應該是開門的裝置。")
+    if CheckItem(10536) == 1 and CheckItem(10537)==1 and CheckItem(10538)==1 and CheckItem(10539)==1 and CheckItem(10540)==1 and CheckItem(10541)==1 and CheckItem(10542)==1 then
+        Ask("p門上有一個七色的凹口，應該是開門的裝置。要使用七色門匙部件嗎？","是的","不是","ans_handler")
+    end        
+end
+
+function ans_handler()
+    if GetChoice()==0 then
+        RemoveItem(10536)
+        RemoveItem(10537)
+        RemoveItem(10538)
+        RemoveItem(10539)
+        RemoveItem(10540)
+        RemoveItem(10541)
+        RemoveItem(10542)
+        MovePlayer(13056,4032,46)
+    else
+        QuestEnd()
+    end
+end

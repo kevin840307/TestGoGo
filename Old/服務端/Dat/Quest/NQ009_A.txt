@@ -1,0 +1,41 @@
+--NQ009_A  古老的寶箱
+
+function start()
+	lv=GetData("Level")
+	statue=GetFlag("NQ009_Task")
+	
+	if lv<10 then
+		Say("p1這個寶箱放了什麼呢……打開它看看…")
+		Say("p1咦？好緊……打不開！","End")
+
+	elseif statue==4 then
+		Say("p1咦？這個寶箱好像又收了什麼……打開來看看～")
+		Say("p1一、二、三……！")
+		Say("p1嗯？又是這張紙？這次不知道又收了什麼……去看看好了！","End")			
+		SetFlag("NQ009_Task",1)
+		
+	elseif statue>=1 then
+		Say("p1還是看清楚些比較保險……機械之城旁的森林……嗎？")
+		Say("p1耶？這兒還有字！在樹下……嗯！幸好看多一次！","End")
+
+	else 
+		if GetFlag("NQ009_Done")==1 then
+			Say("p1咦？這個寶箱好像又收了什麼……打開來看看～")
+			Say("p1一、二、三……！")
+			Say("p1嗯？又是這張紙？這次不知道又收了什麼……去看看好了！","End")
+
+
+		else
+			Say("p1這個寶箱放了什麼呢……打開它看看…")
+			Say("p1一、二、三……！")
+			Say("p1嗯？是一張紙嘛……原來只是垃圾～")
+			Say("p6紙上畫了很多奇怪的記號，似乎是一張藏寶圖…")
+			Say("p1耶！這次發財了！我看看～～嗯……")
+			Say("p1寶藏就收在"..Color(0,45,198).."機械之城旁的森林"..Color(0,0,0).."嘛！好～～不可以給人搶先！","End")
+			
+		end
+		SetFlag("NQ009_Task",1)
+	end	
+
+
+end

@@ -1,0 +1,73 @@
+--NQ003_C 拍賣會司儀
+
+function start()
+	if GetFlag("NQ_003_GotQuest")== 2 then
+		Ask("n各位先生女士！大家好！歡迎來到尼尼亞皇城的拍賣會，我是拍賣會的司儀～廢話就不多說了，今天拍賣的是－百福袋一個！嗯～到底裡面有什麼呢？這就要大家得到之後，自己打開來看囉！請出價！", "100元好了……", "嗯……500元！", "1000元！！", "10000元！！！", "Step2")
+	else
+		Say("n1一會拍賣會就會開始，請期待～", "End")
+	end
+end
+
+function Step2()
+	choice = GetChoice()
+	if choice == 0 then
+		success = random(10)
+		if success == 1 then
+			Say("p6場上冷冷清清的，一個人也沒有。好像沒什麼人想要這個東西……那，我不客氣囉！", "End")
+			if GetData("Money") > 100 then
+				ModifyData("Money", -100)
+				AddItem(10015,1)
+				name=GetName()
+				Say("n1今次由"..name.."得到大福袋！恭喜恭喜！", "End")
+			else
+				Say("n1沒有錢請不要胡亂出價！！！", "End")
+			end
+			SetFlag("NQ_003_GotQuest", 0)
+		else
+			Say("p3這個東西被人叫得更高的價錢了……哎呀呀……", "End")
+		end
+	elseif choice == 1 then
+		success = random(3)
+		if success == 1 then
+			Say("p6嗯～～場上有一小群人。不過沒什麼叫過價。看來沒什麼人和我爭奪吧？太好了！成功～！", "End")
+			if GetData("Money") > 500 then
+				ModifyData("Money", -500)
+				AddItem(10015,1)
+				name=GetName()
+				Say("n1今次由"..name.."得到大福袋！恭喜恭喜！", "End")
+			else
+				Say("n1沒有錢請不要胡亂出價！！！", "End")
+			end
+			SetFlag("NQ_003_GotQuest", 0)
+		else
+			Say("p3這個東西被人叫得更高的價錢了……哎呀呀……", "End")
+		end
+	elseif choice == 2 then
+		success = random(3)
+		if success == 1 then
+			Say("p6場上很多人呢！好像很多人想要這個東西！不過，我還是最高價的一個！果然最後還是歸我的～我不客氣囉！", "End")
+			if GetData("Money") > 1000 then
+				ModifyData("Money", -1000)
+				AddItem(10015,1)
+				name=GetName()
+				Say("n1今次由"..name.."得到大福袋！恭喜恭喜！", "End")
+			else
+				Say("n1沒有錢請不要胡亂出價！！！", "End")
+			end
+			SetFlag("NQ_003_GotQuest", 0)
+		else
+			Say("p3這個東西被人叫得更高的價錢了……哎呀呀……", "End")
+		end
+	else
+		Say("p6我出10000元～～！！！全場的焦點都注意在我的身上了……哎呀呀，有點難為情……不過現在果然沒有人再出價～哇哈哈哈哈！！這個百福袋是我的了～！", "End")
+		if GetData("Money") > 10000 then
+			ModifyData("Money", -10000)
+			AddItem(10015,1)
+			name=GetName()
+			Say("n1今次由"..name.."得到大福袋！恭喜恭喜！", "End")
+		else
+			Say("n1沒有錢請不要胡亂出價！！！", "End")
+		end
+		SetFlag("NQ_003_GotQuest", 0)
+	end
+end

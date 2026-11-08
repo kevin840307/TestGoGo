@@ -1,0 +1,67 @@
+--Recommend_Apr_C 
+
+function start()
+    if GetCountItemCount(10593) < 300 then
+        AddItem(10593)
+        Say("p7使用極級天馬裝備換領券。")        
+        if ItemListCountLeft(1) < 4 then
+            Say("p7對不起，你身上的裝備太多了，請整理一下吧！")
+        else        
+            page1()
+        end        
+    else
+        Say("p7使用極級天馬裝備換領券。","start300")        
+    end        
+end
+
+function start300()
+    AddItem(10593)
+    if ItemListCountLeft(1) < 4 then
+        Say("p7對不起，你身上的裝備太多了，請整理一下吧！")
+    else        
+        page1()
+    end
+end
+
+function page1()
+    Ask("p請問你要什麼等級的天馬裝備呢？","等級75的戰神天馬裝備。","等級85的魔神天馬裝備。","等級95的神聖天馬裝備。","請讓我再考慮一下。","page1Handler")
+end
+
+function page1Handler()
+    if GetChoice() == 3 then
+        QuestEnd()
+    elseif GetChoice() == 2 then
+        Say("p7得到神聖天馬裝備一套","GiveItem3")
+    elseif GetChoice() == 1 then
+        Say("p7得到魔神天馬裝備一套","GiveItem2")
+    elseif GetChoice() == 0 then
+        Say("p7得到戰神天馬裝備一套","GiveItem1")        
+    end
+end
+
+function GiveItem1()
+    RemoveItem(10593)
+    AddItem(21046)
+    AddItem(22046)
+    AddItem(23046)
+    AddItem(24046)
+    QuestEnd()
+end
+
+function GiveItem2()
+    RemoveItem(10593)
+    AddItem(21047)
+    AddItem(22047)
+    AddItem(23047)
+    AddItem(24047)
+    QuestEnd()
+end
+
+function GiveItem3()
+    RemoveItem(10593)
+    AddItem(21048)
+    AddItem(22048)
+    AddItem(23048)
+    AddItem(24048)
+    QuestEnd()
+end

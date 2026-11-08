@@ -110,8 +110,44 @@ var current_mecha_body_spr_id: int = 0
 var _audio_sequence_key: String = ""
 var _audio_played_cues: Dictionary = {}
 var _audio_last_frame: int = -1
-var _controller_timed_frames_cache: Dictionary = {}
-var _mecha_head_anchor_cache: Dictionary = {}
+static var _shared_controller_timed_frames_cache: Dictionary = {}
+static var _mecha_head_anchor_cache: Dictionary = {}
+# Bounded by 8 palette indices x effect types. Sharing identical material
+# parameters avoids allocating a new ShaderMaterial for each doll part.
+# The shader uses global TIME: identical materials preserve effect animation.
+static var _shared_palette_materials: Dictionary = {}
+
+
+static func get_shared_palette_material(color_index: int, effect_type: int) -> ShaderMaterial:
+	var hue: float = float(COLOR_INDEX_TO_DEGREES.get(color_index, 0.0))
+	var key: String = "%d:%.4f" % [effect_type, hue]
+	var material: ShaderMaterial = _shared_palette_materials.get(key, null) as ShaderMaterial
+	if is_instance_valid(material):
+		return material
+	material = ShaderMaterial.new()
+	material.shader = PALETTE_SHADER
+	material.set_shader_parameter("effect_type", effect_type)
+	material.set_shader_parameter("hue_shift", hue)
+	_shared_palette_materials[key] = material
+	return material
+
+
+static func get_shared_palette_material_count() -> int:
+	return _shared_palette_materials.size()
+
+
+static func visual_runtime_cache_for_audit() -> Dictionary:
+	return {
+		"timed_frames": _shared_controller_timed_frames_cache,
+		"palette_materials": _shared_palette_materials,
+	}
+
+
+static func clear_visual_runtime_cache() -> int:
+	var removed: int = _shared_controller_timed_frames_cache.size() + _shared_palette_materials.size()
+	_shared_controller_timed_frames_cache.clear()
+	_shared_palette_materials.clear()
+	return removed
 
 const ACT_CONTROLLER_TIMELINES_META = "act_controller_timelines"
 const USE_RESOURCE_MECHA_HEAD_ANCHORS: = true
@@ -246,6 +282,152 @@ func _get_mecha_head_anchor_frame(sprite_node: AnimatedSprite2D, raw_action: Str
 				return int(entry.get("frame", -1))
 	return sprite_node.frame if sprite_node.frame >= 0 and sprite_node.frame < anchor_count else -1
 
+
+func _yield_initial_build_frame() -> void :
+	var tree := get_tree()
+	if tree != null:
+		await tree.process_frame
+
+func build_human_model_initial_async(race: String, hair: String, hair_color: int, body_color: int, equips: Dictionary) -> void :
+	current_mode = Mode.HUMAN
+	current_race = race
+	current_hair = hair
+	current_hair_color_index = hair_color
+	current_body_color_index = body_color
+	current_equips = equips
+
+	clear_dolls()
+
+	_add_doll_part("Shadow", 0, "Shadow", "Shadow", false)
+	await _yield_initial_build_frame()
+
+	if current_race != "Robot":
+		_add_doll_part("Head", 0, "Head", "Standard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("Hair", -1, current_hair, "Standard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("Leg", 0, "Leg", "Standard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("L-Arm", 0, "L-Arm", "Standard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("R-Arm", 0, "R-Arm", "Standard", false)
+		await _yield_initial_build_frame()
+
+	_add_doll_part("Body", 0, "Body", "Standard", false)
+	await _yield_initial_build_frame()
+	await _update_equipment_layers_initial_async()
+
+func _update_equipment_layers_initial_async() -> void :
+	var bonnet_id: int = int(current_equips.get(0, 0))
+	var left_id: int = int(current_equips.get(1, 0))
+	var right_id: int = int(current_equips.get(2, 0))
+	var upper_id: int = int(current_equips.get(3, 0))
+	var lower_id: int = int(current_equips.get(4, 0))
+	var weapon_id: int = int(current_equips.get(5, 0))
+	var shield_id: int = int(current_equips.get(6, 0))
+	var back_id: int = int(current_equips.get(7, 0))
+
+	if upper_id >= 0 and not (current_race == "Yas" and not _is_transmog_upper_armor(upper_id)):
+		_add_doll_part("EquipBody", upper_id, "Body", "Equip", false)
+		await _yield_initial_build_frame()
+	if lower_id >= 0:
+		_add_doll_part("EquipLeg", lower_id, "Leg", "Equip", false)
+		await _yield_initial_build_frame()
+	if left_id >= 0:
+		_add_doll_part("EquipL-Arm", left_id, "L-Arm", "Equip", false)
+		await _yield_initial_build_frame()
+	if right_id >= 0:
+		_add_doll_part("EquipR-Arm", right_id, "R-Arm", "Equip", false)
+		await _yield_initial_build_frame()
+
+	if bonnet_id > 0:
+		_add_doll_part("Bonnet", bonnet_id, "Bonnet", "Equip", false)
+		await _yield_initial_build_frame()
+	elif current_race == "Robot":
+		_add_doll_part("Bonnet", -1, "Bonnet000", "Equip", false)
+		await _yield_initial_build_frame()
+
+	if back_id > 0:
+		_add_doll_part("Back", back_id, "Back", "Equip", false)
+		await _yield_initial_build_frame()
+
+	if weapon_id > 0:
+		var w_prefix: String = "Sword"
+		if ItemLoader:
+			var n4: String = str(ItemLoader.get_item_property(weapon_id, "note_4", "")).strip_edges()
+			if n4 != "":
+				w_prefix = n4
+		if w_prefix == "TwinGun":
+			_add_doll_part("L-Gun", weapon_id, "L_TwinGun", "Equip", true)
+			await _yield_initial_build_frame()
+			_add_doll_part("R-Gun", weapon_id, "R_TwinGun", "Equip", true)
+			await _yield_initial_build_frame()
+		else:
+			_add_doll_part("Sword", weapon_id, w_prefix, "Equip", true)
+			await _yield_initial_build_frame()
+
+	var disable_shield: bool = false
+	if weapon_id > 0 and ItemLoader:
+		disable_shield = int(ItemLoader.get_item_property(weapon_id, "no_shield", 0)) == 1
+	if shield_id > 0 and not disable_shield:
+		_add_doll_part("Shield", shield_id, "Shield", "Equip", true)
+		await _yield_initial_build_frame()
+
+func build_mecha_model_initial_async(race: String, hair: String, hair_color: int, bonnet_id: int, body_id: int, leg_id: int, weapon_id: int, mecha_type: String = "MS") -> void :
+	current_mode = Mode.MECHA
+	current_race = race
+	current_hair = hair
+	current_hair_color_index = hair_color
+	current_mecha_type = mecha_type
+
+	current_mecha_body_spr_id = 0
+	if body_id > 0 and ItemLoader:
+		current_mecha_body_spr_id = int(ItemLoader.get_item_property(body_id, "spr_id", 0))
+
+	clear_dolls()
+
+	if current_mecha_type == "MA":
+		_add_doll_part("MSBody", body_id, "MA", "MA_Standard", false)
+		await _yield_initial_build_frame()
+		if USE_RESOURCE_MECHA_HEAD_ANCHORS:
+			if current_race == "Robot":
+				if bonnet_id > 0:
+					_add_doll_part("Bonnet", bonnet_id, "Bonnet", "MechaHead", false)
+				else:
+					_add_doll_part("Bonnet", -1, "Bonnet00", "MechaHead", false)
+				await _yield_initial_build_frame()
+			else:
+				_add_doll_part("Head", 0, "Head", "MechaHead", false)
+				await _yield_initial_build_frame()
+				_add_doll_part("Hair", -1, current_hair, "MechaHead", false)
+				await _yield_initial_build_frame()
+				if bonnet_id > 0:
+					_add_doll_part("Bonnet", bonnet_id, "Bonnet", "MechaHead", false)
+					await _yield_initial_build_frame()
+	else:
+		_add_doll_part("MSBody", body_id, "MSBody", "MechaStandard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("MSLeg", leg_id, "MSLeg", "MechaStandard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("L-MSArm", weapon_id, "L-MSArm", "MechaStandard", false)
+		await _yield_initial_build_frame()
+		_add_doll_part("R-MSArm", weapon_id, "R-MSArm", "MechaStandard", false)
+		await _yield_initial_build_frame()
+
+		if current_race == "Robot":
+			if bonnet_id > 0:
+				_add_doll_part("Bonnet", bonnet_id, "Bonnet", "MechaHead", false)
+			else:
+				_add_doll_part("Bonnet", -1, "Bonnet00", "MechaHead", false)
+			await _yield_initial_build_frame()
+		else:
+			_add_doll_part("Head", 0, "Head", "MechaHead", false)
+			await _yield_initial_build_frame()
+			_add_doll_part("Hair", -1, current_hair, "MechaHead", false)
+			await _yield_initial_build_frame()
+			if bonnet_id > 0:
+				_add_doll_part("Bonnet", bonnet_id, "Bonnet", "MechaHead", false)
+				await _yield_initial_build_frame()
 
 func build_human_model(race: String, hair: String, hair_color: int, body_color: int, equips: Dictionary) -> void :
 	current_mode = Mode.HUMAN
@@ -595,11 +777,9 @@ func _add_doll_part(node_key: String, item_id: int, prefix: String, category: St
 			apply_shader = true
 
 		if apply_shader:
-			var shader_mat = ShaderMaterial.new()
-			shader_mat.shader = PALETTE_SHADER
-			shader_mat.set_shader_parameter("effect_type", chosen_effect_type)
-			shader_mat.set_shader_parameter("hue_shift", COLOR_INDEX_TO_DEGREES.get(chosen_index, 0.0))
-			anim_sprite.material = shader_mat
+			# Materials are immutable after setup; reuse for identical hue/effect
+			# across multiple dolls and parts without changing shader visuals.
+			anim_sprite.material = get_shared_palette_material(chosen_index, chosen_effect_type)
 		else: anim_sprite.material = null
 
 func _on_sprite_frame_changed(part_key: String) -> void :
@@ -937,11 +1117,12 @@ func _get_controller_timed_frames(source_frames: SpriteFrames, controller: Strin
 	if tick_rate <= 0.0:
 		return source_frames
 	var cache_key = "%s:%d:%s" % [controller, source_frames.get_instance_id(), skip_movement_timing]
-	if _controller_timed_frames_cache.has(cache_key):
-		return _controller_timed_frames_cache[cache_key]
-	var timed_frames = source_frames.duplicate() as SpriteFrames
-	if timed_frames == null:
-		return source_frames
+	if _shared_controller_timed_frames_cache.has(cache_key):
+		return _shared_controller_timed_frames_cache[cache_key]
+	# Duplicating SpriteFrames can be expensive when a PaperDoll has many
+	# layers. Most items have no applicable ACT timeline; only clone after the
+	# first valid timeline is found, preserving exactly the previous result.
+	var timed_frames: SpriteFrames = null
 	var applied_timelines: Dictionary = {}
 	for raw_action in action_prefixes:
 		if skip_movement_timing and raw_action == "NR":
@@ -957,6 +1138,10 @@ func _get_controller_timed_frames(source_frames: SpriteFrames, controller: Strin
 					break
 		if animation_names.is_empty() or not _controller_timeline_fits(source_frames, animation_names, timeline, controller, raw_action):
 			continue
+		if timed_frames == null:
+			timed_frames = source_frames.duplicate() as SpriteFrames
+			if timed_frames == null:
+				return source_frames
 		for animation_name in animation_names:
 			var textures: Array[Texture2D] = []
 			for entry in timeline:
@@ -969,10 +1154,10 @@ func _get_controller_timed_frames(source_frames: SpriteFrames, controller: Strin
 				timed_frames.add_frame(animation_name, textures[index], float(timeline[index]["ticks"]))
 		applied_timelines[raw_action] = timeline
 	if applied_timelines.is_empty():
-		_controller_timed_frames_cache[cache_key] = source_frames
+		_shared_controller_timed_frames_cache[cache_key] = source_frames
 		return source_frames
 	timed_frames.set_meta(ACT_CONTROLLER_TIMELINES_META, applied_timelines)
-	_controller_timed_frames_cache[cache_key] = timed_frames
+	_shared_controller_timed_frames_cache[cache_key] = timed_frames
 	return timed_frames
 
 func _controller_timeline_fits(source_frames: SpriteFrames, animation_names: Array[StringName], timeline: Array, controller: String, raw_action: String) -> bool:

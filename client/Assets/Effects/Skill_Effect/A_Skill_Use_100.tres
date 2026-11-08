@@ -1,0 +1,101 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Use100.spr.0000.png" id="tex0"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Use100.spr.0001.png" id="tex1"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Use100.spr.0002.png" id="tex2"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Use100.spr.0003.png" id="tex3"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Use100.spr.0004.png" id="tex4"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Use100.spr.0005.png" id="tex5"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Use100.spr.0006.png" id="tex6"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Use100.spr.0007.png" id="tex7"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Use100.spr.0008.png" id="tex8"]
+[ext_resource type="Texture2D" path="res://Assets/Effects/RawData/Skill_Effect/Stellar_Use100.spr.0009.png" id="tex9"]
+
+[sub_resource type="AtlasTexture" id="atlas0"]
+atlas = ExtResource("tex0")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas1"]
+atlas = ExtResource("tex1")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas2"]
+atlas = ExtResource("tex2")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas3"]
+atlas = ExtResource("tex3")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas4"]
+atlas = ExtResource("tex4")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas5"]
+atlas = ExtResource("tex5")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas6"]
+atlas = ExtResource("tex6")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas7"]
+atlas = ExtResource("tex7")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas8"]
+atlas = ExtResource("tex8")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[sub_resource type="AtlasTexture" id="atlas9"]
+atlas = ExtResource("tex9")
+region = Rect2(0, 0, 256, 256)
+metadata/old_offset = Vector2(128, 128)
+
+[resource]
+metadata/effect_scale = Vector2(3.0, 3.0)
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas0")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas1")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas2")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas3")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas4")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas5")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas6")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas7")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas8")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas9")
+}],
+"loop": false,
+"name": &"default",
+"speed": 14.0
+}]

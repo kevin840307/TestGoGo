@@ -1,0 +1,456 @@
+function start()
+	if GetFlag("MS008_D_Step") >= 2 then
+		if GetFlag("MS008_D_Step")  >= 11 then
+			Step14()
+		else
+			Step04()
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("s由於今年父王身體抱恙，因此我會代替父王進行祭祀儀式。")
+	Say("p1王子殿下，國王陛下身體怎樣？")
+	Say("s之前兩所學校的紛爭令到父王操勞過度，但經過休息後已經安好了，謝謝你們的關心。對了，這次祭祀，有個難處。")
+	Say("p1王子陛下，有什麼難處不妨直說，我一定會盡力幫忙你。")
+	Say("n1說來真的不好意思，我對立普的傳說了解也不是太深，有一些情況還不太明白。")
+	Ask("n你可否為我解答數個有關傳說的問題嗎？ ","當然可以。","我自己也不太清楚．．．","Step01_Handler")
+--＜選項＞
+--．當然可以。→Step02
+--．我自己也不太清楚．．．→Step03
+end
+
+function Step01_Handler()
+	if GetChoice()==0 then
+		Step02()
+	else
+		Step03()
+	end
+end
+
+function Step02()
+	Say("s太好了，請你再準備資料，可以時再找我。")
+	SetFlag("MS008_D_Step",2)
+end
+
+function Step03()
+	Say("s那麼麻煩你替我詢問一下吧。")
+end
+function Step04()
+--<After MS008_D Step02>
+--＜開始紀錄玩家答對的題數＞
+--＜請隨機放出在問題欄中的問題＞
+--＜選擇＞
+--＜問題欄的選擇答案＞
+    SetFlag("MS008_D_hits",0)
+    SetFlag("MS008_Q",0)
+	tmp = GetWorldFlag("MS008_Next_Q")
+	if tmp < 0 then
+		tmp = 0
+	end		
+	tmp = tmp + 6
+	if tmp >= 20 then 
+		tmp= tmp - 20
+	end			
+	SetWorldFlag("MS008_Next_Q",tmp)
+	getQuestion(tmp)	
+end
+function Step05()	
+	SetFlag("MS008_Q",1)
+	tmp = GetWorldFlag("MS008_Next_Q")
+	if tmp < 0 then
+		tmp = 0
+	end
+	tmp = tmp + 1	
+	if tmp >= 20 then 
+		tmp= tmp - 20
+	end			
+	SetWorldFlag("MS008_Next_Q",tmp)
+	Say("s原來是這樣的，我還有一點兒不明白。")
+	getQuestion(tmp)	
+end
+function Step06()	
+	SetFlag("MS008_Q",2)
+	tmp = GetWorldFlag("MS008_Next_Q")
+	if tmp < 0 then
+		tmp = 0
+	end
+	tmp = tmp + 1	
+	if tmp >= 20 then 
+		tmp= tmp - 20
+	end			
+	SetWorldFlag("MS008_Next_Q",tmp)
+	Say("s真是難以令人明白，請繼續解答我的問題。")
+	getQuestion(tmp)	
+end	
+function Step07()
+	SetFlag("MS008_Q",3)
+	tmp = GetWorldFlag("MS008_Next_Q")
+	if tmp < 0 then
+		tmp = 0
+	end
+	tmp = tmp + 1	
+	if tmp >= 20 then 
+		tmp= tmp - 20
+	end			
+	SetWorldFlag("MS008_Next_Q",tmp)
+	Say("s對不起，傳說來到這裡是怎樣。")
+	getQuestion(tmp)	
+end
+function Step08()
+	SetFlag("MS008_Q",4)
+	tmp = GetWorldFlag("MS008_Next_Q")
+	if tmp < 0 then
+		tmp = 0
+	end	
+	tmp = tmp + 1	
+	if tmp >= 20 then 
+		tmp= tmp - 20
+	end	
+	SetWorldFlag("MS008_Next_Q",tmp)
+	Say("s這兒又是怎麼解釋？")
+	getQuestion(tmp)
+end
+function Step09()
+	SetFlag("MS008_Q",5)
+	tmp = GetWorldFlag("MS008_Next_Q")
+	if tmp < 0 then
+		tmp = 0
+	end	
+	tmp = tmp + 1	
+	if tmp >= 20 then 
+		tmp= tmp - 20
+	end	
+	SetWorldFlag("MS008_Next_Q",tmp)
+	Say("s這是我最後的疑問了。")
+	getQuestion(tmp)
+end
+function StepX()
+	SetFlag("MS008_Q",6)
+	tmp = GetWorldFlag("MS008_Next_Q")
+	if tmp < 0 then
+		tmp = 0
+	end	
+	tmp = tmp + 1	
+	if tmp >= 20 then 
+		tmp= tmp - 20
+	end
+	SetWorldFlag("MS008_Next_Q",tmp)
+--<玩家所有答對題數=0至2>→Step10
+--<玩家所有答對題數=3至5>→Step11
+--<玩家所有答對題數=6>→Step12	
+	SetFlag("MS008_Q",7)
+	if GetFlag("MS008_D_hits") <= 2 then
+		Step10()
+	elseif GetFlag("MS008_D_hits") == 6 then
+		Step11()
+	else
+		Step11()
+	end		
+end
+
+
+
+function Step10()
+	Say("s請稍等一會。")
+	Say("s．．．．．．")
+	Say("s．．．．．．")
+	Say("s．．．．．．")
+	Say("s我向其他人民詢問後，發現你們說的傳說不相同，請你再次準備資料為我解答有關傳說的問題。")
+	SetFlag("MS008_D_hits",0)
+--＜清除玩家答對數量，讓玩家由MS008_D Step02開始＞
+end
+
+function Step11()
+--<如玩家身上物品空間少於１>→Step13
+	if ItemListCountLeft(0) < 1 then
+		Step13()
+	else
+		Say("s"..GetName().."，你知道的真不少，謝謝你給我解答問題，這是我一點心意。")
+		Say("p1謝王子陛下。")
+		Say("p7得到換領卷。")
+		AddItem(10757)
+		SetFlag("MS008_D_Step",11)
+	end	
+end
+
+
+function Step13()
+	Say("s想不到你的袋子裡藏了這麼多東西，我的賞賜你的都拿不下了吧，請先整理一下你的物品。")
+end
+function Step14()
+--<After MS008_D Step11 Or Step12>
+	Say("s原來立普有這樣的歷史，我是從來沒有想過，雖然牠們會攻擊國民，可是牠們的祖先這樣救我們，我要加快查出原因。")
+end
+
+
+--問題集
+function getQuestion(n)
+	if n == 0 then
+	Ask("n請問天神有多少兒女？","三個女兒。","一個兒子及兩個女兒。","一個女兒及兩個兒子。","Q1Ans")
+--＜選擇＞                                           
+--．三個女兒。→錯                                   
+--．一個兒子及兩個女兒。→錯                        
+--．一個女兒及兩個兒子。→對                         
+	elseif n == 1 then
+	Ask("n是哪一個天神開始了滅絕人類的行動？","卡奧斯。","亞魯斯。","佳雅。","Q2Ans")
+--(n)是哪一個天神開始了滅絕人類的行動？              
+--＜選擇＞                                           
+--．卡奧斯。→對                                     
+--．亞魯斯。→錯                                     
+--．佳雅。→錯        
+	elseif n == 2 then                               
+	Ask("n在天神之戰中，哪一個天神迷惑人類？","卡奧斯。","亞魯斯。","佳雅。","Q3Ans")
+--＜選擇＞                                           
+--．卡奧斯。→對                                     
+--．亞魯斯。→題                                     
+--．佳雅。→錯   
+	elseif n == 3 then                                    
+	Ask("n哪一個天神給人類砍下手臂？","卡奧斯。","亞魯斯。","佳雅。","Q4Ans")
+--(n)哪一個天神給人類砍下手臂？                      
+--＜選擇＞                                           
+--．卡奧斯。→錯                                     
+--．亞魯斯。→對                                     
+--．佳雅。→錯   
+	elseif n == 4 then                                    
+	Ask("n米古族是在那一位天神的血中誕生？","卡奧斯。","亞魯斯。","佳雅。","Q5Ans")
+--(n)米古族是在那一位天神的血中誕生？              
+--＜選擇＞                                           
+--．卡奧斯。→錯                                     
+--．亞魯斯。→對                                     
+--．佳雅。→錯   
+	elseif n == 5 then                                    
+	Ask("n亞魯斯用了自己最後的力量去創造什麼生物？","古尼。","立普。","機械偶。","Q6Ans")
+--＜選擇＞                                           
+--．古尼。→錯                                       
+--．立普。→對                                       
+--．機械偶。→錯 
+	elseif n == 6 then                                    
+	Ask("n立普為人類阻擋了什麼？","攻擊。","魔法。","迷惑。","Q7Ans")
+--＜選擇＞                                           
+--．攻擊。→錯                                       
+--．魔法。→錯                                       
+--．迷惑。→對   
+	elseif n == 7 then                                    
+	Ask("n立普們卻被卡奧斯帶到什麼地方生活？","溫暖的地方。","尼尼亞皇城。","氣候長期寒冷，沒有陽光的地方。","Q8Ans")
+--＜選擇＞                                           
+--．溫暖的地方。→錯                                 
+--．尼尼亞皇城。→錯                                 
+--．氣候長期寒冷，沒有陽光的地方。→對               
+	elseif n == 8 then
+	Ask("n戰爭後，人類和米古受到誰人的幫助而重建新故鄉","機動靈。","亞魯斯。","鐵男。","Q9Ans")
+--＜選擇＞                                           
+--．機動靈。→對                                     
+--．亞魯斯。→錯                                     
+--．鐵男。→錯                                       
+	elseif n == 9 then
+	Ask("n誰人的祝福令加米蘭特成為氣候溫的美麗星球？","塔傑。","奧米加。","科吉。","Q10Ans")
+--＜選擇＞                                           
+--．塔傑。→錯                                       
+--．奧米加。→對                                     
+--．科吉。→錯   
+	elseif n == 10 then                                    
+	Ask("n祖先們想救回立普到那裡定居？","加米蘭特星。","騎士之城。","魔法之都。","Q11Ans")
+--＜選擇＞                                           
+--．加米蘭特星。→對                                 
+--．騎士之城。→錯                                   
+--．魔法之都。→錯
+	elseif n == 11 then                                   
+	Ask("n祖先們不想再和誰人開戰？","GM。","遊俠立普。","卡奧斯。","Q12Ans")
+--＜選擇＞                                           
+--．GM。→錯                                         
+--．遊俠立普。→錯                                   
+--．卡奧斯。→對  
+	elseif n == 12 then                                   
+	Ask("n加米蘭特星的居民記著誰的恩惠？","立普。","星空大使。","棉花兔。","Q13Ans")
+--＜選擇＞                                           
+--．立普。→對                                       
+--．星空大使。→錯                                   
+--．棉花兔。→錯                                     
+	elseif n == 13 then
+	Ask("n加米蘭特人民運用星之門加米蘭特星，而逃難到那裡？","星球尼路亞。","尼尼亞皇城。" ,"火山島。","Q14Ans")
+--＜選擇＞                                           
+--．星球尼路亞。→對                                 
+--．尼尼亞皇城。→錯                                 
+--．火山島。→錯  
+	elseif n == 14 then                                   
+	Ask("n那一個天神被砍下手臂，而對人類失去信心？","卡奧斯。","佳雅。","亞魯斯。","Q15Ans")
+--＜選擇＞                                           
+--．卡奧斯。→錯                                     
+--．佳雅。→錯                                       
+--．亞魯斯。→對  
+	elseif n == 15 then                                   
+	Ask("n立普為誰人阻擋了卡奧斯的迷惑？","米古族。","人類。","機動靈。","Q16Ans")
+--＜選擇＞                                           
+--．米古族。→錯                                     
+--．人類。→對                                       
+--．機動靈。→錯  
+	elseif n == 16 then                                   
+	Ask("n立普到達長期寒冷的地方生活， 有什麼立場？","放任。","堅定。","置之不理。","Q17Ans")
+--＜選擇＞                                           
+--．放任。→錯                                       
+--．堅定。→對                                       
+--．置之不理。→錯
+	elseif n == 17 then                                   
+	Ask("n加米蘭特的人民決定用什麼離開加米蘭特星？","機動勳章。","星之門。","皇城鐵道之套票。","Q18Ans")
+--＜選擇＞                                           
+--．機動勳章。→錯                                   
+--．星之門。→對                                     
+--．皇城鐵道之套票。→錯                             
+	elseif n == 18 then
+	Ask("n有多少人可以逃難到尼路亞？","沒有人。","全部。","約一半。","Q19Ans")
+--＜選擇＞                                           
+--．沒有人。→錯                                     
+--．全部。→錯                                       
+--．約一半。→對  
+	elseif n == 19 then                                   
+	Ask("n逃難失敗的人民做了誰人的奴隸？","亞斯人。","外星人。","加米蘭特星人。","Q20Ans")
+	else
+		Say("n1Hi...sorry...有 bug 添...")
+	end
+end
+
+function go_next_question()
+	next_step = GetFlag("MS008_Q")
+	if next_step == 0 then
+		Step05()
+	elseif next_step == 1 then
+		Step06()
+	elseif next_step == 2 then
+		Step07()
+	elseif next_step == 3 then
+		Step08()
+	elseif next_step == 4 then
+		Step09()
+	elseif next_step == 5 then
+		StepX()
+	elseif next_step == 6 then
+		QuestEnd()
+	else
+		QuestEnd()		
+	end
+end
+
+
+function Q1Ans() 
+	if GetChoice() == 2 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q2Ans() 
+	if GetChoice() == 0 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q3Ans() 
+	if GetChoice() == 0 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q4Ans() 
+	if GetChoice() == 1 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q5Ans() 
+	if GetChoice() == 1 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q6Ans() 
+	if GetChoice() == 1 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q7Ans() 
+	if GetChoice() == 2 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q8Ans() 
+	if GetChoice() == 2 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q9Ans() 
+	if GetChoice() == 0 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q10Ans() 
+	if GetChoice() == 1 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q11Ans() 
+	if GetChoice() == 0 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q12Ans() 
+	if GetChoice() == 2 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q13Ans() 
+	if GetChoice() == 0 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q14Ans() 
+	if GetChoice() == 0 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q15Ans() 
+	if GetChoice() == 2 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q16Ans() 
+	if GetChoice() == 1 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q17Ans() 
+	if GetChoice() == 1 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q18Ans() 
+	if GetChoice() == 1 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q19Ans() 
+	if GetChoice() == 2 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end
+function Q20Ans() 
+	if GetChoice() == 0 then
+		SetFlag("MS008_D_hits",GetFlag("MS008_D_hits")+1)
+	end
+	go_next_question()
+end

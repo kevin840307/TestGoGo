@@ -1,0 +1,6 @@
+--People01 克蕾蕾
+
+function start()
+	Say("n1你喜歡跳舞嗎？")
+	Say("n1只要喜歡的話，酒吧都是歡迎你來跳舞的。","End")
+end

@@ -14,6 +14,7 @@ atk = 150
 def = 150
 matk = 150
 mdef = 150
+aspd = 50
 move_speed = 50
 durability = 50
 equip_slot = 6

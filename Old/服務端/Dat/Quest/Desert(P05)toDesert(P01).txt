@@ -1,0 +1,13 @@
+--Desert(P05) to Desert(P01)
+
+function start()
+	Ask("n要進入灼熱沙漠嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(11776,4032,34)
+	end
+	QuestEnd()
+end

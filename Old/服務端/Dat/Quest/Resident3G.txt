@@ -1,0 +1,5 @@
+--People01 娜娜美
+
+function start()
+	Say("n1機動靈的專用職業多帶有強勁的攻擊力喔！","End")
+end

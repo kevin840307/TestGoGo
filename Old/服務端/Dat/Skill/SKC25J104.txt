@@ -1,0 +1,69 @@
+--SKC25J104
+
+function start()
+	MinHit=2
+	MinHitDelta=3
+	BlockByShield = 0
+	consume = "MP"
+	other_consume = "HP"
+--	conTotal = 20
+	APcount = "MAP"
+	DPcount = "MDP"
+	varyDelta = 20
+
+	defender=GetTargetPtr()
+	attackType=GetType()
+	defenderType=GetTargetType(defender)
+	skillinfo = GetSkillInfo()
+	skillLv = GetTargetData(skillinfo, "Lv")
+	effect = GetPara(skillLv)
+	
+	conTotal = GetConTotal(skillLv)
+	other_conTotal = GetConTotal_Other(skillLv)
+		
+	Attack_Cure()
+end
+
+function GetPara(lv)
+	if lv == 1 then
+		return 175
+	elseif lv == 2 then
+		return 235
+	elseif lv == 3 then
+		return 298
+	elseif lv == 4 then
+		return 375
+	else
+		return 455
+	end
+end
+
+function GetConTotal(lv)
+	if lv == 1 then
+		return 46
+	elseif lv == 2 then
+		return 60
+	elseif lv == 3 then
+		return 75
+	elseif lv == 4 then
+		return 84
+	else
+		return 102
+	end
+end
+
+function GetConTotal_Other(lv)
+	if lv == 1 then
+		return 94
+	elseif lv == 2 then
+		return 123
+	elseif lv == 3 then
+		return 156
+	elseif lv == 4 then
+		return 193
+	else
+		return 234
+	end
+end
+
+#include "skillcommon.txt"

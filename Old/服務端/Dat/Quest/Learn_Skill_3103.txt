@@ -1,0 +1,37 @@
+--Learn_Skill_3103(暴風閃劍)
+
+function start()
+	Giveback()
+	if GetData("Career") == 3 then
+	CheckOther()
+	else
+	Say("p7只有聖劍士才可學習暴風閃劍。","End")
+	end
+end
+
+function CheckOther()
+	if GetData("Level") < 20 then
+	Say("p7你的等級仍未可學習暴風閃劍啊。","End")
+	elseif HasSkill(3103)==1 then
+	Say("p7你已經學會了暴風閃劍。","End")
+	else
+	Say("p7你的眼前出現一道白光，你看到了風神的形象，這時祂對你說．．．")
+		Ask("p你要學習暴風閃劍嗎?","是的。","不是。","Teach")
+	end
+end
+
+function Teach()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("p7我現在就將暴風閃劍傳授給你．．．")
+		Say("p7你已經學會了暴風閃劍。","End")
+		RemoveItem(10334)
+		AddSkill(3103)
+	else
+	Say("p7需要學習暴風閃劍時，可以再次召喚我。","End")
+	end
+end
+
+function Giveback()
+	AddItem(10334)
+end

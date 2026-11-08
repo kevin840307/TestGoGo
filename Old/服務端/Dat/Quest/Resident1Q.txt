@@ -1,0 +1,6 @@
+--People01 尤妮
+
+function start()
+	Say("n1呃呃呃．．．有什麼事嗎？")
+	Say("n1我還是快點弄好紅蘿蔔果凍．．．不可以給阿妮搶先！","End")
+end

@@ -1,0 +1,5 @@
+--People01 奧地
+
+function start()
+	Say("n1賢者這個名字，教皇大人真是當之無愧。","End")
+end

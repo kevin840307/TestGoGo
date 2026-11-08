@@ -2,6 +2,9 @@
 extends CharacterBody2D
 class_name BaseEntity
 
+const LEGACY_DIALOG_BUBBLE = preload("res://scripts/legacy_dialog_bubble.gd")
+const LEGACY_BUBBLE_SKIN = preload("res://scripts/legacy_bubble_skin.gd")
+
 
 var data_model: PlayerData = PlayerData.new()
 
@@ -37,6 +40,10 @@ var shop_owner_label: Label = null
 
 
 var current_state: String = "idle"
+var _render_visible: bool = true
+var _afk_visual_suspended: bool = false
+var _render_notifier: VisibleOnScreenNotifier2D = null
+const RENDER_VISIBILITY_RECT: Rect2 = Rect2(-220.0, -280.0, 440.0, 500.0)
 var current_dir: String = "1"
 var hp_update_seq: int = 0
 var normal_attack_visual_started_msec: int = -1
@@ -106,6 +113,82 @@ func _ready() -> void :
 		NetworkManager.entity_name_color_updated.connect(_on_entity_name_color_updated)
 		NetworkManager.party_sync_received.connect(_on_party_sync_received)
 
+	_render_notifier = VisibleOnScreenNotifier2D.new()
+	_render_notifier.rect = RENDER_VISIBILITY_RECT
+	add_child(_render_notifier)
+	_render_notifier.screen_entered.connect(_on_render_screen_entered)
+	_render_notifier.screen_exited.connect(_on_render_screen_exited)
+
+func _set_render_animation_paused(paused: bool) -> void :
+	if is_instance_valid(doll_engine):
+		for sprite_node in doll_engine.doll_sprites.values():
+			if not is_instance_valid(sprite_node):
+				continue
+			if paused:
+				sprite_node.pause()
+			elif sprite_node.visible and not sprite_node.is_playing():
+				sprite_node.play()
+	if is_instance_valid(transform_sprite):
+		if paused:
+			transform_sprite.pause()
+		elif transform_sprite.visible and not transform_sprite.is_playing():
+			transform_sprite.play()
+	if is_instance_valid(ui_container):
+		ui_container.visible = not paused
+
+func _on_render_screen_entered() -> void :
+	_render_visible = true
+	_set_render_animation_paused(false)
+
+func _on_render_screen_exited() -> void :
+	_render_visible = false
+	_set_render_animation_paused(true)
+
+func is_render_visible() -> bool:
+	return _render_visible
+
+
+func set_afk_visual_suspended(suspended: bool) -> void:
+	if _afk_visual_suspended == suspended:
+		return
+	_afk_visual_suspended = suspended
+	if suspended:
+		if is_instance_valid(doll_engine) and doll_engine.has_method("clear_dolls"):
+			doll_engine.clear_dolls()
+			doll_engine.visible = false
+		if is_instance_valid(transform_sprite):
+			transform_sprite.stop()
+			transform_sprite.sprite_frames = null
+			transform_sprite.material = null
+			transform_sprite.visible = false
+		for effect in [
+			mecha_recover_effect, level_up_effect, mecha_transform_effect,
+			death_effect, item_effect, mecha_bullet_effect_l,
+			mecha_bullet_effect_r, weapon_attack_effect
+		]:
+			if is_instance_valid(effect):
+				effect.stop()
+				effect.sprite_frames = null
+				effect.material = null
+				effect.visible = false
+		for transient in _active_transient_skill_effects.duplicate():
+			if is_instance_valid(transient):
+				transient.queue_free()
+		_active_transient_skill_effects.clear()
+		if is_instance_valid(ui_container):
+			ui_container.visible = false
+		return
+
+	if is_instance_valid(ui_container):
+		ui_container.visible = _render_visible
+	setup_layered_paper_dolls()
+	sync_animation()
+
+
+func is_afk_visual_suspended() -> bool:
+	return _afk_visual_suspended
+
+
 func is_entity_moving() -> bool:
 	return false
 
@@ -114,7 +197,14 @@ func update_hp(new_hp: int, hit_delay: float = 0.3, is_miss: bool = false) -> vo
 	hp_update_seq += 1
 	var current_seq = hp_update_seq
 
-	if hit_delay > 0: await get_tree().create_timer(hit_delay).timeout
+	if hit_delay > 0:
+		if not is_instance_valid(self) or not is_inside_tree():
+			return
+		var tree := get_tree()
+		if tree == null:
+			return
+		var timer := tree.create_timer(hit_delay)
+		await timer.timeout
 	if not is_instance_valid(self) or not is_inside_tree(): return
 	if current_seq != hp_update_seq: return
 
@@ -160,6 +250,8 @@ func _die() -> void :
 		_play_death_effect()
 
 func _play_death_effect() -> void :
+	if _afk_visual_suspended:
+		return
 
 	if is_riding_mecha():
 		if name_label: name_label.position.y = -160.0
@@ -232,10 +324,14 @@ func revive() -> void :
 	sync_animation()
 
 func show_damage_number(damage: int, is_crit: bool = false, hit_delay: float = 0.3, split_count: int = 1, skill_id: int = 0, is_primary: bool = true) -> void :
+	if _afk_visual_suspended:
+		return
 	if FloatingTextManager:
 		FloatingTextManager.show_damage(self, damage, is_crit, hit_delay, split_count, skill_id, is_primary)
 
 func show_level_up(is_mecha: bool = false) -> void :
+	if _afk_visual_suspended:
+		return
 	if not is_instance_valid(level_up_effect): return
 
 
@@ -409,7 +505,103 @@ func get_combat_hit_state() -> String:
 func is_riding_mecha() -> bool:
 	return "summoned_horse_uid" in data_model and data_model.summoned_horse_uid != -1
 
+func setup_layered_paper_dolls_initial_async() -> void :
+	if _afk_visual_suspended:
+		return
+	if data_model.transform_type > 0:
+		setup_layered_paper_dolls()
+		return
+
+	if not is_instance_valid(doll_engine):
+		return
+	if is_instance_valid(transform_sprite):
+		transform_sprite.visible = false
+	doll_engine.visible = true
+	if is_instance_valid(name_label):
+		name_label.visible = not data_model.is_shop_open
+
+	if is_riding_mecha():
+		var body_id: int = 0
+		var leg_id: int = 0
+		var weapon_id: int = 0
+		var dynamic_mecha_type: String = str(data_model.mecha_type)
+		var mecha_horse_idx: int = 0
+
+		if "horse_list" in data_model and data_model.horse_list.size() > 0:
+			for h in data_model.horse_list:
+				if int(h.get("horse_uid", -1)) == int(data_model.summoned_horse_uid):
+					dynamic_mecha_type = str(h.get("horse_type", "MS"))
+					data_model.mecha_type = dynamic_mecha_type
+					mecha_horse_idx = int(h.get("horse_idx", 0))
+					break
+
+		for heq in data_model.horse_equip_list:
+			if int(heq.get("horse_uid", -1)) == int(data_model.summoned_horse_uid) and int(heq.get("in_bank", 0)) == 0:
+				var e_idx: int = int(heq.get("equip_idx", 0))
+				var part: int = int(heq.get("part", 0))
+				if part == 0:
+					body_id = e_idx
+					if ItemLoader:
+						var item_mecha_type: String = str(ItemLoader.get_item_property(e_idx, "horse_type", ""))
+						if item_mecha_type != "" and item_mecha_type != "0":
+							dynamic_mecha_type = item_mecha_type
+							data_model.mecha_type = dynamic_mecha_type
+				elif part == 1:
+					weapon_id = e_idx
+				elif part == 2:
+					leg_id = e_idx
+
+		if dynamic_mecha_type == "MA" and body_id == 0:
+			body_id = mecha_horse_idx
+			if ItemLoader:
+				var ma_body_id: int = int(ItemLoader.get_item_property(mecha_horse_idx, "body_id", 0))
+				if ma_body_id > 0:
+					body_id = ma_body_id
+
+		await doll_engine.build_mecha_model_initial_async(
+			current_race,
+			current_hair,
+			current_hair_color_index,
+			int(data_model.bonnet_id),
+			body_id,
+			leg_id,
+			weapon_id,
+			dynamic_mecha_type
+		)
+
+		if data_model.transform_type == 0:
+			if name_label: name_label.position.y = -160.0
+			if title_label: title_label.position.y = -180.0
+			if club_label: club_label.position.y = -200.0
+	else:
+		var equips: Dictionary = {
+			0: data_model.bonnet_id,
+			1: data_model.left_hand_id,
+			2: data_model.right_hand_id,
+			3: data_model.upper_armor_id,
+			4: data_model.lower_armor_id,
+			5: data_model.weapon_id,
+			6: data_model.shield_id,
+			7: data_model.back_id,
+		}
+		await doll_engine.build_human_model_initial_async(
+			current_race,
+			current_hair,
+			current_hair_color_index,
+			current_body_color_index,
+			equips
+		)
+
+		if data_model.transform_type == 0:
+			if name_label: name_label.position.y = -130.0
+			if title_label: title_label.position.y = -150.0
+			if club_label: club_label.position.y = -170.0
+
+	_refresh_appearance_visibility()
+
 func setup_layered_paper_dolls() -> void :
+	if _afk_visual_suspended:
+		return
 
 	if data_model.transform_type > 0:
 		_ensure_transform_sprite()
@@ -554,6 +746,8 @@ func update_paper_doll_part(part_index: int, new_item_id: int) -> void :
 	sync_animation()
 
 func sync_animation() -> void :
+	if _afk_visual_suspended:
+		return
 	if not is_instance_valid(doll_engine) or not doll_engine.has_method("update_animation"): return
 
 
@@ -615,7 +809,7 @@ func sync_animation() -> void :
 			mecha_recover_effect.stop()
 
 	if is_instance_valid(mecha_bullet_effect_l) and is_instance_valid(mecha_bullet_effect_r):
-		if is_riding_mecha() and current_state.begins_with("attack_") and data_model.transform_type == 0:
+		if (not GameManager or GameManager.should_render_combat_effects()) and is_riding_mecha() and current_state.begins_with("attack_") and data_model.transform_type == 0:
 			if not mecha_bullet_effect_l.get_meta("attack_triggered", false):
 				mecha_bullet_effect_l.set_meta("attack_triggered", true)
 				mecha_bullet_effect_r.set_meta("attack_triggered", true)
@@ -737,7 +931,7 @@ func sync_animation() -> void :
 
 
 	if is_instance_valid(weapon_attack_effect):
-		if not is_riding_mecha() and current_state.begins_with("attack_") and data_model.transform_type == 0:
+		if (not GameManager or GameManager.should_render_combat_effects()) and not is_riding_mecha() and current_state.begins_with("attack_") and data_model.transform_type == 0:
 			if not weapon_attack_effect.get_meta("attack_triggered", false):
 				weapon_attack_effect.set_meta("attack_triggered", true)
 
@@ -887,6 +1081,8 @@ func _ensure_name_tag() -> void :
 		add_child(chat_bubble_timer)
 
 func _ensure_effects() -> void :
+	if _afk_visual_suspended:
+		return
 	if not is_instance_valid(mecha_recover_effect):
 		mecha_recover_effect = AnimatedSprite2D.new()
 		mecha_recover_effect.name = "MechaRecoverEffect"
@@ -1066,6 +1262,25 @@ func _on_effect_frame_changed(effect_node: AnimatedSprite2D) -> void :
 	var actual_offset_x = tex_w - offset_val.x if effect_node.flip_h else offset_val.x
 	effect_node.offset = Vector2( - actual_offset_x, - offset_val.y)
 
+func stop_combat_visual_effects() -> void:
+	# Do NOT call _clear_transient_skill_effects() here: it increments buff
+	# generations and cancels the safety timeout, risking a stuck buff/attack.
+	# Visual-only cleanup must leave gameplay timers/generations untouched.
+	var active_effects: Array[AnimatedSprite2D] = _active_transient_skill_effects.duplicate()
+	_active_transient_skill_effects.clear()
+	for effect_node in active_effects:
+		if is_instance_valid(effect_node):
+			effect_node.stop()
+			effect_node.queue_free()
+	if current_state == "buff":
+		_try_finish_buff_animation()
+	_clear_mecha_bullet_effects()
+	if is_instance_valid(weapon_attack_effect):
+		weapon_attack_effect.stop()
+		weapon_attack_effect.visible = false
+		weapon_attack_effect.set_meta("attack_triggered", false)
+
+
 func _play_transient_skill_effect(
 	frames: SpriteFrames, 
 	animation_name: StringName, 
@@ -1074,6 +1289,8 @@ func _play_transient_skill_effect(
 	playback_speed: float, 
 	is_self_cast_effect: bool = false
 ) -> AnimatedSprite2D:
+	if GameManager and not GameManager.should_render_combat_effects():
+		return null
 	if not frames or not frames.has_animation(animation_name):
 		return null
 
@@ -1087,6 +1304,12 @@ func _play_transient_skill_effect(
 	effect_node.position = Vector2.ZERO
 	effect_node.centered = false
 	effect_node.speed_scale = playback_speed
+	var effect_scale = frames.get_meta("effect_scale", Vector2.ONE)
+	if effect_scale is Vector2:
+		effect_node.scale = effect_scale
+	elif effect_scale is float or effect_scale is int:
+		var uniform_scale := float(effect_scale)
+		effect_node.scale = Vector2(uniform_scale, uniform_scale)
 	effect_node.set_meta("is_self_cast_effect", is_self_cast_effect)
 	add_child(effect_node)
 
@@ -1226,11 +1449,12 @@ func play_mecha_transform() -> void :
 	else:
 		print("[Mecha過場-網路玩家] ❌ 錯誤：mecha_transform_effect 節點未建立或已損毀！")
 
-func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = {}) -> void :
+func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = {}, rich_text: bool = false) -> void :
+	if _afk_visual_suspended:
+		return
 	if not chat_bubble_bg or not chat_bubble_label: return
-	var tex_path = "res://ui/BG_BUBBLE_%02d.png" % clamp(bubble_type + 1, 1, 7)
-	chat_bubble_bg.texture = load(tex_path)
-	chat_bubble_label.text = text
+	chat_bubble_bg.texture = LEGACY_BUBBLE_SKIN.get_texture(bubble_type)
+	# Leave ordinary messages on the original Label.
 
 	var fixed_bubble_size = Vector2(64, 48)
 	if chat_bubble_bg.texture: fixed_bubble_size = chat_bubble_bg.texture.get_size()
@@ -1246,6 +1470,7 @@ func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = 
 
 	chat_bubble_label.size = Vector2(fixed_bubble_size.x - m_left - m_right, fixed_bubble_size.y - m_top - m_bottom)
 	chat_bubble_label.position = Vector2(m_left, m_top)
+	LEGACY_DIALOG_BUBBLE.display(chat_bubble_bg, chat_bubble_label, text, rich_text)
 
 	if bubble_fade_tween and bubble_fade_tween.is_running(): bubble_fade_tween.kill()
 	chat_bubble_bg.modulate.a = 1.0
@@ -1417,6 +1642,8 @@ func execute_mecha_transition(setup_func: Callable) -> void :
 		transition_tween.kill()
 
 	setup_func.call()
+	if _afk_visual_suspended:
+		return
 
 	if is_instance_valid(mecha_transform_effect):
 		if mecha_transform_effect.sprite_frames:
@@ -1468,6 +1695,11 @@ func execute_skill_visuals(skill_id: int, skill_level: int, target_node: Node2D 
 					trigger_combat_action("buff")
 
 
+		# Preserve action timing/direction above. In Mass mode skill, hit
+		# and extra effects never load textures or spawn transient nodes.
+		if GameManager and not GameManager.should_render_combat_effects():
+			return
+
 		var fx_use = s_res.fx_use
 		if fx_use != "":
 			var r_prefix = "B"
@@ -1503,8 +1735,15 @@ func execute_skill_visuals(skill_id: int, skill_level: int, target_node: Node2D 
 		var fx_hit = s_res.fx_hit
 		if fx_hit != "":
 
-			if s_res.skill_type == 7 and "special_skill" in s_res and s_res.special_skill.contains("挑撥"):
+			var is_aoe_target_hit: bool = false
+			if s_res.skill_type == 7 and not aoe_targets.is_empty():
+				var special_text: String = str(s_res.special_skill)
+				is_aoe_target_hit = (
+					special_text.contains("挑撥")
+					or special_text.contains("範圍攻擊")
+				)
 
+			if is_aoe_target_hit:
 				for t_info in aoe_targets:
 					var t_id = int(t_info.get("ID", t_info.get("id", 0)))
 					if NetworkEntityManager and NetworkEntityManager.active_entities.has(t_id):
@@ -1544,6 +1783,8 @@ func execute_skill_visuals(skill_id: int, skill_level: int, target_node: Node2D 
 
 
 func _play_skill_hit(fx_hit: String, is_self_cast_effect: bool = false) -> void :
+	if GameManager and not GameManager.should_render_combat_effects():
+		return
 	var effect_name = ""
 	if fx_hit.begins_with("Normal"):
 		effect_name = "Normal_Effect/%s" % fx_hit
@@ -1580,18 +1821,24 @@ func _play_skill_hit(fx_hit: String, is_self_cast_effect: bool = false) -> void 
 		_play_transient_skill_effect(loaded_res, anim_to_play, eff_flip, 60, p_spd, is_self_cast_effect)
 
 
-func _play_skill_extra(fx_extra: String) -> void :
-	var effect_name = ""
+# Hit_Effect assets live under Hit_Effect/, not Skill_Effect/.
+# Resolve the real path before calling EffectLoader, so a valid effect no
+# longer produces a spurious missing-resource warning on first cast.
+static func preferred_extra_effect_path(fx_extra: String) -> String:
 	if fx_extra.begins_with("Normal"):
-		effect_name = "Normal_Effect/%s" % fx_extra
-	elif fx_extra.begins_with("Skill"):
-		effect_name = "Skill_Effect/%s" % fx_extra
-	else:
-		effect_name = "Skill_Effect/%s" % fx_extra
+		return "Normal_Effect/%s" % fx_extra
+	if fx_extra.begins_with("Hit_Effect"):
+		return "Hit_Effect/%s" % fx_extra
+	return "Skill_Effect/%s" % fx_extra
 
+
+func _play_skill_extra(fx_extra: String) -> void :
+	if GameManager and not GameManager.should_render_combat_effects():
+		return
+	var effect_name: String = preferred_extra_effect_path(fx_extra)
 	var loaded_res = EffectLoader.get_effect(effect_name)
 
-	if not loaded_res:
+	if not loaded_res and not effect_name.begins_with("Hit_Effect/"):
 		loaded_res = EffectLoader.get_effect("Hit_Effect/%s" % fx_extra)
 
 	if loaded_res:
@@ -1616,6 +1863,8 @@ func _play_skill_extra(fx_extra: String) -> void :
 		_play_transient_skill_effect(loaded_res, anim_to_play, eff_flip, 61, p_spd, true)
 
 func _play_item_effect(item_index: int) -> void :
+	if GameManager and not GameManager.should_render_combat_effects():
+		return
 	if not ItemLoader: return
 
 	var note_1 = str(ItemLoader.get_item_property(item_index, "note_1", "")).strip_edges()
@@ -1744,8 +1993,15 @@ func _refresh_identity_labels() -> void :
 
 func _lock_ui_position_for_transform() -> void :
 	if data_model.transform_type > 0 and transform_sprite and transform_sprite.sprite_frames:
-		await get_tree().process_frame
-		if not is_instance_valid(self): return
+		var tree: SceneTree = get_tree()
+		if tree == null:
+			return
+		await tree.process_frame
+		if not is_instance_valid(self) or not is_inside_tree():
+			return
+		# Transform can end or its SpriteFrames can change during await.
+		if data_model.transform_type <= 0 or not is_instance_valid(transform_sprite) or not is_instance_valid(transform_sprite.sprite_frames):
+			return
 
 		var fixed_head_y = -80.0
 		var base_anim = "IDLE_1"

@@ -50,6 +50,17 @@ var _emotion_tween: Tween
 @onready var btn_announcement: TextureButton = $BtnAnnouncement
 @onready var btn_game_info: TextureButton = $BtnGameInfo
 @onready var btn_craft_dismantle: TextureButton = $BtnCraftDismantle
+@onready var btn_afk_mode: Button = $BtnAfkMode
+@onready var afk_overlay: Control = $AFKOverlay
+@onready var afk_status: Label = $AFKOverlay / MonitorCard / LblStatus
+@onready var afk_character: Label = $AFKOverlay / MonitorCard / LblCharacter
+@onready var afk_vitals: Label = $AFKOverlay / MonitorCard / LblVitals
+@onready var afk_position: Label = $AFKOverlay / MonitorCard / LblPosition
+@onready var afk_runtime: Label = $AFKOverlay / MonitorCard / LblRuntime
+@onready var afk_resource_stats: Label = $AFKOverlay / MonitorCard / LblResources
+@onready var afk_btn_restore: Button = $AFKOverlay / MonitorCard / BtnRestore
+@onready var afk_restore_progress: SmoothLoadingBar = $AFKOverlay / MonitorCard / RestoreProgress
+@onready var afk_update_timer: Timer = $AFKOverlay / UpdateTimer
 
 @onready var windows_container: Control = $WindowsContainer
 @onready var character_window: Control = $WindowsContainer / CharacterWindow
@@ -62,14 +73,23 @@ var _emotion_tween: Tween
 @onready var option_volume_bg: Control = $WindowsContainer / SettingsWindow / OptionVolumeBg
 @onready var option_volume_effect: Control = $WindowsContainer / SettingsWindow / OptionVolumeEffect
 @onready var option_auto_saint: Control = $WindowsContainer / SettingsWindow / OptionAutoSaint
-@onready var option_quality_enhancement: Control = $WindowsContainer / SettingsWindow / OptionQualityEnhancement
-@onready var mall_window: Control = $WindowsContainer / MallWindow
-@onready var announcement_window: Control = $WindowsContainer / AnnouncementWindow
-@onready var game_info_window: Control = $WindowsContainer / GameInfoWindow
+@onready var option_fps_limit: Control = $WindowsContainer / SettingsWindow / OptionFpsLimit
+@onready var option_performance_load: Control = $WindowsContainer / SettingsWindow / OptionPerformanceLoad
+@onready var option_combat_render: Control = $WindowsContainer / SettingsWindow / OptionCombatRender
+@onready var option_simplify_players: Control = $WindowsContainer / SettingsWindow / OptionSimplifyPlayers
+@onready var option_simplify_monsters: Control = $WindowsContainer / SettingsWindow / OptionSimplifyMonsters
+var mall_window: Control = null
+var announcement_window: Control = null
+var game_info_window: Control = null
 
 
 @onready var npc_dialog_panel: Control = $WindowsContainer / NpcDialogPanel
 @onready var npc_dialog_text: RichTextLabel = $WindowsContainer / NpcDialogPanel / QuestionLabel
+const LEGACY_DIALOG_SEQUENCE = preload("res://scripts/legacy_dialog_sequence.gd")
+const LEGACY_CINEMATIC_PANEL = preload("res://scripts/legacy_cinematic_panel.gd")
+var _legacy_dialog_sequence = LEGACY_DIALOG_SEQUENCE.new()
+var _legacy_dialog_line_waiting: bool = false
+var _legacy_cinematic_panel: Variant = null
 var _current_npc_entity_id: int = 0
 var _current_npc_script_name: String = ""
 var _next_dialog_node: String = ""
@@ -87,7 +107,7 @@ var _window_drag_pointer_offset: = Vector2.ZERO
 
 
 @onready var loading_overlay: CanvasLayer = %LoadingOverlay
-@onready var loading_bar: ProgressBar = %LoadingOverlay / LoadingBar
+@onready var loading_bar: SmoothLoadingBar = %LoadingOverlay / LoadingBar
 var _map_loading_tween: Tween
 
 
@@ -96,6 +116,9 @@ var current_bank_window: Control = null
 
 const REPAIR_WINDOW_SCENE = preload("res://repair_window.tscn")
 var current_repair_window: Control = null
+
+const ITEM_CHOICE_WINDOW_SCENE = preload("res://item_choice_window.tscn")
+var current_item_choice_window: Control = null
 
 
 @onready var invite_box: Control = $InviteBox
@@ -130,7 +153,7 @@ const PET_STATUS_ROW_SCENE = preload("res://pet_status_row.tscn")
 @onready var spin_input_box_btn_confirm: BaseButton = $SpinInputBox / BtnConfirm
 @onready var spin_input_box_btn_cancel: BaseButton = $SpinInputBox / BtnCancel
 
-@onready var quest_window: Control = $WindowsContainer / QuestWindow
+var quest_window: Control = null
 @onready var quest_tracker_panel: Panel = $WindowsContainer / QuestTrackerPanel
 
 var _invite_time_left: float = 0.0
@@ -151,7 +174,26 @@ const BUFF_ICON_SCENE = preload("res://buff_icon.tscn")
 
 const MINIMAP_UPDATE_INTERVAL: = 0.05
 const MINIMAP_WORLD_CULL_MASK: = 1 << 0
+# The SubViewport draws only the static map layer; players/NPCs are
+# separately drawn by minimap_npc_overlay. Avoid re-rendering that map
+# 20 times/sec while the camera is stationary.
+const MINIMAP_IDLE_WORLD_REDRAW_INTERVAL: float = 1.0
 var _minimap_update_elapsed: = 0.0
+var _minimap_world_idle_elapsed: float = 0.0
+var _minimap_force_world_redraw: bool = true
+var _minimap_world_redraw_requests: int = 0
+var _minimap_world_redraw_skips: int = 0
+
+
+static func should_redraw_minimap_world(camera_changed: bool, forced: bool, idle_seconds: float) -> bool:
+	return camera_changed or forced or idle_seconds >= MINIMAP_IDLE_WORLD_REDRAW_INTERVAL
+
+
+func get_minimap_world_redraw_stats() -> Dictionary:
+	return {
+		"redraws": _minimap_world_redraw_requests,
+		"skipped": _minimap_world_redraw_skips,
+	}
 
 
 const SHORTCUT_SLOT_SCENE = preload("res://shortcut_slot.tscn")
@@ -165,13 +207,22 @@ var current_pet_window: Control = null
 const RANK_WINDOW_SCENE = preload("res://rank_window.tscn")
 var current_rank_window: Control = null
 
-const CRAFT_DISMANTLE_WINDOW_SCENE = preload("res://craft_dismantle_window.tscn")
 var craft_dismantle_window: Control = null
-
-const BIG_MAP_WINDOW_SCENE = preload("res://big_map_window.tscn")
+var _craft_window_initial_opening: bool = false
 var big_map_window: Control = null
-const WORLD_MAP_WINDOW_SCENE = preload("res://world_map_window.tscn")
 var world_map_window: Control = null
+
+const LAZY_WINDOW_PATHS: Dictionary = {
+	"quest": "res://quest_window.tscn",
+	"mall": "res://mall_window.tscn",
+	"announcement": "res://announcement_window.tscn",
+	"game_info": "res://game_info_window.tscn",
+	"craft": "res://craft_dismantle_window.tscn",
+	"big_map": "res://big_map_window.tscn",
+	"world_map": "res://world_map_window.tscn",
+}
+var _lazy_window_scenes: Dictionary = {}
+var _lazy_window_requests: Dictionary = {}
 
 const BUBBLE_TEXT_MARGINS = {
 	0: {"left": 10, "top": 8, "right": 10, "bottom": 23}, 
@@ -203,7 +254,13 @@ var _is_hud_hidden: bool = false
 var _hud_tween: Tween
 var _sys_msg_tween: Tween
 var current_pet_combat_mode: int = 1
-var current_quality_enhancement_enabled: bool = GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
+var current_fps_limit: int = GameConstants.SETTING_DEFAULT_FOREGROUND_FPS_LIMIT
+var current_performance_load_mode: int = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
+var current_combat_render_mode: int = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
+var current_simplify_players_mode: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE
+var current_simplify_monsters_mode: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE
+var _afk_hidden_roots: Array[Dictionary] = []
+var _afk_entered_msec: int = 0
 
 
 func _ready() -> void :
@@ -216,6 +273,14 @@ func _ready() -> void :
 
 	if invite_box: invite_box.visible = false
 	if message_box: message_box.visible = false
+	if afk_overlay: afk_overlay.visible = false
+	if btn_afk_mode:
+		btn_afk_mode.focus_mode = Control.FOCUS_NONE
+		btn_afk_mode.pressed.connect(_on_afk_mode_requested)
+	if afk_btn_restore:
+		afk_btn_restore.pressed.connect(_on_afk_restore_requested)
+	if afk_update_timer:
+		afk_update_timer.timeout.connect(_refresh_afk_dashboard)
 	if input_box:
 		input_box.visible = false
 		if input_box_line_edit:
@@ -290,9 +355,12 @@ func _ready() -> void :
 		if NetworkManager.has_signal("npc_dialog_received"):
 			if not NetworkManager.npc_dialog_received.is_connected(_on_npc_dialog_received):
 				NetworkManager.npc_dialog_received.connect(_on_npc_dialog_received)
-		if NetworkManager.has_signal("npc_dialog_closed"):
-			if not NetworkManager.npc_dialog_closed.is_connected(_on_npc_dialog_closed):
-				NetworkManager.npc_dialog_closed.connect(_on_npc_dialog_closed)
+		if NetworkManager.has_signal("npc_dialog_close_packet"):
+			if not NetworkManager.npc_dialog_close_packet.is_connected(_on_npc_dialog_close_requested):
+				NetworkManager.npc_dialog_close_packet.connect(_on_npc_dialog_close_requested)
+		elif NetworkManager.has_signal("npc_dialog_closed"):
+			if not NetworkManager.npc_dialog_closed.is_connected(_on_npc_dialog_close_requested):
+				NetworkManager.npc_dialog_closed.connect(_on_npc_dialog_close_requested)
 
 		if NetworkManager.has_signal("open_bank_window_received"):
 			if not NetworkManager.open_bank_window_received.is_connected(_on_open_bank_window_received):
@@ -340,6 +408,13 @@ func _ready() -> void :
 		if NetworkManager.has_signal("system_message_flash_received"):
 			if not NetworkManager.system_message_flash_received.is_connected(show_system_message_flash):
 				NetworkManager.system_message_flash_received.connect(show_system_message_flash)
+		if NetworkManager.has_signal("item_pickup_feedback_received"):
+			if not NetworkManager.item_pickup_feedback_received.is_connected(_on_item_pickup_feedback_received):
+				NetworkManager.item_pickup_feedback_received.connect(_on_item_pickup_feedback_received)
+
+		if NetworkManager.has_signal("item_choice_required_received"):
+			if not NetworkManager.item_choice_required_received.is_connected(_on_item_choice_required_received):
+				NetworkManager.item_choice_required_received.connect(_on_item_choice_required_received)
 
 		if NetworkManager.has_signal("system_message_chat_received"):
 			if not NetworkManager.system_message_chat_received.is_connected(show_system_message_chat):
@@ -371,6 +446,31 @@ func _on_chat_panel_message_sent(channel: int, message: String, bubble_type: int
 	if NetworkManager:
 		if NetworkManager.has_method("send_secure_packet"):
 			NetworkManager.send_secure_packet({"Type": "ChatMessage", "Channel": channel, "Message": message, "BubbleType": bubble_type})
+
+
+func _on_item_choice_required_received(
+	item_uid: int,
+	_item_index: int,
+	title: String,
+	options: Array
+) -> void:
+	if item_uid <= 0 or options.is_empty():
+		show_rejection_message_box("目前沒有可用的獎勵選項。")
+		return
+
+	if is_instance_valid(current_item_choice_window):
+		current_item_choice_window.queue_free()
+
+	current_item_choice_window = ITEM_CHOICE_WINDOW_SCENE.instantiate()
+	if windows_container:
+		windows_container.add_child(current_item_choice_window)
+	else:
+		add_child(current_item_choice_window)
+
+	if current_item_choice_window.has_method("setup"):
+		current_item_choice_window.setup(item_uid, title, options)
+	current_item_choice_window.move_to_front()
+	_play_interface_activation_feedback(current_item_choice_window)
 
 
 func _on_open_bank_window_received() -> void :
@@ -482,11 +582,22 @@ func _on_skill_synced_hud(skills: Array) -> void :
 		skill_window.update_ui()
 
 const REJECTION_FEEDBACK_SE_ID: int = 97
+# SE0064 is a skill-hit sound. SE0066 is the short, heavier normal-effect cue used for pickup feedback.
+const ITEM_PICKUP_SE_ID: int = 97
 const PARTY_INVITATION_SE_ID: int = 129
 
 func show_rejection_message_flash(msg: String) -> void :
 	show_system_message_flash(msg)
 	_play_rejection_feedback_se()
+
+func _on_item_pickup_feedback_received(data: Dictionary) -> void :
+	var message: String = str(data.get("Message", ""))
+	if not message.is_empty():
+		show_system_message_flash(message)
+
+	var play_sound: bool = bool(data.get("PlaySound", true))
+	if play_sound and AudioManager:
+		AudioManager.play_se(ITEM_PICKUP_SE_ID)
 
 func show_system_message_flash(msg: String) -> void :
 	var lbl_sys_msg_node = chat_panel.get_node_or_null("LblSystemMsg") if chat_panel else null
@@ -559,10 +670,12 @@ func _setup_window_manager() -> void :
 		windows_container.modulate.a = 1.0
 
 	_window_map = {
-		btn_character: character_window, btn_inventory: inventory_window, btn_skill: skill_window, 
-		btn_party: party_window, btn_clan: clan_window, btn_quest: quest_window, 
-		btn_settings: settings_window, btn_mall: mall_window, btn_announcement: announcement_window, 
-		btn_game_info: game_info_window
+		btn_character: character_window,
+		btn_inventory: inventory_window,
+		btn_skill: skill_window,
+		btn_party: party_window,
+		btn_clan: clan_window,
+		btn_settings: settings_window,
 	}
 
 	for btn in _window_map.keys():
@@ -586,11 +699,7 @@ func _setup_window_manager() -> void :
 		skill_window, 
 		party_window, 
 		clan_window, 
-		settings_window, 
-		quest_window, 
-		mall_window, 
-		announcement_window, 
-		game_info_window
+		settings_window
 	]:
 		_register_draggable_window(draggable_window)
 
@@ -675,43 +784,310 @@ func _setup_window_manager() -> void :
 			if not option_auto_saint.gui_input.is_connected(_on_option_gui_input):
 				option_auto_saint.gui_input.connect(_on_option_gui_input.bind(option_auto_saint))
 
-		if option_quality_enhancement is OptionButton:
-			option_quality_enhancement.select(1 if current_quality_enhancement_enabled else 0)
-			if not option_quality_enhancement.item_selected.is_connected(_on_opt_quality_enhancement_item_selected):
-				option_quality_enhancement.item_selected.connect(_on_opt_quality_enhancement_item_selected)
-			option_quality_enhancement.focus_mode = Control.FOCUS_NONE
+		if option_fps_limit is SpinBox:
+			# Editable value + built-in up/down buttons, independent of quality.
+			# 0 = unlimited, 30..120 in steps of 5, or 144.
+			option_fps_limit.min_value = 0.0
+			option_fps_limit.max_value = 144.0
+			# Range.step must be 1 so manually entered 144 is representable.
+			option_fps_limit.step = 1.0
+			option_fps_limit.custom_arrow_step = 5.0
+			option_fps_limit.custom_arrow_round = false
+			option_fps_limit.rounded = true
+			option_fps_limit.value = float(current_fps_limit)
+			option_fps_limit.editable = true
+			option_fps_limit.select_all_on_focus = true
+			if not option_fps_limit.value_changed.is_connected(_on_opt_fps_limit_value_changed):
+				option_fps_limit.value_changed.connect(_on_opt_fps_limit_value_changed)
 
-			if not option_quality_enhancement.gui_input.is_connected(_on_option_gui_input):
-				option_quality_enhancement.gui_input.connect(_on_option_gui_input.bind(option_quality_enhancement))
+		if option_performance_load is OptionButton:
+			option_performance_load.select(current_performance_load_mode)
+			if not option_performance_load.item_selected.is_connected(_on_opt_performance_load_item_selected):
+				option_performance_load.item_selected.connect(_on_opt_performance_load_item_selected)
+			option_performance_load.focus_mode = Control.FOCUS_NONE
+			if not option_performance_load.gui_input.is_connected(_on_option_gui_input):
+				option_performance_load.gui_input.connect(_on_option_gui_input.bind(option_performance_load))
 
-	if is_instance_valid(windows_container):
-		craft_dismantle_window = CRAFT_DISMANTLE_WINDOW_SCENE.instantiate()
-		windows_container.add_child(craft_dismantle_window)
-		craft_dismantle_window.visible = false
-		craft_dismantle_window.modulate.a = 0.0
-		btn_craft_dismantle.pressed.connect(_toggle_window.bind(craft_dismantle_window))
-		btn_craft_dismantle.focus_mode = Control.FOCUS_NONE
+		if option_combat_render is OptionButton:
+			option_combat_render.select(current_combat_render_mode)
+			if not option_combat_render.item_selected.is_connected(_on_opt_combat_render_item_selected):
+				option_combat_render.item_selected.connect(_on_opt_combat_render_item_selected)
+			option_combat_render.focus_mode = Control.FOCUS_NONE
+			if not option_combat_render.gui_input.is_connected(_on_option_gui_input):
+				option_combat_render.gui_input.connect(_on_option_gui_input.bind(option_combat_render))
+
+		if option_simplify_players is OptionButton:
+			option_simplify_players.select(current_simplify_players_mode)
+			if not option_simplify_players.item_selected.is_connected(_on_opt_simplify_players_item_selected):
+				option_simplify_players.item_selected.connect(_on_opt_simplify_players_item_selected)
+			option_simplify_players.focus_mode = Control.FOCUS_NONE
+			if not option_simplify_players.gui_input.is_connected(_on_option_gui_input):
+				option_simplify_players.gui_input.connect(_on_option_gui_input.bind(option_simplify_players))
+
+		if option_simplify_monsters is OptionButton:
+			option_simplify_monsters.select(current_simplify_monsters_mode)
+			if not option_simplify_monsters.item_selected.is_connected(_on_opt_simplify_monsters_item_selected):
+				option_simplify_monsters.item_selected.connect(_on_opt_simplify_monsters_item_selected)
+			option_simplify_monsters.focus_mode = Control.FOCUS_NONE
+			if not option_simplify_monsters.gui_input.is_connected(_on_option_gui_input):
+				option_simplify_monsters.gui_input.connect(_on_option_gui_input.bind(option_simplify_monsters))
+
+		for option in [
+			option_pet_mode,
+			option_volume_bg,
+			option_volume_effect,
+			option_auto_saint,
+			option_fps_limit,
+			option_performance_load,
+			option_combat_render,
+			option_simplify_players,
+			option_simplify_monsters
+		]:
+			if option is OptionButton:
+				_bind_option_popup_cursor(option)
+
+	if btn_quest and not btn_quest.pressed.is_connected(_toggle_lazy_window.bind("quest")):
+		btn_quest.pressed.connect(_toggle_lazy_window.bind("quest"))
+	if btn_announcement and not btn_announcement.pressed.is_connected(_toggle_lazy_window.bind("announcement")):
+		btn_announcement.pressed.connect(_toggle_lazy_window.bind("announcement"))
+	if btn_game_info and not btn_game_info.pressed.is_connected(_toggle_lazy_window.bind("game_info")):
+		btn_game_info.pressed.connect(_toggle_lazy_window.bind("game_info"))
+	if btn_craft_dismantle and not btn_craft_dismantle.pressed.is_connected(_toggle_lazy_window.bind("craft")):
+		btn_craft_dismantle.pressed.connect(_toggle_lazy_window.bind("craft"))
+	if btn_mall:
+		btn_mall.focus_mode = Control.FOCUS_NONE
 
 
-		craft_dismantle_window.gui_input.connect(_on_window_gui_input.bind(craft_dismantle_window))
+func release_afk_visual_preloads() -> int:
+	var released: int = 0
+	for kind_value in LAZY_WINDOW_PATHS.keys():
+		var kind: String = str(kind_value)
+		var window: Control = _get_lazy_window(kind)
+		if is_instance_valid(window) and not window.visible:
+			window.free()
+			_assign_lazy_window(kind, null)
+			released += 1
+	_lazy_window_scenes.clear()
+	_lazy_window_requests.clear()
+	return released
 
-		big_map_window = BIG_MAP_WINDOW_SCENE.instantiate()
-		windows_container.add_child(big_map_window)
-		_register_draggable_window(big_map_window)
-		big_map_window.visible = false
-		big_map_window.modulate.a = 0.0
-		big_map_window.gui_input.connect(_on_window_gui_input.bind(big_map_window))
-		if big_map_window.has_signal("close_requested"):
-			big_map_window.close_requested.connect(_close_window.bind(big_map_window))
 
-		world_map_window = WORLD_MAP_WINDOW_SCENE.instantiate()
-		windows_container.add_child(world_map_window)
-		_register_draggable_window(world_map_window)
-		world_map_window.visible = false
-		world_map_window.modulate.a = 0.0
-		world_map_window.gui_input.connect(_on_window_gui_input.bind(world_map_window))
-		if world_map_window.has_signal("close_requested"):
-			world_map_window.close_requested.connect(_close_window.bind(world_map_window))
+func _assign_lazy_window(kind: String, window: Control = null) -> void :
+	match kind:
+		"quest": quest_window = window
+		"mall": mall_window = window
+		"announcement": announcement_window = window
+		"game_info": game_info_window = window
+		"craft": craft_dismantle_window = window
+		"big_map": big_map_window = window
+		"world_map": world_map_window = window
+
+func _get_lazy_window(kind: String) -> Control:
+	match kind:
+		"quest": return quest_window
+		"mall": return mall_window
+		"announcement": return announcement_window
+		"game_info": return game_info_window
+		"craft": return craft_dismantle_window
+		"big_map": return big_map_window
+		"world_map": return world_map_window
+	return null
+
+func _configure_lazy_window(kind: String, window: Control) -> void :
+	window.visible = false
+	window.modulate.a = 0.0
+	_register_draggable_window(window)
+	window.gui_input.connect(_on_window_gui_input.bind(window))
+
+	var close_btn := window.get_node_or_null("BtnClose")
+	if close_btn is BaseButton:
+		close_btn.pressed.connect(_close_window.bind(window))
+		close_btn.focus_mode = Control.FOCUS_NONE
+
+	if is_instance_valid(target_player) and window.has_method("setup"):
+		window.call("setup", target_player)
+
+	if kind == "big_map":
+		if window.has_signal("close_requested"):
+			window.close_requested.connect(_close_window.bind(window))
+	elif kind == "world_map":
+		if window.has_signal("close_requested"):
+			window.close_requested.connect(_close_window.bind(window))
+
+func _ensure_lazy_window(kind: String) -> Control:
+	var existing := _get_lazy_window(kind)
+	if is_instance_valid(existing):
+		return existing
+
+	var total_started_usec: int = Time.get_ticks_usec()
+
+	# craft/game_info may already have entered the SceneTree on the login screen.
+	# Reuse those exact nodes so their first _ready/layout cost is never paid in
+	# the world-entry critical path.
+	if GameManager and GameManager.has_method("take_prewarmed_hud_window"):
+		var warmed := GameManager.take_prewarmed_hud_window(kind) as Control
+		if is_instance_valid(warmed) and is_instance_valid(windows_container):
+			var add_started_usec: int = Time.get_ticks_usec()
+			windows_container.add_child(warmed)
+			var add_child_ms: float = float(Time.get_ticks_usec() - add_started_usec) / 1000.0
+			_assign_lazy_window(kind, warmed)
+			var setup_started_usec: int = Time.get_ticks_usec()
+			_configure_lazy_window(kind, warmed)
+			var setup_ms: float = float(Time.get_ticks_usec() - setup_started_usec) / 1000.0
+			var total_ms: float = float(Time.get_ticks_usec() - total_started_usec) / 1000.0
+			print("[HUD_WINDOW_INIT] kind=%s source=login_cache load_ms=0.00 instantiate_ms=0.00 add_child_ms=%.2f setup_ms=%.2f total_ms=%.2f" % [
+				kind,
+				add_child_ms,
+				setup_ms,
+				total_ms,
+			])
+			return warmed
+
+	var load_started_usec: int = total_started_usec
+	var path: String = str(LAZY_WINDOW_PATHS.get(kind, ""))
+	if path.is_empty():
+		return null
+
+	var scene: PackedScene = _lazy_window_scenes.get(kind, null) as PackedScene
+	if scene == null and ResourceLoader.has_cached(path):
+		scene = ResourceLoader.load(path) as PackedScene
+		if scene != null:
+			_lazy_window_scenes[kind] = scene
+
+	if scene == null:
+		if not _lazy_window_requests.has(kind):
+			var request_error: int = ResourceLoader.load_threaded_request(path)
+			if request_error != OK:
+				push_error("[HUD] lazy window load request failed: %s" % path)
+				return null
+			_lazy_window_requests[kind] = true
+
+		while true:
+			var progress: Array = []
+			var status: int = ResourceLoader.load_threaded_get_status(path, progress)
+			if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+				await get_tree().process_frame
+				continue
+			if status == ResourceLoader.THREAD_LOAD_LOADED:
+				scene = ResourceLoader.load_threaded_get(path) as PackedScene
+				break
+			push_error("[HUD] lazy window threaded load failed: %s" % path)
+			_lazy_window_requests.erase(kind)
+			return null
+
+		_lazy_window_scenes[kind] = scene
+		_lazy_window_requests.erase(kind)
+
+	var load_ms: float = float(Time.get_ticks_usec() - load_started_usec) / 1000.0
+	var instantiate_started_usec: int = Time.get_ticks_usec()
+	var window := scene.instantiate() as Control
+	var instantiate_ms: float = float(Time.get_ticks_usec() - instantiate_started_usec) / 1000.0
+	if window == null or not is_instance_valid(windows_container):
+		return null
+
+	var add_child_started_usec: int = Time.get_ticks_usec()
+	windows_container.add_child(window)
+	var add_child_ms: float = float(Time.get_ticks_usec() - add_child_started_usec) / 1000.0
+
+	_assign_lazy_window(kind, window)
+
+	var setup_started_usec: int = Time.get_ticks_usec()
+	_configure_lazy_window(kind, window)
+	var setup_ms: float = float(Time.get_ticks_usec() - setup_started_usec) / 1000.0
+	var total_ms: float = float(Time.get_ticks_usec() - total_started_usec) / 1000.0
+
+	print("[HUD_WINDOW_INIT] kind=%s load_ms=%.2f instantiate_ms=%.2f add_child_ms=%.2f setup_ms=%.2f total_ms=%.2f" % [
+		kind,
+		load_ms,
+		instantiate_ms,
+		add_child_ms,
+		setup_ms,
+		total_ms,
+	])
+	return window
+
+func prepare_lazy_windows_before_reveal(progress_callback: Callable = Callable()) -> void :
+	var kinds: Array[String] = [
+		"quest",
+		"mall",
+		"announcement",
+		"game_info",
+		# Craft uses first-open, time-budgeted recipe construction with a
+		# visible in-window progress indicator; not part of map reveal.
+		"big_map",
+		"world_map",
+	]
+	var total: int = kinds.size()
+	for index: int in range(total):
+		if not is_inside_tree():
+			return
+		var kind: String = kinds[index]
+		var window := await _ensure_lazy_window(kind)
+		if is_instance_valid(window):
+			window.visible = false
+			window.modulate.a = 0.0
+		if progress_callback.is_valid():
+			progress_callback.call(index + 1, total, kind)
+		await get_tree().process_frame
+
+func _prewarm_lazy_window_scenes() -> void :
+	for kind_value in LAZY_WINDOW_PATHS.keys():
+		var kind: String = str(kind_value)
+		if _lazy_window_scenes.has(kind) or _lazy_window_requests.has(kind):
+			continue
+		var path: String = str(LAZY_WINDOW_PATHS[kind])
+		var request_error: int = ResourceLoader.load_threaded_request(path)
+		if request_error == OK:
+			_lazy_window_requests[kind] = true
+
+	while not _lazy_window_requests.is_empty():
+		for kind_value in _lazy_window_requests.keys().duplicate():
+			var kind: String = str(kind_value)
+			var path: String = str(LAZY_WINDOW_PATHS[kind])
+			var status: int = ResourceLoader.load_threaded_get_status(path)
+			if status == ResourceLoader.THREAD_LOAD_LOADED:
+				var scene := ResourceLoader.load_threaded_get(path) as PackedScene
+				if scene != null:
+					_lazy_window_scenes[kind] = scene
+				_lazy_window_requests.erase(kind)
+			elif status == ResourceLoader.THREAD_LOAD_FAILED or status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+				_lazy_window_requests.erase(kind)
+		await get_tree().process_frame
+
+func _toggle_lazy_window(kind: String) -> void :
+	# Optional crafting recipes are intentionally not built at login or map
+	# reveal. Open the actual window BEFORE any expensive work, then display
+	# first-use progress inside it. A second click must not spawn a second
+	# 1453-row Tree build.
+	if kind == "craft":
+		if _craft_window_initial_opening:
+			return
+		_craft_window_initial_opening = true
+		var crafting_window := await _ensure_lazy_window(kind)
+		if not is_instance_valid(crafting_window):
+			_craft_window_initial_opening = false
+			return
+		if crafting_window.has_method("is_initial_prepared") and not bool(crafting_window.is_initial_prepared()):
+			_open_window(crafting_window)
+			if crafting_window.has_method("prepare_initial_with_progress_async"):
+				await crafting_window.prepare_initial_with_progress_async()
+			elif crafting_window.has_method("prepare_initial_async"):
+				await crafting_window.prepare_initial_async()
+			_craft_window_initial_opening = false
+			return
+		_craft_window_initial_opening = false
+		_toggle_window(crafting_window)
+		return
+	var window := await _ensure_lazy_window(kind)
+	if not is_instance_valid(window):
+		return
+	_toggle_window(window)
+
+func start_post_reveal_background_prewarm() -> void :
+	# Dismantle is optional and still costs close to a second of cumulative UI
+	# work even when batched. Do not start it automatically after login; build it
+	# only if/when the player opens the Dismantle tab.
+	return
 
 func _setup_header_button_hover_signals() -> void :
 	for button in [btn_announcement, btn_game_info, btn_craft_dismantle]:
@@ -735,6 +1111,7 @@ func _setup_menu_tooltips() -> void :
 	if btn_announcement: btn_announcement.tooltip_text = "最新消息"
 	if btn_game_info: btn_game_info.tooltip_text = "遊戲資訊"
 	if btn_craft_dismantle: btn_craft_dismantle.tooltip_text = "合成/分解 (Ctrl+G)"
+	if btn_afk_mode: btn_afk_mode.tooltip_text = "掛機監控：卸載可還原視覺資源，保留角色運作"
 
 	if chat_panel:
 		var btn_channel = chat_panel.get_node_or_null("BtnChannel")
@@ -782,7 +1159,11 @@ func _toggle_window(target_window: Control) -> void :
 
 		if target_window == clan_window:
 			if is_instance_valid(target_player) and "data_model" in target_player and target_player.data_model.club_id <= 0:
-				show_rejection_message_box("你尚未加入任何戰團！")
+				if NetworkManager and NetworkManager.has_method("send_secure_packet"):
+					NetworkManager.send_secure_packet({
+						"Type": "ClubAction",
+						"Action": "OpenCreate"
+					})
 				return
 
 		if target_window.has_method("update_ui"): target_window.update_ui()
@@ -943,6 +1324,197 @@ func _clear_window_drag() -> void :
 	_dragged_window = null
 	_window_drag_pointer_offset = Vector2.ZERO
 
+func _on_afk_mode_requested() -> void:
+	if not GameManager or GameManager.is_afk_mode_active():
+		return
+	if GameManager.is_changing_map:
+		show_rejection_message_box("正在切換地圖，請完成後再進入掛機模式。")
+		return
+	if not is_instance_valid(GameManager.current_player):
+		show_rejection_message_box("必須先進入遊戲才能啟用掛機模式。")
+		return
+	show_message_box(
+		"確定進入掛機監控模式？\n將關閉遊戲畫面、卸載可安全回收的貼圖，但會繼續自動移動、打怪與拾取。\n如需恢復畫面可按「返回遊戲」。",
+		2,
+		_confirm_begin_afk
+	)
+
+
+func _confirm_begin_afk() -> void:
+	if not GameManager or not GameManager.begin_afk_mode():
+		show_rejection_message_box("掛機模式啟動失敗，請確認地圖已完成載入。")
+		return
+	_afk_entered_msec = Time.get_ticks_msec()
+	set_background_visuals_paused(true)
+	_afk_hidden_roots.clear()
+	_afk_hide_nonessential_roots()
+	if afk_btn_restore:
+		afk_btn_restore.disabled = false
+	if afk_overlay:
+		afk_overlay.visible = true
+		afk_overlay.move_to_front()
+	# Focus may have changed during AFK setup; do not start a monitor
+	# timer in a hidden window. The next focus-in refreshes it immediately.
+	set_afk_dashboard_updates_enabled(GameManager.is_game_window_focused())
+
+
+func _afk_hide_nonessential_roots() -> void:
+	# Keep the existing MessageBox for a real confirm/cancel interaction.
+	# HUD state remains alive for packet-driven inventory/quest updates.
+	for root_child in get_children():
+		if root_child == afk_overlay or root_child == message_box:
+			continue
+		if not (root_child is CanvasItem or root_child is CanvasLayer):
+			continue
+		var already_tracked: bool = false
+		for snapshot in _afk_hidden_roots:
+			var ref: WeakRef = snapshot["node"]
+			if ref.get_ref() == root_child:
+				already_tracked = true
+				break
+		if not already_tracked:
+			_afk_hidden_roots.append({"node": weakref(root_child), "visible": root_child.visible})
+		root_child.visible = false
+
+
+func _on_afk_restore_requested() -> void:
+	if not GameManager or not GameManager.is_afk_mode_active():
+		return
+	if GameManager.is_changing_map or GameManager.is_afk_mode_restoring():
+		_refresh_afk_dashboard()
+		return
+	show_message_box(
+		"確定結束掛機監控並返回遊戲？\n地圖貼圖將分批重新載入，角色不會登出。",
+		2,
+		_confirm_restore_afk
+	)
+
+
+func _on_afk_restore_progress(percent: float, stage: String) -> void:
+	if not is_inside_tree():
+		return
+	if afk_restore_progress and afk_restore_progress.visible:
+		afk_restore_progress.set_target_progress(percent)
+	if afk_resource_stats:
+		afk_resource_stats.text = "還原進度 %d%%｜%s" % [int(percent), stage]
+
+
+func _confirm_restore_afk() -> void:
+	if not GameManager or not GameManager.is_afk_mode_active():
+		return
+	if afk_btn_restore:
+		afk_btn_restore.disabled = true
+	if afk_restore_progress:
+		afk_restore_progress.visible = true
+		afk_restore_progress.reset_progress()
+	if afk_status:
+		afk_status.text = "正在分批還原遊戲資源…"
+	var restored: bool = await GameManager.finish_afk_mode(
+		Callable(self, "_on_afk_restore_progress")
+	)
+	if not is_inside_tree():
+		return
+	if not restored:
+		if afk_btn_restore:
+			afk_btn_restore.disabled = false
+		if afk_restore_progress:
+			afk_restore_progress.visible = false
+		_refresh_afk_dashboard()
+		return
+	if afk_restore_progress:
+		afk_restore_progress.finish_progress()
+		await get_tree().create_timer(0.3).timeout
+		if not is_inside_tree():
+			return
+		afk_restore_progress.visible = false
+	if afk_update_timer:
+		afk_update_timer.stop()
+	if afk_overlay:
+		afk_overlay.visible = false
+	for snapshot in _afk_hidden_roots:
+		var ref: WeakRef = snapshot["node"]
+		var node: Node = ref.get_ref()
+		if is_instance_valid(node) and (node is CanvasItem or node is CanvasLayer):
+			node.visible = bool(snapshot["visible"])
+	_afk_hidden_roots.clear()
+	# GameManager already restored the correct foreground/background focus policy.
+	# Re-applying the AFK-enter pause state would strand the minimap disabled.
+	if is_instance_valid(GameManager.current_map_node):
+		GameManager.current_map_node.visible = true
+
+
+func set_afk_dashboard_updates_enabled(enabled: bool) -> void:
+	if not afk_update_timer or not afk_overlay or not afk_overlay.visible:
+		return
+	if enabled and GameManager and GameManager.is_afk_mode_active():
+		if afk_update_timer.is_stopped():
+			afk_update_timer.start()
+			_refresh_afk_dashboard()
+	else:
+		afk_update_timer.stop()
+
+
+func _refresh_afk_dashboard() -> void:
+	# The SceneTree may still execute fixed gameplay while backgrounded.
+	# Do not update visual labels or traverse the HUD until refocused.
+	if not GameManager or not GameManager.is_afk_mode_active():
+		return
+	if not GameManager.is_game_window_focused():
+		return
+	_afk_hide_nonessential_roots()
+	var player: Node = GameManager.current_player
+	var connected: bool = NetworkManager and NetworkManager.is_connected_to_server
+	if afk_character:
+		afk_character.text = "角色｜等待同步"
+	if afk_vitals:
+		afk_vitals.text = "生命 / 魔力｜—"
+	if afk_position:
+		afk_position.text = "位置｜—"
+	if is_instance_valid(player) and "data_model" in player and player.data_model:
+		var data: PlayerData = player.data_model
+		if afk_character:
+			afk_character.text = "角色｜%s    Lv.%d" % [data.character_name, data.level]
+		if afk_vitals:
+			afk_vitals.text = "HP %d / %d    MP %d / %d" % [data.hp, data.max_hp, data.mp, data.max_mp]
+		if afk_position:
+			afk_position.text = "地圖 %d    X %d · Y %d" % [data.map_id, int(player.global_position.x), int(player.global_position.y)]
+	if afk_status:
+		var state: String = "待命"
+		if not connected:
+			state = "連線中斷"
+		elif GameManager.is_changing_map:
+			state = "切換地圖中"
+		elif GameManager.is_afk_mode_restoring():
+			state = "還原資源中"
+		elif is_instance_valid(player):
+			if bool(player.get("is_dead")):
+				state = "角色死亡"
+			elif is_instance_valid(player.get("combat_target")):
+				state = "自動戰鬥中"
+			elif str(player.get("current_state")).begins_with("attack"):
+				state = "攻擊中"
+			elif bool(player.get("is_moving")):
+				state = "移動中"
+			elif "data_model" in player and player.data_model and player.data_model.is_auto_saint_on:
+				state = "自動聖靈中"
+		afk_status.text = "● %s  ｜  %s" % ["已連線" if connected else "未連線", state]
+	if afk_runtime:
+		var elapsed: int = maxi(0, int((Time.get_ticks_msec() - _afk_entered_msec) / 1000))
+		afk_runtime.text = "掛機時間｜%02d:%02d:%02d" % [int(elapsed / 3600), int(elapsed / 60) % 60, elapsed % 60]
+	if afk_resource_stats and not GameManager.is_afk_mode_restoring():
+		var stats: Dictionary = GameManager.afk_visual_stats()
+		var failed: int = int(stats.get("restore_missing", 0))
+		if failed > 0:
+			afk_resource_stats.text = "有 %d 筆貼圖無法還原，請再次點擊返回遊戲重試" % failed
+		else:
+			afk_resource_stats.text = "卸載 %d 筆 · 保留子資源 %d 筆 · 監控 20 FPS · 失焦不渲染" % [
+				int(stats.get("released", 0)),
+				int(stats.get("retained_embedded", 0))
+			]
+	if afk_btn_restore:
+		afk_btn_restore.disabled = GameManager.is_changing_map or GameManager.is_afk_mode_restoring()
+
+
 func _on_btn_back_to_login_pressed() -> void :
 	var btn_back = get_node_or_null("WindowsContainer/SettingsWindow/BtnBackToLogin") as BaseButton
 	if btn_back: btn_back.disabled = true
@@ -984,15 +1556,20 @@ func _on_unequip_requested(target_slot: int) -> void :
 		if NetworkManager.has_method("send_secure_packet"):
 			NetworkManager.send_secure_packet({"Type": "UnequipRequest", "TargetSlot": target_slot})
 
+var _initial_hud_ready: bool = false
+
 func initialize_hud(player: CharacterBody2D) -> void :
+	var hud_started_usec := Time.get_ticks_usec()
 	target_player = player
 	_last_displayed_coords = null
 	if character_window and character_window.has_method("setup"): character_window.setup(player)
 	if inventory_window and inventory_window.has_method("setup"): inventory_window.setup(player)
-	if skill_window and skill_window.has_method("setup"): skill_window.setup(player)
-	if game_info_window and game_info_window.has_method("setup"): game_info_window.call("setup", player)
+	if skill_window and skill_window.has_method("setup"):
+		var skill_setup_started_usec: int = Time.get_ticks_usec()
+		skill_window.setup(player)
+		var skill_setup_ms: float = float(Time.get_ticks_usec() - skill_setup_started_usec) / 1000.0
+		print("[HUD_SKILL_INIT] setup_ms=%.2f" % skill_setup_ms)
 	if clan_window and clan_window.has_method("setup"): clan_window.setup(player)
-	if quest_window and quest_window.has_method("setup"): quest_window.setup(player)
 	if quest_tracker_panel and quest_tracker_panel.has_method("setup"): quest_tracker_panel.setup(player)
 
 	if minimap_viewport and get_tree().root.is_node_ready():
@@ -1009,17 +1586,51 @@ func initialize_hud(player: CharacterBody2D) -> void :
 		update_map_info(map_id, raw_node_name)
 
 	update_status_panel()
+
+	# Shortcut restoration may synchronously load skill .tres resources. Keep it
+	# outside the initial world-entry critical path and let the first frame render.
+	call_deferred("_initialize_hud_deferred")
+
+	var hud_sync_ms := float(Time.get_ticks_usec() - hud_started_usec) / 1000.0
+	if hud_sync_ms >= 25.0:
+		print("[HUD_INIT_TIMING] synchronous_ms=%.2f" % hud_sync_ms)
+
+func _initialize_hud_deferred() -> void :
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+
+	var shortcuts_started_usec := Time.get_ticks_usec()
 	_load_shortcuts_from_data()
+	var shortcuts_ms := float(Time.get_ticks_usec() - shortcuts_started_usec) / 1000.0
+	if shortcuts_ms >= 25.0:
+		print("[HUD_INIT_TIMING] shortcuts_ms=%.2f" % shortcuts_ms)
 
 	if NetworkManager and NetworkManager.has_method("send_set_global_pet_mode"):
 		NetworkManager.send_set_global_pet_mode(current_pet_combat_mode)
 
-	_open_window(announcement_window)
-	announcement_window.call("set_loading")
-	NetworkManager.send_announcement_list_request()
+	_initial_hud_ready = true
+	call_deferred("_open_initial_announcement_lazy")
+
+func _open_initial_announcement_lazy() -> void :
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	var window := await _ensure_lazy_window("announcement")
+	if not is_instance_valid(window):
+		return
+	_open_window(window)
+	if window.has_method("set_loading"):
+		window.call("set_loading")
+	if NetworkManager:
+		NetworkManager.send_announcement_list_request()
+
+func is_initial_hud_ready() -> bool:
+	return _initial_hud_ready
 
 func update_map_info(map_id: int, raw_node_name: String) -> void :
 	_last_displayed_coords = null
+	_minimap_force_world_redraw = true
 	if map_name_label:
 		map_name_label.text = REAL_MAP_NAMES.get(map_id, "")
 	if is_instance_valid(minimap_npc_overlay):
@@ -1113,13 +1724,40 @@ func update_pet_status_panel() -> void :
 	for i in range(used_rows, existing_rows.size()):
 		existing_rows[i].queue_free()
 
-func _process(delta: float) -> void :
-	_update_game_window_cursor_override()
+var _background_visuals_paused: bool = false
 
-	_minimap_update_elapsed += delta
-	if _minimap_update_elapsed >= MINIMAP_UPDATE_INTERVAL:
-		_minimap_update_elapsed = fmod(_minimap_update_elapsed, MINIMAP_UPDATE_INTERVAL)
-		_update_minimap()
+func set_background_visuals_paused(paused: bool) -> void :
+	_background_visuals_paused = paused
+	if minimap_viewport:
+		minimap_viewport.render_target_update_mode = (
+			SubViewport.UPDATE_DISABLED if paused else SubViewport.UPDATE_ONCE
+		)
+	if is_instance_valid(minimap_npc_overlay) and minimap_npc_overlay.has_method("set_active"):
+		minimap_npc_overlay.set_active(not paused and not _is_hud_hidden)
+	if not paused:
+		_minimap_update_elapsed = MINIMAP_UPDATE_INTERVAL
+		_minimap_force_world_redraw = true
+		_cursor_scan_elapsed = CURSOR_SCAN_IDLE_INTERVAL
+
+var _cursor_scan_elapsed: float = 0.0
+var _last_cursor_scan_position: Vector2 = Vector2(-99999.0, -99999.0)
+const CURSOR_SCAN_IDLE_INTERVAL: float = 0.10
+
+func _process(delta: float) -> void :
+	if not _background_visuals_paused:
+		_cursor_scan_elapsed += delta
+		var mouse_position := get_viewport().get_mouse_position()
+		if mouse_position != _last_cursor_scan_position or _cursor_scan_elapsed >= CURSOR_SCAN_IDLE_INTERVAL:
+			_last_cursor_scan_position = mouse_position
+			_cursor_scan_elapsed = 0.0
+			_update_game_window_cursor_override()
+
+		if not _is_hud_hidden and is_instance_valid(target_player):
+			_minimap_world_idle_elapsed += delta
+		_minimap_update_elapsed += delta
+		if _minimap_update_elapsed >= MINIMAP_UPDATE_INTERVAL:
+			_minimap_update_elapsed = fmod(_minimap_update_elapsed, MINIMAP_UPDATE_INTERVAL)
+			_update_minimap()
 
 	if invite_box and invite_box.visible and _invite_time_left > 0:
 		_invite_time_left -= delta
@@ -1164,10 +1802,18 @@ func _update_minimap() -> void :
 		return
 
 	var player_position: = target_player.global_position
+	var camera_changed: bool = false
 	if minimap_camera and minimap_camera.global_position != player_position:
 		minimap_camera.global_position = player_position
+		camera_changed = true
 	if minimap_viewport:
-		minimap_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+		if should_redraw_minimap_world(camera_changed, _minimap_force_world_redraw, _minimap_world_idle_elapsed):
+			minimap_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+			_minimap_world_redraw_requests += 1
+			_minimap_world_idle_elapsed = 0.0
+			_minimap_force_world_redraw = false
+		else:
+			_minimap_world_redraw_skips += 1
 	if coords_label:
 		var displayed_coords: = Vector2i(int(player_position.x), int(player_position.y))
 		if displayed_coords != _last_displayed_coords:
@@ -1199,15 +1845,17 @@ func _unhandled_input(event: InputEvent) -> void :
 				KEY_W: if inventory_window: _toggle_window(inventory_window)
 				KEY_S: if skill_window: _toggle_window(skill_window)
 				KEY_D: if party_window: _toggle_window(party_window)
-				KEY_J: if quest_window: _toggle_window(quest_window)
+				KEY_J: _toggle_lazy_window("quest")
 				KEY_Q: if settings_window: _toggle_window(settings_window)
-				KEY_G: if is_instance_valid(craft_dismantle_window): _toggle_window(craft_dismantle_window)
+				KEY_G: _toggle_lazy_window("craft")
 				KEY_F:
 					toggle_fullscreen()
 					get_viewport().set_input_as_handled()
 					return
 
 func _toggle_big_map() -> void :
+	if not is_instance_valid(big_map_window):
+		big_map_window = await _ensure_lazy_window("big_map")
 	if not is_instance_valid(big_map_window):
 		return
 
@@ -1220,6 +1868,8 @@ func _toggle_big_map() -> void :
 	_open_window(big_map_window)
 
 func _toggle_world_map() -> void :
+	if not is_instance_valid(world_map_window):
+		world_map_window = await _ensure_lazy_window("world_map")
 	if not is_instance_valid(world_map_window):
 		return
 
@@ -1272,6 +1922,8 @@ func _toggle_hud_visibility() -> void :
 	else:
 		if is_instance_valid(minimap_npc_overlay) and minimap_npc_overlay.has_method("set_active"):
 			minimap_npc_overlay.set_active(true)
+		_minimap_force_world_redraw = true
+		_minimap_update_elapsed = MINIMAP_UPDATE_INTERVAL
 		for panel in panels:
 			if panel: panel.visible = true;_hud_tween.tween_property(panel, "modulate:a", 1.0, 0.2)
 
@@ -1294,7 +1946,16 @@ func _on_player_emotion_selected(anim_name: String) -> void :
 
 
 
-func _on_npc_dialog_received(data: Dictionary) -> void :
+func _on_npc_dialog_received(data: Dictionary, from_queue: bool = false) -> void :
+	# Old quest scripts can emit multiple Say() calls before an Ask().
+	# Sequence only old Lua packets; other dialogs preserve their original path.
+	if not from_queue:
+		if data.has("LegacyPrefix") and data.has("DialogLayout"):
+			if not _legacy_dialog_sequence.push_or_begin(data):
+				return
+		else:
+			_legacy_dialog_sequence.reset()
+			_legacy_dialog_line_waiting = false
 	if CursorManager:
 		CursorManager.set_cursor_state("normal")
 
@@ -1306,9 +1967,15 @@ func _on_npc_dialog_received(data: Dictionary) -> void :
 	var bubble_type = int(data.get("BubbleType", 0))
 	var speaker = str(data.get("Speaker", "NPC"))
 	var options = data.get("Options", [])
+	var legacy_prefix = str(data.get("LegacyPrefix", ""))
+	var dialog_layout = str(data.get("DialogLayout", "Default"))
+	var bubble_text = text
+	# Legacy n7/p7 are narrative events rather than ordinary spoken lines.
+	if dialog_layout == "Narration":
+		bubble_text = "[i][color=#596777]" + text + "[/color][/i]"
 
 
-	if is_instance_valid(target_player):
+	if not from_queue and is_instance_valid(target_player):
 		target_player.set("is_interacting_with_npc", true)
 		if target_player.has_method("_stop_movement"):
 			target_player._stop_movement()
@@ -1318,32 +1985,81 @@ func _on_npc_dialog_received(data: Dictionary) -> void :
 		return
 
 	if dialog_type == "ActionDialog":
+		_legacy_dialog_sequence.note_presented(data)
+		_legacy_dialog_line_waiting = from_queue or data.has("LegacyPrefix")
 		_next_dialog_node = str(data.get("NextNode", ""))
 
-		if text != "": _trigger_npc_bubble(_current_npc_entity_id, text, bubble_type, speaker)
+		if dialog_layout == "Media":
+			_hide_current_dialog_bubbles()
+			_ensure_legacy_cinematic_panel()
+			if is_instance_valid(_legacy_cinematic_panel):
+				var media: Dictionary = data.get("LegacyMedia", {}) if data.get("LegacyMedia", {}) is Dictionary else {}
+				_legacy_cinematic_panel.show_media(media)
+		else:
+			_hide_legacy_cinematic_panel()
+			if text != "":
+				_trigger_npc_bubble(_current_npc_entity_id, bubble_text, bubble_type, speaker, true)
 		if npc_dialog_panel: npc_dialog_panel.visible = false
 		return
 
+	_hide_legacy_cinematic_panel()
+	_legacy_dialog_line_waiting = false
 	_next_dialog_node = ""
 	if options.is_empty():
 
-		if text != "": _trigger_npc_bubble(_current_npc_entity_id, text, bubble_type, speaker)
+		if text != "": _trigger_npc_bubble(_current_npc_entity_id, bubble_text, bubble_type, speaker, true)
 		if npc_dialog_panel: npc_dialog_panel.visible = false
 		return
 
 	if is_instance_valid(npc_dialog_panel) and npc_dialog_panel.has_method("show_dialog"):
+		_legacy_dialog_sequence.note_presented(data)
 		var was_visible = npc_dialog_panel.visible
-		npc_dialog_panel.show_dialog(text, options)
+		npc_dialog_panel.show_dialog(text, options, legacy_prefix, dialog_layout)
 		if not was_visible:
 			_play_interface_activation_feedback(npc_dialog_panel)
 
+func has_legacy_dialog_line_waiting() -> bool:
+	return _legacy_dialog_line_waiting
+
+
+func _on_npc_dialog_close_requested(packet: Dictionary = {}) -> void:
+	# A late close for an older Lua execution must not dismiss a newer batch.
+	if _legacy_dialog_sequence.is_stale_close(packet):
+		return
+	# Original quests may call QuestEnd() directly after Ask(). Keep its options
+	# clickable; option handlers already close/reset the dialogue when selected.
+	if _legacy_dialog_sequence.is_awaiting_choice():
+		return
+	# Otherwise preserve every queued Say before respecting script termination.
+	if _legacy_dialog_line_waiting and _legacy_dialog_sequence.defer_close():
+		return
+	_on_npc_dialog_closed()
+
+
 func request_next_dialog_sentence() -> void :
+	_hide_legacy_cinematic_panel()
+	# A terminal QuestEnd() must not swallow an explicit Say(..., "Next")
+	# continuation. Queued actual Say/Ask messages still take precedence.
+	var resume_explicit_node := _next_dialog_node != "" and (
+		_legacy_dialog_sequence.only_terminal_close_pending()
+	)
+	if _legacy_dialog_sequence.has_pending() and not resume_explicit_node:
+		var next_packet: Dictionary = _legacy_dialog_sequence.take_next()
+		if str(next_packet.get("DialogType", "")) == "Close":
+			_on_npc_dialog_closed()
+		else:
+			_hide_current_dialog_bubbles()
+			_on_npc_dialog_received(next_packet, true)
+		return
 	if _next_dialog_node == "":
 		_on_npc_dialog_closed()
 		return
 
 	var target_node = _next_dialog_node
 	_next_dialog_node = ""
+	# A server continuation starts a fresh batch, not a queued old line.
+	_legacy_dialog_line_waiting = false
+	_legacy_dialog_sequence.reset()
 
 	if NetworkManager:
 		if NetworkManager.has_method("send_secure_packet"):
@@ -1368,18 +2084,13 @@ func _on_npc_option_selected(target_node: String) -> void :
 			})
 
 func _on_npc_dialog_closed() -> void :
+	_hide_legacy_cinematic_panel()
+	_legacy_dialog_line_waiting = false
+	_legacy_dialog_sequence.reset()
 	if npc_dialog_panel: npc_dialog_panel.visible = false
 
 
-	if _current_npc_entity_id != 0 and NetworkEntityManager:
-		if "active_entities" in NetworkEntityManager and NetworkEntityManager.active_entities.has(_current_npc_entity_id):
-			var entity = NetworkEntityManager.active_entities[_current_npc_entity_id]
-			if is_instance_valid(entity) and entity.has_method("hide_chat_bubble"):
-				entity.hide_chat_bubble()
-
-
-	if is_instance_valid(target_player) and target_player.has_method("hide_chat_bubble"):
-		target_player.hide_chat_bubble()
+	_hide_current_dialog_bubbles()
 
 
 	_current_npc_entity_id = 0
@@ -1390,13 +2101,39 @@ func _on_npc_dialog_closed() -> void :
 	if is_instance_valid(target_player):
 		target_player.set("is_interacting_with_npc", false)
 
-func _trigger_npc_bubble(entity_id: int, text: String, bubble_type: int, speaker: String = "NPC") -> void :
+func _ensure_legacy_cinematic_panel() -> void:
+	if is_instance_valid(_legacy_cinematic_panel):
+		return
+	if not is_instance_valid(windows_container):
+		return
+	_legacy_cinematic_panel = LEGACY_CINEMATIC_PANEL.new()
+	_legacy_cinematic_panel.name = "LegacyCinematicPanel"
+	windows_container.add_child(_legacy_cinematic_panel)
+	_legacy_cinematic_panel.advance_requested.connect(request_next_dialog_sentence)
+
+
+func _hide_legacy_cinematic_panel() -> void:
+	if is_instance_valid(_legacy_cinematic_panel):
+		_legacy_cinematic_panel.dismiss()
+
+
+func _hide_current_dialog_bubbles() -> void:
+	if _current_npc_entity_id != 0 and NetworkEntityManager:
+		if "active_entities" in NetworkEntityManager and NetworkEntityManager.active_entities.has(_current_npc_entity_id):
+			var entity = NetworkEntityManager.active_entities[_current_npc_entity_id]
+			if is_instance_valid(entity) and entity.has_method("hide_chat_bubble"):
+				entity.hide_chat_bubble()
+	if is_instance_valid(target_player) and target_player.has_method("hide_chat_bubble"):
+		target_player.hide_chat_bubble()
+
+
+func _trigger_npc_bubble(entity_id: int, text: String, bubble_type: int, speaker: String = "NPC", rich_text: bool = false) -> void :
 	var margins = BUBBLE_TEXT_MARGINS.get(bubble_type, BUBBLE_TEXT_MARGINS[0])
 
 
 	if speaker == "Player":
 		if is_instance_valid(target_player) and target_player.has_method("show_chat_bubble"):
-			target_player.show_chat_bubble(text, bubble_type, margins)
+			target_player.show_chat_bubble(text, bubble_type, margins, rich_text)
 		return
 
 
@@ -1404,19 +2141,31 @@ func _trigger_npc_bubble(entity_id: int, text: String, bubble_type: int, speaker
 		if "active_entities" in NetworkEntityManager and NetworkEntityManager.active_entities.has(entity_id):
 			var entity = NetworkEntityManager.active_entities[entity_id]
 			if is_instance_valid(entity) and entity.has_method("show_chat_bubble"):
-				entity.show_chat_bubble(text, bubble_type, margins)
+				entity.show_chat_bubble(text, bubble_type, margins, rich_text)
 
 
+
+
+func set_map_loading_progress(progress: float) -> void:
+	if is_instance_valid(loading_bar):
+		loading_bar.set_target_progress(progress)
 
 
 func show_map_loading(duration: float = 0.3) -> void :
+	_hide_legacy_cinematic_panel()
+	if GameManager and GameManager.is_afk_mode_active():
+		# The monitor is the ONLY visible window during AFK map changes.
+		# The existing hide_map_loading still completes WorldReady handshake.
+		if loading_overlay:
+			loading_overlay.visible = false
+		return
 	if not loading_overlay or not loading_bar: return
 
 	if _map_loading_tween and _map_loading_tween.is_running():
 		_map_loading_tween.kill()
 
 	loading_overlay.visible = true
-	loading_bar.value = 0.0
+	loading_bar.reset_progress()
 
 	_map_loading_tween = create_tween()
 	_map_loading_tween.set_parallel(true)
@@ -1431,9 +2180,12 @@ func hide_map_loading() -> void :
 	if _map_loading_tween and _map_loading_tween.is_running():
 		_map_loading_tween.kill()
 
-	if loading_bar: loading_bar.value = 100.0
+	if loading_bar: loading_bar.finish_progress()
 
-	var fade_tween = create_tween().set_parallel(true)
+	# Cancel a previous fade-out when a new map change starts, so an old
+	# finish callback cannot clear the newer overlay or send stale WorldReady.
+	_map_loading_tween = create_tween().set_parallel(true)
+	var fade_tween: Tween = _map_loading_tween
 	var has_fade_target = false
 
 
@@ -1443,9 +2195,24 @@ func hide_map_loading() -> void :
 			has_fade_target = true
 
 	if has_fade_target:
-		fade_tween.chain().tween_callback( func(): loading_overlay.visible = false)
+		fade_tween.chain().tween_callback(_finish_map_loading)
 	else:
+		_finish_map_loading()
+
+func _finish_map_loading() -> void :
+	if loading_overlay:
 		loading_overlay.visible = false
+	# Keep the 0.4-second loading fade drawable; switching maps must not
+	# pause the render loop until this callback has hidden the overlay.
+	if GameManager and GameManager.has_method("notify_world_loading_overlay_hidden"):
+		GameManager.notify_world_loading_overlay_hidden()
+	if NetworkManager and NetworkManager.has_method("send_world_ready"):
+		var map_id := 0
+		if is_instance_valid(target_player) and target_player.get("data_model"):
+			map_id = int(target_player.data_model.map_id)
+		elif GameManager and is_instance_valid(GameManager.current_player) and GameManager.current_player.get("data_model"):
+			map_id = int(GameManager.current_player.data_model.map_id)
+		NetworkManager.send_world_ready(map_id)
 
 
 func show_player_context_menu(target_dbid: int, target_name: String) -> void :
@@ -2221,36 +2988,146 @@ func show_transfer_input_box(target_dbid: int, p_target_name: String) -> void :
 	)
 
 
+func _bind_option_popup_cursor(option_button: OptionButton) -> void:
+	if option_button == null:
+		return
+	var popup := option_button.get_popup()
+	if popup == null:
+		return
+	if not popup.about_to_popup.is_connected(_on_system_option_popup_opened.bind(popup)):
+		popup.about_to_popup.connect(_on_system_option_popup_opened.bind(popup))
+	if not popup.popup_hide.is_connected(_on_system_option_popup_closed.bind(popup)):
+		popup.popup_hide.connect(_on_system_option_popup_closed.bind(popup))
+
+func _on_system_option_popup_opened(popup: PopupMenu) -> void:
+	if CursorManager and CursorManager.has_method("show_popup_game_cursor"):
+		CursorManager.show_popup_game_cursor(popup)
+
+func _on_system_option_popup_closed(popup: PopupMenu) -> void:
+	if CursorManager and CursorManager.has_method("hide_popup_game_cursor"):
+		CursorManager.hide_popup_game_cursor(popup)
+
+
+func _game_settings_section() -> String:
+	var account := ""
+	if GlobalTempData:
+		account = str(GlobalTempData.login_user).strip_edges().to_lower()
+	if account.is_empty():
+		return GameConstants.SETTING_SECTION_GAME
+	return "%s:%s" % [
+		GameConstants.SETTING_SECTION_GAME,
+		account
+	]
+
 func _load_game_settings() -> void :
 	var config = ConfigFile.new()
 	var err = config.load(GameConstants.CLIENT_SETTINGS_PATH)
+	var section := _game_settings_section()
+	var fallback_section := GameConstants.SETTING_SECTION_GAME
+
 	if err == OK:
-		current_pet_combat_mode = config.get_value(
-			GameConstants.SETTING_SECTION_GAME, 
-			GameConstants.SETTING_KEY_PET_COMBAT_MODE, 
-			GameConstants.SETTING_DEFAULT_PET_COMBAT_MODE
-		)
-		current_quality_enhancement_enabled = bool(config.get_value(
-			GameConstants.SETTING_SECTION_GAME, 
-			GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED, 
-			GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
+		current_pet_combat_mode = int(config.get_value(
+			section,
+			GameConstants.SETTING_KEY_PET_COMBAT_MODE,
+			config.get_value(
+				fallback_section,
+				GameConstants.SETTING_KEY_PET_COMBAT_MODE,
+				GameConstants.SETTING_DEFAULT_PET_COMBAT_MODE
+			)
 		))
+		current_fps_limit = ClientPerformanceProfile.sanitize_fps_limit(int(config.get_value(
+			section,
+			GameConstants.SETTING_KEY_FOREGROUND_FPS_LIMIT,
+			config.get_value(
+				fallback_section,
+				GameConstants.SETTING_KEY_FOREGROUND_FPS_LIMIT,
+				GameConstants.SETTING_DEFAULT_FOREGROUND_FPS_LIMIT
+			)
+		)))
+		current_performance_load_mode = ClientPerformanceProfile.sanitize_load_mode(int(config.get_value(
+			section,
+			GameConstants.SETTING_KEY_PERFORMANCE_LOAD_MODE,
+			config.get_value(
+				fallback_section,
+				GameConstants.SETTING_KEY_PERFORMANCE_LOAD_MODE,
+				GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
+			)
+		)))
+		current_combat_render_mode = ClientPerformanceProfile.sanitize_combat_mode(int(config.get_value(
+			section,
+			GameConstants.SETTING_KEY_COMBAT_RENDER_MODE,
+			config.get_value(
+				fallback_section,
+				GameConstants.SETTING_KEY_COMBAT_RENDER_MODE,
+				GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
+			)
+		)))
+		current_simplify_players_mode = ClientPerformanceProfile.sanitize_simplify_mode(int(config.get_value(
+			section,
+			GameConstants.SETTING_KEY_SIMPLIFY_PLAYERS_MODE,
+			config.get_value(
+				fallback_section,
+				GameConstants.SETTING_KEY_SIMPLIFY_PLAYERS_MODE,
+				GameConstants.SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE
+			)
+		)))
+		current_simplify_monsters_mode = ClientPerformanceProfile.sanitize_simplify_mode(int(config.get_value(
+			section,
+			GameConstants.SETTING_KEY_SIMPLIFY_MONSTERS_MODE,
+			config.get_value(
+				fallback_section,
+				GameConstants.SETTING_KEY_SIMPLIFY_MONSTERS_MODE,
+				GameConstants.SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE
+			)
+		)))
 	else:
 		current_pet_combat_mode = GameConstants.SETTING_DEFAULT_PET_COMBAT_MODE
-		current_quality_enhancement_enabled = GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
+		current_fps_limit = GameConstants.SETTING_DEFAULT_FOREGROUND_FPS_LIMIT
+		current_performance_load_mode = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
+		current_combat_render_mode = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
+		current_simplify_players_mode = GameConstants.SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE
+		current_simplify_monsters_mode = GameConstants.SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE
+
+	if GameManager:
+		GameManager.set_foreground_fps_limit(current_fps_limit)
+		GameManager.set_performance_modes(
+			current_performance_load_mode,
+			current_combat_render_mode
+		)
+		GameManager.set_visual_simplification_modes(
+			current_simplify_players_mode,
+			current_simplify_monsters_mode
+		)
 
 func _save_game_settings() -> void :
 	var config = ConfigFile.new()
 	config.load(GameConstants.CLIENT_SETTINGS_PATH)
+	var section := _game_settings_section()
 	config.set_value(
-		GameConstants.SETTING_SECTION_GAME, 
-		GameConstants.SETTING_KEY_PET_COMBAT_MODE, 
+		section,
+		GameConstants.SETTING_KEY_PET_COMBAT_MODE,
 		current_pet_combat_mode
 	)
+	config.set_value(section, GameConstants.SETTING_KEY_FOREGROUND_FPS_LIMIT, current_fps_limit)
 	config.set_value(
-		GameConstants.SETTING_SECTION_GAME, 
-		GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED, 
-		current_quality_enhancement_enabled
+		section,
+		GameConstants.SETTING_KEY_PERFORMANCE_LOAD_MODE,
+		current_performance_load_mode
+	)
+	config.set_value(
+		section,
+		GameConstants.SETTING_KEY_COMBAT_RENDER_MODE,
+		current_combat_render_mode
+	)
+	config.set_value(
+		section,
+		GameConstants.SETTING_KEY_SIMPLIFY_PLAYERS_MODE,
+		current_simplify_players_mode
+	)
+	config.set_value(
+		section,
+		GameConstants.SETTING_KEY_SIMPLIFY_MONSTERS_MODE,
+		current_simplify_monsters_mode
 	)
 	config.save(GameConstants.CLIENT_SETTINGS_PATH)
 
@@ -2263,11 +3140,60 @@ func _on_opt_pet_mode_item_selected(index: int) -> void :
 	if NetworkManager and NetworkManager.has_method("send_set_global_pet_mode"):
 		NetworkManager.send_set_global_pet_mode(current_pet_combat_mode)
 
-func _on_opt_quality_enhancement_item_selected(index: int) -> void :
-	current_quality_enhancement_enabled = (index == 1)
+func _on_opt_fps_limit_value_changed(raw_value: float) -> void:
+	if not option_fps_limit is SpinBox:
+		return
+	var selected: int = ClientPerformanceProfile.normalize_fps_spin_step(
+		current_fps_limit, int(round(raw_value))
+	)
+	# Reflect normalized values back to the numeric editor without recursion.
+	if int(round(option_fps_limit.value)) != selected:
+		option_fps_limit.set_value_no_signal(float(selected))
+		# Prevent a stale typed text value from restoring an invalid number
+		# when the LineEdit loses keyboard focus.
+		option_fps_limit.get_line_edit().text = str(selected)
+	if selected == current_fps_limit:
+		return
+	current_fps_limit = selected
 	_save_game_settings()
 	if GameManager:
-		GameManager.set_world_enhancement_enabled(current_quality_enhancement_enabled)
+		GameManager.set_foreground_fps_limit(current_fps_limit)
+
+func _on_opt_performance_load_item_selected(index: int) -> void:
+	current_performance_load_mode = ClientPerformanceProfile.sanitize_load_mode(index)
+	_save_game_settings()
+	if GameManager:
+		GameManager.set_performance_modes(
+			current_performance_load_mode,
+			current_combat_render_mode
+		)
+
+func _on_opt_combat_render_item_selected(index: int) -> void:
+	current_combat_render_mode = ClientPerformanceProfile.sanitize_combat_mode(index)
+	_save_game_settings()
+	if GameManager:
+		GameManager.set_performance_modes(
+			current_performance_load_mode,
+			current_combat_render_mode
+		)
+
+func _on_opt_simplify_players_item_selected(index: int) -> void:
+	current_simplify_players_mode = ClientPerformanceProfile.sanitize_simplify_mode(index)
+	_save_game_settings()
+	if GameManager:
+		GameManager.set_visual_simplification_modes(
+			current_simplify_players_mode,
+			current_simplify_monsters_mode
+		)
+
+func _on_opt_simplify_monsters_item_selected(index: int) -> void:
+	current_simplify_monsters_mode = ClientPerformanceProfile.sanitize_simplify_mode(index)
+	_save_game_settings()
+	if GameManager:
+		GameManager.set_visual_simplification_modes(
+			current_simplify_players_mode,
+			current_simplify_monsters_mode
+		)
 
 
 func show_revive_prompt(caster_name: String, skill_id: int, skill_level: int, hp_pct: int, mp_pct: int) -> void :
@@ -2331,10 +3257,13 @@ func _on_open_megaphone_window_received(item_uid: int) -> void :
 func _on_btn_mall_pressed() -> void :
 	if is_instance_valid(mall_window) and mall_window.visible and mall_window.modulate.a > 0.1:
 		_close_window(mall_window)
-	else:
+		return
 
-		if NetworkManager and NetworkManager.has_method("send_mall_action"):
-			NetworkManager.send_mall_action("OpenMall")
+	mall_window = await _ensure_lazy_window("mall")
+	if not is_instance_valid(mall_window):
+		return
+	if NetworkManager and NetworkManager.has_method("send_mall_action"):
+		NetworkManager.send_mall_action("OpenMall")
 
 func _on_mall_list_received(points: int, items: Array, gifts: Array) -> void :
 	if is_instance_valid(mall_window):

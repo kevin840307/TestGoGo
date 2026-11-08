@@ -1,0 +1,20 @@
+--再生水晶
+
+
+function start()
+	AddItem(10306)
+	Say("p7使用再生水晶...")
+	Say("p7水晶發出耀眼的光芒，在這時你好像聽到一把神聖而威嚴的聲音...")
+	Ask("p我是命運之精靈菲克斯，我可以給你一個重新分配能力的機會，你需要我的幫助嗎？","是的，請讓我重新分配能力。","不需要了。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("p7你的力量好像河水般流走了...")
+		Say("p7你感覺到在你的體內有新的力量正在湧現！！","End")
+		ResetExp()
+		RemoveItem(10306)
+	end
+	QuestEnd()
+end

@@ -1,0 +1,12 @@
+--shop_a.txt
+
+function start()
+	Ask("s歡迎光臨，請問要購買藥水作治療嗎？", "請給我看看。","不需要了","reply")
+end
+
+function reply()
+	if GetChoice()==0 then
+		OpenShop(1, 100)
+	end
+	QuestEnd()
+end

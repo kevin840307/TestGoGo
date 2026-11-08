@@ -1,0 +1,58 @@
+--MQ001_D 魔藥師柏爾
+
+function start()
+	sick = GetFlag("MQ_001_1")
+	name=GetName()
+	if GetFlag("MQ_001_End")==1 then
+		Say("n1烏藍的妹妹沒什麼了吧？真是辛苦你為她跑腿了！","End")
+	elseif GetFlag("MQ_001_KnowCureWay")==1 then
+		KnowCureWay()
+	elseif sick > 5  then
+		Say("p1柏爾先生，想請問一下．．．")
+		Say("n7"..name.."向柏爾說出了烏藍妹妹的事．．．","CureWay")
+	else
+		Say("n1要注意身體健康哦！有什麼病痛都來找我吧！我最喜歡幫助別人．．．","End")
+	end
+end
+
+function KnowCureWay()
+	sick = GetFlag("MQ_001_1")
+	if sick == 6 then
+		Say("n1森林內的老伯可能會有"..Color(0,45,198).."火光種子"..Color(0,0,0).."，你不妨去找找看．．．","End")
+	elseif sick == 7 then
+		Say("n1你到城外的森林找"..Color(0,45,198).."冰蘋果"..Color(0,0,0).."吧！應該可以找得到．．．","End")
+	elseif sick == 8 then
+		Say("n1森林內的老伯可能會有"..Color(0,45,198).."魔洋蔥"..Color(0,0,0).."，你不妨去找找看．．．","End")
+	elseif sick == 9 then
+		Say("n1我已經沒有"..Color(0,45,198).."紫色樹漿"..Color(0,0,0).."了，不過你可到森林找找．．．","End")
+	else
+		Say("n1我記憶中森林中的老伯應該有"..Color(0,45,198).."跳蚤花"..Color(0,0,0).."．．．","End")
+	end
+end
+
+function CureWay()
+	sick = GetFlag("MQ_001_1")
+	if sick == 6 then
+		Say("n1晚上就會看不見？真是奇怪．．．幸好以前我也見過類似的病例．．．")
+		Say("n1用"..Color(0,45,198).."火光種子"..Color(0,0,0).."磨成粉末之後敷上眼睛，應該可以把病治好的了！")
+		Say("n1可是我手上沒有這種藥材．．．啊！我想起了．．．森林內的老伯可能會有"..Color(0,45,198).."火光種子"..Color(0,0,0).."，你不妨去找找看．．．","Ans")
+	elseif sick == 7 then
+		Say("n1發燒不退？服用"..Color(0,45,198).."冰蘋果"..Color(0,0,0).."吧！這種魔藥可以有退燒的功用．．．")
+		Say("n1可是我手上沒有這種藥材．．．啊！我想起了．．．你到城外的森林找找，應該可以找得到．．．","Ans")
+	elseif sick == 8 then
+		Say("n1哭個不停？我想應該是中了哭泣咒！他得罪了別人嗎？")
+		Say("n1中了這種咒語的人必須用"..Color(0,45,198).."魔洋蔥"..Color(0,0,0).."的汁液來敷眼，可是我沒有"..Color(0,45,198).."魔洋蔥"..Color(0,0,0).."．．．")
+		Say("n1啊！我想起了．．．森林內的老伯可能會有"..Color(0,45,198).."魔洋蔥"..Color(0,0,0).."，你不妨去找找看．．．","Ans")
+	elseif sick == 9 then
+		Say("n1全身長滿大毒瘡嗎？那可糟糕了！必須盡快用"..Color(0,45,198).."紫色樹漿"..Color(0,0,0).."塗在毒瘡上防止發炎！")
+		Say("n1可是我已經沒有"..Color(0,45,198).."紫色樹漿"..Color(0,0,0).."了，不過你可到森林找找．．．","Ans")
+	else
+		Say("n1失心病？現在好像越來越多人患上了這種病！要治癒必須使用"..Color(0,45,198).."跳蚤花"..Color(0,0,0).."來煎藥才肯．．．")
+		Say("n1我記憶中森林中的老伯會有這種藥材．．．","Ans")
+	end
+end
+
+function Ans()
+	Say("p1太好了！謝謝柏爾先生！我立即去找．．．","End")
+	SetFlag("MQ_001_KnowCureWay",1)
+end

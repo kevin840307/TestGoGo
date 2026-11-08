@@ -1,0 +1,6 @@
+--People01 芝華
+
+function start()
+	Say("n1我的哥哥他老是欺負我！")
+	Say("n1我最討厭他了！","End")
+end

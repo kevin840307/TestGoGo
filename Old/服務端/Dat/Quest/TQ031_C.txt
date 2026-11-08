@@ -1,0 +1,52 @@
+--花之魔藥師
+--(TQ031_C)
+
+--TQ031_C
+--1. Talked with 花之魔藥師
+--2. Got the flower
+
+function start()
+	state = GetFlag("TQ031_Task")
+	state_c = GetFlag("TQ031_C")
+
+	if state_c >= 2 then
+		dia_04()
+	elseif state_c >= 1 then
+		dia_03()
+	elseif state >= 2 then
+		dia_02()
+	else
+		dia_01()
+	end
+end
+
+function dia_01()
+	Say("n1在尼尼亞國境內有很多擁有魔力的植物！要好好愛護自然環境啊！","End")
+end
+
+
+--＜After TQ031_B Step02＞
+function dia_02()
+	Say("p1啊！妳就是花之魔藥師嗎？我是受人所託來找熱血之花的，妳可以給我嗎？")
+	Say("n1啊！真可惜，現在並不是熱血之花開花的季節，我現在沒有你要的花啊．．．")
+	Say("p1那怎麼辦？")
+	Say("n1呀！還有一個方法，熱血之花會受四周的受氣氛感染而開花，如果有一批人在它旁邊擺出勝利的姿態，它也許就會開花！")
+	Say("p1那麼我找人跟我去組隊就可以讓它開花吧！？")
+	Say("n1嗯！可以一試！但不要過度採集啊！")
+	Say("p1謝謝妳！","End")
+	SetFlag("TQ031_C", 1)
+end
+
+--＜After TQ031_C Step02＞
+function dia_03()
+	Say("n1熱血之花會受四周的受氣氛感染而開花，如果有一批人在它旁邊擺出勝利的姿態，它也許就會開花！")
+	Say("p1那麼我找人跟我去組隊就可以讓它開花吧！？")
+	Say("n1嗯！可以一試！但不要過度採集啊！")
+	Say("p1謝謝妳！","End")
+end
+
+--＜After TQ031_D Step04＞
+function dia_04()
+	Say("p1妳教我的方法真有效！只要有一批人在它旁邊擺出勝利的姿態，它就會真的開花了！")
+	Say("n1真的太好了～","End")
+end

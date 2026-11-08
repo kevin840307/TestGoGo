@@ -1,0 +1,20 @@
+--MQ003_C 石頭
+
+function start()
+	if GetFlag("暗之光取得")==1
+		Final()
+	elseif GetFlag("MQ003_B_Get_Hints")==1
+		Get_Item()
+	else
+	Say("n1噢，差點就給石頭絆倒了。","End")
+end
+
+function Get_Item()
+	Say("p1這些爛石頭真的是暗之光嗎？跟本就是爛石一塊嘛！真是有點懷疑……不過還是拿起來好了……","End")
+	Additem(10006,1)
+	SetFlag("暗之光取得", 1)
+end
+
+function Final()
+	Say("p7暗之光這種石頭真是太神奇了。"."End")
+end

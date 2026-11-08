@@ -1,0 +1,19 @@
+--LS_24106_5 "石之盾‧五級"
+
+function GetSkillData()
+	return 24106,5,80,31423,"石之盾‧五級","石之盾‧四級","守護劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 2 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

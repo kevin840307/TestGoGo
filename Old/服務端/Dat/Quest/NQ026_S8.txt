@@ -1,0 +1,18 @@
+--NQ026_S8 桃魔空間入口
+
+function start()
+    if CheckItem(10550) ~= 1 then
+        Say("p7沒有合適的鎖匙，不能進入。")
+    else
+        Ask("p要使用桃魔空間之匙進入桃魔空間嗎?","是的","不是","ans_handler")
+    end    
+end 
+
+function ans_handler()
+    if GetChoice()==0 then
+        RemoveItem(10550)
+        MovePlayer(10752,17088,59)
+    else
+        QuestEnd()
+    end
+end

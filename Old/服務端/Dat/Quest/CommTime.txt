@@ -1,0 +1,13 @@
+
+
+function GetTimeForDay(total)
+	return 86400*total
+end
+
+function GetTimeForHour(total)
+	return 3600*total
+end
+
+function GetTimeForMin(total)
+	return 60*total	
+end

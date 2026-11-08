@@ -1,0 +1,42 @@
+name: Server smoke Windows
+
+on:
+  push:
+    branches:
+      - feature/local-server-net8
+    paths:
+      - 'server/**'
+      - 'client/Skills/**'
+      - 'client/Assets/GameInfo/**'
+      - 'tests/SGO.Server.SmokeTests/**'
+      - '.github/workflows/server-smoke-windows.yml'
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Full game integration smoke
+        shell: pwsh
+        run: |
+          dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release 2>&1 | Tee-Object -FilePath smoke.log
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Upload smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-smoke-windows-log
+          path: |
+            smoke.log
+            test-results/**
+          if-no-files-found: ignore

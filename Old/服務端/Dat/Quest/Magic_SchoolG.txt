@@ -1,0 +1,5 @@
+--People01 愛若妮
+
+function start()
+	Say("n1娜姬老師常常告訴我們，魔法是用來幫助別人，不是用來傷害別人的。","End")
+end

@@ -1,0 +1,19 @@
+--LS_31104_1 "武器製造‧一級"
+
+function GetSkillData()
+	return 31104,1,15,31669,"武器製造‧一級","","見習道具使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 9 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

@@ -1,0 +1,61 @@
+--灼熱騎士團後補生
+--(TQ031_B)
+
+--TQ031_Task
+--1. lv > 50 and talked with TQ031_A
+--2. talked with TQ031_B, need to get the 熱血之花
+--3. talked with TQ031_A, need to get the 熱血之花 again
+--4. quest completed
+
+function start()
+	state = GetFlag("TQ031_Task")
+
+	if state >= 4 then
+		dia_06()
+	elseif state >= 3 then
+		dia_05()
+	elseif state >= 2 then
+		if CheckItem(10633)>0 then
+			dia_04()
+		else
+			dia_03()
+		end
+	elseif state >= 1 then
+		dia_02()
+	else
+		dia_01()
+	end
+end
+
+function dia_01()
+	Say("n1現在整個灼熱騎士團的人都沒有鬥志似的，有什麼人可以幫我啊！？","End")
+end
+
+--＜After TQ031_A Step01＞
+function dia_02()
+	Say("n1你想知道團長發生什麼事，讓我說給你知吧！")
+	Say("n1他們之前曾經去過地獄火山採集烈火岩，任務失敗回來後，意志就變得非常消沉。")
+	Say("n1你可以幫我去魔法之都找花之魔藥師，向她要一種叫熱血之花的魔藥回來嗎？")
+	Say("n1熱血之花可以使他們回復鬥志的！！","End")
+	SetFlag("TQ031_Task", 2)
+end
+
+--＜After TQ031_B Step02＞
+function dia_03()
+	Say("n1請你幫我去魔法之都找花之魔藥師，向她要一種叫熱血之花的魔藥回來，這可以使他們回復鬥志的！！拜託你了！","End")
+end
+
+--＜玩家身上持有熱血之花(10633)＞
+function dia_04()
+	Say("n1請你讓團長服下熱血之花吧！","End")
+end
+
+--＜After TQ031_A Step04＞
+function dia_05()
+	Say("n1採集烈火岩的任務就拜託你了！","End")
+end
+
+--＜After TQ031_A Step08＞
+function dia_06()
+	Say("n1感謝你幫我們完成採集烈火岩的任務！","End")
+end

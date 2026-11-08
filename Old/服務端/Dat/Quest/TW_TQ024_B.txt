@@ -1,0 +1,127 @@
+--大聖殿的神父(TQ024B)
+
+function start()
+	if GetFlag("TQ024_Target")<0 then
+		dia_01()
+	else
+		dia_02()
+	end
+end
+
+function dia_01()
+	Say("n1情人節是情人間最甜蜜的日子，為了替在星空的戀人給予最大的祝福。")
+	Say("n1我們將提供各式各樣的情人禮物給玩家。")
+	Say("n1有關詳情你可以向大聖殿的修女查詢，她會指引你的。","End")
+end
+
+function dia_02()
+	Ask("n你想用紅心水晶換取什麼物品呢？","用20個“紅心水晶”換取“玫瑰一朵”。","用40個“紅心水晶”換取“情人卡”。","用60個“紅心水晶”換取“濃情巧克力”。","其他。","reply02")
+end
+function dia_02b()
+--	Ask("n你想用紅心水晶換取什麼物品呢？","用100個“紅心水晶”換取“玫瑰花束”。","用101個“紅心水晶”換取“星空禮服卡”。","其他。","不需要了，謝謝你。","reply02b")
+	Ask("n你想用紅心水晶換取什麼物品呢？","用80個“紅心水晶”換取“PUMA套裝卡”。","用101個“紅心水晶”換取“星空禮服卡”。","其他。","不需要了，謝謝你。","reply02b")
+end
+function reply02()
+	ans = GetChoice()
+	if ans==0 then
+		dia_04(0)
+	elseif ans==1 then
+		dia_04(2)
+	elseif ans==2 then
+		dia_04(3)
+	else
+		dia_02b()
+	end
+end
+function reply02b()
+	ans = GetChoice()
+	if ans==0 then
+		dia_04(4)
+	elseif ans==1 then
+		dia_04(5)
+	elseif ans==2 then
+		dia_02()
+	else
+		QuestEnd()
+	end
+end
+
+function dia_04(item)
+	needed = check_needed(item)
+	if GetCountItemCount(10465)<needed then
+		dia_05(item, needed)
+	else
+		dia_04b(item, needed)
+	end
+end
+
+function dia_04b(item, needed)
+	if ItemListCountLeft(0)>0 then
+		go_get_item(item, needed)
+		name = get_item_name(item)
+		Say("n1這就是你要的"..name.."。")
+		Say("n1交出"..needed.."個紅心水晶。")
+		Say("p7得到「"..name.."」。")
+		Say("n1祝福你可以在這裡找到你的真愛。","End")
+	else
+		no_space()
+	end
+end
+
+function dia_05(item, needed)
+	name = get_item_name(item)
+	Say("n1你要有"..needed.."個紅心水晶才可換到"..name.."。","End")
+end
+
+function go_get_item(item, needed)
+	RemoveItem(10465, needed)
+	if item==0 then
+		AddItem(10466)
+	elseif item==1 then
+		AddItem(10471)
+	elseif item==2 then
+		AddItem(10467)
+	elseif item==3 then
+		AddItem(10468)
+	elseif item==4 then
+		AddItem(10527)
+	else
+		AddItem(10470, 2)
+	end
+end
+
+function check_needed(item)
+	if item==0 then
+		return 20
+	elseif item==1 then
+		return 30
+	elseif item==2 then
+		return 40
+	elseif item==3 then
+		return 60
+	elseif item==4 then
+		return 80
+	else
+		return 101
+	end
+end
+
+function get_item_name(item)
+	if item==0 then
+		return "玫瑰一朵"
+	elseif item==1 then
+		return "真愛水晶"
+	elseif item==2 then
+		return "情人卡"
+	elseif item==3 then
+		return "濃情巧克力"
+	elseif item==4 then
+		return "PUMA套裝卡"
+	else
+		return "星空禮服卡"
+	end
+end
+
+function no_space()
+	Say("p1對不起，你身上的物品太多了，請清除一些物品後再試。","End")
+end

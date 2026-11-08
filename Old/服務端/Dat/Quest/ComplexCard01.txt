@@ -1,0 +1,5 @@
+-- Complex01 
+function start()
+	StartRobotComplex(1)
+end
+

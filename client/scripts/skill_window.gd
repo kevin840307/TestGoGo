@@ -48,8 +48,13 @@ func _ready() -> void :
 
 
 func setup(player: CharacterBody2D) -> void :
+	# GameHUD installs this window hidden on world entry. Building SkillCards
+	# and loading all referenced .tres/icons here costs ~60ms and memory even
+	# when the user never opens the skill book (especially expensive for
+	# multiple background clients). GameHUD._toggle_window() already calls
+	# update_ui() immediately before each first/open, and SkillSync refreshes
+	# only an already visible window. Keep the authoritative model binding.
 	target_player = player
-	update_ui()
 
 
 func update_ui() -> void :
@@ -59,12 +64,16 @@ func update_ui() -> void :
 		_show_unavailable_state()
 		return
 
-	var data = target_player.data_model
-	if not data:
+	# CharacterBody2D does not statically declare the game player's
+	# data_model field; read it through Object.get after checking presence.
+	var data: Variant = target_player.get("data_model")
+	if data == null:
 		_show_unavailable_state()
 		return
 
-	var learned_skills: Array = data.skill_list.duplicate(true) if "skill_list" in data else []
+	var learned_skills: Array = []
+	if "skill_list" in data:
+		learned_skills = (data.get("skill_list") as Array).duplicate(true)
 	learned_skills.sort_custom( func(a, b):
 		return int(a.get("skill_id", 0)) < int(b.get("skill_id", 0))
 	)
@@ -97,20 +106,27 @@ func update_ui() -> void :
 	_update_skill_count(learned_skills.size())
 	_update_category_buttons(category_counts)
 
+	var added_cards := 0
 	for skill_entry in display_skills:
-		_add_skill_card(skill_entry)
+		if _add_skill_card(skill_entry):
+			added_cards += 1
 
 	if display_skills.is_empty():
 		_show_empty_state(
 			"目前沒有技能" if learned_skills.is_empty() else "此分類沒有技能", 
 			_get_empty_description()
 		)
+	elif added_cards == 0:
+		_show_empty_state(
+			"技能卡載入失敗",
+			"技能資料仍在；請查看 [SkillWindow] 錯誤訊息"
+		)
 	else:
 		content_scroll.visible = true
 		empty_state.visible = false
 
 
-func _add_skill_card(skill_entry: Dictionary) -> void :
+func _add_skill_card(skill_entry: Dictionary) -> bool :
 	var skill_id: = int(skill_entry.get("skill_id", 0))
 	var skill_level: = int(skill_entry.get("level", 1))
 	var skill_resource: = skill_entry.get("resource") as Resource
@@ -119,12 +135,63 @@ func _add_skill_card(skill_entry: Dictionary) -> void :
 	if skill_resource and SkillLoader:
 		icon_texture = SkillLoader.get_icon(int(skill_resource.get("icon_id")))
 
-	var card: = SKILL_CARD_SCENE.instantiate()
+	# Keep SkillWindow independent from the SkillCard class symbol. A card
+	# script regression must not make this entire window fail to parse/load.
+	var card := SKILL_CARD_SCENE.instantiate()
+	if card == null or not card.has_method("setup"):
+		push_error("[SkillWindow] SkillCard scene/script failed to load")
+		if is_instance_valid(card):
+			card.queue_free()
+		return false
+
 	skill_grid.add_child(card)
-	card.setup(skill_resource, skill_id, skill_level, icon_texture, _get_skill_label_color(skill_resource))
-	card.skill_clicked.connect(_on_skill_clicked)
-	card.mouse_entered.connect(_show_skill_tooltip.bind(skill_id, skill_level, icon_texture))
-	card.mouse_exited.connect(_hide_skill_tooltip)
+	var show_aoe_center_toggle := (
+		is_instance_valid(target_player)
+		and target_player.has_method("is_skill_aoe_center_toggle_available")
+		and bool(target_player.call("is_skill_aoe_center_toggle_available", skill_id))
+	)
+	var self_center := (
+		show_aoe_center_toggle
+		and target_player.has_method("is_skill_aoe_self_center")
+		and bool(target_player.call("is_skill_aoe_self_center", skill_id))
+	)
+	card.call(
+		"setup",
+		skill_resource,
+		skill_id,
+		skill_level,
+		icon_texture,
+		_get_skill_label_color(skill_resource),
+		show_aoe_center_toggle,
+		self_center
+	)
+
+	if card.has_signal("skill_clicked"):
+		card.connect(
+			"skill_clicked",
+			Callable(self, "_on_skill_clicked")
+		)
+	if card.has_signal("aoe_center_mode_changed"):
+		card.connect(
+			"aoe_center_mode_changed",
+			Callable(self, "_on_aoe_center_mode_changed")
+		)
+	if card.has_signal("mouse_entered"):
+		card.connect(
+			"mouse_entered",
+			_show_skill_tooltip.bind(
+				skill_id,
+				skill_level,
+				icon_texture
+			)
+		)
+	if card.has_signal("mouse_exited"):
+		card.connect(
+			"mouse_exited",
+			Callable(self, "_hide_skill_tooltip")
+		)
+
+	return true
 
 
 func _clear_skill_grid() -> void :
@@ -243,7 +310,15 @@ func _get_empty_description() -> String:
 
 func _on_skill_clicked(skill_id: int) -> void :
 	if is_instance_valid(target_player) and target_player.has_method("prepare_skill"):
-		target_player.prepare_skill(skill_id)
+		target_player.call("prepare_skill", skill_id)
+
+
+func _on_aoe_center_mode_changed(skill_id: int, self_center: bool) -> void:
+	if (
+		is_instance_valid(target_player)
+		and target_player.has_method("set_skill_aoe_self_center")
+	):
+		target_player.call("set_skill_aoe_self_center", skill_id, self_center)
 
 
 func _show_skill_tooltip(skill_id: int, level: int, icon_texture: Texture2D) -> void :

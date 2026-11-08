@@ -1,0 +1,6 @@
+--People01 史丹
+
+function start()
+	Say("n1聽說騎士學校和魔法學校的校長是兄弟！")
+	Say("n1可是他們卻互相敵視似的...","End")
+end

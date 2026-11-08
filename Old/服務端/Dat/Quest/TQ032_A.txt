@@ -1,0 +1,158 @@
+--魔法老師‧靈嘉
+--(TQ032_A)
+
+--TQ032_Task
+--1: talked with TQ032_A
+--2: talked with TQ032_B
+--3: can passed to map
+--4: get the 10637
+
+#include "CommComplex.txt"
+
+function start()
+	--if GetFlag("TQ035_Done")==1 and GetFlag("TQ032_Done")==1 then
+	--	RemoveFlag("TQ032_Task")
+	--	RemoveFlag("TQ032_C")
+	--	RemoveFlag("TQ032_C_Try")
+	--	RemoveFlag("TQ032_Done")
+	--end
+
+	state = GetFlag("TQ032_Task")
+	if state>=4 then
+		dia_10()
+	elseif state>=3 then
+		equip, color = GetComplexArray()
+		if CheckItem(10637)>0 then
+			dia_08()
+		elseif equip==1 and color==2 and CheckItem(10636)>0 then
+			dia_06()
+		else
+			dia_05()
+		end
+	elseif state>=2 then
+		if CheckItem(10636)>0 then
+			dia_04()
+		else
+			dia_03()
+		end
+	elseif GetData("Level")>=50 then
+		dia_01()
+	else
+		dia_02()
+	end
+end
+
+--＜玩家等級低於50＞→Step02
+function dia_01()
+	Say("n1呵欠～")
+	Say("n1 呵欠～呵欠～")
+	Say("n1 z～Z～z～Z～")
+	Say("p1你發生什麼事了？怎可以在這裡睡覺的？")
+	Say("n1 z～Z～z～Z～．．．")
+	Say("p7在旁的魔法學生‧克克拉就對你說．．．")
+	Say("p7 克克拉：你可不可以幫我一個忙？","End")
+	SetFlag("TQ032_Task", 1)
+end
+
+function dia_02()
+	Say("n1呵欠～")
+	Say("n1呵欠～呵欠～")
+	Say("n1z～Z～z～Z～")
+	Say("p1你發生什麼事了？怎可以在這裡睡覺？")
+	Say("n1z～Z～z～Z～．．．","End")
+end
+
+
+--＜After TQ032_B Step02＞
+function dia_03()
+	Say("n1呵欠～")
+	Say("n1呵欠～呵欠～")
+	Say("n1z～Z～z～Z～")
+	Say("p7要快點取得活力結晶回來！","End")
+end
+
+
+--＜玩家身上持有活力結晶(10636)＞
+function dia_04()
+	Say("p1使用活力結晶．．．")
+	Say("n7．．．．．．")
+	Say("n7．．．．．．")
+	Say("p3靈嘉老師！靈嘉老師！你醒一醒啊！")
+	Say("n1呵欠～不要在我的耳邊大叫．．．這裡是！？")
+	Say("n7克克拉向靈嘉老師說出事件的詳情．．．")
+	Say("n1"..GetName().."，謝謝你的幫忙！我記得我之前曾去過旋風洞窟中找尋綠幽之氣作研究之用，可是最後卻無功而還，而且回來之後，就一直變得沒精打釆了。")
+	Say("n1而我現在剛剛復原，行動有些不便，你可以替我去旋風洞窟中找尋綠幽之氣回來嗎？")
+	Say("p1這包在我身上吧！")
+	Say("n1那太好了！可是旋風洞窟充滿了毒氣，而且那地方好像受了詛咒般會使人失去活力．．．")
+	Say("n1你可嘗試用活力結晶保持活力充沛和以皇國狂風戰將的形態，利用風的力量在身邊形成一道氣牆，以阻隔毒氣。還有一點提示，在入口附近風勢會比較弱一點。")
+	Say("n1你準備好再來找我吧！","End")
+	RemoveItem(10636)
+	SetFlag("TQ032_Task", 3)
+end
+
+
+--＜After TQ032_A Step04＞
+--＜玩家不符合下列要求＞
+--1．皇國狂風戰將形態
+--2．持有活力結晶(10636)
+function dia_05()
+	Say("n1旋風洞窟四周都充滿了毒氣，而且那地方好像受了詛咒般會使人失去活力．．．")
+	Say("n1你可嘗試用活力結晶保持活力充沛和以皇國狂風戰將的形態，利用風的力量在身邊形成一道氣牆，以阻隔毒氣。還有一點提示，在入口附近風勢會比較弱一點。")
+	Say("n1你準備好再來找我吧！","End")
+end
+
+
+--＜After TQ032_A Step04＞
+--＜玩家符合下列要求＞
+--1．皇國狂風戰將形態
+--2．持有活力結晶(10636)
+function dia_06()
+	Ask("n你已經準備好前往旋風洞窟了嗎？","是的。","不是。","reply_06")
+end
+
+function reply_06()
+	if GetChoice()==0 then
+		dia_07()
+	end
+	QuestEnd()
+end
+
+--＜傳送玩家至(X,Y,Z)＞
+function dia_07()
+	MovePlayer(3456,2688,62)
+	Say("p7使用活力結晶保持活力。")
+	RemoveItem(10636)
+end
+
+
+--＜玩家身上持有綠幽之氣(10637)＞
+function dia_08()
+--＜玩家身上裝備空間少於1＞→Step09
+	if ItemListCountLeft(1)<1 then 
+		dia_09()
+	else
+		Say("n1啊！這真的是綠幽之氣！！")
+		Say("n1太感謝你了！我就將這綠幽下裝送給你吧！")
+		Say("p7得到綠幽下裝")
+		Say("p7得到30000Exp","End")
+		RemoveItem(10637)
+		AddItem(10638)
+		gainexp(30000)
+		SetFlag("TQ032_Task", 4)
+		SetFlag("TQ032_Done", 1)
+	end
+end
+
+function dia_09()
+	Say("p7身上沒有足夠的裝備空間啊．．．先整理一下好了。","End")
+end
+
+--＜After TQ032_A Step08＞
+function dia_10()
+	Say("n7感謝你幫我們找到綠幽之氣！","End")
+end
+
+function gainexp(value)
+	ModifyData("ExpUse", value)
+	ModifyData("ExpAcc", value)
+end

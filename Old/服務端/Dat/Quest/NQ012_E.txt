@@ -1,0 +1,39 @@
+--NQ012_E  莎姬
+
+--statue(NQ012_Task) =1 : receive the mission
+-- =2 : after talking with 凱兒
+-- =3 : need to find 金妮露
+-- =4 : after finding the 金妮露
+-- =5 : NQ012_Task is completed
+
+--statue(NQ014_Task) =1 : receive the mission
+--		     =2 : can go to find 福爾
+
+function start()
+
+	statue=GetFlag("NQ012_Task")
+	statue13=GetFlag("NQ013_Task")
+	statue14=GetFlag("NQ014_Task")
+
+	if statue14>=1 then
+		Say("n1院長是有回過來的喔～～")
+		Say("p1真的嗎！？")
+		Say("n1對丫～～他的鬼魂常常出現呢～～！好可怕的！")
+		Say("p1……","End")
+
+	elseif statue13>=1 then
+		Say("n1媽媽～～我要媽媽～～泊裘斯快要死了～～嗚嗚～～","End")
+	
+
+
+	elseif statue==3 then
+		Say("n1為什麼金妮露會不見了的啊～？她給人抓走了嗎？","End")
+
+	else
+
+		Say("n1嗯…肚子有點餓～","End")
+	end
+
+
+
+end

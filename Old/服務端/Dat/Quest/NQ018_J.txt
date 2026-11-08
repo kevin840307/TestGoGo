@@ -1,0 +1,75 @@
+--NQ018_J 皇家學會管理員
+
+-- NQ018_Task
+-- 1: quest started
+-- 2: quest completed
+
+--NQ018_Done
+-- 1: Can start soc
+
+function start()
+	if ClubCheckMember() == -1 and GetFlag("NQ018_Done")==1 then
+		dialogue_02()
+	else
+		dialogue_03()
+	end
+	QuestEnd()
+end
+
+function dialogue_01()
+	Say("n1管理學會是一門高深的學問。","End")
+end
+
+function dialogue_02()
+	Say("n1歡迎你來成立學會，學會是皇城認可的組織，每個學會有專用的頻道，以及得到皇城認可的研究。")
+	Say("n1在成立初期，你可招收15個會員並把其中２人任命為副會長，當然會長是你喔！")
+	dialogue_03()
+	Ask("n現在你要成立學會嗎？","我記下了，現在我想馬上成立學會。","我還是先考慮一會才成立學會。","reply_02")
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		goClub()
+	end
+end
+
+function goClub()
+	InputClubName("next")
+end
+
+function next()
+	choice = GetChoice()
+	if choice == 0 then
+		RemoveFlag("NQ018_Task")
+		RemoveFlag("NQ018_Done")
+		Say("n1我現在宣佈，學會『"..GetClubName().."』正式成立！","End")
+	elseif choice == 1 then
+		Say("n1想清楚再來找我吧！","End")	
+	elseif choice == 2 then
+		Say("n1學會名稱不合格！", "End")
+	else
+		Say("n1噢！現在經已有太多學會了，你遲些再來申請吧！")
+		Say("n3這麼多的學會，叫我如何管理呢！？", "End")
+	end
+end
+
+function dialogue_03()
+	name = GetClubName()
+	if name~="" then
+		Say("n1唔...我認得你，你是屬於"..name.."的。")
+	end
+	ans = random(5)
+	if ans == 1 then
+		Say("n1每週皇城也會在"..Color(0,45,198).."學會維持日"..Color(0,0,0).."檢查學會的人數是否不足"..Color(0,45,198).."10人"..Color(0,0,0).."，若人數不足皇城便會立即宣告學會解散。")
+		Say("n1還有，若然脫離或解散了所創立的學會，想另立新會的話，必須再向皇家學會申請員申請。這點成立學會的人要牢牢記下啊。")
+	elseif ans == 2 then
+		Say("n1成立學會的人必須不屬於任何學會，才能向皇家學會申請員申請成立。")
+	elseif ans == 3 then
+		Say("n1當會長確實不易，雖然有時有種吃力不討好的感覺，但看見學會一天天成長和會員的快樂，便會自然地充滿喜悅。")
+	elseif ans == 4 then
+		Say("n1很多會員也想成為會長，認為當會長一定很棒，但當上了卻改變了他的看法。")
+	else
+		Say("n1有消息指出，學會有一定的盟友後便可成立星盟，並且可以分享友會的研究，所以學會研究什麼要好好想清楚。")
+	end
+end
+

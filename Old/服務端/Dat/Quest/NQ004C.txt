@@ -1,0 +1,20 @@
+-- NQ004_C 箱子一號
+
+function start()
+
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		if RemoveItem(10019) == 1 then
+			Say("p6這個應該就是老伯說的箱子了吧？不知道裡要有什麼呢？")
+			Say("p3哎呀！是一支藥水！太棒了！")
+			Say("p7得到治療特效藥","End")
+			AddItem(72, 1)	
+			SetFlag("NQ004_Box1opened",1)
+		
+		else
+			Say("p6這個箱子……呃！打不開。", "End")
+
+		end
+	end
+end

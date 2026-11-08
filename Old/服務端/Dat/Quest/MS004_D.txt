@@ -1,0 +1,71 @@
+--技術員‧泰雲(MS004_D)
+
+--MS004_Task
+-- 1: quest start, go to 泰雲
+-- 2: go to 依加魯穩定器
+-- 3: go to 迪爾
+-- 4: go to 資訊大樓
+-- 5: go to 嘉迪尼事務長
+-- 6: go to 格靈森林
+-- 7: got the 野花電子卡
+-- 8: 基地destoryed
+-- 9: quest completed
+
+function start()
+	status = GetFlag("MS004_Task")
+	if status >= 9 then
+		dialogue_06()
+	elseif status >= 4 then
+		dialogue_05()
+	elseif status >= 3 then
+		dialogue_04()
+	elseif status >= 2 then
+		dialogue_03()
+	elseif status >= 1 then
+		dialogue_02()
+	else
+		dialogue_01()		
+	end
+end
+
+function dialogue_01()
+	Say("n1你就是替我們找到烏洛特金屬回來的"..GetName().."嗎？")
+	Say("n1謝謝你的幫忙，可是建造星之門的工程又出現了阻滯．．．","End")
+end
+
+--玩家完成了MS004C－Step03
+function dialogue_02()
+	Say("p1我可以問你一些有關穩定器爆炸的事嗎？")
+	Say("n1好的，請問吧！")
+	Say("p1聽說當時是你操作穩定器的，不知道在爆炸前有沒有發生過什麼不尋常事情呢？")
+	Say("n1沒有啊！就和平時一樣，我將高純度的依加魯能量液注入穩定器，想將能量液穩定成結晶狀，就在最後的步驟中發生了爆炸．．．穩定器在使用前已經做過詳細檢查。")
+	Say("p1是穩定器發生故障嗎？")
+	Say("n1不可能，因為穩定器在使用前剛好做完詳細檢查和保養的工作。")
+	Say("p1那會是能量液有問題？")
+	Say("n1也不可能，高純度的依加魯能量液是藍色的，如果有一點點雜質的話它也會是紅色的。")
+	Say("p1是嗎？我可以去拿一點能量液的樣本吧？")
+	Say("n1好的，依加魯穩定器仍留有一些能量液，你自己去拿吧。")
+	Say("n1之後你可以去"..Color(0,45,198).."機械之城‧絲蘭"..Color(0,0,0).."那兒附近找能源"..Color(0,45,198).."研究員‧迪爾"..Color(0,0,0).."，他比我對能量液更加有研究。可是他是個很脾氣很古怪的人。","End")
+	SetFlag("MS004_Task", 2)
+end
+
+--玩家完成了MS004D－Step02
+function dialogue_03()
+	Say("n1依加魯穩定器仍留有一些能量液，你自己去拿吧。")
+	Say("n1之後你可以去"..Color(0,45,198).."機械之城‧絲蘭"..Color(0,0,0).."那兒附近找能源"..Color(0,45,198).."研究員‧迪爾"..Color(0,0,0).."，他比我對能量液更加有研究。可是他是個很脾氣很古怪的人。","End")
+end
+
+--玩家完成了MS004E－Step02
+function dialogue_04()
+	Say("n1你可以去"..Color(0,45,198).."機械之城‧絲蘭"..Color(0,0,0).."那兒附近找能源"..Color(0,45,198).."研究員‧迪爾"..Color(0,0,0).."，他比我對能量液更加有研究。可是他是個很脾氣很古怪的人。","End")
+end
+
+--玩家完成了MS004F－Step03B
+function dialogue_05()
+	Say("n1請你努力去查出穩定器爆炸的原因。","End")
+end
+
+--玩家完成了MS004C－Step07
+function dialogue_06()
+	Say("n1要加緊重建星之門的進度，不然會被祖加尼先生責罵的。","End")
+end

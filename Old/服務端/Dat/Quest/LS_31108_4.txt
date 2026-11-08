@@ -1,0 +1,19 @@
+--LS_31108_4 "地動山移‧四級"
+
+function GetSkillData()
+	return 31108,4,70,31685,"地動山移‧四級","地動山移‧三級","道具使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 9 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

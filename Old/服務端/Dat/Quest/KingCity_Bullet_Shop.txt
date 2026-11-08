@@ -1,0 +1,5 @@
+--Shop05 King City ¤l¼u©±
+
+function start()
+	OpenShop (5,100)
+end

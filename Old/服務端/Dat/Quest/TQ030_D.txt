@@ -1,0 +1,14 @@
+--出口
+--(TQ030_D)
+
+function start()
+	Say("p7在離開封印山洞之後，餘下的獵殺限額便會取消。")
+	Ask("p確定要離開封印山洞，回到尼尼亞皇城嗎？","是的","不是","reply_01")
+end
+
+function reply_01()
+	if GetChoice()==0 then
+		MovePlayer(10000,10000,15)
+	end
+	QuestEnd()
+end

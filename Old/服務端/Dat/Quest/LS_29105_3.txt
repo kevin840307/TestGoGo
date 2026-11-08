@@ -1,0 +1,19 @@
+--LS_29105_3 "氣彈射‧三級"
+
+function GetSkillData()
+	return 29105,3,35,31602,"氣彈射‧三級","氣彈射‧二級","銃戰士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 4 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

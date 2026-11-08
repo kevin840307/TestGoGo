@@ -1,0 +1,62 @@
+--MQ050_B 大牧師雪蘭
+
+--MQ050_Task
+-- 1: quest start, find 大牧師
+-- 2: player get the 魔動爐
+-- 3: player returned the 魔動爐
+
+--MQ050_MPBank
+-- store the total MP Banked
+
+function start()
+	status = GetFlag("MQ050_Task")
+	if status<0 or status>=3 then
+		dialogue_01()
+	elseif status == 2 then
+		if GetFlag("MQ050_MPBank")>=500 then
+			dialogue_04()
+		else
+			dialogue_03()
+		end
+	else
+		dialogue_02()
+	end
+end
+
+function dialogue_01()
+	Say("n1……專心祈禱吧。","End")
+end
+
+function dialogue_02()
+	Say("p1小姐，請問你知道哪兒有魔動爐嗎？")
+	Say("n1……知道啊。")
+	Say("p1可以借給我嗎？")
+	Say("n1在那邊的箱子中，自己去拿吧。")
+	Say("p1可…可是自己拿走好像有點不對！大牧師在哪兒？我要先請示她！")
+	Say("n1……我就是大牧師雪蘭，有什麼不妥？")
+	Say("p1呃……")
+	getTheOven()
+end
+
+function getTheOven()
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		SetFlag("MQ050_Task",2)
+		Say("p7得到“魔動爐”")
+		SetFlag("MQ050_MPBank", 0)
+		AddItem(10226)
+		dialogue_03()
+	end
+end
+
+function dialogue_03()
+	Say("n1用完之後請快點還給我。","End")
+end
+
+function dialogue_04()
+	Say("n1……我想你已經用完了吧？請把魔動爐還給我。","End")
+	if RemoveItem(10226)==1 then
+		SetFlag("MQ050_Task",3)
+	end
+end

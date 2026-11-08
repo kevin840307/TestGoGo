@@ -1,0 +1,5 @@
+--People01 祖
+
+function start()
+	Say("n1我的工作是收集垃圾，皇城太多人居住了…沒有我是不行的。","End")
+end

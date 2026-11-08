@@ -1,0 +1,55 @@
+--Play星空E博士(TQ018A)
+
+--TQ018_Done
+
+function start()
+	if GetFlag("TQ018_Done")>0 then
+		dia_04()
+	elseif GetCountItemCount(10441)>0 then
+		dia_01()
+	else
+		dia_03()
+	end
+end
+
+function dia_01()
+	Ask("n哈囉！我是Play星空E博士，你要用e-play 機甲試用証去換取依比機甲卡嗎？","是的，請給我一張依比機甲卡。","不了，謝謝。","reply_01")
+end
+
+function reply_01()
+	if GetChoice()==0 then
+		dia_02()
+	end
+	QuestEnd()
+end
+
+function dia_02()
+	if GetHorseCountLeft()<1 then
+		Say("n1對不起，你身上的機甲太多了，請清除一些機甲後再來。","End")
+	elseif GetHorseEquipCountLeft()<1 then
+		Say("n1對不起，你身上的機甲裝備太多了，請清除一些機甲裝備後再來。","End")
+	else
+		Say("n1好的，讓我說明一下吧，這是機甲的"..Color(0,45,198).."試用裝"..Color(0,0,0).."，壞掉了之後便不能修理的。")
+		Say("n1如果你要一架真正屬於你的機甲，你只要在等級20之後去"..Color(0,45,198).."機械之城找穆蘭卡博士"..Color(0,0,0).."，她便會指示你如果取得機甲的了。")
+		Say("n1而當你30級之後，更可以使用合體卡片，將機甲合體成更強大的巨型機械人。")
+		Say("n1記著機甲要有電池才可使用啊！")
+		Say("p7得到依比機甲卡。","dia_02b")
+	end
+end
+
+function dia_02b()
+	Say("p7得到e-play勁量電池10枚。","End")
+	AddItem(6002)
+	AddItem(6906,10)
+	RemoveItem(10441)
+	SetFlag("TQ018_Done", 1)
+end
+
+function dia_03()
+	Say("n1哈囉！我是Play星空E博士，你只要用e-play 機甲試用証就可以在這裡換取依比機甲卡了。","End")
+end
+
+function dia_04()
+	Say("n1機甲是一樣很強勁的武器吧！如果你要一架真正屬於你的機甲，你只要在等級20之後去"..Color(0,45,198).."機械之城找穆蘭卡博士"..Color(0,0,0).."，她便會指示你如何取得機甲的了。")
+	Say("n1而當你30級之後，更可以使用合體卡片，將機甲合體成更強大的巨型機械人。","End")
+end

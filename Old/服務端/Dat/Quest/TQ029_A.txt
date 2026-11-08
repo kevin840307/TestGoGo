@@ -1,0 +1,52 @@
+--TQ029_A
+
+function start()
+    init_item()
+    if (CheckItem(10578) == 0) and (ItemListCountLeft(0) < 1) then
+        Say("p7對不起，你身上的物品太多了，請整理一下再回來找我吧。")
+    elseif GetCountItemCount(10578) > 299 then
+        Say("p7對不起，你身上的出奇復活蛋太多了，請整理一下再回來找我吧。")
+    elseif GetCountItemCount(10577) >= 30 then
+        step02()
+    else      
+        step01()
+    end                      
+end
+
+function step01()
+    Say("n1唉！~黑暗森林女巫又把我們慶祝復活節用的巧克力偷去...")
+    Say("n1你可以去戰鬥平原替我找回巧克力嗎？")
+    Say("n1如果你能夠將30個復活節巧克力帶回來給我，我就送你一隻出奇復活蛋！")
+    Say("n1使用出奇復活蛋可能會得到限量30個的機動勳章啊！")
+    Say("n1有了它就可以隨時返回機械之城了，很方便呢！")
+    Say("n7現在已經派出了"..GetWorldFlag("TQ029_MobileMedal").."個機動勳章。")    
+end
+
+function step02()
+    Say("n1多謝你替我找回復活節巧克力，今年的復活節又有美味的巧克力去慶祝復活節了！")
+    Say("n1送你一隻出奇復活蛋吧！")
+    Say("n1復活節是記念耶穌被釘十字架，三天後復活的事情啊！")
+    Say("n1不要忘記復活節的意義^_^")
+    Say("p7交出30個復活節都巧克力。")
+    Say("p7得到出奇復活蛋。","step02get")
+end
+
+function step02get()
+    RemoveItem(10577,30)
+    AddItem(10578)
+end
+
+function init_item()
+    if GetWorldFlag("TQ029_MobileMedal")<0 then
+        SetWorldFlag("TQ029_MobileMedal",0)
+    end    
+    if GetWorldFlag("TQ029_FighterSword")<0 then
+        SetWorldFlag("TQ029_FighterSword",0)
+    end
+    if GetWorldFlag("TQ029_MagicWond")<0 then
+        SetWorldFlag("TQ029_MagicWond",0)
+    end
+    if GetWorldFlag("TQ029_MeteorGun")<0 then
+        SetWorldFlag("TQ029_MeteorGun",0)
+    end
+end

@@ -1,0 +1,6 @@
+--People01 荷米恩
+
+function start()
+	Say("n1大陸上只有兩所學校，真是可惜……")
+	Say("n1我比較喜愛其他學科，好像古文系之類…","End")
+end

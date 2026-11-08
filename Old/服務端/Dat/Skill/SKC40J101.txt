@@ -1,0 +1,30 @@
+--SKC40J101
+
+function start()
+	MinHit=2
+	MinHitDelta=3
+	BlockByShield = 0
+	consume = "MP"
+	--conTotal = 20
+
+	APcount = "AP"
+	DPcount = "DP"
+	varyDelta = 20
+
+	defender=GetTargetPtr()
+	attackType=GetType()
+	defenderType=GetTargetType(defender)
+	effect = 1
+	conTotal = 0
+
+	ClearRedManPunish()		
+	Attack()
+end
+
+function ClearRedManPunish()
+	if GetTargetData(defender, "RedMan") >= 4 then
+		SetTargetData(defender, "RedMan", 3)
+	end
+end
+
+#include "skillcommon.txt"

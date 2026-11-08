@@ -1,0 +1,44 @@
+--石頭(MQ003_C)
+
+--MQ003_Task
+--1 Quest started
+
+--MQ003_Stone
+--1 already get the stone
+
+--MQ004_Task
+--1 Quest started
+
+function start()
+	if GetFlag("MQ003_Stone")>=1 then
+		dialogue_03()
+	elseif GetFlag("MQ003_Task")>=1 or GetFlag("MQ004_Task")>=1 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+--<任務未開始>
+function dialogue_01()
+	Say("p1噢，差點就給石頭絆倒了。","End")
+end
+
+--<任務進行時>
+function dialogue_02()
+	Say("p1這些爛石頭真的是暗之光嗎？跟本就是爛石一塊嘛！真是有點懷疑……不過還是拿起來好了……","dialogue_02b")
+end
+function dialogue_02b()
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到「暗之光』","End")
+		AddItem(10006)
+		SetFlag("MQ003_Stone", 1)
+	end
+end
+
+--<得到暗之光後>
+function dialogue_03()
+	Say("p7暗之光這種石頭真是太神奇了。","End")
+end

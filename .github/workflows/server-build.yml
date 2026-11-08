@@ -1,0 +1,167 @@
+name: Server build
+on:
+  push:
+    paths: ['server/**', 'game-editor/**', 'client/**/*.gd', 'client/**/*.tscn', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/SGO.Server.WireLoadProbe/**', 'tests/SGO.ItemCoverageReport/**', 'tests/SGO.MappingCoverageReport/**', 'tests/SGO.Server.LoadProbe/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', 'tests/test_packet_log_privacy.py', 'tests/test_client_network_contract.py', 'tests/test_client_aoi_order_contract.py', 'tests/test_mouse_autorun_contract.py', 'tests/test_ground_pickup_visibility_contract.py', 'tests/test_gm_security.py', 'tests/test_mall_external_security.py', 'tests/quest_host_audit.py', 'tests/test_quest_host_audit.py', 'tests/test_smoke_suite_structure.py', 'tests/test_smoke_helper_scope_contract.py', 'tests/test_load_probe_structure.py', 'tests/test_wire_load_probe_structure.py', 'tests/test_feature_gap_tracker.py', 'tests/test_release_logging_config.py', 'tests/test_admin_ui_structure.py', 'tests/test_global_rate_contract.py', '.github/workflows/server-build.yml']
+  pull_request:
+    paths: ['server/**', 'game-editor/**', 'client/**/*.gd', 'client/**/*.tscn', 'tests/SGO.Server.SmokeTests/**', 'tests/SGO.Server.WireSmokeTests/**', 'tests/SGO.Server.WireLoadProbe/**', 'tests/SGO.ItemCoverageReport/**', 'tests/SGO.MappingCoverageReport/**', 'tests/SGO.Server.LoadProbe/**', 'tests/packet_contract_audit.py', 'tests/test_packet_contract_audit.py', 'tests/packet_schema_audit.py', 'tests/test_packet_schema_audit.py', 'tests/packet_response_audit.py', 'tests/test_packet_response_audit.py', 'tests/test_packet_log_privacy.py', 'tests/test_client_network_contract.py', 'tests/test_client_aoi_order_contract.py', 'tests/test_mouse_autorun_contract.py', 'tests/test_ground_pickup_visibility_contract.py', 'tests/test_gm_security.py', 'tests/test_mall_external_security.py', 'tests/quest_host_audit.py', 'tests/test_quest_host_audit.py', 'tests/test_smoke_suite_structure.py', 'tests/test_smoke_helper_scope_contract.py', 'tests/test_load_probe_structure.py', 'tests/test_wire_load_probe_structure.py', 'tests/test_feature_gap_tracker.py', 'tests/test_release_logging_config.py', 'tests/test_admin_ui_structure.py', 'tests/test_global_rate_contract.py', '.github/workflows/server-build.yml']
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Packet contract audit
+        run: |
+          python3 -m unittest discover -s tests -p 'test_packet_contract_audit.py' -v
+          python3 -m unittest discover -s tests -p 'test_packet_schema_audit.py' -v
+          python3 -m unittest discover -s tests -p 'test_packet_response_audit.py' -v
+          python3 -m unittest discover -s tests -p 'test_packet_log_privacy.py' -v
+          python3 -m unittest discover -s tests -p 'test_client_network_contract.py' -v
+          python3 -m unittest discover -s tests -p 'test_client_visual_performance_contract.py' -v
+          python3 -m unittest discover -s tests -p 'test_afk_mode_contract.py' -v
+          python3 -m unittest discover -s tests -p 'test_client_aoi_order_contract.py' -v
+          python3 -m unittest discover -s tests -p 'test_mouse_autorun_contract.py' -v
+          python3 -m unittest discover -s tests -p 'test_ground_pickup_visibility_contract.py' -v
+          python3 -m unittest discover -s tests -p 'test_gm_security.py' -v
+          python3 -m unittest discover -s tests -p 'test_mall_external_security.py' -v
+          python3 -m unittest discover -s tests -p 'test_quest_host_audit.py' -v
+          python3 -m unittest discover -s tests -p 'test_smoke_suite_structure.py' -v
+          python3 -m unittest discover -s tests -p 'test_smoke_helper_scope_contract.py' -v
+          python3 -m unittest discover -s tests -p 'test_load_probe_structure.py' -v
+          python3 -m unittest discover -s tests -p 'test_wire_load_probe_structure.py' -v
+          python3 -m unittest discover -s tests -p 'test_feature_gap_tracker.py' -v
+          python3 -m unittest discover -s tests -p 'test_release_logging_config.py' -v
+          python3 -m unittest discover -s tests -p 'test_admin_ui_structure.py' -v
+          python3 -m unittest discover -s tests -p 'test_global_rate_contract.py' -v
+          python3 tests/packet_contract_audit.py --strict --output packet-contract-report.json
+          python3 tests/packet_schema_audit.py --strict --output packet-schema-report.json
+          python3 tests/packet_response_audit.py --strict --output packet-response-report.json
+          python3 tests/quest_host_audit.py --strict --output quest-host-report.json
+      - name: Game editor tests
+        run: |
+          python3 -m py_compile game-editor/editor.py game-editor/sgo_editor/*.py
+          node --check game-editor/web/app-core.js
+          node --check game-editor/web/app-health.js
+          node --check game-editor/web/app-skills.js
+          node --check game-editor/web/app-world.js
+          node --check game-editor/web/app-map-math.js
+          node --check game-editor/web/app-map-editor.js
+          node --check game-editor/web/app-history.js
+          node --check game-editor/web/app-help.js
+          node --check game-editor/web/app-tools.js
+          node game-editor/tests/test_map_math.js
+          python3 -m unittest discover -s game-editor/tests -v
+      - name: Godot headless AOI regressions (when Godot is available)
+        run: |
+          set -euo pipefail
+          GODOT_CMD=""
+          if command -v godot >/dev/null 2>&1; then
+            GODOT_CMD="$(command -v godot)"
+          elif command -v godot4 >/dev/null 2>&1; then
+            GODOT_CMD="$(command -v godot4)"
+          fi
+          if [ -z "$GODOT_CMD" ]; then
+            echo "[SKIP] Godot not installed; Client AOI behavior remains unverified on this runner."
+          else
+            for script in afk_cursor_audio_regression.gd afk_visual_cache_regression.gd afk_focus_render_regression.gd simplified_monster_async_layout_regression.gd performance_ui_settings_regression.gd performance_visual_aoi_regression.gd mouse_autorun_regression.gd player_map_movement_regression.gd aoi_pre_spawn_move_regression.gd aoi_monster_snapshot_order_regression.gd ground_item_aoi_regression.gd multiclient_render_dedup_regression.gd; do
+              "$GODOT_CMD" --headless --path client --script "res://tests/$script" 2>&1 | tee -a godot-aoi-regression.log
+            done
+          fi
+      - name: Build server
+        run: |
+          set -o pipefail
+          dotnet build server/SGO.Server.csproj -c Release 2>&1 | tee build.log
+      - name: Scripted item coverage report
+        run: |
+          set -o pipefail
+          dotnet run --project tests/SGO.ItemCoverageReport/SGO.ItemCoverageReport.csproj -c Release -- --strict --output item-use-coverage-report.json 2>&1 | tee item-coverage.log
+      - name: Historical mapping coverage report
+        run: |
+          set -o pipefail
+          dotnet run --project tests/SGO.MappingCoverageReport/SGO.MappingCoverageReport.csproj -c Release -- --output mapping-coverage-report.json 2>&1 | tee mapping-coverage.log
+      - name: Server capacity probe
+        run: |
+          set -o pipefail
+          dotnet run --project tests/SGO.Server.LoadProbe/SGO.Server.LoadProbe.csproj -c Release -- --sizes 10,50,100 --fanout-iterations 200 --db-ops 2 --output load-probe-report.json 2>&1 | tee load-probe.log
+      - name: Fast domain smoke tests
+        run: |
+          set -o pipefail
+          dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite protocol 2>&1 | tee protocol-smoke.log
+          dotnet run --no-build --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite announcements 2>&1 | tee announcement-smoke.log
+          dotnet run --no-build --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite world 2>&1 | tee world-smoke.log
+          dotnet run --no-build --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite concurrency 2>&1 | tee concurrency-smoke.log
+      - name: Full game integration smoke
+        run: |
+          set -o pipefail
+          dotnet run --no-build --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release 2>&1 | tee smoke.log
+      - name: Build encrypted WebSocket transport tests
+        run: |
+          dotnet build tests/SGO.Server.WireSmokeTests/SGO.Server.WireSmokeTests.csproj -c Release
+          dotnet build tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -c Release
+      - name: Encrypted WebSocket transport smoke
+        run: |
+          set -o pipefail
+          export Game__GmCommandsEnabled=true
+          (cd server && dotnet bin/Release/net8.0/SGO.Server.dll) > server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 90); do
+            if curl -fsS --max-time 2 http://127.0.0.1:5678/health >/dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+              cat server.log
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat server.log
+            exit 1
+          fi
+          dotnet run --no-build --project tests/SGO.Server.WireSmokeTests/SGO.Server.WireSmokeTests.csproj -c Release -- ws://127.0.0.1:5678/ 2>&1 | tee wire.log
+          dotnet run --no-build --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -c Release -- --url ws://127.0.0.1:5678/ --sizes 10,50,100 --rounds 2 --setup-concurrency 10 --mixed-seconds 5 --timeout-seconds 20 --output wire-load-probe-report.json 2>&1 | tee wire-load-probe.log
+          GODOT_CMD=""
+          if command -v godot >/dev/null 2>&1; then
+            GODOT_CMD="$(command -v godot)"
+          elif command -v godot4 >/dev/null 2>&1; then
+            GODOT_CMD="$(command -v godot4)"
+          fi
+          if [ -n "$GODOT_CMD" ]; then
+            SGO_TEST_SERVER_URL=ws://127.0.0.1:5678/ "$GODOT_CMD" --headless --path client --script res://tests/real_server_network_e2e.gd 2>&1 | tee godot-real-server-network.log
+          else
+            echo "[SKIP] Godot real-server NetworkManager E2E: godot/godot4 not installed on runner."
+          fi
+      - name: Upload diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-build-logs
+          path: |
+            build.log
+            smoke.log
+            protocol-smoke.log
+            announcement-smoke.log
+            world-smoke.log
+            concurrency-smoke.log
+            wire.log
+            wire-load-probe.log
+            wire-load-probe-report.json
+            godot-aoi-regression.log
+            godot-real-server-network.log
+            server.log
+            packet-contract-report.json
+            packet-schema-report.json
+            packet-response-report.json
+            quest-host-report.json
+            item-use-coverage-report.json
+            item-coverage.log
+            mapping-coverage-report.json
+            mapping-coverage.log
+            load-probe-report.json
+            load-probe.log
+          if-no-files-found: ignore

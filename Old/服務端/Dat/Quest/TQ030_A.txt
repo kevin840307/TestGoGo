@@ -1,0 +1,40 @@
+--TQ030_A (封印山洞仙級團簽證)
+
+-- TQ030_Count : 獵殺限額
+
+function start()
+	AddItem(10575)
+	if GetData("ComplexType") > 0 then
+		dia_03()
+	else
+		dia_01()
+	end
+	QuestEnd()
+end
+
+function dia_01()
+	Say("p7使用封印山洞仙級團簽證。")
+	Say("p7封封印山洞仙級團注意事項：")
+	Say("p7每張簽證只可使用1次")
+	Say("p7每次進入封印山洞最多只可以"..Color(0,45,198).."獵殺10隻獅鷲"..Color(0,0,0).."。")
+	Say("p7在獵殺獅鷲時死亡，餘下的獵殺限額便會取消。")
+	Ask("p確定要使用簽證進入封印山洞嗎？","是的","不是","reply_01")
+end
+
+function reply_01()
+	if GetChoice()==0 then
+		dia_02()
+	end
+	QuestEnd()
+end
+
+function dia_02()
+	RemoveItem(10575)
+	MovePlayer(7024,4330,5)
+	SetFlag("TQ030_Count", 0)
+	Say("p7請好好享受今次的旅程，祝升級愉快！","End")
+end
+
+function dia_03()
+	Say("p7魔裝機甲形態不能進入。","End")
+end

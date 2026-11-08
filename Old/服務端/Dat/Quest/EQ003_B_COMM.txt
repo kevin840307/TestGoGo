@@ -1,0 +1,130 @@
+function bird(i)
+	if GetFlag("EQ003_B_Step") >= 5 then
+		Step07()
+	else
+		if GetFlag("EQ003_Hits") >= 1 then
+			if GetFlag("EQ003_Next") == i then
+				Step02()
+			else
+				Step03()
+			end		
+		else
+			Step01()
+		end
+	end
+end
+
+function Step01()
+	--<第1次打倒四色波奇鳥＞
+	Say("p7吱吱！你已經打倒了第1隻四色波奇鳥。")
+	Say("p7你現在的分數是：1分。")
+	p = random(1000)
+	if p <= 250 then
+		Say("p7你下一個目標是紅色波奇鳥。")
+		SetFlag("EQ003_Next",1)
+	elseif p <= 500 then
+		Say("p7你下一個目標是黃色波奇鳥。")
+		SetFlag("EQ003_Next",2)
+	elseif p <= 750 then
+		Say("p7你下一個目標是綠色波奇鳥。")
+		SetFlag("EQ003_Next",3)
+	else
+		Say("p7你下一個目標是藍色波奇鳥。")
+		SetFlag("EQ003_Next",4)
+	end
+	--<記錄開始時間＞
+	SetFlag("EQ003_Start",GetRealTime())
+	SetFlag("EQ003_Hits",1)
+	SetFlag("EQ003_Score",1)
+end
+
+function Step02()
+--<距離開始時間已經超過１小時＞→Step04
+	if GetRealTime() - GetFlag("EQ003_Start") > 3600 then
+		Step04()
+	else
+		SetFlag("EQ003_Hits",GetFlag("EQ003_Hits")+1)
+		SetFlag("EQ003_Score",GetFlag("EQ003_Score")+1)
+		Say("p7吱吱！你已經打倒了第"..GetFlag("EQ003_Hits").."隻四色波奇鳥。")
+		Say("p7你現在的分數是："..GetFlag("EQ003_Score").."分。")
+		p = random(1000)
+		if p <= 250 then
+			Say("p7你下一個目標是紅色波奇鳥。")
+			SetFlag("EQ003_Next",1)
+		elseif p <= 500 then
+			Say("p7你下一個目標是黃色波奇鳥。")
+			SetFlag("EQ003_Next",2)
+		elseif p <= 750 then
+			Say("p7你下一個目標是綠色波奇鳥。")
+			SetFlag("EQ003_Next",3)
+		else
+			Say("p7你下一個目標是藍色波奇鳥。")
+			SetFlag("EQ003_Next",4)
+		end
+		if GetFlag("EQ003_Hits") >= 100 then
+			Step05()
+		end
+	end
+end
+
+function Step03()
+	if GetRealTime() - GetFlag("EQ003_Start") > 3600 then
+		Step04()
+	else
+		SetFlag("EQ003_Hits",GetFlag("EQ003_Hits")+1)
+		Say("p7吱吱！顏色不對啊～")
+		Say("p7吱吱！你已經打倒了第"..GetFlag("EQ003_Hits").."隻四色波奇鳥。")
+		Say("p7你現在的分數是："..GetFlag("EQ003_Score").."分。")
+		p = random(1000)
+		if p <= 250 then
+			Say("p7你下一個目標是紅色波奇鳥。")
+			SetFlag("EQ003_Next",1)
+		elseif p <= 500 then
+			Say("p7你下一個目標是黃色波奇鳥。")
+			SetFlag("EQ003_Next",2)
+		elseif p <= 750 then
+			Say("p7你下一個目標是綠色波奇鳥。")
+			SetFlag("EQ003_Next",3)
+		else
+			Say("p7你下一個目標是藍色波奇鳥。")
+			SetFlag("EQ003_Next",4)
+		end		
+		if GetFlag("EQ003_Hits") >= 100 then
+			Step05()
+		end
+	end
+end
+
+function Step04()
+	Say("p7對不起，已經超過比賽限時了，請重新開始射擊波奇鳥活動吧。")
+	SetFlag("EQ003_Start",0)
+	SetFlag("EQ003_Hits",0)
+	SetFlag("EQ003_Score",0)
+--＜清除開始時間記錄、已打波奇鳥數量和分數，讓玩家由打第一隻波奇鳥的步驟再開始＞
+end
+
+function Step05()
+--<分數不足85分>→Step06
+	if GetFlag("EQ003_Score") < 85 then
+		Step06()
+	else
+		Say("p7吱吱～你的分數是"..GetFlag("EQ003_Score").."分。")
+		Say("p7恭喜你！你已經完成了這次的射擊比賽！")
+		Say("p7可以回去找射擊比賽‧裁判領取世運第3環。")
+		SetFlag("EQ003_B_Step",5)
+	end 
+end
+
+function Step06()
+	Say("p7真可惜，你的分數只有"..GetFlag("EQ003_Score").."分，不及格啦！請重新開始射擊波奇鳥活動吧。")
+	--＜清除開始時間記錄、已打波奇鳥數量和分數，讓玩家由打第一隻波奇鳥的步驟再開始＞
+	SetFlag("EQ003_Start",0)
+	SetFlag("EQ003_Hits",0)
+	SetFlag("EQ003_Score",0)
+end
+
+function Step07()
+--<After EQ003_B Step05>
+	Say("p7恭喜你！你已經完成了這次的射擊比賽！")
+	Say("p7可以回去找射擊比賽‧裁判領取世運第3環。")
+end

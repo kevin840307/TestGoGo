@@ -1,0 +1,45 @@
+--NQ017_E 亞可(男)
+
+--NQ017_TaskType
+-- 1: 簽名版工作
+-- 2: 送信工作
+
+--NQ017_Task
+-- 1: quest start, do NQ017_TaskType
+-- 2: task finished, go back to get battery
+-- 3: quest completed
+
+
+function start()
+	status = GetFlag("NQ017_Task")
+	taskType = GetFlag("NQ017_TaskType")
+	if taskType==2 then
+		if status>=2 then
+			dialogue_03()
+		elseif RemoveItem(10219)==1 then
+			dialogue_02()
+			SetFlag("NQ017_Task",2)
+		else
+			dialogue_01()
+		end
+	else
+		dialogue_01()
+	end	
+end
+
+function dialogue_01()
+	Say("n1議會的公函還沒到嗎？","End")
+end
+
+function dialogue_02()
+	Say("n1嗯？有信給我嗎？")
+	Say("p7交出“送給亞可的公函”")
+	Say("n1是議會給我的！太好了！")
+	Say("n1可是…這是什麼嘛…只有白紙一張？")
+	Say("p6不管了…做完就算，回去嚕！","End")
+end
+
+function dialogue_03()
+	Say("n1這封是什麼怪信…一個字也沒有！")
+	Say("p6還是快些離開…免得給他纏上了…","End")
+end

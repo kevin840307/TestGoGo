@@ -1,0 +1,168 @@
+-- curecommon.txt
+#include "txt_curecom.txt"
+#include "CommTeam.txt"
+
+----------------------------------------------------------------------------------------------------
+function Cure()
+	if GetData(consume) >= conTotal then
+		ModifyData(consume,-conTotal)
+		
+		Cure_value = effect + effect * (varyDelta - random(varyDelta*2)) / 100
+		ModifyTargetData(defender,boost,Cure_value)	
+		SetSkillDefender(defender)
+	end
+
+	QuestEnd()
+end
+
+----------------------------------------------------------------------------------------------------
+function Cure_2_Consume()
+	if GetData(consume) >= conTotal and GetData(other_consume) >= other_conTotal then
+		ModifyData(consume,-conTotal)
+		ModifyData(other_consume,-other_conTotal)
+		
+		Cure_value = effect + effect * (varyDelta - random(varyDelta*2)) / 100
+		ModifyTargetData(defender,boost,Cure_value)	
+		SetSkillDefender(defender)
+	end
+
+	QuestEnd()
+end
+
+----------------------------------------------------------------------------------------------------
+function Cure_Range(CureRange)
+	if GetData(consume) >= conTotal then
+		ModifyData(consume,-conTotal)
+		
+		--hasdefender, defender = GetVisEnemyList_First(CureRange)
+		defenderType=GetTargetType(defender)
+		Cure_value = effect + effect * (varyDelta - random(varyDelta*2)) / 100
+		ModifyTargetData(defender,boost,Cure_value)	
+		SetSkillDefender(defender)
+
+		x, y = GetTargetXY(defender)
+		mpid = GetData("MapID")
+		hasdefender, teammember = GetTeamList_First()
+		while hasdefender ~= 0 do
+			if IsTargetCloseTo(teammember, x, y, mpid, CureRange)==0 then
+				defenderType=GetTargetType(teammember)
+				Cure_value = effect + effect * (varyDelta - random(varyDelta*2)) / 100
+				ModifyTargetData(teammember,boost,Cure_value)	
+				SetSkillDefender(teammember)
+			end
+			--hasdefender, defender = GetVisList_Next()
+			hasdefender, teammember = GetTeamList_Next()
+		end		
+	end
+
+	QuestEnd()
+end
+
+----------------------------------------------------------------------------------------------------
+function Cure_Range_2_Boost(CureRange)
+	if GetData(consume) >= conTotal then
+		ModifyData(consume,-conTotal)
+		
+		Cure_value = effect + effect * (varyDelta - random(varyDelta*2)) / 100
+		ModifyTargetData(defender,boost,Cure_value)	
+
+		Cure_value = other_effect + other_effect * (varyDelta - random(varyDelta*2)) / 100
+		ModifyTargetData(defender,other_boost,Cure_value)	
+		SetSkillDefender(defender)			
+		
+		x, y = GetTargetXY(defender)
+		mpid = GetData("MapID")		
+		--hasdefender, defender = GetVisEnemyList_First(CureRange)
+		hasdefender, teammember = GetTeamList_First()
+		
+		while hasdefender ~= 0 do
+			if IsTargetCloseTo(teammember, x, y, mpid, CureRange)==0 then
+				defenderType=GetTargetType(teammember)
+            	
+				Cure_value = effect + effect * (varyDelta - random(varyDelta*2)) / 100
+				ModifyTargetData(teammember,boost,Cure_value)	
+							
+				Cure_value = other_effect + other_effect * (varyDelta - random(varyDelta*2)) / 100
+				ModifyTargetData(teammember,other_boost,Cure_value)	
+				SetSkillDefender(teammember)			
+            end
+			hasdefender, teammember = GetTeamList_Next()
+		end		
+	end
+
+	QuestEnd()
+end
+
+----------------------------------------------------------------------------------------------------
+function Reanimate()
+	if GetData(consume) < conTotal then
+		Say("p7"..TXT_NoMP()..skillname)
+	elseif defenderType==0 and GetTargetData(defender,Reanimate_HP)==0 and MPKGet(GetCallerPtr())==0 then
+		ModifyData(consume, -conTotal)
+		SetSkillDefender(defender)
+		SetTargetFlag(defender, "skillLv", skillLv)
+		SetSkillTimer(defender,1,"Finish_Reanimate")	
+	end
+	QuestEnd()
+end
+
+function Finish_Reanimate()
+	if GetData(Reanimate_HP)==0 then
+		Ask("p"..TXT_DoYouAccept()..skillname..TXT_RebornHere(),TXT_Yes(),TXT_No(),"reply")
+	end
+	QuestEnd()	
+end
+
+function reply()
+	if GetChoice()==0 then
+		reborn()
+	end
+	QuestEnd()
+end
+
+function GetExpDeath(level)
+	return (level^4)*2*( (random(4)+1)/100 )
+end
+
+function GetReanimate_HP(percent_value)
+	return GetTargetData(defender,"HPMAX") * percent_value / 100
+end
+
+function GetReanimate_MP(percent_value)
+	return GetTargetData(defender,"MPMAX") * percent_value / 100
+end
+
+function GetReanimate_ExpDeath(lv, percent_value)
+	return GetExpDeath(lv) * percent_value / 100
+end
+
+--function reborn()
+--	if GetData("HP")==0 then				
+--		skillLv = GetFlag("skillLv")
+--		
+--		HP_Value = GetHP(skillLv)
+--		MP_Value = GetMP(skillLv)
+--		ExpDeath_Value = GetMyExpDeath(skillLv)	
+--		
+--		MapID = GetData("MapID")
+--		if MapID ~= 15 then
+--			level = GetData("Level")
+--			if level >= 11 then
+--				currDeathExp = GetData("ExpDeath")
+--				if currDeathExp > ExpDeath_Value then
+--					ModifyData("ExpDeath", -ExpDeath_Value)
+--				else
+--					SetData("ExpDeath",0)
+--				end		
+--			end
+--		end
+
+--		DoNoDie(GetCallerPtr())
+--		SetData(Reanimate_HP,HP_Value)
+--		SetData(Reanimate_MP,MP_Value)
+		--SetData(boost,effect)
+		--SetData("HP", floor(GetData("HPMAX")/2))
+		--SetData("MP", floor(GetData("MPMAX")/2))
+--	end
+--end
+

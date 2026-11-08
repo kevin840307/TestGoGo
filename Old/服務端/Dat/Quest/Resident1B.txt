@@ -1,0 +1,5 @@
+--People01 姆庫
+
+function start()
+	Say("n1想去釣魚呢！聽說流星之河的魚都很肥美，想到這我的口水都滴下來了。","End")
+end

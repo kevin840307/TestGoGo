@@ -1,0 +1,184 @@
+--NQ011_A  輔助技能教授 
+
+
+function start()
+
+	statue=GetFlag("NQ011_Task")
+	lv=GetData("Level")
+	crr=GetData("Career")
+
+--	<玩家未到LV15或職業是道具使或精靈使>
+
+	if lv <15 or crr==9 or crr==10 or crr==0 then
+		if lv<15 then
+			Say("n1你目前的級數還未可以學習新的技能喔～")
+		end	
+		Say("n1呼…這杯茶真是太好喝了～","End")
+
+	elseif statue==2 then
+		Say("n1呼…這杯茶真是太好喝了～","End")
+
+	elseif statue==1 then
+		if GetFlag("NQ011_B_Task")==1 and GetCountItemCount(10171)>=3 then
+			LearningSkill(crr)
+			SetFlag("NQ011_END",1)
+		
+		else
+			Say("n1要習得第一個技能，就要三隻紫晶指環。")
+			Say("n1記住你的攻擊技能要有一定的水平，才可有機會取得指環","End")		
+		end
+	else
+		
+		Say("n1有一個忙想要你幫一下我！可以嗎？")
+		Say("p1什麼事？")
+		Say("n1我忘記帶錢包……可是我已經要了兩杯茶……")
+		Say("n3旁邊的老闆娘：嗯！？沒錢！？")
+		Say("n7老闆娘的眼睛瞪得大大的。")
+		Ask("n哎呀，拜託你救命啊～～這兒一共是1000元～～","嘖，真麻煩～給你算了。","我也沒錢～","response1")
+		
+	end
+
+
+end
+
+
+function response1()
+
+	if GetChoice()==0 then
+		if GetData("Money")>=1000 then
+			SetFlag("NQ011_Task",1)
+			ModifyData("Money",-1000)
+			speech2()
+		else
+			speech01()
+		end
+
+	else
+		speech1()
+	
+	end
+
+
+
+end
+
+function speech01()
+	Say("p4咦?!我的身上也沒有一千元.....")
+	Say("p1對不起....我身上的錢也不夠..........")
+	Say("n3呀??!!!請幫一幫我想個法兒吧!!","End")	
+
+end
+
+function speech1()
+	Say("n3怎麼會沒錢的??")
+	Say("n1求你幫幫我吧.........","End")
+
+end
+
+function speech2()
+	Say("n1呼……得救了。")
+	Say("n2謝謝你！")
+	Say("p1你真麻煩！對了，你何時把錢還給我？")
+	Say("n1這…這個…")
+	Say("p1嗯！？")
+	Say("n1這樣好了…我教你一個好用的技能作補償，好嗎？")
+	Say("p6嗯…這樣我好像有賺……")
+	Say("p1好！一言為定！")
+	Say("n1可是在這之前…你去拿"..Color(0,45,198).."三隻紫晶指環"..Color(0,0,0).."回來給我。")
+	Say("p3什麼？還有東西要拿啊！？")
+	Say("n1是～！因為這隻指環存有很多依加魯力量，我想你只要吸收到這些力量，就可以隨心所欲的利用我教你的技能了。")
+	Say("p1可是那個指環在哪兒？")
+	Say("n1在"..Color(0,45,198).."流星之河，有一種叫紫晶龜獸的生物"..Color(0,0,0).."，他們的身體會自動分泌出一種依加魯力量，並會形成指環……")
+	Say("p1這麼厲害啊…？")
+	Say("n1對，不過你要注意的是，你身體中必需要有基本的依加魯力量，否則就算你打倒牠也好，牠所生出的指環一樣會消失的。")
+	Say("p1即是…我的攻擊技能要有一定的水平？")
+	Say("n1嗯～你也不是笨得沒救嘛……","End")
+	
+
+end
+
+function LearningSkill(career)
+	
+	SetFlag("NQ011_Task",2)	
+	Say("n1嗯～就是這個。")
+	Say("n1你先把指環都套到手上。")
+	RemoveItem(10171,3)
+	Say("p1嗯？")
+	race=GetData("Race")
+	if race==2 then
+		Ask("n你想要保護別人的能力或是如風一般的速度？","保護別人的能力。","如風一般的速度。","choosingskill")
+
+	else
+		skillID=crr*1000 + 102
+		LearningSpeech()
+	end
+
+end
+
+function LearningSpeech()
+	Say("n1好，就是這樣，你看著我的手腳什麼動，知道嗎？")
+	Say("p1……")
+	Say("p7……")
+	Say("p7……")
+	Say("p1明白了！")
+	Say("p1咦？這三隻指環不見了？")
+	Say("n1這當然了～你已經吸收了它們。")
+	Say("p1感覺有點奇怪……")
+	AddSkill(skillID)
+	skillname=GetSkillName(skillID)			
+	Say("p7習得"..skillname.."","End")
+
+end
+
+function choosingskill()
+	if GetChoice()==0 then
+		if GetData("Career")==3 then
+			skillID=3105
+		else
+			skillID=7105
+		
+		end
+
+	else
+		if GetData("Career")==3 then
+			skillID=3102
+		else
+			skillID=7102
+		end
+	end
+	LearningSpeech()
+end
+
+function GetSkillName(ID)
+	if ID==1102 then
+		return "赤之星"
+
+	elseif ID==2102 then
+		return "鐵之星"
+
+	elseif ID==3102 then
+		return "風之紗"
+	
+	elseif ID==4102 then
+		return "霧之影"
+
+	elseif ID==5102 then
+		return "暗之力"
+
+	elseif ID==6102 then
+		return "光之盾"
+
+	elseif ID==7102 then
+		return "風影咒"
+
+	elseif ID==8102 then
+		return "幻靈咒"
+
+	elseif ID==3105 then
+		return "風之輕撫"
+	
+	elseif ID==7105 then
+		return "靈之輕撫"
+
+	end
+end

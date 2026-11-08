@@ -1,0 +1,52 @@
+--軟世星空大使(TQ021A)
+
+--TQ021_Done
+-- quest done
+
+function start()
+	if GetFlag("TQ021_Done") > 0 then
+		dia_04()
+	elseif GetCountItemCount(10443)>0 then
+		dia_01()
+	else
+		dia_03()
+	end
+end
+
+function dia_01()
+	Ask("n哈囉！我是軟世星空大使，你要用軟世機甲試用証去換取蘇域機甲卡嗎？","是的，請給我一張蘇域機甲卡。","不了，謝謝。","reply_01")
+end
+function reply_01()
+	if GetChoice()==0 then
+		dia_02()
+	else
+		QuestEnd()
+	end
+end
+
+function dia_02()
+	Say("n1好的，讓我說明一下吧，這是機甲的試用裝，壞掉了之後便不能修理的。")
+	Say("n1如果你要一架真正屬於你的機甲，你只要在等級20之後去"..Color(0,45,198).."機械之城找穆蘭卡博士"..Color(0,0,0).."，她便會指示你如果取得機甲的了。")
+	Say("n1而當你30級之後，更可以使用"..Color(0,45,198).."合體卡片"..Color(0,0,0).."，將機甲合體成更強大的巨型機械人。")
+	Say("n1記著機甲要有電池才可使用啊！","dia_02b")
+end
+function dia_02b()
+--	if ItemListCountLeft(3)<1 then
+	if GetHorseEquipCountLeft()<3 or GetHorseCountLeft()<1 then
+		Say("n1對不起，你身上的機甲太多了，請清除一些機甲後再來。","End")
+	else
+		Say("n1得到蘇域機甲卡。","End")
+		RemoveItem(10443)
+		SetFlag("TQ021_Done", 1)
+		AddItem(6003)
+	end
+end
+
+function dia_03()
+	Say("n1哈囉！我是軟世星空大使，你只要用"..Color(0,45,198).."軟世機甲試用証"..Color(0,0,0).."就可以在這裡換取"..Color(0,45,198).."蘇域機甲卡"..Color(0,0,0).."了。","End")
+end
+
+function dia_04()
+	Say("n1機甲是一樣很強勁的武器吧！如果你要一架真正屬於你的機甲，你只要在等級20之後去"..Color(0,45,198).."機械之城找穆蘭卡博士"..Color(0,0,0).."，她便會指示你如果取得機甲的了。")
+	Say("n1而當你30級之後，更可以使用"..Color(0,45,198).."合體卡片"..Color(0,0,0).."，將機甲合體成更強大的巨型機械人。","End")
+end

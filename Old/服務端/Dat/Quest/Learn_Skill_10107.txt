@@ -1,0 +1,37 @@
+--Learn_Skill_10107(召靈咒)
+
+function start()
+	Giveback()
+	if GetData("Career") == 10 then
+	CheckOther()
+	else
+	Say("p7只有精靈使才可學習召靈咒。","End")
+	end
+end
+
+function CheckOther()
+	if GetData("Level") < 15 then
+	Say("p7你的等級仍未可學習召靈咒啊。","End")
+	elseif HasSkill(10107)==1 then
+	Say("p7你已經學會了召靈咒。","End")
+	else
+	Say("p7你的眼前出現一道白光，你看到了精靈王的形象，這時祂對你說．．．")
+		Ask("p你要學習召靈咒嗎?","是的。","不是。","Teach")
+	end
+end
+
+function Teach()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("p7我現在就將召靈咒傳授給你．．．")
+		Say("p7你已經學會了召靈咒。","End")
+		RemoveItem(10358)
+		AddSkill(10107)
+	else
+	Say("p7需要學習召靈咒時，可以再次召喚我。","End")
+	end
+end
+
+function Giveback()
+	AddItem(10358)
+end

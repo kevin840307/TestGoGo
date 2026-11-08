@@ -1,0 +1,13 @@
+--KingCity(P01) to KingCity(P02)
+
+function start()
+	Ask("n要進入資訊大樓嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(4096,1728,16)
+	end
+	QuestEnd()
+end

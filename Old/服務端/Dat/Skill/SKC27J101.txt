@@ -1,0 +1,61 @@
+--SKC27J101
+#include "txt_27101.txt"
+
+function init_data()
+	skillflag 	= "27101"
+	TXT_SkillName()
+	boost		= "EffDP"
+end
+
+function start()
+	init_data()
+	consume 	= "MP"
+	
+	varyDelta 	= 10
+
+	recastTime 	= 600
+	duration 	= 600
+	
+	skillid 	= 27101
+
+	defender	= GetTargetPtr()
+	
+	skillLv 	= GetSkillLv()
+	effect		= GetPara(skillLv)
+	conTotal 	= GetConTotal(skillLv)
+	
+	GoBoost()
+end
+
+function GetPara(lv)
+	if lv == 1 then
+		return 2
+	elseif lv == 2 then
+		return 3
+	elseif lv == 3 then
+		return 4
+	elseif lv == 4 then
+		return 5
+	else
+		return 6
+	end
+end
+
+function GetConTotal(lv)
+	if lv == 1 then
+		return 8
+	elseif lv == 2 then
+		return 11
+	elseif lv == 3 then
+		return 15
+	elseif lv == 4 then
+		return 21
+	else
+		return 28
+	end
+end
+
+#include "boostcommon.txt"
+
+
+

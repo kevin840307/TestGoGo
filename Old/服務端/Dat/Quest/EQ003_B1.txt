@@ -1,0 +1,4 @@
+function start()
+	bird(1)
+end
+#include "EQ003_B_COMM.txt"

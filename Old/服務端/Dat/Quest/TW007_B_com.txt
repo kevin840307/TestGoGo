@@ -1,0 +1,114 @@
+--集字者
+--TW007_B_com
+
+--TW007_B_Task
+
+function main(city)
+	level = GetFlag("TW007_Level")
+	if level<0 then
+		level = GetData("Level")
+	end
+	
+	if city==0 then
+		if level<=20 then
+			main1()
+		else
+			dia_01()
+		end
+	elseif city==1 then
+		if level>20 and level<=40 then
+			main1()
+		else
+			dia_01()
+		end
+	elseif city==2 then
+		if level>40 and level<=60 then
+			main1()
+		else
+			dia_01()
+		end
+	else
+		if level>60 then
+			main1()
+		else
+			dia_01()
+		end
+	end
+end
+function main1()
+	state = GetFlag("TW007_B_Task")
+	if state>=2 then
+		dia_07()
+	elseif state>=1 then
+		dia_05()
+	elseif state>=0 then
+		dia_02()
+	else
+		dia_01()
+	end
+end
+
+function dia_01()
+	Say("n1收集~收集~我最喜歡收集字了！","End")
+end
+
+function GetItemData(level)
+	if level<=20 then
+		return '古尼獸毛皮', 10105
+	elseif level<=40 then
+		return '雪兔毛皮', 10385
+	elseif level<=60 then
+		return '黑森魔獸毛皮', 10119
+	else
+		return '地神烏毛皮', 10296
+	end
+end
+function dia_02()
+	level = GetFlag("TW007_Level")
+	if level<0 then
+		level = GetData("Level")
+	end
+	
+	itemname, itemidx = GetItemData(level)
+	Say("n1請問有什麼事情嗎？")
+	Say("p1我受屈原先生之託，前來跟您要些字。")
+	Ask("n是喔！那可以先麻煩您幫我收集25張"..itemname.."嗎?","好，我去收集但你要給我屈原先生需要的字喔！。","不要太麻煩了！。", "reply_02")
+end
+function reply_02()
+	if GetChoice()==0 then
+		Say("n1好！","End")
+		SetFlag("TW007_B_Task", 1)
+	else
+		Say("n1那算了，不要跟我要字！","End")
+	end
+end
+function dia_05()
+	level = GetFlag("TW007_Level")
+	if level<0 then
+		level = GetData("Level")
+	end
+	itemname, itemidx = GetItemData(level)
+	
+	if GetCountItemCount(itemidx)>=25 then
+		if ItemListCountLeft(0) < 1 then
+			dia_08()
+		else
+			Say("p125張"..itemname.."，可以給我屈原先生需要的字嗎?")
+			Say("n1謝謝囉！這裡面有你需要的字，拿去吧……^^ 。")
+			Say("p7交出25個"..itemname.."。")
+			Say("p7得到字的寶盒1個。","End")
+			RemoveItem(itemidx, 25)
+			AddItem(10681)
+			SetFlag("TW007_B_Task", 2)
+		end
+	else
+		Say("n1咦？你答應要幫我收集25張"..itemname.."的喔！","End")
+	end
+end
+
+function dia_07()
+	Say("n1你不是要將字交給屈原先生嗎？","End")
+end
+function dia_08()
+	Say("n1身上的物品太多了，還是先整理一下，再找我吧。","End")
+end

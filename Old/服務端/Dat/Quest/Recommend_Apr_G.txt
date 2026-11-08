@@ -1,0 +1,17 @@
+--Recommend_Apr_G
+
+function start()
+    if ItemListCountLeft(4) < 3 then
+        AddItem(10596)
+        Say("p7對不起，你身上的機甲裝備太多了，請整理一下吧！")
+    else
+        Say("p7得到火星行者機甲一套。")
+        GiveItem1()
+    end
+end
+
+function GiveItem1()   
+   AddItem(6654)
+   AddItem(6655)
+   AddItem(6656)
+end

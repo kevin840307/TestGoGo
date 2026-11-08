@@ -1,0 +1,16 @@
+--TQ012 重陽避難日
+--TQ012_C 榮譽勳章
+
+function start()
+	AddItem(10235)
+	Say("p7榮譽勳章發出一道白光，白光直指尼尼亞皇城的方向。")
+	Ask("p要傳送到尼尼亞皇城嗎？","是的。","不是。","reply")
+end
+
+function reply()
+	if GetChoice()==0 then
+		MovePlayer(9408,10336,15)
+	else
+		QuestEnd()
+	end
+end

@@ -24,16 +24,13 @@
 [ext_resource type="Script" uid="uid://bi6fx43fy1ypt" path="res://scripts/npc_dialog_panel.gd" id="105_ikehs"]
 [ext_resource type="Texture2D" uid="uid://gnsdg20mifn0" path="res://ui/BG_NPC_MESSAGE.png" id="105_vcy0k"]
 [ext_resource type="Texture2D" uid="uid://cmdeoenkg40uh" path="res://ui/BG_LOADING.png" id="107_mot27"]
-[ext_resource type="PackedScene" uid="uid://dfjddbh86te0i" path="res://quest_window.tscn" id="110_hhfau"]
+[ext_resource type="Script" path="res://scripts/smooth_loading_bar.gd" id="sgo_smoothbar"]
 [ext_resource type="Texture2D" uid="uid://guvnfd7jjglr" path="res://ui/OK_BUTTON.png" id="110_lihbo"]
-[ext_resource type="PackedScene" uid="uid://da2rvtatb3ymu" path="res://mall_window.tscn" id="111_5rq5p"]
 [ext_resource type="Texture2D" uid="uid://dm7lx3ho16pu" path="res://ui/CLOSESCREEN.png" id="111_qcerj"]
 [ext_resource type="Script" uid="uid://ccmih0pb00sfy" path="res://scripts/quest_tracker_panel.gd" id="111_rauce"]
-[ext_resource type="PackedScene" uid="uid://0hnlpad6dst5" path="res://announcement_window.tscn" id="112_announcement"]
 [ext_resource type="Texture2D" uid="uid://b6iclvevuex11" path="res://ui/bg_i.png" id="113_announcement_icon"]
 [ext_resource type="Texture2D" uid="uid://6mdqrex8sqvb" path="res://ui/bg_i3.png" id="113_craft_dismantle_icon"]
 [ext_resource type="Texture2D" uid="uid://bqyrfehi4bgxb" path="res://ui/bg_i2.png" id="113_game_info_icon"]
-[ext_resource type="PackedScene" uid="uid://da30wj2ee4ah6" path="res://game_info_window.tscn" id="113_game_info_window"]
 [ext_resource type="Texture2D" uid="uid://qkagrjecj221" path="res://ui/BH_HOTKEY.png" id="114_wyqnl"]
 [ext_resource type="PackedScene" uid="uid://bw83gldcutlso" path="res://shared_tooltip.tscn" id="119_188en"]
 [ext_resource type="PackedScene" path="res://ui/resource_bar.tscn" id="120_resource_bar"]
@@ -742,6 +739,23 @@ grow_horizontal = 0
 tooltip_text = "合成/分解 (Ctrl+G)"
 texture_normal = ExtResource("113_craft_dismantle_icon")
 stretch_mode = 5
+
+[node name="BtnAfkMode" type="Button" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -245.0
+offset_top = 10.0
+offset_right = -186.0
+offset_bottom = 51.0
+grow_horizontal = 0
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_party_button_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_party_button_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_party_button_hover")
+text = "掛機"
+tooltip_text = "進入掛機監控模式；遊戲會繼續運作"
 
 [node name="ChatPanel" type="Control" parent="." unique_id=140509825]
 layout_mode = 3
@@ -3551,7 +3565,7 @@ anchor_bottom = 0.5
 offset_left = -323.0
 offset_top = -313.0
 offset_right = -51.0
-offset_bottom = 37.0
+offset_bottom = 227.0
 grow_horizontal = 0
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_qcerj")
@@ -3568,18 +3582,11 @@ text = "系統"
 vertical_alignment = 1
 
 [node name="OptionPetMode" type="OptionButton" parent="WindowsContainer/SettingsWindow" unique_id=412295753]
-layout_mode = 1
-anchors_preset = 6
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -122.0
-offset_top = -26.0
-offset_right = -22.0
-offset_bottom = -1.0
-grow_horizontal = 0
-grow_vertical = 2
+layout_mode = 0
+offset_left = 150.0
+offset_top = 150.0
+offset_right = 250.0
+offset_bottom = 175.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 15
@@ -3595,18 +3602,11 @@ popup/item_2/text = "主動戰鬥"
 popup/item_2/id = 2
 
 [node name="OptionVolumeBg" type="OptionButton" parent="WindowsContainer/SettingsWindow" unique_id=878719380]
-layout_mode = 1
-anchors_preset = 6
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -123.0
-offset_top = -125.0
-offset_right = -23.0
-offset_bottom = -100.0
-grow_horizontal = 0
-grow_vertical = 2
+layout_mode = 0
+offset_left = 150.0
+offset_top = 51.0
+offset_right = 250.0
+offset_bottom = 76.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 15
@@ -3638,18 +3638,11 @@ popup/item_10/text = "100%"
 popup/item_10/id = 10
 
 [node name="OptionVolumeEffect" type="OptionButton" parent="WindowsContainer/SettingsWindow" unique_id=1443463132]
-layout_mode = 1
-anchors_preset = 6
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -122.0
-offset_top = -74.0
-offset_right = -22.0
-offset_bottom = -49.0
-grow_horizontal = 0
-grow_vertical = 2
+layout_mode = 0
+offset_left = 150.0
+offset_top = 101.0
+offset_right = 250.0
+offset_bottom = 126.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 15
@@ -3681,18 +3674,11 @@ popup/item_10/text = "100%"
 popup/item_10/id = 10
 
 [node name="OptionAutoSaint" type="OptionButton" parent="WindowsContainer/SettingsWindow" unique_id=1564728060]
-layout_mode = 1
-anchors_preset = 6
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -122.0
-offset_top = 24.0
-offset_right = -22.0
-offset_bottom = 49.0
-grow_horizontal = 0
-grow_vertical = 2
+layout_mode = 0
+offset_left = 150.0
+offset_top = 199.0
+offset_right = 250.0
+offset_bottom = 224.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 15
@@ -3753,32 +3739,28 @@ text = "自動聖靈"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="OptionQualityEnhancement" type="OptionButton" parent="WindowsContainer/SettingsWindow" unique_id=37759114]
-layout_mode = 1
-anchors_preset = 6
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -122.0
-offset_top = 74.0
-offset_right = -22.0
-offset_bottom = 99.0
-grow_horizontal = 0
-grow_vertical = 2
+[node name="OptionFpsLimit" type="SpinBox" parent="WindowsContainer/SettingsWindow" unique_id=37759114]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 248.0
+offset_right = 250.0
+offset_bottom = 273.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
-selected = 0
-item_count = 2
-popup/item_0/text = "關閉"
-popup/item_0/id = 0
-popup/item_1/text = "開啟"
-popup/item_1/id = 1
+min_value = 0.0
+max_value = 144.0
+step = 1.0
+custom_arrow_step = 5.0
+value = 60.0
+rounded = true
+editable = true
+suffix = " FPS"
+tooltip_text = "上下鍵每次加減 5 FPS，也可輸入；0 = 不限制（會關閉 VSync），支援 30～120（每 5 FPS）與 144。切換畫質不影響此設定。"
 
-[node name="LabelQualityEnhancement" type="Label" parent="WindowsContainer/SettingsWindow" unique_id=663293368]
+[node name="LabelFpsLimit" type="Label" parent="WindowsContainer/SettingsWindow" unique_id=663293368]
 layout_mode = 0
 offset_left = 22.0
 offset_top = 246.0
@@ -3786,23 +3768,146 @@ offset_right = 142.0
 offset_bottom = 274.0
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
-text = "畫質增強"
+text = "畫面 FPS"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="LabelPerformanceLoad" type="Label" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 290.0
+offset_right = 142.0
+offset_bottom = 318.0
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
+text = "效能模式"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="OptionPerformanceLoad" type="OptionButton" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 292.0
+offset_right = 250.0
+offset_bottom = 317.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+alignment = 1
+selected = 1
+item_count = 3
+popup/item_0/text = "畫質優先"
+popup/item_0/id = 0
+popup/item_1/text = "一般"
+popup/item_1/id = 1
+popup/item_2/text = "低資源"
+popup/item_2/id = 2
+tooltip_text = "低資源：簡化怪物和其他玩家、關閉非必要戰鬥特效及日夜畫面效果，保留戰鬥與操作反應。FPS 獨立設定。"
+
+[node name="LabelCombatRender" type="Label" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 334.0
+offset_right = 142.0
+offset_bottom = 362.0
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
+text = "戰鬥模式"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="OptionCombatRender" type="OptionButton" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 336.0
+offset_right = 250.0
+offset_bottom = 361.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+alignment = 1
+selected = 0
+item_count = 2
+popup/item_0/text = "一般"
+popup/item_0/id = 0
+popup/item_1/text = "反應優先"
+popup/item_1/id = 1
+tooltip_text = "反應優先適合 PK、Boss；若想進一步節省資源，選擇效能模式的「低資源」即可關閉非必要戰鬥特效。"
+
+[node name="LabelSimplifyPlayers" type="Label" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 378.0
+offset_right = 142.0
+offset_bottom = 406.0
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
+text = "簡化其他玩家"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="OptionSimplifyPlayers" type="OptionButton" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 380.0
+offset_right = 250.0
+offset_bottom = 405.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+alignment = 1
+selected = 0
+item_count = 3
+popup/item_0/text = "自動"
+popup/item_0/id = 0
+popup/item_1/text = "一般"
+popup/item_1/id = 1
+popup/item_2/text = "簡化"
+popup/item_2/id = 2
+tooltip_text = "自動依效能設定切換；一般保留原始人物；簡化使用內建菱形光球。隊友綠、社團藍、可攻擊紅、一般白，無須另外選擇圖形。"
+
+[node name="LabelSimplifyMonsters" type="Label" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 420.0
+offset_right = 142.0
+offset_bottom = 448.0
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
+text = "簡化普通怪物"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="OptionSimplifyMonsters" type="OptionButton" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 422.0
+offset_right = 250.0
+offset_bottom = 447.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+alignment = 1
+selected = 0
+item_count = 3
+popup/item_0/text = "自動"
+popup/item_0/id = 0
+popup/item_1/text = "一般"
+popup/item_1/id = 1
+popup/item_2/text = "簡化"
+popup/item_2/id = 2
+tooltip_text = "自動依效能設定切換；一般保留原始怪物；簡化使用唯一的白色帶刺光球。攻擊、受擊與死亡不會切回原始圖片。"
+
 [node name="BtnBackToLogin" type="Button" parent="WindowsContainer/SettingsWindow" unique_id=791546295]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -115.0
-offset_top = 126.0
-offset_right = -5.0
-offset_bottom = 156.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 0
+offset_left = 21.0
+offset_top = 486.0
+offset_right = 131.0
+offset_bottom = 516.0
 theme_override_font_sizes/font_size = 16
 theme_override_styles/normal = SubResource("StyleBoxFlat_gge44")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_mpvlv")
@@ -3810,18 +3915,11 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_4tm8i")
 text = "回選擇伺服器"
 
 [node name="BtnQuit" type="Button" parent="WindowsContainer/SettingsWindow" unique_id=1181727582]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 20.0
-offset_top = 126.0
-offset_right = 120.0
-offset_bottom = 156.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 0
+offset_left = 156.0
+offset_top = 486.0
+offset_right = 256.0
+offset_bottom = 516.0
 theme_override_font_sizes/font_size = 16
 theme_override_styles/normal = SubResource("StyleBoxFlat_gge44")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_mpvlv")
@@ -3912,10 +4010,6 @@ modulate = Color(1, 1, 1, 0.8627451)
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="QuestWindow" parent="WindowsContainer" unique_id=458362973 instance=ExtResource("110_hhfau")]
-visible = false
-layout_mode = 1
-
 [node name="QuestTrackerPanel" type="Panel" parent="WindowsContainer" unique_id=512950833]
 modulate = Color(1, 1, 1, 0.9019608)
 layout_mode = 1
@@ -3974,29 +4068,6 @@ horizontal_scroll_mode = 0
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
-
-[node name="MallWindow" parent="WindowsContainer" unique_id=56914137 instance=ExtResource("111_5rq5p")]
-visible = false
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -400.0
-offset_top = -361.0
-offset_right = 400.0
-offset_bottom = 239.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="AnnouncementWindow" parent="WindowsContainer" unique_id=892704680 instance=ExtResource("112_announcement")]
-visible = false
-layout_mode = 1
-
-[node name="GameInfoWindow" parent="WindowsContainer" unique_id=806043964 instance=ExtResource("113_game_info_window")]
-visible = false
-layout_mode = 1
 
 [node name="SysMsgScrollBox" type="ScrollContainer" parent="." unique_id=701368035]
 anchors_preset = 2
@@ -4083,6 +4154,16 @@ stretch_mode = 0
 [node name="LoadingOverlay" type="CanvasLayer" parent="." unique_id=811334640]
 unique_name_in_owner = true
 visible = false
+layer = 100
+
+[node name="BlackBackground" type="ColorRect" parent="LoadingOverlay"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
 
 [node name="Background" type="TextureRect" parent="LoadingOverlay" unique_id=520243095]
 anchors_preset = 8
@@ -4099,6 +4180,7 @@ grow_vertical = 2
 texture = ExtResource("107_mot27")
 
 [node name="LoadingBar" type="ProgressBar" parent="LoadingOverlay" unique_id=2057668192]
+script = ExtResource("sgo_smoothbar")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -4339,3 +4421,139 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_nkhed")
 text = "取消
 
 "
+
+[node name="AFKOverlay" type="ColorRect" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.025, 0.038, 0.067, 1)
+
+[node name="MonitorCard" type="Panel" parent="AFKOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -242.0
+offset_top = -198.0
+offset_right = 242.0
+offset_bottom = 198.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_knh8b")
+
+[node name="LblTitle" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 18.0
+offset_right = 460.0
+offset_bottom = 57.0
+theme_override_colors/font_color = Color(0.4, 0.94, 0.81, 1)
+theme_override_font_sizes/font_size = 25
+text = "掛機監控模式"
+
+[node name="LblSubtitle" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 57.0
+offset_right = 462.0
+offset_bottom = 84.0
+theme_override_colors/font_color = Color(0.7, 0.75, 0.82, 1)
+theme_override_font_sizes/font_size = 14
+text = "已關閉世界畫面 · 角色與伺服器持續運作"
+
+[node name="Divider" type="ColorRect" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 94.0
+offset_right = 462.0
+offset_bottom = 95.0
+mouse_filter = 2
+color = Color(0.32, 0.48, 0.56, 0.65)
+
+[node name="LblStatus" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 107.0
+offset_right = 460.0
+offset_bottom = 142.0
+theme_override_colors/font_color = Color(0.45, 0.98, 0.71, 1)
+theme_override_font_sizes/font_size = 19
+text = "● 已連線 ｜ 待命"
+
+[node name="LblCharacter" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 152.0
+offset_right = 460.0
+offset_bottom = 180.0
+theme_override_font_sizes/font_size = 16
+text = "角色｜載入中"
+
+[node name="LblVitals" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 187.0
+offset_right = 460.0
+offset_bottom = 216.0
+theme_override_font_sizes/font_size = 16
+text = "HP — / —   MP — / —"
+
+[node name="LblPosition" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 223.0
+offset_right = 460.0
+offset_bottom = 250.0
+theme_override_font_sizes/font_size = 16
+text = "地圖 —   X — / Y —"
+
+[node name="LblRuntime" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 259.0
+offset_right = 460.0
+offset_bottom = 287.0
+theme_override_font_sizes/font_size = 16
+text = "掛機時間｜00:00:00"
+
+[node name="LblResources" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 292.0
+offset_right = 460.0
+offset_bottom = 319.0
+theme_override_colors/font_color = Color(0.69, 0.77, 0.84, 1)
+theme_override_font_sizes/font_size = 13
+text = "正在釋放可還原的視覺資源"
+
+[node name="RestoreProgress" type="ProgressBar" parent="AFKOverlay/MonitorCard"]
+visible = false
+layout_mode = 0
+offset_left = 24.0
+offset_top = 319.0
+offset_right = 460.0
+offset_bottom = 331.0
+show_percentage = false
+script = ExtResource("sgo_smoothbar")
+
+[node name="BtnRestore" type="Button" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 134.0
+offset_top = 335.0
+offset_right = 350.0
+offset_bottom = 375.0
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_bsslp")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_cgxsc")
+theme_override_styles/hover = SubResource("StyleBoxFlat_sfov8")
+text = "返回遊戲"
+
+[node name="UpdateTimer" type="Timer" parent="AFKOverlay"]
+wait_time = 1.0

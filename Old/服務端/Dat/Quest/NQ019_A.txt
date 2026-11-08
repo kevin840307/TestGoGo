@@ -1,0 +1,241 @@
+--大地博士(NQ019_A)
+
+function start()
+    if GetFlag("NQ019_Task") >=1 then       
+	    if ItemListCountLeft(0) < 1 then
+	        Say("p7身上的物品太多了，還是先整理一下吧！")
+	    else
+    		dia_02()
+	    end
+    else
+        dia_01()
+    end        	    
+end
+
+--<任務開始時>
+--<玩家已完成機甲任務NQ016。>
+--<玩家未完成NQ019_Step01>
+function dia_01()
+    if GetFlag("NQ016_Done") >= 1 then
+	    Ask("n你就是穆蘭卡所說的適合人選嗎？果然不錯。","什麼？什麼適合人選了？","dia_01b")
+    else
+        Say("n1愛情、友情、勇氣！便是戰鬥的力量泉源，看你連機甲也不會操縱，你是不會明白的了。","End")
+    end	    
+end
+function dia_01b()
+	Say("n1雖然我們正大量生產機甲，但要面對已經過了一千年發展的亞斯人，單憑機甲的能力還是不足夠的。")
+	Say("n1因此我們秘密研製了更強大的合體機甲－－"..Color(0,45,198).."魔裝機甲"..Color(0,0,0).."，希望能打敗強大的亞斯人。")
+	Ask("n而你"..GetName().."，便是我們心目中適當的駕駛員。","我？魔裝機甲駕駛員？","dia_01c")
+end
+function dia_01c()
+	Ask("n先聽我說下去。很可惜，當研究進入最後階段時，用來合體的機甲裝備"..Color(0,45,198).."合體魔裝卡"..Color(0,0,0).."被神秘的組織偷去了。","這樣說，你要我做什麼呢？","dia_01d")
+end
+function dia_01d()
+	Say("n1你果然很有天份，現在你必須尋回一套合體魔裝卡和不同的"..Color(0,45,198).."貝塔晶石"..Color(0,0,0).."。")
+	Say("n1把不同的貝塔晶石交給我，我便會替你合成合體晶片。")
+	Ask("n只要你"..Color(0,45,198).."把一套合體魔裝卡和一顆貝塔晶石裝上機甲，再使用合體晶片"..Color(0,0,0).."，便能和同樣裝有以上裝備的隊友進行合體。","這樣便可以合體了嗎？","dia_01e")
+end
+function dia_01e()
+	Ask("n當然不是了，難度你不知合體最重要是什麼嗎？","喔？","dia_01f")
+end
+function dia_01f()
+	Say("n1當然就是愛、友情和勇氣了，難度你沒有看卡通的嗎？")
+	Ask("n只要你和你的同伴使用機甲不斷戰鬥，便會產生"..Color(0,45,198).."「怒」"..Color(0,0,0).."能量，當大家能量注滿時，身為隊長的你便可以使用合體晶片了。","這樣我便馬上出發尋找一套合體魔裝卡和貝塔晶石","dia_01g")
+end
+function dia_01g()
+	Say("n1不用急，什麼天才也好，也必須一本操作說明書的，這是不可缺少的橋段，拿去吧！","dia_01h")
+end
+function dia_01h()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到魔裝機甲操作說明書","End")
+		AddItem(10428)
+		SetFlag("NQ019_Task",1)
+	end
+end
+
+function dia_02()
+	Ask("n你拿回了貝塔晶石嗎？我馬上便替你合成吧。要注意啊，能力越強的晶片，合成失敗率會越高。","我要合成「合體微晶片或合體原晶片」。","我要合成「合體限晶片或合體極晶片」。","我還是多考慮一會。","reply_02")
+end
+
+function reply_02()
+	ans = GetChoice()
+	if ans==0 then
+		dia_02a()
+	elseif ans==1 then
+		dia_02b()
+	end
+	QuestEnd()
+end
+
+function dia_02a()
+	Ask("n你選擇合成那款晶片呢？","我要用「貝塔火晶、風晶、土晶」合成「合體微晶片」。","我要用「貝塔火晶、風晶、土晶、水晶」合成「合體原晶片」。","我還是多考慮一會。","reply_02a")
+end
+function reply_02a()
+	ans = GetChoice()
+	if ans==0 then
+		dia_02aa()
+	elseif ans==1 then
+		dia_02ab()
+	end
+	QuestEnd()
+end
+
+function dia_02aa()
+	if CheckItem(6327)>0 and CheckItem(6326)>0 and CheckItem(6325)>0 then
+		dia_02aa2()
+	else
+		not_enough()
+	end
+	QuestEnd()
+end
+function dia_02aa2()
+	RemoveItem(6326)
+	RemoveItem(6325)
+	RemoveItem(6327)
+	Say("p7交出貝塔火晶")
+	Say("p7交出貝塔風晶")
+	Say("p7交出貝塔土晶","dia_02aa3")
+end
+function dia_02aa3()
+	if random(100)>50 then
+		Say("n1恭喜你，獲得「合體微晶片」。")
+		Say("p7得到「合體微晶片」","End")
+		AddItem(10429)
+	else
+		Say("n1很抱歉，合成失敗了。","dia_02aa4")
+	end
+end
+function dia_02aa4()
+	if random(100)>90 then
+		ans = random(3)
+		if ans==1 then
+			Say("n1幸好還有一顆貝塔火晶完好無缺。","End")
+			AddItem(6327)
+		elseif ans==2 then
+			Say("n1幸好還有一顆貝塔風晶完好無缺。","End")
+			AddItem(6326)
+		else
+			Say("n1幸好還有一顆貝塔土晶完好無缺。","End")
+			AddItem(6325)
+		end
+	end
+	QuestEnd()
+end
+
+function dia_02ab()
+	if CheckItem(6327)>0 and CheckItem(6326)>0 and CheckItem(6325)>0 and CheckItem(6328)>0 then
+		dia_02ab2()
+	else
+		not_enough()
+	end
+	QuestEnd()
+end
+function dia_02ab2()
+	RemoveItem(6328)
+	RemoveItem(6326)
+	RemoveItem(6325)
+	RemoveItem(6327)
+	Say("p7交出貝塔水晶")
+	Say("p7交出貝塔火晶")
+	Say("p7交出貝塔風晶")
+	Say("p7交出貝塔土晶","dia_02ab3")
+end
+function dia_02ab3()
+	if random(100)>75 then
+		Say("n1恭喜你，獲得「合體原晶片」。")
+		Say("p7得到「合體原晶片」","End")
+		AddItem(10430)
+	else
+		Say("n1很抱歉，合成失敗了。","dia_02ab4")
+	end
+end
+function dia_02ab4()
+	if random(100)>80 then
+		ans = random(4)
+		if ans==1 then
+			Say("n1幸好還有一顆貝塔火晶完好無缺。","End")
+			AddItem(6327)
+		elseif ans==2 then
+			Say("n1幸好還有一顆貝塔風晶完好無缺。","End")
+			AddItem(6326)
+		elseif ans==3 then
+			Say("n1幸好還有一顆貝塔水晶完好無缺。","End")
+			AddItem(6328)
+		else
+			Say("n1幸好還有一顆貝塔土晶完好無缺。","End")
+			AddItem(6325)
+		end
+	end
+	QuestEnd()
+end
+
+function dia_02b()
+	Ask("n你選擇合成那款晶片呢？","我要用「兩顆合體原晶片」合成「合體限晶片」。","我要用「三顆合體原晶片」合成「合體極晶片」。","我還是多考慮一會。","reply_02b")
+end
+function reply_02b()
+	ans = GetChoice()
+	if ans==0 then
+		dia_02ba()
+	elseif ans==1 then
+		dia_02bb()
+	end
+	QuestEnd()
+end
+
+function dia_02ba()
+	if GetCountItemCount(10430)>1 then
+		dia_02ba2()
+	else
+		not_enough()
+	end
+	QuestEnd()
+end
+function dia_02ba2()
+	RemoveItem(10430,2)
+	Say("p7交出兩顆「合體原晶片」","dia_02ba3")
+end
+function dia_02ba3()
+	if random(100)>40 then
+		Say("n1恭喜你，獲得「合體限晶片」。")
+		Say("p7得到「合體限晶片」","End")
+		AddItem(10431)
+	else
+		Say("n1很抱歉，合成失敗了。","dia_02ba4")
+	end
+end
+function dia_02ba4()
+	if random(100)>92 then
+		Say("n1幸好還有一顆「合體原晶片」完好無缺。","End")
+		AddItem(10430)
+	end
+	QuestEnd()
+end
+
+function dia_02bb()
+	if GetCountItemCount(10430)>2 then
+		dia_02bb2()
+	else
+		not_enough()
+	end
+	QuestEnd()
+end
+function dia_02bb2()
+	RemoveItem(10430,3)
+	Say("p7交出三顆「合體原晶片」","dia_02bb3")
+end
+function dia_02bb3()
+	if random(100)>60 then
+		Say("n1恭喜你，獲得「合體極晶片」。")
+		Say("p7得到「合體極晶片」","End")
+		AddItem(10432)
+	else
+		Say("n1很抱歉，合成失敗了。","dia_02ba4")
+	end
+end
+
+function not_enough()
+	Say("n1你這個笨蛋，身上的晶石不足是無法合成的，你還是多看看操作說明書吧！","End")
+end
+

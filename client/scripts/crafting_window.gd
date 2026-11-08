@@ -23,6 +23,10 @@ const NORMAL_FEE_COLOR: = Color.WHITE
 const INSUFFICIENT_FEE_COLOR: = Color.RED
 const SEARCH_DEBOUNCE_SECONDS: = 0.15
 const REQUEST_COOLDOWN_SECONDS: = 0.6
+# The old fixed 24-recipe batch forced ~40-60 full frame waits even when
+# recipes were cheap. Use a capped time budget plus a hard per-frame limit.
+const STATIC_RECIPE_MAX_PER_FRAME: int = 64
+const STATIC_RECIPE_FRAME_BUDGET_USEC: int = 2500
 
 var all_recipes: Array = []
 var current_selected_recipe: Dictionary = {}
@@ -30,6 +34,10 @@ var max_craftable_amount: int = 0
 var _search_debounce_timer: Timer
 var _request_generation: int = 0
 var _request_cooldown_active: bool = false
+var _static_tree_built: bool = false
+var _tree_items_by_recipe_id: Dictionary = {}
+var _recipe_entries: Array[Dictionary] = []
+var _availability_refresh_generation: int = 0
 
 func _ready() -> void :
 	_search_debounce_timer = Timer.new()
@@ -73,9 +81,172 @@ func _on_preview_mouse_exited() -> void :
 
 func set_recipe_data(recipes: Array) -> void :
 	all_recipes = recipes
-	_update_tree()
+	if _static_tree_built:
+		refresh_availability_async()
+	else:
+		_update_tree()
+
+static func should_yield_static_recipe_batch(processed_since_yield: int, elapsed_usec: int) -> bool:
+	return processed_since_yield >= STATIC_RECIPE_MAX_PER_FRAME or elapsed_usec >= STATIC_RECIPE_FRAME_BUDGET_USEC
+
+
+static func recipe_preload_progress(completed: int, total: int) -> float:
+	return clampf(float(completed) / float(maxi(total, 1)), 0.0, 1.0)
+
+
+func prepare_static_tree_async(recipes: Array, progress_callback: Callable = Callable()) -> void :
+	all_recipes = recipes
+	_availability_refresh_generation += 1
+	_static_tree_built = false
+	_tree_items_by_recipe_id.clear()
+	_recipe_entries.clear()
+	recipe_tree.clear()
+	var root: TreeItem = recipe_tree.create_item()
+	recipe_tree.hide_root = true
+
+	var category_labels: Dictionary = {
+		"Equipment": "裝備合成",
+		"Weapon": "武器合成",
+		"Material": "材料合成",
+	}
+	var categories: Dictionary = {}
+	for category: String in ["Equipment", "Weapon", "Material"]:
+		var category_item: TreeItem = recipe_tree.create_item(root)
+		category_item.set_text(0, category_labels[category])
+		category_item.set_selectable(0, false)
+		categories[category] = category_item
+
+	var processed: int = 0
+	var processed_since_yield: int = 0
+	var recipe_index: int = 0
+	var total_recipes: int = all_recipes.size()
+	var batch_started_usec: int = Time.get_ticks_usec()
+	for recipe_value in all_recipes:
+		recipe_index += 1
+		var recipe: Dictionary = recipe_value
+		if str(recipe.get("ActionType", "")) != "Craft":
+			continue
+		var outputs: Array = recipe.get("Outputs", [])
+		if outputs.is_empty():
+			continue
+		var output_id: int = int(outputs[0].get("ItemID", 0))
+		var item_name: String = str(ItemLoader.get_item_property(output_id, "item_name", "未知物品")) if ItemLoader else "未知物品"
+		var category: String = str(recipe.get("Category", "Material"))
+		if not categories.has(category):
+			category = "Material"
+		var tree_item: TreeItem = recipe_tree.create_item(categories[category])
+		tree_item.set_text(0, item_name)
+		tree_item.set_metadata(0, recipe)
+		tree_item.set_custom_color(0, Color.GRAY)
+		if ItemLoader:
+			var icon_id: int = int(ItemLoader.get_item_property(output_id, "icon_id", 1)) - 1
+			var icon_texture = ItemLoader.get_photo(icon_id)
+			if icon_texture:
+				var color_index: int = int(ItemLoader.get_item_property(output_id, "color_index", 0))
+				tree_item.set_icon(0, ITEM_ICON_TINT.get_tinted_icon(icon_texture, color_index))
+				tree_item.set_icon_max_width(0, 24)
+		var recipe_id: int = int(recipe.get("RecipeID", -1))
+		_tree_items_by_recipe_id[recipe_id] = tree_item
+		_recipe_entries.append({
+			"recipe": recipe,
+			"item_name": item_name,
+			"recipe_id": recipe_id,
+		})
+		processed += 1
+		processed_since_yield += 1
+		if should_yield_static_recipe_batch(
+			processed_since_yield,
+			Time.get_ticks_usec() - batch_started_usec
+		):
+			# Emit a precise fraction at existing frame boundaries. The UI
+			# never reports success/100% until all recipe rows are built.
+			if progress_callback.is_valid():
+				progress_callback.call(recipe_preload_progress(recipe_index, total_recipes))
+			await get_tree().process_frame
+			processed_since_yield = 0
+			batch_started_usec = Time.get_ticks_usec()
+
+	_static_tree_built = true
+	if progress_callback.is_valid():
+		progress_callback.call(1.0)
+
+func _build_inventory_count_cache() -> Dictionary:
+	var counts: Dictionary = {}
+	if not is_instance_valid(GameManager.current_player) or not "data_model" in GameManager.current_player:
+		return counts
+	for item_value in GameManager.current_player.data_model.inventory:
+		var item: Dictionary = item_value
+		if int(item.get("in_bank", 0)) != 0 or int(item.get("in_shop", 0)) != 0:
+			continue
+		var item_id: int = int(item.get("item_index", 0))
+		counts[item_id] = int(counts.get(item_id, 0)) + int(item.get("count", 0))
+	return counts
+
+func _calculate_max_craftable_cached(recipe: Dictionary, counts: Dictionary, money: int) -> int:
+	var max_craft: int = 9999
+	var cost: int = int(recipe.get("MoneyCost", 0))
+	if cost > 0:
+		max_craft = mini(max_craft, int(money / cost))
+	# Ingredient dictionaries are read-only here. Most recipes have no
+	# blueprint, so avoid recursively cloning all inputs on every availability
+	# refresh. When a blueprint is present, copy only the outer array before
+	# appending the virtual ingredient.
+	var inputs: Array = recipe.get("Inputs", [])
+	if int(recipe.get("BlueprintID", 0)) > 0:
+		inputs = inputs.duplicate()
+		inputs.append({"ItemID": recipe.get("BlueprintID"), "Count": 1})
+	for req_value in inputs:
+		var req: Dictionary = req_value
+		var need: int = int(req.get("Count", 1))
+		if need <= 0:
+			continue
+		var has_count: int = int(counts.get(int(req.get("ItemID", 0)), 0))
+		max_craft = mini(max_craft, int(has_count / need))
+	return maxi(max_craft, 0)
+
+func refresh_availability_async(progress_callback: Callable = Callable()) -> void :
+	if not _static_tree_built:
+		# Search/filters rebuild a different Tree. Preserve that filter and
+		# never use stale cached TreeItem references from the original layout.
+		_apply_current_filter()
+		if progress_callback.is_valid():
+			progress_callback.call(1.0)
+		return
+	_availability_refresh_generation += 1
+	var this_generation: int = _availability_refresh_generation
+	var counts: Dictionary = _build_inventory_count_cache()
+	var money: int = int(GameManager.current_player.data_model.money) if is_instance_valid(GameManager.current_player) else 0
+	var processed: int = 0
+	for entry_value in _recipe_entries:
+		var entry: Dictionary = entry_value
+		var recipe: Dictionary = entry["recipe"]
+		var recipe_id: int = int(entry["recipe_id"])
+		var tree_item: TreeItem = _tree_items_by_recipe_id.get(recipe_id, null) as TreeItem
+		if tree_item == null:
+			continue
+		var max_can_do: int = _calculate_max_craftable_cached(recipe, counts, money)
+		var display_name: String = str(entry["item_name"])
+		if max_can_do > 0:
+			display_name += " (可製作：%d)" % max_can_do
+		tree_item.set_text(0, display_name)
+		tree_item.set_custom_color(0, AVAILABLE_ITEM_COLOR if max_can_do > 0 else Color.GRAY)
+		processed += 1
+		if processed % 64 == 0:
+			if progress_callback.is_valid():
+				progress_callback.call(recipe_preload_progress(processed, _recipe_entries.size()))
+			await get_tree().process_frame
+			if this_generation != _availability_refresh_generation or not is_inside_tree():
+				return
+	if progress_callback.is_valid():
+		progress_callback.call(1.0)
 
 func _update_tree(filter_text: String = "", only_craftable: bool = false) -> void :
+	# Once a filtered/dynamic Tree replaces the static default Tree,
+	# references saved during first-open preparation are invalidated.
+	_availability_refresh_generation += 1
+	_static_tree_built = false
+	_tree_items_by_recipe_id.clear()
+	_recipe_entries.clear()
 	recipe_tree.clear()
 	var root = recipe_tree.create_item()
 	recipe_tree.hide_root = true
@@ -275,18 +446,9 @@ func _draw_materials(batch_amount: int = 1) -> void :
 		material_container.add_child(vbox)
 
 func _calculate_max_craftable(recipe: Dictionary) -> int:
-	var max_craft = 9999
-	var money = GameManager.current_player.data_model.money if GameManager.current_player else 0
-	var cost = recipe.get("MoneyCost", 0)
-	if cost > 0: max_craft = min(max_craft, money / cost)
-	var inputs = recipe.get("Inputs", []).duplicate(true)
-	if recipe.get("BlueprintID", 0) > 0:
-		inputs.append({"ItemID": recipe.get("BlueprintID"), "Count": 1})
-	for req in inputs:
-		var has = _get_player_item_count(req.get("ItemID", 0))
-		var need = req.get("Count", 1)
-		if need > 0: max_craft = min(max_craft, has / need)
-	return max_craft if max_craft > 0 else 0
+	var counts: Dictionary = _build_inventory_count_cache()
+	var money: int = int(GameManager.current_player.data_model.money) if is_instance_valid(GameManager.current_player) else 0
+	return _calculate_max_craftable_cached(recipe, counts, money)
 
 func _get_player_item_count(item_id: int) -> int:
 	var count = 0
@@ -364,5 +526,11 @@ func _clear_right_panel() -> void :
 
 func update_ui() -> void :
 	_search_debounce_timer.stop()
-	_apply_current_filter()
+	# Most opens and inventory changes use the default list. Recompute only
+	# counts/colors in small batches; don't allocate a fresh 1453-row Tree
+	# (and new icons) every time the player toggles the crafting window.
+	if _static_tree_built and search_input.text.is_empty() and not check_craftable.button_pressed:
+		refresh_availability_async()
+	else:
+		_apply_current_filter()
 	_refresh_right_panel()

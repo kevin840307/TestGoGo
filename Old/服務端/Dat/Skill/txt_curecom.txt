@@ -1,0 +1,19 @@
+function TXT_NoMP()
+	return "魔法值不足！！沒法使用"
+end
+
+function TXT_DoYouAccept()
+	return "是否接受"
+end
+
+function TXT_RebornHere()
+	return "，在這裡復活？"
+end
+
+function TXT_Yes()
+	return "是"
+end
+	
+function TXT_No()	
+	return "不是"
+end

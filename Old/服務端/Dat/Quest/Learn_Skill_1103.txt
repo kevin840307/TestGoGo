@@ -1,0 +1,37 @@
+--Learn_Skill_1103(烈火爆劍)
+
+function start()
+	Giveback()
+	if GetData("Career") == 1 then
+	CheckOther()
+	else
+	Say("p7只有靈鬥士才可學習烈火爆劍。","End")
+	end
+end
+
+function CheckOther()
+	if GetData("Level") < 20 then
+	Say("p7你的等級仍未可學習烈火爆劍啊。","End")
+	elseif HasSkill(1103)==1 then
+	Say("p7你已經學會了烈火爆劍。","End")
+	else
+	Say("p7你的眼前出現一道白光，你看到了火神的形象，這時祂對你說．．．")
+		Ask("p你要學習烈火爆劍嗎?","是的。","不是。","Teach")
+	end
+end
+
+function Teach()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("p7我現在就將烈火爆劍傳授給你．．．")
+		Say("p7你已經學會了烈火爆劍。","End")
+		RemoveItem(10332)
+		AddSkill(1103)
+	else
+	Say("p7需要學習烈火爆劍時，可以再次召喚我。","End")
+	end
+end
+
+function Giveback()
+	AddItem(10332)
+end

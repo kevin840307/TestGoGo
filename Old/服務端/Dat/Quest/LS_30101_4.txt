@@ -1,0 +1,19 @@
+--LS_30101_4 "魔彈術‧四級"
+
+function GetSkillData()
+	return 30101,4,40,31628,"魔彈術‧四級","魔彈術‧三級","魔銃使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 8 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

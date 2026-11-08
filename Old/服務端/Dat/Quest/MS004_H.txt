@@ -1,0 +1,51 @@
+--機關石(MS004_H)
+
+--MS004_Task
+-- 1: quest start, go to 泰雲
+-- 2: go to 依加魯穩定器
+-- 3: go to 迪爾
+-- 4: go to 資訊大樓
+-- 5: go to 嘉迪尼事務長
+-- 6: go to 格靈森林
+-- 7: got the 野花電子卡
+-- 8: 基地destoryed
+-- 9: quest completed
+
+function start()
+	status = GetFlag("MS004_Task")
+	if status>=8 then
+		dialogue_04()
+	elseif status>=6 then
+		dialogue_03()
+	elseif status>=5 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("p7一塊石頭．．．好像有點奇怪。","End")
+end
+
+--玩家完成了MS004G－Step02
+function dialogue_02()
+	Say("p1還是先回去向嘉迪尼事務長報告比較好！","End")
+end
+
+--玩家完成了MS004C－Step06
+function dialogue_03()
+	Ask("n啟動機關石，要進入野花的基地嗎？","是的。","不是。","reply_03")
+end
+
+function reply_03()
+	if GetChoice()==0 then
+		MovePlayer(1344,4128,26)
+	end
+	QuestEnd();
+end
+
+--玩家完成了MS004J－Step02
+function dialogue_04()
+	Say("p7野花的基地已經倒塌了。","End")
+end

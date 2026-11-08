@@ -1,0 +1,19 @@
+--LS_24105_5 "≠∏•€Ø}∏H°E§≠Ø≈"
+
+function GetSkillData()
+	return 24105,5,55,31418,"≠∏•€Ø}∏H°E§≠Ø≈","≠∏•€Ø}∏H°E•|Ø≈","¶u≈@ºC§h"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 2 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

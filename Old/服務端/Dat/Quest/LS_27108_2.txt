@@ -1,0 +1,19 @@
+--LS_27108_2 "狂戰士‧二級"
+
+function GetSkillData()
+	return 27108,2,60,31536,"狂戰士‧二級","狂戰士‧一級","守護使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 6 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

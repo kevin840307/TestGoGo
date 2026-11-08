@@ -1,0 +1,13 @@
+--DarkForest(P03) to DarkForest
+
+function start()
+	Ask("n要離開地洞嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(12992,5288,1)
+	end
+	QuestEnd()
+end

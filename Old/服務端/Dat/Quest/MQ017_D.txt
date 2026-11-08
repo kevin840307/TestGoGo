@@ -1,0 +1,33 @@
+--MQ017_D  達力
+
+--statue=2 : After talking with 娜姬．連特
+--statue=3 : After talking with 達力
+--statue=5 : Mission is accomplished
+
+function start()
+	statue=GetFlag("MQ017_Task")
+	
+	if statue>=4 then
+		Say("n1原來瑪麗有夢遊症？這可成為大新聞了，謝謝你說我知道！","End")
+
+	elseif statue==3 then
+		Say("n1"..Color(0,45,198).."瑪麗"..Color(0,0,0).."應該就在"..Color(0,45,198).."城外的森林"..Color(0,0,0).."，你去找找她吧！她應該會知道什麼。","End")	
+
+	elseif statue==2 then
+		Say("n1我告訴你喔，最近學校晚上常常有怪聲喔…")
+		Say("p1嗯？那你知道是誰造出來的嗎？")
+		Say("n1是誰我就不知道…不過呢，我好像看到"..Color(0,45,198).."瑪麗"..Color(0,0,0).."這陣子有點奇怪喔…常常晚上都會出外似的。")
+		Say("p1是…是這樣嗎？")
+		Say("n1你不妨去找找她問問看，我想她現在正在"..Color(0,45,198).."城外的森林"..Color(0,0,0).."呢……","End")
+		SetFlag("MQ017_Task",3)
+
+	else
+		Say("n1我告訴你喔，最近學校晚上常常有怪聲喔…")
+		Say("p1耶？真…真的嗎？！")
+		Say("n1嘿嘿…是真的啦。")
+		Say("p6嗚啊…真可怕…","End")
+
+	end
+
+end
+

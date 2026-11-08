@@ -1,0 +1,52 @@
+function start()
+	if GetFlag("TQ041_H_Step") >= 1 then
+		if GetFlag("TQ041_I_Step") >=3 then
+			if GetFlag("TQ041_H_Step") >= 3 then							
+				Step05()
+			else
+				Step03()
+			end
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+
+
+
+function Step01()
+	Say("p1這是什麼？好強的能量牆啊！！")
+	Say("p1這看來是一道非常強大的能量結界，星之道已經被它封閉了，還是回去向國皇報告一下，再作決定。")
+	SetFlag("TQ041_H_Step",1)
+end
+
+function Step02()
+--//＜After TQ041_H．Step01＞
+	Say("p1這看來是一道非常強大的能量結界，星之道已經被它封閉了，還是回去向國皇報告一下，再作決定。")
+	SetFlag("TQ041_H_Step",2)
+end
+
+function Step03()
+--//＜After TQ041_I．Step03＞
+--//＜玩家身上物品空間少於1＞→Step04
+	if ItemListCountLeft(0) < 1 then
+		Step04()
+	else
+		Say("p1好強的能量牆啊！！")
+		Say("p1讓我將一些樣本回去吧！")
+		Say("p7得到結界能量樣本。")
+		AddItem(10687)
+		SetFlag("TQ041_H_Step",3)
+	end
+end
+
+function Step04()
+	Say("p1身上的物品太多了，還是先整理一下吧！")
+end
+
+function Step05()
+--//＜After TQ041_I．Step03＞
+	Say("p1這看來是一道非常強大的能量結界，星之道已經被它封閉了。")
+end

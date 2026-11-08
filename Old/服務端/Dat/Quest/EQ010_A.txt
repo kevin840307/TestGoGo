@@ -1,0 +1,79 @@
+function start()
+	if GetFlag("MS001_Done") ~= 1 then
+		Step01()
+	else
+		if GetFlag("EQ010_A_Step") >= 3 then
+			if GetFlag("EQ010_B_Step") >= 5 then
+				if GetFlag("EQ010_A_Step") >= 5 then
+					Step07()
+				else
+					Step05()
+				end
+			else
+				Step04()
+			end			
+		else
+			Step02()
+		end
+	end	
+end
+
+
+function Step01()
+--<玩家未完成主線任務第一章>
+	Say("n1花火，煙霧迷漫，很好看啊。")
+	SetFlag("EQ010_A_Step", 1)
+end
+
+function Step02()
+--＜如玩家已完成主線任務第一章＞
+Say("n3不得了，今晚的花火活動要取消了。")
+Say("n1聽說有位魔法師下了咒語，令所有花火都燒不起。")
+Ask("n真是令人失望，唉，你也是今晚來花火的嗎？","是的。我現在就了解一下情況。","不是。","Step01_Handler")
+--＜選項＞
+--．是的。我現在就了解一下情況。→Step03
+--．不是。→Quest End
+end
+
+function Step01_Handler()
+	if GetChoice() == 0 then
+		Step03()
+	else
+		SetFlag("EQ010_A_Step", 2)
+		QuestEnd()
+	end
+end
+
+function Step03()
+	Say("n1我是從皇宮附近聽到消息的，那兒的煙火管理員應該知道情況。")
+	SetFlag("EQ010_A_Step", 3)
+end
+
+function Step04()
+--<After EQ010_A Step03>
+	Say("n1那麼拜託你到皇宮附近的煙火管理員了解一下吧。")
+	SetFlag("EQ010_A_Step", 4)
+end
+
+function Step05()
+--<After EQ010_B Step05>
+--＜玩家身上物品空間少於1＞→Step06
+	if ItemListCountLeft(1) < 5 then 
+		Step06()
+	else
+		Say("n1太謝謝你了，這個是一點心意。")
+		Say("p7得到五個『糯米丸子』")
+		AddItem(10449,5)
+		SetFlag("EQ010_A_Step", 5)
+	end
+--<得到5個糯米丸子(10449)>
+end
+
+function Step06()
+	Say("p7身上的物品太多了，還是先整理一下吧！")
+end
+
+function Step07()
+--<After EQ010_A Step05>
+	Say("n1『"..GetName().."』，太感謝你。")
+end

@@ -1,0 +1,19 @@
+--LS_26104_2 "魔影術‧二級"
+
+function GetSkillData()
+	return 26104,2,30,31480,"魔影術‧二級","魔影術‧一級","魔動使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 5 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

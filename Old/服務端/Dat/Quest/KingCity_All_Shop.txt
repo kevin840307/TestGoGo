@@ -1,0 +1,111 @@
+--坝┍
+
+function start()
+	Career = GetData("Career")
+	if Career == 9 then
+		CheapShop()
+	else
+	Ask("n舧羬稱ぐ或砯珇㎡","杆称","珇","","check")
+	end
+end
+
+function check()
+	choice = GetChoice()
+	if choice == 0 then
+		WhatShop()
+	elseif choice == 1 then
+		OpenShop (1,100)
+	else
+		OpenShop (8,100)
+	end
+end
+
+function WhatShop()
+	Ask("n稱ぐ或杆称㎡","猌竟","ňㄣ","诀瘪繷场","WorE")
+end
+
+function WorE()
+	choice = GetChoice()
+	if choice == 0 then
+		OpenShop (2,100)
+	elseif choice == 1 then
+		Ask("n璶ぐ或摸ňㄣ㎡","も场","ō","ō","礟","EqAsk")
+	else
+		OpenShop (10,100)
+	end
+end
+
+function EqAsk()
+	choice = GetChoice()
+	if choice == 0 then
+		Ask("n璶も场1临琌も场2㎡","も场1","も场2","WhatHand")
+	elseif choice == 1 then
+		OpenShop (5,100)
+	elseif choice == 2 then
+		OpenShop (6,100)
+	else
+		OpenShop (7,100)
+	end
+end
+
+function WhatHand()
+	choice = GetChoice()
+	if choice == 0 then
+		OpenShop (3,100)
+	else
+		OpenShop (4,100)
+	end
+end
+
+function CheapShop()
+	Ask("n舧羬稱ぐ或砯珇㎡","杆称","珇","","checkC")
+end
+
+function checkC()
+	choice = GetChoice()
+	if choice == 0 then
+		WhatShopC()
+	elseif choice == 1 then
+		OpenShop (1,80)
+	else
+		OpenShop (8,80)
+	end
+end
+
+function WhatShopC()
+	Ask("n稱ぐ或杆称㎡","猌竟","ňㄣ","诀瘪繷场","WorEC")
+end
+
+function WorEC()
+	choice = GetChoice()
+	if choice == 0 then
+		OpenShop (2,80)
+	elseif choice == 1 then
+		Ask("n璶ぐ或摸ňㄣ㎡","も场","ō","ō","礟","EqAskC")
+	else
+		OpenShop (10,80)
+	end
+end
+
+function EqAskC()
+	choice = GetChoice()
+	if choice == 0 then
+		Ask("n璶も场1临琌も场2㎡","も场1","も场2","WhatHandC")
+	elseif choice == 1 then
+		OpenShop (5,80)
+	elseif choice == 2 then
+		OpenShop (6,80)
+	else
+		OpenShop (7,80)
+	end
+end
+
+function WhatHandC()
+	choice = GetChoice()
+	if choice == 0 then
+		OpenShop (3,80)
+	else
+		OpenShop (4,80)
+	end
+end
+

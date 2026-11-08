@@ -1,0 +1,18 @@
+--Knight_City 復活點設定
+
+function start()
+--AFTER JP TRANSLATION PART 2
+	Ask("s要在騎士之城設定復活點嗎？","好的。","不需要了。","我想進入初心者之間。","set")
+end
+
+function set()
+	choice = GetChoice()
+	if choice == 0 then
+	Say("s已經在這裡設定了復活點。","End")
+	SetRebornLocation(6208,9120,22)
+	elseif choice == 2 then
+		MovePlayer(2304,3008,40)
+	else
+	QuestEnd()
+	end
+end

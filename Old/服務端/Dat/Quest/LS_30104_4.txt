@@ -1,0 +1,19 @@
+--LS_30104_4 "烈日光輝‧四級"
+
+function GetSkillData()
+	return 30104,4,40,31641,"烈日光輝‧四級","烈日光輝‧三級","魔銃使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 8 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

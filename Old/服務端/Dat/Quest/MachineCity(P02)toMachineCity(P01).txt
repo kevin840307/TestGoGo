@@ -1,0 +1,13 @@
+--MachineCity(P02) to MachineCity(P01)
+
+function start()
+	Ask("n要離開地洞嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(8256,6304,28)
+	end
+	QuestEnd()
+end

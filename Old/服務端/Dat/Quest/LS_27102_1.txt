@@ -1,0 +1,19 @@
+--LS_27102_1 "魔法屏障‧一級"
+
+function GetSkillData()
+	return 27102,1,20,31509,"魔法屏障‧一級","","見習守護使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 6 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

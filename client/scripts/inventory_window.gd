@@ -6,6 +6,8 @@ signal equip_requested(item_uid: int, target_slot: int)
 signal unequip_requested(target_slot: int)
 
 var _is_equip_locked: bool = false
+var _equip_tab_prewarmed: bool = false
+var _equip_tab_prewarm_running: bool = false
 
 func _ready() -> void :
 	super._ready()
@@ -21,6 +23,7 @@ func _ready() -> void :
 	item_clicked.connect(_on_inventory_item_clicked)
 	equip_slot_clicked.connect(_on_equip_slot_clicked)
 	tab_changed.connect(_on_tab_changed)
+	visibility_changed.connect(_on_inventory_visibility_changed)
 
 
 	closed.connect( func():
@@ -39,7 +42,53 @@ func unlock_equip() -> void :
 	_is_equip_locked = false
 
 func _on_tab_changed(_new_tab: int) -> void :
+	var started_usec: int = Time.get_ticks_usec()
 	update_ui()
+	print("[INVENTORY_TAB_TIMING] tab=%d dispatch_ms=%.2f equip_prewarmed=%s" % [
+		int(current_tab),
+		float(Time.get_ticks_usec() - started_usec) / 1000.0,
+		str(_equip_tab_prewarmed),
+	])
+
+func _on_inventory_visibility_changed() -> void :
+	if not visible or _equip_tab_prewarmed or _equip_tab_prewarm_running:
+		return
+	# The general backpack opens quickly. Use the time while the player is
+	# looking at it to prepare the expensive 200+ equipment rows offscreen.
+	call_deferred("_prewarm_equip_tab_async")
+
+func _prewarm_equip_tab_async() -> void :
+	if _equip_tab_prewarmed or _equip_tab_prewarm_running:
+		return
+	if not is_instance_valid(_target_player) or not "data_model" in _target_player:
+		return
+	_equip_tab_prewarm_running = true
+
+	var started_usec: int = Time.get_ticks_usec()
+	var data = _target_player.data_model
+	var bag_equip_items: Array = []
+	var equipped_map: Dictionary = {}
+	for eq in data.equip_list:
+		var part: int = int(eq.get("part", 255))
+		if part >= 0 and part <= 8:
+			equipped_map[part] = eq
+		elif part == 255 and int(eq.get("in_bank", 0)) == 0:
+			bag_equip_items.append(eq)
+
+	var sorted_items: Array = _sort_items_by_index_and_uid(
+		bag_equip_items,
+		["item_idx", "ItemIdx", "item_index", "ItemIndex"],
+		["item_id", "ItemID", "equip_uid", "EquipUID"]
+	)
+	await _update_item_list_batched(sorted_items, list_equip_detailed, TabType.EQUIP)
+	if is_instance_valid(self):
+		render_equipped_slots(equipped_map, data)
+		_equip_tab_prewarmed = true
+		_equip_tab_prewarm_running = false
+		print("[INVENTORY_EQUIP_PREWARM] items=%d total_ms=%.2f" % [
+			sorted_items.size(),
+			float(Time.get_ticks_usec() - started_usec) / 1000.0,
+		])
 
 func update_ui() -> void :
 

@@ -1,0 +1,6 @@
+--People01 絲路兒
+
+function start()
+	Say("n1說到武術的高手……")
+	Say("n1我想在騎士學校的加路卡老師是其中的一位。","End")
+end

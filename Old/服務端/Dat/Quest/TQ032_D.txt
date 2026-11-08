@@ -1,0 +1,27 @@
+--毒風鳥獸
+--(TQ032_D)
+
+#include "CommTeam.txt"
+
+function start()
+	if CheckItem(10637)>0 then
+		QuestEnd()
+	elseif IsTargetCloseTo(GetCallerPtr(), 3456,2688,62, 400)==0 then
+		dia_03()
+	elseif ItemListCountLeft(0)<1 then
+		dia_02()
+	else
+		Say("p7打倒毒風鳥獸。")
+		Say("p7得到綠幽之氣。","End")
+		AddItem(10637)
+	end
+end
+
+function dia_02()
+	Say("p7身上沒有足夠的物品空間啊．．．先整理一下好了。","End")
+end
+
+function dia_03()
+	Say("p7打倒毒風鳥獸。")
+	Say("p7一陣強風吹來！綠幽之氣被風吹散了！","End")
+end

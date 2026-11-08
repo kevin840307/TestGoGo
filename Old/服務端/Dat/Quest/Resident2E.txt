@@ -1,0 +1,6 @@
+--People01 希那
+
+function start()
+	Say("n1嗯？魔法之都這兒不錯吧？")
+	Say("n1魔法之都有很多好東西喔！我自小都在這長大的。","End")
+end

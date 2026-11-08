@@ -1,0 +1,14 @@
+function start()
+	CanMove()
+end
+
+function GetLocName()
+	return "廢棄地下工場"
+end
+
+function GetLoc()
+	return 1408,1088,26
+
+end
+
+#include "TS_Common.txt"

@@ -1,0 +1,57 @@
+--SKC28J102
+#include "txt_28102.txt"
+
+function start()
+	consume 	= "MP"
+	boost		= "Will"
+	
+	varyDelta 	= 10
+
+	skillid 	= 28102
+	TXT_SkillName()
+	skillflag 	= "28102"
+	
+	defender	= GetTargetPtr()
+	if defender == 0 then
+		defender = GetCallerPtr()
+	end
+	
+	skillLv 	= GetSkillLv()
+	effect		= GetPara(skillLv)
+	conTotal 	= GetConTotal(skillLv)
+	
+	Cure()
+end
+
+function GetPara(lv)
+	if lv == 1 then
+		return 38
+	elseif lv == 2 then
+		return 69
+	elseif lv == 3 then
+		return 113
+	elseif lv == 4 then
+		return 169
+	else
+		return 238
+	end
+end
+
+function GetConTotal(lv)
+	if lv == 1 then
+		return 38
+	elseif lv == 2 then
+		return 69
+	elseif lv == 3 then
+		return 113
+	elseif lv == 4 then
+		return 169
+	else
+		return 238
+	end
+end
+
+#include "curecommon.txt"
+
+
+

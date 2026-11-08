@@ -1,0 +1,33 @@
+function start()
+	if GetFlag("TQ041_B_Step") >= 1 then
+		if GetFlag("TQ041_K_Step") >= 1 then
+			Step03()
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+
+
+function Step01()
+	Say("p1參見二皇子殿下！")
+	Say("s你幫忙重建星空之門的事情，我也略有所聞，你做得非常之好！！")
+	Say("p1多謝二皇子讚賞。")
+	Say("s今次可以打開星空之門，可說是重奪加米蘭特的機會，我們和亞斯人多年來的恩怨，是時候來個了斷！！")
+	SetFlag("TQ041_D_Step",1)
+end
+
+function Step02()
+--//＜After TQ041_B．Step01＞                                                                       
+	Say("s要盡快完成探索星之道的任務，加米蘭特的同胞正等著我們的解放！我們必需奪回加米蘭特星！！")
+	SetFlag("TQ041_D_Step",2)
+end
+
+function Step03()
+--//＜After TQ041_K．Step01＞                                                                       
+	Say("s為何大神奧米加而設下這個難題去為難我們呢！")
+	SetFlag("TQ041_D_Step",3)
+end
+                                                                                                

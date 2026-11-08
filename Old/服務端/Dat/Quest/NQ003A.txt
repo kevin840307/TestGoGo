@@ -1,0 +1,16 @@
+--NQ003_A 員工奧斯
+
+function start()
+	lv = GetData("Level")
+	if RemoveItem(10014)==1 then
+		SetFlag("NQ_003_GotQuest", 2)
+		Say("n1歡迎光臨尼尼亞皇城的拍賣會！請你和司儀叫價吧！", "End")
+	elseif lv >= 10 then
+		SetFlag("NQ_003_GotQuest", 1)
+		Say("n1拍賣會開始了，要入場的話，請先購買入場券。")
+		Say("p1在哪兒可以買到？")
+		Say("n1你問狄福吧，他負責入場券的事務。", "End")
+	else
+		Say("n1拍賣會還沒有開始，請稍後再來。", "End")
+	end
+end

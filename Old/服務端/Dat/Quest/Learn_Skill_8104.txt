@@ -1,0 +1,37 @@
+--Learn_Skill_8104(閃電符文)
+
+function start()
+	Giveback()
+	if GetData("Career") == 8 then
+	CheckOther()
+	else
+	Say("p7只有魔銃使才可學習閃電符文。","End")
+	end
+end
+
+function CheckOther()
+	if GetData("Level") < 30 then
+	Say("p7你的等級仍未可學習閃電符文啊。","End")
+	elseif HasSkill(8104)==1 then
+	Say("p7你已經學會了閃電符文。","End")
+	else
+	Say("p7你的眼前出現一道白光，你看到了聖光雷獸的形象，這時祂對你說．．．")
+		Ask("p你要學習閃電符文嗎?","是的。","不是。","Teach")
+	end
+end
+
+function Teach()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("p7我現在就將閃電符文傳授給你．．．")
+		Say("p7你已經學會了閃電符文。","End")
+		RemoveItem(10347)
+		AddSkill(8104)
+	else
+	Say("p7需要學習閃電符文時，可以再次召喚我。","End")
+	end
+end
+
+function Giveback()
+	AddItem(10347)
+end

@@ -1,0 +1,13 @@
+--KingCity(P03) to KingCity(P01)
+
+function start()
+	Ask("n要離開大會議廳嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(8064,8512,15)
+	end
+	QuestEnd()
+end

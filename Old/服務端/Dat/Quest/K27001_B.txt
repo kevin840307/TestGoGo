@@ -1,0 +1,63 @@
+--K27001_B  古尼達博士
+
+function response1()
+	choice=GetChoice()
+	if choice==0 then
+		Say("n1啊！你好，但我忙著研究不同立普的分別，沒有空了解你是否符合就職條件。")
+		Say("p1你的研究我有什麼可以幫忙的呢？")
+		Ask("n看你為人也不錯，這樣吧，我正在尋找三隻不同種族的立普。若你能替我把牠們的羽毛也拿回來，我便承認你能就職吧。","好，就交給我吧。","這個．．．好像不太好。","response2")
+
+		
+	else
+		QuestEnd()
+	end
+
+end
+
+function response2()
+	choice=GetChoice()
+	if choice==0 then
+		Say("n1很好，你只要往\“流星之河‧下游\”找\“冰藍立普\”、往\“流星之河‧上游\”找\“星果立普\”和往\“尼尼亞盆地\”找\“森林立普\”，")
+		Say("n1把這三隻立普的羽毛帶回來給我，我便承認你的能力給你就職吧。")
+		Say("p1好吧，我找到羽毛後很快便回來。","End")
+		SetFlag("K27001_Task",2)
+
+	else
+		QuestEnd()
+	end
+end
+
+function start()
+	statue=GetFlag("K27001_Task")
+	
+	if statue==3 or statue==4 then
+		Say("n1你以後要加油啊，不論有什麼困難也要努力啊。","End")
+		
+	elseif GetFlag("K27001_GetAll")==1 then
+		Say("n1啊！很好果然是三隻立普的羽毛，你果然有一定的實力，這樣我也只好給你就職了，")
+		Say("n1這兒有一封\“就職認可書\”你拿給皇家侍衛，他便會給你就職了。")
+		Say("n7拿到就職認可書","End")
+		RemoveItem(10036)
+		RemoveItem(10037)
+		RemoveItem(10038)
+		AddItem(10035)
+		SetFlag("K27001_Task",3)
+		
+		
+	
+	elseif statue==2 then
+		Say("n1你忘記了嗎？這次你要記著啊！往\“流星之河‧下游\”找\“冰藍立普\”")
+		Say("n1往\“流星之河‧上游\”找\“星果立普\”和")
+		Say("n1往\“尼尼亞盆地\”找\“森林立普\”，把這三隻立普的羽毛帶回來給我，我便承認你的能力給你就職。","End")
+	
+
+	elseif statue==1 then
+		Say("n7這人正仔細研究東西似的")
+		Ask("n不要煩著我．．．星果．．．冰藍．．．．．．","請問你是古尼達博士嗎？我是來就職的喔。","喔！對不起。","response1")
+	else
+		Say("n7這人正仔細研究東西似的")
+		Say("n1不要煩著我．．．星果．．．冰藍．．．．．．","End")
+	end
+
+
+end

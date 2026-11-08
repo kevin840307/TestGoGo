@@ -1,0 +1,128 @@
+function start()
+	if GetFlag("TQ043_D_Step") >= 6 then
+		if GetFlag("TQ043_E_Step") >= 2 then
+			if GetFlag("TQ043_E_Step") >= 3 then
+				if GetFlag("TQ043_A_Step") >= 13 then
+					if GetFlag("TQ043_E_Step") >= 9 then
+						Step10()
+					else
+						Step09()
+					end
+				else
+					Step05()
+				end
+			else	
+				Step03()
+			end
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("n1天堂與尼尼亞皇國也不是差距很遠。")
+end
+function Step02()
+--		＜After TQ043_D．function Step06＞
+	Say("p1冰奇，你最近有沒有與天堂接觸？")
+	Say("n1沒有啊，他們沒有和我聯絡。發生什麼事了？")
+	Say("p1天堂受到入侵了，而我在天空島中發現了天使，這個天使現在很虛弱，他說需要『慈愛祝福』助他康復。")
+	Say("n1『慈愛祝福』．．．得到的方法我是知道的，但要找齊材料很難啊。")
+	Say("p1我不怕難，只怕沒有方法，冰奇，請你告訴我吧，若救不了天使，恐怕這個皇城也會毀滅。")
+	Say("n1材料．．．有『快樂之粉』、『蝙蝠之吻』、『佳雅之淚』及『甜點』，然後再交給我，我便可以替你製作『慈愛祝福』。")
+	Say("p1這些是什麼來的？我從來都沒有聽過。")
+	Say("n1你先帶四個古捷機動偶零件、一個星之徽章及七個地神龍鳥之心給我，我會給你『佳雅之淚』及告訴你其他資料。")
+	Say("p1好，我立即去辦。")
+	SetFlag("TQ043_E_Step",2)
+end
+function Step03()
+--		＜After TQ043_E．function Step02＞
+--＜玩家持有４個捷機動偶零件(10125) 、１個星之徽章(10262)及７個地神龍鳥之心(10402)＞
+--＜玩家身上沒有４個捷機動偶零件(10125) 、１個星之徽章(10262)及７個地神龍鳥之心(10402)＞→function Step04
+	if GetCountItemCount(10125) < 4 or GetCountItemCount(10262) < 1 or GetCountItemCount(10402) < 7 then
+		Step04()
+	else
+		Say("p1這些是你要的材料。")
+	--＜收去玩家身上的４個捷機動偶零件(10125)、１個星之徽章(10262)及７個地神龍鳥之心(10402)＞
+		Say("p7失去四個古捷機動偶零件、一個星之徽章及七個地神龍鳥之心。")
+		Say("n1很好，我曾經承諾過會將『佳雅之淚』給你，你好好拿著。")
+		Say("p7得到『佳雅之淚』。")
+		Say("p2萬歲，請問我應該到那裡找其他的材料？")
+		AddItem(10749)
+		SetFlag("TQ043_E_Step",3)
+	end
+end
+
+function Step04()
+	Say("n1你先帶四個古捷機動偶零件、一個星之徽章及七個地神龍鳥之心給我，我會給你『佳雅之淚』及告訴你其他資料。")
+	Say("p1好，我立即去辦。")
+end
+function Step05()
+--		＜After TQ043_E．function Step03＞
+SetFlag("TQ043_E_Step",5)
+Ask("n你要知道那一個材料的資料？","『快樂之粉』","『蝙蝠之吻』","『甜點』","Step05_Handler")
+--＜選項＞
+--．『快樂之粉』→function Step06
+--．『蝙蝠之吻』→function Step07
+--．『甜點』→function Step08
+end
+
+function Step05_Handler()
+	if GetChoice() == 0 then
+		Step06()
+	elseif GetChoice() == 1 then
+		Step07()
+	else
+		Step08()
+	end
+end
+
+
+function Step06()
+	Say("n1要得到『快樂之粉』，你要帶著三位朋友一起到星之湖對著巫樹一起展示幸福的樣子，就可以得到快樂之粉。")
+end
+function Step07()		
+	Say("n1蝙蝠只有最慈愛的一刻才會發出吻，但要令到他們慈愛及作出收集，也不容易。若想試試看，可到灼熱沙漠碰運氣。")
+	Say("n1你有沒有認識居住在灼熱沙漠的朋友，若果有，你去找他幫忙就對了。")
+	Say("p6豆貝斯！！")
+	SetFlag("TQ043_E_Step",7)
+end
+function Step08()		
+	Say("n1天使們喜歡吃甜，因此需要甜點來調節味道。")
+	Say("n1你要在冰荷烏身上打出『薄荷』、在畢茉鳥身上打出『茉莉香』及在糖衣鳥身上打出『糖蜜』。")
+	Say("n1然後再將薄荷、茉莉香及糖蜜交給道具使以基礎製藥技能合成就可以了。")
+end
+function Step09()
+	if CheckItem(10747) ~= 1 or CheckItem(10748) ~= 1 or CheckItem(10749) ~= 1 or CheckItem(10750) ~= 1 then
+		Step05()
+	else
+		--＜After TQ043_A．function Step13＞
+		--＜身上持有快樂之粉(10747)、蝙蝠之吻(10748)、佳雅之淚(10749)及甜點(10750)＞
+		--＜身上沒有快樂之粉(10747)、蝙蝠之吻(10748)、佳雅之淚(10749)及甜點(10750)＞→function Step05
+		Say("p1冰奇，我已將快樂之粉、蝙蝠之吻、佳雅之淚及甜點交來了，請替我將它們製作成『慈愛祝福』。我怕天使等不到了。")
+		Say("n1別太心急，先將材料給我。")
+		--＜收去玩家身上的快樂之粉(10747)、蝙蝠之吻(10748)、佳雅之淚(10749)及甜點(10750)＞
+		Say("p7失去快樂之粉、蝙蝠之吻、佳雅之淚及甜點。")
+		Say("n6．．．．．．")
+		Say("n6．．．．．．")
+		Say("n1好了，這就是『慈愛祝福』了，你要小心保管。")
+		--＜得到『慈愛祝福』(10751)＞
+		Say("p1謝謝你，我現在先去找天使，替他療傷。")
+		RemoveItem(10747)
+		RemoveItem(10748)
+		RemoveItem(10749)
+		RemoveItem(10750)
+		AddItem(10751)
+		SetFlag("TQ043_E_Step",9)
+	end
+end
+
+
+function Step10()
+--		＜After TQ043_E．function Step09＞
+	Say("n1想不到你真的能取得這些材料，很好很好。")
+	SetFlag("TQ043_E_Step",10)
+end

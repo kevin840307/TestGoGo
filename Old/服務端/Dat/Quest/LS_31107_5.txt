@@ -1,0 +1,19 @@
+--LS_31107_5 "極速投擲‧五級"
+
+function GetSkillData()
+	return 31107,5,50,31681,"極速投擲‧五級","極速投擲‧四級","道具使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 9 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

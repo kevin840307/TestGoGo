@@ -1,0 +1,13 @@
+--KnightCity(P20) to KnightCity(P21)
+
+function start()
+	Ask("n要進入塔第四層嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(4846,6912,23)
+	end
+	QuestEnd()
+end

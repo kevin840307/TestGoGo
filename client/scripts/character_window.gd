@@ -86,17 +86,11 @@ func _on_add_stat_pressed(stat_type: String) -> void :
 		return
 
 
-	data.exp_use -= 1
-	match stat_type:
-		"STR": data.strength += 1
-		"DEX": data.dexterity += 1
-		"CON": data.constitution += 1
-		"WIS": data.wisdom += 1
-
-	update_ui()
-
-
-	if NetworkManager: NetworkManager.send_allocate_stat_request(stat_type)
+	# Server is authoritative. Do not mutate the local model before the
+	# AllocateStatResponse arrives; otherwise a rejected request leaves the
+	# character window showing stats that were never persisted.
+	if NetworkManager:
+		NetworkManager.send_allocate_stat_request(stat_type)
 
 
 func setup(player: CharacterBody2D) -> void :
@@ -224,11 +218,8 @@ func _populate_title_list() -> void :
 
 
 func _on_title_selected(t_id: int) -> void :
-
+	# UpdateAppearance is the authoritative acknowledgement and player.gd
+	# updates data_model.title from that packet. Avoid showing a title that
+	# the server may reject as locked.
 	if NetworkManager:
 		NetworkManager.send_set_title_request(t_id)
-
-
-	if is_instance_valid(target_player) and "data_model" in target_player:
-		target_player.data_model.title = t_id
-		update_ui()

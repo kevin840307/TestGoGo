@@ -13,6 +13,9 @@ var _last_protection_display_second: int = -1
 var _remaining_expires_at_msec: int = 0
 var _protect_expires_at_msec: int = 0
 var _protection_timer: Timer = null
+var _afk_visual_suspended: bool = false
+var _visual_icon_id: int = 0
+var _visual_color_index: int = 0
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var name_label: Label = $LabelContainer / NameLabel
@@ -20,10 +23,38 @@ var _protection_timer: Timer = null
 @onready var label_container: VBoxContainer = $LabelContainer
 
 const PALETTE_SHADER = preload("res://palette_swap.gdshader")
+# Share immutable collision resources and identical palette materials across
+# item instances. Every drop still has its own Area2D and can be clicked.
+static var _shared_click_shapes: Dictionary = {}
+static var _shared_palette_materials: Dictionary = {}
 const COLOR_INDEX_TO_DEGREES = {
 	0: 0.0, 1: 90.0, 2: 180.0, 3: 270.0, 
 	4: 45.0, 5: 135.0, 6: 225.0, 7: 315.0
 }
+
+static func get_shared_click_shape(texture_size: Vector2) -> RectangleShape2D:
+	var key := Vector2i(int(texture_size.x), int(texture_size.y))
+	var cached := _shared_click_shapes.get(key) as RectangleShape2D
+	if is_instance_valid(cached):
+		return cached
+	var shape := RectangleShape2D.new()
+	shape.size = texture_size + Vector2(30.0, 30.0)
+	_shared_click_shapes[key] = shape
+	return shape
+
+
+static func get_shared_palette_material(color_index: int) -> ShaderMaterial:
+	var cached := _shared_palette_materials.get(color_index) as ShaderMaterial
+	if is_instance_valid(cached):
+		return cached
+	var material := ShaderMaterial.new()
+	material.shader = PALETTE_SHADER
+	material.set_shader_parameter(
+		"hue_shift", COLOR_INDEX_TO_DEGREES.get(color_index, 0.0)
+	)
+	_shared_palette_materials[color_index] = material
+	return material
+
 
 func _ready() -> void :
 	set_process(false)
@@ -82,49 +113,57 @@ func initialize_ground_item(data: Dictionary) -> void :
 	_update_protection_visuals()
 	_schedule_protection_update()
 
-	var icon_id = ItemLoader.get_item_property(item_index, "icon_id", 1) - 1
-	sprite.texture = ItemLoader.get_ground(icon_id)
+	_visual_icon_id = ItemLoader.get_item_property(item_index, "icon_id", 1) - 1
+	_visual_color_index = int(ItemLoader.get_item_property(item_index, "color_index", 0))
+	if GameManager and GameManager.is_afk_mode_active():
+		set_afk_visual_suspended(true)
+	else:
+		_restore_ground_visual()
 
 
+func set_afk_visual_suspended(suspended: bool) -> void:
+	if _afk_visual_suspended == suspended:
+		return
+	_afk_visual_suspended = suspended
+	if suspended:
+		if is_instance_valid(sprite):
+			sprite.texture = null
+			sprite.material = null
+			sprite.visible = false
+		if is_instance_valid(label_container):
+			label_container.visible = false
+		return
+	_restore_ground_visual()
+	if is_instance_valid(sprite):
+		sprite.visible = true
+	if is_instance_valid(label_container):
+		label_container.visible = true
+	_update_protection_visuals()
+
+
+func is_afk_visual_suspended() -> bool:
+	return _afk_visual_suspended
+
+
+func _restore_ground_visual() -> void:
+	if not is_instance_valid(sprite):
+		return
+	sprite.texture = ItemLoader.get_ground(_visual_icon_id) if _visual_icon_id > 0 else null
 	if sprite.texture:
-		var tex_h = sprite.texture.get_height()
-		var tex_w = sprite.texture.get_width()
-
-
-		var offset_y = - tex_h + (tex_h * 0.2)
-		sprite.offset = Vector2( - tex_w / 2.0, offset_y)
-
-
-		if has_node("CollisionShape2D"):
-			var col_shape = $CollisionShape2D
-
-
-			var new_shape = RectangleShape2D.new()
-
-
-
-			var collision_padding = 30.0
-			new_shape.size = Vector2(tex_w + collision_padding, tex_h + collision_padding)
-
-			col_shape.shape = new_shape
-
-
+		var tex_h: float = sprite.texture.get_height()
+		var tex_w: float = sprite.texture.get_width()
+		var offset_y: float = -tex_h + (tex_h * 0.2)
+		sprite.offset = Vector2(-tex_w / 2.0, offset_y)
+		var col_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
+		if is_instance_valid(col_shape):
+			col_shape.shape = get_shared_click_shape(Vector2(tex_w, tex_h))
 			col_shape.position = sprite.offset
-
-
-
-		if has_node("LabelContainer"):
-			var container = get_node("LabelContainer")
-			var container_height = container.size.y
-			container.position = Vector2(-100, (offset_y - (tex_h / 2.0)) - container_height - 15)
-
-
-	if ItemLoader.get_item_property(item_index, "color_index", 0) > 0:
-		var color_index = ItemLoader.get_item_property(item_index, "color_index", 0)
-		var mat = ShaderMaterial.new()
-		mat.shader = PALETTE_SHADER
-		mat.set_shader_parameter("hue_shift", COLOR_INDEX_TO_DEGREES.get(color_index, 0.0))
-		sprite.material = mat
+		if is_instance_valid(label_container):
+			label_container.position = Vector2(-100, (offset_y - (tex_h / 2.0)) - label_container.size.y - 15)
+	if _visual_color_index > 0:
+		sprite.material = get_shared_palette_material(_visual_color_index)
+	else:
+		sprite.material = null
 
 
 func _on_mouse_entered() -> void :
@@ -162,6 +201,10 @@ func request_pickup() -> void :
 		if player.get("is_dead") or player.get("is_action_locked") or (player.get("data_model") and player.data_model.get("is_shop_open")):
 			return
 
+	# Ground-item pickup may start its own approach navigation. Stop
+	# cursor-follow walking first so it cannot immediately repath away.
+	if is_instance_valid(player) and player.has_method("cancel_autorun_tracking"):
+		player.cancel_autorun_tracking(true)
 	set_meta("is_requesting", true)
 
 
@@ -172,19 +215,25 @@ func request_pickup() -> void :
 		if dist > 50.0:
 			player.combat_target = null
 			player.is_emoting = false
-			player.target_position = global_position
-			player.is_moving = true
+
+			if player.has_method("_set_navigation_target"):
+				player._set_navigation_target(global_position)
+			else:
+				player.target_position = global_position
+				player.is_moving = true
+
+			if not player.is_moving:
+				set_meta("is_requesting", false)
+				return
 
 			if player.current_state != "walk":
 				player.current_state = "walk"
 				if player.has_method("sync_animation"):
 					player.sync_animation()
 
-
 			while is_instance_valid(self) and is_instance_valid(player):
 				dist = global_position.distance_to(player.global_position)
 				if dist <= 50.0:
-
 					if player.has_method("_stop_movement"):
 						player._stop_movement()
 					else:
@@ -192,11 +241,9 @@ func request_pickup() -> void :
 						player.target_position = player.global_position
 					break
 
-
-				if player.target_position.distance_to(global_position) > 10.0 or ( not player.is_moving and dist > 50.0):
+				if not player.is_moving:
 					set_meta("is_requesting", false)
 					return
-
 
 				await get_tree().process_frame
 

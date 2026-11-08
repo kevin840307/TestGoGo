@@ -1,0 +1,6 @@
+--People01 修格
+
+function start()
+	Say("n1我正在研究魔法的結構！")
+	Say("n1如果把土和風的依加魯力量合起來，會變得什麼樣呢……","End")
+end

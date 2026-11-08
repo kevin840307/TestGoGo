@@ -1,0 +1,9 @@
+--玫瑰花束(TQ024G)
+
+function start()
+	Say("p7送給親愛的“"..GetName().."”：\n玫瑰花，是“美神”的化身，是“愛情之花”。由11朵玫瑰組成的玫瑰花束代表“一心一意愛著你”。”","showpic")
+	AddItem(10469)
+end
+function showpic()
+	Say("m#X_mas_card\\EVENT_CARD03.spr#na##","End")
+end

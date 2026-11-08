@@ -1,0 +1,123 @@
+--糖果廚子‧哈羅威(TQ015A)
+
+--TQ015_Task
+-- 1: start quest
+-- 2: brought the apple back, go to beat wizard
+-- 3: quest completed
+
+--TQ015_Done
+-- 1: quest completed at least once
+
+--TQ015_Total (WorldFlag)
+-- total number of metal given out
+
+function start()
+	status=GetFlag("TQ015_Task")
+	if status>=3 then
+		dialogue_04()
+		dialogue_06()
+	elseif status>=2 then
+		if RemoveItem(10278)==1 then
+			dialogue_05()
+		else
+			dialogue_04()
+		end
+	elseif status>=1 and GetCountItemCount(10276)>0 and GetCountItemCount(10277)>0 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+	QuestEnd()
+end
+
+function dialogue_01()
+	Say("n1唉！～\n今年的萬聖節沒有糖果可以派給小朋友了！")
+	Say("n1製造糖果的材料都給黑暗森林女巫派出的黑蝙蝠偷走了！")
+	Say("n1你可以去絲蘭森林替我找回"..Color(0,45,198).."杏仁和蘋果"..Color(0,0,0).."嗎？","End")
+	SetFlag("TQ015_Task", 1)
+end
+
+
+--玩家身上有杏仁(10276)和蘋果(10277)
+function dialogue_02()
+	RemoveItem(10276)
+	RemoveItem(10277)
+	Say("p7交出“杏仁”和“蘋果”。")
+	Say("n1多謝你替我找回杏仁和蘋果，今年的萬聖節又有美味的糖果派給小朋友了！")
+	Say("n1送你一個萬聖節派對的頭飾吧！","dialogue_02b")
+end
+
+function dialogue_02b()
+	race = GetData("Race")
+	if race==2 then
+		Say("p7得到“魔南瓜”。")
+		AddItem(10281)
+	elseif race==3 then
+		Say("p7得到“科學怪人”。")
+		AddItem(10282)
+	else
+		Say("p7得到“魔頭骨”。")
+		AddItem(10280)
+	end
+	dialogue_03()
+end
+
+
+--玩家完成TQ015A－Step02
+function dialogue_03()
+	Say("n1聽說在黑暗森林中，女巫化身成其中一隻食人蝙蝠，如果你能夠打倒女巫所化身的食人蝙蝠，得到女巫的糖果...")
+	Say("n1"..Color(0,45,198).."首30名勇士可以得到榮譽勳章"..Color(0,0,0).."一個，而"..Color(0,45,198).."之後的可得到10000星幣"..Color(0,0,0).."作賞金。")
+	Say("n1不過我有一點要提醒你！食人蝙蝠是一種集體行動的邪惡魔物，不要嘗試一個人去挑戰食人蝙蝠．．．小心！小心！")
+	SetFlag("TQ015_Task", 2)
+end
+
+function dialogue_04()
+	total=GetWorldFlag("TQ015_Total")+1
+	if total==0 then
+		Say("n1現在仍未有勇士取得女巫的糖果回來．．．")
+	elseif total<30 then
+		Say("n1現在已經有"..total.."個勇士取得女巫的糖果回來了！")
+		if GetFlag("TQ015_Task")<3 then
+			Say("n1你還有機會取得榮譽勳章！加油啊！")
+		end
+	else
+		Say("n1現在已經有"..total.."個勇士取得女巫的糖果回來了！")
+	end
+end
+
+
+--手持女巫的糖果(10278)回來的玩家
+function dialogue_05()
+	Say("p7交出“女巫的糖果”。")
+	if GetWorldFlag("TQ015_Total")<29 then
+		dialogue_05a()
+	else
+		dialogue_05b()
+	end
+	SetWorldFlag("TQ015_Total", GetWorldFlag("TQ015_Total")+1)
+	SetFlag("TQ015_Task", 3)
+end
+function dialogue_05a()
+	Say("n1為了表揚你的英勇表現，現代皇家頒發一個榮譽勳章給你！","dialogue_05a2")
+end
+function dialogue_05a2()
+	Say("p7得到“榮譽勳章”。")
+	AddItem(10235)
+	dialogue_04()
+	dialogue_06()
+end
+function dialogue_05b()
+	Say("n1為了答謝你打倒黑暗森林女巫，現頒發10000星幣賞金給你！","dialogue_05b2")
+end
+function dialogue_05b2()
+	Say("p7得到10000元")
+	ModifyData("Money",10000)
+	dialogue_04()
+	dialogue_06()
+end
+
+
+--玩家完成TQ015A－Step05
+function dialogue_06()
+	Say("n1祝你萬聖節快樂！","End")
+end

@@ -1,0 +1,51 @@
+--MS001_B 英雄狄更斯‧麥可之墓
+
+--MS001_Task
+-- 1: quest started, go to find 50冰柏古獸的牙
+-- 2: back from the tomb
+-- 3: quest competed
+
+--MS001_Done
+-- 1: quest has been done once
+
+function start()
+	dialogue_01()
+	if GetFlag("MS001_Task")==1 and GetCountItemCount(10094)>=50 then
+		dialogue_02()
+	else
+		QuestEnd()
+	end
+end
+
+function dialogue_01()
+	Say("n7英雄狄更斯．麥可之墓\n(星空曆-027至073年)\n吾友英雄狄更斯．麥可生於星之戰爭前27年。狄更斯在星之戰爭中表現出他超於常人的勇敢與榮譽，…")
+	Say("n7他在我們從加米蘭特走進尼路亞時，無懼一切的毅力與鬥志深刻在每一個加米蘭特人的心中，他遠航至廣闊之海，世界之初升地，…")
+	Say("n7勇戰雙頭魔龍迪姆霸斯，寬恕判亂者瑪亞凱爾，為人民重新帶來和平與安定，他一生無所負亦無所惡，以生命照遍加米蘭特人民。…")
+	Say("n7願吾友狄更斯與大地女神佳雅同在，受奧米加之祝福。\n～尼尼亞．烏托\n星空曆073年")
+end
+
+function dialogue_02()
+	Ask("n你要怎麼做呢？","在墓前放下冰柏古獸的牙。","還是離開死人的墓地。","reply_02")
+end
+
+function dialogue_02a()
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7失去50隻“冰柏古獸的牙”")
+		RemoveItem(10094,50)
+		Say("n7放下冰柏古獸的牙後，在牙齒的四周的冰雪慢慢化成一層霧氣，霧氣慢慢地向墓中央會集，形成一道紅色的耀眼光芒。…")
+		Say("n7當再次睜開雙眼時，只見一顆赤紅如血的寶石在墓前。")
+		Say("p7得到“英雄之心”","End")
+		AddItem(10225)
+		SetFlag("MS001_Task", 2)
+	end
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		dialogue_02a()
+	else
+		QuestEnd()
+	end
+end

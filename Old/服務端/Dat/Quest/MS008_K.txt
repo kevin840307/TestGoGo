@@ -1,0 +1,149 @@
+function start()
+	AddItem(10757)
+	Step01()
+end
+
+function Step01()
+Ask("n你要換取禮物嗎？","是的。","不是。","Step01_Handler")
+--＜選擇＞
+--．是的。→Step2
+--．不是。→AddItem(10757)→Quest End
+end
+
+function Step01_Handler()
+	if GetChoice()== 0 then
+		Step02()
+	else
+		QuestEnd()
+	end
+end
+
+function Step02()
+	Ask("n你要換取什麼禮物呢？","波奇鳥甲殼一百個","大眼立普羽毛四十個","魔靈電池五粒","其他選擇。","Step02_Handler")
+--＜選擇＞
+--．波奇鳥甲殼一百個→Step03
+--．大眼立普羽毛四十個→Step4
+--．魔靈電池五粒→Step05
+--．其他選擇。→Step06
+end
+
+function Step02_Handler()
+	if GetChoice() == 0 then
+		Step03()
+	elseif GetChoice() == 1 then
+		Step04()
+	elseif GetChoice() == 2 then
+		Step05()
+	elseif GetChoice() == 3 then
+		Step06()
+	end
+end
+
+function Step03()
+	if GetCountItemCount(10046) > 200 or ItemListCountLeft(0) < 1 then
+		Step10()
+	else
+	
+--<如玩家身上的波奇鳥甲殼(10046)多於200或物品空間少於1>→Step10
+--<取回玩家身上的換領卷(10757)>
+		Say("p7這是你的禮物，請小心拿定。")
+		RemoveItem(10757)
+		AddItem(10046,100)
+	end
+--<加波奇鳥甲殼100個(10046)>
+end
+
+function Step04()
+	if GetCountItemCount(10063) > 260 or ItemListCountLeft(0) < 1 then
+		Step10()
+	else
+--<如玩家身上的大眼立普羽毛(10063)多於260或物品空間少於1 >→Step10
+--<取回玩家身上的換領卷(10757)>
+		Say("p7這是你的禮物，請小心拿定。")
+		RemoveItem(10757)
+		AddItem(10063,40)
+	end
+--<加大眼立普羽毛40個(10063)>
+end
+
+function Step05()
+	if GetCountItemCount(6905) > 75 or ItemListCountLeft(4) < 1 then
+		Step10()
+	else
+--<如玩家身上的魔靈電池(6905)多於75或機甲裝備空間少於1>→Step10
+--<取回玩家身上的換領卷(10757)>
+		Say("p7這是你的禮物，請小心拿定。")
+		RemoveItem(10757)
+		AddItem(6905,5)
+	end
+--<加魔靈電池5粒(6905)>
+end
+
+function Step06()
+	Ask("n你要換取什麼禮物呢？","寵物依貝鳥","合體限晶片三個","經驗值九萬。","我還是再想想。","Step06_Handler")	
+--＜選擇＞
+--．寵物依貝鳥→Step07
+--．合體限晶片三個→Step8
+--．經驗值九萬。→Step09
+--．我還是再想想。→AddItem(10757)→Quest End
+end
+
+function Step06_Handler()
+	if GetChoice() == 0 then
+		Step07()
+	elseif GetChoice() == 1 then
+		Step08()
+	elseif GetChoice() == 2 then
+		Step09()
+	else
+		QuestEnd()
+	end
+end
+
+
+function Step07()
+--<如玩家身上寵物空間少於1>→Step10
+--<取回玩家身上的換領卷(10757)>
+	if ItemListCountLeft(2) < 1 then
+		Step10()
+	else
+		Say("p7這是你的禮物，請小心拿定。")
+		RemoveItem(10757)
+		AddItem(5030)
+	end
+--<加依貝鳥一隻(5030)>
+end
+function Step08()
+	if GetCountItemCount(10431) > 297 or ItemListCountLeft(0) < 1 then 
+		Step10()
+	else
+--<如玩家身上的合體限晶片(10431)多於297或物品空間少於1>→Step10	
+--<取回玩家身上的換領卷(10757)>
+		Say("p7這是你的禮物，請小心拿定。")
+		RemoveItem(10757)
+		AddItem(10431,3)
+	end
+--<加合體限晶片3個(10431)>
+end
+function Step09()
+--<如玩家經驗值已到遊戲上限>→Step11
+	if GetData("ExpAcc") > 4200000000 then
+		Step11()
+--<取回玩家身上的換領卷(10757)>
+	else
+		Say("p7站定定吧，經驗值正在注入你的身體。")
+		RemoveItem(10757)
+		ModifyData("ExpAcc",90000)
+		ModifyData("ExpUse",90000)
+	end
+end
+--<加經驗值90000>
+function Step10()		
+	Say("p7你身上已放了太多東西，請先整理一下，不然你會拿不下啊。")
+--<加換領卷(10757)一張>
+end
+
+function Step11()
+	Say("p7你已經很強了，這個禮物要留給較弱小的人，請你選擇其他物品吧。")
+--<加換領卷(10757)一張>
+end

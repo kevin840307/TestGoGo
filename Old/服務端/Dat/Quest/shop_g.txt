@@ -1,0 +1,13 @@
+--shop_e4.txt
+
+function start()
+	Ask("s要看看小店的雜貨嗎？", "好。", "不要看。","reply")	
+end
+
+function reply()
+	ans = GetChoice()
+	if ans==0 then
+		OpenShop(13, 100)
+	end
+	QuestEnd()
+end

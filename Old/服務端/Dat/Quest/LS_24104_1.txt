@@ -1,0 +1,19 @@
+--LS_24104_1 "鋼鐵意志‧一級"
+
+function GetSkillData()
+	return 24104,1,30,31409,"鋼鐵意志‧一級","","守護劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 2 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

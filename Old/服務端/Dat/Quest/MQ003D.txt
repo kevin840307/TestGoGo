@@ -1,0 +1,18 @@
+--MQ003_D 魔物柏古
+
+function start()
+	if GetFlag("魔物之血")==1
+		QuestEnd()
+	elseif GetFlag("MQ003_B_Get_Hints")==1
+		Get_Item()
+	else 
+		QuestEnd()
+end
+
+function Get_Item()
+	Say("p7得到“魔物之血”","End")
+	Additem(10007,1)
+	SetFlag("魔物之血取得", 1)
+end
+
+

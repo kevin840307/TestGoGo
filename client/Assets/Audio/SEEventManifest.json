@@ -6429,6 +6429,77 @@
       "category": "enemy",
       "resource": "res://Assets/Monsters/EN125A.json",
       "source_act": "Enemy/EN125A.ACT"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0151",
+            "SE0149",
+            "SE0150"
+          ],
+          "5": [
+            "SE0099",
+            "SE0107",
+            "SE0146"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/A_Skill_Use_100.tres",
+      "source_act": "Custom/Stellar_Shock"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0151",
+            "SE0149",
+            "SE0150"
+          ],
+          "5": [
+            "SE0099",
+            "SE0107",
+            "SE0146"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/B_Skill_Use_100.tres",
+      "source_act": "Custom/Stellar_Shock"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "0": [
+            "SE0151",
+            "SE0149",
+            "SE0150"
+          ],
+          "5": [
+            "SE0099",
+            "SE0107",
+            "SE0146"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/R_Skill_Use_100.tres",
+      "source_act": "Custom/Stellar_Shock"
+    },
+    {
+      "actions": {
+        "Effect": {
+          "1": [
+            "SE0162",
+            "SE0158",
+            "SE0144"
+          ]
+        }
+      },
+      "category": "effect",
+      "resource": "res://Assets/Effects/Skill_Effect/Skill_Hit_100.tres",
+      "source_act": "Custom/Stellar_Shock"
     }
   ],
   "format_version": 1,

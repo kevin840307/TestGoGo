@@ -1,0 +1,19 @@
+--LS_25101_3 "體力回復‧三級"
+
+function GetSkillData()
+	return 25101,3,25,31431,"體力回復‧三級","體力回復‧二級","見習聖劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 3 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

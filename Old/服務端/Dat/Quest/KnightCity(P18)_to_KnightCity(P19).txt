@@ -1,0 +1,13 @@
+--KnightCity(P18) to KnightCity(P19)
+
+function start()
+	Ask("n要進入塔第二層嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(2496,8928,23)
+	end
+	QuestEnd()
+end

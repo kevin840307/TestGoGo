@@ -1,0 +1,33 @@
+--MQ012_B  麥斯
+
+function start()
+	stat=GetFlag("MQ012_Task")
+
+	if stat==3 then
+		Say("n1轉職了？恭喜你丫！","End")
+
+	elseif stat==1 then
+		mission_begin()
+
+	elseif stat==2 then
+		if CheckItem(10188)>0 then
+			Say("n1這就是了，快放給老師吧！","End")
+		else
+			Say("n1藍寶石在藍藍立普身上，前陣子我在流星之河好像見到有藍藍立普出現……","End")
+		end
+	else 
+		Say("n1什麼了嗎？如果有什麼關於石頭的問題，就來找我吧。","End")
+	end
+end
+
+function mission_begin()
+	name=GetName()
+	Say("n1有什麼事？")
+	Say("p1請問你知道哪兒有藍寶石嗎？")
+	Say("n1藍寶石…？我記得藍藍立普身上會有……")
+	Say("n7"..name.."點點頭")
+	Say("p1那藍藍立普在哪？")
+	Say("n1應該在流星之河吧……我記得我在流星之河見過一次！")
+	Say("p1謝謝你！","End")
+	SetFlag("MQ012_Task",2)
+end

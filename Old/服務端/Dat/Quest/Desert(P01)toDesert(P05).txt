@@ -1,0 +1,17 @@
+--Desert(P01) to Desert(P05)
+
+function start()
+Say("n1封印之地嚴禁進入","End")
+end
+
+function notuse()
+	Ask("n要進入往實驗室遺址嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(12032,5056,35)
+	end
+	QuestEnd()
+end

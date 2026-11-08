@@ -1,0 +1,43 @@
+
+
+function start()
+	if GetCountItemCount(10607)>299 then
+		Say("p7使用龍蛋孵化器．．．","dia_01")
+	else
+		Say("p7使用龍蛋孵化器．．．")
+		dia_01()
+	end
+end
+function dia_01()
+	giveback()
+	if GetCountItemCount(10606)<1 then
+		dia_02()
+	elseif ItemListCountLeft(2) < 1 then
+		dia_03()
+	else
+		Ask("p確定要使用龍蛋和龍蛋孵化器去孵出幼龍嗎？","是的。","不是。","reply_01")
+	end
+end
+function reply_01()
+	if GetChoice()==0 then
+		Say("p7將龍蛋放在龍蛋孵化器上。")
+		Say("p7．．．．．．")
+		Say("p7．．．．．．")
+		Say("p7 孵化出可愛的幼龍了～","End")
+		RemoveItem(10607)
+		RemoveItem(10606)
+		AddItem(5018)
+	end
+	QuestEnd()
+end
+
+function dia_02()
+		Say("p7要擁有龍蛋和龍蛋孵化器才可蛋孵出幼龍啊。","End")
+end
+function dia_03()
+		Say("p7身上的戰鬥精靈太多了，還是先整理一下吧。","End")
+end
+
+function giveback()
+	AddItem(10607)
+end

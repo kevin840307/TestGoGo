@@ -1,0 +1,6 @@
+--People01 優格
+
+function start()
+	Say("n1別把我的名字開玩笑喔。")
+	Say("n1我可不是飲料……","End")
+end

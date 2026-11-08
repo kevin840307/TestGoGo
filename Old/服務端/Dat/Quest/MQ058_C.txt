@@ -1,0 +1,67 @@
+--MQ058_C 光風怪
+
+--MQ058_C
+-- 1: got the item at least once
+
+function start()
+	if GetData("Career")~=6 then
+		dialogue_01()
+	elseif GetFlag("MQ058_C")==1 then
+		dialogue_04()
+	else
+		skill = GetSpecifiedSkillInfo(GetCallerPtr(), 6101)
+		if GetTargetData(skill, "Lv") < 4 then
+			dialogue_02()
+		else
+			dialogue_03()
+		end
+	end
+end
+
+--人族魔法使以外的玩家打倒它時
+function dialogue_01()
+	Say("p1牠身上那神秘的粉在哪兒？")
+	Say("p1難道要用什麼特定的魔法維持神秘的粉的存在？","End")
+end
+
+--用白魔彈把其打倒，卻不夠4級
+function dialogue_02()
+	Say("p1牠身上那神秘的粉在哪兒？")
+	Say("p1好像白魔彈還未夠強…令神秘的粉維持不到…","End")
+end
+
+--白魔彈夠4級時
+function dialogue_03()
+	Say("p1啊！掉下神秘的粉了！")
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p1好耶！")
+		Say("p7得到“神秘的粉”")
+		Say("p7得到4000EXP","End")
+		AddItem(10246)
+		gainexp(4000)
+		SetFlag("MQ058_C", 1)
+	end
+end
+
+--白魔彈夠4級時，但拿過
+function dialogue_04()
+	if random(100)>50 then
+		Say("p1啊！掉下神秘的粉了！")
+		if ItemListCountLeft(0)<1 then
+			Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			Say("p1好耶！")
+			Say("p7得到“神秘的粉”","End")
+			AddItem(10246)
+		end
+	else
+		QuestEnd()
+	end
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end

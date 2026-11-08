@@ -1,0 +1,12 @@
+--競技場管理員(NQ021_E)
+
+function start()
+	Ask("n你要離開選手預備區嗎？","我要馬上離開。","還是多考慮一會。","reply_01")
+end
+
+function reply_01()
+	if GetChoice()==0 then
+		MovePlayer(9891, 3434, 48)
+	end
+	QuestEnd()
+end

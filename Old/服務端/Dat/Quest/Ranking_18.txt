@@ -1,0 +1,17 @@
+--Ranking
+
+function start()
+	Ask("n要查看什麼排行呢？","等級排行。","財富排行。","學會排行","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		RankQuery(0)
+	elseif choice == 1 then
+		RankQuery(1)
+	else
+		ClubRanking()
+	end
+	QuestEnd()
+end

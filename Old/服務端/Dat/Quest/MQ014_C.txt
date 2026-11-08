@@ -1,0 +1,45 @@
+--MQ014_C  柯爾
+
+--statue3 =1 : MQ017 mission starts
+--statue3 =2 : After Talking with 娜姬．連特 
+
+function start()
+	
+	statue=GetFlag("MQ013_Task")
+	statue2=GetFlag("MQ014_Task")
+	statue3=GetFlag("MQ017_Task")
+	
+
+	if GetFlag("MQ014_C")==2 or statue3==2 then
+		Say("n1嗯……真的有點像魔法學校的學生。")
+
+	elseif statue3==1 then
+		Say("p1最近你有沒有看到那個賊人了？")
+		Say("n1嗯！還有見過啊！就是幾天前而已嘛！那個人又在那棵樹下出現了！")
+		Say("n1我想那一定收起了不少奇怪的東西才對，不過說起來，我覺得他有點像魔法學校的學生……")
+		Say("n1現在的學校真是管教無方呀…我想你應該和老師們聊一聊這個問題才對！")	
+		SetFlag("MQ014_C",2)
+
+	elseif statue>=4 then
+		Say("n1城中的治安真是越來越差了……","End")
+
+	elseif statue==3 or statue2==1 then
+		if GetFlag("MQ014_C")==1 then
+			Say("n1我看到他就好像在"..Color(0,45,198).."樹旁"..Color(0,0,0).."的樣子……","End")
+		else
+			Say("p1你是不是知道這陣子晚上有人出沒在附近的事？")
+			Say("n1是啊，清楚得不得了！我還看到他呢！")
+			Say("p1你是在哪兒看到他的？可以說我知道嗎？")
+			Say("n1嗯！我看到他時，他好像一直在一棵"..Color(0,45,198).."樹下"..Color(0,0,0).."似的！")
+			Say("p1謝謝你的幫忙。","End")
+			SetFlag("MQ014_C",1)
+				
+		end
+
+	else
+		Say("n1這陣子真是很奇怪呢？有人常常都在晚上出沒。","End")
+	end
+
+end
+
+

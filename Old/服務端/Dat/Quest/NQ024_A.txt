@@ -1,0 +1,182 @@
+--皇城鐵道票務員(NQ024_A)
+
+--NQ024_Done
+--1: done
+
+function start()
+	if GetFlag("NQ024_Done") == -1 then
+		LearnTrain()
+	else
+		BuyTicket0()
+	end
+
+	QuestEnd()
+end
+
+--<當玩家第一次次買票>
+function LearnTrain()
+	Say("s皇城的鐵路，是為方便人民而架設，它分別有魔法之都幹線、騎士之城幹線和機械之城幹線。")
+	Say("s由於每個城市離首都的距離不一，因此鐵路的收費也不相同，而等級25以下的新手更可以優惠的劃一價錢購買車票。")
+	Say("s當你購票後，可隨時找車長乘車，每班車相隔3分鐘開出，而上車時間為2分鐘。")
+	SetFlag("NQ024_Done", 1)
+end
+
+--<當玩家第一次次買票後>
+function BuyTicket0()
+	Ask("s你要購買什麼樣的票呢？","單程車票","新手單程優惠車票","皇城鐵道套票","讓我先考慮一會。","BuyTicket0Reply")
+end
+
+function BuyTicket0Reply()
+	Result = GetChoice()
+
+	if Result == 0 then
+		BuySingle()
+	elseif Result == 1 then
+		BuyDiscount()
+	elseif Result == 2 then
+		BuyOctopus()
+	else
+	end
+end
+
+function BuySingle()
+	Ask("s你要購買行走那條路線的單程車票呢？", "300星幣購買：魔法之都幹線的單程車票。", "300星幣購買：騎士之城幹線的單程車票。", "300星幣購買：機械之城幹線的單程車票。", "對不起，我要考慮一會。", "BuySingleReply")
+end
+
+function BuySingleReply()
+	Result = GetChoice()
+	if ItemListCountLeft(0)<1 then
+		too_much()
+	else
+		if Result == 0 then
+			if GetData("Money") < 300 then
+				Say("s很抱歉，你身上的星幣好像不夠買車票啊。")
+			elseif GetCountItemCount(10505)>299 then
+				too_much2()
+			else
+				AddItem(10505)
+				ModifyData("Money", -300)
+				Say("p7得到「魔法之都幹線單程車票」")
+			end
+		elseif Result == 1 then
+			if GetData("Money") < 300 then
+				Say("s很抱歉，你身上的星幣好像不夠買車票啊。")
+			elseif GetCountItemCount(10507)>299 then
+				too_much2()
+			else
+				AddItem(10507)
+				ModifyData("Money", -300)
+				Say("p7得到「騎士之城幹線單程車票」")
+			end
+		elseif Result == 2 then
+			if GetData("Money") < 300 then
+				Say("s很抱歉，你身上的星幣好像不夠買車票啊。")
+			elseif GetCountItemCount(10506)>299 then
+				too_much2()
+			else
+				AddItem(10506)
+				ModifyData("Money", -300)
+				Say("p7得到「機械之城幹線單程車票」")
+			end
+		end
+	end
+end
+
+function BuyDiscount()
+	Ask("s等級在25以下，便可享有半價的優惠購買新手單程票，但你使用時必須在等級25以下，超過了車長是不會給你上車的，現在你要購買嗎？", "100星幣購買：魔法之都幹線的優惠票。", "100星幣購買：騎士之城幹線的優惠票。", "100星幣購買：機械之城幹線的優惠票。", "對不起，我要考慮一會。", "BuyDiscountReply")
+end
+
+function BuyDiscountReply()
+	Result = GetChoice()
+	if ItemListCountLeft(0)<1 then
+		too_much()
+	else
+		if Result == 0 then
+			if GetData("Level") > 25 then
+				Say("s很抱歉，優惠車票只售買給等級在25以下的乘客，閣下的等級好像已超出等級了。")
+			elseif GetCountItemCount(10508)>299 then
+				too_much2()
+			elseif GetData("Money") < 100 then
+				Say("s很抱歉，你身上的星幣好像不夠買車票啊。")
+			else
+				AddItem(10508)
+				ModifyData("Money", -100)
+				Say("p7得到「魔法之都幹線優惠車票」")
+			end
+		elseif Result == 1 then
+			if GetData("Level") > 25 then
+				Say("s很抱歉，優惠車票只售買給等級在25以下的乘客，閣下的等級好像已超出等級了。")
+			elseif GetCountItemCount(10510)>299 then
+				too_much2()
+			elseif GetData("Money") < 100 then
+				Say("s很抱歉，你身上的星幣好像不夠買車票啊。")
+			else
+				AddItem(10510)
+				ModifyData("Money", -100)
+				Say("p7得到「騎士之城幹線優惠車票」")
+			end
+		elseif Result == 2 then
+			if GetData("Level") > 25 then
+				Say("s很抱歉，優惠車票只售買給等級在25以下的乘客，閣下的等級好像已超出等級了。")
+			elseif GetCountItemCount(10509)>299 then
+				too_much2()
+			elseif GetData("Money") < 100 then
+				Say("s很抱歉，你身上的星幣好像不夠買車票啊。")
+			else
+				AddItem(10509)
+				ModifyData("Money", -100)
+				Say("p7得到「機械之城幹線優惠車票」")
+			end
+		end
+	end
+end
+
+function BuyOctopus()
+	Ask("s皇城鐵道套票是可以同時乘搭不同幹線的套票，但每一次必須購買多張套票，而且套票是不能轉讓的，這點請你留意啊！", "6000星幣購買：20張皇城鐵道套票。", "12000星幣購買：40張皇城鐵道套票。", "24000星幣購買：80張皇城鐵道套票。", "對不起，我要考慮一會。", "BuyOctopusReply")
+end
+
+function BuyOctopusReply()
+	Result = GetChoice()
+	if ItemListCountLeft(0)<1 then
+		too_much()
+	else
+		if Result == 0 then
+			if GetData("Money") < 6000 then
+				Say("s很抱歉，你身上的星幣好像不夠買車票啊。")
+			elseif GetCountItemCount(10511)>280 then
+				too_much2()
+			else
+				AddItem(10511, 20)
+				ModifyData("Money", -6000)
+				Say("p7得到「20張皇城鐵道套票。」")
+			end
+		elseif Result == 1 then
+			if GetData("Money") < 12000 then
+				Say("s很抱歉，你身上的星幣好像不夠買車票啊。")
+			elseif GetCountItemCount(10511)>260 then
+				too_much2()
+			else
+				AddItem(10511, 40)
+				ModifyData("Money", -12000)
+				Say("p7得到「40張皇城鐵道套票。」")
+			end
+		elseif Result == 2 then
+			if GetData("Money") < 24000 then
+				Say("s很抱歉，你身上的星幣好像不夠買車票啊。")
+			elseif GetCountItemCount(10511)>220 then
+				too_much2()
+			else
+				AddItem(10511, 80)
+				ModifyData("Money", -24000)
+				Say("p7得到「80張皇城鐵道套票。」")
+			end
+		end
+	end
+end
+
+function too_much()
+	Say("s很抱歉，你身上的物品太多了，不能再購買車票。","End")
+end
+function too_much2()
+	Say("s很抱歉，你身上的票已太多了，不能再購買車票了。","End")
+end

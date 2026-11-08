@@ -1,0 +1,18 @@
+--Forest04(P01) to Forest04(P03)軍用地下倉庫
+
+function start()
+Say("n1封印之地嚴禁進入","End")
+end
+
+function notuse()
+--下面句子層於13-11-03作出地名修改
+	Ask("n要進入軍用地下倉庫嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(4224,8000,21)
+	end
+	QuestEnd()
+end

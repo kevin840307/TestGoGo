@@ -1,0 +1,27 @@
+--SKC21J103
+
+function start()
+	consume = "MP"
+
+	skillinfo = GetSkillInfo()
+	skillLv = GetData(skillinfo, "Lv")
+
+	conTotal = GetConTotal(skillLv)
+	pull_start(conTotal)
+end
+
+function GetConTotal(lv)
+	if lv == 1 then
+		return 15
+	elseif lv == 2 then
+		return 30
+	elseif lv == 3 then
+		return 55
+	elseif lv == 4 then
+		return 90
+	else
+		return 135
+	end
+end
+
+#include "pull_common.txt"

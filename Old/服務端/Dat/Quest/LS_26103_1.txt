@@ -1,0 +1,19 @@
+--LS_26103_1 "黑魔彈‧一級"
+
+function GetSkillData()
+	return 26103,1,20,31474,"黑魔彈‧一級","","見習魔動使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 5 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

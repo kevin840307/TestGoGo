@@ -1,0 +1,503 @@
+--TQ036_A
+--國王．加魯加．尼尼亞
+--
+--TQ036_B
+--娛樂大臣．斯狄依
+--
+--TQ036_C1
+--紅色機動偶
+--
+--TQ036_C2
+--黃色機動偶
+--
+--TQ036_C3
+--藍色機動偶
+--
+--TQ036_C4
+--綠色機動偶
+--
+--勝利之翼	數碼娛樂打怪大賽的獎品			10655	Lv30(+迴避)
+--喜樂之環	數碼娛樂打怪大賽的獎品			10656	Lv30(+迴避)
+--榮光之劍	數碼娛樂打怪大賽的獎品			10657	Lv30(+迴避)
+--實力之盾	數碼娛樂打怪大賽的獎品			10658	Lv30(+迴避)
+--紅隊絲帶	數碼娛樂打怪大賽的分隊用頭飾	10659	不可交易
+--黃隊絲帶	數碼娛樂打怪大賽的分隊用頭飾	10660	不可交易
+--藍隊絲帶	數碼娛樂打怪大賽的分隊用頭飾	10661	不可交易
+--綠隊絲帶	數碼娛樂打怪大賽的分隊用頭飾	10662	不可交易
+--勝利之翼	數碼娛樂打怪大賽的獎品			10655	Lv30(+迴避)
+--
+--紅色機動偶	Lv35	TQ036_C1
+--黃色機動偶	Lv35	TQ036_C2
+--藍色機動偶	Lv35	TQ036_C3
+
+--global flag:
+-- TQ036_Rteam_Mark 紅隊
+-- TQ036_Yteam_Mark 黃隊
+-- TQ036_Bteam_Mark 藍隊
+-- TQ036_Gteam_Mark 綠隊
+-- TQ036_st winner
+-- TQ036_nd 
+-- TQ036_rd 
+-- TQ036_th 
+-- TQ036_counter
+--Individual
+-- TQ036_Task
+-- TQ036_team
+-- 1: 喜樂之紅
+-- 2: 榮譽之黃
+-- 3: 勝利之藍
+-- 4: 實力之綠
+
+-- Kitson
+-- TQ036_Task
+-- 2: wrong gift
+-- 3: right gift
+-- TQ036_st_ok winner
+-- TQ036_nd_ok 
+-- TQ036_rd_ok 
+-- TQ036_th_ok 
+
+function start()
+	if GetFlag("TQ036_Task") < 1 then
+		if GetData("Level") > 29 then
+			Step02()
+		else
+			Step01()
+		end
+	elseif GetFlag("TQ036_Task") == 2 then
+		regetItem()
+	else
+		Step04()
+	end
+end
+
+function Step01()
+	Say("n1星空之門得到第二屆香港數瑪娛樂傑出大獎‧專業界別的最佳電腦/電視娛樂軟件！！這都是因為我們一直得到大家的支持！")
+	Say("n1現在皇上為了與大家一起分享這份喜悅，特別舉行了一個數碼娛樂打怪大賽。")
+	Say("n1只要是等級30或以上尼尼亞國民都可參加這次的比賽。")
+end
+
+function Step02()
+	--//＜4隊分數都已達88888＞→Step08
+	Rmark = GetWorldFlag("TQ036_Rteam_Mark")
+	Ymark = GetWorldFlag("TQ036_Yteam_Mark")
+	Gmark = GetWorldFlag("TQ036_Gteam_Mark")
+	Bmark = GetWorldFlag("TQ036_Bteam_Mark")
+	if Rmark > 88887 and Ymark > 88887 and Bmark > 88887 and Gmark > 88887 then
+		Step08()
+	elseif ItemListCountLeft(1) < 1 then
+		Step07()
+	else
+		Say("n1星空之門得到第二屆香港數瑪娛樂傑出大獎‧專業界別的最佳電腦/電視娛樂軟件！！這都是因為我們一直得到大家的支持！")
+		Say("n1現在皇上為了與大家一起分享這份喜悅，特別舉行了一個數碼娛樂打怪大賽。")
+		Say("n1參加的國民會被編成４隊，分別是喜樂之紅、榮譽之黃、勝利之藍、實力之綠四隊。")
+		Say("n1分隊之後可得絲帶一個，以作隊伍色別之用。")
+		Say("n1之後你們可以去孤寂山區、戰爭平原、饑餓荒地和冰花山谷中打倒自己隊伍的機動偶或其他隊伍的機動偶。")
+		Say("n1打倒大賽用的機動偶時，必需帶上絲帶，否則會視為搗亂比賽而被送至神團聖殿。")
+		Say("n1打倒自己隊伍所屬的機動偶，可得5分。")
+		Say("n1而打到別隊的機動偶，可使該隊分數減2分。")
+		Say("n1最先得到88888分的隊伍可以得到一等大獎，第二的是二等獎，如此類推。")
+		Say("n1一等大獎的獎品：勝利之翼、喜樂之環、榮光之劍和實力之盾。")
+		Say("n1二等獎的獎品：喜樂之環、榮光之劍和實力之盾。")
+		Say("n1三等獎的獎品：榮光之劍和實力之盾。")
+		Say("n1四等獎的獎品：實力之盾。")
+		Ask("n你明白了比賽規則和決定要參賽嗎？","是的！","請讓我再考慮一下～","Q2Ans")
+	end		
+end
+
+function Q2Ans()
+
+	if GetChoice() == 0 then
+		Step03()
+	else
+		QuestEnd()			
+	end
+end
+
+function Step03()
+	Say("n1好的！我現在正式接受"..GetName().."參加數碼娛樂打怪大賽！")
+	
+	team = GetWorldFlag("TQ036_counter")	
+	Rmark = GetWorldFlag("TQ036_Rteam_Mark")
+	Ymark = GetWorldFlag("TQ036_Yteam_Mark")
+	Gmark = GetWorldFlag("TQ036_Gteam_Mark")
+	Bmark = GetWorldFlag("TQ036_Bteam_Mark")
+	if team == 1 then
+		if Ymark < 88888 then
+			Say("n1我現在宣告"..GetName().."被編入榮譽之黃的隊伍之中。")
+			Say("p7得到黃隊絲帶。","Step03_AddItem_Y")
+		elseif Bmark < 88888 then
+			Say("n1我現在宣告"..GetName().."被編入勝利之藍的隊伍之中。")
+			Say("p7得到藍隊絲帶。","Step03_AddItem_B")
+		elseif Gmark < 88888 then
+			Say("n1我現在宣告"..GetName().."被編入實力之綠的隊伍之中。")
+    		Say("p7得到綠隊絲帶。","Step03_AddItem_G")    	
+		elseif Rmark < 8888 then
+			Say("n1我現在宣告"..GetName().."被編入喜樂之紅的隊伍之中。")
+	    	Say("p7得到紅隊絲帶。","Step03_AddItem_R")
+	    else
+	    	
+		end
+	elseif team == 2 then	
+		if Bmark < 88888 then
+			Say("n1我現在宣告"..GetName().."被編入勝利之藍的隊伍之中。")
+			Say("p7得到藍隊絲帶。","Step03_AddItem_B")
+		elseif Gmark < 88888 then
+			Say("n1我現在宣告"..GetName().."被編入實力之綠的隊伍之中。")
+    		Say("p7得到綠隊絲帶。","Step03_AddItem_G")    	
+		elseif Rmark < 88888 then
+			Say("n1我現在宣告"..GetName().."被編入喜樂之紅的隊伍之中。")
+	    	Say("p7得到紅隊絲帶。","Step03_AddItem_R")
+		elseif Ymark < 8888 then
+			Say("n1我現在宣告"..GetName().."被編入榮譽之黃的隊伍之中。")
+			Say("p7得到黃隊絲帶。","Step03_AddItem_Y")
+	    else
+	    	
+		end
+	elseif team == 3 then		
+		if Gmark < 88888 then
+			Say("n1我現在宣告"..GetName().."被編入實力之綠的隊伍之中。")
+    		Say("p7得到綠隊絲帶。","Step03_AddItem_G")    	
+		elseif Rmark < 88888 then
+			Say("n1我現在宣告"..GetName().."被編入喜樂之紅的隊伍之中。")
+	    	Say("p7得到紅隊絲帶。","Step03_AddItem_R")
+		elseif Ymark < 8888 then
+			Say("n1我現在宣告"..GetName().."被編入榮譽之黃的隊伍之中。")
+			Say("p7得到黃隊絲帶。","Step03_AddItem_Y")
+	    elseif Bmark < 88888 then
+			Say("n1我現在宣告"..GetName().."被編入勝利之藍的隊伍之中。")
+			Say("p7得到藍隊絲帶。","Step03_AddItem_B")
+		else
+	    	
+		end
+	else
+		if Rmark < 88888 then
+			Say("n1我現在宣告"..GetName().."被編入喜樂之紅的隊伍之中。")
+	    	Say("p7得到紅隊絲帶。","Step03_AddItem_R")
+		elseif Ymark < 8888 then
+			Say("n1我現在宣告"..GetName().."被編入榮譽之黃的隊伍之中。")
+			Say("p7得到黃隊絲帶。","Step03_AddItem_Y")
+	    elseif Bmark < 88888 then
+			Say("n1我現在宣告"..GetName().."被編入勝利之藍的隊伍之中。")
+			Say("p7得到藍隊絲帶。","Step03_AddItem_B")
+		elseif Gmark < 88888 then
+			Say("n1我現在宣告"..GetName().."被編入實力之綠的隊伍之中。")
+    		Say("p7得到綠隊絲帶。","Step03_AddItem_G")    	
+		else
+	    	
+		end
+			
+	end
+end
+
+function Step03_AddItem_R()
+	SetWorldFlag("TQ036_counter",1)
+	SetFlag("TQ036_team",1)	
+	SetFlag("TQ036_Task",1)
+	AddItem(10659)
+end
+
+function Step03_AddItem_Y()
+	SetWorldFlag("TQ036_counter",2)
+	SetFlag("TQ036_team",2)
+	SetFlag("TQ036_Task",1)
+	AddItem(10660)
+end
+
+function Step03_AddItem_B()
+	SetWorldFlag("TQ036_counter",3)
+	SetFlag("TQ036_team",3)
+	SetFlag("TQ036_Task",1)
+	AddItem(10661)
+end
+
+function Step03_AddItem_G()
+	SetWorldFlag("TQ036_counter",4)
+	SetFlag("TQ036_team",4)
+	SetFlag("TQ036_Task",1)
+	AddItem(10662)
+end
+
+function Step04()
+--//＜After TQ036_B Step03＞
+	Rmark = GetWorldFlag("TQ036_Rteam_Mark")
+	Ymark = GetWorldFlag("TQ036_Yteam_Mark")
+    Bmark = GetWorldFlag("TQ036_Bteam_Mark")
+	Gmark = GetWorldFlag("TQ036_Gteam_Mark")
+	if Rmark < 0 then 
+		Rmark = 0
+	end
+	if Ymark < 0 then 
+		Ymark = 0
+	end
+	if Gmark < 0 then
+		Gmark = 0
+	end
+	if Bmark < 0 then
+		Bmark = 0
+	end
+	
+	Say("n1現在就讓我來報告各隊現在的分數：")
+	Say("n1喜樂之紅現在的分數是"..Rmark.."。")
+	Say("n1榮譽之黃現在的分數是"..Ymark.."。")
+	Say("n1勝利之藍現在的分數是"..Bmark.."。")
+	Say("n1實力之綠現在的分數是"..Gmark.."。")
+	
+	Say("n1得到第一名的隊伍是～")
+	n = GetWorldFlag("TQ036_st_ok")
+	if n == 1 then
+		Say("n1喜樂之紅。")
+	elseif n == 2 then
+		Say("n1榮譽之黃。")
+	elseif n == 3 then
+		Say("n1勝利之藍。")
+	elseif n == 4 then
+		Say("n1實力之綠。")
+	else
+		Say("n1未有結果。")
+	end
+	
+	Say("n1得到第二名的隊伍是～")
+	n = GetWorldFlag("TQ036_nd_ok")
+	if n == 1 then
+		Say("n1喜樂之紅。")
+	elseif n == 2 then
+		Say("n1榮譽之黃。")
+	elseif n == 3 then
+		Say("n1勝利之藍。")
+	elseif n == 4 then
+		Say("n1實力之綠。")
+	else
+		Say("n1未有結果。")
+	end
+	Say("n1得到第三名的隊伍是～")
+	n = GetWorldFlag("TQ036_rd_ok")
+	if n == 1 then
+		Say("n1喜樂之紅。")
+	elseif n == 2 then
+		Say("n1榮譽之黃。")
+	elseif n == 3 then
+		Say("n1勝利之藍。")
+	elseif n == 4 then
+		Say("n1實力之綠。")
+	else
+		Say("n1未有結果。")
+	end
+	Say("n1得到第四名的隊伍是～")
+	n = GetWorldFlag("TQ036_th_ok")
+	if n == 1 then
+		Say("n1喜樂之紅。")
+	elseif n == 2 then
+		Say("n1榮譽之黃。")
+	elseif n == 3 then
+		Say("n1勝利之藍。")
+	elseif n == 4 then
+		Say("n1實力之綠。")
+	else
+		Say("n1未有結果。")
+	end
+--//＜角色所屬的隊伍分數大於88887＞→Step05
+	pTeam = GetFlag("TQ036_team")
+	if pTeam == 1 and Rmark > 88887 then
+		Step05()
+	elseif pTeam == 2 and Ymark > 88887 then
+		Step05()
+	elseif pTeam == 3 and Bmark > 88887 then
+		Step05()
+	elseif pTeam == 4 and Gmark > 88887 then
+		Step05()
+	end
+end
+
+function Step05()
+	--//＜所屬的隊伍得第四名＞→Step06
+	itemSpace = 0
+	if GetWorldFlag("TQ036_th_ok") == GetFlag("TQ036_team") then
+		Step06()
+	else
+		if GetWorldFlag("TQ036_st_ok") == GetFlag("TQ036_team") then
+			Say("n1恭喜你們！！因為你們的優越表現，你們的隊伍得到了今次數碼娛樂打怪大賽數碼的冠軍！！")
+			itemSpace = 4
+		elseif GetWorldFlag("TQ036_nd_ok") == GetFlag("TQ036_team") then
+			Say("n1恭喜你們！！因為你們的優越表現，你們的隊伍得到了今次數碼娛樂打怪大賽數碼的亞軍！！")
+			itemSpace = 3
+		elseif GetWorldFlag("TQ036_rd_ok") == GetFlag("TQ036_team") then
+			Say("n1恭喜你們！！因為你們的優越表現，你們的隊伍得到了今次數碼娛樂打怪大賽數碼的季軍！！")
+			itemSpace = 2
+		end		
+		if GetFlag("TQ036_Task") >= 2 then
+			QuestEnd()
+		else
+			if ItemListCountLeft(1) < itemSpace then
+				Step07()
+			else
+				Say("n1這些是你勝出比賽的獎勵！！")
+				if GetWorldFlag("TQ036_st_ok") == GetFlag("TQ036_team") then
+					Say("p7得到勝利之翼")
+					Say("p7得到喜樂之環")
+					Say("p7得到榮光之劍")
+					Say("p7得到實力之盾","Step05_AddItem_st")
+				elseif GetWorldFlag("TQ036_nd_ok") == GetFlag("TQ036_team") then
+					Say("p7得到勝利之翼")
+					Say("p7得到喜樂之環")
+					Say("p7得到榮光之劍","Step05_AddItem_nd")				
+				elseif GetWorldFlag("TQ036_rd_ok") == GetFlag("TQ036_team") then				
+					Say("p7得到榮光之劍")
+					Say("p7得到實力之盾","Step05_AddItem_rd")
+				end
+			end
+		end
+		--//＜角色已經領取了獎品＞→Quest End
+		--//＜角色身上裝備空間不足(冠軍．4 /亞軍．3 /季軍．2)＞→Step07	
+		--//Say("p7得到一等大獎／二等獎／三等獎的內容
+	end
+end
+
+function Step05_AddItem_st()
+	SetFlag("TQ036_Task",3)
+    AddItem (10655)
+    AddItem (10656)
+    AddItem (10657)
+    AddItem (10658)
+    QuestEnd()
+end
+
+function Step05_AddItem_nd()
+	SetFlag("TQ036_Task",3)
+	AddItem (10655)
+    AddItem (10656)
+    AddItem (10657)
+    QuestEnd()
+end
+
+function Step05_AddItem_rd()
+	SetFlag("TQ036_Task",3)
+	AddItem (10657)
+    AddItem (10658)
+    QuestEnd()
+end
+
+function Step06()
+	--//＜角色身上裝備空間少於１＞→Step07 
+	if GetFlag("TQ036_Task") >= 2 then
+		Say("n1多謝你的參與，下次比賽要多加努力啊！")
+		QuestEnd()
+	else
+		if ItemListCountLeft(1) < 1 then
+			Step07()
+		else		
+			Say("n1多謝你的參與，下次比賽要多加努力啊！")
+			Say("n1這實力之盾是答謝你們參加今次的比賽！")
+			Say("p7得到實力之盾。","Step06_AddItem")
+		end
+	end	
+end
+
+function Step06_AddItem()
+	SetFlag("TQ036_Task",3)
+    AddItem (10658)
+    QuestEnd()
+end
+
+function Step07()
+	Say("p7身上的裝備太多了，還是先整理一下吧！")
+end
+
+function Step08()
+	Say("n1星空之門得到第二屆香港數瑪娛樂傑出大獎‧專業界別的最佳電腦/電視娛樂軟件和數碼港大獎！！這都是因為我們一直得到大家的支持！")
+	Say("n1皇上為了與大家一起分享這份喜悅，特別舉行了一個數碼娛樂打怪大賽。現在數碼娛樂打怪大賽已經結束了，多謝大家的支持！")
+end
+
+function regetItem()
+	if GetWorldFlag("TQ036_st") == GetFlag("TQ036_team") then
+		Ask("n請你把勝利之翼、喜樂之環、榮光之劍和實力之盾帶回給我吧！","我經已帶來了。","我才不會給你呢！","reget_1")
+	elseif GetWorldFlag("TQ036_nd") == GetFlag("TQ036_team") then
+		Ask("n請你把喜樂之環、榮光之劍和實力之盾帶回給我吧！","我經已帶來了。","我才不會給你呢！","reget_2")		
+	elseif GetWorldFlag("TQ036_rd") == GetFlag("TQ036_team") then				
+		Ask("n請你把榮光之劍和實力之盾帶回給我吧！","我經已帶來了。","我才不會給你呢！","reget_3")		
+	else		
+		Ask("n請你把實力之盾帶回給我吧！","我經已帶來了。","我才不會給你呢！","reget_4")		
+	end
+end
+
+function reget_1()
+	if GetChoice()==0 then
+		go_reget_1()
+	end
+	QuestEnd()
+end
+
+function reget_2()
+	if GetChoice()==0 then
+		go_reget_2()
+	end
+	QuestEnd()
+end
+
+function reget_3()
+	if GetChoice()==0 then
+		go_reget_3()
+	end
+	QuestEnd()
+end
+
+function reget_4()
+	if GetChoice()==0 then
+		go_reget_4()
+	end
+	QuestEnd()
+end
+
+function go_reget_1()
+	if CheckItem(10655)>=1 and GetData("Back")~=10655 and CheckItem(10656)>=1 and GetData("Bonnet")~=10656 and CheckItem(10657)>=1 and GetData("Weapon")~=10657 and CheckItem(10658)>=1 and GetData("Shield")~=10658 then
+		SetFlag("TQ036_Task",1)
+    	RemoveItem(10655)
+    	RemoveItem(10656)
+    	RemoveItem(10657)
+    	RemoveItem(10658)
+    	Step04()
+	else
+		Say("n1唔...你似乎未有把我要的將備帶來哦。若你的裝備已裝了上身，請先把它解除。")
+		Say("n1記著，我要的裝備是勝利之翼、喜樂之環、榮光之劍和實力之盾。","End")
+    end
+    QuestEnd()
+end
+
+function go_reget_2()
+	if CheckItem(10656)>=1 and GetData("Bonnet")~=10656 and CheckItem(10657)>=1 and GetData("Weapon")~=10657 and CheckItem(10658)>=1 and GetData("Shield")~=10658 then
+		SetFlag("TQ036_Task",1)
+	    RemoveItem (10656)
+	    RemoveItem (10657)
+	    RemoveItem (10658)
+	    Step04()
+	else
+		Say("n1唔...你似乎未有把我要的將備帶來哦。若你的裝備已裝了上身，請先把它解除。")
+		Say("n1記著，我要的裝備是喜樂之環、榮光之劍和實力之盾。","End")
+	end
+    QuestEnd()
+end
+
+function go_reget_3()
+	if CheckItem(10657)>=1 and GetData("Weapon")~=10657 and CheckItem(10658)>=1 and GetData("Shield")~=10658 then
+		SetFlag("TQ036_Task",1)
+	    RemoveItem (10657)
+	    RemoveItem (10658)
+	    Step04()
+	else
+		Say("n1唔...你似乎未有把我要的將備帶來哦。若你的裝備已裝了上身，請先把它解除。")
+		Say("n1記著，我要的裝備是榮光之劍和實力之盾。","End")
+	end
+    QuestEnd()
+end
+
+function go_reget_4()
+	if CheckItem(10658)>=1 and GetData("Shield")~=10658 then
+		SetFlag("TQ036_Task",1)
+	    RemoveItem (10658)
+	    Step04()
+	else
+		Say("n1唔...你似乎未有把我要的將備帶來哦。若你的裝備已裝了上身，請先把它解除。")
+		Say("n1記著，我要的裝備是實力之盾。","End")
+	end
+    QuestEnd()
+end

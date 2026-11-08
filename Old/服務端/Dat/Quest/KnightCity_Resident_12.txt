@@ -1,0 +1,6 @@
+--People01 凱兒
+
+function start()
+	Say("n1你會玩拼字遊戲嗎？")
+	Say("n1我是城中的高手～沒什麼人可以勝過我。","End")
+end

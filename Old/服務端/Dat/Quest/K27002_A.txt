@@ -1,0 +1,146 @@
+--K27002_A  咪咪的收集
+
+
+function start()
+	statue=GetFlag("K27002A_Task")
+	
+	if statue==1 then
+		if conditionsatisfied(300) then
+			Ask ( "n啊！你是否已收集足夠甲殼，把它們帶來給我？","對，我已收集好了。","對不起，我還沒有收集好。","response1")
+		else
+			Say("n1你只要替我收集300個“戰鬥精靈的甲殼”我便會送你一個特別的頭飾或物品。","End")
+
+		end
+
+	else 
+		Say("n1你好，這兒是奇異飾物店，我是這裡的店主咪咪。")
+		Say("n1您想買飾物？我這裡是不賣飾物給陌生客人的，但只要你幫我收集物品，")
+		Say("n1我便會送你一個特別的頭飾或物品給你。","End")
+		SetFlag("K27002A_Task",1)
+	end
+
+
+end
+ 
+
+
+function response1()
+	if GetChoice()==0 then
+		Say("n1啊！你已經找到足夠甲殼了嗎。")
+		if ItemListCountLeft(1)<1 then
+			Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+		else
+			RemoveTheShell(300)
+			result=random(100)
+			Say("n1..........")
+			if result>=1 and result<=70 then
+				Say("n1送你星光鳥帽子。")
+				Say("p7得到「星光鳥帽子」")
+				AddItem(10140)
+			elseif result>=71 and result<=85 then
+				Say("n1送你一副防風鏡")
+				ItemId=Glasses()
+				AddItem(ItemId)
+			elseif result>=86 and result<=95 then
+				Say("n1送你一頂春日草帽")
+				ItemId=SDCap()
+				AddItem(ItemId)
+			else	
+				Say("n1送你一頂騎士之冠")
+				ItemId=Queen()
+				AddItem(ItemId)
+			end
+			Say("n1若你再收集滿300甲殼，我便會再送你一個特別的頭飾或物品。","End")
+		end	
+	else
+		QuestEnd()
+	end
+end
+
+
+function Glasses()
+	result = random(100)
+	
+	if result>=1 and result<=17 then
+		return 10141
+	
+	elseif result>=18 and result<= 34 then
+		return 10142
+	
+	elseif result>=35 and result<=51 then
+		return 10143
+
+	elseif result>=52 and result<=68 then
+		return 10144
+	
+	elseif result>69 and result<=85 then
+		return 10145	
+
+	else 
+		return 10146 
+
+	end
+
+end
+
+function SDCap()
+	result=random(10)
+
+	if result >=1 and result<=2 then
+		return 10147
+	
+	elseif result >=3 and result <=4 then
+		return 10148
+
+	elseif result >=5 and result <=6 then
+		return 10149
+	
+	elseif result >=7 and result <=8 then
+		return 10150
+	
+	else
+		return 10151
+
+	end
+end
+
+function Queen()
+	result=random(10)
+
+	if result>=1 and result<=3 then
+		return 10152
+	
+	else 
+		return 10153
+
+	end
+
+end
+
+function conditionsatisfied (RequiredTotalNumber)
+	--total=0
+	--for var=10046 ,10059 , 1 do
+	--	total=total+GetCountItemCount(var)
+		
+	--end
+	--return total>=RequiredTotalNumber
+
+	return GetCountItemCount(31024)>=RequiredTotalNumber
+end
+
+
+function RemoveTheShell(y)
+	RemoveItem(31024, y)
+	--for var=10046,10059,1 do
+	--	x=GetCountItemCount(var)		
+	--	if y==0 then
+	--		break
+	--	elseif x>=y then
+	--		RemoveItem(var,y)
+	--		y=0
+	--	else
+	--		RemoveItem(var,x)
+	--		y=y-x
+	--	end
+	--end	
+end

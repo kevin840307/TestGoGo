@@ -1,0 +1,37 @@
+-- SQLite compatibility migration metadata.
+-- SqliteSchemaMigrator reads @ensure-column directives and only executes
+-- ALTER TABLE when the target column is missing.
+--
+-- Format:
+-- Syntax: @ensure-column TABLE COLUMN SQLITE_COLUMN_DEFINITION
+
+-- @ensure-column characters hp INTEGER NOT NULL DEFAULT 100
+-- @ensure-column characters max_hp INTEGER NOT NULL DEFAULT 100
+-- @ensure-column characters mp INTEGER NOT NULL DEFAULT 50
+-- @ensure-column characters max_mp INTEGER NOT NULL DEFAULT 50
+-- @ensure-column characters sp INTEGER NOT NULL DEFAULT 100
+-- @ensure-column characters max_sp INTEGER NOT NULL DEFAULT 100
+-- @ensure-column characters money INTEGER NOT NULL DEFAULT 0
+-- @ensure-column characters exp_use INTEGER NOT NULL DEFAULT 0
+-- @ensure-column characters exp_acc INTEGER NOT NULL DEFAULT 0
+-- @ensure-column characters exp_death INTEGER NOT NULL DEFAULT 0
+-- @ensure-column characters max_exp INTEGER NOT NULL DEFAULT 1000
+-- @ensure-column characters career INTEGER NOT NULL DEFAULT 0
+-- @ensure-column characters job INTEGER NOT NULL DEFAULT 0
+-- @ensure-column characters attack INTEGER NOT NULL DEFAULT 10
+-- @ensure-column characters defense INTEGER NOT NULL DEFAULT 5
+-- @ensure-column characters magic_attack INTEGER NOT NULL DEFAULT 5
+-- @ensure-column characters magic_defense INTEGER NOT NULL DEFAULT 5
+-- @ensure-column characters hit INTEGER NOT NULL DEFAULT 100
+-- @ensure-column characters dodge INTEGER NOT NULL DEFAULT 0
+-- @ensure-column characters lucky INTEGER NOT NULL DEFAULT 0
+-- @ensure-column characters move_speed INTEGER NOT NULL DEFAULT 100
+-- @ensure-column characters attack_speed INTEGER NOT NULL DEFAULT 100
+-- @ensure-column characters attack_range INTEGER NOT NULL DEFAULT 80
+-- @ensure-column characters crit_rate INTEGER NOT NULL DEFAULT 0
+-- @ensure-column characters crit_damage INTEGER NOT NULL DEFAULT 125
+-- @ensure-column characters state TEXT NOT NULL DEFAULT 'idle'
+-- @ensure-column characters reborn_map_id INTEGER NOT NULL DEFAULT 15
+-- @ensure-column characters reborn_x REAL NOT NULL DEFAULT 9408
+-- @ensure-column characters reborn_y REAL NOT NULL DEFAULT 10336
+-- @ensure-column characters summoned_horse_uid INTEGER NOT NULL DEFAULT -1

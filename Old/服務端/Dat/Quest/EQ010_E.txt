@@ -1,0 +1,17 @@
+
+--流程說明	出口
+--(EQ010_E)
+function start()
+Ask("n要離開魔法樹林嗎？","是的。","不是。","start_ans")
+--＜選項＞
+--．是的。→傳送玩家至()
+--．不是。→Quest End
+end
+
+function start_ans()	
+	if GetChoice() == 0 then
+		MovePlayer(10000,10000,15)
+	else
+		QuestEnd()
+	end
+end

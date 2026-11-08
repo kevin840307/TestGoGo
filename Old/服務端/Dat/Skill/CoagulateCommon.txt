@@ -1,0 +1,41 @@
+--CoagulateCommon.txt
+#include "txt_CoaguCom.txt"
+
+--step05 ~ 12
+function conagilate(BeforeItemID,AfterItemID,NeedConagulateNum,MaxItemNum)
+	if ItemListCountLeft(0) < 1 then
+		Step13()
+		return
+	end
+	
+	if GetCountItemCount(BeforeItemID) < NeedConagulateNum then
+		Step14()
+		return
+	end
+	
+	if GetCountItemCount(AfterItemID) > MaxItemNum then
+		Step15()
+		return
+	end
+	
+	if GetCountItemCount(BeforeItemID) >= NeedConagulateNum then
+		RemoveItem(BeforeItemID,NeedConagulateNum)
+		AddItem(AfterItemID,1)
+		Say("p7"..TXT_Success()..BeforeConagulateName..TXT_ChangeTo()..AfterConagulateName..TXT_FullStop())		
+		SetSkillDefender(GetCallerPtr())
+		QuestEnd()
+	end
+end
+
+function Step13()
+	Say("p7"..TXT_BagFull(),End)
+end
+
+function Step14()
+	Say("p7"..TXT_NotEnough(),End)
+end
+
+function Step15()
+	Say("p7"..TXT_TooMany() ,End)
+end
+

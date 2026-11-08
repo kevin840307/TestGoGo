@@ -1,0 +1,28 @@
+--TQ029_B
+
+function start()
+    init_item()
+    if (CheckItem(10577) == 0) and (ItemListCountLeft(0) < 1) then
+        Say("p7對不起，你身上的物品太多了，請整理一下吧！")
+    elseif GetCountItemCount(10577) > 299 then
+        Say("p7對不起，你身上的復活節巧克力太多了，請整理一下吧！")
+    else
+        Say("p7得到復活節巧克力。")
+        AddItem(10577)
+    end            
+end
+
+function init_item()
+    if GetWorldFlag("TQ029_MobileMedal")<0 then
+        SetWorldFlag("TQ029_MobileMedal",0)
+    end    
+    if GetWorldFlag("TQ029_FighterSword")<0 then
+        SetWorldFlag("TQ029_FighterSword",0)
+    end
+    if GetWorldFlag("TQ029_MagicWond")<0 then
+        SetWorldFlag("TQ029_MagicWond",0)
+    end
+    if GetWorldFlag("TQ029_MeteorGun")<0 then
+        SetWorldFlag("TQ029_MeteorGun",0)
+    end
+end

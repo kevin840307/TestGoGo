@@ -1,0 +1,19 @@
+--LS_27106_1 "ÆF»î¾®»E¡E¤@¯Å"
+
+function GetSkillData()
+	return 27106,1,30,31525,"ÆF»î¾®»E¡E¤@¯Å","","¦uÅ@¨Ï"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 6 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

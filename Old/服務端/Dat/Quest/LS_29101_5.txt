@@ -1,0 +1,19 @@
+--LS_29101_5 "製彈術‧五級"
+
+function GetSkillData()
+	return 29101,5,50,31586,"製彈術‧五級","製彈術‧四級","銃戰士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 4 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

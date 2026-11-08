@@ -1,0 +1,82 @@
+--MQ001_B 守衛
+
+function start()
+	if GetData("Career")==1 then
+		Say("n1這兒不可以隨便進入的，請你回去。","End")
+	elseif GetData("Career")==2 then
+		Say("n1這兒不可以隨便進入的，請你回去。","End")
+	elseif GetData("Career")==3 then
+		Say("n1這兒不可以隨便進入的，請你回去。","End")
+	elseif GetData("Career")==4 then
+		Say("n1這兒不可以隨便進入的，請你回去。","End")
+	elseif GetData("Career")==9 then
+		Say("n1這兒不可以隨便進入的，請你回去。","End")
+	elseif GetData("Career")==0 then
+		Say("n1這兒不可以隨便進入的，請你回去。","End")
+	elseif GetFlag("MQ_001_End")==1 then
+		Ask("n嗯！有什麼事嗎？", "我要進入學院．．．","真是辛苦你了！請加油！", "GoSchool")
+	elseif GetFlag("MQ_001_Teacher_Part")==1 then
+		Ask("n不是已經說了不可進入嗎？","我已經知道口令了！","我是來閒逛而已．．．","Serect_Word")
+	elseif GetFlag("MQ_001_Talk01") == 1 then
+		Say("n1又是你？沒有口令就不能進入！請你回去吧！","QuestStart")
+	else
+		name=GetName()
+		Say("p1這就是德爾莫亞魔法學院了嗎？")
+		Say("p7正當"..name.."想進入德爾莫亞時給守衛叫停了．．．")
+		Say("p1守衛大哥，你叫我嗎？")
+		Ask("n你要找誰？","我是來考入學試的．．．","只是逛逛而已！","check01")
+	end
+end
+
+function check01()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("n1入學試還未開始，不准進入！","QuestStart")
+		SetFlag("MQ_001_Talk01",1)
+	else
+		Say("n1這裡是魔法學院的範圍，閒雜人等不可接近，請你回去吧！","End")	
+	end
+end
+
+function QuestStart()
+	name=GetName()
+	lv = GetData("Level")
+	if lv >= 10 and GetFlag("MQ_001_Start") == -1 then
+		Say("n7"..name.."正要離開，卻發現一個女子正在街上哭泣．．．")
+		Say("n7"..name.."很是好奇，於是上前問過究竟．．．","End")
+		SetFlag("MQ_001_Start",1)
+	else
+		QuestEnd()
+	end
+end
+
+function Serect_Word()
+	if GetChoice() == 0 then
+		Say("n1請讀出口令！")
+		Say("p1『智慧比力量更重要』")
+		Say("n1正確！你可以進入德爾莫亞魔法學院．．．")
+		Say("p7得到650Exp","GetPirce")
+		ModifyData("ExpAcc",650)
+		SetFlag("MQ_001_End",1)	
+	else
+		QuestEnd()
+	end
+end
+
+function GoSchool()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("n1請由這邊進入．．．","Jump")
+	else
+		 QuestEnd()		
+	end
+end
+
+function Jump()
+	MovePlayer(5148,1952,9)
+	QuestEnd()
+end
+
+function GetPirce()
+	Jump()
+end

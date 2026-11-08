@@ -1,0 +1,19 @@
+function start()
+	Step01()
+end
+
+function Step01()
+	if ItemListCountLeft(0) < 1  then
+		Step02()
+	else
+		if GetFlag("TQ044_B_Step") == 2 and GetFlag("TQ044_F_Step") ~= 1 then
+			Say("p7得到蝙蝠電玩。")
+			AddItem(10760,1)
+			SetFlag("TQ044_F_Step",1)
+		end
+	end
+end
+
+function Step02()
+	Say("p1原來身上已沒有足夠的物品空間了．先整理一下好了")
+end

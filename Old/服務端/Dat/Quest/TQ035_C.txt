@@ -1,0 +1,13 @@
+--地城要塞出口
+--(TQ035_C)
+
+function start()
+	Ask("n要離開地城要塞嗎？","是的。","不是。","reply")
+end
+
+function reply()
+	if GetChoice()==0 then
+		MovePlayer(10000, 10000,15)
+	end
+	QuestEnd()
+end

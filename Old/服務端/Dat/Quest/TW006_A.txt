@@ -1,0 +1,140 @@
+--Quest:
+--TW006_A 		小米古 機械之城-絲蘭
+--TW006_B 		小米古母親 神團聖殿
+--TW006_C 		給小米古的信 				10653
+--Item:
+--康乃馨 									10650
+--康乃馨花束 								10651
+--冰地鳥獸羽毛 								10066
+--魔靈電池									6905
+--羽毛衣									10652
+--給小米古的信								10653
+--孝子光環		等級１裝備，生命上限+200	10654
+--Task:
+-- 1 : TW006_A step 1 fin
+-- 2 : TW006_A step 4 fin
+-- 3 : TW006_B step 4 fin
+-- 4 : TW006_A step 7 fin
+
+function start()
+	state = GetFlag("TW006_Task")
+	if state == 1 then
+		Step2()
+	elseif state == 2 then
+		Step5()
+	elseif state == 3 then
+		Step6()
+	elseif state == 4 then
+		Step10()
+	else
+		Step1()	
+	end
+end
+
+function Step1()
+	Say("n1阿~~~我該送什麼呢？")
+	Say("p1什麼該送什麼啊！你在說什麼啊？")
+	Say("n1就是母親節啊！我不知道要送什麼給我媽媽？")
+	Say("p1幫你想想~~~~~~~~~~就送康乃馨阿！")
+	Say("n1可是…………。")
+	Say("p1可是什麼？")
+	Ask("n可是送康乃馨最好就是將20朵康乃馨作成一束，這個會比較漂亮，康乃馨只有城外的康乃馨立普才有，我打不過康乃馨立普。你可不可收集20朵康乃馨然後給我呢？","可以啊！", "抱歉！我很忙沒空！","Q1Ans")
+end
+
+function Q1Ans()
+	if GetChoice() == 0 then
+		SetFlag("TW006_Task","1")
+	else
+		QuestEnd()
+	end
+end
+
+function Step2()
+	if GetCountItemCount(10650) < 20 then
+		Step3()
+	elseif ItemListCountLeft(0) < 1 then
+		Step8()
+	else
+		Ask("n你要給我20朵康乃馨嗎？","拿去。","沒有。","Q2Ans")
+	end
+end
+
+function Q2Ans()
+	if GetChoice() == 0 then
+		Step4()
+	else
+		QuestEnd()
+	end 
+end
+
+function Step3()
+	Say("n1你忘記了喔！是20朵康乃馨。在城外的康乃馨立普身上就可以得到的。","QuestEnd")
+end
+
+function Step4()
+	Say("n1真是謝謝你幫我收集20朵康乃馨。")
+	Say("n1可不可以再麻煩你幫我將康乃馨花束和收集10張冰地鳥獸羽毛一起送到神團聖殿給我媽媽呢？")
+	Say("p1可以啊！但要冰地鳥獸羽毛作什麼？")
+	Say("n1冰地鳥獸在獅鷲山上，是媽媽交代我送去的。麻煩你囉！","Step4_AddItem")
+end
+
+function Step4_AddItem()
+	SetFlag("TW006_Task",2)
+	RemoveItem(10650,20)
+	AddItem(10651)
+end
+
+function Step5()
+	Say("n1請記得將康乃馨花束和收集10張冰地鳥獸羽毛送到神團聖殿給我媽媽，謝謝你！")
+end
+
+function Step6()
+	if ItemListCountLeft(1) < 1 then
+		Step9()
+	elseif CheckItem(10652)~=1 and CheckItem(10653) ~= 1 then
+		Step11()
+	else
+		Ask("n你回來了阿，請問東西有順利交給我媽媽嗎？","有！這是你媽媽要我轉交給你的。","我忘了。","Q6Ans")
+	end		
+end
+
+function Q6Ans()
+	if GetChoice() == 0 then
+		Step7()
+	else
+		QuestEnd()
+	end
+end
+
+function Step7()
+	Say("p7將羽毛衣和一封信交給小米古！")
+	Say("p1你媽媽很辛苦，你要好好聽話喔！")
+	Say("n1嗯！知道了～這東西送給你吧！")
+	Say("p7得到孝子光環。","Step7_AddItem")
+end
+
+function Step7_AddItem()
+	SetFlag("TW006_Task",4)
+	SetFlag("TW006_Done",1)
+	RemoveItem(10652)
+	RemoveItem(10653)
+	AddItem(10654)
+end
+
+function Step8()
+	Say("p7身上的物品太多了，還是先整理一下吧！")
+end
+
+function Step9()
+	Say("p7身上的裝備太多了，還是先整理一下吧！")
+end
+
+function Step10()
+	Say("p1你媽媽很辛苦，你要好好聽話喔！")
+	Say("n1嗯！知道了～")
+end
+
+function Step11()
+	Say("n1你回來了阿，請問東西有順利交給我媽媽嗎？")
+	Say("p1有！而且她還有東西交給你，可是我現在沒有帶在身上，你再等一下．．．")
+end

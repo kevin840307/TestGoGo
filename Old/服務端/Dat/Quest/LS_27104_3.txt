@@ -1,0 +1,19 @@
+--LS_27104_3 "生命之源‧三級"
+
+function GetSkillData()
+	return 27104,3,60,31519,"生命之源‧三級","生命之源‧二級","守護使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 6 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

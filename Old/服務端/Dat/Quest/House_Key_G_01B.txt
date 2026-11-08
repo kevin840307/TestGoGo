@@ -1,0 +1,8 @@
+--Key002  «È¤H°Í
+--ItemNumber:10199
+
+
+function start()
+	MovePlayer(3328,2944,82)
+
+end

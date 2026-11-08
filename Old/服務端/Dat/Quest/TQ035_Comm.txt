@@ -1,0 +1,27 @@
+--1083643200: 2004-5-4 12:00
+
+function lIsResting()
+	timeDiff = GetRealTime() - 1083643200
+	time4Week = GetTimeForDay(7)
+	--numWeek = floor(timeDiff/time4Week)
+	--trimDiff = timeDiff - numWeek * time4Week
+	trimDiff = mod(timeDiff, time4Week)
+	
+	-- 5 days and 12 hours
+	fightPeriod = GetTimeForDay(5)+GetTimeForHour(12)
+	if trimDiff > fightPeriod then
+		return 1
+	else
+		return 0
+	end
+end
+
+function lUpdateTotal()
+	tmp = GetWorldFlag("TQ035_KillCount")
+	if tmp>0 then
+		SetWorldFlag("TQ035_PrevKillCount", tmp)
+		SetWorldFlag("TQ035_KillCount", 0)
+	end
+end
+
+#include "CommTime.txt"

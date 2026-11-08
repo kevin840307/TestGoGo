@@ -50,6 +50,14 @@ func _get_free_label() -> Label:
 	return null
 
 
+func stop_combat_visual_effects() -> void:
+	# Retain damage labels; those are essential combat feedback, not FX sprites.
+	for effect in _effect_pool:
+		if is_instance_valid(effect):
+			effect.stop()
+			effect.visible = false
+
+
 func _get_free_effect() -> AnimatedSprite2D:
 	for eff in _effect_pool:
 		if not eff.visible: return eff
@@ -62,7 +70,11 @@ func _get_free_effect() -> AnimatedSprite2D:
 
 func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: float = 0.3, split_count: int = 1, skill_id: int = 0, is_primary: bool = true) -> void :
 	if hit_delay > 0:
-		await get_tree().create_timer(hit_delay).timeout
+		var tree := get_tree()
+		if tree == null:
+			return
+		var timer := tree.create_timer(hit_delay)
+		await timer.timeout
 
 	if not is_instance_valid(target) or not target.is_inside_tree():
 		return
@@ -83,7 +95,7 @@ func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: 
 		elif is_pet:
 			effect_name = "Normal_Effect/New_Miss_Purple"
 
-		var frames = EffectLoader.get_effect(effect_name)
+		var frames: SpriteFrames = EffectLoader.get_effect(effect_name) if (not GameManager or GameManager.should_render_combat_effects()) else null
 		if frames:
 			var miss_effect = _get_free_effect()
 			if miss_effect:
@@ -143,6 +155,13 @@ func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: 
 		await get_tree().create_timer(fx_duration * 0.3).timeout
 
 	if not is_instance_valid(target) or not target.is_inside_tree(): return
+
+	# Skill 99001 can kill dozens of monsters in the same packet batch.
+	# Spawn its number immediately while the target node still exists; queued
+	# numbers would otherwise be discarded after EntityDeath removes the node.
+	if skill_id == 99001:
+		_spawn_bouncing_number(target, damage, is_crit, 0.0, false)
+		return
 
 	if split_count > 1 and damage > 1:
 		var remain_dmg = damage
@@ -282,6 +301,8 @@ func _spawn_bouncing_number(target: Node2D, val: int, is_crit: bool, dir_ratio: 
 
 
 func _spawn_effect_on_target(target: Node2D, full_effect_name: String, z_idx: int) -> float:
+	if GameManager and not GameManager.should_render_combat_effects():
+		return 0.0
 	var duration = 0.0
 	var frames = EffectLoader.get_effect(full_effect_name)
 
@@ -319,6 +340,8 @@ func _spawn_effect_on_target(target: Node2D, full_effect_name: String, z_idx: in
 	return duration
 
 func _play_hit_effect(target: Node2D, skill_id: int = 0, is_primary: bool = true) -> float:
+	if GameManager and not GameManager.should_render_combat_effects():
+		return 0.0
 	var effect_name = ""
 	var skill_effect_name = ""
 	var fx_target = target

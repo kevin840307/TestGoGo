@@ -1,0 +1,13 @@
+--CyberCity_to_BornPlace(Cyber)
+
+function start()
+	Ask("n要往初心者之間嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(3456,6272,40)
+	end
+	QuestEnd()
+end

@@ -1,0 +1,5 @@
+--Shop02 Magic_City ªZ¾¹©±
+
+function start()
+	OpenShop (2,100)
+end

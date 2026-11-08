@@ -1,0 +1,25 @@
+-- 靈感獸的血 (NQ018_H)
+
+function start()
+	if GetCountItemCount(10265)<1 then
+		dialogue_01()
+	else
+		dialogue_02()
+	end
+end
+
+--<沒持有人族企劃書的玩家使用時>
+function dialogue_01()
+	Say("p1不行…我不可以使用這個…","End")
+	AddItem(10270)
+end
+
+--持有人族企劃書的玩家
+function dialogue_02()
+	Say("p1太好了！企劃書完成了！可以拿回去了！")
+	Say("p7得到“完成．人族企劃書”")
+	Say("p7人族企劃書消失了。","End")
+	RemoveItem(10265)
+	AddItem(10268)
+end
+

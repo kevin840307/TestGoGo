@@ -1,0 +1,169 @@
+function start()
+	if GetFlag("TQ043_A_Step") >= 7 then
+		if GetFlag("TQ043_D_Step") >= 2 then
+			if GetFlag("TQ043_C_Step")>=3 then
+				if GetFlag("TQ043_D_Step") >= 6 then
+					if GetFlag("TQ043_E_Step") >= 9 then
+						if GetFlag("TQ043_D_Step") >= 9 then
+							Step12()
+						else
+							Step09()
+						end
+					else
+						Step08()
+					end
+				else
+					Step05()
+				end
+			else
+				Step04()
+			end
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+function Step01()
+	Say("n4啊嗚嗎，呼吱噫。")
+	Say("p6怎麼聽不懂這是什麼語言？但又感到很親切．．．")
+end
+function Step02()
+--＜After TQ043_A．function Step07＞
+--＜玩家身上沒有足夠物品空間得到破舊的信件(10745)＞→function Step03
+	if ItemListCountLeft(0) < 1 then 
+		Step03()
+	else
+		Say("p1你好啊，我是奉了國王的旨意來調查的。現在天空島已封閉，請你儘快離開。")
+		Say("n4啊嗚嗎，呼吱噫。")
+		Say("p1對．對不起，請問剛才你說什麼？")
+		Say("p6難道他就是豆貝斯口中的天使．．．")
+		Say("p7在天使的身旁，發現了一封破破的信。")
+		Say("p7得到破舊的信件。")
+		Say("n4嗚嗚．．．嗚嗚．．．．")
+		Say("p1別哭了，這位．．．你還是快離開這裡吧，要我先去找我的朋友豆貝斯，免得他繼續擔心。")
+		AddItem(10745)
+		SetFlag("TQ043_D_Step",2)
+	end
+end
+
+function Step03()
+	Say("p7身上沒有足夠的物品空間啊．．．先整理一下好了。")	
+end
+
+function Step04()
+--		＜After TQ043_D．function Step02＞
+	Say("n4嗚嗚．．．嗚嗚．．．．")
+	SetFlag("TQ043_D_Step",4)
+end
+
+function Step05()
+--		＜After TQ043_C．function Step03＞
+	Say("p1請問．．．")
+	Say("n1我是由天堂來的天使，天堂現在正受到很嚴重的破壞，而我們都對抗不了，嗚．．．嗚．．．。")
+	Say("p1不要哭，你真的是天使嗎？")
+	Say("n1天使是不懂說謊的。但你不信也是正常的，我唯一的証明都掉了．．．")
+	Say("p3掉了！？是什麼來的，我替你找找看。")
+	Say("n1那是一封信。我是來向貴國國王求救的，希望國王可以派兵平息天空島的戰爭。")
+	Say("p1對不起，那封信是我撿起並帶到國王手裡，我剛才怕你是卡奧斯派來的人，真是對不起。")
+	Say("n1不，是我們太冒昧了，呼吱噫。")
+	Say("p1你在說什麼．．．？怎麼突然聽不懂了。")
+	Say("n1對不起，我的力量現在還未完全回復，啊嗚嗎。哎，對不起，又出錯了。")
+	Say("p1這樣了也不是辦法，有沒有什麼解決方法？")
+	Say("n1我的能力不完全回復，就不能回到天堂了。")
+	Ask("n這樣吧，『"..GetName().."』你能助我回復能力嗎？","當然可以，我要怎樣做才可以幫忙？","讓我先想想，我還要確定一下你是否天使。","Step05_Handler")
+--＜選項＞
+--．當然可以，我要怎樣做才可以幫忙？→function Step06
+--．讓我先想想，我還要確定一下你是否天使。→function Step07 
+--
+end
+
+function Step05_Handler()
+	if GetChoice() == 0 then
+		Step06()
+	else
+		Step07()
+	end
+end
+function Step06()
+	if CheckItem(10746) ~= 1 then
+		Say("n4嗚嗚．．．嗚嗚．．．．")
+		QuestEnd()	
+	else
+		Say("n1那麼真是太麻煩你了。這件事也不易辦到。")
+		Say("p1你可以隨便吩咐，我會儘力替你完成。")
+		Say("p3哎呀，差一點忘了，這是國王給你的信。")
+		Say("p7落難天使細心地把信件細讀")
+		--<收去玩家「給天使的信」(10746)>
+		Say("n1嗚．．．嗚．．．呼吱噫，真是謝謝你們，天堂有救了。")
+		Say("p6這個天使也未免太易哭了。")
+		Say("p1別哭吧．．．快告訴我應該怎樣幫你去回復能力。")
+		Say("n1呼吱噫，我只需要一個份『慈愛祝福』。但我不知在這兒會在那裡找到。請嘗試問一下常與天堂有接觸的人。")
+		Say("p6常與天堂有接觸的人．．．！神團聖殿中的冰奇！")
+		Say("p1我先替你去查詢，你在這裡等我吧，但要小心聖獸們的攻擊啊。")
+		RemoveItem(10746)
+		SetFlag("TQ043_D_Step",6)
+	end
+end
+
+function Step07()
+	Say("n1我也知道是難以令人相信，我也不知該怎辦。若果你改變主意，可再來找我。")
+end
+
+function Step08()
+--＜After TQ043_D．function Step06＞
+	Say("p1我先替你去向神團聖殿中的冰奇查詢，你別亂走，要在這裡等我啊。")
+	SetFlag("TQ043_D_Step",8)
+end
+
+function Step09()
+--		＜After TQ043_E．function Step09＞
+--＜玩家身上持有慈愛祝福(10751)＞
+--＜玩家身上持沒有慈愛祝福(10751)＞→function Step10
+	if CheckItem(10751) ~= 1 then
+		Step10()
+	else	
+		--＜玩家身上沒有足夠裝備空間得到神佑之翼(10755)＞→function Step11
+		if ItemListCountLeft(1) < 1  then
+			Step11()
+		else
+			Say("n1．．．啊嗚嗎．．．我好像快不行了。")
+			Say("p1天使，我已替你找到了『慈愛祝福』，你快服用吧。")
+			Say("n1．．．．．．")
+			Say("n1．．．．．．")
+			Say("p7失去『慈愛祝福』。")
+			Say("p1怎樣？你別嚇壞我。")
+			Say("n1謝謝你，我已完全康復了。")
+			Say("p1那就好了，你快快告訴我，要怎樣才可以平息天空島中的戰爭。")
+			Say("n1由於一般人類沒有飛行的能力，因此也不能參與天上的戰爭，所以也只好利用機械來幫助。")
+			Say("n1以我們所知道，人類已發明出機械來飛行，但這個並未普遍。")
+			Say("n1根據我所知道，戰神亞魯斯為了防止出現今天的情況，他已將用作協助人類飛翔的物品放在野生動物中，但是什麼物品．．．")
+			Say("n1抱歉，有關這個我也不知道．．．")
+			Say("p1那麼我先向國王陛下回報這一切，再見了天使。")
+			Say("n1別走。")
+			Say("p1怎麼了？")
+			Say("n1這個送給你的。")
+			Say("p7得到『神佑之翼』。")
+			Say("n1我們傳說中，只要裝備著這個，就可以得到神的保佑，因為你救了我們的性命，這只能算是一點小心意。")
+			Say("p3謝謝你啊，我會好好保存它，我真的要走了，再見。")
+			RemoveItem(10751)
+			AddItem(10755)
+			SetFlag("TQ043_D_Step",9)
+		end
+	end
+end
+
+function Step10()
+	Say("n1請替我尋找慈愛祝福，我快要不行了。")
+end
+
+function Step11()
+	Say("p7身上沒有足夠的裝備空間啊．．．先整理一下好了。")
+end
+
+function Step12()
+--		＜After TQ043_D．function Step09＞
+	Say("n1你要努力啊，天堂的存亡就要以你們幫忙了。")
+	SetFlag("TQ043_D_Step",12)
+end

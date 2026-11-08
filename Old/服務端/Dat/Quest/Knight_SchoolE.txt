@@ -1,0 +1,5 @@
+--People01 騎士哲也
+
+function start()
+	Say("n1古加尼校長雖然比較粗豪，但他平易近人，大家也很信賴他。","End")
+end

@@ -1,0 +1,14 @@
+function start()
+	CanMove()
+end
+
+function GetLocName()
+	return "¤ô´¹¯à¶q·½"
+end
+
+function GetLoc()
+	return 4288,9248,32
+
+end
+
+#include "TS_Common.txt"

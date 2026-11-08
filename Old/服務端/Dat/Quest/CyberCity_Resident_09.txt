@@ -1,0 +1,6 @@
+--People01 亞奈亞多
+
+function start()
+	Say("n1嗯？有什麼事嗎？")
+	Say("n1沒事就別吵我，我正在忙～～！","End")
+end

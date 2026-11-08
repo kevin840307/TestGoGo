@@ -1,0 +1,10 @@
+--CommComplex.txt
+
+function GetComplexArray()
+	complexPtr = GetComplexPtr()
+	if complexPtr then
+		return GetTargetData(complexPtr, "ComplexEquipIdx"), GetTargetData(complexPtr, "ComplexColor")
+	else
+		return 0,0
+	end
+end

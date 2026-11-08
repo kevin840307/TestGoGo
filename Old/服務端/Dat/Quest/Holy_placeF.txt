@@ -1,0 +1,5 @@
+--People01 愛麗絲．南姆
+
+function start()
+	Say("n1只要你誠心禱告，亞魯斯和佳雅也會祝福你。","End")
+end

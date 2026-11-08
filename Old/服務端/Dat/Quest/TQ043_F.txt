@@ -1,0 +1,98 @@
+#include "CommTeam.txt"
+
+function start()
+	if GetFlag("TQ043_E_Step") >= 5 then
+		if CheckItem(10747) == 1 then
+			Step06()
+		else
+			if GetFlag("TQ043_F_Step") >= 4 then
+				Step08()
+			else				
+				Step02()
+			end
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("p1怎麼一靠近這棵樹便有快樂的感覺。")
+end
+
+function Step02()
+--		＜After TQ043_E．Step05＞
+--＜團隊中沒有人在指定範圍做出高興動作＞
+--＜指定範圍左上(6880,7320,45) ,右下(8480,5920,45)＞	
+	if IsTeamCloseTo(6248,1111,31,200) ~= 1 then
+		Step07()
+	else
+		if GetTeamTotal() == 0 or GetTeamEmotion(10) == 0 then
+			Say("p1站在這裡的感覺太快樂。")
+			Say("p1要多找一些人來感受一下．．．")
+		else
+			Step03()
+		end
+	end
+end
+function Step03()
+--		＜After TQ043_E．Step05＞
+--＜團隊中有人在指定範圍做出高興動作，但人數少於3＞
+	if GetTeamEmotion(10) > 0 then
+		if GetTeamTotal() < 3 then
+			Say("p1樹上好像有些粉末掉下來。")
+			Say("p1．．．．．．")
+			Say("p1．．．．．．")
+			Say("p1快樂之粉的數量還不夠．．．是不是人數不足呢！？")
+		else
+			Step04()
+		end
+	else
+		
+	end
+end
+
+function Step04()
+--		＜After TQ043_E．Step05＞
+--＜團隊中有人在指定範圍做出高興動作，且人數等於3＞
+--＜玩家身上沒有足夠空間得到快樂之粉(10747)＞→Step05
+	total = GetTeamEmotion(10) 
+--	teamTotal = GetTeamTotal()
+--	Say("p1 Team total:"..teamTotal)
+--	Say("p1 Team Emotion:"..total)
+	if total == 3 then
+		if ItemListCountLeft(0) < 1 then
+			Step05()
+		else
+			Say("p1快樂之粉就是從這棵樹掉下來！")
+			Say("p1在這樹下，大家都獲得快樂的感覺！！")
+			Say("p1．．．．．．")
+			Say("p1．．．．．．")
+			Say("p3快樂之粉掉下來了！")
+			Say("p7得到快樂之粉。")
+			AddItem(10747)
+			SetFlag("TQ043_F_Step",4)
+		end
+	else
+		
+	end
+end
+
+function Step05()
+	Say("p7身上沒有足夠的物品空間啊．．．先整理一下好了。")
+end
+function Step06()
+--		＜玩家身上持有快樂之粉(10642)＞
+	Say("p7之前已經取得了快樂之粉。")
+end
+function Step07()
+--		＜After TQ043_E．Step05＞
+--＜隊員們的位置太遠＞
+	Say("p7隊員們，再走近一點吧～")
+end
+
+function Step08()
+--		＜After TQ043_E．Step05＞
+--＜玩家之前已曾取得快樂之粉＞
+	Say("p7我已拿過了，這些珍貴的快樂，還是留給別人嘗嘗吧。")
+end

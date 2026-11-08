@@ -1,0 +1,124 @@
+--MQ009_C  子彈商人－尼珍
+
+--statue=1 :任務開始時
+--statue=2 :任務進行中
+--statue=3 :造了風速彈
+--statue=4 :任務完成後
+--statue=other :任務未開始
+
+
+function start()
+	
+	statue=GetFlag("MQ009_Task")
+	statue2=GetFlag("MQ010_Task")
+	
+	if GetFlag("MQ009_Diamond") ==0 or GetFlag("MQ010_Diamond")==0 then
+		if RemoveItem(16)==1 then
+			Say("n1你等一下就對了。")
+			BombMaking()
+		else
+			Say("n1請拿一個小綠晶石給我,火藥不大穩定","End")
+		end
+	
+
+	elseif GetFlag("MQ009_Diamond") ==1 or GetFlag("MQ010_Diamond")==1 then
+		if RemoveItem(21)==1 then
+			Say("n1你等一下就對了。")
+			BombMaking()
+		else
+			Say("n1請拿一個小紫晶石給我,火藥不大穩定","End")
+		end
+	
+
+
+	elseif   GetFlag("MQ009_GBM")==1  or  GetFlag("MQ010_GBM")==1  then
+		
+		Say("n1你等一下就對了。")
+		
+		diamond=random(0,1)
+		if diamond==0  then
+			Say("n1可以再拿一個小綠晶石給我嗎？火藥好像不大穩定…")
+			if RemoveItem(16,1)==1 then
+				BombMaking()
+
+			else
+				Say("n1請拿一個小綠晶石給我,火藥不大穩定","End")
+				DiamondType(0)
+				
+			end
+	
+		else
+			Say("n1可以再拿一個小紫晶石給我嗎？火藥好像不大穩定…")
+
+			if RemoveItem(21,1)==1 then
+				BombMaking()
+
+			else
+				Say("n1請拿一個小紫晶石給我,火藥不大穩定","End")
+				DiamondType(1)
+				
+			end		
+		
+		end
+		
+		
+
+	elseif statue==1 or statue==2 or statue2==1 or statue2==2  then
+
+		Say("p1可以幫我一下嗎？")
+		Say("n1嗯？")
+		Say("p7你應該可以訂造風速彈吧？")
+		Say("n1是的，要是你把風速火藥帶給我，我就幫你造，")
+		Say("n1反正我第一次造這種子彈，今次免費幫你造吧！","End")
+		
+	
+	elseif  statue==3 or statue2==3  then
+		Say("n1你是不是要拿風速彈回去轉職？快點吧。","End")
+
+	elseif  statue==4 or statue2==4  then
+		Say("n1嗯！有什麼子彈想造的話，儘管找我，我可以便宜一點喔！","End")	
+	
+	
+	else 
+		Say("n1想訂造子彈的話，找我準沒錯了。","End")
+
+	
+	end
+
+
+
+end
+
+function DiamondType(type)
+	
+	if GetFlag("MQ009_GBM")==1 then
+	
+		SetFlag("MQ009_Diamond",type)
+		
+	else
+		
+		SetFlag("MQ010_Diamond",type)
+			
+	end
+
+end
+
+function BombMaking()
+		
+		Say("n1你的風速彈做好了，點收吧。","End")
+		RemoveItem(10031)
+		AddItem(10030)
+		if statue==2  then
+			SetFlag("MQ009_GetWindBomb",1)
+			SetFlag("MQ009_GBM",0)
+			SetFlag("MQ009_Task",3)
+			SetFlag("MQ009_Diamond",5)
+		else
+			SetFlag("MQ010_GetWindBomb",1)
+			SetFlag("MQ010_GBM",0)
+			SetFlag("MQ010_Task",3)
+			SetFlag("MQ010_Diamond",5)
+		end
+
+
+end

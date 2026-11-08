@@ -1,0 +1,89 @@
+--NQ011B  紫晶龜獸
+
+
+function start()
+	statue=GetFlag("NQ011_Task")
+	if statue>=1 and GetFlag("NQ011_End")~=1 then
+		GetRing()				
+
+	else
+		QuestEnd()
+	end	
+
+end
+
+
+function GetRing()
+	crr=GetData("Career")
+	skillID=crr*1000 + 101
+	skillinfo=GetSpecifiedSkillInfo(GetCallerPtr(),skillID)
+	skilllv=GetTargetData(skillinfo,"Lv")
+	rate=random(100)
+	
+	if skilllv<=2 then
+		fail()
+		
+	
+	elseif skilllv==3 then
+		if rate>=1 and rate<=5 then
+			success()
+		
+		else 
+			fail()
+
+		end
+
+	elseif skilllv==4 then
+		if rate>=1 and rate<=10 then
+			success()
+
+		else 
+
+			fail()
+		end
+
+	elseif skilllv==5 then
+		if rate>=1 and rate<=20 then
+			success()
+
+		else 
+
+			fail()
+		end
+
+	else 
+		if rate>=1 and rate<=50 then
+			success()
+
+		else 
+
+			fail()
+		end
+	end
+end
+
+
+function success()
+	Say("p1這隻應該就是紫晶指環了！好耶！")
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到紫晶指環","End")
+		AddItem(10171)
+		SetFlag("NQ011_B_Task",1)
+	end
+end
+
+
+
+function fail()
+	Say("p1咦！沒有指環啊.......")
+	Say("p1要加把勁才行啊！","End")
+	
+
+end
+
+
+
+
+

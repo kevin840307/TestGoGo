@@ -1,6 +1,9 @@
 
 extends Area2D
 
+const LEGACY_DIALOG_BUBBLE = preload("res://scripts/legacy_dialog_bubble.gd")
+const LEGACY_BUBBLE_SKIN = preload("res://scripts/legacy_bubble_skin.gd")
+
 static var _offset_cache: Dictionary = {}
 static var _offset_file_read_count: int = 0
 static var _offset_cache_hit_count: int = 0
@@ -25,6 +28,9 @@ var is_bubble_active: bool = false
 
 var npc_script_name: String = ""
 var is_portal: bool = false
+var _pending_initialize_data: Dictionary = {}
+var _afk_visual_suspended: bool = false
+var _visual_sprite_name: String = ""
 
 func _ready() -> void :
 	chat_bubble_bg.visible = false
@@ -49,17 +55,62 @@ func _ready() -> void :
 	chat_bubble_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	chat_bubble_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 
+	if not _pending_initialize_data.is_empty():
+		var pending_data := _pending_initialize_data
+		_pending_initialize_data = {}
+		_apply_npc_data(pending_data)
+
 func initialize_npc(data: Dictionary) -> void :
+	# Entity packets can arrive while the new map exists but is not inside the
+	# SceneTree yet. In that case @onready members are still null, so defer the
+	# visual/UI part until _ready() runs.
 	entity_id = int(data.get("EntityID", 0))
+	npc_name = str(data.get("Name", "未知NPC"))
+	var extra = data.get("ExtraData", {})
+	npc_script_name = str(extra.get("Script", ""))
+	is_portal = bool(extra.get("IsPortal", npc_script_name.begins_with("Portal_")))
+
+	if not is_node_ready():
+		_pending_initialize_data = data.duplicate(true)
+		return
+
+	_apply_npc_data(data)
+
+func _apply_npc_data(data: Dictionary) -> void :
 	npc_name = str(data.get("Name", "未知NPC"))
 	name_label.text = npc_name
 
 	var extra = data.get("ExtraData", {})
-	var sprite_name = str(extra.get("Sprite", ""))
+	_visual_sprite_name = str(extra.get("Sprite", ""))
 	npc_script_name = str(extra.get("Script", ""))
 	is_portal = bool(extra.get("IsPortal", npc_script_name.begins_with("Portal_")))
 
-	_load_visuals(sprite_name)
+	if GameManager and GameManager.is_afk_mode_active():
+		set_afk_visual_suspended(true)
+	else:
+		_load_visuals(_visual_sprite_name)
+
+func set_afk_visual_suspended(suspended: bool) -> void:
+	if _afk_visual_suspended == suspended:
+		return
+	_afk_visual_suspended = suspended
+	if suspended:
+		if is_instance_valid(sprite):
+			sprite.texture = null
+			sprite.visible = false
+		if is_instance_valid(visual_center):
+			visual_center.visible = false
+		return
+	if is_instance_valid(visual_center):
+		visual_center.visible = true
+	if is_instance_valid(sprite):
+		sprite.visible = true
+	_load_visuals(_visual_sprite_name)
+
+
+func is_afk_visual_suspended() -> bool:
+	return _afk_visual_suspended
+
 
 func _load_visuals(sprite_name: String) -> void :
 	if sprite_name == "": return
@@ -173,6 +224,9 @@ func _input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) -> vo
 				return
 
 		get_viewport().set_input_as_handled()
+		# Terrain autorun must not resume and override a selected NPC.
+		if is_instance_valid(player) and player.has_method("cancel_autorun_tracking"):
+			player.cancel_autorun_tracking(true)
 
 		if NetworkManager:
 			if NetworkManager.has_method("send_secure_packet"):
@@ -182,19 +236,14 @@ func _input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) -> vo
 				})
 
 
-func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = {}) -> void :
+func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = {}, rich_text: bool = false) -> void :
+	if _afk_visual_suspended:
+		return
 	if not chat_bubble_bg or not chat_bubble_label: return
 
-	match bubble_type:
-		0: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_01.png")
-		1: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_02.png")
-		2: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_03.png")
-		3: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_04.png")
-		4: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_05.png")
-		5: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_06.png")
-		6: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_07.png")
+	chat_bubble_bg.texture = LEGACY_BUBBLE_SKIN.get_texture(bubble_type)
 
-	chat_bubble_label.text = text
+	# Leave ordinary messages on the original Label.
 
 	var fixed_bubble_size = Vector2(64, 48)
 	if chat_bubble_bg.texture: fixed_bubble_size = chat_bubble_bg.texture.get_size()
@@ -224,6 +273,7 @@ func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = 
 
 	chat_bubble_label.size = Vector2(fixed_bubble_size.x - m_left - m_right, fixed_bubble_size.y - m_top - m_bottom)
 	chat_bubble_label.position = Vector2(m_left, m_top)
+	LEGACY_DIALOG_BUBBLE.display(chat_bubble_bg, chat_bubble_label, text, rich_text)
 
 	if bubble_fade_tween and bubble_fade_tween.is_running(): bubble_fade_tween.kill()
 	chat_bubble_bg.modulate.a = 1.0

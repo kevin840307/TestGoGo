@@ -1,0 +1,273 @@
+--皇城鐵道車長(NQ024_B)
+
+--NQ024_Type
+--0: 一般單程票。
+--1: 單程優惠票。
+--2: 皇城鐵道套票。
+
+function get_time()
+	now = GetRealTime()
+	return (floor(now/60) - floor(now/600)*10)
+end
+
+function start()
+	time = get_time()
+	if time>4 then
+		time = time-5
+	end
+	if time<2 or GetFlag("NQ024_DEBUG")==1 then
+		dia_02()
+	else
+		dia_01(5-time)
+	end
+end
+
+--<未到上車時間>
+function dia_01(time)
+	Say("s往各城市的列車還有約"..time.."分鐘才到達本站。","End")
+end
+
+--<到了上車時間>
+function dia_02()
+	Ask("s前往各城市的列車已到達本站，你要乘搭往那裡的列車呢？","行駛「魔法之都幹線」往魔法之都的列車。","行駛「騎士之城幹線」往騎士之城的列車。","行駛「機械之城幹線」往機械之城的列車。","對不起，我要考慮一會。","reply_02")
+end
+
+function reply_02()
+	ans=GetChoice()
+	if ans==0 then
+		dia_03(0)
+	elseif ans==1 then
+		dia_03(1)
+	elseif ans==2 then
+		dia_03(2)
+	else
+		QuestEnd()
+	end
+end
+
+function dia_03(target)
+	if target==0 then
+		Ask("s請問你要使用什麼車票呢？","一般單程票。","單程優惠票。","皇城鐵道套票。","我想去別的地方。","reply_03a")
+	elseif target==1 then
+		Ask("s請問你要使用什麼車票呢？","一般單程票。","單程優惠票。","皇城鐵道套票。","我想去別的地方。","reply_03b")
+	else
+		Ask("s請問你要使用什麼車票呢？","一般單程票。","單程優惠票。","皇城鐵道套票。","我想去別的地方。","reply_03c")
+	end
+end
+function reply_03a()
+	ans=GetChoice()
+	if ans>=3 then
+		dia_02()
+	else
+		dia_04(0, ans)
+	end
+end
+function reply_03b()
+	ans=GetChoice()
+	if ans>=3 then
+		dia_02()
+	else
+		dia_04(1, ans)
+	end
+end
+function reply_03c()
+	ans=GetChoice()
+	if ans>=3 then
+		dia_02()
+	else
+		dia_04(2, ans)
+	end
+end
+
+
+--<一般單程票>
+function dia_04(target, ticket)
+	--魔法之都幹線
+	if target==0 then
+		--一般單程票
+		if ticket==0 then
+			if GetCountItemCount(10505) <1 then
+				no_ticket()
+			else
+				dia_04a(ticket)
+			end
+		--單程優惠票
+		elseif ticket==1 then
+			if GetCountItemCount(10508) <1 then
+				no_ticket()
+			elseif GetData("Level")>=25 then
+				high_level()
+			else
+				dia_04a(ticket)
+			end
+		--皇城鐵道套票
+		else
+			if GetCountItemCount(10511) <1 then
+				no_ticket()
+			else
+				dia_04a(ticket)
+			end
+		end
+	--騎士之城幹線
+	elseif target==1 then
+		--一般單程票
+		if ticket==0 then
+			if GetCountItemCount(10507) <1 then
+				no_ticket()
+			else
+				dia_04b(ticket)
+			end
+		--單程優惠票
+		elseif ticket==1 then
+			if GetCountItemCount(10510) <1 then
+				no_ticket()
+			elseif GetData("Level")>=25 then
+				high_level()
+			else
+				dia_04b(ticket)
+			end
+		--皇城鐵道套票
+		else
+			if GetCountItemCount(10511) <1 then
+				no_ticket()
+			else
+				dia_04b(ticket)
+			end
+		end
+	--機械之城幹線
+	else
+		--一般單程票
+		if ticket==0 then
+			if GetCountItemCount(10506) <1 then
+				no_ticket()
+			else
+				dia_04c(ticket)
+			end
+		--單程優惠票
+		elseif ticket==1 then
+			if GetCountItemCount(10509) <1 then
+				no_ticket()
+			elseif GetData("Level")>=25 then
+				high_level()
+			else
+				dia_04c(ticket)
+			end
+		--皇城鐵道套票
+		else
+			if GetCountItemCount(10511) <1 then
+				no_ticket()
+			else
+				dia_04c(ticket)
+			end
+		end
+	end
+end
+
+
+--魔法之都幹線
+function dia_04a(ticket)
+	SetFlag("NQ024_Type", ticket)
+	Say("s嗯，你可以上車了。","dia_04a1")
+end
+function dia_04a1()
+	Say("m#X_mas_card\\BG_STATION_01.spr#na#SE0136.mp3#","dia_04a6")
+end
+function dia_04a2()
+	Say("m#X_mas_card\\BG_STATION_02.spr#na#SE0135.mp3#","dia_04a3")
+end
+function dia_04a3()
+	Say("m#X_mas_card\\BG_STATION_03.spr#na#SE0134.mp3#","dia_04a4")
+end
+function dia_04a4()
+	Say("m#X_mas_card\\BG_STATION_04.spr#na#SE0137.mp3#","dia_04a5")
+end
+function dia_04a5()
+	Say("m#X_mas_card\\BG_STATION_06_MAGIC.spr#na##")
+	QuestEnd()
+end
+function dia_04a6()
+	ticket = GetFlag("NQ024_Type")
+	if ticket==0 then
+		RemoveItem(10505)
+	elseif ticket==1 then
+		RemoveItem(10508)
+	else
+		RemoveItem(10511)
+	end
+	MovePlayer(5079,2887,47)
+	dia_04a5()
+end
+
+--騎士之城幹線
+function dia_04b(ticket)
+	SetFlag("NQ024_Type", ticket)
+	Say("s嗯，你可以上車了。","dia_04b1")
+end
+function dia_04b1()
+	Say("m#X_mas_card\\BG_STATION_01.spr#na#SE0136.mp3#","dia_04b6")
+end
+function dia_04b2()
+	Say("m#X_mas_card\\BG_STATION_02.spr#na#SE0135.mp3#","dia_04b3")
+end
+function dia_04b3()
+	Say("m#X_mas_card\\BG_STATION_03.spr#na#SE0134.mp3#","dia_04b4")
+end
+function dia_04b4()
+	Say("m#X_mas_card\\BG_STATION_04.spr#na#SE0137.mp3#","dia_04b5")
+end
+function dia_04b5()
+	Say("m#X_mas_card\\BG_STATION_07_KNIGHT.spr#na##")
+	QuestEnd()
+end
+function dia_04b6()
+	ticket = GetFlag("NQ024_Type")
+	if ticket==0 then
+		RemoveItem(10507)
+	elseif ticket==1 then
+		RemoveItem(10510)
+	else
+		RemoveItem(10511)
+	end
+	MovePlayer(14278,8544,22)
+	dia_04b5()
+end
+--機械之城幹線
+function dia_04c(ticket)
+	SetFlag("NQ024_Type", ticket)
+	Say("s嗯，你可以上車了。","dia_04c1")
+end
+function dia_04c1()
+	Say("m#X_mas_card\\BG_STATION_01.spr#na#SE0136.mp3#","dia_04c6")
+end
+function dia_04c2()
+	Say("m#X_mas_card\\BG_STATION_02.spr#na#SE0135.mp3#","dia_04c3")
+end
+function dia_04c3()
+	Say("m#X_mas_card\\BG_STATION_03.spr#na#SE0134.mp3#","dia_04c4")
+end
+function dia_04c4()
+	Say("m#X_mas_card\\BG_STATION_04.spr#na#SE0137.mp3#","dia_04c5")
+end
+function dia_04c5()
+	Say("m#X_mas_card\\BG_STATION_08_ROBOT.spr#na##")
+	QuestEnd()
+end
+function dia_04c6()
+	ticket = GetFlag("NQ024_Type")
+	if ticket==0 then
+		RemoveItem(10506)
+	elseif ticket==1 then
+		RemoveItem(10509)
+	else
+		RemoveItem(10511)
+	end
+	MovePlayer(8877,4754,17)
+	dia_04c5()
+end
+
+function no_ticket()
+	Say("s喔！你身上沒有適當的車票，你必須往票務員那兒購買車票才能上車。","End")
+end
+function high_level()
+	Say("s喔！等級在24以上是不能使用優惠票的，你必須往票務員那兒購買適當的車票才能上車。","End")
+end

@@ -1,0 +1,15 @@
+--shop_b.txt
+
+function start()
+	Ask("s歡迎光臨，要看看最新時裝嗎？", "小姐，我想看看上身衣服。。","麻煩你，我要看褲子。", "不需要了","reply")	
+end
+
+function reply()
+	ans = GetChoice()
+	if ans==0 then
+		OpenShop(3, 100)
+	elseif ans==1 then
+		OpenShop(2, 100)
+	end
+	QuestEnd()
+end

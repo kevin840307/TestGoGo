@@ -1,0 +1,19 @@
+--LS_25107_5 "大氣之翼‧五級"
+
+function GetSkillData()
+	return 25107,5,65,31463,"大氣之翼‧五級","大氣之翼‧四級","聖劍士"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 3 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

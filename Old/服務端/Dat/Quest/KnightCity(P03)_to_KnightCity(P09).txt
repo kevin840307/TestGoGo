@@ -1,0 +1,13 @@
+--KnightCity(P03) to KnightCity(P09)
+
+function start()
+	Ask("n要進入高班訓練場嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(7040,5376,23)
+	end
+	QuestEnd()
+end

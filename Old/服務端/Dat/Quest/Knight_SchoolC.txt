@@ -1,0 +1,5 @@
+--People01 騎士開多姆
+
+function start()
+	Say("n1學校內封印著亞斯人的武器？胡說，不要聽取無聊的傳聞。","End")
+end

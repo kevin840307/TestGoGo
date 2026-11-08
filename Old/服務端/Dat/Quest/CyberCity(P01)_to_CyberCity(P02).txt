@@ -1,0 +1,17 @@
+--CyberCity(P01) to CyberCity(P02)
+
+function start()
+	Say("n1機械工場重地不得進入","End")
+end
+
+function notuse()
+	Ask("n要進入機械工場嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(4416,2912,18)
+	end
+	QuestEnd()
+end

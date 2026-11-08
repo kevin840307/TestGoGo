@@ -1,0 +1,5 @@
+--Shop04 Magic City §÷®Æ©±
+
+function start()
+	OpenShop (4,100)
+end

@@ -1,0 +1,5 @@
+--´¶´¶(MS005_C)
+
+function start()
+	Say("n1¡K¡K","End")
+end

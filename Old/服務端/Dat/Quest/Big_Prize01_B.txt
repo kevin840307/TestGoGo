@@ -1,0 +1,49 @@
+--神秘技能捲軸‧下卷
+--Recommend_Big_Prize01_B
+
+function start()
+	if GetCountItemCount(10598)>299 then
+		Say("p7要使用神秘技能捲軸下卷．．．","dia_01")
+	else
+		Say("p7要使用神秘技能捲軸下卷．．．")
+		dia_01()
+	end
+end
+
+function dia_01()
+	AddItem(10598)
+	if CheckItem(10597)<1 then
+		dia_02()
+	elseif HasSkill(11104)>0 then
+		dia_03()
+	else
+		Ask("p確定要使用神秘技能捲軸‧上卷和下卷去學習復活技能-生命之源嗎？","是的。","不是。","reply_01")
+	end
+end
+
+function reply_01()
+	if GetChoice()==0 then
+		 dia_04()
+	end
+	QuestEnd()
+end
+
+function dia_04()
+	if CheckItem(10597)>0 and CheckItem(10598)>0 then
+		Say("p7學會了復活技能-生命之源。")
+		RemoveItem(10597)
+		RemoveItem(10598)
+		AddSkill(11104)
+	else
+		dia_02()
+	end
+	QuestEnd()
+end
+
+function dia_02()
+	Say("p7要擁有神秘技能捲軸‧上卷和下卷才可學得復活技能-生命之源。","End")
+end
+
+function dia_03()
+	Say("p7你已經學會了復活技能-生命之源。","End")
+end

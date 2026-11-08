@@ -1,0 +1,44 @@
+--TQ004A  道具合成大師‧卡狄尼
+
+--statue 1  : receive the mission
+--statue 2  : mission is completed
+
+function start()
+
+	crr=GetData("Career")
+	statue=GetFlag("TQ004_Task")
+		
+	if crr~=9 then
+		Say("n1合成道具是一門很高難度的技術。")
+		Say("p1啊～是嗎？","End")
+	
+	elseif statue==2 or HasSkill(9104)==1 then
+			Say("n1合成道具是不是很有用呢？","End")
+	
+	elseif statue==1 then
+		if RemoveItem(10187)==1 then
+			
+			Say("p1這是你要的合成器零件，我真的可以學會裝備精煉嗎？")
+			Say("n1這果然是我要的合成器零件，你看～")
+			Say("n1只要這樣，再這樣，就可以了！")
+			Say("p1可以再示範一次嗎？")
+			Say("n1不了～我只示範一次，你學會多少就多少。")
+			Say("p1．．．．．．")
+			Say("p7學會了"..Color(0,45,198).."裝備製造"..Color(0,0,0).."",End)
+			AddSkill(9104)
+			SetFlag("TQ004_Task",2)
+		else
+			Say("n1在"..Color(0,45,198).."機械之城的森林"..Color(0,0,0).."，打倒"..Color(0,45,198).."5隻合成機動偶"..Color(0,0,0).."，得到合成器零件，我就教你如何製造高級裝備。","End")
+		end
+		
+	else
+		Say("n1合成道具是一門很高難度的技術，我看你也對這方面有一些天份，我就給你一個考驗，")
+		Say("n1如果你能在"..Color(0,45,198).."機械之城的森林"..Color(0,0,0).."，打倒"..Color(0,45,198).."5隻合成機動偶"..Color(0,0,0).."，得到合成器零件，")
+		Say("n1我就教你如何製造高級裝備。")
+		Say("p3真的嗎？")
+		Say("n1你可要小心點，我所製造的合成機動偶可是很強的。")
+		SetFlag("TQ004_Task",1)
+
+	end
+
+end  

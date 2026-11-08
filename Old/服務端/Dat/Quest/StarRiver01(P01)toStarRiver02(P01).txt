@@ -1,0 +1,13 @@
+--StarRiver01(P01) to StarRiver02(P01)
+
+function start()
+	Ask("n要進入流星之河．下游嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(2752,4448,29)
+	end
+	QuestEnd()
+end

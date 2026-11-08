@@ -1,0 +1,18 @@
+--Magic_City 復活點設定
+
+function start()
+--AFTER JP TRANSLATION PART 2
+	Ask("s要在魔法之都設定復活點嗎？","好的。","不需要了。","我想進入初心者之間。","set")
+end
+
+function set()
+	choice = GetChoice()
+	if choice == 0 then
+	Say("s已經在這裡設定了復活點。","End")
+	SetRebornLocation(3328,2944,9)
+	elseif choice == 2 then
+		MovePlayer(4672,4448,40)
+	else
+	QuestEnd()
+	end
+end

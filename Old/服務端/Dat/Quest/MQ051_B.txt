@@ -1,0 +1,47 @@
+--MQ051_B 古米爾
+
+--MQ051_TaskA
+-- 1: quest start, find 古米爾
+-- 2: go to get the bread for 古米爾
+-- 3: quest completed
+
+function start()
+	status = GetFlag("MQ051_TaskA")
+	if status==2 then
+		if RemoveItem(10228)==1 then
+			dialogue_04()
+		else
+			dialogue_03()
+		end
+	elseif status ==1 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1最近掘出了不少黑曜石，真好。","End")
+end
+
+function dialogue_02()
+	Say("p1請問你有黑曜石嗎？可不可以讓一個給我？")
+	Say("n1沒什麼問題……可是……")
+	Say("n1我有點餓，可以幫我去買一個麵包嗎？","End")
+	SetFlag("MQ051_TaskA", 2)
+end
+
+function dialogue_03()
+	Say("n1我想吃麵包啊……","End")
+end
+
+function dialogue_04()
+	Say("n1這個麵包真的給我嗎？謝謝你！\n我把黑曜石送給你吧！")
+	if ItemListCountLeft(0)<1 then
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到“黑曜石”","End")
+		AddItem(10229)
+		SetFlag("MQ051_TaskA", 3)
+	end
+end

@@ -1,0 +1,14 @@
+--BornPlace(Knight) to KnightCity
+
+function start()
+	Say("n7你只要找城中的星空大使，便可再回來初心者之間。")
+	Ask("n要往騎士之城嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(1776,8240,22)
+	end
+	QuestEnd()
+end

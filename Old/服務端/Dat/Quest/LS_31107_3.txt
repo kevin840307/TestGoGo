@@ -1,0 +1,19 @@
+--LS_31107_3 "極速投擲‧三級"
+
+function GetSkillData()
+	return 31107,3,40,31679,"極速投擲‧三級","極速投擲‧二級","道具使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 9 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

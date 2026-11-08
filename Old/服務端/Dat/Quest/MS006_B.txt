@@ -1,0 +1,57 @@
+--皇宮侍衛(2) (MS006_B)
+
+--MS006_Task
+-- 1: title shown
+-- 2: quest started
+-- 3: quest completed
+
+--MS006_Done
+-- 1: quest completed
+
+function start()
+	status = GetFlag("MS006_Task")
+	if status >=3 then
+		dialogue_02()
+	elseif status >=2 then
+		if GetCountItemCount(10301)>=1 and GetCountItemCount(10302)>=1 then
+			dialogue_01()
+		else
+			dialogue_02()
+		end
+	else
+		dialogue_01()
+	end
+end
+
+--玩家完成MS006_A－Step03_Choice1未與皇子說話
+function dialogue_01()
+	Say("n1你快去參見大皇子吧！難度要大皇子等你嗎？","End")
+end
+
+--玩家完成MS006_A－Step03_Choice1已和皇子說話
+function dialogue_02()
+	Ask("n你想馬上離開嗎？","是啊，麻煩你。","對不起，我還是多留一會。","reply_02")
+end
+
+function reply_02()
+	choice = GetChoice()
+	if choice == 0 then
+		dialogue_03()
+	else
+		dialogue_04()
+	end
+end
+
+--玩家完成MS006_B－Step02_Choice1
+function dialogue_03()
+	Say("n1請你跟我來。","move")
+end
+function move()
+	MovePlayer(6378,8824,15)
+	QuestEnd()
+end
+function dialogue_04()
+	Say("n1請不要在皇宮內隨意走動和張望。","End")
+end
+
+

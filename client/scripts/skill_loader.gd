@@ -3,6 +3,7 @@ extends Node
 
 
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
 const SKILL_DATA_PATH = "res://Skills/"
 
 
@@ -14,6 +15,13 @@ var _skill_path_map: Dictionary = {}
 var _icon_cache: Dictionary = {}
 var _is_data_loaded: bool = false
 
+
+func trim_unreferenced_runtime_cache() -> int:
+	return BG_CACHE_TRIM.trim_unused(_icon_cache, 24)
+
+
+func clear_runtime_cache() -> void :
+	_icon_cache.clear()
 
 func preload_all_skill_data() -> void :
 	if _is_data_loaded: return
@@ -53,7 +61,9 @@ func get_icon(icon_id: int) -> Texture2D:
 
 	var path = ICON_PATH % icon_id
 	if ResourceLoader.exists(path):
-		var tex = load(path) as Texture2D
+		var tex = ResourceLoader.load(
+			path, "", ResourceLoader.CACHE_MODE_IGNORE
+		) as Texture2D
 		_icon_cache[icon_id] = tex
 		return tex
 

@@ -1,0 +1,30 @@
+--流程說明	魔女斐兒
+--(EQ010_D)
+function start()
+	if GetFlag("EQ010_C_Step") >= 3 then
+		if GetFlag("EQ010_D_Step") < 1 then
+			Step01()
+		end
+	end
+end
+
+function Step01()
+--<After EQ010_C Step03>
+--<第1次打倒魔女斐兒>
+--<玩家身上物品空間少於1>→Step02
+	if ItemListCountLeft(1) < 1 then 
+		Step02()
+	else
+		Say("n3可惡，尼尼亞皇城竟然有這樣的高手。")
+		--（得到魔女頭髮。）
+		Say("p1成功了吧，還是快快集齊材料回城去。")
+		Say("p7得到魔女頭髮。")
+		AddItem(10732)
+		SetFlag("EQ010_D_Step",1)
+	end
+end
+
+function Step02()
+	Say("p1原來身上已沒有足夠的物品空間了．先整理一下好了。")
+	SetFlag("EQ010_D_Step",2)
+end

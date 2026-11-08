@@ -1,0 +1,57 @@
+-- MS003_B 尼爾歌．馬奇
+
+-- MS003_Task
+-- 0: ShowTitle
+-- 1: quest start
+-- 2: get the blood, go to get metal
+-- 3: get the metal, not the passport yet
+-- 4: get the passport
+
+function start()
+	status = GetFlag("MS003_Task")
+	if status>=3 then
+		dialogue_06()
+	elseif status >= 2 then
+		dialogue_05()
+	elseif status >= 1 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1祖加尼叔叔！你再不休息是不行的，你已經三個星期沒有睡覺了，你會支持不了的．．．","End")
+end
+
+function dialogue_02()
+	Say("n1"..GetName().."，謝謝你！")
+	Ask("n你知道卡瑪魔甲龍的所在地嗎？","知道","不知道","reply_02")
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		dialogue_03()
+	else
+		dialogue_04()
+	end
+end
+
+function dialogue_03()
+	Say("n1你一定可以打倒卡瑪魔甲龍回來的！","End")
+end
+
+function dialogue_04()
+	Say("n1卡瑪魔甲龍就是生長在流星之河上游。")
+	dialogue_03()
+end
+
+function dialogue_05()
+	Say("n1那三種龍甲獸分別是"..Color(0,45,198).."烏比龍甲獸"..Color(0,0,0).."、"..Color(0,45,198).."洛卡龍甲獸"..Color(0,0,0).."和"..Color(0,45,198).."特迪龍甲獸"..Color(0,0,0).."，牠們分別生長在"..Color(0,45,198).."黑暗森林"..Color(0,0,0).."、"..Color(0,45,198).."獅鷲山"..Color(0,0,0).."和"..Color(0,45,198).."星之湖中"..Color(0,0,0).."。")
+	Say("n1由於烏洛特金屬的穩定性很低，所以是很難合成的。")
+	Say("n1不過你一定可以找到烏洛特金屬回來的。","End")
+end
+
+function dialogue_06()
+	Say("n1謝謝你替我叔叔找到烏洛特金屬。","End")
+end

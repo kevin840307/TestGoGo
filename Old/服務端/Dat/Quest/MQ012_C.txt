@@ -1,0 +1,14 @@
+--MQ012_C  藍藍立普
+
+function start()
+	if CheckItem(10188)>0 then
+		QuestEnd()
+	elseif ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到\“藍寶石\”")
+		Say("p1晶瑩剔透的…我想拿去賣也會有個不錯的價錢。","End")
+		AddItem (10188,1)
+	end
+
+end

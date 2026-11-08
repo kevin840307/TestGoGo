@@ -1,0 +1,109 @@
+--TQ005A  道具合成大師‧史卡
+
+
+function start()
+
+	crr=GetData("Career")
+	
+	if crr~= 9 then
+		Say("n1做合成的人，要有靈活的手。")
+		Say("p1啊～是嗎？","End")
+
+	elseif HasSkill(9101)==1 and HasSkill(9102)==1 and HasSkill(9103)==1 then
+		Say("n1到你的手更靈活的時候，我才教你更複習的合成技能吧！","End")	
+
+	elseif HasSkill(9104)==1 then
+		Say("n1你現在已有足夠的能力去學習一些簡單的合成，只要你肯學，我就教你一些簡單的合成技能吧。","End")
+		Ask("n你想學哪一個技能？","基礎製藥","強化劑合成","攻擊物品製造","等一下才學","LearningSkills")
+	
+	else
+
+		Say("n1做合成的人，要有靈活的手。可惜你的手仍不夠靈活，你至少學會了一項合成技能之後再回來找我吧。","End")
+		
+
+	end
+
+
+end
+
+
+function LearningSkills()
+
+	choice=GetChoice()
+	
+	if choice==3 then 
+		Say("n1好吧, 想學的話隨時找我。","End")
+	
+	else
+
+
+		if choice==0 then
+			if HasSkill(9101)==1 then
+				HadLearnt()
+			else
+				Learn1()
+			end
+	
+		elseif choice==1 then
+			if HasSkill(9102)==1 then
+				HadLearnt()
+			else
+				Learn2()
+			end
+
+		else 
+			if HasSkill(9103)==1 then
+				HadLearnt()
+			else
+				Learn3()
+			end
+
+		end
+	end
+
+end
+
+function HadLearnt()
+	Say("n1這個我已經教過你的了。","End")
+
+end
+
+function NoMoney()
+
+	Say("n1我可以免費的教你啊，只要你肯學，我就教你一些簡單的合成技能。","End")
+end
+
+function Learn1()
+	
+	Say("n1這是見習道具使的拿手技術，有了這個技術，見習道具使就可以自行的製作藥品，")
+	Say("n1不過只限於基礎製藥而已，這個技術真的帶來不少方便。")
+	Say("p7......")
+	Say("p7......")
+	Say("p1我明白了")
+	Say("p7學會了"..Color(0,45,198).."基礎製藥"..Color(0,0,0).."","End")
+	AddSkill(9101)
+end
+
+
+function Learn2()
+	Say("n1強化劑往往是戰鬥的關鍵之一，學會了這個之後，就可以造出一些強化身體機能的藥品，")
+	Say("n1當然，太過激烈又偏門的強化藥品全國禁止調配出售。")
+	Say("p7......")
+	Say("p7......")
+	Say("p1我明白了")
+	Say("p7學會了"..Color(0,45,198).."強化劑合成"..Color(0,0,0).."","End")
+	AddSkill(9102)
+end
+
+function Learn3()
+	Say("n1想用炸彈丟敵人嗎？有了這個技能就可以實現你的夢想！學會這個技能之後，")
+	Say("n1一些可以攻擊敵人的物品也可以開發了，不過請不要隨身帶備太多，")
+	Say("n1不然如果有火的話，便會變成煙火大會。")
+	Say("p7......")
+	Say("p7......")
+	Say("p1我明白了")
+	Say("p7學會了"..Color(0,45,198).."攻擊物品製造"..Color(0,0,0).."","End")
+	AddSkill(9103)	
+
+
+end

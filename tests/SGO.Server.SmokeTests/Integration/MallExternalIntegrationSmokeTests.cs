@@ -1,0 +1,583 @@
+using System.Text.Json;
+using SGO.Server.Application.Mall;
+using SGO.Server.Infrastructure.Persistence.Sqlite;
+using SGO.Server.SmokeTests.Fixtures;
+
+using static SGO.Server.SmokeTests.SmokeAssert;
+
+namespace SGO.Server.SmokeTests.Integration;
+
+internal static class MallExternalIntegrationSmokeTests
+{
+    public static void Run()
+    {
+        using var temp =
+            new TemporaryDirectoryFixture(
+                "sgo-mall-external-");
+        var store =
+            new SqliteGameStore(
+                Path.Combine(
+                    temp.Root,
+                    "game.db"));
+
+        var username =
+            "mall-" +
+            Guid.NewGuid().ToString("N");
+        const string password =
+            "test-password";
+
+        var registered =
+            store.Register(
+                username,
+                password,
+                "");
+        Check(
+            registered.Success,
+            "register account for external mall settlement");
+
+        var accountId =
+            store.Login(
+                username,
+                password);
+        Check(
+            accountId.HasValue,
+            "login account for external mall settlement");
+
+        var payPal =
+            new FakePayPalProvider();
+        var legacy =
+            new FakeLegacyPointProvider();
+
+        var mall =
+            new MallService(
+                store,
+                configuration: null,
+                current: null,
+                payPal: payPal,
+                legacyPoints: legacy);
+
+        var createOrder =
+            mall.Handle(
+                accountId!.Value,
+                0,
+                "CreatePayPalDonation",
+                0,
+                1,
+                500,
+                0,
+                requestId:
+                    "paypal-request-1");
+
+        var createOrderJson =
+            JsonSerializer.Serialize(
+                createOrder);
+
+        Check(
+            payPal.LastAccountId ==
+                accountId.Value &&
+            payPal.LastAmount == 500 &&
+            payPal.LastRequestId ==
+                "paypal-request-1" &&
+            createOrderJson.Contains(
+                "\"Type\":\"PayPalDonationCreated\"") &&
+            createOrderJson.Contains(
+                "\"Success\":true") &&
+            createOrderJson.Contains(
+                "https://www.paypal.com/checkoutnow?token=test") &&
+            store.GetMallPoints(
+                accountId.Value) == 0 &&
+            store.GetLifetimeDonation(
+                accountId.Value) == 0,
+            "PayPal order creation forwards request id but never credits before settlement");
+
+        var firstSettlement =
+            mall.SettlePayPalDonation(
+                accountId.Value,
+                "paypal-order-1",
+                500);
+
+        var repeatedSettlement =
+            mall.SettlePayPalDonation(
+                accountId.Value,
+                "paypal-order-1",
+                500);
+
+        var conflictingSettlement =
+            mall.SettlePayPalDonation(
+                accountId.Value,
+                "paypal-order-1",
+                600);
+
+        Check(
+            firstSettlement.Success &&
+            !firstSettlement.AlreadyApplied &&
+            firstSettlement.NewBalance == 500 &&
+            firstSettlement.LifetimeDonation == 500 &&
+            repeatedSettlement.Success &&
+            repeatedSettlement.AlreadyApplied &&
+            repeatedSettlement.NewBalance == 500 &&
+            repeatedSettlement.LifetimeDonation == 500 &&
+            !conflictingSettlement.Success &&
+            store.GetMallPoints(
+                accountId.Value) == 500 &&
+            store.GetLifetimeDonation(
+                accountId.Value) == 500,
+            "PayPal settlement is idempotent and conflicting transaction reuse is rejected");
+
+        var query =
+            mall.Handle(
+                accountId.Value,
+                0,
+                "QueryLegacyPoints",
+                0,
+                1,
+                0,
+                0,
+                legacyLoginName:
+                    "legacy-user",
+                legacyPassword:
+                    "legacy-secret");
+
+        var queryJson =
+            JsonSerializer.Serialize(
+                query);
+
+        Check(
+            legacy.LastLoginName ==
+                "legacy-user" &&
+            legacy.LastPassword ==
+                "legacy-secret" &&
+            queryJson.Contains(
+                "\"Operation\":\"Query\"") &&
+            queryJson.Contains(
+                "\"LegacyPoints\":1000"),
+            "legacy query forwards exact credentials to provider");
+
+        var withdraw =
+            mall.Handle(
+                accountId.Value,
+                0,
+                "WithdrawLegacyPoints",
+                0,
+                1,
+                200,
+                0,
+                legacyLoginName:
+                    "legacy-user",
+                legacyPassword:
+                    "legacy-secret",
+                requestId:
+                    "legacy-request-1");
+
+        var withdrawJson =
+            JsonSerializer.Serialize(
+                withdraw);
+
+        Check(
+            legacy.LastLoginName ==
+                "legacy-user" &&
+            legacy.LastPassword ==
+                "legacy-secret" &&
+            legacy.LastAmount == 200 &&
+            legacy.LastRequestId ==
+                "legacy-request-1" &&
+            withdrawJson.Contains(
+                "\"Operation\":\"Withdraw\"") &&
+            withdrawJson.Contains(
+                "\"Success\":true") &&
+            withdrawJson.Contains(
+                "\"Type\":\"MallPointsSync\"") &&
+            withdrawJson.Contains(
+                "\"Points\":700") &&
+            store.GetMallPoints(
+                accountId.Value) == 700 &&
+            store.GetLifetimeDonation(
+                accountId.Value) == 500,
+            "legacy withdrawal credits current points without counting as donation");
+
+        var repeatedWithdraw =
+            mall.Handle(
+                accountId.Value,
+                0,
+                "WithdrawLegacyPoints",
+                0,
+                1,
+                200,
+                0,
+                legacyLoginName:
+                    "legacy-user",
+                legacyPassword:
+                    "legacy-secret",
+                requestId:
+                    "legacy-request-1");
+
+        var repeatedResponse =
+            repeatedWithdraw
+                .Select(packet =>
+                    JsonDocument.Parse(
+                        JsonSerializer.Serialize(packet)))
+                .ToArray();
+
+        try
+        {
+            var withdrawalResponse =
+                repeatedResponse
+                    .Select(x => x.RootElement)
+                    .First(x =>
+                        x.TryGetProperty(
+                            "Type",
+                            out var type) &&
+                        type.GetString() ==
+                            "LegacyPointWithdrawalResponse");
+
+            var pointsSync =
+                repeatedResponse
+                    .Select(x => x.RootElement)
+                    .First(x =>
+                        x.TryGetProperty(
+                            "Type",
+                            out var type) &&
+                        type.GetString() ==
+                            "MallPointsSync");
+
+            Check(
+                withdrawalResponse
+                    .GetProperty("Success")
+                    .GetBoolean() &&
+                withdrawalResponse
+                    .GetProperty("Message")
+                    .GetString() ==
+                    "此提領交易已完成，未重複入帳" &&
+                pointsSync
+                    .GetProperty("Points")
+                    .GetInt64() == 700 &&
+                store.GetMallPoints(
+                    accountId.Value) == 700 &&
+                store.GetLifetimeDonation(
+                    accountId.Value) == 500,
+                "replayed legacy withdrawal with same external transaction does not double credit");
+        }
+        finally
+        {
+            foreach (var document in repeatedResponse)
+                document.Dispose();
+        }
+
+        var nullProviders =
+            new MallService(store);
+
+        var blockedPayPal =
+            JsonSerializer.Serialize(
+                nullProviders.Handle(
+                    accountId.Value,
+                    0,
+                    "CreatePayPalDonation",
+                    0,
+                    1,
+                    500,
+                    0,
+                    requestId:
+                        "blocked-paypal"));
+
+        var blockedLegacy =
+            JsonSerializer.Serialize(
+                nullProviders.Handle(
+                    accountId.Value,
+                    0,
+                    "QueryLegacyPoints",
+                    0,
+                    1,
+                    0,
+                    0,
+                    legacyLoginName:
+                        "legacy-user",
+                    legacyPassword:
+                        "legacy-secret"));
+
+        Check(
+            blockedPayPal.Contains(
+                "\"Success\":false") &&
+            blockedLegacy.Contains(
+                "\"Success\":false"),
+            "null external providers fail closed without fake orders or balances");
+
+        var unknownAccountCredit =
+            store.CreditExternalMallPoints(
+                9_999_999,
+                "paypal",
+                "unknown-account-tx",
+                500,
+                500);
+
+        Check(
+            !unknownAccountCredit.Success &&
+            unknownAccountCredit.NewBalance == 0 &&
+            unknownAccountCredit.LifetimeDonation == 0,
+            "external settlement rejects unknown local account");
+
+        var unsafeMall =
+            new MallService(
+                store,
+                payPal:
+                    new UnsafePayPalProvider(),
+                legacyPoints:
+                    new ThrowingLegacyProvider());
+
+        var unsafePayPal =
+            JsonSerializer.Serialize(
+                unsafeMall.Handle(
+                    accountId.Value,
+                    0,
+                    "CreatePayPalDonation",
+                    0,
+                    1,
+                    500,
+                    0,
+                    requestId:
+                        "unsafe-url"));
+
+        var providerExceptionQuery =
+            JsonSerializer.Serialize(
+                unsafeMall.Handle(
+                    accountId.Value,
+                    0,
+                    "QueryLegacyPoints",
+                    0,
+                    1,
+                    0,
+                    0,
+                    legacyLoginName:
+                        "legacy-user",
+                    legacyPassword:
+                        "legacy-secret"));
+
+        var providerExceptionWithdraw =
+            JsonSerializer.Serialize(
+                unsafeMall.Handle(
+                    accountId.Value,
+                    0,
+                    "WithdrawLegacyPoints",
+                    0,
+                    1,
+                    100,
+                    0,
+                    legacyLoginName:
+                        "legacy-user",
+                    legacyPassword:
+                        "legacy-secret",
+                    requestId:
+                        "throwing-legacy"));
+
+        Check(
+            unsafePayPal.Contains(
+                "\"Success\":false") &&
+            !unsafePayPal.Contains(
+                "evil.example") &&
+            providerExceptionQuery.Contains(
+                "\"Success\":false") &&
+            providerExceptionWithdraw.Contains(
+                "\"Success\":false") &&
+            store.GetMallPoints(
+                accountId.Value) == 700,
+            "unsafe URL and provider exceptions fail closed without mutating mall balance");
+
+        var webhookProvider =
+            new VerifiedWebhookPayPalProvider(
+                accountId.Value);
+        var webhookMall =
+            new MallService(
+                store,
+                payPal:
+                    webhookProvider);
+        var webhookService =
+            new PayPalWebhookService(
+                webhookProvider,
+                webhookMall);
+
+        var webhookHeaders =
+            new Dictionary<string, string>
+            {
+                ["PayPal-Transmission-Id"] =
+                    "synthetic-transmission"
+            };
+
+        var firstWebhook =
+            webhookService.HandleAsync(
+                    webhookHeaders,
+                    "{\"event\":\"PAYMENT.CAPTURE.COMPLETED\"}",
+                    CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+
+        var repeatedWebhook =
+            webhookService.HandleAsync(
+                    webhookHeaders,
+                    "{\"event\":\"PAYMENT.CAPTURE.COMPLETED\"}",
+                    CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+
+        Check(
+            firstWebhook.Outcome ==
+                PayPalWebhookOutcome.Applied &&
+            repeatedWebhook.Outcome ==
+                PayPalWebhookOutcome.Duplicate &&
+            firstWebhook.NewBalance == 1200 &&
+            repeatedWebhook.NewBalance == 1200 &&
+            store.GetMallPoints(
+                accountId.Value) == 1200 &&
+            store.GetLifetimeDonation(
+                accountId.Value) == 1000,
+            "verified PayPal webhook applies once and duplicate delivery is idempotent");
+    }
+
+    private sealed class FakePayPalProvider :
+        IPayPalDonationProvider
+    {
+        public long LastAccountId { get; private set; }
+        public int LastAmount { get; private set; }
+        public string LastRequestId { get; private set; } = "";
+
+        public PayPalDonationOrderResult CreateOrder(
+            long accountId,
+            int amount,
+            string requestId)
+        {
+            LastAccountId = accountId;
+            LastAmount = amount;
+            LastRequestId = requestId;
+
+            return new(
+                true,
+                "PayPal 測試訂單已建立",
+                "https://www.paypal.com/checkoutnow?token=test",
+                "paypal-order-1");
+        }
+
+        public Task<PayPalWebhookVerificationResult> VerifyWebhookAsync(
+            IReadOnlyDictionary<string, string> headers,
+            string body,
+            CancellationToken cancellationToken)
+            => Task.FromResult(
+                new PayPalWebhookVerificationResult(
+                    true,
+                    false,
+                    "此 fake 只測建單"));
+    }
+
+    private sealed class VerifiedWebhookPayPalProvider :
+        IPayPalDonationProvider
+    {
+        private readonly long _accountId;
+
+        public VerifiedWebhookPayPalProvider(
+            long accountId)
+        {
+            _accountId = accountId;
+        }
+
+        public PayPalDonationOrderResult CreateOrder(
+            long accountId,
+            int amount,
+            string requestId)
+            => new(
+                false,
+                "not used");
+
+        public Task<PayPalWebhookVerificationResult> VerifyWebhookAsync(
+            IReadOnlyDictionary<string, string> headers,
+            string body,
+            CancellationToken cancellationToken)
+            => Task.FromResult(
+                new PayPalWebhookVerificationResult(
+                    true,
+                    true,
+                    "verified",
+                    _accountId,
+                    "paypal-webhook-tx-1",
+                    500));
+    }
+
+    private sealed class UnsafePayPalProvider :
+        IPayPalDonationProvider
+    {
+        public PayPalDonationOrderResult CreateOrder(
+            long accountId,
+            int amount,
+            string requestId)
+            => new(
+                true,
+                "unsafe",
+                "https://evil.example/pay",
+                "unsafe-order");
+
+        public Task<PayPalWebhookVerificationResult> VerifyWebhookAsync(
+            IReadOnlyDictionary<string, string> headers,
+            string body,
+            CancellationToken cancellationToken)
+            => Task.FromResult(
+                new PayPalWebhookVerificationResult(
+                    true,
+                    false,
+                    "unsafe provider webhook rejected"));
+    }
+
+    private sealed class ThrowingLegacyProvider :
+        ILegacyPointProvider
+    {
+        public LegacyPointQueryResult Query(
+            string loginName,
+            string password)
+            => throw new TimeoutException(
+                "synthetic legacy timeout");
+
+        public LegacyPointWithdrawalResult Withdraw(
+            string loginName,
+            string password,
+            int amount,
+            string requestId)
+            => throw new TimeoutException(
+                "synthetic legacy timeout");
+    }
+
+    private sealed class FakeLegacyPointProvider :
+        ILegacyPointProvider
+    {
+        public string LastLoginName { get; private set; } = "";
+        public string LastPassword { get; private set; } = "";
+        public int LastAmount { get; private set; }
+        public string LastRequestId { get; private set; } = "";
+
+        public LegacyPointQueryResult Query(
+            string loginName,
+            string password)
+        {
+            LastLoginName = loginName;
+            LastPassword = password;
+
+            return new(
+                true,
+                "查詢成功",
+                1000);
+        }
+
+        public LegacyPointWithdrawalResult Withdraw(
+            string loginName,
+            string password,
+            int amount,
+            string requestId)
+        {
+            LastLoginName = loginName;
+            LastPassword = password;
+            LastAmount = amount;
+            LastRequestId = requestId;
+
+            return new(
+                true,
+                "提領成功",
+                800,
+                amount,
+                "legacy-tx-1");
+        }
+    }
+}

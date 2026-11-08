@@ -1,0 +1,18 @@
+--精靈之魂
+
+function start()
+	Say("p7使用精靈之魂...")
+	Say("p7精靈之魂發出耀眼的光芒，在這時你好像聽到一把神聖而威嚴的聲音...")
+	Say("p7我是命運之精靈菲克斯，我可以增加1點你現正召喚中的精靈的壽命...")
+	Ask("p在使用我的力量之前，你要注意你現在必需召喚出需要增加壽命的精靈，而精靈的壽命不是全滿，不然你就白白浪費了這機會了，你已經明白和需要我的幫助嗎？","是的，請增加我精靈的壽命。","不需要了。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		Say("p7菲克斯已經將新的生命注入精靈之中...")
+		ModifyTargetData(GetSummonedPet(),"LifeCount",1)
+	else
+	AddItem(10305)
+	end
+end

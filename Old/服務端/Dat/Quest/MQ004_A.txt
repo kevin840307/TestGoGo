@@ -1,0 +1,128 @@
+--MQ004_A  帕米
+
+--MQ004_Task
+--1 Quest started
+--2 Talked with student already
+--3 Quest done
+
+function start()
+	status = GetFlag("MQ004_Task")
+	if status>=3 then
+		dialogue_06()
+	elseif status>=1 then
+		if GetCountItemCount(10006)>=1 and GetCountItemCount(10007)>=1 then
+			dialogue_05()
+		else
+			dialogue_04()
+		end
+	elseif GetData("Career")==6 then
+		if GetData("Level")>=40 then
+			dialogue_03()
+		else
+			dialogue_01()
+		end
+	else
+		dialogue_02()
+	end
+end
+
+--＜玩家條件不附合時＞
+function dialogue_01()
+	Say("n1光明魔法，是洗滌心靈的良方呢。")
+	Say("p1真的呢。")
+	Say("n7老師又再做起自己的事來。","End")
+end
+
+function dialogue_02()
+	Say("n1嗯？你什麼跑來這兒了？守護使只有見習守護使才可以做到，你去找其他老師看看。","End")
+end
+
+--<條件附合>
+function dialogue_03()
+	Say("p7你看到一位外貌甚有活力的老先生，他就是學院的守護使老師，帕米先生。")
+	Say("p1老師，你的工作是什麼樣的呢？")
+	Say("n1我是當守護使的，這個工作充滿了光輝和活力。我可以操縱光明的力量，而且有著日冕聖獸守護著。")
+	Say("p7玩家點點頭。")
+	Say("n1守護使的魔法防禦力很強，魔法對我們的侵害不會很大，但是我們還是有著缺點，就是我們的速度比較弱……")
+	Say("n1雖然是這樣，我們還是可靠的一群。順帶說明，我們魔法力的來源是大氣中的"..Color(0,45,198).."“光之依加魯能量微粒”"..Color(0,0,0).."的。")
+	Ask("n有什麼事了嗎…？","我想成為守護使！","沒什麼事！只是來聽聽老師的說話而已。","reply_03")
+end
+
+function reply_03()
+	if GetChoice()==0 then
+		dialogue_03a()
+	else
+		dialogue_03b()
+	end
+end
+
+function dialogue_03a()
+	Say("n1呵，聽見你這樣說，真是太好了。要成為守護使，必須舉行一個儀式。這個儀式需要有"..Color(0,45,198).."暗之光"..Color(0,0,0).."和"..Color(0,45,198).."魔物之血"..Color(0,0,0).."。")
+	Say("p1嗯？這是什麼？")
+	Say("n1自己努力去找！所有人想當守護使之前都必須自己找，給你一個暗示吧，我想學校內一定會有學生知道的，你去問問學長們。","End")
+	SetFlag("MQ004_Task", 1)
+end
+
+--<選：「沒什麼事，只是來看看老師。」>
+function dialogue_03b()
+	Say("n1嗯，謝謝你來聽我的說話。","End")
+end
+
+--<玩家接下此任務後>
+function dialogue_04()
+	Say("n1努力去找"..Color(0,45,198).."暗之光"..Color(0,0,0).."和"..Color(0,45,198).."魔物之血"..Color(0,0,0).."回來吧，好好加油喔。","End")
+end
+
+--<完成條件後>
+function dialogue_05()
+	Ask("n這真是太好了。你確定要成為守護使了嗎？","是的！","我要再考慮一下。","reply_05")
+end
+
+function reply_05()
+	if GetChoice()==0 then
+		dialogue_05a()
+	else
+		dialogue_05b()
+	end
+end
+
+function dialogue_05a()
+	Say("n1嗯……很好。你留心看著石頭。")
+	Say("n7只見帕米把魔物之血滴了滴在暗之光上，本來平平無奇的石頭竟然在此時，發出奇異的光芒！")
+	Say("n7你的身上感覺到被光之依加魯能量微粒包圍著。")
+	Say("n1嗯，好了，你已經是守護使了！這把屠龍魔杖，就送給你吧，當作是獎勵你的努力。")
+	if ItemListCountLeft(1)<1 then
+			Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+	else
+		Say("p7得到850Exp")
+		Say("p7得到「守護使」的稱號")
+		Say("p7得到「屠龍魔杖」","dialogue_05a2")
+	end
+end
+function dialogue_05a2()
+	RemoveItem(10006)
+	RemoveItem(10007)
+	SetFlag("MQ004_Task", 3)
+	SetFlag("MQ004_Done", 1)
+	gainexp(850)
+	AddTitle(18)
+	AddJob(2)
+	AddItem(8349)
+	QuestEnd()
+end
+
+--<選　我要再考慮一下。>
+function dialogue_05b()
+	Say("n1好好考慮清楚吧！我等你的答覆。","End")
+end
+
+function dialogue_06()
+	Say("n1要是有光明魔法的問題，不要客氣，來問我吧！","End")
+end
+
+function gainexp(exp)
+
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+
+end

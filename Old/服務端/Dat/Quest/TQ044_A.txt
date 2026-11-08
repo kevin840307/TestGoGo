@@ -1,0 +1,71 @@
+function start()
+	if GetData("Level") >= 26 then
+		Step01()
+	else
+		if GetData("Level") <=25 and GetFlag("TQ044_A_Step") < 2 then
+			Step02()
+		else
+			if GetWorldFlag("TQ044_A") <= 20 and CheckItem(10759) == 1 then
+				Step04()
+			else
+				if GetWorldFlag("TQ044_A") > 20 and CheckItem(10759) == 1 then
+					Step05()
+				else
+					if GetFlag("TQ044_A_Step") == 4 or GetFlag("TQ044_A_Step") == 5 then
+						Step06()
+					else
+						if GetFlag("TQ044_A_Step") == 2 and CheckItem(10759) == 0 then
+							Step03()
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
+function Step01()
+	Say("n1又是可惡的蝙蝠出動的時候了，各處地方都方發現他們的蹤影，今年的萬聖節又不得安寧了。")
+end
+
+function Step02()
+	Say("n1又是可惡的蝙蝠出動的時候了，各處地方都方發現他們的蹤影。")
+	Say("n1若首20名勇士可以打敗這些蝙蝠及將信物拿回來，便可以得到騎士勳章一個。而遲了回來的也可得到5000星幣作賞金。")
+	Say("n1不過我有一點要提醒你！這些蝙蝠並不好惹的，去年已有不少人民因挑戰失敗而失去性命，要小心！小心！")
+	Say("n1你等級還低，請你到流星之河上游替我打敗蝙蝠寶寶吧。但記得帶備一些藥物旁身啊。")
+	SetFlag("TQ044_A_Step",2)
+end
+
+function Step03()
+	if GetWorldFlag("TQ044_A") == 0 then
+		Say("n1現在仍未有勇士取得蝙蝠奶瓶回來．．．")
+	else
+		if GetWorldFlag("TQ044_A") <= 20 then
+			Say("n1現在已經有 "..GetWorldFlag("TQ044_A").." 個勇士取得蝙蝠奶瓶回來了！你還有機會取得騎士勳章！加油啊！")
+		else
+			if GetWorldFlag("TQ044_A") > 20 then
+				Say("n1現在已經有 "..GetWorldFlag("TQ044_A").." 個勇士取得蝙蝠奶瓶回來了！")
+			end
+		end
+	end
+end
+
+function Step04()
+	Say("n1為了表揚你的英勇表現，現代皇家頒發一個騎士勳章給你！祝你萬聖節快樂！")
+	AddItem(10763,1)
+	SetWorldFlag("TQ044_A",GetWorldFlag("TQ044_A")+1)
+	SetFlag("TQ044_A_Step",4)
+end
+
+function Step05()
+	Say("n1為了答謝你打倒那些可惡的蝙蝠，現頒發5000星幣賞金給你！祝你萬聖節快樂！")
+	ModifyData("Money",5000)
+	SetWorldFlag("TQ044_A",GetWorldFlag("TQ044_A")+1)	
+	SetFlag("TQ044_A_Step",5)
+end
+
+function Step06()
+	Say("n1現在已經有 "..GetWorldFlag("TQ044_A").." 個勇士取得蝙蝠奶瓶回來了！祝你萬聖節快樂！")
+end
+
+

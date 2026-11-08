@@ -1,0 +1,54 @@
+-- 靈感之筆 (NQ018_F)
+
+-- NQ018_Task_1		機動靈任務
+-- 1: Got the pen
+-- 2: used the pen
+
+function start()
+	if GetData("MP") < GetData("MPMAX") then
+		dialogue_01()
+	else
+		dialogue_02()
+	end
+end
+
+--<玩家點選時，魔力未滿點>
+function dialogue_01()
+	Say("p1咦…我提不起這支筆！")
+	Say("p1什麼它突然會變得那麼重…對了，一定是我的魔力不夠吧。","End")
+	AddItem(10271)
+end
+
+function dialogue_02()
+	Say("p1好！寫、寫、寫……")
+	Say("p6嗯…寫得滿流暢的～")
+	Say("p6咦…想不到應該寫什麼了…")
+	SetData("MP", 0)
+	if GetCountItemCount(10264)<1 or random(100)<50 then
+		dialogue_02a()
+	else
+		dialogue_02b()
+	end
+end
+
+--<玩家點選時，魔力滿點，隨機一>
+function dialogue_02a()
+	Say("p4……")
+	Say("p6哎呀，我差點睡起來了…")
+	Say("p6書上多了很多塗鴉…\n要撕下來才行！")
+	Say("p6咦！原來書上的那個“註”是這樣的意思…","End")
+	AddItem(10271)
+end
+
+--<玩家點選時，魔力滿點，隨機二>
+function dialogue_02b()
+	Say("p6……")
+	Say("p6嗯！有了！這個點子不錯！")
+	Say("p6寫、寫、寫…")
+	Say("p3完成了！")
+	Say("p7得到“完成．機動靈計策報告”")
+	Say("p7靈感之筆消失了。","End")
+	RemoveItem(10264)
+	AddItem(10267)
+	SetFlag("NQ018_Task_1", 2)
+end

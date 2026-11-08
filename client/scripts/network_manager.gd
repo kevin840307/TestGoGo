@@ -1,7 +1,7 @@
 
 extends Node
 
-var USE_DDNS: bool = true
+var USE_DDNS: bool = false
 var SERVER_URL = "ws://127.0.0.1:5678"
 var socket = WebSocketPeer.new()
 var is_connected_to_server = false
@@ -24,8 +24,11 @@ var _last_received_packet_type: String = ""
 var _last_received_entity_type: int = -1
 var _drain_packet_types: Dictionary = {}
 var _drain_spawn_entity_types: Dictionary = {}
+var _unknown_server_packet_types: Dictionary = {}
 
 var _logout_action: String = "quit"
+var latest_skill_sync: Array = []
+var has_latest_skill_sync: bool = false
 
 
 
@@ -58,6 +61,9 @@ signal pet_idle_speech_received(entity_id: int, message: String)
 
 signal npc_dialog_received(data: Dictionary)
 signal npc_dialog_closed()
+# Supplemental metadata for batch-aware Lua dialogue; keep the old no-argument
+# signal for any existing callers.
+signal npc_dialog_close_packet(data: Dictionary)
 signal change_map_received(map_id: int, target_x: float, target_y: float)
 signal train_travel_started(data: Dictionary)
 signal festival_theme_received(theme: String)
@@ -71,6 +77,8 @@ signal open_create_club_window_received()
 signal system_message_flash_received(message: String)
 signal system_message_chat_received(message: String)
 signal system_message_broadcast_received(message: String)
+signal item_pickup_feedback_received(data: Dictionary)
+signal item_choice_required_received(item_uid: int, item_index: int, title: String, options: Array)
 signal open_bank_window_received()
 signal open_repair_window_received(repair_type: int)
 
@@ -133,6 +141,7 @@ signal dismantle_item_response_received(success: bool, message: String, result_i
 
 
 signal toggle_auto_saint_response_received(is_on: bool)
+signal world_ready_response_received(success: bool, map_id: int, message: String)
 
 
 
@@ -200,7 +209,9 @@ func _force_exit_game(reason: String = "forced_exit") -> void :
 	if socket: socket.close()
 	get_tree().quit()
 
-func _process(delta: float) -> void :
+# Keep network delivery, disconnect checks and timer prediction on fixed physics ticks,
+# not per-render-frame: 30/45/60/144 FPS must not change gameplay update cadence.
+func _physics_process(delta: float) -> void :
 	socket.poll()
 	var state = socket.get_ready_state()
 
@@ -361,6 +372,14 @@ func send_secure_packet(data_dict: Dictionary) -> void :
 func send_announcement_list_request() -> void :
 	send_secure_packet({"Type": "AnnouncementListRequest"})
 
+func send_world_ready(map_id: int) -> void :
+	if map_id <= 0:
+		return
+	send_secure_packet({
+		"Type": "WorldReady",
+		"MapID": map_id,
+	})
+
 func send_login_request(user: String, pass_str: String) -> void :
 	var connected = await connect_to_server()
 	if not connected:
@@ -439,6 +458,8 @@ func send_modify_password_request(char_slot: int, dbid: int, new_pwd: String) ->
 	send_secure_packet({"Type": "ModifyPasswordRequest", "CharSlot": char_slot, "DBID": dbid, "NewPwd": new_pwd})
 
 func send_select_character_request(dbid: int) -> void :
+	latest_skill_sync.clear()
+	has_latest_skill_sync = false
 	if socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
 		send_secure_packet({"Type": "SelectCharacterRequest", "DBID": dbid})
 
@@ -453,6 +474,14 @@ func send_unequip_request(target_slot: int) -> void :
 func send_use_item_request(item_uid: int) -> void :
 	if socket and socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
 		send_secure_packet({"Type": "UseItemRequest", "ItemUID": item_uid})
+
+func send_item_choice_request(item_uid: int, item_index: int) -> void :
+	if socket and socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
+		send_secure_packet({
+			"Type": "UseItemChoiceRequest",
+			"ItemUID": item_uid,
+			"ItemIndex": item_index
+		})
 
 func send_logout_request(action: String = "quit") -> void :
 	if socket and socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
@@ -538,6 +567,15 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 					main_entry.show_error_popup(msg)
 			)
 
+		"PositionCorrection":
+			if GameManager and is_instance_valid(GameManager.current_player):
+				var corrected_position := Vector2(
+					float(data.get("X", GameManager.current_player.global_position.x)),
+					float(data.get("Y", GameManager.current_player.global_position.y))
+				)
+				if GameManager.current_player.has_method("apply_position_correction"):
+					GameManager.current_player.apply_position_correction(corrected_position)
+
 		"CreateCharacterResponse":
 			create_character_response_received.emit(data.get("Success", false), data.get("Message", ""))
 
@@ -579,7 +617,12 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 				if char_win and char_win.visible and char_win.has_method("update_ui"):
 					char_win.update_ui()
 
-		"EnterWorldSuccess": enter_world_success.emit(data)
+		"EnterWorldSuccess":
+			var bootstrap_skills: Array = data.get("SkillList", [])
+			if not bootstrap_skills.is_empty():
+				latest_skill_sync = bootstrap_skills.duplicate(true)
+				has_latest_skill_sync = true
+			enter_world_success.emit(data)
 
 		"InventorySync": inventory_synced.emit(data.get("Items", []), int(data.get("MaxSize", 200)))
 		"EquipSync": equip_synced.emit(data.get("Equips", []), int(data.get("MaxSize", 200)))
@@ -587,13 +630,15 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 			var pets = data.get("Pets", [])
 			var max_size = int(data.get("MaxSize", 50))
 			if GameManager.current_player and "data_model" in GameManager.current_player:
-				GameManager.current_player.data_model.update_pets(pets, max_size)
+				var p_data = GameManager.current_player.data_model
+				p_data.pet_summon_max = int(data.get("MaxSummon", p_data.pet_summon_max))
+				p_data.update_pets(pets, max_size)
 			pet_synced.emit(pets, max_size)
 
 		"HorseSync":
 			var horses = data.get("Horses", [])
 			var horse_equips = data.get("HorseEquips", [])
-			var max_horse_eq_size = int(data.get("MaxHorseEquipSize", 20))
+			var max_horse_eq_size = int(data.get("MaxHorseEquipSize", 100))
 
 			if GameManager.current_player and "data_model" in GameManager.current_player:
 				GameManager.current_player.data_model.update_horses(horses, horse_equips, max_horse_eq_size)
@@ -603,7 +648,13 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 			if GameManager.current_hud and GameManager.current_hud.has_method("_refresh_inventory_if_open"):
 				GameManager.current_hud._refresh_inventory_if_open()
 
-		"SkillSync": skill_synced.emit(data.get("Skills", []))
+		"SkillSync":
+			var skills: Array = data.get("Skills", [])
+			latest_skill_sync = skills.duplicate(true)
+			has_latest_skill_sync = true
+			if GameManager.current_player and "data_model" in GameManager.current_player:
+				GameManager.current_player.data_model.update_skills(latest_skill_sync)
+			skill_synced.emit(latest_skill_sync)
 		"SyncBuffs": buffs_synced.emit(data.get("Buffs", []))
 		"SpawnEntity": entity_spawned.emit(data)
 		"DespawnEntity": entity_despawned.emit(data)
@@ -622,12 +673,23 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 			festival_activity_received.emit(str(data.get("Festival", "")))
 
 		"NpcDialogResponse":
-			if data.get("DialogType", "") == "Close": npc_dialog_closed.emit()
-			else: npc_dialog_received.emit(data)
+			if data.get("DialogType", "") == "Close":
+				npc_dialog_close_packet.emit(data)
+				npc_dialog_closed.emit()
+			else:
+				npc_dialog_received.emit(data)
 
 		"SystemMessageFlash": system_message_flash_received.emit(data.get("Message", ""))
 		"SystemMessageChat": system_message_chat_received.emit(data.get("Message", ""))
 		"SystemMessageBroadcast": system_message_broadcast_received.emit(data.get("Message", ""))
+		"ItemPickupFeedback": item_pickup_feedback_received.emit(data)
+		"ItemChoiceRequired":
+			item_choice_required_received.emit(
+				int(data.get("ItemUID", 0)),
+				int(data.get("ItemIndex", 0)),
+				str(data.get("Title", "選擇獎勵")),
+				data.get("Options", [])
+			)
 		"OpenBankWindow": open_bank_window_received.emit()
 		"OpenRepairWindow": open_repair_window_received.emit(int(data.get("RepairType", 1)))
 
@@ -655,9 +717,11 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 			npc_shop_view_response_received.emit(int(data.get("ShopID", 0)), str(data.get("ShopName", "")), data.get("Items", []))
 
 		"AllocateStatResponse":
-			var success = data.get("Success", false)
-
-
+			var success = bool(data.get("Success", false))
+			if not success:
+				system_message_flash_received.emit(
+					str(data.get("Message", "能力配點失敗"))
+				)
 
 			if GameManager.current_player and "data_model" in GameManager.current_player:
 				var p_data = GameManager.current_player.data_model
@@ -702,34 +766,33 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 			if success and GameManager.current_player and "data_model" in GameManager.current_player:
 				var p_data = GameManager.current_player.data_model
 
+				# DriveMechaResponse is only the authoritative drive/recall ACK.
+				# Effective combat stats are refreshed by the following
+				# PlayerStatusSync packet from the server.
 				p_data.summoned_horse_uid = h_uid
 				p_data.rider_state["SummonedHorseUID"] = h_uid
 
-				if data.has("MaxHP"): p_data.max_hp = int(data.get("MaxHP", p_data.max_hp))
-				if data.has("MaxMP"): p_data.max_mp = int(data.get("MaxMP", p_data.max_mp))
-				if data.has("MaxSP"): p_data.max_sp = int(data.get("MaxSP", p_data.max_sp))
-				if data.has("Attack"): p_data.attack = int(data.get("Attack", p_data.attack))
-				if data.has("Defense"): p_data.defense = int(data.get("Defense", p_data.defense))
-				if data.has("MagicAttack"): p_data.magic_attack = int(data.get("MagicAttack", p_data.magic_attack))
-				if data.has("MagicDefense"): p_data.magic_defense = int(data.get("MagicDefense", p_data.magic_defense))
-				if data.has("Hit"): p_data.hit = int(data.get("Hit", p_data.hit))
-				if data.has("Dodge"): p_data.dodge = int(data.get("Dodge", p_data.dodge))
-				if data.has("Lucky"): p_data.lucky = int(data.get("Lucky", p_data.lucky))
-				if data.has("AttackSpeed"): p_data.attack_speed = int(data.get("AttackSpeed", p_data.attack_speed))
-				if data.has("AttackRange"): p_data.attack_range = int(data.get("AttackRange", p_data.attack_range))
-				if data.has("MoveSpeed"): p_data.move_speed = int(data.get("MoveSpeed", p_data.move_speed))
-				if data.has("CritRate"): p_data.crit_rate = int(data.get("CritRate", p_data.crit_rate))
-				if data.has("CritDamage"): p_data.crit_damage = int(data.get("CritDamage", p_data.crit_damage))
-
-
-				if GameManager.current_hud and GameManager.current_hud.has_method("update_status_panel"):
-					GameManager.current_hud.update_status_panel()
-
-
-				if GameManager.current_hud and GameManager.current_hud.has_method("get_node_or_null"):
-					var char_win = GameManager.current_hud.get_node_or_null("WindowsContainer/CharacterWindow")
-					if char_win and char_win.visible and char_win.has_method("update_ui"):
-						char_win.update_ui()
+				# A successful dismount changes the server's walkability
+				# rules. Cancel any in-flight client path and rebase to the
+				# server's current map/position BEFORE new SyncPosition packets
+				# can carry a stale pre-dismount coordinate. This is also used
+				# when the mecha automatically runs out of energy.
+				if (
+					h_uid == -1
+					and data.has("MapID") and data.has("X") and data.has("Y")
+					and not GameManager.is_changing_map
+					and int(data["MapID"]) == int(p_data.map_id)
+				):
+					var player = GameManager.current_player
+					var authoritative_pos := Vector2(float(data["X"]), float(data["Y"]))
+					if OS.is_debug_build():
+						print("[MECHA_DISMOUNT_REBASE] map=%d client=%s server=%s diff=%.1f" % [
+							int(p_data.map_id), str(player.global_position),
+							str(authoritative_pos),
+							player.global_position.distance_to(authoritative_pos)
+						])
+					if player.has_method("apply_position_correction"):
+						player.apply_position_correction(authoritative_pos)
 
 				if GameManager.current_hud and GameManager.current_hud.has_method("_refresh_inventory_if_open"):
 					GameManager.current_hud._refresh_inventory_if_open()
@@ -866,6 +929,37 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 								int(member.get("Level", -1))
 							)
 							break
+
+		"ScreenAoeResult":
+			var aoe_results: Array = data.get("Results", [])
+			var aoe_skill_id: int = int(data.get("SkillID", 0))
+			var aoe_skill_level: int = int(data.get("SkillLevel", 1))
+			var aoe_attacker_id: int = int(data.get("AttackerID", 0))
+			for result in aoe_results:
+				if not result is Dictionary:
+					continue
+				var entity_id: int = int(result.get("EntityID", 0))
+				if entity_id <= 0:
+					continue
+
+				entity_damage_received.emit({
+					"TargetID": entity_id,
+					"TargetType": 1,
+					"Damage": int(result.get("Damage", 0)),
+					"CurrentHP": int(result.get("CurrentHP", 0)),
+					"MaxHP": int(result.get("MaxHP", 0)),
+					"IsCrit": false,
+					"SkillID": aoe_skill_id,
+					"SkillLevel": aoe_skill_level,
+					"AttackerID": aoe_attacker_id
+				})
+
+				if bool(result.get("Died", false)):
+					entity_death_received.emit({
+						"EntityID": entity_id,
+						"EntityType": 1,
+						"KillerID": aoe_attacker_id
+					})
 
 		"EntityDeath":
 			entity_death_received.emit(data)
@@ -1220,8 +1314,73 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 		"Ping":
 			send_secure_packet({"Type": "Pong"})
 
+		"WorldReadyResponse":
+			var ready_ok: bool = bool(data.get("Success", false))
+			var ready_map_id: int = int(data.get("MapID", 0))
+			var ready_message: String = str(data.get("Message", ""))
+			world_ready_response_received.emit(
+				ready_ok,
+				ready_map_id,
+				ready_message
+			)
+			if GameManager and GameManager.has_method("trace_map_diagnostic"):
+				GameManager.trace_map_diagnostic("world_ready_ack", {
+					"map_id": ready_map_id,
+					"success": ready_ok,
+				})
+			if not ready_ok:
+				push_warning("[WORLD_READY_REJECTED] %s" % ready_message)
+
+		"UpdateShortcutResponse":
+			var shortcut_ok := bool(data.get("Success", false))
+			var slot_index := int(data.get("SlotIndex", -1))
+			var shortcut_type := int(data.get("ShortcutType", 0))
+			var target_id := int(data.get("TargetID", 0))
+
+			if shortcut_ok and GameManager.current_player and "data_model" in GameManager.current_player:
+				var p_data = GameManager.current_player.data_model
+				if p_data and "shortcuts" in p_data:
+					var shortcuts: Array = p_data.shortcuts
+					var found := false
+					for i in range(shortcuts.size() - 1, -1, -1):
+						if int(shortcuts[i].get("SlotIndex", -1)) != slot_index:
+							continue
+						if shortcut_type == 0:
+							shortcuts.remove_at(i)
+						else:
+							shortcuts[i]["ShortcutType"] = shortcut_type
+							shortcuts[i]["TargetID"] = target_id
+						found = true
+						break
+					if not found and shortcut_type > 0 and slot_index >= 0:
+						shortcuts.append({
+							"SlotIndex": slot_index,
+							"ShortcutType": shortcut_type,
+							"TargetID": target_id
+						})
+
+			if not shortcut_ok:
+				system_message_flash_received.emit(
+					str(data.get("Message", "快速鍵儲存失敗"))
+				)
+
+			# On success render the newly acknowledged model; on failure render the
+			# old authoritative model to roll back the optimistic visual slot.
+			if GameManager.current_hud and GameManager.current_hud.has_method("_load_shortcuts_from_data"):
+				GameManager.current_hud.call_deferred("_load_shortcuts_from_data")
+
+		"PacketError":
+			var request_type: String = str(data.get("RequestType", ""))
+			var error_code: String = str(data.get("Code", "UNKNOWN"))
+			var error_message: String = str(data.get("Message", "伺服器無法處理此操作"))
+			push_warning("[PACKET_ERROR] RequestType=%s Code=%s Message=%s" % [request_type, error_code, error_message])
+			system_message_flash_received.emit(error_message)
+
 		_:
-			pass
+			var unknown_type: String = str(packet_type)
+			if not _unknown_server_packet_types.has(unknown_type):
+				_unknown_server_packet_types[unknown_type] = true
+				push_warning("[UNHANDLED_SERVER_PACKET] Type=%s" % unknown_type)
 
 func send_trade_request(target_dbid: int) -> void :
 	if socket and socket.get_ready_state() == WebSocketPeer.STATE_OPEN:

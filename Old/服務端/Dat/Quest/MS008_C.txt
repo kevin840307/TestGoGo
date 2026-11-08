@@ -1,0 +1,50 @@
+function start()
+	if GetFlag("MS008_A_Step") >= 9 then
+		if GetFlag("MS008_C_Step")>=2 then
+			if GetFlag("MS008_D_Step") >= 11 then
+				Step04()
+			else
+				Step03()
+			end				
+		else
+			Step02()
+		end
+	else
+		Step01()
+	end
+end
+
+function Step01()
+	Say("n1立普的傳說太感人了，雖然未知真假，但我們也樂意相信。")
+end	
+function Step02()
+	--<After MS008_A Step09>                                                                                
+	Say("n1"..GetName().."，我剛剛到處找你啊，由於你處理兩所學校的紛爭上立了功勞，王子陛下邀請你一起參加今年的立普祭祀儀式。")
+	Say("p1太好了，不知道國王陛下是否想給我一官半職呢。")
+	Say("n1．．．．．．")                                                                                              
+	Say("n1別幻想太多了，祭祀會稍後才開始，但是王子對傳說只是一知半解，他想了解更多。請你為王子解釋一下。")
+	Say("p1好吧，我剛剛才聽完了整個傳說。")
+	Say("n1你先去整理一下衣著打扮，準備妥當便來找我，我會帶領你去參見王子陛下。")                                      
+	SetFlag("MS008_C_Step",2)
+end	
+function Step03()
+--<After MS008_C Step03>                                                                                
+	Ask("n你是不是已經準備妥善，要去參見王子陛下？","是的","不是","Step03_Handler")
+--＜選項＞                                                                                                      
+--．是的→MovePlayer (11136，2944，89)                                                                          
+--．不是→Quest End                                                                                             
+end
+
+function Step03_Handler()
+	if GetChoice() == 0 then
+		MovePlayer(1705, 1947, 06)
+	else
+		QuestEnd()
+	end
+end
+                                                                                                              
+function Step04()
+--<After MS008_D Step11 And Step12>                                                                     
+	Say("n1祭祀典禮還有許多工作未完成，我現在不能和你聊了，再見。")
+end
+                                                                                                              

@@ -1,0 +1,65 @@
+--GOM001_A  遊網少女 
+
+
+function start()
+	
+	if GetFlag("GOM001A_Completed")==1 then
+		Say("n1多謝你參與這次的活動，請下一次也多多支持星空活動。","End")
+	
+	else
+		Say("n1您好，為了"..Color(0,45,198).."慶祝遊網誌100期"..Color(0,0,0).."，只要您答中以下問題，我便會送你一個可愛的頭飾。")
+		Ask("n問題開始了，今次的活動是為了慶祝？","遊網誌100週年。","遊網誌100期。","遊網誌已售出100萬本。","對不起，請等我一會。","response1")
+
+	end
+
+end
+
+
+function response1()
+	
+	choice=GetChoice()
+	if choice==0 or choice==2 then
+		Ask("n．．．您想清楚了嗎？我再多給你一次機會，答錯便會沒有獎品了。","遊網誌100週年。","遊網誌100期。","遊網誌已售出100萬本。","對不起，請等我一會。","Askagain")
+	
+	elseif choice==1 then
+		Correct()
+
+		
+	else
+		Say("n1有空請快回來，因為活動很快便會終止了。","End")
+
+	end	
+
+end
+
+
+
+function Askagain()
+	choice=GetChoice()
+	if choice==0 or choice==2 then
+		Wrong()
+	elseif choice==1 then
+		Correct()
+
+	else
+		Say("n1有空請快回來，因為活動很快便會終止了。","End")
+	end	
+
+end
+
+
+function Correct()
+
+	Say("n1恭喜您答中了，您一定是遊網誌的長期讀者，我便送你一個可愛的頭飾吧")
+	Say("p7得到小蛋糕帽","End")
+	AddItem(10172)
+	SetFlag("GOM001A_Completed",1)
+
+
+end
+
+function Wrong()
+	Say("n1對不起你答錯了，真是可惜．．．","End")
+	SetFlag("GOM001A_Completed",1)
+
+end

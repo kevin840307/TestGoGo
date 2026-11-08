@@ -1,0 +1,9 @@
+--濃情巧克力(TQ024F)
+
+function start()
+	Say("p7送給親愛的“"..GetName().."”：\n甜蜜的巧克力，代表我們甜蜜的愛情。”","showpic")
+	AddItem(10468)
+end
+function showpic()
+	Say("m#X_mas_card\\EVENT_CARD04.spr#na##","End")
+end

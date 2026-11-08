@@ -1,0 +1,47 @@
+--密技星空情人(TQ022A)
+
+--TQ022_Done
+
+function start()
+	if GetFlag("TQ022_Done") > 0 then
+		dia_04()
+	elseif GetCountItemCount(10444)>0 then
+		dia_01()
+	else
+		dia_03()
+	end
+end
+
+function dia_01()
+	Say("n1哈囉！我是密技星空情人，在這個情人節，最好就是將你的心意，透過一個甜蜜蜜的蛋糕傳達給你最喜愛的人。")
+	Ask("n你要用情人節蛋糕?去換取情人蛋糕帽嗎？","是的，請給我一頂情人蛋糕帽。","不了，謝謝。","reply_01")
+end
+function reply_01()
+	if GetChoice()==0 then
+		dia_02()
+	else
+		QuestEnd()
+	end
+end
+
+function dia_02()
+	Say("n1這是你的蛋糕帽，祝你有一個溫馨的星空情人節 ^_^","dia_02b")
+end
+function dia_02b()
+	if ItemListCountLeft(1)<1 then
+		Say("p7對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+	else
+		Say("p7得到「情人蛋糕帽」","End")
+		SetFlag("TQ022_Done",1)
+		RemoveItem(10444)
+		AddItem(10445)
+	end
+end
+
+function dia_03()
+	Say("n1在這個情人節，最好就是將你的心意，透過一個甜蜜蜜的蛋糕傳達給你最喜愛的人。","End")
+end
+
+function dia_04()
+	Say("n1祝你有一個溫馨的星空情人節 ^_^","End")
+end

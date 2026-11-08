@@ -1,0 +1,5 @@
+--Shop01 ­×²z©±
+
+function start()
+	OpenRepair(10)
+end

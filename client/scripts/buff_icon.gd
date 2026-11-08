@@ -95,6 +95,7 @@ func _process(delta: float) -> void :
 		if remaining_time <= 0.0:
 			modulate.a = 1.0
 			set_process(false)
+			queue_free()
 
 func _update_time_label() -> void :
 	var display_value = max(0, int(ceil(remaining_time / 60.0))) if display_minutes else max(0, int(ceil(remaining_time)))

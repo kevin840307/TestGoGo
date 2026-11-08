@@ -1,0 +1,20 @@
+--冰窟魔鳥
+--(TQ034_F)
+
+function start()
+	if CheckItem(10644)>0 then
+		QuestEnd()
+	elseif ItemListCountLeft(0)<1 then
+			Say("p7身上沒有足夠的物品空間啊．．．先整理一下好了。","End")
+	else
+		Say("p7打倒冰窟魔鳥。")
+		Say("p7得到冰之依加魯結晶。")
+		Say("p7一塊躁狂之石從冰窟魔鳥掉落。")
+		Say("p1就是這石頭使大臣‧卡奇頓變得脾氣暴躁的原因吧！ ")
+		Say("p3好！就讓我們來打碎它！！")
+		Say("p3看我的！！")
+		Say("p3砰！！")
+		Say("p7打碎了躁狂之石．．．","End")
+		AddItem(10644)
+	end
+end

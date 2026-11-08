@@ -1,0 +1,19 @@
+--LS_31105_2 "金錢投擲‧二級"
+
+function GetSkillData()
+	return 31105,2,25,31672,"金錢投擲‧二級","金錢投擲‧一級","見習道具使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 9 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

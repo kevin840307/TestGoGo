@@ -1,0 +1,94 @@
+--NQ014_F  福爾
+
+
+--statue(NQ014_Task) =1 : receive the mission
+--		     =2 : can go to find 福爾
+--		     =3 : go to find 治療藥水．3
+--		     =4 : got the letter already
+
+
+
+function start()
+
+	statue=GetFlag("NQ014_Task")
+	done15=GetFlag("NQ015_Done")
+	statue15=GetFlag("NQ015_Task")
+	lv=GetData("Level")
+	
+	if statue15>=2 then
+		Say("n1加油吧。","End")
+
+	elseif statue15==1 then
+		if lv<30 then
+			Say("n1你回來了？把信交給凱兒了吧？")
+			Say("p1對對對，快說我知道阿爾瑪在哪兒吧！")
+			Say("n1別急別急～我還未想說～等你力量足夠時才說吧？","End")
+
+		else
+			if done15==1 then
+				Say("n1謝謝你幫我送信。阿爾瑪他還是待在那兒…一副想不通的樣子～")
+				Say("p1嗯…那我去找他了。 ","End")
+	
+			else
+				Say("n1嗯～你來了～那我就說你知道，阿爾瑪到底在哪吧。")
+				Say("p1嗯…唉，他一定在很危險的地方吧…")
+				Say("n1不對啊。")
+				Say("p1咦？")
+				Say("n1他就在"..Color(0,45,198).."騎士之城"..Color(0,0,0).."而已。")
+				Say("p1什麼什麼什麼！？")
+				Say("n1我就說到這兒了～自己去找他吧～","End")
+			end
+			SetFlag("NQ015_Task",2)
+		end
+
+	elseif statue==4 then
+		Say("n1你還未交信給凱兒嗎？","End")
+
+	elseif statue==3 then
+		if ItemListCountLeft(0)<1 then
+			Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			if RemoveItem(72,3)==1 then
+				if done15==1 then
+					Say("n1呼～～好多了，謝謝你。你把這封信交給凱兒～知道嗎？")
+					Say("p1什麼？我想向你打聽阿爾瑪的消息的！")
+					Say("n1交完這封信之後，我自然會說你知道～")
+				
+				else
+					Say("n1呼～～好多了，謝謝你。")
+					Say("p1剛才聽你說什麼…孤兒院…是指凱兒那間嗎？")
+					Say("n1你認識凱兒？太好了～你把信拿給她吧！是阿爾瑪給她的！")
+					Say("p1咦？阿爾瑪是誰？")
+					Say("n1就是凱兒的戀人！快去吧！")
+					
+				end
+				Say("n1得到"..Color(0,45,198).."阿爾瑪的信"..Color(0,0,0).."","End")
+				AddItem(10211)
+				SetFlag("NQ014_Task",4)
+			
+			else
+				Say("p1我拿"..Color(0,45,198).."三支治療特效藥"..Color(0,0,0).."給你，包準一定治好～你等等我好了！","End")
+			end
+		end
+
+	elseif statue==2 then
+		if done15==1 then
+			Say("n1我又弄傷了～救命啊～～")
+			Say("p1是你！你知道阿爾瑪他在哪的吧？我看你這點傷…沒什麼大礙的啦！")
+			Say("p1我拿三支治療特效藥給你，包準一定治好～你等等我好了！","End")
+
+		else
+			Say("n1拜託拜託！你可以把這封信…拿去尼尼亞皇城的孤兒院嗎？")
+			Say("n1我快死了！求求你！")
+			Say("p6咦？孤兒院……？不會是……")
+			Say("p1我看你這點傷…沒什麼大礙的啦！")
+			Say("p1我拿"..Color(0,45,198).."三支治療特效藥"..Color(0,0,0).."給你，包準一定治好～你等等我好了！","End")
+		end
+		SetFlag("NQ014_Task",3)
+	else
+		Say("n1哎呀哎呀！我的腳啊！別靠過來～～我的腳痛得不得了～！","End")
+
+
+	end
+
+end

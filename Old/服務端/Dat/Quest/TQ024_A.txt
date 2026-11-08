@@ -1,0 +1,192 @@
+--TQ024 情人節的婚禮
+--大聖殿的修女(TQ024_A)
+
+--TQ024_Target
+--0: boy
+--1: girl
+--2: migu
+--3: robot
+
+function start()
+	if GetFlag("TQ024_Target")<0 then
+		dia_01()
+	else
+		dia_05()
+	end
+end
+
+function dia_01()
+	Say("n1情人節是情人間最甜蜜的日子，為了替在星空的戀人給予最大的祝福。")
+	Say("n1我們將提供各式各樣的情人禮物給玩家。")
+	Say("n1現在我向你說明一下，如何獲得這些情人節禮物。")
+--	Say("n1在流星之河和星之湖有一種叫“結晶球”的怪物，不同種族的人會得到不同“結晶”，用你和你戀人的結晶各150個，便可在我這裡換取“紅心水晶”一個。")
+	Say("n1在流星之河、星之湖、戰爭平原、飢餓荒地有一種叫“結晶球”的怪物，不同種族的人會得到不同“結晶”，用你和你戀人的結晶各150個，便可在我這裡換取“紅心水晶”一個。")
+	Say("n1之後你可以向大聖殿的神父用“紅心水晶”換取不同物品，其中一款就是“星空禮服卡”。")
+	Say("n1由於“紅心水晶”是不能交易的，你和你的戀人最好是將換取“紅心水晶”的程序交由同一人進行。")
+	Say("n1如果想知道詳細活動流程，可以到sg.gameflier.com.tw查詢。")
+	Ask("n明白了嗎？明白的話請你登記你戀人的種族，定立愛的盟約，不過請你記得登記了之後便不可作出修改。","對不起，我想再聽聽如何獲得舉行婚禮的資格。","明白了，我現在就要定立愛的盟約。","明白了，但我仍未想定立愛的盟約。","reply01")
+end
+
+function reply01()
+	ans = GetChoice()
+	if ans==0 then
+		dia_02()
+	elseif ans==1 then
+		dia_03()
+	else
+		QuestEnd()
+	end
+end
+
+function dia_02()
+	Say("n1情人節是情人間最甜蜜的日子，為了替在星空的戀人給予最大的祝福。")
+	Say("n1我們將提供各式各樣的情人禮物給玩家。")
+	Say("n1現在我向你說明一下，如何獲得這些情人節禮物。")
+--	Say("n1在流星之河和星之湖有一種叫“結晶球”的怪物，不同種族的人會得到不同“結晶”，用你和你戀人的結晶各150個，便可在我這裡換取“紅心水晶”一個。")
+	Say("n1在流星之河、星之湖、戰爭平原、飢餓荒地有一種叫“結晶球”的怪物，不同種族的人會得到不同“結晶”，用你和你戀人的結晶各150個，便可在我這裡換取“紅心水晶”一個。")
+	Say("n1之後你可以向大聖殿的神父用“紅心水晶”換取不同物品，其中一款就是“星空禮服卡”。")
+	Say("n1由於“紅心水晶”是不能交易的，你和你的戀人最好是將換取“紅心水晶”的程序交由同一人進行。")
+	Say("n1如果想知道詳細活動流程，可以到sg.gameflier.com.tw查詢。","End")
+end
+
+function dia_03()
+	gender=GetData("Race")
+	if gender==0 then
+		dia_03a()
+	elseif gender==1 then
+		dia_03b()
+	else
+		dia_03c()
+	end
+end
+function dia_03a()
+	Ask("n那麼你的戀人是那一個種族的呢？","人族（女性）","米古族","機動靈","reply03a")
+end
+function reply03a()
+	ans=GetChoice()
+	if ans==0 then
+		dia_04(1)
+	elseif ans==1 then
+		dia_04(2)
+	else
+		dia_04(3)
+	end
+end
+function dia_03b()
+	Ask("n那麼你的戀人是那一個種族的呢？","人族（男性）","米古族","機動靈","reply03b")
+end
+function reply03b()
+	ans=GetChoice()
+	if ans==0 then
+		dia_04(0)
+	elseif ans==1 then
+		dia_04(2)
+	else
+		dia_04(3)
+	end
+end
+function dia_03c()
+	Ask("n那麼你的戀人是那一個種族的呢？","人族（男性）","人族（女性）","米古族","機動靈","reply03c")
+end
+function reply03c()
+	dia_04(GetChoice())
+end
+
+function dia_04(race)
+	SetFlag("TQ024_Target", race)
+	Say("n1那我現在就為你定立愛的盟約。")
+	Say("n1．．．")
+	Say("n1．．．")
+	name1=get_crystal_name(GetData("Race"))
+	name2 = get_crystal_name(race)
+	Say("n1我已經為定立了不可改變愛的盟約，那麼你需要用150顆“"..name1.."”和150顆“"..name2.."”才可向我換取“紅心水晶”。","End")
+end
+
+function dia_05()
+	Ask("n你要換取“紅心水晶”的嗎？","是的。","不是。","reply05")
+end
+function reply05()
+	id1=get_crystal_id(GetData("Race"))
+	id2=get_crystal_id(GetFlag("TQ024_Target"))
+	if GetChoice()==0 then
+		if id1 ==  id2 then
+			if GetCountItemCount(id1)>=300 then
+				dia_06()
+			else
+				name1=get_crystal_name(GetData("Race"))
+				name2 = get_crystal_name(GetFlag("TQ024_Target"))
+				Say("n1你需要用150顆“"..name1.."”和“"..name2.."”才可向我換取“紅心水晶”的。","End")
+			end
+		else
+			if GetCountItemCount(id1)>=150 and GetCountItemCount(id2)>=150 then
+				dia_06()
+			else
+				name1=get_crystal_name(GetData("Race"))
+				name2 = get_crystal_name(GetFlag("TQ024_Target"))
+				Say("n1你需要用150顆“"..name1.."”和“"..name2.."”才可向我換取“紅心水晶”的。","End")
+			end
+		end
+	else
+		QuestEnd()
+	end
+end
+
+function dia_06()
+	Say("n1這是你的“紅心水晶”，祝福你可以在這裡找到你的真愛。")
+	if ItemListCountLeft(0)>=1 then
+		name1=get_crystal_name(GetData("Race"))
+		name2 = get_crystal_name(GetFlag("TQ024_Target"))
+		Say("n1交出150顆“"..name1.."”和“"..name2.."”。","dia_06b")
+	else
+		Say("n1對不起，你身上的物品太多了，請清除一些物品後再試。","End")
+	end
+end
+function dia_06b()
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到「紅心水晶」。","End")
+		id1=get_crystal_id(GetData("Race"))
+		id2=get_crystal_id(GetFlag("TQ024_Target"))
+		AddItem(10465)
+		RemoveItem(id1, 150)
+		RemoveItem(id2, 150)
+	end
+end
+
+function dia_07()
+	name1=get_crystal_name(GetData("Race"))
+	name2 = get_crystal_name(GetFlag("TQ024_Target"))
+	Ask("n你需要用150顆"..name1.."”和“"..name2.."”才可向我換取“紅心水晶”的。","我明白了。","對不起，我想再聽聽如何獲得舉行婚禮的資格。","reply07")
+end
+function reply07()
+	if GetChoice()==0 then
+		QuestEnd()
+	else
+		dia_02()
+	end
+end
+
+function get_crystal_name(race)
+	if race==0 then
+		return "濃情結晶"
+	elseif race==1 then
+		return "柔情結晶"
+	elseif race==2 then
+		return "真情結晶"
+	else
+		return "深情結晶"
+	end
+end
+
+function get_crystal_id(race)
+	if race==0 then
+		return 10461
+	elseif race==1 then
+		return 10462
+	elseif race==2 then
+		return 10463
+	else
+		return 10464
+	end
+end

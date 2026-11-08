@@ -1,0 +1,62 @@
+--魔法學生‧克克拉
+--(TQ032_B)
+
+--TQ032_Task
+--1: talked with TQ032_A
+--2: talked with TQ032_B
+--3: can passed to map
+--4: get the 10637
+
+function start()
+	state = GetFlag("TQ032_Task")
+
+	if state>=4 then
+		dia_06()
+	elseif state>=3 then
+		dia_05()
+	elseif state>=2 then
+		if CheckItem(10636)>0 then
+			dia_04()
+		else
+			dia_03()
+		end
+	elseif state>=1 then
+		dia_02()
+	else
+		dia_01()
+	end
+end
+
+function dia_01()
+	Say("n1靈嘉老師！不要再睡了，我們正等著你回校上課的！")
+	Say("n3靈嘉老師：不要吵啊．．．讓我再多睡一會．．．","End")
+end
+
+--＜After TQ032_A Step01＞
+function dia_02()
+	Say("n1你可不可以幫我一個忙？老師不知道為什麼整天在睡．．．")
+	Say("n1你可以幫我去機械之城找一個結晶收藏家，向他要一塊活力結晶回來嗎？")
+	Say("n1活力結晶可以使人活力充沛的！！","End")
+	SetFlag("TQ032_Task", 2)
+end
+
+--＜After TQ032_B Step02＞
+function dia_03()
+	Say("n1請你幫我去機械之城找一個結晶收藏家，向他要一塊活力結晶回來好嗎？")
+	Say("n1活力結晶可以使人活力充沛的！！拜託你了！","End")
+end
+
+--＜玩家身上持有活力結晶(10636)＞
+function dia_04()
+	Say("n1請你向靈嘉老師使用活力結晶吧！","End")
+end
+
+--＜After TQ032_A Step04＞
+function dia_05()
+	Say("n1尋找綠幽之氣的事就拜託你了！","End")
+end
+
+--＜After TQ031_A Step08＞
+function dia_06()
+	Say("n1感謝你幫我們找到綠幽之氣！","End")
+end

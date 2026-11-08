@@ -1,0 +1,6 @@
+--People01 大米
+
+function start()
+	Say("n1可以麻煩你幫我寄個東西嗎？")
+	Say("n1哎呀……不好意思，我以為你是郵差。","End")
+end

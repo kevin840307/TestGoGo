@@ -1,0 +1,14 @@
+function start()
+Ask("n要離開祭祀禮堂嗎？", "是的。","不是。","ans")
+--＜選項＞                      
+--．是的。→傳送玩家至尼尼亞皇城
+--．不是。→Quest End           
+end
+
+function ans()
+	if GetChoice()== 0 then
+		MovePlayer(10000,10000,15)
+	else
+		QuestEnd()
+	end		
+end

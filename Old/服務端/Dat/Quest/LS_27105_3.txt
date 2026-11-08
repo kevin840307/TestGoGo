@@ -1,0 +1,19 @@
+--LS_27105_3 "戰神之力‧三級"
+
+function GetSkillData()
+	return 27105,3,35,31522,"戰神之力‧三級","戰神之力‧二級","守護使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 6 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

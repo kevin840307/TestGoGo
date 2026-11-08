@@ -1,0 +1,13 @@
+--KnightCity(P04) to KnightCity(P03)
+
+function start()
+	Ask("n要進入禮堂嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(6976,3168,23)
+	end
+	QuestEnd()
+end

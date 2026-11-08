@@ -1,0 +1,127 @@
+--結晶收藏家
+--(TQ032_C)
+
+--TQ032_C
+-- counter of win
+-- 10: won the game
+
+--TQ032_C_Try
+-- counter of trying
+
+function start()
+	if GetFlag("TQ032_C_Try") < 0 then
+		SetFlag("TQ032_C_Try",0)
+	end
+
+	if GetFlag("TQ032_C") >= 10 or GetFlag("TQ032_C_Try")>=20 then
+		SetFlag("TQ032_C_Try",0)
+	end
+
+	if CheckItem(10636)>0 then
+		dia_09()
+	elseif GetFlag("TQ032_Task")>=2 then
+		dia_02()
+	else
+		dia_01()
+	end
+end
+
+function dia_01()
+	Say("n1我的收藏品有如天上的星星一樣的美麗，我是不會給你看的！","End")
+end
+
+--＜After TQ032_B Step02＞
+function dia_02()
+	--＜玩家身上沒有足夠空間得到活力結晶(10636)＞→Step08
+	if ItemListCountLeft(0)<1 then
+		dia_08()
+	else
+		Say("p1啊！你就是結晶收藏家嗎？我是受人所託來找活力結晶的，可以給我嗎？")
+		Say("n1啊！我才不會就這樣給你呢！")
+		Say("n1除非你跟我猜拳，並連續勝出10次。不過我要收猜拳費，每次1000星幣。")
+		Ask("n是否要挑戰我？","是的。","不是。","reply_02")
+	end
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		dia_03()
+	end
+	QuestEnd()
+end
+
+function dia_03()
+	--＜玩家沒有1000星幣＞→Step05
+	if GetData("Money")<1000 then
+		dia_05()
+	else
+		Say("p7交出1000星幣猜拳費！")
+		ModifyData("Money",-1000)
+		SetFlag("TQ032_C",0)
+		dia_04()
+	end
+end
+
+
+function dia_04()
+	Ask("n那麼開始了！！剪刀！石頭！布！","剪刀！","石頭！","布！","reply_04")
+end
+
+function reply_04()
+	ans = GetChoice()
+	if ans==0 then
+		dia_06("布","石頭")
+	elseif ans==1 then
+		dia_06("剪刀", "布")
+	else
+		dia_06("石頭", "剪刀")
+	end
+end
+
+function dia_05()
+	Say("n1你連1000星幣都沒有，就別想我跟你猜拳！","End")
+end
+
+function dia_06(win, lose)
+	ans = random(100)
+	if ans<=65 then
+		Say("n2"..win.."！啊！我輸了！")
+		total = GetFlag("TQ032_C")
+		total = total+1
+		SetFlag("TQ032_C", total)
+		Say("p7已經勝出了"..total.."局！！")
+		if total<10 then
+			dia_04()
+		else
+			Say("n1啊！你的猜拳技術真好！這是你要的活力結晶！","End")
+			AddItem(10636)
+		end
+	else
+		Say("n2"..lose.."！啊！你輸了！")
+		tryTimes = GetFlag("TQ032_C_Try")
+		tryTimes = tryTimes+1
+		SetFlag("TQ032_C_Try", tryTimes)
+		if tryTimes>=20 then
+			dia_07()
+		else
+			QuestEnd()
+		end
+	end
+end
+
+function dia_07()
+	Say("p3啊！！慢著！原來你一直是在使詐！！")
+	Say("p3快點交出活力結晶！不然就要你好看！！")
+	Say("n1．．．這是你要的活力結晶。")
+	Say("p3以後不要再欺騙人了！")
+	Say("p7得到活力結晶。","End")
+	AddItem(10636)
+end
+
+function dia_08()
+	Say("p7身上沒有足夠的物品空間啊．．．先整理一下好了。","End")
+end
+
+function dia_09()
+	Say("n1要不要再跟我猜拳！？","End")
+end

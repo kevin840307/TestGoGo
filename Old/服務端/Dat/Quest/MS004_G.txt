@@ -1,0 +1,49 @@
+--資訊電腦(MS004_G)
+
+--MS004_Task
+-- 1: quest start, go to 泰雲
+-- 2: go to 依加魯穩定器
+-- 3: go to 迪爾
+-- 4: go to 資訊大樓
+-- 5: go to 嘉迪尼事務長
+-- 6: go to 格靈森林
+-- 7: got the 野花電子卡
+-- 8: 基地destoryed
+-- 9: quest completed
+
+function start()
+	if GetFlag("MS004_Task")>=4 and GetCountItemCount(10273)>=1 then
+		dialogue_01()
+	else
+		dialogue_02()
+	end
+end
+
+--玩家完成了MS004F－Step03B並手持電腦卡－X105
+function dialogue_01()
+	Say("n7請插入電腦卡。")
+	Say("p7插入電腦卡－X105")
+	Say("n7．．．")
+	Say("n7．．．")
+	Say("n7這是野花反戰民兵團的任務資料：")
+	Say("n7任務編號：X-105AT")
+	Say("n7已完成爆破機械偶的生產工作。")
+	Say("n7在數天之後進行破壞星之門行動。")
+	Say("n7以爆破機械偶空襲星之門建造場。")
+	Say("n7各成員需於3天內去到格靈森林的基地集合。")
+	Say("n7基地外有一塊機關石作開啟入口之用。")
+	Say("n7為了和平的世界！我們必需阻止星之門開啟！")
+	if GetFlag("MS004_Task")<=5 then
+		Say("p1要快些回去向嘉迪尼事務長報告！")
+		SetFlag("MS004_Task", 5)
+	end
+	RemoveItem(10273)
+	QuestEnd()
+end
+
+function dialogue_02()
+	Say("n7請插入電腦卡。")
+	Say("n7．．．")
+	Say("n7．．．")
+	Say("n7沒有合適的電腦卡。","End")
+end

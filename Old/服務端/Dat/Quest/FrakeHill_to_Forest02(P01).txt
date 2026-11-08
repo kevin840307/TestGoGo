@@ -1,0 +1,13 @@
+--FrakeHill to Forest(P01)
+
+function start()
+	Ask("n要進入尼西亞台地嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(2624,2912,13)
+	end
+	QuestEnd()
+end

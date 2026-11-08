@@ -1,0 +1,6 @@
+--People01 艾絲美拉達
+
+function start()
+	Say("n1聽說將來有一個選妃大賽，看來我也要努力！")
+	Say("n1能當上皇子妃的話就好了。","End")
+end

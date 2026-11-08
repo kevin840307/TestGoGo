@@ -1,0 +1,20 @@
+--NQ026_C2(戰爭魔物)
+function start()
+    complex_type = GetData("ComplexType")
+    if complex_type == 0 then
+        Say("p7在魔物死亡的一刻，一度魔光在其體內射出，之後發生強烈的爆炸！！！")
+        Say("p3轟隆隆！！")
+        Say("p7受到了嚴重的傷害！")
+        SetData("HP",1)
+        Say("p6噢！可惡的魔物，差點便栽在你的手上．．．")
+    else
+        if ItemListCountLeft(0) < 1 then
+            Say("p7身上的物品太多了，清除一些物品再來吧！")                
+        else
+            Say("p7在魔物死亡的一刻，一度魔光在其體內射出．．．")
+            Say("p7開動魔裝機甲的特殊能力！吸收爆炸能量！")
+            AddItem(10524)
+            Say("p7得到戰爭魔物之魂")
+        end
+    end        
+end

@@ -1,0 +1,87 @@
+--波坦(MQ003_B)
+
+--MQ003_Task
+--1 Quest started
+--2 Talked with student already
+--3 Quest done
+
+--MQ004_Task
+--1 quest started
+--2 Talked with student already
+--3 Quest done
+
+function start()
+	status = GetFlag("MQ003_Task")
+	status4 = GetFlag("MQ004_Task")
+	if status4>0 then
+		if status4>=3 then
+			dialogue_05()
+		elseif status4>=2 then
+			if GetCountItemCount(10006)>=1 and GetCountItemCount(10007)>=1 then
+				dialogue_04()
+			else
+				dialogue_03()
+			end
+		else
+			dialogue_02(4)
+		end
+	elseif status>0 then
+		if status>=3 then
+			dialogue_05()
+		elseif status>=2 then
+			if GetCountItemCount(10006)>=1 and GetCountItemCount(10007)>=1 then
+				dialogue_04()
+			else
+				dialogue_03()
+			end
+		else
+			dialogue_02(3)
+		end
+	else
+		dialogue_01()
+	end
+end
+
+--<任務未開始>
+function dialogue_01()
+	Say("n1有什麼問題都可以問我喔！我很樂意幫助新生。","End")
+end
+
+--<任務開始時>
+function dialogue_02(task)
+	Say("p1學…學長！")
+	Say("n1嗯？什麼了？")
+	Say("p1請問你知道什麼是"..Color(0,45,198).."暗之光"..Color(0,0,0).."和"..Color(0,45,198).."魔物之血"..Color(0,0,0).."嗎？")
+	if task == 4 then
+		Say("n1你想成為守護使吧？這兩個都要用在魔法使的儀式上呢。")
+	else
+		Say("n1你想成為魔動使吧？這兩個都要用在魔法使的儀式上呢。")
+	end
+
+	Say("p7點點頭")
+	Say("n1其實"..Color(0,45,198).."暗之光"..Color(0,0,0).."的樣子只是一塊普通的石頭，可是只要是把"..Color(0,45,198).."魔物之血"..Color(0,0,0).."洒上去...")
+	Say("n1就會成為儀式用之物，而且會閃閃發光呢，在黑夜非常顯眼，所以就叫"..Color(0,45,198).."暗之光"..Color(0,0,0).."了，那時的它真是完美的寶石啊。")
+	Say("p1是這樣啊……")
+	Say("n1沒錯，"..Color(0,45,198).."暗之光"..Color(0,0,0).."可以在森林找到，而"..Color(0,45,198).."魔物之血"..Color(0,0,0).."嘛……就要在"..Color(0,45,198).."流星之河"..Color(0,0,0).."殺掉"..Color(0,45,198).."魔物柏古"..Color(0,0,0).."才可以得到了。","End")
+	if task == 4 then
+		SetFlag("MQ004_Task", 2)
+	else
+		SetFlag("MQ003_Task", 2)
+	end
+end
+
+--<任務進行中>
+function dialogue_03()
+	Say("n1暗之光可以在"..Color(0,45,198).."星精靈祭壇"..Color(0,0,0).."找到，而魔物之血就要在流星之河殺掉"..Color(0,45,198).."魔物柏古"..Color(0,0,0).."才可以得到了。","End")
+end
+
+--<完成條件後>
+function dialogue_04()
+	Say("n1你已經拿到了嗎？快交給老師吧！","End")
+end
+
+--<任務完成後>
+function dialogue_05()
+	Say("n1嗯？你已經就職了？恭喜喔！","End")
+end
+

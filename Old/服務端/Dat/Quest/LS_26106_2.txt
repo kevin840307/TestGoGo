@@ -1,0 +1,19 @@
+--LS_26106_2 "血色月蝕‧二級"
+
+function GetSkillData()
+	return 26106,2,40,31490,"血色月蝕‧二級","血色月蝕‧一級","魔動使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 5 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

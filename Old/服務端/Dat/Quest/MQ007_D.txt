@@ -1,0 +1,31 @@
+--淡火貓咪(MQ007_D)
+
+--MQ007_Task
+--1 quest start
+--2 already talk with 盧杜
+--3 talked with 芬娜
+--4 given the 灰紅之石
+--5 asked to find  小紅晶石
+--6 given the 小紅晶石
+--7 asked to find  小黃晶石
+--8 got the 聖水
+--9 quest completed
+
+--MQ007_Stone
+--1 already get the stone
+
+function start()
+	if GetFlag("MQ007_Task")>=2 or GetFlag("MQ008_Task")>=2 then
+		if GetFlag("MQ007_Stone")<0 then
+			if ItemListCountLeft(0)<1 then
+				Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				Say("p7得到「灰紅之石」")
+				Say("p1這就是灰紅之石了嗎？感覺有點熱似的。","End")
+				SetFlag("MQ007_Stone",1)
+				AddItem(10029)
+			end
+		end
+	end
+	QuestEnd()
+end

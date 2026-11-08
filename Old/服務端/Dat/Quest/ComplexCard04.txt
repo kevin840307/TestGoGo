@@ -1,0 +1,5 @@
+-- Complex04
+function start()
+	StartRobotComplex(4)
+end
+

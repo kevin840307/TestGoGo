@@ -1,0 +1,83 @@
+--MQ057_C 好像會動的箱子
+
+--MQ057_Counter
+-- store the last time get the paper
+
+function start()
+	counter = GetFlag("MQ057_Counter")
+	if counter~=-1 then
+		if GetGameHours()-counter<2016 then
+			dialogue_02()
+		else
+			dialogue_03()
+		end
+	else
+		if GetData("Career")~=7 then
+			dialogue_NonMigu()
+		else
+			skill = GetSpecifiedSkillInfo(GetCallerPtr(), 7103)
+			if GetTargetData(skill, "Lv") < 4 then
+				dialogue_below4()
+			else
+				dialogue_01()
+			end
+		end
+	end
+end
+
+--不是米古魔法使的玩家點選時
+function dialogue_NonMigu()
+	Say("p1這個箱子好像會動，真恐怖。")
+	Say("p1還是別去理它好了……","End")
+end
+
+function dialogue_global()
+	Say("p1這個箱子好像會動，真恐怖。")
+	Say("p1這裡面可能會有寶物也說不定……")
+	Say("p1啊！這張是什麼？！")
+	Say("p1有一張紙好像跑出來的樣子！")
+	Say("p1速度還很快……")
+end
+
+--米古魔法使點選，但魔風咒未夠4級時
+function dialogue_below4()
+	dialogue_global()
+	Say("p1啊……跑掉了……早知道就練多點魔風咒……","End")
+end
+
+--米古魔法使點選，魔風咒夠4級時
+function dialogue_01()
+	dialogue_global()
+	Say("p3嘿！想逃？先問一下我的咒語！魔風咒出擊！")
+	Say("p1呵呵……果然慢起來了吧？拿到了！")
+	if ItemListCountLeft(0)<1 then
+		Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+	else
+		Say("p7得到“活生生符紙”")
+		Say("p7得到4000EXP","End")
+		AddItem(10243)
+		gainexp(4000)
+		SetFlag("MQ057_Counter", GetGameHours())
+	end
+end
+
+--米古魔法使點選，但拿到之後未過一星期
+function dialogue_02()
+	Say("p1這個箱子平靜下來了。","End")
+end
+
+--米古魔法使點選，拿到之後過了一星期
+function dialogue_03()
+	Say("p1這個箱子又再動起來了。")
+	Say("p1又有一張紙好像跑出來的樣子！")
+	Say("p1速度還很快……")
+	Say("p3嘿！想逃？先問一下我的咒語！魔風咒出擊！")
+	Say("p1呵呵……果然慢起來了吧？拿到了！")
+	Say("p7得到“活生生符紙”","End")
+	SetFlag("MQ057_Counter", GetGameHours())
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end

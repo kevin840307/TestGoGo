@@ -1,0 +1,13 @@
+--LionHole(P04) to LionHole(P03)
+
+function start()
+	Ask("n要進入獅鷲山洞嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(7104,8352,11)
+	end
+	QuestEnd()
+end

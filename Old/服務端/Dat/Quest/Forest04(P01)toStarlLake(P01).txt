@@ -1,0 +1,13 @@
+--Forest04(P01) to StarlLake(P01)
+
+function start()
+	Ask("n要進入星之湖嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(9600,3712,31)
+	end
+	QuestEnd()
+end

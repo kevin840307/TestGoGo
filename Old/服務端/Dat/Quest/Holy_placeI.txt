@@ -1,0 +1,5 @@
+--People01 露兒
+
+function start()
+	Say("n1聖女給人高貴、溫柔的感覺，不論男女老少都十分喜愛她。","End")
+end

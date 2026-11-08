@@ -1,0 +1,19 @@
+--LS_26101_4 "黑魔刃‧四級"
+
+function GetSkillData()
+	return 26101,4,25,31467,"黑魔刃‧四級","黑魔刃‧三級","見習魔動使"
+end
+
+function CheckCareer(career, job)
+	if job < 1 then
+		return 0
+	end
+
+	if career == 5 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

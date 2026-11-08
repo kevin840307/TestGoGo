@@ -1,0 +1,5 @@
+--Shop01 ­Ü®w
+
+function start()
+	OpenBank()
+end

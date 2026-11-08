@@ -1,0 +1,13 @@
+function start()
+	CanMove()
+end
+
+function GetLocName()
+	return "軍用地下倉庫"
+end
+
+function GetLoc()
+	return 4160,8032,21
+end
+
+#include "TS_Common.txt"

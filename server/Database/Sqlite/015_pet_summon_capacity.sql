@@ -1,0 +1,3 @@
+-- Persistent simultaneous pet summon slots.
+-- Base game allows one pet; item 2301 adds one slot up to two extra slots.
+-- @ensure-column characters pet_summon_capacity INTEGER NOT NULL DEFAULT 1

@@ -1,0 +1,125 @@
+--沙加(MQ008_A)
+
+--MQ008_Task
+--1 quest start
+--2 already talk with 盧杜
+--3 talked with 芬娜
+--4 given the 灰紅之石
+--5 asked to find  小紅晶石
+--6 given the 小紅晶石
+--7 asked to find  小黃晶石
+--8 got the 聖水
+--9 quest completed
+
+function start()
+	status = GetFlag("MQ008_Task")
+	if status>=9 then
+		dia_05()
+	elseif status>=8 and GetCountItemCount(10028)>0 then
+		dia_04()
+	elseif status>=1 then
+		dia_03()
+	else
+		if GetData("Career")==2 and GetData("Level")>=40 then
+			dia_02()
+		else
+			dia_01()
+		end
+	end
+end
+
+--<玩家不是遊民時>
+function dia_01()
+	Say("n1……防禦不可以鬆懈下來。")
+	Say("p1呃……是……","End")
+end
+
+--<條件附合>
+function dia_02()
+	Say("n7這是守護劍士老師沙加，他的防禦技巧是學校中數一數二的。")
+	Say("p1請問老師是守護劍士嗎？")
+	Say("n1嗯嗯。")
+	Say("p1那麼守護劍士有什麼特點？")
+	Say("n1守護劍士物理防禦力很強，這是我們也有經過長時間的訓練而成的。可是我們攻擊有點弱就是。")
+	Say("n1而我們的武術，是依靠“地之依加魯能量微粒”的所產生，守護神則是土神。")
+	Ask("n你來找我有甚麼事嗎？","我想成為守護劍士！","想來知道守護劍士到底是什麼而已。","reply_02")
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		dia_02a()
+	else
+		dia_02b()
+	end
+end
+
+--選項：「我想成為守護劍士！」
+function dia_02a()
+	Say("n1真的？那你需要"..Color(0,45,198).."灰紅色聖水"..Color(0,0,0).."，把它找回來就行。")
+	Say("p1灰紅色聖水？")
+	Say("n1對！快去找吧，不過我不會說你知道在哪，你問學長們吧！","End")
+	SetFlag("MQ008_Task", 1)
+end
+
+--<選：「想來知道守護劍士到底是什麼而已。」>
+function dia_02b()
+	Say("n1多些訓練自己吧。","End")
+end
+
+--<玩家接下此任務後>
+function dia_03()
+	Say("n1找到"..Color(0,45,198).."灰紅色聖水"..Color(0,0,0).."了沒？","End")
+end
+
+--<完成條件後>
+function dia_04()
+	Ask("n你要成為守護劍士了嘛？","是的！","我要再考慮一下。","reply_04")
+end
+
+function reply_04()
+	if GetChoice()==0 then
+		dia_04a()
+	else
+		dia_04b()
+	end
+end
+
+--<選 是的！>
+function dia_04a()
+	Say("p7交出「灰紅色聖水」")
+	Say("n1嗯，很好。")
+	Say("n7只見沙加把灰紅色聖水潑了在我的身上，就有些奇怪的光粒在空中飄浮著，它們慢慢進入你的身體……你感覺到被地之依加魯能量微粒包圍著。")
+	Say("n1你是守護劍士了！這把屠龍巨劍就送給你吧。")
+	if ItemListCountLeft(1)<1 then
+			Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+	else
+		Say("p7得到850Exp")
+		Say("p7得到「守護劍士」的稱號")
+		Say("p7得到「屠龍巨劍」","dia_04a2")
+	end
+end
+function dia_04a2()
+	RemoveItem(10028)
+	SetFlag("MQ008_Task", 9)
+	SetFlag("MQ008_Done", 1)
+	gainexp(850)
+	AddTitle(14)
+	AddJob(2)
+	AddItem(8348)
+	QuestEnd()
+end
+
+--<選　我要再考慮一下。>
+function dia_04b()
+	Say("n1嗯？還有什麼要想的？","End")
+end
+
+--<任務完成後>
+function dia_05()
+	Say("n1快些去好好訓練自己吧。","End")
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end

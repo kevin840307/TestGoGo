@@ -1,0 +1,55 @@
+--SKC27J108
+#include "txt_27108.txt"
+
+function init_data()
+	skillflag 	= "27108"
+	TXT_SkillName()
+	boost	= "EffSP"
+end
+
+function start()
+	init_data()
+	
+	consume 	= "Will"
+	varyDelta 	= 10
+	skillLv 	= GetSkillLv()
+
+	recastTime 	= GetDuration(skillLv)
+	duration 	= recastTime	
+	skillid 	= 27108
+	defender	= GetTargetPtr()
+	
+	effect		= GetPara(skillLv)
+	conTotal 	= GetConTotal(skillLv)
+
+	GoBoost()
+end
+
+function GetDuration(lv)
+	if lv == 1 then
+		return 120
+	elseif lv == 2 then
+		return 240
+	else
+		return 480
+	end
+end
+
+function GetPara(lv)
+	return -1
+end
+
+function GetConTotal(lv)
+	if lv == 1 then
+		return 26
+	elseif lv == 2 then
+		return 46
+	else
+		return 74
+	end
+end
+
+#include "boostcommon.txt"
+
+
+

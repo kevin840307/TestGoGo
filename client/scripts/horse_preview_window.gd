@@ -52,6 +52,8 @@ const ROYAL_TERRITORY_WAR_MAP_ID: = 67
 var _palette_mat_cache: Dictionary = {}
 
 var _local_energy: float = -1.0
+var _drive_request_pending: bool = false
+var _requested_drive_horse_uid: int = -2
 
 var target_player: CharacterBody2D = null
 var current_horse_data: Dictionary = {}
@@ -75,6 +77,8 @@ func _ready() -> void :
 			NetworkManager.inventory_synced.connect(_on_inventory_synced)
 		if not NetworkManager.sync_mecha_energy_received.is_connected(_on_sync_mecha_energy):
 			NetworkManager.sync_mecha_energy_received.connect(_on_sync_mecha_energy)
+		if not NetworkManager.drive_mecha_response_received.is_connected(_on_drive_mecha_response):
+			NetworkManager.drive_mecha_response_received.connect(_on_drive_mecha_response)
 
 func _on_visibility_changed() -> void :
 	set_process(is_visible_in_tree())
@@ -501,7 +505,8 @@ func _update_buttons() -> void :
 	if btn_leave: btn_leave.visible = is_riding
 
 func _on_btn_ride_pressed() -> void :
-	if not target_player: return
+	if not target_player or _drive_request_pending:
+		return
 
 	if "data_model" in target_player and target_player.data_model and int(target_player.data_model.map_id) == ROYAL_TERRITORY_WAR_MAP_ID:
 		if GameManager.current_hud:
@@ -519,50 +524,71 @@ func _on_btn_ride_pressed() -> void :
 				GameManager.current_hud.show_rejection_message_flash("請先解除目前駕駛的機甲！")
 			return
 
-	var h_uid = current_horse_data.get("horse_uid", 0)
-	var energy_left = current_horse_data.get("energy_left", 0)
+	var h_uid = int(current_horse_data.get("horse_uid", 0))
+	var energy_left = int(current_horse_data.get("energy_left", 0))
 
+	if h_uid <= 0:
+		return
 	if energy_left <= 0:
 		if GameManager.current_hud:
 			GameManager.current_hud.show_rejection_message_flash("機甲電量不足，無法駕駛！")
 		return
 
-	if NetworkManager:
-		NetworkManager.send_drive_mecha_request(h_uid)
+	_begin_drive_request(h_uid)
 
-
-	target_player.execute_mecha_transition( func():
-		target_player.data_model.summoned_horse_uid = h_uid
-		target_player.setup_layered_paper_dolls()
-		target_player.sync_animation()
-		_update_buttons()
-	)
-
-	var hud = GameManager.current_hud if GameManager else null
-	if hud and hud.has_method("_refresh_inventory_if_open"):
-		hud._refresh_inventory_if_open()
-
-	hide()
 
 func _on_btn_leave_pressed() -> void :
-	if not target_player: return
+	if not target_player or _drive_request_pending:
+		return
+	_begin_drive_request(-1)
 
-	if NetworkManager:
-		NetworkManager.send_drive_mecha_request(-1)
+
+func _begin_drive_request(horse_uid: int) -> void :
+	if not NetworkManager or not NetworkManager.is_connected_to_server:
+		return
+	_drive_request_pending = true
+	_requested_drive_horse_uid = horse_uid
+	if btn_ride:
+		btn_ride.disabled = true
+	if btn_leave:
+		btn_leave.disabled = true
+	NetworkManager.send_drive_mecha_request(horse_uid)
 
 
-	target_player.execute_mecha_transition( func():
-		target_player.data_model.summoned_horse_uid = -1
-		target_player.setup_layered_paper_dolls()
-		target_player.sync_animation()
-		_update_buttons()
-	)
+func _on_drive_mecha_response(success: bool, horse_uid: int, _message: String) -> void :
+	if not _drive_request_pending:
+		return
+
+	# Only consume the acknowledgement for the operation this window sent.
+	if success and horse_uid != _requested_drive_horse_uid:
+		return
+
+	_drive_request_pending = false
+	_requested_drive_horse_uid = -2
+	if btn_ride:
+		btn_ride.disabled = false
+	if btn_leave:
+		btn_leave.disabled = false
+
+	if not success:
+		# The local model was never changed, so refreshing restores the exact
+		# authoritative pre-request state without a visual rollback race.
+		refresh_data()
+		return
+
+	if is_instance_valid(target_player):
+		target_player.execute_mecha_transition(func():
+			target_player.setup_layered_paper_dolls()
+			target_player.sync_animation()
+			_update_buttons()
+		)
 
 	var hud = GameManager.current_hud if GameManager else null
 	if hud and hud.has_method("_refresh_inventory_if_open"):
 		hud._refresh_inventory_if_open()
 
 	hide()
+
 
 func _on_sync_mecha_energy(h_uid: int, energy: int, exp: int, max_exp: int, level: int) -> void :
 	if not visible: return

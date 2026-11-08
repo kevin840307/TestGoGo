@@ -1,0 +1,17 @@
+--KnightCity(P01) to KnightCity(P18)
+
+function start()
+Say("n1武鬥塔嚴禁進入","End")
+end
+
+function notuse()
+	Ask("n要進入武鬥塔嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(3584,5632,23)
+	end
+	QuestEnd()
+end

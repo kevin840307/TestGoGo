@@ -1,0 +1,44 @@
+--NQ026_D (研究所守衛)
+
+function start()
+	if GetData("ComplexType") ~= 0 then
+		Say("n1請你們解除魔裝機甲狀態後才進入研究所。")
+	else
+		if GetFlag("NQ026_B_STEP") < 4 then
+			Say("n1請出示你的通行証。")
+		    Say("p1我沒有啊．．．")
+	        Say("n1你是來幹什麼的？研究所重地，閒人免進！快走吧！")
+	        if GetFlag("NQ026_G_STEP") > 0 then
+	        	SetFlag("NQ026_G_STEP",0)
+	        end
+	    else
+		    if GetFlag("NQ026_D_STEP") < 2 then
+		        Say("n1請出示你的通行証。")
+		        if CheckItem(10535) == 1 then
+		            Say("p1這是鐵男先生的通行証，我是要來加入魔裝機甲軍團的！")
+		            Say("n1歡迎你！鐵男先生已經通知我們了，所長‧艾克森在等你。")
+		            Ask("n你要進入研究所嗎？","是的","不是","choice_handler")
+		            SetFlag("NQ026_D_STEP",2)
+		        else
+		            Say("p1我沒有啊．．．")
+		            Say("n1你是來幹什麼的？研究所重地，閒人免進！快走吧！")
+		        end                
+		    else
+		        if CheckItem(10535) == 1 then
+		            Ask("n你要進入研究所嗎？","是的","不是","choice_handler")    
+		        else
+		            Say("p1我沒有啊．．．")
+		            Say("n1你是來幹什麼的？研究所重地，閒人免進！快走吧！")
+		        end            
+		    end
+		end
+	end
+end
+
+function choice_handler()
+    if GetChoice() == 0 then
+        MovePlayer(4416,2912,18)
+    else
+        QuestEnd()
+    end
+end

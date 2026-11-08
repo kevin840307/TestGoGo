@@ -1,0 +1,114 @@
+--莫拿加(MQ007_A)
+
+--MQ007_Task
+--1 quest start
+--2 already talk with 盧杜
+--3 talked with 芬娜
+--4 given the 灰紅之石
+--5 asked to find  小紅晶石
+--6 given the 小紅晶石
+--7 asked to find  小黃晶石
+--8 got the 聖水
+--9 quest completed
+
+function start()
+	status = GetFlag("MQ007_Task")
+	if status>=9 then
+		dialogue_05()
+	elseif status>=8 and GetCountItemCount(10028)>0 then
+		dialogue_04()
+	elseif status>=1 then
+		dialogue_03()
+	else
+		if GetData("Career")==1 and GetData("Level")>=40 then
+			dialogue_02()
+		else
+			dialogue_01()
+		end
+	end
+end
+
+function dialogue_01()
+	Say("n1有強壯的身體才可以打倒敵人！")
+	Say("p1是！","End")
+end
+
+function dialogue_02()
+	Say("n7這是靈鬥士老師，叫作莫拿加。他的力量真的可以和一隻牛相提並論！")
+	Say("p1請問……")
+	Say("n1說話別吞吞吐吐！有話就快點說！")
+	Say("p1老師是靈鬥士嗎？")
+	Ask("n對！靈鬥士攻擊力很強！我們可以輕易殺死敵人，不過就是速度有點慢。而我們的武術，是依靠“炎之依加魯能量微粒”的。守護神則是火神，他會幫助我們的！","我想成為靈鬥士！","想來知道靈鬥士到底是什麼而已。","reply_02")
+end
+
+function reply_02()
+	if GetChoice()==0 then
+		dialogue_02a()
+	else
+		dialogue_02b()
+	end
+end
+
+function dialogue_02a()
+	Say("n1嗯！不錯！你需要"..Color(0,45,198).."灰紅色聖水"..Color(0,0,0).."，把它找回來就行。")
+	Say("p1灰紅色聖水？")
+	Say("n1對！快去找，不過不用指望我會說你知道在哪，不過你問學長們也許會知道。","End")
+	SetFlag("MQ007_Task", 1)
+end
+
+function dialogue_02b()
+	Say("n1嗯。","End")
+end
+
+function dialogue_03()
+	Say("n1還站在這兒？還不快點去找灰紅色聖水？","End")
+end
+
+function dialogue_04()
+	Ask("n你確定要成為靈鬥士了？","是的！","我要再考慮一下。","reply_04")
+end
+
+function reply_04()
+	if GetChoice()==0 then
+		dialogue_04a()
+	else
+		dialogue_04b()
+	end
+end
+
+function dialogue_04a()
+	Say("p7交出「灰紅色聖水」")
+	Say("n1等一下。")
+	Say("n7只見莫拿加把灰紅色聖水潑了在我的身上，就有些奇怪的光粒在空中飄浮著，它們慢慢進入你的身體……你感覺到被炎之依加魯能量微粒包圍著。")
+	Say("n1你已經是靈鬥士了！這把屠龍巨劍就送給你吧，當作是獎勵！加油加油！")
+	if ItemListCountLeft(1)<1 then
+			Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+	else
+		Say("p7得到850Exp")
+		Say("p7得到「靈鬥士」的稱號")
+		Say("p7得到「屠龍巨劍」","dialogue_04a2")
+	end
+end
+function dialogue_04a2()
+	RemoveItem(10028)
+	SetFlag("MQ007_Task", 9)
+	SetFlag("MQ007_Done", 1)
+	gainexp(850)
+	AddTitle(13)
+	AddJob(2)
+	AddItem(8348)
+	QuestEnd()
+end
+
+function dialogue_04b()
+	Say("n1好好考慮清楚！","End")
+end
+
+function dialogue_05()
+	Say("n1快點去作多些訓練！","End")
+end
+
+function gainexp(exp)
+	ModifyData("ExpAcc",exp)
+	ModifyData("ExpUse",exp)
+end

@@ -1,0 +1,18 @@
+--K27001_D  冰藍立普
+
+function start()
+	if CheckItem(10037)>0 or GetFlag("K27001_Start")~=1 then
+		QuestEnd()
+	else
+		if ItemListCountLeft(0)<1 then
+			Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			Say("p7得到\“冰藍立普之羽\”","End")
+			AddItem(10037,1)
+			if CheckItem(10036)>0 and CheckItem(10038)==1 then
+				SetFlag("K27001_GetAll",1)
+			end
+		end
+	end		
+	
+end

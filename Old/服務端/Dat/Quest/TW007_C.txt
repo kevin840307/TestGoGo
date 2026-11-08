@@ -1,0 +1,85 @@
+--端午禮物
+--TW007_C
+
+
+function start()
+	if ItemListCountLeft(0) < 1 then
+		dia_02()
+	elseif GetCountItemCount(71)>299 then
+		dia_03()
+	elseif GetCountItemCount(6909)>298 then
+		dia_04()
+	elseif GetCountItemCount(6905)>299 then
+		dia_05()
+	elseif GetCountItemCount(221)>299 then
+		dia_06()
+	elseif GetCountItemCount(226)>299 then
+		dia_07()
+	elseif GetCountItemCount(10238)>299 then
+		dia_08()
+	elseif ItemListCountLeft(1)<1 then
+		dia_09()
+	elseif GetCountItemCount(10047)>290 then
+		dia_10()
+	elseif GetCountItemCount(70)>297 then
+		dia_11()
+	else
+		main()
+	end
+end
+function giveandend()
+	giveback()
+	QuestEnd()
+end
+function giveback()
+	AddItem(10682)
+end
+
+function dia_02()
+	Say("p7身上的物品太多了，還是先整理一下，再點端午禮物吧。","giveandend")
+end
+function dia_03()
+	Say("p7身上的治療藥劑太多了，還是先整理一下，再點端午禮物吧。","giveandend")
+end
+function dia_04()
+	Say("p7身上的魔靈小電池太多了，還是先整理一下，再點端午禮物吧。","giveandend")
+end
+function dia_05()
+	Say("p7身上的魔靈電池太多了，還是先整理一下，再點端午禮物吧。","giveandend")
+end
+function dia_06()
+	Say("p7身上的生命強化劑太多了，還是先整理一下，再點端午禮物吧。","giveandend")
+end
+function dia_07()
+	Say("p7身上的魔力強化劑太多了，還是先整理一下，再點端午禮物吧。","giveandend")
+end
+function dia_08()
+	Say("p7身上的燒肉太多了，還是先整理一下，再點端午禮物吧。","giveandend")
+end
+function dia_09()
+	Say("p7身上的裝備太多了，還是先整理一下，再點端午禮物吧。","giveandend")
+end
+function dia_10()
+	Say("p7身上的索爾魔怪甲殼太多了，還是先整理一下，再點端午禮物吧。","giveandend")
+end
+function dia_11()
+	Say("p7身上的治療藥水太多了，還是先整理一下，再點端午禮物吧。","giveandend")
+end
+
+function main()
+	Say("p7看看屈原先生送什麼給我^^","main2")
+end
+function main2()
+	giveback()
+	Say("p7．．．．．．")
+	Say("p7．．．．．．","randgift")
+end
+
+function randgift()
+	itemnamd, itemidx, itemtotal = GetRandGift()
+	AddItem(itemidx, itemtotal)
+	Say("p7得到"..itemnamd.."。","End")
+	RemoveItem(10682)
+end
+
+#include "TW007_gift.txt"

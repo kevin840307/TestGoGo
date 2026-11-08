@@ -1,0 +1,141 @@
+using SGO.Server.Application.Messaging;
+using static SGO.Server.SmokeTests.SmokeAssert;
+
+namespace SGO.Server.SmokeTests.World;
+
+/// <summary>Server-only AOI behavior; no SQLite, packet transport or game assets.</summary>
+internal static class PlayerSpatialAoiSmokeTests
+{
+    private static OnlinePlayerPresence Player(
+        long id, int mapId, double x, double y)
+        => new(Guid.NewGuid(), id, id, mapId, x, y);
+
+    private static OnlinePlayerPresence Move(
+        OnlinePlayerPresence player, double x, double y)
+        => player with { X = x, Y = y };
+
+    public static void Run()
+    {
+        var aoi = new PlayerSpatialAoi();
+        var a = Player(1, 13, 0, 0);
+        var b = Player(2, 13, 9_000, 0);
+        var otherMap = Player(3, 15, 0, 0);
+        Check(aoi.Upsert(a).Count == 0, "AOI first ready player sees no peers");
+        Check(aoi.Upsert(b).Count == 0, "AOI players at far ends of map have no edges");
+        Check(aoi.Upsert(otherMap).Count == 0, "AOI different maps never discover each other");
+        Check(aoi.VisiblePeers(a.ConnectionId).Count == 0, "AOI A never receives far B");
+
+        b = Move(b, 1799, 0);
+        var appeared = aoi.Upsert(b);
+        Check(appeared.Count == 2 && appeared.All(change => change.Appeared),
+            "AOI crossing enter radius generates exactly two directional spawn edges");
+        Check(aoi.IsVisible(a.ConnectionId, b.ConnectionId) &&
+              aoi.IsVisible(b.ConnectionId, a.ConnectionId),
+            "AOI visibility is symmetric");
+        Check(aoi.Upsert(b).Count == 0, "AOI unchanged coordinates never duplicate spawn");
+
+        b = Move(b, 2150, 0);
+        Check(aoi.Upsert(b).Count == 0 &&
+              aoi.IsVisible(a.ConnectionId, b.ConnectionId),
+            "AOI exit hysteresis keeps existing peer at 2150 distance");
+        b = Move(b, 2201, 0);
+        var vanished = aoi.Upsert(b);
+        Check(vanished.Count == 2 && vanished.All(change => !change.Appeared),
+            "AOI crossing exit radius delivers reciprocal despawn");
+        Check(aoi.VisiblePeers(a.ConnectionId).Count == 0,
+            "AOI removed B from A known-entity set");
+
+        b = Move(b, -1799, -1);
+        Check(aoi.Upsert(b).Count == 2,
+            "AOI negative grid cells and cell boundaries still find nearby peers");
+        b = Move(b, 50_000, 50_000);
+        Check(aoi.Upsert(b).Count == 2 &&
+              aoi.VisiblePeers(a.ConnectionId).Count == 0,
+            "AOI teleport crosses many cells and cleans up old visibility");
+
+        b = Move(b, 10, 10);
+        Check(aoi.Upsert(b).Count == 2, "AOI returning from teleport resends spawn");
+        b = b with { MapId = 15 };
+        var mapLeft = aoi.Upsert(b);
+        Check(mapLeft.Any(change => !change.Appeared &&
+                change.ObserverConnectionId == a.ConnectionId),
+            "AOI map transition despawns from old-map viewer");
+        Check(!aoi.IsVisible(a.ConnectionId, b.ConnectionId),
+            "AOI map transition cannot leak same-map visibility");
+
+        // Separate index: no O(N^2) scanning or accidental pairs in a
+        // 1000-player, evenly spread out map.
+        var dense = new PlayerSpatialAoi();
+        var farPlayers = new List<OnlinePlayerPresence>();
+        for (var i = 0; i < 1_000; i++)
+        {
+            var player = Player(i + 100, 13, i * 8_192, 0);
+            farPlayers.Add(player);
+            Check(dense.Upsert(player).Count == 0,
+                "AOI widely separated player " + i + " has no spurious spawn");
+        }
+        Check(dense.ReadyPlayerCount == 1000, "AOI indexes all 1000 players");
+        Check(dense.VisiblePeers(farPlayers[500].ConnectionId).Count == 0,
+            "AOI middle player does not see distant 999 others");
+        var crowded = farPlayers[501];
+        crowded = Move(crowded, farPlayers[500].X + 10, 0);
+        Check(dense.Upsert(crowded).Count == 2,
+            "AOI 1000-player spatial index produces only the nearby pair");
+
+        // Stress state transitions, same-map races, and removals: no
+        // duplicate visibility or asymmetric ghost edges after final settle.
+        var concurrent = new PlayerSpatialAoi();
+        var origin = Player(3001, 7, 0, 0);
+        var racers = Enumerable.Range(0, 32)
+            .Select(i => Player(4000 + i, 7, 5000, 0)).ToArray();
+        concurrent.Upsert(origin);
+        foreach (var player in racers)
+            concurrent.Upsert(player);
+        Parallel.For(0, 512, i =>
+        {
+            var idx = i % racers.Length;
+            concurrent.Upsert(Move(
+                racers[idx], i % 2 == 0 ? 100 : 5_000, idx * 5));
+        });
+        // Serial final settle establishes definitive state after the races.
+        for (var i = 0; i < racers.Length; i++)
+            concurrent.Upsert(Move(racers[i], 100, i * 5));
+        Check(concurrent.VisiblePeers(origin.ConnectionId).Count == racers.Length,
+            "AOI concurrent movement reconciles every nearby peer exactly once");
+        foreach (var racer in racers)
+            Check(concurrent.IsVisible(racer.ConnectionId, origin.ConnectionId),
+                "AOI concurrent movement retains reciprocal edge");
+        foreach (var racer in racers)
+            concurrent.Remove(racer.ConnectionId);
+        Check(concurrent.VisiblePeers(origin.ConnectionId).Count == 0 &&
+              concurrent.ReadyPlayerCount == 1,
+            "AOI removes all departed client edges and spatial cells");
+
+        // Hub route check: movement should reach the near player queue only.
+        var hub = new ServerBroadcastHub();
+        var aConn = hub.Register();
+        var bConn = hub.Register();
+        var farConn = hub.Register();
+        hub.UpdatePresence(aConn.ConnectionId, 13, 1, 1, 0, 0);
+        hub.UpdatePresence(bConn.ConnectionId, 13, 2, 2, 100, 100);
+        hub.UpdatePresence(farConn.ConnectionId, 13, 3, 3, 8000, 8000);
+        hub.ReconcilePlayerAoi(aConn.ConnectionId);
+        hub.ReconcilePlayerAoi(bConn.ConnectionId);
+        hub.ReconcilePlayerAoi(farConn.ConnectionId);
+        hub.PublishToPlayerObservers(aConn.ConnectionId, new { Type = "MoveEntity", EntityID = 1 });
+        Check(bConn.Queue.TryDequeue(out _),
+            "AOI ServerBroadcastHub delivers nearby player's move");
+        Check(!farConn.Queue.TryDequeue(out _),
+            "AOI ServerBroadcastHub suppresses distant player's move");
+        Check(!aConn.Queue.TryDequeue(out _),
+            "AOI source client does not receive its own move echo");
+        hub.RemovePlayerAoi(aConn.ConnectionId);
+        Check(hub.VisiblePlayerPeers(bConn.ConnectionId).Count == 0,
+            "AOI disconnect clears peers in broadcast hub");
+        hub.Unregister(aConn.ConnectionId);
+        hub.Unregister(bConn.ConnectionId);
+        hub.Unregister(farConn.ConnectionId);
+
+        Console.WriteLine("Player spatial AOI smoke passed.");
+    }
+}

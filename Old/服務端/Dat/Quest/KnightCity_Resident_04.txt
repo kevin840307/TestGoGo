@@ -1,0 +1,6 @@
+--People01 亞斯加
+
+function start()
+	Say("n1你聽見嗎？其實風是會說話的。")
+	Say("n1我自小就聽得見…","End")
+end

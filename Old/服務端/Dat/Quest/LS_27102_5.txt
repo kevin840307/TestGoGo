@@ -1,0 +1,19 @@
+--LS_27102_5 "魔法屏障‧五級"
+
+function GetSkillData()
+	return 27102,5,40,31513,"魔法屏障‧五級","魔法屏障‧四級","守護使"
+end
+
+function CheckCareer(career, job)
+	if job < 2 then
+		return 0
+	end
+
+	if career == 6 then
+		return 1
+	else
+		return 0
+	end
+end
+
+#include "LS_common.txt"

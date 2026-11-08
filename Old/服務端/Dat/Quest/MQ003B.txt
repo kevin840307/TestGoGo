@@ -1,0 +1,44 @@
+--MQ003_B 波坦
+
+function start()
+	if GetFlag("闇黑魔法使就職完成")==1 or GetFlag("光明魔法使就職完成")==1 then
+		Final()
+	if GetFlag("MQ003_B_Get_Hints")==1
+		Hints()
+	elseif GetFlag("闇黑魔法使就職")==1 or GetFlag("光明魔法使就職")==1 then
+		Get_Help()
+	else 
+		Just_Talk()
+
+function Get_Help()
+	Say("p1學…學長！")
+	Say("n1嗯？什麼了？")
+	Say("p1請問你知道什麼是“暗之光”和“魔物之血”嗎？")
+	Say("n1你想成為魔法使吧？這兩個都要用在魔法使的儀式上呢。")
+	Say("p7你點點頭")
+	Say("n1其實“暗之光”的樣子只是一塊普通的石頭，可是只要是把“魔物之血”洒上去...")
+	Say("n1就會成為儀式用之物，而且會閃閃發光呢，在黑夜非常顯眼...")
+	Say("n1所以就叫“暗之光”了，那時的它真是完美的寶石啊。")
+	Say("n1沒錯，“暗之光”可以在森林找到，而“魔物之血”嘛……")
+	Say("n1就要在流星之河”殺掉“魔物柏古”才可以得到了。","End")
+	SetFlag("MQ003_B_Get_Hints", 1)
+	end
+end
+
+function Hints()
+	if GetFlag("魔物之血取得")==1 and GetFlag("暗之光取得")==1
+		Tell_to_End()
+	Say("n1“暗之光”可以在森林找到，而“魔物之血”就要在流星之河”殺掉“魔物柏古”才可以得到了。","End")
+end
+
+function Just_Talk()
+	Say("n1有什麼問題都可以問我喔！我很樂意幫助新生。","End")
+end
+
+function Tell_to_End()
+	Say("n1你已經拿到了嗎？快交給老師吧！","End")
+end
+
+function Final()
+	Say("n1嗯？你已經就職了？恭喜喔！")
+end

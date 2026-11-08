@@ -2,15 +2,36 @@
 extends Node
 
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
 const ASSET_ROOT = "res://Assets/Monsters/"
 const AUDIO_RESOURCE_PATH_META = "se_event_resource_path"
 const AUDIO_PLAYED_CUES_META = "se_event_played_cues"
 const AUDIO_LAST_FRAME_META = "se_event_last_frame"
 const ACT_TIMELINES_META = "act_timing_timelines"
+const DEFAULT_ANIMATION_FPS: float = 8.0
+const WALK_ANIMATION_FPS: float = 6.0
 var _cache: Dictionary = {}
+
+func trim_unreferenced_runtime_cache() -> int:
+	return BG_CACHE_TRIM.trim_unused(_cache, 12)
+
 
 func clear_runtime_cache() -> void :
 	_cache.clear()
+
+# Recovered sprites are packed edge-to-edge in a single large atlas.
+# filter_clip must be enabled: linear sampling otherwise pulls pixels from
+# adjacent frames when a monster first plays HIT/ATTACK or is scaled.
+# Keep the original RGBA alpha; never replace it with an opaque background.
+func make_clipped_frame_texture(
+		atlas: Texture2D, region: Rect2, origin: Vector2) -> AtlasTexture:
+	var frame := AtlasTexture.new()
+	frame.atlas = atlas
+	frame.region = region
+	frame.filter_clip = true
+	frame.set_meta("old_offset", origin)
+	return frame
+
 
 func get_monster_frames(monster_id: String, apply_act_timing: bool = false) -> SpriteFrames:
 	monster_id = monster_id.to_upper()
@@ -29,7 +50,9 @@ func get_monster_frames(monster_id: String, apply_act_timing: bool = false) -> S
 		return null
 
 
-	var big_texture = load(png_path) as Texture2D
+	var big_texture = ResourceLoader.load(
+		png_path, "", ResourceLoader.CACHE_MODE_IGNORE
+	) as Texture2D
 	var json_text = FileAccess.open(json_path, FileAccess.READ).get_as_text()
 	var atlas_data: Dictionary = JSON.parse_string(json_text)
 
@@ -45,17 +68,21 @@ func get_monster_frames(monster_id: String, apply_act_timing: bool = false) -> S
 		sf.add_animation(anim_name)
 
 		sf.set_animation_loop(anim_name, not ("DEATH" in anim_name or "ATTACK" in anim_name or "HIT" in anim_name))
-		sf.set_animation_speed(anim_name, 8.0)
+
+		# Monster movement waypoints are ~42 px per 250 ms (~168 px/s).
+		# Five-frame WALK clips at 8 FPS looked like the feet were cycling
+		# faster than the body was actually travelling, so keep locomotion
+		# slower without changing attack/hit/death timing.
+		var animation_fps := WALK_ANIMATION_FPS if str(anim_name).begins_with("WALK_") else DEFAULT_ANIMATION_FPS
+		sf.set_animation_speed(anim_name, animation_fps)
 
 		for f_key in animations[anim_name]:
 			var meta = frames_meta[f_key]
-			var atlas_tex = AtlasTexture.new()
-			atlas_tex.atlas = big_texture
-			atlas_tex.region = Rect2(meta.x, meta.y, meta.w, meta.h)
-
-
-			atlas_tex.set_meta("old_offset", Vector2(meta.offset_x, meta.offset_y))
-
+			var frame_region := Rect2(meta.x, meta.y, meta.w, meta.h)
+			var atlas_tex := make_clipped_frame_texture(
+				big_texture, frame_region,
+				Vector2(meta.offset_x, meta.offset_y)
+			)
 			sf.add_frame(anim_name, atlas_tex)
 
 

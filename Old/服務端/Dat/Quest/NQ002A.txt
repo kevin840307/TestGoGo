@@ -1,0 +1,94 @@
+-- NQ002_A 農民米奧
+
+function start()
+	lv = GetData("Level")
+	if CheckItem(10021)>0 then
+		Ask("n你身上的雞湯！可以給我嗎？好像很好吃的樣子耶！", "算了，送你吧！", "鬼才給你，你剛才是什麼態度？", "Step5")
+	elseif CheckItem(10020) >0 then
+		Say("n1說起來，有點口渴，想喝點湯……不跟你說了。", "End")		
+	elseif GetFlag("NQ_005_GotQuest") == 4 then
+		Ask("n要南瓜？沒問題，不過為「答謝」你上次給我的種子，就大便宜賣你4000元！", "就4000元吧！真是搶錢。", "什麼這樣貴！？不要了！", "可不可以便宜點啊！？", "Step3")		
+	elseif GetFlag("NQ_005_GotQuest") == 2 then
+		Say("n3紅蘿蔔？")
+		Say("n3說起就有氣！上次都是你的錯！把南瓜的種子拿來給我！")
+		Say("n3現在所有的作物都變成南瓜了！我只有幾個紅蘿蔔，不過我不會給你的～", "End")
+		SetFlag("NQ_005_GotQuest", 3)
+	--南瓜種子
+	elseif RemoveItem(10024)==1 then
+		Say("n1這個……謝謝你！不過什麼形狀好像有點奇怪？這是新的品種嗎？")
+		Say("p5呃……可能是吧？")
+		Say("n1嗯，總之謝謝你，我送你這個好了！")
+		if ItemListCountLeft(0)<1 then
+			Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		else
+			chest = random(2)
+			if chest == 1 then
+				AddItem(10011,1)
+				Say("p6這個箱子好奇怪，不知道裡面的是什麼呢？", "End")
+			else
+				AddItem(10013,1)
+				Say("p6哇～～～好像很好吃的樣子！", "End")
+			end
+			SetFlag("NQ_005_GotQuest", 1)
+		end
+	elseif GetFlag("NQ_002_GoGetSeed")==1 then
+		Say("n3謝謝你的幫忙，請快去快回喔！", "End")
+	elseif lv >= 5 then
+		Say("n3哎呀，種子都用完了……")
+		Say("p1什麼了呢？")
+		Say("n1啊！有救星了，你來得正好！")
+		Say("p5？？？")
+		Ask("n我的蘿蔔種子已經用完了，可以幫我找些回來嗎？我想米斯堤應該會有！", "呃…好吧…", "不要～", "Step2")
+	else
+		Say("n3哎呀，種子都用完了……", "End")
+	end
+end
+
+function Step2()
+	if GetChoice() == 0 then
+		SetFlag("NQ_002_GoGetSeed", 1)
+		Say("n1謝謝你的幫忙，請快去快回喔！", "End")
+	else
+		Say("n6那我什麼辦……", "End")
+	end
+end
+
+function Step3()
+	if GetChoice() == 0 then
+		if GetData("Money") > 4000 then
+			Say("n1這就是你的南瓜～呵呵……真是賺到了。")
+			Say("p1………")
+			Say("n1說起來，有點口渴，想喝點湯……不跟你說了。", "End")
+			AddItem(10020, 1)
+		else
+			Say("n3別以為我不知道你想騙我，你跟本沒有足夠的錢。", "End")
+	elseif GetChoice() == 1 then
+		Say("n1不要就算了～", "End")
+	else
+		Ask("n看你都沒有4000元的了～真是窮鬼。就便宜你2000元好了。", "就2000元！", "還是太貴了～", "Step4")
+	end
+end
+
+function Step4()
+	if GetChoice() == 0 then
+		if GetData("Money") > 2000 then
+			Say("n1這就是你的南瓜～呵呵……真是賺到了。")
+			Say("p1………")
+			Say("n1說起來，有點口渴，想喝點湯……不跟你說了。", "End")
+			AddItem(10020, 1)
+		else
+			Say("n3連這樣的錢都沒有？真是窮鬼！不賣了！", "End")
+	else
+		Say("n3那你別買吧。", "End")
+	end
+end
+
+function Step5()
+	if GetChoice() == 0 then
+		Say("n1真的嗎？你真是好人！剛才真是對不起，我把我珍藏的紅蘿蔔送你好了！", "End")
+		AddItem(10022, 1)
+		RemoveItem(10021)
+	else
+		Say("n3哼！不給我算了，我也不稀罕～", "End")
+	end
+end		

@@ -1,0 +1,13 @@
+--NQ026_T1
+
+function start()
+    Ask("p要離開赤魔空間嗎?","是的","不是","ans_handler")
+end
+
+function ans_handler()
+    if GetChoice()==0 then
+        MovePlayer(8192,3648,46)
+    else
+        QuestEnd()
+    end
+end

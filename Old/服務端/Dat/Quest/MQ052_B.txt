@@ -1,0 +1,67 @@
+--MQ052_B 中級道具使格拉斯
+
+--MQ052_Task
+-- 1: quest started
+-- 2: go to find 巴基木
+-- 3: got the 魔法火藥
+
+--MQ053_Task
+-- 1: quest started
+-- 2: go to find 巴基木
+-- 3: got the 魔法火藥
+
+function start()
+	career=GetData("Career")
+	if career==3 then
+		status=GetFlag("MQ052_Task")
+	else
+		status=GetFlag("MQ053_Task")
+	end
+	if status==2 then
+		if ItemListCountLeft(0)<1 then
+			Say("p7對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+		elseif RemoveItem(26, 5)==1 then
+			dialogue_04()
+		else
+			dialogue_03()
+		end
+	elseif status==1 then
+		dialogue_02()
+	else
+		dialogue_01()
+	end
+end
+
+function dialogue_01()
+	Say("n1你好像不是道具使吧？這兒不是教武術的。","End")
+end
+
+function dialogue_02()
+	Say("p1請問你有沒有魔法火藥？")
+	Say("n1有，你想要嗎？要來做什麼？")
+	Say("p1因為要做魔風彈……所以……")
+	Say("n1想要魔法火藥也沒問題，不過我的巴基木已經用完了，你可以拿"..Color(0,45,198).."五個巴基木"..Color(0,0,0).."給我交換嗎？","End")
+	if GetData("Career")==3 then
+		SetFlag("MQ052_Task", 2)
+	else
+		SetFlag("MQ053_Task", 2)
+	end
+end
+
+function dialogue_03()
+	Say("n1我想要"..Color(0,45,198).."五個巴基木"..Color(0,0,0).."，要是你給我的話，我也會給你魔法火藥。")
+	Say("n1巴基木如何找？到樹林外找"..Color(0,45,198).."基木貓"..Color(0,0,0).."吧！", "End")
+end
+
+function dialogue_04()
+	Say("p7交出５個“巴基木”")
+	Say("n1麻煩你了，這個魔法火藥就交給你吧？謝謝。")
+	Say("p7得到“魔法火藥”","End")
+	AddItem(10233)
+	if GetData("Career")==3 then
+		SetFlag("MQ052_Task", 3)
+	else
+		SetFlag("MQ053_Task", 3)
+	end
+end
+

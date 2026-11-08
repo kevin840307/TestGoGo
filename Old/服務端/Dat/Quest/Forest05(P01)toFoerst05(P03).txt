@@ -1,0 +1,17 @@
+--Forest05(P01) to Forest05(P03)
+
+function start()
+Say("n1封印之地嚴禁進入","End")
+end
+
+function notuse()
+	Ask("n要進入地洞嗎?","是的。","不是。","Check")
+end
+
+function Check()
+	choice = GetChoice()
+	if choice == 0 then
+		MovePlayer(1344,4128,26)
+	end
+	QuestEnd()
+end

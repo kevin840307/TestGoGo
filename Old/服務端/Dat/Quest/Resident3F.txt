@@ -1,0 +1,5 @@
+--People01 路羅蒂
+
+function start()
+	Say("n1聽說星之門快要建成，這應該是一件好事吧？","End")
+end

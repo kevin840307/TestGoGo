@@ -1,0 +1,65 @@
+--NQ001_A 魔法師伊寇
+
+function start()
+	statue=GetFlag("NQ_001_GetQuest")
+	if statue==2 then
+		if CheckItem(10009)>0 then
+			Say("n1你把兔娃娃用掉之後，再回來幫我買茶葉好嗎？","End")
+		else
+			SetFlag("NQ001_GetTea",0)
+			begin()
+		end
+
+	elseif statue==1 then
+		if GetCountItemCount(10008)>=1 then
+			if ItemListCountLeft(0)<1 then
+				Say("n1對不起，你身上的物品太多了，請清除一些物品後再來。","End")
+			else
+				RemoveItem(10008)
+				AddItem(10009,1)
+				Ask("n對了，就是這些茶葉，還是佩玲知道我的口味！對了，這個是我用魔法線做出來的娃娃，正想拿去賣，我還多做一個給你呢！","哇～～謝謝你！","……","Step4")
+			end		
+		else
+			Say("n1那就拜託你了囉！記著是去森林，找佩玲買一包茶葉喔！", "End")
+		end
+
+	else
+		begin()
+	end
+end
+
+function begin()
+	Ask("n嘿嘿，歡迎你來到魔法之都！", "你好呢！", "你頭腦有問題啊？為什麼和我打招呼？", "Step2")
+end
+
+function Step2()
+	if GetChoice() == 0 then
+		Say("n1你真是一個有禮貌的人！現在的人很少會和我打招呼了……")
+		Ask("n對了，你可以幫我去森林的茶店那兒買一包茶葉嗎？我正有點事，不能走開呢，我想佩玲會知道我的口味。", "嗯～好吧！","才不要呢，我有事忙。", "Step3")
+	else
+		Say("n3嘖……現在的人呀……", "End")
+	end
+end
+
+function Step3()
+	if GetChoice() == 0 then
+		SetFlag("NQ_001_GetQuest", 1)
+		Say("n1那就拜託你了囉！記著是去森林，找佩玲買一包茶葉喔！", "End")
+	else
+		Say("n3這樣算了。", "End")
+	end
+end
+
+function Step4()
+
+	if GetChoice() == 0 then
+		Say("n2不用客氣！現在的人很少會好像你一樣有禮貌的了，記著要和人好好相處喔！")
+		Say("n7得到50Exp","End") 
+		ModifyData("ExpAcc",50)
+		
+	else
+		Say("n3不向我道謝嗎？算了。", "End")
+	end
+	SetFlag("NQ_001_GetQuest", 2)
+end
+

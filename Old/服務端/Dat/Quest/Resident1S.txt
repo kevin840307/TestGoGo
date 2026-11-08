@@ -1,0 +1,6 @@
+--People01 比撒
+
+function start()
+	Say("n1我很喜歡小孩子，看不出來吧？")
+	Say("n1小孩子都很可愛，真想咬他們一口～～","End")
+end

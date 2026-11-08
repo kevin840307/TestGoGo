@@ -1,0 +1,52 @@
+--NQ010_B  佑希
+
+function start()
+	
+	done=GetFlag("NQ010_B_Done")
+
+	if CheckItem(10181)>0 then
+		if done==1 then
+			Say("n1又有好東西了？")
+			Say("p1還是那個老頭給我的時鐘……")
+			Say("n1嗯～我照收下來了，謝謝！")
+			Say("p7得到3000元")
+			Say("p1咦？這次不是手環嗎？")
+			Say("n1手環已經沒有了啦，用錢代替吧～呵呵…","End")
+			ModifyData("Money",3000)
+			RemoveItem(10181)
+		else 
+			Say("n1收破爛～高價收破爛～")
+			Say("p6嗯，把這個垃圾鐘賣了好了…")
+			Say("p1請問這個時鐘可以賣多少錢？")
+			Say("n1我看看……")
+			Say("n1咦！？")
+			Say("p1什麼了？有什麼不妥嗎？")
+			Say("n1這個鐘的零件真是太棒了！是用藍晶石所造成，用依加魯力量推動！")
+			Say("p1這個爛時鐘有這樣厲害啊……")
+			Say("n1對！把它讓給我吧！我把這個送你！")
+			if ItemListCountLeft(1)<2 then
+				Say("n1對不起，你身上的裝備太多了，請清除一些裝備後再來。","End")
+			else
+				Say("p7得到虹色手環")
+				RemoveItem(10181)
+				AddItem(10182)
+				AddItem(10183)
+				Say("n1謝謝！")
+				Say("p1你…這叫強搶耶！")
+				Say("p6算了……反正這個垃圾我又用不著……")
+				Say("n1下次有什麼好東西，都一定要給我啊！","End")
+				SetFlag("NQ010_B_Done",1)
+			end
+	
+		end
+	else
+		if done==1 then
+			Say("n1上次謝謝你的好東西啦～","End")
+		else
+
+			Say("n1收破爛～高價收破爛～","End")
+
+		end
+	end
+
+end

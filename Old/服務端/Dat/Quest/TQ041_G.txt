@@ -1,0 +1,11 @@
+function start()
+	Ask("n你要回到尼尼亞皇城？","是的。","不了。","step01_handler")
+end
+
+function step01_handler()
+	if GetChoice() == 0 then
+		MovePlayer(10000,10000,15)
+	else
+		QuestEnd()
+	end
+end

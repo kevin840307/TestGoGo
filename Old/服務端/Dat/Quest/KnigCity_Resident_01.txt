@@ -1,0 +1,6 @@
+--People01 碧西
+
+function start()
+	Say("n1這兒是議會，好像正在招募工作人員……")
+	Say("n1不知道我有沒有機會做這份工……","End")
+end

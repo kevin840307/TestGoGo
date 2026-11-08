@@ -1,0 +1,8 @@
+function start()
+	MixPlace = 2
+	TXT_SkillName()
+	MPNeeded = 55
+	GoMix()
+end
+#include "txt_31203.txt"
+#include "MixCommon.txt"
