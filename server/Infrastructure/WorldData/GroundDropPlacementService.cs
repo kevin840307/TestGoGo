@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace SGO.Server.Infrastructure.WorldData;
 
 /// <summary>
@@ -17,6 +19,12 @@ public sealed class GroundDropPlacementService
 
     private readonly BlockingMapService _blocking;
     private readonly MonsterNavigationService _navigation;
+    private readonly ConcurrentDictionary<int, byte> _reportedMissingMaps = new();
+
+    // The first missing-map warning is important; logging once for each
+    // dropped item could overwhelm a server with 1000 active players.
+    public bool ShouldReportMissingMap(int mapId)
+        => _reportedMissingMaps.TryAdd(mapId, 0);
 
     public GroundDropPlacementService(BlockingMapService blocking)
     {
