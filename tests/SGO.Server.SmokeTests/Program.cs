@@ -8978,17 +8978,48 @@ try
         "monster at 120px keeps moving closer instead of standing at the attack boundary");
 
     monster.HasTarget = true;
+    monster.TargetCharacterId = id;
+    monster.TargetPetUid = 0;
     monster.AiState = MonsterAiState.Attack;
     monster.LastAttackAt = DateTimeOffset.MinValue;
+
+    const double outsideAttackRange = 120.0;
+    var farAttackTarget = new[]
+        {
+            (Dx: 1.0, Dy: 0.0),
+            (Dx: -1.0, Dy: 0.0),
+            (Dx: 0.0, Dy: 1.0),
+            (Dx: 0.0, Dy: -1.0),
+            (Dx: Math.Sqrt(0.5), Dy: Math.Sqrt(0.5)),
+            (Dx: Math.Sqrt(0.5), Dy: -Math.Sqrt(0.5)),
+            (Dx: -Math.Sqrt(0.5), Dy: Math.Sqrt(0.5)),
+            (Dx: -Math.Sqrt(0.5), Dy: -Math.Sqrt(0.5))
+        }
+        .Select(direction => (
+            X: monster.X + direction.Dx * outsideAttackRange,
+            Y: monster.Y + direction.Dy * outsideAttackRange))
+        .FirstOrDefault(candidate =>
+            monsterNavigation.IsDirectClear(
+                monster.MapId,
+                monster.X,
+                monster.Y,
+                candidate.X,
+                candidate.Y));
+
+    Check(
+        farAttackTarget != default,
+        "outside-melee fixture finds a clear Blocking.dat chase path");
+
     var hpBeforeFarAttack =
         Convert.ToInt32(store.GetCharacter(account.Value, id)!["HP"]);
 
     var farAttackPackets = combat.TickAi(
         session,
         account.Value,
-        monster.X + 155,
-        monster.Y,
-        session.LastMonsterAiTick.AddSeconds(2));
+        farAttackTarget.X,
+        farAttackTarget.Y,
+        session.LastMonsterAiTick.AddSeconds(2),
+        new[] { monster.EntityId });
 
     var hpAfterFarAttack =
         Convert.ToInt32(store.GetCharacter(account.Value, id)!["HP"]);
