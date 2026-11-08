@@ -3849,7 +3849,7 @@ popup/item_0/text = "自動"
 popup/item_0/id = 0
 popup/item_1/text = "一般"
 popup/item_1/id = 1
-popup/item_2/text = "簡化（關係自動變色）"
+popup/item_2/text = "簡化"
 popup/item_2/id = 2
 tooltip_text = "自動依效能設定切換；一般保留原始人物；簡化使用內建菱形光球。隊友綠、社團藍、可攻擊紅、一般白，無須另外選擇圖形。"
 
@@ -3882,7 +3882,7 @@ popup/item_0/text = "自動"
 popup/item_0/id = 0
 popup/item_1/text = "一般"
 popup/item_1/id = 1
-popup/item_2/text = "簡化（白色光球）"
+popup/item_2/text = "簡化"
 popup/item_2/id = 2
 tooltip_text = "自動依效能設定切換；一般保留原始怪物；簡化使用唯一的白色帶刺光球。攻擊、受擊與死亡不會切回原始圖片。"
 
