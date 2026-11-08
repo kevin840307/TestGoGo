@@ -17,6 +17,17 @@ public sealed record SharedMapAiTickDiagnostics(
     int MonsterCount,
     int AssignedMonsterCount);
 
+public sealed record SharedMapAiTickProfile(
+    double TotalMs,
+    double SessionSnapshotMs,
+    double PlayerSnapshotMs,
+    double RespawnMs,
+    double AssignmentMs,
+    double SessionLockWaitMs,
+    double TickAiMs,
+    double DirectPublishMs,
+    double OtherMs);
+
 /// <summary>
 /// A single 250ms scheduler for all active maps. Monster AI and respawns are
 /// executed once for each map tick, not once by every websocket's timer.
@@ -44,8 +55,14 @@ public sealed class SharedMapAiTicker : BackgroundService
             0,
             0);
 
+    private SharedMapAiTickProfile _lastProfile =
+        new(0, 0, 0, 0, 0, 0, 0, 0, 0);
+
     public SharedMapAiTickDiagnostics LastDiagnostics
         => _lastDiagnostics;
+
+    public SharedMapAiTickProfile LastProfile
+        => _lastProfile;
 
     public SharedMapAiTicker(
         CombatService combat,
@@ -102,6 +119,7 @@ public sealed class SharedMapAiTicker : BackgroundService
     public int TickOnce(DateTimeOffset now)
     {
         var started = Stopwatch.GetTimestamp();
+        var sessionSnapshotStarted = Stopwatch.GetTimestamp();
         var activeByMap = _sessions.Values
             .Where(s => s.WorldReady &&
                         s.CurrentMapId > 0 &&
@@ -109,6 +127,16 @@ public sealed class SharedMapAiTicker : BackgroundService
                         s.CharacterId.HasValue)
             .GroupBy(s => s.CurrentMapId)
             .ToArray();
+        var sessionSnapshotMs =
+            Stopwatch.GetElapsedTime(sessionSnapshotStarted)
+                .TotalMilliseconds;
+
+        var playerSnapshotMs = 0.0;
+        var respawnMs = 0.0;
+        var assignmentMs = 0.0;
+        var sessionLockWaitMs = 0.0;
+        var tickAiMs = 0.0;
+        var directPublishMs = 0.0;
 
         var activeSessionCount =
             activeByMap.Sum(group => group.Count());
@@ -133,6 +161,7 @@ public sealed class SharedMapAiTicker : BackgroundService
                 }
             }
 
+            var playerSnapshotStarted = Stopwatch.GetTimestamp();
             var players = new List<PlayerContext>();
             foreach (var session in group)
             {
@@ -158,6 +187,9 @@ public sealed class SharedMapAiTicker : BackgroundService
                         session.PetPositions.Values.ToArray()));
                 }
             }
+            playerSnapshotMs +=
+                Stopwatch.GetElapsedTime(playerSnapshotStarted)
+                    .TotalMilliseconds;
 
             if (players.Count == 0)
                 continue;
@@ -183,6 +215,7 @@ public sealed class SharedMapAiTicker : BackgroundService
             players.Sort((a, b) => a.CharacterId.CompareTo(b.CharacterId));
 
             // Respawn once per map, before distributing newly alive monsters.
+            var respawnStarted = Stopwatch.GetTimestamp();
             var respawnOwner = players[0].Session;
             lock (respawnOwner)
             {
@@ -217,7 +250,11 @@ public sealed class SharedMapAiTicker : BackgroundService
                     }
                 }
             }
+            respawnMs +=
+                Stopwatch.GetElapsedTime(respawnStarted)
+                    .TotalMilliseconds;
 
+            var assignmentStarted = Stopwatch.GetTimestamp();
             var assignments = players.ToDictionary(
                 p => p.Session.ConnectionId,
                 _ => new List<int>());
@@ -277,6 +314,9 @@ public sealed class SharedMapAiTicker : BackgroundService
                     assignedMonsterCount++;
                 }
             }
+            assignmentMs +=
+                Stopwatch.GetElapsedTime(assignmentStarted)
+                    .TotalMilliseconds;
 
             foreach (var player in players)
             {
@@ -285,8 +325,13 @@ public sealed class SharedMapAiTicker : BackgroundService
                     continue;
 
                 var session = player.Session;
+                var sessionLockStarted = Stopwatch.GetTimestamp();
                 lock (session)
                 {
+                    sessionLockWaitMs +=
+                        Stopwatch.GetElapsedTime(sessionLockStarted)
+                            .TotalMilliseconds;
+
                     if (!session.SharedAiManaged ||
                         !session.WorldReady ||
                         session.CurrentMapId != group.Key ||
@@ -298,6 +343,7 @@ public sealed class SharedMapAiTicker : BackgroundService
 
                     try
                     {
+                        var tickAiStarted = Stopwatch.GetTimestamp();
                         var packets = _combat.TickAi(
                             session,
                             session.AccountId.Value,
@@ -305,7 +351,11 @@ public sealed class SharedMapAiTicker : BackgroundService
                             session.LastY,
                             now,
                             assigned);
+                        tickAiMs +=
+                            Stopwatch.GetElapsedTime(tickAiStarted)
+                                .TotalMilliseconds;
 
+                        var directPublishStarted = Stopwatch.GetTimestamp();
                         // The combat service broadcasts to AOI peers. The
                         // driver socket must obey the same monster known-set;
                         // otherwise a far-away scheduler owner still receives
@@ -321,6 +371,9 @@ public sealed class SharedMapAiTicker : BackgroundService
                                 session.ConnectionId,
                                 packet);
                         }
+                        directPublishMs +=
+                            Stopwatch.GetElapsedTime(directPublishStarted)
+                                .TotalMilliseconds;
                     }
                     catch (Exception ex)
                     {
@@ -343,9 +396,30 @@ public sealed class SharedMapAiTicker : BackgroundService
             tickedMaps++;
         }
 
+        var totalMs =
+            Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        var accountedMs =
+            sessionSnapshotMs +
+            playerSnapshotMs +
+            respawnMs +
+            assignmentMs +
+            sessionLockWaitMs +
+            tickAiMs +
+            directPublishMs;
+        _lastProfile = new SharedMapAiTickProfile(
+            totalMs,
+            sessionSnapshotMs,
+            playerSnapshotMs,
+            respawnMs,
+            assignmentMs,
+            sessionLockWaitMs,
+            tickAiMs,
+            directPublishMs,
+            Math.Max(0.0, totalMs - accountedMs));
+
         _lastDiagnostics = new SharedMapAiTickDiagnostics(
             now,
-            Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+            totalMs,
             activeSessionCount,
             activeByMap.Length,
             tickedMaps,
@@ -422,9 +496,44 @@ public sealed class SharedMapAiTicker : BackgroundService
                         "MapAiSlowTick",
                         $"ActiveSessions={_lastDiagnostics.ActiveSessions} ActiveMaps={_lastDiagnostics.ActiveMaps} Monsters={_lastDiagnostics.MonsterCount}",
                         elapsedMilliseconds: elapsed.TotalMilliseconds);
+                    var profile = _lastProfile;
+                    var profileMessage =
+                        $"Total={profile.TotalMs:F1}ms " +
+                        $"SessionSnapshot={profile.SessionSnapshotMs:F1}ms " +
+                        $"PlayerSnapshot={profile.PlayerSnapshotMs:F1}ms " +
+                        $"Respawn={profile.RespawnMs:F1}ms " +
+                        $"Assignment={profile.AssignmentMs:F1}ms " +
+                        $"SessionLockWait={profile.SessionLockWaitMs:F1}ms " +
+                        $"TickAi={profile.TickAiMs:F1}ms " +
+                        $"DirectPublish={profile.DirectPublishMs:F1}ms " +
+                        $"Other={profile.OtherMs:F1}ms " +
+                        $"ActiveSessions={_lastDiagnostics.ActiveSessions} " +
+                        $"ActiveMaps={_lastDiagnostics.ActiveMaps} " +
+                        $"Monsters={_lastDiagnostics.MonsterCount} " +
+                        $"Assigned={_lastDiagnostics.AssignedMonsterCount}";
+                    _diagnostics?.Record(
+                        "Warning",
+                        "MapAiProfile",
+                        profileMessage,
+                        elapsedMilliseconds: elapsed.TotalMilliseconds);
                     _log.LogWarning(
                         "[MAP_AI_SLOW_TICK] ElapsedMs={ElapsedMs:F1}",
                         elapsed.TotalMilliseconds);
+                    _log.LogWarning(
+                        "[MAP_AI_PROFILE] TotalMs={TotalMs:F1} SessionSnapshotMs={SessionSnapshotMs:F1} PlayerSnapshotMs={PlayerSnapshotMs:F1} RespawnMs={RespawnMs:F1} AssignmentMs={AssignmentMs:F1} SessionLockWaitMs={SessionLockWaitMs:F1} TickAiMs={TickAiMs:F1} DirectPublishMs={DirectPublishMs:F1} OtherMs={OtherMs:F1} ActiveSessions={ActiveSessions} ActiveMaps={ActiveMaps} Monsters={Monsters} Assigned={Assigned}",
+                        profile.TotalMs,
+                        profile.SessionSnapshotMs,
+                        profile.PlayerSnapshotMs,
+                        profile.RespawnMs,
+                        profile.AssignmentMs,
+                        profile.SessionLockWaitMs,
+                        profile.TickAiMs,
+                        profile.DirectPublishMs,
+                        profile.OtherMs,
+                        _lastDiagnostics.ActiveSessions,
+                        _lastDiagnostics.ActiveMaps,
+                        _lastDiagnostics.MonsterCount,
+                        _lastDiagnostics.AssignedMonsterCount);
                 }
             }
         }

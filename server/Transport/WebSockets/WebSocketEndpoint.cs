@@ -338,16 +338,38 @@ public static class WebSocketEndpoint
 
                         var packetStarted =
                             System.Diagnostics.Stopwatch.GetTimestamp();
+                        var sessionLockWaitMs = 0.0;
+                        var handlerMs = 0.0;
+                        var syncPresenceMs = 0.0;
 
                         try
                         {
+                            var sessionLockStarted =
+                                System.Diagnostics.Stopwatch.GetTimestamp();
                             lock (state)
                             {
+                                sessionLockWaitMs =
+                                    System.Diagnostics.Stopwatch.GetElapsedTime(
+                                            sessionLockStarted)
+                                        .TotalMilliseconds;
+
+                                var handlerStarted =
+                                    System.Diagnostics.Stopwatch.GetTimestamp();
                                 responses = router.Handle(
                                     packet.RootElement,
                                     state);
+                                handlerMs =
+                                    System.Diagnostics.Stopwatch.GetElapsedTime(
+                                            handlerStarted)
+                                        .TotalMilliseconds;
 
+                                var syncPresenceStarted =
+                                    System.Diagnostics.Stopwatch.GetTimestamp();
                                 router.SyncPresence(state);
+                                syncPresenceMs =
+                                    System.Diagnostics.Stopwatch.GetElapsedTime(
+                                            syncPresenceStarted)
+                                        .TotalMilliseconds;
                             }
 
                             diagnostics.PacketHandled();
@@ -359,11 +381,34 @@ public static class WebSocketEndpoint
 
                             if (packetElapsedMs >= 250)
                             {
+                                var accountedMs =
+                                    sessionLockWaitMs +
+                                    handlerMs +
+                                    syncPresenceMs;
+                                var otherMs = Math.Max(
+                                    0.0,
+                                    packetElapsedMs - accountedMs);
+                                var timingDetail =
+                                    $"Type={packetType} Total={packetElapsedMs:F1}ms " +
+                                    $"SessionLockWait={sessionLockWaitMs:F1}ms " +
+                                    $"Handler={handlerMs:F1}ms " +
+                                    $"SyncPresence={syncPresenceMs:F1}ms " +
+                                    $"Other={otherMs:F1}ms EncodedBytes={encodedLength}";
+
                                 diagnostics.SlowPacket();
                                 diagnostics.Record(
                                     "Warning",
                                     "SlowPacket",
                                     packetType,
+                                    state.ConnectionId,
+                                    state.AccountId,
+                                    state.CharacterId,
+                                    state.CurrentMapId,
+                                    packetElapsedMs);
+                                diagnostics.Record(
+                                    "Warning",
+                                    "SlowPacketDetail",
+                                    timingDetail,
                                     state.ConnectionId,
                                     state.AccountId,
                                     state.CharacterId,
@@ -377,6 +422,15 @@ public static class WebSocketEndpoint
                                     state.AccountId,
                                     state.CharacterId,
                                     state.CurrentMapId);
+                                log.LogWarning(
+                                    "[SLOW_PACKET_DETAIL] Type={Type} TotalMs={TotalMs:F1} SessionLockWaitMs={SessionLockWaitMs:F1} HandlerMs={HandlerMs:F1} SyncPresenceMs={SyncPresenceMs:F1} OtherMs={OtherMs:F1} EncodedBytes={EncodedBytes}",
+                                    packetType,
+                                    packetElapsedMs,
+                                    sessionLockWaitMs,
+                                    handlerMs,
+                                    syncPresenceMs,
+                                    otherMs,
+                                    encodedLength);
                             }
                         }
                         catch (Exception ex)

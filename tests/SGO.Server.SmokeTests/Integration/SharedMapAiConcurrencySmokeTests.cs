@@ -176,6 +176,26 @@ internal static class SharedMapAiConcurrencySmokeTests
                 firstDiagnostics.ElapsedMs >= 0,
                 "shared AI diagnostics report sessions maps monsters assignments and elapsed time");
 
+            var firstProfile = ticker.LastProfile;
+            Check(
+                firstProfile.TotalMs >= 0 &&
+                firstProfile.SessionSnapshotMs >= 0 &&
+                firstProfile.PlayerSnapshotMs >= 0 &&
+                firstProfile.RespawnMs >= 0 &&
+                firstProfile.AssignmentMs >= 0 &&
+                firstProfile.SessionLockWaitMs >= 0 &&
+                firstProfile.TickAiMs >= 0 &&
+                firstProfile.DirectPublishMs >= 0 &&
+                firstProfile.OtherMs >= 0 &&
+                firstProfile.TotalMs + 0.001 >=
+                    firstProfile.SessionSnapshotMs +
+                    firstProfile.PlayerSnapshotMs +
+                    firstProfile.AssignmentMs +
+                    firstProfile.SessionLockWaitMs +
+                    firstProfile.TickAiMs +
+                    firstProfile.DirectPublishMs,
+                "shared AI profile exposes non-negative phase timings without changing the tick contract");
+
             lock (map.SyncRoot)
             {
                 Check(
