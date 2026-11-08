@@ -27,12 +27,12 @@ func _run() -> void:
 		return
 	root.add_child(craft)
 	await process_frame
-	_check(not bool(craft.is_initial_prepared()),
+	_check(not bool(craft.call("is_initial_prepared")),
 		"crafting tree is NOT pre-built merely because its scene exists")
-	_check(not bool(craft.is_initial_preparing()),
+	_check(not bool(craft.call("is_initial_preparing")),
 		"crafting window starts with no recipe work in progress")
 	craft.call("update_ui")
-	_check(not bool(craft.is_initial_prepared()),
+	_check(not bool(craft.call("is_initial_prepared")),
 		"inventory refresh cannot force heavy tree construction before first opening")
 
 	craft.call("_ensure_initial_loading_overlay")
@@ -63,7 +63,7 @@ func _run() -> void:
 	var crafting_panel: Control = craft.get_node(
 		"Background/ContentContainer/CraftingPanel"
 	) as Control
-	await crafting_panel.prepare_static_tree_async([])
+	await crafting_panel.call("prepare_static_tree_async", [])
 	var tree: Tree = crafting_panel.get_node("RecipeTree") as Tree
 	var old_root_id: int = tree.get_root().get_instance_id()
 	crafting_panel.call("update_ui")
@@ -79,15 +79,15 @@ func _run() -> void:
 	# the real Recipe.json or touching network packets.
 	craft.set("_static_prepared", true)
 	craft.set("_cached_recipe_data", [])
-	await craft.prepare_initial_with_progress_async()
-	_check(bool(craft.is_initial_prepared()),
+	await craft.call("prepare_initial_with_progress_async")
+	_check(bool(craft.call("is_initial_prepared")),
 		"first-open build reaches prepared state when content is ready")
-	_check(not bool(craft.is_initial_preparing()),
+	_check(not bool(craft.call("is_initial_preparing")),
 		"first-open progress task clears its in-progress flag")
 	_check(not overlay.visible,
 		"first-open progress panel hides after successful initialization")
 	var completed_root_id: int = tree.get_root().get_instance_id()
-	await craft.prepare_initial_with_progress_async()
+	await craft.call("prepare_initial_with_progress_async")
 	_check(tree.get_root().get_instance_id() == completed_root_id,
 		"subsequent opening skips static initialization")
 
