@@ -49,6 +49,22 @@ jobs:
           node --check game-editor/web/app-tools.js
           node game-editor/tests/test_map_math.js
           python3 -m unittest discover -s game-editor/tests -v
+      - name: Godot headless AOI regressions (when Godot is available)
+        run: |
+          set -euo pipefail
+          GODOT_CMD=""
+          if command -v godot >/dev/null 2>&1; then
+            GODOT_CMD="$(command -v godot)"
+          elif command -v godot4 >/dev/null 2>&1; then
+            GODOT_CMD="$(command -v godot4)"
+          fi
+          if [ -z "$GODOT_CMD" ]; then
+            echo "[SKIP] Godot not installed; Client AOI behavior remains unverified on this runner."
+          else
+            for script in aoi_pre_spawn_move_regression.gd aoi_monster_snapshot_order_regression.gd ground_item_aoi_regression.gd multiclient_render_dedup_regression.gd; do
+              "$GODOT_CMD" --headless --path client --script "res://tests/$script" 2>&1 | tee -a godot-aoi-regression.log
+            done
+          fi
       - name: Build server
         run: |
           set -o pipefail
@@ -131,6 +147,7 @@ jobs:
             wire.log
             wire-load-probe.log
             wire-load-probe-report.json
+            godot-aoi-regression.log
             godot-real-server-network.log
             server.log
             packet-contract-report.json
