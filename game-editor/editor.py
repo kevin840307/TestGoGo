@@ -44,8 +44,34 @@ class EditorHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args: Any) -> None:
         sys.stdout.write("[editor] " + (fmt % args) + "\n")
 
+    @staticmethod
+    def _parse_host_header(value: str) -> str | None:
+        raw = (value or "").strip()
+        if not raw:
+            return ""
+        if raw == "::1":
+            return "::1"
+        if raw.startswith("["):
+            close = raw.find("]")
+            if close <= 1:
+                return None
+            host = raw[1:close].lower()
+            suffix = raw[close + 1:]
+            if suffix and not re.fullmatch(r":\d+", suffix):
+                return None
+            return host
+        if raw.count(":") > 1:
+            return None
+        if ":" in raw:
+            host, port = raw.rsplit(":", 1)
+            if not port.isdigit():
+                return None
+        else:
+            host = raw
+        return host.lower()
+
     def _local_host_only(self) -> bool:
-        host = (self.headers.get("Host") or "").split(":", 1)[0].strip("[]").lower()
+        host = self._parse_host_header(self.headers.get("Host") or "")
         return host in {"127.0.0.1", "localhost", "::1", ""}
 
     def _json_body(self) -> Any:
