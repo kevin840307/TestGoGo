@@ -1114,6 +1114,15 @@ public sealed class CombatService
                 continue;
             }
 
+            // Ground SpawnEntity is registered with world AOI at creation.
+            // The killer receives it in the direct response, so broadcasting
+            // it here would either duplicate it or leak it across the map.
+            if (type == "SpawnEntity" &&
+                PacketLong(packet, "EntityType") == 3)
+            {
+                continue;
+            }
+
             // Player-origin visuals follow the tighter player AOI. Party,
             // trade and directed responses never enter this path.
             if (IsPlayerOriginAoiPacket(
@@ -3185,29 +3194,51 @@ public sealed class CombatService
                 continue;
 
             session.GroundItems[ground.EntityId] = ground;
-            var now = DateTimeOffset.UtcNow;
 
-            packets.Add(new
+            object BuildDropSpawn()
+                => BuildGroundDropSpawnPacket(
+                    ground,
+                    drop.Name);
+
+            // The killer receives the SpawnEntity in its direct combat
+            // response. Other players receive it only when the persisted
+            // ground entity is inside their world AOI. The factory computes
+            // protection/lifetime from the current clock for late entrants.
+            var changes =
+                _broadcasts.UpsertWorldEntity(
+                    new WorldAoiEntity(
+                        ground.EntityId,
+                        3,
+                        ground.MapId,
+                        ground.X,
+                        ground.Y,
+                        BuildDropSpawn));
+
+            foreach (var change in changes)
             {
-                Type = "SpawnEntity",
-                EntityID = ground.EntityId,
-                EntityType = 3,
-                Name = drop.Name,
-                LocX = ground.X,
-                LocY = ground.Y,
-                ExtraData = new
-                {
-                    ItemIndex = ground.ItemIndex,
-                    Count = ground.Count,
-                    TabType = ground.TabType,
-                    Damage = ground.Damage,
-                    Color = ground.Color,
-                    Part = ground.Part,
-                    RemainingTime = ground.RemainingSeconds(now),
-                    OwnerDBID = ground.OwnerDbid,
-                    ProtectTimeSeconds = ground.ProtectSeconds(now)
-                }
-            });
+                if (change.ObserverConnectionId ==
+                    session.ConnectionId)
+                    continue;
+
+                if (_broadcasts.IsWorldAoiVisible(
+                        change.ObserverConnectionId,
+                        ground.EntityId) !=
+                    change.Appeared)
+                    continue;
+
+                _broadcasts.PublishToConnection(
+                    change.ObserverConnectionId,
+                    change.Appeared
+                        ? change.Entity.SpawnPacketFactory()
+                        : new
+                        {
+                            Type = "DespawnEntity",
+                            EntityID = ground.EntityId
+                        });
+            }
+
+            packets.Add(
+                BuildDropSpawn());
 
             // The recovered drop table contains explicit probabilities but no
             // separate announcement flag. Treat ultra-rare entries (<= 0.5%)
@@ -3230,6 +3261,37 @@ public sealed class CombatService
                 });
             }
         }
+    }
+
+    private object BuildGroundDropSpawnPacket(
+        GroundItemRuntime ground,
+        string? displayName = null)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new
+        {
+            Type = "SpawnEntity",
+            EntityID = ground.EntityId,
+            EntityType = 3,
+            Name = string.IsNullOrWhiteSpace(displayName)
+                ? _current.FindItem(ground.ItemIndex)?.Name ??
+                  $"Item {ground.ItemIndex}"
+                : displayName,
+            LocX = ground.X,
+            LocY = ground.Y,
+            ExtraData = new
+            {
+                ItemIndex = ground.ItemIndex,
+                Count = ground.Count,
+                TabType = ground.TabType,
+                Damage = ground.Damage,
+                Color = ground.Color,
+                Part = ground.Part,
+                RemainingTime = ground.RemainingSeconds(now),
+                OwnerDBID = ground.OwnerDbid,
+                ProtectTimeSeconds = ground.ProtectSeconds(now)
+            }
+        };
     }
 
     private void AddAreaKillRewards(
