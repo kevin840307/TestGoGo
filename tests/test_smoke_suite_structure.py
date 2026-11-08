@@ -196,6 +196,25 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("ten buyers racing five player-shop items", source)
         self.assertIn("sold-out player shop closes atomically", source)
 
+    def test_player_shop_lifecycle_race_is_isolated_and_conservative(self):
+        concurrency = (
+            SMOKE / "Integration" / "ConcurrencySmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
+        module = (
+            SMOKE / "Integration" /
+            "PlayerShopLifecycleConcurrencySmokeTests.cs"
+        )
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("RaceBuyAgainstClose", source)
+        self.assertIn("buy/close race conserves total item count", source)
+        self.assertIn("buy/close race conserves total money", source)
+        self.assertIn("closing shop leaves no reserved inventory rows", source)
+        self.assertIn(
+            "PlayerShopLifecycleConcurrencySmokeTests.Run(",
+            concurrency,
+        )
+
     def test_session_lifecycle_suite_covers_position_and_presence_races(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = SMOKE / "Integration" / "SessionLifecycleSmokeTests.cs"
