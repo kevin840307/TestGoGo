@@ -71,7 +71,9 @@ static var _debug_chase_packet_gap_logs: int = 0
 static var _debug_chase_state_idle_logs: int = 0
 static var _debug_chase_client_idle_logs: int = 0
 static var _debug_authoritative_snap_logs: int = 0
+static var _debug_first_aggro_move_logs: int = 0
 var _debug_last_aggro_move_packet_ms: int = 0
+var _debug_aggro_started_ms: int = 0
 const MOVE_DIR_CONFIRM_COUNT: int = 2
 const MOVE_DIR_MAX_HOLD_MS: int = 450
 const VISIBILITY_RECT: Rect2 = Rect2(-180.0, -260.0, 360.0, 420.0)
@@ -804,8 +806,16 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	move_idle_generation += 1
 	var now_ms: int = Time.get_ticks_msec()
 	if OS.is_debug_build() and is_instance_valid(target_indicator) and target_indicator.visible:
-		# Ignore the first move after aggro: the previous packet may have been
-		# a normal wander step several seconds earlier, not a missed chase tick.
+		# The first move after acquiring aggro is not a packet-gap event.
+		if (
+			_debug_last_aggro_move_packet_ms == 0
+			and _debug_aggro_started_ms > 0
+			and _debug_first_aggro_move_logs < 20
+		):
+			_debug_first_aggro_move_logs += 1
+			print("[MONSTER_AGGRO_FIRST_MOVE] id=%d delay_ms=%d state=%s speed_time=%.3f" % [
+				entity_id, now_ms - _debug_aggro_started_ms, current_state, speed_time
+			])
 		if _debug_last_aggro_move_packet_ms > 0:
 			var aggro_gap_ms: int = now_ms - _debug_last_aggro_move_packet_ms
 			if _debug_chase_packet_gap_logs < 16 and aggro_gap_ms > 375:
@@ -961,8 +971,9 @@ func _on_animation_finished() -> void :
 func set_target_indicator(has_target: bool) -> void :
 	if is_instance_valid(target_indicator):
 		if OS.is_debug_build() and target_indicator.visible != has_target:
-			# Reset the chase-packet baseline on aggro changes.
+			# Keep the first-move latency distinct from a chase packet gap.
 			_debug_last_aggro_move_packet_ms = 0
+			_debug_aggro_started_ms = Time.get_ticks_msec() if has_target else 0
 		target_indicator.visible = has_target
 		if has_target:
 			if not target_indicator.is_playing():
