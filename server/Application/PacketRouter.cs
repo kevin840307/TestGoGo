@@ -217,7 +217,8 @@ public sealed class PacketRouter
             hasCurrent ? nextCharacterId : null,
             hasCurrent ? state.AccountId : null,
             hasCurrent ? state.LastX : 0,
-            hasCurrent ? state.LastY : 0);
+            hasCurrent ? state.LastY : 0,
+            hasCurrent ? state.CharacterName : "");
 
         if (hasCurrent && state.WorldReady)
             PublishPlayerAoiChanges(
@@ -378,6 +379,7 @@ public sealed class PacketRouter
             var id = _store.Login(req.Str("User"), req.Str("Pass"));
             state.AccountId = id;
             state.CharacterId = null;
+            state.CharacterName = "";
             state.CurrentMapId = 0;
             state.PendingMapSpawn = false;
             state.WorldReady = false;
@@ -727,6 +729,7 @@ public sealed class PacketRouter
                     state.CharacterId == dbid)
                 {
                     state.CharacterId = null;
+                    state.CharacterName = "";
                     state.CurrentMapId = 0;
                     state.PendingMapSpawn = false;
                 }
@@ -805,6 +808,9 @@ public sealed class PacketRouter
                 }
 
                 state.CharacterId = dbid;
+                state.CharacterName = character.TryGetValue("NAME", out var selectedName)
+                    ? selectedName?.ToString() ?? $"角色{dbid}"
+                    : $"角色{dbid}";
                 state.CurrentMapId = Convert.ToInt32(character["MapID"]);
                 state.LastX = Convert.ToDouble(character["LocX"]);
                 state.LastY = Convert.ToDouble(character["LocY"]);
@@ -5136,6 +5142,7 @@ public sealed class PacketRouter
                 DisconnectPresence(state);
                 state.AccountId = null;
                 state.CharacterId = null;
+                state.CharacterName = "";
                 state.CurrentMapId = 0;
                 state.PendingMapSpawn = false;
                 state.Monsters.Clear();
