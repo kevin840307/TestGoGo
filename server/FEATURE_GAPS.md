@@ -31,16 +31,16 @@
 
 | ID | 狀態 | 現況與真正剩餘缺口 | 已有自動驗證 | 完成驗收 |
 | --- | --- | --- | --- | --- |
-| P0-01 | IMPLEMENTED_UNVERIFIED | **真實傳輸已從單人擴成雙 Client**。AES/WebSocket 已涵蓋註冊→登入→建角→重登→選角→bootstrap→WorldReady→商城→登出，並新增兩個真實 socket 的 Party Invite/Accept/PartySync 與 Trade Invite/Accept/Lock/FinalConfirm/Success。仍缺真正 Godot Scene/UI 驅動的切圖、戰鬥、掉寶、寵物、機甲流程。 | `tests/SGO.Server.WireSmokeTests/Program.cs`、`client/tests/*.gd`、`test_client_network_contract.py` | 有 Godot executable 的環境跑完 headless client tests，並補真正 Scene/UI 驅動的戰鬥／切圖 E2E |
-| P0-02 | IMPLEMENTED_UNVERIFIED | **多人競態程式與測試已補**：10 人同撿一個掉物、重複/同時 TradeFinalConfirm、10 人同怪擊殺、斷線/重連/切圖 race、10 人同地圖 SharedMapAiTicker owner arbitration。掉物改成 SQLite `DELETE ... RETURNING` 原子 claim；交易 FinalConfirm 改 single-owner commit。剩餘是有 runner 的實際執行證據與 50/100 人性能測量，不再是邏輯缺測。 | `Integration/ConcurrencySmokeTests.cs`、`MonsterConcurrencySmokeTests.cs`、`SessionLifecycleSmokeTests.cs`、`SharedMapAiConcurrencySmokeTests.cs` | Smoke 真正 PASS；同怪/同掉物/交易不重複；SharedMapAI 一張地圖每 scheduler pass 只處理一次 |
+| P0-01 | IMPLEMENTED_UNVERIFIED | **真實傳輸已從單人擴成雙 Client**。AES/WebSocket 已涵蓋註冊→登入→建角→重登→選角→bootstrap→WorldReady→商城→登出，並新增兩個真實 socket 的 Party/Trade、聊天/移動、掉寶撿取、寵物/機甲、戰鬥/技能、切圖及選擇型寶箱封包流程。仍缺真正 Godot Scene/UI 驅動的整段多人互動驗證。 | `tests/SGO.Server.WireSmokeTests/Program.cs`、`client/tests/*.gd`、`test_client_network_contract.py` | 有 Godot executable 的環境跑完 headless client tests，並補真正 Scene/UI 驅動的戰鬥／切圖 E2E |
+| P0-02 | IMPLEMENTED_UNVERIFIED | **多人競態程式與測試已補**：10 人同撿一個掉物、重複/同時 TradeFinalConfirm、10 人同怪擊殺、斷線/重連/切圖 race、10 人同地圖 SharedMapAiTicker owner arbitration、重複 TradeLock 冪等、最後確認與取消/斷線的受控提交競態測試。掉物改成 SQLite `DELETE ... RETURNING` 原子 claim；交易 FinalConfirm 改 single-owner commit。剩餘是有 runner 的實際執行證據與 50/100 人性能測量，不再是邏輯缺測。 | `Integration/ConcurrencySmokeTests.cs`、`MonsterConcurrencySmokeTests.cs`、`SessionLifecycleSmokeTests.cs`、`SharedMapAiConcurrencySmokeTests.cs` | Smoke 真正 PASS；同怪/同掉物/交易不重複；SharedMapAI 一張地圖每 scheduler pass 只處理一次 |
 | P0-03 | TEST_GAP | **CI 基礎設施仍擋住實際 PASS 證據**。2026-11-08 run `42438420106` 仍在取得 Runner 前結束，job `steps=null`，不是 build/test failure。 | workflow 與 `tests/run_protocol_checks.ps1` 已包含 strict audits、build、domain/full smoke、concurrency、Wire E2E、coverage reports | 取得至少一筆有實際 steps 的 run，所有 Python/.NET/Wire 檢查全 PASS |
-| P0-04 | TEST_GAP | 固定 Type/Action、請求 schema、40+ 關鍵 Server→Client response shape、nested anonymous response、Godot packet ownership 已守門。剩餘主要是動態 Dictionary／computed payload 的完整值型別與 optional-field 語意，不是固定路由缺 handler。 | `packet_*_audit.py`、`PacketSchemaValidator.cs`、`test_client_network_contract.py` | 所有動態 payload 也有 runtime contract/E2E；失敗路徑均回 typed `PacketError` 或既有相容失敗 response |
+| P0-04 | TEST_GAP | 固定 Type/Action、請求 schema、40+ 關鍵 Server→Client response shape、nested anonymous response、`ItemChoiceRequired` / `UseItemChoiceRequest`、Godot packet ownership 已守門。剩餘主要是動態 Dictionary／computed payload 的完整值型別與 optional-field 語意，不是固定路由缺 handler。 | `packet_*_audit.py`、`PacketSchemaValidator.cs`、`test_client_network_contract.py` | 所有動態 payload 也有 runtime contract/E2E；失敗路徑均回 typed `PacketError` 或既有相容失敗 response |
 
 ## P1 — 遊戲資料與舊版相容
 
 | ID | 狀態 | 現況與真正剩餘缺口 | 已有自動驗證 | 完成驗收 |
 | --- | --- | --- | --- | --- |
-| P1-01 | PARTIAL | **Scripted item 已改為全量可執行 coverage**。現有實作涵蓋恢復、容量卡、多寵物、機甲/蜂型套件、技能書、EXP 卡、booster、變身、外觀變身、幸福娃娃、Festival reward、固定/可安全還原寶箱、製作藍圖分類等。Coverage 現在 `--strict`：只要仍有 `UNKNOWN_SCRIPT_EFFECT` 就直接 fail。描述要求玩家選擇、或原始隨機機率不可可靠推定的項目維持 `CHOICE_REQUIRED`，Server 不會猜獎勵或誤消耗。 | `tests/SGO.ItemCoverageReport/`、`BoosterSmokeTests.cs`、`RecoveredBoxSmokeTests.cs`、`ItemUseClassificationSmokeTests.cs`、`WaspPackageSmokeTests.cs`、`CosmeticTransformationSmokeTests.cs` | strict report 的 `UNKNOWN_SCRIPT_EFFECT=0`；CHOICE_REQUIRED 另有明確 Client 選擇流程後才能視為完整 |
+| P1-01 | PARTIAL | **Scripted item 已改為全量可執行 coverage**。現有實作涵蓋恢復、容量卡、多寵物、機甲/蜂型套件、技能書、EXP 卡、booster、變身、外觀變身、幸福娃娃、Festival reward、固定/可安全還原寶箱、製作藍圖分類等。Coverage 現在 `--strict`：只要仍有 `UNKNOWN_SCRIPT_EFFECT` 就直接 fail。已新增可靠選項解析的 `ChoiceRewardCatalog`、`UseItemChoiceRequest`、Godot 選擇 UI 與合法選項原子發獎（含 2209 等已辨識寶箱），並補偽造選項／重放 UID 的 integration + AES/WebSocket 測試；原始隨機機率不可可靠推定的項目仍維持 `CHOICE_REQUIRED` 或資料不足狀態，不會猜獎勵或誤消耗。 | `tests/SGO.ItemCoverageReport/`、`BoosterSmokeTests.cs`、`RecoveredBoxSmokeTests.cs`、`ItemUseClassificationSmokeTests.cs`、`WaspPackageSmokeTests.cs`、`CosmeticTransformationSmokeTests.cs` | strict report 的 `UNKNOWN_SCRIPT_EFFECT=0`；CHOICE_REQUIRED 另有明確 Client 選擇流程後才能視為完整 |
 | P1-02 | PARTIAL | **Quest Host 相容已改為全 1,566 份腳本稽核**，CI/local runner 使用 `--strict`，任何直接呼叫未綁 host function 都 fail。曾實際出錯的 `Add_Gift.txt/CheckGift` 已直接執行 smoke，`AddGift` 無 provider 時安全走原腳本 `None()` callback。仍不能宣稱 1,566 份腳本的每一條業務分支、持久化與獎勵都已做 E2E。 | `tests/quest_host_audit.py`、`test_quest_host_audit.py`、主 Smoke 的真實 QuestRuntime 案例 | strict host audit=0 unbound；高使用率 NPC/Quest 持續補成功/拒絕/重登 integration，不再出現 nil global |
 | P1-03 | IMPLEMENTED_UNVERIFIED | **歷史資源 ID 不再直接信任**：同 ID 名稱/分類不同視為 collision；先用名稱安全 remap，找不到就 `SKIPPED/UNMAPPED`。新增 machine-readable mapping report，列出 SAFE_SAME_ID / NAME_REMAP / LEGACY_ID_COLLISION / SKIPPED 與 legacy drop RESOLVED/UNMAPPED。 | `ShopCatalog.MappingInfo/Warnings`、`EnemyDropCatalog.ResolveItem`、`tests/SGO.MappingCoverageReport/` | 報告可審核；任何不確定項目保持跳過而非錯配；需要的遺留內容逐項補正確名稱/來源 |
 | P1-04 | IMPLEMENTED_UNVERIFIED | 多寵物、技能、booster、固定/還原寶箱、蜂型機甲、外觀變身等近期功能均已有持久化/Router smoke；還缺真正 Godot 實機操作結果。 | 多個 `Integration/*SmokeTests.cs` + Client contract/headless regression | 使用真實 Client 操作後重登，資產、狀態、外觀、技能與召喚狀態一致 |
@@ -62,7 +62,8 @@
 - `World/BlockingMapSmokeTests.cs`：Blocking、穿牆、A*。
 - `Announcements/AnnouncementSmokeTests.cs`。
 - `GameData/CurrentClientCatalogSmokeTests.cs`。
-- `Integration/ConcurrencySmokeTests.cs`：10 人同掉物 + Trade duplicate confirm。
+- `Integration/ConcurrencySmokeTests.cs`：10 人同掉物 + Trade duplicate confirm / duplicate Lock。
+- `Integration/TradeTerminalRaceSmokeTests.cs`：受控攔截 DB commit，驗證取消／斷線在提交中不會同時產生 TradeCancel 與 TradeSuccess。
 - `Integration/MonsterConcurrencySmokeTests.cs`：10 人同怪死亡 race。
 - `Integration/SharedMapAiConcurrencySmokeTests.cs`：10 人/10 怪 SharedMapAiTicker ownership。
 - `Integration/SessionLifecycleSmokeTests.cs`：disconnect/reconnect/map transition race。
