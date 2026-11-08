@@ -5995,16 +5995,63 @@ try
                 $"\"EntityID\":{4_000_000L + appearancePetUid}")),
         "summoned pet follows player from server world tick");
 
+    // A connected socket is not automatically a spatial AOI observer.
+    // The client must acknowledge WorldReady; the transport then syncs
+    // presence so both the owner and peer are in the ready-player grid.
+    router.SyncPresence(session);
+    using (var speechWorldReady = Json(
+        """{"Type":"WorldReady","MapID":15}"""))
+    {
+        var readyPackets = router.Handle(
+            speechWorldReady.RootElement,
+            session);
+        Check(session.WorldReady &&
+              readyPackets.Any(x =>
+                  JsonSerializer.Serialize(x).Contains(
+                      "\\"Type\\":\\"WorldReadyResponse\\"") &&
+                  JsonSerializer.Serialize(x).Contains(
+                      "\\"Success\\":true")),
+            "pet speech owner acknowledges WorldReady before AOI delivery");
+    }
+    router.SyncPresence(session);
+
     var speechPeer = broadcastHub.Register();
-    broadcastHub.UpdatePresence(
-        speechPeer.ConnectionId,
-        session.CurrentMapId,
-        secondCharacterId,
-        account.Value,
-        session.LastX + 50,
-        session.LastY);
+    var speechPeerSession = new ClientSession
+    {
+        ConnectionId = speechPeer.ConnectionId,
+        AccountId = account.Value,
+        CharacterId = secondCharacterId,
+        CurrentMapId = session.CurrentMapId,
+        LastX = session.LastX + 50,
+        LastY = session.LastY,
+        WorldReady = true
+    };
+    router.SyncPresence(speechPeerSession);
+
+    Check(broadcastHub.IsPlayerAoiVisibleAs(
+              speechPeer.ConnectionId,
+              session.ConnectionId,
+              id),
+        "nearby WorldReady peer enters player's spatial AOI");
+
+    var peerSpawnPackets = speechPeer.Queue.ToArray()
+        .Select(x => JsonSerializer.Serialize(x))
+        .ToArray();
+    Check(
+        peerSpawnPackets.Any(x =>
+            x.Contains("\\"Type\\":\\"SpawnEntity\\"") &&
+            x.Contains($"\\"EntityID\\":{id}")) &&
+        peerSpawnPackets.Any(x =>
+            x.Contains("\\"Type\\":\\"SpawnEntity\\"") &&
+            x.Contains(
+                $"\\"EntityID\\":{4_000_000L + appearancePetUid}")),
+        "AOI peer sees owner and summoned pet before receiving pet speech");
 
     while (speechPeer.Queue.TryDequeue(out _)) { }
+
+    Check(Convert.ToInt32(
+              store.GetCharacter(account.Value, id)!["HP"]) > 0,
+        "idle speech fixture owner is alive");
 
     session.PetPositions[appearancePetUid] =
         (session.LastX + 42, session.LastY + 24);
@@ -6016,19 +6063,25 @@ try
         session,
         DateTimeOffset.UtcNow.AddSeconds(2));
 
-    Check(
-        idleSpeechPackets.Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                "\"Type\":\"PetIdleSpeech\"") &&
-            JsonSerializer.Serialize(x).Contains(
-                $"\"EntityID\":{4_000_000L + appearancePetUid}")) &&
-        speechPeer.Queue.ToArray().Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                "\"Type\":\"PetIdleSpeech\"")),
-        "idle summoned pet emits configurable speech to owner and same-map peers");
+    var ownerSpeech = idleSpeechPackets.Any(x =>
+        JsonSerializer.Serialize(x).Contains(
+            "\\"Type\\":\\"PetIdleSpeech\\"") &&
+        JsonSerializer.Serialize(x).Contains(
+            $"\\"EntityID\\":{4_000_000L + appearancePetUid}"));
+    Check(ownerSpeech,
+        "idle summoned pet emits configured speech to its owner");
 
-    broadcastHub.Unregister(
-        speechPeer.ConnectionId);
+    var observerSpeech = speechPeer.Queue.ToArray().Any(x =>
+        JsonSerializer.Serialize(x).Contains(
+            "\\"Type\\":\\"PetIdleSpeech\\"") &&
+        JsonSerializer.Serialize(x).Contains(
+            $"\\"EntityID\\":{4_000_000L + appearancePetUid}"));
+    Check(observerSpeech,
+        "idle pet speech is broadcast only to ready and nearby AOI peers");
+
+    speechPeerSession.WorldReady = false;
+    router.SyncPresence(speechPeerSession);
+    broadcastHub.Unregister(speechPeer.ConnectionId);
 
     var selected = store.GetCharacter(account.Value, id);
     Check(Convert.ToInt32(Convert.ToDouble(selected!["LocX"])) == 5000 &&
