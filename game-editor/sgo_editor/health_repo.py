@@ -351,14 +351,36 @@ class HealthRepository:
         warnings: list[dict[str, Any]] = []
         suggestions: list[dict[str, Any]] = []
         seen_existing: set[int] = set()
+        seen_source_indexes: set[int] = set()
         added = moved = changed = 0
         duplicate_keys: dict[tuple[Any, ...], list[int]] = defaultdict(list)
 
         for row_index, row in enumerate(items):
-            source_index = int(row.get("index", -1))
+            try:
+                source_index = int(row.get("index", -1))
+            except (TypeError, ValueError):
+                self._validation_issue(
+                    errors, row_index, "invalid_source_index",
+                    "index 必須是整數；新資料請使用 -1",
+                )
+                source_index = -1
+
             old = old_by_index.get(source_index)
-            if source_index >= 0:
-                seen_existing.add(source_index)
+            if source_index != -1:
+                if source_index < 0 or source_index not in old_by_index:
+                    self._validation_issue(
+                        errors, row_index, "invalid_source_index",
+                        f"source index {source_index} 不存在；新資料請使用 -1",
+                    )
+                    old = None
+                elif source_index in seen_source_indexes:
+                    self._validation_issue(
+                        errors, row_index, "duplicate_source_index",
+                        f"source index {source_index} 被重複使用；這可能錯用 legacy metadata",
+                    )
+                else:
+                    seen_source_indexes.add(source_index)
+                    seen_existing.add(source_index)
 
             x = int(row.get("x", 0))
             y = int(row.get("y", 0))
