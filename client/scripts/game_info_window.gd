@@ -703,6 +703,11 @@ var _festival_data: Dictionary = {}
 var _festival_load_error: = ""
 var _selected_festival_id: = ""
 var _pet_evolution_catalog_loaded: bool = false
+const PET_EVOLUTION_BATCH_MAX_FAMILIES: int = 2
+const PET_EVOLUTION_BATCH_BUDGET_USEC: int = 1800
+
+static func should_yield_pet_evolution_batch(families_since_yield: int, elapsed_usec: int) -> bool:
+	return families_since_yield >= PET_EVOLUTION_BATCH_MAX_FAMILIES or elapsed_usec >= PET_EVOLUTION_BATCH_BUDGET_USEC
 var _skill_catalog_loaded: bool = false
 var _engraving_catalog_loaded: bool = false
 var _monster_drop_catalog_loaded: bool = false
@@ -780,7 +785,10 @@ func _select_category(category: String) -> void :
 		_ensure_equipment_catalog_loaded()
 	if category == "寵物" and not _pet_evolution_catalog_loaded:
 		_pet_evolution_catalog_loaded = true
-		_build_pet_evolution_catalog()
+		pet_family_title.text = "正在整理寵物進化資料…"
+		pet_roadmap_empty_state.text = "正在整理寵物進化資料…"
+		pet_roadmap_empty_state.visible = true
+		call_deferred("_build_pet_evolution_catalog")
 	if category == "怪物掉落" and not _monster_drop_catalog_loaded:
 		_monster_drop_catalog_loaded = true
 		_load_monster_drop_catalog()
@@ -2735,7 +2743,11 @@ func _build_pet_evolution_catalog() -> void :
 		pet_ids.append(int(raw_pet_id))
 	pet_ids.sort()
 
+	var families_since_yield: int = 0
+	var batch_started_usec: int = Time.get_ticks_usec()
 	for pet_id in pet_ids:
+		if not is_inside_tree():
+			return
 		var pet_config: Dictionary = all_configs.get(pet_id, {})
 		var graph: = _build_pet_evolution_graph(pet_id, pet_config)
 		_pet_evolution_graphs[pet_id] = graph
@@ -2749,6 +2761,15 @@ func _build_pet_evolution_catalog() -> void :
 		button.pressed.connect(_select_pet_family.bind(pet_id))
 		pet_family_list.add_child(button)
 		_pet_family_buttons[pet_id] = button
+		if _selected_pet_family_id < 0:
+			_select_pet_family(pet_id)
+		families_since_yield += 1
+		if should_yield_pet_evolution_batch(families_since_yield, Time.get_ticks_usec() - batch_started_usec):
+			await get_tree().process_frame
+			if not is_inside_tree():
+				return
+			families_since_yield = 0
+			batch_started_usec = Time.get_ticks_usec()
 
 	if pet_ids.is_empty():
 		pet_family_title.text = "沒有可顯示的寵物"
@@ -2757,7 +2778,9 @@ func _build_pet_evolution_catalog() -> void :
 		pet_roadmap_empty_state.visible = true
 		return
 
-	_select_pet_family(pet_ids[0])
+	# Retain user-selected family while remaining graphs are built.
+	if OS.is_debug_build():
+		print("[PET_EVOLUTION_CATALOG_READY] families=%d" % pet_ids.size())
 
 func _build_pet_evolution_graph(pet_id: int, pet_config: Dictionary) -> Dictionary:
 	var nodes: Dictionary = {}
