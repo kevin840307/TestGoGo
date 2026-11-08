@@ -7978,18 +7978,32 @@ try
         monster.X + 100,
         monster.Y);
 
-    Check(sharedSpawnPackets.Any(x =>
-              JsonSerializer.Serialize(x).Contains(
-                  "\"Type\":\"SpawnEntity\"")) &&
-          peerRegistration.Queue.ToArray().Any(x =>
-              JsonSerializer.Serialize(x).Contains(
-                  "\"Type\":\"SpawnEntity\"")) &&
-          broadcastRegistration.Queue.IsEmpty,
-        "map world events broadcast to peers without echoing to source connection");
+    var spawnedWorldEntityId = sharedSpawnPackets
+        .Select(packet => JsonSerializer.SerializeToElement(packet))
+        .Where(packet =>
+            packet.TryGetProperty("Type", out var type) &&
+            type.GetString() == "SpawnEntity" &&
+            packet.TryGetProperty("EntityType", out var entityType) &&
+            entityType.GetInt32() == 1)
+        .Select(packet => packet.GetProperty("EntityID").GetInt32())
+        .Single();
+
+    Check(
+        peerRegistration.Queue.ToArray().Any(packet =>
+            JsonSerializer.Serialize(packet).Contains(
+                "\"Type\":\"SpawnEntity\"") &&
+            JsonSerializer.Serialize(packet).Contains(
+                $"\"EntityID\":{spawnedWorldEntityId}")) &&
+        !broadcastRegistration.Queue.ToArray().Any(packet =>
+            JsonSerializer.Serialize(packet).Contains(
+                "\"Type\":\"SpawnEntity\"") &&
+            JsonSerializer.Serialize(packet).Contains(
+                $"\"EntityID\":{spawnedWorldEntityId}")),
+        "map world events broadcast the spawned monster to peers without echoing that monster to the source connection");
 
     combat.BuildCurrentMapSnapshot(peerSession);
     var dynamicMonster = session.Monsters.Values
-        .First(x => x.EntityId >= 9_000_000);
+        .First(x => x.EntityId == spawnedWorldEntityId);
     var peerDynamicMonster =
         peerSession.Monsters[dynamicMonster.EntityId];
     var dynamicHpBefore = dynamicMonster.CurrentHp;
