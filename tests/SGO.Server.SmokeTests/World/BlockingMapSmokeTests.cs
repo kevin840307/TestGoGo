@@ -112,6 +112,26 @@ internal static class BlockingMapSmokeTests
         Check(!navigator.IsDirectClear(2, 40, 24, 56, 24) &&
               !navigator.IsDirectClear(2, 40, 24, 56, 40),
             "monster cannot step through a wall or cut its diagonal corner");
+
+        Check(
+            navigator.TryNextStep(
+                2,
+                56,
+                56,
+                88,
+                24,
+                16,
+                out var cornerStepX,
+                out var cornerStepY) &&
+            navigator.IsDirectClear(
+                2,
+                56,
+                56,
+                cornerStepX,
+                cornerStepY) &&
+            cornerStepX > 56 &&
+            Math.Abs(cornerStepY - 56) <= 0.001,
+            "monster A-star falls back to the next safe grid edge at a wall opening");
         var navX = 24.0;
         var navY = 24.0;
         var followedValidRoute = true;
