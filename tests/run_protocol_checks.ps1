@@ -148,13 +148,25 @@ try {
     }
 
     Write-Host "[CHECK] Starting isolated local server" -ForegroundColor Cyan
-    $server = Start-Process -FilePath "dotnet" -ArgumentList @(
-        ('"' + $serverDll + '"')
-    ) -WorkingDirectory (Join-Path $root "server") -RedirectStandardOutput (
-        Join-Path $logRoot "server.log"
-    ) -RedirectStandardError (
-        Join-Path $logRoot "server-errors.log"
-    ) -PassThru
+    $previousGmSetting = $env:Game__GmCommandsEnabled
+    $env:Game__GmCommandsEnabled = "true"
+    try {
+        $server = Start-Process -FilePath "dotnet" -ArgumentList @(
+            ('"' + $serverDll + '"')
+        ) -WorkingDirectory (Join-Path $root "server") -RedirectStandardOutput (
+            Join-Path $logRoot "server.log"
+        ) -RedirectStandardError (
+            Join-Path $logRoot "server-errors.log"
+        ) -PassThru
+    }
+    finally {
+        if ($null -eq $previousGmSetting) {
+            Remove-Item Env:Game__GmCommandsEnabled -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:Game__GmCommandsEnabled = $previousGmSetting
+        }
+    }
 
     $ready = $false
     for ($i = 0; $i -lt 60; $i++) {
