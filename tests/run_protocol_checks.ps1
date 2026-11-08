@@ -34,6 +34,10 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_packet_log_privacy.py", "-v"
     )
+    Invoke-Checked "Smoke suite structure tests" "python" @(
+        "-m", "unittest", "discover", "-s", "tests",
+        "-p", "test_smoke_suite_structure.py", "-v"
+    )
     Invoke-Checked "Packet Type/Action coverage" "python" @(
         "tests/packet_contract_audit.py", "--strict", "--output",
         (Join-Path $logRoot "packet-contract.json")
