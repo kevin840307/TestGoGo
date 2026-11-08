@@ -23,6 +23,7 @@ internal static class CrossFeatureConcurrencySmokeTests
             Path.Combine(temp.Root, "game.db"));
 
         TradeAndDirectTransferConserveMoney(store);
+        TradeAndPlayerShopPurchaseConserveMoney(store);
     }
 
     private static void TradeAndDirectTransferConserveMoney(
@@ -109,6 +110,133 @@ internal static class CrossFeatureConcurrencySmokeTests
         Check(
             firstMoney + secondMoney + thirdMoney == 300,
             "mixed multiplayer money operations conserve total currency");
+    }
+
+    private static void TradeAndPlayerShopPurchaseConserveMoney(
+        SqliteGameStore store)
+    {
+        var buyer = CreatePlayer(store, "shop_trade_a");
+        var tradePeer = CreatePlayer(store, "shop_trade_b");
+        var seller = CreatePlayer(store, "shop_seller");
+
+        foreach (var player in new[] { buyer, tradePeer, seller })
+        {
+            Check(
+                store.AdjustMoney(
+                    player.AccountId,
+                    player.CharacterId,
+                    100) is not null,
+                "seed trade plus player-shop concurrency money");
+        }
+
+        const int itemIndex = 999_950;
+        var uid = store.AddInventoryItem(
+            seller.AccountId,
+            seller.CharacterId,
+            itemIndex,
+            1);
+        Check(uid > 0, "seed player-shop item for mixed trade race");
+
+        var reserved = store.SetPlayerShopAssetState(
+            seller.AccountId,
+            seller.CharacterId,
+            uid,
+            0,
+            1,
+            true);
+        Check(reserved.Success, "reserve player-shop item for mixed trade race");
+
+        using var ready = new CountdownEvent(2);
+        using var start = new ManualResetEventSlim(false);
+
+        var tradeTask = Task.Run(() =>
+        {
+            ready.Signal();
+            if (!start.Wait(TimeSpan.FromSeconds(10)))
+                throw new TimeoutException(
+                    "trade/player-shop trade barrier timed out");
+
+            return store.CommitTrade(
+                buyer.AccountId,
+                buyer.CharacterId,
+                30,
+                Array.Empty<SGO.Server.Application.Abstractions.TradeAssetOffer>(),
+                tradePeer.AccountId,
+                tradePeer.CharacterId,
+                20,
+                Array.Empty<SGO.Server.Application.Abstractions.TradeAssetOffer>());
+        });
+
+        var shopTask = Task.Run(() =>
+        {
+            ready.Signal();
+            if (!start.Wait(TimeSpan.FromSeconds(10)))
+                throw new TimeoutException(
+                    "trade/player-shop purchase barrier timed out");
+
+            return store.BuyPlayerShopAsset(
+                buyer.AccountId,
+                buyer.CharacterId,
+                seller.AccountId,
+                seller.CharacterId,
+                reserved.ReservedUid,
+                0,
+                1,
+                15);
+        });
+
+        try
+        {
+            Check(
+                ready.Wait(TimeSpan.FromSeconds(10)),
+                "trade and player-shop purchase reached start barrier");
+        }
+        finally
+        {
+            start.Set();
+        }
+
+        Check(
+            Task.WaitAll(
+                new Task[] { tradeTask, shopTask },
+                TimeSpan.FromSeconds(20)),
+            "trade plus player-shop purchase terminate without SQLite lock failure");
+
+        Check(
+            tradeTask.Result.Success && shopTask.Result.Success,
+            "trade and player-shop purchase both commit exactly once");
+
+        var buyerMoney = Money(store, buyer);
+        var peerMoney = Money(store, tradePeer);
+        var sellerMoney = Money(store, seller);
+
+        Check(
+            buyerMoney == 75 &&
+            peerMoney == 110 &&
+            sellerMoney == 115,
+            "trade and player-shop money deltas compose regardless of commit order");
+
+        Check(
+            buyerMoney + peerMoney + sellerMoney == 300,
+            "trade plus player-shop purchase conserve total currency");
+
+        var buyerCopies = store.GetCharacterAssets(
+                buyer.AccountId,
+                buyer.CharacterId)
+            .Inventory
+            .Where(x => Convert.ToInt32(x["ItemIndex"]) == itemIndex)
+            .Sum(x => Convert.ToInt32(x["Count"]));
+
+        var sellerCopies = store.GetCharacterAssets(
+                seller.AccountId,
+                seller.CharacterId)
+            .Inventory
+            .Where(x => Convert.ToInt32(x["ItemIndex"]) == itemIndex)
+            .Sum(x => Convert.ToInt32(x["Count"]));
+
+        Check(
+            buyerCopies == 1 && sellerCopies == 0,
+            "mixed trade/player-shop race transfers exactly one listed item");
     }
 
     private static Player CreatePlayer(
