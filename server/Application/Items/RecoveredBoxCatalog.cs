@@ -160,10 +160,7 @@ public static partial class RecoveredBoxCatalog
 
         foreach (var item in current.Items)
         {
-            if (item.Category is not (
-                    "equip" or
-                    "weapon") &&
-                !item.Category.Equals(
+            if (!item.Category.Equals(
                     "equip",
                     StringComparison.OrdinalIgnoreCase) &&
                 !item.Category.Equals(
