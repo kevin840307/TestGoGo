@@ -38,6 +38,10 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_client_network_contract.py", "-v"
     )
+    Invoke-Checked "Godot client visual performance static contracts" "python" @(
+        "-m", "unittest", "discover", "-s", "tests",
+        "-p", "test_client_visual_performance_contract.py", "-v"
+    )
     Invoke-Checked "Godot AOI packet ordering static contracts" "python" @(
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_client_aoi_order_contract.py", "-v"
@@ -178,6 +182,14 @@ try {
         Invoke-Checked "Godot headless client regressions: ground-item visual AOI" $godotCommand @(
             "--headless", "--path", "client",
             "--script", "res://tests/ground_item_aoi_regression.gd"
+        )
+        Invoke-Checked "Godot client regressions: render preset FPS settings" $godotCommand @(
+            "--headless", "--path", "client",
+            "--script", "res://tests/performance_ui_settings_regression.gd"
+        )
+        Invoke-Checked "Godot client regressions: visual AOI profile thresholds" $godotCommand @(
+            "--headless", "--path", "client",
+            "--script", "res://tests/performance_visual_aoi_regression.gd"
         )
         Invoke-Checked "Godot headless client regressions: queued monster AOI replay" $godotCommand @(
             "--headless", "--path", "client",
