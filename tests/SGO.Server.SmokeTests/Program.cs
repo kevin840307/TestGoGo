@@ -5392,6 +5392,9 @@ try
             "third 2301 use is rejected at max three and does not consume the card");
     }
 
+    // Exercise the real recall route instead of changing SQLite directly.
+    // PetAction Recall also clears session tracking and AOI companion
+    // snapshots, preventing ghost pets in the subsequent map/appearance test.
     foreach (var activePetUid in new[]
              {
                  firstMultiPetUid,
@@ -5399,15 +5402,27 @@ try
                  thirdMultiPetUid
              })
     {
-        store.SetPetState(
-            account.Value,
-            id,
-            activePetUid,
-            0);
-        session.PetPositions.Remove(
-            activePetUid);
-        session.PetTargets.Remove(
-            activePetUid);
+        using var recallFixturePet = Json(JsonSerializer.Serialize(new
+        {
+            Type = "PetAction",
+            Action = "Recall",
+            PetUID = activePetUid
+        }));
+        var recallPackets = router.Handle(
+            recallFixturePet.RootElement,
+            session);
+        Check(
+            store.GetCharacterAssets(account.Value, id).Pets.Any(x =>
+                Convert.ToInt64(x["UID"]) == activePetUid &&
+                Convert.ToInt32(x["State"]) == 0) &&
+            recallPackets.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"DespawnEntity\"") &&
+                JsonSerializer.Serialize(x).Contains(
+                    $"\"EntityID\":{4_000_000L + activePetUid}")) &&
+            !session.PetPositions.ContainsKey(activePetUid) &&
+            !session.PetTargets.ContainsKey(activePetUid),
+            "capacity fixture recall removes pet state, AOI entity and session tracking");
     }
 
     var teleportOriginalMap =
