@@ -1,5 +1,34 @@
 # SGO Client Performance Regression Checks
 
+## Initial black-screen / craft prewarm loading bar
+
+The entry scene now shows the **existing LoadingOverlay, ProgressBar and a
+status message from its initial scene state**, even before EntryManager._ready.
+Heavy item/skill/pet indexing starts only after two process-frame signals,
+letting Godot present the loading UI before the synchronous indexing work.
+
+The craft window still prewarms its full static recipe tree *before login*
+so world entry does not inherit the 1453-row UI hitch. Its existing
+time-budgeted recipe batches emit real processed/total progress, mapped to
+60–85% of startup progress. Stage labels explain resource load, recipe
+construction, and readiness. This does not add artificial timeouts or
+remove the original login/input focus behavior.
+
+```powershell
+godot --headless --path client --script res://tests/startup_loading_regression.gd
+godot --headless --path client --script res://tests/smooth_loading_bar_regression.gd
+godot --headless --path client --script res://tests/npc_shop_close_and_crafting_regression.gd
+```
+
+Manual acceptance: launch in foreground and ensure the progress bar and
+"正在準備遊戲資源…" appear before prewarm; while recipes are building,
+the bar should advance in small increments and the stage label update.
+After 100% the account/password form should appear as before. Repeat on
+cold start, in Debug and exported builds. When the app is unfocused,
+the **existing background rendering-disabled policy** still prevents
+visible UI redraw until focus returns; no focus policy was modified here.
+
+
 ## Foreground/background performance diagnostics (focus-aware)
 
 Godot's focus power-save behavior is **intentional**: on focus loss the client
