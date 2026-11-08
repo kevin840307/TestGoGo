@@ -159,6 +159,14 @@ try {
             "--headless", "--path", "client",
             "--script", "res://tests/perf_regression_smoke.gd"
         )
+        Invoke-Checked "Godot headless client regressions: ground-item visual AOI" $godotCommand @(
+            "--headless", "--path", "client",
+            "--script", "res://tests/ground_item_aoi_regression.gd"
+        )
+        Invoke-Checked "Godot headless client regressions: multiclient render dedup" $godotCommand @(
+            "--headless", "--path", "client",
+            "--script", "res://tests/multiclient_render_dedup_regression.gd"
+        )
         Invoke-Checked "Godot headless client regressions: item choice UI" $godotCommand @(
             "--headless", "--path", "client",
             "--script", "res://tests/item_choice_regression.gd"
