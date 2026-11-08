@@ -23,6 +23,7 @@ internal static class AssetMutationConcurrencySmokeTests
             Path.Combine(temp.Root, "game.db"));
 
         ConcurrentRepairsCannotUndercharge(store);
+        ConcurrentDuplicateRepairChargesOnce(store);
     }
 
     private static void ConcurrentRepairsCannotUndercharge(
@@ -125,6 +126,88 @@ internal static class AssetMutationConcurrencySmokeTests
             equips.Count(x =>
                 Convert.ToInt32(x["Damage"]) == 0) == 1,
             "failed concurrent repair rolls back its equipment mutation");
+    }
+
+    private static void ConcurrentDuplicateRepairChargesOnce(
+        SqliteGameStore store)
+    {
+        var player = CreatePlayer(store, "repair_same");
+        Check(
+            store.AdjustMoney(
+                player.AccountId,
+                player.CharacterId,
+                100) is not null,
+            "seed money for duplicate concurrent repair");
+
+        const int itemIndex = 990_103;
+        const int repairedDurability = 100;
+        const long repairCost = 60;
+
+        var uid = store.AddEquipment(
+            player.AccountId,
+            player.CharacterId,
+            itemIndex,
+            damage: 0);
+        Check(uid > 0, "seed one damaged equipment row for duplicate repair");
+
+        using var ready = new CountdownEvent(2);
+        using var start = new ManualResetEventSlim(false);
+
+        Task<SGO.Server.Application.Abstractions.RepairAssetResult> Repair() =>
+            Task.Run(() =>
+            {
+                ready.Signal();
+                if (!start.Wait(TimeSpan.FromSeconds(10)))
+                    throw new TimeoutException(
+                        "duplicate repair start barrier timed out");
+
+                return store.RepairAsset(
+                    player.AccountId,
+                    player.CharacterId,
+                    uid,
+                    false,
+                    repairedDurability,
+                    repairCost);
+            });
+
+        var attempts = new[] { Repair(), Repair() };
+
+        try
+        {
+            Check(
+                ready.Wait(TimeSpan.FromSeconds(10)),
+                "both duplicate repair contenders reached start barrier");
+        }
+        finally
+        {
+            start.Set();
+        }
+
+        Check(
+            Task.WaitAll(attempts, TimeSpan.FromSeconds(20)),
+            "duplicate same-UID repairs terminate without SQLite lock failure");
+
+        var results = attempts.Select(x => x.Result).ToArray();
+        Check(
+            results.Count(x => x.Success) == 1,
+            "duplicate same-UID repair succeeds exactly once");
+
+        var character = store.GetCharacter(
+            player.AccountId,
+            player.CharacterId);
+        Check(
+            Convert.ToInt64(character!["Money"]) == 40,
+            "duplicate same-UID repair charges exactly once");
+
+        var equip = store.GetCharacterAssets(
+                player.AccountId,
+                player.CharacterId)
+            .Equips
+            .Single(x => Convert.ToInt64(x["ItemID"]) == uid);
+
+        Check(
+            Convert.ToInt32(equip["Damage"]) == repairedDurability,
+            "duplicate same-UID repair leaves one fully repaired item");
     }
 
     private static Player CreatePlayer(
