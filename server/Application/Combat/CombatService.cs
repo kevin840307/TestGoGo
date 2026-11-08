@@ -1125,6 +1125,39 @@ public sealed class CombatService
                 continue;
             }
 
+            if (type == "EntityHeal" &&
+                PacketLong(packet, "TargetType") == 0)
+            {
+                var targetCharacterId =
+                    PacketLong(
+                        packet,
+                        "TargetID");
+                var targetPresence =
+                    targetCharacterId > 0
+                        ? _broadcasts.FindCharacter(
+                            targetCharacterId)
+                        : null;
+
+                if (targetPresence is not null &&
+                    targetPresence.MapId ==
+                        session.CurrentMapId)
+                {
+                    if (session.CharacterId !=
+                        targetCharacterId)
+                    {
+                        _broadcasts.PublishToCharacter(
+                            targetCharacterId,
+                            packet);
+                    }
+
+                    _broadcasts.PublishToPlayerObservers(
+                        targetPresence.ConnectionId,
+                        packet,
+                        session.ConnectionId);
+                    continue;
+                }
+            }
+
             // Player-origin visuals follow the tighter player AOI. Party,
             // trade and directed responses never enter this path.
             if (IsPlayerOriginAoiPacket(
@@ -1273,7 +1306,11 @@ public sealed class CombatService
         var property = type switch
         {
             "SkillCast" => "CasterID",
+            "SpawnEntity" => "EntityID",
+            "DespawnEntity" => "EntityID",
             "SyncState" => "EntityID",
+            "EntityDeath" => "EntityID",
+            "EntityHeal" => "TargetID",
             "EntityDamage" => "AttackerID",
             "PlayEffect" => "EntityID",
             _ => null
@@ -1291,10 +1328,14 @@ public sealed class CombatService
         if (entityId == characterId.Value)
             return true;
 
-        // Companion combat-state entities use the recovered 4M/5M ranges.
-        // Their owner already defines visibility through PlayerSpatialAoi, so
-        // a pet/mecha attack animation must not fall back to full-map fanout.
-        return type == "SyncState" &&
+        // Companion world entities use the recovered 4M/5M ranges. Their
+        // owner already defines visibility through PlayerSpatialAoi, so
+        // spawn/despawn/state/death visuals must never fall back to full-map.
+        return type is
+                   "SpawnEntity" or
+                   "DespawnEntity" or
+                   "SyncState" or
+                   "EntityDeath" &&
                entityId >= 4_000_000 &&
                entityId < 6_000_000;
     }
@@ -4845,8 +4886,16 @@ public sealed class CombatService
             entityId <= 0)
             return;
 
+        var presence =
+            _broadcasts.FindCharacter(
+                entityId);
+        if (presence is null ||
+            presence.MapId !=
+                session.CurrentMapId)
+            return;
+
         _broadcasts.PublishToPlayerObservers(
-            session.ConnectionId,
+            presence.ConnectionId,
             new
             {
                 Type = "SyncStatus",
