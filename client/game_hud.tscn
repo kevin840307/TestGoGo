@@ -3882,9 +3882,9 @@ popup/item_0/text = "自動"
 popup/item_0/id = 0
 popup/item_1/text = "關閉"
 popup/item_1/id = 1
-popup/item_2/text = "開啟"
+popup/item_2/text = "開啟（內建圖形）"
 popup/item_2/id = 2
-tooltip_text = "自動會跟隨效能/戰鬥模式；關閉保留普通怪物原始外觀；開啟強制簡化。戰鬥目標與重要怪物仍保留完整外觀。"
+tooltip_text = "自動會跟隨效能/戰鬥模式；只要進入簡化，就使用 Godot 內建 Primitive 圖形，不再載入通用怪物素材。戰鬥目標與重要怪物仍保留完整外觀。"
 
 [node name="BtnBackToLogin" type="Button" parent="WindowsContainer/SettingsWindow" unique_id=791546295]
 layout_mode = 0
