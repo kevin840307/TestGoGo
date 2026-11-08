@@ -208,10 +208,38 @@ class AssetRepositoryTests(EditorFixture):
         path = self.paths.assets / "Monsters" / "a.png"
         path.write_bytes(b"OLD")
         repo = AssetRepository(self.paths, self.backups)
-        repo.replace("Monsters/a.png", base64.b64encode(b"NEW").decode())
+        repo.replace(
+            "Monsters/a.png",
+            base64.b64encode(b"NEW").decode(),
+            source_name="replacement.png",
+        )
         self.assertEqual(path.read_bytes(), b"NEW")
         with self.assertRaises(UnsafePathError):
-            repo.replace("../server/appsettings.json", base64.b64encode(b"BAD").decode())
+            repo.replace(
+                "../server/appsettings.json",
+                base64.b64encode(b"BAD").decode(),
+                source_name="appsettings.json",
+            )
+
+    def test_asset_replace_rejects_wrong_extension_and_missing_target(self) -> None:
+        path = self.paths.assets / "Monsters" / "a.png"
+        path.write_bytes(b"OLD")
+        repo = AssetRepository(self.paths, self.backups)
+
+        with self.assertRaises(ValueError):
+            repo.replace(
+                "Monsters/a.png",
+                base64.b64encode(b"JPEG").decode(),
+                source_name="wrong.jpg",
+            )
+        self.assertEqual(path.read_bytes(), b"OLD")
+
+        with self.assertRaises(FileNotFoundError):
+            repo.replace(
+                "Monsters/missing.png",
+                base64.b64encode(b"NEW").decode(),
+                source_name="new.png",
+            )
 
 
 class WebStructureTests(unittest.TestCase):
