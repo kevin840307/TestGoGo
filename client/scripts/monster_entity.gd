@@ -24,6 +24,7 @@ var _original_sprite_name: String = ""
 var _original_color_index: int = 0
 var _performance_simplified_visual: bool = false
 var _primitive_simplified_visual: bool = false
+var _performance_visual_protected: bool = false
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 var ui_container: Control = null
@@ -570,6 +571,7 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 	require_ctrl_to_attack = bool(extra_data.get("RequireCtrlToAttack", false))
 	entity_scale = float(extra_data.get("Scale", 1.0))
 	var is_world_boss := bool(extra_data.get("IsWorldBoss", false))
+	_performance_visual_protected = is_world_boss
 	if is_world_boss:
 		_performance_simplified_visual = false
 		_primitive_simplified_visual = false
@@ -627,6 +629,9 @@ func set_performance_simplified(enabled: bool, use_primitive: bool = false) -> v
 
 func is_performance_simplified() -> bool:
 	return _performance_simplified_visual
+
+func can_use_performance_simplification() -> bool:
+	return not _performance_visual_protected
 
 func _apply_performance_sprite() -> void:
 	if not is_instance_valid(sprite):
