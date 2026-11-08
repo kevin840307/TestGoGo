@@ -291,3 +291,30 @@ snapshot 時也不能填入 `ClientSession.GroundItems`。
 目前只有檔案、測試結構接線與程式碼檢查；尚無有實際
 steps 的 .NET/Godot CI PASS，狀態維持
 `IMPLEMENTED_UNVERIFIED`。
+
+### Windows 一鍵執行（不需改程式）
+
+`tests/run_local_verification.bat` 新增以下安全模式：
+
+```bat
+REM 只在目前分支為 feature/local-server-net8 時允許 fast-forward，不會 reset
+tests\run_local_verification.bat pull
+
+REM 先 pull，再跑 Python audits、.NET build、domain/full smoke、AES Wire、
+REM 10/50/100 load 與可用時的 Godot headless/真 NetworkManager E2E
+tests\run_local_verification.bat pull-all
+
+REM 只測世界 AOI/怪物與多人金錢、撿物、交易
+tests\run_local_verification.bat world
+tests\run_local_verification.bat concurrency
+
+REM 需另開本機測試 Server（localhost:5678，使用隔離的 DB）
+REM 真加密 WebSocket + 移動（--move-pixels 4）+ mixed combat/chat soak
+tests\run_local_verification.bat load 10,50,100 60
+tests\run_local_verification.bat load 100,500,1000 600
+```
+
+`load` 只對**已經啟動**的本機 `ws://127.0.0.1:5678/`
+發送，會產生臨時測試帳號，不可對正式 DB/Server 執行。
+結果 JSON 放在 Windows `%TEMP%`。其中實測 1000 人是需要
+自行執行並取得結果的能力，不代表已在 CI 或此環境達標。
