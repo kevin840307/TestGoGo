@@ -555,7 +555,7 @@ func should_render_combat_effects() -> bool:
 	return bool(current_performance_profile.get("combat_effects_enabled", true))
 
 
-func _stop_combat_effects_for_mass_mode() -> void:
+func _stop_nonessential_combat_effects() -> void:
 	# Called on preset changes, never per frame; do not stop combat logic.
 	if is_instance_valid(current_player) and current_player.has_method("stop_combat_visual_effects"):
 		current_player.stop_combat_visual_effects()
@@ -575,6 +575,7 @@ func set_foreground_fps_limit(value: int) -> void:
 		print("[FPS_LIMIT] cap=%d mode=%s" % [current_foreground_fps_limit, ClientPerformanceProfile.load_mode_name(current_performance_load_mode)])
 
 func set_performance_modes(load_mode: int, combat_mode: int) -> void:
+	var previously_low: bool = current_performance_load_mode == ClientPerformanceProfile.LOAD_LOW
 	current_performance_load_mode = ClientPerformanceProfile.sanitize_load_mode(load_mode)
 	current_combat_render_mode = ClientPerformanceProfile.sanitize_combat_mode(combat_mode)
 	_rebuild_performance_profile()
@@ -583,6 +584,14 @@ func set_performance_modes(load_mode: int, combat_mode: int) -> void:
 	else:
 		world_enhancement_enabled = current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY
 	_apply_performance_profile()
+	# The visual simplification signal above has already detached SpriteFrames
+	# from ordinary monsters. Drop unreferenced animation/effect cache entries
+	# on entering low-resource mode, not on every frame or FPS change.
+	if current_performance_load_mode == ClientPerformanceProfile.LOAD_LOW and not previously_low:
+		if MonsterLoader and MonsterLoader.has_method("clear_runtime_cache"):
+			MonsterLoader.clear_runtime_cache()
+		if EffectLoader and EffectLoader.has_method("clear_runtime_cache"):
+			EffectLoader.clear_runtime_cache()
 
 func set_visual_simplification_modes(player_mode: int, monster_mode: int) -> void:
 	current_simplify_players_mode = ClientPerformanceProfile.sanitize_simplify_mode(player_mode)
@@ -701,8 +710,9 @@ func _apply_performance_profile() -> void:
 	_focused_max_fps = configured_foreground_fps(current_performance_profile)
 	_refresh_focus_render_policy()
 	if not should_render_combat_effects():
-		_stop_combat_effects_for_mass_mode()
+		_stop_nonessential_combat_effects()
 	performance_profile_changed.emit(get_performance_profile())
+	_apply_low_resource_world_visual_policy()
 	if OS.is_debug_build():
 		print("[PERFORMANCE_PROFILE] mode=%s combat=%s player_simplify=%s monster_simplify=%s load=%d combat_id=%d foreground_fps=%d background_fps=%d players=%d monsters=%d effects=%d%% combat_fx_enabled=%s quality_enhanced=%s monster_aoi_base=%.0f ground_aoi_base=%.0f" % [
 			ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
@@ -1048,7 +1058,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		camera.reset_smoothing()
 		camera.force_update_scroll()
 
-	_ensure_day_night_overlay()
+	_apply_low_resource_world_visual_policy()
 	set_world_enhancement_enabled(current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY)
 
 	_report_initial_loading_progress(progress_callback, 54.0, "載入介面")
@@ -1245,6 +1255,17 @@ func _clear_visual_runtime_caches() -> void :
 		EffectLoader.clear_runtime_cache()
 	if PetLoader and PetLoader.has_method("clear_runtime_cache"):
 		PetLoader.clear_runtime_cache()
+
+func _apply_low_resource_world_visual_policy() -> void:
+	# Day/night is purely visual; the server's world clock and player actions
+	# continue unchanged. Do not instantiate its overlay in low-resource mode.
+	if not is_instance_valid(current_map_node):
+		return
+	if current_performance_load_mode == ClientPerformanceProfile.LOAD_LOW:
+		_remove_day_night_overlay()
+	else:
+		_ensure_day_night_overlay()
+
 
 func _ensure_day_night_overlay() -> void :
 	if not is_instance_valid(current_day_night_overlay):
