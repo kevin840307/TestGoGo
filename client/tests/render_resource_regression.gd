@@ -3,6 +3,7 @@ extends SceneTree
 # godot --headless --path client --script res://tests/render_resource_regression.gd
 # Checks that resource reuse does not change ground clicks or targeting.
 const GROUND_ITEM_SCRIPT = preload("res://scripts/ground_item_entity.gd")
+const DAY_NIGHT_SCRIPT = preload("res://scripts/day_night_overlay.gd")
 const MONSTER_SCENE = preload("res://monster_entity.tscn")
 var _failures: int = 0
 
@@ -37,6 +38,13 @@ func _run() -> void:
 		"first original palette color stays the same")
 	_check(is_equal_approx(float(mat2.get_shader_parameter("hue_shift")), 90.0),
 		"second original palette color stays the same")
+
+	_check(not DAY_NIGHT_SCRIPT.should_render_night_overlay(0.0),
+		"fully transparent daytime shader does not draw fullscreen pass")
+	_check(DAY_NIGHT_SCRIPT.should_render_night_overlay(0.001),
+		"first nonzero dusk light restores fullscreen overlay")
+	_check(DAY_NIGHT_SCRIPT.should_render_night_overlay(1.0),
+		"nighttime lighting remains enabled")
 
 	var monster: MonsterEntity = MONSTER_SCENE.instantiate() as MonsterEntity
 	root.add_child(monster)
