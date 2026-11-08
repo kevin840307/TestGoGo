@@ -145,7 +145,8 @@ public sealed class ServerBroadcastHub
                 x.Value.CharacterId,
                 x.Value.MapId,
                 x.Value.X,
-                x.Value.Y))
+                x.Value.Y,
+                x.Value.CharacterName))
             .ToArray();
 
     public void Unregister(Guid connectionId)
