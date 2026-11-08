@@ -221,56 +221,56 @@ public sealed class SharedMapAiTicker : BackgroundService
             var assignments = players.ToDictionary(
                 p => p.Session.ConnectionId,
                 _ => new List<int>());
+
+            // Snapshot once per map tick. Previously every target lookup and
+            // every idle monster performed a full scan of all map players:
+            // O(monsters * (players + pets)). The direct target map is O(1)
+            // and the exact nearest-owner tree is typically O(log(players +
+            // pets)) per monster. Preserve the CharacterId sort for ties.
+            var targetOwners = new Dictionary<long, PlayerContext>(
+                players.Count);
+            var ownerPoints = new List<MapAiOwnerPoint>(
+                players.Count);
+            for (var i = 0; i < players.Count; i++)
+            {
+                var player = players[i];
+                targetOwners.TryAdd(player.CharacterId, player);
+                if (player.IsAlive)
+                    ownerPoints.Add(
+                        new MapAiOwnerPoint(i, player.X, player.Y));
+                foreach (var pet in player.PetPositions)
+                    ownerPoints.Add(
+                        new MapAiOwnerPoint(i, pet.X, pet.Y));
+            }
+
+            var nearestOwner = new MapAiOwnerSpatialIndex(
+                ownerPoints);
+
             lock (map.SyncRoot)
             {
                 foreach (var monster in map.Monsters.Values)
                 {
-                    var owner = monster.HasTarget
-                        ? players.FirstOrDefault(p =>
-                            p.CharacterId == monster.TargetCharacterId)
-                        : null;
-
-                    if (owner is null && monster.HasTarget)
+                    PlayerContext? owner = null;
+                    if (monster.HasTarget)
                     {
-                        // Stale or disconnected target: let an active player
-                        // clear the target so wandering can resume.
-                        owner = players[0];
-                    }
-
-                    if (owner is null)
-                    {
-                        // Assign an idle monster once, using the nearest
-                        // player or their currently tracked pet position.
-                        // This prevents N players from each scanning/updating
-                        // all idle monsters on one map.
-                        var bestDistance = double.MaxValue;
-                        foreach (var player in players)
+                        if (!targetOwners.TryGetValue(
+                                monster.TargetCharacterId, out owner))
                         {
-                            if (!player.IsAlive && player.PetPositions.Length == 0)
-                                continue;
-                            var dx = player.X - monster.X;
-                            var dy = player.Y - monster.Y;
-                            var distance = player.IsAlive
-                                ? dx * dx + dy * dy
-                                : double.MaxValue;
-                            foreach (var pet in player.PetPositions)
-                            {
-                                var petDx = pet.X - monster.X;
-                                var petDy = pet.Y - monster.Y;
-                                distance = Math.Min(
-                                    distance, petDx * petDx + petDy * petDy);
-                            }
-
-                            if (distance < bestDistance)
-                            {
-                                bestDistance = distance;
-                                owner = player;
-                            }
+                            // Stale/disconnected target: preserve the old
+                            // deterministic fallback so combat can clear it.
+                            owner = players[0];
                         }
                     }
+                    else
+                    {
+                        var ownerIndex = nearestOwner.FindNearestOwnerIndex(
+                            monster.X, monster.Y);
+                        if (ownerIndex >= 0)
+                            owner = players[ownerIndex];
+                    }
 
-                    // When everyone is dead, keep one owner for idle
-                    // wandering and stale-target cleanup only.
+                    // When everyone is dead and has no pets, keep one driver
+                    // for idle wandering and stale-target cleanup only.
                     owner ??= players[0];
                     assignments[owner.Session.ConnectionId].Add(
                         monster.EntityId);
