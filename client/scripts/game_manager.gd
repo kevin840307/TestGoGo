@@ -410,6 +410,7 @@ var _window_has_focus: bool = true
 var _focused_max_fps: int = 0
 var _master_bus_was_muted_before_focus_loss: bool = false
 var _startup_loading_overlay_active: bool = false
+var _startup_focus_observed_frames: int = 0
 const UNFOCUSED_MAX_FPS := 30
 const STARTUP_UNFOCUSED_PROGRESS_FPS := 10
 
@@ -427,6 +428,26 @@ func set_startup_loading_overlay_active(active: bool) -> void:
 		RenderingServer.render_loop_enabled = active
 	if OS.is_debug_build():
 		_log_focus_power_save("startup_overlay_on" if active else "startup_overlay_off")
+
+
+# Some Windows launches deliver a focus-out notification while
+# window_is_focused() already reports true. Until focus-in is delivered the
+# new window is incorrectly capped at startup 10 FPS, making typing feel
+# delayed. Reconcile only during bootstrap, requiring three consistent OS
+# reads to avoid single-frame notification/query ordering races.
+func reconcile_startup_window_focus() -> void:
+	if not _startup_loading_overlay_active:
+		return
+	var observed_focus: bool = DisplayServer.window_is_focused()
+	if observed_focus == _window_has_focus:
+		_startup_focus_observed_frames = 0
+		return
+	_startup_focus_observed_frames += 1
+	if _startup_focus_observed_frames >= 3:
+		_startup_focus_observed_frames = 0
+		_set_window_focus_power_save(observed_focus)
+		if OS.is_debug_build():
+			_log_focus_power_save("startup_focus_reconciled")
 
 
 static func background_loading_display_fps(bootstrap_active: bool) -> int:
