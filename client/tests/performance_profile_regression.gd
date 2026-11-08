@@ -53,6 +53,10 @@ func _ready() -> void:
 	)
 	assert(bool(auto_profile["simplify_other_players"]))
 	assert(bool(auto_profile["simplify_noncritical_monsters"]))
+	assert(int(auto_profile["player_simplify_style"]) ==
+		ClientPerformanceProfile.SIMPLIFY_MINIMAL)
+	assert(int(auto_profile["monster_simplify_style"]) ==
+		ClientPerformanceProfile.SIMPLIFY_MINIMAL)
 
 	var forced_off := ClientPerformanceProfile.apply_visual_overrides(
 		multibox,
@@ -71,5 +75,27 @@ func _ready() -> void:
 	assert(bool(forced_on["simplify_other_players"]))
 	assert(bool(forced_on["simplify_noncritical_monsters"]))
 	assert(bool(forced_on["use_primitive_monsters"]))
+	assert(ClientPerformanceProfile.SIMPLIFY_ON ==
+		ClientPerformanceProfile.SIMPLIFY_PIXEL_A)
+	assert(int(forced_on["player_simplify_style"]) ==
+		ClientPerformanceProfile.SIMPLIFY_PIXEL_A)
 
-	print("PASS: client performance profiles preserve player-first combat priorities and visual overrides")
+	var mixed_styles := ClientPerformanceProfile.apply_visual_overrides(
+		balanced,
+		ClientPerformanceProfile.SIMPLIFY_PIXEL_B,
+		ClientPerformanceProfile.SIMPLIFY_MINIMAL
+	)
+	assert(bool(mixed_styles["simplify_other_players"]))
+	assert(bool(mixed_styles["simplify_noncritical_monsters"]))
+	assert(int(mixed_styles["player_simplify_style"]) ==
+		ClientPerformanceProfile.SIMPLIFY_PIXEL_B)
+	assert(int(mixed_styles["monster_simplify_style"]) ==
+		ClientPerformanceProfile.SIMPLIFY_MINIMAL)
+	assert(ClientPerformanceProfile.simplify_mode_name(
+		ClientPerformanceProfile.SIMPLIFY_PIXEL_B
+	) == "pixel_b")
+	assert(ClientPerformanceProfile.simplify_mode_name(
+		ClientPerformanceProfile.SIMPLIFY_MINIMAL
+	) == "minimal")
+
+	print("PASS: client performance profiles preserve combat priorities and built-in entity styles")
