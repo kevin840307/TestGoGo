@@ -32,7 +32,11 @@ class WireLoadProbeStructureTests(unittest.TestCase):
         self.assertIn("CountDirectedAoiPeers(clients)", scenario)
         self.assertIn("PlayerSpatialAoi.EnterRadius", scenario)
         self.assertNotIn("clients.Length - 1", scenario)
-        self.assertIn("clients.Length *", scenario)
+        self.assertIn(
+            "clients.Length + CountDirectedAoiPeers(clients)",
+            scenario,
+        )
+        self.assertIn("expectedPerRound *", scenario)
         self.assertIn("movement conservation failed", scenario)
         self.assertIn("chat conservation failed", scenario)
         self.assertIn("combat death conservation failed", scenario)
