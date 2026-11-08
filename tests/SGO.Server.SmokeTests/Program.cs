@@ -5163,6 +5163,27 @@ try
         progressedPetLevel > initialOwnerLevel,
         "pet progression fixture is above owner level and cannot be reused as summon-capacity fixture");
 
+    using (var summonOverleveledPet = Json(
+        JsonSerializer.Serialize(new
+        {
+            Type = "PetAction",
+            Action = "Summon",
+            PetUID = petUid
+        })))
+    {
+        var responses = router.Handle(
+            summonOverleveledPet.RootElement,
+            session);
+        Check(
+            store.GetCharacterAssets(account.Value, id).Pets
+                .Any(x =>
+                    Convert.ToInt64(x["UID"]) == petUid &&
+                    Convert.ToInt32(x["State"]) == 0) &&
+            responses.Any(x =>
+                PacketTreeContainsString(x, "寵物操作失敗")),
+            "pet above owner level cannot be summoned even with an available slot");
+    }
+
     using (var summonFirstBeforeExpansion = Json(
         JsonSerializer.Serialize(new
         {
