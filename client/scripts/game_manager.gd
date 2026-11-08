@@ -499,7 +499,11 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		)
 
 	current_player.global_position = spawn_position
-	if "target_position" in current_player:
+	if current_player.has_method("reset_map_navigation_state"):
+		# EnterWorld's MapID is authoritative. Keep player navigation, cached
+		# walkable position and loaded map in sync from the first world frame.
+		current_player.reset_map_navigation_state(target_map_id, spawn_position)
+	elif "target_position" in current_player:
 		current_player.target_position = spawn_position
 
 	_report_initial_loading_progress(progress_callback, 47.0, "初始化角色")
@@ -1123,7 +1127,9 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 				current_player.current_state = "idle"
 			current_player.velocity = Vector2.ZERO
 
-		if "data_model" in current_player and current_player.data_model:
+		if current_player.has_method("reset_map_navigation_state"):
+			current_player.reset_map_navigation_state(target_map_id, new_pos)
+		elif "data_model" in current_player and current_player.data_model:
 			current_player.data_model.map_id = target_map_id
 
 		var camera = current_player.get_node_or_null("Camera2D")
