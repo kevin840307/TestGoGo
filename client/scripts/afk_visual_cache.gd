@@ -92,13 +92,17 @@ func restore_static_map(batch_size: int = 24) -> Dictionary:
 	var restored: int = 0
 	var missing: int = 0
 	var offset: int = 0
-	var count: int = _resources.size()
+	# Capture a stable snapshot: a server-initiated map transition can replace
+	# the active map while we await render frames during restore.
+	var restore_map: Node = tracked_map()
+	var records: Array[Dictionary] = _resources.duplicate()
+	var count: int = records.size()
 	# Synchronous ResourceLoader calls are spread across idle frames; this
 	# avoids the long freeze of loading all map visuals in one tick.
 	while offset < count:
 		var end: int = mini(offset + maxi(1, batch_size), count)
 		for index in range(offset, end):
-			var record: Dictionary = _resources[index]
+			var record: Dictionary = records[index]
 			var reference: WeakRef = record["node"]
 			var node: Node = reference.get_ref() as Node
 			if not is_instance_valid(node) or node.is_queued_for_deletion():
@@ -118,7 +122,8 @@ func restore_static_map(batch_size: int = 24) -> Dictionary:
 			var tree: SceneTree = Engine.get_main_loop() as SceneTree
 			if tree != null:
 				await tree.process_frame
-	discard()
+	if tracked_map() == restore_map:
+		discard()
 	return {"restored": restored, "missing": missing}
 
 

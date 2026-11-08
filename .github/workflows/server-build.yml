@@ -20,6 +20,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_packet_log_privacy.py' -v
           python3 -m unittest discover -s tests -p 'test_client_network_contract.py' -v
           python3 -m unittest discover -s tests -p 'test_client_visual_performance_contract.py' -v
+          python3 -m unittest discover -s tests -p 'test_afk_mode_contract.py' -v
           python3 -m unittest discover -s tests -p 'test_client_aoi_order_contract.py' -v
           python3 -m unittest discover -s tests -p 'test_mouse_autorun_contract.py' -v
           python3 -m unittest discover -s tests -p 'test_ground_pickup_visibility_contract.py' -v
@@ -64,7 +65,7 @@ jobs:
           if [ -z "$GODOT_CMD" ]; then
             echo "[SKIP] Godot not installed; Client AOI behavior remains unverified on this runner."
           else
-            for script in simplified_monster_async_layout_regression.gd performance_ui_settings_regression.gd performance_visual_aoi_regression.gd mouse_autorun_regression.gd player_map_movement_regression.gd aoi_pre_spawn_move_regression.gd aoi_monster_snapshot_order_regression.gd ground_item_aoi_regression.gd multiclient_render_dedup_regression.gd; do
+            for script in afk_visual_cache_regression.gd simplified_monster_async_layout_regression.gd performance_ui_settings_regression.gd performance_visual_aoi_regression.gd mouse_autorun_regression.gd player_map_movement_regression.gd aoi_pre_spawn_move_regression.gd aoi_monster_snapshot_order_regression.gd ground_item_aoi_regression.gd multiclient_render_dedup_regression.gd; do
               "$GODOT_CMD" --headless --path client --script "res://tests/$script" 2>&1 | tee -a godot-aoi-regression.log
             done
           fi
