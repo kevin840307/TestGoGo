@@ -19,6 +19,7 @@ from sgo_editor.paths import ProjectPaths
 from sgo_editor.quest_repo import QuestRepository
 from sgo_editor.skill_repo import SkillRepository
 from sgo_editor.storage import BackupManager, UnsafePathError, safe_child
+from editor import EditorHandler
 
 
 class EditorFixture(unittest.TestCase):
@@ -500,6 +501,43 @@ class WebStructureTests(unittest.TestCase):
         self.assertIn("sourceName:file.name", tools)
         self.assertIn('body.get("sourceName"', editor)
         self.assertIn("_canonical_extension", asset_repo)
+
+    def test_local_host_header_parser_accepts_only_loopback_hosts(self) -> None:
+        accepted = {
+            "": "",
+            "127.0.0.1": "127.0.0.1",
+            "127.0.0.1:8765": "127.0.0.1",
+            "localhost": "localhost",
+            "localhost:8765": "localhost",
+            "::1": "::1",
+            "[::1]": "::1",
+            "[::1]:8765": "::1",
+        }
+        for raw, expected in accepted.items():
+            with self.subTest(raw=raw):
+                self.assertEqual(EditorHandler._parse_host_header(raw), expected)
+
+        rejected = (
+            "evil.example",
+            "evil.example:8765",
+            "[2001:db8::1]:8765",
+            "[::evil]:8765",
+            "[::1]evil",
+            "[::1]:abc",
+            "2001:db8::1",
+            "[",
+        )
+        for raw in rejected:
+            with self.subTest(raw=raw):
+                self.assertIsNone(EditorHandler._parse_host_header(raw))
+
+        handler = object.__new__(EditorHandler)
+        for raw in accepted:
+            handler.headers = {"Host": raw}
+            self.assertTrue(handler._local_host_only(), raw)
+        for raw in rejected:
+            handler.headers = {"Host": raw}
+            self.assertFalse(handler._local_host_only(), raw)
 
     def test_editor_defaults_to_localhost_only(self) -> None:
         source = (GAME_EDITOR_ROOT / "editor.py").read_text(encoding="utf-8")
