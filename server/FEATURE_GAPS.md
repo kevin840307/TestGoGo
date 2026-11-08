@@ -33,7 +33,7 @@
 | --- | --- | --- | --- | --- |
 | P0-01 | TEST_GAP | **實際 Godot ↔ .NET 封包 E2E**：登入、角色建立／選取、WorldReady、切圖、怪物同步、技能、掉寶、拾取、交易、寵物／機甲、商城點數、登出 | `client/scripts/network_manager.gd`、`server/Application/PacketRouter.cs` | 真實 Client 逐項操作，兩端封包及資料一致；失敗案例有回應，不會無限等待 |
 | P0-02 | TEST_GAP | **多人同步與並行安全**：2／10 人同地圖、相同怪物同時擊殺、交易兩端同時確認、同一掉寶同時拾取、切圖與斷線 | `SharedMapAiTicker`、`CombatService`、`TradeService`、`PacketRouter` | 單怪更新一次、獎勵與物品不重複、角色位置不倒退，重連後狀態一致 |
-| P0-03 | TEST_GAP | **CI 真正執行**：GitHub Actions 過去多筆 Job 在取得 Runner 前失敗，尚無 Build／Smoke／Wire 全綠證據 | `.github/workflows/server-build.yml`、`tests/run_protocol_checks.ps1` | 取得有步驟的 CI run：Python 契約、.NET build、遊戲 Smoke、AES/WebSocket smoke 全 PASS |
+| P0-03 | TEST_GAP | **CI 真正執行**：2026-11-08 本輪最新 push run `42431097198` 仍在取得 Runner 前失敗，job `steps=null`；因此尚無 Build／Smoke／Wire 全綠證據，不能把 workflow failure 當成程式測試失敗 | `.github/workflows/server-build.yml`、`tests/run_protocol_checks.ps1` | 取得有實際 steps 的 CI run：Python 契約、.NET build、遊戲 Smoke、AES/WebSocket smoke 全 PASS |
 | P0-04 | TEST_GAP | **完整欄位契約**：已補 Server → Client 巢狀 anonymous object 解析、`DriveMechaResponse` 明確 ACK 契約，以及 Godot `network_manager.gd` client ownership 回歸測試；仍缺非固定 Dictionary、動態組裝、全部欄位型別與錯誤分支 | `tests/packet_*_audit.py`、`tests/test_client_network_contract.py`、`server/Protocol/PacketSchemaValidator.cs` | 報告列出每個實際用到的 Type／Action、必要／選填欄位、型別、成功與失敗回應；無未分類路由 |
 
 ## P1 — 已知部分實作功能
