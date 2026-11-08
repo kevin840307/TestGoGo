@@ -175,13 +175,13 @@ func _queue_cached_monster_spawn(entity_id: int) -> void :
 		return
 	_deferred_monster_spawns.erase(entity_id)
 	_queued_spawn_ids[entity_id] = true
-	_enqueue_spawn_by_priority((cached as Dictionary).duplicate(true))
+	_enqueue_spawn_by_priority((cached as Dictionary).duplicate())
 	_last_spawn_enqueue_usec = Time.get_ticks_usec()
 
 func _unload_monster_for_aoi(entity_id: int, monster: Node2D) -> void :
 	var cached = _monster_spawn_templates.get(entity_id, null)
 	if cached is Dictionary:
-		var updated: Dictionary = (cached as Dictionary).duplicate(true)
+		var updated: Dictionary = (cached as Dictionary).duplicate()
 		updated["LocX"] = monster.global_position.x
 		updated["LocY"] = monster.global_position.y
 		_monster_spawn_templates[entity_id] = updated
@@ -231,7 +231,14 @@ func _on_entity_spawned(data: Dictionary) -> void :
 	if get_active_entity(entity_id) or _queued_spawn_ids.has(entity_id):
 		return
 	_queued_spawn_ids[entity_id] = true
-	var queued_data: Dictionary = data.duplicate(true)
+	var queued_data: Dictionary
+	if entity_type == 1:
+		# The authoritative packet was deep-copied once into the monster template.
+		# Only the top-level LocX/LocY fields can change before spawning; reuse
+		# its read-only ExtraData instead of deep-cloning it a second time.
+		queued_data = (_monster_spawn_templates[entity_id] as Dictionary).duplicate()
+	else:
+		queued_data = data.duplicate(true)
 	# Prioritize interactables and nearest monsters instead of FIFO. During
 	# teleport/login snapshots the closest threats should be the first Nodes
 	# instantiated, while far monsters stay deferred by AOI.
