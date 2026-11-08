@@ -293,7 +293,10 @@ public static class PacketSchemaValidator
                 new("Count", FieldType.Integer)
             ],
             ["MallAction:CreatePayPalDonation"] =
-                [new("Amount", FieldType.Integer)],
+            [
+                new("Amount", FieldType.Integer),
+                new("RequestID", FieldType.Text, false)
+            ],
             ["MallAction:QueryLegacyPoints"] =
             [
                 new("LoginName", FieldType.NonEmptyText),
@@ -303,7 +306,8 @@ public static class PacketSchemaValidator
             [
                 new("LoginName", FieldType.NonEmptyText),
                 new("Password", FieldType.Text),
-                new("Amount", FieldType.Integer)
+                new("Amount", FieldType.Integer),
+                new("RequestID", FieldType.Text, false)
             ],
             ["MallAction:ClaimDonationGift"] =
                 [new("RewardID", FieldType.Integer)]
