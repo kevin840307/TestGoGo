@@ -36,7 +36,7 @@ static func find_texture_path(raw_name: String) -> String:
         return ""
     for root in MEDIA_ROOTS:
         for extension in IMAGE_EXTENSIONS:
-            var candidate := root + stem + "." + extension
+            var candidate: String = str(root) + stem + "." + str(extension)
             if ResourceLoader.exists(candidate):
                 return candidate
     return ""
@@ -48,7 +48,7 @@ static func find_audio_path(raw_name: String) -> String:
         return ""
     for root in MEDIA_ROOTS:
         for extension in AUDIO_EXTENSIONS:
-            var candidate := root + stem + "." + extension
+            var candidate: String = str(root) + stem + "." + str(extension)
             if ResourceLoader.exists(candidate):
                 return candidate
 
