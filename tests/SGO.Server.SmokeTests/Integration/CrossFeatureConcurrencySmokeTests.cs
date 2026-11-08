@@ -37,14 +37,9 @@ internal static class CrossFeatureConcurrencySmokeTests
         var third = CreatePlayer(store, "sender_c");
 
         foreach (var player in new[] { first, second, third })
-        {
-            Check(
-                store.AdjustMoney(
-                    player.AccountId,
-                    player.CharacterId,
-                    100) is not null,
-                "seed cross-feature concurrency money");
-        }
+            ExactMoneyFixture.Set(
+                store, player.AccountId, player.CharacterId, 100,
+                "trade plus direct-transfer race");
 
         using var ready = new CountdownEvent(2);
         using var start = new ManualResetEventSlim(false);
@@ -123,14 +118,9 @@ internal static class CrossFeatureConcurrencySmokeTests
         var seller = CreatePlayer(store, "shop_seller");
 
         foreach (var player in new[] { buyer, tradePeer, seller })
-        {
-            Check(
-                store.AdjustMoney(
-                    player.AccountId,
-                    player.CharacterId,
-                    100) is not null,
-                "seed trade plus player-shop concurrency money");
-        }
+            ExactMoneyFixture.Set(
+                store, player.AccountId, player.CharacterId, 100,
+                "trade plus player-shop purchase race");
 
         const int itemIndex = 999_950;
         var uid = store.AddInventoryItem(
@@ -248,16 +238,12 @@ internal static class CrossFeatureConcurrencySmokeTests
         var crafter = CreatePlayer(store, "craft_a");
         var sender = CreatePlayer(store, "craft_b");
 
-        Check(
-            store.AdjustMoney(
-                crafter.AccountId,
-                crafter.CharacterId,
-                100) is not null &&
-            store.AdjustMoney(
-                sender.AccountId,
-                sender.CharacterId,
-                100) is not null,
-            "seed craft plus transfer concurrency money");
+        ExactMoneyFixture.Set(
+            store, crafter.AccountId, crafter.CharacterId, 100,
+            "craft plus transfer: crafter");
+        ExactMoneyFixture.Set(
+            store, sender.AccountId, sender.CharacterId, 100,
+            "craft plus transfer: sender");
 
         const int ingredientItem = 999_960;
         const int resultItem = 999_961;
