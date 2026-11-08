@@ -33,7 +33,7 @@ internal static class MapReadySnapshotSmokeTests
 
             var packets = router.Handle(ready.RootElement, session);
             var serialized = packets
-                .Select(JsonSerializer.Serialize)
+                .Select(packet => JsonSerializer.Serialize(packet))
                 .ToArray();
 
             Check(serialized.Any(x =>
