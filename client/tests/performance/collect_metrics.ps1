@@ -160,97 +160,7 @@ $multiLabel="multibox-on"
 if ($Scenario -eq "multi") {
  $multiLabel=Read-Host "Label for ALL clients [balanced-on/low-on/multibox-on/balanced-off; default multibox-on]"
  if ([string]::IsNullOrWhiteSpace($multiLabel)) { $multiLabel="multibox-on" }
- if ($multiLabel -notmatch '^[a-zA-Z0-9_-]{1,40}
-foreach ($stage in $stages) {
- Write-Host ""
- Write-Host ("STAGE: "+$stage)
- if ($stage -eq "balanced-on") { Write-Host "Choose Balanced / PvP / monster simplify ON." }
- elseif ($stage -eq "low-on") { Write-Host "Choose Low / PvP / monster simplify ON." }
- elseif ($stage -eq "multibox-on") { Write-Host "Choose Multibox / PvP / monster simplify ON." }
- elseif ($stage -eq "balanced-off") { Write-Host "Choose Balanced / PvP / monster simplify OFF." }
- else { Write-Host "Set ALL clients to same map and mode; test them in the same condition." }
- $ready=Read-Host "Enter after settings and map are ready; type Q to finish"
- if ($ready -match '^(?i:q|quit)$') { break }
- Write-Host "Return focus to Godot NOW. The BAT/CMD window is foreground after pressing Enter."
- Write-Host "Warmup: $WarmupSeconds sec; use it to refocus your game window."
- if ($WarmupSeconds -gt 0) { Start-Sleep -Seconds $WarmupSeconds }
- # Consume historic login/warmup/performance-profile lines without
- # attributing them to the next 60-second measurement stage.
- foreach ($target in $targets) { ReadGodot $target $stage $true }
- $previous.Clear()
- [void]$completedStages.Add($stage)
- $end=[DateTime]::UtcNow.AddSeconds($DurationSeconds)
- $idx=0
- Write-Host "Recording $DurationSeconds sec. No map/mode/focus changes during the stage."
- while ([DateTime]::UtcNow -lt $end) {
-  $idx++
-  $gpu=GpuSnapshot
-  $now=[DateTime]::UtcNow
-  foreach ($target in $targets) {
-   $pidValue=[int]$target.pid
-   try { $proc=Get-Process -Id $pidValue -ErrorAction Stop } catch { continue }
-   $key=[string]$pidValue
-   $cpuPct=$null
-   if ($previous.ContainsKey($key)) {
-    $prev=$previous[$key]
-    $delta=($now-$prev.utc).TotalSeconds
-    if ($delta -gt 0.05) {
-     $cpuPct=[Math]::Min(100.0,[Math]::Max(0.0,([double]$proc.CPU-$prev.cpu))/$delta*100.0/$cores)
-    }
-   }
-   $previous[$key]=@{utc=$now;cpu=[double]$proc.CPU}
-   $gpu3d=$null;$gpuAll=$null;$vram=$null
-   if ($script:gpu3dCounterAvailable) {
-    if ($gpu.threeD.ContainsKey($key)) { $gpu3d=[Math]::Min(100.0,[double]$gpu.threeD[$key]) }
-    if ($gpu.all.ContainsKey($key)) { $gpuAll=[Math]::Min(100.0,[double]$gpu.all[$key]) }
-   }
-   if ($script:gpuMemoryCounterAvailable -and $gpu.dedicated.ContainsKey($key)) {
-    $vram=[double]$gpu.dedicated[$key]
-   }
-   $sample=[pscustomobject][ordered]@{
-    timestamp_utc=$now.ToString("o");run_id=$runId;scenario=$Scenario;stage=$stage
-    target_count=$count;sample_index=$idx;pid=$pidValue
-    cpu_percent=Fmt $cpuPct
-    ram_working_mb=Fmt ([double]$proc.WorkingSet64/1MB)
-    ram_private_mb=Fmt ([double]$proc.PrivateMemorySize64/1MB)
-    gpu_3d_percent=Fmt $gpu3d
-    gpu_engine_percent=Fmt $gpuAll
-    gpu_vram_dedicated_mb=Fmt $vram
-   }
-   CsvRow $hardwareFile $sample
-   ReadGodot $target $stage
-  }
-  if ($idx % 10 -eq 0) {
-   Write-Host ("  "+$stage+" samples="+$idx+" remaining_s="+[Math]::Max(0,[Math]::Ceiling(($end-[DateTime]::UtcNow).TotalSeconds)))
-  }
-  Start-Sleep -Milliseconds 1000
- }
-}
-if (-not (Test-Path -LiteralPath $hardwareFile)) {
- throw "No samples were captured. Ensure the Godot game process stays running and retry."
-}
-$metadata=[ordered]@{
- schema_version=1;run_id=$runId;scenario=$Scenario;target_count=$count
- started_utc=$startedUtc.ToString("o");finished_utc=[DateTime]::UtcNow.ToString("o")
- duration_seconds_per_stage=$DurationSeconds;warmup_seconds_per_stage=$WarmupSeconds
- logical_processor_count=$cores
- gpu_engine_counter_available=$script:gpu3dCounterAvailable
- gpu_memory_counter_available=$script:gpuMemoryCounterAvailable
- stages=@($completedStages.ToArray());clients=@($targets.ToArray())
- note="Stage labels are chosen by user; validate actual mode against Godot profile events. Attach mode has no Godot logs."
-}
-$metadata | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath $metaFile -Encoding UTF8
-Write-Host ""
-Write-Host "Complete. CSV+meta in: $runDir"
-Write-Host "Menu 9 generates the comparison HTML."
-if ($launched.Count -gt 0) {
- $answer=Read-Host "Close ONLY the $($launched.Count) clients started by this tool? [y/N]"
- if ($answer -match '^(?i:y|yes)$') {
-  foreach ($id in $launched) { Stop-Process -Id $id -ErrorAction SilentlyContinue }
- }
-}
-exit 0
-) { throw "Mode label may use only letters, numbers, - or _." }
+ if ($multiLabel -notmatch '^[a-zA-Z0-9_-]{1,40}$') { throw "Mode label may use only letters, numbers, - or _." }
 }
 $stages=if ($Scenario -eq "single") { @("balanced-on","low-on","multibox-on","balanced-off") }
 else { @("multi-$count-$multiLabel") }
@@ -273,6 +183,7 @@ foreach ($stage in $stages) {
 $previous.Clear()
  [void]$completedStages.Add($stage)
  $end=[DateTime]::UtcNow.AddSeconds($DurationSeconds)
+ $nextSampleUtc=[DateTime]::UtcNow
  $idx=0
  Write-Host "Recording $DurationSeconds sec. No map/mode/focus changes during the stage."
  while ([DateTime]::UtcNow -lt $end) {
@@ -316,7 +227,10 @@ $previous.Clear()
   if ($idx % 10 -eq 0) {
    Write-Host ("  "+$stage+" samples="+$idx+" remaining_s="+[Math]::Max(0,[Math]::Ceiling(($end-[DateTime]::UtcNow).TotalSeconds)))
   }
-  Start-Sleep -Milliseconds 1000
+  $nextSampleUtc=$nextSampleUtc.AddSeconds(1)
+  $sleepMs=[Math]::Floor(($nextSampleUtc-[DateTime]::UtcNow).TotalMilliseconds)
+  if ($sleepMs -gt 0) { Start-Sleep -Milliseconds $sleepMs }
+  else { $nextSampleUtc=[DateTime]::UtcNow }
  }
 }
 if (-not (Test-Path -LiteralPath $hardwareFile)) {
