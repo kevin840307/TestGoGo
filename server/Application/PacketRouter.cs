@@ -1234,6 +1234,82 @@ public sealed class PacketRouter
                         itemIndex);
                 }
 
+                var fixedRewardBox =
+                    FixedRewardBoxCatalog.Find(itemIndex);
+
+                if (fixedRewardBox is not null)
+                {
+                    var reward =
+                        _current.FindItem(
+                            fixedRewardBox.RewardItemId);
+
+                    if (reward is null)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message =
+                                    "寶箱獎勵資料不存在，未消耗寶箱"
+                            }
+                        ];
+                    }
+
+                    var opened =
+                        _store.OpenFixedRewardBox(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            fixedRewardBox.BoxItemId,
+                            fixedRewardBox.RewardItemId,
+                            fixedRewardBox.RewardKind,
+                            rewardPart: reward.EquipSlot,
+                            rewardDamage: reward.Durability);
+
+                    if (!opened.Success)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = opened.Message
+                            }
+                        ];
+                    }
+
+                    var assets =
+                        _store.GetCharacterAssets(
+                            accountId,
+                            state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        new
+                        {
+                            Type = "EquipSync",
+                            Equips = assets.Equips,
+                            MaxSize = assets.EquipMaxSize
+                        },
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message =
+                                $"開箱獲得：{fixedRewardBox.RewardName}"
+                        }
+                    ];
+                }
+
                 if (itemIndex == 2301)
                 {
                     var expanded =
