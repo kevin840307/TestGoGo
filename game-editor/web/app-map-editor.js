@@ -129,11 +129,12 @@ async function loadMaps() {
 
 async function loadMapRows() {
   if (!state.mapId) return;
-  const [rows, meta] = await Promise.all([
-    api(`/api/maps/${state.mapId}/${state.mapTab}`),
+  const [payload, meta] = await Promise.all([
+    api(`/api/maps/${state.mapId}/${state.mapTab}?envelope=1`),
     api(`/api/maps/${state.mapId}/editor-meta`),
   ]);
-  state.mapRows = rows;
+  state.mapRows = Array.isArray(payload) ? payload : (payload.items || []);
+  state.mapRevision = Array.isArray(payload) ? null : (payload.revision || null);
   state.mapMeta = meta;
   state.mapBatchArmed = false;
   state.mapClipboard = [];
@@ -981,10 +982,12 @@ async function saveMap() {
   try {
     const report = await validateMapBeforeSave();
     if (!report) return;
-    state.mapRows = await api(`/api/maps/${state.mapId}/${state.mapTab}`, {
+    const payload = await api(`/api/maps/${state.mapId}/${state.mapTab}`, {
       method:'PUT',
-      body:state.mapRows,
+      body:{items:state.mapRows, expectedRevision:state.mapRevision},
     });
+    state.mapRows = Array.isArray(payload) ? payload : (payload.items || []);
+    state.mapRevision = Array.isArray(payload) ? null : (payload.revision || null);
     resetMapHistory();
     toast('地圖資料已儲存');
     await loadMaps();
