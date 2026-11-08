@@ -55,6 +55,7 @@ for color in (
 require(player, "func _play_death_effect() -> void:", "simplified player must override death visuals")
 require(player, "death_effect.visible = false", "simplified death must hide original death SpriteFrames")
 require(player, "doll_engine.visible = false", "simplified player must hide layered paper doll")
+require(player, "doll_engine.clear_dolls()", "switching to simplified player must release existing paper-doll layers")
 require(player, "func play_mecha_transform() -> void:", "simplified player must skip full mecha transition")
 
 for needle in (
