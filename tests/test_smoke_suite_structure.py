@@ -84,6 +84,16 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("2250", source)
         self.assertIn("RecoveredBoxSmokeTests.Run(", main)
 
+    def test_shared_map_ai_suite_covers_ten_player_scheduler_arbitration(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = SMOKE / "Integration" / "SharedMapAiConcurrencySmokeTests.cs"
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("ten players on one map still produce exactly one shared map tick", source)
+        self.assertIn("nearest-player arbitration assigns synthetic monster", source)
+        self.assertIn("second shared pass advances each monster once", source)
+        self.assertIn("SharedMapAiConcurrencySmokeTests.Run(", main)
+
     def test_monster_concurrency_suite_covers_shared_kill_race(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = SMOKE / "Integration" / "MonsterConcurrencySmokeTests.cs"
