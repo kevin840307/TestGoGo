@@ -58,7 +58,7 @@ class HealthRepositoryTests(unittest.TestCase):
         )
 
         enemy_payload = bytearray(struct.pack("<i", 3))
-        for enemy_id, x, y in ((1, 24, 24), (99, 40, 40), (1, 24, 24)):
+        for enemy_id, x, y in ((1, 40, 40), (99, 56, 56), (1, 40, 40)):
             enemy_payload += struct.pack("<i", 0)
             enemy_payload += str(enemy_id).encode("ascii") + b"\x00"
             enemy_payload += struct.pack("<ii", x, y)
@@ -68,7 +68,7 @@ class HealthRepositoryTests(unittest.TestCase):
         npc_name = "NPC".encode("cp950")
         npc_payload = bytearray(struct.pack("<i", 2))
         npc_payload += struct.pack("<iiiB", 1, 8, 8, 0) + b"NpcOk.txt\x00" + npc_name + b"\x00"
-        npc_payload += struct.pack("<iiiB", 1, 56, 56, 0) + b"Missing.txt\x00" + npc_name + b"\x00"
+        npc_payload += struct.pack("<iiiB", 1, 24, 24, 0) + b"Missing.txt\x00" + npc_name + b"\x00"
         (dat / "Map" / "Map13" / "NPC.dat").write_bytes(npc_payload)
 
         self.paths = ProjectPaths.resolve(self.root)
