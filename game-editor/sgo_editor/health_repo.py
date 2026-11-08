@@ -103,6 +103,13 @@ class HealthRepository:
 
             spawn_count += len(enemy_rows) + len(npc_rows)
             blocking = self.maps._read_blocking(map_id)
+            blocking_error = self.maps._blocking_errors.get(map_id, "")
+            if blocking_error:
+                self._add_issue(
+                    issues, "error", "blocking_invalid",
+                    f"Map{map_id:02d} Blocking.dat 無效", blocking_error,
+                    target={"view": "maps", "mapId": map_id, "tab": "enemies"},
+                )
 
             enemy_dupes: dict[tuple[int, int, int], list[int]] = defaultdict(list)
             for index, row in enumerate(enemy_rows):
