@@ -212,6 +212,54 @@ test('safe map view preferences persist across reload without editor payload', a
   await expect(page.locator('#map-snap-walkable')).not.toBeChecked();
 });
 
+test('stale second browser tab cannot overwrite newer map data', async ({ context }) => {
+  const pageA = await context.newPage();
+  const pageB = await context.newPage();
+  await pageA.goto(baseUrl);
+  await pageB.goto(baseUrl);
+
+  const load = page => page.evaluate(async () => {
+    const response = await fetch('/api/maps/13/enemies?envelope=1');
+    return response.json();
+  });
+  const [a, b] = await Promise.all([load(pageA), load(pageB)]);
+  expect(a.revision).toBeTruthy();
+  expect(b.revision).toBe(a.revision);
+
+  const nextX = 64 + a.items.length * 16;
+  const next = [...a.items, {index:-1, enemyId:1, x:nextX, y:64, sourceFlags:0}];
+
+  const saveA = await pageA.evaluate(async ({items, revision}) => {
+    const response = await fetch('/api/maps/13/enemies', {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({items, expectedRevision:revision}),
+    });
+    return {status:response.status, body:await response.json()};
+  }, {items:next, revision:a.revision});
+  expect(saveA.status).toBe(200);
+  expect(saveA.body.revision).not.toBe(a.revision);
+
+  const saveB = await pageB.evaluate(async ({items, revision}) => {
+    const response = await fetch('/api/maps/13/enemies', {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({items, expectedRevision:revision}),
+    });
+    return {status:response.status, body:await response.json()};
+  }, {items:b.items, revision:b.revision});
+  expect(saveB.status).toBe(400);
+  expect(saveB.body.error).toContain('其他 Editor 分頁或程序修改');
+
+  const after = await load(pageA);
+  expect(after.revision).toBe(saveA.body.revision);
+  expect(after.items.length).toBe(next.length);
+  expect(after.items.some(item => item.x === nextX && item.y === 64)).toBe(true);
+
+  await pageA.close();
+  await pageB.close();
+});
+
 test('first-run help can be dismissed and remembered', async ({ page }) => {
   await page.goto(baseUrl);
   await expect(page.locator('#help-modal')).toBeVisible();
