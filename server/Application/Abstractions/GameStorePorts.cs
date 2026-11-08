@@ -192,6 +192,11 @@ public sealed record ActiveTimedEffect(
     long StartedUtcMs,
     int DurationSeconds);
 
+public sealed record TimedEffectBundleActivationResult(
+    bool Success,
+    string Message,
+    long ExpiresUtcMs);
+
 public interface ITimedEffectStore
 {
     TimedEffectActivationResult ActivateTimedEffectFromItem(
@@ -201,6 +206,17 @@ public interface ITimedEffectStore
         int itemIndex,
         string effectKey,
         int effectValue,
+        int durationSeconds,
+        long nowUtcMs,
+        int sourceType = 0,
+        int sourceValue = 0);
+
+    TimedEffectBundleActivationResult ActivateTimedEffectsFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        IReadOnlyDictionary<string, int> effects,
         int durationSeconds,
         long nowUtcMs,
         int sourceType = 0,
