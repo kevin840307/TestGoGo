@@ -25,6 +25,7 @@ public static class GameFeatureServiceCollectionExtensions
         IConfiguration configuration)
     {
         services.AddSingleton<ServerDiagnostics>();
+        services.AddHostedService<ServerResourceMonitor>();
         services.AddSingleton<WorldRuntimeService>();
         services.AddSingleton<SharedMapAiTicker>();
         services.AddHostedService(sp => sp.GetRequiredService<SharedMapAiTicker>());
