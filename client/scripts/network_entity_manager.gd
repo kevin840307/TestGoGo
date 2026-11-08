@@ -11,6 +11,8 @@ const DEBUG_MONSTER_NETWORK_LOGS: bool = false
 const MONSTER_AOI_ENTER_RADIUS: float = 1800.0
 const MONSTER_AOI_EXIT_RADIUS: float = 2200.0
 const MONSTER_AOI_UPDATE_INTERVAL: float = 0.20
+# Keep server-confirmed combat monsters present even across AOI boundaries.
+const MONSTER_COMBAT_REVEAL_MSEC: int = 12000
 
 var active_entities: Dictionary = {}
 var _last_skill_casts: Dictionary = {}
@@ -32,6 +34,7 @@ var _initial_spawn_boost: bool = false
 var _monster_spawn_templates: Dictionary = {}
 var _deferred_monster_spawns: Dictionary = {}
 var _monster_aoi_elapsed: float = 0.0
+var _combat_reveal_until_msec: Dictionary = {}
 
 func get_active_entity(entity_id: int) -> Node2D:
 	var entity = active_entities.get(entity_id)
@@ -60,6 +63,7 @@ func clear_map_entities() -> Dictionary:
 	_runtime_monster_ids.clear()
 	_monster_spawn_templates.clear()
 	_deferred_monster_spawns.clear()
+	_combat_reveal_until_msec.clear()
 	_monster_aoi_elapsed = 0.0
 	return {"total": cleared_total, "by_type": cleared_by_type}
 
@@ -119,6 +123,45 @@ func _is_monster_inside_aoi(data: Dictionary, radius: float) -> bool:
 		return true
 	return (player_pos as Vector2).distance_squared_to(_monster_packet_position(data)) <= radius * radius
 
+
+func _is_combat_monster_revealed(entity_id: int) -> bool:
+	var expiry: int = int(_combat_reveal_until_msec.get(entity_id, 0))
+	if expiry <= 0:
+		return false
+	if Time.get_ticks_msec() < expiry:
+		return true
+	_combat_reveal_until_msec.erase(entity_id)
+	return false
+
+
+func _can_spawn_monster(data: Dictionary, radius: float) -> bool:
+	return _is_combat_monster_revealed(int(data.get("EntityID", 0))) or _is_monster_inside_aoi(data, radius)
+
+
+func _reveal_combat_monster(entity_id: int, reason: String) -> void:
+	# Never invent monsters: only restore a server-known SpawnEntity on
+	# the current map, preserving its appearance and latest coordinates.
+	if entity_id <= 0 or not _monster_spawn_templates.has(entity_id):
+		return
+	_combat_reveal_until_msec[entity_id] = Time.get_ticks_msec() + MONSTER_COMBAT_REVEAL_MSEC
+	if get_active_entity(entity_id):
+		return
+	if not _queued_spawn_ids.has(entity_id):
+		_deferred_monster_spawns[entity_id] = _monster_spawn_templates[entity_id]
+		_queue_cached_monster_spawn(entity_id)
+	else:
+		# A monster that is attacking must not wait behind far-away monsters.
+		for index: int in range(_spawn_queue.size()):
+			if int(_spawn_queue[index].get("EntityID", 0)) == entity_id:
+				var queued_data: Dictionary = _spawn_queue[index]
+				_spawn_queue.remove_at(index)
+				_enqueue_spawn_by_priority(queued_data)
+				break
+	if OS.is_debug_build():
+		print("[MONSTER_COMBAT_REVEAL] id=%d reason=%s queued=%s" % [
+			entity_id, reason, str(_queued_spawn_ids.has(entity_id))
+		])
+
 func _defer_monster_spawn(data: Dictionary) -> void :
 	var entity_id: int = int(data.get("EntityID", 0))
 	if entity_id <= 0:
@@ -148,6 +191,8 @@ func _spawn_priority(data: Dictionary, player_pos: Variant) -> float:
 		return -250000000.0
 	if entity_type != 1:
 		return 0.0
+	if _is_combat_monster_revealed(int(data.get("EntityID", 0))):
+		return -375000000.0
 	if player_pos == null:
 		return 0.0
 	return (player_pos as Vector2).distance_squared_to(_monster_packet_position(data))
@@ -222,11 +267,15 @@ func _update_monster_aoi(delta: float) -> void :
 			continue
 		var monster := get_active_entity(entity_id)
 		if is_instance_valid(monster) and local_pos.distance_squared_to(monster.global_position) > exit_radius_sq:
-			_unload_monster_for_aoi(entity_id, monster)
+			if not _is_combat_monster_revealed(entity_id):
+				_unload_monster_for_aoi(entity_id, monster)
 	for raw_id in _deferred_monster_spawns.keys():
 		var entity_id: int = int(raw_id)
 		var cached = _deferred_monster_spawns.get(entity_id, null)
-		if cached is Dictionary and local_pos.distance_squared_to(_monster_packet_position(cached)) <= enter_radius_sq:
+		if cached is Dictionary and (
+			local_pos.distance_squared_to(_monster_packet_position(cached)) <= enter_radius_sq
+			or _is_combat_monster_revealed(entity_id)
+		):
 			_queue_cached_monster_spawn(entity_id)
 
 func _on_entity_spawned(data: Dictionary) -> void :
@@ -237,7 +286,7 @@ func _on_entity_spawned(data: Dictionary) -> void :
 	if entity_type == 1:
 		var cached: Dictionary = data.duplicate(true)
 		_monster_spawn_templates[entity_id] = cached
-		if not _is_monster_inside_aoi(cached, MONSTER_AOI_ENTER_RADIUS):
+		if not _can_spawn_monster(cached, MONSTER_AOI_ENTER_RADIUS):
 			_defer_monster_spawn(cached)
 			return
 		_deferred_monster_spawns.erase(entity_id)
@@ -285,6 +334,7 @@ func _process(delta: float) -> void :
 		_runtime_monster_ids.clear()
 		_monster_spawn_templates.clear()
 		_deferred_monster_spawns.clear()
+		_combat_reveal_until_msec.clear()
 		return
 
 	_update_monster_aoi(delta)
@@ -338,7 +388,7 @@ func _spawn_entity_now(data: Dictionary) -> void :
 	var entity_type = int(data.get("EntityType", 0))
 	if entity_type == 1:
 		_monster_spawn_templates[entity_id] = data.duplicate(true)
-		if not _is_monster_inside_aoi(data, MONSTER_AOI_EXIT_RADIUS):
+		if not _can_spawn_monster(data, MONSTER_AOI_EXIT_RADIUS):
 			_defer_monster_spawn(data)
 			return
 
@@ -484,6 +534,7 @@ func _on_entity_despawned(data: Dictionary) -> void :
 	_runtime_monster_ids.erase(entity_id)
 	_monster_spawn_templates.erase(entity_id)
 	_deferred_monster_spawns.erase(entity_id)
+	_combat_reveal_until_msec.erase(entity_id)
 	_remove_queued_spawn(entity_id)
 
 func _on_entity_moved(data: Dictionary) -> void :
@@ -534,6 +585,8 @@ func _on_entity_moved(data: Dictionary) -> void :
 				_runtime_monster_ids[entity_id] = true
 
 func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String) -> void :
+	if new_state == "attack" or new_state.begins_with("attack_"):
+		_reveal_combat_monster(entity_id, "attack_state")
 	var target_node = get_active_entity(entity_id)
 	if target_node:
 		if DEBUG_MONSTER_NETWORK_LOGS and int(_active_entity_types.get(entity_id, -1)) == 1:
@@ -599,6 +652,12 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 	var skill_id = int(data.get("SkillID", 0))
 
 	var attacker_id = int(data.get("AttackerID", 0))
+	if target_type == 1 and current_hp > 0:
+		_reveal_combat_monster(target_id, "monster_damaged")
+	var local_player_for_reveal = GameManager.current_player if GameManager else null
+	if target_type == 0 and is_instance_valid(local_player_for_reveal) and "data_model" in local_player_for_reveal:
+		if int(local_player_for_reveal.data_model.db_id) == target_id:
+			_reveal_combat_monster(attacker_id, "player_damaged")
 	if DEBUG_MONSTER_NETWORK_LOGS and int(_active_entity_types.get(attacker_id, -1)) == 1:
 		print("[MONSTER_NET_DAMAGE] attacker=", attacker_id,
 			" target=", target_id,
@@ -814,6 +873,8 @@ func _on_entity_death_received(data: Dictionary) -> void :
 
 
 func _on_skill_cast_received(caster_id: int, caster_type: int, skill_id: int, skill_level: int, target_id: int, target_x: int, target_y: int, aoe_targets: Array = []) -> void :
+	if caster_type == 1:
+		_reveal_combat_monster(caster_id, "skill_cast")
 
 	_last_skill_casts[caster_id] = {
 		"skill_id": skill_id, 
@@ -838,6 +899,10 @@ func _on_skill_cast_received(caster_id: int, caster_type: int, skill_id: int, sk
 		caster_node.execute_skill_visuals(skill_id, skill_level, target_node, aoe_targets)
 
 func _on_monster_target_changed(entity_id: int, has_target: bool) -> void :
+	if has_target:
+		_reveal_combat_monster(entity_id, "aggro")
+	else:
+		_combat_reveal_until_msec.erase(entity_id)
 	var target_node = get_active_entity(entity_id)
 	if target_node and target_node.has_method("set_target_indicator"):
 		target_node.set_target_indicator(has_target)
