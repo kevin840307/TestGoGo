@@ -36,7 +36,8 @@ public sealed record CurrentItemDefinition(
     int Durability = 0,
     int CanRepair = 1,
     int CanTrade = 1,
-    string ScriptName = "");
+    string ScriptName = "",
+    string Description = "");
 
 public sealed record CurrentSkillBookDefinition(
     int ItemId,
@@ -465,7 +466,8 @@ public sealed class CurrentClientDataCatalog
                     ReadInt(text, "durability"),
                     ReadInt(text, "can_repair", 1),
                     ReadInt(text, "can_trade", 1),
-                    ReadString(text, "script_name"));
+                    ReadString(text, "script_name"),
+                    ReadString(text, "description"));
 
                 _items[id] = item;
                 AddByName(_itemsByName, item.Name, item);
