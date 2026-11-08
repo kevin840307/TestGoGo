@@ -93,6 +93,44 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("count > maximumCount || unitPrice < 0", store)
         self.assertIn("var total = (long)unitPrice * count", store)
 
+    def test_world_aoi_snapshot_generation_prevents_ghost_ground(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        aoi = (
+            ROOT / "server" / "Application" / "Messaging" /
+            "WorldEntitySpatialAoi.cs"
+        ).read_text(encoding="utf-8-sig")
+        hub = (
+            ROOT / "server" / "Application" / "Messaging" /
+            "ServerBroadcastHub.cs"
+        ).read_text(encoding="utf-8-sig")
+        router = (
+            ROOT / "server" / "Application" / "PacketRouter.cs"
+        ).read_text(encoding="utf-8-sig")
+        race = (
+            SMOKE / "World" / "WorldEntityAoiSnapshotRaceSmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
+        stationary = (
+            SMOKE / "World" /
+            "WorldEntityAoiStationaryRefreshSmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn("entity.IndexedGeneration <= snapshotGeneration", aoi)
+        self.assertIn("CaptureEntityGeneration()", aoi)
+        self.assertIn("entry.Entity.X == entity.X", aoi)
+        self.assertIn("CaptureWorldEntityGeneration()", hub)
+        self.assertIn("_broadcasts.CaptureWorldEntityGeneration();", router)
+        self.assertIn("authoritativeIds,\n                snapshotGeneration)", router)
+        self.assertEqual(
+            main.count("WorldEntityAoiSnapshotRaceSmokeTests.Run();"), 2
+        )
+        self.assertEqual(
+            main.count("WorldEntityAoiStationaryRefreshSmokeTests.Run();"), 2
+        )
+        self.assertIn("StaleSnapshotCannotPurgeLaterGroundDrop", race)
+        self.assertIn("BroadcastHubPreservesLateDropDuringWorldReadyPrune", race)
+        self.assertIn("late observer receives the newest", stationary)
+        self.assertIn("same-cell coordinate movement", stationary)
+
     def test_dynamic_action_schema_runtime_covers_every_action_rule(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = (
