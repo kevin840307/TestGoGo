@@ -278,7 +278,7 @@ internal static class ConcurrencySmokeTests
             tradeItemIndex);
 
         var firstPackets = firstReg.Queue
-            .Select(JsonSerializer.Serialize)
+            .Select(x => JsonSerializer.Serialize(x))
             .ToArray();
         var secondPackets = secondReg.Queue
             .Select(JsonSerializer.Serialize)
