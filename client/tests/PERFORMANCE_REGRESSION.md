@@ -24,9 +24,14 @@ Manual acceptance: launch in foreground and ensure the progress bar and
 "正在準備遊戲資源…" appear before prewarm; while recipes are building,
 the bar should advance in small increments and the stage label update.
 After 100% the account/password form should appear as before. Repeat on
-cold start, in Debug and exported builds. When the app is unfocused,
-the **existing background rendering-disabled policy** still prevents
-visible UI redraw until focus returns; no focus policy was modified here.
+cold start, in Debug and exported builds. If Windows considers a newly launched window unfocused, the initial
+loading bar is temporarily rendered at **10 FPS** during bootstrap, otherwise
+the old background rendering shutdown would leave it black until focus
+returned. After the existing login fade finishes (without blocking input),
+the normal **30 FPS, render-loop-disabled, muted** background policy resumes.
+This narrow exception applies only to initial startup, not world/map loads
+or ordinary unfocused gameplay. Log context includes
+`startup_overlay=true/false` to distinguish these phases.
 
 
 ## Foreground/background performance diagnostics (focus-aware)
@@ -37,7 +42,8 @@ audio bus, and trims selected transient caches. On refocus it restores the
 previous FPS setting, rendering, and the previous mute state. This change adds
 **debug-only telemetry**, not new game/application throttling.
 
-- `[FOCUS_POWER_SAVE]`: emitted once at startup and at each focus transition.
+- `[FOCUS_POWER_SAVE]`: emitted at startup, focus transitions and when
+  the initial loading-overlay exception begins/ends.
   `focus_query_disagrees=true` means the synchronous
   `DisplayServer.window_is_focused()` query disagreed with the delivered
   focus event at that instant. This can be an OS notification/query ordering
