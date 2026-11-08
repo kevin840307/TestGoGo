@@ -298,7 +298,8 @@ internal static class CosmeticTransformationSmokeTests
 
             Check(
                 packets.Any(x =>
-                    JsonSerializer.Serialize(x).Contains(
+                    PacketTreeContainsString(
+                        x,
                         "不適用於目前角色種族")) &&
                 store.GetCharacterAssets(
                         accountId,
