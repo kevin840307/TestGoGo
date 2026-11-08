@@ -3953,10 +3953,18 @@ public sealed class PacketRouter
                 var spawnPacket =
                     BuildGroundItemSpawnPacket(ground);
 
-                _broadcasts.PublishToMap(
-                    state.CurrentMapId,
-                    spawnPacket,
-                    state.ConnectionId);
+                PublishWorldAoiChanges(
+                    _broadcasts.UpsertWorldEntity(
+                        new WorldAoiEntity(
+                            ground.EntityId,
+                            3,
+                            ground.MapId,
+                            ground.X,
+                            ground.Y,
+                            () => BuildGroundItemSpawnPacket(
+                                ground,
+                                isSnapshot: true))),
+                    skipObserver: state.ConnectionId);
 
                 return
                 [
@@ -4069,10 +4077,13 @@ public sealed class PacketRouter
                     EntityID = entityId
                 };
 
-                _broadcasts.PublishToMap(
-                    state.CurrentMapId,
+                _broadcasts.PublishToWorldEntityObservers(
+                    entityId,
                     despawnPacket,
                     state.ConnectionId);
+                _broadcasts.RemoveWorldEntity(
+                    entityId,
+                    notifyObservers: false);
 
                 var pickedName = _current.FindItem(ground.ItemIndex)?.Name
                     ?? $"Item {ground.ItemIndex}";
@@ -5424,11 +5435,22 @@ public sealed class PacketRouter
                     Type = "DespawnEntity",
                     EntityID = entityId
                 };
-                packets.Add(despawnPacket);
-                _broadcasts.PublishToMap(
-                    state.CurrentMapId,
+
+                var visibleToSelf =
+                    _broadcasts.IsWorldAoiVisible(
+                        state.ConnectionId,
+                        entityId);
+
+                _broadcasts.PublishToWorldEntityObservers(
+                    entityId,
                     despawnPacket,
                     state.ConnectionId);
+                _broadcasts.RemoveWorldEntity(
+                    entityId,
+                    notifyObservers: false);
+
+                if (visibleToSelf)
+                    packets.Add(despawnPacket);
             }
         }
 
