@@ -66,6 +66,10 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_quest_host_audit.py", "-v"
     )
+    Invoke-Checked "Smoke helper scope (CS8801) and nullable snapshot guards" "python" @(
+        "-m", "unittest", "discover", "-s", "tests",
+        "-p", "test_smoke_helper_scope_contract.py", "-v"
+    )
     Invoke-Checked "Smoke suite structure tests" "python" @(
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_smoke_suite_structure.py", "-v"
