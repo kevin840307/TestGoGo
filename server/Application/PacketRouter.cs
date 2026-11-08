@@ -798,6 +798,14 @@ public sealed class PacketRouter
                 state.WorldReady = false;
                 character["Type"] = "EnterWorldSuccess";
 
+                // A process restart loses the in-memory player-shop registry
+                // but SQLite may still contain InShop=1 rows from a shop that
+                // was open at the crash. Recover those orphaned reservations
+                // before the first asset bootstrap reaches the client.
+                _playerShop.RecoverStaleReservations(
+                    accountId,
+                    dbid);
+
                 // Reconcile collection objectives against authoritative
                 // inventory before sending the first QuestSync after login.
                 _questProgress.RefreshCollectedItems(
