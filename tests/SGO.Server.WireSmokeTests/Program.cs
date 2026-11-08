@@ -910,6 +910,14 @@ await AwaitType(
             equip.GetProperty("ItemIdx").GetInt32() == 15113),
     "selected armor is granted through equipment sync");
 
+await AwaitType(
+    socket,
+    "SystemMessageFlash",
+    root =>
+        root.TryGetProperty("Message", out var message) &&
+        (message.GetString() ?? "").Contains("已選擇獎勵"),
+    "successful choice acknowledges the one-time selected reward");
+
 await SendPacket(
     socket,
     new
