@@ -49,6 +49,26 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("ResolveExperienceCard(2460)", source)
         self.assertIn("ResolveSkillBook(3701)", source)
 
+    def test_trade_terminal_races_are_separate_and_deterministic(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        concurrency = (
+            SMOKE / "Integration" / "ConcurrencySmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
+        terminal = (
+            SMOKE / "Integration" / "TradeTerminalRaceSmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
+        trade = (
+            ROOT / "server" / "Application" / "Trade" / "TradeService.cs"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn("ConcurrencySmokeTests.Run(", main)
+        self.assertIn("TradeTerminalRaceSmokeTests.Run(", concurrency)
+        self.assertIn("BlockingTradeCommitProxy", terminal)
+        self.assertIn("CommitEntered.Wait(", terminal)
+        self.assertIn("cancel and disconnect during commit", terminal)
+        self.assertIn("trade.CommitStarted && !force", trade)
+        self.assertIn("trade.CommitStarted || self.Locked", trade)
+
     def test_concurrency_suite_has_explicit_isolated_context(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = SMOKE / "Integration" / "ConcurrencySmokeTests.cs"
