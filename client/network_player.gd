@@ -487,6 +487,9 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 				GameManager.current_hud.show_player_context_menu(data_model.db_id, data_model.character_name)
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_LEFT:
+			# PvP readability wins over the low-load visual once this player is targeted.
+			if _performance_simplified_visual:
+				set_performance_simplified(false)
 			var local_player = GameManager.current_player if GameManager else null
 			if local_player and is_instance_valid(local_player):
 				var in_safe_zone = data_model.map_id in SAFE_MAP_IDS
