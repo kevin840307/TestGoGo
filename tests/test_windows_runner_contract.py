@@ -21,10 +21,13 @@ class TestWindowsRunnerContract(unittest.TestCase):
     def test_double_click_menu_and_noninteractive_modes(self):
         for mode in ("Full", "Aoi", "Wire100", "WireAll", "BuildOnly"):
             with self.subTest(mode=mode):
-                self.assertIn('set "MODE=' + mode + '"', self.bat)
                 self.assertIn(mode, self.ps1)
-        self.assertIn("choice /C 12345Q", self.bat)
-        self.assertIn('-File "%RUNNER%" -Mode "%MODE%"', self.bat)
+        # The BAT is intentionally small so other contributors can update it
+        # independently of the interactive menu.
+        self.assertIn('powershell.exe', self.bat)
+        self.assertIn('-File "%RUNNER%" %*', self.bat)
+        self.assertIn("[string]$Mode = 'Menu'", self.ps1)
+        self.assertIn("Read-Host 'Choose [1-5,Q]'", self.ps1)
 
     def test_safe_git_pull(self):
         self.assertIn("status --porcelain --untracked-files=no", self.ps1)
