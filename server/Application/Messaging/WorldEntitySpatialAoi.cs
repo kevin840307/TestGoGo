@@ -573,7 +573,14 @@ public sealed class WorldEntitySpatialAoi
         if (!_entities.Remove(
                 entityId,
                 out var entry))
+        {
+            // A pickup can commit before the first WorldReady snapshot has
+            // indexed its row. Even an absent AOI entry must leave a temporary
+            // tombstone, otherwise that older SELECT could resurrect it.
+            if (_activeSnapshots > 0)
+                _removedDuringSnapshots[entityId] = ++_entityGeneration;
             return [];
+        }
 
         RemoveEntityCell(entry);
         var removedAt = ++_entityGeneration;
