@@ -79,6 +79,37 @@ internal static class ActionSchemaSmokeTests
                       validMallDonate.RootElement, "MallAction", out _),
                 "PayPal request wire schema remains valid without enabling payments");
         }
+        using (var validPayPalRequestId = Json(
+            """{"Type":"MallAction","Action":"CreatePayPalDonation","Amount":500,"RequestID":"paypal-123"}"""))
+        {
+            Check(PacketSchemaValidator.TryValidate(
+                      validPayPalRequestId.RootElement, "MallAction", out _),
+                "PayPal request accepts optional text idempotency key");
+        }
+        using (var invalidPayPalRequestId = Json(
+            """{"Type":"MallAction","Action":"CreatePayPalDonation","Amount":500,"RequestID":123}"""))
+        {
+            Check(!PacketSchemaValidator.TryValidate(
+                      invalidPayPalRequestId.RootElement, "MallAction", out var error) &&
+                  error.Contains("RequestID"),
+                "PayPal request rejects non-text idempotency key");
+        }
+        using (var validLegacyRequestId = Json(
+            """{"Type":"MallAction","Action":"WithdrawLegacyPoints","LoginName":"old","Password":"pw","Amount":100,"RequestID":"legacy-123"}"""))
+        {
+            Check(PacketSchemaValidator.TryValidate(
+                      validLegacyRequestId.RootElement, "MallAction", out _),
+                "legacy withdrawal accepts optional text idempotency key");
+        }
+        using (var invalidLegacyRequestId = Json(
+            """{"Type":"MallAction","Action":"WithdrawLegacyPoints","LoginName":"old","Password":"pw","Amount":100,"RequestID":{}}"""))
+        {
+            Check(!PacketSchemaValidator.TryValidate(
+                      invalidLegacyRequestId.RootElement, "MallAction", out var error) &&
+                  error.Contains("RequestID"),
+                "legacy withdrawal rejects non-text idempotency key");
+        }
+
         using (var wrongLegacyPassword = Json(
             """{"Type":"MallAction","Action":"QueryLegacyPoints","LoginName":"old","Password":42}"""))
         {
