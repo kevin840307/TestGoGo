@@ -8397,10 +8397,10 @@ try
     // map even though that character is already far outside aggro range. It
     // must release that stale owner and acquire the nearby player in the same
     // tick instead of standing beside the nearby player indefinitely.
-    store.Revive(account.Value, secondCharacterId);
+    store.Revive(peerAccount!.Value, peerCharacterId);
     store.UpdateLocation(
-        account.Value,
-        secondCharacterId,
+        peerAccount.Value,
+        peerCharacterId,
         combatMapId,
         Convert.ToInt32(monster.X + 2000),
         Convert.ToInt32(monster.Y));
@@ -8408,13 +8408,13 @@ try
     broadcastHub.UpdatePresence(
         staleTargetRegistration.ConnectionId,
         combatMapId,
-        secondCharacterId,
-        account.Value,
+        peerCharacterId,
+        peerAccount.Value,
         monster.X + 2000,
         monster.Y);
 
     monster.HasTarget = true;
-    monster.TargetCharacterId = secondCharacterId;
+    monster.TargetCharacterId = peerCharacterId;
     monster.AiState = MonsterAiState.Attack;
     monster.LastAttackAt = DateTimeOffset.MinValue;
 
@@ -9453,8 +9453,8 @@ try
     var returnPeerSession = new ClientSession
     {
         ConnectionId = returnPeerRegistration.ConnectionId,
-        AccountId = account.Value,
-        CharacterId = secondCharacterId,
+        AccountId = peerAccount!.Value,
+        CharacterId = peerCharacterId,
         CurrentMapId = 15,
         LastX = 9408,
         LastY = 10336
@@ -9467,8 +9467,8 @@ try
         9408,
         10336);
     store.UpdateLocation(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         15,
         9448,
         10336);
@@ -9479,8 +9479,8 @@ try
         9000,
         9000);
     store.SetRebornLocation(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         16,
         9040,
         9000);
@@ -9488,6 +9488,9 @@ try
     session.CurrentMapId = 15;
     session.LastX = 9408;
     session.LastY = 10336;
+    accountSessions.Register(
+        peerAccount!.Value,
+        returnPeerRegistration.ConnectionId);
     router.SyncPresence(session);
     router.SyncPresence(returnPeerSession);
 
@@ -9495,11 +9498,11 @@ try
         session,
         account.Value,
         "Invite",
-        secondCharacterId,
+        peerCharacterId,
         DateTimeOffset.UtcNow);
     party.Handle(
         returnPeerSession,
-        account.Value,
+        peerAccount.Value,
         "Accept",
         id,
         DateTimeOffset.UtcNow.AddSeconds(1));
@@ -9507,8 +9510,8 @@ try
     broadcastHub.UpdatePresence(
         returnPeerRegistration.ConnectionId,
         16,
-        secondCharacterId,
-        account.Value);
+        peerCharacterId,
+        peerAccount!.Value);
     while (returnPeerRegistration.Queue.TryDequeue(out _)) { }
 
     using (var partyChat = Json(
@@ -9557,8 +9560,8 @@ try
                 id)!["MapID"]) == 16 &&
         Convert.ToInt32(
             store.GetCharacter(
-                account.Value,
-                secondCharacterId)!["MapID"]) == 16 &&
+                peerAccount!.Value,
+                peerCharacterId)!["MapID"]) == 16 &&
         returnPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"ChangeMap\"")) &&
@@ -9578,7 +9581,7 @@ try
 
     party.Handle(
         returnPeerSession,
-        account.Value,
+        peerAccount!.Value,
         "Leave",
         -1,
         DateTimeOffset.UtcNow.AddSeconds(4));
