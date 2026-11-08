@@ -6,8 +6,8 @@
 
 - **技能 CRUD**：以常用數值優先的表單編輯 `client/Skills/*.tres`；進階類型、特效與屬性加成預設收合，每級可直接複製上一級再微調。
 - **怪物 CRUD**：以名稱與圖片預覽為主，編輯 `Old/服務端/Dat/Enemy/Enemy_Data.csv` 常用欄位；新增怪物可直接從「怪物名稱」選擇相近怪物 Clone，不必背 ID。
-- **視覺化地圖怪物編輯**：搜尋怪物名稱後，點座標畫布放置、拖曳移動、點標記編輯 / 複製 / 刪除。底層仍安全寫入 `MapXX/Enemy.dat`，既有記錄保留原本 207-byte payload。
-- **視覺化地圖 NPC 編輯**：點畫布新增 NPC、拖曳改位置，右側直接改名稱 / Script / Type；仍保留進階原始清單。
+- **視覺化地圖怪物編輯**：搜尋怪物名稱後，點座標畫布放置、拖曳移動、點標記編輯 / 複製 / 刪除。畫布直接使用 `client/maps/map_bounds.json` 的遊戲範圍，疊加 `Blocking.dat` 碰撞層（紅＝不可走、黃＝特殊地形）與 `MapSpawnConfig.json` 怪物區域參考；放到阻擋格時預設自動吸附到最近可走格。底層仍安全寫入 `MapXX/Enemy.dat`，既有記錄保留原本 207-byte payload。
+- **視覺化地圖 NPC 編輯**：點畫布新增 NPC、拖曳改位置，右側直接改名稱 / Script / Type；同樣使用 Blocking 檢查與自動吸附，仍保留進階原始清單。
 - **NPC 腳本編輯器**：管理 `Old/服務端/Dat/Quest/*.txt`，支援搜尋、function outline、常用 Say / Ask / Function 範本、`#include` 檢查、callback 與 block/括號/字串基本驗證。
 - **素材管理**：瀏覽 `client/Assets`、圖片預覽、按鈕選檔替換，也可直接拖檔案到素材卡片上替換。
 - **安全寫入**：所有修改先備份到 `game-editor/.backups/`，再使用 atomic replace；所有可輸入路徑都有 traversal guard。
@@ -65,8 +65,14 @@ python -m unittest discover -s game-editor/tests -v
 - CP950 Quest script 儲存
 - 素材替換與備份路徑安全
 - 視覺化地圖編輯器的放置 / 拖曳 / 複製操作是否有正確掛載
+- `map_bounds.json` / `Blocking.dat` 解析、阻擋層 PNG、不可走格最近可走位置計算
 - NPC 範本、素材拖放、技能常用/進階欄位 UI 是否有正確掛載
 
 ## 資料來源原則
 
 Editor 改的是 repository 內的 **source-of-truth**，不是 `bin/Debug` 或 publish 產物。例如 NPC Quest 直接改 `Old/服務端/Dat/Quest`；目前 `SGO.Server.csproj` build/publish 時會把 `Old/服務端/Dat/**/*` link 到 `GameData`，因此下次 build 會自然帶入修改。
+
+
+## 地圖底圖說明
+
+目前遊戲內的大地圖本身不是讀取單一 `MapXX.png`，而是 Godot `SubViewport` 直接重畫當前 World2D。因此 Web Editor 不假裝存在一張不存在的完整地圖圖片；Editor 改用與遊戲一致的世界座標範圍與 `Blocking.dat` 作為可操作底層。若未來加入預先輸出的地圖縮圖，可再直接疊到同一個座標畫布，不需要重寫怪物 / NPC 編輯邏輯。
