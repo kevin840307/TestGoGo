@@ -220,6 +220,42 @@ Map13 → Map15 → Map13. Record `[PERF_ANALYSIS]` and `[RENDER_STATS]` under
 the same population/viewpoint; do not claim RAM/FPS savings without
 comparative measurements.
 
+## 2026-11-08 log: NPC shop close and recipe prewarm optimization
+
+Baseline from `godot(20261108-034948).log`: mostly 60 FPS, 18
+frame gaps >=100ms, 1453 recipe prewarm 990.06ms, map transition frame
+gaps 287.58-376.88ms, HUD 134.56ms, paper doll 314.88ms,
+up to 7413 canvas nodes, 308 ground items, 1549 draw calls,
+338MB Godot static memory and 348.8MB video memory.
+
+**NPC merchant:** Left X worked, but right-hand SharedInventoryPanel's
+`closed` signal was not connected. Both now use `_on_close_pressed`;
+buy/sell packets and price logic are unchanged. NPC product-row palette
+materials are cached by color and effect within the window.
+
+**Craft:** `CraftingWindow.prepare_static_tree_async` no longer yields a
+whole frame for every 24 inexpensive recipes. It yields after at most
+64 recipes or 2.5ms of processing, whichever happens first. This keeps
+the existing 1453-recipe data, sorting, icons, search and crafting
+behavior, while removing unnecessary per-batch idle frames.
+
+Tests:
+```powershell
+godot --headless --path client --script res://tests/npc_shop_close_and_crafting_regression.gd
+godot --headless --path client --script res://tests/perf_regression_smoke.gd
+```
+
+Manual test: open NPC merchant, use left/right X separately, reopen, buy/
+sell item variants and check coloring. Check personal shop and player
+trade right-side close/cancel remain unchanged. Open craft list, search,
+filter craftable recipes, use skill/equipment, and confirm all recipes
+remain available. Repeat Map13→Map15→Map13. Compare log milestones and
+frame gaps with the original log under the same conditions.
+
+Logged warnings not yet addressed: stale UID in Skills/*.tres,
+PaperDollEngine mecha ACT timeline, missing Hit_Effect08 and B-Fire01_AB
+ACT frame. No measured CPU/RAM improvement is claimed until real tests.
+
 ## Manual end-to-end acceptance
 
 1. Startup prewarm → login form: mouse and login input are responsive; progress 0→100.
