@@ -142,7 +142,9 @@ public sealed class CombatService
                 session.Monsters[pair.Key] = pair.Value;
 
                 if (pair.Value.IsAlive)
-                    packets.Add(BuildMonsterSpawnPacket(pair.Value));
+                    RegisterMonsterAoi(
+                        pair.Value,
+                        session.ConnectionId);
             }
         }
 
@@ -163,10 +165,14 @@ public sealed class CombatService
             foreach (var monster in runtime.Monsters.Values)
             {
                 if (monster.IsAlive)
-                    packets.Add(BuildMonsterSpawnPacket(monster));
+                    RegisterMonsterAoi(
+                        monster,
+                        session.ConnectionId);
             }
         }
 
+        // NPCs are low-frequency static map content. Dynamic monsters are
+        // delivered by WorldEntitySpatialAoi after WorldReady.
         return packets;
     }
 
@@ -1036,10 +1042,9 @@ public sealed class CombatService
 
         foreach (var packet in packets)
         {
-            var type = packet.GetType()
-                .GetProperty("Type")
-                ?.GetValue(packet)
-                ?.ToString();
+            var type = PacketString(
+                packet,
+                "Type");
 
             if (type is not (
                     "SpawnEntity" or
@@ -1054,19 +1059,74 @@ public sealed class CombatService
                     "PlayEffect"))
                 continue;
 
-            // Player-origin visuals must not fan out across the whole
-            // map. Monster/world-authoritative updates remain map events
-            // until their own spatial Spawn/Despawn ownership is tracked.
-            // Never suppress a monster EntityDeath or damage notification
-            // just because it was generated during a player's attack.
+            if (TryResolveMonsterAoiEntityId(
+                    session,
+                    packet,
+                    type,
+                    out var monsterEntityId) &&
+                session.Monsters.TryGetValue(
+                    monsterEntityId,
+                    out var monster))
+            {
+                if (type == "EntityDeath")
+                {
+                    // Observers that know the monster receive the death
+                    // animation first. Removing silently afterwards makes a
+                    // future respawn a fresh AOI SpawnEntity.
+                    _broadcasts.PublishToWorldEntityObservers(
+                        monsterEntityId,
+                        packet,
+                        session.ConnectionId);
+                    _broadcasts.RemoveWorldEntity(
+                        monsterEntityId,
+                        notifyObservers: false);
+                    continue;
+                }
+
+                if (type == "DespawnEntity")
+                {
+                    _broadcasts.PublishToWorldEntityObservers(
+                        monsterEntityId,
+                        packet,
+                        session.ConnectionId);
+                    _broadcasts.RemoveWorldEntity(
+                        monsterEntityId,
+                        notifyObservers: false);
+                    continue;
+                }
+
+                // Keep the AOI position + spawn factory current before any
+                // incremental event. If the monster crossed an AOI boundary,
+                // Spawn/Despawn is queued before Move/State/Damage.
+                RegisterMonsterAoi(
+                    monster,
+                    session.ConnectionId);
+
+                if (type != "SpawnEntity")
+                {
+                    _broadcasts.PublishToWorldEntityObservers(
+                        monsterEntityId,
+                        packet,
+                        session.ConnectionId);
+                }
+                continue;
+            }
+
+            // Player-origin visuals follow the tighter player AOI. Party,
+            // trade and directed responses never enter this path.
             if (IsPlayerOriginAoiPacket(
-                    packet, type, session.CharacterId))
+                    packet,
+                    type,
+                    session.CharacterId))
             {
                 _broadcasts.PublishToPlayerObservers(
-                    session.ConnectionId, packet);
+                    session.ConnectionId,
+                    packet);
             }
             else
             {
+                // Static/legacy world events without tracked entity ownership
+                // remain map events until they get their own known-set model.
                 _broadcasts.PublishToMap(
                     session.CurrentMapId,
                     packet,
@@ -1074,6 +1134,122 @@ public sealed class CombatService
             }
         }
     }
+
+    private void RegisterMonsterAoi(
+        MonsterRuntimeState monster,
+        Guid skipObserver = default)
+    {
+        if (!monster.IsAlive)
+            return;
+
+        var changes =
+            _broadcasts.UpsertWorldEntity(
+                new WorldAoiEntity(
+                    monster.EntityId,
+                    1,
+                    monster.MapId,
+                    monster.X,
+                    monster.Y,
+                    () => BuildMonsterSpawnPacket(
+                        monster)));
+
+        foreach (var change in changes)
+        {
+            if (change.ObserverConnectionId ==
+                skipObserver)
+                continue;
+
+            if (_broadcasts.IsWorldAoiVisible(
+                    change.ObserverConnectionId,
+                    change.Entity.EntityId) !=
+                change.Appeared)
+                continue;
+
+            _broadcasts.PublishToConnection(
+                change.ObserverConnectionId,
+                change.Appeared
+                    ? change.Entity.SpawnPacketFactory()
+                    : new
+                    {
+                        Type = "DespawnEntity",
+                        EntityID = change.Entity.EntityId
+                    });
+        }
+    }
+
+    private static bool TryResolveMonsterAoiEntityId(
+        ClientSession session,
+        object packet,
+        string? type,
+        out int entityId)
+    {
+        entityId = 0;
+
+        long candidate = type switch
+        {
+            "SpawnEntity"
+                when PacketLong(packet, "EntityType") == 1
+                => PacketLong(packet, "EntityID"),
+            "MoveEntity" or
+            "SyncState" or
+            "MonsterTarget" or
+            "DespawnEntity"
+                => PacketLong(packet, "EntityID"),
+            "EntityDeath"
+                when PacketLong(packet, "EntityType") == 1
+                => PacketLong(packet, "EntityID"),
+            "EntityDamage"
+                when PacketLong(packet, "TargetType") == 1
+                => PacketLong(packet, "TargetID"),
+            "EntityDamage"
+                => PacketLong(packet, "AttackerID"),
+            "EntityHeal"
+                when PacketLong(packet, "TargetType") == 1
+                => PacketLong(packet, "TargetID"),
+            "SkillCast"
+                when PacketLong(packet, "CasterType") == 1
+                => PacketLong(packet, "CasterID"),
+            _ => 0
+        };
+
+        if (candidate <= 0 ||
+            candidate > int.MaxValue ||
+            !session.Monsters.ContainsKey(
+                (int)candidate))
+            return false;
+
+        entityId = (int)candidate;
+        return true;
+    }
+
+    private static long PacketLong(
+        object packet,
+        string property)
+    {
+        var raw = packet.GetType()
+            .GetProperty(property)
+            ?.GetValue(packet);
+
+        if (raw is null)
+            return 0;
+
+        try
+        {
+            return Convert.ToInt64(raw);
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private static string? PacketString(
+        object packet,
+        string property)
+        => packet.GetType()
+            .GetProperty(property)
+            ?.GetValue(packet)
+            ?.ToString();
 
     internal static bool IsPlayerOriginAoiPacket(
         object packet, string? type, long? characterId)
@@ -4520,8 +4696,8 @@ public sealed class CombatService
             entityId <= 0)
             return;
 
-        _broadcasts.PublishToMap(
-            session.CurrentMapId,
+        _broadcasts.PublishToPlayerObservers(
+            session.ConnectionId,
             new
             {
                 Type = "SyncStatus",
@@ -4551,8 +4727,7 @@ public sealed class CombatService
                 MoveSpeed = s.MoveSpeed,
                 CritRate = s.CritRate,
                 CritDamage = s.CritDamage
-            },
-            session.ConnectionId);
+            });
     }
 
     private static object Flash(string message)
