@@ -44,6 +44,7 @@ class MapRepository:
         self.backups = backups
         self._blocking_cache: dict[int, tuple[tuple[int, int], tuple[int, int, bytes, Path]]] = {}
         self._blocking_png_cache: dict[int, tuple[tuple[Any, ...], bytes]] = {}
+        self._blocking_errors: dict[int, str] = {}
         self._json_cache: dict[Path, tuple[tuple[int, int], dict[str, Any]]] = {}
 
     def list_maps(self) -> list[dict[str, Any]]:
@@ -130,6 +131,7 @@ class MapRepository:
         if not path.exists():
             self._blocking_cache.pop(int(map_id), None)
             self._blocking_png_cache.pop(int(map_id), None)
+            self._blocking_errors.pop(int(map_id), None)
             return None
 
         stat = path.stat()
@@ -139,14 +141,25 @@ class MapRepository:
             return cached[1]
 
         data = path.read_bytes()
+        error: str | None = None
         if len(data) < 8:
-            raise ValueError(f"Blocking.dat 太短: {path}")
-        width, height = struct.unpack_from("<ii", data, 0)
-        if width <= 0 or height <= 0:
-            raise ValueError(f"Blocking.dat 尺寸異常: {width}x{height}")
-        cell_count = width * height
-        if cell_count > 50_000_000 or len(data) < 8 + cell_count:
-            raise ValueError(f"Blocking.dat 資料不完整: {width}x{height}")
+            error = f"Blocking.dat 太短（{len(data)} bytes）"
+        else:
+            width, height = struct.unpack_from("<ii", data, 0)
+            if width <= 0 or height <= 0:
+                error = f"Blocking.dat 尺寸異常: {width}x{height}"
+            else:
+                cell_count = width * height
+                if cell_count > 50_000_000 or len(data) < 8 + cell_count:
+                    error = f"Blocking.dat 資料不完整: {width}x{height}"
+
+        if error is not None:
+            self._blocking_cache.pop(int(map_id), None)
+            self._blocking_png_cache.pop(int(map_id), None)
+            self._blocking_errors[int(map_id)] = error
+            return None
+
+        self._blocking_errors.pop(int(map_id), None)
 
         result = (width, height, data[8:8 + cell_count], path)
         if int(map_id) not in self._blocking_cache and len(self._blocking_cache) >= 8:
@@ -252,6 +265,7 @@ class MapRepository:
         blocking_meta: dict[str, Any] = {
             "hasBlocking": blocking is not None,
             "cellSize": self.CELL_SIZE,
+            "error": self._blocking_errors.get(int(map_id), ""),
         }
         if blocking is not None:
             width, height, _, _ = blocking
