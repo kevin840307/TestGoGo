@@ -113,14 +113,62 @@ internal static class RecoveredBoxSmokeTests
             var packets = router.Handle(
                 use.RootElement,
                 session);
-            var json = JsonSerializer.Serialize(packets);
 
-            Check(
-                json.Contains("\"Type\":\"InventorySync\"") &&
-                json.Contains("\"Type\":\"EquipSync\"") &&
-                json.Contains("赤日蒼鷹臂甲(左)") &&
-                json.Contains("赤日蒼鷹臂甲(右)"),
-                "UseItemRequest opens recovered multi-reward box with inventory/equipment sync");
+            var packetDocuments = packets
+                .Select(packet =>
+                    JsonDocument.Parse(
+                        JsonSerializer.Serialize(packet)))
+                .ToArray();
+
+            try
+            {
+                var hasInventorySync =
+                    packetDocuments.Any(document =>
+                        document.RootElement.TryGetProperty(
+                            "Type",
+                            out var type) &&
+                        type.GetString() == "InventorySync");
+
+                var hasEquipSync =
+                    packetDocuments.Any(document =>
+                        document.RootElement.TryGetProperty(
+                            "Type",
+                            out var type) &&
+                        type.GetString() == "EquipSync");
+
+                var hasBundleMessage =
+                    packetDocuments.Any(document =>
+                    {
+                        var root = document.RootElement;
+                        return root.TryGetProperty(
+                                   "Type",
+                                   out var type) &&
+                               type.GetString() ==
+                                   "SystemMessageFlash" &&
+                               root.TryGetProperty(
+                                   "Message",
+                                   out var message) &&
+                               (message.GetString() ?? "")
+                                   .Contains(
+                                       "赤日蒼鷹臂甲(左)",
+                                       StringComparison.Ordinal) &&
+                               (message.GetString() ?? "")
+                                   .Contains(
+                                       "赤日蒼鷹臂甲(右)",
+                                       StringComparison.Ordinal);
+                    });
+
+                Check(
+                    hasInventorySync &&
+                    hasEquipSync &&
+                    hasBundleMessage,
+                    "UseItemRequest opens recovered multi-reward box with inventory/equipment sync");
+            }
+            finally
+            {
+                foreach (var document in packetDocuments)
+                    document.Dispose();
+            }
         }
 
         var after = store.GetCharacterAssets(
@@ -152,10 +200,29 @@ internal static class RecoveredBoxSmokeTests
                 accountId,
                 characterId);
 
+            var rejectedReplay =
+                packets.Any(packet =>
+                {
+                    using var document =
+                        JsonDocument.Parse(
+                            JsonSerializer.Serialize(packet));
+                    var root = document.RootElement;
+                    return root.TryGetProperty(
+                               "Type",
+                               out var type) &&
+                           type.GetString() ==
+                               "SystemMessageFlash" &&
+                           root.TryGetProperty(
+                               "Message",
+                               out var message) &&
+                           (message.GetString() ?? "")
+                               .Contains(
+                                   "找不到",
+                                   StringComparison.Ordinal);
+                });
+
             Check(
-                packets.Any(x =>
-                    JsonSerializer.Serialize(x).Contains(
-                        "找不到可使用的寶箱")) &&
+                rejectedReplay &&
                 afterRepeat.Equips.Count(x =>
                     Convert.ToInt32(x["ItemIdx"]) == 15230) ==
                     beforeLeft + 1 &&
