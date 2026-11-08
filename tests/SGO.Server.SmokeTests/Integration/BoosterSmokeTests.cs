@@ -172,11 +172,24 @@ internal static class BoosterSmokeTests
                     .Sum(x =>
                         Convert.ToInt32(x["Count"]));
 
+            var hasDuplicateEffectMessage =
+                responses.Any(packet =>
+                {
+                    using var doc =
+                        JsonDocument.Parse(
+                            JsonSerializer.Serialize(packet));
+                    return doc.RootElement.TryGetProperty(
+                               "Message",
+                               out var message) &&
+                           message.ValueKind ==
+                               JsonValueKind.String &&
+                           message.GetString() ==
+                               "相同類型的能力增益仍在持續中";
+                });
+
             Check(
                 remainingAfterReject == 1 &&
-                responses.Any(x =>
-                    JsonSerializer.Serialize(x).Contains(
-                        "相同類型的能力增益仍在持續中")),
+                hasDuplicateEffectMessage,
                 "overlapping booster effect is rejected without consuming the second item");
         }
 
