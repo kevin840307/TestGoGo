@@ -63,9 +63,9 @@ class SmokeHelperScopeContractTests(unittest.TestCase):
         # System.Text.Json's default encoder escapes Chinese text. Checking
         # the serialized JSON for a raw CJK substring is always unreliable.
         program = read("Program.cs")
-        self.assertIn(
-            'PacketTreeContainsString(\\n            responses, "退回 10 點")',
+        self.assertRegex(
             program,
+            r'PacketTreeContainsString\(\s*responses,\s*"退回 10 點"\s*\)',
         )
         self.assertNotIn(
             'json.Contains("退回 10 點")',
