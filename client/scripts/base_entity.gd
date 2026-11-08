@@ -1732,18 +1732,22 @@ func _play_skill_hit(fx_hit: String, is_self_cast_effect: bool = false) -> void 
 		_play_transient_skill_effect(loaded_res, anim_to_play, eff_flip, 60, p_spd, is_self_cast_effect)
 
 
-func _play_skill_extra(fx_extra: String) -> void :
-	var effect_name = ""
+# Hit_Effect assets live under Hit_Effect/, not Skill_Effect/.
+# Resolve the real path before calling EffectLoader, so a valid effect no
+# longer produces a spurious missing-resource warning on first cast.
+static func preferred_extra_effect_path(fx_extra: String) -> String:
 	if fx_extra.begins_with("Normal"):
-		effect_name = "Normal_Effect/%s" % fx_extra
-	elif fx_extra.begins_with("Skill"):
-		effect_name = "Skill_Effect/%s" % fx_extra
-	else:
-		effect_name = "Skill_Effect/%s" % fx_extra
+		return "Normal_Effect/%s" % fx_extra
+	if fx_extra.begins_with("Hit_Effect"):
+		return "Hit_Effect/%s" % fx_extra
+	return "Skill_Effect/%s" % fx_extra
 
+
+func _play_skill_extra(fx_extra: String) -> void :
+	var effect_name: String = preferred_extra_effect_path(fx_extra)
 	var loaded_res = EffectLoader.get_effect(effect_name)
 
-	if not loaded_res:
+	if not loaded_res and not effect_name.begins_with("Hit_Effect/"):
 		loaded_res = EffectLoader.get_effect("Hit_Effect/%s" % fx_extra)
 
 	if loaded_res:
