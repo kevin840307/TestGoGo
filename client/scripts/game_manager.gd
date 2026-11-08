@@ -1809,6 +1809,8 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 	set_frame_gap_stage("map_transition_add_child")
 	var add_child_started_usec: = Time.get_ticks_usec()
 	get_tree().root.add_child(current_map_node)
+	if _afk_active:
+		current_map_node.visible = false
 	var add_child_ms: = float(Time.get_ticks_usec() - add_child_started_usec) / 1000.0
 	_trace_map_change("new_map_added", source_map_id, target_map_id, {
 		"instantiate_ms": instantiate_ms, 
@@ -1857,10 +1859,11 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 
 	if is_instance_valid(current_hud) and current_hud.has_method("update_map_info"):
 		current_hud.update_map_info(target_map_id, current_map_node.name)
-	# Existing map transitions still execute normally while AFK. Strip only
-	# newly instantiated VIEW textures after reparenting the live player.
+	# Festival/building initialization uses call_deferred above; run the
+	# visual strip AFTER it so new festival textures are included.
+	# The new root was already hidden before the player was reparented.
 	if _afk_active:
-		_refresh_afk_map_visuals_after_change()
+		call_deferred("_refresh_afk_map_visuals_after_change")
 
 	if CursorManager:
 		CursorManager.set_cursor_state("normal")

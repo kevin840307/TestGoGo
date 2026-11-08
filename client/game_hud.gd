@@ -259,7 +259,6 @@ var current_combat_render_mode: int = GameConstants.SETTING_DEFAULT_COMBAT_RENDE
 var current_simplify_players_mode: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE
 var current_simplify_monsters_mode: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE
 var _afk_hidden_roots: Array[Dictionary] = []
-var _afk_hud_was_paused: bool = false
 var _afk_entered_msec: int = 0
 
 
@@ -1319,7 +1318,7 @@ func _on_afk_mode_requested() -> void:
 		show_rejection_message_box("必須先進入遊戲才能啟用掛機模式。")
 		return
 	show_message_box(
-		"確定進入掛機監控模式？\\n將關閉遊戲畫面、卸載可安全回收的貼圖，但會繼續自動移動、打怪與拾取。\\n如需恢復畫面可按「返回遊戲」。",
+		"確定進入掛機監控模式？\n將關閉遊戲畫面、卸載可安全回收的貼圖，但會繼續自動移動、打怪與拾取。\\n如需恢復畫面可按「返回遊戲」。",
 		2,
 		_confirm_begin_afk
 	)
@@ -1330,7 +1329,6 @@ func _confirm_begin_afk() -> void:
 		show_rejection_message_box("掛機模式啟動失敗，請確認地圖已完成載入。")
 		return
 	_afk_entered_msec = Time.get_ticks_msec()
-	_afk_hud_was_paused = _background_visuals_paused
 	set_background_visuals_paused(true)
 	_afk_hidden_roots.clear()
 	_afk_hide_nonessential_roots()
@@ -1399,7 +1397,8 @@ func _confirm_restore_afk() -> void:
 		if is_instance_valid(node) and (node is CanvasItem or node is CanvasLayer):
 			node.visible = bool(snapshot["visible"])
 	_afk_hidden_roots.clear()
-	set_background_visuals_paused(_afk_hud_was_paused)
+	# GameManager already restored the correct foreground/background focus policy.
+	# Re-applying the AFK-enter pause state would strand the minimap disabled.
 	if is_instance_valid(GameManager.current_map_node):
 		GameManager.current_map_node.visible = true
 

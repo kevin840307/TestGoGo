@@ -62,7 +62,9 @@ func suspend_static_map(map_node: Node) -> Dictionary:
 			continue
 		# Do not traverse the live world entity container. Player movement,
 		# targeting, AOI, combat and loot logic continue during AFK.
-		if node != map_node and (node.name == "Entities" or node is CharacterBody2D):
+		if node != map_node and (
+			node.name == "Entities" or node is CollisionObject2D or node.get_script() != null
+		):
 			continue
 		var property_name: String = _visual_property(node)
 		if property_name != "":

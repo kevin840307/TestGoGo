@@ -693,7 +693,21 @@ func get_initial_spawn_settle_progress(quiet_usec: int = 300000) -> float:
 func is_initial_spawn_queue_idle(quiet_usec: int = 300000) -> bool:
 	return get_initial_spawn_settle_progress(quiet_usec) >= 1.0
 
-func _process(delta: float) -> void :
+func _process(delta: float) -> void:
+	if GameManager and GameManager.is_afk_mode_active():
+		return
+	_run_entity_runtime(delta)
+
+
+func _physics_process(delta: float) -> void:
+	# AFK monitors render at 20 FPS, but spawn queues, monster interpolation
+	# and targeting stay on the normal fixed 60Hz physics cadence.
+	if not GameManager or not GameManager.is_afk_mode_active():
+		return
+	_run_entity_runtime(delta)
+
+
+func _run_entity_runtime(delta: float) -> void :
 	if not is_instance_valid(GameManager.current_map_node) or GameManager.current_map_node.is_queued_for_deletion():
 		_spawn_queue.clear()
 		_queued_spawn_ids.clear()
