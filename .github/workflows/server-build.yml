@@ -61,7 +61,7 @@ jobs:
           if [ -z "$GODOT_CMD" ]; then
             echo "[SKIP] Godot not installed; Client AOI behavior remains unverified on this runner."
           else
-            for script in aoi_pre_spawn_move_regression.gd aoi_monster_snapshot_order_regression.gd ground_item_aoi_regression.gd multiclient_render_dedup_regression.gd; do
+            for script in mouse_autorun_regression.gd aoi_pre_spawn_move_regression.gd aoi_monster_snapshot_order_regression.gd ground_item_aoi_regression.gd multiclient_render_dedup_regression.gd; do
               "$GODOT_CMD" --headless --path client --script "res://tests/$script" 2>&1 | tee -a godot-aoi-regression.log
             done
           fi
