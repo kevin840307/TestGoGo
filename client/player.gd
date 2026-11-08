@@ -32,6 +32,9 @@ var is_moving: bool = false
 var is_interacting_with_npc: bool = false
 var is_mouse_holding: bool = false
 var _mouse_autorun = MOUSE_AUTORUN_STATE.new()
+# A click that stopped latched walking must not immediately restart
+# terrain navigation in _unhandled_input on the very same mouse press.
+var _autorun_left_press_cancelled: bool = false
 var _autorun_blocked_retry_seconds: float = 0.0
 const AUTORUN_BLOCKED_RETRY_INTERVAL: float = 0.4
 
@@ -420,9 +423,9 @@ func _finish_mouse_autorun_hold() -> void:
 		CursorManager.set_autorun_indicator(_mouse_autorun.latched)
 
 
-# Other object / GUI interactions must preempt auto-walking, while a
-# normal terrain click remains owned by the original click-to-move handler.
-# Isolated from event routing so the priority rules are directly testable.
+# Object / GUI interactions keep their original event handlers. This
+# predicate remains useful for interactions outside autorun; click-to-stop
+# itself no longer depends on what lies under the pointer.
 func _autorun_click_has_priority(hovered_entity: Node, hovered_ui: Control) -> bool:
 	if is_instance_valid(hovered_entity):
 		return true
@@ -435,19 +438,23 @@ func _autorun_click_has_priority(hovered_entity: Node, hovered_ui: Control) -> b
 	)
 
 
-# _input executes before object picking. Cancel navigation without consuming
-# the right-click: NetworkPlayer's own _input_event must still open its
-# original player context menu, and right-click skill cancellation remains.
+# _input sees the press before entity/UI handlers. Both mouse buttons
+# stop latched walking immediately, but neither press is consumed: the
+# original NPC, skill, PvP context menu and UI events still work.
 func _input(event: InputEvent) -> void:
-	# Other clicks have priority over latched terrain movement. _input runs
-	# before GUI/object picking, so stop first and do NOT consume the event.
-	# A click on bare terrain is left for _unhandled_input to restore the
-	# original one-shot click-to-move behavior.
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if _mouse_autorun.latched or _mouse_autorun.holding:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if not event.pressed:
+			_autorun_left_press_cancelled = false
+		elif _mouse_autorun.latched:
+			_autorun_left_press_cancelled = true
+			cancel_autorun_tracking(true)
+		elif _mouse_autorun.holding:
+			# A click on another interactable takes priority over held
+			# walking; do not interrupt an ordinary click on the terrain.
 			var hovered_entity: Node = CursorManager.current_hovered_entity if CursorManager else null
 			var hovered_ui: Control = get_viewport().gui_get_hovered_control() if is_inside_tree() else null
 			if _autorun_click_has_priority(hovered_entity, hovered_ui):
+				_autorun_left_press_cancelled = true
 				cancel_autorun_tracking(true)
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
 		if _mouse_autorun.latched or is_mouse_holding or (
@@ -481,6 +488,12 @@ func _unhandled_input(event: InputEvent) -> void :
 
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
+			# The same left press already stopped a latched autorun in
+			# _input; never start a new A* destination on this press.
+			# This returns only from Player's terrain handler; it does
+			# not mark the event handled or block entity/UI click code.
+			if _autorun_left_press_cancelled:
+				return
 			if CursorManager:
 
 				if CursorManager.cursor_sprite.animation == "skill":
