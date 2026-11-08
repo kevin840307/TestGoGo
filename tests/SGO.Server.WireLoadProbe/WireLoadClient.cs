@@ -150,6 +150,81 @@ internal sealed class WireLoadClient : IAsyncDisposable
             0);
     }
 
+    public async Task TeleportAsync(
+        int mapId,
+        int x,
+        int y,
+        TimeSpan timeout)
+    {
+        await SendPacketAsync(
+            new
+            {
+                Type = "ChatMessage",
+                Channel = 0,
+                Message =
+                    $"/gm map {mapId} {x} {y}",
+                BubbleType = 0
+            },
+            timeout);
+
+        var change = await WaitForPacketAsync(
+            "ChangeMap",
+            root =>
+                root.TryGetProperty(
+                    "MapID",
+                    out var foundMap) &&
+                foundMap.GetInt32() ==
+                    mapId,
+            timeout);
+
+        MapId =
+            change.GetProperty("MapID")
+                .GetInt32();
+        X = (int)Math.Round(
+            change.GetProperty("X")
+                .GetDouble());
+        Y = (int)Math.Round(
+            change.GetProperty("Y")
+                .GetDouble());
+
+        var ready = await RequestAsync(
+            new
+            {
+                Type = "WorldReady",
+                MapID = MapId
+            },
+            "WorldReadyResponse",
+            timeout);
+
+        RequireSuccess(
+            ready,
+            "AOI teleport WorldReady");
+    }
+
+    public async Task<bool> TryWaitForEntityPacketAsync(
+        string packetType,
+        long entityId,
+        TimeSpan timeout)
+    {
+        try
+        {
+            await WaitForPacketAsync(
+                packetType,
+                root =>
+                    root.TryGetProperty(
+                        "EntityID",
+                        out var found) &&
+                    found.GetInt64() ==
+                        entityId,
+                timeout);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+    }
+
     public Task SendPositionAsync(
         TimeSpan timeout)
         => SendPacketAsync(
