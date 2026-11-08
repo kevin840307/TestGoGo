@@ -135,6 +135,8 @@ func _print_render_stats() -> void :
 	var visible_monsters := 0
 	var visible_players := 0
 	var visible_pets := 0
+	var ground_items_total := 0
+	var ground_items_visible_nearby := 0
 	var paper_doll_layers := 0
 
 	if NetworkEntityManager:
@@ -153,6 +155,11 @@ func _print_render_stats() -> void :
 			match entity_type:
 				0: visible_players += 1
 				1: visible_monsters += 1
+				3:
+					ground_items_total += 1
+					if is_instance_valid(current_player) and entity.is_visible_in_tree():
+						if entity.global_position.distance_squared_to(current_player.global_position) <= 900.0 * 900.0:
+							ground_items_visible_nearby += 1
 				4: visible_pets += 1
 			if "doll_engine" in entity and is_instance_valid(entity.doll_engine):
 				paper_doll_layers += entity.doll_engine.doll_sprites.size()
@@ -168,7 +175,7 @@ func _print_render_stats() -> void :
 		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
 			aoi_deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
 
-	print("[RENDER_STATS] fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d visible_pets=%d paper_doll_layers=%d" % [
+	print("[RENDER_STATS] fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d paper_doll_layers=%d" % [
 		int(Performance.get_monitor(Performance.TIME_FPS)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
@@ -181,6 +188,8 @@ func _print_render_stats() -> void :
 		aoi_deferred_monsters,
 		visible_players,
 		visible_pets,
+		ground_items_total,
+		ground_items_visible_nearby,
 		paper_doll_layers,
 	])
 

@@ -136,6 +136,34 @@ full-map retries.
 Regression tests are added but **not claimed as executed** in an
 environment without local Godot/.NET runtime.
 
+## Follow-up: monster snaps and restored ground items after map return
+
+The server ground-item snapshot now sets `IsSnapshot=true`. Only a
+newly spawned drop can play the monster-death bounce animation. This avoids
+the full active-monster scan and temporary hidden sprite for every restored
+drop; no change to the 60-second server-side drop lifetime.
+
+AOI unload must keep the last authoritative MoveEntity coordinates rather than
+the interpolating MonsterEntity render position. Server correction
+SpeedTime=0 still updates the collision/targeting position instantly; for
+visible small/moderate corrections the sprite/UI now visually ease for 0.24s.
+Actual teleports greater than 160 px remain immediate.
+
+After Map13 -> Map15 -> Map13, and Map13 -> Map31 -> Map13:
+- Check the same living monster never reappears at its spawn location and then
+  visibly jumps 20-101px to the server combat position.
+- Check items dropped less than 60 seconds ago reappear, including when a dead
+  monster occupies the same position; expired items should not reappear.
+- Confirm a restored ground item is clickable and pickup works.
+- Check `[RENDER_STATS] ground_items=... ground_nearby_visible=...`
+  to distinguish absence of server-sent items from culling or rendering.
+- Re-run targeted skill, non-targeted skill, NPC click, pet/mecha,
+  monster pursuit, offscreen re-entry and pickup while moving.
+
+This regression is covered by client `perf_regression_smoke.gd` and server
+`MapReadySnapshotSmokeTests.cs`; these automated tests have not been
+executed in this environment without Godot/.NET.
+
 ## Manual end-to-end acceptance
 
 1. Startup prewarm → login form: mouse and login input are responsive; progress 0→100.

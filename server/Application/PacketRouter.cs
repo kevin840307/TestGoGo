@@ -5536,14 +5536,15 @@ public sealed class PacketRouter
         foreach (var ground in _store.GetGroundItems(state.CurrentMapId))
         {
             state.GroundItems[ground.EntityId] = ground;
-            packets.Add(BuildGroundItemSpawnPacket(ground));
+            packets.Add(BuildGroundItemSpawnPacket(ground, isSnapshot: true));
         }
 
         return packets;
     }
 
     private object BuildGroundItemSpawnPacket(
-        GroundItemRuntime ground)
+        GroundItemRuntime ground,
+        bool isSnapshot = false)
     {
         var now = DateTimeOffset.UtcNow;
         return new
@@ -5551,6 +5552,7 @@ public sealed class PacketRouter
             Type = "SpawnEntity",
             EntityID = ground.EntityId,
             EntityType = 3,
+            IsSnapshot = isSnapshot,
             Name = _current.FindItem(ground.ItemIndex)?.Name
                 ?? $"Item {ground.ItemIndex}",
             LocX = ground.X,

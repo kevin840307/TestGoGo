@@ -244,11 +244,11 @@ func _queue_cached_monster_spawn(entity_id: int) -> void :
 func _unload_monster_for_aoi(entity_id: int, monster: Node2D) -> void :
 	var cached = _monster_spawn_templates.get(entity_id, null)
 	if cached is Dictionary:
-		var updated: Dictionary = (cached as Dictionary).duplicate()
-		updated["LocX"] = monster.global_position.x
-		updated["LocY"] = monster.global_position.y
-		_monster_spawn_templates[entity_id] = updated
-		_deferred_monster_spawns[entity_id] = updated
+		# AOI removal must preserve the last SERVER-approved MoveEntity position.
+		# The CharacterBody is visually interpolated and can be dozens of pixels
+		# behind the server. Copying that body position into the spawn template
+		# causes a visible teleport when the server sends its next correction.
+		_deferred_monster_spawns[entity_id] = cached
 	_unregister_entity_hover(monster)
 	monster.queue_free()
 	active_entities.erase(entity_id)
@@ -388,6 +388,12 @@ func _process(delta: float) -> void :
 	for entity_id in finished_ids:
 		_runtime_monster_ids.erase(entity_id)
 
+static func _should_check_ground_drop_bounce(data: Dictionary) -> bool:
+	# WorldReady/periodic snapshots describe already existing items.
+	# Only genuinely new drops may play the monster-death bounce animation.
+	return not bool(data.get("IsSnapshot", false))
+
+
 func _spawn_entity_now(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
 	var entity_type = int(data.get("EntityType", 0))
@@ -459,18 +465,19 @@ func _spawn_entity_now(data: Dictionary) -> void :
 			var drop_delay = 0.0
 			var is_monster_drop = false
 
-			for active_entity_id in _active_entity_types:
-				if int(_active_entity_types[active_entity_id]) != 1:
-					continue
-				var monster = get_active_entity(int(active_entity_id))
-				if not monster:
-					continue
-				if monster.current_hp <= 0 or monster.has_meta("fatal_hit_delay"):
-					if monster.global_position.distance_to(spawn_pos) < 100.0:
-						var fatal_delay = float(monster.get_meta("fatal_hit_delay")) if monster.has_meta("fatal_hit_delay") else 0.0
-						drop_delay = fatal_delay
-						is_monster_drop = true
-						break
+			if _should_check_ground_drop_bounce(data):
+				for active_entity_id in _active_entity_types:
+					if int(_active_entity_types[active_entity_id]) != 1:
+						continue
+					var monster = get_active_entity(int(active_entity_id))
+					if not monster:
+						continue
+					if monster.current_hp <= 0 or monster.has_meta("fatal_hit_delay"):
+						if monster.global_position.distance_to(spawn_pos) < 100.0:
+							var fatal_delay = float(monster.get_meta("fatal_hit_delay")) if monster.has_meta("fatal_hit_delay") else 0.0
+							drop_delay = fatal_delay
+							is_monster_drop = true
+							break
 
 			if is_monster_drop:
 				new_entity.visible = false

@@ -98,6 +98,28 @@ func _run() -> void:
 		"queued source snapshot remains unchanged")
 	_check(NetworkEntityManager._get_current_queued_spawn_data({"EntityID": 102, "EntityType": 2}).get("EntityType", -1) == 2,
 		"NPC queued spawn data is unchanged")
+	_check(not NetworkEntityManager._should_check_ground_drop_bounce({
+		"EntityID": 555, "EntityType": 3, "IsSnapshot": true
+	}), "ground item restored after map transition is never hidden by drop animation")
+	_check(NetworkEntityManager._should_check_ground_drop_bounce({
+		"EntityID": 556, "EntityType": 3
+	}), "fresh drops preserve the existing monster-death bounce")
+	_check(MonsterEntity.should_ease_authoritative_correction(101.1, true, "walk"),
+		"101px server attack correction is smoothed visually after map return")
+	_check(MonsterEntity.should_ease_authoritative_correction(29.0, true, "idle"),
+		"small idle-position correction is smoothed visually")
+	_check(not MonsterEntity.should_ease_authoritative_correction(900.0, true, "walk"),
+		"real map teleports are never disguised as small corrections")
+	# Simulate AOI culling when the monster render body is lagging behind
+	# the last authoritative MoveEntity position.
+	var temporary_monster: Node2D = Node2D.new()
+	root.add_child(temporary_monster)
+	temporary_monster.global_position = Vector2(850.0, 930.0)
+	NetworkEntityManager._unload_monster_for_aoi(test_id, temporary_monster)
+	var after_cull: Dictionary = NetworkEntityManager._deferred_monster_spawns.get(test_id, {})
+	_check(is_equal_approx(float(after_cull.get("LocX", -1.0)), 30.0)
+		and is_equal_approx(float(after_cull.get("LocY", -1.0)), 40.0),
+		"AOI unload must not replace the server coordinate with interpolated render position")
 	_check(MonsterEntity.NETWORK_MOVE_MIN_SPEED <= 10.0,
 		"short monster waypoints are not forced to excessive speed")
 	_check(MonsterEntity.MOVE_IDLE_GRACE_SECONDS >= 0.25,

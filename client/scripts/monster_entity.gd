@@ -62,9 +62,9 @@ const NETWORK_MOVE_MAX_SPEED: float = 205.0
 # does not produce a stop at every server tick. Combat and correction packets
 # continue to override movement immediately.
 const NETWORK_MOVE_VISUAL_SLACK_SECONDS: float = 0.04
-const AUTHORITATIVE_VISUAL_CORRECTION_SECONDS: float = 0.16
+const AUTHORITATIVE_VISUAL_CORRECTION_SECONDS: float = 0.24
 const AUTHORITATIVE_VISUAL_CORRECTION_MIN_DISTANCE: float = 8.0
-const AUTHORITATIVE_VISUAL_CORRECTION_MAX_DISTANCE: float = 96.0
+const AUTHORITATIVE_VISUAL_CORRECTION_MAX_DISTANCE: float = 160.0
 const NETWORK_MOVE_SNAP_EPSILON: float = 1.0
 # Keep diagnostics bounded even with hundreds of simultaneously chasing mobs.
 static var _debug_chase_packet_gap_logs: int = 0
@@ -740,16 +740,20 @@ func _clear_authoritative_visual_correction() -> void:
 		ui_container.position = _ui_visual_base
 
 
+static func should_ease_authoritative_correction(distance: float, on_screen: bool, state: String) -> bool:
+	return on_screen and state in ["walk", "idle"] and (
+		distance >= AUTHORITATIVE_VISUAL_CORRECTION_MIN_DISTANCE
+		and distance <= AUTHORITATIVE_VISUAL_CORRECTION_MAX_DISTANCE
+	)
+
+
 func _ease_authoritative_visual_correction(previous_world_pos: Vector2) -> void:
 	var distance: float = previous_world_pos.distance_to(global_position)
-	# Above the bound this might be a real teleport, respawn or map reset.
-	# Below the bound it is too small to be visually distracting.
-	if (
-		not is_inside_tree()
-		or not _is_on_screen
-		or current_state != "walk"
-		or distance < AUTHORITATIVE_VISUAL_CORRECTION_MIN_DISTANCE
-		or distance > AUTHORITATIVE_VISUAL_CORRECTION_MAX_DISTANCE
+	# The physics body must move to the server-approved coordinate immediately,
+	# but keep its sprite and UI visually continuous after a delayed attack snap.
+	# Real map teleports or respawns (>160 px) are never visually disguised.
+	if not is_inside_tree() or not should_ease_authoritative_correction(
+		distance, _is_on_screen, current_state
 	):
 		_clear_authoritative_visual_correction()
 		return
