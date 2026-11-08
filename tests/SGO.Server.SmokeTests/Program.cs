@@ -3045,6 +3045,11 @@ try
         currentCatalog,
         realCurrentCatalog);
 
+    LanternTransformationSmokeTests.Run(
+        router,
+        store,
+        currentCatalog);
+
     CosmeticTransformationSmokeTests.Run(
         router,
         store,
