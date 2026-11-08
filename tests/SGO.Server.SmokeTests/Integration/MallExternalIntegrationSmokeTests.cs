@@ -211,20 +211,57 @@ internal static class MallExternalIntegrationSmokeTests
                 requestId:
                     "legacy-request-1");
 
-        var repeatedJson =
-            JsonSerializer.Serialize(
-                repeatedWithdraw);
+        var repeatedResponse =
+            repeatedWithdraw
+                .Select(packet =>
+                    JsonDocument.Parse(
+                        JsonSerializer.Serialize(packet)))
+                .ToArray();
 
-        Check(
-            repeatedJson.Contains(
-                "\"Success\":true") &&
-            repeatedJson.Contains(
-                "未重複入帳") &&
-            store.GetMallPoints(
-                accountId.Value) == 700 &&
-            store.GetLifetimeDonation(
-                accountId.Value) == 500,
-            "replayed legacy withdrawal with same external transaction does not double credit");
+        try
+        {
+            var withdrawalResponse =
+                repeatedResponse
+                    .Select(x => x.RootElement)
+                    .First(x =>
+                        x.TryGetProperty(
+                            "Type",
+                            out var type) &&
+                        type.GetString() ==
+                            "LegacyPointWithdrawalResponse");
+
+            var pointsSync =
+                repeatedResponse
+                    .Select(x => x.RootElement)
+                    .First(x =>
+                        x.TryGetProperty(
+                            "Type",
+                            out var type) &&
+                        type.GetString() ==
+                            "MallPointsSync");
+
+            Check(
+                withdrawalResponse
+                    .GetProperty("Success")
+                    .GetBoolean() &&
+                withdrawalResponse
+                    .GetProperty("Message")
+                    .GetString() ==
+                    "此提領交易已完成，未重複入帳" &&
+                pointsSync
+                    .GetProperty("Points")
+                    .GetInt64() == 700 &&
+                store.GetMallPoints(
+                    accountId.Value) == 700 &&
+                store.GetLifetimeDonation(
+                    accountId.Value) == 500,
+                "replayed legacy withdrawal with same external transaction does not double credit");
+        }
+        finally
+        {
+            foreach (var document in repeatedResponse)
+                document.Dispose();
+        }
 
         var nullProviders =
             new MallService(store);
