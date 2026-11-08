@@ -159,7 +159,26 @@ const BUFF_ICON_SCENE = preload("res://buff_icon.tscn")
 
 const MINIMAP_UPDATE_INTERVAL: = 0.05
 const MINIMAP_WORLD_CULL_MASK: = 1 << 0
+# The SubViewport draws only the static map layer; players/NPCs are
+# separately drawn by minimap_npc_overlay. Avoid re-rendering that map
+# 20 times/sec while the camera is stationary.
+const MINIMAP_IDLE_WORLD_REDRAW_INTERVAL: float = 1.0
 var _minimap_update_elapsed: = 0.0
+var _minimap_world_idle_elapsed: float = 0.0
+var _minimap_force_world_redraw: bool = true
+var _minimap_world_redraw_requests: int = 0
+var _minimap_world_redraw_skips: int = 0
+
+
+static func should_redraw_minimap_world(camera_changed: bool, forced: bool, idle_seconds: float) -> bool:
+	return camera_changed or forced or idle_seconds >= MINIMAP_IDLE_WORLD_REDRAW_INTERVAL
+
+
+func get_minimap_world_redraw_stats() -> Dictionary:
+	return {
+		"redraws": _minimap_world_redraw_requests,
+		"skipped": _minimap_world_redraw_skips,
+	}
 
 
 const SHORTCUT_SLOT_SCENE = preload("res://shortcut_slot.tscn")
@@ -1322,6 +1341,7 @@ func is_initial_hud_ready() -> bool:
 
 func update_map_info(map_id: int, raw_node_name: String) -> void :
 	_last_displayed_coords = null
+	_minimap_force_world_redraw = true
 	if map_name_label:
 		map_name_label.text = REAL_MAP_NAMES.get(map_id, "")
 	if is_instance_valid(minimap_npc_overlay):
@@ -1427,6 +1447,7 @@ func set_background_visuals_paused(paused: bool) -> void :
 		minimap_npc_overlay.set_active(not paused and not _is_hud_hidden)
 	if not paused:
 		_minimap_update_elapsed = MINIMAP_UPDATE_INTERVAL
+		_minimap_force_world_redraw = true
 		_cursor_scan_elapsed = CURSOR_SCAN_IDLE_INTERVAL
 
 var _cursor_scan_elapsed: float = 0.0
@@ -1442,6 +1463,8 @@ func _process(delta: float) -> void :
 			_cursor_scan_elapsed = 0.0
 			_update_game_window_cursor_override()
 
+		if not _is_hud_hidden and is_instance_valid(target_player):
+			_minimap_world_idle_elapsed += delta
 		_minimap_update_elapsed += delta
 		if _minimap_update_elapsed >= MINIMAP_UPDATE_INTERVAL:
 			_minimap_update_elapsed = fmod(_minimap_update_elapsed, MINIMAP_UPDATE_INTERVAL)
@@ -1490,10 +1513,18 @@ func _update_minimap() -> void :
 		return
 
 	var player_position: = target_player.global_position
+	var camera_changed: bool = false
 	if minimap_camera and minimap_camera.global_position != player_position:
 		minimap_camera.global_position = player_position
+		camera_changed = true
 	if minimap_viewport:
-		minimap_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+		if should_redraw_minimap_world(camera_changed, _minimap_force_world_redraw, _minimap_world_idle_elapsed):
+			minimap_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+			_minimap_world_redraw_requests += 1
+			_minimap_world_idle_elapsed = 0.0
+			_minimap_force_world_redraw = false
+		else:
+			_minimap_world_redraw_skips += 1
 	if coords_label:
 		var displayed_coords: = Vector2i(int(player_position.x), int(player_position.y))
 		if displayed_coords != _last_displayed_coords:
@@ -1602,6 +1633,8 @@ func _toggle_hud_visibility() -> void :
 	else:
 		if is_instance_valid(minimap_npc_overlay) and minimap_npc_overlay.has_method("set_active"):
 			minimap_npc_overlay.set_active(true)
+		_minimap_force_world_redraw = true
+		_minimap_update_elapsed = MINIMAP_UPDATE_INTERVAL
 		for panel in panels:
 			if panel: panel.visible = true;_hud_tween.tween_property(panel, "modulate:a", 1.0, 0.2)
 
