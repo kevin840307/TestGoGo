@@ -9275,7 +9275,26 @@ try
                   "\"Type\":\"SpawnEntity\"")),
         "dead monster respawns with full HP");
 
-    // Monster -> player damage/death.
+    // Monster -> player damage/death. The preceding reward smoke can
+    // legitimately level this shared character all the way to Lv255, so do
+    // not make this death contract depend on an arbitrary 100-hit HP budget.
+    // Leave the character alive at 1 HP, then require the monster's own
+    // authoritative attack path to persist the actual death.
+    var playerBeforeDeathFixture =
+        store.GetCharacter(account.Value, id)!;
+    var playerHpBeforeDeathFixture =
+        Convert.ToInt32(playerBeforeDeathFixture["HP"]);
+    var preparedPlayerDeathFixture = store.ApplyDamage(
+        account.Value,
+        id,
+        Math.Max(0, playerHpBeforeDeathFixture - 1));
+
+    Check(
+        preparedPlayerDeathFixture is not null &&
+        Convert.ToInt32(preparedPlayerDeathFixture["HP"]) == 1 &&
+        preparedPlayerDeathFixture["State"].ToString() != "death",
+        "prepare alive 1 HP player fixture for monster death smoke");
+
     var playerDeathSeen = false;
     var aiNow = session.LastMonsterAiTick.AddSeconds(2);
 
