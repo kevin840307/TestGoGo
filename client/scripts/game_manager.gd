@@ -43,9 +43,15 @@ var current_festival_theme: String = FestivalThemeManager.NORMAL
 var current_festival_activity: String = ""
 var current_performance_load_mode: int = ClientPerformanceProfile.LOAD_BALANCED
 var current_combat_render_mode: int = ClientPerformanceProfile.COMBAT_NORMAL
-var current_performance_profile: Dictionary = ClientPerformanceProfile.resolve(
-	current_performance_load_mode,
-	current_combat_render_mode
+var current_simplify_players_mode: int = ClientPerformanceProfile.SIMPLIFY_AUTO
+var current_simplify_monsters_mode: int = ClientPerformanceProfile.SIMPLIFY_AUTO
+var current_performance_profile: Dictionary = ClientPerformanceProfile.apply_visual_overrides(
+	ClientPerformanceProfile.resolve(
+		current_performance_load_mode,
+		current_combat_render_mode
+	),
+	current_simplify_players_mode,
+	current_simplify_monsters_mode
 )
 
 var is_changing_map: bool = false
@@ -465,14 +471,33 @@ const BACKGROUND_CACHE_TRIM_COOLDOWN_MSEC: int = 60000
 const UNFOCUSED_MAX_FPS := 30
 
 
+func _rebuild_performance_profile() -> void:
+	current_performance_profile = ClientPerformanceProfile.apply_visual_overrides(
+		ClientPerformanceProfile.resolve(
+			current_performance_load_mode,
+			current_combat_render_mode
+		),
+		current_simplify_players_mode,
+		current_simplify_monsters_mode
+	)
+
 func set_performance_modes(load_mode: int, combat_mode: int) -> void:
 	current_performance_load_mode = ClientPerformanceProfile.sanitize_load_mode(load_mode)
 	current_combat_render_mode = ClientPerformanceProfile.sanitize_combat_mode(combat_mode)
-	current_performance_profile = ClientPerformanceProfile.resolve(
-		current_performance_load_mode,
-		current_combat_render_mode
-	)
+	_rebuild_performance_profile()
 	_apply_performance_profile()
+
+func set_visual_simplification_modes(player_mode: int, monster_mode: int) -> void:
+	current_simplify_players_mode = ClientPerformanceProfile.sanitize_simplify_mode(player_mode)
+	current_simplify_monsters_mode = ClientPerformanceProfile.sanitize_simplify_mode(monster_mode)
+	_rebuild_performance_profile()
+	_apply_performance_profile()
+
+func get_simplify_players_mode() -> int:
+	return current_simplify_players_mode
+
+func get_simplify_monsters_mode() -> int:
+	return current_simplify_monsters_mode
 
 func get_performance_profile() -> Dictionary:
 	return current_performance_profile.duplicate(true)
@@ -521,9 +546,11 @@ func _apply_performance_profile() -> void:
 	_refresh_focus_render_policy()
 	performance_profile_changed.emit(get_performance_profile())
 	if OS.is_debug_build():
-		print("[PERFORMANCE_PROFILE] mode=%s combat=%s load=%d combat_id=%d foreground_fps=%d background_fps=%d players=%d monsters=%d effects=%d%%" % [
+		print("[PERFORMANCE_PROFILE] mode=%s combat=%s player_simplify=%s monster_simplify=%s load=%d combat_id=%d foreground_fps=%d background_fps=%d players=%d monsters=%d effects=%d%%" % [
 			ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
 			ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
+			ClientPerformanceProfile.simplify_mode_name(current_simplify_players_mode),
+			ClientPerformanceProfile.simplify_mode_name(current_simplify_monsters_mode),
 			current_performance_load_mode,
 			current_combat_render_mode,
 			int(current_performance_profile.get("foreground_fps", 0)),
