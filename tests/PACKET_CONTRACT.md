@@ -3,9 +3,21 @@
 > **最新未完成功能與驗收狀態**：[server/FEATURE_GAPS.md](../server/FEATURE_GAPS.md)。
 > **測試模組架構及新增測試方式**：[SMOKE_TESTS.md](SMOKE_TESTS.md)。
 > 以下按日期記錄的 16／27、40／44 等數量是歷史擴充過程，
-> 目前程式碼中定義 **44 種請求、34 種 Action、27 種關鍵回應**；
+> 目前程式碼中定義 **44 種請求、34 種 Action、39 種關鍵回應**；
 > 靜態 `ROUTED` 不代表實際操作或 E2E 通過。
 
+
+## 2026-11-08：多人地圖與狀態同步回應契約
+
+`tests/packet_response_audit.py` 新增 **12 種**高頻事件最低必要欄位：
+`SpawnEntity`、`MoveEntity`、`SyncState`、`ChangeMap`、
+`PositionCorrection`、`SyncMoney`、`SyncBuffs`、`SyncStatus`、
+`ItemPickupFeedback`、`SystemMessageFlash`、`QuestSync`、`QuestUpdate`。
+
+實際對照 Server 71 個 C# 原始檔中這些固定匿名封包宣告的欄位；
+所有檢查的宣告都具有目前指定的最低欄位集合。這是**靜態形狀檢查**，
+仍需真實 Godot 連線驗證動畫時序、Client 欄位值與多人狀態一致性。
+`test_packet_response_audit.py` 也新增了 `MoveEntity.SpeedTime` 缺失的反例測試。
 
 ## 執行方式
 
