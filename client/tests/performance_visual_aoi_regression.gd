@@ -24,8 +24,7 @@ func _run() -> void:
 	for mode: int in [
 		ClientPerformanceProfile.LOAD_QUALITY,
 		ClientPerformanceProfile.LOAD_BALANCED,
-		ClientPerformanceProfile.LOAD_LOW,
-		ClientPerformanceProfile.LOAD_MULTIBOX
+		ClientPerformanceProfile.LOAD_LOW
 	]:
 		var profile: Dictionary = ClientPerformanceProfile.resolve(mode, ClientPerformanceProfile.COMBAT_NORMAL)
 		var monster: Vector2 = ENTITY_MANAGER.resolve_visual_aoi_radii(profile, true, 0.0)
@@ -37,10 +36,14 @@ func _run() -> void:
 		previous_monster = monster.x
 		previous_ground = ground.x
 
-	var multibox: Dictionary = ClientPerformanceProfile.resolve(
+	var low: Dictionary = ClientPerformanceProfile.resolve(
+		ClientPerformanceProfile.LOAD_LOW, ClientPerformanceProfile.COMBAT_NORMAL
+	)
+	var migrated: Dictionary = ClientPerformanceProfile.resolve(
 		ClientPerformanceProfile.LOAD_MULTIBOX, ClientPerformanceProfile.COMBAT_NORMAL
 	)
-	var camera_monster: Vector2 = ENTITY_MANAGER.resolve_visual_aoi_radii(multibox, true, 3000.0)
+	check(low == migrated, "legacy multibox visual radii migrate to low resource")
+	var camera_monster: Vector2 = ENTITY_MANAGER.resolve_visual_aoi_radii(low, true, 3000.0)
 	check(camera_monster.x >= 3000.0, "large camera still shows onscreen monsters")
 	var camera_ground: Vector2 = ENTITY_MANAGER.resolve_visual_aoi_radii(multibox, false, 2800.0)
 	check(camera_ground.x >= 2800.0, "large camera still shows clickable drops")
