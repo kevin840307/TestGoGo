@@ -193,8 +193,16 @@ public sealed class SharedMapAiTicker : BackgroundService
                     {
                         foreach (var packet in _combat.TickRespawns(
                                      respawnOwner, now))
+                        {
+                            if (!ShouldDeliverActorPacket(
+                                    respawnOwner,
+                                    packet))
+                                continue;
+
                             _broadcasts.PublishToConnection(
-                                respawnOwner.ConnectionId, packet);
+                                respawnOwner.ConnectionId,
+                                packet);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -298,11 +306,21 @@ public sealed class SharedMapAiTicker : BackgroundService
                             now,
                             assigned);
 
-                        // The combat service broadcasts to map peers; enqueue
-                        // the return packets only to the actor's own socket.
+                        // The combat service broadcasts to AOI peers. The
+                        // driver socket must obey the same monster known-set;
+                        // otherwise a far-away scheduler owner still receives
+                        // every idle monster Move/State packet.
                         foreach (var packet in packets)
+                        {
+                            if (!ShouldDeliverActorPacket(
+                                    session,
+                                    packet))
+                                continue;
+
                             _broadcasts.PublishToConnection(
-                                session.ConnectionId, packet);
+                                session.ConnectionId,
+                                packet);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -335,6 +353,34 @@ public sealed class SharedMapAiTicker : BackgroundService
             assignedMonsterCount);
 
         return tickedMaps;
+    }
+
+    private bool ShouldDeliverActorPacket(
+        ClientSession session,
+        object packet)
+    {
+        var type = packet.GetType()
+            .GetProperty("Type")
+            ?.GetValue(packet)
+            ?.ToString();
+
+        // Death is terminal and the assigned combat owner is normally the
+        // target/attacker. BroadcastWorldPackets removes the entity from the
+        // AOI immediately after publishing death, so visibility can no longer
+        // be queried here. One terminal packet to the owner is still bounded.
+        if (type == "EntityDeath")
+            return true;
+
+        if (!CombatService.TryResolveMonsterAoiEntityId(
+                session,
+                packet,
+                type,
+                out var monsterEntityId))
+            return true;
+
+        return _broadcasts.IsWorldAoiVisible(
+            session.ConnectionId,
+            monsterEntityId);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
