@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import binascii
+import hashlib
 import json
 import math
 import re
@@ -73,6 +74,15 @@ class MapRepository:
         if not path.exists():
             raise FileNotFoundError(f"找不到地圖 Map{int(map_id):02d}")
         return path
+
+    def spawn_revision(self, map_id: int, tab: str) -> str:
+        if tab not in {"enemies", "npcs"}:
+            raise ValueError("tab 必須是 enemies 或 npcs")
+        filename = "Enemy.dat" if tab == "enemies" else "NPC.dat"
+        path = self._map_dir(map_id) / filename
+        if not path.exists():
+            return "missing"
+        return hashlib.sha256(path.read_bytes()).hexdigest()
 
     def _spawn_config_path(self) -> Path:
         return self.paths.assets / "GameInfo" / "MapSpawnConfig.json"
