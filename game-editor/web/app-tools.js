@@ -283,6 +283,9 @@ $$('[data-map-tab]').forEach(b => b.onclick = async () => {
   await loadMapRows();
 });
 $('#map-enemy-search').oninput = debounce(renderEnemyPalette, 100);
+$('#map-show-blocking').onchange = e => { state.mapShowBlocking = e.target.checked; renderMapVisual(); };
+$('#map-show-spawners').onchange = e => { state.mapShowSpawners = e.target.checked; renderMapVisual(); };
+$('#map-snap-walkable').onchange = e => { state.mapSnapWalkable = e.target.checked; };
 $('#map-add').onclick = addMapRow;
 $('#map-save').onclick = saveMap;
 
