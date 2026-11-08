@@ -2370,7 +2370,9 @@ public sealed class CombatService
         }
 
         if (isAttack &&
-            (primaryMonster is not null || isScreenAreaAttack))
+            (primaryMonster is not null ||
+             isScreenAreaAttack ||
+             isSelfCenteredAreaAttack))
         {
             var damage = Math.Max(
                 1,
