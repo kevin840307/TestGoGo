@@ -35,10 +35,62 @@ var remembered_accounts: Array[Dictionary] = []
 var submitted_username: String = ""
 var submitted_password: String = ""
 
+# Small debug-only window measuring the first seconds of the login UI.
+# Never emit account/password text or individual input events to logs.
+var _login_reveal_started_usec: int = 0
+var _login_startup_gap_reports: int = 0
+const LOGIN_STARTUP_MONITOR_SECONDS: float = 6.0
+const LOGIN_STARTUP_GAP_WARN_SECONDS: float = 0.05
+const LOGIN_STARTUP_MAX_GAP_REPORTS: int = 12
+
 
 var ascii_regex: RegEx = RegEx.new()
 var alphanumeric_regex: RegEx = RegEx.new()
 var email_regex: RegEx = RegEx.new()
+
+static func needs_non_ascii_rewrite(original: String, sanitized: String) -> bool:
+	return original != sanitized
+
+
+func warm_background_video() -> void:
+	# Do not decode the looping OGV through the whole 1453-recipe prewarm.
+	# The parent starts this shortly BEFORE displaying the login form,
+	# leaving the original motion visible when the form is shown.
+	if not is_instance_valid(bg_video) or bg_video.stream == null:
+		return
+	bg_video.loop = true
+	if not bg_video.is_playing():
+		bg_video.play()
+	else:
+		bg_video.paused = false
+
+
+func stop_background_video() -> void:
+	if is_instance_valid(bg_video) and bg_video.is_playing():
+		bg_video.stop()
+
+
+func mark_login_screen_revealed() -> void:
+	_login_reveal_started_usec = Time.get_ticks_usec()
+	_login_startup_gap_reports = 0
+
+
+func _process(delta: float) -> void:
+	if not OS.is_debug_build() or _login_reveal_started_usec <= 0:
+		return
+	var age_seconds: float = float(Time.get_ticks_usec() - _login_reveal_started_usec) / 1000000.0
+	if age_seconds > LOGIN_STARTUP_MONITOR_SECONDS:
+		_login_reveal_started_usec = 0
+		return
+	if delta >= LOGIN_STARTUP_GAP_WARN_SECONDS and _login_startup_gap_reports < LOGIN_STARTUP_MAX_GAP_REPORTS:
+		_login_startup_gap_reports += 1
+		var video_active: bool = is_instance_valid(bg_video) and bg_video.is_playing() and not bg_video.paused
+		var input_focused: bool = (is_instance_valid(user_edit) and user_edit.has_focus()) or (is_instance_valid(password_edit) and password_edit.has_focus())
+		print("[LOGIN_STARTUP_FRAME_GAP] frame_ms=%.2f age_s=%.2f video_playing=%s input_focused=%s %s" % [
+			delta * 1000.0, age_seconds, str(video_active), str(input_focused),
+			GameManager._focus_perf_context() if GameManager else "",
+		])
+
 
 func _ready() -> void :
 
@@ -54,9 +106,9 @@ func _ready() -> void :
 	register_panel.visible = false
 
 
-	if bg_video and bg_video.stream != null:
-		bg_video.loop = true
-		bg_video.play()
+	# EntryManager starts the video at the END of startup prewarm, while
+	# the loading overlay still covers this screen. Do not waste CPU/GPU
+	# decoding during item/skill/recipe indexing.
 
 
 	_setup_input_fields()
@@ -94,9 +146,14 @@ func _setup_input_fields() -> void :
 		if edit:
 			edit.focus_entered.connect( func(): DisplayServer.window_set_ime_active(false))
 			edit.text_changed.connect( func(new_text: String):
-				var caret_pos = edit.get_caret_column()
-				edit.text = _clean_non_ascii(new_text)
-				edit.set_caret_column(caret_pos)
+				var sanitized: String = _clean_non_ascii(new_text)
+				# Most account/password keystrokes are already ASCII. Reassigning
+				# identical LineEdit.text every key forces needless layout/caret
+				# changes and can interfere with IME/focus input responsiveness.
+				if needs_non_ascii_rewrite(new_text, sanitized):
+					var caret_pos: int = edit.get_caret_column()
+					edit.text = sanitized
+					edit.set_caret_column(mini(caret_pos, sanitized.length()))
 			)
 
 
@@ -141,6 +198,7 @@ func _commit_login_flow() -> void :
 
 func _on_login_result_received(success: bool, msg: String) -> void :
 	if success:
+		stop_background_video()
 		_remember_successful_login(submitted_username, submitted_password)
 	else:
 		_stop_loading_animation()
