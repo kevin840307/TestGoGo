@@ -12,6 +12,7 @@ var current_dir: String = "1"
 var is_action_locked: bool = false
 var entity_scale: float = 1.0
 const GENERIC_MONSTER_CLICK_SIZE := Vector2(112.0, 136.0)
+const SIMPLIFIED_ORB_CACHE = preload("res://scripts/simplified_orb_cache.gd")
 var _original_sprite_name: String = ""
 var _original_color_index: int = 0
 var _performance_simplified_visual: bool = false
@@ -197,34 +198,14 @@ func _simplified_monster_base_color() -> Color:
 
 
 func _draw_simplified_monster(center: Vector2, tint: Color) -> void:
-	# A small hand-painted-looking, spiky pearl orb, using only CanvasItem
-	# primitives. Soft concentric layers imitate a gradient without textures,
-	# shaders, SpriteFrames or continuous animation.
-	draw_circle(center, 33.0, Color(0.60, 0.80, 1.0, 0.12))
-	for i in range(8):
-		var angle := TAU * float(i) / 8.0
-		var direction := Vector2(cos(angle), sin(angle))
-		var sideways := Vector2(-direction.y, direction.x)
-		var root := center + direction * 18.0
-		var tip := center + direction * (35.0 if i % 2 == 0 else 30.0)
-		draw_colored_polygon(
-			PackedVector2Array([
-				root - sideways * 6.0,
-				tip,
-				root + sideways * 6.0
-			]),
-			Color(0.78, 0.89, 1.0, 0.94)
-		)
-
-	draw_circle(center + Vector2(0.0, 2.0), 25.0, Color(0.52, 0.69, 0.84, 0.88))
-	draw_circle(center, 22.0, Color(0.79, 0.88, 0.97, 1.0))
-	draw_circle(center + Vector2(-2.0, -3.0), 18.0, tint)
-	draw_circle(center + Vector2(-6.0, -8.0), 11.0, Color(1.0, 1.0, 1.0, 0.96))
-	# Sparse stepped highlights give the glow a drawn/pixel-art accent.
-	draw_rect(Rect2(center + Vector2(-13.0, -16.0), Vector2(7.0, 3.0)), Color.WHITE)
-	draw_rect(Rect2(center + Vector2(-17.0, -10.0), Vector2(4.0, 7.0)), Color(1.0, 1.0, 1.0, 0.72))
-	draw_rect(Rect2(center + Vector2(11.0, 10.0), Vector2(5.0, 3.0)), Color(0.66, 0.83, 1.0, 0.75))
-
+	# One textured quad, not eight triangles plus layered circles and rects.
+	# All simplified monsters reuse the SAME runtime-generated ImageTexture.
+	# No sprite frames are loaded and no per-entity texture is allocated.
+	draw_texture(
+		SIMPLIFIED_ORB_CACHE.monster_texture(),
+		center - SIMPLIFIED_ORB_CACHE.HALF_SIZE,
+		tint
+	)
 
 func _draw() -> void:
 	if not _primitive_simplified_visual:
