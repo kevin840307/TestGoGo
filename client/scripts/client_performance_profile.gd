@@ -10,11 +10,41 @@ const COMBAT_NORMAL := 0
 const COMBAT_PVP := 1
 const COMBAT_MASS := 2
 
+const SIMPLIFY_AUTO := 0
+const SIMPLIFY_OFF := 1
+const SIMPLIFY_ON := 2
+
 static func sanitize_load_mode(value: int) -> int:
 	return clampi(value, LOAD_QUALITY, LOAD_MULTIBOX)
 
 static func sanitize_combat_mode(value: int) -> int:
 	return clampi(value, COMBAT_NORMAL, COMBAT_MASS)
+
+static func sanitize_simplify_mode(value: int) -> int:
+	return clampi(value, SIMPLIFY_AUTO, SIMPLIFY_ON)
+
+static func simplify_mode_name(value: int) -> String:
+	match sanitize_simplify_mode(value):
+		SIMPLIFY_AUTO: return "auto"
+		SIMPLIFY_OFF: return "off"
+		SIMPLIFY_ON: return "on"
+	return "auto"
+
+static func apply_visual_overrides(
+	profile: Dictionary,
+	player_mode: int,
+	monster_mode: int
+) -> Dictionary:
+	var result := profile.duplicate(true)
+	player_mode = sanitize_simplify_mode(player_mode)
+	monster_mode = sanitize_simplify_mode(monster_mode)
+	if player_mode != SIMPLIFY_AUTO:
+		result["simplify_other_players"] = player_mode == SIMPLIFY_ON
+	if monster_mode != SIMPLIFY_AUTO:
+		result["simplify_noncritical_monsters"] = monster_mode == SIMPLIFY_ON
+	result["simplify_players_mode"] = player_mode
+	result["simplify_monsters_mode"] = monster_mode
+	return result
 
 static func load_mode_name(value: int) -> String:
 	match sanitize_load_mode(value):
