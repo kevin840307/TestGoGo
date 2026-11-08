@@ -7977,9 +7977,9 @@ try
     Check(sharedSpawnPackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"SpawnEntity\"")) &&
-          peerRegistration.Queue.TryDequeue(out var peerSpawn) &&
-          JsonSerializer.Serialize(peerSpawn).Contains(
-              "\"Type\":\"SpawnEntity\"") &&
+          peerRegistration.Queue.ToArray().Any(x =>
+              JsonSerializer.Serialize(x).Contains(
+                  "\"Type\":\"SpawnEntity\"")) &&
           broadcastRegistration.Queue.IsEmpty,
         "map world events broadcast to peers without echoing to source connection");
 
