@@ -4201,8 +4201,7 @@ try
         account.Value,
         id,
         happinessDollUid,
-        currentCatalog,
-        config);
+        currentCatalog);
 
     var equipmentDollUid = store.AddInventoryItem(
         account.Value, id, 2126, 1);
