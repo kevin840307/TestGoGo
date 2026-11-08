@@ -25,6 +25,9 @@ var legacyNpcVisuals =
     app.Services.GetRequiredService<LegacyNpcVisualCatalog>();
 var shopCatalog =
     app.Services.GetRequiredService<ShopCatalog>();
+var sharedMapAiTicker =
+    app.Services.GetRequiredService<
+        SGO.Server.Application.World.SharedMapAiTicker>();
 
 if (!currentClientData.IsAvailable)
 {
@@ -61,7 +64,18 @@ app.MapGet("/health", (IConfiguration config) => Results.Ok(new
     currentClientRoot = currentClientData.Root,
     currentItemCount = currentClientData.Items.Count,
     currentSkillCount = currentClientData.Skills.Count,
-    currentPetCount = currentClientData.Pets.Count
+    currentPetCount = currentClientData.Pets.Count,
+    sharedMapAi = sharedMapAiTicker.LastDiagnostics,
+    runtime = new
+    {
+        workingSetBytes = Environment.WorkingSet,
+        gcHeapBytes = GC.GetTotalMemory(false),
+        cpuTotalMilliseconds =
+            System.Diagnostics.Process
+                .GetCurrentProcess()
+                .TotalProcessorTime
+                .TotalMilliseconds
+    }
 }));
 
 app.MapSgoWebSocket();
