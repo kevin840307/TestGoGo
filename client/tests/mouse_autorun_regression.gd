@@ -71,12 +71,8 @@ func _test_existing_cursor_precedence() -> void:
 		"locked walk replaces ordinary mouse sprite instead of adding an overlay")
 	_check(CursorManager.is_autorun_indicator_visible(),
 		"latched movement has a distinct animated cursor")
-	var status_badge: Label = CursorManager.get("_autorun_status_label") as Label
-	_check(is_instance_valid(status_badge) and status_badge.visible and
-		status_badge.text.contains("自動走路 ON") and
-		status_badge.text.contains("右鍵停止") and
-		status_badge.mouse_filter == Control.MOUSE_FILTER_IGNORE,
-		"persistent readable lock-ON badge explains state and does not intercept clicks")
+	_check(CursorManager.get("_autorun_status_label") == null,
+		"autorun animation has no text badge or extra input surface")
 	_check(CursorManager.cursor_sprite.scale.x > 1.0,
 		"only locked walking increases sprite visibility")
 	_check(CursorManager.cursor_sprite.sprite_frames.get_frame_texture(
@@ -85,9 +81,8 @@ func _test_existing_cursor_precedence() -> void:
 	CursorManager.set_cursor_state("attack")
 	_check(not CursorManager.is_autorun_indicator_visible() and
 		CursorManager.cursor_sprite.animation == "attack" and
-		not status_badge.visible and
 		is_equal_approx(CursorManager.cursor_sprite.scale.x, 1.0),
-		"hovered monster keeps original dimensions and hides locked-walk badge")
+		"hovered monster keeps original dimensions and priority over autorun")
 	CursorManager.set_cursor_state("check")
 	_check(not CursorManager.is_autorun_indicator_visible(),
 		"hovered NPC keeps existing check cursor")
@@ -105,9 +100,8 @@ func _test_existing_cursor_precedence() -> void:
 		"cursor returns on terrain while latch is still active")
 	CursorManager.set_autorun_indicator(false)
 	_check(not CursorManager.is_autorun_indicator_visible() and
-		not status_badge.visible and
 		is_equal_approx(CursorManager.cursor_sprite.scale.x, 1.0),
-		"right-click or terrain tap immediately hides lock badge and restores regular sprite")
+		"right-click or terrain tap restores regular pointer without text")
 
 
 func _test_right_click_preserves_player_interaction() -> void:
