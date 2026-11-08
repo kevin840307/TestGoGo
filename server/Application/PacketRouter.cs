@@ -2424,6 +2424,53 @@ public sealed class PacketRouter
                     ];
                 }
 
+                var choiceReward =
+                    ChoiceRewardCatalog.Resolve(
+                        _current,
+                        itemIndex);
+
+                if (choiceReward is not null)
+                {
+                    if (Convert.ToInt32(
+                            inventoryItem["InBank"]) != 0 ||
+                        Convert.ToInt32(
+                            inventoryItem["InShop"]) != 0 ||
+                        Convert.ToInt32(
+                            inventoryItem["Count"]) <= 0)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message =
+                                    "此選擇型道具目前無法使用"
+                            }
+                        ];
+                    }
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "ItemChoiceRequired",
+                            ItemUID = itemUid,
+                            ItemIndex = itemIndex,
+                            Title = choiceReward.SourceName,
+                            Options = choiceReward.Options
+                                .Select(option =>
+                                    new
+                                    {
+                                        ItemIndex =
+                                            option.ItemIndex,
+                                        Name =
+                                            option.Name
+                                    })
+                                .ToArray()
+                        }
+                    ];
+                }
+
                 if (scriptedItem is not null &&
                     IsCraftingMaterialItem(scriptedItem))
                 {
@@ -2446,6 +2493,151 @@ public sealed class PacketRouter
                         Message = "此物品的使用效果尚未支援"
                     }
                 ];
+            }
+
+            case "UseItemChoiceRequest":
+            {
+                if (!state.CharacterId.HasValue)
+                    return [];
+
+                var itemUid =
+                    req.Long("ItemUID");
+                var selectedItemIndex =
+                    req.Int("ItemIndex");
+
+                var assetsBefore =
+                    _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+                var sourceItem =
+                    assetsBefore.Inventory
+                        .FirstOrDefault(x =>
+                            Convert.ToInt64(
+                                x["ItemUID"]) ==
+                            itemUid);
+
+                if (sourceItem is null)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message =
+                                "找不到可使用的選擇型道具"
+                        }
+                    ];
+                }
+
+                var sourceItemIndex =
+                    Convert.ToInt32(
+                        sourceItem["ItemIndex"]);
+                var choiceReward =
+                    ChoiceRewardCatalog.Resolve(
+                        _current,
+                        sourceItemIndex);
+
+                var selected =
+                    choiceReward?.Options
+                        .FirstOrDefault(x =>
+                            x.ItemIndex ==
+                            selectedItemIndex);
+
+                if (choiceReward is null ||
+                    selected is null)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message =
+                                "獎勵選項已失效，請重新使用道具"
+                        }
+                    ];
+                }
+
+                var opened =
+                    _store.OpenFixedRewardBundle(
+                        accountId,
+                        state.CharacterId.Value,
+                        itemUid,
+                        sourceItemIndex,
+                        [
+                            new FixedRewardGrant(
+                                selected.ItemIndex,
+                                selected.Kind,
+                                1,
+                                selected.Part,
+                                selected.Damage)
+                        ]);
+
+                if (!opened.Success)
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = opened.Message
+                        }
+                    ];
+                }
+
+                var assets =
+                    _store.GetCharacterAssets(
+                        accountId,
+                        state.CharacterId.Value);
+                var packets =
+                    new List<object>
+                    {
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize =
+                                assets.InventoryMaxSize
+                        }
+                    };
+
+                if (selected.Kind ==
+                    AssetPurchaseKind.Equipment)
+                {
+                    packets.Add(new
+                    {
+                        Type = "EquipSync",
+                        Equips = assets.Equips,
+                        MaxSize =
+                            assets.EquipMaxSize
+                    });
+                }
+
+                if (selected.Kind ==
+                    AssetPurchaseKind.HorseEquipment)
+                {
+                    packets.Add(new
+                    {
+                        Type = "HorseSync",
+                        Horses = assets.Horses,
+                        HorseEquips =
+                            assets.HorseEquips,
+                        MaxHorseEquipSize =
+                            assets.HorseEquipMaxSize
+                    });
+                }
+
+                packets.Add(
+                    BuildAndBroadcastItemEffect(
+                        state,
+                        sourceItemIndex));
+                packets.Add(new
+                {
+                    Type = "SystemMessageFlash",
+                    Message =
+                        $"已選擇獎勵：{selected.Name}"
+                });
+
+                return packets;
             }
 
             case "EquipRequest":
