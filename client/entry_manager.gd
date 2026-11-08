@@ -526,5 +526,9 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 
 		overlay.visible = false
 
+	# The loading surface is now actually gone. Only at this point may
+	# an unfocused world resume GPU/render-loop power saving.
+	if GameManager and GameManager.has_method("notify_world_loading_overlay_hidden"):
+		GameManager.notify_world_loading_overlay_hidden()
 	_debug_perf_checkpoint("world_ready")
 	queue_free()
