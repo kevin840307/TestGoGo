@@ -44,8 +44,8 @@ func _run() -> void:
 	GameManager._refresh_focus_render_policy()
 	check(not RenderingServer.render_loop_enabled,
 		"AFK focus-out disables the entire GPU render loop")
-	check(Engine.max_fps == GameManager.AFK_MONITOR_FPS,
-		"AFK remains limited to its monitor frame pacing")
+	check(Engine.max_fps == old_fps,
+		"AFK focus-out preserves the user's active main-loop FPS pacing")
 	check(Engine.physics_ticks_per_second == old_physics_hz,
 		"AFK focus-out leaves fixed simulation tick rate untouched")
 
@@ -59,6 +59,8 @@ func _run() -> void:
 	GameManager._refresh_focus_render_policy()
 	check(not RenderingServer.render_loop_enabled,
 		"AFK refocus keeps the continuous GPU render loop disabled")
+	check(Engine.max_fps == old_fps,
+		"AFK refocus still does not alter the user's FPS setting")
 	check(GameManager.request_afk_dashboard_frame(),
 		"focused AFK dashboard can request one explicit frame")
 	check(not RenderingServer.render_loop_enabled,
