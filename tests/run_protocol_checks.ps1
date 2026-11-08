@@ -42,6 +42,10 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_smoke_suite_structure.py", "-v"
     )
+    Invoke-Checked "Feature gap tracking regression" "python" @(
+        "-m", "unittest", "discover", "-s", "tests",
+        "-p", "test_feature_gap_tracker.py", "-v"
+    )
     Invoke-Checked "Packet Type/Action coverage" "python" @(
         "tests/packet_contract_audit.py", "--strict", "--output",
         (Join-Path $logRoot "packet-contract.json")
