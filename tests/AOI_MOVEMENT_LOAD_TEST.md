@@ -35,6 +35,8 @@ dotnet run -c Release --project .\tests\SGO.Server.LoadProbe\SGO.Server.LoadProb
 
 ```powershell
 cd C:\SGO\Recovered
+# 一定使用新的測試 DB，不共用現有正式遊戲資料。
+$env:Database__Sqlite__Path = (Join-Path (Get-Location) ("server\Data\aoi-load-" + (Get-Date -Format "yyyyMMdd-HHmmss") + ".db"))
 $env:Game__GmCommandsEnabled = "true"
 dotnet run -c Release --project .\server\SGO.Server.csproj
 ```
