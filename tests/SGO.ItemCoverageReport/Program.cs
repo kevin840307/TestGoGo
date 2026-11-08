@@ -64,6 +64,10 @@ var report = new
         rows.Count(x =>
             x.Status ==
             "DATA_AMBIGUOUS"),
+    LegacyRewardDataRequiredCount =
+        rows.Count(x =>
+            x.Status ==
+            "LEGACY_REWARD_DATA_REQUIRED"),
     Items =
         rows,
     Limits = new[]
@@ -71,6 +75,7 @@ var report = new
         "Static/data-driven coverage: a SUPPORTED classification does not replace gameplay E2E.",
         "CHOICE_REQUIRED means the item still needs a reliable player-selection/random rule and is intentionally not guessed.",
         "DATA_AMBIGUOUS means legacy text maps to multiple current variants; runtime must reject without consuming the source.",
+        "LEGACY_REWARD_DATA_REQUIRED means the key/box relationship is known but the authoritative reward table is absent; neither item is consumed.",
         "UNKNOWN_SCRIPT_EFFECT must remain a visible code/data gap; strict mode fails until it is classified or implemented."
     }
 };
@@ -107,7 +112,8 @@ foreach (var row in rows.Where(x =>
              x.Status is
                  "UNKNOWN_SCRIPT_EFFECT" or
                  "CHOICE_REQUIRED" or
-                 "DATA_AMBIGUOUS"))
+                 "DATA_AMBIGUOUS" or
+                 "LEGACY_REWARD_DATA_REQUIRED"))
 {
     Console.WriteLine(
         $"{row.Status}: {row.ItemId} {row.Name} " +
@@ -232,6 +238,30 @@ CoverageRow Classify(
         return Supported(
             item,
             "timed experience-card resolver");
+    }
+
+    if (LegacyKeyedChestCatalog.Resolve(
+            current,
+            item.ItemId) is not null)
+    {
+        return new(
+            item.ItemId,
+            item.Name,
+            item.ScriptName,
+            "LEGACY_REWARD_DATA_REQUIRED",
+            "chest/key pairing is known but the original reward table is not present in the recovered data");
+    }
+
+    if (CraftingArtifactCatalog.Resolve(
+            current,
+            item.ItemId) is not null)
+    {
+        return new(
+            item.ItemId,
+            item.Name,
+            item.ScriptName,
+            "NONCONSUMABLE_CRAFTING",
+            "legacy crafting card/chip resolves to one current-client output item");
     }
 
     if (IsCraftingMaterial(
