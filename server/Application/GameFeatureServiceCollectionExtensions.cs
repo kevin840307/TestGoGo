@@ -36,6 +36,7 @@ public static class GameFeatureServiceCollectionExtensions
         services.AddSingleton<IPayPalDonationProvider, NullPayPalDonationProvider>();
         services.AddSingleton<ILegacyPointProvider, NullLegacyPointProvider>();
         services.AddSingleton<MallService>();
+        services.AddSingleton<PayPalWebhookService>();
         services.AddSingleton<PartyService>();
         services.AddSingleton<RankService>();
         services.AddSingleton<QuestProgressService>();
