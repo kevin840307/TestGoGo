@@ -54,9 +54,9 @@ func _ready() -> void:
 	assert(bool(auto_profile["simplify_other_players"]))
 	assert(bool(auto_profile["simplify_noncritical_monsters"]))
 	assert(int(auto_profile["player_simplify_style"]) ==
-		ClientPerformanceProfile.SIMPLIFY_MINIMAL)
+		ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
 	assert(int(auto_profile["monster_simplify_style"]) ==
-		ClientPerformanceProfile.SIMPLIFY_MINIMAL)
+		ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
 
 	var forced_off := ClientPerformanceProfile.apply_visual_overrides(
 		multibox,
@@ -80,22 +80,49 @@ func _ready() -> void:
 	assert(int(forced_on["player_simplify_style"]) ==
 		ClientPerformanceProfile.SIMPLIFY_PIXEL_A)
 
-	var mixed_styles := ClientPerformanceProfile.apply_visual_overrides(
+
+	# The UI now exposes exactly Auto / Normal / Simplified. Old per-account
+	# settings 3 (beast/armored) and 4 (minimal) migrate to Simplified=2.
+	assert(ClientPerformanceProfile.sanitize_simplify_mode(-1) ==
+		ClientPerformanceProfile.SIMPLIFY_AUTO)
+	assert(ClientPerformanceProfile.sanitize_simplify_mode(1) ==
+		ClientPerformanceProfile.SIMPLIFY_NORMAL)
+	assert(ClientPerformanceProfile.sanitize_simplify_mode(3) ==
+		ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
+	assert(ClientPerformanceProfile.sanitize_simplify_mode(4) ==
+		ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
+	assert(ClientPerformanceProfile.simplify_mode_name(1) == "normal")
+	assert(ClientPerformanceProfile.simplify_mode_name(4) == "simplified")
+
+	var migrated := ClientPerformanceProfile.apply_visual_overrides(
 		balanced,
 		ClientPerformanceProfile.SIMPLIFY_PIXEL_B,
 		ClientPerformanceProfile.SIMPLIFY_MINIMAL
 	)
-	assert(bool(mixed_styles["simplify_other_players"]))
-	assert(bool(mixed_styles["simplify_noncritical_monsters"]))
-	assert(int(mixed_styles["player_simplify_style"]) ==
-		ClientPerformanceProfile.SIMPLIFY_PIXEL_B)
-	assert(int(mixed_styles["monster_simplify_style"]) ==
-		ClientPerformanceProfile.SIMPLIFY_MINIMAL)
-	assert(ClientPerformanceProfile.simplify_mode_name(
-		ClientPerformanceProfile.SIMPLIFY_PIXEL_B
-	) == "pixel_b")
-	assert(ClientPerformanceProfile.simplify_mode_name(
-		ClientPerformanceProfile.SIMPLIFY_MINIMAL
-	) == "minimal")
+	assert(bool(migrated["simplify_other_players"]))
+	assert(bool(migrated["simplify_noncritical_monsters"]))
+	assert(int(migrated["player_simplify_style"]) ==
+		ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
+	assert(int(migrated["monster_simplify_style"]) ==
+		ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
 
-	print("PASS: client performance profiles preserve combat priorities and built-in entity styles")
+	# Independent player and monster selectors must not influence each other.
+	var player_only := ClientPerformanceProfile.apply_visual_overrides(
+		balanced,
+		ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED,
+		ClientPerformanceProfile.SIMPLIFY_NORMAL
+	)
+	assert(bool(player_only["simplify_other_players"]))
+	assert(not bool(player_only["simplify_noncritical_monsters"]))
+	assert(not bool(player_only["use_primitive_monsters"]))
+
+	var monster_only := ClientPerformanceProfile.apply_visual_overrides(
+		balanced,
+		ClientPerformanceProfile.SIMPLIFY_NORMAL,
+		ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED
+	)
+	assert(not bool(monster_only["simplify_other_players"]))
+	assert(bool(monster_only["simplify_noncritical_monsters"]))
+	assert(bool(monster_only["use_primitive_monsters"]))
+
+	print("PASS: performance modes, three-option orb simplification and legacy migration")
