@@ -19,6 +19,7 @@ public sealed class ServerDiagnostics
     private const int MaxEvents = 500;
     private readonly ConcurrentQueue<ServerDiagnosticEvent> _events = new();
     private long _sequence;
+    private int _eventCount;
     private long _packetCount;
     private long _packetErrorCount;
     private long _slowPacketCount;
@@ -70,9 +71,11 @@ public sealed class ServerDiagnostics
             elapsedMilliseconds);
 
         _events.Enqueue(item);
-        while (_events.Count > MaxEvents &&
+        var count = Interlocked.Increment(ref _eventCount);
+        while (count > MaxEvents &&
                _events.TryDequeue(out _))
         {
+            count = Interlocked.Decrement(ref _eventCount);
         }
     }
 
