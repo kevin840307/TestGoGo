@@ -103,6 +103,34 @@ try {
         "-c", "Release"
     )
 
+    $godotCommand = $null
+    if ($env:GODOT_BIN -and (Test-Path $env:GODOT_BIN)) {
+        $godotCommand = $env:GODOT_BIN
+    }
+    else {
+        $resolvedGodot = Get-Command "godot" -ErrorAction SilentlyContinue
+        if ($null -eq $resolvedGodot) {
+            $resolvedGodot = Get-Command "godot4" -ErrorAction SilentlyContinue
+        }
+        if ($null -ne $resolvedGodot) {
+            $godotCommand = $resolvedGodot.Source
+        }
+    }
+
+    if ($null -ne $godotCommand) {
+        Invoke-Checked "Godot headless client regressions: monster chase" $godotCommand @(
+            "--headless", "--path", "client",
+            "--script", "res://tests/monster_chase_regression.gd"
+        )
+        Invoke-Checked "Godot headless client regressions: performance hot paths" $godotCommand @(
+            "--headless", "--path", "client",
+            "--script", "res://tests/perf_regression_smoke.gd"
+        )
+    }
+    else {
+        Write-Host "[SKIP] Godot headless client regressions: set GODOT_BIN or install godot/godot4." -ForegroundColor Yellow
+    }
+
     $serverDll = Join-Path $root "server/bin/Release/net8.0/SGO.Server.dll"
     if (-not (Test-Path $serverDll)) {
         throw "Server DLL was not created: $serverDll"
