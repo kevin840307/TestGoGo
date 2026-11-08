@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using SGO.Server.Application;
+using SGO.Server.Application.Diagnostics;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Application.World;
 using SGO.Server.Domain.Sessions;
@@ -25,6 +26,7 @@ public static class WebSocketEndpoint
             ServerBroadcastHub broadcasts,
             AccountSessionRegistry sessions,
             SharedMapAiTicker mapAi,
+            ServerDiagnostics diagnostics,
             ILoggerFactory loggerFactory) =>
         {
             var log = loggerFactory.CreateLogger("SGO.WebSocket");
@@ -44,6 +46,15 @@ public static class WebSocketEndpoint
             var broadcastConnectionId = broadcastRegistration.ConnectionId;
             var broadcastQueue = broadcastRegistration.Queue;
             state.ConnectionId = broadcastConnectionId;
+            diagnostics.WebSocketConnected();
+            diagnostics.Record(
+                "Information",
+                "WebSocket",
+                "Connected",
+                state.ConnectionId);
+            log.LogInformation(
+                "[WS_CONNECTED] Connection={ConnectionID}",
+                state.ConnectionId);
             router.SyncPresence(state);
             mapAi.Register(state);
             using var worldTickCts =
@@ -191,9 +202,22 @@ public static class WebSocketEndpoint
                 }
                 catch (Exception ex)
                 {
+                    diagnostics.PacketError();
+                    diagnostics.Record(
+                        "Error",
+                        "WorldTick",
+                        ex.GetType().Name,
+                        state.ConnectionId,
+                        state.AccountId,
+                        state.CharacterId,
+                        state.CurrentMapId);
                     log.LogError(
                         ex,
-                        "World tick failed");
+                        "[WORLD_TICK_FAILED] Connection={ConnectionID} Account={AccountID} Character={CharacterID} Map={MapID}",
+                        state.ConnectionId,
+                        state.AccountId,
+                        state.CharacterId,
+                        state.CurrentMapId);
                 }
             });
 
@@ -211,6 +235,19 @@ public static class WebSocketEndpoint
 
                     if (result.MessageType != WebSocketMessageType.Text)
                     {
+                        diagnostics.PacketError();
+                        diagnostics.Record(
+                            "Warning",
+                            "WebSocket",
+                            $"Unsupported message type: {result.MessageType}",
+                            state.ConnectionId,
+                            state.AccountId,
+                            state.CharacterId,
+                            state.CurrentMapId);
+                        log.LogWarning(
+                            "[WS_INVALID_MESSAGE_TYPE] Connection={ConnectionID} Type={MessageType}",
+                            state.ConnectionId,
+                            result.MessageType);
                         await socket.CloseAsync(
                             WebSocketCloseStatus.InvalidMessageType,
                             "Text only",
@@ -222,6 +259,19 @@ public static class WebSocketEndpoint
 
                     if (message.Length > 2_097_152)
                     {
+                        diagnostics.PacketError();
+                        diagnostics.Record(
+                            "Warning",
+                            "WebSocket",
+                            $"Packet too large: {message.Length} bytes",
+                            state.ConnectionId,
+                            state.AccountId,
+                            state.CharacterId,
+                            state.CurrentMapId);
+                        log.LogWarning(
+                            "[WS_PACKET_TOO_LARGE] Connection={ConnectionID} Bytes={Bytes}",
+                            state.ConnectionId,
+                            message.Length);
                         await socket.CloseAsync(
                             WebSocketCloseStatus.MessageTooBig,
                             "Packet too large",
@@ -253,6 +303,9 @@ public static class WebSocketEndpoint
                         // for transport diagnostics without exposing content.
                         var encodedLength = encoded.Length;
 
+                        var packetStarted =
+                            System.Diagnostics.Stopwatch.GetTimestamp();
+
                         try
                         {
                             lock (state)
@@ -263,14 +316,56 @@ public static class WebSocketEndpoint
 
                                 router.SyncPresence(state);
                             }
+
+                            diagnostics.PacketHandled();
+
+                            var packetElapsedMs =
+                                System.Diagnostics.Stopwatch.GetElapsedTime(
+                                        packetStarted)
+                                    .TotalMilliseconds;
+
+                            if (packetElapsedMs >= 250)
+                            {
+                                diagnostics.SlowPacket();
+                                diagnostics.Record(
+                                    "Warning",
+                                    "SlowPacket",
+                                    packetType,
+                                    state.ConnectionId,
+                                    state.AccountId,
+                                    state.CharacterId,
+                                    state.CurrentMapId,
+                                    packetElapsedMs);
+                                log.LogWarning(
+                                    "[SLOW_PACKET] Type={Type} ElapsedMs={ElapsedMs:F1} Connection={ConnectionID} Account={AccountID} Character={CharacterID} Map={MapID}",
+                                    packetType,
+                                    packetElapsedMs,
+                                    state.ConnectionId,
+                                    state.AccountId,
+                                    state.CharacterId,
+                                    state.CurrentMapId);
+                            }
                         }
                         catch (Exception ex)
                         {
+                            diagnostics.PacketError();
+                            diagnostics.Record(
+                                "Error",
+                                "PacketHandler",
+                                $"{packetType}: {ex.GetType().Name}",
+                                state.ConnectionId,
+                                state.AccountId,
+                                state.CharacterId,
+                                state.CurrentMapId);
                             log.LogError(
                                 ex,
-                                "[PACKET_HANDLER_FAILED] Type={Type} EncodedLength={EncodedLength}",
+                                "[PACKET_HANDLER_FAILED] Type={Type} EncodedLength={EncodedLength} Connection={ConnectionID} Account={AccountID} Character={CharacterID} Map={MapID}",
                                 packetType,
-                                encodedLength);
+                                encodedLength,
+                                state.ConnectionId,
+                                state.AccountId,
+                                state.CharacterId,
+                                state.CurrentMapId);
                             await SendPacketsAsync(
                                 [
                                     new
@@ -315,9 +410,19 @@ public static class WebSocketEndpoint
                         CryptographicException or
                         JsonException)
                     {
+                        diagnostics.PacketError();
+                        diagnostics.Record(
+                            "Warning",
+                            "PacketDecode",
+                            e.GetType().Name,
+                            state.ConnectionId,
+                            state.AccountId,
+                            state.CharacterId,
+                            state.CurrentMapId);
                         log.LogWarning(
-                            "Rejected invalid encrypted packet: {Error}",
-                            e.GetType().Name);
+                            "[INVALID_ENCRYPTED_PACKET] Error={Error} Connection={ConnectionID}",
+                            e.GetType().Name,
+                            state.ConnectionId);
 
                         await socket.CloseAsync(
                             WebSocketCloseStatus.InvalidPayloadData,
@@ -332,12 +437,38 @@ public static class WebSocketEndpoint
             }
             catch (WebSocketException ex)
             {
+                diagnostics.Record(
+                    "Information",
+                    "WebSocket",
+                    $"Transport disconnected: {ex.WebSocketErrorCode}",
+                    state.ConnectionId,
+                    state.AccountId,
+                    state.CharacterId,
+                    state.CurrentMapId);
                 log.LogInformation(
-                    "WebSocket disconnected: {Message}",
+                    "[WS_TRANSPORT_DISCONNECTED] Connection={ConnectionID} Error={Error} Message={Message}",
+                    state.ConnectionId,
+                    ex.WebSocketErrorCode,
                     ex.Message);
             }
             finally
             {
+                diagnostics.WebSocketDisconnected();
+                diagnostics.Record(
+                    "Information",
+                    "WebSocket",
+                    "Disconnected",
+                    state.ConnectionId,
+                    state.AccountId,
+                    state.CharacterId,
+                    state.CurrentMapId);
+                log.LogInformation(
+                    "[WS_DISCONNECTED] Connection={ConnectionID} Account={AccountID} Character={CharacterID} Map={MapID}",
+                    state.ConnectionId,
+                    state.AccountId,
+                    state.CharacterId,
+                    state.CurrentMapId);
+
                 lock (state)
                 {
                     mapAi.Unregister(state);
