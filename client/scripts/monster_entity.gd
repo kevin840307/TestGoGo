@@ -379,6 +379,8 @@ func _input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) -> vo
 
 			if player.has_method("can_attack") and not player.can_attack():
 
+				if player.has_method("cancel_autorun_tracking"):
+					player.cancel_autorun_tracking(true)
 				player.target_position = get_global_mouse_position()
 				player.is_moving = true
 				if not player.is_action_locked:
@@ -395,7 +397,9 @@ func _input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) -> vo
 				return
 
 			get_viewport().set_input_as_handled()
-
+			# Combat tracking must replace, not compete with, terrain autorun.
+			if player.has_method("cancel_autorun_tracking"):
+				player.cancel_autorun_tracking(true)
 
 			if "ready_to_cast_skill_id" in player and player.ready_to_cast_skill_id > 0:
 				player.begin_targeted_skill(self, player.ready_to_cast_skill_id)
