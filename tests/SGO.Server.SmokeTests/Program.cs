@@ -4068,6 +4068,21 @@ try
             "UseItemRequest consumes a resolved skill book and syncs learned skill");
     }
 
+    // ToggleAutoSaint now correctly requires the two recovered
+    // support skills. Seed them before testing enabled-state persistence;
+    // a separate peer-session test below verifies the rejection path when
+    // either prerequisite is missing.
+    store.SetSkill(
+        account.Value,
+        id,
+        28102,
+        1);
+    store.SetSkill(
+        account.Value,
+        id,
+        28107,
+        1);
+
     var autoSaintStartX = session.LastX;
     var autoSaintStartY = session.LastY;
 
