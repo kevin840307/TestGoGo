@@ -15,6 +15,7 @@ MODULES = {
     "Protocol/ActionSchemaSmokeTests.cs": "ActionSchemaSmokeTests",
     "Protocol/IdentitySchemaSmokeTests.cs": "IdentitySchemaSmokeTests",
     "Announcements/AnnouncementSmokeTests.cs": "AnnouncementSmokeTests",
+    "World/BlockingMapSmokeTests.cs": "BlockingMapSmokeTests",
 }
 
 
@@ -47,6 +48,8 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         self.assertNotIn("PacketSchemaValidator.TryValidate(", main)
         self.assertNotIn("AnnouncementCatalog.Read(", main)
+        self.assertNotIn("var blockingTestRoot =", main)
+        self.assertNotIn("MonsterNavigationService(blocking)", main)
         self.assertNotIn("static JsonDocument Json(", main)
         self.assertNotIn("static void Check(", main)
 
