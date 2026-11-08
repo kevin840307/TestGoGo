@@ -21,6 +21,19 @@ var _last_snapshot_target_position: Vector2 = Vector2.ZERO
 var _has_snapshot_target: bool = false
 var _observed_snapshot_speed: float = 0.0
 var _pending_idle: bool = false
+var _performance_simplified_visual: bool = false
+const GENERIC_PLAYER_RACE := "Boy"
+const GENERIC_PLAYER_HAIR := "Hair000"
+const GENERIC_PLAYER_EQUIPS := {
+	0: 0,
+	1: -1,
+	2: -1,
+	3: -1,
+	4: -1,
+	5: 0,
+	6: 0,
+	7: 0,
+}
 
 const SAFE_MAP_IDS: Array = [4, 9, 15, 17, 22, 39, 40, 53, 75, 93]
 
@@ -57,6 +70,41 @@ func _ready() -> void :
 	if is_instance_valid(doll_engine) and doll_engine.get("doll_sprites") != null and doll_engine.doll_sprites.is_empty():
 		setup_layered_paper_dolls()
 		sync_animation()
+
+func set_performance_simplified(enabled: bool) -> void:
+	if _performance_simplified_visual == enabled:
+		return
+	_performance_simplified_visual = enabled
+	setup_layered_paper_dolls()
+	sync_animation()
+
+func is_performance_simplified() -> bool:
+	return _performance_simplified_visual
+
+func setup_layered_paper_dolls() -> void:
+	if not _performance_simplified_visual:
+		super.setup_layered_paper_dolls()
+		return
+	if not is_instance_valid(doll_engine):
+		return
+	if is_instance_valid(transform_sprite):
+		transform_sprite.visible = false
+	doll_engine.visible = true
+	doll_engine.build_human_model(
+		GENERIC_PLAYER_RACE,
+		GENERIC_PLAYER_HAIR,
+		0,
+		0,
+		GENERIC_PLAYER_EQUIPS
+	)
+	if name_label:
+		name_label.position.y = -130.0
+		name_label.visible = not data_model.is_shop_open
+	if title_label:
+		title_label.position.y = -150.0
+	if club_label:
+		club_label.position.y = -170.0
+	_refresh_appearance_visibility()
 
 func _exit_tree() -> void :
 	if CursorManager:
