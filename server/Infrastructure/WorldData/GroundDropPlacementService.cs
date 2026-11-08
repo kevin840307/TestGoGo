@@ -147,6 +147,35 @@ public sealed class GroundDropPlacementService
         return false;
     }
 
+    /// <summary>
+    /// A legal item tile is not sufficient for pickup: a player standing on
+    /// the opposite side of a wall could previously claim it from 100px away.
+    /// This is a short bounded LOS check, never a full A* search.
+    /// Maps without Blocking.dat retain the existing distance-only behavior.
+    /// </summary>
+    public GroundPickupReachability CheckPickup(
+        int mapId, double playerX, double playerY,
+        double itemX, double itemY,
+        double pickupRadius = 100.0)
+    {
+        if (!double.IsFinite(playerX) || !double.IsFinite(playerY) ||
+            !double.IsFinite(itemX) || !double.IsFinite(itemY) ||
+            !double.IsFinite(pickupRadius) || pickupRadius <= 0 ||
+            SquaredDistance(playerX, playerY, itemX, itemY) >
+            pickupRadius * pickupRadius)
+            return GroundPickupReachability.TooFar;
+
+        if (!_blocking.HasMap(mapId))
+            return GroundPickupReachability.MapNotVerified;
+
+        if (_blocking.GetFlags(mapId, itemX, itemY) != 0 ||
+            !_navigation.IsDirectClear(
+                mapId, playerX, playerY, itemX, itemY))
+            return GroundPickupReachability.Blocked;
+
+        return GroundPickupReachability.Allowed;
+    }
+
     private bool IsReachable(
         int mapId, double anchorX, double anchorY,
         double targetX, double targetY)
@@ -169,3 +198,11 @@ public sealed class GroundDropPlacementService
 /// </param>
 public readonly record struct DropPlacement(
     double X, double Y, bool Relocated, bool CollisionVerified);
+
+public enum GroundPickupReachability
+{
+    Allowed,
+    MapNotVerified,
+    TooFar,
+    Blocked
+}
