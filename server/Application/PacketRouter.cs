@@ -208,8 +208,12 @@ public sealed class PacketRouter
         // the whole map. Only WorldReady clients join the spatial AOI.
         // Remove old visibility before a map/identity transition.
         if (changed || !state.WorldReady)
+        {
             PublishPlayerAoiChanges(
                 _broadcasts.RemovePlayerAoi(state.ConnectionId));
+            _broadcasts.RemoveWorldAoiObserver(
+                state.ConnectionId);
+        }
 
         _broadcasts.UpdatePresence(
             state.ConnectionId,
@@ -221,8 +225,12 @@ public sealed class PacketRouter
             hasCurrent ? state.CharacterName : "");
 
         if (hasCurrent && state.WorldReady)
+        {
             PublishPlayerAoiChanges(
                 _broadcasts.ReconcilePlayerAoi(state.ConnectionId));
+            PublishWorldAoiChanges(
+                _broadcasts.ReconcileWorldAoi(state.ConnectionId));
+        }
 
         state.PublishedMapId = nextMapId;
         state.PublishedCharacterId = nextCharacterId;
@@ -256,6 +264,8 @@ public sealed class PacketRouter
         // Only clients that actually saw this player need the despawn.
         PublishPlayerAoiChanges(
             _broadcasts.RemovePlayerAoi(state.ConnectionId));
+        _broadcasts.RemoveWorldAoiObserver(
+            state.ConnectionId);
 
         _broadcasts.UpdatePresence(
             state.ConnectionId,
@@ -314,6 +324,65 @@ public sealed class PacketRouter
                 _broadcasts.PublishToConnection(
                     change.ObserverConnectionId, packet);
         }
+    }
+
+    private void PublishWorldAoiChanges(
+        IReadOnlyList<WorldEntitySpatialAoi.Change> changes,
+        Guid skipObserver = default)
+    {
+        foreach (var change in changes)
+        {
+            if (change.ObserverConnectionId == skipObserver)
+                continue;
+
+            // A concurrent player/entity movement may supersede the copied
+            // change before it reaches the queue.
+            if (_broadcasts.IsWorldAoiVisible(
+                    change.ObserverConnectionId,
+                    change.Entity.EntityId) != change.Appeared)
+                continue;
+
+            _broadcasts.PublishToConnection(
+                change.ObserverConnectionId,
+                change.Appeared
+                    ? change.Entity.SpawnPacketFactory()
+                    : new
+                    {
+                        Type = "DespawnEntity",
+                        EntityID = change.Entity.EntityId
+                    });
+        }
+    }
+
+    private IReadOnlyList<object> BuildWorldAoiSnapshotPackets(
+        ClientSession state)
+    {
+        if (!state.WorldReady ||
+            state.CurrentMapId <= 0)
+            return [];
+
+        var changes =
+            _broadcasts.ReconcileWorldAoi(
+                state.ConnectionId);
+
+        var packets = new List<object>();
+        foreach (var change in changes)
+        {
+            if (change.ObserverConnectionId !=
+                state.ConnectionId)
+                continue;
+
+            if (!_broadcasts.IsWorldAoiVisible(
+                    state.ConnectionId,
+                    change.Entity.EntityId))
+                continue;
+
+            if (change.Appeared)
+                packets.Add(
+                    change.Entity.SpawnPacketFactory());
+        }
+
+        return packets;
     }
 
     public IReadOnlyList<object> Handle(JsonElement req, ClientSession state)
@@ -963,6 +1032,8 @@ public sealed class PacketRouter
                 worldReadyPackets.AddRange(
                     BuildGroundItemSnapshotPackets(state));
                 worldReadyPackets.AddRange(
+                    BuildWorldAoiSnapshotPackets(state));
+                worldReadyPackets.AddRange(
                     BuildOtherPlayerSnapshotPackets(state));
                 worldReadyPackets.AddRange(
                     BuildActivePetSnapshotPackets(
@@ -1039,8 +1110,12 @@ public sealed class PacketRouter
                     x,
                     y);
                 if (state.WorldReady)
+                {
                     PublishPlayerAoiChanges(
                         _broadcasts.ReconcilePlayerAoi(state.ConnectionId));
+                    PublishWorldAoiChanges(
+                        _broadcasts.ReconcileWorldAoi(state.ConnectionId));
+                }
 
                 var now = DateTimeOffset.UtcNow;
                 if (now - state.LastPositionPersistAt >=
@@ -5664,16 +5739,33 @@ public sealed class PacketRouter
     private IReadOnlyList<object> BuildGroundItemSnapshotPackets(
         ClientSession state)
     {
-        var packets = new List<object>();
         state.GroundItems.Clear();
 
-        foreach (var ground in _store.GetGroundItems(state.CurrentMapId))
+        foreach (var ground in
+                 _store.GetGroundItems(
+                     state.CurrentMapId))
         {
-            state.GroundItems[ground.EntityId] = ground;
-            packets.Add(BuildGroundItemSpawnPacket(ground, isSnapshot: true));
+            state.GroundItems[
+                ground.EntityId] = ground;
+
+            PublishWorldAoiChanges(
+                _broadcasts.UpsertWorldEntity(
+                    new WorldAoiEntity(
+                        ground.EntityId,
+                        3,
+                        ground.MapId,
+                        ground.X,
+                        ground.Y,
+                        () => BuildGroundItemSpawnPacket(
+                            ground,
+                            isSnapshot: true))),
+                skipObserver: state.ConnectionId);
         }
 
-        return packets;
+        // The local WorldReady response gets only entities inside AOI from
+        // BuildWorldAoiSnapshotPackets. Distant ground rows stay authoritative
+        // in SQLite and the AOI index without consuming client bandwidth.
+        return [];
     }
 
     private object BuildGroundItemSpawnPacket(
