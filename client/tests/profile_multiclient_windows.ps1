@@ -6,7 +6,8 @@ param(
     [Parameter(Mandatory = $true)][string]$ProcessName,
     [ValidateRange(1,10000)][int]$Samples = 36,
     [ValidateRange(1,3600)][int]$IntervalSeconds = 5,
-    [string]$OutputCsv = ".\sgo_multiclient.csv"
+    [string]$OutputCsv = ".\sgo_multiclient.csv",
+    [string]$ModeLabel = "unknown"
 )
 
 $ErrorActionPreference = "Stop"
@@ -81,6 +82,7 @@ for ($sampleId = 1; $sampleId -le $Samples; $sampleId++) {
             UtcTime = $now.ToString("o")
             Sample = $sampleId
             Pid = $procId
+            ModeLabel = $ModeLabel
             CpuPctWholeHost = $cpuPct
             WorkingSetMB = [Math]::Round($proc.WorkingSet64 / 1MB, 1)
             PrivateBytesMB = [Math]::Round($proc.PrivateMemorySize64 / 1MB, 1)
