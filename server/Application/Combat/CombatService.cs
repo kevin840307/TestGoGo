@@ -1694,6 +1694,10 @@ public sealed class CombatService
         var isAreaAttack =
             isAttack &&
             levelData.AoeRadius > 0;
+        var isSelfCenteredAreaAttack =
+            isAreaAttack &&
+            targetType == 0 &&
+            targetEntityId == session.CharacterId.Value;
 
         if (!isAttack &&
             !isHeal &&
@@ -1728,7 +1732,8 @@ public sealed class CombatService
 
         if (isAttack)
         {
-            if (isScreenAreaAttack)
+            if (isScreenAreaAttack ||
+                isSelfCenteredAreaAttack)
             {
                 targetEntityId =
                     checked((int)session.CharacterId.Value);
@@ -2418,7 +2423,9 @@ public sealed class CombatService
                     CasterType = 0,
                     SkillID = skillId,
                     SkillLevel = skillLevel,
-                    TargetID = isScreenAreaAttack
+                    TargetID = (
+                        isScreenAreaAttack ||
+                        isSelfCenteredAreaAttack)
                         ? session.CharacterId.Value
                         : primaryMonster!.EntityId,
                     TargetX = Convert.ToInt32(centerX),
