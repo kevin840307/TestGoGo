@@ -42,6 +42,10 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_client_aoi_order_contract.py", "-v"
     )
+    Invoke-Checked "Two-second autorun mouse + cursor source contracts" "python" @(
+        "-m", "unittest", "discover", "-s", "tests",
+        "-p", "test_mouse_autorun_contract.py", "-v"
+    )
     Invoke-Checked "Ground pickup AOI and stale snapshot static contracts" "python" @(
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_ground_pickup_visibility_contract.py", "-v"
