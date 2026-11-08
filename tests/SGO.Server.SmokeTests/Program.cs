@@ -1359,6 +1359,13 @@ try
         petEvolution,
         questProgress,
         NullLogger<CombatService>.Instance);
+
+    SharedMapAiConcurrencySmokeTests.Run(
+        combat,
+        worldRuntime,
+        store,
+        broadcastHub,
+        accountSessions);
     var shops = new ShopService(
         store,
         store,
