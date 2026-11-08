@@ -137,6 +137,14 @@ CoverageRow Classify(
             "explicit UseItemRequest implementation");
     }
 
+    if (item.ItemId ==
+        LanternTransformationCatalog.SourceItemId)
+    {
+        return Supported(
+            item,
+            "equipped-weapon lantern appearance transformation");
+    }
+
     if (item.ItemId is
         TransformationCatalog.TransformScrollItemId or
         TransformationCatalog.RestoreScrollItemId)
