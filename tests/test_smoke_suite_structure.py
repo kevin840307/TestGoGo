@@ -270,6 +270,11 @@ class SmokeSuiteStructureTests(unittest.TestCase):
             "LogoutRequest releases player-shop reservations before identity reset",
             source,
         )
+        self.assertIn(
+            "character bootstrap recovers orphaned player-shop reservations after restart",
+            source,
+        )
+        self.assertIn("RecoverStaleReservations(", router)
         self.assertIn("DisconnectPresence(state);", router)
         self.assertIn("SessionIdentityCleanupSmokeTests.Run(", main)
 
