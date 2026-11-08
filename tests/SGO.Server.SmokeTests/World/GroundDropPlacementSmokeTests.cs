@@ -1,4 +1,5 @@
 using SGO.Server.Infrastructure.WorldData;
+using SGO.Server.Infrastructure.Persistence.Sqlite;
 using SGO.Server.SmokeTests.Fixtures;
 using static SGO.Server.SmokeTests.SmokeAssert;
 
@@ -59,6 +60,59 @@ internal static class GroundDropPlacementSmokeTests
         Check(placement.CheckPickup(99, 40, 40, 204, 40) ==
               GroundPickupReachability.TooFar,
             "legacy map still enforces the 100px pickup distance");
+
+        Check(placement.TryRecoverPersistedDrop(1, 56, 40, out var repaired) &&
+              repaired.CollisionVerified && repaired.Relocated &&
+              blocking.GetFlags(1, repaired.X, repaired.Y) == 0 &&
+              Math.Abs(repaired.X - 56) <= 80 &&
+              Math.Abs(repaired.Y - 40) <= 80,
+            "legacy drop stored in a wall repairs near its original tile");
+        Check(!placement.TryRecoverPersistedDrop(1, 40, 40, out _),
+            "valid persisted drops are not moved or re-created");
+        Check(!placement.TryRecoverPersistedDrop(99, 56, 40, out _),
+            "legacy map without Blocking.dat cannot certify a repair");
+
+        var persist = new SqliteGameStore(
+            Path.Combine(fixture.Root, "ground-repair.db"));
+        var oldGround = persist.CreateGroundItem(
+            123, 0, 1001, 1, 1, 56, 40,
+            protectSeconds: 15, lifetimeSeconds: 60);
+        Check(oldGround is not null,
+            "create the original blocked ground item with existing TTL");
+        if (oldGround is not null)
+        {
+            var previous = persist.GetGroundItems(1)
+                .Single(x => x.GroundItemId == oldGround.GroundItemId);
+            var concurrent = Enumerable.Range(0, 6)
+                .Select(_ => Task.Run(() =>
+                    persist.RelocateGroundItemIfUnchanged(
+                        oldGround.GroundItemId, 1,
+                        oldGround.X, oldGround.Y,
+                        repaired.X, repaired.Y)))
+                .ToArray();
+            Task.WaitAll(concurrent);
+            var latest = persist.GetGroundItems(1)
+                .Single(x => x.GroundItemId == oldGround.GroundItemId);
+            Check(concurrent.All(x => x.Result is not null &&
+                       x.Result.X == repaired.X &&
+                       x.Result.Y == repaired.Y) &&
+                  latest.X == repaired.X && latest.Y == repaired.Y,
+                "six concurrent WorldReady repairs converge to one persisted location");
+            Check(persist.GetGroundItems(1)
+                    .Count(x => x.GroundItemId == oldGround.GroundItemId) == 1 &&
+                  latest.OwnerDbid == previous.OwnerDbid &&
+                  latest.ProtectUntil == previous.ProtectUntil &&
+                  latest.ExpiresAt == previous.ExpiresAt &&
+                  latest.CreatedAt == previous.CreatedAt,
+                "repair preserves single DB row, owner, protection, creation and original 60s lifetime");
+            Check(persist.RelocateGroundItemIfUnchanged(
+                      oldGround.GroundItemId, 1, oldGround.X, oldGround.Y,
+                      88, 88)?.X == repaired.X,
+                "stale repair request cannot overwrite an already corrected position");
+            Check(placement.CheckPickup(1, 40, 40,
+                      latest.X, latest.Y) == GroundPickupReachability.Allowed,
+                "a recovered old drop is now reachable for a normal pickup");
+        }
 
         Check(placement.TryResolve(1,
                   40, 40, 40, 40, 40, 40, out var original) &&
