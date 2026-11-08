@@ -949,7 +949,7 @@ var currentCatalog = new CurrentClientDataCatalog(
             99002, 1, 1, 0,
             500, 300,
             0, 0, 0,
-            10, 100, 0,
+            1, 0, 0,
             0, 0,
             0, 0, 0,
             0, 0, 0, 0,
