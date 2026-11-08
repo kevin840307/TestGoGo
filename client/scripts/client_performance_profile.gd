@@ -44,6 +44,10 @@ static func apply_visual_overrides(
 		result["simplify_noncritical_monsters"] = monster_mode == SIMPLIFY_ON
 	result["simplify_players_mode"] = player_mode
 	result["simplify_monsters_mode"] = monster_mode
+	result["use_primitive_monsters"] = (
+		int(result.get("load_mode", LOAD_BALANCED)) == LOAD_MULTIBOX
+		and bool(result.get("simplify_noncritical_monsters", false))
+	)
 	return result
 
 static func load_mode_name(value: int) -> String:
@@ -76,6 +80,7 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 		"effect_budget_percent": 100,
 		"simplify_other_players": false,
 		"simplify_noncritical_monsters": false,
+		"use_primitive_monsters": false,
 		"hide_far_noncombat_monsters": false,
 		"aggressive_cache_trim": false,
 	}
@@ -108,6 +113,7 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 			profile["effect_budget_percent"] = 35
 			profile["simplify_other_players"] = true
 			profile["simplify_noncritical_monsters"] = true
+			profile["use_primitive_monsters"] = true
 			profile["hide_far_noncombat_monsters"] = true
 			profile["aggressive_cache_trim"] = true
 
