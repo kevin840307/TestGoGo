@@ -795,6 +795,10 @@ func _init_buildings_with_diagnostics(source_map_id: int, target_map_id: int) ->
 	})
 	set_frame_gap_stage("world_running")
 
+static func should_release_initial_spawn_gate(elapsed_msec: int) -> bool:
+	return elapsed_msec >= INITIAL_SPAWN_GATE_MAX_MSEC
+
+
 func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vector2, progress_callback: Callable = Callable()) -> bool:
 	# Reset inherited background state before the first visible loading
 	# frame: a previous focus-out must not black out this startup overlay.
@@ -1028,7 +1032,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 
 	var spawn_gate_started_msec: int = Time.get_ticks_msec()
 	while NetworkEntityManager and NetworkEntityManager.has_method("is_initial_spawn_queue_idle") and not NetworkEntityManager.is_initial_spawn_queue_idle():
-		if Time.get_ticks_msec() - spawn_gate_started_msec >= INITIAL_SPAWN_GATE_MAX_MSEC:
+		if should_release_initial_spawn_gate(Time.get_ticks_msec() - spawn_gate_started_msec):
 			var still_queued: int = int(NetworkEntityManager.get_spawn_queue_remaining_count()) \
 				if NetworkEntityManager.has_method("get_spawn_queue_remaining_count") else -1
 			push_warning("[INITIAL_SPAWN_GATE_TIMEOUT] pending=%d elapsed_ms=%d; presenting world and draining existing queue without dropping entities" % [
