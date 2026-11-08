@@ -71,6 +71,19 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("ItemEffect_14", source)
         self.assertIn("expired booster rows", source)
 
+    def test_recovered_box_suite_guards_safe_multi_reward_behavior(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = SMOKE / "Integration" / "RecoveredBoxSmokeTests.cs"
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("RecoveredBoxCatalog.Resolve(", source)
+        self.assertIn("2256", source)
+        self.assertIn("15230", source)
+        self.assertIn("15243", source)
+        self.assertIn("2209", source)
+        self.assertIn("2250", source)
+        self.assertIn("RecoveredBoxSmokeTests.Run(", main)
+
     def test_prelogin_route_suite_has_explicit_context(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = SMOKE / "Protocol" / "PreloginPacketSmokeTests.cs"
