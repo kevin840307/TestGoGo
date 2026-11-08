@@ -9657,9 +9657,10 @@ public sealed class SqliteGameStore : IGameStore
             ? "horse_equipment"
             : "equipment_items";
 
-        // Make the equipment mutation the first write in this transaction.
-        // SQLite then serializes concurrent repairs before any money value is
-        // observed, avoiding the old read -> calculate -> absolute-write race.
+        // Only a genuinely damaged row can transition to the requested
+        // durability. The conditional mutation makes retries/concurrent
+        // requests for the same UID idempotent; the money debit below is in
+        // the same transaction, so a failed debit rolls this change back.
         using (var updateItem = db.CreateCommand())
         {
             updateItem.Transaction = tx;
