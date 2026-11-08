@@ -68,7 +68,7 @@ async function loadStatus() {
 }
 
 async function go(view) {
-  if (state.view === 'maps' && view !== 'maps' && typeof confirmDiscardMapChanges === 'function' && !confirmDiscardMapChanges()) return;
+  if (state.view === 'maps' && view !== 'maps' && typeof confirmDiscardMapChanges === 'function' && !confirmDiscardMapChanges()) return false;
   state.view = view;
   $$('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.view === view));
   $$('.view').forEach(x => x.classList.toggle('active', x.id === `view-${view}`));
@@ -76,6 +76,7 @@ async function go(view) {
   $('#view-title').textContent = meta[0];
   $('#view-subtitle').textContent = meta[1];
   try { await refreshCurrent(); } catch (e) { toast(e.message, 'error'); }
+  return true;
 }
 
 async function refreshCurrent() {
