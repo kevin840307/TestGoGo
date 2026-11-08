@@ -423,7 +423,11 @@ func _finish_mouse_autorun_hold() -> void:
 # original player context menu, and right-click skill cancellation remains.
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
-		if _mouse_autorun.latched or is_mouse_holding:
+		if _mouse_autorun.latched or is_mouse_holding or (
+			is_moving and not is_instance_valid(combat_target)
+		):
+			# Also stop an ordinary ground click route. Preserve combat
+			# tracking and let normal right-click handlers continue.
 			cancel_autorun_tracking(true)
 
 
