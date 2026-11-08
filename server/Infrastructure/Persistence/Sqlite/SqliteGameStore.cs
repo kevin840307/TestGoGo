@@ -9209,7 +9209,7 @@ public sealed class SqliteGameStore : IGameStore
         // Reject invalid coordinates before mutating any inventory row.
         if (uid <= 0 || count <= 0 || mapId <= 0 ||
             !double.IsFinite(x) || !double.IsFinite(y) ||
-            (tabType is 1 or 3 && count != 1))
+            ((tabType is 1 or 3) && count != 1))
             return null;
 
         using var db = Open();
