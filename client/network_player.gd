@@ -495,6 +495,8 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 				var in_safe_zone = data_model.map_id in SAFE_MAP_IDS
 
 				if "ready_to_cast_skill_id" in local_player and local_player.ready_to_cast_skill_id > 0:
+					if local_player.has_method("cancel_autorun_tracking"):
+						local_player.cancel_autorun_tracking(true)
 					local_player.pending_skill_id = local_player.ready_to_cast_skill_id
 					local_player.combat_target = self
 					local_player.ready_to_cast_skill_id = -1
@@ -509,6 +511,8 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 						if local_player.has_method("can_attack") and not local_player.can_attack():
 							return
 
+						if local_player.has_method("cancel_autorun_tracking"):
+							local_player.cancel_autorun_tracking(true)
 						local_player.pending_skill_id = -1
 						local_player.combat_target = self
 						get_viewport().set_input_as_handled()
