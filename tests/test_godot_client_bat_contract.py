@@ -42,8 +42,17 @@ class GodotClientBatContract(unittest.TestCase):
             "focus_performance_regression",
             "render_resource_regression",
             "login_visual_readiness_regression",
+            "world_loading_render_regression",
         ):
             self.assertIn(name, self.bat)
+
+    def test_black_screen_regression_runs_in_all_and_focus_modes(self):
+        self.assertEqual(
+            self.bat.count(
+                "call :run_test world_loading_render_regression WORLD_RENDER_REGRESSION"
+            ),
+            2,
+        )
 
     def test_failure_does_not_report_pass(self):
         self.assertIn('start "" /wait', self.bat)
