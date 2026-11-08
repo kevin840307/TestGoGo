@@ -179,6 +179,10 @@ try {
             "--headless", "--path", "client",
             "--script", "res://tests/perf_regression_smoke.gd"
         )
+        Invoke-Checked "Godot headless client regressions: AFK focus GPU suspension" $godotCommand @(
+            "--headless", "--path", "client",
+            "--script", "res://tests/afk_focus_render_regression.gd"
+        )
         Invoke-Checked "Godot headless client regressions: shared cached monster/player orbs" $godotCommand @(
             "--headless", "--path", "client",
             "--script", "res://tests/simplified_orb_cache_regression.gd"
