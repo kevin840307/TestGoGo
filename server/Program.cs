@@ -1,4 +1,5 @@
 using SGO.Server.Application;
+using SGO.Server.Application.Diagnostics;
 using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Infrastructure.Quest;
 using SGO.Server.Infrastructure.WorldData;
@@ -19,6 +20,40 @@ builder.Services.AddGameData(builder.Configuration);
 builder.Services.AddGameFeatures(builder.Configuration);
 
 var app = builder.Build();
+
+app.Use(async (ctx, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        var diagnostics =
+            ctx.RequestServices.GetRequiredService<ServerDiagnostics>();
+
+        diagnostics.Record(
+            "Error",
+            "Http",
+            $"{ctx.Request.Method} {ctx.Request.Path}: {ex.GetType().Name}");
+
+        app.Logger.LogError(
+            ex,
+            "[HTTP_UNHANDLED_EXCEPTION] Method={Method} Path={Path}",
+            ctx.Request.Method,
+            ctx.Request.Path);
+
+        if (!ctx.Response.HasStarted)
+        {
+            ctx.Response.StatusCode =
+                StatusCodes.Status500InternalServerError;
+            await ctx.Response.WriteAsJsonAsync(new
+            {
+                error = "Internal server error"
+            });
+        }
+    }
+});
 
 var currentClientData =
     app.Services.GetRequiredService<CurrentClientDataCatalog>();
@@ -80,6 +115,7 @@ app.MapGet("/health", (IConfiguration config) => Results.Ok(new
 }));
 
 app.MapMallIntegrationEndpoints();
+app.MapAdminEndpoints();
 app.MapSgoWebSocket();
 
 app.Run();
