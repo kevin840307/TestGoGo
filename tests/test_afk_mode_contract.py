@@ -37,7 +37,7 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('RenderingServer.render_loop_enabled = true', game)
         self.assertIn('var desired_fps: int = AFK_MONITOR_FPS if _afk_active else', game)
         self.assertIn('func begin_afk_mode(progress_callback: Callable = Callable()) -> bool:', game)
-        self.assertIn('func finish_afk_mode() -> bool:', game)
+        self.assertIn('func finish_afk_mode(progress_callback: Callable = Callable()) -> bool:', game)
         self.assertIn('current_map_node.visible = false', game)
         self.assertIn('current_map_node.visible = true', game)
         self.assertIn('AFK_VISUAL_CACHE.new()', game)
@@ -105,7 +105,7 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('set_visual_simplification_modes(', game)
         self.assertIn('_refresh_afk_map_visuals_after_change()', game)
         self.assertIn('call_deferred("_refresh_afk_map_visuals_after_change")', game)
-        self.assertIn('is_changing_map or original_map != current_map_node', game)
+        self.assertIn('if is_changing_map or not bool(restore_result.get("ok", false)):', game)
         self.assertIn('func _reset_afk_mode()', game)
         cleanup = game[game.index("func cleanup_and_return_to_login() -> void :"):]
         self.assertIn("_reset_afk_mode()", cleanup)
@@ -219,7 +219,10 @@ class AfkModeContract(unittest.TestCase):
         self.assertNotIn("NetworkManager", shell)
         self.assertNotIn("send_secure_packet", shell)
         self.assertNotIn("send_world_ready", shell)
-        begin = game[game.index("func begin_afk_mode()"):game.index("func finish_afk_mode()")]
+        begin = game[
+            game.index("func begin_afk_mode(progress_callback: Callable = Callable())"):
+            game.index("func finish_afk_mode(progress_callback: Callable = Callable())")
+        ]
         self.assertNotIn("clear_map_entities()", begin)
         self.assertNotIn("NetworkManager.", begin)
         self.assertIn("current_player.reparent(container, true)", game)
