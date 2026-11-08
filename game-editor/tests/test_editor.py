@@ -262,6 +262,9 @@ class WebStructureTests(unittest.TestCase):
             sources[script_name] = source
             # Editors render some controls dynamically with innerHTML/template strings.
             known_ids.update(re.findall(r'\bid="([A-Za-z0-9_-]+)"', source))
+            known_ids.update(
+                re.findall(r"\bfield\('([A-Za-z0-9_-]+)'", source)
+            )
 
         for script_name, source in sources.items():
             for selector_id in re.findall(r"\$\('#([A-Za-z0-9_-]+)'\)", source):
