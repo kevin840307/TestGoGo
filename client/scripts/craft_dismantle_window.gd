@@ -132,11 +132,10 @@ func _set_initial_loading_progress(ratio: float) -> void:
 	if is_instance_valid(_initial_loading_progress):
 		_initial_loading_progress.value = percent
 	if is_instance_valid(_initial_loading_label):
-		_initial_loading_label.text = (
-			"正在載入合成配方… %d%%" % int(percent)
-			if percent < 90.0 else
-			"正在更新可合成數量… %d%%" % int(percent)
-		)
+		if percent < 90.0:
+			_initial_loading_label.text = "正在載入合成配方… %d%%" % int(percent)
+		else:
+			_initial_loading_label.text = "正在更新可合成數量… %d%%" % int(percent)
 
 
 func prepare_initial_with_progress_async() -> void:
