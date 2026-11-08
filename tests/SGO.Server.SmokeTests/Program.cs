@@ -8306,9 +8306,14 @@ try
               $"expectedRadius={expectedWanderRadius:F1}, " +
               $"nextWanderAt={monster.NextWanderAt:O})"));
 
+    // Use the dedicated eligible Lv1 multi-pet fixture here. The older
+    // petUid progression fixture is intentionally above the Lv1 owner's
+    // level and its feed value is exercised by separate runtime tests.
+    var petCombatUid = firstMultiPetUid;
+
     foreach (var commandedPetUid in new[]
              {
-                 petUid,
+                 petCombatUid,
                  secondMultiPetUid,
                  thirdMultiPetUid
              })
@@ -8322,7 +8327,7 @@ try
             "multi-pet command setup respects expanded summon capacity");
     }
 
-    session.PetPositions[petUid] =
+    session.PetPositions[petCombatUid] =
         (monster.X - 80, monster.Y);
     session.PetPositions[secondMultiPetUid] =
         (monster.X - 75, monster.Y + 20);
@@ -8346,7 +8351,7 @@ try
             monster.HasTarget &&
             new[]
             {
-                petUid,
+                petCombatUid,
                 secondMultiPetUid,
                 thirdMultiPetUid
             }.All(uid =>
@@ -8357,7 +8362,7 @@ try
                     monster.EntityId) &&
             new[]
             {
-                petUid,
+                petCombatUid,
                 secondMultiPetUid,
                 thirdMultiPetUid
             }.All(uid =>
@@ -8399,25 +8404,31 @@ try
     monster.HasTarget = false;
     monster.HoldingAttackRange = false;
     session.PetTargets.Clear();
-    session.PetPositions[petUid] = (monster.X - 80, monster.Y);
-    session.PetLastAttackAt[petUid] = DateTimeOffset.MinValue;
+    session.PetPositions[petCombatUid] = (monster.X - 80, monster.Y);
+    session.PetLastAttackAt[petCombatUid] = DateTimeOffset.MinValue;
     session.LastPetFollowTick = DateTimeOffset.MinValue;
     var hpBeforeAutoPetAttack = monster.CurrentHp;
+    var autoPetTickAt = aiFixtureAt.AddSeconds(5);
+    // This fixture validates pet targeting/attacks, not hunger catch-up from
+    // earlier future-clock smokes. Keep companion runtime monotonic and local
+    // to this tick so a valid summoned pet is not recalled by unrelated time.
+    session.LastCompanionRuntimeAt = autoPetTickAt;
+    session.LastCompanionClientSyncAt = autoPetTickAt;
     var autoPetPackets = router.Tick(
         session,
-        aiFixtureAt.AddSeconds(5));
+        autoPetTickAt);
 
     Check(monster.CurrentHp < hpBeforeAutoPetAttack &&
           monster.HasTarget &&
           session.PetTargets.TryGetValue(
-              petUid,
+              petCombatUid,
               out var autoTargetId) &&
           autoTargetId == monster.EntityId &&
           autoPetPackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"SyncState\"") &&
               JsonSerializer.Serialize(x).Contains(
-                  $"\"EntityID\":{4_000_000L + petUid}") &&
+                  $"\"EntityID\":{4_000_000L + petCombatUid}") &&
               JsonSerializer.Serialize(x).Contains(
                   "\"State\":\"attack\"")) &&
           autoPetPackets.Any(x =>
@@ -8437,16 +8448,16 @@ try
     monster.LastAttackAt = DateTimeOffset.MinValue;
 
     session.PetTargets.Clear();
-    session.PetLastAttackAt[petUid] =
+    session.PetLastAttackAt[petCombatUid] =
         aiFixtureAt.AddSeconds(5);
-    session.PetPositions[petUid] =
+    session.PetPositions[petCombatUid] =
         (monster.X + 60, monster.Y);
 
     var petBeforeMonsterAggro = store.GetCharacterAssets(
             account.Value,
             id)
         .Pets
-        .First(x => Convert.ToInt64(x["UID"]) == petUid);
+        .First(x => Convert.ToInt64(x["UID"]) == petCombatUid);
     var petHpBeforeMonsterAggro =
         Convert.ToInt32(petBeforeMonsterAggro["HP"]);
 
@@ -8461,12 +8472,12 @@ try
             account.Value,
             id)
         .Pets
-        .First(x => Convert.ToInt64(x["UID"]) == petUid);
+        .First(x => Convert.ToInt64(x["UID"]) == petCombatUid);
 
     Check(
         monster.HasTarget &&
         monster.TargetCharacterId == id &&
-        monster.TargetPetUid == petUid &&
+        monster.TargetPetUid == petCombatUid &&
         Convert.ToInt32(petAfterMonsterAggro["HP"]) <
             petHpBeforeMonsterAggro &&
         monsterPetAggroPackets.Any(x =>
@@ -8475,7 +8486,7 @@ try
             JsonSerializer.Serialize(x).Contains(
                 "\"TargetType\":4") &&
             JsonSerializer.Serialize(x).Contains(
-                $"\"TargetID\":{4_000_000L + petUid}")),
+                $"\"TargetID\":{4_000_000L + petCombatUid}")),
         "monster proactively aggros and attacks a closer summoned pet without waiting for pet attack");
 
     monster.HasTarget = false;
@@ -8486,9 +8497,9 @@ try
     // immediately teleport the pet; only sustained off-screen distance does.
     session.LastX = monster.X - 1200;
     session.LastY = monster.Y;
-    session.PetPositions[petUid] =
+    session.PetPositions[petCombatUid] =
         (monster.X - 20, monster.Y);
-    session.PetLastAttackAt[petUid] =
+    session.PetLastAttackAt[petCombatUid] =
         DateTimeOffset.MinValue;
     session.LastPetFollowTick =
         DateTimeOffset.MinValue;
@@ -8500,7 +8511,7 @@ try
         leashStart);
 
     Check(
-        session.PetOutOfRangeSince.ContainsKey(petUid) &&
+        session.PetOutOfRangeSince.ContainsKey(petCombatUid) &&
         !gracePackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"SpeedTime\":0.01")),
@@ -8516,7 +8527,7 @@ try
     var expectedPetX = session.LastX + 42;
     var expectedPetY = session.LastY + 24;
     var leashedPetPosition =
-        session.PetPositions[petUid];
+        session.PetPositions[petCombatUid];
 
     Check(
         Math.Abs(leashedPetPosition.X - expectedPetX) < 0.001 &&
@@ -8525,18 +8536,18 @@ try
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"MoveEntity\"") &&
             JsonSerializer.Serialize(x).Contains(
-                $"\"EntityID\":{4_000_000L + petUid}") &&
+                $"\"EntityID\":{4_000_000L + petCombatUid}") &&
             JsonSerializer.Serialize(x).Contains(
                 "\"SpeedTime\":0.01")) &&
-        !session.PetOutOfRangeSince.ContainsKey(petUid) &&
+        !session.PetOutOfRangeSince.ContainsKey(petCombatUid) &&
         !leashPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"EntityDamage\"") &&
             JsonSerializer.Serialize(x).Contains(
-                $"\"AttackerID\":{4_000_000L + petUid}")),
+                $"\"AttackerID\":{4_000_000L + petCombatUid}")),
         "pet teleports back only after remaining beyond 900px for three seconds");
 
-    Check(!session.PetTargets.ContainsKey(petUid),
+    Check(!session.PetTargets.ContainsKey(petCombatUid),
         "hard owner return clears the pet combat target");
 
     // A monster may retain a target whose websocket presence is still on the
