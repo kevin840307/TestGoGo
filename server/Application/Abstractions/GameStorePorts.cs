@@ -652,6 +652,13 @@ public sealed record MallGiftClaimResult(
     string Message,
     long LifetimeDonation);
 
+public sealed record ExternalMallCreditResult(
+    bool Success,
+    bool AlreadyApplied,
+    string Message,
+    long NewBalance,
+    long LifetimeDonation);
+
 public interface IMallStore : ICharacterAssetReader
 {
     long GetMallPoints(long accountId);
@@ -667,6 +674,13 @@ public interface IMallStore : ICharacterAssetReader
         long accountId,
         long delta,
         out long newTotal);
+
+    ExternalMallCreditResult CreditExternalMallPoints(
+        long accountId,
+        string source,
+        string externalTransactionId,
+        long points,
+        long lifetimeDonation);
 
     IReadOnlySet<int> GetClaimedMallGiftIds(
         long accountId);
