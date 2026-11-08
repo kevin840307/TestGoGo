@@ -3548,7 +3548,7 @@ anchor_bottom = 0.5
 offset_left = -323.0
 offset_top = -313.0
 offset_right = -51.0
-offset_bottom = 37.0
+offset_bottom = 137.0
 grow_horizontal = 0
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_qcerj")
@@ -3786,6 +3786,74 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
 text = "畫質增強"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="LabelPerformanceLoad" type="Label" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 286.0
+offset_right = 142.0
+offset_bottom = 314.0
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
+text = "效能負載"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="OptionPerformanceLoad" type="OptionButton" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 288.0
+offset_right = 250.0
+offset_bottom = 313.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+alignment = 1
+selected = 1
+item_count = 4
+popup/item_0/text = "畫質優先"
+popup/item_0/id = 0
+popup/item_1/text = "平衡"
+popup/item_1/id = 1
+popup/item_2/text = "低負載"
+popup/item_2/id = 2
+popup/item_3/text = "多開"
+popup/item_3/id = 3
+tooltip_text = "控制 CPU/GPU/記憶體負擔；多開模式會大幅降低背景與非必要視覺更新。"
+
+[node name="LabelCombatRender" type="Label" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 321.0
+offset_right = 142.0
+offset_bottom = 349.0
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
+text = "戰鬥優先"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="OptionCombatRender" type="OptionButton" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 323.0
+offset_right = 250.0
+offset_bottom = 348.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+alignment = 1
+selected = 0
+item_count = 3
+popup/item_0/text = "一般"
+popup/item_0/id = 0
+popup/item_1/text = "PK低延遲"
+popup/item_1/id = 1
+popup/item_2/text = "大型戰鬥"
+popup/item_2/id = 2
+tooltip_text = "PK/大型戰鬥會優先保留玩家、目標與戰鬥資訊，降低怪物與非必要特效的視覺預算。"
 
 [node name="BtnBackToLogin" type="Button" parent="WindowsContainer/SettingsWindow" unique_id=791546295]
 layout_mode = 1
