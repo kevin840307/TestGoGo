@@ -54,7 +54,8 @@ internal static class ItemUseClassificationSmokeTests
         Check(
             remaining == 1 &&
             packets.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
+                PacketTreeContainsString(
+                    x,
                     "製作材料／藍圖")),
             "double-clicking crafting blueprint gives explicit crafting guidance without consuming it");
 
@@ -129,9 +130,9 @@ internal static class ItemUseClassificationSmokeTests
             Check(
                 cardRemaining == 1 &&
                 cardPackets.Any(x =>
-                    JsonSerializer.Serialize(x)
-                        .Contains(
-                            "製作材料／藍圖")),
+                    PacketTreeContainsString(
+                        x,
+                        "製作材料／藍圖")),
                 "legacy crafting card is not consumed when double-clicked");
         }
 
@@ -156,9 +157,9 @@ internal static class ItemUseClassificationSmokeTests
 
             Check(
                 chestPackets.Any(x =>
-                    JsonSerializer.Serialize(x)
-                        .Contains(
-                            "需要堅固的鑰匙")) &&
+                    PacketTreeContainsString(
+                        x,
+                        "需要堅固的鑰匙")) &&
                 store.GetCharacterAssets(
                         accountId,
                         characterId)
@@ -194,9 +195,9 @@ internal static class ItemUseClassificationSmokeTests
 
             Check(
                 chestPackets.Any(x =>
-                    JsonSerializer.Serialize(x)
-                        .Contains(
-                            "原始寶箱獎勵表尚未恢復")) &&
+                    PacketTreeContainsString(
+                        x,
+                        "原始寶箱獎勵表尚未恢復")) &&
                 after.Inventory.Any(x =>
                     Convert.ToInt64(
                         x["ItemUID"]) ==
