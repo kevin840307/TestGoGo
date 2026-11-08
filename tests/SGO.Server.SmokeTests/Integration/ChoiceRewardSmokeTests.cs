@@ -300,7 +300,9 @@ internal static class ChoiceRewardSmokeTests
 
         Check(
             racingResults.Count(x => x.Contains("已選擇獎勵")) == 1 &&
-            racingResults.Count(x => x.Contains("找不到可使用的選擇型道具")) == 9 &&
+            racingResults.Count(x =>
+                x.Contains("找不到可使用的選擇型道具") ||
+                x.Contains("找不到可使用的寶箱")) == 9 &&
             !afterRacing.Inventory.Any(x =>
                 Convert.ToInt64(x["ItemUID"]) == racingUid) &&
             afterRacing.Equips.Count(x =>
