@@ -67,7 +67,7 @@ Get-ChildItem 'C:\SGO' -Recurse -File -ErrorAction SilentlyContinue |
 
 ## 3. 舊版 → 新版完整功能矩陣
 
-下列優先級以**目前可玩、可驗證且資料不會掉**為主；P-LAST 一律排最後，並非技術上比較簡單。
+下列優先級以**目前可玩、可驗證且資料不會掉**為主；P-LAST 條目實際排在表格最末尾，表示使用者已明確暫不開發，而非技術上比較簡單。
 
 | ID | 2009/2004 舊版功能 | 舊版證據（符號/資源） | 新版對應與觀察 | 判定 | 優先 | 必要驗收 |
 |---|---|---|---|---|---|---|
@@ -118,7 +118,6 @@ Get-ChildItem 'C:\SGO' -Recurse -File -ErrorAction SilentlyContinue |
 | T03 | CI／編譯／Godot E2E 真實結果 | 舊 EXE 僅供功能參考 | server/FEATURE_GAPS.md 記載 CI steps=null；現有工作流程不能視為 PASS | 實際驗證缺口 | P0 | 必須取得可讀 Actions steps，所有有執行的 Suite PASS |
 | UX01 | 舊版快捷欄分頁（Page1/Page2） | 2004 `CHotKeyItf::OnPage1/OnPage2`；2009 `007_HOTKEY_yl.itf`（行 135109） | 新版 `client/game_hud.gd` 有 F1～F12 與快捷儲存，尚未找到同等頁切換 UI | 部分還原／需求待確認 | P2 | 先比對舊 UI 頁數與目前 12 格需求；若要補，測切頁、保存、重登、使用中切圖 |
 | UX02 | 舊版 Refund 視窗（未知用途） | 2009 `098_Refund.itf`，IDA 行 345287，VA `004D9D58` | 現有商城/付款服務與舊 UI 不能直接判等；用途未明 | 僅識別 UI 資源，暫不推定缺功能 | P3 | 取得舊視窗截圖/操作入口、找呼叫者與送出封包，才決定是否需另開工作 |
-<!-- 以下條目均為使用者指定暫不開發，僅供舊版功能溯源，不得移入近期開發排程。 -->
 | S07 | 好友名單／邀請／忽略名單 | 2004 CFriendItf::OnAddFriendEntry/OnAddIgnoreEntry；2009 CFriendItf | 目前無 friend UI/Store/Request | 明確缺少，暫緩 | P-LAST | 使用者目前不打算加入，不排入近期 Roadmap |
 | S08 | 好友 P2P 歷史／離線留言 | 2004 CFriendMsgItf、CFriendItf::ArchiveP2PHistory/OnSuccessSendOffline；2009 CFriendMsgItf | 新版僅在線密語，無好友專用儲存 | 明確缺少，暫緩 | P-LAST | 與好友功能一起最後處理 |
 | S09 | 高階社團/社交活動/聯盟 | 2009 CSociSysItf/CSociEventItf；2004 CClubSysItf | ClubService 已夠目前需求；舊進階介面未對等 | 部分還原，暫緩 | P-LAST | 保留現有戰團基本功能，不擴進階系統 |
