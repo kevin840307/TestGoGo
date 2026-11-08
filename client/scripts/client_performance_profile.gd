@@ -117,7 +117,7 @@ static func load_mode_name(value: int) -> String:
 	match sanitize_load_mode(value):
 		LOAD_QUALITY: return "quality"
 		LOAD_BALANCED: return "balanced"
-		LOAD_LOW: return "low_resource"
+		LOAD_LOW: return "low"
 	return "balanced"
 
 static func combat_mode_name(value: int) -> String:
