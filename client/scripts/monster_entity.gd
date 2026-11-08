@@ -31,6 +31,12 @@ var move_idle_generation: int = 0
 var network_move_target: Vector2 = Vector2.ZERO
 var network_move_speed: float = 0.0
 var network_move_active: bool = false
+# Only visual children may ease attack-entry position corrections. The
+# CharacterBody2D global_position stays exactly on the authoritative server
+# coordinate for combat, targeting and AOI checks.
+var _authoritative_visual_tween: Tween = null
+var _sprite_visual_base: Vector2 = Vector2.ZERO
+var _ui_visual_base: Vector2 = Vector2.ZERO
 # The latest server-approved waypoint remains safe to finish when the server
 # changes state to idle before the renderer has finished interpolation.
 var _idle_after_last_waypoint: bool = false
@@ -56,6 +62,9 @@ const NETWORK_MOVE_MAX_SPEED: float = 205.0
 # does not produce a stop at every server tick. Combat and correction packets
 # continue to override movement immediately.
 const NETWORK_MOVE_VISUAL_SLACK_SECONDS: float = 0.04
+const AUTHORITATIVE_VISUAL_CORRECTION_SECONDS: float = 0.16
+const AUTHORITATIVE_VISUAL_CORRECTION_MIN_DISTANCE: float = 8.0
+const AUTHORITATIVE_VISUAL_CORRECTION_MAX_DISTANCE: float = 96.0
 const NETWORK_MOVE_SNAP_EPSILON: float = 1.0
 # Keep diagnostics bounded even with hundreds of simultaneously chasing mobs.
 static var _debug_chase_packet_gap_logs: int = 0
@@ -102,6 +111,10 @@ func _resolve_ui_nodes() -> void :
 
 func _ready() -> void :
 	_resolve_ui_nodes()
+	if is_instance_valid(sprite):
+		_sprite_visual_base = sprite.position
+	if is_instance_valid(ui_container):
+		_ui_visual_base = ui_container.position
 
 	collision_shape = get_node_or_null("CollisionShape2D")
 	if not collision_shape:
@@ -232,7 +245,7 @@ func _on_screen_exited() -> void :
 		sprite.pause()
 
 func _exit_tree() -> void :
-
+	_clear_authoritative_visual_correction()
 	if CursorManager:
 		CursorManager.unregister_hover(self)
 
@@ -505,6 +518,7 @@ func _lock_ui_position() -> void :
 
 
 	ui_container.position = Vector2( - ui_container.size.x / 2.0, fixed_head_y)
+	_ui_visual_base = ui_container.position
 
 
 func _generate_dynamic_collision_shape() -> void :
@@ -683,6 +697,8 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		return
 
 	_idle_after_last_waypoint = false
+	if new_state in ["death", "die"]:
+		_clear_authoritative_visual_correction()
 	if new_state != "walk":
 		move_idle_generation += 1
 		network_move_active = false
@@ -711,6 +727,61 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		pending_move_dir_count = 0
 		last_move_dir_change_ms = now_ms
 	sync_animation()
+
+
+func _clear_authoritative_visual_correction() -> void:
+	if _authoritative_visual_tween and _authoritative_visual_tween.is_valid():
+		_authoritative_visual_tween.kill()
+	_authoritative_visual_tween = null
+	if is_instance_valid(sprite):
+		sprite.position = _sprite_visual_base
+	if is_instance_valid(ui_container):
+		ui_container.position = _ui_visual_base
+
+
+func _ease_authoritative_visual_correction(previous_world_pos: Vector2) -> void:
+	var distance: float = previous_world_pos.distance_to(global_position)
+	# Above the bound this might be a real teleport, respawn or map reset.
+	# Below the bound it is too small to be visually distracting.
+	if (
+		not is_inside_tree()
+		or not _is_on_screen
+		or current_state != "walk"
+		or distance < AUTHORITATIVE_VISUAL_CORRECTION_MIN_DISTANCE
+		or distance > AUTHORITATIVE_VISUAL_CORRECTION_MAX_DISTANCE
+	):
+		_clear_authoritative_visual_correction()
+		return
+
+	var displacement: Vector2 = previous_world_pos - global_position
+	if _authoritative_visual_tween and _authoritative_visual_tween.is_valid():
+		_authoritative_visual_tween.kill()
+	_authoritative_visual_tween = null
+
+	var has_visual: bool = false
+	if is_instance_valid(sprite):
+		sprite.position += displacement
+		has_visual = true
+	if is_instance_valid(ui_container):
+		ui_container.position += displacement
+		has_visual = true
+	if not has_visual:
+		return
+
+	# Ease the render-only offset back to zero. Never move the body itself:
+	# server-authoritative collision / skill target positions remain unchanged.
+	_authoritative_visual_tween = create_tween()
+	_authoritative_visual_tween.set_parallel(true)
+	if is_instance_valid(sprite):
+		_authoritative_visual_tween.tween_property(
+			sprite, "position", _sprite_visual_base,
+			AUTHORITATIVE_VISUAL_CORRECTION_SECONDS
+		).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	if is_instance_valid(ui_container):
+		_authoritative_visual_tween.tween_property(
+			ui_container, "position", _ui_visual_base,
+			AUTHORITATIVE_VISUAL_CORRECTION_SECONDS
+		).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 
 func _apply_network_target_direction(target_pos: Vector2) -> void :
@@ -751,6 +822,7 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	# entering attack state. Snap first so the following SyncState("attack")
 	# cannot freeze the monster at an older visual position.
 	if speed_time <= 0.01:
+		var visual_position_before_correction: Vector2 = global_position
 		# Server attack-position corrections remain instantaneous for
 		# authoritative combat. Report sizeable on-screen jumps so we can
 		# distinguish them from viewport-edge snapping in Debug builds.
@@ -763,6 +835,7 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 					str(global_position), str(target_pos)
 				])
 		global_position = target_pos
+		_ease_authoritative_visual_correction(visual_position_before_correction)
 		network_move_active = false
 		network_move_speed = 0.0
 		return
