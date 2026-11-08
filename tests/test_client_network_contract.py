@@ -11,6 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 NETWORK_MANAGER = ROOT / "client" / "scripts" / "network_manager.gd"
+MALL_WINDOW = ROOT / "client" / "scripts" / "mall_window.gd"
 CASE = re.compile(r'^\t\t"([A-Za-z][A-Za-z0-9_]*)"\s*:', re.M)
 FIELD_READ = re.compile(r'data\.(?:get|has)\(\s*["\']([A-Za-z][A-Za-z0-9_]*)["\']')
 
@@ -52,6 +53,21 @@ class ClientNetworkContractTests(unittest.TestCase):
         block = packet_block(self.source, "MallListResponse")
         fields = set(FIELD_READ.findall(block))
         self.assertTrue({"Points", "Items", "Gifts"} <= fields)
+
+    def test_external_mall_mutations_send_idempotency_keys(self):
+        source = MALL_WINDOW.read_text(encoding="utf-8-sig")
+        self.assertIn(
+            '"RequestID": _next_external_request_id("paypal")',
+            source,
+        )
+        self.assertIn(
+            '"RequestID": _next_external_request_id("legacy")',
+            source,
+        )
+        self.assertIn(
+            "func _next_external_request_id(prefix: String) -> String:",
+            source,
+        )
 
 
 if __name__ == "__main__":
