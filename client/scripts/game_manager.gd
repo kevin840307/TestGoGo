@@ -443,6 +443,7 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 			_master_bus_was_muted_before_focus_loss = AudioServer.is_bus_mute(master_bus_index)
 			AudioServer.set_bus_mute(master_bus_index, true)
 	else:
+		_set_background_visual_processing(false)
 		RenderingServer.render_loop_enabled = true
 		Engine.max_fps = _focused_max_fps
 
@@ -454,7 +455,17 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 
 	_log_focus_power_save("focus_in" if has_focus else "focus_out", not has_focus)
 
+func _set_background_visual_processing(paused: bool) -> void :
+	if CursorManager:
+		CursorManager.set_process(not paused)
+	if is_instance_valid(current_day_night_overlay):
+		current_day_night_overlay.set_process(not paused)
+	if is_instance_valid(current_hud) and current_hud.has_method("set_background_visuals_paused"):
+		current_hud.set_background_visuals_paused(paused)
+
 func _trim_unfocused_runtime_caches() -> void :
+	if DollLoader and DollLoader.has_method("clear_runtime_cache"):
+		DollLoader.clear_runtime_cache()
 	if EffectLoader and EffectLoader.has_method("clear_runtime_cache"):
 		EffectLoader.clear_runtime_cache()
 	if MonsterLoader and MonsterLoader.has_method("clear_runtime_cache"):
