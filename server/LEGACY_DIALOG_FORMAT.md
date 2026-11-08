@@ -16,7 +16,7 @@
 | `b` | 教學段落，`#` 隔段 | 轉成雙換行、使用可捲動說明顯示 |
 | `h` | 長篇說明頁 | 可捲動、頂端對齊文字 |
 | `c` | 具體意義未知 | 保留前綴，避免錯誤映射 |
-| `m#...` | 舊版圖像／音樂演出 | 維持既有 `SuppressLegacyMediaDialogs` 行為，尚未實作媒體播放 |
+| `m#...` | 舊版圖像／音樂演出 | 解析原始兩張 `.spr`、一個 `.mp3` 名稱為 `LegacyMedia`，沒有圖資時顯示「劇情演出」並保留下一步節點；仍未播放原版媒體 |
 
 ### RGB 顏色
 
@@ -38,9 +38,21 @@ Server 執行 Lua 時以私有控制標記代替原先空字串，再於 `Dialog
 - `Text`：可顯示的 BBCode 文字。
 - `PlainText`：不含 Lua 顏色控制標記的純文字。
 - `LegacyPrefix`：原版前綴，例如 `p7`、`n1`、`h`。
-- `DialogLayout`：`Default`、`Narration`、`Help`。
+- `DialogLayout`：`Default`、`Narration`、`Help`、`Media`。
+- `LegacyMedia`：只有原始 `m#imageA#imageB#audio#` 會附帶 `ImageA`、`ImageB`、`Audio` 欄位。沒有對應素材時不推測圖像或音效。
 
 原有 `DialogType`、`NextNode`、`Options`、`TargetNode`、`BubbleType` 均未改動；選項 callback 邏輯不變。玩家聊天仍使用原本的 `Label`，只有經過 NPC 對話流程的富文字才建立輕量 `RichTextLabel`。
+
+## 對話逐句播放（第三階段）
+
+**已確認原版腳本會在一個函式內連續執行 `Say()`、`Say()`、`Ask()`、`QuestEnd()`。** Server 原本會順序送出所有封包，但 Client 立即逐筆覆蓋畫面，造成前幾句無法閱讀、`QuestEnd()` 立即關閉。
+
+Client 現在以 `legacy_dialog_sequence.gd` **只緩衝同一 NPC（EntityID + ScriptName）的後續對話事件**，第一句立即顯示、其餘等待使用者點擊再顯示，`Ask()` 最後才呈現選項；尾端的 `QuestEnd()` 在 NPC 正顯示 `Say()` 時延後處理。不同 NPC 的對話會清除舊佇列。選項按下後仍使用原本的 `NpcOptionRequest`、`TargetNode`，不插入新的 Server 狀態機。
+
+- 已有 `NextNode` 的 `Say()`：若目前批次沒有待顯示事件，點擊後仍送出原本的 `NpcOptionRequest`。
+- 沒有 `NextNode` 的 `Say()`：若有後續 `Say()/Ask()`，點擊會顯示下一筆；若無，按原本結束方式關閉。
+- `Ask()` 並非逐句氣泡，選項邏輯照舊；獨立 `Ask()` 後收到 `QuestEnd()` 仍維持原有關閉邏輯。
+- 原本 `m#` 媒體資料尚缺對應可播放的 Godot sprite/audio，`LegacyMedia` 先保留檔名及順序，以無素材的低侵入方式保持任務續接；火車 `SuppressLegacyMediaDialogs` 的既有特殊處理保留不變。
 
 ## 相容性與防回歸（第二階段）
 
@@ -55,8 +67,9 @@ Server 執行 Lua 時以私有控制標記代替原先空字串，再於 `Dialog
 ```powershell
 dotnet run --project tests/SGO.Server.SmokeTests -- --suite protocol
 godot --headless --path client --script res://tests/npc_legacy_dialog_regression.gd
+godot --headless --path client --script res://tests/npc_dialog_sequence_regression.gd
 ```
 
 測試涵蓋 Lua `Say/Ask/Color`、NPC／玩家來源、`p7`、`b/h`、顏色 span、選項 `TargetNode`、普通英文文字／未知前綴不被誤刪、選項控制碼淨化、快速重開選單、Godot 富文字氣泡與純文字回退／元件重用。
 
-**尚待原始 Client 資產／行為比對**：編號 `2..6` 的確切情緒／頭像、`s/c` 的精確視覺、`m#` 的舊媒體演出、`b` 教學排版及不同解析度的介面微調。這些不應宣稱已與原版 100% 相同。
+**尚待原始 Client 資產／行為比對**：編號 `2..6` 的確切情緒／頭像、`s/c` 的精確視覺、`m#` 原版 `.spr/.mp3` 檔案的轉換與播放、`b` 教學排版及不同解析度的介面微調。這些不應宣稱已與原版 100% 相同。

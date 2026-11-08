@@ -102,8 +102,13 @@ func get_spawn_queue_remaining_count() -> int:
 func _unhandled_input(event: InputEvent) -> void :
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if GameManager.current_hud and is_instance_valid(GameManager.current_hud):
-			if GameManager.current_hud.get("_next_dialog_node") != "":
-				GameManager.current_hud.request_next_dialog_sentence()
+			var hud = GameManager.current_hud
+			if hud.get("_next_dialog_node") != "" or (
+				hud.has_method("has_legacy_dialog_line_waiting")
+				and hud.has_legacy_dialog_line_waiting()
+			):
+				hud.request_next_dialog_sentence()
+				get_viewport().set_input_as_handled()
 
 func _get_local_player_position() -> Variant:
 	var player = GameManager.current_player if GameManager else null

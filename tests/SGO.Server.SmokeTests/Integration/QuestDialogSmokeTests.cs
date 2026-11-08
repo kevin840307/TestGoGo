@@ -24,9 +24,24 @@ internal static class QuestDialogSmokeTests
             "legacy b help page breaks are supported");
         Check(DialogFormatter.Parse("h熱鍵操作").Layout == "Help",
             "h help layout is retained");
-        Check(DialogFormatter.Parse("m#image.spr#na#sound.mp3#").Text ==
-              "m#image.spr#na#sound.mp3#",
-            "legacy media script strings are not corrupted");
+        var media = DialogFormatter.Parse(
+            "m#STORY_NAME_00A.spr#STORY_NAME_00B.spr#030.mp3#");
+        Check(media.Prefix == "m" &&
+              media.Layout == "Media" &&
+              media.Text == "劇情演出" &&
+              media.Media?.ImageA == "STORY_NAME_00A.spr" &&
+              media.Media?.ImageB == "STORY_NAME_00B.spr" &&
+              media.Media?.Audio == "030.mp3",
+            "legacy m# scene assets are retained as metadata with a safe fallback");
+        var stationMedia = DialogFormatter.Parse(
+            @"m#X_mas_card\BG_STATION_01.spr#na#SE0136.mp3#");
+        Check(stationMedia.Media?.ImageA ==
+              @"X_mas_card\BG_STATION_01.spr" &&
+              stationMedia.Media?.ImageB == "na" &&
+              stationMedia.Media?.Audio == "SE0136.mp3",
+            "station cinematic paths and na placeholders are preserved");
+        Check(DialogFormatter.Parse("m#invalid").Text == "m#invalid",
+            "malformed media descriptor stays literal instead of crashing");
         Check(DialogFormatter.Parse("一般文字").Text == "一般文字",
             "unmarked text remains unchanged");
         foreach (var plain in new[] { "hello", "please travel", "shop", "cancel", "help", "booking" })
@@ -67,6 +82,17 @@ internal static class QuestDialogSmokeTests
                 Ask("h熱鍵操作", "返回目錄", "Done")
                 Ask("p確定要去尼尼亞皇城嗎?", "確定", "取消", "Answer")
                 Ask("n前往哪裡?", "到"..Color(0,45,198).."皇城"..Color(0,0,0), "不去", "Choice")
+            end
+
+            function story()
+                Say("n1第一句")
+                Say("p1第二句")
+                Ask("n前往皇城嗎?", "前往", "取消", "Answer")
+                QuestEnd()
+            end
+
+            function media()
+                Say("m#STORY_NAME_00A.spr#STORY_NAME_00B.spr#030.mp3#", "Next")
             end
             """);
 
@@ -118,5 +144,39 @@ internal static class QuestDialogSmokeTests
               dialogs[5].GetProperty("Options")[1]
                   .GetProperty("TargetNode").GetString() == "Choice#1",
             "Lua Color() in choice text is removed without changing callback mapping");
+
+        var story = runtime.Execute(
+            "LegacyDialogTest.txt", "story", 123, "守衛", null, _ => 0);
+        using var storyDoc = JsonDocument.Parse(
+            JsonSerializer.Serialize(story.Packets));
+        var sequence = storyDoc.RootElement;
+        Check(sequence.GetArrayLength() == 4 &&
+              sequence[0].GetProperty("Text").GetString() == "第一句" &&
+              sequence[1].GetProperty("Text").GetString() == "第二句" &&
+              sequence[2].GetProperty("DialogType").GetString() == "Dialog" &&
+              sequence[2].GetProperty("Options")[0]
+                  .GetProperty("TargetNode").GetString() == "Answer#0" &&
+              sequence[3].GetProperty("DialogType").GetString() == "Close",
+            "Lua emits Say, Say, Ask and QuestEnd in original story order");
+
+        var mediaExecution = runtime.Execute(
+            "LegacyDialogTest.txt", "media", 123, "守衛", null, _ => 0);
+        using var mediaDoc = JsonDocument.Parse(
+            JsonSerializer.Serialize(mediaExecution.Packets));
+        var cinematic = mediaDoc.RootElement[0];
+        Check(cinematic.GetProperty("Text").GetString() == "劇情演出" &&
+              cinematic.GetProperty("DialogLayout").GetString() == "Media" &&
+              cinematic.GetProperty("NextNode").GetString() == "Next" &&
+              cinematic.GetProperty("LegacyMedia")
+                  .GetProperty("ImageA").GetString() == "STORY_NAME_00A.spr" &&
+              cinematic.GetProperty("LegacyMedia")
+                  .GetProperty("Audio").GetString() == "030.mp3",
+            "Lua m# media emits original asset names and continuation node");
+
+        var suppressedMedia = runtime.Execute(
+            "LegacyDialogTest.txt", "media", 123, "守衛", null, _ => 0,
+            new QuestRuntimeBindings { SuppressLegacyMediaDialogs = true });
+        Check(suppressedMedia.Packets.Count == 0,
+            "train travel suppression of legacy media remains unchanged");
     }
 }

@@ -589,6 +589,7 @@ public sealed class QuestRuntime
                 PlainText = dialog.PlainText,
                 LegacyPrefix = dialog.Prefix,
                 DialogLayout = dialog.Layout,
+                LegacyMedia = dialog.Media,
                 Speaker = dialog.Speaker,
                 BubbleType = 0,
                 NextNode = next

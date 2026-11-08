@@ -9,7 +9,11 @@ public sealed record LegacyDialogText(
     string PlainText,
     string Prefix,
     string Speaker,
-    string Layout);
+    string Layout,
+    LegacyDialogMedia? Media = null);
+
+/// <summary>Original m#image1#image2#audio# script references; paths are data only.</summary>
+public sealed record LegacyDialogMedia(string ImageA, string ImageB, string Audio);
 
 public static class DialogFormatter
 {
@@ -25,6 +29,16 @@ public static class DialogFormatter
     public static LegacyDialogText Parse(string? value, string defaultSpeaker = "NPC")
     {
         var source = value ?? "";
+        // Original cinematic strings use m#pictureA.spr#pictureB.spr#music.mp3#.
+        // The original sprite/audio files are not yet converted to Godot.
+        // Retain their identities without leaking raw file paths into speech.
+        if (TryParseMedia(source, out var media))
+        {
+            const string fallback = "劇情演出";
+            return new LegacyDialogText(
+                fallback, fallback, "m", defaultSpeaker, "Media", media);
+        }
+
         // Do not eat the first letter of ordinary unmarked dialogue
         // ("hello", "please", "shop", etc.). Only known, single-digit
         // legacy forms may be removed.
@@ -62,6 +76,25 @@ public static class DialogFormatter
     // color directives without interpreting a choice's first letter as a prefix.
     public static string PlainInlineText(string? value)
         => RenderColors(value ?? "").Plain;
+
+    private static bool TryParseMedia(string source, out LegacyDialogMedia? media)
+    {
+        media = null;
+        if (!source.StartsWith("m#", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var parts = source.Split('#');
+        if (parts.Length != 5 || parts[0].Length != 1 || parts[4].Length != 0)
+            return false;
+
+        // The 'na' and empty values are legitimate legacy placeholders.
+        if (parts[1].Length == 0 || parts[1].Length > 255 ||
+            parts[2].Length > 255 || parts[3].Length > 255)
+            return false;
+
+        media = new LegacyDialogMedia(parts[1], parts[2], parts[3]);
+        return true;
+    }
 
     private static string ReadLegacyPrefix(string text)
     {

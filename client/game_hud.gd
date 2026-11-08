@@ -70,6 +70,9 @@ var game_info_window: Control = null
 
 @onready var npc_dialog_panel: Control = $WindowsContainer / NpcDialogPanel
 @onready var npc_dialog_text: RichTextLabel = $WindowsContainer / NpcDialogPanel / QuestionLabel
+const LEGACY_DIALOG_SEQUENCE = preload("res://scripts/legacy_dialog_sequence.gd")
+var _legacy_dialog_sequence = LEGACY_DIALOG_SEQUENCE.new()
+var _legacy_dialog_line_waiting: bool = false
 var _current_npc_entity_id: int = 0
 var _current_npc_script_name: String = ""
 var _next_dialog_node: String = ""
@@ -303,7 +306,7 @@ func _ready() -> void :
 				NetworkManager.npc_dialog_received.connect(_on_npc_dialog_received)
 		if NetworkManager.has_signal("npc_dialog_closed"):
 			if not NetworkManager.npc_dialog_closed.is_connected(_on_npc_dialog_closed):
-				NetworkManager.npc_dialog_closed.connect(_on_npc_dialog_closed)
+				NetworkManager.npc_dialog_closed.connect(_on_npc_dialog_close_requested)
 
 		if NetworkManager.has_signal("open_bank_window_received"):
 			if not NetworkManager.open_bank_window_received.is_connected(_on_open_bank_window_received):
@@ -1581,7 +1584,16 @@ func _on_player_emotion_selected(anim_name: String) -> void :
 
 
 
-func _on_npc_dialog_received(data: Dictionary) -> void :
+func _on_npc_dialog_received(data: Dictionary, from_queue: bool = false) -> void :
+	# Old quest scripts can emit multiple Say() calls before an Ask().
+	# Sequence only old Lua packets; other dialogs preserve their original path.
+	if not from_queue:
+		if data.has("LegacyPrefix") and data.has("DialogLayout"):
+			if not _legacy_dialog_sequence.push_or_begin(data):
+				return
+		else:
+			_legacy_dialog_sequence.reset()
+			_legacy_dialog_line_waiting = false
 	if CursorManager:
 		CursorManager.set_cursor_state("normal")
 
@@ -1601,7 +1613,7 @@ func _on_npc_dialog_received(data: Dictionary) -> void :
 		bubble_text = "[i][color=#596777]" + text + "[/color][/i]"
 
 
-	if is_instance_valid(target_player):
+	if not from_queue and is_instance_valid(target_player):
 		target_player.set("is_interacting_with_npc", true)
 		if target_player.has_method("_stop_movement"):
 			target_player._stop_movement()
@@ -1611,12 +1623,14 @@ func _on_npc_dialog_received(data: Dictionary) -> void :
 		return
 
 	if dialog_type == "ActionDialog":
+		_legacy_dialog_line_waiting = from_queue or data.has("LegacyPrefix")
 		_next_dialog_node = str(data.get("NextNode", ""))
 
 		if text != "": _trigger_npc_bubble(_current_npc_entity_id, bubble_text, bubble_type, speaker, true)
 		if npc_dialog_panel: npc_dialog_panel.visible = false
 		return
 
+	_legacy_dialog_line_waiting = false
 	_next_dialog_node = ""
 	if options.is_empty():
 
@@ -1630,13 +1644,35 @@ func _on_npc_dialog_received(data: Dictionary) -> void :
 		if not was_visible:
 			_play_interface_activation_feedback(npc_dialog_panel)
 
+func has_legacy_dialog_line_waiting() -> bool:
+	return _legacy_dialog_line_waiting
+
+
+func _on_npc_dialog_close_requested() -> void:
+	# Prevent QuestEnd() from erasing an unread Say(), but keep existing Ask()
+	# behavior (including immediate close when no speech is being displayed).
+	if _legacy_dialog_line_waiting and _legacy_dialog_sequence.defer_close():
+		return
+	_on_npc_dialog_closed()
+
+
 func request_next_dialog_sentence() -> void :
+	if _legacy_dialog_sequence.has_pending():
+		var next_packet: Dictionary = _legacy_dialog_sequence.take_next()
+		if str(next_packet.get("DialogType", "")) == "Close":
+			_on_npc_dialog_closed()
+		else:
+			_on_npc_dialog_received(next_packet, true)
+		return
 	if _next_dialog_node == "":
 		_on_npc_dialog_closed()
 		return
 
 	var target_node = _next_dialog_node
 	_next_dialog_node = ""
+	# A server continuation starts a fresh batch, not a queued old line.
+	_legacy_dialog_line_waiting = false
+	_legacy_dialog_sequence.reset()
 
 	if NetworkManager:
 		if NetworkManager.has_method("send_secure_packet"):
@@ -1661,6 +1697,8 @@ func _on_npc_option_selected(target_node: String) -> void :
 			})
 
 func _on_npc_dialog_closed() -> void :
+	_legacy_dialog_line_waiting = false
+	_legacy_dialog_sequence.reset()
 	if npc_dialog_panel: npc_dialog_panel.visible = false
 
 
