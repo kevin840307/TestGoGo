@@ -422,6 +422,18 @@ func _finish_mouse_autorun_hold() -> void:
 # the right-click: NetworkPlayer's own _input_event must still open its
 # original player context menu, and right-click skill cancellation remains.
 func _input(event: InputEvent) -> void:
+	# Other clicks have priority over latched terrain movement. _input runs
+	# before GUI/object picking, so stop first and do NOT consume the event.
+	# A click on bare terrain is left for _unhandled_input to restore the
+	# original one-shot click-to-move behavior.
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if _mouse_autorun.latched or _mouse_autorun.holding:
+			var hovered_entity: Node = CursorManager.current_hovered_entity if CursorManager else null
+			var hovered_ui: Control = get_viewport().gui_get_hovered_control() if is_inside_tree() else null
+			if is_instance_valid(hovered_entity) or (
+				is_instance_valid(hovered_ui) and hovered_ui.mouse_filter == Control.MOUSE_FILTER_STOP
+			):
+				cancel_autorun_tracking(true)
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
 		if _mouse_autorun.latched or is_mouse_holding or (
 			(is_moving or _navigation_fallback_running)
