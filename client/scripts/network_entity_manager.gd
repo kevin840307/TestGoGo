@@ -566,6 +566,14 @@ func _process(delta: float) -> void :
 	for entity_id in finished_ids:
 		_runtime_monster_ids.erase(entity_id)
 
+# Decorative animation must operate on the Sprite2D child, never the
+# authoritative Area2D root (position, click shape and AOI anchor).
+static func get_ground_drop_bounce_sprite(entity: Node2D) -> Node2D:
+	if not is_instance_valid(entity):
+		return null
+	return entity.get_node_or_null("Sprite2D") as Node2D
+
+
 static func _should_check_ground_drop_bounce(data: Dictionary) -> bool:
 	# WorldReady/periodic snapshots describe already existing items.
 	# Only genuinely new drops may play the monster-death bounce animation.
@@ -685,21 +693,24 @@ func _spawn_entity_now(data: Dictionary) -> void :
 				new_entity.initialize_ground_item(data)
 
 			if is_monster_drop:
+				# Server already validated this item's global position against
+				# Blocking.dat. Never move the Area2D itself for a decorative
+				# bounce: that shifts its click target and can land the item in
+				# a wall after the Server chose a safe tile.
 				var bounce_tween = new_entity.create_tween()
 				bounce_tween.tween_interval(drop_delay)
-				bounce_tween.tween_callback( func():
-					if is_instance_valid(new_entity):
-						new_entity.visible = true
-
-						var start_pos = new_entity.position
-						var floor_pos = start_pos + Vector2(randf_range(-45.0, 45.0), randf_range(-20.0, 25.0))
-						var peak_pos = start_pos + Vector2((floor_pos.x - start_pos.x) / 2.0, -50.0)
-
-						var t = new_entity.create_tween()
-						t.tween_property(new_entity, "position", peak_pos, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-						t.tween_property(new_entity, "position", floor_pos, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-						t.tween_property(new_entity, "position", floor_pos + Vector2(0, -10), 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-						t.tween_property(new_entity, "position", floor_pos, 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+				bounce_tween.tween_callback(func():
+					if not is_instance_valid(new_entity) or new_entity.is_queued_for_deletion():
+						return
+					new_entity.visible = true
+					var drop_sprite := get_ground_drop_bounce_sprite(new_entity)
+					if not is_instance_valid(drop_sprite):
+						return
+					var landing_offset: Vector2 = drop_sprite.position
+					drop_sprite.position = landing_offset + Vector2(0.0, -40.0)
+					var visual_tween := new_entity.create_tween()
+					visual_tween.tween_property(drop_sprite, "position", landing_offset + Vector2(0.0, 7.0), 0.24).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+					visual_tween.tween_property(drop_sprite, "position", landing_offset, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 				)
 		4:
 			new_entity = PET_SCENE.instantiate()
