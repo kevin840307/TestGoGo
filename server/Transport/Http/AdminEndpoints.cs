@@ -166,7 +166,11 @@ async function refresh(){
  document.getElementById('summary').innerHTML=[
  ['在線',s.onlinePlayers],['Working Set',s.runtime.workingSetMb+' MB'],['Private RAM',s.runtime.privateMemoryMb+' MB'],
  ['GC Heap',s.runtime.gcHeapMb+' MB'],['Threads',s.runtime.threads],['Packets',s.counters.packets],
- ['Packet Errors',s.counters.packetErrors],['Slow Packets',s.counters.slowPackets]
+ ['Packet Errors',s.counters.packetErrors],['Slow Packets',s.counters.slowPackets],
+ ['AI Slow',s.counters.mapAiSlowTicks],['Map Pressure',s.counters.mapPressureWarnings],
+ ['Broadcast Backlog',s.counters.broadcastBacklogWarnings],['Trade Conflicts',s.counters.tradeConflicts],
+ ['Pickup Conflicts',s.counters.pickupConflicts],['DB Failures',s.counters.databaseFailures],
+ ['World Tick Failures',s.counters.worldTickFailures],['Resource Warnings',s.counters.resourceWarnings]
  ].map(x=>'<div class="card"><div class="muted">'+esc(x[0])+'</div><div class="metric">'+esc(x[1])+'</div></div>').join('');
  document.getElementById('maps').innerHTML=s.maps.length?s.maps.map(x=>'Map '+esc(x.mapId)+': <b>'+esc(x.players)+'</b>').join(' &nbsp; '):'<span class="muted">目前無玩家</span>';
  document.getElementById('players').innerHTML=s.players.map(p=>'<tr><td>'+esc(p.characterId)+'</td><td>'+esc(p.accountId)+'</td><td>'+esc(p.mapId)+'</td><td>'+esc(p.x)+', '+esc(p.y)+'</td><td>'+esc(p.connectionId)+'</td></tr>').join('');
