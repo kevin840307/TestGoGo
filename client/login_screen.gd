@@ -96,10 +96,6 @@ func reveal_form_after_warmup() -> void:
 	login_panel.visible = true
 
 
-static func can_reveal_login(resources_ready: bool, focused: bool, video_ready: bool, stable_frames: int, minimum_stable_frames: int) -> bool:
-	return resources_ready and focused and video_ready and stable_frames >= minimum_stable_frames
-
-
 func warm_background_video() -> void:
 	# Do not decode the looping OGV through the whole 1453-recipe prewarm.
 	# The parent starts this shortly BEFORE displaying the login form,
