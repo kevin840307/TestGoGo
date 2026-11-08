@@ -7,7 +7,7 @@
 | 層級 | 目錄／檔案 | 目的 | 是否需要啟動 Server |
 | --- | --- | --- | --- |
 | 靜態協定契約 | `tests/packet_contract_audit.py`、`packet_schema_audit.py`、`packet_response_audit.py` | Client／Server Type、Action、欄位是否有對應（不宣稱功能正確） | 否 |
-| Python 契約單元測試 | `tests/test_packet_*.py` | 驗證稽核工具本身：漏欄位、未對應 Handler、忽略動態欄位等 | 否 |
+| Python 契約單元測試 | `tests/test_packet_*.py`、`test_client_network_contract.py` | 驗證稽核工具本身與 Godot client 封包責任：漏欄位、未對應 Handler、巢狀回應、狀態同步 ownership | 否 |
 | .NET 領域 Smoke | `tests/SGO.Server.SmokeTests/Protocol/`、`World/`、`Announcements/` | 純資料／封包驗證，不使用既有主測試的共用 DB 狀態 | 否 |
 | .NET 遊戲整合 Smoke | `tests/SGO.Server.SmokeTests/Program.cs`，未來拆為 `Integration/` | SQLite、角色、技能、寵物、交易、世界狀態等實際整合 | 否，直接組合服務 |
 | 加密傳輸 E2E | `tests/SGO.Server.WireSmokeTests/` | 對真實運作中的 WebSocket Server 編碼／傳送／接收／解碼 | 是 |
@@ -67,6 +67,8 @@ powershell -ExecutionPolicy Bypass -File tests/run_protocol_checks.ps1
 ```
 
 `test_smoke_suite_structure.py` 在 CI 中會檢查各模組存在、已由 Runner 呼叫，且獨立的 Schema／公告／BlockingMap 案例沒有被塞回 `Program.cs`。
+
+`test_client_network_contract.py` 會直接讀取真實 `client/scripts/network_manager.gd`，目前驗證 `DriveMechaResponse` 只處理駕駛 ACK、有效能力值由 `PlayerStatusSync` 更新，以及 `MallListResponse` 仍消費 `Gifts`。這層屬於 client 靜態回歸測試，仍不能取代真實 Godot 場景 E2E。
 
 ## 下一階段拆分（尚未完成）
 
