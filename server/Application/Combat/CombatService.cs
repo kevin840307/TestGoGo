@@ -1282,8 +1282,21 @@ public sealed class CombatService
             return false;
 
         var raw = packet.GetType().GetProperty(property)?.GetValue(packet);
-        return raw is not null &&
-               Convert.ToInt64(raw) == characterId.Value;
+        if (raw is null)
+            return false;
+
+        var entityId =
+            Convert.ToInt64(raw);
+
+        if (entityId == characterId.Value)
+            return true;
+
+        // Companion combat-state entities use the recovered 4M/5M ranges.
+        // Their owner already defines visibility through PlayerSpatialAoi, so
+        // a pet/mecha attack animation must not fall back to full-map fanout.
+        return type == "SyncState" &&
+               entityId >= 4_000_000 &&
+               entityId < 6_000_000;
     }
 
     private static void SetAiState(
