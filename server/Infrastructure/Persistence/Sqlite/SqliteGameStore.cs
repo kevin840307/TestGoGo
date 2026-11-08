@@ -8795,9 +8795,15 @@ public sealed class SqliteGameStore : IGameStore
         int itemPart = 255,
         int itemDamage = 0)
     {
-        count = Math.Max(1, count);
-        unitPrice = Math.Max(0, unitPrice);
-        var total = checked(unitPrice * count);
+        // The application validates wire quantities too, but persistence must
+        // never silently turn a forged zero/negative count into one item, or
+        // a negative price into a free purchase. Use 64-bit money arithmetic
+        // so large submitted quantities fail the funds check instead of
+        // raising an Int32 overflow before the transaction starts.
+        if (count <= 0 || unitPrice < 0)
+            return new(false, "購買資料無效", 0, 0);
+
+        var total = (long)unitPrice * count;
 
         using var db = Open();
         using var tx = db.BeginTransaction();
@@ -8944,8 +8950,8 @@ public sealed class SqliteGameStore : IGameStore
         out long newMoney)
     {
         newMoney = 0;
-        count = Math.Max(1, count);
-        unitPrice = Math.Max(0, unitPrice);
+        if (count <= 0 || unitPrice < 0)
+            return false;
 
         using var db = Open();
         using var tx = db.BeginTransaction();
