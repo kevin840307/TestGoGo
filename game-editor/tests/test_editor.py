@@ -431,6 +431,32 @@ class WebStructureTests(unittest.TestCase):
         self.assertIn("playwright", workflow.lower())
         self.assertIn("map add drag undo redo save and reload", e2e)
 
+    def test_safe_map_preferences_are_persisted_without_unsaved_payloads(self) -> None:
+        web = GAME_EDITOR_ROOT / "web"
+        core = (web / "app-core.js").read_text(encoding="utf-8")
+        tools = (web / "app-tools.js").read_text(encoding="utf-8")
+        map_editor = (web / "app-map-editor.js").read_text(encoding="utf-8")
+
+        self.assertIn("EDITOR_PREFS_KEY", core)
+        self.assertIn("loadEditorPreferences", core)
+        self.assertIn("saveEditorPreferences", core)
+        self.assertIn("applyEditorPreferencesToControls", core)
+        for key in (
+            "mapId", "mapTab", "mapSelectedEnemyId",
+            "mapShowPreview", "mapShowBlocking", "mapShowSpawners",
+            "mapShowLabels", "mapOnlySelectedType", "mapSnapWalkable",
+        ):
+            self.assertIn(f"'{key}'", core)
+
+        # Never persist editable rows/history/clipboard/dirty state.
+        pref_block = core[core.index("const EDITOR_PREF_FIELDS"):core.index("function loadEditorPreferences")]
+        for unsafe in ("mapRows", "mapUndo", "mapRedo", "mapClipboard", "mapDirty"):
+            self.assertNotIn(unsafe, pref_block)
+
+        self.assertIn("applyEditorPreferencesToControls()", tools)
+        self.assertGreaterEqual(tools.count("saveEditorPreferences()"), 6)
+        self.assertIn("saveEditorPreferences()", map_editor)
+
     def test_collision_aware_map_ui_is_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
         index = (web / "index.html").read_text(encoding="utf-8")
