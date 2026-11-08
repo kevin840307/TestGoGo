@@ -68,6 +68,7 @@ async function loadStatus() {
 }
 
 async function go(view) {
+  if (state.view === 'maps' && view !== 'maps' && typeof confirmDiscardMapChanges === 'function' && !confirmDiscardMapChanges()) return;
   state.view = view;
   $$('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.view === view));
   $$('.view').forEach(x => x.classList.toggle('active', x.id === `view-${view}`));
