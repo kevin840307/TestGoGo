@@ -8,6 +8,9 @@ const MAP_LOADING_RESOURCE_PROGRESS_MAX: = 90.0
 const MAP_LOADING_INSTANTIATE_PROGRESS: = 94.0
 const MAP_LOADING_ADD_CHILD_PROGRESS: = 97.0
 const MAP_LOADING_FINALIZE_PROGRESS: = 99.0
+# Loading must not wait forever for a continuously refilled spawn queue.
+# Remaining entities stay in the live queue and continue spawning normally.
+const INITIAL_SPAWN_GATE_MAX_MSEC: int = 12000
 const TRAIN_TRAVEL_MAP_TIMEOUT_SECONDS: = 15.0
 const TRAIN_VIDEO_TIMEOUT_SECONDS: = 120.0
 const WORLD_ENHANCEMENT_SCENE: = preload("res://world_enhancement.tscn")
@@ -1023,7 +1026,15 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 			NetworkEntityManager.set_spawn_queue_paused(false)
 	await get_tree().process_frame
 
+	var spawn_gate_started_msec: int = Time.get_ticks_msec()
 	while NetworkEntityManager and NetworkEntityManager.has_method("is_initial_spawn_queue_idle") and not NetworkEntityManager.is_initial_spawn_queue_idle():
+		if Time.get_ticks_msec() - spawn_gate_started_msec >= INITIAL_SPAWN_GATE_MAX_MSEC:
+			var still_queued: int = int(NetworkEntityManager.get_spawn_queue_remaining_count()) \
+				if NetworkEntityManager.has_method("get_spawn_queue_remaining_count") else -1
+			push_warning("[INITIAL_SPAWN_GATE_TIMEOUT] pending=%d elapsed_ms=%d; presenting world and draining existing queue without dropping entities" % [
+				still_queued, Time.get_ticks_msec() - spawn_gate_started_msec
+			])
+			break
 		var remaining_spawns: int = 0
 		if NetworkEntityManager.has_method("get_spawn_queue_remaining_count"):
 			remaining_spawns = int(NetworkEntityManager.get_spawn_queue_remaining_count())
