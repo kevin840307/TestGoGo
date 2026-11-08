@@ -5789,7 +5789,7 @@ try
             "PetAction Summon refreshes PetSync");
 
         var appearanceSpawn = responses
-            .Select(JsonSerializer.Serialize<object>)
+            .Select(x => JsonSerializer.Serialize(x))
             .FirstOrDefault(x =>
                 x.Contains("\"Type\":\"SpawnEntity\"", StringComparison.Ordinal) &&
                 x.Contains("\"EntityType\":4", StringComparison.Ordinal) &&
