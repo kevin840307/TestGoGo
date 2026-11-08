@@ -52,6 +52,10 @@ const ACTION_STATE_MAX_MS: int = 900
 # authoritative 250ms duration; otherwise they arrive early and pause.
 const NETWORK_MOVE_MIN_SPEED: float = 1.0
 const NETWORK_MOVE_MAX_SPEED: float = 205.0
+# Slightly overlap successive 250ms visual waypoints so normal packet jitter
+# does not produce a stop at every server tick. Combat and correction packets
+# continue to override movement immediately.
+const NETWORK_MOVE_VISUAL_SLACK_SECONDS: float = 0.04
 const NETWORK_MOVE_SNAP_EPSILON: float = 1.0
 # Keep diagnostics bounded even with hundreds of simultaneously chasing mobs.
 static var _debug_chase_packet_gap_logs: int = 0
@@ -768,11 +772,13 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 		network_move_active = false
 		return
 
-	# Keep each short waypoint paced to SpeedTime (250ms in server AI),
-	# while capping extreme catch-up speed for delayed/lost packets.
-	# A large minimum speed made short steps complete early, then appear idle
-	# until the next server packet.
-	var requested_time: float = maxf(speed_time, 0.01)
+	# The server normally sends 250ms movement waypoints. A small visual
+	# slack overlaps the next waypoint to hide render/network scheduling
+	# jitter; authoritative attack/correction packets still take priority.
+	# Clamp extreme catch-up speed for delayed/lost packets.
+	var requested_time: float = maxf(
+		speed_time + NETWORK_MOVE_VISUAL_SLACK_SECONDS, 0.01
+	)
 	var requested_speed: float = remaining / requested_time
 	network_move_speed = clampf(
 		requested_speed,
