@@ -3191,6 +3191,20 @@ public sealed class PacketRouter
                     horseUid,
                     item.EquipSlot);
 
+                if (!success)
+                {
+                    _log.LogWarning(
+                        "[MECHA_EQUIP_FAILED] DBID={DBID} EquipUID={EquipUID} EquipIndex={EquipIndex} HorseUID={HorseUID} StoredPart={StoredPart} AuthoritativePart={AuthoritativePart} HorseType={HorseType} ItemHorseType={ItemHorseType}",
+                        state.CharacterId.Value,
+                        equipUid,
+                        Convert.ToInt32(equipRecord["EquipIdx"]),
+                        horseUid,
+                        Convert.ToInt32(equipRecord["Part"]),
+                        item.EquipSlot,
+                        horseType,
+                        item.HorseType);
+                }
+
                 var assets = _store.GetCharacterAssets(
                     accountId,
                     state.CharacterId.Value);
