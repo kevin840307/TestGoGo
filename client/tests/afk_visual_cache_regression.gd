@@ -102,7 +102,25 @@ func _run() -> void:
 			"static animated SpriteFrames restore the previous animation")
 	check(dynamic_actor.get_parent() == map_root and dynamic_drop.get_parent() == map_root,
 		"combat actor and pickup survive unload/reload")
+	# If the server swaps maps during AFK, a view snapshot from Map A
+	# cannot be replayed into Map B. New snapshots supersede the old set.
+	var second_map: Node2D = Node2D.new()
+	second_map.name = "SecondMap"
+	root.add_child(second_map)
+	var second_sprite: Sprite2D = Sprite2D.new()
+	second_sprite.texture = texture
+	second_map.add_child(second_sprite)
+	var first_map_again: Dictionary = cache.suspend_static_map(map_root)
+	check(int(first_map_again.get("released", 0)) == 1,
+		"old map can be stripped again before transition")
+	var second_stats: Dictionary = cache.suspend_static_map(second_map)
+	check(cache.tracked_map() == second_map and int(second_stats.get("released", 0)) == 1,
+		"second map supersedes the old suspended resource list")
+	var second_restore: Dictionary = await cache.restore_static_map(1)
+	check(int(second_restore.get("restored", 0)) == 1 and second_sprite.texture != null,
+		"only the new map is restored after map change")
 	Engine.max_fps = cap_before
+	second_map.queue_free()
 	map_root.queue_free()
 	await process_frame
 	print("[AFK_CACHE_REGRESSION] %s" % ("ALL PASS" if failures == 0 else "FAILURES=%d" % failures))

@@ -43,6 +43,8 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('_refresh_afk_dashboard()', hud)
         self.assertIn('update_timer.start()', hud.replace('afk_update_timer', 'update_timer'))
         self.assertIn('NetworkManager.is_connected_to_server', hud)
+        self.assertIn('if GameManager and GameManager.is_afk_mode_active():', hud)
+        self.assertIn('loading_overlay.visible = false', hud)
         self.assertIn('HP %d / %d', hud)
         self.assertIn('[AFK_MODE]', game)
 

@@ -1438,6 +1438,8 @@ func _refresh_afk_dashboard() -> void:
 				state = "角色死亡"
 			elif is_instance_valid(player.get("combat_target")):
 				state = "自動戰鬥中"
+			elif str(player.get("current_state")).begins_with("attack"):
+				state = "攻擊中"
 			elif bool(player.get("is_moving")):
 				state = "移動中"
 			elif "data_model" in player and player.data_model and player.data_model.is_auto_saint_on:
@@ -2097,6 +2099,12 @@ func set_map_loading_progress(progress: float) -> void:
 
 func show_map_loading(duration: float = 0.3) -> void :
 	_hide_legacy_cinematic_panel()
+	if GameManager and GameManager.is_afk_mode_active():
+		# The monitor is the ONLY visible window during AFK map changes.
+		# The existing hide_map_loading still completes WorldReady handshake.
+		if loading_overlay:
+			loading_overlay.visible = false
+		return
 	if not loading_overlay or not loading_bar: return
 
 	if _map_loading_tween and _map_loading_tween.is_running():
