@@ -201,9 +201,37 @@ public sealed class MonsterNavigationService
         var y2 = fromY + wayDy / wayDistance * move;
         if (!IsDirectClear(mapId, fromX, fromY, x2, y2))
         {
-            // At a sharp corner, the direct line from a point near the
-            // edge of the starting cell can cut the wall even though the
-            // A* cell route is legal. First steer to our own cell centre.
+            // LOS smoothing can choose a far waypoint whose full segment is
+            // clear while a sampled partial step touches a blocked corner due
+            // to cell-boundary rounding. Never fail the chase there: first
+            // fall back to the next A* cell, which is guaranteed to be a
+            // legal non-corner-cut edge from the current grid cell.
+            var safeWaypoint = path.Count > 1
+                ? path[1]
+                : goal;
+            var safeX = safeWaypoint.X * Cell + Cell / 2.0;
+            var safeY = safeWaypoint.Y * Cell + Cell / 2.0;
+            var safeDx = safeX - fromX;
+            var safeDy = safeY - fromY;
+            var safeDistance = Math.Sqrt(
+                safeDx * safeDx + safeDy * safeDy);
+
+            if (safeDistance >= 0.01)
+            {
+                var safeStep = Math.Min(maxStep, safeDistance);
+                x2 = fromX + safeDx / safeDistance * safeStep;
+                y2 = fromY + safeDy / safeDistance * safeStep;
+
+                if (IsDirectClear(mapId, fromX, fromY, x2, y2))
+                {
+                    nextX = x2;
+                    nextY = y2;
+                    return true;
+                }
+            }
+
+            // If we are between cell centres, first return to the current
+            // walkable cell centre before trying the next A* edge.
             var centerX = start.Item1 * Cell + Cell / 2.0;
             var centerY = start.Item2 * Cell + Cell / 2.0;
             var centerDx = centerX - fromX;
