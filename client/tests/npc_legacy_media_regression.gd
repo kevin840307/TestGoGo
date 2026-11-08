@@ -81,6 +81,11 @@ func _run() -> void:
     _check(clicks[0] == 1, "continue button emits one advance event")
     panel.dismiss()
     _check(not panel.visible, "scene dismiss closes the overlay and sound")
+    var scene_a: TextureRect = panel.get("_picture_a") as TextureRect
+    var scene_b: TextureRect = panel.get("_picture_b") as TextureRect
+    _check(scene_a != null and scene_b != null and
+        scene_a.texture == null and scene_b.texture == null,
+        "dismiss releases both cinematic texture references")
     panel.show_media({"ImageA": "na", "ImageB": "na", "Audio": ""})
     _check(panel.visible, "missing original images use a safe fallback UI")
     panel.dismiss()

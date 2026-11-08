@@ -22,12 +22,15 @@ func _ready() -> void:
     dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
     var center := CenterContainer.new()
-    center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    # PASS allows child buttons to receive mouse input; outer scrim
+    # prevents clicks from reaching the game world.
+    center.mouse_filter = Control.MOUSE_FILTER_PASS
     add_child(center)
     center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
     var panel := PanelContainer.new()
     panel.custom_minimum_size = Vector2(590, 350)
+    panel.mouse_filter = Control.MOUSE_FILTER_PASS
     var panel_style := StyleBoxFlat.new()
     panel_style.bg_color = Color(0.09, 0.13, 0.22, 0.98)
     panel_style.border_color = Color(0.48, 0.60, 0.76, 1.0)
@@ -123,4 +126,12 @@ func dismiss() -> void:
     if is_instance_valid(_audio):
         _audio.stop()
         _audio.stream = null
+    # Release large cinematic image references after each scene; avoid
+    # retaining every legacy cutscene while the HUD persists.
+    if is_instance_valid(_picture_a):
+        _picture_a.texture = null
+        _picture_a.visible = false
+    if is_instance_valid(_picture_b):
+        _picture_b.texture = null
+        _picture_b.visible = false
     hide()
