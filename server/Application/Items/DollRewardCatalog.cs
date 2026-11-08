@@ -90,5 +90,5 @@ public static class DollRewardCatalog
     }
 
     public static IReadOnlyCollection<int> SourceItemIds
-        => Pools.Keys;
+        => Pools.Keys.ToArray();
 }
