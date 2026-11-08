@@ -5757,25 +5757,59 @@ try
               Convert.ToInt32(expHorseBefore["Level"]),
         "mecha EXP persists and can advance mecha level");
 
-    using (var petSummon = Json(JsonSerializer.Serialize(new { Type = "PetAction", Action = "Summon", PetUID = petUid })))
+    // Earlier progression tests deliberately made petUid higher-level
+    // than its owner, and verified that Summon rejects it. Reusing petUid
+    // here made PetSync pass (sent for failed actions) while SpawnEntity
+    // correctly never appeared. Use the still-eligible level-one fixture.
+    var appearancePetUid = firstMultiPetUid;
+    var appearancePet = store.GetCharacterAssets(account.Value, id).Pets
+        .Single(x => Convert.ToInt64(x["UID"]) == appearancePetUid);
+    var appearanceOwner = store.GetCharacter(account.Value, id)!;
+    Check(
+        Convert.ToInt32(appearancePet["Level"]) <=
+            Convert.ToInt32(appearanceOwner["Level"]) &&
+        Convert.ToInt32(appearancePet["EvolID"]) == 0 &&
+        Convert.ToInt32(appearancePet["State"]) == 0 &&
+        Convert.ToInt32(appearancePet["LifeCount"]) > 0 &&
+        Convert.ToInt32(appearancePet["FeedValue"]) > 0 &&
+        Convert.ToInt32(appearancePet["HP"]) > 0,
+        "pet appearance/follow fixture is eligible and not the overleveled pet");
+
+    using (var petSummon = Json(JsonSerializer.Serialize(new
+    {
+        Type = "PetAction",
+        Action = "Summon",
+        PetUID = appearancePetUid
+    })))
     {
         var responses = router.Handle(petSummon.RootElement, session);
         Check(responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"PetSync\"")),
             "PetAction Summon refreshes PetSync");
-        Check(responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "\"Type\":\"SpawnEntity\"") &&
-                JsonSerializer.Serialize(x).Contains(
-                    "\"EntityType\":4") &&
-                JsonSerializer.Serialize(x).Contains(
-                    "\"Sprite\":\"EN050A\"")),
-            "PetAction Summon spawns current-client pet appearance");
-        Check(store.GetCharacterAssets(account.Value, id).Pets
-                .Any(x => Convert.ToInt64(x["UID"]) == petUid &&
-                          Convert.ToInt32(x["State"]) == 1),
-            "pet summon state persists");
+
+        var appearanceSpawn = responses
+            .Select(JsonSerializer.Serialize<object>)
+            .FirstOrDefault(x =>
+                x.Contains("\"Type\":\"SpawnEntity\"", StringComparison.Ordinal) &&
+                x.Contains("\"EntityType\":4", StringComparison.Ordinal) &&
+                x.Contains(
+                    $"\"EntityID\":{4_000_000L + appearancePetUid}",
+                    StringComparison.Ordinal));
+        var appearancePersisted = store.GetCharacterAssets(account.Value, id).Pets
+            .Any(x =>
+                Convert.ToInt64(x["UID"]) == appearancePetUid &&
+                Convert.ToInt32(x["State"]) == 1);
+        Check(
+            appearanceSpawn is not null &&
+            appearanceSpawn.Contains(
+                "\"Sprite\":\"EN050A\"",
+                StringComparison.Ordinal) &&
+            appearancePersisted,
+            "PetAction Summon spawns current-client pet appearance" +
+            $" (pet={appearancePetUid}, active={appearancePersisted}," +
+            $" spawn={appearanceSpawn ?? "missing"})");
+        Check(appearancePersisted, "pet summon state persists");
     }
 
     using (var petRename = Json(JsonSerializer.Serialize(new { Type = "PetAction", Action = "Rename", PetUID = petUid, NewName = "Momo" })))
@@ -5805,7 +5839,7 @@ try
             "pet equipment removal persists");
     }
 
-    using (var petRecall = Json(JsonSerializer.Serialize(new { Type = "PetAction", Action = "Recall", PetUID = petUid })))
+    using (var petRecall = Json(JsonSerializer.Serialize(new { Type = "PetAction", Action = "Recall", PetUID = appearancePetUid })))
     {
         var responses = router.Handle(petRecall.RootElement, session);
         Check(responses.Any(x =>
@@ -5813,7 +5847,7 @@ try
                     "\"Type\":\"DespawnEntity\"")),
             "PetAction Recall despawns pet entity");
         Check(store.GetCharacterAssets(account.Value, id).Pets
-                .Any(x => Convert.ToInt64(x["UID"]) == petUid &&
+                .Any(x => Convert.ToInt64(x["UID"]) == appearancePetUid &&
                           Convert.ToInt32(x["State"]) == 0),
             "pet recall state persists");
     }
@@ -5845,7 +5879,7 @@ try
     {
         Type = "PetAction",
         Action = "Summon",
-        PetUID = petUid
+        PetUID = appearancePetUid
     })))
     {
         router.Handle(summonForFollow.RootElement, session);
@@ -5871,7 +5905,7 @@ try
     Check(followPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains("\"Type\":\"MoveEntity\"") &&
             JsonSerializer.Serialize(x).Contains(
-                $"\"EntityID\":{4_000_000L + petUid}")),
+                $"\"EntityID\":{4_000_000L + appearancePetUid}")),
         "summoned pet follows player from server world tick");
 
     var speechPeer = broadcastHub.Register();
@@ -5885,10 +5919,10 @@ try
 
     while (speechPeer.Queue.TryDequeue(out _)) { }
 
-    session.PetPositions[petUid] =
+    session.PetPositions[appearancePetUid] =
         (session.LastX + 42, session.LastY + 24);
-    session.PetTargets.Remove(petUid);
-    session.PetNextIdleSpeechAt[petUid] =
+    session.PetTargets.Remove(appearancePetUid);
+    session.PetNextIdleSpeechAt[appearancePetUid] =
         DateTimeOffset.UtcNow.AddSeconds(-1);
 
     var idleSpeechPackets = router.Tick(
@@ -5900,7 +5934,7 @@ try
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"PetIdleSpeech\"") &&
             JsonSerializer.Serialize(x).Contains(
-                $"\"EntityID\":{4_000_000L + petUid}")) &&
+                $"\"EntityID\":{4_000_000L + appearancePetUid}")) &&
         speechPeer.Queue.ToArray().Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"PetIdleSpeech\"")),
@@ -6030,6 +6064,31 @@ try
             JsonSerializer.Serialize(x).Contains(
                 "\"EntityType\":4")),
         "summoned pet respawns after map transition");
+
+    // Leave the three expanded summon slots free for the subsequent
+    // multi-pet combat concurrency tests; never bypass the owner-level
+    // rule merely to make the earlier appearance test pass.
+    using (var recallAppearanceAfterMap = Json(JsonSerializer.Serialize(new
+    {
+        Type = "PetAction",
+        Action = "Recall",
+        PetUID = appearancePetUid
+    })))
+    {
+        var responses = router.Handle(
+            recallAppearanceAfterMap.RootElement,
+            session);
+        Check(
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    $"\"EntityID\":{4_000_000L + appearancePetUid}") &&
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"DespawnEntity\"")) &&
+            store.GetCharacterAssets(account.Value, id).Pets.Any(x =>
+                Convert.ToInt64(x["UID"]) == appearancePetUid &&
+                Convert.ToInt32(x["State"]) == 0),
+            "map-transition pet fixture is recalled before multi-pet combat setup");
+    }
 
     // Combat runtime: use a monster map directly so this test is independent
     // from the exact portal route used by the recovered client.
