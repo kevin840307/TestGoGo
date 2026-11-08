@@ -817,7 +817,9 @@ func _restore_afk_render_shell(progress_callback: Callable = Callable()) -> Dict
 		ResourceLoader.THREAD_LOAD_IN_PROGRESS,
 		ResourceLoader.THREAD_LOAD_LOADED
 	]:
-		var request_error: int = ResourceLoader.load_threaded_request(path)
+		var request_error: int = ResourceLoader.load_threaded_request(
+			path, "", false, ResourceLoader.CACHE_MODE_IGNORE
+		)
 		if request_error != OK:
 			return {"ok": false, "reason": "load_request", "error": request_error}
 	var packed: PackedScene = null
@@ -1566,7 +1568,9 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 			NetworkEntityManager.set_spawn_queue_paused(false)
 		return false
 
-	var request_error: int = ResourceLoader.load_threaded_request(map_path)
+	var request_error: int = ResourceLoader.load_threaded_request(
+		map_path, "", false, ResourceLoader.CACHE_MODE_IGNORE
+	)
 	if request_error != OK:
 		_trace_map_change("initial_load_request_error", 0, target_map_id, {"error": request_error})
 		if NetworkEntityManager and NetworkEntityManager.has_method("set_spawn_queue_paused"):
@@ -2185,7 +2189,9 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 		return
 
 
-	var load_request_error: = ResourceLoader.load_threaded_request(map_path)
+	var load_request_error: = ResourceLoader.load_threaded_request(
+		map_path, "", false, ResourceLoader.CACHE_MODE_IGNORE
+	)
 	_trace_map_change("load_requested", source_map_id, target_map_id)
 	if load_request_error != OK:
 		_trace_map_change("load_request_error", source_map_id, target_map_id, {"error": load_request_error})
