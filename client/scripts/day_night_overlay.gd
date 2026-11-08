@@ -26,12 +26,21 @@ func _process(delta: float) -> void :
 		_update_night_strength()
 
 	_update_viewport_size()
-	_update_player_screen_position()
+	# The shader is fully transparent during the daytime. Skip all player-UV
+	# updates while the ColorRect is not rendered; resume automatically at dusk.
+	if is_instance_valid(screen_overlay) and screen_overlay.visible:
+		_update_player_screen_position()
 
 
 func set_tracked_player(player: Node2D) -> void :
 	_tracked_player = player
 	_update_player_screen_position()
+
+
+static func should_render_night_overlay(strength: float) -> bool:
+	# At strength 0 the shader produces alpha=0 for every pixel, so a
+	# full-screen pass has no visible effect whatsoever.
+	return strength > 0.0
 
 
 func calculate_night_strength(hour: float) -> float:
@@ -50,7 +59,10 @@ func _update_night_strength() -> void :
 	var hour: = float(current_time.get("hour", 0))
 	hour += float(current_time.get("minute", 0)) / 60.0
 	hour += float(current_time.get("second", 0)) / 3600.0
-	_set_shader_parameter(&"night_strength", calculate_night_strength(hour))
+	var strength: float = calculate_night_strength(hour)
+	if is_instance_valid(screen_overlay):
+		screen_overlay.visible = should_render_night_overlay(strength)
+	_set_shader_parameter(&"night_strength", strength)
 
 
 func _update_viewport_size(force_update: bool = false) -> void :
