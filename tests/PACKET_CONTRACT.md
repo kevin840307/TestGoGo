@@ -1,5 +1,12 @@
 # Client ↔ Server 封包契約檢查
 
+> **最新未完成功能與驗收狀態**：[server/FEATURE_GAPS.md](../server/FEATURE_GAPS.md)。
+> **測試模組架構及新增測試方式**：[SMOKE_TESTS.md](SMOKE_TESTS.md)。
+> 以下按日期記錄的 16／27、40／44 等數量是歷史擴充過程，
+> 目前程式碼中定義 **44 種請求、34 種 Action、27 種關鍵回應**；
+> 靜態 `ROUTED` 不代表實際操作或 E2E 通過。
+
+
 ## 執行方式
 
 在 Repository 根目錄執行：
