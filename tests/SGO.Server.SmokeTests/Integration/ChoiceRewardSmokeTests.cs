@@ -164,7 +164,7 @@ internal static class ChoiceRewardSmokeTests
                     spoof.RootElement,
                     session);
             Check(
-                PacketTreeContainsString(
+                SGO.Server.SmokeTests.SmokeAssert.PacketTreeContainsString(
                     packets,
                     "獎勵選項已失效"),
                 "forged choice reward IDs are rejected");
@@ -212,7 +212,7 @@ internal static class ChoiceRewardSmokeTests
                     "\"Type\":\"InventorySync\"") &&
                 json.Contains(
                     "\"Type\":\"EquipSync\"") &&
-                PacketTreeContainsString(
+                SGO.Server.SmokeTests.SmokeAssert.PacketTreeContainsString(
                     packets,
                     "已選擇獎勵：聖殿騎士鎧甲．復仇"),
                 "valid choice consumes source and synchronizes the granted equipment");
@@ -258,7 +258,7 @@ internal static class ChoiceRewardSmokeTests
 
             Check(
                 packets.Any(x =>
-                    PacketTreeContainsString(
+                    SGO.Server.SmokeTests.SmokeAssert.PacketTreeContainsString(
                         x,
                         "找不到可使用的選擇型道具")) &&
                 afterReplay.Equips.Count(x =>
