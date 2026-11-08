@@ -113,8 +113,9 @@ public sealed class GmCommandService
     }
 
     private bool Enabled()
-        // Privileged commands must be explicitly enabled by the deployment.
-        // Tests opt in through configuration; production/default is denied.
+        // The local SGO appsettings explicitly opts in. Keep the code-level
+        // fallback denied so deployments can still disable GM commands by
+        // omitting/overriding Game:GmCommandsEnabled.
         => _config.GetValue<bool?>("Game:GmCommandsEnabled") ?? false;
 
     private IReadOnlyList<object> Position(long accountId, long dbid)
