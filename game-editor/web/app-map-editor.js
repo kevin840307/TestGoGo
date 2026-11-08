@@ -201,7 +201,8 @@ function toggleMapSelection(index) {
 }
 
 function selectAllMapRows() {
-  setMapSelection(state.mapRows.map((_,i) => i), state.mapRows.length ? 0 : null);
+  const indexes = state.mapRows.map((row,i) => markerVisible(row) ? i : -1).filter(i => i >= 0);
+  setMapSelection(indexes, indexes[0] ?? null);
   renderMapVisual();
 }
 
@@ -229,6 +230,7 @@ function renderEnemyPalette() {
 
   $$('.map-enemy-item', host).forEach(btn => btn.onclick = () => {
     state.mapSelectedEnemyId = Number(btn.dataset.enemyId);
+    if (state.mapOnlySelectedType) setMapSelection([]);
     renderEnemyPalette();
     if (state.mapOnlySelectedType) renderMapVisual();
     const enemy = getEnemyById(state.mapSelectedEnemyId);
