@@ -370,7 +370,8 @@ var currentCatalog = new CurrentClientDataCatalog(
             item.ItemId is
                 2256 or
                 15230 or
-                15243)),
+                15243 or
+                3239)),
     new[]
     {
         new CurrentSkillDefinition(20101, "Current Skill 20101"),
@@ -2913,6 +2914,14 @@ try
         id,
         currentCatalog,
         realCurrentCatalog);
+
+    ItemUseClassificationSmokeTests.Run(
+        router,
+        store,
+        session,
+        account.Value,
+        id,
+        currentCatalog);
 
     var petBeforeLevel = store.GetCharacterAssets(
             account.Value,
