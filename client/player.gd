@@ -492,31 +492,51 @@ func _physics_process(_delta: float) -> void :
 		0.0,
 		navigation_repath_cooldown - _delta
 	)
+	_autorun_blocked_retry_seconds = maxf(
+		0.0, _autorun_blocked_retry_seconds - _delta
+	)
 
 	if is_dead:
 		_handle_death_timer(_delta)
 		return
 
-	# A monster click can consume mouse-up before the player handles it.
-	# Keep mouse-hold navigation from fighting skill/combat tracking.
-	if is_mouse_holding and is_instance_valid(combat_target):
-		is_mouse_holding = false
-
-	if is_mouse_holding:
-
+	# Interactable clicks can consume mouse-up before Player receives it.
+	# Track the 500ms hold in physics so cursor changes while pressed.
+	if _mouse_autorun.holding:
 		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			_finish_mouse_autorun_hold()
+		elif _mouse_autorun.poll_long_hold(Time.get_ticks_msec()):
+			if CursorManager and CursorManager.has_method("set_autorun_indicator"):
+				CursorManager.set_autorun_indicator(true)
+
+	if (is_mouse_holding or _mouse_autorun.latched) and (
+		is_instance_valid(combat_target) or data_model.is_shop_open
+		or is_interacting_with_npc or data_model.is_auto_saint_on
+	):
+		cancel_autorun_tracking()
+
+	if is_mouse_holding or _mouse_autorun.latched:
+		if not _mouse_autorun.latched and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 			is_mouse_holding = false
 		elif current_state != "death" and not data_model.is_shop_open and not is_interacting_with_npc and not data_model.is_auto_saint_on:
 			var mouse_pos = get_global_mouse_position()
-
 			if global_position.distance_to(mouse_pos) > 10.0:
 				var destination_changed: bool = (
 					move_destination.distance_to(mouse_pos) >= NAVIGATION_REPATH_DISTANCE
 				)
-				if not is_moving or (
-					destination_changed and
-					navigation_repath_cooldown <= 0.0
-				):
+				var should_repath: bool = (
+					(not is_moving and (
+						not _mouse_autorun.latched
+						or _autorun_blocked_retry_seconds <= 0.0
+					)) or (
+						is_moving and destination_changed
+						and navigation_repath_cooldown <= 0.0
+					)
+				)
+				if should_repath:
+					if _mouse_autorun.latched and not is_moving:
+						# Rejected paths must not restart expensive A* every frame.
+						_autorun_blocked_retry_seconds = AUTORUN_BLOCKED_RETRY_INTERVAL
 					_set_navigation_target(mouse_pos)
 				if not is_action_locked and current_state != "walk":
 					current_state = "walk"
