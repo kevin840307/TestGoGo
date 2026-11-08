@@ -10,6 +10,45 @@ var url = args.Length > 0
     ? args[0]
     : "ws://127.0.0.1:5678/";
 
+var websocketUri =
+    new Uri(url);
+var webhookUri =
+    new UriBuilder(
+        websocketUri)
+    {
+        Scheme =
+            websocketUri.Scheme ==
+            "wss"
+                ? "https"
+                : "http",
+        Path =
+            "/integrations/paypal/webhook"
+    }.Uri;
+
+using (var http = new HttpClient())
+using (var webhookBody =
+       new StringContent(
+           "{}",
+           Encoding.UTF8,
+           "application/json"))
+{
+    var webhookResponse =
+        await http.PostAsync(
+            webhookUri,
+            webhookBody);
+
+    if (webhookResponse.StatusCode !=
+        System.Net.HttpStatusCode.ServiceUnavailable)
+    {
+        throw new Exception(
+            "PayPal webhook without configured provider must fail closed with 503; got " +
+            (int)webhookResponse.StatusCode);
+    }
+
+    Console.WriteLine(
+        "PASS: unconfigured PayPal webhook fails closed");
+}
+
 using var socket = new ClientWebSocket();
 using (var connectTimeout =
        new CancellationTokenSource(
@@ -20,7 +59,7 @@ using (var connectTimeout =
         connectTimeout.Token);
 }
 
-var passed = 0;
+var passed = 1;
 
 await Probe(
     new
