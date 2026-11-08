@@ -89,7 +89,11 @@ static func should_yield_static_recipe_batch(processed_since_yield: int, elapsed
 	return processed_since_yield >= STATIC_RECIPE_MAX_PER_FRAME or elapsed_usec >= STATIC_RECIPE_FRAME_BUDGET_USEC
 
 
-func prepare_static_tree_async(recipes: Array) -> void :
+static func recipe_preload_progress(completed: int, total: int) -> float:
+	return clampf(float(completed) / float(maxi(total, 1)), 0.0, 1.0)
+
+
+func prepare_static_tree_async(recipes: Array, progress_callback: Callable = Callable()) -> void :
 	all_recipes = recipes
 	_static_tree_built = false
 	_tree_items_by_recipe_id.clear()
@@ -112,8 +116,11 @@ func prepare_static_tree_async(recipes: Array) -> void :
 
 	var processed: int = 0
 	var processed_since_yield: int = 0
+	var recipe_index: int = 0
+	var total_recipes: int = all_recipes.size()
 	var batch_started_usec: int = Time.get_ticks_usec()
 	for recipe_value in all_recipes:
+		recipe_index += 1
 		var recipe: Dictionary = recipe_value
 		if str(recipe.get("ActionType", "")) != "Craft":
 			continue
@@ -149,13 +156,17 @@ func prepare_static_tree_async(recipes: Array) -> void :
 			processed_since_yield,
 			Time.get_ticks_usec() - batch_started_usec
 		):
-			# Keep UI responsive, but don't burn an entire frame for every
-			# inexpensive group of 24 recipe rows.
+			# Emit a precise fraction at existing frame boundaries. The UI
+			# never reports success/100% until all recipe rows are built.
+			if progress_callback.is_valid():
+				progress_callback.call(recipe_preload_progress(recipe_index, total_recipes))
 			await get_tree().process_frame
 			processed_since_yield = 0
 			batch_started_usec = Time.get_ticks_usec()
 
 	_static_tree_built = true
+	if progress_callback.is_valid():
+		progress_callback.call(1.0)
 
 func _build_inventory_count_cache() -> Dictionary:
 	var counts: Dictionary = {}
