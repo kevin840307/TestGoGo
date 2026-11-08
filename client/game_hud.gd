@@ -1318,7 +1318,7 @@ func _on_afk_mode_requested() -> void:
 		show_rejection_message_box("必須先進入遊戲才能啟用掛機模式。")
 		return
 	show_message_box(
-		"確定進入掛機監控模式？\n將關閉遊戲畫面、卸載可安全回收的貼圖，但會繼續自動移動、打怪與拾取。\\n如需恢復畫面可按「返回遊戲」。",
+		"確定進入掛機監控模式？\n將關閉遊戲畫面、卸載可安全回收的貼圖，但會繼續自動移動、打怪與拾取。\n如需恢復畫面可按「返回遊戲」。",
 		2,
 		_confirm_begin_afk
 	)
@@ -1368,7 +1368,7 @@ func _on_afk_restore_requested() -> void:
 		_refresh_afk_dashboard()
 		return
 	show_message_box(
-		"確定結束掛機監控並返回遊戲？\\n地圖貼圖將分批重新載入，角色不會登出。",
+		"確定結束掛機監控並返回遊戲？\n地圖貼圖將分批重新載入，角色不會登出。",
 		2,
 		_confirm_restore_afk
 	)
@@ -1382,6 +1382,8 @@ func _confirm_restore_afk() -> void:
 	if afk_status:
 		afk_status.text = "正在分批還原遊戲資源…"
 	var restored: bool = await GameManager.finish_afk_mode()
+	if not is_inside_tree():
+		return
 	if not restored:
 		if afk_btn_restore:
 			afk_btn_restore.disabled = false
@@ -1446,9 +1448,13 @@ func _refresh_afk_dashboard() -> void:
 		afk_runtime.text = "掛機時間｜%02d:%02d:%02d" % [int(elapsed / 3600), int(elapsed / 60) % 60, elapsed % 60]
 	if afk_resource_stats:
 		var stats: Dictionary = GameManager.afk_visual_stats()
-		afk_resource_stats.text = "已卸載貼圖 %d 筆  ·  監控畫面 %d FPS" % [
-			int(stats.get("released", 0)), GameManager.AFK_MONITOR_FPS
-		]
+		var failed: int = int(stats.get("restore_missing", 0))
+		if failed > 0:
+			afk_resource_stats.text = "有 %d 筆貼圖無法還原，請再次點擊返回遊戲重試" % failed
+		else:
+			afk_resource_stats.text = "已卸載貼圖 %d 筆  ·  監控畫面 %d FPS" % [
+				int(stats.get("released", 0)), GameManager.AFK_MONITOR_FPS
+			]
 	if afk_btn_restore:
 		afk_btn_restore.disabled = GameManager.is_changing_map or GameManager.is_afk_mode_restoring()
 
