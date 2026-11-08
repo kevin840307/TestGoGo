@@ -270,14 +270,20 @@ internal static class MarketplaceResponseContractSmokeTests
         broadcasts.UpdatePresence(
             sellerReg.ConnectionId, 15, seller.CharacterId, seller.AccountId, 1000, 1000);
 
-        var buyerSessions = buyers.Select((buyer, index) =>
+        var buyerRegistrations = buyers.Select((buyer, index) =>
         {
             var reg = broadcasts.Register();
             broadcasts.UpdatePresence(
                 reg.ConnectionId, 15, buyer.CharacterId, buyer.AccountId,
                 1010 + index, 1000);
-            return Session(reg.ConnectionId, buyer, 15);
+            return (
+                Session: Session(reg.ConnectionId, buyer, 15),
+                reg.Queue);
         }).ToArray();
+
+        var buyerSessions = buyerRegistrations
+            .Select(x => x.Session)
+            .ToArray();
 
         broadcasts.ReconcilePlayerAoi(sellerReg.ConnectionId);
         foreach (var buyerSession in buyerSessions)
@@ -348,9 +354,18 @@ internal static class MarketplaceResponseContractSmokeTests
         var finalSync = LastPacket(sellerPackets, "ShopSync");
         Check(RequireArray(finalSync, "Items").GetArrayLength() == 0,
             "seller receives an empty ShopSync after the final item is sold");
-        var closedBoard = LastPacket(sellerPackets, "SyncShopBoard");
-        Check(!RequireBoolean(closedBoard, "IsOpen"),
-            "seller observes the sold-out public board close");
+
+        var observerPackets = buyerRegistrations
+            .SelectMany(x => Drain(x.Queue))
+            .ToArray();
+        var closedBoard = LastPacket(
+            observerPackets,
+            "SyncShopBoard");
+        Check(
+            !RequireBoolean(closedBoard, "IsOpen") &&
+            RequireNumber(closedBoard, "EntityID").GetInt64() ==
+                seller.CharacterId,
+            "nearby observers receive the sold-out player-shop board close");
 
         Console.WriteLine("Ten-buyer PlayerShopService race contract passed.");
     }
