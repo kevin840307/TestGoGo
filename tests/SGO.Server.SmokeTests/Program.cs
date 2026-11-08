@@ -2260,14 +2260,58 @@ try
                 festivalBeforeCounts.GetValueOrDefault(itemId, 0);
         });
 
-    Check(!festivalAfter.Inventory.Any(x =>
-              Convert.ToInt64(x["ItemUID"]) == festivalBoxUid) &&
-          receivedFestivalReward &&
-          festivalPackets.Any(x =>
-              JsonSerializer.Serialize(x).Contains("InventorySync")) &&
-          festivalPackets.Any(x =>
-              JsonSerializer.Serialize(x).Contains("精靈飼養盒送給你")),
-        "festival reward box atomically consumes source and grants a recovered-client reward");
+    var festivalPacketDocuments =
+        festivalPackets
+            .Select(packet =>
+                JsonDocument.Parse(
+                    JsonSerializer.Serialize(packet)))
+            .ToArray();
+
+    try
+    {
+        var hasFestivalInventorySync =
+            festivalPacketDocuments
+                .Select(x => x.RootElement)
+                .Any(x =>
+                    x.TryGetProperty(
+                        "Type",
+                        out var type) &&
+                    type.GetString() ==
+                        "InventorySync");
+
+        var festivalMessage =
+            festivalPacketDocuments
+                .Select(x => x.RootElement)
+                .Where(x =>
+                    x.TryGetProperty(
+                        "Type",
+                        out var type) &&
+                    type.GetString() ==
+                        "SystemMessageFlash")
+                .Select(x =>
+                    x.TryGetProperty(
+                        "Message",
+                        out var message)
+                        ? message.GetString() ?? ""
+                        : "")
+                .FirstOrDefault(x =>
+                    x.StartsWith(
+                        "精靈飼養盒送給你：",
+                        StringComparison.Ordinal));
+
+        Check(
+            !festivalAfter.Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) == festivalBoxUid) &&
+            receivedFestivalReward &&
+            hasFestivalInventorySync &&
+            !string.IsNullOrWhiteSpace(festivalMessage),
+            "festival reward box atomically consumes source and grants a recovered-client reward");
+    }
+    finally
+    {
+        foreach (var document in festivalPacketDocuments)
+            document.Dispose();
+    }
 
     var accelerationBook =
         realCurrentCatalog.ResolveSkillBook(3701)!;
