@@ -144,6 +144,10 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn('"TradeStart"', source)
         self.assertIn('"TradeFinalConfirmReq"', source)
         self.assertIn('"TradeSuccess"', source)
+        self.assertIn('"MoveEntity"', source)
+        self.assertIn('"ChatBroadcast"', source)
+        self.assertIn("authoritative same-map movement", source)
+        self.assertIn("nearby chat", source)
         self.assertIn("allowInterleaved: true", source)
         self.assertIn("AwaitType(", source)
 
