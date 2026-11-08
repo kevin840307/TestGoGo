@@ -96,6 +96,17 @@ func _run() -> void:
 		"latest queued spawn preserves health metadata")
 	_check(int(stale_spawn.get("LocX", -1)) == 10,
 		"queued source snapshot remains unchanged")
+	# A snapshot can defer a monster that was previously queued nearby. It
+	# must remove the old queue entry and its marker, or replay both later.
+	NetworkEntityManager._defer_monster_spawn(template)
+	_check(not NetworkEntityManager._queued_spawn_ids.has(test_id),
+		"AOI deferral clears pending spawn marker")
+	var deferred_duplicate_count: int = 0
+	for queued_candidate in NetworkEntityManager._spawn_queue:
+		if int(queued_candidate.get("EntityID", 0)) == test_id:
+			deferred_duplicate_count += 1
+	_check(deferred_duplicate_count == 0,
+		"AOI deferral removes stale queued monster instances")
 	_check(NetworkEntityManager._get_current_queued_spawn_data({"EntityID": 102, "EntityType": 2}).get("EntityType", -1) == 2,
 		"NPC queued spawn data is unchanged")
 	_check(not NetworkEntityManager._should_check_ground_drop_bounce({
