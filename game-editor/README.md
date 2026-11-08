@@ -14,6 +14,8 @@
 - **Project Health**：Dashboard 會掃描跨檔案引用與資料完整性，包含不存在的 Enemy、NPC Script、Quest 驗證錯誤、重複出生點、Blocking 衝突、技能 TRES 與 Skill FX / Icon 參考。
 - **儲存前驗證**：地圖儲存前先顯示新增 / 刪除 / 移動 / 修改摘要。新產生的壞引用或 Blocking 衝突會阻止寫入；既有歷史問題只警告，避免舊資料讓整張地圖無法編輯。
 - **修復預覽**：Blocking 衝突會顯示原座標與最近合法座標，可一鍵套用到 Editor 草稿，確認後再另行儲存；不會偷偷直接改檔。
+- **變更歷史 / 還原**：直接瀏覽 `.backups` 內的 Editor 自動備份；文字檔顯示 unified diff，二進位檔顯示大小與 SHA256。還原前會再備份目前版本，避免「還原」本身成為不可逆操作。
+- **Health 篩選**：Project Health 支援關鍵字、Error/Warning、category 篩選，資料很多時不必人工捲整份清單。
 
 > NPC 腳本的即時檢查是 Editor 端的快速靜態檢查，用來提早抓常見錯誤；Server 執行時仍以 `QuestRuntime + MoonSharp` 為最終語意。
 
@@ -78,6 +80,20 @@ python -m unittest discover -s game-editor/tests -v
 - Skill FX runtime fallback / Icon 素材驗證
 - Save 前 Change Summary、Blocking 修復預覽與一鍵套用 wiring
 - Map 怪物/NPC Tab 必須使用 query-all 綁定，防止單一 selector regression
+- Backup history list / search / text diff / binary hash / deleted-file restore
+- Restore 前自動備份目前版本，以及 unmanaged path / traversal 防護
+- History UI/API wiring、Health 搜尋 / severity / category filter wiring
+
+## 變更歷史與安全還原
+
+側邊欄的「變更歷史」會列出 Editor 自動建立的修改前版本，可依檔案或備份原因搜尋。
+
+- 文字資料（Quest、Skill TRES、CSV、JSON 等）：顯示 backup → current 的 unified diff。
+- 二進位資料（例如 `Enemy.dat / NPC.dat`）：不假裝做文字 Diff，改顯示檔案大小與 SHA256。
+- 目前檔案已被刪除時，也可以由備份重新建立。
+- 還原前會自動把目前版本另存成 `restore` backup，因此可以再次回復。
+- Restore API 只允許 Editor 管理範圍：`client/Skills`、`client/Assets`、Legacy Map / Quest 與 `Enemy_Data.csv`；不能拿 backup id 覆寫 Server 設定或任意專案檔案。
+- Backup id 一樣經過 traversal guard，`..`、絕對路徑與 symlink escape 都不允許。
 
 ## Project Health 與引用保護
 
