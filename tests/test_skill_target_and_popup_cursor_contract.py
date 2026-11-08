@@ -47,6 +47,15 @@ require(
 
 require(
     skill_card,
+    'get_node("Margin/Content") as HBoxContainer',
+    "SkillCard content must resolve through an explicit node path so the script can load",
+)
+if "$Margin / Content" in skill_card:
+    raise AssertionError(
+        "SkillCard must not regress to the ambiguous spaced node-path expression"
+    )
+require(
+    skill_card,
     'text = "自身中心"',
     "AOE skill cards must expose the self-center toggle",
 )
