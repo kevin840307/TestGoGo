@@ -957,6 +957,59 @@ await AwaitType(
             wireHorseUid,
     "DriveMechaRequest mounts seeded mecha through authoritative ACK");
 
+// Dismount must acknowledge the authoritative position. The client reuses
+// these fields to invalidate any stale mecha-era movement path/anchor.
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "DriveMechaRequest",
+        HorseUID = -1
+    });
+
+await AwaitType(
+    socket,
+    "DriveMechaResponse",
+    root =>
+        root.TryGetProperty(
+            "Success", out var success) &&
+        success.ValueKind == JsonValueKind.True &&
+        root.TryGetProperty(
+            "HorseUID", out var horseUid) &&
+        horseUid.GetInt64() == -1 &&
+        root.TryGetProperty(
+            "MapID", out var mapId) &&
+        mapId.ValueKind == JsonValueKind.Number &&
+        mapId.GetInt32() > 0 &&
+        root.TryGetProperty(
+            "X", out var x) &&
+        x.ValueKind == JsonValueKind.Number &&
+        root.TryGetProperty(
+            "Y", out var y) &&
+        y.ValueKind == JsonValueKind.Number,
+    "dismount ACK includes map and authoritative position for client rebase");
+
+// Remount so subsequent combat assertions keep their previous setup.
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "DriveMechaRequest",
+        HorseUID = wireHorseUid
+    });
+
+await AwaitType(
+    socket,
+    "DriveMechaResponse",
+    root =>
+        root.TryGetProperty(
+            "Success", out var success) &&
+        success.ValueKind == JsonValueKind.True &&
+        root.TryGetProperty(
+            "HorseUID", out var horseUid) &&
+        horseUid.GetInt64() == wireHorseUid,
+    "remount preserves the existing mecha combat workflow");
+
 // Player combat uses a separately spawned monster so the pet test cannot
 // accidentally consume the same death transition.
 var combatSpawn = await SendGm(
