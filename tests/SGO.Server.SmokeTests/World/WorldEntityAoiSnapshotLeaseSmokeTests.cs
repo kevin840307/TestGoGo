@@ -25,6 +25,7 @@ internal static class WorldEntityAoiSnapshotLeaseSmokeTests
     public static void Run()
     {
         PickupDuringSnapshotCannotResurrectItem();
+        PickupBeforeFirstAoiInsertStillBlocksOldSnapshot();
         NewerLiveStateWinsAgainstOlderSnapshot();
         OverlappingSnapshotsKeepTombstonesUntilLastReader();
         HubConditionalIndexingPreservesWorldReadyConsistency();
@@ -63,6 +64,22 @@ internal static class WorldEntityAoiSnapshotLeaseSmokeTests
                 changes.Count == 1 && changes[0].Appeared,
                 "new snapshot can legitimately index a current ground row");
         }
+    }
+
+    private static void PickupBeforeFirstAoiInsertStillBlocksOldSnapshot()
+    {
+        var aoi = new WorldEntitySpatialAoi();
+        var item = Ground(6_008_105);
+        using var snapshot = aoi.BeginSnapshot();
+
+        // A's SELECT read the row while no observer had ever visited this
+        // map. B picks up that row, but the AOI has not indexed it yet.
+        Check(aoi.RemoveEntity(item.EntityId).Count == 0,
+            "pickup on an as-yet unindexed map has no observer edge");
+        Check(!aoi.TryUpsertEntityFromSnapshot(
+                  item, snapshot, out var changes) &&
+              changes.Count == 0 && aoi.EntityCount == 0,
+            "unindexed pickup must still tombstone the stale DB row");
     }
 
     private static void NewerLiveStateWinsAgainstOlderSnapshot()
