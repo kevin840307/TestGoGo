@@ -9,6 +9,7 @@ using SGO.Server.Application.Packets;
 using SGO.Server.Application.Party;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Crafting;
+using SGO.Server.Application.Diagnostics;
 using SGO.Server.Application.Club;
 using SGO.Server.Application.Rank;
 using SGO.Server.Application.Quest;
