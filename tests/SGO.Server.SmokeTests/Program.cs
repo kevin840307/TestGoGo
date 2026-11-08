@@ -50,6 +50,7 @@ if (args.Length != 0)
         case "protocol":
             RequestSchemaSmokeTests.Run();
             ActionSchemaSmokeTests.Run();
+            DynamicActionSchemaCoverageSmokeTests.Run();
             IdentitySchemaSmokeTests.Run();
             QuestDialogSmokeTests.Run();
             Console.WriteLine("Protocol schema smoke passed.");
@@ -80,6 +81,7 @@ if (args.Length != 0)
 // Protocol/*.cs, World/*.cs and Announcements/*.cs.
 RequestSchemaSmokeTests.Run();
 ActionSchemaSmokeTests.Run();
+DynamicActionSchemaCoverageSmokeTests.Run();
 IdentitySchemaSmokeTests.Run();
 QuestDialogSmokeTests.Run();
 AnnouncementSmokeTests.Run();

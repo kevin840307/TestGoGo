@@ -28,6 +28,7 @@ tests/SGO.Server.SmokeTests/
   Protocol/
     RequestSchemaSmokeTests.cs
     ActionSchemaSmokeTests.cs
+    DynamicActionSchemaCoverageSmokeTests.cs
     IdentitySchemaSmokeTests.cs
     PreloginPacketSmokeTests.cs
   World/
@@ -51,6 +52,8 @@ tests/SGO.Server.SmokeTests/
     CosmeticTransformationSmokeTests.cs
   Program.cs
 ```
+
+Protocol 動態 action 也已獨立化：`DynamicActionSchemaCoverageSmokeTests` 會直接讀取 Server 的完整 `ActionRules`，對每個 Shop/Pet/Mall/Party/Club action 自動產生合法 payload，並對每個必填欄位做錯型別拒絕測試；新增 action rule 時不需要人工複製 30 多份固定測試。
 
 重要的多人情境已獨立化：
 

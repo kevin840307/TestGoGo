@@ -14,6 +14,7 @@ WIRE_SMOKE = ROOT / "tests" / "SGO.Server.WireSmokeTests" / "Program.cs"
 MODULES = {
     "Protocol/RequestSchemaSmokeTests.cs": "RequestSchemaSmokeTests",
     "Protocol/ActionSchemaSmokeTests.cs": "ActionSchemaSmokeTests",
+    "Protocol/DynamicActionSchemaCoverageSmokeTests.cs": "DynamicActionSchemaCoverageSmokeTests",
     "Protocol/IdentitySchemaSmokeTests.cs": "IdentitySchemaSmokeTests",
     "Announcements/AnnouncementSmokeTests.cs": "AnnouncementSmokeTests",
     "World/BlockingMapSmokeTests.cs": "BlockingMapSmokeTests",
@@ -31,6 +32,24 @@ class SmokeSuiteStructureTests(unittest.TestCase):
                 self.assertIn(f"class {name}", contents)
                 self.assertIn("public static void Run()", contents)
                 self.assertIn(f"{name}.Run();", main)
+
+    def test_dynamic_action_schema_runtime_covers_every_action_rule(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = (
+            SMOKE / "Protocol" /
+            "DynamicActionSchemaCoverageSmokeTests.cs"
+        )
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn('GetField(', source)
+        self.assertIn('"ActionRules"', source)
+        self.assertIn("ValidValue", source)
+        self.assertIn("InvalidValue", source)
+        self.assertIn("required-field rejection", source)
+        self.assertIn(
+            "DynamicActionSchemaCoverageSmokeTests.Run();",
+            main,
+        )
 
     def test_current_client_catalog_suite_has_explicit_catalog_context(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
