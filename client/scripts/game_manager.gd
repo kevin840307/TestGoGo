@@ -463,7 +463,6 @@ var _startup_focus_observed_frames: int = 0
 var _last_background_cache_trim_msec: int = 0
 const BACKGROUND_CACHE_TRIM_COOLDOWN_MSEC: int = 60000
 const UNFOCUSED_MAX_FPS := 30
-const STARTUP_UNFOCUSED_PROGRESS_FPS := 10
 
 
 func set_performance_modes(load_mode: int, combat_mode: int) -> void:
@@ -487,6 +486,30 @@ func get_combat_render_mode() -> int:
 func _current_background_fps() -> int:
 	return maxi(1, int(current_performance_profile.get("background_fps", UNFOCUSED_MAX_FPS)))
 
+static func should_throttle_background_visuals(has_focus: bool, world_active: bool) -> bool:
+	# Login and character selection never use the background FPS limiter.
+	return not has_focus and world_active
+
+
+static func fps_cap_for_focus(profile: Dictionary, has_focus: bool, world_active: bool) -> int:
+	if should_throttle_background_visuals(has_focus, world_active):
+		return maxi(1, int(profile.get("background_fps", UNFOCUSED_MAX_FPS)))
+	return configured_foreground_fps(profile)
+
+
+func _has_active_world_visuals() -> bool:
+	return is_instance_valid(current_map_node) and is_instance_valid(current_player)
+
+
+func _refresh_focus_render_policy() -> void:
+	var world_background: bool = should_throttle_background_visuals(
+		_window_has_focus, _has_active_world_visuals())
+	Engine.max_fps = fps_cap_for_focus(
+		current_performance_profile, _window_has_focus, _has_active_world_visuals())
+	RenderingServer.render_loop_enabled = not world_background
+	_set_background_visual_processing(world_background)
+
+
 static func configured_foreground_fps(profile: Dictionary) -> int:
 	# Never derive the foreground cap from Engine.max_fps: the engine may
 	# currently be limited to 10/20 FPS by the background/startup policy.
@@ -495,10 +518,7 @@ static func configured_foreground_fps(profile: Dictionary) -> int:
 
 func _apply_performance_profile() -> void:
 	_focused_max_fps = configured_foreground_fps(current_performance_profile)
-	if _window_has_focus:
-		Engine.max_fps = _focused_max_fps
-	else:
-		Engine.max_fps = STARTUP_UNFOCUSED_PROGRESS_FPS if _startup_loading_overlay_active else _current_background_fps()
+	_refresh_focus_render_policy()
 	performance_profile_changed.emit(get_performance_profile())
 	if OS.is_debug_build():
 		print("[PERFORMANCE_PROFILE] mode=%s combat=%s load=%d combat_id=%d foreground_fps=%d background_fps=%d players=%d monsters=%d effects=%d%%" % [
@@ -514,16 +534,12 @@ func _apply_performance_profile() -> void:
 		])
 
 func set_startup_loading_overlay_active(active: bool) -> void:
-	# A completely disabled background render loop cannot display the first
-	# startup loading bar at all (the exact black-screen regression).
-	# Draw it at 10 FPS *only during bootstrap*, then restore the original
-	# render-disabled background policy as soon as login is ready.
+	# Login and character select stay at the configured foreground FPS,
+	# regardless of focus transitions or loading-overlay visibility.
 	if _startup_loading_overlay_active == active:
 		return
 	_startup_loading_overlay_active = active
-	if not _window_has_focus:
-		Engine.max_fps = STARTUP_UNFOCUSED_PROGRESS_FPS if active else _current_background_fps()
-		RenderingServer.render_loop_enabled = active
+	_refresh_focus_render_policy()
 	if OS.is_debug_build():
 		_log_focus_power_save("startup_overlay_on" if active else "startup_overlay_off")
 
@@ -547,9 +563,6 @@ func reconcile_startup_window_focus() -> void:
 		if OS.is_debug_build():
 			_log_focus_power_save("startup_focus_reconciled")
 
-
-static func background_loading_display_fps(bootstrap_active: bool) -> int:
-	return STARTUP_UNFOCUSED_PROGRESS_FPS if bootstrap_active else UNFOCUSED_MAX_FPS
 
 func _notification(what: int) -> void :
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
@@ -575,22 +588,12 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 	var caches_trimmed: bool = false
 
 	if not has_focus:
-		# Do not accidentally save a previously throttled 10/20 FPS as
-		# the future foreground cap when Windows rapidly toggles focus.
 		_focused_max_fps = configured_foreground_fps(current_performance_profile)
-		Engine.max_fps = STARTUP_UNFOCUSED_PROGRESS_FPS if _startup_loading_overlay_active else _current_background_fps()
-		RenderingServer.render_loop_enabled = _startup_loading_overlay_active
-		# RenderingServer alone stops GPU drawing but not HUD._process,
-		# minimap/cursor scanning and day-night screen-UV updates.
-		# Pause visuals only; network, timers and server world state continue.
-		_set_background_visual_processing(true)
-		# Alt+Tab rarely frees much static memory while live scenes still
-		# reference their textures. Repeatedly clearing caches instead forces
-		# redecoding/reloading resources when cycling among 10 clients.
-		# Keep the first trim once a world exists, but debounce subsequent
-		# trims so background clients don't pay this churn each focus event.
+		_refresh_focus_render_policy()
+		# Only an unfocused active world clears large runtime caches.
 		var now_msec: int = Time.get_ticks_msec()
-		if should_trim_background_caches(is_instance_valid(current_map_node), _last_background_cache_trim_msec, now_msec):
+		if _has_active_world_visuals() and should_trim_background_caches(
+			true, _last_background_cache_trim_msec, now_msec):
 			_trim_unfocused_runtime_caches()
 			_last_background_cache_trim_msec = now_msec
 			caches_trimmed = true
@@ -599,9 +602,7 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 			_master_bus_was_muted_before_focus_loss = AudioServer.is_bus_mute(master_bus_index)
 			AudioServer.set_bus_mute(master_bus_index, true)
 	else:
-		_set_background_visual_processing(false)
-		RenderingServer.render_loop_enabled = true
-		Engine.max_fps = _focused_max_fps
+		_refresh_focus_render_policy()
 
 		if master_bus_index >= 0:
 			AudioServer.set_bus_mute(
@@ -978,6 +979,8 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		current_hud.start_post_reveal_background_prewarm()
 
 	set_frame_gap_stage("world_ready")
+	# Switch to background savings only after the initial world is ready.
+	_refresh_focus_render_policy()
 	_trace_map_change("initial_enter_completed", 0, target_map_id, {
 		"total_ms": float(Time.get_ticks_usec() - initial_started_usec) / 1000.0,
 	})
@@ -1018,6 +1021,8 @@ func cleanup_and_return_to_login() -> void :
 		GlobalTempData.character_list = []
 
 
+	# Returning to login restores smooth controls even if unfocused.
+	_refresh_focus_render_policy()
 	get_tree().change_scene_to_file("res://entry_manager.tscn")
 
 func _clear_visual_runtime_caches() -> void :
