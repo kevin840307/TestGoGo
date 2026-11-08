@@ -270,6 +270,8 @@ function renderMapVisual() {
   $('#map-npc-palette').hidden = enemyMode;
   const onlyTypeToggle = $('#map-only-selected-type')?.closest('label');
   if (onlyTypeToggle) onlyTypeToggle.hidden = !enemyMode;
+  const previewToggle = $('#map-preview-toggle');
+  if (previewToggle) previewToggle.hidden = !state.mapMeta?.preview?.available;
   renderEnemyPalette();
 
   const stage = $('#map-stage');
@@ -283,6 +285,10 @@ function renderMapVisual() {
   stage.style.width = `${Math.round(state.mapZoom * 100)}%`;
 
   const blocking = state.mapMeta?.blocking;
+  const preview = state.mapMeta?.preview;
+  const previewLayer = state.mapShowPreview && preview?.available
+    ? `<img class="map-preview-layer" src="${preview.url}?v=${preview.mtimeNs || 0}" alt="Map${state.mapId} preview" draggable="false">`
+    : '';
   const blockingLayer = state.mapShowBlocking && blocking?.hasBlocking
     ? `<img class="map-blocking-layer" src="/api/maps/${state.mapId}/blocking.png?v=${state.mapId}" alt="Blocking.dat overlay" draggable="false">`
     : '';
@@ -303,6 +309,7 @@ function renderMapVisual() {
   }).join('');
 
   stage.innerHTML = `
+    ${previewLayer}
     ${blockingLayer}
     ${renderSpawnerZones(bounds)}
     ${renderContentBoundary(bounds)}
@@ -357,10 +364,13 @@ function renderMapVisual() {
   const collisionText = blocking?.hasBlocking
     ? `Blocking ${blocking.width}×${blocking.height} / ${blocking.cellSize}px`
     : (blocking?.error ? `Blocking 無效：${blocking.error}` : '無 Blocking.dat');
+  const previewText = preview?.available
+    ? `實景預覽 ${preview.width}×${preview.height}`
+    : '未產生實景預覽';
   const audit = state.mapMeta?.spawnAudit?.[enemyMode ? 'enemies' : 'npcs'];
   const invalidCount = Number(audit?.invalidCount || 0);
   $('#map-meta').textContent =
-    `${map?.name || ''} · ${state.mapRows.length} ${enemyMode ? '個怪物出生點' : '個 NPC'} · ${collisionText} · ${state.mapMeta?.spawners?.length || 0} 個區域參考${invalidCount ? ` · ⚠ ${invalidCount} 筆 Blocking 衝突` : ''}`;
+    `${map?.name || ''} · ${state.mapRows.length} ${enemyMode ? '個怪物出生點' : '個 NPC'} · ${previewText} · ${collisionText} · ${state.mapMeta?.spawners?.length || 0} 個區域參考${invalidCount ? ` · ⚠ ${invalidCount} 筆 Blocking 衝突` : ''}`;
   $('#map-meta').classList.toggle('has-warning', invalidCount > 0 || !!blocking?.error);
 
   $('#map-stage-hint').textContent = enemyMode
