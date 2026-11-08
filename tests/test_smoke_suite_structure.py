@@ -131,6 +131,43 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("late observer receives the newest", stationary)
         self.assertIn("same-cell coordinate movement", stationary)
 
+    def test_ground_drop_guard_covers_safe_input_and_pickup(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        store = (
+            ROOT / "server" / "Infrastructure" / "Persistence" /
+            "Sqlite" / "SqliteGameStore.cs"
+        ).read_text(encoding="utf-8-sig")
+        router = (
+            ROOT / "server" / "Application" / "PacketRouter.cs"
+        ).read_text(encoding="utf-8-sig")
+        suite = (
+            SMOKE / "Integration" / "GroundDropRequestGuardSmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
+        self.assertEqual(main.count("GroundDropRequestGuardSmokeTests.Run();"), 2)
+        self.assertIn("((tabType is 1 or 3) && count != 1)", store)
+        self.assertIn("double.IsFinite(x)", store)
+        self.assertIn("var requestedCount = req.Int(\"Count\", 1)", router)
+        self.assertIn("requestedCount <= 0", router)
+        self.assertIn("duplicate pickup cannot create", suite)
+        self.assertIn("equipment pickup restores", suite)
+
+    def test_client_aoi_spawn_replay_uses_latest_movement(self):
+        client = (
+            ROOT / "client" / "scripts" / "network_entity_manager.gd"
+        ).read_text(encoding="utf-8-sig")
+        regression = (
+            ROOT / "client" / "tests" /
+            "aoi_monster_snapshot_order_regression.gd"
+        ).read_text(encoding="utf-8-sig")
+        runner = (
+            ROOT / "tests" / "run_protocol_checks.ps1"
+        ).read_text(encoding="utf-8-sig")
+        self.assertIn('cached["_aoi_has_move"] = true', client)
+        self.assertIn('previous.get("_aoi_has_move", false)', client)
+        self.assertIn("repeated SpawnEntity cannot undo newer movement", regression)
+        self.assertIn("AOI exit removes both cached and queued", regression)
+        self.assertIn("aoi_monster_snapshot_order_regression.gd", runner)
+
     def test_dynamic_action_schema_runtime_covers_every_action_rule(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = (
