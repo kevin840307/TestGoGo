@@ -261,6 +261,7 @@ class EditorHandler(BaseHTTPRequestHandler):
             path = parsed.path
             query = urllib.parse.parse_qs(parsed.query)
             force = query.get("force", ["0"])[0].lower() in {"1", "true", "yes"}
+            reference_token = query.get("referenceToken", [""])[0].strip()
             body = {} if method == "DELETE" else self._json_body()
             if path == "/api/history/restore":
                 if method == "DELETE":
@@ -289,7 +290,12 @@ class EditorHandler(BaseHTTPRequestHandler):
                         if impact["count"] and not force:
                             raise ValueError(
                                 f"怪物 {enemy_id} 仍有 {impact['count']} 筆引用；"
-                                "請先處理引用，或經使用者確認後以 force=1 刪除"
+                                "請先處理引用，或經使用者確認後刪除"
+                            )
+                        if impact["count"] and force and reference_token != impact.get("token", ""):
+                            raise ValueError(
+                                "怪物引用在確認刪除後已發生變化；"
+                                "請重新檢查引用並再次確認"
                             )
                         self.app.enemies.delete(enemy_id)
                         result = {"ok": True}
@@ -368,7 +374,12 @@ class EditorHandler(BaseHTTPRequestHandler):
                         if impact["count"] and not force:
                             raise ValueError(
                                 f"NPC Script {name} 仍有 {impact['count']} 筆引用；"
-                                "請先處理引用，或經使用者確認後以 force=1 刪除"
+                                "請先處理引用，或經使用者確認後刪除"
+                            )
+                        if impact["count"] and force and reference_token != impact.get("token", ""):
+                            raise ValueError(
+                                "NPC Script 引用在確認刪除後已發生變化；"
+                                "請重新檢查引用並再次確認"
                             )
                         self.app.quests.delete(name)
                         result = {"ok": True}
