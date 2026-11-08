@@ -208,7 +208,8 @@ public sealed class GroundDropPlacementService
     public GroundPickupReachability CheckPickup(
         int mapId, double playerX, double playerY,
         double itemX, double itemY,
-        double pickupRadius = 100.0)
+        double pickupRadius = 100.0,
+        bool canCrossSpecialTerrain = false)
     {
         if (!double.IsFinite(playerX) || !double.IsFinite(playerY) ||
             !double.IsFinite(itemX) || !double.IsFinite(itemY) ||
@@ -222,7 +223,8 @@ public sealed class GroundDropPlacementService
 
         if (_blocking.GetFlags(mapId, itemX, itemY) != 0 ||
             !_navigation.IsDirectClear(
-                mapId, playerX, playerY, itemX, itemY))
+                mapId, playerX, playerY, itemX, itemY,
+                canCrossSpecialTerrain))
             return GroundPickupReachability.Blocked;
 
         return GroundPickupReachability.Allowed;
