@@ -374,7 +374,7 @@ func _trace_map_change(stage: String, source_map_id: int, target_map_id: int, de
 var _window_has_focus: bool = true
 var _focused_max_fps: int = 0
 var _master_bus_was_muted_before_focus_loss: bool = false
-const UNFOCUSED_MAX_FPS := 5
+const UNFOCUSED_MAX_FPS := 30
 
 func _notification(what: int) -> void :
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
@@ -388,7 +388,7 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 	_window_has_focus = has_focus
 	_focus_last_change_usec = Time.get_ticks_usec()
 	_focus_change_count += 1
-	# The frame spanning focus-in/out includes the intentional 5 FPS wait.
+	# The frame spanning focus-in/out includes the intentional background FPS cap.
 	# It cannot be assigned to foreground lag: restart the gap window.
 	_frame_gap_last_usec = _focus_last_change_usec
 
