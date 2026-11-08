@@ -113,7 +113,7 @@ internal static class LanternTransformationSmokeTests
                     packets.Any(x =>
                         JsonSerializer.Serialize(x)
                             .Contains(
-                                ""Success":true")),
+                                "\"Success\":true")),
                     "isolated lantern session logs in through packet router");
             }
 
@@ -174,9 +174,9 @@ internal static class LanternTransformationSmokeTests
 
                 Check(
                     json.Contains(
-                        ""Type":"UpdateAppearance"") &&
+                        "\"Type\":\"UpdateAppearance\"") &&
                     json.Contains(
-                        ""Weapon":31639") &&
+                        "\"Weapon\":31639") &&
                     json.Contains(
                         "已套用燈籠武器外觀"),
                     "lantern transformer broadcasts melee lantern appearance through normal router path");
