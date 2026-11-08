@@ -301,6 +301,23 @@ class MapRepository:
             "spawners": spawners,
         }
 
+    @classmethod
+    def world_to_cell(cls, world_x: float, world_y: float) -> tuple[int, int]:
+        """Match Client/Server collision addressing exactly: floor(world / 16)."""
+        return (
+            math.floor(world_x / cls.CELL_SIZE),
+            math.floor(world_y / cls.CELL_SIZE),
+        )
+
+    @classmethod
+    def cell_center(cls, cell_x: int, cell_y: int) -> tuple[int, int]:
+        """Return the same 16x16 cell center used by the client pathfinder."""
+        half = cls.CELL_SIZE // 2
+        return (
+            cell_x * cls.CELL_SIZE + half,
+            cell_y * cls.CELL_SIZE + half,
+        )
+
     def _terrain_from_blocking(
         self,
         blocking: tuple[int, int, bytes, Path] | None,
@@ -322,8 +339,7 @@ class MapRepository:
             }
 
         width, height, cells, _ = blocking
-        cell_x = math.floor(world_x / self.CELL_SIZE)
-        cell_y = math.floor(world_y / self.CELL_SIZE)
+        cell_x, cell_y = self.world_to_cell(world_x, world_y)
 
         def flags_at(x: int, y: int) -> int:
             if x < 0 or y < 0 or x >= width or y >= height:
@@ -358,9 +374,10 @@ class MapRepository:
                 candidates.append((cell_x + radius, cell_y + dy))
             for x, y in candidates:
                 if flags_at(x, y) == 0:
+                    center_x, center_y = self.cell_center(x, y)
                     result["nearest"] = {
-                        "x": x * self.CELL_SIZE + self.CELL_SIZE // 2,
-                        "y": y * self.CELL_SIZE + self.CELL_SIZE // 2,
+                        "x": center_x,
+                        "y": center_y,
                         "cellX": x,
                         "cellY": y,
                     }
