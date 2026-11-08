@@ -31,6 +31,11 @@ func _ready() -> void:
 
 	assert(int(mass["full_player_budget"]) >= int(response["full_player_budget"]))
 	assert(int(mass["effect_budget_percent"]) <= int(response["effect_budget_percent"]))
+	assert(ClientPerformanceProfile.combat_mode_name(
+		ClientPerformanceProfile.COMBAT_RESPONSE
+	) == "response")
+	assert(ClientPerformanceProfile.COMBAT_PVP ==
+		ClientPerformanceProfile.COMBAT_RESPONSE)
 
 	var auto_profile := ClientPerformanceProfile.apply_visual_overrides(
 		multibox,
