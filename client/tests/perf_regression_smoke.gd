@@ -102,8 +102,35 @@ func _run() -> void:
 		"short monster waypoints are not forced to excessive speed")
 	_check(MonsterEntity.MOVE_IDLE_GRACE_SECONDS >= 0.25,
 		"monster walk animation covers the 250ms server tick")
+	# Regression: monsters must not remain invisible while they are attacking
+	# the player after a map transition or an AOI unload.
+	NetworkEntityManager._on_monster_target_changed(test_id, true)
+	_check(NetworkEntityManager._is_combat_monster_revealed(test_id),
+		"server monster aggro establishes temporary AOI visibility")
+	_check(NetworkEntityManager._queued_spawn_ids.has(test_id),
+		"server monster aggro requeues an invisible cached monster")
+	var combat_queue_entries: int = 0
+	for queued in NetworkEntityManager._spawn_queue:
+		if int(queued.get("EntityID", 0)) == test_id:
+			combat_queue_entries += 1
+	_check(combat_queue_entries == 1,
+		"combat reveal queues exactly one copy of the monster")
+	NetworkEntityManager._on_entity_state_changed(test_id, "attack", "1")
+	var after_attack_entries: int = 0
+	for queued in NetworkEntityManager._spawn_queue:
+		if int(queued.get("EntityID", 0)) == test_id:
+			after_attack_entries += 1
+	_check(after_attack_entries == 1,
+		"repeated aggro and attack events do not duplicate monster spawns")
+	var combat_spawn: Dictionary = NetworkEntityManager._get_current_queued_spawn_data(template)
+	_check(int((combat_spawn.get("ExtraData", {}) as Dictionary).get("CurrentHP", -1)) == 175,
+		"combat reveal preserves authoritative monster HP and metadata")
+	NetworkEntityManager._on_monster_target_changed(test_id, false)
+	_check(not NetworkEntityManager._is_combat_monster_revealed(test_id),
+		"server aggro ending restores normal AOI culling")
 	NetworkEntityManager._monster_spawn_templates.erase(test_id)
 	NetworkEntityManager._deferred_monster_spawns.erase(test_id)
+	NetworkEntityManager._combat_reveal_until_msec.erase(test_id)
 	NetworkEntityManager._remove_queued_spawn(test_id)
 
 	if _failures == 0:
