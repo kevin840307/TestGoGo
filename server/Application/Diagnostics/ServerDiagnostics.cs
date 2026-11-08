@@ -31,6 +31,7 @@ public sealed class ServerDiagnostics
     private long _pickupConflictCount;
     private long _databaseFailureCount;
     private long _worldTickFailureCount;
+    private long _resourceWarningCount;
 
     public void PacketHandled() => Interlocked.Increment(ref _packetCount);
     public void PacketError() => Interlocked.Increment(ref _packetErrorCount);
@@ -44,6 +45,7 @@ public sealed class ServerDiagnostics
     public void PickupConflict() => Interlocked.Increment(ref _pickupConflictCount);
     public void DatabaseFailure() => Interlocked.Increment(ref _databaseFailureCount);
     public void WorldTickFailure() => Interlocked.Increment(ref _worldTickFailureCount);
+    public void ResourceWarning() => Interlocked.Increment(ref _resourceWarningCount);
 
     public void Record(
         string level,
@@ -96,6 +98,7 @@ public sealed class ServerDiagnostics
         tradeConflicts = Interlocked.Read(ref _tradeConflictCount),
         pickupConflicts = Interlocked.Read(ref _pickupConflictCount),
         databaseFailures = Interlocked.Read(ref _databaseFailureCount),
-        worldTickFailures = Interlocked.Read(ref _worldTickFailureCount)
+        worldTickFailures = Interlocked.Read(ref _worldTickFailureCount),
+        resourceWarnings = Interlocked.Read(ref _resourceWarningCount)
     };
 }
