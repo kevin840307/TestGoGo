@@ -105,6 +105,7 @@ public sealed class QuestRuntime
 
         var source = LoadAndPreprocessScript(path, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
         var script = new Script(CoreModules.Preset_Complete);
+        string? deferredLegacyCallback = null;
 
         script.Globals["GetChoice"] = (Func<int>)(() => choiceIndex ?? 0);
         script.Globals["GetData"] = (Func<string, object?>)(name => getData(name));
@@ -534,22 +535,14 @@ public sealed class QuestRuntime
         script.Globals["AddGift"] = DynValue.NewCallback((ctx, args) =>
         {
             // Legacy CDGiftSys.dll exposed AddGift(ok, fail, none).
-            // The recovered server currently has no pending-gift provider,
-            // so preserve script flow by dispatching the original "none"
-            // callback instead of leaving AddGift as a nil Lua global.
-            var noneTarget = args.Count > 2
+            // There is currently no pending-gift provider, so select the
+            // original "none" callback. Do not call back into MoonSharp from
+            // inside this CLR callback: re-entering the active Lua VM can
+            // suppress or corrupt the nested script flow. Dispatch it after
+            // the current Lua function returns instead.
+            deferredLegacyCallback = args.Count > 2
                 ? args[2].CastToString()
-                : "";
-
-            if (!string.IsNullOrWhiteSpace(noneTarget))
-            {
-                var target = script.Globals.Get(noneTarget);
-                if (target.Type == DataType.Function ||
-                    target.Type == DataType.ClrFunction)
-                {
-                    script.Call(target);
-                }
-            }
+                : null;
 
             return DynValue.Nil;
         });
@@ -692,12 +685,39 @@ public sealed class QuestRuntime
 
         var fn = script.Globals.Get(functionName);
         if (fn.Type == DataType.Function || fn.Type == DataType.ClrFunction)
+        {
             script.Call(fn);
+
+            // Legacy native APIs can select a follow-up callback while Lua is
+            // executing. Dispatch only after the active function unwinds so
+            // MoonSharp is never re-entered from a CLR callback.
+            for (var callbackDepth = 0;
+                 callbackDepth < 8 &&
+                 !string.IsNullOrWhiteSpace(deferredLegacyCallback);
+                 callbackDepth++)
+            {
+                var callbackName =
+                    deferredLegacyCallback!;
+                deferredLegacyCallback = null;
+
+                var callback =
+                    script.Globals.Get(callbackName);
+                if (callback.Type != DataType.Function &&
+                    callback.Type != DataType.ClrFunction)
+                {
+                    break;
+                }
+
+                script.Call(callback);
+            }
+        }
         else
+        {
             result.Packets.Add(new {
                 Type = "SystemMessageChat",
                 Message = $"找不到腳本節點: {scriptName}/{functionName}"
             });
+        }
 
         return result;
     }
