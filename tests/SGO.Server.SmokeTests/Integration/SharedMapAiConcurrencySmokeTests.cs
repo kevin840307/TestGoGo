@@ -68,15 +68,19 @@ internal static class SharedMapAiConcurrencySmokeTests
         {
             for (var i = 0; i < 10; i++)
             {
+                var unique =
+                    Guid.NewGuid()
+                        .ToString("N")[..8];
                 var username =
-                    $"shared-ai-{Guid.NewGuid():N}-{i}";
+                    $"ai{i:D2}-{unique}";
                 var registered = store.Register(
                     username,
                     "test-password",
                     "");
                 Check(
                     registered.Success,
-                    $"register shared AI player {i}");
+                    $"register shared AI player {i} " +
+                    $"(username={username}, message={registered.Message})");
 
                 var accountId = store.Login(
                     username,
