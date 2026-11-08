@@ -18,6 +18,15 @@
 
 每項從清單移除前：附上實際 commit、通過的測試名稱／紀錄，並檢查既有 Client 相容性。
 
+## 協定稽核已知部分完成對照
+
+- `UseItemRequest` → **P1-01**（未識別道具腳本效果仍部分完成）。
+- `MallAction` → **P2-01／P2-02**（點數購買／禮物可用；真實金流、舊服資料依賴外部服務）。
+- `PayPalDonationCreated` → **P2-01**（未接入供應商時明確回傳失敗）。
+- `LegacyPointWithdrawalResponse` → **P2-02**（未接入舊服資料時明確回傳失敗）。
+
+`tests/test_feature_gap_tracker.py` 會檢查契約稽核標示 `PARTIAL` 的封包有列在此文件，避免 Type 對上就被當成已完成。
+
 ## P0 — 封包、資料一致性及驗證基礎
 
 | ID | 狀態 | 具體待辦 | 主要位置 | 完成驗收 |
