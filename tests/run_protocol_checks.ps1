@@ -42,6 +42,10 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_gm_security.py", "-v"
     )
+    Invoke-Checked "Mall external security regression tests" "python" @(
+        "-m", "unittest", "discover", "-s", "tests",
+        "-p", "test_mall_external_security.py", "-v"
+    )
     Invoke-Checked "Quest host audit unit tests" "python" @(
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_quest_host_audit.py", "-v"
