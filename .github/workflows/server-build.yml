@@ -24,7 +24,7 @@ jobs:
           python3 tests/packet_contract_audit.py --strict --output packet-contract-report.json
           python3 tests/packet_schema_audit.py --strict --output packet-schema-report.json
           python3 tests/packet_response_audit.py --strict --output packet-response-report.json
-          python3 tests/quest_host_audit.py --output quest-host-report.json
+          python3 tests/quest_host_audit.py --strict --output quest-host-report.json
       - name: Build server
         run: |
           set -o pipefail
@@ -32,7 +32,7 @@ jobs:
       - name: Scripted item coverage report
         run: |
           set -o pipefail
-          dotnet run --project tests/SGO.ItemCoverageReport/SGO.ItemCoverageReport.csproj -c Release -- --output item-use-coverage-report.json 2>&1 | tee item-coverage.log
+          dotnet run --project tests/SGO.ItemCoverageReport/SGO.ItemCoverageReport.csproj -c Release -- --strict --output item-use-coverage-report.json 2>&1 | tee item-coverage.log
       - name: Historical mapping coverage report
         run: |
           set -o pipefail
