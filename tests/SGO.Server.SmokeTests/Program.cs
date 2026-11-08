@@ -67,6 +67,7 @@ if (args.Length != 0)
             ConcurrencySmokeTests.Run(
                 Directory.GetCurrentDirectory());
             EconomyConcurrencySmokeTests.Run();
+            AssetMutationConcurrencySmokeTests.Run();
             Console.WriteLine("Concurrency smoke passed.");
             return;
         case "all":
@@ -97,6 +98,7 @@ var world = new WorldDataService(gameDataRoot);
 BlockingMapSmokeTests.Run();
 ConcurrencySmokeTests.Run(repoRoot);
 EconomyConcurrencySmokeTests.Run();
+AssetMutationConcurrencySmokeTests.Run();
 MallExternalIntegrationSmokeTests.Run();
 
 var realCurrentCatalog = new CurrentClientDataCatalog(
