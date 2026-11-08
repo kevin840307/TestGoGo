@@ -6567,7 +6567,8 @@ try
     // Assert full resource/target validity as well as the original 94 cap.
     // A failed prerequisite must be diagnosed, not mistaken for broken healing.
     var lifeDrainReady =
-        lifeDrainLevel?.CostSp == 69 &&
+        lifeDrainLevel is not null &&
+        lifeDrainLevel.CostSp == 69 &&
         lifeDrainSpBefore >= lifeDrainLevel.CostSp &&
         lifeDrainHpBefore > 0 &&
         lifeDrainMaxHp - lifeDrainHpBefore >= 94 &&
