@@ -29,7 +29,9 @@ class WireLoadProbeStructureTests(unittest.TestCase):
         self.assertIn("CombatEvents", client)
         self.assertIn("dropCombatNoise", client)
 
-        self.assertIn("clients.Length - 1", scenario)
+        self.assertIn("CountDirectedAoiPeers(clients)", scenario)
+        self.assertIn("PlayerSpatialAoi.EnterRadius", scenario)
+        self.assertNotIn("clients.Length - 1", scenario)
         self.assertIn("clients.Length *", scenario)
         self.assertIn("movement conservation failed", scenario)
         self.assertIn("chat conservation failed", scenario)
