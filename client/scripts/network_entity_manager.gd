@@ -148,6 +148,8 @@ func _should_simplify_monster(_entity_id: int, entity: Node2D) -> bool:
 	var profile: Dictionary = GameManager.get_performance_profile()
 	if not bool(profile.get("simplify_noncritical_monsters", false)):
 		return false
+	if entity.has_method("can_use_performance_simplification") and not entity.can_use_performance_simplification():
+		return false
 	# Combat reveal keeps an authoritative monster alive in AOI, but it must
 	# not silently change the user's visual-simplification preference.
 	# Only the player's explicitly selected combat target is promoted back
@@ -163,7 +165,16 @@ func _apply_performance_visual_to_entity(entity_id: int, entity_type: int, entit
 		0:
 			entity.set_performance_simplified(_should_simplify_player(entity))
 		1:
-			entity.set_performance_simplified(_should_simplify_monster(entity_id, entity))
+			var simplify_monster := _should_simplify_monster(entity_id, entity)
+			var profile: Dictionary = GameManager.get_performance_profile() if GameManager else {}
+			var use_primitive := (
+				simplify_monster
+				and bool(profile.get("use_primitive_monsters", false))
+			)
+			entity.set_performance_simplified(
+				simplify_monster,
+				use_primitive
+			)
 
 func _refresh_performance_visuals() -> void:
 	for raw_id in active_entities.keys():
@@ -772,6 +783,17 @@ func _spawn_entity_now(data: Dictionary) -> void :
 			var monster_spawn_started_usec: int = Time.get_ticks_usec()
 			var monster_instantiate_started_usec: int = monster_spawn_started_usec
 			new_entity = MONSTER_SCENE.instantiate()
+			var spawn_profile: Dictionary = GameManager.get_performance_profile() if GameManager else {}
+			var pre_simplified := bool(spawn_profile.get("simplify_noncritical_monsters", false))
+			var pre_primitive := (
+				pre_simplified
+				and bool(spawn_profile.get("use_primitive_monsters", false))
+			)
+			if new_entity.has_method("prepare_performance_visual"):
+				new_entity.prepare_performance_visual(
+					pre_simplified,
+					pre_primitive
+				)
 			var monster_instantiate_ms: float = float(Time.get_ticks_usec() - monster_instantiate_started_usec) / 1000.0
 
 			var monster_add_started_usec: int = Time.get_ticks_usec()
