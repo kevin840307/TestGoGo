@@ -54,6 +54,7 @@ REQUIRED = {
     "SyncBuffs": ("Buffs",),
     "SyncStatus": ("EntityID", "HP", "MP", "SP", "MaxHP", "MaxMP", "MaxSP"),
     "ItemPickupFeedback": ("Message",),
+    "ItemChoiceRequired": ("ItemUID", "ItemIndex", "Title", "Options"),
     "SystemMessageFlash": ("Message",),
     "QuestSync": ("Quests",),
     "QuestUpdate": ("QuestID", "Status", "CurrentStep", "StepProgress"),
