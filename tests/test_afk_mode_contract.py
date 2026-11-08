@@ -129,6 +129,8 @@ class AfkModeContract(unittest.TestCase):
         suite = read("client/tests/afk_visual_cache_regression.gd")
         workflow = read(".github/workflows/server-build.yml")
         self.assertIn('afk_visual_cache_regression.gd', workflow)
+        self.assertIn('afk_cursor_audio_regression.gd', workflow)
+        self.assertIn('AFK_CURSOR_AUDIO_REGRESSION', read("client/tests/afk_cursor_audio_regression.gd"))
         self.assertIn('afk_visual_cache_regression.gd', suite)
         self.assertIn('AFK_CACHE_REGRESSION', suite)
         self.assertIn('test_afk_mode_contract.py', workflow)

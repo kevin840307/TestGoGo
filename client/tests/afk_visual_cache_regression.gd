@@ -72,6 +72,10 @@ func _run() -> void:
 
 	var cache: AfkVisualCache = AfkVisualCache.new()
 	var stats: Dictionary = cache.suspend_static_map(map_root)
+	check(int(stats.get("visited_nodes", 0)) > 0 and int(stats.get("visual_candidates", 0)) >= 2,
+		"AFK resource diagnostics count scanned nodes and visual candidates")
+	check(int(stats.get("excluded_collision", 0)) >= 1,
+		"AFK diagnostics explain protected live collision/loot subtrees")
 	check(int(stats.get("released", 0)) == (2 if is_instance_valid(animated_frames) else 1),
 		"only static map textures/animations are released, never actor/drop graphics")
 	check(static_sprite.texture == null, "static visual resource released")
