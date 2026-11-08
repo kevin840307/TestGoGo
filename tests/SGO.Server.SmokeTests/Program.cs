@@ -8794,12 +8794,38 @@ try
     monster.IsMoving = true;
     monster.AiState = MonsterAiState.Chase;
     monster.LastAttackAt = session.LastMonsterAiTick.AddMilliseconds(900);
+
+    var monsterNavigation = new MonsterNavigationService(blocking);
+    var meleeTarget = new[]
+        {
+            (X: monster.X + 80.0, Y: monster.Y),
+            (X: monster.X - 80.0, Y: monster.Y),
+            (X: monster.X, Y: monster.Y + 80.0),
+            (X: monster.X, Y: monster.Y - 80.0),
+            (X: monster.X + 56.0, Y: monster.Y + 56.0),
+            (X: monster.X + 56.0, Y: monster.Y - 56.0),
+            (X: monster.X - 56.0, Y: monster.Y + 56.0),
+            (X: monster.X - 56.0, Y: monster.Y - 56.0)
+        }
+        .FirstOrDefault(candidate =>
+            monsterNavigation.IsDirectClear(
+                monster.MapId,
+                monster.X,
+                monster.Y,
+                candidate.X,
+                candidate.Y));
+
+    Check(
+        meleeTarget != default,
+        "monster melee-entry fixture finds a clear Blocking.dat path");
+
     var closeRangePackets = combat.TickAi(
         session,
         account.Value,
-        monster.X + 90,
-        monster.Y,
-        session.LastMonsterAiTick.AddSeconds(1));
+        meleeTarget.X,
+        meleeTarget.Y,
+        session.LastMonsterAiTick.AddSeconds(1),
+        new[] { monster.EntityId });
 
     Check(!monster.IsMoving &&
           monster.AiState == MonsterAiState.Attack &&
@@ -8816,7 +8842,7 @@ try
                   "\"Type\":\"MoveEntity\"") &&
               JsonSerializer.Serialize(x).Contains(
                   $"\"EntityID\":{monster.EntityId}")),
-        "monster entering melee range attacks immediately instead of standing through an old cooldown");
+        "monster entering clear melee range attacks immediately instead of standing through an old cooldown");
 
     // Attack facing must use the exact target direction rather than movement
     // hysteresis. At about 26 degrees, movement may intentionally keep dir 6,
