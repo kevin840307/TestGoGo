@@ -78,6 +78,39 @@ class MapRepository:
     def _bounds_path(self) -> Path:
         return self.paths.root / "client" / "maps" / "map_bounds.json"
 
+    def _preview_path(self, map_id: int) -> Path:
+        return (
+            self.paths.root
+            / "game-editor"
+            / ".generated"
+            / "map-previews"
+            / f"Map{int(map_id):02d}.png"
+        )
+
+    @staticmethod
+    def _png_dimensions(path: Path) -> tuple[int, int] | None:
+        try:
+            head = path.read_bytes()[:24]
+        except OSError:
+            return None
+        if len(head) < 24 or not head.startswith(b"\x89PNG\r\n\x1a\n"):
+            return None
+        width, height = struct.unpack(">II", head[16:24])
+        if width <= 0 or height <= 0:
+            return None
+        return width, height
+
+    def preview_file(self, map_id: int) -> Path:
+        self._map_dir(map_id)  # Keep the endpoint scoped to real maps.
+        path = self._preview_path(map_id)
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"Map{int(map_id):02d} 尚未產生地圖預覽；請執行 game-editor/export_map_previews.bat"
+            )
+        if self._png_dimensions(path) is None:
+            raise ValueError(f"地圖預覽 PNG 無效: {path}")
+        return path
+
     def _read_json(self, path: Path) -> dict[str, Any]:
         if not path.exists():
             self._json_cache.pop(path, None)
@@ -292,6 +325,19 @@ class MapRepository:
                     "invalidCount": len(invalid_indexes),
                 }
 
+        preview_path = self._preview_path(map_id)
+        preview_dimensions = self._png_dimensions(preview_path) if preview_path.is_file() else None
+        preview_meta: dict[str, Any] = {
+            "available": preview_dimensions is not None,
+            "url": f"/api/maps/{int(map_id)}/preview.png" if preview_dimensions is not None else "",
+        }
+        if preview_dimensions is not None:
+            preview_meta.update({
+                "width": preview_dimensions[0],
+                "height": preview_dimensions[1],
+                "mtimeNs": preview_path.stat().st_mtime_ns,
+            })
+
         return {
             "id": int(map_id),
             "name": str(map_config.get("MapName", "")).strip() or f"Map{int(map_id):02d}",
@@ -299,6 +345,7 @@ class MapRepository:
             "blocking": blocking_meta,
             "spawnAudit": spawn_audit,
             "spawners": spawners,
+            "preview": preview_meta,
         }
 
     @classmethod
