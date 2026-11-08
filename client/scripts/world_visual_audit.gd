@@ -51,3 +51,39 @@ static func snapshot(root: Node) -> Dictionary:
 	stats["unique_textures"] = textures.size()
 	stats["unique_sprite_frames"] = frames.size()
 	return stats
+
+# Top visual Resource *references* by source path, not byte size. Works with
+# original login HUD, active map, and restored visual shell without retaining
+# any references after the diagnostic call finishes.
+static func top_live_visual_resources(root: Node, limit: int = 6) -> String:
+	if not is_instance_valid(root):
+		return "none"
+	var usage: Dictionary = {}
+	var pending: Array[Node] = [root]
+	while not pending.is_empty():
+		var node: Node = pending.pop_back()
+		var resource: Resource = null
+		if node is AnimatedSprite2D:
+			resource = (node as AnimatedSprite2D).sprite_frames
+		elif node is Sprite2D:
+			resource = (node as Sprite2D).texture
+		elif node is TextureRect:
+			resource = (node as TextureRect).texture
+		if is_instance_valid(resource):
+			var resource_path: String = resource.resource_path
+			if resource_path.is_empty():
+				resource_path = "[runtime:%s]" % resource.get_class()
+			usage[resource_path] = int(usage.get(resource_path, 0)) + 1
+		for child in node.get_children():
+			pending.append(child)
+	if usage.is_empty():
+		return "none"
+	var ordered: Array = usage.keys()
+	ordered.sort_custom(func(a, b):
+		return int(usage[a]) > int(usage[b])
+	)
+	var top: PackedStringArray = []
+	for i in range(mini(maxi(limit, 0), ordered.size())):
+		var path: String = str(ordered[i]).replace(" ", "_")
+		top.append("%s:%d" % [path, int(usage[ordered[i]])])
+	return ",".join(top)

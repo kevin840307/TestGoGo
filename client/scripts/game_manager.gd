@@ -87,6 +87,15 @@ func log_world_visual_audit(phase: String) -> void:
 		float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
 		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
 	])
+	# A named list of top retained visual resource paths makes the next
+	# memory profile actionable without changing render or network behavior.
+	print("[WORLD_VISUAL_ASSETS] phase=%s map=%s hud=%s player=%s entry=%s" % [
+		phase,
+		WORLD_VISUAL_AUDIT.top_live_visual_resources(current_map_node),
+		WORLD_VISUAL_AUDIT.top_live_visual_resources(current_hud),
+		WORLD_VISUAL_AUDIT.top_live_visual_resources(current_player),
+		WORLD_VISUAL_AUDIT.top_live_visual_resources(get_tree().current_scene)
+	])
 
 
 func _audit_login_after_logout() -> void:
