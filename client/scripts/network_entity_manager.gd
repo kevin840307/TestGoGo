@@ -412,7 +412,12 @@ func _spawn_entity_now(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
 	var entity_type = int(data.get("EntityType", 0))
 	if entity_type == 1:
-		_monster_spawn_templates[entity_id] = data.duplicate(true)
+		# The authoritative SpawnEntity handler already made one deep copy.
+		# A queued spawn must reuse that canonical record instead of doing a
+		# second deep copy of ExtraData for every one of 200+ nearby monsters.
+		# Also preserve newer server MoveEntity coordinates in the template.
+		if not _monster_spawn_templates.has(entity_id):
+			_monster_spawn_templates[entity_id] = data.duplicate(true)
 		if not _can_spawn_monster(data, MONSTER_AOI_EXIT_RADIUS):
 			_defer_monster_spawn(data)
 			return
