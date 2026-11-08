@@ -118,6 +118,11 @@ static func _scan_value(
 ) -> void:
 	if depth > MAX_SCAN_DEPTH:
 		return
+	if value is Node:
+		var cached_node: Node = value as Node
+		if is_instance_valid(cached_node):
+			_scan_node_tree(cached_node, source, records)
+		return
 	if value is Resource:
 		if not value is Script:
 			_record_resource(value as Resource, source, records)

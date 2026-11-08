@@ -159,6 +159,7 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('_log_afk_memory_audit("afk_settled_3s")', game)
         self.assertIn('_log_afk_memory_audit("logout_settled")', game)
         self.assertIn("get_reference_count()", audit)
+        self.assertIn("if value is Node:", audit)
         self.assertIn("reference_sources", audit)
         self.assertIn("estimated_texture_bytes", audit)
         self.assertIn("SpriteFrames", audit)
