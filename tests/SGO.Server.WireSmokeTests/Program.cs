@@ -1261,6 +1261,101 @@ await AwaitType(
             message.GetString()),
     "peer receives one successful trade completion");
 
+// Exercise a complete map-presence transition while both clients remain live.
+// GM only selects the deterministic destination; ChangeMap/WorldReady and
+// presence despawn/spawn still use the normal transport/router path.
+var awayMap = await SendGm(
+    $"map 16 {firstX} {firstY}",
+    "ChangeMap",
+    root =>
+        root.TryGetProperty(
+            "MapID",
+            out var mapId) &&
+        mapId.GetInt32() == 16,
+    "map transition sends authoritative ChangeMap to destination 16");
+
+await AwaitType(
+    peerSocket,
+    "DespawnEntity",
+    root =>
+        root.TryGetProperty(
+            "EntityID",
+            out var entity) &&
+        entity.GetInt64() ==
+            dbid,
+    "peer despawns player immediately when player leaves map 15",
+    skipNonMatchingSameType: true);
+
+await ProbeOn(
+    socket,
+    new
+    {
+        Type = "WorldReady",
+        MapID = 16
+    },
+    "WorldReadyResponse",
+    root =>
+        root.TryGetProperty(
+            "Success",
+            out var success) &&
+        success.ValueKind ==
+            JsonValueKind.True &&
+        root.TryGetProperty(
+            "MapID",
+            out var mapId) &&
+        mapId.GetInt32() == 16,
+    "destination map WorldReady completes after ChangeMap",
+    allowInterleaved: true);
+
+var returnMap = await SendGm(
+    $"map {currentMapId} {firstX} {firstY}",
+    "ChangeMap",
+    root =>
+        root.TryGetProperty(
+            "MapID",
+            out var mapId) &&
+        mapId.GetInt32() ==
+            currentMapId,
+    "map transition sends authoritative ChangeMap back to original map");
+
+await AwaitType(
+    peerSocket,
+    "SpawnEntity",
+    root =>
+        root.TryGetProperty(
+            "EntityID",
+            out var entity) &&
+        entity.GetInt64() ==
+            dbid &&
+        root.TryGetProperty(
+            "EntityType",
+            out var entityType) &&
+        entityType.GetInt32() == 0,
+    "peer respawns returning player in original map presence",
+    skipNonMatchingSameType: true);
+
+await ProbeOn(
+    socket,
+    new
+    {
+        Type = "WorldReady",
+        MapID = currentMapId
+    },
+    "WorldReadyResponse",
+    root =>
+        root.TryGetProperty(
+            "Success",
+            out var success) &&
+        success.ValueKind ==
+            JsonValueKind.True &&
+        root.TryGetProperty(
+            "MapID",
+            out var mapId) &&
+        mapId.GetInt32() ==
+            currentMapId,
+    "return map WorldReady completes after presence respawn",
+    allowInterleaved: true);
+
 await ProbeOn(
     peerSocket,
     new
