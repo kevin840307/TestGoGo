@@ -199,45 +199,6 @@ CurrentItemDefinition CurrentItem(
         0, // ColorIndex
         weaponStyle);
 
-static bool PacketTreeContainsString(
-    object? packet,
-    string expected)
-{
-    using var document = JsonDocument.Parse(
-        JsonSerializer.Serialize(packet));
-
-    static bool Contains(
-        JsonElement element,
-        string expectedText)
-    {
-        switch (element.ValueKind)
-        {
-            case JsonValueKind.String:
-                return element.GetString()?.Contains(
-                    expectedText,
-                    StringComparison.Ordinal) == true;
-            case JsonValueKind.Object:
-                foreach (var property in element.EnumerateObject())
-                {
-                    if (Contains(property.Value, expectedText))
-                        return true;
-                }
-                break;
-            case JsonValueKind.Array:
-                foreach (var item in element.EnumerateArray())
-                {
-                    if (Contains(item, expectedText))
-                        return true;
-                }
-                break;
-        }
-
-        return false;
-    }
-
-    return Contains(document.RootElement, expected);
-}
-
 var currentCatalog = new CurrentClientDataCatalog(
     new[]
     {
