@@ -166,12 +166,12 @@ CoverageRow Classify(
             "monster transformation/restore implementation");
     }
 
-    if (item.ItemId ==
-        DollService.HappinessDollItemId)
+    if (DollRewardCatalog.Supports(
+            item.ItemId))
     {
         return Supported(
             item,
-            "happiness doll reward service");
+            "recovered client doll reward catalog");
     }
 
     if (festival.Supports(
