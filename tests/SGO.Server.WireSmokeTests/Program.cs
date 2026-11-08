@@ -678,7 +678,8 @@ if (peerSocket.State ==
         peerCloseTimeout.Token);
 }
 
-await Probe(
+await ProbeOn(
+    socket,
     new
     {
         Type = "LogoutRequest",
@@ -691,7 +692,8 @@ await Probe(
             out var back) &&
         back.ValueKind ==
             JsonValueKind.True,
-    "safe logout returns acknowledgement before socket close");
+    "safe logout returns acknowledgement before socket close",
+    allowInterleaved: true);
 
 if (socket.State ==
     WebSocketState.Open)
