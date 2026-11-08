@@ -41,6 +41,7 @@ public sealed class TradeService
         public required string SessionId { get; init; }
         public required Participant First { get; init; }
         public required Participant Second { get; init; }
+        public bool CommitStarted { get; set; }
 
         public Participant? Find(long characterId)
             => First.CharacterId == characterId
@@ -541,8 +542,6 @@ public sealed class TradeService
         Participant self,
         Participant other)
     {
-        bool ready;
-
         lock (_sync)
         {
             if (!self.Locked ||
@@ -552,13 +551,17 @@ public sealed class TradeService
             }
 
             self.Confirmed = true;
-            ready =
-                self.Confirmed &&
-                other.Confirmed;
-        }
+            if (!self.Confirmed ||
+                !other.Confirmed)
+                return [];
 
-        if (!ready)
-            return [];
+            // FinalConfirm may arrive more than once or concurrently from a
+            // client. Exactly one caller owns the durable commit.
+            if (trade.CommitStarted)
+                return [];
+
+            trade.CommitStarted = true;
+        }
 
         var result = _store.CommitTrade(
             trade.First.AccountId,
@@ -802,6 +805,7 @@ public sealed class TradeService
         trade.First.Confirmed = false;
         trade.Second.Locked = false;
         trade.Second.Confirmed = false;
+        trade.CommitStarted = false;
     }
 
     private void PublishSync(
