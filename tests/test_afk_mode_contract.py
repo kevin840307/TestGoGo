@@ -160,6 +160,26 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn("GameManager.is_afk_mode_active()", entities)
 
 
+    def test_afk_monster_scene_compaction_is_transport_neutral(self):
+        manager = read("client/scripts/network_entity_manager.gd")
+        game = read("client/scripts/game_manager.gd")
+        self.assertIn("AFK_MONSTER_AOI_ENTER_RADIUS: float = 360.0", manager)
+        self.assertIn("AFK_MONSTER_AOI_EXIT_RADIUS: float = 520.0", manager)
+        self.assertIn("func enter_afk_monster_compaction()", manager)
+        self.assertIn("func exit_afk_monster_compaction()", manager)
+        self.assertIn('cached_state["_aoi_state"] = new_state', manager)
+        self.assertIn('cached_state["_aoi_dir"] = new_dir', manager)
+        self.assertIn("NetworkEntityManager.enter_afk_monster_compaction()", game)
+        self.assertIn("NetworkEntityManager.exit_afk_monster_compaction()", game)
+        compact = manager[
+            manager.index("func enter_afk_monster_compaction()"):
+            manager.index("func exit_afk_monster_compaction()")
+        ]
+        self.assertNotIn("NetworkManager.", compact)
+        self.assertNotIn("send_", compact)
+        self.assertNotIn("clear_map_entities", compact)
+
+
     def test_native_mouse_and_silent_afk_audio(self):
         cursor = read("client/scripts/cursor_manager.gd")
         manager = read("client/scripts/game_manager.gd")

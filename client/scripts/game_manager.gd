@@ -813,9 +813,14 @@ func begin_afk_mode() -> bool:
 	# identity are untouched.
 	set_performance_modes(ClientPerformanceProfile.LOAD_MULTIBOX, ClientPerformanceProfile.COMBAT_MASS)
 	set_visual_simplification_modes(ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED, ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
+	var monster_compaction: Dictionary = {}
+	if NetworkEntityManager and NetworkEntityManager.has_method("enter_afk_monster_compaction"):
+		monster_compaction = NetworkEntityManager.enter_afk_monster_compaction()
 	var suspended_entities: int = _set_afk_dynamic_visuals_suspended(true)
 	_afk_visual_stats = _enter_afk_render_shell()
 	_afk_visual_stats["suspended_entity_visuals"] = suspended_entities
+	_afk_visual_stats["compacted_monsters"] = int(monster_compaction.get("unloaded", 0))
+	_afk_visual_stats["cancelled_monster_spawns"] = int(monster_compaction.get("queued_cancelled", 0))
 	_afk_visual_stats["released"] = int(_afk_visual_stats.get("freed_static_nodes", 0))
 	_clear_visual_runtime_caches()
 	_refresh_focus_render_policy()
@@ -841,6 +846,11 @@ func finish_afk_mode() -> bool:
 		return false
 	_afk_active = false
 	_afk_restoring = false
+	if NetworkEntityManager and NetworkEntityManager.has_method("exit_afk_monster_compaction"):
+		var monster_restore: Dictionary = NetworkEntityManager.exit_afk_monster_compaction()
+		_afk_visual_stats["monster_visuals_requeued"] = int(
+			monster_restore.get("queued_for_visual_restore", 0)
+		)
 	_leave_afk_audio_silence(true)
 	if is_instance_valid(current_player) and current_player.has_method("end_afk_navigation_anchor"):
 		current_player.end_afk_navigation_anchor()
@@ -873,9 +883,14 @@ func _refresh_afk_map_visuals_after_change() -> void:
 	_afk_map_cache.discard()
 	_afk_render_shell.discard()
 	current_map_node.visible = false
+	var monster_compaction: Dictionary = {}
+	if NetworkEntityManager and NetworkEntityManager.has_method("enter_afk_monster_compaction"):
+		monster_compaction = NetworkEntityManager.enter_afk_monster_compaction()
 	var suspended_entities: int = _set_afk_dynamic_visuals_suspended(true)
 	_afk_visual_stats = _enter_afk_render_shell()
 	_afk_visual_stats["suspended_entity_visuals"] = suspended_entities
+	_afk_visual_stats["compacted_monsters"] = int(monster_compaction.get("unloaded", 0))
+	_afk_visual_stats["cancelled_monster_spawns"] = int(monster_compaction.get("queued_cancelled", 0))
 	_afk_visual_stats["released"] = int(_afk_visual_stats.get("freed_static_nodes", 0))
 	_clear_visual_runtime_caches()
 	_log_afk_state("map_changed_unloaded", int(_afk_visual_stats.get("released", 0)))
