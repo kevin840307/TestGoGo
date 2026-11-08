@@ -237,8 +237,12 @@ class MapRepository:
             "spawners": spawners,
         }
 
-    def get_terrain(self, map_id: int, world_x: float, world_y: float) -> dict[str, Any]:
-        blocking = self._read_blocking(map_id)
+    def _terrain_from_blocking(
+        self,
+        blocking: tuple[int, int, bytes, Path] | None,
+        world_x: float,
+        world_y: float,
+    ) -> dict[str, Any]:
         if blocking is None:
             return {
                 "hasBlocking": False,
@@ -247,6 +251,10 @@ class MapRepository:
                 "flags": 0,
                 "x": world_x,
                 "y": world_y,
+                "nearest": {
+                    "x": int(round(world_x)),
+                    "y": int(round(world_y)),
+                },
             }
 
         width, height, cells, _ = blocking
@@ -269,15 +277,13 @@ class MapRepository:
         }
         if flags == 0:
             result["nearest"] = {
-                "x": int(world_x),
-                "y": int(world_y),
+                "x": int(round(world_x)),
+                "y": int(round(world_y)),
                 "cellX": cell_x,
                 "cellY": cell_y,
             }
             return result
 
-        # Editor placement helper only: find the nearest ordinary walkable cell.
-        # This does not change server movement semantics.
         for radius in range(1, 17):
             candidates: list[tuple[int, int]] = []
             for dx in range(-radius, radius + 1):
@@ -298,14 +304,25 @@ class MapRepository:
         result["nearest"] = None
         return result
 
+    def get_terrain(self, map_id: int, world_x: float, world_y: float) -> dict[str, Any]:
+        return self._terrain_from_blocking(
+            self._read_blocking(map_id),
+            world_x,
+            world_y,
+        )
+
     def snap_points(self, map_id: int, points: list[dict[str, Any]], snap: bool = True) -> list[dict[str, Any]]:
         if len(points) > 5000:
             raise ValueError("單次座標檢查不可超過 5000 點")
+
+        # A group drag / batch placement may contain many points. Read/stat
+        # Blocking.dat once for the whole request instead of once per point.
+        blocking = self._read_blocking(map_id)
         result: list[dict[str, Any]] = []
         for point in points:
             x = float(point.get("x", 0))
             y = float(point.get("y", 0))
-            terrain = self.get_terrain(map_id, x, y)
+            terrain = self._terrain_from_blocking(blocking, x, y)
             if terrain.get("walkable") or not snap:
                 result.append({
                     "x": int(round(x)),
