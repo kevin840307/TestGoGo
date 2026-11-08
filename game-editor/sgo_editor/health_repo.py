@@ -373,6 +373,12 @@ class HealthRepository:
             return parsed, True
 
         for row_index, row in enumerate(items):
+            if not isinstance(row, dict):
+                self._validation_issue(
+                    errors, row_index, "invalid_row",
+                    "地圖資料列必須是物件",
+                )
+                continue
             try:
                 source_index = int(row.get("index", -1))
             except (TypeError, ValueError):
