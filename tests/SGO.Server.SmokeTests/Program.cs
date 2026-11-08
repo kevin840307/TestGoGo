@@ -4880,9 +4880,15 @@ try
             "driving mecha refreshes effective combat stats");
     }
 
+    var assetsBeforeCharge = store.GetCharacterAssets(account.Value, id);
     var energyBeforeCharge = Convert.ToInt32(
-        store.GetCharacterAssets(account.Value, id).Horses
+        assetsBeforeCharge.Horses
             .First(x => Convert.ToInt64(x["HorseUID"]) == horseUid)["EnergyLeft"]);
+    var batteryStackBeforeCharge = assetsBeforeCharge.Inventory
+        .Where(x => Convert.ToInt64(x["ItemUID"]) == batteryUid)
+        .Sum(x => Convert.ToInt32(x["Count"]));
+    Check(batteryStackBeforeCharge > 0,
+        "source mecha battery exists before charging");
 
     using (var charge = Json(JsonSerializer.Serialize(new
     {
@@ -4903,9 +4909,16 @@ try
         Check(Convert.ToInt32(horseAfterCharge["EnergyLeft"]) ==
                   energyBeforeCharge + 3600,
             "source battery adds expected mecha energy");
-        Check(!assetsAfterCharge.Inventory.Any(x =>
-                Convert.ToInt64(x["ItemUID"]) == batteryUid),
-            "mecha battery is consumed");
+        var batteryStackAfterCharge = assetsAfterCharge.Inventory
+            .Where(x => Convert.ToInt64(x["ItemUID"]) == batteryUid)
+            .Sum(x => Convert.ToInt32(x["Count"]));
+        Check(
+            batteryStackAfterCharge == batteryStackBeforeCharge - 1 &&
+            (batteryStackBeforeCharge != 1 ||
+             !assetsAfterCharge.Inventory.Any(x =>
+                 Convert.ToInt64(x["ItemUID"]) == batteryUid)),
+            $"mecha battery consumes exactly one from its stack " +
+            $"(before={batteryStackBeforeCharge}, after={batteryStackAfterCharge})");
     }
 
     var directBatteryUid = store.AddInventoryItem(
