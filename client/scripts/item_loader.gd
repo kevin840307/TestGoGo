@@ -29,6 +29,11 @@ var _ground_cache: Dictionary = {}
 
 
 
+func clear_runtime_cache() -> void :
+	_icon_cache.clear()
+	_photo_cache.clear()
+	_ground_cache.clear()
+
 func _safe_get(obj: Object, property: String, default_value: Variant) -> Variant:
 	var val = obj.get(property)
 	return val if val != null else default_value
