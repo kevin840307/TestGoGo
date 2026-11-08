@@ -6642,7 +6642,7 @@ try
 
     // Multiplayer protocol tests must use a genuinely separate account.
     // AccountSessionRegistry intentionally allows only one current connection
-    // per account, so reusing SmokePeerCharacter from the main account would make
+    // per account, so reusing SecondCharacter from the main account would make
     // every peer router.Handle call a legitimate ForceLogout instead of testing
     // party/trade/shop behavior.
     var peerUsername = $"peer-{Guid.NewGuid():N}";
@@ -6699,6 +6699,14 @@ try
     accountSessions.Register(
         peerAccount!.Value,
         peerRegistration.ConnectionId);
+    Check(
+        accountSessions.IsCurrent(
+            account.Value,
+            broadcastRegistration.ConnectionId) &&
+        accountSessions.IsCurrent(
+            peerAccount.Value,
+            peerRegistration.ConnectionId),
+        "separate multiplayer accounts keep independent current connections");
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
     while (peerRegistration.Queue.TryDequeue(out _)) { }
