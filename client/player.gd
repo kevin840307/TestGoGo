@@ -418,6 +418,21 @@ func _finish_mouse_autorun_hold() -> void:
 		CursorManager.set_autorun_indicator(_mouse_autorun.latched)
 
 
+# Other object / GUI interactions must preempt auto-walking, while a
+# normal terrain click remains owned by the original click-to-move handler.
+# Isolated from event routing so the priority rules are directly testable.
+func _autorun_click_has_priority(hovered_entity: Node, hovered_ui: Control) -> bool:
+	if is_instance_valid(hovered_entity):
+		return true
+	if not is_instance_valid(hovered_ui):
+		return false
+	# MOUSE_FILTER_PASS can belong to a full-screen HUD overlay, which
+	# should not make every bare-ground click behave like a UI click.
+	return hovered_ui.mouse_filter == Control.MOUSE_FILTER_STOP or (
+		hovered_ui is BaseButton and hovered_ui.mouse_filter != Control.MOUSE_FILTER_IGNORE
+	)
+
+
 # _input executes before object picking. Cancel navigation without consuming
 # the right-click: NetworkPlayer's own _input_event must still open its
 # original player context menu, and right-click skill cancellation remains.
@@ -430,9 +445,7 @@ func _input(event: InputEvent) -> void:
 		if _mouse_autorun.latched or _mouse_autorun.holding:
 			var hovered_entity: Node = CursorManager.current_hovered_entity if CursorManager else null
 			var hovered_ui: Control = get_viewport().gui_get_hovered_control() if is_inside_tree() else null
-			if is_instance_valid(hovered_entity) or (
-				is_instance_valid(hovered_ui) and hovered_ui.mouse_filter == Control.MOUSE_FILTER_STOP
-			):
+			if _autorun_click_has_priority(hovered_entity, hovered_ui):
 				cancel_autorun_tracking(true)
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
 		if _mouse_autorun.latched or is_mouse_holding or (
