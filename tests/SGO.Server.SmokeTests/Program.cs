@@ -5461,7 +5461,7 @@ try
         var json = JsonSerializer.Serialize(
             responses);
 
-        Check(
+        var capitalDbLocationOk =
             Convert.ToInt32(
                 teleportedCharacter["MapID"]) == 15 &&
             Convert.ToInt32(
@@ -5469,26 +5469,50 @@ try
                     teleportedCharacter["LocX"])) == 9408 &&
             Convert.ToInt32(
                 Convert.ToDouble(
-                    teleportedCharacter["LocY"])) == 10336 &&
+                    teleportedCharacter["LocY"])) == 10336;
+        var capitalSessionLocationOk =
             session.CurrentMapId == 15 &&
             Math.Round(session.LastX) == 9408 &&
             Math.Round(session.LastY) == 10336 &&
             session.PendingMapSpawn &&
-            !session.WorldReady &&
+            !session.WorldReady;
+        var capitalItemConsumed =
             !store.GetCharacterAssets(
                 account.Value,
                 id).Inventory.Any(x =>
                 Convert.ToInt64(x["ItemUID"]) ==
-                    capitalTeleportUid) &&
+                    capitalTeleportUid);
+        var capitalInventorySync =
             json.Contains(
-                "\"Type\":\"InventorySync\"") &&
+                "\"Type\":\"InventorySync\"",
+                StringComparison.Ordinal);
+        var capitalChangeMap =
             json.Contains(
-                "\"Type\":\"ChangeMap\"") &&
+                "\"Type\":\"ChangeMap\"",
+                StringComparison.Ordinal) &&
             json.Contains(
-                "\"MapID\":15") &&
-            json.Contains(
-                "首都．尼尼亞皇城"),
-            "2000 teleport item atomically consumes itself and returns DB/session state to the fixed capital spawn");
+                "\"MapID\":15",
+                StringComparison.Ordinal);
+        // System.Text.Json escapes non-ASCII by default; comparing raw JSON
+        // with Chinese text makes a successful teleport look like a failure.
+        // Parse decoded packet string values instead, as other smoke cases do.
+        var capitalMessage =
+            responses.Any(x =>
+                PacketTreeContainsString(
+                    x,
+                    "首都．尼尼亞皇城"));
+
+        Check(
+            capitalDbLocationOk &&
+            capitalSessionLocationOk &&
+            capitalItemConsumed &&
+            capitalInventorySync &&
+            capitalChangeMap &&
+            capitalMessage,
+            "2000 teleport item atomically consumes itself and returns DB/session state to the fixed capital spawn" +
+            $" (db={capitalDbLocationOk}, session={capitalSessionLocationOk}," +
+            $" consumed={capitalItemConsumed}, inventory_sync={capitalInventorySync}," +
+            $" change_map={capitalChangeMap}, decoded_message={capitalMessage})");
     }
 
     store.UpdateLocation(
