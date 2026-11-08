@@ -140,51 +140,166 @@ public static class AdminEndpoints
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SGO Server Admin</title>
+<title>SGO Server Console</title>
 <style>
-body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;background:#111827;color:#e5e7eb}
-main{max-width:1400px;margin:auto;padding:20px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
-.card{background:#1f2937;border:1px solid #374151;border-radius:10px;padding:14px}h1,h2{margin-top:0}
-.metric{font-size:26px;font-weight:700}.muted{color:#9ca3af;font-size:13px}
-table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px;border-bottom:1px solid #374151;font-size:13px}
-input,button{background:#111827;color:#e5e7eb;border:1px solid #4b5563;border-radius:6px;padding:9px}
-input{width:min(600px,70%)}button{cursor:pointer}.event-error{color:#fca5a5}.event-warning{color:#fde68a}
-section{margin-top:16px}.scroll{max-height:360px;overflow:auto}
+:root{color-scheme:dark;--bg:#090d14;--panel:#101722;--panel2:#151e2b;--line:#263244;--text:#eef4ff;--muted:#8ea0b8;--blue:#6aa9ff;--green:#58d68d;--yellow:#f4c95d;--red:#ff7383;--shadow:0 18px 40px rgba(0,0,0,.22)}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:radial-gradient(circle at top left,#14213a 0,#090d14 34%,#070a10 100%);color:var(--text);min-height:100vh}
+.shell{max-width:1540px;margin:auto;padding:26px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:20px}.brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:900;background:linear-gradient(145deg,#2f80ed,#5f6bff);box-shadow:0 8px 22px rgba(65,105,225,.3)}h1{font-size:20px;margin:0}.subtitle{font-size:12px;color:var(--muted);margin-top:3px}.live{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 5px rgba(88,214,141,.1)}
+.grid{display:grid;gap:14px}.metrics{grid-template-columns:repeat(auto-fit,minmax(155px,1fr));margin-bottom:14px}.layout{grid-template-columns:minmax(0,1.6fr) minmax(330px,.7fr)}@media(max-width:1050px){.layout{grid-template-columns:1fr}.shell{padding:16px}}
+.card{background:linear-gradient(180deg,rgba(21,30,43,.96),rgba(15,22,33,.96));border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}.pad{padding:16px}.metric-card{padding:14px 15px;min-height:86px}.metric-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}.metric-value{font-size:24px;font-weight:760;margin-top:8px}.metric-foot{font-size:11px;color:var(--muted);margin-top:5px}.warn .metric-value{color:var(--yellow)}.bad .metric-value{color:var(--red)}
+.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 13px}.section-title h2{font-size:14px;margin:0}.badge{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:#1c2939;border:1px solid #304157;color:#b9c9dc;font-size:11px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}input,select,button{font:inherit;border-radius:9px;border:1px solid #33445c;background:#0c131d;color:var(--text);padding:9px 11px;outline:none}input:focus,select:focus{border-color:#548ee6;box-shadow:0 0 0 3px rgba(84,142,230,.12)}button{cursor:pointer;background:linear-gradient(180deg,#2d7ee7,#2269c5);border-color:#3a84df;font-weight:650}button:hover{filter:brightness(1.08)}button.secondary{background:#111b28;border-color:#33445c;color:#cbd7e8}
+.broadcast-row{display:flex;gap:8px}.broadcast-row input{flex:1;min-width:140px}.status-text{font-size:12px;color:var(--muted);margin-top:8px;min-height:17px}
+.scroll{overflow:auto;max-height:420px;border-radius:10px;border:1px solid #223044}table{width:100%;border-collapse:collapse;min-width:650px}thead{position:sticky;top:0;z-index:1;background:#121c29}th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#91a3ba;text-align:left;padding:10px 11px;border-bottom:1px solid #29384c}td{font-size:12px;padding:10px 11px;border-bottom:1px solid #1e2a3a;color:#dce6f5}tbody tr:hover{background:rgba(83,126,181,.08)}.mono{font-family:"SFMono-Regular",Consolas,monospace;font-size:11px}.empty{padding:25px;text-align:center;color:var(--muted)}
+.level{display:inline-flex;min-width:72px;justify-content:center;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:800}.level-error{color:#ffd8dd;background:rgba(255,115,131,.12);border:1px solid rgba(255,115,131,.25)}.level-warning{color:#ffe9a9;background:rgba(244,201,93,.11);border:1px solid rgba(244,201,93,.24)}.level-information{color:#bfe0ff;background:rgba(106,169,255,.10);border:1px solid rgba(106,169,255,.23)}
+.map-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px}.map-pill{padding:10px 11px;border-radius:10px;background:#0d1520;border:1px solid #25344a}.map-name{font-size:11px;color:var(--muted)}.map-count{font-size:18px;font-weight:800;margin-top:3px}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:720px){.two-col{grid-template-columns:1fr}}
+.kv{display:grid;grid-template-columns:1fr auto;gap:9px 16px;font-size:12px}.kv div:nth-child(odd){color:var(--muted)}.good{color:var(--green)}.warning{color:var(--yellow)}.danger{color:var(--red)}
+.footer{color:#71839a;font-size:11px;text-align:center;padding:18px 0 2px}
 </style>
 </head>
-<body><main>
-<h1>SGO Server Admin</h1>
-<div id="summary" class="grid"></div>
-<section class="card"><h2>全服公告</h2><input id="broadcast" maxlength="500" placeholder="輸入公告內容"><button onclick="sendBroadcast()">送出</button><span id="broadcastResult" class="muted"></span></section>
-<section class="card"><h2>地圖分布</h2><div id="maps"></div></section>
-<section class="card"><h2>在線玩家</h2><div class="scroll"><table><thead><tr><th>Character</th><th>Account</th><th>Map</th><th>Position</th><th>Connection</th></tr></thead><tbody id="players"></tbody></table></div></section>
-<section class="card"><h2>最近診斷事件</h2><div class="scroll"><table><thead><tr><th>時間</th><th>Level</th><th>Category</th><th>Message</th><th>ms</th></tr></thead><tbody id="events"></tbody></table></div></section>
+<body>
+<div class="shell">
+<header class="topbar">
+ <div class="brand"><div class="logo">SGO</div><div><h1>Server Console</h1><div class="subtitle">Local administration & runtime diagnostics</div></div></div>
+ <div class="live"><span class="dot"></span><span id="liveText">Connecting...</span></div>
+</header>
+
+<div id="summary" class="grid metrics"></div>
+
+<div class="grid layout">
+ <div class="grid">
+  <section class="card pad">
+   <div class="section-title"><h2>在線玩家</h2><span id="playerBadge" class="badge">0 players</span></div>
+   <div class="scroll"><table><thead><tr><th>Character</th><th>Account</th><th>Map</th><th>Position</th><th>Connection</th></tr></thead><tbody id="players"></tbody></table></div>
+  </section>
+
+  <section class="card pad">
+   <div class="section-title">
+    <h2>診斷事件</h2>
+    <div class="toolbar">
+     <select id="eventLevel" onchange="renderEvents()"><option value="">全部 Level</option><option>Error</option><option>Warning</option><option>Information</option></select>
+     <input id="eventSearch" oninput="renderEvents()" placeholder="搜尋 Category / Message" style="width:210px">
+     <button class="secondary" onclick="refresh()">立即更新</button>
+    </div>
+   </div>
+   <div class="scroll"><table><thead><tr><th>Time</th><th>Level</th><th>Category</th><th>Message</th><th>Elapsed</th></tr></thead><tbody id="events"></tbody></table></div>
+  </section>
+ </div>
+
+ <aside class="grid">
+  <section class="card pad">
+   <div class="section-title"><h2>全服公告</h2><span class="badge">Local only</span></div>
+   <div class="broadcast-row"><input id="broadcast" maxlength="500" placeholder="輸入公告內容"><button onclick="sendBroadcast()">送出</button></div>
+   <div id="broadcastResult" class="status-text"></div>
+  </section>
+
+  <section class="card pad">
+   <div class="section-title"><h2>地圖分布</h2><span id="mapBadge" class="badge">0 maps</span></div>
+   <div id="maps" class="map-list"></div>
+  </section>
+
+  <section class="card pad">
+   <div class="section-title"><h2>Runtime</h2><span id="uptime" class="badge">--</span></div>
+   <div id="runtime" class="kv"></div>
+  </section>
+
+  <section class="card pad">
+   <div class="section-title"><h2>Shared Map AI</h2><span id="aiHealth" class="badge">--</span></div>
+   <div id="ai" class="kv"></div>
+  </section>
+
+  <section class="card pad">
+   <div class="section-title"><h2>Game Data</h2><span id="dataHealth" class="badge">--</span></div>
+   <div id="gameData" class="kv"></div>
+  </section>
+ </aside>
+</div>
+<div class="footer">SGO Server Console · loopback access only · auto refresh 2s</div>
+</div>
+
 <script>
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let latestEvents=[];
+let refreshing=false;
+const fmtUptime=s=>{s=Math.max(0,Math.floor(Number(s)||0));const d=Math.floor(s/86400);s%=86400;const h=Math.floor(s/3600);s%=3600;const m=Math.floor(s/60);return (d?d+'d ':'')+(h?h+'h ':'')+m+'m'};
+const metric=(label,value,foot='',kind='')=>'<div class="card metric-card '+kind+'"><div class="metric-label">'+esc(label)+'</div><div class="metric-value">'+esc(value)+'</div><div class="metric-foot">'+esc(foot)+'</div></div>';
+function row(k,v,cls=''){return '<div>'+esc(k)+'</div><div class="'+cls+'">'+esc(v)+'</div>'}
+function renderEvents(){
+ const level=document.getElementById('eventLevel').value.toLowerCase();
+ const q=document.getElementById('eventSearch').value.trim().toLowerCase();
+ const rows=latestEvents.filter(x=>(!level||String(x.level).toLowerCase()===level)&&(!q||(String(x.category)+' '+String(x.message)).toLowerCase().includes(q)));
+ document.getElementById('events').innerHTML=rows.length?rows.map(x=>{
+   const lv=String(x.level||'Information').toLowerCase();
+   return '<tr><td class="mono">'+esc(new Date(x.timestamp).toLocaleTimeString())+'</td><td><span class="level level-'+esc(lv)+'">'+esc(x.level)+'</span></td><td>'+esc(x.category)+'</td><td>'+esc(x.message)+'</td><td class="mono">'+esc(x.elapsedMilliseconds==null?'':Number(x.elapsedMilliseconds).toFixed(1)+' ms')+'</td></tr>'
+ }).join(''):'<tr><td colspan="5" class="empty">沒有符合條件的事件</td></tr>';
+}
 async function refresh(){
- const s=await (await fetch('/admin/api/status')).json();
- document.getElementById('summary').innerHTML=[
- ['在線',s.onlinePlayers],['Working Set',s.runtime.workingSetMb+' MB'],['Private RAM',s.runtime.privateMemoryMb+' MB'],
- ['GC Heap',s.runtime.gcHeapMb+' MB'],['Threads',s.runtime.threads],['Packets',s.counters.packets],
- ['Packet Errors',s.counters.packetErrors],['Slow Packets',s.counters.slowPackets],
- ['AI Slow',s.counters.mapAiSlowTicks],['Map Pressure',s.counters.mapPressureWarnings],
- ['Broadcast Backlog',s.counters.broadcastBacklogWarnings],['Trade Conflicts',s.counters.tradeConflicts],
- ['Pickup Conflicts',s.counters.pickupConflicts],['DB Failures',s.counters.databaseFailures],
- ['World Tick Failures',s.counters.worldTickFailures],['Resource Warnings',s.counters.resourceWarnings]
- ].map(x=>'<div class="card"><div class="muted">'+esc(x[0])+'</div><div class="metric">'+esc(x[1])+'</div></div>').join('');
- document.getElementById('maps').innerHTML=s.maps.length?s.maps.map(x=>'Map '+esc(x.mapId)+': <b>'+esc(x.players)+'</b>').join(' &nbsp; '):'<span class="muted">目前無玩家</span>';
- document.getElementById('players').innerHTML=s.players.map(p=>'<tr><td>'+esc(p.characterId)+'</td><td>'+esc(p.accountId)+'</td><td>'+esc(p.mapId)+'</td><td>'+esc(p.x)+', '+esc(p.y)+'</td><td>'+esc(p.connectionId)+'</td></tr>').join('');
- const e=await (await fetch('/admin/api/events?count=150')).json();
- document.getElementById('events').innerHTML=e.map(x=>'<tr class="event-'+String(x.level).toLowerCase()+'"><td>'+esc(new Date(x.timestamp).toLocaleTimeString())+'</td><td>'+esc(x.level)+'</td><td>'+esc(x.category)+'</td><td>'+esc(x.message)+'</td><td>'+esc(x.elapsedMilliseconds??'')+'</td></tr>').join('');
+ if(refreshing)return; refreshing=true;
+ try{
+  const [sr,er]=await Promise.all([fetch('/admin/api/status',{cache:'no-store'}),fetch('/admin/api/events?count=250',{cache:'no-store'})]);
+  if(!sr.ok||!er.ok)throw new Error('HTTP '+sr.status+'/'+er.status);
+  const s=await sr.json(); latestEvents=await er.json();
+
+  const issueCount=(s.counters.packetErrors||0)+(s.counters.databaseFailures||0)+(s.counters.worldTickFailures||0);
+  document.getElementById('summary').innerHTML=[
+   metric('Online Players',s.onlinePlayers,'active sessions'),
+   metric('Working Set',s.runtime.workingSetMb+' MB','process memory',s.runtime.workingSetMb>=1024?'warn':''),
+   metric('GC Heap',s.runtime.gcHeapMb+' MB','managed heap'),
+   metric('AI Tick',Number(s.sharedMapAi.elapsedMs||0).toFixed(1)+' ms','target < 250 ms',s.sharedMapAi.elapsedMs>250?'bad':''),
+   metric('Packets',s.counters.packets,'handled'),
+   metric('Packet Errors',s.counters.packetErrors,'handler/decode',s.counters.packetErrors?'bad':''),
+   metric('Trade Conflicts',s.counters.tradeConflicts,'concurrency guard',s.counters.tradeConflicts?'warn':''),
+   metric('Pickup Conflicts',s.counters.pickupConflicts,'race detected',s.counters.pickupConflicts?'warn':'')
+  ].join('');
+
+  document.getElementById('playerBadge').textContent=s.onlinePlayers+' players';
+  document.getElementById('mapBadge').textContent=s.maps.length+' maps';
+  document.getElementById('players').innerHTML=s.players.length?s.players.map(p=>'<tr><td>'+esc(p.characterId)+'</td><td>'+esc(p.accountId)+'</td><td>'+esc(p.mapId)+'</td><td class="mono">'+esc(p.x)+', '+esc(p.y)+'</td><td class="mono">'+esc(p.connectionId)+'</td></tr>').join(''):'<tr><td colspan="5" class="empty">目前沒有在線玩家</td></tr>';
+  document.getElementById('maps').innerHTML=s.maps.length?s.maps.map(x=>'<div class="map-pill"><div class="map-name">Map '+esc(x.mapId)+'</div><div class="map-count">'+esc(x.players)+'</div></div>').join(''):'<div class="empty">目前無活躍地圖</div>';
+
+  document.getElementById('uptime').textContent=fmtUptime(s.uptimeSeconds);
+  document.getElementById('runtime').innerHTML=
+   row('Private memory',s.runtime.privateMemoryMb+' MB')+
+   row('Threads',s.runtime.threads)+
+   row('GC Gen 0 / 1 / 2',s.runtime.gcGen0+' / '+s.runtime.gcGen1+' / '+s.runtime.gcGen2)+
+   row('CPU total',Math.round(s.runtime.cpuTotalMilliseconds/1000)+' sec')+
+   row('Resource warnings',s.counters.resourceWarnings,s.counters.resourceWarnings?'warning':'good')+
+   row('Broadcast backlog',s.counters.broadcastBacklogWarnings,s.counters.broadcastBacklogWarnings?'warning':'good')+
+   row('DB failures',s.counters.databaseFailures,s.counters.databaseFailures?'danger':'good')+
+   row('World tick failures',s.counters.worldTickFailures,s.counters.worldTickFailures?'danger':'good');
+
+  const ai=s.sharedMapAi||{};
+  document.getElementById('aiHealth').textContent=(ai.elapsedMs||0)<=250?'Healthy':'Slow';
+  document.getElementById('aiHealth').className='badge '+((ai.elapsedMs||0)<=250?'good':'warning');
+  document.getElementById('ai').innerHTML=
+   row('Active sessions',ai.activeSessions||0)+row('Active maps',ai.activeMaps||0)+
+   row('Ticked maps',ai.tickedMaps||0)+row('Monsters',ai.monsterCount||0)+
+   row('Assigned monsters',ai.assignedMonsterCount||0)+row('Slow tick count',s.counters.mapAiSlowTicks,s.counters.mapAiSlowTicks?'warning':'good')+
+   row('Map pressure warnings',s.counters.mapPressureWarnings,s.counters.mapPressureWarnings?'warning':'good');
+
+  document.getElementById('dataHealth').textContent=s.gameData.available?'Available':'Missing';
+  document.getElementById('dataHealth').className='badge '+(s.gameData.available?'good':'danger');
+  document.getElementById('gameData').innerHTML=row('Items',s.gameData.items)+row('Skills',s.gameData.skills)+row('Pets',s.gameData.pets)+row('Root',s.gameData.root||'--');
+
+  renderEvents();
+  document.getElementById('liveText').textContent='Live · '+new Date(s.serverTime).toLocaleTimeString()+(issueCount?' · '+issueCount+' errors':'');
+ }catch(e){
+  document.getElementById('liveText').textContent='Disconnected · '+e.message;
+ }finally{refreshing=false}
 }
 async function sendBroadcast(){
- const el=document.getElementById('broadcast'), out=document.getElementById('broadcastResult');
- const r=await fetch('/admin/api/broadcast',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:el.value})});
- out.textContent=r.ok?' 已送出':' 送出失敗'; if(r.ok)el.value='';
- await refresh();
+ const el=document.getElementById('broadcast'),out=document.getElementById('broadcastResult'),message=el.value.trim();
+ if(!message){out.textContent='請輸入公告內容';return}
+ try{
+  const r=await fetch('/admin/api/broadcast',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message})});
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||('HTTP '+r.status))}
+  el.value='';out.textContent='公告已送出';await refresh();
+ }catch(e){out.textContent='送出失敗：'+e.message}
 }
+document.getElementById('broadcast').addEventListener('keydown',e=>{if(e.key==='Enter')sendBroadcast()});
 refresh();setInterval(refresh,2000);
 </script>
-</main></body></html>
-""";
+</body>
+</html>
+"""
 }
