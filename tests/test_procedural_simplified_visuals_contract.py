@@ -54,6 +54,7 @@ for needle in (
     "doll_engine.clear_dolls()",
 ):
     assert needle in player, needle
+assert 'my_party not in ["", "0", "-1"]' in player
 for color in (
     "Color(0.28, 1.0, 0.56, 1.0)",  # party
     "Color(0.32, 0.70, 1.0, 1.0)",  # club
