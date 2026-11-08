@@ -6639,12 +6639,50 @@ try
     // these test sessions simulate the already-ready world state.
     session.WorldReady = true;
     router.SyncPresence(session);
+
+    // Multiplayer protocol tests must use a genuinely separate account.
+    // AccountSessionRegistry intentionally allows only one current connection
+    // per account, so reusing SmokePeerCharacter from the main account would make
+    // every peer router.Handle call a legitimate ForceLogout instead of testing
+    // party/trade/shop behavior.
+    var peerUsername = $"peer-{Guid.NewGuid():N}";
+    var (peerCreated, peerCreateMessage) =
+        store.Register(peerUsername, "peer-password", "");
+    Check(
+        peerCreated,
+        $"create isolated multiplayer peer account: {peerCreateMessage}");
+
+    var peerAccount =
+        store.Login(peerUsername, "peer-password");
+    Check(
+        peerAccount.HasValue,
+        "login isolated multiplayer peer account");
+
+    using (var createPeerCharacter = Json(
+        """
+        {"Name":"SmokePeerCharacter","Password":"2468","Race":0,"Hair":1,"HairColor":2,"Str":7,"Dex":6,"Con":5,"Wis":4}
+        """))
+    {
+        var peerCreateResult = store.Create(
+            peerAccount!.Value,
+            createPeerCharacter.RootElement);
+        Check(
+            peerCreateResult.Success,
+            $"create isolated multiplayer peer character: {peerCreateResult.Message}");
+    }
+
+    var peerCharacterId = Convert.ToInt64(
+        store.Characters(peerAccount!.Value)
+            .First(x =>
+                x.TryGetValue("NAME", out var peerName) &&
+                peerName?.ToString() == "SmokePeerCharacter")["DBID"]);
+
     var peerRegistration = broadcastHub.Register();
     var peerSession = new ClientSession
     {
         ConnectionId = peerRegistration.ConnectionId,
-        AccountId = account.Value,
-        CharacterId = secondCharacterId,
+        AccountId = peerAccount!.Value,
+        CharacterId = peerCharacterId,
         CurrentMapId = combatMapId,
         LastX = combatEnemy.X,
         LastY = combatEnemy.Y,
@@ -6653,11 +6691,14 @@ try
     };
 
     store.UpdateLocation(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         combatMapId,
         combatEnemy.X,
         combatEnemy.Y);
+    accountSessions.Register(
+        peerAccount!.Value,
+        peerRegistration.ConnectionId);
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
     while (peerRegistration.Queue.TryDequeue(out _)) { }
@@ -6669,7 +6710,7 @@ try
             JsonSerializer.Serialize(packet).Contains(
                 "\"EntityType\":0") &&
             JsonSerializer.Serialize(packet).Contains(
-                $"\"EntityID\":{secondCharacterId}")) &&
+                $"\"EntityID\":{peerCharacterId}")) &&
         peerRegistration.Queue.ToArray().Any(packet =>
             JsonSerializer.Serialize(packet).Contains(
                 "\"EntityType\":0") &&
@@ -6678,7 +6719,7 @@ try
         broadcastHub.IsPlayerAoiVisibleAs(
             session.ConnectionId,
             peerSession.ConnectionId,
-            secondCharacterId) &&
+            peerCharacterId) &&
         broadcastHub.IsPlayerAoiVisibleAs(
             peerSession.ConnectionId,
             session.ConnectionId,
@@ -6734,8 +6775,8 @@ try
         1);
     store.Revive(account.Value, id);
     store.ApplyDamage(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         999_999);
 
     store.UpdateLocation(
@@ -6745,8 +6786,8 @@ try
         combatEnemy.X,
         combatEnemy.Y);
     store.UpdateLocation(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         combatMapId,
         combatEnemy.X + 40,
         combatEnemy.Y);
@@ -6764,7 +6805,7 @@ try
         session,
         account.Value,
         27104,
-        checked((int)secondCharacterId),
+        checked((int)peerCharacterId),
         0,
         combatEnemy.X + 40,
         combatEnemy.Y,
@@ -6785,14 +6826,14 @@ try
 
     var reviveAccepted = combat.AcceptRevive(
         peerSession,
-        account.Value,
+        peerAccount!.Value,
         27104,
         1,
         DateTimeOffset.UtcNow.AddSeconds(1));
 
     var revivedCharacter = store.GetCharacter(
-        account.Value,
-        secondCharacterId)!;
+        peerAccount!.Value,
+        peerCharacterId)!;
 
     Check(
         Convert.ToInt32(revivedCharacter["HP"]) ==
@@ -6815,16 +6856,16 @@ try
         1);
     store.Revive(account.Value, id);
     store.SpendSkillResources(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         0,
         0,
         50);
 
     var targetSpBefore = Convert.ToInt32(
         store.GetCharacter(
-            account.Value,
-            secondCharacterId)!["SP"]);
+            peerAccount!.Value,
+            peerCharacterId)!["SP"]);
 
     while (peerRegistration.Queue.TryDequeue(out _)) { }
 
@@ -6832,7 +6873,7 @@ try
         session,
         account.Value,
         28102,
-        checked((int)secondCharacterId),
+        checked((int)peerCharacterId),
         0,
         combatEnemy.X + 40,
         combatEnemy.Y,
@@ -6840,8 +6881,8 @@ try
 
     var targetSpAfter = Convert.ToInt32(
         store.GetCharacter(
-            account.Value,
-            secondCharacterId)!["SP"]);
+            peerAccount!.Value,
+            peerCharacterId)!["SP"]);
 
     var targetSpRecovered =
         targetSpAfter - targetSpBefore;
@@ -6858,7 +6899,7 @@ try
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"SyncStatus\"") &&
             JsonSerializer.Serialize(x).Contains(
-                $"\"EntityID\":{secondCharacterId}")),
+                $"\"EntityID\":{peerCharacterId}")),
         "心靈轉換 restores another same-map player's SP and broadcasts public SyncStatus");
 
     store.SetSkill(
@@ -6872,7 +6913,7 @@ try
         session,
         account.Value,
         20103,
-        checked((int)secondCharacterId),
+        checked((int)peerCharacterId),
         0,
         combatEnemy.X + 40,
         combatEnemy.Y,
@@ -6883,7 +6924,7 @@ try
 
     Check(
         PacketTreeContainsString(scoutPackets, "[偵察]") &&
-        scoutJson.Contains("SecondCharacter") &&
+        scoutJson.Contains("SmokePeerCharacter") &&
         !scoutJson.Contains("CharacterPwd") &&
         !scoutJson.Contains("\"ACCID\""),
         "偵察 returns public target status without account/password fields");
@@ -6952,8 +6993,8 @@ try
         store.GetCharacter(account.Value, id)!["Money"]);
     var targetMoneyBeforeTransfer = Convert.ToInt64(
         store.GetCharacter(
-            account.Value,
-            secondCharacterId)!["Money"]);
+            peerAccount!.Value,
+            peerCharacterId)!["Money"]);
 
     while (peerRegistration.Queue.TryDequeue(out _)) { }
 
@@ -6961,7 +7002,7 @@ try
         JsonSerializer.Serialize(new
         {
             Type = "DirectTransfer",
-            TargetDBID = secondCharacterId,
+            TargetDBID = peerCharacterId,
             Amount = 321L
         })))
     {
@@ -6977,8 +7018,8 @@ try
                 senderMoneyBeforeTransfer - 321 &&
             Convert.ToInt64(
                 store.GetCharacter(
-                    account.Value,
-                    secondCharacterId)!["Money"]) ==
+                    peerAccount!.Value,
+                    peerCharacterId)!["Money"]) ==
                 targetMoneyBeforeTransfer + 321 &&
             responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains(
@@ -6997,7 +7038,7 @@ try
         {
             Type = "PartyAction",
             Action = "Invite",
-            TargetDBID = secondCharacterId
+            TargetDBID = peerCharacterId
         })))
     {
         var responses = router.Handle(
@@ -7034,7 +7075,7 @@ try
         Check(
             !string.IsNullOrWhiteSpace(firstPartyId) &&
             firstPartyId ==
-                party.GetPartyId(secondCharacterId) &&
+                party.GetPartyId(peerCharacterId) &&
             responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"PartySync\"") &&
@@ -7082,13 +7123,13 @@ try
         1);
 
     var peerBeforeIceTouch = store.GetCharacter(
-        account.Value,
-        secondCharacterId)!;
+        peerAccount!.Value,
+        peerCharacterId)!;
     var peerBaseStats = CharacterStatCalculator.Calculate(
         peerBeforeIceTouch,
         store.GetCharacterAssets(
-            account.Value,
-            secondCharacterId),
+            peerAccount!.Value,
+            peerCharacterId),
         currentCatalog);
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
@@ -7113,7 +7154,7 @@ try
     Check(
         iceTouchPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
-                $"\"ID\":{secondCharacterId}")) &&
+                $"\"ID\":{peerCharacterId}")) &&
         peerIceTouchJson.Contains(
             "\"Type\":\"SyncBuffs\"") &&
         PacketTreeContainsString(peerRegistration.Queue.ToArray(), "冰之觸") &&
@@ -7175,7 +7216,7 @@ try
     Check(
         darkShadowPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
-                $"\"ID\":{secondCharacterId}")) &&
+                $"\"ID\":{peerCharacterId}")) &&
         PacketTreeContainsString(peerRegistration.Queue.ToArray(), "黑暗之影") &&
         peerDarkShadowJson.Contains(
             $"\"Attack\":{peerBaseStats.Attack + 80}") &&
@@ -7226,15 +7267,15 @@ try
         1);
     store.Revive(account.Value, id);
     store.Revive(
-        account.Value,
-        secondCharacterId);
+        peerAccount!.Value,
+        peerCharacterId);
     store.ApplyDamage(
         account.Value,
         id,
         20);
     store.ApplyDamage(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         20);
     store.SpendSkillResources(
         account.Value,
@@ -7243,8 +7284,8 @@ try
         10,
         0);
     store.SpendSkillResources(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         0,
         10,
         0);
@@ -7253,8 +7294,8 @@ try
         account.Value,
         id)!;
     var groupBeforePeer = store.GetCharacter(
-        account.Value,
-        secondCharacterId)!;
+        peerAccount!.Value,
+        peerCharacterId)!;
 
     var groupHealPackets = combat.UseSkill(
         session,
@@ -7270,8 +7311,8 @@ try
         account.Value,
         id)!;
     var groupAfterPeer = store.GetCharacter(
-        account.Value,
-        secondCharacterId)!;
+        peerAccount!.Value,
+        peerCharacterId)!;
 
     Check(
         Convert.ToInt32(groupAfterSelf["HP"]) >
@@ -7290,8 +7331,8 @@ try
         "治療風暴 restores HP and MP for online same-map party members");
 
     store.UpdateLocation(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         combatMapId,
         combatEnemy.X + 550,
         combatEnemy.Y);
@@ -7300,19 +7341,19 @@ try
     router.SyncPresence(peerSession);
 
     store.ApplyDamage(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         20);
     store.SpendSkillResources(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         0,
         10,
         0);
 
     var farPeerBefore = store.GetCharacter(
-        account.Value,
-        secondCharacterId)!;
+        peerAccount!.Value,
+        peerCharacterId)!;
 
     combat.UseSkill(
         session,
@@ -7325,8 +7366,8 @@ try
         DateTimeOffset.UtcNow.AddSeconds(5));
 
     var farPeerAfter = store.GetCharacter(
-        account.Value,
-        secondCharacterId)!;
+        peerAccount!.Value,
+        peerCharacterId)!;
 
     Check(
         Convert.ToInt32(farPeerAfter["HP"]) ==
@@ -7336,8 +7377,8 @@ try
         "治療風暴 does not heal same-map party members outside original 400 range");
 
     store.UpdateLocation(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         combatMapId,
         combatEnemy.X,
         combatEnemy.Y);
@@ -7370,8 +7411,8 @@ try
 
     store.Revive(account.Value, id);
     store.Revive(
-        account.Value,
-        secondCharacterId);
+        peerAccount!.Value,
+        peerCharacterId);
 
     session.WorldReady = true;
     peerSession.WorldReady = true;
@@ -7397,19 +7438,19 @@ try
     }
 
     store.ApplyDamage(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         30);
     store.SpendSkillResources(
-        account.Value,
-        secondCharacterId,
+        peerAccount!.Value,
+        peerCharacterId,
         0,
         20,
         0);
 
     var autoHealBefore = store.GetCharacter(
-        account.Value,
-        secondCharacterId)!;
+        peerAccount!.Value,
+        peerCharacterId)!;
     var autoSaintAt =
         DateTimeOffset.UtcNow.AddMinutes(10);
 
@@ -7419,8 +7460,8 @@ try
         session,
         autoSaintAt);
     var autoHealAfter = store.GetCharacter(
-        account.Value,
-        secondCharacterId)!;
+        peerAccount!.Value,
+        peerCharacterId)!;
 
     Check(
         Convert.ToInt32(autoHealAfter["HP"]) >
@@ -7435,15 +7476,15 @@ try
         "auto saint casts existing 治療風暴 when a nearby party member HP/MP falls below threshold");
 
     var peerSpState = store.GetCharacter(
-        account.Value,
-        secondCharacterId)!;
+        peerAccount!.Value,
+        peerCharacterId)!;
     var peerSpNow = Convert.ToInt32(
         peerSpState["SP"]);
     if (peerSpNow > 5)
     {
         store.SpendSkillResources(
-            account.Value,
-            secondCharacterId,
+            peerAccount!.Value,
+            peerCharacterId,
             0,
             0,
             peerSpNow - 5);
@@ -7451,8 +7492,8 @@ try
 
     var autoSpBefore = Convert.ToInt32(
         store.GetCharacter(
-            account.Value,
-            secondCharacterId)!["SP"]);
+            peerAccount!.Value,
+            peerCharacterId)!["SP"]);
 
     session.SkillReadyAt.Remove(28102);
     var autoSpPackets = router.Tick(
@@ -7460,8 +7501,8 @@ try
         autoSaintAt.AddSeconds(2));
     var autoSpAfter = Convert.ToInt32(
         store.GetCharacter(
-            account.Value,
-            secondCharacterId)!["SP"]);
+            peerAccount!.Value,
+            peerCharacterId)!["SP"]);
 
     Check(
         autoSpAfter > autoSpBefore &&
@@ -7514,7 +7555,7 @@ try
             string.IsNullOrWhiteSpace(
                 party.GetPartyId(id)) &&
             string.IsNullOrWhiteSpace(
-                party.GetPartyId(secondCharacterId)) &&
+                party.GetPartyId(peerCharacterId)) &&
             responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"PartySync\"") &&
@@ -7538,8 +7579,8 @@ try
         .Sum(x => Convert.ToInt32(x["Count"]));
 
     var secondTradeItemCountBefore = store.GetCharacterAssets(
-            account.Value,
-            secondCharacterId)
+            peerAccount!.Value,
+            peerCharacterId)
         .Inventory
         .Where(x =>
             Convert.ToInt32(x["ItemIndex"]) ==
@@ -7552,8 +7593,8 @@ try
         store.GetCharacter(account.Value, id)!["Money"]);
     var secondTradeMoneyBefore = Convert.ToInt64(
         store.GetCharacter(
-            account.Value,
-            secondCharacterId)!["Money"]);
+            peerAccount!.Value,
+            peerCharacterId)!["Money"]);
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
     while (peerRegistration.Queue.TryDequeue(out _)) { }
@@ -7562,7 +7603,7 @@ try
         JsonSerializer.Serialize(new
         {
             Type = "TradeRequest",
-            TargetEntityID = secondCharacterId
+            TargetEntityID = peerCharacterId
         })))
     {
         router.Handle(
@@ -7697,8 +7738,8 @@ try
         .Sum(x => Convert.ToInt32(x["Count"]));
 
     var secondTradeItemCountAfter = store.GetCharacterAssets(
-            account.Value,
-            secondCharacterId)
+            peerAccount!.Value,
+            peerCharacterId)
         .Inventory
         .Where(x =>
             Convert.ToInt32(x["ItemIndex"]) ==
@@ -7719,8 +7760,8 @@ try
             firstTradeMoneyBefore - 50 &&
         Convert.ToInt64(
             store.GetCharacter(
-                account.Value,
-                secondCharacterId)!["Money"]) ==
+                peerAccount!.Value,
+                peerCharacterId)!["Money"]) ==
             secondTradeMoneyBefore + 50 &&
         broadcastRegistration.Queue.ToArray().Any(x =>
             JsonSerializer.Serialize(x).Contains(
@@ -7755,8 +7796,8 @@ try
         .Sum(x => Convert.ToInt32(x["Count"]));
 
     var buyerShopItemBefore = store.GetCharacterAssets(
-            account.Value,
-            secondCharacterId)
+            peerAccount!.Value,
+            peerCharacterId)
         .Inventory
         .Where(x =>
             Convert.ToInt32(x["ItemIndex"]) ==
@@ -7864,8 +7905,8 @@ try
         store.GetCharacter(account.Value, id)!["Money"]);
     var buyerShopMoneyBefore = Convert.ToInt64(
         store.GetCharacter(
-            account.Value,
-            secondCharacterId)!["Money"]);
+            peerAccount!.Value,
+            peerCharacterId)!["Money"]);
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
 
@@ -7893,8 +7934,8 @@ try
             .Sum(x => Convert.ToInt32(x["Count"]));
 
         var buyerAfter = store.GetCharacterAssets(
-                account.Value,
-                secondCharacterId)
+                peerAccount!.Value,
+                peerCharacterId)
             .Inventory
             .Where(x =>
                 Convert.ToInt32(x["ItemIndex"]) ==
@@ -7919,8 +7960,8 @@ try
                 sellerShopMoneyBefore + 20 &&
             Convert.ToInt64(
                 store.GetCharacter(
-                    account.Value,
-                    secondCharacterId)!["Money"]) ==
+                    peerAccount!.Value,
+                    peerCharacterId)!["Money"]) ==
                 buyerShopMoneyBefore - 20 &&
             remainingListed is not null &&
             Convert.ToInt32(
@@ -8039,7 +8080,7 @@ try
             JsonSerializer.Serialize(packet).Contains(
                 "\"Type\":\"DespawnEntity\"") &&
             JsonSerializer.Serialize(packet).Contains(
-                $"\"EntityID\":{secondCharacterId}")),
+                $"\"EntityID\":{peerCharacterId}")),
         "disconnecting player immediately despawns from map peers");
 
     broadcastHub.Unregister(peerRegistration.ConnectionId);
