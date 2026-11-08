@@ -46,9 +46,11 @@ static func apply_visual_overrides(
 		result["simplify_noncritical_monsters"] = monster_mode == SIMPLIFY_ON
 	result["simplify_players_mode"] = player_mode
 	result["simplify_monsters_mode"] = monster_mode
-	result["use_primitive_monsters"] = (
-		int(result.get("load_mode", LOAD_BALANCED)) == LOAD_MULTIBOX
-		and bool(result.get("simplify_noncritical_monsters", false))
+	# "Simplify monsters" has one visual meaning everywhere:
+	# texture-free Godot primitive rendering. Do not silently fall back to a
+	# generic monster sprite in Low/Balanced/manual modes.
+	result["use_primitive_monsters"] = bool(
+		result.get("simplify_noncritical_monsters", false)
 	)
 	return result
 
@@ -138,4 +140,9 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 			profile["simplify_noncritical_monsters"] = true
 			profile["hide_far_noncombat_monsters"] = true
 
+	# Keep direct resolve() callers consistent with apply_visual_overrides():
+	# every simplified noncritical monster uses the built-in primitive path.
+	profile["use_primitive_monsters"] = bool(
+		profile.get("simplify_noncritical_monsters", false)
+	)
 	return profile
