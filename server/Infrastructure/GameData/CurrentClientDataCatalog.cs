@@ -436,19 +436,24 @@ public sealed class CurrentClientDataCatalog
                         Path.GetFileNameWithoutExtension(path),
                         out id))
                     continue;
+                var isBooster =
+                    folder.Equals(
+                        "booster",
+                        StringComparison.OrdinalIgnoreCase);
+
                 var item = new CurrentItemDefinition(
                     id,
                     ReadString(text, "item_name"),
                     folder,
                     ReadInt(text, "price"),
                     ReadInt(text, "can_sell"),
-                    ReadInt(text, "atk"),
-                    ReadInt(text, "def"),
-                    ReadInt(text, "matk"),
-                    ReadInt(text, "mdef"),
-                    ReadInt(text, "hit"),
-                    ReadInt(text, "flee"),
-                    ReadInt(text, "luk"),
+                    ReadInt(text, isBooster ? "atk_bonus" : "atk"),
+                    ReadInt(text, isBooster ? "def_bonus" : "def"),
+                    ReadInt(text, isBooster ? "matk_bonus" : "matk"),
+                    ReadInt(text, isBooster ? "mdef_bonus" : "mdef"),
+                    ReadInt(text, isBooster ? "hit_bonus" : "hit"),
+                    ReadInt(text, isBooster ? "flee_bonus" : "flee"),
+                    ReadInt(text, isBooster ? "luk_bonus" : "luk"),
                     ReadInt(text, "aspd"),
                     ReadInt(text, "move_speed"),
                     ReadInt(text, "crit_rate"),
