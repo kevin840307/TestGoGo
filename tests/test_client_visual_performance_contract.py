@@ -74,6 +74,27 @@ class ClientVisualPerformanceContractTests(unittest.TestCase):
         self.assertIn("resolve_visual_aoi_radii(", manager)
         self.assertIn("_pending_aoi_moves.record_move(", manager)
 
+    def test_fixed_physics_network_and_mass_effect_suppression(self):
+        manager = source("client/scripts/game_manager.gd")
+        network = source("client/scripts/network_manager.gd")
+        profile = source("client/scripts/client_performance_profile.gd")
+        actor = source("client/scripts/base_entity.gd")
+        monster = source("client/scripts/monster_entity.gd")
+        floating = source("client/scripts/floating_text_manager.gd")
+        self.assertIn('func _physics_process(delta: float)', network)
+        self.assertNotIn('func _process(delta: float)', network)
+        self.assertIn('physics_ticks_per_second', manager)
+        self.assertIn('[PHYSICS_CADENCE]', manager)
+        self.assertIn('static func needs_vsync_disabled', manager)
+        self.assertIn('DisplayServer.window_set_vsync_mode(preferred_mode)', manager)
+        self.assertIn('profile["effect_budget_percent"] = 0', profile)
+        self.assertIn('profile["combat_effects_enabled"] = false', profile)
+        self.assertIn('func stop_combat_visual_effects()', actor)
+        self.assertIn('func stop_combat_visual_effects()', monster)
+        self.assertIn('func stop_combat_visual_effects()', floating)
+        self.assertIn('not GameManager.should_render_combat_effects()', floating)
+        self.assertIn('_try_finish_buff_animation()', actor)
+
     def test_behavioral_scripts_wired_to_runner(self):
         runner = source("tests/run_protocol_checks.ps1")
         for test in (

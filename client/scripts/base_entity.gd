@@ -1206,8 +1206,17 @@ func _on_effect_frame_changed(effect_node: AnimatedSprite2D) -> void :
 	effect_node.offset = Vector2( - actual_offset_x, - offset_val.y)
 
 func stop_combat_visual_effects() -> void:
-	# Visual cleanup only: never reset combat targets, movement, HP or packet state.
-	_clear_transient_skill_effects()
+	# Do NOT call _clear_transient_skill_effects() here: it increments buff
+	# generations and cancels the safety timeout, risking a stuck buff/attack.
+	# Visual-only cleanup must leave gameplay timers/generations untouched.
+	var active_effects: Array[AnimatedSprite2D] = _active_transient_skill_effects.duplicate()
+	_active_transient_skill_effects.clear()
+	for effect_node in active_effects:
+		if is_instance_valid(effect_node):
+			effect_node.stop()
+			effect_node.queue_free()
+	if current_state == "buff":
+		_try_finish_buff_animation()
 	_clear_mecha_bullet_effects()
 	if is_instance_valid(weapon_attack_effect):
 		weapon_attack_effect.stop()

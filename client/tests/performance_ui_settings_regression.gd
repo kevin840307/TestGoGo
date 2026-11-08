@@ -67,6 +67,9 @@ func _run() -> void:
 		and tscn.contains("custom_arrow_step = 5.0"),
 		"FPS settings widget is an editable SpinBox with five FPS per click")
 	var original_cap: int = GameManager.current_foreground_fps_limit
+	var original_physics_rate: int = Engine.physics_ticks_per_second
+	check(NetworkManager.is_physics_processing(),
+		"network packet handling runs at fixed physics tick, not render FPS")
 	var original_load: int = GameManager.current_performance_load_mode
 	var original_combat: int = GameManager.current_combat_render_mode
 	GameManager.set_foreground_fps_limit(45)
@@ -76,8 +79,13 @@ func _run() -> void:
 	check(Engine.max_fps == 45,
 		"switching to Low does not override selected foreground FPS")
 	GameManager.set_foreground_fps_limit(0)
+	check(Engine.physics_ticks_per_second == original_physics_rate,
+		"changing FPS cap does not change physics tick rate/gameplay time")
 	check(Engine.max_fps == 0 and GameManager.current_foreground_fps_limit == 0,
 		"zero FPS cap is actually unlimited in Engine.max_fps")
+	if DisplayServer.get_name() != "headless":
+		check(DisplayServer.window_get_vsync_mode() == DisplayServer.VSYNC_DISABLED,
+			"0 FPS actually disables VSync in a real window")
 	check(GameManager.needs_vsync_disabled(0, 60.0),
 		"unlimited FPS requires disabling VSync")
 	check(GameManager.needs_vsync_disabled(144, 60.0) and not GameManager.needs_vsync_disabled(60, 60.0),
@@ -88,6 +96,17 @@ func _run() -> void:
 	GameManager.set_performance_modes(ClientPerformanceProfile.LOAD_BALANCED, ClientPerformanceProfile.COMBAT_MASS)
 	check(not GameManager.should_render_combat_effects() and int(GameManager.current_performance_profile.get("effect_budget_percent", -1)) == 0,
 		"Mass combat hides combat effect resources without limiting FPS")
+	var dummy: Node2D = Node2D.new()
+	check(FloatingTextManager._play_hit_effect(dummy, 0, true) == 0.0,
+		"Mass combat does not instantiate ordinary hit textures")
+	check(FloatingTextManager._spawn_effect_on_target(dummy, "Hit_Effect/Hit_Effect00", 95) == 0.0,
+		"Mass combat skips pooled effect creation")
+	dummy.free()
+	var actor: BaseEntity = BaseEntity.new()
+	actor._play_skill_hit("Hit_Effect00")
+	check(actor._active_transient_skill_effects.is_empty(),
+		"Mass combat skips BaseEntity hit visual instantiation")
+	actor.free()
 	GameManager.set_performance_modes(original_load, original_combat)
 	GameManager.set_foreground_fps_limit(original_cap)
 	var game_manager_source: String = FileAccess.get_file_as_string("res://scripts/game_manager.gd")

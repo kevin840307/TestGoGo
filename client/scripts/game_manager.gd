@@ -72,6 +72,8 @@ const RENDER_STATS_INTERVAL_SECONDS: float = 2.0
 const PERF_ANALYSIS_INTERVAL_SECONDS: float = 5.0
 var _render_stats_elapsed: float = 0.0
 var _perf_analysis_elapsed: float = 0.0
+var _last_physics_tick_count: int = -1
+var _last_physics_tick_sample_msec: int = 0
 var _focus_last_change_usec: int = 0
 var _focus_change_count: int = 0
 var _prewarmed_hud_windows: Dictionary = {}
@@ -397,6 +399,24 @@ func _print_performance_analysis(checkpoint: String) -> void:
 		_focus_perf_context(),
 		_multiclient_gpu_context(),
 	])
+	# FPS is presentation. Compare physics ticks per real second to catch
+	# accidental simulation slowdowns when switching 30/60/unlimited.
+	var tick_now_msec: int = Time.get_ticks_msec()
+	var tick_now_count: int = Engine.get_physics_frames()
+	if _last_physics_tick_count >= 0:
+		var tick_elapsed_msec: int = tick_now_msec - _last_physics_tick_sample_msec
+		if tick_elapsed_msec >= 1000:
+			var measured_hz: float = float(tick_now_count - _last_physics_tick_count) * 1000.0 / float(tick_elapsed_msec)
+			print("[PHYSICS_CADENCE] pid=%d fps_cap=%d configured_hz=%d measured_hz=%.1f sample_ms=%d physics_ticks=%d network_fixed_tick=%s" % [
+				OS.get_process_id(), Engine.max_fps, Engine.physics_ticks_per_second,
+				measured_hz, tick_elapsed_msec, tick_now_count,
+				str(NetworkManager.is_physics_processing()) if NetworkManager else "false",
+			])
+			_last_physics_tick_count = tick_now_count
+			_last_physics_tick_sample_msec = tick_now_msec
+	else:
+		_last_physics_tick_count = tick_now_count
+		_last_physics_tick_sample_msec = tick_now_msec
 
 
 func log_performance_checkpoint(checkpoint: String) -> void:
