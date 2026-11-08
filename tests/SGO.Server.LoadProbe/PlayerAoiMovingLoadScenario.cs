@@ -39,8 +39,9 @@ internal static class PlayerAoiMovingLoadScenario
                 var index = i - 2;
                 var group = dense ? 0 : index / 20;
                 var member = dense ? index : index % 20;
-                x = 8_000 + group * 6_000 + member % 10 * 24;
-                y = 11_000 + member / 10 * 24;
+                var columns = dense ? 32 : 10;
+                x = 8_000 + group * 6_000 + member % columns * 24;
+                y = 11_000 + member / columns * 24;
             }
 
             players[i] = new OnlinePlayerPresence(
@@ -78,7 +79,7 @@ internal static class PlayerAoiMovingLoadScenario
                     ? old.X
                     : i == 1
                         ? (step % 2 == 0 ? 2_000 : 3_000)
-                        : old.X + (step % 2 == 0 ? 8 : -16);
+                        : old.X + (step % 2 == 0 ? 8 : -8);
                 var nextY = i == 0 ? old.Y + (step % 2 == 0 ? 4 : -4) : old.Y;
                 if (nextX == old.X && nextY == old.Y)
                     movementFailures++;
