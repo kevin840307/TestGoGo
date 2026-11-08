@@ -8800,7 +8800,11 @@ public sealed class SqliteGameStore : IGameStore
         // a negative price into a free purchase. Use 64-bit money arithmetic
         // so large submitted quantities fail the funds check instead of
         // raising an Int32 overflow before the transaction starts.
-        if (count <= 0 || unitPrice < 0)
+        var maximumCount = kind is
+            AssetPurchaseKind.General or AssetPurchaseKind.HorseBattery
+                ? 9999
+                : 1;
+        if (count <= 0 || count > maximumCount || unitPrice < 0)
             return new(false, "購買資料無效", 0, 0);
 
         var total = (long)unitPrice * count;
