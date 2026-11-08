@@ -3194,7 +3194,8 @@ public sealed class CombatService
                 continue;
             }
 
-            if (!placement.CollisionVerified)
+            if (!placement.CollisionVerified &&
+                _dropPlacement.ShouldReportMissingMap(monster.MapId))
             {
                 _log.LogWarning(
                     "[GROUND_DROP_MAP_MISSING] Map={MapId} Monster={MonsterId} Blocking.dat unavailable; legacy placement retained",
