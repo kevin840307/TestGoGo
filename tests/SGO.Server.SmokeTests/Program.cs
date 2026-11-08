@@ -6402,6 +6402,9 @@ try
     monster.CurrentHp = monster.MaxHp;
     monster.RespawnAt = null;
     monster.AiState = MonsterAiState.Idle;
+    monster.HasTarget = false;
+    monster.TargetCharacterId = 0;
+    monster.TargetPetUid = 0;
 
     store.SetSkill(
         account.Value,
@@ -8911,6 +8914,9 @@ try
     moonTarget.CurrentHp = moonTarget.MaxHp;
     moonTarget.RespawnAt = null;
     moonTarget.AiState = MonsterAiState.Idle;
+    moonTarget.HasTarget = false;
+    moonTarget.TargetCharacterId = 0;
+    moonTarget.TargetPetUid = 0;
     store.UpdateLocation(
         account.Value,
         id,
@@ -9010,6 +9016,9 @@ try
     skillTarget.CurrentHp = skillTarget.MaxHp;
     skillTarget.RespawnAt = null;
     skillTarget.AiState = MonsterAiState.Idle;
+    skillTarget.HasTarget = false;
+    skillTarget.TargetCharacterId = 0;
+    skillTarget.TargetPetUid = 0;
     store.UpdateLocation(
         account.Value,
         id,
