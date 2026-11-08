@@ -1,3 +1,29 @@
+## Memory diagnostics: collect evidence before more aggressive unloading
+
+The first safe cold-cache sweep does not necessarily reduce Windows RAM;
+live scene nodes, cached `ResourceLoader` textures, shared visuals, and the
+OS allocator can retain pages. This change **does not modify unload,
+render, physics, networking, AFK, or refocus behavior**.
+
+Debug builds log `[BACKGROUND_MEMORY]` once on focus-out, before/after
+each cache sweep, at 15/60/180s in the background, and twice on refocus.
+`loader_counts` fields are `name:entries/warm/held/idle`, based on
+reference counts (approximate). `cache_idle` and `removed` are *counts*,
+not megabytes reclaimed. `static_mb` is Godot tracked memory, whereas
+`texture_mb`/`video_mb` are renderer allocation statistics.
+
+Windows process working set and private bytes must be measured separately:
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\client\tools\Measure-SgoMemory.ps1 -ProcessIds 12345 -Samples 36 -IntervalSeconds 5 -OutputCsv .\memory.csv
+```
+Replace PID using the number in the Godot `[BACKGROUND_MEMORY]` line.
+Use `-ProcessIds 12345,23456` to measure multiple clients.
+Compare focus-out, after 15s, after 60/180s, and refocus.
+If `removed>0` but Windows `PrivateMB` does not drop, further cache
+dictionary clearing alone is not a proven fix. If `cache_idle=0` and
+RAM is still high, identify live scene textures rather than force-freeing
+gameplay nodes.
+
 ## Safe, delayed background RAM trim (2026-11-08)
 
 The previous focus-out notification **immediately** cleared all runtime

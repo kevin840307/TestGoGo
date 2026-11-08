@@ -100,6 +100,21 @@ func _run() -> void:
 	_check(BG_CACHE_TRIM.trim_unused(large_idle_cache, 0, 0) == 0,
 		"zero eviction budget never touches live resources")
 
+	# Focus memory probes must be read-only, not evict hidden world assets.
+	var external: Resource = Resource.new()
+	var memory_probe: Dictionary = {
+		"idle": Resource.new(),
+		"held": external,
+		"warm": Resource.new()
+	}
+	var memory_report: Dictionary = GameManager.inspect_background_cache(memory_probe, 1)
+	_check(memory_report["entries"] == 3 and memory_report["warm"] == 1
+		and memory_report["held"] == 1 and memory_report["idle"] == 1
+		and memory_probe.size() == 3,
+		"memory logging only counts warm/held/idle cache entries")
+	_check(GameManager.inspect_background_cache({}, 8)["entries"] == 0,
+		"memory logging handles empty caches without loading anything")
+
 	# The background branch must stop visual-only work. Never pause
 	# networking, gameplay world updates or the entire SceneTree.
 	var cursor_was_processing: bool = CursorManager.is_processing()

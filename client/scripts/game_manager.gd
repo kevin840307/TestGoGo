@@ -525,6 +525,7 @@ const WORLD_FOCUS_POLL_INTERVAL_SECONDS: float = 0.25
 var _startup_focus_observed_frames: int = 0
 var _last_background_cache_trim_msec: int = 0
 var _background_focus_lost_msec: int = 0
+var _background_memory_checkpoint_stage: int = 0
 const BACKGROUND_CACHE_TRIM_DELAY_MSEC: int = 12000
 const BACKGROUND_CACHE_TRIM_COOLDOWN_MSEC: int = 60000
 const UNFOCUSED_MAX_FPS := 30
@@ -855,6 +856,7 @@ func _reconcile_world_render_policy(delta: float) -> void:
 	# Never do a cache sweep in the focus event. A brief Alt+Tab must keep
 	# all existing assets warm. Idle-only reclamation happens after 12s.
 	_try_trim_idle_background_caches()
+	_log_background_memory_checkpoint()
 
 
 func _refresh_focus_render_policy() -> void:
@@ -954,6 +956,107 @@ static func should_run_background_cache_sweep(
 		and should_trim_background_caches(has_world, last_trim_msec, now_msec)
 
 
+
+# These snapshots are observability only. They do not evict/retain resources.
+# get_reference_count() is indicative, not proof that Windows freed memory.
+static func inspect_background_cache(cache: Dictionary, keep_recent: int) -> Dictionary:
+	var keys: Array = cache.keys()
+	var older: int = maxi(0, keys.size() - maxi(0, keep_recent))
+	var stats: Dictionary = {
+		"entries": keys.size(), "warm": keys.size() - older,
+		"held": 0, "idle": 0, "unknown": 0
+	}
+	for i in range(older):
+		var resource: RefCounted = cache.get(keys[i]) as RefCounted
+		if resource == null:
+			stats["unknown"] += 1
+		elif resource.get_reference_count() <= 2:
+			stats["idle"] += 1
+		else:
+			stats["held"] += 1
+	return stats
+
+
+func _background_memory_cache_report() -> Dictionary:
+	var sources: Array = [
+		["monster", MonsterLoader, "_cache", 12],
+		["doll", DollLoader, "_cache", 12],
+		["sr", DollLoader, "_sr_cache", 4],
+		["sr_effect", DollLoader, "_sr_effect_cache", 2],
+		["pet", PetLoader, "_frames_cache", 8],
+		["effect", EffectLoader, "_effect_cache", 8],
+		["icon", ItemLoader, "_icon_cache", 48],
+		["photo", ItemLoader, "_photo_cache", 8],
+		["ground", ItemLoader, "_ground_cache", 24],
+		["skill", SkillLoader, "_icon_cache", 24],
+		["sound", AudioManager, "se_cache", 32],
+		["bgm", AudioManager, "_map_bgm_cache", 3],
+	]
+	var totals: Dictionary = {"entries": 0, "warm": 0, "held": 0, "idle": 0}
+	var labels: PackedStringArray = []
+	for spec in sources:
+		var node: Node = spec[1] as Node
+		if not is_instance_valid(node):
+			continue
+		var value: Variant = node.get(str(spec[2]))
+		if not value is Dictionary:
+			continue
+		var cache: Dictionary = value
+		var current: Dictionary = {"entries": 0, "warm": 0, "held": 0, "idle": 0}
+		if str(spec[0]) == "doll":
+			for category in cache.values():
+				if category is Dictionary:
+					var nested: Dictionary = inspect_background_cache(category, int(spec[3]))
+					for field in current.keys():
+						current[field] += int(nested[field])
+		else:
+			current = inspect_background_cache(cache, int(spec[3]))
+		for field in totals.keys():
+			totals[field] += int(current[field])
+		labels.append("%s:%d/%d/%d/%d" % [
+			str(spec[0]), int(current["entries"]), int(current["warm"]),
+			int(current["held"]), int(current["idle"])
+		])
+	totals["detail"] = ",".join(labels)
+	return totals
+
+
+func _log_background_memory(event_name: String, removed: int = 0) -> void:
+	if not OS.is_debug_build():
+		return
+	var info: Dictionary = _background_memory_cache_report()
+	var age_ms: int = Time.get_ticks_msec() - _background_focus_lost_msec \
+		if _background_focus_lost_msec > 0 else 0
+	var entities: int = NetworkEntityManager.active_entities.size() \
+		if NetworkEntityManager else 0
+	print("[BACKGROUND_MEMORY] pid=%d event=%s age_ms=%d focus=%s world=%s afk=%s fps=%d render=%s static_mb=%.2f static_peak_mb=%.2f texture_mb=%.2f video_mb=%.2f objects=%d nodes=%d entities=%d cache_entries=%d cache_warm=%d cache_held=%d cache_idle=%d removed=%d loader_counts=%s" % [
+		OS.get_process_id(), event_name, age_ms,
+		str(_window_has_focus), str(_has_active_world_visuals()),
+		str(_afk_active), Engine.max_fps, str(RenderingServer.render_loop_enabled),
+		_get_process_memory_mb(),
+		float(OS.get_static_memory_peak_usage()) / 1048576.0,
+		float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
+		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+		int(Performance.get_monitor(Performance.OBJECT_COUNT)),
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+		entities, int(info["entries"]), int(info["warm"]),
+		int(info["held"]), int(info["idle"]), removed, str(info["detail"])
+	])
+
+
+func _log_background_memory_checkpoint() -> void:
+	if not OS.is_debug_build() or _window_has_focus or _background_focus_lost_msec <= 0:
+		return
+	var elapsed: int = Time.get_ticks_msec() - _background_focus_lost_msec
+	var thresholds: Array[int] = [15000, 60000, 180000]
+	if _background_memory_checkpoint_stage >= thresholds.size():
+		return
+	var threshold: int = thresholds[_background_memory_checkpoint_stage]
+	if elapsed >= threshold:
+		_log_background_memory("background_%ds" % int(threshold / 1000))
+		_background_memory_checkpoint_stage += 1
+
+
 func _try_trim_idle_background_caches() -> void:
 	if _background_focus_lost_msec <= 0 or _window_has_focus:
 		return
@@ -964,8 +1067,10 @@ func _try_trim_idle_background_caches() -> void:
 			_last_background_cache_trim_msec, now_msec):
 		return
 	_last_background_cache_trim_msec = now_msec
+	_log_background_memory("trim_before")
 	var before_mb: float = _get_process_memory_mb()
 	var removed: int = _trim_unfocused_runtime_caches()
+	_log_background_memory("trim_after", removed)
 	# This counts released cache entries, NOT reclaimed process RAM. The
 	# allocator/OS may retain pages; never infer MB saved from this count.
 	if OS.is_debug_build():
@@ -988,17 +1093,21 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 	var master_bus_index := AudioServer.get_bus_index("Master")
 	if not has_focus:
 		_background_focus_lost_msec = Time.get_ticks_msec()
+		_background_memory_checkpoint_stage = 0
 		_focused_max_fps = configured_foreground_fps(current_performance_profile)
 		_refresh_focus_render_policy()
 		# Leave all animation, HUD, map, BGM and recently used assets warm.
 		# No synchronous unloading is permitted in an Alt+Tab handler.
+		_log_background_memory("focus_out")
 		if master_bus_index >= 0:
 			if not _afk_active:
 				_master_bus_was_muted_before_focus_loss = AudioServer.is_bus_mute(master_bus_index)
 			AudioServer.set_bus_mute(master_bus_index, true)
 	else:
+		_log_background_memory("focus_in_before")
 		_background_focus_lost_msec = 0
 		_refresh_focus_render_policy()
+		_log_background_memory("focus_in_after")
 
 		if master_bus_index >= 0:
 			AudioServer.set_bus_mute(
