@@ -442,6 +442,21 @@ public sealed class PacketRouter
             ];
         }
 
+        if (!state.CharacterId.HasValue &&
+            RequiresSelectedCharacter(type))
+        {
+            return
+            [
+                new
+                {
+                    Type = "PacketError",
+                    RequestType = type,
+                    Code = "WORLD_REQUIRED",
+                    Message = "請先選擇角色並進入遊戲世界"
+                }
+            ];
+        }
+
         if (_packetHandlers.TryGetValue(type, out var moduleHandler))
             return moduleHandler.Handle(req, state, accountId);
 
@@ -7198,6 +7213,15 @@ public sealed class PacketRouter
         character["CritRate"] = stats.CritRate;
         character["CritDamage"] = stats.CritDamage;
     }
+
+    private static bool RequiresSelectedCharacter(
+        string packetType)
+        => packetType is not (
+            "CreateCharacterRequest" or
+            "DeleteCharacterRequest" or
+            "ModifyPasswordRequest" or
+            "SelectCharacterRequest" or
+            "LogoutRequest");
 
     private static bool IsCraftingMaterialItem(
         CurrentItemDefinition item)
