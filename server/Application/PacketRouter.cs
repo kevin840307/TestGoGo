@@ -29,7 +29,7 @@ namespace SGO.Server.Application;
 
 public sealed class PacketRouter
 {
-    private const int NpcInteractRange = 500;
+    private const int NpcInteractRange = 700;
     private static readonly TimeSpan PositionPersistInterval =
         TimeSpan.FromSeconds(3);
     private static readonly TimeSpan PositionBroadcastInterval =
