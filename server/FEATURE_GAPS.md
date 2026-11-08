@@ -34,7 +34,7 @@
 | P0-01 | IMPLEMENTED_UNVERIFIED | **真實傳輸已從單人擴成雙 Client**。AES/WebSocket 已涵蓋註冊→登入→建角→重登→選角→bootstrap→WorldReady→商城→登出，並新增兩個真實 socket 的 Party/Trade、聊天/移動、掉寶撿取、寵物/機甲、戰鬥/技能、切圖、選擇型寶箱，以及 BankTransfer、DirectTransfer、玩家商店 AddItem/OpenShop/ViewShop/BuyItem、NPC Shop BuyNpcItem，以及 deterministic CraftItemRequest/DismantleItemRequest 的完整 wire 流程。仍缺真正 Godot Scene/UI 驅動的整段多人互動驗證。 | `tests/SGO.Server.WireSmokeTests/Program.cs`、`client/tests/*.gd`、`test_client_network_contract.py` | 有 Godot executable 的環境跑完 headless client tests，並補真正 Scene/UI 驅動的戰鬥／切圖 E2E |
 | P0-02 | IMPLEMENTED_UNVERIFIED | **多人競態程式與測試已補**：10 人同撿一個掉物、重複/同時 TradeFinalConfirm、10 人同怪擊殺、斷線/重連/切圖 race、10 人同地圖 SharedMapAiTicker owner arbitration、重複 TradeLock 冪等、最後確認與取消/斷線的受控提交競態；另外新增 NPC 商店超額競購、同 UID 重複出售、銀行同堆疊搬移、玩家商店 10 人搶同商品、直接轉帳守恆；WireLoadProbe 再以 10/50/100 個真 AES/WebSocket client 同時 AttackEntity 同一怪，要求全圖只收到一次死亡終態的 N 份 delivery。掉物使用 SQLite `DELETE ... RETURNING` 原子 claim；交易 FinalConfirm 使用 single-owner commit；經濟扣款改 DB 條件式原子更新，SQLite 啟用 WAL 降低多人讀寫互卡。剩餘是有 runner 的實際執行證據與長時間混合戰鬥/AI 容量報告；10/50/100 的 correctness/load harness 已在 repository 內，不再是主要邏輯缺測。 | `Integration/ConcurrencySmokeTests.cs`、`MonsterConcurrencySmokeTests.cs`、`SessionLifecycleSmokeTests.cs`、`SharedMapAiConcurrencySmokeTests.cs` | Smoke 真正 PASS；同怪/同掉物/交易不重複；SharedMapAI 一張地圖每 scheduler pass 只處理一次 |
 | P0-03 | TEST_GAP | **CI 基礎設施仍擋住實際 PASS 證據**。2026-11-08 最新確認 push run `42447665573`（head `f5feb273`）仍在取得 Runner 前結束，job `128629939346` 的 `steps=null`，不是 build/test failure。 | workflow 與 `tests/run_protocol_checks.ps1` 已包含 strict audits、build、domain/full smoke、concurrency、Wire E2E、10/50/100 WireLoadProbe、coverage reports | 取得至少一筆有實際 steps 的 run，所有 Python/.NET/Wire 檢查全 PASS |
-| P0-04 | TEST_GAP | 固定 Type/Action、請求 schema、40+ 關鍵 Server→Client response shape、nested anonymous response、`ItemChoiceRequired` / `UseItemChoiceRequest`、Trade/Shop/Pet/Mall/Party/Club 動態封包 helper 的 Client 組裝契約、Godot packet ownership 已守門；新增 DynamicActionSchemaCoverageSmokeTests 會 reflection 掃過 PacketSchemaValidator 全部 ActionRules，對每一個 action 自動驗證合法 payload，並逐一把必填欄位改成錯型別確認 runtime validator 拒絕。剩餘主要是 Server 動態 Dictionary／computed response 的 optional-field/value semantics，不是 Client→Server 固定路由或 action schema 缺 handler。 | `packet_*_audit.py`、`PacketSchemaValidator.cs`、`test_client_network_contract.py` | 所有動態 payload 也有 runtime contract/E2E；失敗路徑均回 typed `PacketError` 或既有相容失敗 response |
+| P0-04 | TEST_GAP | 固定 Type/Action、請求 schema、40+ 關鍵 Server→Client response shape、nested anonymous response、`ItemChoiceRequired` / `UseItemChoiceRequest`、Trade/Shop/Pet/Mall/Party/Club 動態封包 helper 的 Client 組裝契約、Godot packet ownership 已守門；DynamicActionSchemaCoverageSmokeTests 會 reflection 掃過 PacketSchemaValidator 全部 ActionRules。新增 `RuntimeResponseContractSmokeTests` 直接序列化真 Router/SQLite 回應，驗證 LoginResponse.Characters 與 Inventory/Equip/Pet/Horse/Skill/Club/Buff/Quest bootstrap 的 Dictionary/array/number/string runtime 型別，並覆蓋 AUTH_REQUIRED / INVALID_PACKET / WORLD_REQUIRED / UNHANDLED_PACKET 四種 typed PacketError；Godot headless `network_response_contract_regression.gd` 也會走同一 AES-CBC decode/dispatch 路徑驗證動態陣列與 fallback。剩餘主要是玩家商店/交易等更深層動態 item view 的逐欄 optional/value semantics，以及實際 runner/Godot PASS 證據。 | `packet_*_audit.py`、`RuntimeResponseContractSmokeTests.cs`、`test_client_network_contract.py`、`client/tests/network_response_contract_regression.gd` | 所有動態 payload 也有 runtime contract/E2E；失敗路徑均回 typed `PacketError` 或既有相容失敗 response |
 
 ## P1 — 遊戲資料與舊版相容
 
@@ -59,6 +59,7 @@
 目前不再把新案例全部塞回原本約 9,518 行的 `Program.cs`。已拆出：
 
 - `Protocol/`：Request / Action / Identity / Prelogin schema；DynamicActionSchemaCoverageSmokeTests 會自動跑完整 ActionRules 的合法/錯型別 runtime 驗證。
+- `Protocol/RuntimeResponseContractSmokeTests.cs`：真 Router/SQLite 動態 response JSON 型別、bootstrap Dictionary 與 typed PacketError runtime contract。
 - `World/BlockingMapSmokeTests.cs`：Blocking、穿牆、A*。
 - `Announcements/AnnouncementSmokeTests.cs`。
 - `GameData/CurrentClientCatalogSmokeTests.cs`。
@@ -71,7 +72,7 @@
 - `Integration/BoosterSmokeTests.cs`、`RecoveredBoxSmokeTests.cs`、`ItemUseClassificationSmokeTests.cs`、`WaspPackageSmokeTests.cs`、`CosmeticTransformationSmokeTests.cs`。
 - `tests/SGO.Server.WireSmokeTests/`：真 AES/WebSocket，現已含兩 client Party/Trade。
 - `tests/SGO.Server.WireLoadProbe/`：10/50/100 個真 AES/WebSocket client，同圖移動/聊天 fanout conservation、round latency、wire throughput，以及同怪 AttackEntity death-conservation race。
-- `client/tests/monster_chase_regression.gd`、`perf_regression_smoke.gd`：Godot headless regression；Windows runner 有 Godot 時自動執行。
+- `client/tests/monster_chase_regression.gd`、`perf_regression_smoke.gd`、`network_response_contract_regression.gd`：Godot headless regression；Windows runner 有 Godot 時自動執行，後者直接餵 AES-CBC Server response 驗證 client dispatcher。
 - `tests/SGO.ItemCoverageReport/`：scripted item 全量分類，`--strict` 未知效果守門。
 - `tests/SGO.MappingCoverageReport/`：歷史 ID/名稱 remap、collision、skipped/unmapped 報告。
 - `tests/quest_host_audit.py --strict`：1,566 份 Quest host surface 守門。

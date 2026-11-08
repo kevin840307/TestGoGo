@@ -31,6 +31,7 @@ tests/SGO.Server.SmokeTests/
     DynamicActionSchemaCoverageSmokeTests.cs
     IdentitySchemaSmokeTests.cs
     PreloginPacketSmokeTests.cs
+    RuntimeResponseContractSmokeTests.cs
   World/
     BlockingMapSmokeTests.cs
   Announcements/
@@ -54,6 +55,8 @@ tests/SGO.Server.SmokeTests/
 ```
 
 Protocol 動態 action 也已獨立化：`DynamicActionSchemaCoverageSmokeTests` 會直接讀取 Server 的完整 `ActionRules`，對每個 Shop/Pet/Mall/Party/Club action 自動產生合法 payload，並對每個必填欄位做錯型別拒絕測試；新增 action rule 時不需要人工複製 30 多份固定測試。
+
+動態 Server→Client payload 也不再只靠 source grep：`RuntimeResponseContractSmokeTests` 會對真 Router/SQLite 產生的 LoginResponse 與角色 bootstrap 做 JSON runtime 型別驗證，涵蓋 Inventory/Equip/Pet/Horse/Skill/Club/Buff/Quest 的 Dictionary/array 欄位；AUTH_REQUIRED、INVALID_PACKET、WORLD_REQUIRED、UNHANDLED_PACKET 四種失敗也統一驗證為 typed `PacketError`。
 
 重要的多人情境已獨立化：
 
@@ -162,6 +165,7 @@ Windows runner 會優先讀 `GODOT_BIN`，否則尋找 `godot` / `godot4`。找�
 godot --headless --path client --script res://tests/monster_chase_regression.gd
 godot --headless --path client --script res://tests/perf_regression_smoke.gd
 godot --headless --path client --script res://tests/item_choice_regression.gd
+godot --headless --path client --script res://tests/network_response_contract_regression.gd
 ```
 
 沒有 Godot 時 runner 會明確印 `[SKIP]`，不會把「沒跑」寫成 PASS。

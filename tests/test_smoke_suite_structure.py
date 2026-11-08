@@ -256,6 +256,35 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn('AnnouncementListRequest', source)
         self.assertIn('LoginRequest', source)
 
+    def test_runtime_dynamic_response_contracts_are_modular(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = (
+            SMOKE / "Protocol" /
+            "RuntimeResponseContractSmokeTests.cs"
+        )
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("AssertLoginResponse(", source)
+        self.assertIn("AssertBootstrap(", source)
+        self.assertIn("InventorySync.Items", source)
+        self.assertIn("HorseSync.HorseEquips", source)
+        self.assertIn("WORLD_REQUIRED", source)
+        self.assertIn("INVALID_PACKET", source)
+        self.assertIn("AUTH_REQUIRED", source)
+        self.assertIn("UNHANDLED_PACKET", source)
+        self.assertIn(
+            "RuntimeResponseContractSmokeTests.AssertLoginResponse(",
+            main,
+        )
+        self.assertIn(
+            "RuntimeResponseContractSmokeTests.AssertBootstrap(",
+            main,
+        )
+        self.assertNotIn(
+            "var unsupportedPacket = Json(",
+            main,
+        )
+
     def test_protocol_assertions_not_reintroduced_in_monolith(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         self.assertNotIn("PacketSchemaValidator.TryValidate(", main)

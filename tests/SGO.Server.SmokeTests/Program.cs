@@ -3094,6 +3094,8 @@ try
         var responses = router.Handle(login.RootElement, session);
         Check(responses.Count == 1 && session.AccountId == account,
             "router login establishes authenticated session");
+        RuntimeResponseContractSmokeTests.AssertLoginResponse(
+            responses);
     }
 
     using (var select = Json(JsonSerializer.Serialize(new
@@ -3107,8 +3109,10 @@ try
             "router selects character");
         Check(session.CurrentMapId == 15 && session.PendingMapSpawn,
             "selected character waits for server world tick spawn");
-        Check(responses.Count == 9,
+        Check(responses.Count == 10,
             "enter world emits bootstrap sync packets only");
+        RuntimeResponseContractSmokeTests.AssertBootstrap(
+            responses);
 
         Check(JsonSerializer.Serialize(responses[1]).Contains(
                 $"\"ItemIndex\":{generalShopItem.ItemIndex}"),
@@ -9098,19 +9102,9 @@ try
     session.CurrentMapId = originalMap;
     session.WorldReady = originalReady;
 
-    using (var unsupportedPacket = Json(
-        """{"Type":"PacketContractUnknownOperation"}"""))
-    {
-        var errorResponses = router.Handle(
-            unsupportedPacket.RootElement,
-            session);
-        var responseJson = JsonSerializer.Serialize(errorResponses);
-        Check(
-            responseJson.Contains("\"Type\":\"PacketError\"") &&
-            responseJson.Contains("\"RequestType\":\"PacketContractUnknownOperation\"") &&
-            responseJson.Contains("\"Code\":\"UNHANDLED_PACKET\""),
-            "unsupported client packet receives a typed PacketError instead of silence");
-    }
+    RuntimeResponseContractSmokeTests.AssertAuthenticatedFailureResponses(
+        router,
+        session);
 
     session.AccountId = account.Value;
     session.CharacterId = id;
@@ -9147,20 +9141,9 @@ try
             "logout clears authenticated session");
     }
 
-    using (var unauthorizedPacket = Json(
-        """{"Type":"UseSkill","SkillID":123}"""))
-    {
-        var unauthorizedResponses = router.Handle(
-            unauthorizedPacket.RootElement,
-            session);
-        var unauthorizedJson = JsonSerializer.Serialize(
-            unauthorizedResponses);
-        Check(
-            unauthorizedJson.Contains("\"Type\":\"PacketError\"") &&
-            unauthorizedJson.Contains("\"Code\":\"AUTH_REQUIRED\"") &&
-            unauthorizedJson.Contains("\"RequestType\":\"UseSkill\""),
-            "unauthenticated packet receives an explicit error");
-    }
+    RuntimeResponseContractSmokeTests.AssertUnauthenticatedFailureResponse(
+        router,
+        session);
 
     Check(!store.Delete(account.Value, id, "wrong"),
         "reject wrong character password");

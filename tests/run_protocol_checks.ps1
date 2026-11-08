@@ -159,6 +159,10 @@ try {
             "--headless", "--path", "client",
             "--script", "res://tests/item_choice_regression.gd"
         )
+        Invoke-Checked "Godot headless client regressions: network response contracts" $godotCommand @(
+            "--headless", "--path", "client",
+            "--script", "res://tests/network_response_contract_regression.gd"
+        )
     }
     else {
         Write-Host "[SKIP] Godot headless client regressions: set GODOT_BIN or install godot/godot4." -ForegroundColor Yellow
