@@ -5598,32 +5598,35 @@ try
         var json = JsonSerializer.Serialize(
             responses);
 
-        Check(
-            Convert.ToInt32(resetCharacter["Str"]) == 1 &&
+        var statsReset = Convert.ToInt32(resetCharacter["Str"]) == 1 &&
             Convert.ToInt32(resetCharacter["Dex"]) == 1 &&
             Convert.ToInt32(resetCharacter["Con"]) == 1 &&
-            Convert.ToInt32(resetCharacter["Wis"]) == 1 &&
-            Convert.ToInt32(resetCharacter["ExpUse"]) == 17 &&
-            Convert.ToInt32(resetCharacter["MaxHP"]) ==
-                resetGrowth.MaxHP &&
-            Convert.ToInt32(resetCharacter["MaxMP"]) ==
-                resetGrowth.MaxMP &&
-            Convert.ToInt32(resetCharacter["MaxSP"]) ==
-                resetGrowth.MaxSP &&
-            !store.GetCharacterAssets(
-                account.Value,
-                id).Inventory.Any(x =>
-                Convert.ToInt64(x["ItemUID"]) ==
-                    regenerationCrystalUid) &&
-            json.Contains(
-                "\"Type\":\"AllocateStatResponse\"") &&
-            json.Contains(
-                "\"Success\":true") &&
-            json.Contains(
-                "\"Type\":\"PlayerStatusSync\"") &&
-            json.Contains(
-                "退回 10 點"),
-            "2616 regeneration crystal atomically resets all four primary stats to 1, refunds allocated points, recomputes growth and consumes itself");
+            Convert.ToInt32(resetCharacter["Wis"]) == 1;
+        var pointsRefunded =
+            Convert.ToInt32(resetCharacter["ExpUse"]) == 17;
+        var growthRecalculated =
+            Convert.ToInt32(resetCharacter["MaxHP"]) == resetGrowth.MaxHP &&
+            Convert.ToInt32(resetCharacter["MaxMP"]) == resetGrowth.MaxMP &&
+            Convert.ToInt32(resetCharacter["MaxSP"]) == resetGrowth.MaxSP;
+        var crystalConsumed = !store.GetCharacterAssets(
+            account.Value, id).Inventory.Any(x =>
+                Convert.ToInt64(x["ItemUID"]) == regenerationCrystalUid);
+        var allocateResponse = json.Contains(
+            "\"Type\":\"AllocateStatResponse\"") &&
+            json.Contains("\"Success\":true");
+        var statusSync = json.Contains(
+            "\"Type\":\"PlayerStatusSync\"");
+        var refundMessage = json.Contains("退回 10 點");
+
+        Check(
+            statsReset && pointsRefunded && growthRecalculated &&
+            crystalConsumed && allocateResponse && statusSync &&
+            refundMessage,
+            "2616 regeneration crystal atomically resets all four primary stats to 1, refunds allocated points, recomputes growth and consumes itself" +
+            $" (stats={statsReset}, points={pointsRefunded}/actual:{resetCharacter["ExpUse"]}," +
+            $" growth={growthRecalculated}, consumed={crystalConsumed}," +
+            $" allocate_response={allocateResponse}, status_sync={statusSync}," +
+            $" refund_message={refundMessage}, packets={json[..Math.Min(480, json.Length)]})");
     }
 
     var restoredStats = store.SetPrimaryStats(
