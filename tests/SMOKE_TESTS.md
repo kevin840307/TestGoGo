@@ -264,3 +264,30 @@ dotnet run --project tests/SGO.Server.SmokeTests -c Release -- --suite world
 dotnet run --project tests/SGO.Server.SmokeTests -c Release -- --suite concurrency
 powershell -ExecutionPolicy Bypass -File tests/run_protocol_checks.ps1
 ```
+
+## 2026-11-08 延伸修復：WorldReady 舊 SELECT 不可讓已撿物復活（M-13）
+
+上輪 M-09 只防護 A 舊地圖快照「誤刪 B 剛丟的新物」；
+本輪另外防護 **A SELECT 包含物品 X → B 已從 SQLite 撿走 X → A 用
+舊結果把 X 再次加入 AOI**。新的 `WorldEntityAoiSnapshotLeaseSmokeTests`
+位於 `World/`，檢查：已存在/尚未索引的物品被撿走時都不能由舊
+快照再 Spawn；之後的新位置/狀態不可被舊結果覆蓋；兩個 WorldReady
+快照重疊時，第一個未結束前不能提早清除 tombstone；全部結束後
+會清理刪除紀錄，不會永久阻止新的真正資料。
+
+`Integration/GroundSnapshotPersistenceRaceSmokeTests` 則用**真 SQLite**
+測試丟出 1 件物品 → A 讀 `GetGroundItems` → B 成功
+`PickUpGroundItem` 並 Remove AOI → A 嘗試索引舊 SELECT；
+要求 DB ground row=0、玩家背包數量恢復、AOI 無幽靈物件。
+
+核心 `WorldEntitySpatialAoi` 的 scope 在 SQL SELECT **之前**開始，
+在所有 snapshot upsert 完成後才釋放。新 `TryUpsertWorldEntityFromSnapshot`
+同一把 AOI lock 下檢查刪除與較新異動 generation，拒絕過時
+snapshot 時也不能填入 `ClientSession.GroundItems`。
+刪除紀錄只在有 active snapshot 時保留，最後一個 scope dispose
+會釋放，不應造成無限 memory growth。
+
+已加入 `--suite world`、`--suite concurrency` 和 full。
+目前只有檔案、測試結構接線與程式碼檢查；尚無有實際
+steps 的 .NET/Godot CI PASS，狀態維持
+`IMPLEMENTED_UNVERIFIED`。
