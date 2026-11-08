@@ -523,17 +523,15 @@ func _on_entity_moved(data: Dictionary) -> void :
 
 		if target_node.has_method("network_move_to"):
 			var is_monster := int(_active_entity_types.get(entity_id, -1)) == 1
-			var is_visible_runtime := true
-			if is_monster and target_node.has_method("is_runtime_visible"):
-				is_visible_runtime = bool(target_node.is_runtime_visible())
-
-			if is_monster and not is_visible_runtime and target_node.has_method("apply_offscreen_network_move"):
-				target_node.apply_offscreen_network_move(target_pos, new_dir)
-				_runtime_monster_ids.erase(entity_id)
-			else:
-				target_node.network_move_to(target_pos, speed_time)
-				if is_monster and speed_time > 0.01:
-					_runtime_monster_ids[entity_id] = true
+			# Keep AOI-instantiated monsters moving through the same visual
+			# interpolation even while their sprite is outside the viewport.
+			# The old offscreen fast path assigned global_position directly:
+			# a monster crossing the viewport boundary could visibly teleport.
+			# VisibleOnScreenNotifier2D still pauses offscreen sprite animation.
+			# Server correction packets (SpeedTime == 0) remain authoritative.
+			target_node.network_move_to(target_pos, speed_time)
+			if is_monster and speed_time > 0.01:
+				_runtime_monster_ids[entity_id] = true
 
 func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String) -> void :
 	var target_node = get_active_entity(entity_id)
