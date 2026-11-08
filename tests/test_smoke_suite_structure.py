@@ -209,6 +209,19 @@ class SmokeSuiteStructureTests(unittest.TestCase):
             main.count("GroundSnapshotPersistenceRaceSmokeTests.Run();"), 2
         )
 
+    def test_windows_local_validation_runs_real_suites_and_load(self):
+        batch = (
+            ROOT / "tests" / "run_local_verification.bat"
+        ).read_text(encoding="utf-8-sig")
+        self.assertIn("git pull --ff-only origin feature/local-server-net8", batch)
+        self.assertIn("run_protocol_checks.ps1", batch)
+        self.assertIn("--suite world", batch)
+        self.assertIn("--suite concurrency", batch)
+        self.assertIn("--sizes \"%SIZES%\"", batch)
+        self.assertIn("--move-pixels 4", batch)
+        self.assertIn("sgo-wire-load-", batch)
+        self.assertNotIn("git reset --hard", batch)
+
     def test_dynamic_action_schema_runtime_covers_every_action_rule(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = (
