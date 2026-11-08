@@ -84,6 +84,16 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("2250", source)
         self.assertIn("RecoveredBoxSmokeTests.Run(", main)
 
+    def test_monster_concurrency_suite_covers_shared_kill_race(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = SMOKE / "Integration" / "MonsterConcurrencySmokeTests.cs"
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("ten sessions reference one shared monster runtime", source)
+        self.assertIn("EntityDeath", source)
+        self.assertIn("目標已死亡", source)
+        self.assertIn("MonsterConcurrencySmokeTests.Run(", main)
+
     def test_prelogin_route_suite_has_explicit_context(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = SMOKE / "Protocol" / "PreloginPacketSmokeTests.cs"
