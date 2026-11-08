@@ -8887,7 +8887,12 @@ try
     session.CurrentMapId = combatMapId;
     session.PendingMapSpawn = false;
     combat.EnterMap(session, combatMapId);
-    var moonTarget = session.Monsters.Values.First(x => x.IsAlive);
+    var moonTarget = session.Monsters.Values
+        .OrderByDescending(x => x.MaxHp)
+        .First();
+    moonTarget.CurrentHp = moonTarget.MaxHp;
+    moonTarget.RespawnAt = null;
+    moonTarget.AiState = MonsterAiState.Idle;
     store.UpdateLocation(
         account.Value,
         id,
@@ -8981,7 +8986,12 @@ try
     session.CurrentMapId = combatMapId;
     session.PendingMapSpawn = false;
     combat.EnterMap(session, combatMapId);
-    var skillTarget = session.Monsters.Values.First(x => x.IsAlive);
+    var skillTarget = session.Monsters.Values
+        .OrderByDescending(x => x.MaxHp)
+        .First();
+    skillTarget.CurrentHp = skillTarget.MaxHp;
+    skillTarget.RespawnAt = null;
+    skillTarget.AiState = MonsterAiState.Idle;
     store.UpdateLocation(
         account.Value,
         id,
