@@ -20,10 +20,38 @@ var _protection_timer: Timer = null
 @onready var label_container: VBoxContainer = $LabelContainer
 
 const PALETTE_SHADER = preload("res://palette_swap.gdshader")
+# Share immutable collision resources and identical palette materials across
+# item instances. Every drop still has its own Area2D and can be clicked.
+static var _shared_click_shapes: Dictionary = {}
+static var _shared_palette_materials: Dictionary = {}
 const COLOR_INDEX_TO_DEGREES = {
 	0: 0.0, 1: 90.0, 2: 180.0, 3: 270.0, 
 	4: 45.0, 5: 135.0, 6: 225.0, 7: 315.0
 }
+
+static func get_shared_click_shape(texture_size: Vector2) -> RectangleShape2D:
+	var key := Vector2i(int(texture_size.x), int(texture_size.y))
+	var cached := _shared_click_shapes.get(key) as RectangleShape2D
+	if is_instance_valid(cached):
+		return cached
+	var shape := RectangleShape2D.new()
+	shape.size = texture_size + Vector2(30.0, 30.0)
+	_shared_click_shapes[key] = shape
+	return shape
+
+
+static func get_shared_palette_material(color_index: int) -> ShaderMaterial:
+	var cached := _shared_palette_materials.get(color_index) as ShaderMaterial
+	if is_instance_valid(cached):
+		return cached
+	var material := ShaderMaterial.new()
+	material.shader = PALETTE_SHADER
+	material.set_shader_parameter(
+		"hue_shift", COLOR_INDEX_TO_DEGREES.get(color_index, 0.0)
+	)
+	_shared_palette_materials[color_index] = material
+	return material
+
 
 func _ready() -> void :
 	set_process(false)
@@ -99,14 +127,7 @@ func initialize_ground_item(data: Dictionary) -> void :
 			var col_shape = $CollisionShape2D
 
 
-			var new_shape = RectangleShape2D.new()
-
-
-
-			var collision_padding = 30.0
-			new_shape.size = Vector2(tex_w + collision_padding, tex_h + collision_padding)
-
-			col_shape.shape = new_shape
+			col_shape.shape = get_shared_click_shape(Vector2(tex_w, tex_h))
 
 
 			col_shape.position = sprite.offset
@@ -119,12 +140,10 @@ func initialize_ground_item(data: Dictionary) -> void :
 			container.position = Vector2(-100, (offset_y - (tex_h / 2.0)) - container_height - 15)
 
 
-	if ItemLoader.get_item_property(item_index, "color_index", 0) > 0:
-		var color_index = ItemLoader.get_item_property(item_index, "color_index", 0)
-		var mat = ShaderMaterial.new()
-		mat.shader = PALETTE_SHADER
-		mat.set_shader_parameter("hue_shift", COLOR_INDEX_TO_DEGREES.get(color_index, 0.0))
-		sprite.material = mat
+	var color_index: int = int(ItemLoader.get_item_property(item_index, "color_index", 0))
+	if color_index > 0:
+		# There are no later per-item shader uniform mutations.
+		sprite.material = get_shared_palette_material(color_index)
 
 
 func _on_mouse_entered() -> void :
