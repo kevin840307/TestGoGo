@@ -1041,6 +1041,7 @@ func begin_afk_mode(progress_callback: Callable = Callable()) -> bool:
 	if not is_instance_valid(current_map_node) or not is_instance_valid(current_player):
 		return false
 	var enter_started_usec: int = Time.get_ticks_usec()
+	set_frame_gap_stage("afk_enter_prepare")
 	_afk_saved_profile = {
 		"load": current_performance_load_mode,
 		"combat": current_combat_render_mode,
@@ -1063,6 +1064,7 @@ func begin_afk_mode(progress_callback: Callable = Callable()) -> bool:
 	_remove_world_enhancement()
 	_emit_afk_restore_progress(progress_callback, 12.0, "隱藏遊戲畫面")
 	await get_tree().process_frame
+	set_frame_gap_stage("afk_enter_suspend_entities")
 
 	set_performance_modes(ClientPerformanceProfile.LOAD_MULTIBOX, ClientPerformanceProfile.COMBAT_MASS)
 	set_visual_simplification_modes(ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED, ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
@@ -1071,6 +1073,7 @@ func begin_afk_mode(progress_callback: Callable = Callable()) -> bool:
 	)
 	_emit_afk_restore_progress(progress_callback, 52.0, "切換低記憶體地圖外殼")
 	await get_tree().process_frame
+	set_frame_gap_stage("afk_enter_shell")
 
 	_afk_visual_stats = _enter_afk_render_shell()
 	_afk_visual_stats["suspended_entity_visuals"] = suspended_entities
@@ -1078,9 +1081,11 @@ func begin_afk_mode(progress_callback: Callable = Callable()) -> bool:
 	# AfkRenderShell queues the old static map. Settle that frame before
 	# dropping loader caches so the two destruction waves cannot combine.
 	await get_tree().process_frame
+	set_frame_gap_stage("afk_enter_cache_release")
 	_emit_afk_restore_progress(progress_callback, 64.0, "地圖視覺已卸載")
 	await _clear_visual_runtime_caches_batched(progress_callback)
 
+	set_frame_gap_stage("afk_active")
 	_refresh_focus_render_policy()
 	_emit_afk_restore_progress(progress_callback, 100.0, "掛機模式已啟用")
 	_log_afk_state("enter_after", int(_afk_visual_stats.get("released", 0)))
@@ -2040,6 +2045,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	return true
 
 func cleanup_and_return_to_login() -> void :
+	set_frame_gap_stage("logout_cleanup")
 	log_world_visual_audit("logout_before")
 	_log_afk_memory_audit("logout_before")
 	_reset_afk_mode()
