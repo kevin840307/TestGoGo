@@ -36,6 +36,20 @@ var _mouse_autorun = MOUSE_AUTORUN_STATE.new()
 # terrain navigation in _unhandled_input on the very same mouse press.
 var _autorun_left_press_cancelled: bool = false
 var _autorun_blocked_retry_seconds: float = 0.0
+var _afk_navigation_anchor: Vector2 = Vector2.ZERO
+var _afk_navigation_anchor_active: bool = false
+
+
+func begin_afk_navigation_anchor() -> void:
+	# Latched mouse autorun must not follow the pointer over the AFK overlay.
+	_afk_navigation_anchor = move_destination if is_moving else get_global_mouse_position()
+	_afk_navigation_anchor_active = true
+
+
+func end_afk_navigation_anchor() -> void:
+	_afk_navigation_anchor_active = false
+
+
 const AUTORUN_BLOCKED_RETRY_INTERVAL: float = 0.4
 
 var stuck_frames: int = 0
@@ -575,7 +589,7 @@ func _physics_process(_delta: float) -> void :
 		if not _mouse_autorun.latched and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 			is_mouse_holding = false
 		elif current_state != "death" and not data_model.is_shop_open and not is_interacting_with_npc and not data_model.is_auto_saint_on:
-			var mouse_pos = get_global_mouse_position()
+			var mouse_pos: Vector2 = _afk_navigation_anchor if _afk_navigation_anchor_active else get_global_mouse_position()
 			if global_position.distance_to(mouse_pos) > 10.0:
 				var destination_changed: bool = (
 					move_destination.distance_to(mouse_pos) >= NAVIGATION_REPATH_DISTANCE

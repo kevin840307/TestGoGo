@@ -14,6 +14,8 @@ const INITIAL_SPAWN_GATE_MAX_MSEC: int = 12000
 const TRAIN_TRAVEL_MAP_TIMEOUT_SECONDS: = 15.0
 const TRAIN_VIDEO_TIMEOUT_SECONDS: = 120.0
 const WORLD_ENHANCEMENT_SCENE: = preload("res://world_enhancement.tscn")
+const AFK_VISUAL_CACHE = preload("res://scripts/afk_visual_cache.gd")
+const AFK_MONITOR_FPS: int = 20
 const DAY_NIGHT_OVERLAY_SCENE: = preload("res://day_night_overlay.tscn")
 const TRAIN_VIDEO_PATHS: = {
 	"train_depart_king.ogv": "res://train_depart_king.ogv", 
@@ -39,6 +41,12 @@ signal performance_profile_changed(profile: Dictionary)
 var current_map_node: Node2D = null
 var current_player: CharacterBody2D = null
 var current_hud: CanvasLayer = null
+var _afk_active: bool = false
+var _afk_restoring: bool = false
+var _afk_started_msec: int = 0
+var _afk_map_cache = AFK_VISUAL_CACHE.new()
+var _afk_saved_profile: Dictionary = {}
+var _afk_visual_stats: Dictionary = {}
 var current_world_enhancement: CanvasLayer = null
 var current_day_night_overlay: CanvasLayer = null
 var world_enhancement_enabled: bool = GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
@@ -519,6 +527,120 @@ const BACKGROUND_CACHE_TRIM_COOLDOWN_MSEC: int = 60000
 const UNFOCUSED_MAX_FPS := 30
 
 
+func is_afk_mode_active() -> bool:
+	return _afk_active
+
+
+func is_afk_mode_restoring() -> bool:
+	return _afk_restoring
+
+
+func afk_visual_stats() -> Dictionary:
+	return _afk_visual_stats.duplicate()
+
+
+func _log_afk_state(event_name: String, released: int = 0, missing: int = 0) -> void:
+	if not OS.is_debug_build():
+		return
+	print("[AFK_MODE] event=%s active=%s restoring=%s map_textures_released=%d missing=%d tracked=%d memory_mb=%.1f video_mem_mb=%.1f nodes=%d fps_cap=%d physics_hz=%d connected=%s" % [
+		event_name, str(_afk_active), str(_afk_restoring), released, missing,
+		_afk_map_cache.suspended_count(), _get_process_memory_mb(),
+		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), Engine.max_fps,
+		Engine.physics_ticks_per_second,
+		str(NetworkManager.is_connected_to_server) if NetworkManager else "false"
+	])
+
+
+func begin_afk_mode() -> bool:
+	if _afk_active or _afk_restoring or is_changing_map:
+		return false
+	if not is_instance_valid(current_map_node) or not is_instance_valid(current_player):
+		return false
+	_afk_saved_profile = {
+		"load": current_performance_load_mode,
+		"combat": current_combat_render_mode,
+		"players": current_simplify_players_mode,
+		"monsters": current_simplify_monsters_mode,
+	}
+	_afk_active = true
+	_afk_started_msec = Time.get_ticks_msec()
+	_log_afk_state("enter_before")
+	# Phase 1: keep gameplay nodes alive and network/physics processing at
+	# their original rates; hide only world presentation.
+	if current_player.has_method("begin_afk_navigation_anchor"):
+		current_player.begin_afk_navigation_anchor()
+	current_map_node.visible = false
+	_remove_day_night_overlay()
+	_remove_world_enhancement()
+	# Phase 2: shed full remote paper-doll/monster assets, and restoreable
+	# static map textures, without unloading live combat/collision nodes.
+	set_performance_modes(ClientPerformanceProfile.LOAD_MULTIBOX, ClientPerformanceProfile.COMBAT_MASS)
+	set_visual_simplification_modes(ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED, ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
+	_afk_visual_stats = _afk_map_cache.suspend_static_map(current_map_node)
+	_clear_visual_runtime_caches()
+	_refresh_focus_render_policy()
+	_log_afk_state("enter_after", int(_afk_visual_stats.get("released", 0)))
+	return true
+
+
+func finish_afk_mode() -> bool:
+	if not _afk_active or _afk_restoring or is_changing_map:
+		return false
+	if not is_instance_valid(current_map_node) or not is_instance_valid(current_player):
+		return false
+	_afk_restoring = true
+	_log_afk_state("restore_begin")
+	var original_map: Node = current_map_node
+	var restore_result: Dictionary = await _afk_map_cache.restore_static_map(24)
+	# If a map transition began during incremental restore, retain AFK mode
+	# and let the new map's handoff build its own render snapshot.
+	if is_changing_map or original_map != current_map_node:
+		_afk_restoring = false
+		_log_afk_state("restore_deferred_map_change")
+		return false
+	_afk_active = false
+	_afk_restoring = false
+	if is_instance_valid(current_player) and current_player.has_method("end_afk_navigation_anchor"):
+		current_player.end_afk_navigation_anchor()
+	# Restore user selection, not a hard-coded normal mode. The HUD's
+	# persistent per-account FPS setting was never modified.
+	set_performance_modes(
+		int(_afk_saved_profile.get("load", ClientPerformanceProfile.LOAD_BALANCED)),
+		int(_afk_saved_profile.get("combat", ClientPerformanceProfile.COMBAT_NORMAL))
+	)
+	set_visual_simplification_modes(
+		int(_afk_saved_profile.get("players", ClientPerformanceProfile.SIMPLIFY_AUTO)),
+		int(_afk_saved_profile.get("monsters", ClientPerformanceProfile.SIMPLIFY_AUTO))
+	)
+	_apply_low_resource_world_visual_policy()
+	if is_instance_valid(current_map_node):
+		current_map_node.visible = true
+	_afk_saved_profile.clear()
+	_afk_visual_stats.clear()
+	_refresh_focus_render_policy()
+	_log_afk_state("restore_complete", int(restore_result.get("restored", 0)), int(restore_result.get("missing", 0)))
+	return true
+
+
+func _refresh_afk_map_visuals_after_change() -> void:
+	if not _afk_active or not is_instance_valid(current_map_node):
+		return
+	_afk_map_cache.discard()
+	current_map_node.visible = false
+	_afk_visual_stats = _afk_map_cache.suspend_static_map(current_map_node)
+	_clear_visual_runtime_caches()
+	_log_afk_state("map_changed_unloaded", int(_afk_visual_stats.get("released", 0)))
+
+
+func _reset_afk_mode() -> void:
+	_afk_active = false
+	_afk_restoring = false
+	_afk_saved_profile.clear()
+	_afk_visual_stats.clear()
+	_afk_map_cache.discard()
+
+
 func _rebuild_performance_profile() -> void:
 	current_performance_profile = ClientPerformanceProfile.apply_visual_overrides(
 		ClientPerformanceProfile.resolve(
@@ -680,9 +802,9 @@ func _reconcile_world_render_policy(delta: float) -> void:
 		if OS.is_debug_build():
 			_log_focus_power_save("focus_poll_reconciled")
 	var should_pause: bool = should_throttle_background_visuals(
-		_window_has_focus, _has_active_world_visuals())
+		_window_has_focus, _has_active_world_visuals()) and not _afk_active
 	var desired_rendering: bool = not should_pause
-	var desired_fps: int = fps_cap_for_focus(
+	var desired_fps: int = AFK_MONITOR_FPS if _afk_active else fps_cap_for_focus(
 		current_performance_profile, _window_has_focus, _has_active_world_visuals())
 	if RenderingServer.render_loop_enabled != desired_rendering or Engine.max_fps != desired_fps:
 		_refresh_focus_render_policy()
@@ -691,6 +813,13 @@ func _reconcile_world_render_policy(delta: float) -> void:
 
 
 func _refresh_focus_render_policy() -> void:
+	if _afk_active:
+		# AFK status dashboard must remain visible even when unfocused.
+		# Godot physics_ticks_per_second stays unchanged (60 by default).
+		Engine.max_fps = AFK_MONITOR_FPS
+		RenderingServer.render_loop_enabled = true
+		_set_background_visual_processing(true)
+		return
 	var world_background: bool = should_throttle_background_visuals(
 		_window_has_focus, _has_active_world_visuals())
 	Engine.max_fps = fps_cap_for_focus(
@@ -1208,6 +1337,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	return true
 
 func cleanup_and_return_to_login() -> void :
+	_reset_afk_mode()
 	_world_ready_for_background_saving = false
 	_cancel_active_map_transition("cleanup_and_return_to_login")
 	_cancel_train_travel("cleanup_and_return_to_login")
@@ -1704,6 +1834,10 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 
 	if is_instance_valid(current_hud) and current_hud.has_method("update_map_info"):
 		current_hud.update_map_info(target_map_id, current_map_node.name)
+	# Existing map transitions still execute normally while AFK. Strip only
+	# newly instantiated VIEW textures after reparenting the live player.
+	if _afk_active:
+		_refresh_afk_map_visuals_after_change()
 
 	if CursorManager:
 		CursorManager.set_cursor_state("normal")
