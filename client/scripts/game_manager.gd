@@ -15,6 +15,7 @@ const TRAIN_TRAVEL_MAP_TIMEOUT_SECONDS: = 15.0
 const TRAIN_VIDEO_TIMEOUT_SECONDS: = 120.0
 const WORLD_ENHANCEMENT_SCENE: = preload("res://world_enhancement.tscn")
 const AFK_VISUAL_CACHE = preload("res://scripts/afk_visual_cache.gd")
+const AFK_MONITOR_FPS: int = 20
 const DAY_NIGHT_OVERLAY_SCENE: = preload("res://day_night_overlay.tscn")
 const TRAIN_VIDEO_PATHS: = {
 	"train_depart_king.ogv": "res://train_depart_king.ogv", 
@@ -867,13 +868,9 @@ static func should_draw_afk_dashboard(has_focus: bool) -> bool:
 
 
 func request_afk_dashboard_frame() -> bool:
-	# One event-driven frame is substantially cheaper than keeping a 20 FPS
-	# render loop alive. SceneTree/network/fixed physics continue independently.
-	if not _afk_active or not _window_has_focus:
-		return false
-	RenderingServer.force_draw(true)
-	_afk_forced_draw_count += 1
-	return true
+	# Compatibility hook for HUD/tests. AFK focused mode uses a normal 20 FPS
+	# render loop; unfocused mode renders nothing.
+	return _afk_active and _window_has_focus
 
 
 static func fps_cap_for_focus(profile: Dictionary, has_focus: bool, world_active: bool) -> int:
@@ -933,16 +930,15 @@ func _reconcile_world_render_policy(delta: float) -> void:
 		_set_window_focus_power_save(observed_focus)
 		if OS.is_debug_build():
 			_log_focus_power_save("focus_poll_reconciled")
-	# AFK uses event-driven dashboard frames only. Its continuous render loop
-	# is always disabled, focused or not; simulation/network still run.
+	# AFK dashboard renders at 20 FPS only while focused. Losing focus stops
+	# the render loop completely; simulation/network/fixed physics keep running.
 	var should_pause: bool = should_throttle_background_visuals(
 		_window_has_focus, _has_active_world_visuals())
-	var desired_rendering: bool = false if _afk_active else not should_pause
-	# AFK must not change main-loop pacing. Visual rendering is already
-	# disabled, so lowering Engine.max_fps would only make idle-process input/
-	# gameplay helpers less responsive without providing additional GPU savings.
-	var desired_fps: int = Engine.max_fps if _afk_active else fps_cap_for_focus(
-		current_performance_profile, _window_has_focus, _has_active_world_visuals())
+	var desired_rendering: bool = should_draw_afk_dashboard(_window_has_focus) if _afk_active else not should_pause
+	var desired_fps: int = AFK_MONITOR_FPS if _afk_active and _window_has_focus else (
+		Engine.max_fps if _afk_active else fps_cap_for_focus(
+			current_performance_profile, _window_has_focus, _has_active_world_visuals())
+	)
 	if RenderingServer.render_loop_enabled != desired_rendering or Engine.max_fps != desired_fps:
 		_refresh_focus_render_policy()
 		if OS.is_debug_build():
@@ -955,12 +951,13 @@ func _reconcile_world_render_policy(delta: float) -> void:
 
 func _refresh_focus_render_policy() -> void:
 	if _afk_active:
-		# Never keep the GPU render loop alive in AFK. A focused dashboard asks
-		# for one explicit frame after its 1-second status refresh; focus-out
-		# requests no frames at all. Do NOT change Engine.max_fps here: AFK only
-		# stops presentation, while gameplay/network responsiveness stays at the
-		# user's already-active pacing.
-		RenderingServer.render_loop_enabled = false
+		# Focused AFK: low-cost 20 FPS status dashboard.
+		# Unfocused AFK: zero rendering. Gameplay/network/fixed physics continue.
+		if _window_has_focus:
+			Engine.max_fps = AFK_MONITOR_FPS
+			RenderingServer.render_loop_enabled = true
+		else:
+			RenderingServer.render_loop_enabled = false
 		_set_background_visual_processing(not _window_has_focus)
 		return
 	var world_background: bool = should_throttle_background_visuals(
