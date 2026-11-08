@@ -9421,6 +9421,62 @@ public sealed class SqliteGameStore : IGameStore
         return result;
     }
 
+    public GroundItemRuntime? RelocateGroundItemIfUnchanged(
+        long groundItemId,
+        int mapId,
+        double expectedX, double expectedY,
+        double newX, double newY)
+    {
+        if (!double.IsFinite(expectedX) || !double.IsFinite(expectedY) ||
+            !double.IsFinite(newX) || !double.IsFinite(newY))
+            return null;
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        using (var update = db.CreateCommand())
+        {
+            update.Transaction = tx;
+            update.CommandText = """
+                UPDATE ground_items
+                   SET x=$newX, y=$newY
+                 WHERE id=$id AND map_id=$map
+                   AND x=$oldX AND y=$oldY
+                """;
+            Arg(update, "$id", groundItemId);
+            Arg(update, "$map", mapId);
+            Arg(update, "$oldX", expectedX);
+            Arg(update, "$oldY", expectedY);
+            Arg(update, "$newX", newX);
+            Arg(update, "$newY", newY);
+            update.ExecuteNonQuery();
+        }
+
+        // Read the authoritative row even after a CAS conflict. A competing
+        // WorldReady may have already repaired it, or the item may have
+        // been claimed. Do not return stale coordinates to the AOI index.
+        GroundItemRuntime? result = null;
+        using (var query = db.CreateCommand())
+        {
+            query.Transaction = tx;
+            query.CommandText = """
+                SELECT id,map_id,owner_dbid,tab_type,item_index,count,
+                       damage,color,part,x,y,
+                       created_utc_ms,protect_until_utc_ms,expires_utc_ms
+                  FROM ground_items
+                 WHERE id=$id AND map_id=$map
+                """;
+            Arg(query, "$id", groundItemId);
+            Arg(query, "$map", mapId);
+            using var reader = query.ExecuteReader();
+            if (reader.Read())
+                result = ReadGroundItem(reader);
+        }
+
+        tx.Commit();
+        return result;
+    }
+
     public IReadOnlyList<int> ClearGroundItems(int mapId)
     {
         using var db = Open();
