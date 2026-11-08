@@ -118,11 +118,8 @@ test.afterAll(async () => {
   if (fixtureRoot) fs.rmSync(fixtureRoot, { recursive: true, force: true });
 });
 
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('sgo-editor-help-v1', 'dismissed'));
-});
-
 test('map add drag undo redo save and reload persists real coordinates', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('sgo-editor-help-v1', 'dismissed'));
   await page.goto(baseUrl);
   await expect(page.getByRole('heading', { name: '專案總覽' })).toBeVisible();
 
@@ -188,8 +185,6 @@ test('map add drag undo redo save and reload persists real coordinates', async (
 
 test('first-run help can be dismissed and remembered', async ({ page }) => {
   await page.goto(baseUrl);
-  await page.evaluate(() => localStorage.removeItem('sgo-editor-help-v1'));
-  await page.reload();
   await expect(page.locator('#help-modal')).toBeVisible();
   await page.locator('#help-dont-show').check();
   await page.locator('#help-ok').click();
