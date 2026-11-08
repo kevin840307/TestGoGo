@@ -1679,6 +1679,11 @@ try
         store,
         broadcastHub,
         playerShop);
+    SessionIdentityCleanupSmokeTests.Run(
+        router,
+        store,
+        broadcastHub,
+        playerShop);
 
     PreloginPacketSmokeTests.Run(router, session);
 
