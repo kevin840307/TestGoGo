@@ -95,6 +95,38 @@ class RuntimeCoordinateContractTests(unittest.TestCase):
 
         self.assertFalse(failures, "\n" + "\n".join(failures[:20]))
 
+    def test_all_real_map_spawn_coordinates_fit_their_blocking_grids(self) -> None:
+        failures: list[str] = []
+        for map_info in self.maps.list_maps():
+            map_id = int(map_info["id"])
+            blocking = self.maps._read_blocking(map_id)
+            if blocking is None:
+                continue
+            width, height, _, _ = blocking
+
+            for kind, loader in (
+                ("enemy", self.maps.get_enemy_spawns),
+                ("npc", self.maps.get_npc_spawns),
+            ):
+                try:
+                    rows = loader(map_id)
+                except Exception as exc:
+                    failures.append(f"Map{map_id:02d} {kind}: parse failed: {exc}")
+                    continue
+
+                for index, row in enumerate(rows):
+                    x = int(row["x"])
+                    y = int(row["y"])
+                    cell_x = math.floor(x / self.maps.CELL_SIZE)
+                    cell_y = math.floor(y / self.maps.CELL_SIZE)
+                    if not (0 <= cell_x < width and 0 <= cell_y < height):
+                        failures.append(
+                            f"Map{map_id:02d} {kind}[{index}] ({x},{y}) -> "
+                            f"cell ({cell_x},{cell_y}) outside {width}x{height}"
+                        )
+
+        self.assertFalse(failures, "\n" + "\n".join(failures[:40]))
+
     def test_real_map13_keeps_original_free_world_coordinates(self) -> None:
         # Legacy spawn coordinates are not all cell centers. The editor must not
         # silently snap every existing X/Y to the grid; snapping is only for an
