@@ -1337,9 +1337,9 @@ func _confirm_begin_afk() -> void:
 	if afk_overlay:
 		afk_overlay.visible = true
 		afk_overlay.move_to_front()
-	if afk_update_timer:
-		afk_update_timer.start()
-	_refresh_afk_dashboard()
+	# Focus may have changed during AFK setup; do not start a monitor
+	# timer in a hidden window. The next focus-in refreshes it immediately.
+	set_afk_dashboard_updates_enabled(GameManager.is_game_window_focused())
 
 
 func _afk_hide_nonessential_roots() -> void:
@@ -1405,8 +1405,21 @@ func _confirm_restore_afk() -> void:
 		GameManager.current_map_node.visible = true
 
 
+func set_afk_dashboard_updates_enabled(enabled: bool) -> void:
+	if not afk_update_timer or not afk_overlay or not afk_overlay.visible:
+		return
+	if enabled and GameManager and GameManager.is_afk_mode_active():
+		if afk_update_timer.is_stopped():
+			afk_update_timer.start()
+			_refresh_afk_dashboard()
+	else:
+		afk_update_timer.stop()
+
+
 func _refresh_afk_dashboard() -> void:
-	if not GameManager or not GameManager.is_afk_mode_active():
+	# The SceneTree may still execute fixed gameplay while backgrounded.
+	# Do not update visual labels or traverse the HUD until refocused.
+	if not GameManager or not GameManager.is_afk_mode_active() 			or not GameManager.is_game_window_focused():
 		return
 	_afk_hide_nonessential_roots()
 	var player: Node = GameManager.current_player
