@@ -15,7 +15,9 @@ function renderSkillList() {
   $$('tr[data-id]', body).forEach(row => row.onclick = () => openSkill(Number(row.dataset.id)));
 }
 async function openSkill(id) {
+  if (state.skillDirty && state.selectedSkill?.id !== id && !confirm('目前技能有尚未儲存的修改，確定要切換嗎？')) return;
   state.selectedSkill = await api(`/api/skills/${id}`);
+  state.skillDirty = false;
   renderSkillList();
   renderSkillEditor();
 }
@@ -29,11 +31,13 @@ function blankLevel(level=1) {
   };
 }
 function newSkill() {
+  if (state.skillDirty && !confirm('目前技能有尚未儲存的修改，確定要建立新技能嗎？')) return;
   const maxId = Math.max(0, ...state.skills.map(x => x.id));
   state.selectedSkill = {
     id:maxId+1, name:'新技能', description:'', skillType:0, damageType:0, iconId:0,
     fxUse:'', fxHit:'', fxExtra:'', specialSkill:'', levels:[blankLevel(1)], _new:true
   };
+  state.skillDirty = true;
   renderSkillList();
   renderSkillEditor();
 }
@@ -93,10 +97,12 @@ function renderSkillEditor() {
       <div id="skill-levels"></div>
     </div>`;
   renderLevels(s.levels);
+  host.oninput = () => { state.skillDirty = true; };
   $('#skill-add-level').onclick = () => {
     const nextLevel = Math.max(0, ...s.levels.map(x => Number(x.level))) + 1;
     const previous = s.levels.at(-1);
     s.levels.push(previous ? {...previous, level:nextLevel} : blankLevel(nextLevel));
+    state.skillDirty = true;
     renderLevels(s.levels);
     toast(previous ? '已複製上一級數值，可直接微調' : '已新增等級');
   };
@@ -130,15 +136,18 @@ function renderLevels(levels) {
   $$('.level-card', host).forEach((card, i) => {
     $$('input[data-k]', card).forEach(inp => inp.oninput = () => {
       levels[i][inp.dataset.k] = Number(inp.value || 0);
+      state.skillDirty = true;
     });
     $('.level-duplicate', card).onclick = () => {
       const clone = {...levels[i], level:Math.max(0, ...levels.map(x => Number(x.level))) + 1};
       levels.splice(i + 1, 0, clone);
+      state.skillDirty = true;
       renderLevels(levels);
     };
     $('.level-remove', card).onclick = () => {
       if (levels.length <= 1) return toast('技能至少需要一個等級', 'error');
       levels.splice(i, 1);
+      state.skillDirty = true;
       renderLevels(levels);
     };
   });
@@ -167,6 +176,7 @@ async function saveSkill() {
       throw new Error('既有技能不允許直接改 ID；請新增後刪除舊技能');
     }
     state.selectedSkill = await api(`/api/skills/${doc.id}`, {method:'PUT', body:doc});
+    state.skillDirty = false;
     toast('技能已儲存');
     await loadSkills();
     renderSkillEditor();
@@ -178,6 +188,7 @@ async function deleteSkill() {
   try {
     await api(`/api/skills/${state.selectedSkill.id}`, {method:'DELETE'});
     state.selectedSkill = null;
+    state.skillDirty = false;
     $('#skill-editor').innerHTML = emptyEditor('✦','選擇一個技能','常用欄位會先顯示，進階設定需要時再展開。');
     await loadSkills();
     toast('技能已刪除');
