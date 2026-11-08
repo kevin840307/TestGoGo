@@ -143,21 +143,23 @@ func _reveal_combat_monster(entity_id: int, reason: String) -> void:
 	# the current map, preserving its appearance and latest coordinates.
 	if entity_id <= 0 or not _monster_spawn_templates.has(entity_id):
 		return
+	var already_revealed: bool = _is_combat_monster_revealed(entity_id)
 	_combat_reveal_until_msec[entity_id] = Time.get_ticks_msec() + MONSTER_COMBAT_REVEAL_MSEC
 	if get_active_entity(entity_id):
 		return
 	if not _queued_spawn_ids.has(entity_id):
 		_deferred_monster_spawns[entity_id] = _monster_spawn_templates[entity_id]
 		_queue_cached_monster_spawn(entity_id)
-	else:
-		# A monster that is attacking must not wait behind far-away monsters.
+	elif not already_revealed:
+		# Promote an already-queued monster only once per combat encounter.
+		# Reordering for every damage packet would create unnecessary work.
 		for index: int in range(_spawn_queue.size()):
 			if int(_spawn_queue[index].get("EntityID", 0)) == entity_id:
 				var queued_data: Dictionary = _spawn_queue[index]
 				_spawn_queue.remove_at(index)
 				_enqueue_spawn_by_priority(queued_data)
 				break
-	if OS.is_debug_build():
+	if OS.is_debug_build() and not already_revealed:
 		print("[MONSTER_COMBAT_REVEAL] id=%d reason=%s queued=%s" % [
 			entity_id, reason, str(_queued_spawn_ids.has(entity_id))
 		])
@@ -869,6 +871,7 @@ func _on_entity_death_received(data: Dictionary) -> void :
 		_runtime_monster_ids.erase(entity_id)
 		_monster_spawn_templates.erase(entity_id)
 		_deferred_monster_spawns.erase(entity_id)
+		_combat_reveal_until_msec.erase(entity_id)
 		_remove_queued_spawn(entity_id)
 
 
