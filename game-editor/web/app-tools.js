@@ -136,6 +136,7 @@ async function saveScript() {
     toast('NPC 腳本已儲存');
     await loadScripts();
     await loadStatus();
+    loadHealth(true).catch(() => {});
   } catch (e) { toast(e.message, 'error'); }
 }
 async function deleteScript() {
@@ -159,6 +160,7 @@ async function deleteScript() {
     renderFunctions([]);
     await loadScripts();
     await loadStatus();
+    loadHealth(true).catch(() => {});
     toast('NPC 腳本已刪除');
   } catch (e) { toast(e.message, 'error'); }
 }
@@ -257,6 +259,7 @@ async function replaceAsset(file) {
     await api('/api/assets', {method:'PUT', body:{path:state.assetTarget.path, contentBase64:data, sourceName:file.name}});
     toast('素材已替換');
     await loadAssets();
+    loadHealth(true).catch(() => {});
   } catch (e) { toast(e.message, 'error'); }
 }
 function fileToBase64(file) {
