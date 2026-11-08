@@ -84,6 +84,28 @@ const PALETTE_SHADER = preload("res://palette_swap.gdshader")
 const COLOR_INDEX_TO_DEGREES = {
 	0: 0.0, 1: 90.0, 2: 180.0, 3: 270.0, 4: 45.0, 5: 135.0, 6: 225.0, 7: 315.0
 }
+# Colored mobs share immutable material variants. One map can contain
+# hundreds of identical ColorIndex values; their own scene/UI state remains
+# independent and the existing Shader/TIME animation stays unchanged.
+static var _shared_palette_materials: Dictionary = {}
+
+
+static func get_shared_monster_palette_material(color_index: int) -> ShaderMaterial:
+	var hue: float = float(COLOR_INDEX_TO_DEGREES.get(color_index, 0.0))
+	var key: String = "%.4f" % hue
+	var material: ShaderMaterial = _shared_palette_materials.get(key, null) as ShaderMaterial
+	if is_instance_valid(material):
+		return material
+	material = ShaderMaterial.new()
+	material.shader = PALETTE_SHADER
+	material.set_shader_parameter("effect_type", 0)
+	material.set_shader_parameter("hue_shift", hue)
+	_shared_palette_materials[key] = material
+	return material
+
+
+static func get_shared_monster_palette_material_count() -> int:
+	return _shared_palette_materials.size()
 
 const STATE_MAP = {
 	"idle": "IDLE", "walk": "WALK", "attack": "ATTACK", 
@@ -467,13 +489,9 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 		if frames and sprite: sprite.sprite_frames = frames
 
 	if extra_data.has("ColorIndex") and sprite:
-		var c_idx = int(extra_data["ColorIndex"])
+		var c_idx: int = int(extra_data["ColorIndex"])
 		if c_idx > 0:
-			var mat = ShaderMaterial.new()
-			mat.shader = PALETTE_SHADER
-			mat.set_shader_parameter("effect_type", 0)
-			mat.set_shader_parameter("hue_shift", COLOR_INDEX_TO_DEGREES.get(c_idx, 0.0))
-			sprite.material = mat
+			sprite.material = get_shared_monster_palette_material(c_idx)
 
 	sync_animation()
 	_lock_ui_position()
