@@ -34,15 +34,16 @@ using SGO.Server.SmokeTests.Protocol;
 using SGO.Server.SmokeTests.Announcements;
 using SGO.Server.SmokeTests.World;
 using SGO.Server.SmokeTests.GameData;
+using SGO.Server.SmokeTests.Integration;
 
 // Fast, independent suites can be run without loading legacy GameData or SQLite:
 // dotnet run --project tests/SGO.Server.SmokeTests -- --suite protocol
-// Accepted suites: protocol, announcements, world, all (default).
+// Accepted suites: protocol, announcements, world, concurrency, all (default).
 if (args.Length != 0)
 {
     if (args.Length != 2 || args[0] != "--suite")
         throw new ArgumentException(
-            "Usage: --suite protocol|announcements|world|all");
+            "Usage: --suite protocol|announcements|world|concurrency|all");
 
     switch (args[1].ToLowerInvariant())
     {
@@ -59,6 +60,11 @@ if (args.Length != 0)
         case "world":
             BlockingMapSmokeTests.Run();
             Console.WriteLine("Blocking-map smoke passed.");
+            return;
+        case "concurrency":
+            ConcurrencySmokeTests.Run(
+                Directory.GetCurrentDirectory());
+            Console.WriteLine("Concurrency smoke passed.");
             return;
         case "all":
             break;
@@ -84,6 +90,7 @@ Check(Directory.Exists(gameDataRoot), "server data directory exists");
 var world = new WorldDataService(gameDataRoot);
 
 BlockingMapSmokeTests.Run();
+ConcurrencySmokeTests.Run(repoRoot);
 
 var realCurrentCatalog = new CurrentClientDataCatalog(
     Path.Combine(repoRoot, "client"));
