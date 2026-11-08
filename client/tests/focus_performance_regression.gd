@@ -32,6 +32,12 @@ func _run() -> void:
 		"the same 200ms gap while focused is a real foreground warning")
 	_check(GameManager.classify_frame_gap(200000, false, 0) == "background_stall",
 		"unfocused and uncapped frames are never misclassified as intentional 5 FPS")
+	_check(GameManager.focus_transition_within_interval(10000, 40000, 25000),
+		"a monster packet gap crossing a background/foreground transition is tagged")
+	_check(not GameManager.focus_transition_within_interval(25001, 40000, 25000),
+		"a packet gap starting after refocus is not marked as background-affected")
+	_check(not GameManager.focus_transition_within_interval(10000, 24000, 25000),
+		"future focus transitions cannot explain an earlier packet gap")
 
 	var context: String = GameManager._focus_perf_context()
 	_check(context.contains("focus=") and context.contains("focus_actual="),
