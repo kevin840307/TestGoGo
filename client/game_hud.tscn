@@ -740,6 +740,23 @@ tooltip_text = "合成/分解 (Ctrl+G)"
 texture_normal = ExtResource("113_craft_dismantle_icon")
 stretch_mode = 5
 
+[node name="BtnAfkMode" type="Button" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -245.0
+offset_top = 10.0
+offset_right = -186.0
+offset_bottom = 51.0
+grow_horizontal = 0
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_party_button_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_party_button_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_party_button_hover")
+text = "掛機"
+tooltip_text = "進入掛機監控模式；遊戲會繼續運作"
+
 [node name="ChatPanel" type="Control" parent="." unique_id=140509825]
 layout_mode = 3
 anchors_preset = 7
@@ -4404,3 +4421,129 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_nkhed")
 text = "取消
 
 "
+
+[node name="AFKOverlay" type="ColorRect" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.025, 0.038, 0.067, 1)
+
+[node name="MonitorCard" type="Panel" parent="AFKOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -242.0
+offset_top = -198.0
+offset_right = 242.0
+offset_bottom = 198.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_knh8b")
+
+[node name="LblTitle" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 18.0
+offset_right = 460.0
+offset_bottom = 57.0
+theme_override_colors/font_color = Color(0.4, 0.94, 0.81, 1)
+theme_override_font_sizes/font_size = 25
+text = "掛機監控模式"
+
+[node name="LblSubtitle" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 57.0
+offset_right = 462.0
+offset_bottom = 84.0
+theme_override_colors/font_color = Color(0.7, 0.75, 0.82, 1)
+theme_override_font_sizes/font_size = 14
+text = "已關閉世界畫面 · 角色與伺服器持續運作"
+
+[node name="Divider" type="ColorRect" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 94.0
+offset_right = 462.0
+offset_bottom = 95.0
+mouse_filter = 2
+color = Color(0.32, 0.48, 0.56, 0.65)
+
+[node name="LblStatus" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 107.0
+offset_right = 460.0
+offset_bottom = 142.0
+theme_override_colors/font_color = Color(0.45, 0.98, 0.71, 1)
+theme_override_font_sizes/font_size = 19
+text = "● 已連線 ｜ 待命"
+
+[node name="LblCharacter" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 152.0
+offset_right = 460.0
+offset_bottom = 180.0
+theme_override_font_sizes/font_size = 16
+text = "角色｜載入中"
+
+[node name="LblVitals" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 187.0
+offset_right = 460.0
+offset_bottom = 216.0
+theme_override_font_sizes/font_size = 16
+text = "HP — / —   MP — / —"
+
+[node name="LblPosition" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 223.0
+offset_right = 460.0
+offset_bottom = 250.0
+theme_override_font_sizes/font_size = 16
+text = "地圖 —   X — / Y —"
+
+[node name="LblRuntime" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 259.0
+offset_right = 460.0
+offset_bottom = 287.0
+theme_override_font_sizes/font_size = 16
+text = "掛機時間｜00:00:00"
+
+[node name="LblResources" type="Label" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 292.0
+offset_right = 460.0
+offset_bottom = 319.0
+theme_override_colors/font_color = Color(0.69, 0.77, 0.84, 1)
+theme_override_font_sizes/font_size = 13
+text = "正在釋放可還原的視覺資源"
+
+[node name="BtnRestore" type="Button" parent="AFKOverlay/MonitorCard"]
+layout_mode = 0
+offset_left = 134.0
+offset_top = 335.0
+offset_right = 350.0
+offset_bottom = 375.0
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_bsslp")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_cgxsc")
+theme_override_styles/hover = SubResource("StyleBoxFlat_sfov8")
+text = "返回遊戲"
+
+[node name="UpdateTimer" type="Timer" parent="AFKOverlay"]
+wait_time = 1.0

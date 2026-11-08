@@ -50,6 +50,16 @@ var _emotion_tween: Tween
 @onready var btn_announcement: TextureButton = $BtnAnnouncement
 @onready var btn_game_info: TextureButton = $BtnGameInfo
 @onready var btn_craft_dismantle: TextureButton = $BtnCraftDismantle
+@onready var btn_afk_mode: Button = $BtnAfkMode
+@onready var afk_overlay: Control = $AFKOverlay
+@onready var afk_status: Label = $AFKOverlay / MonitorCard / LblStatus
+@onready var afk_character: Label = $AFKOverlay / MonitorCard / LblCharacter
+@onready var afk_vitals: Label = $AFKOverlay / MonitorCard / LblVitals
+@onready var afk_position: Label = $AFKOverlay / MonitorCard / LblPosition
+@onready var afk_runtime: Label = $AFKOverlay / MonitorCard / LblRuntime
+@onready var afk_resource_stats: Label = $AFKOverlay / MonitorCard / LblResources
+@onready var afk_btn_restore: Button = $AFKOverlay / MonitorCard / BtnRestore
+@onready var afk_update_timer: Timer = $AFKOverlay / UpdateTimer
 
 @onready var windows_container: Control = $WindowsContainer
 @onready var character_window: Control = $WindowsContainer / CharacterWindow
@@ -248,6 +258,9 @@ var current_performance_load_mode: int = GameConstants.SETTING_DEFAULT_PERFORMAN
 var current_combat_render_mode: int = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
 var current_simplify_players_mode: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE
 var current_simplify_monsters_mode: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE
+var _afk_hidden_roots: Array[Dictionary] = []
+var _afk_hud_was_paused: bool = false
+var _afk_entered_msec: int = 0
 
 
 func _ready() -> void :
@@ -260,6 +273,14 @@ func _ready() -> void :
 
 	if invite_box: invite_box.visible = false
 	if message_box: message_box.visible = false
+	if afk_overlay: afk_overlay.visible = false
+	if btn_afk_mode:
+		btn_afk_mode.focus_mode = Control.FOCUS_NONE
+		btn_afk_mode.pressed.connect(_on_afk_mode_requested)
+	if afk_btn_restore:
+		afk_btn_restore.pressed.connect(_on_afk_restore_requested)
+	if afk_update_timer:
+		afk_update_timer.timeout.connect(_refresh_afk_dashboard)
 	if input_box:
 		input_box.visible = false
 		if input_box_line_edit:
@@ -1075,6 +1096,7 @@ func _setup_menu_tooltips() -> void :
 	if btn_announcement: btn_announcement.tooltip_text = "最新消息"
 	if btn_game_info: btn_game_info.tooltip_text = "遊戲資訊"
 	if btn_craft_dismantle: btn_craft_dismantle.tooltip_text = "合成/分解 (Ctrl+G)"
+	if btn_afk_mode: btn_afk_mode.tooltip_text = "掛機監控：卸載可還原視覺資源，保留角色運作"
 
 	if chat_panel:
 		var btn_channel = chat_panel.get_node_or_null("BtnChannel")
@@ -1286,6 +1308,151 @@ func _move_dragged_window(pointer_position: Vector2) -> void :
 func _clear_window_drag() -> void :
 	_dragged_window = null
 	_window_drag_pointer_offset = Vector2.ZERO
+
+func _on_afk_mode_requested() -> void:
+	if not GameManager or GameManager.is_afk_mode_active():
+		return
+	if GameManager.is_changing_map:
+		show_rejection_message_box("正在切換地圖，請完成後再進入掛機模式。")
+		return
+	if not is_instance_valid(GameManager.current_player):
+		show_rejection_message_box("必須先進入遊戲才能啟用掛機模式。")
+		return
+	show_message_box(
+		"確定進入掛機監控模式？\\n將關閉遊戲畫面、卸載可安全回收的貼圖，但會繼續自動移動、打怪與拾取。\\n如需恢復畫面可按「返回遊戲」。",
+		2,
+		_confirm_begin_afk
+	)
+
+
+func _confirm_begin_afk() -> void:
+	if not GameManager or not GameManager.begin_afk_mode():
+		show_rejection_message_box("掛機模式啟動失敗，請確認地圖已完成載入。")
+		return
+	_afk_entered_msec = Time.get_ticks_msec()
+	_afk_hud_was_paused = _background_visuals_paused
+	set_background_visuals_paused(true)
+	_afk_hidden_roots.clear()
+	_afk_hide_nonessential_roots()
+	if afk_btn_restore:
+		afk_btn_restore.disabled = false
+	if afk_overlay:
+		afk_overlay.visible = true
+		afk_overlay.move_to_front()
+	if afk_update_timer:
+		afk_update_timer.start()
+	_refresh_afk_dashboard()
+
+
+func _afk_hide_nonessential_roots() -> void:
+	# Keep the existing MessageBox for a real confirm/cancel interaction.
+	# HUD state remains alive for packet-driven inventory/quest updates.
+	for root_child in get_children():
+		if root_child == afk_overlay or root_child == message_box:
+			continue
+		if not (root_child is CanvasItem or root_child is CanvasLayer):
+			continue
+		var already_tracked: bool = false
+		for snapshot in _afk_hidden_roots:
+			var ref: WeakRef = snapshot["node"]
+			if ref.get_ref() == root_child:
+				already_tracked = true
+				break
+		if not already_tracked:
+			_afk_hidden_roots.append({"node": weakref(root_child), "visible": root_child.visible})
+		root_child.visible = false
+
+
+func _on_afk_restore_requested() -> void:
+	if not GameManager or not GameManager.is_afk_mode_active():
+		return
+	if GameManager.is_changing_map or GameManager.is_afk_mode_restoring():
+		_refresh_afk_dashboard()
+		return
+	show_message_box(
+		"確定結束掛機監控並返回遊戲？\\n地圖貼圖將分批重新載入，角色不會登出。",
+		2,
+		_confirm_restore_afk
+	)
+
+
+func _confirm_restore_afk() -> void:
+	if not GameManager or not GameManager.is_afk_mode_active():
+		return
+	if afk_btn_restore:
+		afk_btn_restore.disabled = true
+	if afk_status:
+		afk_status.text = "正在分批還原遊戲資源…"
+	var restored: bool = await GameManager.finish_afk_mode()
+	if not restored:
+		if afk_btn_restore:
+			afk_btn_restore.disabled = false
+		_refresh_afk_dashboard()
+		return
+	if afk_update_timer:
+		afk_update_timer.stop()
+	if afk_overlay:
+		afk_overlay.visible = false
+	for snapshot in _afk_hidden_roots:
+		var ref: WeakRef = snapshot["node"]
+		var node: Node = ref.get_ref()
+		if is_instance_valid(node) and (node is CanvasItem or node is CanvasLayer):
+			node.visible = bool(snapshot["visible"])
+	_afk_hidden_roots.clear()
+	set_background_visuals_paused(_afk_hud_was_paused)
+	if is_instance_valid(GameManager.current_map_node):
+		GameManager.current_map_node.visible = true
+
+
+func _refresh_afk_dashboard() -> void:
+	if not GameManager or not GameManager.is_afk_mode_active():
+		return
+	_afk_hide_nonessential_roots()
+	var player: Node = GameManager.current_player
+	var connected: bool = NetworkManager and NetworkManager.is_connected_to_server
+	if afk_character:
+		afk_character.text = "角色｜等待同步"
+	if afk_vitals:
+		afk_vitals.text = "生命 / 魔力｜—"
+	if afk_position:
+		afk_position.text = "位置｜—"
+	if is_instance_valid(player) and "data_model" in player and player.data_model:
+		var data: PlayerData = player.data_model
+		if afk_character:
+			afk_character.text = "角色｜%s    Lv.%d" % [data.character_name, data.level]
+		if afk_vitals:
+			afk_vitals.text = "HP %d / %d    MP %d / %d" % [data.hp, data.max_hp, data.mp, data.max_mp]
+		if afk_position:
+			afk_position.text = "地圖 %d    X %d · Y %d" % [data.map_id, int(player.global_position.x), int(player.global_position.y)]
+	if afk_status:
+		var state: String = "待命"
+		if not connected:
+			state = "連線中斷"
+		elif GameManager.is_changing_map:
+			state = "切換地圖中"
+		elif GameManager.is_afk_mode_restoring():
+			state = "還原資源中"
+		elif is_instance_valid(player):
+			if bool(player.get("is_dead")):
+				state = "角色死亡"
+			elif is_instance_valid(player.get("combat_target")):
+				state = "自動戰鬥中"
+			elif bool(player.get("is_moving")):
+				state = "移動中"
+			elif "data_model" in player and player.data_model and player.data_model.is_auto_saint_on:
+				state = "自動聖靈中"
+		afk_status.text = "● %s  ｜  %s" % ["已連線" if connected else "未連線", state]
+	if afk_runtime:
+		var elapsed: int = maxi(0, int((Time.get_ticks_msec() - _afk_entered_msec) / 1000))
+		afk_runtime.text = "掛機時間｜%02d:%02d:%02d" % [int(elapsed / 3600), int(elapsed / 60) % 60, elapsed % 60]
+	if afk_resource_stats:
+		var stats: Dictionary = GameManager.afk_visual_stats()
+		afk_resource_stats.text = "已卸載貼圖 %d 筆  ·  監控畫面 %d FPS" % [
+			int(stats.get("released", 0)), GameManager.AFK_MONITOR_FPS
+		]
+	if afk_btn_restore:
+		afk_btn_restore.disabled = GameManager.is_changing_map or GameManager.is_afk_mode_restoring()
+
 
 func _on_btn_back_to_login_pressed() -> void :
 	var btn_back = get_node_or_null("WindowsContainer/SettingsWindow/BtnBackToLogin") as BaseButton
