@@ -294,6 +294,28 @@ powershell -ExecutionPolicy Bypass -File tests/run_protocol_checks.ps1
 CI 無 Runner steps 時不可標示通過；不能將 unit-level AOI
 驗證混同 100 人真 WebSocket 容量測試。
 
+## 2026-11-08 延伸：A 載入地圖與 B 撿走物品同時發生
+
+`WorldReady` 的 `GetGroundItems` 可能先取得物品 X，之後另一位
+玩家 `PickUpGroundItem` 成功並移除 X 的 AOI。若原先的
+snapshot 接著呼叫普通 `UpsertWorldEntity`，X 會成為
+**資料庫不存在、畫面仍出現**的幽靈物件；即使 X 當時從未
+加入 AOI，單純查詢時的 version guard 也無法阻擋它。
+
+現在載入流程以 `BeginWorldEntitySnapshot` 保持一個
+snapshot scope，查詢後以 `TryUpsertWorldEntityFromSnapshot`
+檢查：
+- 新增或移動比 SELECT 新的 entity 不可被舊值覆蓋；
+- snapshot 期間被移除的 ID，即使此前尚未被索引，仍暫時保留刪除
+  記錄並拒絕該舊快照重新 Spawn；
+- 被拒絕的舊 row 不寫入當前 `ClientSession.GroundItems`；
+- snapshot 全部完成後清空 tombstone，記憶體不隨歷史撿物量永久增長。
+
+真 SQLite 回歸：`Integration/GroundSnapshotPersistenceRaceSmokeTests.cs`；
+純 AOI 並行快照回歸：
+`World/WorldEntityAoiSnapshotLeaseSmokeTests.cs`。
+測試已寫入套件，實跑 PASS 仍待驗證。
+
 ## 9. 目前驗證狀態
 
 程式、測試與壓測 harness 已提交，但此工作環境沒有 .NET SDK / Godot，GitHub Actions 目前也持續在取得 Runner 前結束（job `steps=null`）。
