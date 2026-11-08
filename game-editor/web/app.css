@@ -246,3 +246,34 @@ tbody tr.selected { background:var(--accent-soft); box-shadow:inset 3px 0 var(--
   .map-visual-layout { grid-template-columns:210px minmax(470px,1fr) 230px; }
   .friendly-editor-grid { grid-template-columns:minmax(0,1fr) 220px; }
 }
+
+
+/* Collision-aware visual map editor */
+.map-layer-controls { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.toggle-chip { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); background:#0e141e; color:#a5b2c5; border-radius:999px; padding:6px 9px; font-size:9px; cursor:pointer; user-select:none; }
+.toggle-chip:hover { border-color:#3a4c66; color:#d7e2f0; }
+.toggle-chip input { width:12px; height:12px; accent-color:var(--accent-strong); margin:0; }
+.map-stage-legend { display:flex; align-items:center; gap:6px; white-space:nowrap; }
+.map-stage-legend i { width:10px; height:10px; border-radius:3px; display:inline-block; }
+.legend-blocked { background:rgba(255,112,122,.72); }
+.legend-special { background:rgba(244,198,107,.72); }
+#map-stage-coord { margin-left:8px; color:#9badc4; font-family:"Cascadia Code",Consolas,monospace; }
+
+.map-blocking-layer { position:absolute; inset:0; width:100%; height:100%; object-fit:fill; image-rendering:pixelated; pointer-events:none; z-index:1; }
+.map-spawn-zone { position:absolute; z-index:2; border:1px dashed rgba(110,168,254,.58); background:rgba(110,168,254,.08); pointer-events:none; min-width:2px; min-height:2px; overflow:hidden; }
+.map-spawn-zone span { display:block; max-width:100%; padding:2px 4px; color:#bcd5ff; background:rgba(17,28,43,.72); font-size:8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.map-content-boundary { position:absolute; z-index:2; border:1px solid rgba(255,255,255,.14); box-shadow:inset 0 0 0 1px rgba(0,0,0,.25); pointer-events:none; }
+.map-grid-label { z-index:4; }
+.map-marker { z-index:6; }
+.map-marker:hover,.map-marker.selected { z-index:8; }
+.map-stage-empty { z-index:5; }
+
+.terrain-status { margin-top:10px; border:1px solid var(--line-soft); border-radius:8px; padding:8px 9px; font-size:9px; line-height:1.45; }
+.terrain-status.good { color:#91e8c1; border-color:rgba(87,211,155,.22); background:rgba(87,211,155,.06); }
+.terrain-status.warn { color:#f1cf84; border-color:rgba(244,198,107,.22); background:rgba(244,198,107,.06); }
+.terrain-status.bad { color:#ffadb3; border-color:rgba(255,112,122,.24); background:rgba(255,112,122,.06); }
+.terrain-status.neutral { color:var(--muted); background:#0d141e; }
+
+@media (max-width:1350px) {
+  .map-layer-controls { width:100%; order:4; }
+}
