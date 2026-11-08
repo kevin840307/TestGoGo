@@ -35,6 +35,31 @@ internal static class GroundDropPlacementSmokeTests
         var placement = new GroundDropPlacementService(blocking);
         var nav = new MonsterNavigationService(blocking);
 
+        Check(placement.CheckPickup(1, 40, 40, 40, 24) ==
+              GroundPickupReachability.Allowed,
+            "pickup within 100px succeeds on an unobstructed walkway");
+        Check(placement.CheckPickup(1, 40, 40, 88, 40) ==
+              GroundPickupReachability.Blocked,
+            "pickup across a wall is blocked even when distance is under 100px");
+        Check(placement.CheckPickup(1, 40, 40, 56, 40) ==
+              GroundPickupReachability.Blocked,
+            "pickup cannot claim an item previously left inside a blocked tile");
+        Check(placement.CheckPickup(1, 40, 56, 40, 72) ==
+              GroundPickupReachability.Blocked,
+            "pickup cannot cross a mecha-only special terrain cell");
+        Check(placement.CheckPickup(1, 40, 40, 40, 141) ==
+              GroundPickupReachability.TooFar,
+            "existing 100px pickup range is unchanged");
+        Check(placement.CheckPickup(1, double.NaN, 40, 40, 40) ==
+              GroundPickupReachability.TooFar,
+            "non-finite coordinates cannot claim a ground item");
+        Check(placement.CheckPickup(99, 40, 40, 56, 40) ==
+              GroundPickupReachability.MapNotVerified,
+            "legacy map without Blocking.dat keeps distance-only pickup");
+        Check(placement.CheckPickup(99, 40, 40, 204, 40) ==
+              GroundPickupReachability.TooFar,
+            "legacy map still enforces the 100px pickup distance");
+
         Check(placement.TryResolve(1,
                   40, 40, 40, 40, 40, 40, out var original) &&
               original.CollisionVerified && !original.Relocated &&
