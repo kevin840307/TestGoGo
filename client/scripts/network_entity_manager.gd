@@ -19,8 +19,9 @@ var _active_entity_types: Dictionary = {}
 # Initial map sync can deliver dozens of entities back-to-back. Instantiating
 # every scene immediately makes all _ready()/texture/animation work land in the
 # same frame, causing a visible multi-second stall.
-const SPAWN_BATCH_PER_FRAME: int = 3
+const SPAWN_BATCH_PER_FRAME: int = 1
 const SPAWN_FRAME_BUDGET_USEC: int = 3500
+const SPAWN_SKIP_PROCESS_MS: float = 8.0
 const INITIAL_SPAWN_BATCH_PER_FRAME: int = 10
 const INITIAL_SPAWN_FRAME_BUDGET_USEC: int = 9000
 var _spawn_queue: Array[Dictionary] = []
@@ -266,6 +267,15 @@ func _process(delta: float) -> void :
 	_update_monster_aoi(delta)
 
 	if not _spawn_queue_paused and not _spawn_queue.is_empty():
+		# Once the world is visible, preserving animation/movement smoothness is
+		# more important than draining the remaining spawn queue immediately.
+		# If the previous frame already spent significant time in script work,
+		# defer spawning to a lighter frame.
+		if not _initial_spawn_boost:
+			var previous_process_ms: float = float(Performance.get_monitor(Performance.TIME_PROCESS)) * 1000.0
+			if previous_process_ms >= SPAWN_SKIP_PROCESS_MS:
+				return
+
 		var frame_started_usec := Time.get_ticks_usec()
 		var spawned_count := 0
 		var batch_limit: int = INITIAL_SPAWN_BATCH_PER_FRAME if _initial_spawn_boost else SPAWN_BATCH_PER_FRAME
@@ -336,11 +346,31 @@ func _spawn_entity_now(data: Dictionary) -> void :
 			if new_entity.has_method("initialize_network_player"):
 				new_entity.initialize_network_player(data)
 		1:
+			var monster_spawn_started_usec: int = Time.get_ticks_usec()
+			var monster_instantiate_started_usec: int = monster_spawn_started_usec
 			new_entity = MONSTER_SCENE.instantiate()
+			var monster_instantiate_ms: float = float(Time.get_ticks_usec() - monster_instantiate_started_usec) / 1000.0
+
+			var monster_add_started_usec: int = Time.get_ticks_usec()
 			target_parent.add_child(new_entity)
+			var monster_add_ms: float = float(Time.get_ticks_usec() - monster_add_started_usec) / 1000.0
+
 			new_entity.global_position = spawn_pos
+			var monster_setup_started_usec: int = Time.get_ticks_usec()
 			if new_entity.has_method("setup"):
 				new_entity.setup(entity_id, data.get("Name", "未知怪物"), data.get("ExtraData", {}))
+			var monster_setup_ms: float = float(Time.get_ticks_usec() - monster_setup_started_usec) / 1000.0
+
+			if OS.is_debug_build():
+				var monster_total_ms: float = float(Time.get_ticks_usec() - monster_spawn_started_usec) / 1000.0
+				if monster_total_ms >= 8.0:
+					print("[MONSTER_SPAWN_TIMING] id=%d instantiate_ms=%.2f add_child_ms=%.2f setup_ms=%.2f total_ms=%.2f" % [
+						entity_id,
+						monster_instantiate_ms,
+						monster_add_ms,
+						monster_setup_ms,
+						monster_total_ms
+					])
 		2:
 			new_entity = NPC_SCENE.instantiate()
 			target_parent.add_child(new_entity)
