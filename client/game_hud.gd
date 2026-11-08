@@ -804,6 +804,20 @@ func _setup_window_manager() -> void :
 			if not option_simplify_monsters.gui_input.is_connected(_on_option_gui_input):
 				option_simplify_monsters.gui_input.connect(_on_option_gui_input.bind(option_simplify_monsters))
 
+		for option in [
+			option_pet_mode,
+			option_volume_bg,
+			option_volume_effect,
+			option_auto_saint,
+			option_quality_enhancement,
+			option_performance_load,
+			option_combat_render,
+			option_simplify_players,
+			option_simplify_monsters
+		]:
+			if option is OptionButton:
+				_bind_option_popup_cursor(option)
+
 	if btn_quest and not btn_quest.pressed.is_connected(_toggle_lazy_window.bind("quest")):
 		btn_quest.pressed.connect(_toggle_lazy_window.bind("quest"))
 	if btn_announcement and not btn_announcement.pressed.is_connected(_toggle_lazy_window.bind("announcement")):
@@ -2731,6 +2745,26 @@ func show_transfer_input_box(target_dbid: int, p_target_name: String) -> void :
 		max_transfer_amount, 
 		1
 	)
+
+
+func _bind_option_popup_cursor(option_button: OptionButton) -> void:
+	if option_button == null:
+		return
+	var popup := option_button.get_popup()
+	if popup == null:
+		return
+	if not popup.about_to_popup.is_connected(_on_system_option_popup_opened):
+		popup.about_to_popup.connect(_on_system_option_popup_opened)
+	if not popup.popup_hide.is_connected(_on_system_option_popup_closed):
+		popup.popup_hide.connect(_on_system_option_popup_closed)
+
+func _on_system_option_popup_opened() -> void:
+	if CursorManager and CursorManager.has_method("push_native_popup_cursor"):
+		CursorManager.push_native_popup_cursor()
+
+func _on_system_option_popup_closed() -> void:
+	if CursorManager and CursorManager.has_method("pop_native_popup_cursor"):
+		CursorManager.pop_native_popup_cursor()
 
 
 func _game_settings_section() -> String:
