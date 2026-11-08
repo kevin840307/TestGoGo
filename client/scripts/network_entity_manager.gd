@@ -287,7 +287,7 @@ func _process(delta: float) -> void :
 			spawned_count += 1
 
 		var elapsed_usec := Time.get_ticks_usec() - frame_started_usec
-		if elapsed_usec >= 10000:
+		if OS.is_debug_build() and elapsed_usec >= 10000:
 			print("[ENTITY_SPAWN_TIMING] count=%d elapsed_ms=%.2f remaining=%d" % [
 				spawned_count,
 				float(elapsed_usec) / 1000.0,
