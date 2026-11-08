@@ -484,6 +484,82 @@ await ProbeOn(
     "peer WorldReady completes map-load handshake",
     allowInterleaved: true);
 
+// Same-map movement and chat must traverse the real encrypted socket and the
+// map broadcast hub rather than only direct service calls.
+var firstX =
+    (int)Math.Round(
+        enterWorld.GetProperty(
+                "LocX")
+            .GetDouble());
+var firstY =
+    (int)Math.Round(
+        enterWorld.GetProperty(
+                "LocY")
+            .GetDouble());
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "SyncPosition",
+        X = firstX,
+        Y = firstY,
+        Dir = "1"
+    });
+
+await AwaitType(
+    peerSocket,
+    "MoveEntity",
+    root =>
+        root.TryGetProperty(
+            "EntityID",
+            out var entity) &&
+        entity.GetInt64() ==
+            dbid &&
+        root.TryGetProperty(
+            "X",
+            out var x) &&
+        x.GetInt32() ==
+            firstX &&
+        root.TryGetProperty(
+            "Y",
+            out var y) &&
+        y.GetInt32() ==
+            firstY,
+    "peer receives first player's authoritative same-map movement");
+
+var nearbyText =
+    "wire-nearby-" + suffix;
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "ChatMessage",
+        Channel = 0,
+        Message = nearbyText,
+        BubbleType = 0
+    });
+
+await AwaitType(
+    peerSocket,
+    "ChatBroadcast",
+    root =>
+        root.TryGetProperty(
+            "EntityID",
+            out var entity) &&
+        entity.GetInt64() ==
+            dbid &&
+        root.TryGetProperty(
+            "Channel",
+            out var channel) &&
+        channel.GetInt32() == 0 &&
+        root.TryGetProperty(
+            "Message",
+            out var message) &&
+        message.GetString() ==
+            nearbyText,
+    "peer receives nearby chat from first player over map broadcast");
+
 // Party invite/accept over two live sockets.
 await SendPacket(
     socket,
