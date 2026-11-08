@@ -1669,6 +1669,120 @@ public sealed class PacketRouter
                     ];
                 }
 
+                var boosterItem =
+                    _current.FindItem(itemIndex);
+
+                if (boosterItem is not null &&
+                    boosterItem.Category.Equals(
+                        "booster",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    var effects =
+                        new Dictionary<string, int>(
+                            StringComparer.Ordinal);
+
+                    void AddEffect(
+                        string key,
+                        int value)
+                    {
+                        if (value > 0)
+                            effects[key] = value;
+                    }
+
+                    AddEffect("stat_max_hp", boosterItem.MaxHpBonus);
+                    AddEffect("stat_max_mp", boosterItem.MaxMpBonus);
+                    AddEffect("stat_max_sp", boosterItem.MaxSpBonus);
+                    AddEffect("stat_attack", boosterItem.Atk);
+                    AddEffect("stat_defense", boosterItem.Def);
+                    AddEffect("stat_magic_attack", boosterItem.MAtk);
+                    AddEffect("stat_magic_defense", boosterItem.MDef);
+                    AddEffect("stat_hit", boosterItem.Hit);
+                    AddEffect("stat_dodge", boosterItem.Flee);
+                    AddEffect("stat_lucky", boosterItem.Luk);
+                    AddEffect("stat_attack_speed", boosterItem.Aspd);
+                    AddEffect("stat_move_speed", boosterItem.MoveSpeed);
+                    AddEffect("stat_crit_rate", boosterItem.CritRate);
+                    AddEffect("stat_crit_damage", boosterItem.CritDamage);
+
+                    if (effects.Count == 0)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = "此增益道具沒有可套用的能力效果"
+                            }
+                        ];
+                    }
+
+                    var durationSeconds = Math.Clamp(
+                        _configuration?.GetValue<int?>(
+                            "Gameplay:Items:BoosterDurationSeconds")
+                        ?? 600,
+                        1,
+                        86400);
+
+                    var nowUtcMs =
+                        DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+                    var activated =
+                        _store.ActivateTimedEffectsFromItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            itemIndex,
+                            effects,
+                            durationSeconds,
+                            nowUtcMs,
+                            sourceType: 1,
+                            sourceValue: itemIndex);
+
+                    if (!activated.Success)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = activated.Message
+                            }
+                        ];
+                    }
+
+                    var assets =
+                        _store.GetCharacterAssets(
+                            accountId,
+                            state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        BuildAndBroadcastEffectiveStatusPacket(
+                            state,
+                            accountId,
+                            state.CharacterId.Value,
+                            assets),
+                        BuildTimedEffectSync(
+                            accountId,
+                            state.CharacterId.Value),
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message =
+                                $"{boosterItem.Name} 已啟動 {durationSeconds / 60.0:0.#} 分鐘"
+                        }
+                    ];
+                }
+
                 var recovery = _recoveryItems.Find(itemIndex);
                 if (recovery is not null)
                 {
