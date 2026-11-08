@@ -25,6 +25,33 @@ public static class AdminEndpoints
                 : Results.NotFound();
         });
 
+        app.MapGet("/admin/assets/{fileName}", (
+            HttpContext ctx,
+            string fileName) =>
+        {
+            if (!IsLocal(ctx))
+                return Results.NotFound();
+
+            var contentType = fileName switch
+            {
+                "styles.css" => "text/css; charset=utf-8",
+                "app.js" => "application/javascript; charset=utf-8",
+                _ => null
+            };
+
+            if (contentType is null)
+                return Results.NotFound();
+
+            var assetPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "AdminUi",
+                fileName);
+
+            return File.Exists(assetPath)
+                ? Results.File(assetPath, contentType)
+                : Results.NotFound();
+        });
+
         app.MapGet("/admin/api/status", (
             HttpContext ctx,
             ServerBroadcastHub broadcasts,
