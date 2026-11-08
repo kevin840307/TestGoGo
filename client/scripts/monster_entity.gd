@@ -13,9 +13,17 @@ var is_action_locked: bool = false
 var entity_scale: float = 1.0
 const GENERIC_MONSTER_SPRITE := "EN032A"
 const GENERIC_MONSTER_CLICK_SIZE := Vector2(112.0, 136.0)
+const FAST_MONSTER_BODY_RADIUS: float = 29.0
+const FAST_MONSTER_COLORS := [
+	Color(0.31, 0.75, 0.92, 1.0),
+	Color(0.42, 0.82, 0.49, 1.0),
+	Color(0.80, 0.56, 0.92, 1.0),
+	Color(0.95, 0.68, 0.30, 1.0)
+]
 var _original_sprite_name: String = ""
 var _original_color_index: int = 0
 var _performance_simplified_visual: bool = false
+var _primitive_simplified_visual: bool = false
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 var ui_container: Control = null
@@ -159,6 +167,72 @@ func _resolve_ui_nodes() -> void :
 	if not is_instance_valid(level_icon):
 		level_icon = ui_container.get_node_or_null("TextureRect/LevelIcon") as TextureRect
 
+
+func prepare_performance_visual(simplified: bool, use_primitive: bool = false) -> void:
+	_performance_simplified_visual = simplified
+	_primitive_simplified_visual = simplified and use_primitive
+
+func is_primitive_simplified() -> bool:
+	return _primitive_simplified_visual
+
+func _primitive_direction_vector() -> Vector2:
+	match current_dir:
+		"1": return Vector2(0.0, 1.0)
+		"2": return Vector2(0.707, 0.707)
+		"3": return Vector2(1.0, 0.0)
+		"4": return Vector2(0.707, -0.707)
+		"5": return Vector2(0.0, -1.0)
+		"6": return Vector2(-0.707, -0.707)
+		"7": return Vector2(-1.0, 0.0)
+		"8": return Vector2(-0.707, 0.707)
+	return Vector2.DOWN
+
+func _draw() -> void:
+	if not _primitive_simplified_visual:
+		return
+
+	var state := current_state.to_lower()
+	var body_color: Color = FAST_MONSTER_COLORS[abs(entity_id) % FAST_MONSTER_COLORS.size()]
+	if state == "hit":
+		body_color = body_color.lerp(Color(1.0, 0.30, 0.30, 1.0), 0.55)
+
+	var center := Vector2(0.0, -43.0)
+	if state == "attack":
+		center += _primitive_direction_vector() * 7.0
+
+	# One texture-free primitive body. The actual click area remains the
+	# shared 112x136 collision rectangle, so it is much easier to click than
+	# the visible blob suggests.
+	if state in ["death", "die"]:
+		draw_set_transform(center + Vector2(0.0, 16.0), 0.0, Vector2(1.25, 0.32))
+		draw_circle(Vector2.ZERO, FAST_MONSTER_BODY_RADIUS, body_color)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		return
+
+	draw_circle(center, FAST_MONSTER_BODY_RADIUS, body_color)
+	draw_circle(center + Vector2(-20.0, 16.0), 9.0, body_color.darkened(0.12))
+	draw_circle(center + Vector2(20.0, 16.0), 9.0, body_color.darkened(0.12))
+	draw_circle(center + Vector2(-10.0, -6.0), 4.2, Color(0.06, 0.08, 0.11, 1.0))
+	draw_circle(center + Vector2(10.0, -6.0), 4.2, Color(0.06, 0.08, 0.11, 1.0))
+	draw_circle(center + Vector2(-8.7, -7.3), 1.25, Color.WHITE)
+	draw_circle(center + Vector2(11.3, -7.3), 1.25, Color.WHITE)
+	if state == "attack":
+		draw_line(
+			center + Vector2(-8.0, 9.0),
+			center + Vector2(8.0, 9.0),
+			Color(0.15, 0.08, 0.10, 1.0),
+			3.0
+		)
+	else:
+		draw_arc(
+			center + Vector2(0.0, 5.0),
+			8.0,
+			0.15,
+			PI - 0.15,
+			10,
+			Color(0.15, 0.08, 0.10, 1.0),
+			2.0
+		)
 
 func _ready() -> void :
 	_resolve_ui_nodes()
@@ -495,8 +569,12 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 	if name_label: name_label.text = m_name
 	require_ctrl_to_attack = bool(extra_data.get("RequireCtrlToAttack", false))
 	entity_scale = float(extra_data.get("Scale", 1.0))
+	var is_world_boss := bool(extra_data.get("IsWorldBoss", false))
+	if is_world_boss:
+		_performance_simplified_visual = false
+		_primitive_simplified_visual = false
 
-	if extra_data.get("IsWorldBoss", false) and entity_scale == 1.0: entity_scale = 1.2
+	if is_world_boss and entity_scale == 1.0: entity_scale = 1.2
 	self.scale = Vector2(entity_scale, entity_scale)
 
 	if hp_bar:
@@ -532,20 +610,38 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 	_play_spawn_transition()
 
 
-func set_performance_simplified(enabled: bool) -> void:
-	if _performance_simplified_visual == enabled:
+func set_performance_simplified(enabled: bool, use_primitive: bool = false) -> void:
+	var primitive_enabled := enabled and use_primitive
+	if (
+		_performance_simplified_visual == enabled
+		and _primitive_simplified_visual == primitive_enabled
+	):
 		return
 	_performance_simplified_visual = enabled
+	_primitive_simplified_visual = primitive_enabled
 	_apply_performance_sprite()
 	_lock_ui_position()
 	_generate_dynamic_collision_shape()
 	sync_animation()
+	queue_redraw()
 
 func is_performance_simplified() -> bool:
 	return _performance_simplified_visual
 
 func _apply_performance_sprite() -> void:
-	if not is_instance_valid(sprite) or not MonsterLoader:
+	if not is_instance_valid(sprite):
+		return
+
+	if _primitive_simplified_visual:
+		sprite.stop()
+		sprite.visible = false
+		sprite.sprite_frames = null
+		sprite.material = null
+		queue_redraw()
+		return
+
+	sprite.visible = true
+	if not MonsterLoader:
 		return
 	var sprite_name := GENERIC_MONSTER_SPRITE if _performance_simplified_visual else _original_sprite_name
 	if sprite_name.is_empty():
@@ -559,6 +655,7 @@ func _apply_performance_sprite() -> void:
 		sprite.material = get_shared_monster_palette_material(_original_color_index)
 	else:
 		sprite.material = null
+	queue_redraw()
 
 func _play_spawn_transition() -> void :
 	# Purely visual and intentionally lightweight: one short alpha tween,
@@ -576,7 +673,14 @@ func _play_spawn_transition() -> void :
 
 
 func _lock_ui_position() -> void :
-	if not sprite or not sprite.sprite_frames or not ui_container: return
+	if not ui_container:
+		return
+	if _primitive_simplified_visual:
+		ui_container.position = Vector2(-ui_container.size.x / 2.0, -105.0)
+		_ui_visual_base = ui_container.position
+		return
+	if not sprite or not sprite.sprite_frames:
+		return
 
 	await get_tree().process_frame
 	if not is_instance_valid(self): return
@@ -600,10 +704,13 @@ func _lock_ui_position() -> void :
 
 
 func _generate_dynamic_collision_shape() -> void :
-	if not collision_shape or not sprite or not sprite.sprite_frames: return
+	if not collision_shape:
+		return
 	if _performance_simplified_visual:
 		collision_shape.shape = get_generic_monster_click_shape()
 		collision_shape.position = Vector2(0.0, -GENERIC_MONSTER_CLICK_SIZE.y * 0.5)
+		return
+	if not sprite or not sprite.sprite_frames:
 		return
 
 	var base_anim = "IDLE_1"
@@ -685,7 +792,7 @@ func _apply_visual_direction_from_vector(
 	pending_move_dir = ""
 	pending_move_dir_count = 0
 
-	if current_state in ["walk", "attack"]:
+	if current_state in ["walk", "attack"] or _primitive_simplified_visual:
 		sync_animation()
 
 
@@ -972,6 +1079,23 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 		sync_animation()
 
 func sync_animation() -> void :
+	if _primitive_simplified_visual:
+		queue_redraw()
+		if current_state.to_lower() in ["attack", "hit"]:
+			fallback_action_generation += 1
+			var generation := fallback_action_generation
+			var tree: SceneTree = get_tree()
+			if tree != null:
+				tree.create_timer(FALLBACK_ACTION_RELEASE_SECONDS).timeout.connect(func():
+					if not is_instance_valid(self) or not is_inside_tree() or current_hp <= 0:
+						return
+					if generation != fallback_action_generation:
+						return
+					if current_state not in ["attack", "hit"]:
+						return
+					_release_combat_action_state()
+				)
+		return
 	if not sprite or not sprite.sprite_frames: return
 	var mapped_prefix = STATE_MAP.get(current_state.to_lower(), "IDLE")
 	var dir_int = int(current_dir)
