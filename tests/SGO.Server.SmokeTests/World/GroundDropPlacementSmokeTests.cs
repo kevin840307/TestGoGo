@@ -112,6 +112,14 @@ internal static class GroundDropPlacementSmokeTests
             Check(placement.CheckPickup(1, 40, 40,
                       latest.X, latest.Y) == GroundPickupReachability.Allowed,
                 "a recovered old drop is now reachable for a normal pickup");
+
+            var removed = persist.ClearGroundItems(1);
+            Check(removed.Contains(oldGround.EntityId) &&
+                  persist.RelocateGroundItemIfUnchanged(
+                      oldGround.GroundItemId, 1,
+                      oldGround.X, oldGround.Y, 88, 88) is null &&
+                  !persist.GetGroundItems(1).Any(),
+                "a ground item already removed/picked up cannot be resurrected by stale WorldReady repair");
         }
 
         Check(placement.TryResolve(1,
