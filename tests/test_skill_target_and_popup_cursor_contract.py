@@ -64,6 +64,15 @@ require(
     "aoe_center_mode_changed",
     "skill card must emit AOE center preference changes",
 )
+if "var card: SkillCard" in skill_window:
+    raise AssertionError(
+        "SkillWindow must not hard-depend on the SkillCard class symbol"
+    )
+require(
+    skill_window,
+    'card.has_method("setup")',
+    "SkillWindow must tolerate a card script/load failure without a class parse dependency",
+)
 require(
     skill_window,
     "show_aoe_center_toggle",
