@@ -166,12 +166,14 @@ test('map add drag undo redo save and reload persists real coordinates', async (
   expect(movedY).toBeGreaterThan(beforeY);
 
   await page.locator('#map-undo').click();
-  await expect.poll(async () => Number(await xInput.inputValue())).toBe(beforeX);
-  await expect.poll(async () => Number(await yInput.inputValue())).toBe(beforeY);
+  await page.locator('.map-marker.monster').first().click();
+  await expect(page.locator('#map-inspector-x')).toHaveValue(String(beforeX));
+  await expect(page.locator('#map-inspector-y')).toHaveValue(String(beforeY));
 
   await page.locator('#map-redo').click();
-  await expect.poll(async () => Number(await xInput.inputValue())).toBe(movedX);
-  await expect.poll(async () => Number(await yInput.inputValue())).toBe(movedY);
+  await page.locator('.map-marker.monster').first().click();
+  await expect(page.locator('#map-inspector-x')).toHaveValue(String(movedX));
+  await expect(page.locator('#map-inspector-y')).toHaveValue(String(movedY));
 
   await page.locator('#map-save').click();
   await expect(page.locator('.toast').filter({ hasText: '地圖資料已儲存' })).toBeVisible();
@@ -185,8 +187,9 @@ test('map add drag undo redo save and reload persists real coordinates', async (
 });
 
 test('first-run help can be dismissed and remembered', async ({ page }) => {
-  await page.addInitScript(() => localStorage.removeItem('sgo-editor-help-v1'));
   await page.goto(baseUrl);
+  await page.evaluate(() => localStorage.removeItem('sgo-editor-help-v1'));
+  await page.reload();
   await expect(page.locator('#help-modal')).toBeVisible();
   await page.locator('#help-dont-show').check();
   await page.locator('#help-ok').click();
