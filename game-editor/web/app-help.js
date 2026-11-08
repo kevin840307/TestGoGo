@@ -12,10 +12,12 @@ function openHelp({firstRun=false}={}) {
 function closeHelp({remember=false}={}) {
   const modal = $('#help-modal');
   if (!modal) return;
-  if (remember || $('#help-dont-show')?.checked) {
+  const firstRun = modal.dataset.firstRun === '1';
+  if (firstRun || remember || $('#help-dont-show')?.checked) {
     try { localStorage.setItem(HELP_STORAGE_KEY, 'dismissed'); } catch {}
   }
   modal.hidden = true;
+  modal.dataset.firstRun = '0';
 }
 
 function maybeShowFirstRunHelp() {
