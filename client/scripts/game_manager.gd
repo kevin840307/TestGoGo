@@ -1202,10 +1202,10 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 
 func _set_background_visual_processing(paused: bool) -> void :
 	if CursorManager:
-		# Keep an OS cursor in AFK. Normally CursorManager hides that cursor
-		# and draws its own sprite; pausing _process otherwise loses both.
-		CursorManager.set_afk_native_cursor_enabled(_afk_active)
-		CursorManager.set_process(not paused and not _afk_active)
+		# AFK keeps only the tiny custom cursor process alive while the focused
+		# dashboard is visible. World/minimap/effect processing stays suspended.
+		CursorManager.set_afk_custom_cursor_enabled(_afk_active)
+		CursorManager.set_process(_afk_active or not paused)
 	if is_instance_valid(current_day_night_overlay):
 		current_day_night_overlay.set_process(not paused)
 	if is_instance_valid(current_hud):

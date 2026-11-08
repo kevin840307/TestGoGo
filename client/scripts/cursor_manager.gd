@@ -28,31 +28,31 @@ var _popup_cursor_sprite: AnimatedSprite2D = null
 var hovered_items: Array = []
 
 var _last_ctrl_state: bool = false
-var _afk_native_cursor_enabled: bool = false
+var _afk_custom_cursor_enabled: bool = false
 
 
-func set_afk_native_cursor_enabled(enabled: bool) -> void:
-	# Gameplay normally hides the OS pointer and draws a custom sprite.
-	# AFK pauses that sprite's per-frame updates, so restore the native OS
-	# pointer rather than leaving the user with an invisible mouse.
-	if _afk_native_cursor_enabled == enabled:
+func set_afk_custom_cursor_enabled(enabled: bool) -> void:
+	# Keep the game's own pointer during AFK. It is a single small sprite and
+	# costs far less than the world/minimap/effects we suspend. AFK forces the
+	# ordinary cursor animation and skips hover/combat/tooltip work.
+	if _afk_custom_cursor_enabled == enabled:
 		return
-	_afk_native_cursor_enabled = enabled
+	_afk_custom_cursor_enabled = enabled
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+	if is_instance_valid(cursor_sprite):
+		cursor_sprite.visible = true
+	if is_instance_valid(tooltip_label):
+		tooltip_label.visible = false
 	if enabled:
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		if is_instance_valid(cursor_sprite):
-			cursor_sprite.visible = false
-		if is_instance_valid(tooltip_label):
-			tooltip_label.visible = false
+		if is_instance_valid(cursor_sprite) and cursor_sprite.sprite_frames.has_animation("normal"):
+			cursor_sprite.play("normal")
 	else:
-		Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
-		if is_instance_valid(cursor_sprite):
-			cursor_sprite.visible = true
-			_apply_cursor_visual()
+		_refresh_cursor()
+		_apply_cursor_visual()
 
 
-func is_afk_native_cursor_enabled() -> bool:
-	return _afk_native_cursor_enabled
+func is_afk_custom_cursor_enabled() -> bool:
+	return _afk_custom_cursor_enabled
 
 
 func _ready() -> void :
@@ -78,6 +78,10 @@ func _ready() -> void :
 func _process(_delta: float) -> void :
 	var m_pos = cursor_sprite.get_global_mouse_position()
 	cursor_sprite.global_position = m_pos
+	if _afk_custom_cursor_enabled:
+		# AFK dashboard only needs pointer position. Do not evaluate world hover,
+		# Ctrl combat state, autorun animation or tooltips every frame.
+		return
 	if (
 		is_instance_valid(_popup_cursor_window)
 		and is_instance_valid(_popup_cursor_sprite)
@@ -267,11 +271,10 @@ func hide_popup_game_cursor(popup_window: Window = null) -> void:
 	_popup_cursor_sprite = null
 	_popup_cursor_window = null
 
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if _afk_native_cursor_enabled else Input.MOUSE_MODE_HIDDEN
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
 	if is_instance_valid(cursor_sprite):
-		cursor_sprite.visible = not _afk_native_cursor_enabled
-	if not _afk_native_cursor_enabled:
-		_apply_cursor_visual()
+		cursor_sprite.visible = true
+	_apply_cursor_visual()
 
 
 # Backward-compatible wrappers for callers from older scene/script revisions.
@@ -281,11 +284,10 @@ func push_native_popup_cursor() -> void:
 func pop_native_popup_cursor() -> void:
 	_native_popup_cursor_depth = maxi(0, _native_popup_cursor_depth - 1)
 	if _native_popup_cursor_depth == 0 and not is_instance_valid(_popup_cursor_window):
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if _afk_native_cursor_enabled else Input.MOUSE_MODE_HIDDEN
+		Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
 		if is_instance_valid(cursor_sprite):
-			cursor_sprite.visible = not _afk_native_cursor_enabled
-		if not _afk_native_cursor_enabled:
-			_apply_cursor_visual()
+			cursor_sprite.visible = true
+		_apply_cursor_visual()
 
 func is_native_popup_cursor_active() -> bool:
 	return _native_popup_cursor_depth > 0 or is_instance_valid(_popup_cursor_window)
@@ -308,7 +310,7 @@ func set_game_window_hovered(is_hovered: bool) -> void :
 			current_hovered_entity._on_mouse_entered()
 
 func _apply_cursor_visual() -> void :
-	var visual_state: String = "normal" if _is_game_window_hovered else _logical_cursor_state
+	var visual_state: String = "normal" if (_afk_custom_cursor_enabled or _is_game_window_hovered) else _logical_cursor_state
 	# Keep all old skill/monster/NPC/player/item pointers ahead of autorun.
 	# Only replace the ordinary terrain pointer when walking is latched.
 	if _autorun_enabled and visual_state == "normal" and not _is_game_window_hovered:

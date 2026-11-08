@@ -1,7 +1,7 @@
 extends SceneTree
 
 # godot --headless --path client --script res://tests/afk_cursor_audio_regression.gd
-# Verify native cursor and silence transitions while preserving original state.
+# Verify custom cursor and silence transitions while preserving original state.
 var failures: int = 0
 
 
@@ -19,17 +19,18 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var original_mouse_mode: int = Input.mouse_mode
-	var original_cursor_enabled: bool = CursorManager.is_afk_native_cursor_enabled()
+	var original_cursor_enabled: bool = CursorManager.is_afk_custom_cursor_enabled()
 	var original_audio_silent: bool = AudioManager.is_afk_silent()
 
-	CursorManager.set_afk_native_cursor_enabled(true)
-	check(CursorManager.is_afk_native_cursor_enabled(), "AFK native cursor mode is enabled")
-	check(not CursorManager.cursor_sprite.visible, "game cursor sprite is hidden during AFK")
+	CursorManager.set_afk_custom_cursor_enabled(true)
+	check(CursorManager.is_afk_custom_cursor_enabled(), "AFK custom cursor mode is enabled")
+	check(CursorManager.cursor_sprite.visible, "game cursor sprite remains visible during AFK")
+	check(CursorManager.cursor_sprite.animation == "normal", "AFK cursor uses the ordinary UI animation")
 	if DisplayServer.get_name() != "headless":
-		check(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "actual OS mouse pointer is visible")
-	CursorManager.set_afk_native_cursor_enabled(false)
-	check(not CursorManager.is_afk_native_cursor_enabled(), "game cursor mode can be restored")
-	check(CursorManager.cursor_sprite.visible, "original game cursor sprite becomes visible")
+		check(Input.mouse_mode == Input.MOUSE_MODE_HIDDEN, "OS pointer stays hidden behind the game cursor")
+	CursorManager.set_afk_custom_cursor_enabled(false)
+	check(not CursorManager.is_afk_custom_cursor_enabled(), "normal game cursor mode can be restored")
+	check(CursorManager.cursor_sprite.visible, "game cursor sprite remains available after AFK")
 
 	AudioManager.set_afk_silent(true)
 	check(AudioManager.is_afk_silent(), "AFK audio suppression is active")
@@ -40,7 +41,7 @@ func _run() -> void:
 	check(not AudioManager.is_afk_silent(), "AFK audio suppression can be disabled")
 
 	if original_cursor_enabled:
-		CursorManager.set_afk_native_cursor_enabled(true)
+		CursorManager.set_afk_custom_cursor_enabled(true)
 	if original_audio_silent:
 		AudioManager.set_afk_silent(true)
 	Input.mouse_mode = original_mouse_mode
