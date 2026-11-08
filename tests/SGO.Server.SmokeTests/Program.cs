@@ -6623,6 +6623,11 @@ try
                 "\"Type\":\"EntityHeal\"")),
         "體力回復 Lv1 uses original fixed 13 HP cure with ±10% variance");
 
+    // The current AOI contract only exposes players after WorldReady.
+    // WorldReady's packet/snapshot handshake is covered separately above;
+    // these test sessions simulate the already-ready world state.
+    session.WorldReady = true;
+    router.SyncPresence(session);
     var peerRegistration = broadcastHub.Register();
     var peerSession = new ClientSession
     {
@@ -6632,6 +6637,7 @@ try
         CurrentMapId = combatMapId,
         LastX = combatEnemy.X,
         LastY = combatEnemy.Y,
+        WorldReady = true,
         PendingMapSpawn = true
     };
 
@@ -6648,14 +6654,25 @@ try
     router.SyncPresence(peerSession);
 
     Check(
-        broadcastRegistration.Queue.TryDequeue(
-            out var peerPlayerSpawn) &&
-        JsonSerializer.Serialize(peerPlayerSpawn).Contains(
-            "\"EntityType\":0") &&
-        JsonSerializer.Serialize(peerPlayerSpawn).Contains(
-            $"\"EntityID\":{secondCharacterId}") &&
-        peerRegistration.Queue.IsEmpty,
-        "joining player broadcasts SpawnEntity to existing map peers only");
+        broadcastRegistration.Queue.ToArray().Any(packet =>
+            JsonSerializer.Serialize(packet).Contains(
+                "\"EntityType\":0") &&
+            JsonSerializer.Serialize(packet).Contains(
+                $"\"EntityID\":{secondCharacterId}")) &&
+        peerRegistration.Queue.ToArray().Any(packet =>
+            JsonSerializer.Serialize(packet).Contains(
+                "\"EntityType\":0") &&
+            JsonSerializer.Serialize(packet).Contains(
+                $"\"EntityID\":{id}")) &&
+        broadcastHub.IsPlayerAoiVisibleAs(
+            session.ConnectionId,
+            peerSession.ConnectionId,
+            secondCharacterId) &&
+        broadcastHub.IsPlayerAoiVisibleAs(
+            peerSession.ConnectionId,
+            session.ConnectionId,
+            id),
+        "WorldReady nearby peers exchange SpawnEntity in both AOI directions");
 
     while (peerRegistration.Queue.TryDequeue(out _)) { }
 
