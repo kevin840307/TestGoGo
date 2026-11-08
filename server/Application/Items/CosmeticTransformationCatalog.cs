@@ -12,14 +12,27 @@ public sealed record CosmeticTransformationDefinition(
 /// <summary>
 /// Current-client appearance-only transformation devices. These mappings are
 /// restricted to item descriptions/equipment sets that are unambiguous in the
-/// recovered client. Choice-based weapon appearances remain intentionally
-/// unresolved.
+/// recovered client. Race-specific Wafuu sets are resolved from the current
+/// client equipment data; the flower-ball weapon choice remains unresolved.
 /// </summary>
 public static class CosmeticTransformationCatalog
 {
     private sealed record Mapping(
         int? RequiredRace,
         int[] ItemIds);
+
+    private static readonly IReadOnlyDictionary<int, int[]> WafuuByRace =
+        new Dictionary<int, int[]>
+        {
+            // Human male / Asura-like male set.
+            [0] = [19272, 19276, 19280, 19284],
+            // Human female set.
+            [1] = [19273, 19277, 19281, 19285],
+            // Migu set.
+            [2] = [19274, 19278, 19282, 19286],
+            // Robot set.
+            [3] = [19275, 19279, 19283, 19287]
+        };
 
     private static readonly IReadOnlyDictionary<int, Mapping> Mappings =
         new Dictionary<int, Mapping>
@@ -77,25 +90,55 @@ public static class CosmeticTransformationCatalog
         };
 
     public static bool Supports(int itemId)
-        => Mappings.ContainsKey(itemId);
+        => itemId == 2003 ||
+           Mappings.ContainsKey(itemId);
 
     public static int? RequiredRace(int itemId)
-        => Mappings.TryGetValue(itemId, out var mapping)
-            ? mapping.RequiredRace
-            : null;
+        => itemId == 2003
+            ? null
+            : Mappings.TryGetValue(itemId, out var mapping)
+                ? mapping.RequiredRace
+                : null;
 
     public static CosmeticTransformationDefinition? Resolve(
         CurrentClientDataCatalog current,
         int itemId,
         int race)
     {
-        if (!Mappings.TryGetValue(itemId, out var mapping))
-            return null;
+        int[] targetItemIds;
+        int? requiredRace;
 
-        if (mapping.RequiredRace.HasValue &&
-            mapping.RequiredRace.Value != race)
+        if (itemId == 2003)
         {
-            return null;
+            if (!WafuuByRace.TryGetValue(
+                    race,
+                    out targetItemIds!))
+            {
+                return null;
+            }
+
+            requiredRace = null;
+        }
+        else
+        {
+            if (!Mappings.TryGetValue(
+                    itemId,
+                    out var mapping))
+            {
+                return null;
+            }
+
+            requiredRace =
+                mapping.RequiredRace;
+
+            if (requiredRace.HasValue &&
+                requiredRace.Value != race)
+            {
+                return null;
+            }
+
+            targetItemIds =
+                mapping.ItemIds;
         }
 
         var source = current.FindItem(itemId);
@@ -111,7 +154,7 @@ public static class CosmeticTransformationCatalog
         }
 
         var overrides = new List<CharacterCosmeticOverride>();
-        foreach (var targetId in mapping.ItemIds)
+        foreach (var targetId in targetItemIds)
         {
             var target = current.FindItem(targetId);
             if (target is null ||
