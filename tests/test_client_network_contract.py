@@ -48,12 +48,16 @@ class ClientNetworkContractTests(unittest.TestCase):
             block,
         )
 
-    def test_drive_mecha_response_is_ack_only(self):
+    def test_drive_mecha_response_is_ack_plus_authoritative_rebase_only(self):
         block = packet_block(self.source, "DriveMechaResponse")
         fields = set(FIELD_READ.findall(block))
-        self.assertEqual({"Success", "HorseUID", "Message"}, fields)
+        self.assertEqual(
+            {"Success", "HorseUID", "MapID", "X", "Y", "Message"},
+            fields,
+        )
         self.assertIn("summoned_horse_uid", block)
         self.assertIn('rider_state["SummonedHorseUID"]', block)
+        self.assertIn("apply_position_correction", block)
 
     def test_player_status_sync_owns_effective_combat_stats(self):
         block = packet_block(self.source, "PlayerStatusSync")
