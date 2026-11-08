@@ -37,14 +37,20 @@ func _ready() -> void :
 
 	_show_crafting(false)
 
-func prepare_static_async() -> void :
+func prepare_static_async(progress_callback: Callable = Callable()) -> void :
 	if _static_prepared:
+		if progress_callback.is_valid():
+			progress_callback.call(1.0)
 		return
 	var started_usec: int = Time.get_ticks_usec()
+	if progress_callback.is_valid():
+		progress_callback.call(0.0)
 	_cached_recipe_data = _load_recipe_data()
 	if crafting_panel and crafting_panel.has_method("prepare_static_tree_async"):
-		await crafting_panel.prepare_static_tree_async(_cached_recipe_data)
+		await crafting_panel.prepare_static_tree_async(_cached_recipe_data, progress_callback)
 	_static_prepared = true
+	if progress_callback.is_valid():
+		progress_callback.call(1.0)
 	if OS.is_debug_build():
 		print("[CRAFT_STATIC_PREWARM] recipes=%d total_ms=%.2f" % [
 		_cached_recipe_data.size(),
