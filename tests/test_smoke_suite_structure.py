@@ -512,6 +512,10 @@ class SmokeSuiteStructureTests(unittest.TestCase):
             ROOT / "server" / "Application" / "Party" /
             "PartyService.cs"
         ).read_text(encoding="utf-8-sig")
+        combat = (
+            ROOT / "server" / "Application" / "Combat" /
+            "CombatService.cs"
+        ).read_text(encoding="utf-8-sig")
 
         self.assertIn(
             "_broadcasts.PublishToPlayerObservers(",
@@ -529,6 +533,34 @@ class SmokeSuiteStructureTests(unittest.TestCase):
             "_broadcasts.PublishToPlayerObservers(",
             party,
         )
+
+        status_start = combat.index("private void BroadcastPublicStatus")
+        status_end = combat.index("private static object Flash", status_start)
+        status = combat[status_start:status_end]
+        self.assertIn("_broadcasts.FindCharacter(", status)
+        self.assertIn("presence.ConnectionId", status)
+
+        world_start = combat.index("private void BroadcastWorldPackets")
+        world_end = combat.index("private void RegisterMonsterAoi", world_start)
+        world = combat[world_start:world_end]
+        self.assertIn('type == "EntityHeal"', world)
+        self.assertIn("targetPresence.ConnectionId", world)
+        self.assertIn("session.ConnectionId", world)
+
+        origin_start = combat.index(
+            "internal static bool IsPlayerOriginAoiPacket"
+        )
+        origin_end = combat.index("private static void SetAiState", origin_start)
+        origin = combat[origin_start:origin_end]
+        for packet_type in (
+            '"SpawnEntity"',
+            '"DespawnEntity"',
+            '"SyncState"',
+            '"EntityDeath"',
+        ):
+            self.assertIn(packet_type, origin)
+        self.assertIn("entityId >= 4_000_000", origin)
+        self.assertIn("entityId < 6_000_000", origin)
 
     def test_player_shop_aoi_suite_guards_far_packet_mutation(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
