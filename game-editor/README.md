@@ -6,8 +6,8 @@
 
 - **技能 CRUD**：以常用數值優先的表單編輯 `client/Skills/*.tres`；進階類型、特效與屬性加成預設收合，每級可直接複製上一級再微調。
 - **怪物 CRUD**：以名稱與圖片預覽為主，編輯 `Old/服務端/Dat/Enemy/Enemy_Data.csv` 常用欄位；新增怪物可直接從「怪物名稱」選擇相近怪物 Clone，不必背 ID。
-- **視覺化地圖怪物編輯**：搜尋怪物名稱後，點座標畫布放置、拖曳移動、點標記編輯 / 複製 / 刪除。畫布直接使用 `client/maps/map_bounds.json` 的遊戲範圍，疊加 `Blocking.dat` 碰撞層（紅＝不可走、黃＝特殊地形）與 `MapSpawnConfig.json` 怪物區域參考；放到阻擋格時預設自動吸附到最近可走格。底層仍安全寫入 `MapXX/Enemy.dat`，既有記錄保留原本 207-byte payload。
-- **視覺化地圖 NPC 編輯**：點畫布新增 NPC、拖曳改位置，右側直接改名稱 / Script / Type；同樣使用 Blocking 檢查與自動吸附，仍保留進階原始清單。
+- **視覺化地圖怪物編輯**：搜尋怪物名稱後，點座標畫布放置、拖曳移動、點標記編輯 / 複製 / 刪除。支援 Shift 框選、多選群組拖曳、Ctrl+C/V、Ctrl+Z/Y、Delete、Ctrl+A、名稱顯示切換、只顯示目前怪物種類、縮放 / Fit / Space 或中鍵平移，以及一次 2~100 隻的合法區域批量散佈。畫布直接使用 `client/maps/map_bounds.json` 的遊戲範圍，疊加 `Blocking.dat` 碰撞層（紅＝不可走、黃＝特殊地形）與 `MapSpawnConfig.json` 怪物區域參考；放到阻擋格時預設自動吸附到最近可走格。底層仍安全寫入 `MapXX/Enemy.dat`，既有記錄保留原本 207-byte payload。
+- **視覺化地圖 NPC 編輯**：點畫布新增 NPC、拖曳改位置，右側直接改名稱 / Script / Type；同樣支援框選、多選、群組拖曳、複製貼上、Undo/Redo、縮放/平移與 Blocking 自動吸附，仍保留進階原始清單。
 - **NPC 腳本編輯器**：管理 `Old/服務端/Dat/Quest/*.txt`，支援搜尋、function outline、常用 Say / Ask / Function 範本、`#include` 檢查、callback 與 block/括號/字串基本驗證。
 - **素材管理**：瀏覽 `client/Assets`、圖片預覽、按鈕選檔替換，也可直接拖檔案到素材卡片上替換。
 - **安全寫入**：所有修改先備份到 `game-editor/.backups/`，再使用 atomic replace；所有可輸入路徑都有 traversal guard。
@@ -66,7 +66,31 @@ python -m unittest discover -s game-editor/tests -v
 - 素材替換與備份路徑安全
 - 視覺化地圖編輯器的放置 / 拖曳 / 複製操作是否有正確掛載
 - `map_bounds.json` / `Blocking.dat` 解析、阻擋層 PNG、不可走格最近可走位置計算
+- Blocking cache 來源檔變更刷新、batch snap、5000 點 request guard
+- 地圖 Undo/Redo、多選、框選、複製貼上、縮放、批量放置、獨立 `app-map-editor.js` wiring
 - NPC 範本、素材拖放、技能常用/進階欄位 UI 是否有正確掛載
+
+## 地圖編輯快捷操作
+
+- `Shift + 拖曳空白處`：框選多個怪物 / NPC
+- `Shift / Ctrl + 點標記`：加入或移除多選
+- `Ctrl+A`：選取目前可見物件；若啟用「只看選中怪物」，只會選該種類
+- `Ctrl+C / Ctrl+V`：複製 / 貼上選取物件
+- `Ctrl+Z / Ctrl+Y`：Undo / Redo（最多保留 60 個編輯狀態，並保留最後儲存基準）
+- `Delete`：刪除選取物件，可立即 Undo
+- `Ctrl + 滑鼠滾輪` 或工具列 `＋ / −`：縮放
+- `Space + 左鍵拖曳` 或 `滑鼠中鍵拖曳`：平移
+- `Fit`：依地圖長寬比自動縮放到可視區
+- 「批量放置」：設定數量與半徑後點地圖，以該點為中心散佈；Blocking 檢查會用單次 batch request 完成
+
+地圖切換、頁籤切換、重新整理或離開地圖工具時，若有未儲存修改會先提示，避免誤丟資料。
+
+## 效能設計
+
+- 地圖清單只讀 `Enemy.dat / NPC.dat` 前 4 bytes 的 count，不為了顯示數量完整解析所有 record。
+- `Blocking.dat` 依 mtime/size 快取，批量移動與批量放置在一次 request 內共用同一份 collision grid。
+- Blocking PNG / collision grid / JSON metadata cache 都有限制容量，長時間切換大量地圖不會無限累積記憶體。
+- 地圖拖曳時只更新 DOM 標記位置；放開後才做 Blocking 驗證與完整 render，避免 pointermove 每幀打 API。
 
 ## 資料來源原則
 
