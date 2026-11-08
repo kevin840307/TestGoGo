@@ -33,6 +33,9 @@ class MouseAutorunContractTests(unittest.TestCase):
         handler = player[first:last]
         self.assertIn("MOUSE_BUTTON_RIGHT", handler)
         self.assertIn("cancel_autorun_tracking(true)", handler)
+        self.assertIn("CursorManager.current_hovered_entity", handler)
+        self.assertIn("gui_get_hovered_control()", handler)
+        self.assertIn("Control.MOUSE_FILTER_STOP", handler)
         self.assertNotIn("set_input_as_handled", handler)
         self.assertIn("show_player_context_menu(", network_player)
 
