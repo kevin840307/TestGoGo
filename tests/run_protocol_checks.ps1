@@ -38,6 +38,10 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_client_network_contract.py", "-v"
     )
+    Invoke-Checked "Quest host audit unit tests" "python" @(
+        "-m", "unittest", "discover", "-s", "tests",
+        "-p", "test_quest_host_audit.py", "-v"
+    )
     Invoke-Checked "Smoke suite structure tests" "python" @(
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_smoke_suite_structure.py", "-v"
@@ -57,6 +61,10 @@ try {
     Invoke-Checked "Response field coverage" "python" @(
         "tests/packet_response_audit.py", "--strict", "--output",
         (Join-Path $logRoot "packet-response.json")
+    )
+    Invoke-Checked "Legacy quest host coverage" "python" @(
+        "tests/quest_host_audit.py", "--output",
+        (Join-Path $logRoot "quest-host.json")
     )
 
     Invoke-Checked ".NET Server build" "dotnet" @(
