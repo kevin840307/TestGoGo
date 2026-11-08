@@ -11,6 +11,11 @@ var current_state: String = "idle"
 var current_dir: String = "1"
 var is_action_locked: bool = false
 var entity_scale: float = 1.0
+const GENERIC_MONSTER_SPRITE := "EN032A"
+const GENERIC_MONSTER_CLICK_SIZE := Vector2(112.0, 136.0)
+var _original_sprite_name: String = ""
+var _original_color_index: int = 0
+var _performance_simplified_visual: bool = false
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 var ui_container: Control = null
@@ -93,6 +98,9 @@ static var _shared_palette_materials: Dictionary = {}
 # is immutable after setup; share one Shape2D per texture dimensions.
 static var _shared_click_shapes: Dictionary = {}
 
+
+static func get_generic_monster_click_shape() -> RectangleShape2D:
+	return get_shared_monster_click_shape(GENERIC_MONSTER_CLICK_SIZE)
 
 static func get_shared_monster_click_shape(texture_size: Vector2) -> RectangleShape2D:
 	var key := Vector2i(int(texture_size.x), int(texture_size.y))
@@ -503,14 +511,12 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 			hp_bar.max_value = max_hp
 			hp_bar.value = current_hp
 
-	if extra_data.has("Sprite") and MonsterLoader:
-		var frames = MonsterLoader.get_monster_frames(extra_data["Sprite"], true)
-		if frames and sprite: sprite.sprite_frames = frames
+	_original_sprite_name = str(extra_data.get("Sprite", ""))
+	_original_color_index = int(extra_data.get("ColorIndex", 0))
+	_apply_performance_sprite()
 
-	if extra_data.has("ColorIndex") and sprite:
-		var c_idx: int = int(extra_data["ColorIndex"])
-		if c_idx > 0:
-			sprite.material = get_shared_monster_palette_material(c_idx)
+	if sprite and not _performance_simplified_visual and _original_color_index > 0:
+		sprite.material = get_shared_monster_palette_material(_original_color_index)
 
 	sync_animation()
 	_lock_ui_position()
@@ -518,6 +524,34 @@ func setup(id: int, m_name: String, extra_data: Dictionary) -> void :
 	_generate_dynamic_collision_shape()
 	_play_spawn_transition()
 
+
+func set_performance_simplified(enabled: bool) -> void:
+	if _performance_simplified_visual == enabled:
+		return
+	_performance_simplified_visual = enabled
+	_apply_performance_sprite()
+	_lock_ui_position()
+	_generate_dynamic_collision_shape()
+	sync_animation()
+
+func is_performance_simplified() -> bool:
+	return _performance_simplified_visual
+
+func _apply_performance_sprite() -> void:
+	if not is_instance_valid(sprite) or not MonsterLoader:
+		return
+	var sprite_name := GENERIC_MONSTER_SPRITE if _performance_simplified_visual else _original_sprite_name
+	if sprite_name.is_empty():
+		return
+	var frames = MonsterLoader.get_monster_frames(sprite_name, true)
+	if frames:
+		sprite.sprite_frames = frames
+	if _performance_simplified_visual:
+		sprite.material = null
+	elif _original_color_index > 0:
+		sprite.material = get_shared_monster_palette_material(_original_color_index)
+	else:
+		sprite.material = null
 
 func _play_spawn_transition() -> void :
 	# Purely visual and intentionally lightweight: one short alpha tween,
@@ -560,6 +594,10 @@ func _lock_ui_position() -> void :
 
 func _generate_dynamic_collision_shape() -> void :
 	if not collision_shape or not sprite or not sprite.sprite_frames: return
+	if _performance_simplified_visual:
+		collision_shape.shape = get_generic_monster_click_shape()
+		collision_shape.position = Vector2(0.0, -GENERIC_MONSTER_CLICK_SIZE.y * 0.5)
+		return
 
 	var base_anim = "IDLE_1"
 	if not sprite.sprite_frames.has_animation(base_anim):
