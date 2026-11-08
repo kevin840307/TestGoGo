@@ -68,6 +68,10 @@ public sealed class WorldEntitySpatialAoi
         (int MapId, int CellX, int CellY),
         HashSet<long>> _entityCells = new();
 
+    private readonly Dictionary<
+        (int MapId, int EntityType),
+        HashSet<long>> _entityGroups = new();
+
     public int ObserverCount
     {
         get { lock (_gate) return _observers.Count; }
@@ -254,6 +258,38 @@ public sealed class WorldEntitySpatialAoi
 
             return ReconcileEntityLocked(
                 entry);
+        }
+    }
+
+    public IReadOnlyList<Change> RemoveMissingEntities(
+        int mapId,
+        int entityType,
+        IReadOnlySet<long> authoritativeIds)
+    {
+        lock (_gate)
+        {
+            if (!_entityGroups.TryGetValue(
+                    (mapId, entityType),
+                    out var group) ||
+                group.Count == 0)
+                return [];
+
+            var stale =
+                group.Where(id =>
+                        !authoritativeIds.Contains(id))
+                    .ToArray();
+
+            var changes =
+                new List<Change>();
+            foreach (var entityId in stale)
+            {
+                changes.AddRange(
+                    RemoveEntityLocked(
+                        entityId,
+                        notifyObservers: true));
+            }
+
+            return changes;
         }
     }
 
@@ -575,6 +611,22 @@ public sealed class WorldEntitySpatialAoi
 
         bucket.Add(
             entry.Entity.EntityId);
+
+        var groupKey =
+            (entry.Entity.MapId,
+             entry.Entity.EntityType);
+        if (!_entityGroups.TryGetValue(
+                groupKey,
+                out var group))
+        {
+            group = new HashSet<long>();
+            _entityGroups.Add(
+                groupKey,
+                group);
+        }
+
+        group.Add(
+            entry.Entity.EntityId);
     }
 
     private void RemoveEntityCell(
@@ -590,6 +642,20 @@ public sealed class WorldEntitySpatialAoi
         if (bucket.Count == 0)
             _entityCells.Remove(
                 entry.Cell);
+
+        var groupKey =
+            (entry.Entity.MapId,
+             entry.Entity.EntityType);
+        if (_entityGroups.TryGetValue(
+                groupKey,
+                out var group))
+        {
+            group.Remove(
+                entry.Entity.EntityId);
+            if (group.Count == 0)
+                _entityGroups.Remove(
+                    groupKey);
+        }
     }
 
     private static bool IsWithin(
