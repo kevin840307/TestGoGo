@@ -1,141 +1,67 @@
+"""Regression guards for the compact, texture-free entity simplification path."""
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def read(rel: str) -> str:
-    return (ROOT / rel).read_text(encoding="utf-8")
+def read(path: str) -> str:
+    return (ROOT / path).read_text(encoding="utf-8")
 
 
-def require(text: str, needle: str, message: str) -> None:
-    if needle not in text:
-        raise AssertionError(message)
+def require(source: str, needle: str) -> None:
+    assert needle in source, f"missing contract: {needle}"
 
 
 profile = read("client/scripts/client_performance_profile.gd")
-hud_scene = read("client/game_hud.tscn")
+hud = read("client/game_hud.tscn")
 monster = read("client/scripts/monster_entity.gd")
-network_player = read("client/network_player.gd")
-entity_manager = read("client/scripts/network_entity_manager.gd")
+player = read("client/network_player.gd")
+manager = read("client/scripts/network_entity_manager.gd")
 skill_card = read("client/scripts/skill_card.gd")
 
-for mode in (
-    "SIMPLIFY_PIXEL_A := 2",
-    "SIMPLIFY_PIXEL_B := 3",
-    "SIMPLIFY_MINIMAL := 4",
-):
-    require(profile, mode, f"missing simplification mode: {mode}")
+for name in ("SIMPLIFY_AUTO", "SIMPLIFY_NORMAL", "SIMPLIFY_SIMPLIFIED"):
+    require(profile, name)
+require(profile, "return SIMPLIFY_SIMPLIFIED")
+require(profile, "static func default_auto_style(_load_mode: int)")
+require(profile, 'result["use_primitive_monsters"] = bool(')
 
-for label in (
-    '"像素人"',
-    '"裝甲人"',
-    '"像素魔物"',
-    '"像素獸"',
-    '"棋子"',
-):
-    require(
-        hud_scene,
-        label,
-        f"missing compact text-only simplification choice: {label}",
+for option in ("OptionSimplifyPlayers", "OptionSimplifyMonsters"):
+    match = re.search(
+        rf'\[node name="{option}" type="OptionButton".*?(?=\n\[node |\Z)',
+        hud, re.S,
     )
+    assert match, f"missing selector {option}"
+    block = match.group()
+    require(block, "item_count = 3")
+    for idx, name in enumerate(("自動", "一般", "簡化")):
+        require(block, f'popup/item_{idx}/text = "{name}"')
+    assert "popup/item_3/" not in block and "popup/item_4/" not in block
 
-if "開啟（內建圖形）" in hud_scene:
-    raise AssertionError(
-        "monster selector must stay compact and text-only"
-    )
+require(monster, "func _draw_simplified_monster")
+require(monster, "for i in range(8):")
+require(monster, "sprite.sprite_frames = null")
+require(monster, 'if state in ["death", "die"]:')
+require(monster, "var primitive_enabled := enabled")
+assert "GENERIC_MONSTER_SPRITE" not in monster
+assert "func _draw_pixel_monster_" not in monster
 
-for helper in (
-    "func _draw_pixel_monster_a",
-    "func _draw_pixel_monster_b",
-    "func _draw_minimal_monster",
-):
-    require(monster, helper, f"missing built-in monster renderer: {helper}")
-
-require(
-    monster,
-    "sprite.sprite_frames = null",
-    "simplified monsters must release original SpriteFrames",
-)
-if "set_performance_simplified(false)" in monster:
-    raise AssertionError(
-        "targeting/combat must not restore original monster artwork"
-    )
-require(
-    monster,
-    'if state in ["death", "die"]:',
-    "simplified monster death must stay on the built-in renderer",
-)
-
-for helper in (
-    "func _draw_pixel_human_a",
-    "func _draw_pixel_human_b",
-    "func _draw_minimal_human",
-    "func _draw_relation_glow",
-):
-    require(network_player, helper, f"missing built-in player renderer: {helper}")
-
-if "GENERIC_PLAYER_RACE" in network_player:
-    raise AssertionError(
-        "simplified players must not construct a generic paper doll"
-    )
-if "set_performance_simplified(false)" in network_player:
-    raise AssertionError(
-        "targeting a simplified player must not restore the full paper doll"
-    )
-require(
-    network_player,
-    "doll_engine.visible = false",
-    "simplified players must hide the layered paper doll",
-)
-require(
-    network_player,
-    "doll_engine.clear_dolls()",
-    "switching to simplified players must release existing paper-doll layers",
-)
+require(player, "func _draw_simplified_player_orb")
+require(player, "func _simplified_relation_color")
+require(player, "SIMPLIFIED_PLAYER_CLICK_SIZE")
+require(player, "doll_engine.visible = false")
+require(player, "doll_engine.clear_dolls()")
+require(player, "func _play_death_effect() -> void:")
+require(player, "func play_mecha_transform() -> void:")
 for relation in ("party_id", "club_id", "pk_status"):
-    require(
-        network_player,
-        relation,
-        f"player simplification must preserve {relation} relationship cue",
-    )
-require(
-    network_player,
-    "SIMPLIFIED_PLAYER_CLICK_SIZE",
-    "simplified players must keep an enlarged click target",
-)
-require(
-    network_player,
-    "func _play_death_effect() -> void:",
-    "simplified player death must stay on the procedural renderer",
-)
+    require(player, relation)
+assert "func _draw_pixel_human_" not in player
 
-require(
-    entity_manager,
-    '"player_simplify_style"',
-    "entity manager must pass the selected player pixel style",
-)
-require(
-    entity_manager,
-    '"monster_simplify_style"',
-    "entity manager must pass the selected monster pixel style",
-)
-require(
-    entity_manager,
-    "pre_simplify_player",
-    "simplified players must be configured before add_child/paper-doll setup",
-)
+for name in ('"player_simplify_style"', '"monster_simplify_style"',
+             "pre_simplify_player", "prepare_performance_visual"):
+    require(manager, name)
 
-require(
-    skill_card,
-    'get_node("Margin/Content") as HBoxContainer',
-    "SkillCard must use an explicit content node path",
-)
-if "$Margin / Content" in skill_card:
-    raise AssertionError(
-        "SkillCard contains the node-path expression that hid the skill list"
-    )
+require(skill_card, 'get_node("Margin/Content") as HBoxContainer')
+assert "$Margin / Content" not in skill_card
 
-print(
-    "PASS: built-in pixel monsters/players, relation glow, combat persistence, "
-    "compact selectors, and SkillCard load contract"
-)
+print("PASS: three compact selectors, shared orb visuals, relation colors, hitboxes and no original sprite fallback")
