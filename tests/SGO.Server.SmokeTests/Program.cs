@@ -2103,15 +2103,71 @@ try
         0,
         0,
         7001);
-    var claimGiftJson =
-        JsonSerializer.Serialize(claimGiftPackets);
+    var claimGiftDocuments =
+        claimGiftPackets
+            .Select(packet =>
+                JsonDocument.Parse(
+                    JsonSerializer.Serialize(packet)))
+            .ToArray();
 
-    Check(InventoryCountOf(1001) == giftItemBefore + 3 &&
-          store.GetClaimedMallGiftIds(account.Value).Contains(7001) &&
-          claimGiftJson.Contains("已領取滿額禮") &&
-          claimGiftJson.Contains("\"ClaimStatus\":\"Claimed\"") &&
-          claimGiftJson.Contains("InventorySync"),
-        "donation gift atomically grants reward and becomes claimed");
+    try
+    {
+        var flashMessage =
+            claimGiftDocuments
+                .Select(x => x.RootElement)
+                .First(x =>
+                    x.TryGetProperty(
+                        "Type",
+                        out var type) &&
+                    type.GetString() ==
+                        "SystemMessageFlash")
+                .GetProperty("Message")
+                .GetString();
+
+        var mallList =
+            claimGiftDocuments
+                .Select(x => x.RootElement)
+                .First(x =>
+                    x.TryGetProperty(
+                        "Type",
+                        out var type) &&
+                    type.GetString() ==
+                        "MallListResponse");
+
+        var claimedGift =
+            mallList
+                .GetProperty("Gifts")
+                .EnumerateArray()
+                .Single(x =>
+                    x.GetProperty("RewardID")
+                        .GetInt32() == 7001);
+
+        var hasInventorySync =
+            claimGiftDocuments
+                .Select(x => x.RootElement)
+                .Any(x =>
+                    x.TryGetProperty(
+                        "Type",
+                        out var type) &&
+                    type.GetString() ==
+                        "InventorySync");
+
+        Check(
+            InventoryCountOf(1001) == giftItemBefore + 3 &&
+            store.GetClaimedMallGiftIds(account.Value).Contains(7001) &&
+            flashMessage == "已領取滿額禮：小藥水滿額禮 x 3" &&
+            claimedGift
+                .GetProperty("ClaimStatus")
+                .GetString() ==
+                "Claimed" &&
+            hasInventorySync,
+            "donation gift atomically grants reward and becomes claimed");
+    }
+    finally
+    {
+        foreach (var document in claimGiftDocuments)
+            document.Dispose();
+    }
 
     var giftItemAfterClaim = InventoryCountOf(1001);
     var duplicateGiftClaim = configuredMall.Handle(
@@ -2122,10 +2178,38 @@ try
         0,
         0,
         7001);
-    Check(InventoryCountOf(1001) == giftItemAfterClaim &&
-          JsonSerializer.Serialize(duplicateGiftClaim)
-              .Contains("已領取"),
-        "same account cannot claim the same donation gift twice");
+
+    var duplicateGiftDocuments =
+        duplicateGiftClaim
+            .Select(packet =>
+                JsonDocument.Parse(
+                    JsonSerializer.Serialize(packet)))
+            .ToArray();
+
+    try
+    {
+        var duplicateMessage =
+            duplicateGiftDocuments
+                .Select(x => x.RootElement)
+                .First(x =>
+                    x.TryGetProperty(
+                        "Type",
+                        out var type) &&
+                    type.GetString() ==
+                        "SystemMessageFlash")
+                .GetProperty("Message")
+                .GetString();
+
+        Check(
+            InventoryCountOf(1001) == giftItemAfterClaim &&
+            duplicateMessage == "此贊助滿額禮已領取",
+            "same account cannot claim the same donation gift twice");
+    }
+    finally
+    {
+        foreach (var document in duplicateGiftDocuments)
+            document.Dispose();
+    }
 
     var festivalDolls = new DollService(
         store,
