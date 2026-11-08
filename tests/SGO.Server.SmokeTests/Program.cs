@@ -6392,7 +6392,9 @@ try
         session,
         account.Value);
 
-    var monster = session.Monsters.Values.First();
+    // A previous combat smoke may legitimately leave some shared mobs dead.
+    // Test life drain against a living authoritative map target.
+    var monster = session.Monsters.Values.First(x => x.IsAlive);
 
     store.SetSkill(
         account.Value,
@@ -6505,8 +6507,16 @@ try
     session.LastX = monster.X;
     session.LastY = monster.Y;
 
+    var lifeDrainBefore = store.GetCharacter(
+        account.Value,
+        id)!;
     var lifeDrainHpBefore = Convert.ToInt32(
-        store.GetCharacter(account.Value, id)!["HP"]);
+        lifeDrainBefore["HP"]);
+    var lifeDrainMaxHp = Convert.ToInt32(
+        lifeDrainBefore["MaxHP"]);
+    var lifeDrainSpBefore = Convert.ToInt32(
+        lifeDrainBefore["SP"]);
+    var lifeDrainLevel = currentCatalog.FindSkillLevel(25104, 1);
     var lifeDrainMonsterHpBefore = monster.CurrentHp;
 
     var lifeDrainPackets = combat.UseSkill(
@@ -6530,20 +6540,52 @@ try
         0,
         Convert.ToInt32(lifeDrainAfter["HP"]) -
         lifeDrainHpBefore);
-
+    var lifeDrainPacketElements = lifeDrainPackets
+        .Select(packet => JsonSerializer.SerializeToElement(packet))
+        .ToArray();
+    var lifeDrainHasDamage = lifeDrainPacketElements.Any(packet =>
+        packet.TryGetProperty("Type", out var type) &&
+        type.GetString() == "EntityDamage" &&
+        packet.TryGetProperty("SkillID", out var skillId) &&
+        skillId.GetInt32() == 25104 &&
+        packet.TryGetProperty("TargetID", out var targetId) &&
+        targetId.GetInt32() == monster.EntityId);
+    var lifeDrainHasHeal = lifeDrainPacketElements.Any(packet =>
+        packet.TryGetProperty("Type", out var type) &&
+        type.GetString() == "EntityHeal" &&
+        packet.TryGetProperty("SkillID", out var skillId) &&
+        skillId.GetInt32() == 25104 &&
+        packet.TryGetProperty("Amount", out var amount) &&
+        amount.GetInt32() == lifeDrainRecovered);
+    // Assert full resource/target validity as well as the original 94 cap.
+    // A failed prerequisite must be diagnosed, not mistaken for broken healing.
+    var lifeDrainReady =
+        lifeDrainLevel?.CostSp == 69 &&
+        lifeDrainSpBefore >= lifeDrainLevel.CostSp &&
+        lifeDrainHpBefore > 0 &&
+        lifeDrainMaxHp - lifeDrainHpBefore >= 94 &&
+        lifeDrainMonsterHpBefore > 0;
     Check(
+        lifeDrainReady &&
         lifeDrainDamageDealt > 0 &&
         lifeDrainRecovered ==
             Math.Min(lifeDrainDamageDealt, 94) &&
         Convert.ToInt32(lifeDrainAfter["HP"]) <=
             Convert.ToInt32(lifeDrainAfter["MaxHP"]) &&
-        lifeDrainPackets.Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                "\"Type\":\"EntityDamage\"")) &&
-        lifeDrainPackets.Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                "\"Type\":\"EntityHeal\"")),
-        "生命吸收 Lv1 restores min(actual damage, original 94 HP cap)");
+        lifeDrainHasDamage &&
+        lifeDrainHasHeal,
+        "生命吸收 Lv1 restores min(actual damage, original 94 HP cap)" +
+        (lifeDrainReady &&
+         lifeDrainDamageDealt > 0 &&
+         lifeDrainRecovered == Math.Min(lifeDrainDamageDealt, 94) &&
+         lifeDrainHasDamage && lifeDrainHasHeal
+            ? ""
+            : $" (ready={lifeDrainReady}, HP={lifeDrainHpBefore}/{lifeDrainMaxHp}, " +
+              $"SP={lifeDrainSpBefore}, costSP={lifeDrainLevel?.CostSp}, " +
+              $"monsterHP={lifeDrainMonsterHpBefore}->{monster.CurrentHp}, " +
+              $"damage={lifeDrainDamageDealt}, expectedHeal={Math.Min(lifeDrainDamageDealt, 94)}, " +
+              $"actualHeal={lifeDrainRecovered}, damagePacket={lifeDrainHasDamage}, " +
+              $"healPacket={lifeDrainHasHeal}, packets={JsonSerializer.Serialize(lifeDrainPackets)})"));
 
     store.SetSkill(
         account.Value,
@@ -6810,7 +6852,7 @@ try
         scoutPackets);
 
     Check(
-        scoutJson.Contains("[偵察]") &&
+        PacketTreeContainsString(scoutPackets, "[偵察]") &&
         scoutJson.Contains("SecondCharacter") &&
         !scoutJson.Contains("CharacterPwd") &&
         !scoutJson.Contains("\"ACCID\""),
@@ -7033,7 +7075,7 @@ try
                 $"\"ID\":{secondCharacterId}")) &&
         peerIceTouchJson.Contains(
             "\"Type\":\"SyncBuffs\"") &&
-        peerIceTouchJson.Contains("冰之觸") &&
+        PacketTreeContainsString(peerRegistration.Queue.ToArray(), "冰之觸") &&
         peerIceTouchJson.Contains(
             $"\"Defense\":{peerBaseStats.Defense + 80}") &&
         peerIceTouchJson.Contains(
@@ -7093,13 +7135,12 @@ try
         darkShadowPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 $"\"ID\":{secondCharacterId}")) &&
-        peerDarkShadowJson.Contains("黑暗之影") &&
+        PacketTreeContainsString(peerRegistration.Queue.ToArray(), "黑暗之影") &&
         peerDarkShadowJson.Contains(
             $"\"Attack\":{peerBaseStats.Attack + 80}") &&
         peerDarkShadowJson.Contains(
             $"\"MagicAttack\":{peerBaseStats.MagicAttack + 80}") &&
-        !JsonSerializer.Serialize(darkShadowPackets)
-            .Contains("死亡角色"),
+        !PacketTreeContainsString(darkShadowPackets, "死亡角色"),
         "黑暗之影 type-6 data is treated as a party ATK/MATK buff, not revive");
 
     combat.TickBuffs(
@@ -7134,8 +7175,7 @@ try
                 "\"Type\":\"OpenRepairWindow\"") &&
             JsonSerializer.Serialize(x).Contains(
                 "\"RepairType\":10")) &&
-        !JsonSerializer.Serialize(portableRepairPackets)
-            .Contains("死亡角色"),
+        !PacketTreeContainsString(portableRepairPackets, "死亡角色"),
         "隨身修理店 type-6 skill opens the repair UI instead of revive targeting");
 
     store.SetSkill(
