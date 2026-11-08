@@ -141,6 +141,10 @@ class EditorHandler(BaseHTTPRequestHandler):
                 payload = self.app.maps.blocking_overlay_png(int(match.group(1)))
                 self._send_bytes(payload, "image/png", cache="private, max-age=15")
                 return
+            if match := re.fullmatch(r"/api/maps/(\d+)/preview\.png", path):
+                preview = self.app.maps.preview_file(int(match.group(1)))
+                self._send_bytes(preview.read_bytes(), "image/png", cache="private, max-age=30")
+                return
             if match := re.fullmatch(r"/api/maps/(\d+)/terrain", path):
                 map_id = int(match.group(1))
                 x = float(query.get("x", ["0"])[0])
