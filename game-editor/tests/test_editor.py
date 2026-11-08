@@ -26,6 +26,8 @@ class EditorFixture(unittest.TestCase):
         self.root = Path(self.temp.name)
         (self.root / "client" / "Skills").mkdir(parents=True)
         (self.root / "client" / "Assets" / "Monsters").mkdir(parents=True)
+        (self.root / "client" / "Assets" / "GameInfo").mkdir(parents=True)
+        (self.root / "client" / "maps").mkdir(parents=True)
         (self.root / "server").mkdir()
         dat = self.root / "Old" / "服務端" / "Dat"
         (dat / "Enemy").mkdir(parents=True)
@@ -137,6 +139,42 @@ class MapRepositoryTests(EditorFixture):
         self.assertEqual(raw[16], 9)  # count(4) + 3 ints(12)
         self.assertEqual(repo.get_npc_spawns(13)[0]["script"], "Cure2.txt")
 
+    def test_map_editor_meta_blocking_overlay_and_snap_target(self) -> None:
+        (self.root / "client" / "maps" / "map_bounds.json").write_text(
+            '{"13":{"min_x":17,"min_y":17,"max_x":95,"max_y":79}}',
+            encoding="utf-8",
+        )
+        (self.root / "client" / "Assets" / "GameInfo" / "MapSpawnConfig.json").write_text(
+            '{"13":{"MapName":"測試森林","Spawners":[{"ZoneName":"波奇鳥區","MonsterName":"波奇鳥","MaxCount":3,"RespawnTime":10,"Rect":{"X1":32,"Y1":32,"X2":64,"Y2":64}}]}}',
+            encoding="utf-8",
+        )
+        width, height = 8, 6
+        cells = bytearray(width * height)
+        cells[1] = 1
+        cells[2] = 3
+        (self.paths.maps / "Map13" / "Blocking.dat").write_bytes(
+            struct.pack("<ii", width, height) + bytes(cells)
+        )
+
+        repo = MapRepository(self.paths, self.backups)
+        meta = repo.get_editor_meta(13)
+        self.assertEqual(meta["name"], "測試森林")
+        self.assertEqual(meta["bounds"]["minX"], 16)
+        self.assertEqual(meta["bounds"]["maxX"], 96)
+        self.assertEqual(meta["blocking"]["width"], width)
+        self.assertEqual(meta["blocking"]["cellSize"], 16)
+        self.assertEqual(meta["spawners"][0]["monsterName"], "波奇鳥")
+        self.assertEqual(repo.list_maps()[0]["name"], "測試森林")
+
+        blocked = repo.get_terrain(13, 24, 8)
+        self.assertFalse(blocked["walkable"])
+        self.assertIsNotNone(blocked["nearest"])
+        special = repo.get_terrain(13, 40, 8)
+        self.assertTrue(special["special"])
+
+        png = repo.blocking_overlay_png(13)
+        self.assertTrue(png.startswith(b"\x89PNG\r\n\x1a\n"))
+
 
 class QuestRepositoryTests(EditorFixture):
     def test_validation_outline_callback_and_include(self) -> None:
@@ -205,6 +243,19 @@ class WebStructureTests(unittest.TestCase):
         self.assertIn("dragover", tools)
         self.assertIn("COMMON_LEVEL_FIELDS", skills)
         self.assertIn("ADVANCED_LEVEL_FIELDS", skills)
+
+    def test_collision_aware_map_ui_is_wired(self) -> None:
+        web = GAME_EDITOR_ROOT / "web"
+        index = (web / "index.html").read_text(encoding="utf-8")
+        world = (web / "app-world.js").read_text(encoding="utf-8")
+        editor = (GAME_EDITOR_ROOT / "editor.py").read_text(encoding="utf-8")
+        for control_id in ("map-show-blocking", "map-show-spawners", "map-snap-walkable"):
+            self.assertIn(f'id="{control_id}"', index)
+        self.assertIn("normalizeMapPoint", world)
+        self.assertIn("renderSpawnerZones", world)
+        self.assertIn("/blocking.png", world)
+        self.assertIn("/editor-meta", editor)
+        self.assertIn("/terrain", editor)
 
     def test_editor_defaults_to_localhost_only(self) -> None:
         source = (GAME_EDITOR_ROOT / "editor.py").read_text(encoding="utf-8")
