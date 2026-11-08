@@ -1,6 +1,7 @@
 using System.Text.Json;
 using SGO.Server.Application.Combat;
 using SGO.Server.Domain.Sessions;
+using SGO.Server.Domain.World;
 using SGO.Server.Infrastructure.Persistence.Sqlite;
 
 using static SGO.Server.SmokeTests.SmokeAssert;
@@ -10,6 +11,16 @@ namespace SGO.Server.SmokeTests.Integration;
 internal static class SkillCastCenterSmokeTests
 {
     private const int SelfCenterAoeSkillId = 99002;
+
+    private sealed record MonsterSnapshot(
+        int CurrentHp,
+        bool HasTarget,
+        long TargetCharacterId,
+        long TargetPetUid,
+        MonsterAiState AiState,
+        bool IsMoving,
+        bool HoldingAttackRange,
+        DateTimeOffset? RespawnAt);
 
     public static void Run(
         CombatService combat,
@@ -43,16 +54,30 @@ internal static class SkillCastCenterSmokeTests
         session.SkillReadyAt.Remove(
             SelfCenterAoeSkillId);
 
-        var inRangeBefore = session.Monsters.Values
+        var inRangeMonsters = session.Monsters.Values
             .Where(x =>
                 x.IsAlive &&
                 x.MapId == session.CurrentMapId &&
                 Math.Pow(x.X - session.LastX, 2) +
                 Math.Pow(x.Y - session.LastY, 2) <=
                 300 * 300)
-            .ToDictionary(
-                x => x.EntityId,
-                x => x.CurrentHp);
+            .ToArray();
+
+        var snapshots = inRangeMonsters.ToDictionary(
+            x => x.EntityId,
+            x => new MonsterSnapshot(
+                x.CurrentHp,
+                x.HasTarget,
+                x.TargetCharacterId,
+                x.TargetPetUid,
+                x.AiState,
+                x.IsMoving,
+                x.HoldingAttackRange,
+                x.RespawnAt));
+
+        var inRangeBefore = snapshots.ToDictionary(
+            x => x.Key,
+            x => x.Value.CurrentHp);
 
         Check(
             inRangeBefore.Count > 0,
@@ -104,5 +129,28 @@ internal static class SkillCastCenterSmokeTests
                     out var monster) &&
                 monster.CurrentHp < pair.Value),
             "self-centered damaging AOE applies damage through the shared batch pipeline");
+
+        foreach (var pair in snapshots)
+        {
+            if (!session.Monsters.TryGetValue(
+                    pair.Key,
+                    out var monster))
+            {
+                continue;
+            }
+
+            var snapshot = pair.Value;
+            monster.CurrentHp = snapshot.CurrentHp;
+            monster.HasTarget = snapshot.HasTarget;
+            monster.TargetCharacterId =
+                snapshot.TargetCharacterId;
+            monster.TargetPetUid =
+                snapshot.TargetPetUid;
+            monster.AiState = snapshot.AiState;
+            monster.IsMoving = snapshot.IsMoving;
+            monster.HoldingAttackRange =
+                snapshot.HoldingAttackRange;
+            monster.RespawnAt = snapshot.RespawnAt;
+        }
     }
 }
