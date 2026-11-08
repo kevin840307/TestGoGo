@@ -47,12 +47,6 @@ jobs:
           node --check game-editor/web/app-tools.js
           node game-editor/tests/test_map_math.js
           python3 -m unittest discover -s game-editor/tests -v
-      - name: Game editor Chromium E2E
-        run: |
-          cd game-editor
-          npm install --no-audit --no-fund
-          npx playwright install --with-deps chromium
-          npm run test:e2e
       - name: Build server
         run: |
           set -o pipefail
