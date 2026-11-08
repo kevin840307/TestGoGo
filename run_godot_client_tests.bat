@@ -27,8 +27,11 @@ if /I "%RUN_MODE%"=="focus" goto :run
 if /I "%RUN_MODE%"=="resources" goto :run
 if /I "%RUN_MODE%"=="import" goto :run
 if /I "%RUN_MODE%"=="login" goto :run
+if /I "%RUN_MODE%"=="perf-single" goto :perf_single
+if /I "%RUN_MODE%"=="perf-multi" goto :perf_multi
+if /I "%RUN_MODE%"=="perf-report" goto :perf_report
 echo [ERROR] Unknown mode: %RUN_MODE%
-echo Usage: run_godot_client_tests.bat [all^|render^|focus^|resources^|login^|import^|configure]
+echo Usage: run_godot_client_tests.bat [all^|render^|focus^|resources^|login^|import^|configure^|perf-single^|perf-multi^|perf-report]
 goto :failed
 
 :menu
@@ -42,12 +45,18 @@ echo  [3] Import + Background/focus performance regression
 echo  [4] Import + Sprite/material/resource reuse regression
 echo  [5] Import project only (refresh UID/class cache)
 echo  [6] Login startup regression (no 18-frame hang)
+echo  [7] REAL GAME: one-client CPU RAM GPU VRAM benchmark
+echo  [8] REAL GAME: multi-client 1/5/10 benchmark
+echo  [9] Generate HTML charts and compare previous runs
 echo  [P] Set/change Godot executable path (saved for next time)
 echo  [Q] Exit
 echo.
-choice /C 123456PQ /N /M "Select [1-6,P,Q]: "
-if errorlevel 8 goto :done
-if errorlevel 7 goto :configure
+choice /C 123456789PQ /N /M "Select [1-9,P,Q]: "
+if errorlevel 11 goto :done
+if errorlevel 10 goto :configure
+if errorlevel 9 goto :perf_report
+if errorlevel 8 goto :perf_multi
+if errorlevel 7 goto :perf_single
 if errorlevel 6 set "RUN_MODE=login" & goto :run
 if errorlevel 5 set "RUN_MODE=import" & goto :run
 if errorlevel 4 set "RUN_MODE=resources" & goto :run
@@ -117,6 +126,64 @@ if errorlevel 1 exit /b 1
 if errorlevel 1 exit /b 1
 echo [SAVED] "%CONFIG_FILE%"
 exit /b 0
+
+:perf_single
+set "PERF_SCENARIO=single"
+goto :perf_collect
+
+:perf_multi
+set "PERF_SCENARIO=multi"
+goto :perf_collect
+
+:perf_collect
+call :ensure_godot
+if errorlevel 1 goto :failed
+set "PERF_ROOT=%CD%\test-results\performance"
+echo.
+echo [PERFORMANCE] Real game sampling: %PERF_SCENARIO%
+echo [INFO] 10-sec warmup + 60-sec measurement per stage.
+echo [INFO] Close ONLY game windows started by the recorder if prompted.
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0client\tests\performance\collect_metrics.ps1" -Scenario "%PERF_SCENARIO%" -GodotExe "%GODOT_EXE%" -ClientPath "%CLIENT%" -OutputRoot "%PERF_ROOT%"
+if errorlevel 1 goto :failed
+call :generate_perf_report
+if errorlevel 1 goto :failed
+goto :perf_success
+
+:perf_report
+set "PERF_ROOT=%CD%\test-results\performance"
+call :generate_perf_report
+if errorlevel 1 goto :failed
+goto :perf_success
+
+:generate_perf_report
+if not exist "%PERF_ROOT%" (
+    echo [ERROR] No performance sessions yet. Run mode 7 or 8 first.
+    exit /b 2
+)
+py -3 --version >nul 2>nul
+if not errorlevel 1 (
+    py -3 "%~dp0client\tests\performance\generate_report.py" --root "%PERF_ROOT%"
+    exit /b %errorlevel%
+)
+python --version >nul 2>nul
+if not errorlevel 1 (
+    python "%~dp0client\tests\performance\generate_report.py" --root "%PERF_ROOT%"
+    exit /b %errorlevel%
+)
+echo [ERROR] Python 3 is required to generate offline charts. Raw CSV is retained.
+exit /b 2
+
+:perf_success
+if not exist "%PERF_ROOT%\report.html" goto :failed
+echo.
+echo ================================================================
+echo [SUCCESS] SGO Performance HTML and CSV generated
+echo [REPORT] "%PERF_ROOT%\report.html"
+echo [SUMMARY] "%PERF_ROOT%\summary.csv"
+echo ================================================================
+start "" "%PERF_ROOT%\report.html"
+set "EXIT_CODE=0"
+goto :done
 
 :run
 call :ensure_godot
