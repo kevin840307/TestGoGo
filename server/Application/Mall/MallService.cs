@@ -122,17 +122,41 @@ public sealed class MallService
             "paypal",
             accountId);
 
-        var result = _payPal.CreateOrder(
-            accountId,
-            amount,
-            requestId);
+        PayPalDonationOrderResult result;
+        try
+        {
+            result = _payPal.CreateOrder(
+                accountId,
+                amount,
+                requestId);
+        }
+        catch
+        {
+            return [new
+            {
+                Type = "PayPalDonationCreated",
+                Success = false,
+                Message = "PayPal 金流暫時無法使用，未建立付款訂單",
+                ApprovalUrl = ""
+            }];
+        }
+
+        var safeUrl =
+            result.Success &&
+            IsSafePayPalApprovalUrl(
+                result.ApprovalUrl);
 
         return [new
         {
             Type = "PayPalDonationCreated",
-            Success = result.Success,
-            Message = result.Message,
-            ApprovalUrl = result.Success
+            Success = result.Success &&
+                safeUrl,
+            Message = result.Success &&
+                !safeUrl
+                ? "PayPal 金流回傳的付款網址無效，已拒絕建立訂單"
+                : result.Message,
+            ApprovalUrl = result.Success &&
+                safeUrl
                 ? result.ApprovalUrl
                 : ""
         }];
@@ -142,9 +166,20 @@ public sealed class MallService
         string loginName,
         string password)
     {
-        var result = _legacyPoints.Query(
-            loginName,
-            password);
+        LegacyPointQueryResult result;
+        try
+        {
+            result = _legacyPoints.Query(
+                loginName,
+                password);
+        }
+        catch
+        {
+            result = new(
+                false,
+                "舊服點數服務暫時無法使用",
+                0);
+        }
 
         return [new
         {
@@ -182,11 +217,22 @@ public sealed class MallService
             "legacy",
             accountId);
 
-        var external = _legacyPoints.Withdraw(
-            loginName,
-            password,
-            amount,
-            requestId);
+        LegacyPointWithdrawalResult external;
+        try
+        {
+            external = _legacyPoints.Withdraw(
+                loginName,
+                password,
+                amount,
+                requestId);
+        }
+        catch
+        {
+            external = new(
+                false,
+                "舊服點數服務暫時無法使用",
+                0);
+        }
 
         if (!external.Success)
         {
@@ -260,6 +306,28 @@ public sealed class MallService
                 Points = credit.NewBalance
             }
         ];
+    }
+
+    private static bool IsSafePayPalApprovalUrl(
+        string approvalUrl)
+    {
+        if (!Uri.TryCreate(
+                approvalUrl,
+                UriKind.Absolute,
+                out var uri) ||
+            !string.Equals(
+                uri.Scheme,
+                Uri.UriSchemeHttps,
+                StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return string.Equals(
+                   uri.Host,
+                   "paypal.com",
+                   StringComparison.OrdinalIgnoreCase) ||
+               uri.Host.EndsWith(
+                   ".paypal.com",
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeRequestId(
