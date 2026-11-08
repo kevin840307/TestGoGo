@@ -18,6 +18,14 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_check(GameManager.background_loading_display_fps(false) == 30,
+		"normal unfocused gameplay keeps the configured 30 FPS throttle")
+	_check(GameManager.background_loading_display_fps(true) == 10,
+		"only the initial bootstrap loading bar may draw at 10 FPS")
+	_check(GameManager.classify_frame_gap(100000, false, 10) == "background_throttle",
+		"startup 10 FPS progress redraw is intentional, not a lag spike")
+	_check(GameManager.classify_frame_gap(250000, false, 10) == "background_stall",
+		"an unexpectedly long startup frame remains visible in diagnostics")
 	_check(GameManager.classify_frame_gap(34000, false, 30) == "background_throttle",
 		"current 30 FPS background cap is an intentional 33ms frame interval")
 	_check(GameManager.classify_frame_gap(150000, false, 30) == "background_stall",
