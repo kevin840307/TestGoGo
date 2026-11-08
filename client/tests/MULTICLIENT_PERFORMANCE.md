@@ -1,5 +1,93 @@
 # SGO: GPU / CPU / RAM 1–5–10 client baseline
 
+## 2026-11-08 render / allocation audit
+
+The latest supplied `godot(20261108-052750).log` shows that
+the login visual gate now reaches `[LOGIN_VISUAL_READY]` after 18 good
+foreground frames; two subsequent login readings are 60 FPS. The
+heavier runtime workload is a different problem:
+
+| Single-client metric in this run | Maximum |
+| --- | ---: |
+| Godot static allocation | 460.1 MiB |
+| Godot video resource allocation | 346.6 MiB |
+| Draw calls in one sampled frame | 1,784 |
+| Canvas nodes in one sampled frame | 13,866 |
+| Ground items in the scene | 605 |
+| Active entities | 693 |
+| Largest foreground frame gap | 1,602.54 ms |
+
+These numbers show why **10-window tests must monitor the total host
+CPU/RAM/WDDM VRAM**, not just idle FPS. Godot's video metric does not
+equal Windows per-process dedicated GPU memory.
+
+### Concrete redundant work found and changed
+
+1. `GameHUD._update_minimap()` requested a new **SubViewport
+   UPDATE_ONCE every 50ms**, even when the camera/player stood still.
+   The minimap world cull mask is layer 1, while monster/player/ground
+   dynamic entities occupy layer 2. Live NPC and other player markers
+   are rendered in a **separate Control overlay**, so the map background
+   itself can be reused while stationary. It now redraws immediately
+   whenever the camera moves or a map/focus/UI change requests a redraw,
+   and once per second during idle periods. Overlay marker updating
+   continues at its original cadence. This eliminates up to **19 of 20
+   static-map redraw requests per idle second**; GPU time saving is an
+   expected effect, not yet measured.
+2. `NetworkEntityManager` already deep-copied the server's Monster
+   SpawnEntity packet on receipt. When dequeuing a monster it used
+   to deep-copy the entire metadata tree **again**, even though its
+   canonical template had already been updated by newer MoveEntity
+   packets. It now reuses that canonical cached metadata. Only the
+   compatibility path for an uncached direct spawn needs a new deep
+   copy. This avoids duplicate CPU/temporary RAM allocation and
+   preserves the latest authoritative monster coordinates.
+3. `GameManager` previously cleared icon/animation/resource caches
+   **on every focus-out**. Yet the supplied log still measured roughly
+   446–448 MiB static allocation around repeated focus transitions.
+   Scene-held textures remain referenced and trimming does not
+   guarantee memory release; repeated Alt+Tab can force costly reloads.
+   Cache trimming now occurs at most **once per 60 seconds**, and only
+   when a world is loaded. Background rendering-disabled, audio mute,
+   HUD pause and the existing 30 FPS engine cap are not changed.
+   `[FOCUS_POWER_SAVE] caches_trimmed=true/false` now reflects the
+   action actually taken.
+
+Verify:
+
+```powershell
+godot --headless --path client --script res://tests/multiclient_render_dedup_regression.gd
+godot --headless --path client --script res://tests/focus_performance_regression.gd
+godot --headless --path client --script res://tests/render_resource_regression.gd
+```
+
+For live tests, compare cumulative `minimap_world_redraws` and
+`minimap_world_skips` in `[RENDER_STATS]`. While standing still for
+10 seconds, about 10 static map redraw requests should occur instead
+of about 200. Verify that NPC/player markers still animate/update,
+and that moving the player immediately updates the minimap.
+
+Also validate 1 focused + 9 background: WebSocket, auto-combat,
+monster movement packets, ground item existence/pickups and timers
+continue. A log marked `render_stats_valid=false` must never be
+interpreted as actual background GPU draw calls.
+
+### Next candidates requiring measured profiling, not blind removal
+
+- **Hundreds of drops and >13k Canvas nodes**: investigate
+  view-dependent item labels / draw batching, but preserve all items'
+  authoritative coordinates, click/pickup and return-to-map snapshots.
+- **1.6-second world-running stall**: add targeted phase timing around
+  affected hidden catalog/UI construction, resource decoding and
+  resource cache refill. A frame-gap alone does not identify the
+  responsible function.
+- **Long-lived texture caches**: instrument counts and WDDM memory,
+  then compare image atlas/material sharing before introducing
+  LRU/eviction policies that could make focus-in worse.
+- **10× visible world vs 1 foreground + 9 idle**: both should be
+  measured separately. Don't claim 10× performance from a single
+  client's 60 FPS.
+
 ## Goal and scope
 
 Target **10 concurrent exported Windows clients** without breaking movement,
