@@ -242,6 +242,18 @@ public sealed record CapacityExpansionResult(
     int PetMaxSize,
     int HorseEquipMaxSize);
 
+public sealed record FixedRewardGrant(
+    int ItemIndex,
+    AssetPurchaseKind Kind,
+    int Count = 1,
+    int Part = 255,
+    int Damage = 0);
+
+public sealed record FixedRewardBundleResult(
+    bool Success,
+    string Message,
+    IReadOnlyList<long> RewardUids);
+
 public sealed record CharacterStatResetResult(
     bool Success,
     string Message,
@@ -331,6 +343,13 @@ public interface IInventoryStore : ICharacterAssetReader
         int rewardCount = 1,
         int rewardPart = 255,
         int rewardDamage = 0);
+
+    FixedRewardBundleResult OpenFixedRewardBundle(
+        long accountId,
+        long dbid,
+        long boxUid,
+        int boxItemIndex,
+        IReadOnlyList<FixedRewardGrant> rewards);
     Dictionary<string, object>? UseRecoveryItem(
         long accountId,
         long dbid,
