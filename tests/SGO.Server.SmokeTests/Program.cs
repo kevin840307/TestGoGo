@@ -8480,6 +8480,9 @@ try
         Convert.ToInt32(monster.X + 2000),
         Convert.ToInt32(monster.Y));
     var staleTargetRegistration = broadcastHub.Register();
+    accountSessions.Register(
+        peerAccount!.Value,
+        staleTargetRegistration.ConnectionId);
     broadcastHub.UpdatePresence(
         staleTargetRegistration.ConnectionId,
         combatMapId,
@@ -8517,6 +8520,8 @@ try
                 $"\"AttackerID\":{monster.EntityId}")),
         "monster releases stale foreign target and attacks nearby player in same tick");
 
+    accountSessions.Unregister(
+        staleTargetRegistration.ConnectionId);
     broadcastHub.Unregister(
         staleTargetRegistration.ConnectionId);
 
