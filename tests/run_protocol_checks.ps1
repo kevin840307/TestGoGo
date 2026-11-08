@@ -147,6 +147,10 @@ try {
             "--headless", "--path", "client",
             "--script", "res://tests/perf_regression_smoke.gd"
         )
+        Invoke-Checked "Godot headless client regressions: item choice UI" $godotCommand @(
+            "--headless", "--path", "client",
+            "--script", "res://tests/item_choice_regression.gd"
+        )
     }
     else {
         Write-Host "[SKIP] Godot headless client regressions: set GODOT_BIN or install godot/godot4." -ForegroundColor Yellow
