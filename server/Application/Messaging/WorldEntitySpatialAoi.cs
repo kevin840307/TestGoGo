@@ -256,6 +256,19 @@ public sealed class WorldEntitySpatialAoi
             }
             else
             {
+                // A state-only refresh (HP, drops' remaining lifetime, or
+                // updated SpawnPacketFactory) does not change visibility.
+                // Observers already reconcile their own movement, so
+                // re-scanning all nearby observer cells for every stationary
+                // monster on each AI tick is unnecessary. Keep the newest
+                // factory for late AOI entrants without duplicating Spawn.
+                if (entry.Entity.X == entity.X &&
+                    entry.Entity.Y == entity.Y)
+                {
+                    entry.Entity = entity;
+                    return [];
+                }
+
                 var nextCell = CellOf(
                     entity.MapId,
                     entity.X,
