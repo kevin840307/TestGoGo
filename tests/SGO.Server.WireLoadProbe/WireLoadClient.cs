@@ -33,6 +33,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
     private Exception? _receiveFailure;
     private volatile bool _measure;
     private long _moveBroadcasts;
+    private long _positionCorrections;
     private long _chatBroadcasts;
     private long _combatDeaths;
     private long _combatEvents;
@@ -54,6 +55,9 @@ internal sealed class WireLoadClient : IAsyncDisposable
 
     public long MoveBroadcasts =>
         Interlocked.Read(ref _moveBroadcasts);
+
+    public long PositionCorrections =>
+        Interlocked.Read(ref _positionCorrections);
 
     public long ChatBroadcasts =>
         Interlocked.Read(ref _chatBroadcasts);
@@ -117,6 +121,9 @@ internal sealed class WireLoadClient : IAsyncDisposable
     {
         Interlocked.Exchange(
             ref _moveBroadcasts,
+            0);
+        Interlocked.Exchange(
+            ref _positionCorrections,
             0);
         Interlocked.Exchange(
             ref _chatBroadcasts,
@@ -226,12 +233,13 @@ internal sealed class WireLoadClient : IAsyncDisposable
     }
 
     public Task SendPositionAsync(
-        TimeSpan timeout)
+        TimeSpan timeout,
+        int offsetX = 0)
         => SendPacketAsync(
             new
             {
                 Type = "SyncPosition",
-                X,
+                X = X + offsetX,
                 Y,
                 Dir = "1"
             },
@@ -690,6 +698,13 @@ internal sealed class WireLoadClient : IAsyncDisposable
                             Type = "Pong"
                         },
                         TimeSpan.FromSeconds(5));
+                    continue;
+                }
+
+                if (_measure &&
+                    type == "PositionCorrection")
+                {
+                    Interlocked.Increment(ref _positionCorrections);
                     continue;
                 }
 
