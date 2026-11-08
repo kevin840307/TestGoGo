@@ -4,6 +4,7 @@ async function loadHealth(force=false) {
   if (host) host.innerHTML = '<span class="muted">正在掃描跨檔案引用、Blocking 與腳本…</span>';
   try {
     state.health = await api(`/api/health${force ? '?refresh=1' : ''}`);
+    refreshHealthCategoryOptions();
     renderHealth();
     return state.health;
   } catch (e) {
@@ -26,7 +27,28 @@ function renderHealth() {
     return;
   }
 
-  host.innerHTML = health.issues.slice(0, 120).map((issue, i) => {
+  const query = ($('#health-search')?.value || '').trim().toLowerCase();
+  const severity = $('#health-severity')?.value || '';
+  const category = $('#health-category')?.value || '';
+  const filtered = health.issues
+    .map((issue, index) => ({issue, index}))
+    .filter(({issue}) => {
+      if (severity && issue.severity !== severity) return false;
+      if (category && issue.category !== category) return false;
+      if (!query) return true;
+      const targetText = issue.target ? JSON.stringify(issue.target) : '';
+      const haystack = [
+        issue.severity, issue.category, issue.title, issue.detail, targetText,
+      ].join(' ').toLowerCase();
+      return haystack.includes(query);
+    });
+
+  if (!filtered.length) {
+    host.innerHTML = '<div class="health-empty">沒有符合目前篩選條件的問題。</div>';
+    return;
+  }
+
+  host.innerHTML = filtered.slice(0, 120).map(({issue, index}) => {
     const target = issue.target || {};
     const canOpen = !!target.view;
     const repair = issue.suggestion
@@ -42,13 +64,27 @@ function renderHealth() {
             ${repair}
           </div>
         </div>
-        ${canOpen ? `<button class="button ghost health-open" data-i="${i}">前往</button>` : ''}
+        ${canOpen ? `<button class="button ghost health-open" data-i="${index}">前往</button>` : ''}
       </div>`;
-  }).join('') + (health.truncated ? '<div class="helper">問題過多，清單已截斷；Summary 仍包含完整數量。</div>' : '');
+  }).join('')
+    + `<div class="helper">顯示 ${Math.min(filtered.length, 120)} / ${filtered.length} 筆篩選結果</div>`
+    + (health.truncated ? '<div class="helper">Health 掃描結果過多，來源清單已截斷；Summary 仍包含完整數量。</div>' : '');
 
   $$('.health-open', host).forEach(button => {
     button.onclick = () => openHealthIssue(Number(button.dataset.i));
   });
+}
+
+function refreshHealthCategoryOptions() {
+  const select = $('#health-category');
+  if (!select || !state.health) return;
+  const current = select.value;
+  const categories = Object.keys(state.health.summary?.categories || {}).sort();
+  select.innerHTML = '<option value="">全部類型</option>' + categories.map(category => {
+    const count = state.health.summary.categories[category];
+    return `<option value="${esc(category)}">${esc(category)} (${count})</option>`;
+  }).join('');
+  if (categories.includes(current)) select.value = current;
 }
 
 async function openHealthIssue(index) {
@@ -194,3 +230,7 @@ async function validateMapBeforeSave() {
 $('#health-refresh')?.addEventListener('click', () => {
   loadHealth(true).catch(e => toast(e.message, 'error'));
 });
+
+$('#health-search')?.addEventListener('input', debounce(renderHealth, 120));
+$('#health-severity')?.addEventListener('change', renderHealth);
+$('#health-category')?.addEventListener('change', renderHealth);
