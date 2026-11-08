@@ -212,6 +212,8 @@ func _print_render_stats() -> void :
 	var visible_pets := 0
 	var ground_items_total := 0
 	var ground_items_visible_nearby := 0
+	var ground_known: int = 0
+	var ground_deferred: int = 0
 	var paper_doll_layers := 0
 	var minimap_world_redraws: int = 0
 	var minimap_world_skips: int = 0
@@ -255,8 +257,12 @@ func _print_render_stats() -> void :
 			aoi_active_monsters = int(NetworkEntityManager.get_aoi_active_monster_count())
 		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
 			aoi_deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
+		if NetworkEntityManager.has_method("get_ground_aoi_stats"):
+			var ground_aoi: Dictionary = NetworkEntityManager.get_ground_aoi_stats()
+			ground_known = int(ground_aoi.get("known", 0))
+			ground_deferred = int(ground_aoi.get("deferred", 0))
 
-	print("[RENDER_STATS] fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d paper_doll_layers=%d minimap_world_redraws=%d minimap_world_skips=%d render_stats_valid=%s %s %s" % [
+	print("[RENDER_STATS] fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d ground_known=%d ground_deferred=%d paper_doll_layers=%d minimap_world_redraws=%d minimap_world_skips=%d render_stats_valid=%s %s %s" % [
 		int(Performance.get_monitor(Performance.TIME_FPS)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
@@ -271,6 +277,8 @@ func _print_render_stats() -> void :
 		visible_pets,
 		ground_items_total,
 		ground_items_visible_nearby,
+		ground_known,
+		ground_deferred,
 		paper_doll_layers,
 		minimap_world_redraws,
 		minimap_world_skips,
