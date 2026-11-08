@@ -6,6 +6,10 @@ extends Node
 const GROUND_ITEM_SCRIPT = preload("res://scripts/ground_item_entity.gd")
 const DAY_NIGHT_SCRIPT = preload("res://scripts/day_night_overlay.gd")
 const MONSTER_SCENE = preload("res://monster_entity.tscn")
+# Compile the real SkillWindow and SkillCard dependencies during the
+# client regression suite, not only when a player opens the skill book.
+const SKILL_WINDOW_SCRIPT = preload("res://scripts/skill_window.gd")
+const SKILL_CARD_SCENE = preload("res://skill_card.tscn")
 var _failures: int = 0
 
 
@@ -67,6 +71,17 @@ func _run() -> void:
 	_check(DAY_NIGHT_SCRIPT.should_render_night_overlay(1.0),
 		"nighttime lighting remains enabled")
 
+	var skill_window_node: Control = SKILL_WINDOW_SCRIPT.new() as Control
+	_check(is_instance_valid(skill_window_node) and skill_window_node.has_method("update_ui"),
+		"skill window GDScript parses and exposes update_ui")
+	if is_instance_valid(skill_window_node):
+		skill_window_node.free()
+	var skill_card_node: SkillCard = SKILL_CARD_SCENE.instantiate() as SkillCard
+	_check(is_instance_valid(skill_card_node) and skill_card_node.has_method("setup"),
+		"skill card scene parses and exposes setup")
+	if is_instance_valid(skill_card_node):
+		skill_card_node.free()
+
 	var monster: MonsterEntity = MONSTER_SCENE.instantiate() as MonsterEntity
 	get_tree().root.add_child(monster)
 	_check(not is_instance_valid(monster.target_indicator),
@@ -80,6 +95,36 @@ func _run() -> void:
 	monster.set_target_indicator(false)
 	_check(is_instance_valid(monster.target_indicator) and not monster.target_indicator.visible,
 		"clearing target hides but does not recreate marker")
+	# Simplification releases SpriteFrames entirely. A screen-entered event
+	# must never try to play an absent "default" animation.
+	monster.set_performance_simplified(true)
+	monster.call("_on_screen_entered")
+	_check(monster.sprite.sprite_frames == null and not monster.sprite.is_playing(),
+		"simplified monster re-enters screen without playing nonexistent default frames")
+	monster.set_performance_simplified(false)
+	monster.sprite.stop()
+	monster.call("_on_screen_entered")
+	_check(not monster.sprite.is_playing(),
+		"full monster without loaded SPR frames does not play missing default")
+	var idle_frames := SpriteFrames.new()
+	if idle_frames.has_animation("default"):
+		idle_frames.remove_animation("default")
+	idle_frames.add_animation("IDLE_1")
+	var pixel_image := Image.create(2, 2, false, Image.FORMAT_RGBA8)
+	pixel_image.fill(Color.WHITE)
+	idle_frames.add_frame("IDLE_1", ImageTexture.create_from_image(pixel_image))
+	monster.sprite.sprite_frames = idle_frames
+	monster.sprite.animation = "IDLE_1"
+	monster.sprite.stop()
+	monster.call("_on_screen_entered")
+	_check(monster.sprite.is_playing() and monster.sprite.animation == "IDLE_1",
+		"real IDLE_1 animation resumes instead of missing default")
+	monster.call("_on_screen_exited")
+	_check(not monster.sprite.is_playing(),
+		"offscreen full monster pauses animation to save resources")
+	monster.call("_on_screen_entered")
+	_check(monster.sprite.is_playing() and monster.sprite.animation == "IDLE_1",
+		"offscreen paused animation resumes when the monster reappears")
 	monster.free()
 
 	print("[RENDER_RESOURCE_REGRESSION] %s" % (
