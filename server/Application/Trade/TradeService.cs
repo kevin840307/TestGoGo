@@ -1,5 +1,6 @@
 using System.Text.Json;
 using SGO.Server.Application.Abstractions;
+using SGO.Server.Application.Diagnostics;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Infrastructure.GameData;
@@ -60,6 +61,7 @@ public sealed class TradeService
     private readonly IGameStore _store;
     private readonly CurrentClientDataCatalog _current;
     private readonly ServerBroadcastHub _broadcasts;
+    private readonly ServerDiagnostics? _diagnostics;
     private readonly Dictionary<long, PendingInvite> _invites = new();
     private readonly Dictionary<string, TradeRuntime> _sessions =
         new(StringComparer.Ordinal);
@@ -68,11 +70,13 @@ public sealed class TradeService
     public TradeService(
         IGameStore store,
         CurrentClientDataCatalog current,
-        ServerBroadcastHub broadcasts)
+        ServerBroadcastHub broadcasts,
+        ServerDiagnostics? diagnostics = null)
     {
         _store = store;
         _current = current;
         _broadcasts = broadcasts;
+        _diagnostics = diagnostics;
     }
 
     public IReadOnlyList<object> Request(
@@ -111,6 +115,11 @@ public sealed class TradeService
             if (_byCharacter.ContainsKey(selfDbid) ||
                 _byCharacter.ContainsKey(targetDbid))
             {
+                RecordConflict(
+                    "Request",
+                    selfDbid,
+                    targetDbid,
+                    "participant already trading");
                 return [Flash("其中一方正在交易中")];
             }
 
@@ -209,6 +218,11 @@ public sealed class TradeService
             if (_byCharacter.ContainsKey(selfDbid) ||
                 _byCharacter.ContainsKey(requesterDbid))
             {
+                RecordConflict(
+                    "Reply",
+                    selfDbid,
+                    requesterDbid,
+                    "participant already trading");
                 return [Flash("其中一方正在交易中")];
             }
 
@@ -578,7 +592,14 @@ public sealed class TradeService
             // FinalConfirm may arrive more than once or concurrently from a
             // client. Exactly one caller owns the durable commit.
             if (trade.CommitStarted)
+            {
+                RecordConflict(
+                    "FinalConfirm",
+                    self.CharacterId,
+                    other.CharacterId,
+                    "duplicate concurrent commit attempt");
                 return [];
+            }
 
             trade.CommitStarted = true;
         }
@@ -599,6 +620,11 @@ public sealed class TradeService
 
         if (!result.Success)
         {
+            _diagnostics?.DatabaseFailure();
+            _diagnostics?.Record(
+                "Warning",
+                "TradeCommit",
+                $"Session={trade.SessionId} Failed={result.Message} First={trade.First.CharacterId} Second={trade.Second.CharacterId}");
             Cancel(
                 trade,
                 result.Message,
@@ -982,6 +1008,19 @@ public sealed class TradeService
 
         foreach (var key in expired)
             _invites.Remove(key);
+    }
+
+    private void RecordConflict(
+        string action,
+        long firstCharacterId,
+        long secondCharacterId,
+        string reason)
+    {
+        _diagnostics?.TradeConflict();
+        _diagnostics?.Record(
+            "Warning",
+            "TradeConflict",
+            $"Action={action} First={firstCharacterId} Second={secondCharacterId} Reason={reason}");
     }
 
     private static object Flash(string message)
