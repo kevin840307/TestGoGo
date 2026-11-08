@@ -2979,6 +2979,15 @@ try
         currentCatalog,
         realCurrentCatalog);
 
+    ChoiceRewardSmokeTests.Run(
+        router,
+        store,
+        session,
+        account.Value,
+        id,
+        currentCatalog,
+        realCurrentCatalog);
+
     ItemUseClassificationSmokeTests.Run(
         router,
         store,
