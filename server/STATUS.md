@@ -1,5 +1,12 @@
 # SGO Local Server — Current Status
 
+> **2026-11-08：請優先參考 [FEATURE_GAPS.md](FEATURE_GAPS.md) 追蹤當前未完成功能，
+> 並參考 [測試架構](../tests/SMOKE_TESTS.md)。**
+> 本文件包含歷史開發階段的描述，尤其後半段「技能尚未實作」、
+> 「怪物每個 Session 獨立」等敘述已不再代表最新分支，
+> **不可直接當作目前功能狀態或測試 PASS 的證據**。
+
+
 > Branch: `feature/local-server-net8`
 >
 > Scope: recovered/current Godot client interoperability using a local .NET 8 server.
