@@ -80,6 +80,12 @@ internal static class ConcurrencySmokeTests
             store,
             accounts,
             characters);
+
+        TradeTerminalRaceSmokeTests.Run(
+            repoRoot,
+            store,
+            accounts,
+            characters);
     }
 
     private static void ConcurrentGroundPickup(
