@@ -307,6 +307,31 @@ class RealGameDataContractTests(unittest.TestCase):
         self.assertIn('data.decode("utf-8")', editor)
         self.assertIn('data.decode("cp950")', editor)
 
+    def test_health_skill_asset_rules_match_client_runtime_loaders(self) -> None:
+        skill_loader = (
+            REPO_ROOT / "client" / "scripts" / "skill_loader.gd"
+        ).read_text(encoding="utf-8")
+        base_entity = (
+            REPO_ROOT / "client" / "scripts" / "base_entity.gd"
+        ).read_text(encoding="utf-8")
+        monster_entity = (
+            REPO_ROOT / "client" / "scripts" / "monster_entity.gd"
+        ).read_text(encoding="utf-8")
+        health = (
+            GAME_EDITOR_ROOT / "sgo_editor" / "health_repo.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('ICON_PATH = "res://Skills/Icon/ICON_%03d.png"', skill_loader)
+        self.assertIn('"Skill_Effect/%s_%s" % [r_prefix, fx_use]', base_entity)
+        self.assertIn('EffectLoader.get_effect("Hit_Effect/%s" % fx_hit)', base_entity)
+        self.assertIn('"Skill_Effect/" + s_res.fx_use', monster_entity)
+        self.assertIn('"Hit_Effect/" + s_res.fx_use', monster_entity)
+
+        for prefix in ("A_", "B_", "R_"):
+            self.assertIn(f'f"{prefix}{{effect_name}}"', health)
+        self.assertIn('effect("Hit_Effect", effect_name)', health)
+        self.assertIn('ICON_{icon_id:03d}.png', health)
+
     def test_runtime_dat_reader_layout_still_matches_editor_layout(self) -> None:
         enemy_reader = (
             REPO_ROOT
