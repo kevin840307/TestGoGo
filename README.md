@@ -1,4 +1,4 @@
-# SGO Local Server
+# Local Server
 
 C# .NET 8 / SQLite local interoperability server for the recovered Godot client.
 
