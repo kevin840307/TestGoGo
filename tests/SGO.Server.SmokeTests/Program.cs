@@ -8228,6 +8228,17 @@ try
         aiFixtureMonster.AiState = MonsterAiState.Idle;
         aiFixtureMonster.IsMoving = false;
         aiFixtureMonster.HoldingAttackRange = false;
+        // This is an isolated idle-wander fixture. Earlier authoritative AI
+        // tests may legitimately chase the same shared MonsterRuntimeState
+        // far from its spawn; restore its own wander origin instead of making
+        // one idle tick teleport thousands of pixels back to the center.
+        aiFixtureMonster.X = aiFixtureMonster.WanderCenterX;
+        aiFixtureMonster.Y = aiFixtureMonster.WanderCenterY;
+        aiFixtureMonster.LastMovePacketX = null;
+        aiFixtureMonster.LastMovePacketY = null;
+        aiFixtureMonster.NextPathRetryAt = DateTimeOffset.MinValue;
+        aiFixtureMonster.LastStallLogAt = DateTimeOffset.MinValue;
+        aiFixtureMonster.WanderSequence = 0;
         aiFixtureMonster.LastAiAt = DateTimeOffset.MinValue;
         aiFixtureMonster.LastActionAt = DateTimeOffset.MinValue;
         aiFixtureMonster.LastAttackAt = DateTimeOffset.MinValue;
