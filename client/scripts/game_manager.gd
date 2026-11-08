@@ -15,7 +15,6 @@ const TRAIN_TRAVEL_MAP_TIMEOUT_SECONDS: = 15.0
 const TRAIN_VIDEO_TIMEOUT_SECONDS: = 120.0
 const WORLD_ENHANCEMENT_SCENE: = preload("res://world_enhancement.tscn")
 const AFK_VISUAL_CACHE = preload("res://scripts/afk_visual_cache.gd")
-const AFK_MONITOR_FPS: int = 20
 const DAY_NIGHT_OVERLAY_SCENE: = preload("res://day_night_overlay.tscn")
 const TRAIN_VIDEO_PATHS: = {
 	"train_depart_king.ogv": "res://train_depart_king.ogv", 
@@ -939,7 +938,10 @@ func _reconcile_world_render_policy(delta: float) -> void:
 	var should_pause: bool = should_throttle_background_visuals(
 		_window_has_focus, _has_active_world_visuals())
 	var desired_rendering: bool = false if _afk_active else not should_pause
-	var desired_fps: int = AFK_MONITOR_FPS if _afk_active else fps_cap_for_focus(
+	# AFK must not change main-loop pacing. Visual rendering is already
+	# disabled, so lowering Engine.max_fps would only make idle-process input/
+	# gameplay helpers less responsive without providing additional GPU savings.
+	var desired_fps: int = Engine.max_fps if _afk_active else fps_cap_for_focus(
 		current_performance_profile, _window_has_focus, _has_active_world_visuals())
 	if RenderingServer.render_loop_enabled != desired_rendering or Engine.max_fps != desired_fps:
 		_refresh_focus_render_policy()
@@ -955,8 +957,9 @@ func _refresh_focus_render_policy() -> void:
 	if _afk_active:
 		# Never keep the GPU render loop alive in AFK. A focused dashboard asks
 		# for one explicit frame after its 1-second status refresh; focus-out
-		# requests no frames at all. Physics/socket/combat/pickups keep running.
-		Engine.max_fps = AFK_MONITOR_FPS
+		# requests no frames at all. Do NOT change Engine.max_fps here: AFK only
+		# stops presentation, while gameplay/network responsiveness stays at the
+		# user's already-active pacing.
 		RenderingServer.render_loop_enabled = false
 		_set_background_visual_processing(not _window_has_focus)
 		return
