@@ -4,7 +4,12 @@ import base64
 import struct
 import tempfile
 import unittest
+import sys
 from pathlib import Path
+
+GAME_EDITOR_ROOT = Path(__file__).resolve().parents[1]
+if str(GAME_EDITOR_ROOT) not in sys.path:
+    sys.path.insert(0, str(GAME_EDITOR_ROOT))
 
 from sgo_editor.asset_repo import AssetRepository
 from sgo_editor.enemy_repo import EnemyRepository
@@ -169,6 +174,21 @@ class AssetRepositoryTests(EditorFixture):
         self.assertEqual(path.read_bytes(), b"NEW")
         with self.assertRaises(UnsafePathError):
             repo.replace("../server/appsettings.json", base64.b64encode(b"BAD").decode())
+
+
+class WebStructureTests(unittest.TestCase):
+    def test_frontend_entrypoints_are_wired(self) -> None:
+        web = GAME_EDITOR_ROOT / "web"
+        index = (web / "index.html").read_text(encoding="utf-8")
+        for script in ("app-core.js", "app-skills.js", "app-world.js", "app-tools.js"):
+            self.assertIn(f'src="/{script}"', index)
+            self.assertTrue((web / script).is_file())
+        self.assertTrue((web / "app.css").is_file())
+
+    def test_editor_defaults_to_localhost_only(self) -> None:
+        source = (GAME_EDITOR_ROOT / "editor.py").read_text(encoding="utf-8")
+        self.assertIn('default="127.0.0.1"', source)
+        self.assertIn('{"127.0.0.1", "localhost", "::1"}', source)
 
 
 if __name__ == "__main__":
