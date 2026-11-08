@@ -27,6 +27,25 @@
 
 `tests/test_feature_gap_tracker.py` 會檢查所有稽核標示 `PARTIAL` 的 wire route 在本文件都有對應。
 
+## 2026-11-08 本輪追蹤：多人效能與測試真實性
+
+| 編號 | 狀態 | 本輪改動或未完成事項 | 必須取得的驗證 |
+| --- | --- | --- | --- |
+| M-01 | IMPLEMENTED_UNVERIFIED | `Application/World/MapAiOwnerSpatialIndex.cs`：共用 AI scheduler 對「有 target 怪物」使用 CharacterId dictionary，對 idle 怪物以玩家/寵物位置的 exact KD-tree 找最近執行 owner；小集合直接線性掃描，不限制 AOI 半徑。 | `--suite world` + 完整 shared AI integration PASS；10/50/100 人 tick P95/P99 和 allocation 實測，檢查 AI 對象/追擊結果不變 |
+| M-02 | IMPLEMENTED_UNVERIFIED | `World/MapAiOwnerSpatialIndexSmokeTests.cs`：無玩家、失效座標、等距 tie、死亡角色活躍 pet、1024 owners/2000 查詢與 reference full-scan 一致、併行只讀查詢。已接入 world/full suite。 | dotnet build + world/full PASS；有真正測試結果才可稱通過 |
+| M-03 | IMPLEMENTED_UNVERIFIED | 修正 Economy / AssetMutation / CrossFeature 併發測資：`Create` 預設 10,000 money，舊測試對 100/1000 只做 `AdjustMoney(+N)`，造成「資產不足、只成功一次」斷言不成立；現在用 `Fixtures/ExactMoneyFixture.cs` 將餘額設定到指定值後確認讀回值。 | `--suite concurrency` PASS；失敗時區分真正 overspend / mint 與測資初始化錯誤 |
+| M-04 | TEST_GAP | Monster AI 每個 tick 仍需逐玩家讀取 `GetCharacter`，且 Combat Tick/pathfinding、DB write lock、transport queue、Client 渲染成本需 profile；不可把 AOI CPU 節省當成 100 人實測。 | 10/50/100 真 socket，near/far/進出 AOI、bytes/sec、AI tick p50/p95/p99、CPU/RAM/GC、10 分鐘及 1 小時 soak |
+| M-05 | TEST_GAP | 真正的 Godot Scene/UI 串接以及同怪/同物/交易壓力下 Client 消失/重複物件和顯示一致性仍待實跑。 | Client headless + Scene/UI、斷線/重連、撿物/交易/換圖完整 E2E |
+| M-06 | TECH_DEBT | `SqliteGameStore.cs` 與 `SmokeTests/Program.cs` 仍偏大。先分小模組/Fixture，待 CI 稳定且交易 contract PASS 後再按領域拆 store。 | 不改原封包/SQL 語意的逐模組重構，後續必須有全套 regression |
+
+本輪不新增偽裝成功的未支援封包：已實作項目依
+`packet_*_audit.py`、真 Wire、Godot E2E 交叉驗證，
+PayPal/舊服點數仍為 `BLOCKED_EXTERNAL`。
+CI 最新可讀到的 push run
+[42457284437](https://github.com/kevin840307/SGO/actions/runs/42457284437)
+仍是 job `steps=null`，表示未取得 dotnet/Godot 的執行結果；
+**所有本輪新增 C# 程式和測試仍標記 IMPLEMENTED_UNVERIFIED**。
+
 ## P0 — 協定、多人一致性、實際驗證
 
 | ID | 狀態 | 現況與真正剩餘缺口 | 已有自動驗證 | 完成驗收 |
