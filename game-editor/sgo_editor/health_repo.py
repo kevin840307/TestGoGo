@@ -598,8 +598,17 @@ class HealthRepository:
         else:
             raise ValueError("kind 必須是 enemy 或 script")
 
-        token_payload = json.dumps(
+        canonical_refs = sorted(
             refs,
+            key=lambda ref: json.dumps(
+                ref,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
+        )
+        token_payload = json.dumps(
+            canonical_refs,
             ensure_ascii=False,
             sort_keys=True,
             separators=(",", ":"),
@@ -607,8 +616,8 @@ class HealthRepository:
         return {
             "kind": kind,
             "key": key,
-            "count": len(refs),
-            "references": refs,
+            "count": len(canonical_refs),
+            "references": canonical_refs,
             "token": hashlib.sha256(token_payload).hexdigest(),
         }
 
