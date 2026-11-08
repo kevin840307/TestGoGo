@@ -21,6 +21,9 @@ var _logical_cursor_state: String = "normal"
 var _is_game_window_hovered: bool = false
 var _autorun_enabled: bool = false
 var _native_popup_cursor_depth: int = 0
+var _popup_cursor_window: Window = null
+var _popup_cursor_layer: CanvasLayer = null
+var _popup_cursor_sprite: AnimatedSprite2D = null
 
 
 var hovered_items: Array = []
@@ -77,6 +80,15 @@ func _ready() -> void :
 func _process(_delta: float) -> void :
 	var m_pos = cursor_sprite.get_global_mouse_position()
 	cursor_sprite.global_position = m_pos
+	if (
+		is_instance_valid(_popup_cursor_window)
+		and is_instance_valid(_popup_cursor_sprite)
+		and _popup_cursor_window.visible
+	):
+		# PopupMenu is its own Window/Viewport. Draw the same in-game pointer
+		# inside that viewport so it stays above the dropdown instead of being
+		# covered by the popup surface.
+		_popup_cursor_sprite.position = _popup_cursor_window.get_mouse_position()
 	if is_instance_valid(_autorun_status_label) and _autorun_status_label.visible:
 		# A large pointer remains distinct even when idle. Keep the badge
 		# inside the viewport when the mouse approaches the bottom/right.
@@ -211,11 +223,17 @@ func _register_autorun_cursor_animation() -> void:
 	cursor_sprite.sprite_frames = frames
 
 
-func push_native_popup_cursor() -> void:
-	_native_popup_cursor_depth += 1
-	if _native_popup_cursor_depth != 1:
+func show_popup_game_cursor(popup_window: Window) -> void:
+	if not is_instance_valid(popup_window):
 		return
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+	if is_instance_valid(_popup_cursor_window) and _popup_cursor_window != popup_window:
+		hide_popup_game_cursor(_popup_cursor_window)
+
+	_native_popup_cursor_depth = 1
+	_popup_cursor_window = popup_window
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+
 	if is_instance_valid(cursor_sprite):
 		cursor_sprite.visible = false
 	if is_instance_valid(tooltip_label):
@@ -223,17 +241,66 @@ func push_native_popup_cursor() -> void:
 	if is_instance_valid(_autorun_status_label):
 		_autorun_status_label.visible = false
 
-func pop_native_popup_cursor() -> void:
-	_native_popup_cursor_depth = maxi(0, _native_popup_cursor_depth - 1)
-	if _native_popup_cursor_depth != 0:
+	if is_instance_valid(_popup_cursor_layer):
+		_popup_cursor_layer.queue_free()
+
+	_popup_cursor_layer = CanvasLayer.new()
+	_popup_cursor_layer.name = "GameCursorOverlay"
+	_popup_cursor_layer.layer = 4096
+	popup_window.add_child(_popup_cursor_layer)
+
+	_popup_cursor_sprite = AnimatedSprite2D.new()
+	_popup_cursor_sprite.name = "GameCursorSprite"
+	_popup_cursor_sprite.centered = false
+	_popup_cursor_sprite.sprite_frames = cursor_sprite.sprite_frames
+	_popup_cursor_sprite.scale = _original_cursor_scale
+	_popup_cursor_sprite.texture_filter = _original_cursor_texture_filter
+	_popup_cursor_layer.add_child(_popup_cursor_sprite)
+
+	# System dropdowns are UI interactions, so always use the ordinary
+	# C_NORMAL-style pointer instead of combat/skill/autorun states.
+	var popup_animation := "normal"
+	if not _popup_cursor_sprite.sprite_frames.has_animation(popup_animation):
+		popup_animation = str(cursor_sprite.animation)
+	_popup_cursor_sprite.play(popup_animation)
+	_popup_cursor_sprite.position = popup_window.get_mouse_position()
+
+
+func hide_popup_game_cursor(popup_window: Window = null) -> void:
+	if (
+		is_instance_valid(popup_window)
+		and is_instance_valid(_popup_cursor_window)
+		and popup_window != _popup_cursor_window
+	):
 		return
+
+	_native_popup_cursor_depth = 0
+	if is_instance_valid(_popup_cursor_layer):
+		_popup_cursor_layer.queue_free()
+	_popup_cursor_layer = null
+	_popup_cursor_sprite = null
+	_popup_cursor_window = null
+
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
 	if is_instance_valid(cursor_sprite):
 		cursor_sprite.visible = true
 	_apply_cursor_visual()
 
+
+# Backward-compatible wrappers for callers from older scene/script revisions.
+func push_native_popup_cursor() -> void:
+	_native_popup_cursor_depth += 1
+
+func pop_native_popup_cursor() -> void:
+	_native_popup_cursor_depth = maxi(0, _native_popup_cursor_depth - 1)
+	if _native_popup_cursor_depth == 0 and not is_instance_valid(_popup_cursor_window):
+		Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+		if is_instance_valid(cursor_sprite):
+			cursor_sprite.visible = true
+		_apply_cursor_visual()
+
 func is_native_popup_cursor_active() -> bool:
-	return _native_popup_cursor_depth > 0
+	return _native_popup_cursor_depth > 0 or is_instance_valid(_popup_cursor_window)
 
 
 func set_game_window_hovered(is_hovered: bool) -> void :
