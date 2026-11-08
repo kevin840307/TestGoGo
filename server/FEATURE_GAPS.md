@@ -36,6 +36,13 @@
 | P0-03 | TEST_GAP | **CI 基礎設施仍擋住實際 PASS 證據**。針對本輪真 Godot E2E 功能 commit `7990fc9a` 的 2026-11-08 push run `42449123099`，job `128634335473` 仍在取得 Runner 前結束且 `steps=null`，不是 checkout/build/test failure；本工作環境也無法 DNS 解析 github.com 進行額外 sparse checkout，因此新增 C#/Godot 測試仍誠實標記未實跑。 | workflow 與 `tests/run_protocol_checks.ps1` 已包含 strict audits、build、domain/full smoke、concurrency、Wire E2E、10/50/100 WireLoadProbe + MixedSoak、可用 Godot 時的真 NetworkManager E2E、coverage reports | 取得至少一筆有實際 steps 的 run，所有 Python/.NET/Wire/Godot（有安裝時）檢查全 PASS |
 | P0-04 | TEST_GAP | 固定 Type/Action、請求 schema、40+ 關鍵 Server→Client response shape、nested anonymous response、`ItemChoiceRequired` / `UseItemChoiceRequest`、Trade/Shop/Pet/Mall/Party/Club 動態封包 helper 的 Client 組裝契約、Godot packet ownership 已守門；`DynamicActionSchemaCoverageSmokeTests` 會 reflection 掃完整 ActionRules。`RuntimeResponseContractSmokeTests` 已直接序列化真 Router/SQLite 回應，驗證 LoginResponse.Characters 與 Inventory/Equip/Pet/Horse/Skill/Club/Buff/Quest bootstrap runtime 型別，並覆蓋 AUTH_REQUIRED / INVALID_PACKET / WORLD_REQUIRED / UNHANDLED_PACKET。再新增 `MarketplaceResponseContractSmokeTests`：真 TradeService/PlayerShopService + SQLite + broadcast queue 驗證 `TradeSync` 雙方 My/Other 視角、金額/鎖定狀態、一般物品與寵物 `ExtraData`，以及 `ShopSync` / `ShopViewResponse` 的動態 listing 欄位；另做 10 buyer 搶 5 件的 Service-level race，要求只 5 成交、物品/金錢守恆、售罄後 ShopSync 清空且商店原子關閉。Godot headless `network_response_contract_regression.gd` 走 AES-CBC decode/dispatch 並包含 Trade/Shop 動態 payload；另新增真 socket `real_server_network_e2e.gd`，並讓 `WorldReadyResponse` 有 typed ACK signal 可直接驗證。主要剩餘是實際 runner/Godot PASS 證據，以及未來新增特殊 payload 時持續擴充 runtime contract。 | `packet_*_audit.py`、`RuntimeResponseContractSmokeTests.cs`、`MarketplaceResponseContractSmokeTests.cs`、`test_client_network_contract.py`、`client/tests/network_response_contract_regression.gd` | 動態 payload 有 runtime contract/E2E；多人交易/商店視角一致；失敗路徑回 typed `PacketError` 或既有相容失敗 response；取得實際執行 PASS |
 
+### 2026-11-08 本輪補強：雙向轉帳競態
+
+- **已提交測試（尚未取得 PASS 證據）**：`Integration/EconomyConcurrencySmokeTests.cs` 新增 `ConcurrentBidirectionalTransfersConserveMoney`，以兩位玩家各 1,000 金錢、20 個同步起跑的工作（各方向 10 次）模擬雙向同時轉帳。
+- **驗收不變量**：全部有足額的轉帳須成功且在 30 秒內終止，A 最終 1,040、B 最終 960，總額固定 2,000；這是單向超額扣款測試未覆蓋的相反鎖定順序／死鎖情境。
+- **仍未完成**：無實際本輪 `dotnet`／CI PASS 證據；還需要混合操作（撿物與背包異動、商店購買／下架與交易、玩家斷線與提交）、真 Godot UI 驅動 E2E、10/50/100 人長時間壓測。
+- **執行**：`dotnet run --project tests/SGO.Server.SmokeTests -- --suite concurrency`；任何失敗均不可把 P0-02 標示已驗收。
+
 ## P1 — 遊戲資料與舊版相容
 
 | ID | 狀態 | 現況與真正剩餘缺口 | 已有自動驗證 | 完成驗收 |
