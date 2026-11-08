@@ -145,6 +145,8 @@ echo [2/2] Running tests using scene mode (autoload enabled)...
 if /I "%RUN_MODE%"=="all" (
     call :run_test login_visual_readiness_regression LOGIN_VISUAL_READY_REGRESSION
     if errorlevel 1 goto :failed
+    call :run_test world_loading_render_regression WORLD_RENDER_REGRESSION
+    if errorlevel 1 goto :failed
     call :run_test multiclient_render_dedup_regression RENDER_DEDUP_REGRESSION
     if errorlevel 1 goto :failed
     call :run_test focus_performance_regression FOCUS_PERF_REGRESSION
@@ -158,6 +160,8 @@ if /I "%RUN_MODE%"=="render" (
 )
 if /I "%RUN_MODE%"=="focus" (
     call :run_test focus_performance_regression FOCUS_PERF_REGRESSION
+    if errorlevel 1 goto :failed
+    call :run_test world_loading_render_regression WORLD_RENDER_REGRESSION
     if errorlevel 1 goto :failed
 )
 if /I "%RUN_MODE%"=="resources" (
