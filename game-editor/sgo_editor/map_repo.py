@@ -643,6 +643,8 @@ class MapRepository:
     def _validate_source_indexes(items: list[dict[str, Any]], old_count: int, label: str) -> None:
         seen: set[int] = set()
         for row_index, item in enumerate(items):
+            if not isinstance(item, dict):
+                raise ValueError(f"{label} row {row_index + 1} 必須是物件")
             try:
                 source_index = int(item.get("index", -1))
             except (TypeError, ValueError) as exc:
