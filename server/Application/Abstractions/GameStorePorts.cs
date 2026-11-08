@@ -41,6 +41,17 @@ public sealed record CharacterTransformMutationResult(
     string Message,
     CharacterTransformState? State);
 
+public sealed record CharacterCosmeticOverride(
+    int Part,
+    int ItemIndex,
+    int Color,
+    int SourceItemId);
+
+public sealed record CharacterCosmeticMutationResult(
+    bool Success,
+    string Message,
+    IReadOnlyList<CharacterCosmeticOverride> Overrides);
+
 public interface ICharacterStore
 {
     List<Dictionary<string, object>> Characters(long accountId);
@@ -175,6 +186,18 @@ public interface ICharacterStore
         long dbid,
         long itemUid,
         int itemIndex);
+
+    IReadOnlyList<CharacterCosmeticOverride> GetCosmeticOverrides(
+        long accountId,
+        long dbid);
+
+    CharacterCosmeticMutationResult ApplyCosmeticOverridesFromItem(
+        long accountId,
+        long dbid,
+        long itemUid,
+        int itemIndex,
+        IReadOnlyList<CharacterCosmeticOverride> overrides,
+        bool consumeSource);
 }
 
 public sealed record TimedEffectActivationResult(
