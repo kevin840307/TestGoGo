@@ -1,4 +1,6 @@
 using System.Text.Json;
+using SGO.Server.Application.Abstractions;
+using SGO.Server.Domain.Assets;
 using SGO.Server.Infrastructure.Persistence.Sqlite;
 using SGO.Server.SmokeTests.Fixtures;
 
@@ -24,6 +26,7 @@ internal static class CrossFeatureConcurrencySmokeTests
 
         TradeAndDirectTransferConserveMoney(store);
         TradeAndPlayerShopPurchaseConserveMoney(store);
+        CraftAndDirectTransferComposeAtomically(store);
     }
 
     private static void TradeAndDirectTransferConserveMoney(
@@ -237,6 +240,129 @@ internal static class CrossFeatureConcurrencySmokeTests
         Check(
             buyerCopies == 1 && sellerCopies == 0,
             "mixed trade/player-shop race transfers exactly one listed item");
+    }
+
+    private static void CraftAndDirectTransferComposeAtomically(
+        SqliteGameStore store)
+    {
+        var crafter = CreatePlayer(store, "craft_a");
+        var sender = CreatePlayer(store, "craft_b");
+
+        Check(
+            store.AdjustMoney(
+                crafter.AccountId,
+                crafter.CharacterId,
+                100) is not null &&
+            store.AdjustMoney(
+                sender.AccountId,
+                sender.CharacterId,
+                100) is not null,
+            "seed craft plus transfer concurrency money");
+
+        const int ingredientItem = 999_960;
+        const int resultItem = 999_961;
+        var ingredientUid = store.AddInventoryItem(
+            crafter.AccountId,
+            crafter.CharacterId,
+            ingredientItem,
+            1);
+        Check(
+            ingredientUid > 0,
+            "seed ingredient for craft plus transfer race");
+
+        using var ready = new CountdownEvent(2);
+        using var start = new ManualResetEventSlim(false);
+
+        var craftTask = Task.Run(() =>
+        {
+            ready.Signal();
+            if (!start.Wait(TimeSpan.FromSeconds(10)))
+                throw new TimeoutException(
+                    "craft/transfer craft barrier timed out");
+
+            return store.CommitCraft(
+                crafter.AccountId,
+                crafter.CharacterId,
+                30,
+                new[]
+                {
+                    new CraftIngredient(
+                        ingredientItem,
+                        1)
+                },
+                new[]
+                {
+                    new CraftGrant(
+                        resultItem,
+                        1,
+                        AssetPurchaseKind.General,
+                        255,
+                        0)
+                });
+        });
+
+        var transferTask = Task.Run(() =>
+        {
+            ready.Signal();
+            if (!start.Wait(TimeSpan.FromSeconds(10)))
+                throw new TimeoutException(
+                    "craft/transfer money barrier timed out");
+
+            return store.TransferMoney(
+                sender.AccountId,
+                sender.CharacterId,
+                crafter.CharacterId,
+                15);
+        });
+
+        try
+        {
+            Check(
+                ready.Wait(TimeSpan.FromSeconds(10)),
+                "craft and transfer reached the same start barrier");
+        }
+        finally
+        {
+            start.Set();
+        }
+
+        Check(
+            Task.WaitAll(
+                new Task[] { craftTask, transferTask },
+                TimeSpan.FromSeconds(20)),
+            "craft plus transfer terminate without partial durable state");
+
+        Check(
+            craftTask.Result.Success &&
+            transferTask.Result.Success,
+            "craft and direct transfer both commit exactly once");
+
+        var crafterMoney = Money(store, crafter);
+        var senderMoney = Money(store, sender);
+        Check(
+            crafterMoney == 85 &&
+            senderMoney == 85 &&
+            crafterMoney + senderMoney == 170,
+            "craft cost and incoming transfer compose with exactly one 30-money sink");
+
+        var assets = store.GetCharacterAssets(
+            crafter.AccountId,
+            crafter.CharacterId);
+        var ingredientCount = assets.Inventory
+            .Where(x =>
+                Convert.ToInt32(x["ItemIndex"]) == ingredientItem)
+            .Sum(x =>
+                Convert.ToInt32(x["Count"]));
+        var resultCount = assets.Inventory
+            .Where(x =>
+                Convert.ToInt32(x["ItemIndex"]) == resultItem)
+            .Sum(x =>
+                Convert.ToInt32(x["Count"]));
+
+        Check(
+            ingredientCount == 0 &&
+            resultCount == 1,
+            "craft plus transfer consumes one ingredient and grants one result");
     }
 
     private static Player CreatePlayer(
