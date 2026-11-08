@@ -2,6 +2,7 @@
 extends Area2D
 
 const LEGACY_DIALOG_BUBBLE = preload("res://scripts/legacy_dialog_bubble.gd")
+const LEGACY_BUBBLE_SKIN = preload("res://scripts/legacy_bubble_skin.gd")
 
 static var _offset_cache: Dictionary = {}
 static var _offset_file_read_count: int = 0
@@ -208,14 +209,7 @@ func _input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) -> vo
 func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = {}, rich_text: bool = false) -> void :
 	if not chat_bubble_bg or not chat_bubble_label: return
 
-	match bubble_type:
-		0: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_01.png")
-		1: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_02.png")
-		2: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_03.png")
-		3: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_04.png")
-		4: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_05.png")
-		5: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_06.png")
-		6: chat_bubble_bg.texture = load("res://ui/BG_BUBBLE_07.png")
+	chat_bubble_bg.texture = LEGACY_BUBBLE_SKIN.get_texture(bubble_type)
 
 	# Leave ordinary messages on the original Label.
 

@@ -14,6 +14,17 @@ internal static class QuestDialogSmokeTests
             "n1 prefix is not rendered literally");
         Check(DialogFormatter.Parse("n3驚訝").Prefix == "n3",
             "numbered NPC presentation is retained");
+        for (var id = 1; id <= 7; id++)
+        {
+            Check(DialogFormatter.GetBubbleType($"n{id}") == id - 1 &&
+                  DialogFormatter.GetBubbleType($"p{id}") == id - 1,
+                "old Lua numbered speech maps to existing seven Godot bubble slots");
+        }
+        Check(DialogFormatter.GetBubbleType("n") == 0 &&
+              DialogFormatter.GetBubbleType("p") == 0 &&
+              DialogFormatter.GetBubbleType("h") == 0 &&
+              DialogFormatter.GetBubbleType("p9") == 0,
+            "unnumbered and unsupported layouts use the normal bubble type");
         Check(DialogFormatter.Parse("p7獲得星幣").Speaker == "Player" &&
               DialogFormatter.Parse("p7獲得星幣").Layout == "Narration",
             "p7 event uses player-side narration");
@@ -141,14 +152,16 @@ internal static class QuestDialogSmokeTests
               colored.GetProperty("PlainText").GetString() ==
               "去找大牧師吧！" &&
               colored.GetProperty("Speaker").GetString() == "NPC" &&
-              colored.GetProperty("LegacyPrefix").GetString() == "n1",
+              colored.GetProperty("LegacyPrefix").GetString() == "n1" &&
+              colored.GetProperty("BubbleType").GetInt32() == 0,
             "Lua Say() restores inline color and NPC identity");
 
         Check(dialogs[1].GetProperty("Speaker").GetString() == "Player" &&
               dialogs[1].GetProperty("LegacyPrefix").GetString() == "p1",
             "p1 Say() correctly routes to the player");
-        Check(dialogs[2].GetProperty("DialogLayout").GetString() == "Narration",
-            "p7 Say() reports a narrative event");
+        Check(dialogs[2].GetProperty("DialogLayout").GetString() == "Narration" &&
+              dialogs[2].GetProperty("BubbleType").GetInt32() == 6,
+            "p7 Say() reports narration with seventh bubble type");
         Check(dialogs[3].GetProperty("DialogLayout").GetString() == "Help" &&
               dialogs[3].GetProperty("Options")[0]
                   .GetProperty("TargetNode").GetString() == "Done#0",

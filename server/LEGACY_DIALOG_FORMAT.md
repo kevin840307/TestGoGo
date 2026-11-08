@@ -45,6 +45,16 @@ Server 執行 Lua 時以私有控制標記代替原先空字串，再於 `Dialog
 
 原有 `DialogType`、`NextNode`、`Options`、`TargetNode`、`BubbleType` 均未改動；選項 callback 邏輯不變。玩家聊天仍使用原本的 `Label`，只有經過 NPC 對話流程的富文字才建立輕量 `RichTextLabel`。
 
+## 七種氣泡與多媒體演出（第五階段）
+
+**七種氣泡**：原版腳本的 `n1..n7`、`p1..p7` 與目前 Client 既有七種 `BG_BUBBLE_01.png` 到 `BG_BUBBLE_07.png` 對應為 `BubbleType 0..6`，`n/p` 沒有數字時維持 0。Server 從前綴計算 BubbleType，不更動說話者、`Options`、`NextNode`。**這是依現有七個資源槽位做的相容映射；原版各數字對應的確切畫風仍需原始 Client 對照。**
+
+Client 優先使用本地 `res://ui/BG_BUBBLE_01.png` 等原版圖片；如果沒有檔案，則透過 `legacy_bubble_skin.gd` 使用有顏色區分的輕量氣泡替代品，並針對七種樣式最多各產生一次 Texture2D。*替代品並非原版美術*，不會覆蓋本地原版 PNG，且一般聊天走相同的安全貼圖載入流程。
+
+**多媒體**：`m#ImageA.spr#ImageB.spr#Audio.mp3#` 會走專屬的 `legacy_cinematic_panel.gd` 畫面，而不是輸出檔名氣泡。解析器尋找 `res://Assets/Quest/LegacyMedia/` 內的 PNG、WEBP、JPG、MP3、OGG 或 WAV；`X_mas_card\\BG_STATION_01.spr` 對應 `X_mas_card/BG_STATION_01.png`。若檔案不存在，仍顯示「原版演出素材尚未匯入」及「繼續」按鈕，不阻斷任務；找到素材時則載入圖片與播放音訊，切換場景、跳下一句或關閉對話會停止演出播放。對 `na` 佔位欄位不嘗試讀檔。
+
+所有素材僅從列管的 `res://` 目錄載入，拒絕絕對路徑、路徑穿越與未知副檔名。原始 `.spr` 專有格式不直接宣稱 Godot 可播放；請依 `client/Assets/Quest/LegacyMedia/README.md` 將原始素材轉換匯入。舊版火車過場若已有專用影片路徑，`SuppressLegacyMediaDialogs` 保留，避免重複播放。
+
 ## Ask 選項的原版關閉語意（第四階段）
 
 對照 `Old/服務端/Dat/Quest/NQ024_A.txt`：`start()` 先呼叫 `BuyTicket0()`，在裡面 `Ask(..., "BuyTicket0Reply")`，然後在 `start()` 結尾執行 `QuestEnd()`。這種 **Ask → QuestEnd 是合法的舊版用法**；任務函式返回不代表使用者已經選擇。因此 Client 現在在互動選項可見時保留選項，直到玩家選擇或明確關閉，而不讓尾端 `QuestEnd` 立刻關掉買票視窗。
@@ -80,6 +90,7 @@ Client 現在以 `legacy_dialog_sequence.gd` **只緩衝同一 NPC（EntityID + 
 dotnet run --project tests/SGO.Server.SmokeTests -- --suite protocol
 godot --headless --path client --script res://tests/npc_legacy_dialog_regression.gd
 godot --headless --path client --script res://tests/npc_dialog_sequence_regression.gd
+godot --headless --path client --script res://tests/npc_legacy_media_regression.gd
 ```
 
 測試額外包含 `NQ024_A` 型態的 `Ask → QuestEnd` 選項保持可選。其他測試涵蓋 Lua `Say/Ask/Color`、NPC／玩家來源、`p7`、`b/h`、顏色 span、選項 `TargetNode`、普通英文文字／未知前綴不被誤刪、選項控制碼淨化、快速重開選單、Godot 富文字氣泡與純文字回退／元件重用。

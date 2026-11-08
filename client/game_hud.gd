@@ -71,8 +71,10 @@ var game_info_window: Control = null
 @onready var npc_dialog_panel: Control = $WindowsContainer / NpcDialogPanel
 @onready var npc_dialog_text: RichTextLabel = $WindowsContainer / NpcDialogPanel / QuestionLabel
 const LEGACY_DIALOG_SEQUENCE = preload("res://scripts/legacy_dialog_sequence.gd")
+const LEGACY_CINEMATIC_PANEL = preload("res://scripts/legacy_cinematic_panel.gd")
 var _legacy_dialog_sequence = LEGACY_DIALOG_SEQUENCE.new()
 var _legacy_dialog_line_waiting: bool = false
+var _legacy_cinematic_panel: Variant = null
 var _current_npc_entity_id: int = 0
 var _current_npc_script_name: String = ""
 var _next_dialog_node: String = ""
@@ -1630,10 +1632,20 @@ func _on_npc_dialog_received(data: Dictionary, from_queue: bool = false) -> void
 		_legacy_dialog_line_waiting = from_queue or data.has("LegacyPrefix")
 		_next_dialog_node = str(data.get("NextNode", ""))
 
-		if text != "": _trigger_npc_bubble(_current_npc_entity_id, bubble_text, bubble_type, speaker, true)
+		if dialog_layout == "Media":
+			_hide_current_dialog_bubbles()
+			_ensure_legacy_cinematic_panel()
+			if is_instance_valid(_legacy_cinematic_panel):
+				var media: Dictionary = data.get("LegacyMedia", {}) if data.get("LegacyMedia", {}) is Dictionary else {}
+				_legacy_cinematic_panel.show_media(media)
+		else:
+			_hide_legacy_cinematic_panel()
+			if text != "":
+				_trigger_npc_bubble(_current_npc_entity_id, bubble_text, bubble_type, speaker, true)
 		if npc_dialog_panel: npc_dialog_panel.visible = false
 		return
 
+	_hide_legacy_cinematic_panel()
 	_legacy_dialog_line_waiting = false
 	_next_dialog_node = ""
 	if options.is_empty():
@@ -1668,6 +1680,7 @@ func _on_npc_dialog_close_requested(packet: Dictionary = {}) -> void:
 
 
 func request_next_dialog_sentence() -> void :
+	_hide_legacy_cinematic_panel()
 	# A terminal QuestEnd() must not swallow an explicit Say(..., "Next")
 	# continuation. Queued actual Say/Ask messages still take precedence.
 	var resume_explicit_node := _next_dialog_node != "" and (
@@ -1714,6 +1727,7 @@ func _on_npc_option_selected(target_node: String) -> void :
 			})
 
 func _on_npc_dialog_closed() -> void :
+	_hide_legacy_cinematic_panel()
 	_legacy_dialog_line_waiting = false
 	_legacy_dialog_sequence.reset()
 	if npc_dialog_panel: npc_dialog_panel.visible = false
@@ -1729,6 +1743,22 @@ func _on_npc_dialog_closed() -> void :
 
 	if is_instance_valid(target_player):
 		target_player.set("is_interacting_with_npc", false)
+
+func _ensure_legacy_cinematic_panel() -> void:
+	if is_instance_valid(_legacy_cinematic_panel):
+		return
+	if not is_instance_valid(windows_container):
+		return
+	_legacy_cinematic_panel = LEGACY_CINEMATIC_PANEL.new()
+	_legacy_cinematic_panel.name = "LegacyCinematicPanel"
+	windows_container.add_child(_legacy_cinematic_panel)
+	_legacy_cinematic_panel.advance_requested.connect(request_next_dialog_sentence)
+
+
+func _hide_legacy_cinematic_panel() -> void:
+	if is_instance_valid(_legacy_cinematic_panel):
+		_legacy_cinematic_panel.dismiss()
+
 
 func _hide_current_dialog_bubbles() -> void:
 	if _current_npc_entity_id != 0 and NetworkEntityManager:
@@ -1765,6 +1795,7 @@ func set_map_loading_progress(progress: float) -> void:
 
 
 func show_map_loading(duration: float = 0.3) -> void :
+	_hide_legacy_cinematic_panel()
 	if not loading_overlay or not loading_bar: return
 
 	if _map_loading_tween and _map_loading_tween.is_running():

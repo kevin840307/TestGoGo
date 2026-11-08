@@ -69,6 +69,19 @@ public static class DialogFormatter
         return new LegacyDialogText(rich, plain, prefix, speaker, layout);
     }
 
+    // The recovered Godot client already defines BG_BUBBLE_01..07,
+    // indexed as BubbleType 0..6. Treat numbered n/p dialogue as a
+    // presentation choice without changing the speaker or text.
+    public static int GetBubbleType(string? prefix)
+    {
+        if (prefix is { Length: 2 } &&
+            prefix[0] is 'n' or 'p' &&
+            prefix[1] is >= '1' and <= '7')
+            return prefix[1] - '1';
+
+        return 0;
+    }
+
     // Preserve old callers that only need to remove the legacy prefix.
     public static string CleanText(string? value) => Parse(value).Text;
 

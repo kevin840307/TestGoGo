@@ -3,6 +3,7 @@ extends CharacterBody2D
 class_name BaseEntity
 
 const LEGACY_DIALOG_BUBBLE = preload("res://scripts/legacy_dialog_bubble.gd")
+const LEGACY_BUBBLE_SKIN = preload("res://scripts/legacy_bubble_skin.gd")
 
 
 var data_model: PlayerData = PlayerData.new()
@@ -1372,8 +1373,7 @@ func play_mecha_transform() -> void :
 
 func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = {}, rich_text: bool = false) -> void :
 	if not chat_bubble_bg or not chat_bubble_label: return
-	var tex_path = "res://ui/BG_BUBBLE_%02d.png" % clamp(bubble_type + 1, 1, 7)
-	chat_bubble_bg.texture = load(tex_path)
+	chat_bubble_bg.texture = LEGACY_BUBBLE_SKIN.get_texture(bubble_type)
 	# Leave ordinary messages on the original Label.
 
 	var fixed_bubble_size = Vector2(64, 48)

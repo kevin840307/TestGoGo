@@ -597,7 +597,7 @@ public sealed class QuestRuntime
                 DialogLayout = dialog.Layout,
                 LegacyMedia = dialog.Media,
                 Speaker = dialog.Speaker,
-                BubbleType = 0,
+                BubbleType = DialogFormatter.GetBubbleType(dialog.Prefix),
                 NextNode = next
             });
             return DynValue.Nil;
@@ -633,7 +633,7 @@ public sealed class QuestRuntime
                 LegacyPrefix = dialog.Prefix,
                 DialogLayout = dialog.Layout,
                 Speaker = dialog.Speaker,
-                BubbleType = 0,
+                BubbleType = DialogFormatter.GetBubbleType(dialog.Prefix),
                 Options = options
             });
 
