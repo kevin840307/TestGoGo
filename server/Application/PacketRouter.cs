@@ -3941,7 +3941,8 @@ public sealed class PacketRouter
                     ];
                 }
 
-                if (!dropPosition.CollisionVerified)
+                if (!dropPosition.CollisionVerified &&
+                    _dropPlacement.ShouldReportMissingMap(state.CurrentMapId))
                 {
                     _log.LogWarning(
                         "[GROUND_DROP_MAP_MISSING] Map={MapID} DBID={DBID} Blocking.dat unavailable; legacy placement retained",
