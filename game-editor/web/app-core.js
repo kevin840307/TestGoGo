@@ -4,15 +4,15 @@ const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 const state = {
   view: 'dashboard',
   status: null,
-  skills: [], selectedSkill: null,
-  enemies: [], selectedEnemy: null,
+  skills: [], selectedSkill: null, skillDirty: false,
+  enemies: [], selectedEnemy: null, enemyDirty: false,
   maps: [], mapId: null, mapTab: 'enemies', mapRows: [],
   mapMeta: null, mapSelectedIndex: null, mapSelectedIndexes: [], mapSelectedEnemyId: null,
   mapShowBlocking: true, mapShowSpawners: true, mapShowLabels: true,
   mapOnlySelectedType: false, mapSnapWalkable: true,
   mapZoom: 1, mapClipboard: [], mapUndo: [], mapRedo: [], mapDirty: false,
   mapBatchArmed: false, mapSuppressClick: false, mapSpaceDown: false,
-  scripts: [], selectedScript: null,
+  scripts: [], selectedScript: null, scriptDirty: false,
   assets: [], assetTarget: null,
 };
 
@@ -67,12 +67,38 @@ async function loadStatus() {
   $('#asset-folder').innerHTML = folders.map(x => `<option value="${esc(x)}">${x ? esc(x) : '全部素材'}</option>`).join('');
 }
 
+function viewHasUnsavedChanges(view=state.view) {
+  if (view === 'maps') return !!state.mapDirty;
+  if (view === 'skills') return !!state.skillDirty;
+  if (view === 'enemies') return !!state.enemyDirty;
+  if (view === 'scripts') return !!state.scriptDirty;
+  return false;
+}
+
+function clearViewDirty(view=state.view) {
+  if (view === 'maps') state.mapDirty = false;
+  if (view === 'skills') state.skillDirty = false;
+  if (view === 'enemies') state.enemyDirty = false;
+  if (view === 'scripts') state.scriptDirty = false;
+}
+
+function confirmDiscardCurrentChanges() {
+  if (!viewHasUnsavedChanges()) return true;
+  if (state.view === 'maps' && typeof confirmDiscardMapChanges === 'function') {
+    return confirmDiscardMapChanges();
+  }
+  const label = {
+    skills:'技能',
+    enemies:'怪物',
+    scripts:'NPC 腳本',
+  }[state.view] || '目前';
+  return confirm(`${label}有尚未儲存的修改，確定要放棄嗎？`);
+}
+
 async function go(view) {
   if (view === state.view) return true;
-  if (state.view === 'maps' && view !== 'maps' && typeof confirmDiscardMapChanges === 'function') {
-    if (!confirmDiscardMapChanges()) return false;
-    state.mapDirty = false;
-  }
+  if (!confirmDiscardCurrentChanges()) return false;
+  clearViewDirty(state.view);
   state.view = view;
   $$('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.view === view));
   $$('.view').forEach(x => x.classList.toggle('active', x.id === `view-${view}`));
