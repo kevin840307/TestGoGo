@@ -19,14 +19,27 @@ func _ready() -> void:
 
 
 func _run() -> void:
-	_check(GameManager.background_loading_display_fps(false) == 30,
-		"normal unfocused gameplay keeps the configured 30 FPS throttle")
-	_check(GameManager.background_loading_display_fps(true) == 10,
-		"only the initial bootstrap loading bar may draw at 10 FPS")
+	var normal_profile: Dictionary = {"foreground_fps": 120, "background_fps": 20}
+	_check(GameManager.fps_cap_for_focus(normal_profile, true, false) == 120,
+		"focused login screen renders at the configured 120 FPS")
+	_check(GameManager.fps_cap_for_focus(normal_profile, false, false) == 120,
+		"unfocused login and character selection are never forced down to 10/20 FPS")
+	_check(not GameManager.should_throttle_background_visuals(false, false),
+		"login startup never disables the render loop on focus loss")
+	_check(GameManager.fps_cap_for_focus(normal_profile, true, true) == 120,
+		"active foreground game retains its configured FPS")
+	_check(GameManager.fps_cap_for_focus(normal_profile, false, true) == 20,
+		"unfocused active game alone receives the background FPS cap")
+	_check(GameManager.should_throttle_background_visuals(false, true),
+		"background rendering optimization remains enabled after entering the world")
+	_check(GameManager.fps_cap_for_focus(normal_profile, false, false) == 120,
+		"returning to login restores full FPS even while unfocused")
+	_check(GameManager.configured_foreground_fps(normal_profile) == 120,
+		"foreground FPS is independent from a previously throttled Engine.max_fps")
 	_check(GameManager.classify_frame_gap(100000, false, 10) == "background_throttle",
-		"startup 10 FPS progress redraw is intentional, not a lag spike")
+		"a custom 10 FPS in-world background profile is classified correctly")
 	_check(GameManager.classify_frame_gap(250000, false, 10) == "background_stall",
-		"an unexpectedly long startup frame remains visible in diagnostics")
+		"an unexpectedly long background frame remains visible in diagnostics")
 	_check(GameManager.classify_frame_gap(34000, false, 30) == "background_throttle",
 		"current 30 FPS background cap is an intentional 33ms frame interval")
 	_check(GameManager.classify_frame_gap(150000, false, 30) == "background_stall",
