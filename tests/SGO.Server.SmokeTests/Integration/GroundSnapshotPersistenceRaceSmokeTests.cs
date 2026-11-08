@@ -48,8 +48,10 @@ internal static class GroundSnapshotPersistenceRaceSmokeTests
             account.Value, characterId, itemIndex, 2);
         Check(uid > 0, "seed two inventory items");
         var dropped = store.DropAssetToGround(
-            account.Value, characterId, uid, 0, 1, mapId, 100, 100);
-        Check(dropped is not null, "commit one ground drop before snapshot");
+            account.Value, characterId, uid, 0, 1, mapId, 100, 100)
+            ?? throw new InvalidOperationException(
+                "FAILED: commit one ground drop before snapshot");
+        Check(dropped.EntityId > 0, "commit one ground drop before snapshot");
 
         var hub = new ServerBroadcastHub();
         var viewer = hub.Register();
@@ -63,7 +65,7 @@ internal static class GroundSnapshotPersistenceRaceSmokeTests
             // Step A: SELECT sees the item before another socket's pickup.
             var dbSnapshot = store.GetGroundItems(mapId).ToArray();
             Check(dbSnapshot.Length == 1 &&
-                  dbSnapshot[0].EntityId == dropped!.EntityId,
+                  dbSnapshot[0].EntityId == dropped.EntityId,
                 "WorldReady SELECT sees the initial persisted ground row");
 
             // Step B: the winner claims the SQLite row atomically and then
