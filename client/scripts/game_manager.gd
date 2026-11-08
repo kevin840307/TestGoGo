@@ -55,6 +55,8 @@ const RENDER_STATS_INTERVAL_SECONDS: float = 2.0
 const PERF_ANALYSIS_INTERVAL_SECONDS: float = 5.0
 var _render_stats_elapsed: float = 0.0
 var _perf_analysis_elapsed: float = 0.0
+var _focus_last_change_usec: int = 0
+var _focus_change_count: int = 0
 var _prewarmed_hud_windows: Dictionary = {}
 
 var _train_travel_active: bool = false
@@ -96,6 +98,40 @@ func set_frame_gap_stage(stage: String) -> void :
 	_frame_gap_stage = stage
 	_frame_gap_stage_since_usec = Time.get_ticks_usec()
 
+# A 5 FPS background cap intentionally produces ~200ms frame intervals.
+# Distinguish that normal throttling from genuinely stalled background frames.
+func classify_frame_gap(gap_usec: int, has_focus: bool, fps_cap: int) -> String:
+	if has_focus:
+		return "foreground_stall"
+	if fps_cap > 0:
+		var expected_usec: float = 1000000.0 / float(fps_cap)
+		if float(gap_usec) <= expected_usec * 1.8:
+			return "background_throttle"
+	return "background_stall"
+
+
+func _focus_perf_context() -> String:
+	var focus_name: String = "foreground" if _window_has_focus else "background"
+	var render_enabled: bool = RenderingServer.render_loop_enabled
+	var master_bus_index: int = AudioServer.get_bus_index("Master")
+	var audio_muted: bool = master_bus_index >= 0 and AudioServer.is_bus_mute(master_bus_index)
+	var focus_age_ms: int = -1
+	if _focus_last_change_usec > 0:
+		focus_age_ms = int((Time.get_ticks_usec() - _focus_last_change_usec) / 1000)
+	return "focus=%s focus_actual=%s power_save=%s fps_cap=%d render_loop=%s audio_muted=%s focus_age_ms=%d" % [
+		focus_name, str(DisplayServer.window_is_focused()), str(not _window_has_focus),
+		Engine.max_fps, str(render_enabled), str(audio_muted), focus_age_ms,
+	]
+
+
+func _log_focus_power_save(event_name: String, trimmed_caches: bool = false) -> void:
+	if not OS.is_debug_build():
+		return
+	print("[FOCUS_POWER_SAVE] event=%s %s focus_changes=%d caches_trimmed=%s" % [
+		event_name, _focus_perf_context(), _focus_change_count, str(trimmed_caches),
+	])
+
+
 func _process(delta: float) -> void :
 	# Diagnostics are intentionally excluded from release exports.
 	if not OS.is_debug_build():
@@ -105,15 +141,21 @@ func _process(delta: float) -> void :
 	if _frame_gap_last_usec > 0:
 		var gap_usec := now_usec - _frame_gap_last_usec
 		if gap_usec >= FRAME_GAP_WARN_USEC:
-			var stage_age_ms := float(now_usec - _frame_gap_stage_since_usec) / 1000.0 if _frame_gap_stage_since_usec > 0 else -1.0
-			var line := "[FRAME_GAP] gap_ms=%.2f stage=%s stage_age_ms=%.2f memory_mb=%.2f" % [
-				float(gap_usec) / 1000.0,
-				_frame_gap_stage,
-				stage_age_ms,
-				_get_process_memory_mb()
-			]
-			print(line)
-			_append_transition_log(line)
+			var gap_kind: String = classify_frame_gap(gap_usec, _window_has_focus, Engine.max_fps)
+			# 5 FPS in the background is intentional, not a 200ms frame stall.
+			# Preserve unusually long background gaps as real diagnostics.
+			if gap_kind != "background_throttle":
+				var stage_age_ms := float(now_usec - _frame_gap_stage_since_usec) / 1000.0 if _frame_gap_stage_since_usec > 0 else -1.0
+				var line := "[FRAME_GAP] gap_ms=%.2f stage=%s stage_age_ms=%.2f memory_mb=%.2f kind=%s %s" % [
+					float(gap_usec) / 1000.0,
+					_frame_gap_stage,
+					stage_age_ms,
+					_get_process_memory_mb(),
+					gap_kind,
+					_focus_perf_context(),
+				]
+				print(line)
+				_append_transition_log(line)
 	_frame_gap_last_usec = now_usec
 
 	_render_stats_elapsed += delta
@@ -175,7 +217,7 @@ func _print_render_stats() -> void :
 		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
 			aoi_deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
 
-	print("[RENDER_STATS] fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d paper_doll_layers=%d" % [
+	print("[RENDER_STATS] fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d paper_doll_layers=%d render_stats_valid=%s %s" % [
 		int(Performance.get_monitor(Performance.TIME_FPS)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
@@ -191,6 +233,8 @@ func _print_render_stats() -> void :
 		ground_items_total,
 		ground_items_visible_nearby,
 		paper_doll_layers,
+		str(_window_has_focus and RenderingServer.render_loop_enabled),
+		_focus_perf_context(),
 	])
 
 func _print_performance_analysis(checkpoint: String) -> void:
@@ -225,7 +269,7 @@ func _print_performance_analysis(checkpoint: String) -> void:
 		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
 			deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
 
-	print("[PERF_ANALYSIS] checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d" % [
+	print("[PERF_ANALYSIS] checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d cpu_metric=frame_budget_ratio %s" % [
 		checkpoint,
 		fps,
 		process_ms,
@@ -241,6 +285,7 @@ func _print_performance_analysis(checkpoint: String) -> void:
 		active_entities,
 		active_monsters,
 		deferred_monsters,
+		_focus_perf_context(),
 	])
 
 
@@ -341,6 +386,11 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 	if _window_has_focus == has_focus:
 		return
 	_window_has_focus = has_focus
+	_focus_last_change_usec = Time.get_ticks_usec()
+	_focus_change_count += 1
+	# The frame spanning focus-in/out includes the intentional 5 FPS wait.
+	# It cannot be assigned to foreground lag: restart the gap window.
+	_frame_gap_last_usec = _focus_last_change_usec
 
 	var master_bus_index := AudioServer.get_bus_index("Master")
 
@@ -363,6 +413,8 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 				_master_bus_was_muted_before_focus_loss
 			)
 
+	_log_focus_power_save("focus_in" if has_focus else "focus_out", not has_focus)
+
 func _trim_unfocused_runtime_caches() -> void :
 	if EffectLoader and EffectLoader.has_method("clear_runtime_cache"):
 		EffectLoader.clear_runtime_cache()
@@ -380,9 +432,12 @@ func _trim_unfocused_runtime_caches() -> void :
 func _ready() -> void :
 	_window_has_focus = DisplayServer.window_is_focused()
 	_focused_max_fps = Engine.max_fps
+	_focus_last_change_usec = Time.get_ticks_usec()
 	if not _window_has_focus:
 		_window_has_focus = true
 		_set_window_focus_power_save(false)
+	else:
+		_log_focus_power_save("initial")
 
 	if NetworkManager:
 		NetworkManager.change_map_received.connect(_on_change_map_received)
