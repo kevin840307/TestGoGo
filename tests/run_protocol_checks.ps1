@@ -42,7 +42,7 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_client_aoi_order_contract.py", "-v"
     )
-    Invoke-Checked "Two-second autorun mouse + cursor source contracts" "python" @(
+    Invoke-Checked "One-second autorun mouse + cursor source contracts" "python" @(
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_mouse_autorun_contract.py", "-v"
     )
