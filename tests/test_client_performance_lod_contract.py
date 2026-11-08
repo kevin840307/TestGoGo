@@ -13,7 +13,8 @@ class ClientPerformanceLodContractTests(unittest.TestCase):
     def test_monster_uses_one_spiky_orb_and_large_click_box(self):
         script = source("client/scripts/monster_entity.gd")
         self.assertIn("func _draw_simplified_monster", script)
-        self.assertIn("for i in range(8):", script)
+        self.assertIn("SIMPLIFIED_ORB_CACHE.monster_texture()", script)
+        self.assertIn("draw_texture(", script)
         self.assertIn("GENERIC_MONSTER_CLICK_SIZE := Vector2(112.0, 136.0)", script)
         self.assertIn("get_generic_monster_click_shape()", script)
         self.assertIn("sprite.sprite_frames = null", script)
@@ -23,9 +24,18 @@ class ClientPerformanceLodContractTests(unittest.TestCase):
         script = source("client/network_player.gd")
         self.assertIn("func _draw_simplified_player_orb", script)
         self.assertIn("func _simplified_relation_color", script)
+        self.assertIn("SIMPLIFIED_ORB_CACHE.player_texture()", script)
         self.assertIn("SIMPLIFIED_PLAYER_CLICK_SIZE", script)
         self.assertIn("doll_engine.clear_dolls()", script)
         self.assertNotIn("GENERIC_PLAYER_RACE", script)
+
+    def test_shared_lazy_generated_orb_texture_cache(self):
+        script = source("client/scripts/simplified_orb_cache.gd")
+        self.assertIn("static var _monster_texture: Texture2D", script)
+        self.assertIn("static var _player_texture: Texture2D", script)
+        self.assertIn("if _monster_texture == null:", script)
+        self.assertIn("if _player_texture == null:", script)
+        self.assertEqual(script.count("ImageTexture.create_from_image(image)"), 1)
 
     def test_manager_keeps_simplification_through_combat_and_profile_changes(self):
         script = source("client/scripts/network_entity_manager.gd")
