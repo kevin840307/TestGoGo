@@ -7,6 +7,20 @@ internal static class GlobalRateSmokeTests
 {
     public static void Run()
     {
+        Check(
+            GlobalRateMath.ApplyReward(100, 1.0) == 100 &&
+            GlobalRateMath.ApplyReward(100, 2.0) == 200 &&
+            GlobalRateMath.ApplyReward(3, 1.5) == 5 &&
+            GlobalRateMath.ApplyReward(0, 10.0) == 0 &&
+            GlobalRateMath.ApplyReward(long.MaxValue, 10.0) == int.MaxValue,
+            "global reward math is single-application, rounded and overflow-safe");
+
+        Check(
+            Math.Abs(GlobalRateMath.ApplyDropChance(0.05, 2.0) - 0.10) < 0.000001 &&
+            GlobalRateMath.ApplyDropChance(0.8, 2.0) == 1.0 &&
+            GlobalRateMath.ApplyDropChance(0.05, double.NaN) == 0.05,
+            "global drop math multiplies once and clamps to valid probability");
+
         var service = new GlobalRateService();
         var start = DateTimeOffset.UtcNow.AddMinutes(10);
 
