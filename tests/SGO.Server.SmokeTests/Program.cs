@@ -104,6 +104,7 @@ EconomyConcurrencySmokeTests.Run();
 AssetMutationConcurrencySmokeTests.Run();
 CrossFeatureConcurrencySmokeTests.Run();
 MallExternalIntegrationSmokeTests.Run();
+GlobalRateSmokeTests.Run();
 
 var realCurrentCatalog = new CurrentClientDataCatalog(
     Path.Combine(repoRoot, "client"));
