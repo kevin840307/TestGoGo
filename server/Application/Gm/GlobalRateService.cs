@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace SGO.Server.Application.Gm;
 
 public sealed record GlobalRateSnapshot(
@@ -29,7 +31,14 @@ public sealed class GlobalRateService
         DateTimeOffset.MinValue,
         DateTimeOffset.MinValue);
 
-    private GlobalRateSnapshot _state = Default;
+    private readonly string? _persistencePath;
+    private GlobalRateSnapshot _state;
+
+    public GlobalRateService(string? persistencePath = null)
+    {
+        _persistencePath = persistencePath;
+        _state = Load(persistencePath) ?? Default;
+    }
 
     public GlobalRateSnapshot Snapshot()
         => Volatile.Read(ref _state);
@@ -55,13 +64,50 @@ public sealed class GlobalRateService
             startsAt.Add(safeDuration));
 
         Volatile.Write(ref _state, next);
+        Persist(next);
         return next;
     }
 
     public GlobalRateSnapshot Cancel()
     {
         Volatile.Write(ref _state, Default);
+        Persist(Default);
         return Default;
+    }
+
+    private void Persist(GlobalRateSnapshot value)
+    {
+        if (string.IsNullOrWhiteSpace(_persistencePath))
+            return;
+
+        var directory = Path.GetDirectoryName(_persistencePath);
+        if (!string.IsNullOrWhiteSpace(directory))
+            Directory.CreateDirectory(directory);
+
+        var temp = _persistencePath + ".tmp";
+        File.WriteAllText(
+            temp,
+            JsonSerializer.Serialize(value));
+        File.Move(temp, _persistencePath, overwrite: true);
+    }
+
+    private static GlobalRateSnapshot? Load(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) ||
+            !File.Exists(path))
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<GlobalRateSnapshot>(
+                File.ReadAllText(path));
+        }
+        catch
+        {
+            // A broken optional admin-state file must never prevent the
+            // game server from starting. The admin UI can simply recreate it.
+            return null;
+        }
     }
 
     private static double ClampMultiplier(double value)
