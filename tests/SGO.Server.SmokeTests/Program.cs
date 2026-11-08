@@ -6687,7 +6687,7 @@ try
         LastX = combatEnemy.X,
         LastY = combatEnemy.Y,
         WorldReady = true,
-        PendingMapSpawn = true
+        PendingMapSpawn = false
     };
 
     store.UpdateLocation(
