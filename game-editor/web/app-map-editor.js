@@ -94,12 +94,12 @@ async function switchMap(nextId) {
 async function switchMapTab(tab) {
   if (tab === state.mapTab) return;
   if (!confirmDiscardMapChanges()) {
-    $$$('[data-map-tab]').forEach(x => x.classList.toggle('active', x.dataset.mapTab === state.mapTab));
+    $$('[data-map-tab]').forEach(x => x.classList.toggle('active', x.dataset.mapTab === state.mapTab));
     return;
   }
   state.mapTab = tab;
   saveEditorPreferences();
-  $('[data-map-tab]').forEach(x => x.classList.toggle('active', x.dataset.mapTab === tab));
+  $$('[data-map-tab]').forEach(x => x.classList.toggle('active', x.dataset.mapTab === tab));
   await loadMapRows();
 }
 
