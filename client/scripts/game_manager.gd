@@ -186,6 +186,21 @@ func _process(delta: float) -> void :
 		_perf_analysis_elapsed = 0.0
 		_print_performance_analysis("periodic")
 
+func _multiclient_gpu_context() -> String:
+	# Performance.RENDER_VIDEO_MEM_USED is Godot's resource allocation metric,
+	# not GPU utilization or a Windows/WDDM process-VRAM measurement.
+	# Include PID and resolution so 1/5/10 open-client logs can be matched
+	# against OS-level CPU, GPU Engine and dedicated GPU memory counters.
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	return "pid=%d window=%dx%d paper_palette_materials=%d monster_palette_materials=%d gpu_memory_metric=godot_resources" % [
+		OS.get_process_id(),
+		window_size.x,
+		window_size.y,
+		PaperDollEngine.get_shared_palette_material_count(),
+		MonsterEntity.get_shared_monster_palette_material_count(),
+	]
+
+
 func _print_render_stats() -> void :
 	if not OS.is_debug_build():
 		return
@@ -235,7 +250,7 @@ func _print_render_stats() -> void :
 		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
 			aoi_deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
 
-	print("[RENDER_STATS] fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d paper_doll_layers=%d render_stats_valid=%s %s" % [
+	print("[RENDER_STATS] fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d paper_doll_layers=%d render_stats_valid=%s %s %s" % [
 		int(Performance.get_monitor(Performance.TIME_FPS)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
@@ -253,6 +268,7 @@ func _print_render_stats() -> void :
 		paper_doll_layers,
 		str(_window_has_focus and RenderingServer.render_loop_enabled),
 		_focus_perf_context(),
+		_multiclient_gpu_context(),
 	])
 
 func _print_performance_analysis(checkpoint: String) -> void:
@@ -287,7 +303,7 @@ func _print_performance_analysis(checkpoint: String) -> void:
 		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
 			deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
 
-	print("[PERF_ANALYSIS] checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d cpu_metric=frame_budget_ratio %s" % [
+	print("[PERF_ANALYSIS] checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d cpu_metric=frame_budget_ratio %s %s" % [
 		checkpoint,
 		fps,
 		process_ms,
@@ -304,6 +320,7 @@ func _print_performance_analysis(checkpoint: String) -> void:
 		active_monsters,
 		deferred_monsters,
 		_focus_perf_context(),
+		_multiclient_gpu_context(),
 	])
 
 
