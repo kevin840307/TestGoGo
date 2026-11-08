@@ -111,7 +111,7 @@ var _audio_sequence_key: String = ""
 var _audio_played_cues: Dictionary = {}
 var _audio_last_frame: int = -1
 static var _shared_controller_timed_frames_cache: Dictionary = {}
-var _mecha_head_anchor_cache: Dictionary = {}
+static var _mecha_head_anchor_cache: Dictionary = {}
 
 const ACT_CONTROLLER_TIMELINES_META = "act_controller_timelines"
 const USE_RESOURCE_MECHA_HEAD_ANCHORS: = true
@@ -1085,9 +1085,10 @@ func _get_controller_timed_frames(source_frames: SpriteFrames, controller: Strin
 	var cache_key = "%s:%d:%s" % [controller, source_frames.get_instance_id(), skip_movement_timing]
 	if _shared_controller_timed_frames_cache.has(cache_key):
 		return _shared_controller_timed_frames_cache[cache_key]
-	var timed_frames = source_frames.duplicate() as SpriteFrames
-	if timed_frames == null:
-		return source_frames
+	# Duplicating SpriteFrames can be expensive when a PaperDoll has many
+	# layers. Most items have no applicable ACT timeline; only clone after the
+	# first valid timeline is found, preserving exactly the previous result.
+	var timed_frames: SpriteFrames = null
 	var applied_timelines: Dictionary = {}
 	for raw_action in action_prefixes:
 		if skip_movement_timing and raw_action == "NR":
@@ -1103,6 +1104,10 @@ func _get_controller_timed_frames(source_frames: SpriteFrames, controller: Strin
 					break
 		if animation_names.is_empty() or not _controller_timeline_fits(source_frames, animation_names, timeline, controller, raw_action):
 			continue
+		if timed_frames == null:
+			timed_frames = source_frames.duplicate() as SpriteFrames
+			if timed_frames == null:
+				return source_frames
 		for animation_name in animation_names:
 			var textures: Array[Texture2D] = []
 			for entry in timeline:
