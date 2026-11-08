@@ -8670,6 +8670,7 @@ try
 
     monster.HasTarget = true;
     monster.TargetCharacterId = peerCharacterId;
+    monster.TargetPetUid = 0;
     monster.AiState = MonsterAiState.Attack;
     monster.LastAttackAt = DateTimeOffset.MinValue;
 
