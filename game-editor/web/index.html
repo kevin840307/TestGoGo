@@ -37,6 +37,7 @@
       </div>
       <div class="topbar-actions">
         <div class="project-pill"><span class="status-dot"></span><span id="project-root">Loading...</span></div>
+        <button class="button ghost" id="help-open">? 使用說明</button>
         <button class="button ghost" id="refresh-view">重新整理</button>
       </div>
     </header>
@@ -120,6 +121,7 @@
           <div class="field compact"><label>地圖</label><select id="map-select"></select></div>
           <div class="segmented"><button class="active" data-map-tab="enemies">怪物</button><button data-map-tab="npcs">NPC</button></div>
           <div class="map-layer-controls">
+            <label class="toggle-chip" id="map-preview-toggle" hidden><input type="checkbox" id="map-show-preview" checked /><span>地圖背景</span></label>
             <label class="toggle-chip"><input type="checkbox" id="map-show-blocking" checked /><span>阻擋區</span></label>
             <label class="toggle-chip"><input type="checkbox" id="map-show-spawners" checked /><span>怪物區域</span></label>
             <label class="toggle-chip"><input type="checkbox" id="map-show-labels" checked /><span>名稱</span></label>
@@ -272,6 +274,40 @@
     </div>
   </div>
 </div>
+<div class="modal-backdrop" id="help-modal" hidden>
+  <div class="modal-card help-modal-card">
+    <div class="modal-head">
+      <div><p class="eyebrow">QUICK START</p><h2>SGO Editor 使用說明</h2></div>
+      <button class="icon-button" id="help-close">×</button>
+    </div>
+    <div class="modal-body help-body">
+      <div class="help-steps">
+        <div><strong>1</strong><span><b>先選資料類型</b><small>技能、怪物、地圖、NPC Script、素材各自獨立。</small></span></div>
+        <div><strong>2</strong><span><b>地圖直接視覺編輯</b><small>選怪物後點地圖新增；拖曳移動，Shift 框選，多選可整組移動。</small></span></div>
+        <div><strong>3</strong><span><b>儲存前先驗證</b><small>新產生的壞引用 / Blocking 衝突會被阻止；歷史問題只警告。</small></span></div>
+        <div><strong>4</strong><span><b>改壞可回復</b><small>所有寫入先備份；「變更歷史」可看 Diff 並安全還原。</small></span></div>
+      </div>
+      <div class="shortcut-grid">
+        <div><kbd>Shift + 拖曳</kbd><span>框選地圖物件</span></div>
+        <div><kbd>Ctrl + A</kbd><span>全選可見物件</span></div>
+        <div><kbd>Ctrl + C / V</kbd><span>複製 / 貼上</span></div>
+        <div><kbd>Ctrl + Z / Y</kbd><span>Undo / Redo</span></div>
+        <div><kbd>Delete</kbd><span>刪除選取物件</span></div>
+        <div><kbd>Ctrl + 滾輪</kbd><span>縮放</span></div>
+        <div><kbd>Space + 拖曳</kbd><span>平移地圖</span></div>
+        <div><kbd>Fit</kbd><span>符合畫面</span></div>
+      </div>
+      <div class="help-note">
+        <b>真實地圖背景</b>
+        <span>執行 <code>game-editor\export_map_previews.bat</code> 後，地圖編輯器會自動疊上實際 MapXX.scn 的預覽；沒有預覽時仍使用 Blocking / 座標畫布。</span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <label class="help-dismiss"><input type="checkbox" id="help-dont-show" /> 下次不要自動顯示</label>
+      <button class="button primary" id="help-ok">開始使用</button>
+    </div>
+  </div>
+</div>
 <div class="toast-stack" id="toast-stack"></div>
 <script src="/app-core.js"></script>
 <script src="/app-health.js"></script>
@@ -280,6 +316,7 @@
 <script src="/app-map-math.js"></script>
 <script src="/app-map-editor.js"></script>
 <script src="/app-history.js"></script>
+<script src="/app-help.js"></script>
 <script src="/app-tools.js"></script>
 </body>
 </html>
