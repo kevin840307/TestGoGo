@@ -412,6 +412,8 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("ConcurrentRepairsCannotUndercharge", source)
         self.assertIn("only one of two 60-cost repairs succeeds", source)
         self.assertIn("failed concurrent repair rolls back", source)
+        self.assertIn("ConcurrentDuplicateRepairChargesOnce", source)
+        self.assertIn("duplicate same-UID repair charges exactly once", source)
         self.assertIn("AssetMutationConcurrencySmokeTests.Run();", main)
 
     def test_cross_feature_concurrency_suite_guards_mixed_money_writes(self):
@@ -424,6 +426,8 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         source = module.read_text(encoding="utf-8-sig")
         self.assertIn("TradeAndDirectTransferConserveMoney", source)
         self.assertIn("trade and direct transfer both commit exactly once", source)
+        self.assertIn("TradeAndPlayerShopPurchaseConserveMoney", source)
+        self.assertIn("trade and player-shop purchase both commit exactly once", source)
         self.assertIn("mixed multiplayer money operations conserve", source)
         self.assertIn("CrossFeatureConcurrencySmokeTests.Run();", main)
 
