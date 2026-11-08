@@ -8,7 +8,7 @@ const state = {
   enemies: [], selectedEnemy: null, enemyDirty: false,
   maps: [], mapId: null, mapTab: 'enemies', mapRows: [],
   mapMeta: null, mapSelectedIndex: null, mapSelectedIndexes: [], mapSelectedEnemyId: null,
-  mapShowBlocking: true, mapShowSpawners: true, mapShowLabels: true,
+  mapShowPreview: true, mapShowBlocking: true, mapShowSpawners: true, mapShowLabels: true,
   mapOnlySelectedType: false, mapSnapWalkable: true,
   mapZoom: 1, mapClipboard: [], mapUndo: [], mapRedo: [], mapDirty: false,
   mapBatchArmed: false, mapSuppressClick: false, mapSpaceDown: false,
