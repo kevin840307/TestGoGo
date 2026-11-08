@@ -25,6 +25,12 @@ public sealed class ServerBroadcastHub
     private readonly ConcurrentDictionary<Guid, Presence>
         _presence = new();
 
+    // Only WorldReady clients enter the grid. Character selection does not
+    // expose a half-loaded player to distant peers.
+    private readonly PlayerSpatialAoi _playerAoi = new();
+
+    public int AoiReadyPlayers => _playerAoi.ReadyPlayerCount;
+
     public (Guid ConnectionId, ConcurrentQueue<object> Queue) Register()
     {
         var id = Guid.NewGuid();
@@ -138,8 +144,49 @@ public sealed class ServerBroadcastHub
 
     public void Unregister(Guid connectionId)
     {
+        // WebSocketEndpoint calls PacketRouter.DisconnectPresence first;
+        // remove here defensively for paths that terminate early.
+        _playerAoi.Remove(connectionId);
         _queues.TryRemove(connectionId, out _);
         _presence.TryRemove(connectionId, out _);
+    }
+
+    /// <summary>Update one *ready* player's AOI relations after position,
+    /// map and identity are in the presence registry.</summary>
+    public IReadOnlyList<PlayerSpatialAoi.Change> ReconcilePlayerAoi(
+        Guid connectionId)
+    {
+        if (!_presence.TryGetValue(connectionId, out var presence) ||
+            presence.AccountId <= 0 || presence.CharacterId <= 0 ||
+            presence.MapId <= 0)
+            return _playerAoi.Remove(connectionId);
+
+        return _playerAoi.Upsert(new OnlinePlayerPresence(
+            connectionId, presence.AccountId, presence.CharacterId,
+            presence.MapId, presence.X, presence.Y));
+    }
+
+    public IReadOnlyList<PlayerSpatialAoi.Change> RemovePlayerAoi(
+        Guid connectionId)
+        => _playerAoi.Remove(connectionId);
+
+    public IReadOnlyList<OnlinePlayerPresence> VisiblePlayerPeers(
+        Guid connectionId)
+        => _playerAoi.VisiblePeers(connectionId);
+
+    public bool IsPlayerAoiVisible(Guid viewer, Guid subject)
+        => _playerAoi.IsVisible(viewer, subject);
+
+    /// <summary>Only peer connections that already received SpawnEntity.
+    /// Keeps world chat, party, private responses and commerce independent
+    /// from proximity filtering.</summary>
+    public void PublishToPlayerObservers(
+        Guid sourceConnectionId, object packet)
+    {
+        foreach (var observer in _playerAoi.ObserversOf(sourceConnectionId))
+            // A simultaneous AOI exit may invalidate a copied recipient list.
+            if (_playerAoi.IsVisible(observer, sourceConnectionId))
+                PublishToConnection(observer, packet);
     }
 
     public void Publish(object packet)
