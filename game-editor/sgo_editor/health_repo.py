@@ -57,19 +57,58 @@ class HealthRepository:
         }
 
         # Skills: parse failures are important because list() intentionally hides
-        # malformed resources to keep the UI usable.
+        # malformed resources to keep the UI usable. Asset checks mirror the
+        # actual SkillLoader/BaseEntity EffectLoader lookup rules.
+        icon_dir = self.paths.skills / "Icon"
+        if not icon_dir.is_dir():
+            self._add_issue(
+                issues, "warning", "skill_icon_assets_unavailable",
+                "技能 Icon 目錄不存在，無法驗證 icon_id",
+                "Client SkillLoader 會讀取 res://Skills/Icon/ICON_%03d.png；目前 repository 找不到 client/Skills/Icon。",
+                target={"view": "skills"},
+            )
+
         for path in sorted(self.paths.skills.glob("*.tres"), key=lambda p: p.name):
             if not path.stem.isdigit():
                 continue
             try:
                 skill = self.skills.get(int(path.stem))
-                if int(skill["id"]) != int(path.stem):
+                skill_id = int(path.stem)
+                if int(skill["id"]) != skill_id:
                     self._add_issue(
                         issues, "error", "skill_id_mismatch",
                         f"技能 {path.name} 的 resource id 與檔名不一致",
                         f"resource id={skill['id']}，filename id={path.stem}",
-                        target={"view": "skills", "id": int(path.stem)},
+                        target={"view": "skills", "id": skill_id},
                     )
+
+                if icon_dir.is_dir():
+                    icon_id = int(skill.get("iconId", 0))
+                    icon_path = icon_dir / f"ICON_{icon_id:03d}.png"
+                    if icon_id >= 0 and not icon_path.is_file():
+                        self._add_issue(
+                            issues, "warning", "missing_skill_icon",
+                            f"技能 {skill_id} 找不到 Icon {icon_id}",
+                            f"預期素材：client/Skills/Icon/{icon_path.name}",
+                            target={"view": "skills", "id": skill_id},
+                        )
+
+                for field, effect_name in (
+                    ("fxUse", str(skill.get("fxUse", "")).strip()),
+                    ("fxHit", str(skill.get("fxHit", "")).strip()),
+                    ("fxExtra", str(skill.get("fxExtra", "")).strip()),
+                ):
+                    if not effect_name or effect_name == "0":
+                        continue
+                    candidates = self._skill_effect_candidates(field, effect_name)
+                    if not any(path.is_file() for path in candidates):
+                        self._add_issue(
+                            issues, "warning", "missing_skill_effect",
+                            f"技能 {skill_id} 的 {field} 找不到特效",
+                            f"{effect_name}；runtime 候選："
+                            + ", ".join(self.paths.relative(path) for path in candidates),
+                            target={"view": "skills", "id": skill_id},
+                        )
             except Exception as exc:
                 self._add_issue(
                     issues, "error", "skill_parse",
@@ -216,6 +255,35 @@ class HealthRepository:
         }
         self._cache = (now, result)
         return result
+
+    def _skill_effect_candidates(self, field: str, effect_name: str) -> list[Path]:
+        effects = self.paths.assets / "Effects"
+
+        def effect(folder: str, name: str) -> Path:
+            return effects / folder / f"{name}.tres"
+
+        if field == "fxUse":
+            # Player BaseEntity prefixes the use effect by race; MonsterEntity
+            # also supports a direct Skill_Effect name and Hit_Effect fallback.
+            return [
+                effect("Skill_Effect", f"A_{effect_name}"),
+                effect("Skill_Effect", f"B_{effect_name}"),
+                effect("Skill_Effect", f"R_{effect_name}"),
+                effect("Skill_Effect", effect_name),
+                effect("Hit_Effect", effect_name),
+            ]
+
+        if effect_name.startswith("Normal"):
+            preferred = effect("Normal_Effect", effect_name)
+        elif effect_name.startswith("Hit_Effect"):
+            preferred = effect("Hit_Effect", effect_name)
+        else:
+            preferred = effect("Skill_Effect", effect_name)
+
+        # BaseEntity/MonsterEntity fall back to Hit_Effect when the preferred
+        # path is absent. Keep the same behavior in health validation.
+        fallback = effect("Hit_Effect", effect_name)
+        return [preferred] if preferred == fallback else [preferred, fallback]
 
     def _audit_terrain(
         self,
