@@ -6988,6 +6988,7 @@ try
             peerCharacterId)!["SP"]);
 
     while (peerRegistration.Queue.TryDequeue(out _)) { }
+    while (broadcastRegistration.Queue.TryDequeue(out _)) { }
 
     var spHealPackets = combat.UseSkill(
         session,
@@ -7006,21 +7007,29 @@ try
 
     var targetSpRecovered =
         targetSpAfter - targetSpBefore;
+    var targetPrivateStatus =
+        peerRegistration.Queue.ToArray();
+    var observerPublicStatus =
+        broadcastRegistration.Queue.ToArray();
 
     Check(
         targetSpRecovered is >= 35 and <= 41 &&
         spHealPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"SkillCast\"")) &&
-        peerRegistration.Queue.ToArray().Any(x =>
+        targetPrivateStatus.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"PlayerStatusSync\"")) &&
-        peerRegistration.Queue.ToArray().Any(x =>
+        observerPublicStatus.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"Type\":\"SyncStatus\"") &&
             JsonSerializer.Serialize(x).Contains(
-                $"\"EntityID\":{peerCharacterId}")),
-        "心靈轉換 restores another same-map player's SP and broadcasts public SyncStatus");
+                $"\"EntityID\":{peerCharacterId}")) &&
+        !JsonSerializer.Serialize(observerPublicStatus).Contains(
+            "\"Money\"") &&
+        !JsonSerializer.Serialize(observerPublicStatus).Contains(
+            "\"ExpAcc\""),
+        "心靈轉換 sends private target status and public observer SyncStatus");
 
     store.SetSkill(
         account.Value,
