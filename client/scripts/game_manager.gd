@@ -217,6 +217,8 @@ func _print_render_stats() -> void :
 	var visible_monsters := 0
 	var visible_players := 0
 	var visible_pets := 0
+	var simplified_monsters := 0
+	var simplified_players := 0
 	var ground_items_total := 0
 	var ground_items_visible_nearby := 0
 	var ground_known: int = 0
@@ -247,8 +249,14 @@ func _print_render_stats() -> void :
 			if not visible_runtime:
 				continue
 			match entity_type:
-				0: visible_players += 1
-				1: visible_monsters += 1
+				0:
+					visible_players += 1
+					if entity.has_method("is_performance_simplified") and entity.is_performance_simplified():
+						simplified_players += 1
+				1:
+					visible_monsters += 1
+					if entity.has_method("is_performance_simplified") and entity.is_performance_simplified():
+						simplified_monsters += 1
 				3:
 					ground_items_total += 1
 					if is_instance_valid(current_player) and entity.is_visible_in_tree():
@@ -277,7 +285,9 @@ func _print_render_stats() -> void :
 			ground_aoi_scans = int(ground_aoi.get("ground_full_scans", 0))
 			ground_aoi_skips = int(ground_aoi.get("ground_skipped_scans", 0))
 
-	print("[RENDER_STATS] fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d ground_known=%d ground_deferred=%d monster_aoi_scans=%d monster_aoi_skips=%d ground_aoi_scans=%d ground_aoi_skips=%d paper_doll_layers=%d minimap_world_redraws=%d minimap_world_skips=%d render_stats_valid=%s %s %s" % [
+	print("[RENDER_STATS] mode=%s combat=%s fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d simplified_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d simplified_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d ground_known=%d ground_deferred=%d monster_aoi_scans=%d monster_aoi_skips=%d ground_aoi_scans=%d ground_aoi_skips=%d paper_doll_layers=%d minimap_world_redraws=%d minimap_world_skips=%d render_stats_valid=%s %s %s" % [
+		ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
+		ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
 		int(Performance.get_monitor(Performance.TIME_FPS)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
@@ -286,9 +296,11 @@ func _print_render_stats() -> void :
 		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
 		float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
 		visible_monsters,
+		simplified_monsters,
 		aoi_active_monsters,
 		aoi_deferred_monsters,
 		visible_players,
+		simplified_players,
 		visible_pets,
 		ground_items_total,
 		ground_items_visible_nearby,
@@ -338,7 +350,9 @@ func _print_performance_analysis(checkpoint: String) -> void:
 		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
 			deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
 
-	print("[PERF_ANALYSIS] checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d cpu_metric=frame_budget_ratio %s %s" % [
+	print("[PERF_ANALYSIS] mode=%s combat=%s checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d cpu_metric=frame_budget_ratio %s %s" % [
+		ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
+		ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
 		checkpoint,
 		fps,
 		process_ms,
@@ -482,7 +496,9 @@ func _apply_performance_profile() -> void:
 		Engine.max_fps = STARTUP_UNFOCUSED_PROGRESS_FPS if _startup_loading_overlay_active else _current_background_fps()
 	performance_profile_changed.emit(get_performance_profile())
 	if OS.is_debug_build():
-		print("[PERFORMANCE_PROFILE] load=%d combat=%d foreground_fps=%d background_fps=%d players=%d monsters=%d effects=%d%%" % [
+		print("[PERFORMANCE_PROFILE] mode=%s combat=%s load=%d combat_id=%d foreground_fps=%d background_fps=%d players=%d monsters=%d effects=%d%%" % [
+			ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
+			ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
 			current_performance_load_mode,
 			current_combat_render_mode,
 			int(current_performance_profile.get("foreground_fps", 0)),
