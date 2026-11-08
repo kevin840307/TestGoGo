@@ -126,6 +126,107 @@ public static partial class ChoiceRewardCatalog
             : null;
     }
 
+    private static IReadOnlyList<ChoiceRewardOption> ResolveNamedOptions(
+        CurrentClientDataCatalog current,
+        CurrentItemDefinition source,
+        string quotedName,
+        string description)
+    {
+        var normalizedBase =
+            CurrentClientDataCatalog.NormalizeName(
+                quotedName);
+
+        if (description.Contains(
+                "級",
+                StringComparison.Ordinal) &&
+            !string.IsNullOrWhiteSpace(
+                normalizedBase))
+        {
+            var variants =
+                new List<ChoiceRewardOption>();
+
+            foreach (var candidate in
+                     current.Items)
+            {
+                if (candidate.ItemId ==
+                        source.ItemId ||
+                    candidate.ReqLevel <= 0)
+                {
+                    continue;
+                }
+
+                var normalizedCandidate =
+                    CurrentClientDataCatalog.NormalizeName(
+                        candidate.Name);
+
+                if (!normalizedCandidate.StartsWith(
+                        normalizedBase,
+                        StringComparison.Ordinal) ||
+                    !ContainsNumberToken(
+                        description,
+                        candidate.ReqLevel) ||
+                    !TryResolveKind(
+                        candidate,
+                        out var kind,
+                        out var part))
+                {
+                    continue;
+                }
+
+                variants.Add(new(
+                    candidate.ItemId,
+                    candidate.Name,
+                    kind,
+                    part,
+                    Math.Max(
+                        0,
+                        candidate.Durability)));
+            }
+
+            if (variants
+                .Select(x => x.ItemIndex)
+                .Distinct()
+                .Count() >= 2)
+            {
+                return variants;
+            }
+        }
+
+        var exact =
+            current.FindItemByName(
+                quotedName);
+
+        if (exact is not null &&
+            exact.ItemId != source.ItemId &&
+            TryResolveKind(
+                exact,
+                out var exactKind,
+                out var exactPart))
+        {
+            return
+            [
+                new(
+                    exact.ItemId,
+                    exact.Name,
+                    exactKind,
+                    exactPart,
+                    Math.Max(
+                        0,
+                        exact.Durability))
+            ];
+        }
+
+        return [];
+    }
+
+    private static bool ContainsNumberToken(
+        string text,
+        int value)
+        => Regex.IsMatch(
+            text,
+            $"(?<!\\d){Regex.Escape(value.ToString())}(?!\\d)",
+            RegexOptions.CultureInvariant);
+
     private static bool TryResolveKind(
         CurrentItemDefinition item,
         out AssetPurchaseKind kind,
