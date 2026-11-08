@@ -102,7 +102,9 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('call_deferred("_refresh_afk_map_visuals_after_change")', game)
         self.assertIn('is_changing_map or original_map != current_map_node', game)
         self.assertIn('func _reset_afk_mode()', game)
-        self.assertIn('func cleanup_and_return_to_login() -> void :\n\t_reset_afk_mode()', game)
+        cleanup = game[game.index("func cleanup_and_return_to_login() -> void :"):]
+        self.assertIn("_reset_afk_mode()", cleanup)
+        self.assertIn("_set_afk_dynamic_visuals_suspended(true)", cleanup)
 
     def test_mouse_autorun_and_network_fixed_cadence(self):
         player = read("client/player.gd")
@@ -135,6 +137,59 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('"excluded_scripted": excluded_scripted', cache)
         self.assertIn('"visited_nodes": visited', cache)
         self.assertIn('int(stats.get("retained_embedded", 0))', hud)
+
+    def test_afk_memory_audit_and_disposable_resource_ownership(self):
+        game = read("client/scripts/game_manager.gd")
+        audit = read("client/scripts/afk_memory_audit.gd")
+        effect = read("client/scripts/effect_loader.gd")
+        monster_loader = read("client/scripts/monster_loader.gd")
+        doll_loader = read("client/scripts/paper_doll_loader.gd")
+        item_loader = read("client/scripts/item_loader.gd")
+        skill_loader = read("client/scripts/skill_loader.gd")
+        audio = read("client/scripts/audio_manager.gd")
+        pet = read("client/scripts/pet_entity.gd")
+        ground = read("client/scripts/ground_item_entity.gd")
+        npc = read("client/scripts/npc_entity.gd")
+        render_test = read("client/tests/render_resource_regression.gd")
+
+        self.assertIn("AFK_MEMORY_AUDIT", game)
+        self.assertIn("[AFK_MEMORY_AUDIT]", game)
+        self.assertIn('_log_afk_memory_audit("afk_enter_before")', game)
+        self.assertIn('_log_afk_memory_audit("afk_enter_after")', game)
+        self.assertIn('_log_afk_memory_audit("afk_settled_3s")', game)
+        self.assertIn('_log_afk_memory_audit("logout_settled")', game)
+        self.assertIn("get_reference_count()", audit)
+        self.assertIn("reference_sources", audit)
+        self.assertIn("estimated_texture_bytes", audit)
+        self.assertIn("SpriteFrames", audit)
+        self.assertIn("AtlasTexture", audit)
+
+        # Map scenes and effect .tres files own large external visual
+        # dependencies, so their disposable graphs must bypass the global
+        # ResourceLoader cache recursively.
+        self.assertGreaterEqual(game.count("CACHE_MODE_IGNORE_DEEP"), 3)
+        self.assertIn("CACHE_MODE_IGNORE_DEEP", effect)
+        for source in (monster_loader, doll_loader, item_loader, skill_loader, audio):
+            self.assertIn("CACHE_MODE_IGNORE", source)
+
+        # All dynamic entity categories preserved by the AFK shell must expose
+        # a visual-only suspend path; no collision/gameplay node is freed.
+        for source in (pet, ground, npc):
+            self.assertIn("func set_afk_visual_suspended(suspended: bool)", source)
+            self.assertNotIn("set_physics_process(false)", source)
+        self.assertIn("AFK strips pet SpriteFrames and UI", render_test)
+        self.assertIn("AFK strips ground-item texture and labels", render_test)
+        self.assertIn("AFK strips NPC texture and visual UI", render_test)
+
+        # Unfocused remains a warm/light mode; only optional hidden UI and
+        # unreferenced loader cache entries are reclaimed.
+        trim_start = game.index("func _trim_unfocused_runtime_caches() -> int:")
+        trim_end = game.index("\nfunc ", trim_start + 1)
+        trim = game[trim_start:trim_end]
+        self.assertIn("_release_background_optional_ui()", trim)
+        self.assertNotIn("_set_afk_dynamic_visuals_suspended", trim)
+        self.assertNotIn("_enter_afk_render_shell", trim)
+
 
     def test_afk_low_memory_shell_is_render_only(self):
         shell = read("client/scripts/afk_render_shell.gd")
