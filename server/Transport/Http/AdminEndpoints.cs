@@ -1,5 +1,6 @@
 using System.Net;
 using SGO.Server.Application.Diagnostics;
+using SGO.Server.Application.Gm;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Application.World;
 using SGO.Server.Infrastructure.GameData;
@@ -57,7 +58,8 @@ public static class AdminEndpoints
             ServerBroadcastHub broadcasts,
             ServerDiagnostics diagnostics,
             CurrentClientDataCatalog gameData,
-            SharedMapAiTicker mapAi) =>
+            SharedMapAiTicker mapAi,
+            GlobalRateService globalRates) =>
         {
             if (!IsLocal(ctx))
                 return Results.NotFound();
@@ -91,6 +93,7 @@ public static class AdminEndpoints
                     connectionId = x.ConnectionId,
                     accountId = x.AccountId,
                     characterId = x.CharacterId,
+                    characterName = x.CharacterName,
                     mapId = x.MapId,
                     x = Math.Round(x.X, 1),
                     y = Math.Round(x.Y, 1)
@@ -115,7 +118,8 @@ public static class AdminEndpoints
                     pets = gameData.Pets.Count
                 },
                 counters = diagnostics.SnapshotCounters(),
-                sharedMapAi = mapAi.LastDiagnostics
+                sharedMapAi = mapAi.LastDiagnostics,
+                globalRates = globalRates.Snapshot()
             });
         });
 
@@ -128,6 +132,85 @@ public static class AdminEndpoints
                 return Results.NotFound();
 
             return Results.Ok(diagnostics.Recent(count ?? 100));
+        });
+
+
+        app.MapPost("/admin/api/rates", async (
+            HttpContext ctx,
+            GlobalRateService globalRates,
+            ServerBroadcastHub broadcasts,
+            ServerDiagnostics diagnostics) =>
+        {
+            if (!IsLocal(ctx))
+                return Results.NotFound();
+
+            var body = await ctx.Request.ReadFromJsonAsync<RateRequest>();
+            if (body is null ||
+                body.ExperienceMultiplier is < 1 or > 10 ||
+                body.MoneyMultiplier is < 1 or > 10 ||
+                body.DropMultiplier is < 1 or > 10 ||
+                body.DurationMinutes is < 1 or > 10080)
+            {
+                return Results.BadRequest(new
+                {
+                    error = "倍率需為 1~10，持續時間需為 1~10080 分鐘"
+                });
+            }
+
+            var startsAt = body.StartsAt ?? DateTimeOffset.UtcNow;
+            if (startsAt < DateTimeOffset.UtcNow.AddMinutes(-1) ||
+                startsAt > DateTimeOffset.UtcNow.AddDays(7))
+            {
+                return Results.BadRequest(new
+                {
+                    error = "開始時間需介於現在到 7 天內"
+                });
+            }
+
+            var rate = globalRates.Set(
+                body.ExperienceMultiplier,
+                body.MoneyMultiplier,
+                body.DropMultiplier,
+                startsAt,
+                TimeSpan.FromMinutes(body.DurationMinutes));
+
+            diagnostics.Record(
+                "Information",
+                "GlobalRate",
+                $"EXP={rate.ExperienceMultiplier:0.##}x Money={rate.MoneyMultiplier:0.##}x Drop={rate.DropMultiplier:0.##}x Start={rate.StartsAt:O} End={rate.ExpiresAt:O}");
+
+            broadcasts.Publish(new
+            {
+                Type = "SystemMessageBroadcast",
+                Message =
+                    $"[全服加倍] 經驗 {rate.ExperienceMultiplier:0.##}x / 金錢 {rate.MoneyMultiplier:0.##}x / 掉寶 {rate.DropMultiplier:0.##}x，持續 {body.DurationMinutes} 分鐘"
+            });
+
+            return Results.Ok(rate);
+        });
+
+        app.MapDelete("/admin/api/rates", (
+            HttpContext ctx,
+            GlobalRateService globalRates,
+            ServerBroadcastHub broadcasts,
+            ServerDiagnostics diagnostics) =>
+        {
+            if (!IsLocal(ctx))
+                return Results.NotFound();
+
+            globalRates.Cancel();
+            diagnostics.Record(
+                "Information",
+                "GlobalRate",
+                "Global rate event cancelled");
+
+            broadcasts.Publish(new
+            {
+                Type = "SystemMessageBroadcast",
+                Message = "[全服加倍] 活動已結束"
+            });
+
+            return Results.Ok(new { success = true });
         });
 
         app.MapPost("/admin/api/broadcast", async (
@@ -168,5 +251,11 @@ public static class AdminEndpoints
 
     private sealed record BroadcastRequest(string Message);
 
+    private sealed record RateRequest(
+        double ExperienceMultiplier,
+        double MoneyMultiplier,
+        double DropMultiplier,
+        int DurationMinutes,
+        DateTimeOffset? StartsAt);
 
 }
