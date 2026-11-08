@@ -72,6 +72,9 @@ func clear_map_entities() -> Dictionary:
 	_deferred_monster_spawns.clear()
 	_combat_reveal_until_msec.clear()
 	_monster_aoi_elapsed = 0.0
+	_ground_spawn_templates.clear()
+	_deferred_ground_spawns.clear()
+	_ground_aoi_elapsed = 0.0
 	return {"total": cleared_total, "by_type": cleared_by_type}
 
 func _ready() -> void :
@@ -355,6 +358,23 @@ func _on_entity_spawned(data: Dictionary) -> void :
 			_defer_monster_spawn(cached)
 			return
 		_deferred_monster_spawns.erase(entity_id)
+	elif entity_type == 3:
+		# Keep a canonical packet until the server sends DespawnEntity, even
+		# if its heavy Sprite/Label/Collision nodes have been unloaded.
+		var cached_ground: Dictionary = data.duplicate(true)
+		cached_ground["_aoi_cached_at"] = Time.get_ticks_msec()
+		_ground_spawn_templates[entity_id] = cached_ground
+		if get_active_entity(entity_id):
+			_deferred_ground_spawns.erase(entity_id)
+			return
+		var aoi: Dictionary = _ground_aoi_context()
+		if aoi["center"] != null and not is_ground_inside_aoi(
+			cached_ground, aoi["center"], float(aoi["enter"])
+		):
+			_deferred_ground_spawns[entity_id] = cached_ground
+			_remove_queued_spawn(entity_id)
+			return
+		_deferred_ground_spawns.erase(entity_id)
 	if get_active_entity(entity_id) or _queued_spawn_ids.has(entity_id):
 		return
 	_queued_spawn_ids[entity_id] = true
@@ -364,6 +384,9 @@ func _on_entity_spawned(data: Dictionary) -> void :
 		# Only the top-level LocX/LocY fields can change before spawning; reuse
 		# its read-only ExtraData instead of deep-cloning it a second time.
 		queued_data = (_monster_spawn_templates[entity_id] as Dictionary).duplicate()
+	elif entity_type == 3:
+		queued_data = _ground_spawn_data_at_current_time(entity_id)
+		queued_data["IsSnapshot"] = bool(data.get("IsSnapshot", false))
 	else:
 		queued_data = data.duplicate(true)
 	# Prioritize interactables and nearest monsters instead of FIFO. During
@@ -400,9 +423,13 @@ func _process(delta: float) -> void :
 		_monster_spawn_templates.clear()
 		_deferred_monster_spawns.clear()
 		_combat_reveal_until_msec.clear()
+		_ground_spawn_templates.clear()
+		_deferred_ground_spawns.clear()
+		_ground_aoi_elapsed = 0.0
 		return
 
 	_update_monster_aoi(delta)
+	_update_ground_aoi(delta)
 
 	if not _spawn_queue_paused and not _spawn_queue.is_empty():
 		# Never starve the spawn queue after the world becomes visible.
@@ -457,6 +484,15 @@ static func _should_check_ground_drop_bounce(data: Dictionary) -> bool:
 func _spawn_entity_now(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
 	var entity_type = int(data.get("EntityType", 0))
+	if entity_type == 3:
+		# The player can move away while a ground SpawnEntity waits in
+		# the queue. Never allocate a distant item just to free it again.
+		var aoi: Dictionary = _ground_aoi_context()
+		if aoi["center"] != null and not is_ground_inside_aoi(
+			data, aoi["center"], float(aoi["exit"])
+		):
+			_deferred_ground_spawns[entity_id] = _ground_spawn_templates.get(entity_id, data)
+			return
 	if entity_type == 1:
 		# The authoritative SpawnEntity handler already made one deep copy.
 		# A queued spawn must reuse that canonical record instead of doing a
@@ -612,6 +648,8 @@ func _on_entity_despawned(data: Dictionary) -> void :
 	_monster_spawn_templates.erase(entity_id)
 	_deferred_monster_spawns.erase(entity_id)
 	_combat_reveal_until_msec.erase(entity_id)
+	_ground_spawn_templates.erase(entity_id)
+	_deferred_ground_spawns.erase(entity_id)
 	_remove_queued_spawn(entity_id)
 
 func _on_entity_moved(data: Dictionary) -> void :
