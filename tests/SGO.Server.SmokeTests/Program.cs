@@ -5884,12 +5884,69 @@ try
     Check(!session.PendingMapSpawn,
         "Map15 spawn gate clears after server world tick");
 
+    // The capital spawn and Map15 portal are over 5,000 pixels apart.
+    // SyncPosition is a movement sample, not a teleport command: a direct
+    // jump crosses blocking cells and must return PositionCorrection.
+    var map15Blocking = new BlockingMapService(gameDataRoot);
+    var beforeInvalidJumpX = session.LastX;
+    var beforeInvalidJumpY = session.LastY;
+    Check(!map15Blocking.IsMoveAllowed(
+            15,
+            beforeInvalidJumpX,
+            beforeInvalidJumpY,
+            4932,
+            7783,
+            session.CanCrossSpecialTerrain),
+        "Map15 Blocking.dat rejects direct capital-to-portal movement");
+
+    using (var invalidJump = Json(
+        """{"Type":"SyncPosition","X":4932,"Y":7783}"""))
+    {
+        var responses = router.Handle(invalidJump.RootElement, session);
+        Check(responses.Count == 1 &&
+              JsonSerializer.Serialize(responses[0]).Contains(
+                  "\"Type\":\"PositionCorrection\"") &&
+              session.LastX == beforeInvalidJumpX &&
+              session.LastY == beforeInvalidJumpY,
+            "SyncPosition rejects blocked long-distance jump without moving player");
+    }
+
+    // Reposition test state explicitly, as other integration fixtures do.
+    // Only the short, actual SyncPosition below is being tested as movement.
+    const int portalApproachX = 4900;
+    const int portalApproachY = 7800;
+    Check(map15Blocking.IsMoveAllowed(
+            15,
+            portalApproachX,
+            portalApproachY,
+            4932,
+            7783,
+            session.CanCrossSpecialTerrain) &&
+          store.UpdateLocation(
+              account.Value,
+              id,
+              15,
+              portalApproachX,
+              portalApproachY),
+        "prepare walkable Map15 portal-approach movement fixture");
+    session.LastX = portalApproachX;
+    session.LastY = portalApproachY;
+    session.PositionDirty = false;
+    session.LastPositionPersistAt = DateTimeOffset.UtcNow;
+    broadcastHub.UpdatePosition(
+        session.ConnectionId,
+        portalApproachX,
+        portalApproachY);
+
     using (var move = Json(
         """{"Type":"SyncPosition","X":4932,"Y":7783}"""))
     {
         var responses = router.Handle(move.RootElement, session);
-        Check(responses.Count == 0,
-            "SyncPosition only updates position after server-driven world tick");
+        Check(responses.Count == 0 &&
+              session.LastX == 4932 &&
+              session.LastY == 7783 &&
+              session.PositionDirty,
+            "walkable SyncPosition updates the player without triggering world spawns");
     }
 
     using (var summonForFollow = Json(JsonSerializer.Serialize(new
@@ -5903,6 +5960,17 @@ try
     }
 
     session.LastPetFollowTick = DateTimeOffset.MinValue;
+    // Force the legitimate movement to exercise SQLite persistence rather
+    // than relying on elapsed wall-clock time earlier in this long suite.
+    session.LastPositionPersistAt = DateTimeOffset.MinValue;
+    Check(map15Blocking.IsMoveAllowed(
+            15,
+            session.LastX,
+            session.LastY,
+            5000,
+            7800,
+            session.CanCrossSpecialTerrain),
+        "pet-follow movement fixture follows a walkable path");
     using (var followMove = Json(JsonSerializer.Serialize(new
     {
         Type = "SyncPosition",
@@ -5911,8 +5979,10 @@ try
     })))
     {
         var responses = router.Handle(followMove.RootElement, session);
-        Check(responses.Count == 0,
-            "player movement no longer directly drives pet AI");
+        Check(responses.Count == 0 &&
+              session.LastX == 5000 &&
+              session.LastY == 7800,
+            "player movement updates position without directly driving pet AI");
     }
 
     var followPackets = router.Tick(
@@ -5965,18 +6035,53 @@ try
           Convert.ToInt32(Convert.ToDouble(selected["LocY"])) == 7800,
         "movement and pet-follow position persist to SQLite");
 
+    // These are NPC-dialog tests, not long-distance movement tests.
+    // Put the character on nearby walkable ground in both SQLite and the
+    // session, instead of abusing SyncPosition as a teleport across walls.
+    void PlaceNearMap15NpcForDialog(WorldNpc npc)
+    {
+        (int X, int Y)? nearby = null;
+        for (var radius = 0; radius <= 8 && nearby is null; radius++)
+        {
+            for (var dx = -radius; dx <= radius && nearby is null; dx++)
+            {
+                for (var dy = -radius; dy <= radius; dy++)
+                {
+                    if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != radius)
+                        continue;
+
+                    var candidateX = npc.X + dx * BlockingMapService.CellSize;
+                    var candidateY = npc.Y + dy * BlockingMapService.CellSize;
+                    if (map15Blocking.IsMoveAllowed(
+                            15,
+                            candidateX,
+                            candidateY,
+                            candidateX,
+                            candidateY,
+                            session.CanCrossSpecialTerrain))
+                    {
+                        nearby = (candidateX, candidateY);
+                        break;
+                    }
+                }
+            }
+        }
+
+        Check(nearby.HasValue,
+            $"Map15 NPC {npc.EntityId} has nearby walkable interaction ground");
+        var (x, y) = nearby!.Value;
+        Check(store.UpdateLocation(account.Value, id, 15, x, y),
+            $"prepare Map15 NPC {npc.EntityId} interaction position");
+        session.LastX = x;
+        session.LastY = y;
+        session.PositionDirty = false;
+        session.LastPositionPersistAt = DateTimeOffset.UtcNow;
+        broadcastHub.UpdatePosition(session.ConnectionId, x, y);
+    }
+
     var merchant = map15Npcs.First(x =>
         x.Script.Equals("shop_e3.txt", StringComparison.OrdinalIgnoreCase));
-
-    using (var moveToMerchant = Json(JsonSerializer.Serialize(new
-    {
-        Type = "SyncPosition",
-        X = merchant.X,
-        Y = merchant.Y
-    })))
-    {
-        router.Handle(moveToMerchant.RootElement, session);
-    }
+    PlaceNearMap15NpcForDialog(merchant);
 
     using (var interactMerchant = Json(JsonSerializer.Serialize(new
     {
@@ -6008,16 +6113,7 @@ try
     }
 
     var portal = map15Npcs[0];
-
-    using (var moveBackToPortal = Json(JsonSerializer.Serialize(new
-    {
-        Type = "SyncPosition",
-        X = portal.X,
-        Y = portal.Y
-    })))
-    {
-        router.Handle(moveBackToPortal.RootElement, session);
-    }
+    PlaceNearMap15NpcForDialog(portal);
 
     using (var interact = Json(JsonSerializer.Serialize(new
     {
