@@ -58,6 +58,26 @@ func stop_combat_visual_effects() -> void:
 			effect.visible = false
 
 
+func release_world_runtime_for_login() -> void:
+	_damage_queue.clear()
+	_damage_queue_head = 0
+	set_process(false)
+	for effect in _effect_pool:
+		if not is_instance_valid(effect):
+			continue
+		effect.stop()
+		effect.visible = false
+		effect.sprite_frames = null
+		effect.material = null
+		effect.remove_meta("effect_mode")
+		if effect.has_meta("effect_target"):
+			effect.remove_meta("effect_target")
+	for label in _text_pool:
+		if is_instance_valid(label):
+			_reset_label_tweens(label)
+			label.visible = false
+
+
 func _get_free_effect() -> AnimatedSprite2D:
 	for eff in _effect_pool:
 		if not eff.visible: return eff

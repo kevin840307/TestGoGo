@@ -142,10 +142,20 @@ func _prewarm_game_hud_resources() -> void :
 		await get_tree().process_frame
 
 	_set_loading_progress(55.0)
-	# Resource preloading alone is not enough for the two expensive windows:
-	# their first SceneTree entry/layout is the real hitch. Pay that cost here,
-	# while the player is still on login/character selection, and keep the same
-	# instances alive for GameHUD to adopt later.
+	var skip_instance_prewarm: bool = (
+		GameManager
+		and GameManager.has_method("consume_skip_login_instance_prewarm")
+		and bool(GameManager.consume_skip_login_instance_prewarm())
+	)
+	if skip_instance_prewarm:
+		_set_loading_progress(92.0)
+		_set_startup_loading_status("登入畫面資源已整理")
+		if OS.is_debug_build():
+			print("[LOGIN_HUD_PREWARM] skipped_instances=true reason=return_from_world")
+		return
+
+	# Cold-process startup may pay the GameInfo first-layout cost here. A
+	# return from world deliberately skips it so login memory can settle.
 	for kind_value in GAME_HUD_INSTANCE_PREWARM.keys():
 		if not is_inside_tree():
 			return
@@ -466,7 +476,10 @@ func _on_character_verified_and_enter_game(char_data: Dictionary, _map_id: Strin
 
 
 func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
-	if login_screen: login_screen.visible = false
+	if login_screen:
+		login_screen.visible = false
+		if login_screen.has_method("release_background_video_resources"):
+			login_screen.call("release_background_video_resources")
 	if character_select_layer: character_select_layer.visible = false
 
 	var overlay = get_node_or_null("%LoadingOverlay")

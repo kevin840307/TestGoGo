@@ -96,3 +96,9 @@ func cancel_drag() -> void :
 	drag_icon.visible = false
 	drag_icon.texture = null
 	set_process(false)
+
+
+func release_world_runtime_for_login() -> void:
+	cancel_drag()
+	drag_icon.material = null
+	drag_tab_type = 0

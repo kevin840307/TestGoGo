@@ -29,6 +29,16 @@ var _query_can_cross_special_terrain: bool = false
 var _path_query_deadline_usec: int = 0
 var _path_query_expanded_cells: int = 0
 
+
+func clear_runtime_cache() -> int:
+	var removed: int = _map_cache.size()
+	_map_cache.clear()
+	_query_can_cross_special_terrain = false
+	_path_query_deadline_usec = 0
+	_path_query_expanded_cells = 0
+	return removed
+
+
 func find_path(
 	map_id: int,
 	start_world: Vector2,

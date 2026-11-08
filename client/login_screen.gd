@@ -143,6 +143,20 @@ func stop_background_video() -> void:
 		bg_video.stop()
 
 
+func release_background_video_resources() -> void:
+	if not is_instance_valid(bg_video):
+		return
+	if bg_video.is_playing():
+		bg_video.stop()
+	bg_video.paused = false
+	# Detach the decoder/render resource before the login scene is destroyed.
+	bg_video.stream = null
+
+
+func _exit_tree() -> void:
+	release_background_video_resources()
+
+
 func mark_login_screen_revealed() -> void:
 	_login_reveal_started_usec = Time.get_ticks_usec()
 	_login_startup_gap_reports = 0

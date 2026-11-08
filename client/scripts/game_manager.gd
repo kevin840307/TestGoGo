@@ -271,6 +271,7 @@ var _last_physics_tick_sample_msec: int = 0
 var _focus_last_change_usec: int = 0
 var _focus_change_count: int = 0
 var _prewarmed_hud_windows: Dictionary = {}
+var _skip_next_login_instance_prewarm: bool = false
 
 var _train_travel_active: bool = false
 var _train_travel_id: String = ""
@@ -306,6 +307,13 @@ func take_prewarmed_hud_window(kind: String) -> Control:
 
 func has_prewarmed_hud_window(kind: String) -> bool:
 	return is_instance_valid(_prewarmed_hud_windows.get(kind, null))
+
+
+func consume_skip_login_instance_prewarm() -> bool:
+	var skip: bool = _skip_next_login_instance_prewarm
+	_skip_next_login_instance_prewarm = false
+	return skip
+
 
 func set_frame_gap_stage(stage: String) -> void :
 	_frame_gap_stage = stage
@@ -2066,6 +2074,12 @@ func cleanup_and_return_to_login() -> void :
 
 	if NetworkEntityManager:
 		NetworkEntityManager.clear_map_entities()
+	if LegacyPathfinder and LegacyPathfinder.has_method("clear_runtime_cache"):
+		LegacyPathfinder.clear_runtime_cache()
+	if FloatingTextManager and FloatingTextManager.has_method("release_world_runtime_for_login"):
+		FloatingTextManager.release_world_runtime_for_login()
+	if DropItemManager and DropItemManager.has_method("release_world_runtime_for_login"):
+		DropItemManager.release_world_runtime_for_login()
 	_clear_visual_runtime_caches()
 
 
@@ -2078,6 +2092,9 @@ func cleanup_and_return_to_login() -> void :
 	_world_presented_msec = 0
 	_refresh_focus_render_policy()
 	log_world_visual_audit("logout_cleanup_scheduled")
+	# Do not rebuild GameInfo/festival item thumbnails immediately on return.
+	# They are world/reference UI and can be created lazily on the next entry.
+	_skip_next_login_instance_prewarm = true
 	get_tree().change_scene_to_file("res://entry_manager.tscn")
 	call_deferred("_audit_login_after_logout")
 
