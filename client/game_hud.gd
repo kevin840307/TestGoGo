@@ -1340,22 +1340,74 @@ func _on_afk_mode_requested() -> void:
 	)
 
 
+func _on_afk_enter_progress(percent: float, stage: String) -> void:
+	if not is_inside_tree():
+		return
+	if afk_status:
+		afk_status.text = "正在切換掛機模式…"
+	if afk_resource_stats:
+		afk_resource_stats.text = "準備 %d%%｜%s" % [int(percent), stage]
+
+
+func _restore_afk_hidden_roots_after_failed_enter() -> void:
+	for snapshot in _afk_hidden_roots:
+		var ref: WeakRef = snapshot["node"]
+		var node: Node = ref.get_ref()
+		if is_instance_valid(node) and (node is CanvasItem or node is CanvasLayer):
+			node.visible = bool(snapshot["visible"])
+	_afk_hidden_roots.clear()
+
+
 func _confirm_begin_afk() -> void:
-	if not GameManager or not GameManager.begin_afk_mode():
+	if not GameManager or GameManager.is_afk_mode_active():
+		return
+
+	# Keep the current AFK UI, but actually draw it before memory teardown.
+	_afk_hidden_roots.clear()
+	if afk_btn_restore:
+		afk_btn_restore.disabled = true
+	if afk_overlay:
+		afk_overlay.modulate.a = 0.0
+		afk_overlay.visible = true
+		afk_overlay.move_to_front()
+	if afk_status:
+		afk_status.text = "正在切換掛機模式…"
+	if afk_resource_stats:
+		afk_resource_stats.text = "準備掛機執行環境"
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+
+	if afk_overlay:
+		var transition := create_tween()
+		transition.tween_property(afk_overlay, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE)
+		await transition.finished
+	if not is_inside_tree():
+		return
+
+	_afk_hide_nonessential_roots()
+	await get_tree().process_frame
+	var entered: bool = await GameManager.begin_afk_mode(
+		Callable(self, "_on_afk_enter_progress")
+	)
+	if not is_inside_tree():
+		return
+	if not entered:
+		_restore_afk_hidden_roots_after_failed_enter()
+		if afk_overlay:
+			afk_overlay.visible = false
+			afk_overlay.modulate.a = 1.0
 		show_rejection_message_box("掛機模式啟動失敗，請確認地圖已完成載入。")
 		return
+
 	_afk_entered_msec = Time.get_ticks_msec()
 	set_background_visuals_paused(true)
-	_afk_hidden_roots.clear()
-	_afk_hide_nonessential_roots()
 	if afk_btn_restore:
 		afk_btn_restore.disabled = false
 	if afk_overlay:
-		afk_overlay.visible = true
-		afk_overlay.move_to_front()
-	# Focus may have changed during AFK setup; do not start a monitor
-	# timer in a hidden window. The next focus-in refreshes it immediately.
+		afk_overlay.modulate.a = 1.0
 	set_afk_dashboard_updates_enabled(GameManager.is_game_window_focused())
+	_refresh_afk_dashboard()
 
 
 func _afk_hide_nonessential_roots() -> void:

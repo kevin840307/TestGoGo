@@ -38,6 +38,37 @@ func clear_runtime_cache() -> void :
 	_sr_effect_cache.clear()
 
 
+func clear_runtime_cache_batched(frame_budget_usec: int = 3500) -> int:
+	# AFK entry must not destroy hundreds of AtlasTexture references in one
+	# rendered frame. Active actor visuals have already been detached before
+	# this runs, so each cached SpriteFrames can be released independently.
+	var removed: int = 0
+	var frame_started_usec: int = Time.get_ticks_usec()
+	for category_value in _cache.keys().duplicate():
+		var category = category_value
+		var category_cache: Dictionary = _cache.get(category, {})
+		for part_value in category_cache.keys().duplicate():
+			category_cache.erase(part_value)
+			removed += 1
+			if Time.get_ticks_usec() - frame_started_usec >= frame_budget_usec:
+				await get_tree().process_frame
+				frame_started_usec = Time.get_ticks_usec()
+		_cache.erase(category)
+	for key in _sr_cache.keys().duplicate():
+		_sr_cache.erase(key)
+		removed += 1
+		if Time.get_ticks_usec() - frame_started_usec >= frame_budget_usec:
+			await get_tree().process_frame
+			frame_started_usec = Time.get_ticks_usec()
+	for key in _sr_effect_cache.keys().duplicate():
+		_sr_effect_cache.erase(key)
+		removed += 1
+		if Time.get_ticks_usec() - frame_started_usec >= frame_budget_usec:
+			await get_tree().process_frame
+			frame_started_usec = Time.get_ticks_usec()
+	return removed
+
+
 func get_sr_frames(sr_id: String) -> SpriteFrames:
 	if sr_id not in SR_IDS:
 		return null

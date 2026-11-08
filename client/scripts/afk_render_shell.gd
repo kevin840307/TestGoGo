@@ -52,10 +52,10 @@ func enter(map_node: Node2D, entities: Node) -> Dictionary:
 	_shell = shell
 	_entities = entities
 
-	# Immediate free is intentional: AFK is a memory mode. No static map node
-	# survives merely because it was hidden. Blocking.dat/navigation and all
-	# server-synchronized entities live outside the discarded presentation.
-	map_node.free()
+	# The map is already hidden and live entities have moved into the shell.
+	# Queue recursive destruction so the existing AFK overlay can be drawn
+	# before node teardown, instead of making the click look like a freeze.
+	map_node.queue_free()
 	return {
 		"ok": true,
 		"map_name": _map_name,

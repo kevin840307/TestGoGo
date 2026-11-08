@@ -229,6 +229,7 @@ func _log_afk_memory_after_settle(started_msec: int) -> void:
 	if not is_inside_tree() or not _afk_active or _afk_started_msec != started_msec:
 		return
 	_log_afk_memory("afk_settled_3s")
+	log_world_visual_audit("afk_settled_3s")
 	_log_afk_memory_audit("afk_settled_3s")
 
 
@@ -838,6 +839,84 @@ func _set_afk_dynamic_visuals_suspended(suspended: bool) -> int:
 	return changed
 
 
+func _set_afk_dynamic_visuals_suspended_batched(
+	suspended: bool,
+	progress_callback: Callable = Callable()
+) -> int:
+	var entities: Array[Node] = []
+	if is_instance_valid(current_player):
+		entities.append(current_player)
+	if NetworkEntityManager:
+		for entity in NetworkEntityManager.active_entities.values():
+			if is_instance_valid(entity):
+				entities.append(entity)
+	var total: int = entities.size()
+	var changed: int = 0
+	var frame_started_usec: int = Time.get_ticks_usec()
+	for entity in entities:
+		if is_instance_valid(entity) and entity.has_method("set_afk_visual_suspended"):
+			entity.set_afk_visual_suspended(suspended)
+			changed += 1
+		if changed % 8 == 0 or Time.get_ticks_usec() - frame_started_usec >= 4000:
+			_emit_afk_restore_progress(
+				progress_callback,
+				18.0 + 30.0 * float(changed) / float(maxi(1, total)),
+				"卸載角色與怪物視覺 (%d/%d)" % [changed, total]
+			)
+			await get_tree().process_frame
+			frame_started_usec = Time.get_ticks_usec()
+	return changed
+
+
+func _clear_visual_runtime_caches_batched(
+	progress_callback: Callable = Callable()
+) -> void:
+	if DollLoader:
+		if DollLoader.has_method("clear_runtime_cache_batched"):
+			await DollLoader.clear_runtime_cache_batched()
+		elif DollLoader.has_method("clear_runtime_cache"):
+			DollLoader.clear_runtime_cache()
+	_emit_afk_restore_progress(progress_callback, 69.0, "釋放角色紙娃娃快取")
+	await get_tree().process_frame
+
+	var stage_index: int = 0
+	var loaders: Array = [
+		["怪物", MonsterLoader],
+		["特效", EffectLoader],
+		["寵物", PetLoader],
+		["物品", ItemLoader],
+		["技能", SkillLoader],
+		["音效", AudioManager],
+	]
+	for spec in loaders:
+		var loader: Object = spec[1] as Object
+		if is_instance_valid(loader) and loader.has_method("clear_runtime_cache"):
+			loader.call("clear_runtime_cache")
+		stage_index += 1
+		_emit_afk_restore_progress(
+			progress_callback,
+			70.0 + 18.0 * float(stage_index) / float(loaders.size()),
+			"釋放%s快取" % str(spec[0])
+		)
+		await get_tree().process_frame
+
+	PaperDollEngine.clear_visual_runtime_cache()
+	FestivalThemeManager.clear_texture_cache()
+	_emit_afk_restore_progress(progress_callback, 91.0, "整理共用視覺快取")
+	await get_tree().process_frame
+
+	for kind in _prewarmed_hud_windows.keys().duplicate():
+		var window = _prewarmed_hud_windows.get(kind, null)
+		if is_instance_valid(window):
+			window.free()
+		_prewarmed_hud_windows.erase(kind)
+		await get_tree().process_frame
+	if is_instance_valid(current_hud) and current_hud.has_method("release_afk_visual_preloads"):
+		current_hud.release_afk_visual_preloads()
+	_emit_afk_restore_progress(progress_callback, 95.0, "整理掛機介面")
+	await get_tree().process_frame
+
+
 func _enter_afk_render_shell() -> Dictionary:
 	var container: Node = _afk_dynamic_container()
 	if not is_instance_valid(container):
@@ -948,11 +1027,12 @@ func _restore_afk_render_shell(progress_callback: Callable = Callable()) -> Dict
 	return attached
 
 
-func begin_afk_mode() -> bool:
+func begin_afk_mode(progress_callback: Callable = Callable()) -> bool:
 	if _afk_active or _afk_restoring or is_changing_map:
 		return false
 	if not is_instance_valid(current_map_node) or not is_instance_valid(current_player):
 		return false
+	var enter_started_usec: int = Time.get_ticks_usec()
 	_afk_saved_profile = {
 		"load": current_performance_load_mode,
 		"combat": current_combat_render_mode,
@@ -960,38 +1040,48 @@ func begin_afk_mode() -> bool:
 		"monsters": current_simplify_monsters_mode,
 	}
 	_afk_memory_baseline = _afk_memory_sample()
-	log_world_visual_audit("afk_enter_before")
-	_log_afk_memory_audit("afk_enter_before")
 	_afk_forced_draw_count = 0
 	_afk_active = true
 	_afk_started_msec = Time.get_ticks_msec()
 	_log_afk_memory("enter_before")
 	_log_afk_state("enter_before")
+	_emit_afk_restore_progress(progress_callback, 5.0, "準備掛機執行環境")
 	_enter_afk_audio_silence()
-	# Phase 1: keep gameplay nodes alive and network/physics processing at
-	# their original rates; hide only world presentation.
+
 	if current_player.has_method("begin_afk_navigation_anchor"):
 		current_player.begin_afk_navigation_anchor()
 	current_map_node.visible = false
 	_remove_day_night_overlay()
 	_remove_world_enhancement()
-	# Phase 2: keep the dynamic gameplay subtree alive, but discard the
-	# complete static map scene and full entity artwork. Networking, packet
-	# cadence, fixed physics, collision, timers and authoritative entity
-	# identity are untouched.
+	_emit_afk_restore_progress(progress_callback, 12.0, "隱藏遊戲畫面")
+	await get_tree().process_frame
+
 	set_performance_modes(ClientPerformanceProfile.LOAD_MULTIBOX, ClientPerformanceProfile.COMBAT_MASS)
 	set_visual_simplification_modes(ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED, ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
-	var suspended_entities: int = _set_afk_dynamic_visuals_suspended(true)
+	var suspended_entities: int = await _set_afk_dynamic_visuals_suspended_batched(
+		true, progress_callback
+	)
+	_emit_afk_restore_progress(progress_callback, 52.0, "切換低記憶體地圖外殼")
+	await get_tree().process_frame
+
 	_afk_visual_stats = _enter_afk_render_shell()
 	_afk_visual_stats["suspended_entity_visuals"] = suspended_entities
 	_afk_visual_stats["released"] = int(_afk_visual_stats.get("freed_static_nodes", 0))
-	_clear_visual_runtime_caches()
+	# AfkRenderShell queues the old static map. Settle that frame before
+	# dropping loader caches so the two destruction waves cannot combine.
+	await get_tree().process_frame
+	_emit_afk_restore_progress(progress_callback, 64.0, "地圖視覺已卸載")
+	await _clear_visual_runtime_caches_batched(progress_callback)
+
 	_refresh_focus_render_policy()
+	_emit_afk_restore_progress(progress_callback, 100.0, "掛機模式已啟用")
 	_log_afk_state("enter_after", int(_afk_visual_stats.get("released", 0)))
 	_log_afk_memory("enter_after")
-	log_world_visual_audit("afk_enter_after")
-	_log_afk_memory_audit("afk_enter_after")
 	if OS.is_debug_build():
+		print("[AFK_ENTER_TIMING] total_ms=%.2f batched=true network_fixed_tick=%s" % [
+			float(Time.get_ticks_usec() - enter_started_usec) / 1000.0,
+			str(NetworkManager.is_physics_processing()) if NetworkManager else "false",
+		])
 		_log_afk_memory_after_settle(_afk_started_msec)
 	return true
 
