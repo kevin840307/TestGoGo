@@ -54,6 +54,7 @@
 ### 2026-11-08 本輪補強：Server AOI
 
 - **Player AOI**：`PlayerSpatialAoi` 使用 map + 1024 grid，1800 enter / 2200 exit。遠方玩家不再互收每一步 Move；靠近補完整 Spawn、離開補 Despawn。附近聊天、人物狀態/外觀/技能視覺、稱號、Party name color、PlayerShop board、寵物/伴隨實體事件都沿用 owner Player AOI。
+- **Companion AOI known-set**：ServerBroadcastHub 保存 active companion 的完整 Spawn + 最新位置。玩家進 AOI 時固定 owner Spawn → companion Spawn；離開時 companion Despawn → owner Despawn；Move 更新 snapshot，Despawn/map/logout/disconnect 清 snapshot，避免新觀察者先收到未知 pet Move/Attack 或 owner 離開後殘留孤兒寵物。Server-side persisted map reconcile 也會同 tick 清舊 AOI，不再多留一個 250ms world tick。
 - **Monster / Ground AOI**：新增 `WorldEntitySpatialAoi`，observer/entity 各自有 spatial grid 與 reciprocal known-set，2600 enter / 3000 exit。玩家移動只掃附近 entity cells，怪物移動只掃附近 observer cells，不把頻寬最佳化換成 O(players×monsters) CPU 全掃。
 - **怪物事件完整性**：Spawn → Move/State/Target/Damage/Heal/Skill → Death/Despawn 順序受 known-set 保護；SharedMapAI driver 自己也受 visibility gate。GM/dynamic monster ID 改成 `9_000_000 + mapId * 10_000 + sequence`，避免跨 map key collision。
 - **地面物不丟失**：玩家 Drop、怪物掉寶、WorldReady snapshot、Pickup、Expire 都走 persisted ground AOI。SQLite row 是唯一真相；離開 AOI 只省傳輸不刪資料；late entrant 的保護/存在倒數用最新時間重算；DB snapshot 會 purge stale AOI cache，避免回圖突然出現已過期的幽靈物。
@@ -89,6 +90,7 @@
 - `Protocol/RuntimeResponseContractSmokeTests.cs`：真 Router/SQLite 動態 response JSON 型別、bootstrap Dictionary 與 typed PacketError runtime contract。
 - `World/BlockingMapSmokeTests.cs`：Blocking、穿牆、A*。
 - `World/PlayerSpatialAoiSmokeTests.cs`：玩家 AOI enter/exit、map/disconnect、1000 sparse players、concurrent movement。
+- `World/PlayerCompanionAoiSmokeTests.cs`：companion Spawn/Move snapshot、observer delivery、Despawn/map cleanup，以及 future AOI enter 不復活孤兒 pet。
 - `World/WorldEntitySpatialAoiSmokeTests.cs`：怪物/地面物 known-set、1000 entities/observers、並行移動、stale ground authoritative purge。
 - `Integration/PlayerShopAoiSmokeTests.cs`：遠距 View/Buy 拒絕、靠近可交易、離開再拒絕、資產/金錢不變量。
 - `Announcements/AnnouncementSmokeTests.cs`。
