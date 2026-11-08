@@ -529,24 +529,20 @@ class WebStructureTests(unittest.TestCase):
         self.assertIn("_canonical_extension", asset_repo)
 
     def test_map_mutation_payload_requires_complete_revision_envelope(self) -> None:
-        legacy = [{"index": -1, "enemyId": 1, "x": 8, "y": 8, "sourceFlags": 0}]
-        items, revision, envelope = EditorHandler._map_mutation_payload(legacy)
-        self.assertIs(items, legacy)
-        self.assertEqual(revision, "")
-        self.assertFalse(envelope)
-
-        payload = {"items": legacy, "expectedRevision": "abc123"}
+        rows = [{"index": -1, "enemyId": 1, "x": 8, "y": 8, "sourceFlags": 0}]
+        payload = {"items": rows, "expectedRevision": "abc123"}
         items, revision, envelope = EditorHandler._map_mutation_payload(payload)
-        self.assertIs(items, legacy)
+        self.assertIs(items, rows)
         self.assertEqual(revision, "abc123")
         self.assertTrue(envelope)
 
         for bad in (
+            rows,
             {},
             {"expectedRevision": "abc123"},
             {"items": "not-a-list", "expectedRevision": "abc123"},
-            {"items": legacy},
-            {"items": legacy, "expectedRevision": ""},
+            {"items": rows},
+            {"items": rows, "expectedRevision": ""},
             "not-an-object",
         ):
             with self.subTest(bad=bad):
