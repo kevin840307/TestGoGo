@@ -11,6 +11,9 @@
 - **NPC 腳本編輯器**：管理 `Old/服務端/Dat/Quest/*.txt`，支援搜尋、function outline、常用 Say / Ask / Function 範本、`#include` 檢查、callback 與 block/括號/字串基本驗證。
 - **素材管理**：瀏覽 `client/Assets`、圖片預覽、按鈕選檔替換，也可直接拖檔案到素材卡片上替換。
 - **安全寫入**：所有修改先備份到 `game-editor/.backups/`，再使用 atomic replace；所有可輸入路徑都有 traversal guard。
+- **Project Health**：Dashboard 會掃描跨檔案引用與資料完整性，包含不存在的 Enemy、NPC Script、Quest 驗證錯誤、重複出生點、Blocking 衝突、技能 TRES 與 Skill FX / Icon 參考。
+- **儲存前驗證**：地圖儲存前先顯示新增 / 刪除 / 移動 / 修改摘要。新產生的壞引用或 Blocking 衝突會阻止寫入；既有歷史問題只警告，避免舊資料讓整張地圖無法編輯。
+- **修復預覽**：Blocking 衝突會顯示原座標與最近合法座標，可一鍵套用到 Editor 草稿，確認後再另行儲存；不會偷偷直接改檔。
 
 > NPC 腳本的即時檢查是 Editor 端的快速靜態檢查，用來提早抓常見錯誤；Server 執行時仍以 `QuestRuntime + MoonSharp` 為最終語意。
 
@@ -71,6 +74,26 @@ python -m unittest discover -s game-editor/tests -v
 - Client / Server / Editor 三邊 16px grid contract、真實 MapXX 座標、Map13 byte-identical round-trip
 - 瀏覽器 world↔pixel / world→cell / cell-center 數學測試
 - NPC 範本、素材拖放、技能常用/進階欄位 UI 是否有正確掛載
+- Project Health 跨檔案引用、歷史問題 vs 新錯誤的 severity、刪除引用影響
+- Skill FX runtime fallback / Icon 素材驗證
+- Save 前 Change Summary、Blocking 修復預覽與一鍵套用 wiring
+- Map 怪物/NPC Tab 必須使用 query-all 綁定，防止單一 selector regression
+
+## Project Health 與引用保護
+
+Dashboard 的健康檢查會主動找出：
+
+- Map 使用不存在的 Enemy ID
+- NPC 使用不存在的 Quest Script
+- Quest 靜態驗證錯誤 / 警告
+- 完全重複的 Enemy / NPC 出生點
+- 超出 Blocking grid 或位在不可走格的出生點
+- 無效的 `Blocking.dat`
+- Skill TRES 無法解析或 ID 與檔名不一致
+- Skill `fx_use / fx_hit / fx_extra` 按 Client 真正 EffectLoader fallback 規則找不到素材
+- Skill Icon 目錄存在時，檢查 `ICON_%03d.png`；若整個 Icon 目錄尚未 recovered，只產生一筆專案級 Warning，不製造幾百筆假警告
+
+刪除 Enemy 或 NPC Script 前，Editor 會先列出 Map / `#include` 的引用影響。Health issue 的「前往」可以直接跳到對應 Map、NPC Script 或 Skill。
 
 ## 座標與遊戲格契約
 
