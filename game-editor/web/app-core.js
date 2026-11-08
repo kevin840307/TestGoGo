@@ -6,7 +6,7 @@ const state = {
   status: null, health: null, history: [], selectedHistory: null,
   skills: [], selectedSkill: null, skillDirty: false,
   enemies: [], selectedEnemy: null, enemyDirty: false,
-  maps: [], mapId: null, mapTab: 'enemies', mapRows: [],
+  maps: [], mapId: null, mapTab: 'enemies', mapRows: [], mapRevision: null,
   mapMeta: null, mapSelectedIndex: null, mapSelectedIndexes: [], mapSelectedEnemyId: null,
   mapShowPreview: true, mapShowBlocking: true, mapShowSpawners: true, mapShowLabels: true,
   mapOnlySelectedType: false, mapSnapWalkable: true,
