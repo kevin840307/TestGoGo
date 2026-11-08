@@ -102,7 +102,7 @@ func _simplified_relation_color() -> Color:
 	if is_instance_valid(local_player) and "data_model" in local_player:
 		var local_data = local_player.data_model
 		var my_party := str(local_data.party_id)
-		if not my_party.is_empty() and my_party == str(data_model.party_id):
+		if my_party not in ["", "0", "-1"] and my_party == str(data_model.party_id):
 			return Color(0.28, 1.0, 0.56, 1.0)
 
 		var my_club := int(local_data.club_id)
