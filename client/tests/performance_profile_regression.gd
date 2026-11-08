@@ -10,7 +10,7 @@ func _ready() -> void:
 		ClientPerformanceProfile.COMBAT_NORMAL
 	)
 
-	var multibox := ClientPerformanceProfile.resolve(
+	var legacy_multibox := ClientPerformanceProfile.resolve(
 		ClientPerformanceProfile.LOAD_MULTIBOX,
 		ClientPerformanceProfile.COMBAT_NORMAL
 	)
@@ -18,41 +18,52 @@ func _ready() -> void:
 		ClientPerformanceProfile.LOAD_BALANCED,
 		ClientPerformanceProfile.COMBAT_RESPONSE
 	)
-	var mass := ClientPerformanceProfile.resolve(
+	var legacy_mass := ClientPerformanceProfile.resolve(
 		ClientPerformanceProfile.LOAD_BALANCED,
 		ClientPerformanceProfile.COMBAT_MASS
 	)
 
 	var quality := ClientPerformanceProfile.resolve(ClientPerformanceProfile.LOAD_QUALITY, ClientPerformanceProfile.COMBAT_NORMAL)
-	assert(int(quality["foreground_fps"]) == 60 and int(low["foreground_fps"]) == 60 and int(multibox["foreground_fps"]) == 60)
-	assert(int(multibox["background_fps"]) == int(balanced["background_fps"]))
+	assert(int(quality["foreground_fps"]) == 60 and int(low["foreground_fps"]) == 60 and int(legacy_multibox["foreground_fps"]) == 60)
+	assert(int(legacy_multibox["background_fps"]) == int(balanced["background_fps"]))
 	assert(float(quality["monster_aoi_enter_radius"]) > float(balanced["monster_aoi_enter_radius"]))
 	assert(float(balanced["monster_aoi_enter_radius"]) > float(low["monster_aoi_enter_radius"]))
-	assert(float(low["monster_aoi_enter_radius"]) > float(multibox["monster_aoi_enter_radius"]))
-	assert(int(multibox["effect_budget_percent"]) < int(low["effect_budget_percent"]))
+	assert(float(low["monster_aoi_enter_radius"]) == float(legacy_multibox["monster_aoi_enter_radius"]))
+	assert(int(legacy_multibox["effect_budget_percent"]) == int(low["effect_budget_percent"]))
 	assert(int(low["effect_budget_percent"]) < int(balanced["effect_budget_percent"]))
+	assert(int(low["full_player_budget"]) >= 20)
+	assert(bool(low["hide_far_noncombat_monsters"]))
+	assert(bool(low["aggressive_cache_trim"]))
+	assert(ClientPerformanceProfile.sanitize_load_mode(
+		ClientPerformanceProfile.LOAD_MULTIBOX) == ClientPerformanceProfile.LOAD_LOW)
+	assert(ClientPerformanceProfile.sanitize_combat_mode(
+		ClientPerformanceProfile.COMBAT_MASS) == ClientPerformanceProfile.COMBAT_RESPONSE)
 	assert(ClientPerformanceProfile.sanitize_fps_limit(35) == 35)
 	assert(ClientPerformanceProfile.sanitize_fps_limit(144) == 144)
 	assert(ClientPerformanceProfile.sanitize_fps_limit(0) == 0)
 	assert(ClientPerformanceProfile.fps_options().has(45))
-	assert(int(multibox["full_monster_budget"]) < int(balanced["full_monster_budget"]))
-	assert(bool(multibox["simplify_other_players"]))
-	assert(bool(multibox["use_primitive_monsters"]))
-	assert(bool(multibox["hide_far_noncombat_monsters"]))
+	assert(int(legacy_multibox["full_monster_budget"]) < int(balanced["full_monster_budget"]))
+	assert(bool(legacy_multibox["simplify_other_players"]))
+	assert(bool(legacy_multibox["use_primitive_monsters"]))
+	assert(bool(legacy_multibox["hide_far_noncombat_monsters"]))
 	assert(not bool(balanced["use_primitive_monsters"]))
 	assert(bool(low["simplify_noncritical_monsters"]))
 	assert(bool(low["use_primitive_monsters"]))
 	assert(bool(response["use_primitive_monsters"]))
-	assert(bool(mass["use_primitive_monsters"]))
+	assert(bool(legacy_mass["use_primitive_monsters"]))
 
 	assert(int(response["full_player_budget"]) >= int(balanced["full_player_budget"]))
 	assert(int(response["full_monster_budget"]) <= int(balanced["full_monster_budget"]))
 	assert(bool(response["hide_far_noncombat_monsters"]))
 
-	assert(int(mass["full_player_budget"]) >= int(response["full_player_budget"]))
-	assert(int(mass["effect_budget_percent"]) == 0)
-	assert(not bool(mass["combat_effects_enabled"]))
+	assert(int(legacy_mass["full_player_budget"]) >= int(response["full_player_budget"]))
+	assert(int(low["effect_budget_percent"]) == 0)
+	assert(not bool(low["combat_effects_enabled"]))
 	assert(bool(response["combat_effects_enabled"]))
+	assert(ClientPerformanceProfile.load_mode_name(
+		ClientPerformanceProfile.LOAD_MULTIBOX) == "low_resource")
+	assert(ClientPerformanceProfile.combat_mode_name(
+		ClientPerformanceProfile.COMBAT_MASS) == "response")
 	assert(ClientPerformanceProfile.combat_mode_name(
 		ClientPerformanceProfile.COMBAT_RESPONSE
 	) == "response")
@@ -60,7 +71,7 @@ func _ready() -> void:
 		ClientPerformanceProfile.COMBAT_RESPONSE)
 
 	var auto_profile := ClientPerformanceProfile.apply_visual_overrides(
-		multibox,
+		legacy_multibox,
 		ClientPerformanceProfile.SIMPLIFY_AUTO,
 		ClientPerformanceProfile.SIMPLIFY_AUTO
 	)
@@ -72,7 +83,7 @@ func _ready() -> void:
 		ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
 
 	var forced_off := ClientPerformanceProfile.apply_visual_overrides(
-		multibox,
+		legacy_multibox,
 		ClientPerformanceProfile.SIMPLIFY_OFF,
 		ClientPerformanceProfile.SIMPLIFY_OFF
 	)
