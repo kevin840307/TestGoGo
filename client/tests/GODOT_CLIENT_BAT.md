@@ -30,11 +30,12 @@ C:\SGO\Godot\Godot_v4.7.2-stable_win64.exe
 
 | 選項 | 功能 |
 |---|---|
-| `1` | 先 Import，再執行目前已轉成場景模式的 3 個 Client 效能回歸測試 |
+| `1` | 先 Import，再執行四個 Client 回歸測試（登入／渲染／焦點／資源） |
 | `2` | 重複渲染、AOI 怪物快取與小地圖刷新邏輯 |
 | `3` | 失焦後的背景視覺處理、FPS 限流與記憶體快取策略 |
 | `4` | 地面物品碰撞形狀、材質共用與怪物特效資源 |
 | `5` | 只匯入 Godot 專案，重建匯入／class／UID 快取 |
+| `6` | 登入流程測試：不等待 18 幀、影片失敗不阻止輸入 |
 | `P` | 更改 Godot EXE 路徑並記錄 |
 | `Q` | 離開 |
 
@@ -45,6 +46,7 @@ run_godot_client_tests.bat all
 run_godot_client_tests.bat render
 run_godot_client_tests.bat focus
 run_godot_client_tests.bat resources
+run_godot_client_tests.bat login
 run_godot_client_tests.bat import
 run_godot_client_tests.bat configure
 ```
@@ -60,7 +62,7 @@ run_godot_client_tests.bat configure
 3. 優先使用同資料夾下的 `_console.exe`，否則用 `start /wait` 等待一般版 Godot 完成。
 4. 每個測試都有 `--quit-after 1200` 安全影格上限，避免測試未啟動時無限等待。退出碼 0 以外、未印出自己的 `ALL PASS`、或出現 `SCRIPT ERROR` 都是失敗。
 
-**注意**：這裡的「全部」只指上述三個目前支援場景模式的效能測試，不是整個 `client/tests` 中所有 GDScript，更不是多個完整 Godot 遊戲視窗的 E2E 壓測。
+**注意**：這裡的「全部」只指上述四個目前支援場景模式的登入與效能測試，不是整個 `client/tests` 中所有 GDScript，更不是多個完整 Godot 遊戲視窗的 E2E 壓測。
 
 ## Log
 
@@ -69,6 +71,7 @@ run_godot_client_tests.bat configure
 ```text
 C:\SGO\Recovered\test-results\godot-client-yyyymmdd-hhmmss-xxxx\
     import.log
+    login_visual_readiness_regression.log
     multiclient_render_dedup_regression.log
     focus_performance_regression.log
     render_resource_regression.log
@@ -79,3 +82,7 @@ C:\SGO\Recovered\test-results\godot-client-yyyymmdd-hhmmss-xxxx\
 ## 驗證狀態
 
 已對 BAT 的選單、EXE 路徑持久化、Import 與 Scene 啟動、錯誤／Log 判斷執行靜態回歸檢查，但此工作環境沒有 Windows 與 Godot 4.7.2，尚未完成實際 Windows Runtime 測試。以你實機的 BAT 顯示 `PASS` 為準。
+
+## 登入與焦點 FPS 規則（2026-11）
+
+登入畫面、角色選擇與首次世界載入都使用原本的前景 FPS 設定（例如 balanced 120 FPS），**即使失焦也不刻意降為 10／20 FPS**。只有角色進入遊戲世界、初始化已完成後，才在視窗失焦時停止非必要渲染並套用遊戲背景 FPS 設定；網路、計時器、自動打怪仍繼續運作。登入 UI 準備完成即顯示，影片解碼與連續影格不會阻擋登入。
