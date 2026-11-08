@@ -231,6 +231,15 @@ public sealed class ServerBroadcastHub
             entityId,
             notifyObservers);
 
+    public IReadOnlyList<WorldEntitySpatialAoi.Change> RemoveMissingWorldEntities(
+        int mapId,
+        int entityType,
+        IReadOnlySet<long> authoritativeIds)
+        => _worldAoi.RemoveMissingEntities(
+            mapId,
+            entityType,
+            authoritativeIds);
+
     public bool IsWorldAoiVisible(
         Guid observerConnectionId,
         long entityId)
