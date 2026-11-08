@@ -5744,7 +5744,7 @@ public sealed class SqliteGameStore : IGameStore
                     Arg(add, "$idx", reward.ItemIndex);
                     Arg(add, "$damage", Math.Max(0, reward.Damage));
                     Arg(add, "$part",
-                        reward.Part is >= 0 and <= 6
+                        reward.Part is >= 0 and <= 3
                             ? reward.Part
                             : 255);
 
