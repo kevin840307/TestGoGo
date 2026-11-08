@@ -21,6 +21,8 @@ from sgo_editor.storage import BackupManager
 
 
 class RealMapCoordinateContractTests(unittest.TestCase):
+    KNOWN_INCOMPLETE_BLOCKING_MAPS = {46}
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.paths = ProjectPaths.resolve(REPO_ROOT)
@@ -51,6 +53,7 @@ class RealMapCoordinateContractTests(unittest.TestCase):
         bounds_path = REPO_ROOT / "client" / "maps" / "map_bounds.json"
         bounds = json.loads(bounds_path.read_text(encoding="utf-8"))
         checked = 0
+        incomplete: set[int] = set()
 
         for blocking_path in sorted(self.paths.maps.glob("Map*/Blocking.dat")):
             match = re.fullmatch(r"Map(\d+)", blocking_path.parent.name, re.IGNORECASE)
@@ -58,11 +61,20 @@ class RealMapCoordinateContractTests(unittest.TestCase):
                 continue
             map_id = int(match.group(1))
             raw = blocking_path.read_bytes()
-            self.assertGreaterEqual(len(raw), 8, blocking_path.as_posix())
+            if len(raw) < 8:
+                incomplete.add(map_id)
+                meta = self.repo.get_editor_meta(map_id)
+                self.assertFalse(meta["blocking"]["hasBlocking"])
+                self.assertTrue(meta["blocking"]["error"])
+                continue
+
             width, height = struct.unpack_from("<ii", raw, 0)
-            self.assertGreater(width, 0, blocking_path.as_posix())
-            self.assertGreater(height, 0, blocking_path.as_posix())
-            self.assertGreaterEqual(len(raw), 8 + width * height, blocking_path.as_posix())
+            if width <= 0 or height <= 0 or len(raw) < 8 + width * height:
+                incomplete.add(map_id)
+                meta = self.repo.get_editor_meta(map_id)
+                self.assertFalse(meta["blocking"]["hasBlocking"])
+                self.assertTrue(meta["blocking"]["error"])
+                continue
 
             if str(map_id) in bounds:
                 b = bounds[str(map_id)]
@@ -77,6 +89,11 @@ class RealMapCoordinateContractTests(unittest.TestCase):
             checked += 1
 
         self.assertGreaterEqual(checked, 10, "expected real Blocking.dat maps in repository")
+        self.assertEqual(
+            incomplete,
+            self.KNOWN_INCOMPLETE_BLOCKING_MAPS,
+            "新增或消失的 invalid Blocking.dat 必須明確審查，不可默默忽略",
+        )
 
     def test_real_enemy_and_npc_coordinates_map_to_the_same_blocking_cells(self) -> None:
         checked_spawns = 0
