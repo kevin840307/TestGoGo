@@ -125,6 +125,43 @@ class AdvancedMapEditorRepositoryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "source index 超出範圍"):
             self.repo.save_enemy_spawns(13, forged)
 
+    def test_repository_rejects_binary_overflow_nul_and_trailing_npc_bytes(self) -> None:
+        self._write_blocking(bytes(16))
+
+        enemy_payload = (
+            struct.pack("<i", 1)
+            + struct.pack("<i", 7)
+            + b"1\x00"
+            + struct.pack("<ii", 24, 24)
+            + bytes(MapRepository.ENEMY_TAIL_SIZE)
+        )
+        (self.paths.maps / "Map13" / "Enemy.dat").write_bytes(enemy_payload)
+        enemy_rows = self.repo.get_enemy_spawns(13)
+        overflow = [dict(enemy_rows[0])]
+        overflow[0]["x"] = 2 ** 31
+        with self.assertRaisesRegex(ValueError, "超出 int32 範圍"):
+            self.repo.save_enemy_spawns(13, overflow)
+
+        npc_name = "NPC".encode("cp950")
+        npc_payload = (
+            struct.pack("<i", 1)
+            + struct.pack("<iiiB", 1, 8, 8, 0)
+            + b"NpcOk.txt\x00"
+            + npc_name + b"\x00"
+        )
+        npc_path = self.paths.maps / "Map13" / "NPC.dat"
+        npc_path.write_bytes(npc_payload)
+        npc_rows = self.repo.get_npc_spawns(13)
+
+        nul = [dict(npc_rows[0])]
+        nul[0]["name"] = "NPC\x00Injected"
+        with self.assertRaisesRegex(ValueError, "NUL"):
+            self.repo.save_npc_spawns(13, nul)
+
+        npc_path.write_bytes(npc_payload + b"TRAIL")
+        with self.assertRaisesRegex(ValueError, "尾端多餘 bytes"):
+            self.repo.get_npc_spawns(13)
+
     def test_batch_limit_blocks_accidental_huge_editor_request(self) -> None:
         self._write_blocking(bytes(16))
         with self.assertRaises(ValueError):
