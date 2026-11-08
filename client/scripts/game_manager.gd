@@ -593,6 +593,10 @@ func is_afk_mode_active() -> bool:
 	return _afk_active
 
 
+func is_game_window_focused() -> bool:
+	return _window_has_focus
+
+
 func is_afk_mode_restoring() -> bool:
 	return _afk_restoring
 
@@ -1204,8 +1208,13 @@ func _set_background_visual_processing(paused: bool) -> void :
 		CursorManager.set_process(not paused and not _afk_active)
 	if is_instance_valid(current_day_night_overlay):
 		current_day_night_overlay.set_process(not paused)
-	if is_instance_valid(current_hud) and current_hud.has_method("set_background_visuals_paused"):
-		current_hud.set_background_visuals_paused(paused)
+	if is_instance_valid(current_hud):
+		# AFK never needs the 2D world minimap. Only the focused dashboard
+		# itself may refresh; background focus suspends its timer entirely.
+		if current_hud.has_method("set_background_visuals_paused"):
+			current_hud.set_background_visuals_paused(paused or _afk_active)
+		if current_hud.has_method("set_afk_dashboard_updates_enabled"):
+			current_hud.set_afk_dashboard_updates_enabled(_afk_active and _window_has_focus)
 
 func _trim_unfocused_runtime_caches() -> int:
 	# Leave the map, active sprites, inventory, network and combat simulation
