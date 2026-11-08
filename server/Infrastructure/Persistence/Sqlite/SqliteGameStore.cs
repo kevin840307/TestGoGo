@@ -1173,6 +1173,160 @@ public sealed class SqliteGameStore : IGameStore
         return true;
     }
 
+    public ExternalMallCreditResult CreditExternalMallPoints(
+        long accountId,
+        string source,
+        string externalTransactionId,
+        long points,
+        long lifetimeDonation)
+    {
+        source = source.Trim();
+        externalTransactionId =
+            externalTransactionId.Trim();
+
+        if (accountId <= 0 ||
+            string.IsNullOrWhiteSpace(source) ||
+            source.Length > 64 ||
+            string.IsNullOrWhiteSpace(
+                externalTransactionId) ||
+            externalTransactionId.Length > 200 ||
+            points < 0 ||
+            lifetimeDonation < 0 ||
+            points > 9_999_999_999L ||
+            lifetimeDonation > 9_999_999_999L ||
+            (points == 0 &&
+             lifetimeDonation == 0))
+        {
+            return new(
+                false,
+                false,
+                "外部點數入帳資料無效",
+                GetMallPoints(accountId),
+                GetLifetimeDonation(accountId));
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        EnsureMallAccount(
+            db,
+            accountId,
+            tx);
+
+        long ReadBalance(string column)
+        {
+            using var read = db.CreateCommand();
+            read.Transaction = tx;
+            read.CommandText =
+                $"SELECT {column} FROM account_mall_points WHERE account_id=$account";
+            Arg(read, "$account", accountId);
+            return Convert.ToInt64(
+                read.ExecuteScalar() ?? 0L);
+        }
+
+        using var insert = db.CreateCommand();
+        insert.Transaction = tx;
+        insert.CommandText = """
+            INSERT OR IGNORE INTO external_mall_credits(
+                source,external_transaction_id,account_id,
+                points,lifetime_donation,created_utc_ms)
+            VALUES(
+                $source,$tx,$account,$points,$donation,$created)
+            """;
+        Arg(insert, "$source", source);
+        Arg(insert, "$tx", externalTransactionId);
+        Arg(insert, "$account", accountId);
+        Arg(insert, "$points", points);
+        Arg(insert, "$donation", lifetimeDonation);
+        Arg(
+            insert,
+            "$created",
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+        var inserted =
+            insert.ExecuteNonQuery() == 1;
+
+        if (!inserted)
+        {
+            using var existing = db.CreateCommand();
+            existing.Transaction = tx;
+            existing.CommandText = """
+                SELECT account_id,points,lifetime_donation
+                  FROM external_mall_credits
+                 WHERE source=$source
+                   AND external_transaction_id=$tx
+                """;
+            Arg(existing, "$source", source);
+            Arg(existing, "$tx", externalTransactionId);
+
+            using var reader = existing.ExecuteReader();
+            if (!reader.Read() ||
+                reader.GetInt64(0) != accountId ||
+                reader.GetInt64(1) != points ||
+                reader.GetInt64(2) != lifetimeDonation)
+            {
+                return new(
+                    false,
+                    false,
+                    "外部交易編號與既有入帳資料衝突",
+                    ReadBalance("points"),
+                    ReadBalance("lifetime_donation"));
+            }
+
+            var currentPoints =
+                ReadBalance("points");
+            var currentDonation =
+                ReadBalance("lifetime_donation");
+
+            tx.Commit();
+            return new(
+                true,
+                true,
+                "外部交易已入帳，未重複加點",
+                currentPoints,
+                currentDonation);
+        }
+
+        using (var update = db.CreateCommand())
+        {
+            update.Transaction = tx;
+            update.CommandText = """
+                UPDATE account_mall_points
+                   SET points=points+$points,
+                       lifetime_donation=
+                           lifetime_donation+$donation
+                 WHERE account_id=$account
+                """;
+            Arg(update, "$points", points);
+            Arg(update, "$donation", lifetimeDonation);
+            Arg(update, "$account", accountId);
+
+            if (update.ExecuteNonQuery() != 1)
+            {
+                return new(
+                    false,
+                    false,
+                    "外部點數入帳失敗",
+                    0,
+                    0);
+            }
+        }
+
+        var newBalance =
+            ReadBalance("points");
+        var newDonation =
+            ReadBalance("lifetime_donation");
+
+        tx.Commit();
+
+        return new(
+            true,
+            false,
+            "外部交易入帳成功",
+            newBalance,
+            newDonation);
+    }
+
     public IReadOnlySet<int> GetClaimedMallGiftIds(
         long accountId)
     {
