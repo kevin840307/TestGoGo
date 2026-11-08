@@ -44,6 +44,7 @@ class MapRepository:
         self.backups = backups
         self._blocking_cache: dict[int, tuple[tuple[int, int], tuple[int, int, bytes, Path]]] = {}
         self._blocking_png_cache: dict[int, tuple[tuple[Any, ...], bytes]] = {}
+        self._json_cache: dict[Path, tuple[tuple[int, int], dict[str, Any]]] = {}
 
     def list_maps(self) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = []
@@ -59,8 +60,8 @@ class MapRepository:
                 "id": map_id,
                 "name": map_names.get(map_id) or path.name,
                 "technicalName": path.name,
-                "enemyCount": len(self._read_enemies(path / "Enemy.dat")) if (path / "Enemy.dat").exists() else 0,
-                "npcCount": len(self._read_npcs(path / "NPC.dat")) if (path / "NPC.dat").exists() else 0,
+                "enemyCount": self._record_count(path / "Enemy.dat"),
+                "npcCount": self._record_count(path / "NPC.dat"),
             })
         return result
 
@@ -76,15 +77,38 @@ class MapRepository:
     def _bounds_path(self) -> Path:
         return self.paths.root / "client" / "maps" / "map_bounds.json"
 
-    @staticmethod
-    def _read_json(path: Path) -> dict[str, Any]:
+    def _read_json(self, path: Path) -> dict[str, Any]:
         if not path.exists():
+            self._json_cache.pop(path, None)
             return {}
         try:
+            stat = path.stat()
+            cache_key = (stat.st_mtime_ns, stat.st_size)
+            cached = self._json_cache.get(path)
+            if cached is not None and cached[0] == cache_key:
+                return cached[1]
             value = json.loads(path.read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError):
             return {}
-        return value if isinstance(value, dict) else {}
+        result = value if isinstance(value, dict) else {}
+        self._json_cache[path] = (cache_key, result)
+        if len(self._json_cache) > 8:
+            self._json_cache.pop(next(iter(self._json_cache)))
+        return result
+
+    @staticmethod
+    def _record_count(path: Path) -> int:
+        if not path.exists():
+            return 0
+        try:
+            with path.open("rb") as stream:
+                head = stream.read(4)
+            if len(head) != 4:
+                return 0
+            count = struct.unpack("<i", head)[0]
+            return count if 0 <= count <= 100000 else 0
+        except OSError:
+            return 0
 
     def _map_names(self) -> dict[int, str]:
         config = self._read_json(self._spawn_config_path())
@@ -125,6 +149,10 @@ class MapRepository:
             raise ValueError(f"Blocking.dat 資料不完整: {width}x{height}")
 
         result = (width, height, data[8:8 + cell_count], path)
+        if int(map_id) not in self._blocking_cache and len(self._blocking_cache) >= 8:
+            oldest_id = next(iter(self._blocking_cache))
+            self._blocking_cache.pop(oldest_id, None)
+            self._blocking_png_cache.pop(oldest_id, None)
         self._blocking_cache[int(map_id)] = (cache_key, result)
         self._blocking_png_cache.pop(int(map_id), None)
         return result
@@ -405,6 +433,8 @@ class MapRepository:
             + self._png_chunk(b"IDAT", zlib.compress(bytes(raw), 6))
             + self._png_chunk(b"IEND", b"")
         )
+        if int(map_id) not in self._blocking_png_cache and len(self._blocking_png_cache) >= 8:
+            self._blocking_png_cache.pop(next(iter(self._blocking_png_cache)), None)
         self._blocking_png_cache[int(map_id)] = (cache_key, png)
         return png
 
