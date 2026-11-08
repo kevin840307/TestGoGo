@@ -747,6 +747,10 @@ public sealed class PacketRouter
 
                 var assets = _store.GetCharacterAssets(accountId, dbid);
                 ApplyAssetsToCharacterBootstrap(character, assets);
+                ApplyCosmeticOverrides(
+                    character,
+                    accountId,
+                    dbid);
                 state.CanCrossSpecialTerrain =
                     ResolveSpecialTerrainCapability(
                         character,
@@ -1221,6 +1225,98 @@ public sealed class PacketRouter
                         {
                             Type = "SystemMessageFlash",
                             Message = "已恢復原本外觀"
+                        }
+                    ];
+                }
+
+                if (CosmeticTransformationCatalog.Supports(
+                        itemIndex))
+                {
+                    var character =
+                        _store.GetCharacter(
+                            accountId,
+                            state.CharacterId.Value);
+
+                    if (character is null)
+                        return [];
+
+                    var race = Convert.ToInt32(
+                        character.GetValueOrDefault(
+                            "Race",
+                            -1));
+
+                    var cosmetic =
+                        CosmeticTransformationCatalog.Resolve(
+                            _current,
+                            itemIndex,
+                            race);
+
+                    if (cosmetic is null)
+                    {
+                        var requiredRace =
+                            CosmeticTransformationCatalog.RequiredRace(
+                                itemIndex);
+
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = requiredRace.HasValue &&
+                                          requiredRace.Value != race
+                                    ? "此換裝變身器不適用於目前角色種族"
+                                    : "換裝外觀資料不完整，未消耗道具"
+                            }
+                        ];
+                    }
+
+                    var mutation =
+                        _store.ApplyCosmeticOverridesFromItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            itemIndex,
+                            cosmetic.Overrides,
+                            cosmetic.ConsumeSource);
+
+                    if (!mutation.Success)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = mutation.Message
+                            }
+                        ];
+                    }
+
+                    var assets =
+                        _store.GetCharacterAssets(
+                            accountId,
+                            state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        BuildAndBroadcastAppearancePacket(
+                            state,
+                            accountId,
+                            state.CharacterId.Value,
+                            assets),
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message =
+                                $"已套用外觀：{cosmetic.Name}"
                         }
                     ];
                 }
@@ -5005,6 +5101,10 @@ public sealed class PacketRouter
         ApplyAssetsToCharacterBootstrap(
             character,
             assets);
+        ApplyCosmeticOverrides(
+            character,
+            accountId,
+            dbid);
         ApplyEffectiveStats(
             character,
             assets);
@@ -7007,6 +7107,10 @@ public sealed class PacketRouter
             };
 
         ApplyAssetsToCharacterBootstrap(character, assets);
+        ApplyCosmeticOverrides(
+            character,
+            accountId,
+            dbid);
 
         var packet = new Dictionary<string, object>(character)
         {
@@ -7015,6 +7119,61 @@ public sealed class PacketRouter
         };
 
         return packet;
+    }
+
+    private void ApplyCosmeticOverrides(
+        Dictionary<string, object> character,
+        long accountId,
+        long dbid)
+    {
+        foreach (var cosmetic in
+                 _store.GetCosmeticOverrides(
+                     accountId,
+                     dbid))
+        {
+            switch (cosmetic.Part)
+            {
+                case 0:
+                    character["Bonnet"] =
+                        cosmetic.ItemIndex;
+                    break;
+                case 1:
+                    character["Left_hand"] =
+                        cosmetic.ItemIndex;
+                    break;
+                case 2:
+                    character["Right_hand"] =
+                        cosmetic.ItemIndex;
+                    break;
+                case 3:
+                    character["Upper_armor"] =
+                        cosmetic.ItemIndex;
+                    break;
+                case 4:
+                    character["Lower_armor"] =
+                        cosmetic.ItemIndex;
+                    break;
+                case 5:
+                    character["Weapon"] =
+                        cosmetic.ItemIndex;
+                    break;
+                case 6:
+                    character["Shield"] =
+                        cosmetic.ItemIndex;
+                    break;
+                case 7:
+                    character["Back"] =
+                        cosmetic.ItemIndex;
+                    break;
+                case 8:
+                    character["Amulet"] =
+                        cosmetic.ItemIndex;
+                    break;
+            }
+
+            character[$"EquipColor{cosmetic.Part}"] =
+                cosmetic.Color;
+        }
     }
 
     private void ApplyEffectiveStats(
