@@ -75,6 +75,7 @@ signal system_message_flash_received(message: String)
 signal system_message_chat_received(message: String)
 signal system_message_broadcast_received(message: String)
 signal item_pickup_feedback_received(data: Dictionary)
+signal item_choice_required_received(item_uid: int, item_index: int, title: String, options: Array)
 signal open_bank_window_received()
 signal open_repair_window_received(repair_type: int)
 
@@ -468,6 +469,14 @@ func send_use_item_request(item_uid: int) -> void :
 	if socket and socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
 		send_secure_packet({"Type": "UseItemRequest", "ItemUID": item_uid})
 
+func send_item_choice_request(item_uid: int, item_index: int) -> void :
+	if socket and socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
+		send_secure_packet({
+			"Type": "UseItemChoiceRequest",
+			"ItemUID": item_uid,
+			"ItemIndex": item_index
+		})
+
 func send_logout_request(action: String = "quit") -> void :
 	if socket and socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
 		if not _is_waiting_logout_confirm:
@@ -665,6 +674,13 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 		"SystemMessageChat": system_message_chat_received.emit(data.get("Message", ""))
 		"SystemMessageBroadcast": system_message_broadcast_received.emit(data.get("Message", ""))
 		"ItemPickupFeedback": item_pickup_feedback_received.emit(data)
+		"ItemChoiceRequired":
+			item_choice_required_received.emit(
+				int(data.get("ItemUID", 0)),
+				int(data.get("ItemIndex", 0)),
+				str(data.get("Title", "選擇獎勵")),
+				data.get("Options", [])
+			)
 		"OpenBankWindow": open_bank_window_received.emit()
 		"OpenRepairWindow": open_repair_window_received.emit(int(data.get("RepairType", 1)))
 
