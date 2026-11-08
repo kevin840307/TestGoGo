@@ -26,6 +26,7 @@ internal static class WorldEntityAoiSnapshotLeaseSmokeTests
     {
         PickupDuringSnapshotCannotResurrectItem();
         PickupBeforeFirstAoiInsertStillBlocksOldSnapshot();
+        TwoThreadsCannotReintroducePickedUpItem();
         NewerLiveStateWinsAgainstOlderSnapshot();
         OverlappingSnapshotsKeepTombstonesUntilLastReader();
         HubConditionalIndexingPreservesWorldReadyConsistency();
@@ -80,6 +81,47 @@ internal static class WorldEntityAoiSnapshotLeaseSmokeTests
                   item, snapshot, out var changes) &&
               changes.Count == 0 && aoi.EntityCount == 0,
             "unindexed pickup must still tombstone the stale DB row");
+    }
+
+    private static void TwoThreadsCannotReintroducePickedUpItem()
+    {
+        var aoi = new WorldEntitySpatialAoi();
+        var item = Ground(6_008_106);
+        aoi.UpsertEntity(item);
+        using var dbReadFinished = new ManualResetEventSlim(false);
+        using var pickupRemovedAoi = new ManualResetEventSlim(false);
+        var accepted = true;
+
+        var loadingThread = Task.Run(() =>
+        {
+            using var scope = aoi.BeginSnapshot();
+            // Simulate the SELECT completing on socket A, while its
+            // WorldReady response has not yet reconciled the AOI.
+            dbReadFinished.Set();
+            if (!pickupRemovedAoi.Wait(TimeSpan.FromSeconds(10)))
+                throw new TimeoutException("pickup thread did not finish");
+
+            accepted = aoi.TryUpsertEntityFromSnapshot(
+                item, scope, out _);
+        });
+
+        var pickupThread = Task.Run(() =>
+        {
+            if (!dbReadFinished.Wait(TimeSpan.FromSeconds(10)))
+                throw new TimeoutException("snapshot thread did not start");
+            try
+            {
+                aoi.RemoveEntity(item.EntityId);
+            }
+            finally
+            {
+                pickupRemovedAoi.Set();
+            }
+        });
+
+        Task.WaitAll(loadingThread, pickupThread);
+        Check(!accepted && aoi.EntityCount == 0,
+            "concurrent map-load thread cannot resurrect item after pickup thread commits");
     }
 
     private static void NewerLiveStateWinsAgainstOlderSnapshot()
