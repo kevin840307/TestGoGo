@@ -17,7 +17,7 @@ if errorlevel 1 (
 )
 
 echo [2/3] Browser JavaScript syntax
-for %%F in (web\app-core.js web\app-health.js web\app-skills.js web\app-world.js web\app-map-math.js web\app-map-editor.js web\app-tools.js) do (
+for %%F in (web\app-core.js web\app-health.js web\app-skills.js web\app-world.js web\app-map-math.js web\app-map-editor.js web\app-history.js web\app-tools.js) do (
   node --check "%%F"
   if errorlevel 1 exit /b 1
 )
