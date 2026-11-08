@@ -527,6 +527,11 @@ public sealed class TradeService
             if (!IsActiveLocked(trade))
                 return [Flash("交易已結束")];
 
+            // Repeated Lock is idempotent. It must not clear a previously
+            // received FinalConfirm, and it cannot change a committing trade.
+            if (trade.CommitStarted || self.Locked)
+                return [];
+
             self.Locked = true;
             self.Confirmed = false;
             bothLocked =
