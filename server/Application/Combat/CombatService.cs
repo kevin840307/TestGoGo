@@ -1348,7 +1348,12 @@ public sealed class CombatService
 
         lock (runtime.SyncRoot)
         {
-            var entityId = 9_000_000;
+            // WorldEntitySpatialAoi uses EntityID as a process-wide key.
+            // Dynamic/GM monsters therefore include mapId in their range,
+            // matching the uniqueness rule used by normal/supplemental mobs.
+            var entityId = checked(
+                9_000_000 +
+                session.CurrentMapId * 10_000);
             while (runtime.Monsters.ContainsKey(entityId))
                 entityId++;
 
