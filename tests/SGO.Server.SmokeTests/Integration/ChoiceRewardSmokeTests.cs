@@ -163,12 +163,9 @@ internal static class ChoiceRewardSmokeTests
                 router.Handle(
                     spoof.RootElement,
                     session);
-            var json =
-                JsonSerializer.Serialize(
-                    packets);
-
             Check(
-                json.Contains(
+                PacketTreeContainsString(
+                    packets,
                     "獎勵選項已失效"),
                 "forged choice reward IDs are rejected");
         }
@@ -215,7 +212,8 @@ internal static class ChoiceRewardSmokeTests
                     "\"Type\":\"InventorySync\"") &&
                 json.Contains(
                     "\"Type\":\"EquipSync\"") &&
-                json.Contains(
+                PacketTreeContainsString(
+                    packets,
                     "已選擇獎勵：聖殿騎士鎧甲．復仇"),
                 "valid choice consumes source and synchronizes the granted equipment");
         }
@@ -260,9 +258,9 @@ internal static class ChoiceRewardSmokeTests
 
             Check(
                 packets.Any(x =>
-                    JsonSerializer.Serialize(x)
-                        .Contains(
-                            "找不到可使用的選擇型道具")) &&
+                    PacketTreeContainsString(
+                        x,
+                        "找不到可使用的選擇型道具")) &&
                 afterReplay.Equips.Count(x =>
                     Convert.ToInt32(
                         x["ItemIdx"]) ==
@@ -299,10 +297,17 @@ internal static class ChoiceRewardSmokeTests
         var afterRacing = store.GetCharacterAssets(accountId, characterId);
 
         Check(
-            racingResults.Count(x => x.Contains("已選擇獎勵")) == 1 &&
             racingResults.Count(x =>
-                x.Contains("找不到可使用的選擇型道具") ||
-                x.Contains("找不到可使用的寶箱")) == 9 &&
+                JsonTreeContainsString(
+                    x,
+                    "已選擇獎勵")) == 1 &&
+            racingResults.Count(x =>
+                JsonTreeContainsString(
+                    x,
+                    "找不到可使用的選擇型道具") ||
+                JsonTreeContainsString(
+                    x,
+                    "找不到可使用的寶箱")) == 9 &&
             !afterRacing.Inventory.Any(x =>
                 Convert.ToInt64(x["ItemUID"]) == racingUid) &&
             afterRacing.Equips.Count(x =>
