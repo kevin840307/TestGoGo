@@ -10,31 +10,40 @@ var sizes = options.Sizes.Count == 0
     ? new[] { 10, 50, 100 }
     : options.Sizes.ToArray();
 
+// --aoi-only avoids account creation/PBKDF2 and SQLite contention. It
+// exercises moving PlayerSpatialAoi state independently of the transport,
+// then the real WireLoadProbe can measure encrypted socket throughput.
+var movingAoiRows = new List<object>();
+if (options.AoiSteps > 0)
+{
+    foreach (var size in sizes)
+    {
+        foreach (var dense in new[] { false, true })
+        {
+            Console.Error.WriteLine(
+                $"[AOI_MOVING] players={size} layout={(dense ? "dense" : "groups-of-20")} steps={options.AoiSteps}");
+            movingAoiRows.Add(
+                PlayerAoiMovingLoadScenario.Measure(
+                    size, options.AoiSteps, dense));
+        }
+    }
+}
+
 var fanoutRows = new List<object>();
-foreach (var size in sizes)
-{
-    fanoutRows.Add(
-        MeasureFanout(
-            size,
-            options.FanoutIterations));
-}
-
 var dbRows = new List<object>();
-foreach (var size in sizes)
-{
-    dbRows.Add(
-        await MeasureSqliteWrites(
-            size,
-            options.DbOpsPerWorker));
-}
-
 var distinctPlayerRows = new List<object>();
-foreach (var size in sizes)
+if (!options.AoiOnly)
 {
-    distinctPlayerRows.Add(
-        await DistinctPlayerSqliteLoadScenario.Measure(
-            size,
-            options.DbOpsPerWorker));
+    foreach (var size in sizes)
+        fanoutRows.Add(MeasureFanout(size, options.FanoutIterations));
+
+    foreach (var size in sizes)
+        dbRows.Add(await MeasureSqliteWrites(size, options.DbOpsPerWorker));
+
+    foreach (var size in sizes)
+        distinctPlayerRows.Add(
+            await DistinctPlayerSqliteLoadScenario.Measure(
+                size, options.DbOpsPerWorker));
 }
 
 object? healthSamples = null;
@@ -67,11 +76,14 @@ var report = new
         Sizes = sizes,
         options.FanoutIterations,
         options.DbOpsPerWorker,
+        options.AoiOnly,
+        options.AoiSteps,
         options.HealthUrl,
         options.HealthSamples,
         options.HealthIntervalMs
     },
     Fanout = fanoutRows,
+    AoiMovingPlayers = movingAoiRows,
     SqliteWriteContention = dbRows,
     SqliteDistinctPlayerWrites = distinctPlayerRows,
     LiveHealth = healthSamples,
@@ -80,6 +92,9 @@ var report = new
         "Fanout measures ServerBroadcastHub same-map delivery cost without WebSocket serialization.",
         "SQLite contention intentionally writes one character row from N workers; it is a worst-case lock-contention probe, not a normal session pattern.",
         "SqliteDistinctPlayerWrites uses N different characters so normal 10/50/100-player persistence can be compared with the same-row worst case.",
+        "AoiMovingPlayers changes every synthetic player's coordinates in one map and checks enter/exit boundary, per-move fanout, P95/P99, CPU and allocations for dense/spread layouts.",
+        "AoiMovingPlayers measures the in-process PlayerSpatialAoi index only, not real movement validation, WebSocket bandwidth, network queue, SQLite or Godot.",
+        "Use --aoi-only --aoi-steps 50 to measure 100-1000 moving virtual AOI players without PBKDF2/SQLite setup.",
         "SharedMapAI correctness is covered separately by SharedMapAiConcurrencySmokeTests. Live --health sampling reports real tick elapsed time under an externally generated load.",
         "This is a capacity measurement, not a correctness certificate or a fixed supported-player guarantee."
     }
@@ -597,6 +612,8 @@ internal sealed record Options(
     IReadOnlyList<int> Sizes,
     int FanoutIterations,
     int DbOpsPerWorker,
+    bool AoiOnly,
+    int AoiSteps,
     string? Output,
     string? HealthUrl,
     int HealthSamples,
@@ -609,6 +626,8 @@ internal sealed record Options(
             new List<int>();
         var fanoutIterations = 500;
         var dbOps = 10;
+        var aoiOnly = false;
+        var aoiSteps = 0;
         string? output = null;
         string? health = null;
         var healthSamples = 20;
@@ -651,6 +670,13 @@ internal sealed record Options(
                             int.Parse(
                                 args[++i]));
                     break;
+                case "--aoi-only":
+                    aoiOnly = true;
+                    break;
+                case "--aoi-steps"
+                    when i + 1 < args.Length:
+                    aoiSteps = Math.Clamp(int.Parse(args[++i]), 1, 1000);
+                    break;
 
                 case "--output"
                     when i + 1 < args.Length:
@@ -684,10 +710,15 @@ internal sealed record Options(
             }
         }
 
+        if (aoiOnly && aoiSteps == 0)
+            aoiSteps = 20;
+
         return new Options(
             sizes,
             fanoutIterations,
             dbOps,
+            aoiOnly,
+            aoiSteps,
             output,
             health,
             healthSamples,
