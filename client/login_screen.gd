@@ -41,6 +41,7 @@ var _login_reveal_started_usec: int = 0
 var _login_startup_gap_reports: int = 0
 var _startup_form_interactive: bool = false
 var _startup_video_fallback: bool = false
+var _startup_video_first_frame_seen: bool = false
 const LOGIN_STARTUP_MONITOR_SECONDS: float = 6.0
 const LOGIN_STARTUP_GAP_WARN_SECONDS: float = 0.05
 const LOGIN_STARTUP_MAX_GAP_REPORTS: int = 12
@@ -75,7 +76,11 @@ func is_background_video_frame_ready() -> bool:
 		return true
 	# Playing alone is insufficient: the first actual OGV frame may still
 	# require expensive decoding/texture allocation on the render thread.
-	return bg_video.is_playing() and bg_video.get_stream_position() >= 0.12
+	# Latch readiness: looping videos rewind to 0s on every loop, which
+	# must not reset a successfully completed startup warmup.
+	if bg_video.is_playing() and bg_video.get_stream_position() >= 0.12:
+		_startup_video_first_frame_seen = true
+	return _startup_video_first_frame_seen
 
 
 func use_static_background_after_video_timeout() -> void:
@@ -97,9 +102,8 @@ func reveal_form_after_warmup() -> void:
 
 
 func warm_background_video() -> void:
-	# Do not decode the looping OGV through the whole 1453-recipe prewarm.
-	# The parent starts this shortly BEFORE displaying the login form,
-	# leaving the original motion visible when the form is shown.
+	# The parent starts OGV only after preparing the actual scene behind
+	# the opaque loading overlay. No optional crafting prewarm occurs here.
 	if not is_instance_valid(bg_video) or bg_video.stream == null:
 		return
 	bg_video.loop = true
