@@ -494,19 +494,27 @@ public sealed class GmCommandService
     {
         if (parts.Length < 3 ||
             !int.TryParse(parts[2], out var itemIndex))
-            return [Chat("用法：/gm equip <ItemIndex>")];
+            return [Chat("用法：/gm equip <ItemIndex> [Durability]")];
 
         var currentItem = _current.FindItem(itemIndex);
         if (currentItem is null ||
             currentItem.Category is not ("equip" or "weapon"))
             return [Chat($"新版 GameData 找不到可穿戴裝備 ItemIndex={itemIndex}")];
 
+        var durability = parts.Length > 3 &&
+                         int.TryParse(parts[3], out var requestedDurability)
+            ? Math.Clamp(
+                requestedDurability,
+                0,
+                Math.Max(0, currentItem.Durability))
+            : currentItem.Durability;
+
         var uid = _store.AddEquipment(
             accountId,
             dbid,
             itemIndex,
             255,
-            currentItem.Durability);
+            durability);
 
         if (uid <= 0) return [Chat("給裝備失敗")];
 
@@ -519,7 +527,7 @@ public sealed class GmCommandService
                 Equips = assets.Equips,
                 MaxSize = assets.EquipMaxSize
             },
-            Chat($"已給裝備 ItemIndex={itemIndex}")
+            Chat($"已給裝備 ItemIndex={itemIndex} Durability={durability}")
         ];
     }
 
