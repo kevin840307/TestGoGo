@@ -76,6 +76,7 @@ if (args.Length != 0)
                 Directory.GetCurrentDirectory());
             EconomyConcurrencySmokeTests.Run();
             EconomyRequestGuardSmokeTests.Run();
+            GroundDropRequestGuardSmokeTests.Run();
             AssetMutationConcurrencySmokeTests.Run();
             CrossFeatureConcurrencySmokeTests.Run();
             Console.WriteLine("Concurrency smoke passed.");
@@ -116,6 +117,7 @@ MapAiOwnerSpatialIndexSmokeTests.Run();
 ConcurrencySmokeTests.Run(repoRoot);
 EconomyConcurrencySmokeTests.Run();
 EconomyRequestGuardSmokeTests.Run();
+GroundDropRequestGuardSmokeTests.Run();
 AssetMutationConcurrencySmokeTests.Run();
 CrossFeatureConcurrencySmokeTests.Run();
 PlayerShopAoiSmokeTests.Run(repoRoot);
