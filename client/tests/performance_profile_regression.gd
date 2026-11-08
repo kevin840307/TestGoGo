@@ -5,6 +5,11 @@ func _ready() -> void:
 		ClientPerformanceProfile.LOAD_BALANCED,
 		ClientPerformanceProfile.COMBAT_NORMAL
 	)
+	var low := ClientPerformanceProfile.resolve(
+		ClientPerformanceProfile.LOAD_LOW,
+		ClientPerformanceProfile.COMBAT_NORMAL
+	)
+
 	var multibox := ClientPerformanceProfile.resolve(
 		ClientPerformanceProfile.LOAD_MULTIBOX,
 		ClientPerformanceProfile.COMBAT_NORMAL
@@ -24,6 +29,10 @@ func _ready() -> void:
 	assert(bool(multibox["use_primitive_monsters"]))
 	assert(bool(multibox["hide_far_noncombat_monsters"]))
 	assert(not bool(balanced["use_primitive_monsters"]))
+	assert(bool(low["simplify_noncritical_monsters"]))
+	assert(bool(low["use_primitive_monsters"]))
+	assert(bool(response["use_primitive_monsters"]))
+	assert(bool(mass["use_primitive_monsters"]))
 
 	assert(int(response["full_player_budget"]) >= int(balanced["full_player_budget"]))
 	assert(int(response["full_monster_budget"]) <= int(balanced["full_monster_budget"]))
@@ -61,6 +70,6 @@ func _ready() -> void:
 	)
 	assert(bool(forced_on["simplify_other_players"]))
 	assert(bool(forced_on["simplify_noncritical_monsters"]))
-	assert(not bool(forced_on["use_primitive_monsters"]))
+	assert(bool(forced_on["use_primitive_monsters"]))
 
 	print("PASS: client performance profiles preserve player-first combat priorities and visual overrides")
