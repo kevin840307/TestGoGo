@@ -68,6 +68,7 @@ async function loadStatus() {
 }
 
 async function go(view) {
+  if (view === state.view) return true;
   if (state.view === 'maps' && view !== 'maps' && typeof confirmDiscardMapChanges === 'function') {
     if (!confirmDiscardMapChanges()) return false;
     state.mapDirty = false;
