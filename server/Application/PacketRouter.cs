@@ -4088,16 +4088,24 @@ public sealed class PacketRouter
                     state.GroundItems[entityId] = ground;
                 }
 
-                var dx = ground.X - state.LastX;
-                var dy = ground.Y - state.LastY;
-                if (dx * dx + dy * dy > 100.0 * 100.0)
+                var pickupTerrain = _dropPlacement.CheckPickup(
+                    state.CurrentMapId,
+                    state.LastX, state.LastY,
+                    ground.X, ground.Y);
+                if (pickupTerrain is GroundPickupReachability.TooFar or
+                    GroundPickupReachability.Blocked)
                 {
+                    // Do not call PickUpGroundItem: its DB transaction
+                    // transfers ownership. Both distance and LOS must be
+                    // validated against server coordinates first.
                     return
                     [
                         new
                         {
                             Type = "SystemMessageFlash",
-                            Message = "距離物品太遠"
+                            Message = pickupTerrain == GroundPickupReachability.TooFar
+                                ? "距離物品太遠"
+                                : "地形阻擋，無法撿取物品"
                         }
                     ];
                 }
