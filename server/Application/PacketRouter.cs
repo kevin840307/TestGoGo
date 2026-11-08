@@ -2559,6 +2559,21 @@ public sealed class PacketRouter
                     ];
                 }
 
+                if (AmbiguousRewardCatalog.IsAmbiguous(
+                        _current,
+                        itemIndex))
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message =
+                                "此舊版道具的獎勵規則無法唯一對應新版資料，未消耗道具"
+                        }
+                    ];
+                }
+
                 if (scriptedItem is not null &&
                     IsCraftingMaterialItem(scriptedItem))
                 {
