@@ -9,6 +9,15 @@ previous FPS setting, rendering, and the previous mute state. This change adds
 **debug-only telemetry**, not new game/application throttling.
 
 - `[FOCUS_POWER_SAVE]`: emitted once at startup and at each focus transition.
+  `focus_query_disagrees=true` means the synchronous
+  `DisplayServer.window_is_focused()` query disagreed with the delivered
+  focus event at that instant. This can be an OS notification/query ordering
+  race; verify subsequent periodic `focus_actual` before diagnosing failure.
+- `[MONSTER_CHASE_PACKET_GAP]`: appends
+  `focus_changed_in_gap=true/false` and current focus/render status.
+  A long interval that crosses Alt+Tab is **not** proof of missing server
+  movement packets: inactive/idle monsters may legitimately have long gaps.
+  Correlate with server movement and foreground-only traces.
   Reports `event`, `focus`, `focus_actual`, `power_save`, `fps_cap`,
   `render_loop`, `audio_muted`, `focus_age_ms`, `focus_changes`, and
   whether caches were trimmed.
