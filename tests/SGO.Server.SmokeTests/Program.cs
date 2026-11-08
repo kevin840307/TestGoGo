@@ -4194,46 +4194,15 @@ try
             "RepairItemRequest restores current durability and deducts money");
     }
 
-    var beforeDollAssets = store.GetCharacterAssets(account.Value, id);
-    var beforeDollRewardCount = beforeDollAssets.Inventory
-        .Where(x =>
-            Convert.ToInt32(x["ItemIndex"]) is 1001 or 50102)
-        .Sum(x => Convert.ToInt32(x["Count"]));
-
-    using (var openDoll = Json(JsonSerializer.Serialize(new
-    {
-        Type = "UseItemRequest",
-        ItemUID = happinessDollUid
-    })))
-    {
-        var responses = router.Handle(openDoll.RootElement, session);
-        var after = store.GetCharacterAssets(account.Value, id);
-
-        var doll = after.Inventory.FirstOrDefault(x =>
-            Convert.ToInt64(x["ItemUID"]) == happinessDollUid);
-        var afterRewardCount = after.Inventory
-            .Where(x =>
-                Convert.ToInt32(x["ItemIndex"]) is 1001 or 50102)
-            .Sum(x => Convert.ToInt32(x["Count"]));
-
-        Check(doll is not null &&
-              Convert.ToInt32(doll["Count"]) == 2 &&
-              afterRewardCount == beforeDollRewardCount + 1 &&
-              responses.Any(x =>
-                  JsonSerializer.Serialize(x).Contains(
-                      "\"Type\":\"InventorySync\"")) &&
-              responses.Any(x =>
-                  PacketTreeContainsString(x, "幸福娃娃送給你")),
-            "UseItemRequest opens Happiness Doll, consumes one and grants one reward");
-
-        Check(
-            broadcastRegistration.Queue.TryDequeue(out var announcement) &&
-            JsonSerializer.Serialize(announcement).Contains(
-                "\"Type\":\"SystemMessageBroadcast\"") &&
-            PacketTreeContainsString(announcement, "TestCharacter") &&
-            PacketTreeContainsString(announcement, "魔靈電池"),
-            "rare Happiness Doll reward publishes global announcement");
-    }
+    HappinessDollSmokeTests.Run(
+        router,
+        store,
+        session,
+        account.Value,
+        id,
+        happinessDollUid,
+        currentCatalog,
+        config);
 
     var equipmentDollUid = store.AddInventoryItem(
         account.Value, id, 2126, 1);
