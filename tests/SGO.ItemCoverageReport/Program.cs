@@ -179,6 +179,15 @@ CoverageRow Classify(
             "unambiguous current-client reward description");
     }
 
+    if (ChoiceRewardCatalog.Resolve(
+            current,
+            item.ItemId) is not null)
+    {
+        return Supported(
+            item,
+            "explicit player-choice reward flow");
+    }
+
     if (horseCards.Find(
             item.ItemId) is not null)
     {
