@@ -1975,11 +1975,38 @@ try
         3,
         0,
         0);
-    Check(store.GetMallPoints(account.Value) == 50 &&
-          InventoryCountOf(1001) == mallItemAfterSuccess &&
-          JsonSerializer.Serialize(failedMallBuy)
-              .Contains("商城點數不足"),
-        "insufficient mall points neither debit balance nor grant an item");
+    var failedMallMessage =
+        failedMallBuy
+            .Select(packet =>
+                JsonDocument.Parse(
+                    JsonSerializer.Serialize(packet)))
+            .ToArray();
+
+    try
+    {
+        var flashMessage =
+            failedMallMessage
+                .Select(x => x.RootElement)
+                .First(x =>
+                    x.TryGetProperty(
+                        "Type",
+                        out var type) &&
+                    type.GetString() ==
+                        "SystemMessageFlash")
+                .GetProperty("Message")
+                .GetString();
+
+        Check(
+            store.GetMallPoints(account.Value) == 50 &&
+            InventoryCountOf(1001) == mallItemAfterSuccess &&
+            flashMessage == "商城點數不足",
+            "insufficient mall points neither debit balance nor grant an item");
+    }
+    finally
+    {
+        foreach (var document in failedMallMessage)
+            document.Dispose();
+    }
 
     config["Gameplay:Mall:Items:0:IsActive"] = "false";
     var disabledMallBuy = configuredMall.Handle(
@@ -1990,11 +2017,39 @@ try
         1,
         0,
         0);
-    Check(store.GetMallPoints(account.Value) == 50 &&
-          InventoryCountOf(1001) == mallItemAfterSuccess &&
-          JsonSerializer.Serialize(disabledMallBuy)
-              .Contains("不存在或已下架"),
-        "inactive mall product cannot be purchased");
+
+    var disabledMallDocuments =
+        disabledMallBuy
+            .Select(packet =>
+                JsonDocument.Parse(
+                    JsonSerializer.Serialize(packet)))
+            .ToArray();
+
+    try
+    {
+        var flashMessage =
+            disabledMallDocuments
+                .Select(x => x.RootElement)
+                .First(x =>
+                    x.TryGetProperty(
+                        "Type",
+                        out var type) &&
+                    type.GetString() ==
+                        "SystemMessageFlash")
+                .GetProperty("Message")
+                .GetString();
+
+        Check(
+            store.GetMallPoints(account.Value) == 50 &&
+            InventoryCountOf(1001) == mallItemAfterSuccess &&
+            flashMessage == "商城商品不存在或已下架",
+            "inactive mall product cannot be purchased");
+    }
+    finally
+    {
+        foreach (var document in disabledMallDocuments)
+            document.Dispose();
+    }
     config["Gameplay:Mall:Items:0:IsActive"] = "true";
 
     var mallGifts = MallGiftCatalog.Read(
