@@ -147,40 +147,46 @@ func _run() -> void:
 	_check(found_multi_owner_texture,
 		"AFK memory audit reports both scene and cache ownership sources")
 
-	var pet = PET_SCENE.instantiate()
+	var pet: Node = PET_SCENE.instantiate()
 	get_tree().root.add_child(pet)
-	pet.sprite.sprite_frames = audit_frames
+	var pet_sprite := pet.get_node("AnimatedSprite2D") as AnimatedSprite2D
+	var pet_ui := pet.get_node("UIContainer") as Control
+	pet_sprite.sprite_frames = audit_frames
 	var pet_collision := pet.get_node_or_null("CollisionShape2D")
-	pet.set_afk_visual_suspended(true)
-	_check(pet.sprite.sprite_frames == null and not pet.ui_container.visible,
+	pet.call("set_afk_visual_suspended", true)
+	_check(pet_sprite.sprite_frames == null and not pet_ui.visible,
 		"AFK strips pet SpriteFrames and UI")
 	_check(is_instance_valid(pet_collision) and pet_collision.get_parent() == pet,
 		"AFK preserves pet collision/gameplay node identity")
-	pet.set_afk_visual_suspended(false)
+	pet.call("set_afk_visual_suspended", false)
 	pet.free()
 
-	var ground = GROUND_ITEM_SCENE.instantiate()
+	var ground: Node = GROUND_ITEM_SCENE.instantiate()
 	get_tree().root.add_child(ground)
-	ground.sprite.texture = audit_texture
+	var ground_sprite := ground.get_node("Sprite2D") as Sprite2D
+	var ground_labels := ground.get_node("LabelContainer") as Control
+	ground_sprite.texture = audit_texture
 	var ground_collision := ground.get_node_or_null("CollisionShape2D")
-	ground.set_afk_visual_suspended(true)
-	_check(ground.sprite.texture == null and not ground.label_container.visible,
+	ground.call("set_afk_visual_suspended", true)
+	_check(ground_sprite.texture == null and not ground_labels.visible,
 		"AFK strips ground-item texture and labels")
 	_check(is_instance_valid(ground_collision) and ground_collision.get_parent() == ground,
 		"AFK preserves ground-item pickup/collision node")
-	ground.set_afk_visual_suspended(false)
+	ground.call("set_afk_visual_suspended", false)
 	ground.free()
 
-	var npc = NPC_SCENE.instantiate()
+	var npc: Node = NPC_SCENE.instantiate()
 	get_tree().root.add_child(npc)
-	npc.sprite.texture = audit_texture
+	var npc_sprite := npc.get_node("Sprite2D") as Sprite2D
+	var npc_visuals := npc.get_node("VisualCenter") as Control
+	npc_sprite.texture = audit_texture
 	var npc_collision := npc.get_node_or_null("CollisionShape2D")
-	npc.set_afk_visual_suspended(true)
-	_check(npc.sprite.texture == null and not npc.visual_center.visible,
+	npc.call("set_afk_visual_suspended", true)
+	_check(npc_sprite.texture == null and not npc_visuals.visible,
 		"AFK strips NPC texture and visual UI")
 	_check(is_instance_valid(npc_collision) and npc_collision.get_parent() == npc,
 		"AFK preserves NPC interaction/collision node")
-	npc.set_afk_visual_suspended(false)
+	npc.call("set_afk_visual_suspended", false)
 	npc.free()
 	audit_root.free()
 	# Local client PNGs are intentionally excluded by Git. Exercise

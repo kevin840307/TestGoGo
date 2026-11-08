@@ -32,7 +32,7 @@ func get_effect(sub_path: String) -> SpriteFrames:
 
 	if ResourceLoader.exists(full_path):
 		var source_frames = ResourceLoader.load(
-			full_path, "", ResourceLoader.CACHE_MODE_IGNORE
+			full_path, "", ResourceLoader.CACHE_MODE_IGNORE_DEEP
 		) as SpriteFrames
 		if source_frames:
 			var frames = _build_timed_frames(source_frames, full_path)

@@ -897,7 +897,7 @@ func _restore_afk_render_shell(progress_callback: Callable = Callable()) -> Dict
 		ResourceLoader.THREAD_LOAD_LOADED
 	]:
 		var request_error: int = ResourceLoader.load_threaded_request(
-			path, "", false, ResourceLoader.CACHE_MODE_IGNORE
+			path, "", false, ResourceLoader.CACHE_MODE_IGNORE_DEEP
 		)
 		if request_error != OK:
 			return {"ok": false, "reason": "load_request", "error": request_error}
@@ -1664,7 +1664,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		return false
 
 	var request_error: int = ResourceLoader.load_threaded_request(
-		map_path, "", false, ResourceLoader.CACHE_MODE_IGNORE
+		map_path, "", false, ResourceLoader.CACHE_MODE_IGNORE_DEEP
 	)
 	if request_error != OK:
 		_trace_map_change("initial_load_request_error", 0, target_map_id, {"error": request_error})
@@ -2289,7 +2289,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 
 
 	var load_request_error: = ResourceLoader.load_threaded_request(
-		map_path, "", false, ResourceLoader.CACHE_MODE_IGNORE
+		map_path, "", false, ResourceLoader.CACHE_MODE_IGNORE_DEEP
 	)
 	_trace_map_change("load_requested", source_map_id, target_map_id)
 	if load_request_error != OK:
