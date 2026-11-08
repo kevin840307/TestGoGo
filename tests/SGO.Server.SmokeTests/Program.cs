@@ -2853,11 +2853,17 @@ try
         16,
         id,
         account.Value);
+    broadcastHub.ReconcilePlayerAoi(
+        broadcastRegistration.ConnectionId);
+
     broadcastHub.UpdatePresence(
         clubMemberRegistration.ConnectionId,
         16,
         id,
         account.Value);
+    broadcastHub.ReconcilePlayerAoi(
+        clubMemberRegistration.ConnectionId);
+
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
     while (clubMemberRegistration.Queue.TryDequeue(out _)) { }
 
@@ -2868,13 +2874,24 @@ try
             nearbyChat.RootElement,
             clubLeaderSession);
 
-        Check(responses.Any(x =>
-                  JsonSerializer.Serialize(x).Contains("nearby-only")) &&
-              !broadcastRegistration.Queue.ToArray().Any(x =>
-                  JsonSerializer.Serialize(x).Contains("nearby-only")) &&
-              !clubMemberRegistration.Queue.ToArray().Any(x =>
-                  JsonSerializer.Serialize(x).Contains("nearby-only")),
-            "nearby chat does not cross maps");
+        var nearbySelfReceived =
+            responses.Any(x =>
+                JsonSerializer.Serialize(x).Contains("nearby-only"));
+        var nearbyBroadcastLeaked =
+            broadcastRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains("nearby-only"));
+        var nearbyClubMemberLeaked =
+            clubMemberRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains("nearby-only"));
+
+        Check(
+            nearbySelfReceived &&
+            !nearbyBroadcastLeaked &&
+            !nearbyClubMemberLeaked,
+            "nearby chat does not cross maps; " +
+            $"self={nearbySelfReceived}, " +
+            $"broadcastLeak={nearbyBroadcastLeaked}, " +
+            $"clubMemberLeak={nearbyClubMemberLeaked}");
     }
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
