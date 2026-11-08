@@ -20,10 +20,10 @@ function commitMapEdit(label='已修改地圖') {
   const snapshot = mapSnapshot();
   if (state.mapUndo.at(-1) !== snapshot) {
     state.mapUndo.push(snapshot);
-    if (state.mapUndo.length > 60) state.mapUndo.shift();
+    if (state.mapUndo.length > 60) state.mapUndo.splice(1, 1);
     state.mapRedo = [];
   }
-  state.mapDirty = true;
+  state.mapDirty = snapshot !== state.mapUndo[0];
   updateMapCommandState();
   if (label) $('#map-stage-hint').textContent = label;
 }
@@ -45,7 +45,7 @@ function undoMapEdit() {
   const current = state.mapUndo.pop();
   state.mapRedo.push(current);
   restoreMapSnapshot(state.mapUndo.at(-1));
-  state.mapDirty = state.mapUndo.length > 1;
+  state.mapDirty = state.mapUndo.at(-1) !== state.mapUndo[0];
   updateMapCommandState();
   toast('已復原');
 }
@@ -55,7 +55,7 @@ function redoMapEdit() {
   if (!snapshot) return;
   state.mapUndo.push(snapshot);
   restoreMapSnapshot(snapshot);
-  state.mapDirty = true;
+  state.mapDirty = state.mapUndo.at(-1) !== state.mapUndo[0];
   updateMapCommandState();
   toast('已重做');
 }
@@ -315,6 +315,10 @@ function renderMapVisual() {
     const index = Number(marker.dataset.mapIndex);
     marker.onclick = event => {
       event.stopPropagation();
+      if (state.mapSuppressClick) {
+        state.mapSuppressClick = false;
+        return;
+      }
       if (event.shiftKey || event.ctrlKey || event.metaKey) toggleMapSelection(index);
       else setMapSelection([index], index);
       renderMapVisual();
@@ -430,6 +434,9 @@ function startMapMarkerDrag(event, index, marker, bounds) {
 
     const dx = latest.x - start.x;
     const dy = latest.y - start.y;
+    const moved = Math.abs(dx) > 2 || Math.abs(dy) > 2;
+    if (!moved) return;
+    state.mapSuppressClick = true;
     try {
       const targets = movingIndexes.map(i => {
         const original = originals.get(i);
