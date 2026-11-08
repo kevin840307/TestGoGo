@@ -35,8 +35,16 @@ func _ready() -> void :
 
 
 func setup(player: CharacterBody2D) -> void :
+	# Bind authoritative data only. Hundreds of inventory rows are presentation
+	# and are built lazily by GameHUD immediately before the window is opened.
+	# Avoiding this allocation also lowers the process working-set high-water
+	# mark, which helps both AFK and return-to-login memory.
 	setup_player(player)
-	update_ui()
+
+
+func reset_visual_prewarm_state() -> void:
+	_equip_tab_prewarmed = false
+	_equip_tab_prewarm_running = false
 
 func unlock_equip() -> void :
 	_is_equip_locked = false

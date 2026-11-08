@@ -152,6 +152,32 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('"visited_nodes": visited', cache)
         self.assertIn('int(stats.get("retained_embedded", 0))', hud)
 
+    def test_afk_releases_rebuildable_hud_rows_and_inventory_is_lazy(self):
+        hud = read("client/game_hud.gd")
+        inventory = read("client/scripts/inventory_window.gd")
+        shared = read("client/scripts/shared_inventory_panel.gd")
+
+        setup_start = inventory.index("func setup(player: CharacterBody2D) -> void :")
+        setup_end = inventory.index("\nfunc ", setup_start + 1)
+        setup = inventory[setup_start:setup_end]
+        self.assertIn("setup_player(player)", setup)
+        self.assertNotIn("update_ui()", setup)
+
+        self.assertIn("func release_rebuildable_visual_state_batched", shared)
+        self.assertIn("_item_list_render_generation += 1", shared)
+        self.assertIn("container.remove_child(child)", shared)
+        self.assertIn("child.free()", shared)
+        self.assertIn('get_node_or_null("EquipPreview")', shared)
+        self.assertIn("CACHE_MODE_IGNORE", shared)
+
+        self.assertIn("func release_afk_rebuildable_ui_batched", hud)
+        self.assertIn("release_rebuildable_visual_state_batched", hud)
+        self.assertIn('get_node_or_null("ContentScroll/SkillGrid")', hud)
+        self.assertIn('get_node_or_null("GridContainer")', hud)
+        self.assertIn("SubViewport.UPDATE_DISABLED", hud)
+        self.assertIn("func _restore_afk_rebuildable_ui()", hud)
+
+
     def test_afk_memory_audit_and_disposable_resource_ownership(self):
         game = read("client/scripts/game_manager.gd")
         audit = read("client/scripts/afk_memory_audit.gd")

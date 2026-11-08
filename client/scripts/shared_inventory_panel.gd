@@ -139,6 +139,70 @@ func setup_player(player: CharacterBody2D) -> void :
 	_target_player = player
 
 
+func release_rebuildable_visual_state_batched(batch_size: int = 24) -> int:
+	# PlayerData remains authoritative while AFK. These row/preview nodes are
+	# derived presentation and can be recreated on the next window open.
+	_item_list_render_generation += 1
+	_equip_preview_building = false
+	_cached_equip_items.clear()
+	_palette_mat_cache.clear()
+
+	var containers: Array[Node] = []
+	for candidate in [
+		list_general,
+		list_equip_simple,
+		list_equip_detailed,
+		list_mecha_simple,
+		list_horse_in_use,
+		list_horse,
+		list_battery,
+		list_horse_equip_detailed,
+	]:
+		if is_instance_valid(candidate) and not containers.has(candidate):
+			containers.append(candidate)
+	if is_instance_valid(panel_pet):
+		var pet_list := panel_pet.get_node_or_null("ScrollContainer/ListPet")
+		if is_instance_valid(pet_list) and not containers.has(pet_list):
+			containers.append(pet_list)
+
+	var released: int = 0
+	var released_in_batch: int = 0
+	var safe_batch_size: int = maxi(1, batch_size)
+	for container in containers:
+		for child in container.get_children():
+			if not is_instance_valid(child):
+				continue
+			container.remove_child(child)
+			child.free()
+			released += 1
+			released_in_batch += 1
+			if released_in_batch >= safe_batch_size:
+				released_in_batch = 0
+				await get_tree().process_frame
+				if not is_instance_valid(self):
+					return released
+
+	if is_instance_valid(panel_equip_detailed):
+		var preview := panel_equip_detailed.get_node_or_null("EquipPreview")
+		if is_instance_valid(preview):
+			panel_equip_detailed.remove_child(preview)
+			preview.free()
+			released += 1
+
+	for target_btn in _equip_buttons_map.values():
+		if not is_instance_valid(target_btn):
+			continue
+		target_btn.texture_normal = null
+		target_btn.material = null
+		for conn in target_btn.mouse_entered.get_connections():
+			target_btn.mouse_entered.disconnect(conn.callable)
+		for conn in target_btn.mouse_exited.get_connections():
+			target_btn.mouse_exited.disconnect(conn.callable)
+
+	await get_tree().process_frame
+	return released
+
+
 func setup_mode(mode: DisplayMode, allowed_tabs: Array = [TabType.GENERAL, TabType.EQUIP, TabType.MECHA]) -> void :
 	current_mode = mode
 
@@ -356,7 +420,7 @@ func render_pet_items(items: Array) -> void :
 					if outlook != "":
 						var photo_path = "res://Assets/Pets/Photo/" + outlook + ".png"
 						if ResourceLoader.exists(photo_path):
-							tex = load(photo_path)
+							tex = ResourceLoader.load(photo_path, "", ResourceLoader.CACHE_MODE_IGNORE)
 
 
 		row.setup(tex, mat, "Lv." + str(pet_lv), pet_name, Color.WHITE, Color.WHITE)

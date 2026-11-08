@@ -1410,6 +1410,75 @@ func _confirm_begin_afk() -> void:
 	_refresh_afk_dashboard()
 
 
+func _free_ui_children_batched(parent: Node, batch_size: int = 24) -> int:
+	if not is_instance_valid(parent):
+		return 0
+	var released: int = 0
+	var in_batch: int = 0
+	var safe_batch_size: int = maxi(1, batch_size)
+	for child in parent.get_children():
+		if not is_instance_valid(child):
+			continue
+		parent.remove_child(child)
+		child.free()
+		released += 1
+		in_batch += 1
+		if in_batch >= safe_batch_size:
+			in_batch = 0
+			await get_tree().process_frame
+			if not is_instance_valid(self):
+				return released
+	return released
+
+
+func release_afk_rebuildable_ui_batched() -> int:
+	# Keep this HUD controller connected to NetworkManager so packet-driven
+	# PlayerData continues to update. Only destroy UI that is derived from that
+	# authoritative data and can be rebuilt after AFK.
+	var released: int = 0
+	if is_instance_valid(inventory_window) and inventory_window.has_method("release_rebuildable_visual_state_batched"):
+		released += int(await inventory_window.call("release_rebuildable_visual_state_batched"))
+		if is_instance_valid(inventory_window) and inventory_window.has_method("reset_visual_prewarm_state"):
+			inventory_window.call("reset_visual_prewarm_state")
+
+	if is_instance_valid(skill_window):
+		var skill_grid := skill_window.get_node_or_null("ContentScroll/SkillGrid")
+		released += await _free_ui_children_batched(skill_grid)
+
+	if is_instance_valid(character_window):
+		var title_list := character_window.get_node_or_null("TitlePanel/ScrollContainer/TitleVBox")
+		released += await _free_ui_children_batched(title_list)
+
+	released += await _free_ui_children_batched(pet_status_container)
+
+	if is_instance_valid(shortcut_bar):
+		var shortcut_grid := shortcut_bar.get_node_or_null("GridContainer")
+		released += await _free_ui_children_batched(shortcut_grid)
+
+	if is_instance_valid(minimap_npc_overlay) and minimap_npc_overlay.has_method("clear_context"):
+		minimap_npc_overlay.call("clear_context")
+	if is_instance_valid(minimap_viewport):
+		minimap_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+
+	return released
+
+
+func _restore_afk_rebuildable_ui() -> void:
+	# Heavy windows stay lazy. Recreate only the small always-visible pieces.
+	if is_instance_valid(shortcut_bar):
+		var shortcut_grid := shortcut_bar.get_node_or_null("GridContainer")
+		if is_instance_valid(shortcut_grid) and shortcut_grid.get_child_count() == 0:
+			_init_shortcut_bar()
+			_load_shortcuts_from_data()
+	if is_instance_valid(minimap_viewport):
+		minimap_viewport.world_2d = get_tree().root.get_viewport().world_2d
+		minimap_viewport.canvas_cull_mask = MINIMAP_WORLD_CULL_MASK
+		minimap_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	if is_instance_valid(minimap_npc_overlay) and minimap_npc_overlay.has_method("setup"):
+		minimap_npc_overlay.call("setup", minimap_camera, minimap_viewport_container)
+	update_pet_status_panel()
+
+
 func _afk_hide_nonessential_roots() -> void:
 	# Keep the existing MessageBox for a real confirm/cancel interaction.
 	# HUD state remains alive for packet-driven inventory/quest updates.
@@ -1489,6 +1558,7 @@ func _confirm_restore_afk() -> void:
 		if is_instance_valid(node) and (node is CanvasItem or node is CanvasLayer):
 			node.visible = bool(snapshot["visible"])
 	_afk_hidden_roots.clear()
+	_restore_afk_rebuildable_ui()
 	# GameManager already restored the correct foreground/background focus policy.
 	# Re-applying the AFK-enter pause state would strand the minimap disabled.
 	if is_instance_valid(GameManager.current_map_node):
