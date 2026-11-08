@@ -280,10 +280,23 @@ class WebStructureTests(unittest.TestCase):
     def test_frontend_entrypoints_are_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
         index = (web / "index.html").read_text(encoding="utf-8")
-        for script in ("app-core.js", "app-skills.js", "app-world.js", "app-map-editor.js", "app-tools.js"):
+        for script in ("app-core.js", "app-skills.js", "app-world.js", "app-map-math.js", "app-map-editor.js", "app-tools.js"):
             self.assertIn(f'src="/{script}"', index)
             self.assertTrue((web / script).is_file())
         self.assertTrue((web / "app.css").is_file())
+
+    def test_map_coordinate_math_module_is_loaded_before_editor(self) -> None:
+        web = GAME_EDITOR_ROOT / "web"
+        index = (web / "index.html").read_text(encoding="utf-8")
+        math_pos = index.index('src="/app-map-math.js"')
+        editor_pos = index.index('src="/app-map-editor.js"')
+        self.assertLess(math_pos, editor_pos)
+        math_source = (web / "app-map-math.js").read_text(encoding="utf-8")
+        map_editor = (web / "app-map-editor.js").read_text(encoding="utf-8")
+        self.assertIn("worldToCell", math_source)
+        self.assertIn("cellCenter", math_source)
+        self.assertIn("SGOMapMath.worldToPercent", map_editor)
+        self.assertIn("SGOMapMath.clientToWorld", map_editor)
 
     def test_intuitive_map_editor_is_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
