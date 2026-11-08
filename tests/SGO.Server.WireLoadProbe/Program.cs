@@ -35,8 +35,9 @@ var report = new
     Notes = new[]
     {
         "Uses the same ClientProtocol AES/WebSocket transport as the recovered Godot client.",
-        "Movement expects one MoveEntity on every other same-map client for each accepted SyncPosition.",
-        "Nearby chat expects one ChatBroadcast on every same-map client, including the sender response.",
+        "Movement expects MoveEntity only on ready nearby PlayerSpatialAoi peers, not every same-map client.",
+        "Nearby chat expects the sender response plus ready nearby PlayerSpatialAoi peers.",
+        "WorldAoi splits every 10/50/100-client run into near/far groups: monster SpawnEntity must reach the near group, leak to zero far clients, then appear when a far client re-enters range.",
         "Round latency is end-to-end fanout completion time, not an in-process router benchmark.",
         "MixedSoak keeps movement/chat/AttackEntity traffic active while SharedMapAiTicker processes seeded monsters.",
         "MixedSoak samples /health for server working set, GC heap, CPU total time and SharedMapAi tick latency.",
