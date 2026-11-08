@@ -1,3 +1,4 @@
+using System.Text.Json;
 using SGO.Server.Application.Messaging;
 using static SGO.Server.SmokeTests.SmokeAssert;
 
@@ -91,9 +92,10 @@ internal static class WorldEntityAoiSnapshotLeaseSmokeTests
                   Ground(id, 120, 1),
                   snapshot,
                   out _) &&
-              aoi.VisibleEntities(viewer.ConnectionId)
-                  .Single().SpawnPacketFactory()
-                  .ToString() is not null,
+              JsonSerializer.Serialize(
+                  aoi.VisibleEntities(viewer.ConnectionId)
+                      .Single().SpawnPacketFactory())
+                  .Contains("\"Revision\":3", StringComparison.Ordinal),
             "stationary state updates also advance snapshot generation");
     }
 
