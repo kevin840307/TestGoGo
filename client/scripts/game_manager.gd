@@ -523,6 +523,8 @@ const WORLD_RENDER_GRACE_MSEC: int = 1200
 const WORLD_FOCUS_POLL_INTERVAL_SECONDS: float = 0.25
 var _startup_focus_observed_frames: int = 0
 var _last_background_cache_trim_msec: int = 0
+var _background_focus_lost_msec: int = 0
+const BACKGROUND_CACHE_TRIM_DELAY_MSEC: int = 12000
 const BACKGROUND_CACHE_TRIM_COOLDOWN_MSEC: int = 60000
 const UNFOCUSED_MAX_FPS := 30
 
@@ -810,6 +812,9 @@ func _reconcile_world_render_policy(delta: float) -> void:
 		_refresh_focus_render_policy()
 		if OS.is_debug_build():
 			_log_focus_power_save("render_policy_reconciled")
+	# Never do a cache sweep in the focus event. A brief Alt+Tab must keep
+	# all existing assets warm. Idle-only reclamation happens after 12s.
+	_try_trim_idle_background_caches()
 
 
 func _refresh_focus_render_policy() -> void:
@@ -902,6 +907,34 @@ static func should_trim_background_caches(has_world: bool, last_trim_msec: int, 
 	return has_world and (last_trim_msec <= 0 or now_msec - last_trim_msec >= BACKGROUND_CACHE_TRIM_COOLDOWN_MSEC)
 
 
+static func should_run_background_cache_sweep(
+		has_focus: bool, has_world: bool, unfocused_ms: int,
+		last_trim_msec: int, now_msec: int) -> bool:
+	return not has_focus and unfocused_ms >= BACKGROUND_CACHE_TRIM_DELAY_MSEC \
+		and should_trim_background_caches(has_world, last_trim_msec, now_msec)
+
+
+func _try_trim_idle_background_caches() -> void:
+	if _background_focus_lost_msec <= 0 or _window_has_focus:
+		return
+	var now_msec: int = Time.get_ticks_msec()
+	if not should_run_background_cache_sweep(
+			_window_has_focus, _has_active_world_visuals(),
+			now_msec - _background_focus_lost_msec,
+			_last_background_cache_trim_msec, now_msec):
+		return
+	_last_background_cache_trim_msec = now_msec
+	var before_mb: float = _get_process_memory_mb()
+	var removed: int = _trim_unfocused_runtime_caches()
+	# This counts released cache entries, NOT reclaimed process RAM. The
+	# allocator/OS may retain pages; never infer MB saved from this count.
+	if OS.is_debug_build():
+		print("[BACKGROUND_CACHE_TRIM] removed_entries=%d before_static_mb=%.2f after_static_mb=%.2f focus_age_ms=%d" % [
+			removed, before_mb, _get_process_memory_mb(),
+			now_msec - _background_focus_lost_msec
+		])
+
+
 func _set_window_focus_power_save(has_focus: bool) -> void :
 	if _window_has_focus == has_focus:
 		return
@@ -913,23 +946,17 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 	_frame_gap_last_usec = _focus_last_change_usec
 
 	var master_bus_index := AudioServer.get_bus_index("Master")
-	var caches_trimmed: bool = false
-
 	if not has_focus:
+		_background_focus_lost_msec = Time.get_ticks_msec()
 		_focused_max_fps = configured_foreground_fps(current_performance_profile)
 		_refresh_focus_render_policy()
-		# Only an unfocused active world clears large runtime caches.
-		var now_msec: int = Time.get_ticks_msec()
-		if _has_active_world_visuals() and should_trim_background_caches(
-			true, _last_background_cache_trim_msec, now_msec):
-			_trim_unfocused_runtime_caches()
-			_last_background_cache_trim_msec = now_msec
-			caches_trimmed = true
-
+		# Leave all animation, HUD, map, BGM and recently used assets warm.
+		# No synchronous unloading is permitted in an Alt+Tab handler.
 		if master_bus_index >= 0:
 			_master_bus_was_muted_before_focus_loss = AudioServer.is_bus_mute(master_bus_index)
 			AudioServer.set_bus_mute(master_bus_index, true)
 	else:
+		_background_focus_lost_msec = 0
 		_refresh_focus_render_policy()
 
 		if master_bus_index >= 0:
@@ -938,7 +965,7 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 				_master_bus_was_muted_before_focus_loss
 			)
 
-	_log_focus_power_save("focus_in" if has_focus else "focus_out", caches_trimmed)
+	_log_focus_power_save("focus_in" if has_focus else "focus_out")
 
 func _set_background_visual_processing(paused: bool) -> void :
 	if CursorManager:
@@ -948,21 +975,17 @@ func _set_background_visual_processing(paused: bool) -> void :
 	if is_instance_valid(current_hud) and current_hud.has_method("set_background_visuals_paused"):
 		current_hud.set_background_visuals_paused(paused)
 
-func _trim_unfocused_runtime_caches() -> void :
-	if DollLoader and DollLoader.has_method("clear_runtime_cache"):
-		DollLoader.clear_runtime_cache()
-	if EffectLoader and EffectLoader.has_method("clear_runtime_cache"):
-		EffectLoader.clear_runtime_cache()
-	if MonsterLoader and MonsterLoader.has_method("clear_runtime_cache"):
-		MonsterLoader.clear_runtime_cache()
-	if PetLoader and PetLoader.has_method("clear_runtime_cache"):
-		PetLoader.clear_runtime_cache()
-	if ItemLoader and ItemLoader.has_method("clear_runtime_cache"):
-		ItemLoader.clear_runtime_cache()
-	if SkillLoader and SkillLoader.has_method("clear_runtime_cache"):
-		SkillLoader.clear_runtime_cache()
-	if AudioManager and AudioManager.has_method("clear_runtime_cache"):
-		AudioManager.clear_runtime_cache()
+func _trim_unfocused_runtime_caches() -> int:
+	# Leave the map, active sprites, inventory, network and combat simulation
+	# alone. Only old resources whose sole owner is a loader cache may go.
+	# In particular, NEVER call AudioManager.clear_runtime_cache here:
+	# it stops playing effects and drops the map BGM cache.
+	var removed: int = 0
+	for loader in [DollLoader, MonsterLoader, PetLoader, EffectLoader,
+			ItemLoader, SkillLoader, AudioManager]:
+		if loader and loader.has_method("trim_unreferenced_runtime_cache"):
+			removed += int(loader.trim_unreferenced_runtime_cache())
+	return removed
 
 func _ready() -> void :
 	_window_has_focus = DisplayServer.window_is_focused()

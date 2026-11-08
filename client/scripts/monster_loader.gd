@@ -2,6 +2,7 @@
 extends Node
 
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
 const ASSET_ROOT = "res://Assets/Monsters/"
 const AUDIO_RESOURCE_PATH_META = "se_event_resource_path"
 const AUDIO_PLAYED_CUES_META = "se_event_played_cues"
@@ -10,6 +11,10 @@ const ACT_TIMELINES_META = "act_timing_timelines"
 const DEFAULT_ANIMATION_FPS: float = 8.0
 const WALK_ANIMATION_FPS: float = 6.0
 var _cache: Dictionary = {}
+
+func trim_unreferenced_runtime_cache() -> int:
+	return BG_CACHE_TRIM.trim_unused(_cache, 12)
+
 
 func clear_runtime_cache() -> void :
 	_cache.clear()

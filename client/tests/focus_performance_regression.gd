@@ -1,5 +1,7 @@
 extends Node
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
+
 # Godot CLI project-mode test (autoload globals work):
 # godot --headless --path client --scene res://tests/focus_performance_regression.tscn
 # These tests do not actually change window focus, FPS cap, rendering, or audio.
@@ -60,6 +62,34 @@ func _run() -> void:
 		"a packet gap starting after refocus is not marked as background-affected")
 	_check(not GameManager.focus_transition_within_interval(10000, 24000, 25000),
 		"future focus transitions cannot explain an earlier packet gap")
+
+	# A brief Alt+Tab never evicts resources; active SpriteFrames stay
+	# retained by consumers. Idle cache entries are the only eviction
+	# candidates, and the newest cached visuals stay warm on refocus.
+	_check(not GameManager.should_run_background_cache_sweep(false, true, 11999, 0, 40000),
+		"11.999-second focus loss does not unload resources")
+	_check(GameManager.should_run_background_cache_sweep(false, true, 12000, 0, 40000),
+		"12-second focus loss permits one idle-cache sweep")
+	_check(not GameManager.should_run_background_cache_sweep(true, true, 60000, 0, 80000),
+		"focused window never trims caches")
+	_check(not GameManager.should_run_background_cache_sweep(false, false, 60000, 0, 80000),
+		"login, loading and map transitions do not trim")
+	_check(not GameManager.should_run_background_cache_sweep(false, true, 60000, 40000, 80000),
+		"repeated background sweeps obey the 60-second cooldown")
+	_check(GameManager.should_run_background_cache_sweep(false, true, 60000, 40000, 100000),
+		"long-running background client can reclaim later stale assets")
+
+	var held_resource := Resource.new()
+	var idle_cache: Dictionary = {"cold": Resource.new(), "active": held_resource}
+	var removed: int = BG_CACHE_TRIM.trim_unused(idle_cache, 0)
+	_check(removed == 1 and not idle_cache.has("cold") and idle_cache.has("active"),
+		"cold resource is evicted while an independently held resource survives")
+	_check(idle_cache["active"] == held_resource,
+		"active cached resource keeps its identity on focus return")
+	var recent_cache: Dictionary = {"older": Resource.new(), "newest": Resource.new()}
+	removed = BG_CACHE_TRIM.trim_unused(recent_cache, 1)
+	_check(removed == 1 and not recent_cache.has("older") and recent_cache.has("newest"),
+		"most recent assets remain warmed even if otherwise unreferenced")
 
 	# The background branch must stop visual-only work. Never pause
 	# networking, gameplay world updates or the entire SceneTree.

@@ -1,6 +1,7 @@
 
 extends Node
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
 const EFFECT_ROOT = "res://Assets/Effects/"
 const AUDIO_RESOURCE_PATH_META = "se_event_resource_path"
 const AUDIO_LAST_FRAME_META = "se_event_last_frame"
@@ -8,6 +9,10 @@ const AUDIO_PLAYED_FRAME_META = "se_event_played_frame"
 const ACT_TIMELINE_META = "act_timing_timeline"
 var _effect_cache: Dictionary = {}
 var _missing_effect_cache: Dictionary = {}
+
+func trim_unreferenced_runtime_cache() -> int:
+	return BG_CACHE_TRIM.trim_unused(_effect_cache, 8)
+
 
 func clear_runtime_cache() -> void :
 	_effect_cache.clear()

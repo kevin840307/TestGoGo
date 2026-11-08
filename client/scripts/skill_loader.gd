@@ -3,6 +3,7 @@ extends Node
 
 
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
 const SKILL_DATA_PATH = "res://Skills/"
 
 
@@ -13,6 +14,10 @@ var _skill_database: Dictionary = {}
 var _skill_path_map: Dictionary = {}
 var _icon_cache: Dictionary = {}
 var _is_data_loaded: bool = false
+
+
+func trim_unreferenced_runtime_cache() -> int:
+	return BG_CACHE_TRIM.trim_unused(_icon_cache, 24)
 
 
 func clear_runtime_cache() -> void :

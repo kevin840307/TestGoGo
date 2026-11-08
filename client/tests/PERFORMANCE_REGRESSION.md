@@ -1,3 +1,47 @@
+## Safe, delayed background RAM trim (2026-11-08)
+
+The previous focus-out notification **immediately** cleared all runtime
+sprite/item/effect caches and invoked `AudioManager.clear_runtime_cache()`,
+which also stopped SE playback and discarded BGM preloads. Repeated Alt+Tab
+could reconstruct a large amount of animation data on the first foreground
+frame with little or no reduction in actual working set: live nodes retain
+their `SpriteFrames` and textures.
+
+The background policy is now intentionally conservative:
+
+- **0–12 seconds out of focus:** no cache evictions. The existing background
+  FPS/render-loop/visual-process policy remains unchanged; gameplay, auto
+  combat, network, movement, ground items and server AOI keep running.
+- **After 12 seconds:** if an active world is visible and not changing maps,
+  inspect loader caches once. Evict only *older* Resource/SpriteFrames entries
+  that have no consumer beyond the loader cache. Keep small newest-entry warm
+  reserves per loader (monster 12, pet 8, doll 12 per category, effects 8,
+  item icons 48, ground icons 24, skill icons 24 and audio SE 32).
+  Scene/HUD entities retain their own references and cannot lose textures.
+- **Still unfocused:** repeat at most once per 60 seconds so long background
+  sessions can release stale map and effect art. No periodic content decoding
+  or synchronous preload is initiated.
+- **Focus-in:** no synchronous reload or resource regeneration. Restore
+  rendering/audio with the exact existing focus policy. The map, current
+  BGM and in-use assets remain available.
+
+Debug logging adds `[BACKGROUND_CACHE_TRIM] removed_entries=...`
+alongside static-memory readings. Evicted entries are **not** MB saved;
+OS working-set and GPU memory changes must be measured independently.
+If many resources are currently in view, memory reduction may be limited,
+which is preferable to slowing down immediate focus recovery.
+
+Automated:
+```powershell
+godot --headless --path client --scene res://tests/focus_performance_regression.tscn
+```
+Manual: compare 1/5/10 exported clients after 15 s and 3 min unfocused,
+return focus during combat, check no first-click lag, missing sprites, NPC
+dialog issues, item drops or audio interruptions, then switch maps and
+repeat. Measure private bytes/working set and WDDM dedicated GPU memory,
+not merely the Godot resource monitor. No actual Godot/Windows runtime
+results are claimed from this remote source edit.
+
 # SGO Client Performance Regression Checks
 
 ## Idle AOI scan deduplication and transition diagnostics (2026-11-08)

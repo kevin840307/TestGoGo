@@ -1,12 +1,17 @@
 
 extends Node
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
 const ASSET_ROOT = "res://Assets/Pets/"
 const CONFIG_PATH = "res://Assets/Pets/Config.json"
 
 var _config_cache: Dictionary = {}
 var _frames_cache: Dictionary = {}
 var is_data_loaded: bool = false
+
+func trim_unreferenced_runtime_cache() -> int:
+	return BG_CACHE_TRIM.trim_unused(_frames_cache, 8)
+
 
 func clear_runtime_cache() -> void :
 	_frames_cache.clear()

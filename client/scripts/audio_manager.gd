@@ -6,6 +6,7 @@ var current_map_id: int = -1
 var current_bgm_volume_pct: float = GameConstants.SETTING_DEFAULT_BGM_VOLUME
 var current_se_volume_pct: float = GameConstants.SETTING_DEFAULT_SE_VOLUME
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
 const SE_BASE_PATH = "res://Assets/Audio/SE/"
 const SE_EVENT_MANIFEST_PATH = "res://Assets/Audio/SEEventManifest.json"
 const SE_PLAYER_POOL_SIZE = 16
@@ -437,6 +438,12 @@ func clear_se_cache() -> void :
 	se_cache.clear()
 	_missing_se_names.clear()
 	_last_se_played_at_msec.clear()
+
+func trim_unreferenced_runtime_cache() -> int:
+	# Do NOT stop SE players or flush current/prefetched BGM on focus
+	# changes. Only old, unreferenced one-shot sound clips can go.
+	return BG_CACHE_TRIM.trim_unused(se_cache, 32)
+
 
 func clear_runtime_cache() -> void :
 	stop_all_se()

@@ -1,6 +1,7 @@
 
 extends Node
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
 const ASSET_ROOT = "res://Assets/Player/%s/materials/"
 const MECHA_ASSET_ROOT = "res://Assets/MS/%s/materials/"
 const MA_ASSET_ROOT = "res://Assets/MA/%s/materials/"
@@ -15,6 +16,16 @@ const SR_EFFECT_FILES = {
 var _cache: Dictionary = {}
 var _sr_cache: Dictionary = {}
 var _sr_effect_cache: Dictionary = {}
+
+
+func trim_unreferenced_runtime_cache() -> int:
+	var removed: int = 0
+	for category in _cache.keys():
+		var category_cache: Dictionary = _cache.get(category, {})
+		removed += BG_CACHE_TRIM.trim_unused(category_cache, 12)
+	removed += BG_CACHE_TRIM.trim_unused(_sr_cache, 4)
+	removed += BG_CACHE_TRIM.trim_unused(_sr_effect_cache, 2)
+	return removed
 
 
 func clear_runtime_cache() -> void :

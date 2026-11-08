@@ -2,6 +2,7 @@
 extends Node
 
 
+const BG_CACHE_TRIM = preload("res://scripts/background_cache_trim.gd")
 const ICON_PATH = "res://Assets/Items/Icons/Icon%04d.png"
 const PHOTO_PATH = "res://Assets/Items/Photos/Photo%04d.png"
 const GROUND_PATH = "res://Assets/Items/Grounds/Ground%04d.png"
@@ -27,6 +28,14 @@ var _icon_cache: Dictionary = {}
 var _photo_cache: Dictionary = {}
 var _ground_cache: Dictionary = {}
 
+
+
+func trim_unreferenced_runtime_cache() -> int:
+	var removed: int = 0
+	removed += BG_CACHE_TRIM.trim_unused(_icon_cache, 48)
+	removed += BG_CACHE_TRIM.trim_unused(_photo_cache, 8)
+	removed += BG_CACHE_TRIM.trim_unused(_ground_cache, 24)
+	return removed
 
 
 func clear_runtime_cache() -> void :
