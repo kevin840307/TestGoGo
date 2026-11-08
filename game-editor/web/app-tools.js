@@ -145,7 +145,9 @@ async function deleteScript() {
   try {
     const impact = await referenceImpact('script', name);
     if (!confirm(`確定刪除 NPC 腳本 ${name}？原檔會先備份。${formatReferenceImpact(impact)}`)) return;
-    const force = impact.count ? '?force=1' : '';
+    const force = impact.count
+      ? `?force=1&referenceToken=${encodeURIComponent(impact.token || '')}`
+      : '';
     await api(`/api/scripts/${encodeURIComponent(name)}${force}`, {method:'DELETE'});
     state.selectedScript = null;
     state.scriptDirty = false;
