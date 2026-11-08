@@ -479,3 +479,89 @@ not mean the collision body was visually delayed.
 Rollback on any missing entity, invalid movement, altered character/monster appearance, broken NPC interaction, GDScript parse error or new sustained frame gap.
 
 **Debug-only requirement:** diagnostic output must not run in Release exports.
+
+## 2026-11-08 07:52 Godot log: drop visuals, monster shapes, skill initialization
+
+In `godot(20261108-075204).log`, login reached
+`[LOGIN_VISUAL_READY] elapsed_ms=470.3 stable_frames=18` with no video
+fallback. **The remaining stalls were mostly world initialization and
+map transitions**, not continuous foreground FPS: `[HUD_INIT_TIMING]
+synchronous_ms=399.12`, `[HUD_SKILL_INIT] setup_ms=60.65`, player
+PaperDoll initial build 645.02ms, a 426.56ms HUD frame gap and repeated
+~280–303ms map-transition frame gaps. Some first monster setups cost
+~10–24ms each. No Godot SCRIPT ERROR was logged.
+
+The log also shows 18 stale Skill Script UID warnings. The committed
+`skill_data.gd.uid` and `skill_level_data.gd.uid` did not match
+the UIDs referenced by the preexisting `Skills/*.tres`. The two script
+UID files now match the legacy resources, without altering game skill
+statistics, effects, icon indexes, levels or client-server packets. A
+Python regression walks every skill `.tres` and flags mismatches.
+
+**Validated source problems and the new changes:**
+
+1. **Authoritative drop positions:** The old new-drop bounce in
+   `network_entity_manager.gd` randomly changed the entire item's
+   `Area2D.position` by up to 45px horizontally and 25px vertically,
+   *after* the server had validated the safe drop coordinate. That could
+   visibly put an item into a wall and desynchronize click location and
+   AOI range. The new bounce moves only the `Sprite2D` visual child
+   vertically and returns to its original offset. The ground item root,
+   collision shape, global coordinates, authority, lifetime and pickup
+   requests are not repositioned.
+2. **Monster collision allocation:** `MonsterEntity` previously made a
+   new `RectangleShape2D` for every identical sprite on each spawn.
+   It now caches immutable rectangle resources per texture size. The
+   existing per-monster `CollisionShape2D.position` is still independent,
+   so target/click positions and blocking behavior remain unchanged.
+   This saves repeated object allocation; no quantified CPU/RAM gain is
+   claimed without a Godot run.
+3. **Hidden skill window:** `SkillWindow.setup()` used to call
+   `update_ui()` during synchronous HUD init even though the window
+   was hidden; this loaded `.tres` resources and created all skill card
+   nodes before the player could see the skill window. Now it only sets
+   `target_player`. `GameHUD._toggle_window()` still calls `update_ui()`
+   before showing the window, and `SkillSync` still refreshes when
+   visible. This moves the initial ~60ms skill work to first use and
+   avoids that resource allocation entirely in clients that never open
+   the skill book.
+
+**Regressions to run after pulling:**
+
+```powershell
+python client/tests/resource_uid_reference_regression.py
+godot --headless --path client --script res://tests/render_optimization_regression.gd
+godot --headless --path client --script res://tests/render_resource_regression.gd
+```
+
+Manual verification: kill a monster at the wall and observe a short
+visual drop bounce with the *same* final server/click position; click it
+during/after animation, and then transition maps/relog to confirm no
+lost/stale items. Spawn many monsters of the same and different sprites
+and check hit/target alignment. After logging in, open the skill window
+for the first time and verify all learned skills, categories, icons,
+shortcuts and SkillSync behavior; close/reopen and check the displayed
+levels still match. Verify no stale Script UID warning remains.
+
+**Remaining opportunities requiring a measured follow-up:**
+
+- Map-change repeated ~300ms main-thread stalls: profile
+  `map_resource.instantiate`, `root.add_child`, player reparenting,
+  static map Canvas registrations and GPU texture uploads individually.
+  Avoid keeping every map loaded per client: this would raise RAM/VRAM
+  substantially during 10-open sessions.
+- Ground items: hundreds of known items and ~7k Canvas nodes; next
+  profile visible label/text rendering and protection timer overhead.
+  Keep all item authoritative state and click/pickup behavior; never
+  drop far objects from server state merely to improve FPS.
+- First unique-monster SpriteFrames construction: isolate per-sprite
+  atlas decode vs animated frame creation; consider bounded during-map
+  warmup only if CPU/VRAM measurements support it.
+- Initial PaperDoll 645ms: profile layer/resource setup and ACT timing
+  paths before deleting any layers; fix repeated warnings separately.
+
+No local Godot binary is available here: source-level audit and
+automated test additions have **not** proved in-game FPS, CPU, GPU,
+map-change time or 10-open savings. Compare the same maps/positions and
+item/monster counts in a follow-up Debug Godot log after testing.
+
