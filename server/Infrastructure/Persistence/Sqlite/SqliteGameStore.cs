@@ -8374,26 +8374,6 @@ public sealed class SqliteGameStore : IGameStore
         using var db = Open();
         using var tx = db.BeginTransaction();
 
-        // SQLite transactions are deferred by default. CommitTrade used to
-        // read balances first and only become a writer while moving assets.
-        // A concurrent transfer/shop write could therefore invalidate the
-        // read snapshot and surface SQLITE_BUSY instead of a deterministic
-        // gameplay result. Acquire the single SQLite writer slot first.
-        using (var serialize = db.CreateCommand())
-        {
-            serialize.Transaction = tx;
-            serialize.CommandText = """
-                UPDATE characters
-                   SET money=money
-                 WHERE id=$id
-                   AND account_id=$account
-                """;
-            Arg(serialize, "$id", firstDbid);
-            Arg(serialize, "$account", firstAccountId);
-            if (serialize.ExecuteNonQuery() != 1)
-                return new(false, "交易角色不存在", 0, 0);
-        }
-
         long ReadMoney(
             long accountId,
             long dbid)
@@ -9970,31 +9950,6 @@ public sealed class SqliteGameStore : IGameStore
         using var db = Open();
         using var tx = db.BeginTransaction();
 
-        // Player-shop purchase touches buyer money, seller money and asset
-        // ownership. Take SQLite's writer slot before reading any of them so
-        // a concurrent Trade/transfer cannot invalidate a deferred snapshot.
-        using (var serialize = db.CreateCommand())
-        {
-            serialize.Transaction = tx;
-            serialize.CommandText = """
-                UPDATE characters
-                   SET money=money
-                 WHERE id=$id
-                   AND account_id=$account
-                """;
-            Arg(serialize, "$id", buyerDbid);
-            Arg(serialize, "$account", buyerAccountId);
-            if (serialize.ExecuteNonQuery() != 1)
-            {
-                return new(
-                    false,
-                    "角色不存在",
-                    0,
-                    0,
-                    false);
-            }
-        }
-
         long ReadMoney(
             long accountId,
             long dbid)
@@ -10566,31 +10521,6 @@ public sealed class SqliteGameStore : IGameStore
 
         using var db = Open();
         using var tx = db.BeginTransaction();
-
-        // Acquire SQLite's writer slot before reading either balance. This
-        // prevents two opposite-direction transfers (or a trade plus transfer)
-        // from both holding stale read snapshots and then racing to upgrade.
-        using (var serialize = db.CreateCommand())
-        {
-            serialize.Transaction = tx;
-            serialize.CommandText = """
-                UPDATE characters
-                   SET money=money
-                 WHERE id=$id
-                   AND account_id=$account
-                """;
-            Arg(serialize, "$id", dbid);
-            Arg(serialize, "$account", accountId);
-            if (serialize.ExecuteNonQuery() != 1)
-            {
-                return new(
-                    false,
-                    "角色不存在",
-                    0,
-                    0,
-                    0);
-            }
-        }
 
         long senderMoney;
         using (var sender = db.CreateCommand())
