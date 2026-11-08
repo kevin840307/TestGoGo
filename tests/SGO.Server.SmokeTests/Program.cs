@@ -125,7 +125,8 @@ CurrentItemDefinition CurrentItem(
     int canRepair = 1,
     int canTrade = 1,
     string scriptName = "",
-    string description = "")
+    string description = "",
+    string weaponStyle = "")
     => new(
         id,
         name,
@@ -159,7 +160,9 @@ CurrentItemDefinition CurrentItem(
         canRepair,
         canTrade,
         scriptName,
-        description);
+        description,
+        0, // ColorIndex
+        weaponStyle);
 
 var currentCatalog = new CurrentClientDataCatalog(
     new[]
@@ -183,6 +186,15 @@ var currentCatalog = new CurrentClientDataCatalog(
             "general",
             price: 1,
             scriptName: "封測傳送器"),
+
+        CurrentItem(
+            2001,
+            "燈籠變身器",
+            "general",
+            price: 1,
+            scriptName: "燈籠變身器",
+            description:
+                "能將使用者的兵器幻化成燈籠外觀的奇異變身器。"),
 
         CurrentItem(
             2803,
@@ -332,7 +344,35 @@ var currentCatalog = new CurrentClientDataCatalog(
             atk: 10,
             equipSlot: 5,
             attackRange: 140,
-            durability: 100),
+            durability: 100,
+            weaponStyle: "Sword"),
+        CurrentItem(
+            31639,
+            "近戰型燈籠兵器",
+            "weapon",
+            price: 1,
+            equipSlot: 5,
+            attackRange: 150,
+            durability: 99999,
+            weaponStyle: "Axe"),
+        CurrentItem(
+            31640,
+            "雙銃式燈籠兵器",
+            "weapon",
+            price: 1,
+            equipSlot: 5,
+            attackRange: 350,
+            durability: 99999,
+            weaponStyle: "TwinGun"),
+        CurrentItem(
+            31641,
+            "單銃制燈籠兵器",
+            "weapon",
+            price: 1,
+            equipSlot: 5,
+            attackRange: 350,
+            durability: 99999,
+            weaponStyle: "Gun"),
         CurrentItem(
             31262,
             "雙銃雷霆砲+16",
