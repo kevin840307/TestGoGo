@@ -179,6 +179,10 @@ try {
             "--headless", "--path", "client",
             "--script", "res://tests/perf_regression_smoke.gd"
         )
+        Invoke-Checked "Godot headless client regressions: shared cached monster/player orbs" $godotCommand @(
+            "--headless", "--path", "client",
+            "--script", "res://tests/simplified_orb_cache_regression.gd"
+        )
         Invoke-Checked "Godot headless client regressions: ground-item visual AOI" $godotCommand @(
             "--headless", "--path", "client",
             "--script", "res://tests/ground_item_aoi_regression.gd"
