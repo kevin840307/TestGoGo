@@ -30,12 +30,9 @@ internal static class AssetMutationConcurrencySmokeTests
         SqliteGameStore store)
     {
         var player = CreatePlayer(store, "repair");
-        Check(
-            store.AdjustMoney(
-                player.AccountId,
-                player.CharacterId,
-                100) is not null,
-            "seed money for concurrent repairs");
+        ExactMoneyFixture.Set(
+            store, player.AccountId, player.CharacterId, 100,
+            "two distinct equipment repairs");
 
         const int firstItemIndex = 990_101;
         const int secondItemIndex = 990_102;
@@ -132,12 +129,9 @@ internal static class AssetMutationConcurrencySmokeTests
         SqliteGameStore store)
     {
         var player = CreatePlayer(store, "repair_same");
-        Check(
-            store.AdjustMoney(
-                player.AccountId,
-                player.CharacterId,
-                100) is not null,
-            "seed money for duplicate concurrent repair");
+        ExactMoneyFixture.Set(
+            store, player.AccountId, player.CharacterId, 100,
+            "same-UID duplicate repair");
 
         const int itemIndex = 990_103;
         const int repairedDurability = 100;
