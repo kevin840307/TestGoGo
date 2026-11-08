@@ -75,5 +75,20 @@ internal static class CurrentClientCatalogSmokeTests
         Check(
             catalog.FindItem(2459) is { ScriptName: "無罪之書" },
             "real innocence book exposes its authoritative client script name");
+
+        Check(
+            catalog.FindItem(50816) is
+            {
+                Category: "horseequip",
+                HorseType: "MA",
+                EquipSlot: 6,
+                Atk: 150,
+                Def: 150,
+                MAtk: 150,
+                MDef: 150,
+                Aspd: 50,
+                MoveSpeed: 50
+            },
+            "MA guardian stone 50816 exposes +50 ASPD and +50 move speed to server");
     }
 }
