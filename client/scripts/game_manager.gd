@@ -17,6 +17,7 @@ const WORLD_ENHANCEMENT_SCENE: = preload("res://world_enhancement.tscn")
 const AFK_VISUAL_CACHE = preload("res://scripts/afk_visual_cache.gd")
 const AFK_RENDER_SHELL = preload("res://scripts/afk_render_shell.gd")
 const WORLD_VISUAL_AUDIT = preload("res://scripts/world_visual_audit.gd")
+const AFK_MEMORY_AUDIT = preload("res://scripts/afk_memory_audit.gd")
 const AFK_MONITOR_FPS: int = 20
 const DAY_NIGHT_OVERLAY_SCENE: = preload("res://day_night_overlay.tscn")
 const TRAIN_VIDEO_PATHS: = {
@@ -105,6 +106,7 @@ func _audit_login_after_logout() -> void:
 	await get_tree().process_frame
 	await get_tree().create_timer(0.5).timeout
 	log_world_visual_audit("logout_settled")
+	_log_afk_memory_audit("logout_settled")
 
 
 func _afk_memory_sample() -> Dictionary:
@@ -152,6 +154,73 @@ func _log_afk_memory(stage: String) -> void:
 	])
 
 
+func _afk_memory_audit_cache_sources() -> Array:
+	var sources: Array = [
+		{"name": "GameManager._prewarmed_hud_windows", "value": _prewarmed_hud_windows},
+	]
+	for spec in [
+		["MonsterLoader._cache", MonsterLoader, "_cache"],
+		["DollLoader._cache", DollLoader, "_cache"],
+		["DollLoader._sr_cache", DollLoader, "_sr_cache"],
+		["DollLoader._sr_effect_cache", DollLoader, "_sr_effect_cache"],
+		["PetLoader._frames_cache", PetLoader, "_frames_cache"],
+		["EffectLoader._effect_cache", EffectLoader, "_effect_cache"],
+		["ItemLoader._icon_cache", ItemLoader, "_icon_cache"],
+		["ItemLoader._photo_cache", ItemLoader, "_photo_cache"],
+		["ItemLoader._ground_cache", ItemLoader, "_ground_cache"],
+		["SkillLoader._icon_cache", SkillLoader, "_icon_cache"],
+		["AudioManager.se_cache", AudioManager, "se_cache"],
+		["AudioManager._map_bgm_cache", AudioManager, "_map_bgm_cache"],
+	]:
+		var owner: Object = spec[1] as Object
+		if is_instance_valid(owner):
+			sources.append({"name": str(spec[0]), "value": owner.get(str(spec[2]))})
+	sources.append({
+		"name": "PaperDollEngine.visual_runtime",
+		"value": PaperDollEngine.visual_runtime_cache_for_audit(),
+	})
+	sources.append({
+		"name": "FestivalThemeManager._texture_cache",
+		"value": FestivalThemeManager.texture_cache_for_audit(),
+	})
+	return sources
+
+
+func _log_afk_memory_audit(stage: String) -> void:
+	if not OS.is_debug_build():
+		return
+	var roots: Dictionary = {
+		"map": current_map_node,
+		"hud": current_hud,
+		"player": current_player,
+		"scene": get_tree().current_scene,
+	}
+	var report: Dictionary = AFK_MEMORY_AUDIT.capture(
+		roots, _afk_memory_audit_cache_sources(), 16
+	)
+	print("[AFK_MEMORY_AUDIT] stage=%s pid=%d resources=%d textures=%d sprite_frames=%d estimated_texture_mb=%.2f note=uncompressed_texture_estimate_not_windows_working_set" % [
+		stage, OS.get_process_id(),
+		int(report.get("resources", 0)),
+		int(report.get("texture_resources", 0)),
+		int(report.get("sprite_frame_resources", 0)),
+		float(report.get("estimated_texture_mb", 0.0)),
+	])
+	var rank: int = 0
+	for raw_entry in report.get("top", []):
+		var entry: Dictionary = raw_entry
+		rank += 1
+		print("[AFK_MEMORY_AUDIT] stage=%s rank=%d kind=%s class=%s estimated_mb=%.2f refs=%d source_count=%d path=%s owners=%s" % [
+			stage, rank,
+			str(entry.get("kind", "resource")),
+			str(entry.get("class", "Resource")),
+			float(entry.get("estimated_bytes", 0)) / 1048576.0,
+			int(entry.get("reference_count", 0)),
+			int(entry.get("reference_sources", 0)),
+			str(entry.get("path", "")),
+			str(entry.get("owners", [])),
+		])
+
+
 func _log_afk_memory_after_settle(started_msec: int) -> void:
 	var tree: SceneTree = get_tree()
 	if tree == null:
@@ -160,6 +229,7 @@ func _log_afk_memory_after_settle(started_msec: int) -> void:
 	if not is_inside_tree() or not _afk_active or _afk_started_msec != started_msec:
 		return
 	_log_afk_memory("afk_settled_3s")
+	_log_afk_memory_audit("afk_settled_3s")
 
 
 var current_world_enhancement: CanvasLayer = null
@@ -891,6 +961,7 @@ func begin_afk_mode() -> bool:
 	}
 	_afk_memory_baseline = _afk_memory_sample()
 	log_world_visual_audit("afk_enter_before")
+	_log_afk_memory_audit("afk_enter_before")
 	_afk_forced_draw_count = 0
 	_afk_active = true
 	_afk_started_msec = Time.get_ticks_msec()
@@ -919,6 +990,7 @@ func begin_afk_mode() -> bool:
 	_log_afk_state("enter_after", int(_afk_visual_stats.get("released", 0)))
 	_log_afk_memory("enter_after")
 	log_world_visual_audit("afk_enter_after")
+	_log_afk_memory_audit("afk_enter_after")
 	if OS.is_debug_build():
 		_log_afk_memory_after_settle(_afk_started_msec)
 	return true
@@ -965,6 +1037,7 @@ func finish_afk_mode(progress_callback: Callable = Callable()) -> bool:
 	_log_afk_state("restore_complete", int(restore_result.get("restored_entity_nodes", 0)), 0)
 	_log_afk_memory("restore_complete")
 	log_world_visual_audit("afk_restore_complete")
+	_log_afk_memory_audit("afk_restore_complete")
 	_afk_memory_baseline.clear()
 	_emit_afk_restore_progress(progress_callback, 100.0, "畫面已恢復")
 	return true
@@ -1467,12 +1540,25 @@ func _set_background_visual_processing(paused: bool) -> void :
 		if current_hud.has_method("set_afk_dashboard_updates_enabled"):
 			current_hud.set_afk_dashboard_updates_enabled(_afk_active and _window_has_focus)
 
+func _release_background_optional_ui() -> int:
+	# Unfocused is intentionally lighter than AFK. Keep the active map,
+	# entities and live textures warm, but discard optional hidden windows.
+	var released: int = 0
+	if is_instance_valid(current_hud) and current_hud.has_method("release_afk_visual_preloads"):
+		released += int(current_hud.release_afk_visual_preloads())
+	for kind in _prewarmed_hud_windows.keys().duplicate():
+		var window: Control = _prewarmed_hud_windows.get(kind, null) as Control
+		if is_instance_valid(window):
+			window.free()
+			released += 1
+		_prewarmed_hud_windows.erase(kind)
+	return released
+
+
 func _trim_unfocused_runtime_caches() -> int:
-	# Leave the map, active sprites, inventory, network and combat simulation
-	# alone. Only old resources whose sole owner is a loader cache may go.
-	# In particular, NEVER call AudioManager.clear_runtime_cache here:
-	# it stops playing effects and drops the map BGM cache.
-	var removed: int = 0
+	# Leave map/entity presentation, inventory data, networking and combat
+	# simulation alone. AFK is the only mode that strips live presentation.
+	var removed: int = _release_background_optional_ui()
 	for loader in [DollLoader, MonsterLoader, PetLoader, EffectLoader,
 			ItemLoader, SkillLoader, AudioManager]:
 		if loader and loader.has_method("trim_unreferenced_runtime_cache"):
@@ -1857,7 +1943,11 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 
 func cleanup_and_return_to_login() -> void :
 	log_world_visual_audit("logout_before")
+	_log_afk_memory_audit("logout_before")
 	_reset_afk_mode()
+	# Break large dynamic visual references before queue_free reaches the
+	# frame boundary. Logical entity state is untouched.
+	_set_afk_dynamic_visuals_suspended(true)
 	_world_ready_for_background_saving = false
 	_cancel_active_map_transition("cleanup_and_return_to_login")
 	_cancel_train_travel("cleanup_and_return_to_login")

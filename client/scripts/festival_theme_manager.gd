@@ -234,6 +234,10 @@ static func get_texture(asset_name: String, theme: String) -> Texture2D:
 	return texture
 
 
+static func texture_cache_for_audit() -> Dictionary:
+	return _texture_cache
+
+
 static func clear_texture_cache() -> void :
 	_texture_cache.clear()
 

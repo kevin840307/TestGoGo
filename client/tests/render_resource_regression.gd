@@ -6,6 +6,10 @@ extends Node
 const GROUND_ITEM_SCRIPT = preload("res://scripts/ground_item_entity.gd")
 const DAY_NIGHT_SCRIPT = preload("res://scripts/day_night_overlay.gd")
 const MONSTER_SCENE = preload("res://monster_entity.tscn")
+const PET_SCENE = preload("res://pet_entity.tscn")
+const GROUND_ITEM_SCENE = preload("res://ground_item_entity.tscn")
+const NPC_SCENE = preload("res://npc_entity.tscn")
+const AFK_MEMORY_AUDIT = preload("res://scripts/afk_memory_audit.gd")
 # Compile the real SkillWindow and SkillCard dependencies during the
 # client regression suite, not only when a player opens the skill book.
 const SKILL_WINDOW_SCRIPT = preload("res://scripts/skill_window.gd")
@@ -104,6 +108,81 @@ func _run() -> void:
 		hit_image.get_pixel(0, 0).a < 0.01 and
 		hit_image.get_pixel(1, 1).r > 0.9,
 		"monster HIT atlas crop retains transparency and foreground color")
+
+	# AFK must keep logical entities alive while severing their large visual
+	# references. These synthetic resources make the contract testable without
+	# requiring the ignored local recovered-media bundle.
+	var audit_root := Node2D.new()
+	audit_root.name = "AfkMemoryAuditRoot"
+	get_tree().root.add_child(audit_root)
+	var audit_image := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	audit_image.fill(Color.WHITE)
+	var audit_texture := ImageTexture.create_from_image(audit_image)
+	var audit_sprite := Sprite2D.new()
+	audit_sprite.texture = audit_texture
+	audit_root.add_child(audit_sprite)
+	var audit_frames := SpriteFrames.new()
+	audit_frames.add_frame("default", audit_texture)
+	var audit_animated := AnimatedSprite2D.new()
+	audit_animated.sprite_frames = audit_frames
+	audit_root.add_child(audit_animated)
+	var memory_report: Dictionary = AFK_MEMORY_AUDIT.capture(
+		{"test": audit_root},
+		[{"name": "synthetic_cache", "value": {
+			"texture": audit_texture, "frames": audit_frames
+		}}],
+		12
+	)
+	_check(int(memory_report.get("texture_resources", 0)) >= 1 and
+		int(memory_report.get("sprite_frame_resources", 0)) >= 1,
+		"AFK memory audit finds live Texture2D and SpriteFrames references")
+	_check(int(memory_report.get("estimated_texture_bytes", 0)) >= 8 * 8 * 4,
+		"AFK memory audit ranks texture ownership with a byte estimate")
+	var found_multi_owner_texture: bool = false
+	for raw_entry in memory_report.get("top", []):
+		var entry: Dictionary = raw_entry
+		if int(entry.get("instance_id", 0)) == audit_texture.get_instance_id():
+			found_multi_owner_texture = int(entry.get("reference_sources", 0)) >= 2
+			break
+	_check(found_multi_owner_texture,
+		"AFK memory audit reports both scene and cache ownership sources")
+
+	var pet = PET_SCENE.instantiate()
+	get_tree().root.add_child(pet)
+	pet.sprite.sprite_frames = audit_frames
+	var pet_collision := pet.get_node_or_null("CollisionShape2D")
+	pet.set_afk_visual_suspended(true)
+	_check(pet.sprite.sprite_frames == null and not pet.ui_container.visible,
+		"AFK strips pet SpriteFrames and UI")
+	_check(is_instance_valid(pet_collision) and pet_collision.get_parent() == pet,
+		"AFK preserves pet collision/gameplay node identity")
+	pet.set_afk_visual_suspended(false)
+	pet.free()
+
+	var ground = GROUND_ITEM_SCENE.instantiate()
+	get_tree().root.add_child(ground)
+	ground.sprite.texture = audit_texture
+	var ground_collision := ground.get_node_or_null("CollisionShape2D")
+	ground.set_afk_visual_suspended(true)
+	_check(ground.sprite.texture == null and not ground.label_container.visible,
+		"AFK strips ground-item texture and labels")
+	_check(is_instance_valid(ground_collision) and ground_collision.get_parent() == ground,
+		"AFK preserves ground-item pickup/collision node")
+	ground.set_afk_visual_suspended(false)
+	ground.free()
+
+	var npc = NPC_SCENE.instantiate()
+	get_tree().root.add_child(npc)
+	npc.sprite.texture = audit_texture
+	var npc_collision := npc.get_node_or_null("CollisionShape2D")
+	npc.set_afk_visual_suspended(true)
+	_check(npc.sprite.texture == null and not npc.visual_center.visible,
+		"AFK strips NPC texture and visual UI")
+	_check(is_instance_valid(npc_collision) and npc_collision.get_parent() == npc,
+		"AFK preserves NPC interaction/collision node")
+	npc.set_afk_visual_suspended(false)
+	npc.free()
+	audit_root.free()
 	# Local client PNGs are intentionally excluded by Git. Exercise
 	# production HIT frames as well when the full media set is installed.
 	if ResourceLoader.exists("res://Assets/Monsters/EN004A.png"):

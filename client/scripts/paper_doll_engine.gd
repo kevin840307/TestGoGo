@@ -136,6 +136,13 @@ static func get_shared_palette_material_count() -> int:
 	return _shared_palette_materials.size()
 
 
+static func visual_runtime_cache_for_audit() -> Dictionary:
+	return {
+		"timed_frames": _shared_controller_timed_frames_cache,
+		"palette_materials": _shared_palette_materials,
+	}
+
+
 static func clear_visual_runtime_cache() -> int:
 	var removed: int = _shared_controller_timed_frames_cache.size() + _shared_palette_materials.size()
 	_shared_controller_timed_frames_cache.clear()
