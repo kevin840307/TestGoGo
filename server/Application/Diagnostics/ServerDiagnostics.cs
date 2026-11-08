@@ -24,12 +24,26 @@ public sealed class ServerDiagnostics
     private long _slowPacketCount;
     private long _webSocketConnectCount;
     private long _webSocketDisconnectCount;
+    private long _mapAiSlowTickCount;
+    private long _mapPressureWarningCount;
+    private long _broadcastBacklogWarningCount;
+    private long _tradeConflictCount;
+    private long _pickupConflictCount;
+    private long _databaseFailureCount;
+    private long _worldTickFailureCount;
 
     public void PacketHandled() => Interlocked.Increment(ref _packetCount);
     public void PacketError() => Interlocked.Increment(ref _packetErrorCount);
     public void SlowPacket() => Interlocked.Increment(ref _slowPacketCount);
     public void WebSocketConnected() => Interlocked.Increment(ref _webSocketConnectCount);
     public void WebSocketDisconnected() => Interlocked.Increment(ref _webSocketDisconnectCount);
+    public void MapAiSlowTick() => Interlocked.Increment(ref _mapAiSlowTickCount);
+    public void MapPressureWarning() => Interlocked.Increment(ref _mapPressureWarningCount);
+    public void BroadcastBacklogWarning() => Interlocked.Increment(ref _broadcastBacklogWarningCount);
+    public void TradeConflict() => Interlocked.Increment(ref _tradeConflictCount);
+    public void PickupConflict() => Interlocked.Increment(ref _pickupConflictCount);
+    public void DatabaseFailure() => Interlocked.Increment(ref _databaseFailureCount);
+    public void WorldTickFailure() => Interlocked.Increment(ref _worldTickFailureCount);
 
     public void Record(
         string level,
@@ -75,6 +89,13 @@ public sealed class ServerDiagnostics
         packetErrors = Interlocked.Read(ref _packetErrorCount),
         slowPackets = Interlocked.Read(ref _slowPacketCount),
         webSocketConnects = Interlocked.Read(ref _webSocketConnectCount),
-        webSocketDisconnects = Interlocked.Read(ref _webSocketDisconnectCount)
+        webSocketDisconnects = Interlocked.Read(ref _webSocketDisconnectCount),
+        mapAiSlowTicks = Interlocked.Read(ref _mapAiSlowTickCount),
+        mapPressureWarnings = Interlocked.Read(ref _mapPressureWarningCount),
+        broadcastBacklogWarnings = Interlocked.Read(ref _broadcastBacklogWarningCount),
+        tradeConflicts = Interlocked.Read(ref _tradeConflictCount),
+        pickupConflicts = Interlocked.Read(ref _pickupConflictCount),
+        databaseFailures = Interlocked.Read(ref _databaseFailureCount),
+        worldTickFailures = Interlocked.Read(ref _worldTickFailureCount)
     };
 }
