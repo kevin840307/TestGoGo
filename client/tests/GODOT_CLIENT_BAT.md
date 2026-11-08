@@ -86,3 +86,21 @@ C:\SGO\Recovered\test-results\godot-client-yyyymmdd-hhmmss-xxxx\
 ## 登入與焦點 FPS 規則（2026-11）
 
 登入畫面、角色選擇與首次世界載入都使用原本的前景 FPS 設定（例如 balanced 120 FPS），**即使失焦也不刻意降為 10／20 FPS**。只有角色進入遊戲世界、初始化已完成後，才在視窗失焦時停止非必要渲染並套用遊戲背景 FPS 設定；網路、計時器、自動打怪仍繼續運作。登入 UI 準備完成即顯示，影片解碼與連續影格不會阻擋登入。
+
+## 83～84% 首次進圖黑屏修復驗證
+
+更新 `feature/local-server-net8` 分支後，直接執行：
+
+```bat
+run_godot_client_tests.bat focus
+```
+
+此模式除了原本的前景／背景 FPS 測試，也會執行 `world_loading_render_regression.tscn`，驗證：
+
+- `GameManager` 建立完地圖時，**不會直接停止渲染**；等 `EntryManager` 的 WorldReady、進度條、載入遮罩淡出完成後才恢復背景省電。
+- 切換地圖時，等待 HUD 的地圖 Loading Overlay 真正隱藏後，才允許失焦 Client 關閉渲染迴圈。
+- 進圖完成後仍保留 1.2 秒畫面恢復緩衝，且每 0.25 秒檢查一次焦點／渲染政策，避免漏掉 Windows Focus-In 通知後必須手動切出切回。
+- Spawn Queue 等待有 12 秒上限；若一直有新實體進來，會顯示地圖、**保留佇列並繼續載入**，不會清空待生成的怪物／物品。
+
+上述測試是 Godot 專案內的 **狀態與邊界回歸測試**；實際 83～84% 的黑屏仍須用 Godot F5、選角進圖、Alt+Tab、切圖情境人工驗證。若重現，請提供新一輪的 `godot(...).log`，特別是 `[WORLD_PRESENTED]`、`[FOCUS_POWER_SAVE]`、`[INITIAL_SPAWN_GATE_TIMEOUT]` 及 `[FRAME_GAP]`。
+
