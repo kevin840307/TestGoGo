@@ -2753,16 +2753,28 @@ try
               Convert.ToInt32(researchedLeader["Attack"]) + 10,
         "completed club attack research contributes to effective combat stats");
 
-    var clubRankJson = JsonSerializer.Serialize(
-        rank.GetRankData(
-            account.Value,
-            secondCharacterId,
-            3));
+    using var clubRankDocument =
+        JsonDocument.Parse(
+            JsonSerializer.Serialize(
+                rank.GetRankData(
+                    account.Value,
+                    secondCharacterId,
+                    3)));
 
-    Check(clubRankJson.Contains(
-              $"\"DBID\":{clubId}") &&
-          clubRankJson.Contains(
-              "\"Name\":\"測試團\""),
+    var clubRankResponse =
+        clubRankDocument.RootElement
+            .EnumerateArray()
+            .Single();
+
+    var clubRankEntry =
+        clubRankResponse
+            .GetProperty("Ranks")
+            .EnumerateArray()
+            .Single(x =>
+                x.GetProperty("DBID").GetInt32() == clubId);
+
+    Check(
+        clubRankEntry.GetProperty("Name").GetString() == "測試團",
         "club ranking exposes ClubID while using leader ownership internally");
 
     var clubLeaderSession = new ClientSession
