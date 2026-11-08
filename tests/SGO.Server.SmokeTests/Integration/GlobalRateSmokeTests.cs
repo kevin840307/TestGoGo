@@ -50,6 +50,32 @@ internal static class GlobalRateSmokeTests
             clamped.ExpiresAt - clamped.StartsAt == TimeSpan.FromDays(7),
             "global rate input is bounded for safe administration");
 
+        var persistedPath = Path.Combine(
+            Path.GetTempPath(),
+            "sgo-global-rate-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var persistent = new GlobalRateService(persistedPath);
+            var persisted = persistent.Set(
+                2.5,
+                2.0,
+                1.5,
+                DateTimeOffset.UtcNow.AddMinutes(5),
+                TimeSpan.FromMinutes(45));
+
+            var reloaded = new GlobalRateService(persistedPath).Snapshot();
+            Check(
+                reloaded == persisted,
+                "global rate schedule survives service restart");
+        }
+        finally
+        {
+            if (File.Exists(persistedPath))
+                File.Delete(persistedPath);
+            if (File.Exists(persistedPath + ".tmp"))
+                File.Delete(persistedPath + ".tmp");
+        }
+
         service.Cancel();
         var cancelled = service.Snapshot();
         Check(
