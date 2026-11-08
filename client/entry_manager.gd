@@ -51,12 +51,27 @@ func _set_loading_progress(value: float, session_id: int = -1) -> void :
 		else:
 			bar.set_target_progress(_loading_progress_value)
 
-func _ready() -> void :
+func _set_startup_loading_status(status: String) -> void:
+	var overlay = get_node_or_null("%LoadingOverlay")
+	if not overlay:
+		return
+	var label := overlay.get_node_or_null("StatusLabel") as Label
+	if label:
+		label.text = status
 
+
+func _ready() -> void :
 	if login_screen: login_screen.visible = false
 	if character_select_layer: character_select_layer.visible = false
 	if error_dialog: error_dialog.visible = false
-	_set_loading_progress(0.0)
+	# Display the loading overlay before any expensive startup work.
+	# This is also visible directly in entry_manager.tscn, so startup is
+	# never an unlabelled black rectangle while _ready() is executing.
+	var overlay := get_node_or_null("%LoadingOverlay")
+	if overlay:
+		overlay.visible = true
+	_set_loading_progress(1.0)
+	_set_startup_loading_status("正在準備遊戲資源…")
 
 	if confirm_button: confirm_button.pressed.connect(_on_error_confirm_pressed)
 
@@ -65,18 +80,10 @@ func _ready() -> void :
 	if NetworkManager.has_signal("create_character_response_received"): NetworkManager.create_character_response_received.connect(_on_server_create_character_response)
 	if NetworkManager.has_signal("enter_world_success"): NetworkManager.enter_world_success.connect(_on_server_enter_world_success)
 
-	if ItemLoader: ItemLoader.preload_all_item_data()
-	_set_loading_progress(10.0)
-	if SkillLoader: SkillLoader.preload_all_skill_data()
-	_set_loading_progress(20.0)
-	if PetLoader: PetLoader.preload_all_pet_data()
-	_set_loading_progress(30.0)
-
 	_connect_character_select_signals()
 
-	# Keep the login form hidden until all heavy startup prewarm work is done.
-	# This intentionally pays the cost behind the initial black/loading screen so
-	# typing account/password is never competing with large UI/tree builds.
+	# Do not start heavy resource indexing until the first loading frame has
+	# actually had a chance to render. Startup must not look like a hang.
 	call_deferred("_bootstrap_before_login")
 
 const GAME_HUD_INSTANCE_PREWARM: Dictionary = {
@@ -124,6 +131,7 @@ func _prewarm_game_hud_resources() -> void :
 		var completed_resources: int = total_resources - pending.size()
 		if total_resources > 0:
 			_set_loading_progress(30.0 + (float(completed_resources) / float(total_resources)) * 25.0)
+			_set_startup_loading_status("載入遊戲視窗資源 %d/%d…" % [completed_resources, total_resources])
 		await get_tree().process_frame
 
 	_set_loading_progress(55.0)
@@ -156,10 +164,15 @@ func _prewarm_game_hud_resources() -> void :
 		# player-specific availability and dismantle ownership.
 		if kind == "craft" and window.has_method("prepare_static_async"):
 			_set_loading_progress(60.0)
-			await window.prepare_static_async()
+			_set_startup_loading_status("預先建立合成配方…")
+			var craft_progress_callback: Callable = func(ratio: float) -> void:
+				_set_loading_progress(60.0 + clampf(ratio, 0.0, 1.0) * 25.0)
+				_set_startup_loading_status("預先建立合成配方 %d%%…" % int(clampf(ratio, 0.0, 1.0) * 100.0))
+			await window.prepare_static_async(craft_progress_callback)
 			_set_loading_progress(85.0)
 		elif kind == "game_info":
 			_set_loading_progress(92.0)
+			_set_startup_loading_status("準備角色資訊視窗…")
 
 		var elapsed_ms: float = float(Time.get_ticks_usec() - started_usec) / 1000.0
 		if OS.is_debug_build():
@@ -174,8 +187,28 @@ func _bootstrap_before_login() -> void :
 		login_screen.visible = false
 	if character_select_layer:
 		character_select_layer.visible = false
+
+	# The first process_frame is emitted before frame rendering. Waiting two
+	# frames guarantees the initial loading surface can be drawn before
+	# heavy item/skill indexing and the 1453-row craft tree construction.
 	await get_tree().process_frame
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+
+	_set_startup_loading_status("索引物品資料…")
+	if ItemLoader: ItemLoader.preload_all_item_data()
+	_set_loading_progress(10.0)
+	_set_startup_loading_status("索引技能資料…")
+	if SkillLoader: SkillLoader.preload_all_skill_data()
+	_set_loading_progress(20.0)
+	_set_startup_loading_status("索引寵物資料…")
+	if PetLoader: PetLoader.preload_all_pet_data()
+	_set_loading_progress(30.0)
+
+	_set_startup_loading_status("準備遊戲視窗…")
 	await _prewarm_game_hud_resources()
+	_set_startup_loading_status("登入畫面準備完成")
 	_set_loading_progress(100.0)
 	await get_tree().process_frame
 	_start_game_entry_flow()
