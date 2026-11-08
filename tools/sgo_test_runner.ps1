@@ -2,11 +2,43 @@
 # PowerShell 5.1+; designed to stop on any failed build/smoke/probe.
 [CmdletBinding()]
 param(
-    [ValidateSet('BuildOnly','Full','Aoi','Wire100','WireAll')]
-    [string]$Mode = 'Full'
+    [ValidateSet('Menu','BuildOnly','Full','Aoi','Wire100','WireAll')]
+    [string]$Mode = 'Menu'
 )
 
 $ErrorActionPreference = 'Stop'
+
+# The BAT is intentionally a tiny launcher. Keeping the menu here avoids
+# races when another contributor edits the repository's .bat entry point.
+if ($Mode -eq 'Menu') {
+    Write-Host ''
+    Write-Host '================================================================'
+    Write-Host 'SGO - Pull / Release Build / Smoke Tests / AOI Load'
+    Write-Host '================================================================'
+    Write-Host '[1] Pull + Build + FULL Smoke + Python regression tests'
+    Write-Host '[2] Option 1 + moving AOI test (100,250,500,1000)'
+    Write-Host '[3] Option 2 + isolated REAL WebSocket 100-player load'
+    Write-Host '[4] Option 2 + isolated REAL WebSocket 100/250/500/1000'
+    Write-Host '[5] Pull + Release Build only'
+    Write-Host '[Q] Exit without changes'
+    Write-Host ''
+    Write-Host 'Safety: no force-pull, no reset, no existing game.db.'
+    Write-Host 'Outputs: test-results/<timestamp>/'
+    Write-Host ''
+    $selection = (Read-Host 'Choose [1-5,Q]').Trim().ToUpperInvariant()
+    switch ($selection) {
+        '1' { $Mode = 'Full' }
+        '2' { $Mode = 'Aoi' }
+        '3' { $Mode = 'Wire100' }
+        '4' { $Mode = 'WireAll' }
+        '5' { $Mode = 'BuildOnly' }
+        default {
+            Write-Host 'Canceled. No repository update or test started.'
+            exit 0
+        }
+    }
+}
+
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $branch = 'feature/local-server-net8'
 $reportsRoot = Join-Path $repoRoot 'test-results'
