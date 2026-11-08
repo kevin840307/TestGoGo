@@ -97,6 +97,8 @@ public sealed class WorldEntitySpatialAoi
                 return [];
             }
 
+            var transitionChanges = new List<Change>();
+
             if (_observers.TryGetValue(
                     player.ConnectionId,
                     out var entry) &&
@@ -104,6 +106,20 @@ public sealed class WorldEntitySpatialAoi
                  entry.Player.CharacterId != player.CharacterId ||
                  entry.Player.AccountId != player.AccountId))
             {
+                foreach (var entityId in entry.Visible)
+                {
+                    if (_entities.TryGetValue(
+                            entityId,
+                            out var oldEntity))
+                    {
+                        transitionChanges.Add(
+                            new Change(
+                                player.ConnectionId,
+                                oldEntity.Entity,
+                                Appeared: false));
+                    }
+                }
+
                 RemoveObserverLocked(
                     player.ConnectionId);
                 entry = null;
@@ -111,7 +127,7 @@ public sealed class WorldEntitySpatialAoi
 
             if (entry is not null &&
                 SamePosition(entry.Player, player))
-                return [];
+                return transitionChanges;
 
             if (entry is null)
             {
@@ -148,7 +164,7 @@ public sealed class WorldEntitySpatialAoi
                 candidates.Add(entityId);
             }
 
-            var changes = new List<Change>();
+            var changes = transitionChanges;
             foreach (var entityId in candidates)
             {
                 if (!_entities.TryGetValue(
