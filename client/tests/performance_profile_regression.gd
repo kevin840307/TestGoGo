@@ -61,7 +61,7 @@ func _ready() -> void:
 	assert(not bool(low["combat_effects_enabled"]))
 	assert(bool(response["combat_effects_enabled"]))
 	assert(ClientPerformanceProfile.load_mode_name(
-		ClientPerformanceProfile.LOAD_MULTIBOX) == "low_resource")
+		ClientPerformanceProfile.LOAD_MULTIBOX) == "low")
 	assert(ClientPerformanceProfile.combat_mode_name(
 		ClientPerformanceProfile.COMBAT_MASS) == "response")
 	assert(ClientPerformanceProfile.combat_mode_name(
