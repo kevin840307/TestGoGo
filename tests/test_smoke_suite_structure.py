@@ -59,6 +59,18 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("ConcurrencySmokeTests.Run(", main)
         self.assertIn('case "concurrency":', main)
 
+    def test_booster_suite_uses_explicit_router_context(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = SMOKE / "Integration" / "BoosterSmokeTests.cs"
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("class BoosterSmokeTests", source)
+        self.assertIn("PacketRouter router", source)
+        self.assertIn("CurrentClientDataCatalog current", source)
+        self.assertIn("BoosterSmokeTests.Run(", main)
+        self.assertIn("ItemEffect_14", source)
+        self.assertIn("expired booster rows", source)
+
     def test_prelogin_route_suite_has_explicit_context(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = SMOKE / "Protocol" / "PreloginPacketSmokeTests.cs"
