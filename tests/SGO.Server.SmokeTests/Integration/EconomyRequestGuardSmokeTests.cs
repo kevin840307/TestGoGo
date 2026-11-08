@@ -64,6 +64,7 @@ internal static class EconomyRequestGuardSmokeTests
             (Count: 0, UnitPrice: 25),
             (Count: -1, UnitPrice: 25),
             (Count: 1, UnitPrice: -25),
+            (Count: 10000, UnitPrice: 1),
             (Count: int.MinValue, UnitPrice: int.MinValue)
         })
         {
@@ -82,11 +83,27 @@ internal static class EconomyRequestGuardSmokeTests
         var huge = store.BuyAsset(
             accountId.Value, characterId,
             AssetPurchaseKind.General,
-            itemIndex, int.MaxValue, int.MaxValue);
+            itemIndex, 9999, int.MaxValue);
         Check(!huge.Success &&
               Money() == 100 &&
               InventoryCount() == 0,
             "oversized quantity/price cannot overflow purchase or mint items");
+
+        var hugeCount = store.BuyAsset(
+            accountId.Value, characterId,
+            AssetPurchaseKind.General,
+            itemIndex, int.MaxValue, int.MaxValue);
+        var multipleEquipment = store.BuyAsset(
+            accountId.Value, characterId,
+            AssetPurchaseKind.Equipment,
+            itemIndex, 2, 25);
+        Check(!hugeCount.Success && !multipleEquipment.Success &&
+              Money() == 100 &&
+              InventoryCount() == 0 &&
+              store.GetCharacterAssets(accountId.Value, characterId)
+                  .Equips.All(x =>
+                      Convert.ToInt32(x["ItemIdx"]) != itemIndex),
+            "quantity cap rejects giant stack and non-stackable two-item purchase");
 
         var bought = store.BuyAsset(
             accountId.Value, characterId,
