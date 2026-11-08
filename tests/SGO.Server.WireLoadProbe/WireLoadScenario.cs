@@ -84,6 +84,26 @@ internal sealed record WirePhaseResult(
             LatencySummary.From([]));
 }
 
+internal sealed record WireCombatRaceResult(
+    int TargetEntityId,
+    int AttackWaves,
+    long ExpectedDeathDeliveries,
+    long ActualDeathDeliveries,
+    long SentBytes,
+    long ReceivedBytes,
+    double ElapsedMs)
+{
+    public static WireCombatRaceResult Empty()
+        => new(
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0);
+}
+
 internal sealed record WireLoadScenarioResult(
     int Players,
     bool Success,
@@ -93,6 +113,7 @@ internal sealed record WireLoadScenarioResult(
     LatencySummary SetupLatencyMs,
     WirePhaseResult Movement,
     WirePhaseResult NearbyChat,
+    WireCombatRaceResult CombatRace,
     string[] Errors);
 
 internal static class WireLoadScenario
@@ -218,16 +239,27 @@ internal static class WireLoadScenario
                     rounds,
                     timeout);
 
+            await Task.Delay(250);
+            foreach (var client in active)
+                client.ClearInbox();
+
+            var combat =
+                await MeasureCombatRaceAsync(
+                    active,
+                    timeout);
+
             var success =
                 movement.ActualDeliveries ==
                     movement.ExpectedDeliveries &&
                 chat.ActualDeliveries ==
-                    chat.ExpectedDeliveries;
+                    chat.ExpectedDeliveries &&
+                combat.ActualDeathDeliveries ==
+                    combat.ExpectedDeathDeliveries;
 
             if (!success)
             {
                 errors.Add(
-                    "wire fanout conservation mismatch");
+                    "wire multiplayer conservation mismatch");
             }
 
             return new WireLoadScenarioResult(
@@ -240,6 +272,7 @@ internal static class WireLoadScenario
                     setupLatencies),
                 movement,
                 chat,
+                combat,
                 errors.ToArray());
         }
         finally
@@ -439,6 +472,106 @@ internal static class WireLoadScenario
         }
     }
 
+    private static async Task<WireCombatRaceResult> MeasureCombatRaceAsync(
+        WireLoadClient[] clients,
+        TimeSpan timeout)
+    {
+        // Test seed only: normal AttackEntity remains the path under race.
+        await Task.WhenAll(
+            clients.Select(
+                x => x.PrepareCombatAsync(
+                    timeout)));
+
+        await Task.Delay(150);
+        foreach (var client in clients)
+            client.ClearInbox();
+
+        var anchor =
+            clients[0];
+        var targetEntityId =
+            await anchor.SpawnMonsterAsync(
+                245,
+                anchor.X + 20,
+                anchor.Y,
+                timeout);
+
+        await Task.Delay(150);
+        foreach (var client in clients)
+            client.ClearInbox();
+
+        foreach (var client in clients)
+            client.StartMeasurement(
+                targetEntityId);
+
+        var started =
+            Stopwatch.GetTimestamp();
+        var waves = 0;
+        var expectedDeaths =
+            (long)clients.Length;
+
+        try
+        {
+            while (clients.Sum(
+                       x => x.CombatDeaths) <
+                   expectedDeaths &&
+                   waves < 20)
+            {
+                waves++;
+
+                await Task.WhenAll(
+                    clients.Select(
+                        x => x.SendAttackAsync(
+                            targetEntityId,
+                            timeout)));
+
+                await Task.Delay(25);
+            }
+
+            await WaitUntilAsync(
+                () => clients.Sum(
+                    x => x.CombatDeaths),
+                expectedDeaths,
+                timeout,
+                "EntityDeath");
+
+            // Give any duplicate death packet enough time to surface.
+            await Task.Delay(100);
+
+            var actualDeaths =
+                clients.Sum(
+                    x => x.CombatDeaths);
+            var elapsed =
+                Stopwatch.GetElapsedTime(
+                    started);
+            var sentBytes =
+                clients.Sum(
+                    x => x.SentBytes);
+            var receivedBytes =
+                clients.Sum(
+                    x => x.ReceivedBytes);
+
+            if (actualDeaths != expectedDeaths)
+            {
+                throw new InvalidOperationException(
+                    $"combat death conservation failed expected={expectedDeaths} actual={actualDeaths}");
+            }
+
+            return new WireCombatRaceResult(
+                targetEntityId,
+                waves,
+                expectedDeaths,
+                actualDeaths,
+                sentBytes,
+                receivedBytes,
+                elapsed.TotalMilliseconds);
+        }
+        finally
+        {
+            foreach (var client in clients)
+                client.StopMeasurement();
+        }
+    }
+
     private static WirePhaseResult BuildPhase(
         string name,
         int rounds,
@@ -511,5 +644,6 @@ internal static class WireLoadScenario
                 "SyncPosition->MoveEntity"),
             WirePhaseResult.Empty(
                 "ChatMessage->ChatBroadcast"),
+            WireCombatRaceResult.Empty(),
             errors.ToArray());
 }

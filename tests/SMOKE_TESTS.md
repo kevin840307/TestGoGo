@@ -87,7 +87,8 @@ tests/SGO.Server.SmokeTests/
 
 - `SyncPosition`：每一個 sender 每輪必須讓其餘 `N-1` 個 client 各收到一次 `MoveEntity`，不允許漏包或重複 fanout。
 - Nearby `ChatMessage`：每一個 sender 每輪預期全圖 `N` 個 client（含 sender response）各收到一次 `ChatBroadcast`。
-- 報告 setup 成功/失敗、每輪 fanout completion P50/P95/P99、deliveries/sec、實際 sent/received bytes 與 received bytes/sec。
+- 同怪 combat race：測試 seed 將所有角色提升能力並生成 Enemy 245，之後 10/50/100 個 client 只走正常 `AttackEntity`；同一怪死亡時全圖只允許 `N` 份 `EntityDeath` delivery（每 client 一份），多一份或少一份都 fail。
+- 報告 setup 成功/失敗、每輪 fanout completion P50/P95/P99、deliveries/sec、實際 sent/received bytes、received bytes/sec，以及 combat attack waves/death deliveries。
 - CI/local runner 使用 `--sizes 10,50,100 --rounds 2`；若任一 client setup 失敗或 delivery conservation 不一致即非 0 exit code。
 
 `test_wire_load_probe_structure.py` 守住真 ClientProtocol、10/50/100、fanout conservation 與 CI/local runner wiring。

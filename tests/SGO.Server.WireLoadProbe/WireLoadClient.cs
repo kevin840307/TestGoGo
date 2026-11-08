@@ -34,6 +34,8 @@ internal sealed class WireLoadClient : IAsyncDisposable
     private volatile bool _measure;
     private long _moveBroadcasts;
     private long _chatBroadcasts;
+    private long _combatDeaths;
+    private long _combatTargetEntityId;
     private long _sentBytes;
     private long _receivedBytes;
 
@@ -53,6 +55,9 @@ internal sealed class WireLoadClient : IAsyncDisposable
 
     public long ChatBroadcasts =>
         Interlocked.Read(ref _chatBroadcasts);
+
+    public long CombatDeaths =>
+        Interlocked.Read(ref _combatDeaths);
 
     public long SentBytes =>
         Interlocked.Read(ref _sentBytes);
@@ -101,7 +106,8 @@ internal sealed class WireLoadClient : IAsyncDisposable
         }
     }
 
-    public void StartMeasurement()
+    public void StartMeasurement(
+        long combatTargetEntityId = 0)
     {
         Interlocked.Exchange(
             ref _moveBroadcasts,
@@ -109,6 +115,12 @@ internal sealed class WireLoadClient : IAsyncDisposable
         Interlocked.Exchange(
             ref _chatBroadcasts,
             0);
+        Interlocked.Exchange(
+            ref _combatDeaths,
+            0);
+        Interlocked.Exchange(
+            ref _combatTargetEntityId,
+            combatTargetEntityId);
         Interlocked.Exchange(
             ref _sentBytes,
             0);
@@ -119,7 +131,12 @@ internal sealed class WireLoadClient : IAsyncDisposable
     }
 
     public void StopMeasurement()
-        => _measure = false;
+    {
+        _measure = false;
+        Interlocked.Exchange(
+            ref _combatTargetEntityId,
+            0);
+    }
 
     public Task SendPositionAsync(
         TimeSpan timeout)
@@ -145,6 +162,74 @@ internal sealed class WireLoadClient : IAsyncDisposable
                 BubbleType = 0
             },
             timeout);
+
+    public Task SendAttackAsync(
+        int targetEntityId,
+        TimeSpan timeout)
+        => SendPacketAsync(
+            new
+            {
+                Type = "AttackEntity",
+                TargetEntityID = targetEntityId,
+                TargetType = 1
+            },
+            timeout);
+
+    public async Task PrepareCombatAsync(
+        TimeSpan timeout)
+    {
+        await SendGmForTypeAsync(
+            "level 255",
+            "PlayerStatusSync",
+            timeout);
+        await SendGmForTypeAsync(
+            "maxstats",
+            "AllocateStatResponse",
+            timeout);
+        await SendGmForTypeAsync(
+            "heal",
+            "PlayerStatusSync",
+            timeout);
+    }
+
+    public async Task<int> SpawnMonsterAsync(
+        int enemyId,
+        int x,
+        int y,
+        TimeSpan timeout)
+    {
+        await SendPacketAsync(
+            new
+            {
+                Type = "ChatMessage",
+                Channel = 0,
+                Message =
+                    $"/gm spawn {enemyId} {x} {y}",
+                BubbleType = 0
+            },
+            timeout);
+
+        var packet = await WaitForPacketAsync(
+            "SpawnEntity",
+            root =>
+                root.TryGetProperty(
+                    "EntityType",
+                    out var entityType) &&
+                entityType.GetInt32() == 1 &&
+                root.TryGetProperty(
+                    "ExtraData",
+                    out var extra) &&
+                extra.TryGetProperty(
+                    "EnemyID",
+                    out var foundEnemyId) &&
+                foundEnemyId.GetInt32() ==
+                    enemyId,
+            timeout);
+
+        return packet.GetProperty(
+                "EntityID")
+            .GetInt32();
+    }
 
     private async Task SetupAsync(
         string runId,
@@ -334,6 +419,38 @@ internal sealed class WireLoadClient : IAsyncDisposable
             request,
             timeout);
 
+        return await WaitForPacketAsync(
+            responseType,
+            _ => true,
+            timeout);
+    }
+
+    private async Task<JsonElement> SendGmForTypeAsync(
+        string command,
+        string responseType,
+        TimeSpan timeout)
+    {
+        await SendPacketAsync(
+            new
+            {
+                Type = "ChatMessage",
+                Channel = 0,
+                Message = "/gm " + command,
+                BubbleType = 0
+            },
+            timeout);
+
+        return await WaitForPacketAsync(
+            responseType,
+            _ => true,
+            timeout);
+    }
+
+    private async Task<JsonElement> WaitForPacketAsync(
+        string responseType,
+        Func<JsonElement, bool> predicate,
+        TimeSpan timeout)
+    {
         using var deadline =
             new CancellationTokenSource(timeout);
 
@@ -343,14 +460,17 @@ internal sealed class WireLoadClient : IAsyncDisposable
                 await ReadInboxAsync(
                     deadline.Token);
 
-            if (packet.TryGetProperty(
+            if (!packet.TryGetProperty(
                     "Type",
-                    out var typeElement) &&
-                typeElement.GetString() ==
+                    out var typeElement) ||
+                typeElement.GetString() !=
                     responseType)
             {
-                return packet;
+                continue;
             }
+
+            if (predicate(packet))
+                return packet;
         }
     }
 
@@ -499,6 +619,34 @@ internal sealed class WireLoadClient : IAsyncDisposable
                 {
                     Interlocked.Increment(
                         ref _chatBroadcasts);
+                    continue;
+                }
+
+                var combatTarget =
+                    Interlocked.Read(
+                        ref _combatTargetEntityId);
+
+                if (_measure &&
+                    combatTarget > 0 &&
+                    type == "EntityDeath" &&
+                    packet.TryGetProperty(
+                        "EntityID",
+                        out var deathEntity) &&
+                    deathEntity.GetInt64() ==
+                        combatTarget)
+                {
+                    Interlocked.Increment(
+                        ref _combatDeaths);
+                    continue;
+                }
+
+                if (_measure &&
+                    combatTarget > 0 &&
+                    type is
+                        "EntityDamage" or
+                        "MonsterTarget" or
+                        "SyncState")
+                {
                     continue;
                 }
 
