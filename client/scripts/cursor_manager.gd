@@ -13,7 +13,6 @@ signal ctrl_state_changed(is_pressed: bool)
 @onready var cursor_sprite: AnimatedSprite2D = $CursorSprite
 
 var tooltip_label: RichTextLabel = null
-var _autorun_status_label: Label = null
 var _original_cursor_scale: Vector2 = Vector2.ONE
 var _original_cursor_texture_filter: int = CanvasItem.TEXTURE_FILTER_PARENT_NODE
 var current_hovered_entity: Node = null
@@ -36,33 +35,6 @@ func _ready() -> void :
 	_original_cursor_scale = cursor_sprite.scale
 	_original_cursor_texture_filter = cursor_sprite.texture_filter
 	cursor_sprite.play("normal")
-
-	# A 40x40 animated arrow alone is easy to miss in a busy scene. This
-	# persistent state label is purposefully separate from the sprite,
-	# ignores mouse events, and appears ONLY for ordinary terrain pointers.
-	_autorun_status_label = Label.new()
-	_autorun_status_label.text = "🔒 自動走路 ON\n   右鍵停止"
-	_autorun_status_label.visible = false
-	_autorun_status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_autorun_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_autorun_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_autorun_status_label.add_theme_font_size_override("font_size", 16)
-	_autorun_status_label.add_theme_color_override(
-		"font_shadow_color", Color(0, 0, 0, 0.85)
-	)
-	_autorun_status_label.add_theme_constant_override("shadow_offset_x", 1)
-	_autorun_status_label.add_theme_constant_override("shadow_offset_y", 1)
-	_autorun_status_label.add_theme_color_override(
-		"font_color", Color(1.0, 1.0, 0.87, 1.0)
-	)
-	var autorun_bg := StyleBoxFlat.new()
-	autorun_bg.bg_color = Color(0.035, 0.095, 0.14, 0.97)
-	autorun_bg.border_color = Color(1.0, 0.85, 0.26, 1.0)
-	autorun_bg.set_border_width_all(2)
-	autorun_bg.set_corner_radius_all(6)
-	autorun_bg.set_content_margin_all(5.0)
-	_autorun_status_label.add_theme_stylebox_override("normal", autorun_bg)
-	add_child(_autorun_status_label)
 
 	tooltip_label = RichTextLabel.new()
 	tooltip_label.bbcode_enabled = true
@@ -89,16 +61,6 @@ func _process(_delta: float) -> void :
 		# inside that viewport so it stays above the dropdown instead of being
 		# covered by the popup surface.
 		_popup_cursor_sprite.position = _popup_cursor_window.get_mouse_position()
-	if is_instance_valid(_autorun_status_label) and _autorun_status_label.visible:
-		# A large pointer remains distinct even when idle. Keep the badge
-		# inside the viewport when the mouse approaches the bottom/right.
-		var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-		var badge_size: Vector2 = _autorun_status_label.get_combined_minimum_size()
-		var badge_pos: Vector2 = m_pos + Vector2(44.0, 24.0)
-		badge_pos.x = clampf(badge_pos.x, 0.0, maxf(0.0, viewport_size.x - badge_size.x - 8.0))
-		badge_pos.y = clampf(badge_pos.y, 0.0, maxf(0.0, viewport_size.y - badge_size.y - 8.0))
-		_autorun_status_label.global_position = badge_pos
-
 	if current_hovered_entity != null and not is_instance_valid(current_hovered_entity):
 		_refresh_cursor()
 
@@ -238,8 +200,6 @@ func show_popup_game_cursor(popup_window: Window) -> void:
 		cursor_sprite.visible = false
 	if is_instance_valid(tooltip_label):
 		tooltip_label.visible = false
-	if is_instance_valid(_autorun_status_label):
-		_autorun_status_label.visible = false
 
 	if is_instance_valid(_popup_cursor_layer):
 		_popup_cursor_layer.queue_free()
@@ -336,10 +296,6 @@ func _apply_cursor_visual() -> void :
 	else:
 		cursor_sprite.scale = _original_cursor_scale
 		cursor_sprite.texture_filter = _original_cursor_texture_filter
-	if is_instance_valid(_autorun_status_label):
-		_autorun_status_label.visible = (
-			visual_state == "autorun" and not is_native_popup_cursor_active()
-		)
 
 func show_skill_target_tooltip(target_name: String, skill_name: String) -> void :
 	if not tooltip_label: return
