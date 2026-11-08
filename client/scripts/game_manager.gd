@@ -49,6 +49,7 @@ var _afk_saved_profile: Dictionary = {}
 var _afk_visual_stats: Dictionary = {}
 var _afk_master_was_muted_before: bool = false
 var _afk_memory_baseline: Dictionary = {}
+var _afk_forced_draw_count: int = 0
 
 
 func _afk_memory_sample() -> Dictionary:
@@ -608,11 +609,12 @@ func afk_visual_stats() -> Dictionary:
 func _log_afk_state(event_name: String, released: int = 0, missing: int = 0) -> void:
 	if not OS.is_debug_build():
 		return
-	print("[AFK_MODE] event=%s active=%s restoring=%s map_textures_released=%d missing=%d tracked=%d memory_mb=%.1f video_mem_mb=%.1f nodes=%d fps_cap=%d physics_hz=%d connected=%s" % [
+	print("[AFK_MODE] event=%s active=%s restoring=%s map_textures_released=%d missing=%d tracked=%d memory_mb=%.1f video_mem_mb=%.1f nodes=%d fps_cap=%d render_loop=%s forced_draws=%d physics_hz=%d connected=%s" % [
 		event_name, str(_afk_active), str(_afk_restoring), released, missing,
 		_afk_map_cache.suspended_count(), _get_process_memory_mb(),
 		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
 		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), Engine.max_fps,
+		str(RenderingServer.render_loop_enabled), _afk_forced_draw_count,
 		Engine.physics_ticks_per_second,
 		str(NetworkManager.is_connected_to_server) if NetworkManager else "false"
 	])
@@ -659,6 +661,7 @@ func begin_afk_mode() -> bool:
 		"monsters": current_simplify_monsters_mode,
 	}
 	_afk_memory_baseline = _afk_memory_sample()
+	_afk_forced_draw_count = 0
 	_afk_active = true
 	_afk_started_msec = Time.get_ticks_msec()
 	_log_afk_memory("enter_before")
@@ -859,9 +862,19 @@ static func should_throttle_background_visuals(has_focus: bool, world_active: bo
 
 
 static func should_draw_afk_dashboard(has_focus: bool) -> bool:
-	# AFK mode preserves network and physics, NOT background GPU rendering.
-	# The dashboard is only painted while the app is focused.
+	# AFK never runs a continuous render loop. This only decides whether the
+	# focused dashboard may request an occasional manual frame.
 	return has_focus
+
+
+func request_afk_dashboard_frame() -> bool:
+	# One event-driven frame is substantially cheaper than keeping a 20 FPS
+	# render loop alive. SceneTree/network/fixed physics continue independently.
+	if not _afk_active or not _window_has_focus:
+		return false
+	RenderingServer.force_draw(true)
+	_afk_forced_draw_count += 1
+	return true
 
 
 static func fps_cap_for_focus(profile: Dictionary, has_focus: bool, world_active: bool) -> int:
@@ -921,13 +934,11 @@ func _reconcile_world_render_policy(delta: float) -> void:
 		_set_window_focus_power_save(observed_focus)
 		if OS.is_debug_build():
 			_log_focus_power_save("focus_poll_reconciled")
-	# In AFK mode, the background dashboard must NEVER bypass the
-	# normal no-focus/no-render policy. World simulation still runs.
+	# AFK uses event-driven dashboard frames only. Its continuous render loop
+	# is always disabled, focused or not; simulation/network still run.
 	var should_pause: bool = should_throttle_background_visuals(
 		_window_has_focus, _has_active_world_visuals())
-	if _afk_active:
-		should_pause = not should_draw_afk_dashboard(_window_has_focus)
-	var desired_rendering: bool = not should_pause
+	var desired_rendering: bool = false if _afk_active else not should_pause
 	var desired_fps: int = AFK_MONITOR_FPS if _afk_active else fps_cap_for_focus(
 		current_performance_profile, _window_has_focus, _has_active_world_visuals())
 	if RenderingServer.render_loop_enabled != desired_rendering or Engine.max_fps != desired_fps:
@@ -942,12 +953,11 @@ func _reconcile_world_render_policy(delta: float) -> void:
 
 func _refresh_focus_render_policy() -> void:
 	if _afk_active:
-		# Only draw the status dashboard while focused. On Alt+Tab the
-		# RenderingServer fully stops issuing visual frames, but the SceneTree,
-		# fixed physics, socket processing, combat and pickups continue.
-		# Do not set Engine.max_fps below the active simulation tick budget.
+		# Never keep the GPU render loop alive in AFK. A focused dashboard asks
+		# for one explicit frame after its 1-second status refresh; focus-out
+		# requests no frames at all. Physics/socket/combat/pickups keep running.
 		Engine.max_fps = AFK_MONITOR_FPS
-		RenderingServer.render_loop_enabled = should_draw_afk_dashboard(_window_has_focus)
+		RenderingServer.render_loop_enabled = false
 		_set_background_visual_processing(not _window_has_focus)
 		return
 	var world_background: bool = should_throttle_background_visuals(
