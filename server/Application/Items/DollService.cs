@@ -70,11 +70,11 @@ public sealed class DollService
 
         if (availableRewards.Length == 0)
         {
-            var sourceName =
+            var emptyPoolSourceName =
                 _current.FindItem(dollItemIndex)?.Name ??
                 $"道具 {dollItemIndex}";
             return [Flash(
-                $"{sourceName}獎池目前沒有可安全發放的物品")];
+                $"{emptyPoolSourceName}獎池目前沒有可安全發放的物品")];
         }
 
         var selected = availableRewards[
