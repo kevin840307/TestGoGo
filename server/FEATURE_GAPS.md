@@ -51,7 +51,7 @@
 | --- | --- | --- | --- | --- |
 | P2-01 | BLOCKED_EXTERNAL | **PayPal 付款**需要 provider credentials/API/Webhook endpoint | `CreatePayPalDonation` 明確失敗，不建立假的訂單或點數 | 真 provider sandbox：簽章、Webhook 冪等、退款/重送、可稽核入帳 |
 | P2-02 | BLOCKED_EXTERNAL | **舊服點數查詢/提領**需要真實 legacy account/point source | Query/Withdraw 明確失敗，不模擬舊服餘額 | 真來源身分驗證 + 原子單次轉移 + 重試不重複入帳 |
-| P2-03 | TECH_DEBT | **50/100 人性能容量**。正確性已有 10 人 race/shared-AI/economy coverage，SQLite 也已啟用 WAL + 5s busy timeout；仍需實際壓測 AOI fanout、AI tick wall-time、SQLite write latency/lock、封包 bytes/sec | Shared AI 已由每 socket tick 改成每 map 單一 250ms scheduler；client hot-path/headless perf regressions已建立 | 10/50/100 人報告含 tick P50/P95/P99、DB latency、bytes/sec、CPU/RAM，依瓶頸再優化 |
+| P2-03 | TECH_DEBT | **50/100 人性能容量**。正確性已有 10 人 race/shared-AI/economy coverage，SQLite 也已啟用 WAL + 5s busy timeout；LoadProbe 已分開量測 10/50/100 人 fanout、同 row worst-case contention、distinct-player SQLite 寫入 P50/P95/P99 與 final-state consistency。仍需有 runner 的實際報告，以及真 WebSocket/戰鬥負載下的 AI tick、CPU/RAM、bytes/sec | Shared AI 已由每 socket tick 改成每 map 單一 250ms scheduler；client hot-path/headless perf regressions已建立 | 10/50/100 人報告含 tick P50/P95/P99、DB latency、bytes/sec、CPU/RAM，依瓶頸再優化 |
 | P2-04 | TECH_DEBT | **其他 DB Provider**。Domain/Application 已經透過 store interfaces 隔離，但目前 production persistence 只有 SQLite | 不宣稱 PostgreSQL/其他 DB 已支援 | 真有替換需求時新增 provider，跑同一組交易/掉物/資產/重連 contract tests |
 
 ## 已完成的測試結構
