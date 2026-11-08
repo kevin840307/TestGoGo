@@ -162,6 +162,28 @@ class AdvancedMapEditorRepositoryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "尾端多餘 bytes"):
             self.repo.get_npc_spawns(13)
 
+    def test_spawn_revision_changes_when_binary_data_changes(self) -> None:
+        self._write_blocking(bytes(16))
+        enemy_path = self.paths.maps / "Map13" / "Enemy.dat"
+        enemy_path.write_bytes(struct.pack("<i", 0))
+        first = self.repo.spawn_revision(13, "enemies")
+        self.assertEqual(len(first), 64)
+
+        enemy_payload = (
+            struct.pack("<i", 1)
+            + struct.pack("<i", 0)
+            + b"1\x00"
+            + struct.pack("<ii", 24, 24)
+            + bytes(MapRepository.ENEMY_TAIL_SIZE)
+        )
+        enemy_path.write_bytes(enemy_payload)
+        second = self.repo.spawn_revision(13, "enemies")
+        self.assertEqual(len(second), 64)
+        self.assertNotEqual(first, second)
+
+        with self.assertRaises(ValueError):
+            self.repo.spawn_revision(13, "invalid")
+
     def test_batch_limit_blocks_accidental_huge_editor_request(self) -> None:
         self._write_blocking(bytes(16))
         with self.assertRaises(ValueError):
