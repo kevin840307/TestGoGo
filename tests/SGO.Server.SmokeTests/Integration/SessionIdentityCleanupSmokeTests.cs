@@ -28,6 +28,7 @@ internal static class SessionIdentityCleanupSmokeTests
         ServerBroadcastHub broadcasts,
         PlayerShopService playerShop)
     {
+        VerifyIdentityFixtureUsernames();
         var first = CreatePlayer(store, "identity_a");
         var second = CreatePlayer(store, "identity_b");
 
@@ -323,6 +324,22 @@ internal static class SessionIdentityCleanupSmokeTests
                    Convert.ToInt32(x["InShop"]) != 0);
     }
 
+    // The DB accepts 3..40 characters. A full 32-character GUID after
+    // "identity_identity_a_" exceeded this and caused registration to fail
+    // before the session cleanup scenario was ever exercised.
+    private static string FixtureUsername(string suffix, string unique)
+        => $"id_{suffix}_{unique}";
+
+    private static void VerifyIdentityFixtureUsernames()
+    {
+        var first = FixtureUsername("identity_a", "00000000");
+        var second = FixtureUsername("identity_b", "00000000");
+        Check(
+            new[] { first, second }.All(x => x.Length is >= 3 and <= 40) &&
+            !string.Equals(first, second, StringComparison.OrdinalIgnoreCase),
+            "identity-cleanup account fixtures meet server 40-character limit and remain unique");
+    }
+
     private static Player CreatePlayer(
         SqliteGameStore store,
         string suffix)
@@ -330,8 +347,9 @@ internal static class SessionIdentityCleanupSmokeTests
         var unique =
             Guid.NewGuid()
                 .ToString("N")[..8];
-        var username =
-            $"id_{suffix}_{unique}";
+        var username = FixtureUsername(suffix, unique);
+        Check(username.Length is >= 3 and <= 40,
+            $"identity-cleanup fixture account length is valid (suffix={suffix}, length={username.Length})");
         var password = "test-password";
 
         var registered = store.Register(
@@ -371,7 +389,7 @@ internal static class SessionIdentityCleanupSmokeTests
             create.RootElement);
         Check(
             created.Success,
-            $"create identity-cleanup character {suffix}");
+            $"create identity-cleanup character {suffix} (message={created.Message})");
 
         var dbid = store.Characters(
                 accountId.Value)
