@@ -9141,7 +9141,9 @@ try
             account.Value,
             id)
         .Pets
-        .First(x => Convert.ToInt64(x["UID"]) == petUid);
+        .First(x => Convert.ToInt32(x["State"]) == 1);
+    var activePetUidBeforePlayerKill =
+        Convert.ToInt64(activePetBeforePlayerKill["UID"]);
     var petExpBeforePlayerKill =
         Convert.ToInt32(activePetBeforePlayerKill["Exp"]);
     var petLevelBeforePlayerKill =
@@ -9214,7 +9216,9 @@ try
             account.Value,
             id)
         .Pets
-        .First(x => Convert.ToInt64(x["UID"]) == petUid);
+        .First(x =>
+            Convert.ToInt64(x["UID"]) ==
+            activePetUidBeforePlayerKill);
 
     Check(
         Convert.ToInt32(activePetAfterPlayerKill["Exp"]) >
