@@ -360,7 +360,7 @@ function renderMapVisual() {
   const map = state.maps.find(x => x.id === state.mapId);
   const collisionText = blocking?.hasBlocking
     ? `Blocking ${blocking.width}×${blocking.height} / ${blocking.cellSize}px`
-    : '無 Blocking.dat';
+    : (blocking?.error ? `Blocking 無效：${blocking.error}` : '無 Blocking.dat');
   $('#map-meta').textContent =
     `${map?.name || ''} · ${state.mapRows.length} ${enemyMode ? '個怪物出生點' : '個 NPC'} · ${collisionText} · ${state.mapMeta?.spawners?.length || 0} 個區域參考`;
 
@@ -379,7 +379,15 @@ function renderMapVisual() {
 
 async function normalizeMapPoints(points, notify=true) {
   const rounded = points.map(p => ({x:Math.round(p.x), y:Math.round(p.y)}));
-  if (!state.mapMeta?.blocking?.hasBlocking) return rounded.map(p => ({...p, snapped:false, walkable:true}));
+  const blocking = state.mapMeta?.blocking;
+  if (blocking?.error) {
+    if (state.mapSnapWalkable) {
+      if (notify) toast(`Blocking.dat 無效：${blocking.error}。請先修復資料，或關閉「吸附可走區」後強制編輯。`, 'error');
+      return rounded.map(p => ({...p, snapped:false, walkable:false, unresolved:true}));
+    }
+    return rounded.map(p => ({...p, snapped:false, walkable:false}));
+  }
+  if (!blocking?.hasBlocking) return rounded.map(p => ({...p, snapped:false, walkable:true}));
 
   const result = await api(`/api/maps/${state.mapId}/snap-points`, {
     method:'POST',
