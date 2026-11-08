@@ -28,6 +28,32 @@ var _popup_cursor_sprite: AnimatedSprite2D = null
 var hovered_items: Array = []
 
 var _last_ctrl_state: bool = false
+var _afk_native_cursor_enabled: bool = false
+
+
+func set_afk_native_cursor_enabled(enabled: bool) -> void:
+	# Gameplay normally hides the OS pointer and draws a custom sprite.
+	# AFK pauses that sprite's per-frame updates, so restore the native OS
+	# pointer rather than leaving the user with an invisible mouse.
+	if _afk_native_cursor_enabled == enabled:
+		return
+	_afk_native_cursor_enabled = enabled
+	if enabled:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		if is_instance_valid(cursor_sprite):
+			cursor_sprite.visible = false
+		if is_instance_valid(tooltip_label):
+			tooltip_label.visible = false
+	else:
+		Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+		if is_instance_valid(cursor_sprite):
+			cursor_sprite.visible = true
+			_apply_cursor_visual()
+
+
+func is_afk_native_cursor_enabled() -> bool:
+	return _afk_native_cursor_enabled
+
 
 func _ready() -> void :
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
@@ -241,10 +267,11 @@ func hide_popup_game_cursor(popup_window: Window = null) -> void:
 	_popup_cursor_sprite = null
 	_popup_cursor_window = null
 
-	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if _afk_native_cursor_enabled else Input.MOUSE_MODE_HIDDEN
 	if is_instance_valid(cursor_sprite):
-		cursor_sprite.visible = true
-	_apply_cursor_visual()
+		cursor_sprite.visible = not _afk_native_cursor_enabled
+	if not _afk_native_cursor_enabled:
+		_apply_cursor_visual()
 
 
 # Backward-compatible wrappers for callers from older scene/script revisions.
@@ -254,10 +281,11 @@ func push_native_popup_cursor() -> void:
 func pop_native_popup_cursor() -> void:
 	_native_popup_cursor_depth = maxi(0, _native_popup_cursor_depth - 1)
 	if _native_popup_cursor_depth == 0 and not is_instance_valid(_popup_cursor_window):
-		Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if _afk_native_cursor_enabled else Input.MOUSE_MODE_HIDDEN
 		if is_instance_valid(cursor_sprite):
-			cursor_sprite.visible = true
-		_apply_cursor_visual()
+			cursor_sprite.visible = not _afk_native_cursor_enabled
+		if not _afk_native_cursor_enabled:
+			_apply_cursor_visual()
 
 func is_native_popup_cursor_active() -> bool:
 	return _native_popup_cursor_depth > 0 or is_instance_valid(_popup_cursor_window)

@@ -90,6 +90,23 @@ class AfkModeContract(unittest.TestCase):
         self.assertNotIn('Engine.time_scale =', read("client/scripts/game_manager.gd"))
         self.assertNotIn('Engine.physics_ticks_per_second =', read("client/scripts/game_manager.gd"))
 
+    def test_native_mouse_and_silent_afk_audio(self):
+        cursor = read("client/scripts/cursor_manager.gd")
+        manager = read("client/scripts/game_manager.gd")
+        audio = read("client/scripts/audio_manager.gd")
+        self.assertIn("func set_afk_native_cursor_enabled(enabled: bool)", cursor)
+        self.assertIn("Input.mouse_mode = Input.MOUSE_MODE_VISIBLE", cursor)
+        self.assertIn("Input.mouse_mode = Input.MOUSE_MODE_HIDDEN", cursor)
+        self.assertIn("CursorManager.set_afk_native_cursor_enabled(_afk_active)", manager)
+        self.assertIn("CursorManager.set_process(not paused and not _afk_active)", manager)
+        self.assertIn("func set_afk_silent(enabled: bool)", audio)
+        self.assertIn("stop_all_se()", audio)
+        self.assertIn("stop_bgm()", audio)
+        self.assertIn("if _afk_silent:", audio)
+        self.assertIn("_enter_afk_audio_silence()", manager)
+        self.assertIn("_leave_afk_audio_silence(true)", manager)
+        self.assertIn("_afk_active or _master_bus_was_muted_before_focus_loss", manager)
+
     def test_godot_test_runs_from_ci(self):
         suite = read("client/tests/afk_visual_cache_regression.gd")
         workflow = read(".github/workflows/server-build.yml")

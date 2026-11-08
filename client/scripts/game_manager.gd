@@ -47,6 +47,7 @@ var _afk_started_msec: int = 0
 var _afk_map_cache = AFK_VISUAL_CACHE.new()
 var _afk_saved_profile: Dictionary = {}
 var _afk_visual_stats: Dictionary = {}
+var _afk_master_was_muted_before: bool = false
 var current_world_enhancement: CanvasLayer = null
 var current_day_night_overlay: CanvasLayer = null
 var world_enhancement_enabled: bool = GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
@@ -554,6 +555,35 @@ func _log_afk_state(event_name: String, released: int = 0, missing: int = 0) -> 
 	])
 
 
+func _enter_afk_audio_silence() -> void:
+	var bus: int = AudioServer.get_bus_index("Master")
+	if bus >= 0:
+		_afk_master_was_muted_before = (
+			AudioServer.is_bus_mute(bus) if _window_has_focus
+			else _master_bus_was_muted_before_focus_loss
+		)
+		AudioServer.set_bus_mute(bus, true)
+	if AudioManager and AudioManager.has_method("set_afk_silent"):
+		AudioManager.set_afk_silent(true)
+
+
+func _leave_afk_audio_silence(restart_map_music: bool) -> void:
+	if AudioManager and AudioManager.has_method("set_afk_silent"):
+		AudioManager.set_afk_silent(false)
+	var bus: int = AudioServer.get_bus_index("Master")
+	if bus >= 0:
+		if _window_has_focus:
+			AudioServer.set_bus_mute(bus, _afk_master_was_muted_before)
+		else:
+			# Focus-out must stay silent; the next focus-in restores the
+			# original pre-AFK user mute preference, not the forced mute.
+			_master_bus_was_muted_before_focus_loss = _afk_master_was_muted_before
+			AudioServer.set_bus_mute(bus, true)
+	if restart_map_music and AudioManager and is_instance_valid(current_player):
+		if current_player.data_model:
+			AudioManager.play_map_bgm(current_player.data_model.map_id)
+
+
 func begin_afk_mode() -> bool:
 	if _afk_active or _afk_restoring or is_changing_map:
 		return false
@@ -567,6 +597,7 @@ func begin_afk_mode() -> bool:
 	}
 	_afk_active = true
 	_afk_started_msec = Time.get_ticks_msec()
+	_enter_afk_audio_silence()
 	_log_afk_state("enter_before")
 	# Phase 1: keep gameplay nodes alive and network/physics processing at
 	# their original rates; hide only world presentation.
@@ -609,6 +640,7 @@ func finish_afk_mode() -> bool:
 		return false
 	_afk_active = false
 	_afk_restoring = false
+	_leave_afk_audio_silence(true)
 	if is_instance_valid(current_player) and current_player.has_method("end_afk_navigation_anchor"):
 		current_player.end_afk_navigation_anchor()
 	# Restore user selection, not a hard-coded normal mode. The HUD's
@@ -642,6 +674,8 @@ func _refresh_afk_map_visuals_after_change() -> void:
 
 
 func _reset_afk_mode() -> void:
+	if _afk_active:
+		_leave_afk_audio_silence(false)
 	_afk_active = false
 	_afk_restoring = false
 	_afk_saved_profile.clear()
@@ -959,7 +993,8 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 		# Leave all animation, HUD, map, BGM and recently used assets warm.
 		# No synchronous unloading is permitted in an Alt+Tab handler.
 		if master_bus_index >= 0:
-			_master_bus_was_muted_before_focus_loss = AudioServer.is_bus_mute(master_bus_index)
+			if not _afk_active:
+				_master_bus_was_muted_before_focus_loss = AudioServer.is_bus_mute(master_bus_index)
 			AudioServer.set_bus_mute(master_bus_index, true)
 	else:
 		_background_focus_lost_msec = 0
@@ -968,14 +1003,17 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 		if master_bus_index >= 0:
 			AudioServer.set_bus_mute(
 				master_bus_index,
-				_master_bus_was_muted_before_focus_loss
+				_afk_active or _master_bus_was_muted_before_focus_loss
 			)
 
 	_log_focus_power_save("focus_in" if has_focus else "focus_out")
 
 func _set_background_visual_processing(paused: bool) -> void :
 	if CursorManager:
-		CursorManager.set_process(not paused)
+		# Keep an OS cursor in AFK. Normally CursorManager hides that cursor
+		# and draws its own sprite; pausing _process otherwise loses both.
+		CursorManager.set_afk_native_cursor_enabled(_afk_active)
+		CursorManager.set_process(not paused and not _afk_active)
 	if is_instance_valid(current_day_night_overlay):
 		current_day_night_overlay.set_process(not paused)
 	if is_instance_valid(current_hud) and current_hud.has_method("set_background_visuals_paused"):

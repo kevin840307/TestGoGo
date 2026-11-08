@@ -36,6 +36,28 @@ var _map_bgm_cache: Dictionary = {}
 var _map_bgm_cache_order: Array[String] = []
 var _bgm_request_serial: int = 0
 var _pending_bgm_path: String = ""
+var _afk_silent: bool = false
+
+
+func set_afk_silent(enabled: bool) -> void:
+	if _afk_silent == enabled:
+		return
+	_afk_silent = enabled
+	if enabled:
+		# Stop decoding and releasing audio from players; the map-change
+		# handler cannot start BGM again until this mode is disabled.
+		stop_bgm()
+		stop_all_se()
+		if is_instance_valid(bgm_player):
+			bgm_player.stream = null
+		for player in se_players:
+			if is_instance_valid(player):
+				player.stream = null
+
+
+func is_afk_silent() -> bool:
+	return _afk_silent
+
 
 const LOGIN_BGM_PATH = "res://Assets/Audio/BGM/Silent_Memory.mp3"
 
@@ -363,6 +385,8 @@ func play_se(se_id: int, volume_scale: float = 1.0, pitch_scale: float = 1.0) ->
 	return play_se_by_name("SE%04d" % se_id, volume_scale, pitch_scale)
 
 func play_se_by_name(se_name: String, volume_scale: float = 1.0, pitch_scale: float = 1.0) -> bool:
+	if _afk_silent:
+		return false
 	var normalized_name = _normalize_se_name(se_name)
 	if normalized_name.is_empty():
 		return false
@@ -398,6 +422,8 @@ func play_se_by_name(se_name: String, volume_scale: float = 1.0, pitch_scale: fl
 	return true
 
 func play_se_candidates(candidates: Array[String], volume_scale: float = 1.0, pitch_scale: float = 1.0) -> bool:
+	if _afk_silent:
+		return false
 	var available_candidates: Array[String] = []
 	for candidate in candidates:
 		var normalized_name = _normalize_se_name(candidate)
@@ -601,6 +627,8 @@ func _apply_se_player_volume(player: AudioStreamPlayer) -> void :
 
 
 func play_login_bgm() -> void :
+	if _afk_silent:
+		return
 	_bgm_request_serial += 1
 	_pending_bgm_path = ""
 	var stream = load(LOGIN_BGM_PATH) as AudioStream
@@ -619,6 +647,8 @@ func play_login_bgm() -> void :
 
 
 func play_map_bgm(map_id: int) -> void :
+	if _afk_silent:
+		return
 	_bgm_request_serial += 1
 	var request_id: = _bgm_request_serial
 	var load_started_usec: = Time.get_ticks_usec()
@@ -679,6 +709,8 @@ func play_map_bgm(map_id: int) -> void :
 		return
 
 func _play_loaded_map_bgm(map_id: int, bgm_path: String, stream: AudioStream, request_id: int, load_started_usec: int, cache_hit: bool) -> void :
+	if _afk_silent:
+		return
 	if request_id != _bgm_request_serial or not is_instance_valid(bgm_player) or stream == null:
 		return
 	bgm_player.stream = stream
