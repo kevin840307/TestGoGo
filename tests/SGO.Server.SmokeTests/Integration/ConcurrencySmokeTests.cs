@@ -254,6 +254,16 @@ internal static class ConcurrencySmokeTests
                 firstSession,
                 "TradeFinalConfirm",
                 empty.RootElement);
+            // Duplicate Lock after a final confirmation must not reset
+            // the already-confirmed side or require another confirmation.
+            trade.Action(
+                firstSession,
+                "TradeLock",
+                empty.RootElement);
+            trade.Action(
+                secondSession,
+                "TradeLock",
+                empty.RootElement);
         }
 
         while (firstReg.Queue.TryDequeue(out _)) { }
