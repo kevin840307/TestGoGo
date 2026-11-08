@@ -1259,7 +1259,7 @@ func _can_reuse_combat_target_for_attack_skill(skill) -> bool:
 	return (
 		"current_hp" in combat_target
 		and "entity_id" in combat_target
-		and not combat_target is PetEntity
+		and not (combat_target is PetEntity)
 		and int(combat_target.current_hp) > 0
 	)
 
