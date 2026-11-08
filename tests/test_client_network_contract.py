@@ -49,6 +49,27 @@ class ClientNetworkContractTests(unittest.TestCase):
         ):
             self.assertIn(field, fields)
 
+    def test_item_choice_flow_is_server_authoritative(self):
+        block = packet_block(self.source, "ItemChoiceRequired")
+        fields = set(FIELD_READ.findall(block))
+        self.assertTrue({"ItemUID", "ItemIndex", "Title", "Options"} <= fields)
+        self.assertIn("item_choice_required_received.emit", block)
+        self.assertIn(
+            'send_secure_packet({\n\t\t\t"Type": "UseItemChoiceRequest"',
+            self.source,
+        )
+        self.assertIn('"ItemUID": item_uid', self.source)
+        self.assertIn('"ItemIndex": item_index', self.source)
+
+        window = (
+            ROOT / "client" / "scripts" / "item_choice_window.gd"
+        ).read_text(encoding="utf-8-sig")
+        self.assertIn(
+            "NetworkManager.send_item_choice_request(_item_uid, item_index)",
+            window,
+        )
+        self.assertIn("_selection_sent", window)
+
     def test_mall_list_consumes_donation_gifts(self):
         block = packet_block(self.source, "MallListResponse")
         fields = set(FIELD_READ.findall(block))
