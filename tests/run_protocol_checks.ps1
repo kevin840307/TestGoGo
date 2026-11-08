@@ -34,6 +34,10 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_packet_log_privacy.py", "-v"
     )
+    Invoke-Checked "Godot client network contract tests" "python" @(
+        "-m", "unittest", "discover", "-s", "tests",
+        "-p", "test_client_network_contract.py", "-v"
+    )
     Invoke-Checked "Smoke suite structure tests" "python" @(
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_smoke_suite_structure.py", "-v"
