@@ -1,3 +1,4 @@
+using SGO.Server.Application.Messaging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
@@ -339,6 +340,25 @@ internal static class WireLoadScenario
         }
     }
 
+    private static long CountDirectedAoiPeers(WireLoadClient[] clients)
+    {
+        var count = 0L;
+        for (var i = 0; i < clients.Length; i++)
+        {
+            for (var j = 0; j < clients.Length; j++)
+            {
+                if (i == j || clients[i].MapId != clients[j].MapId)
+                    continue;
+                var dx = (double)clients[i].X - clients[j].X;
+                var dy = (double)clients[i].Y - clients[j].Y;
+                if (dx * dx + dy * dy <=
+                    PlayerSpatialAoi.EnterRadius * PlayerSpatialAoi.EnterRadius)
+                    count++;
+            }
+        }
+        return count;
+    }
+
     private static async Task<WirePhaseResult> MeasureMovementAsync(
         WireLoadClient[] clients,
         int rounds,
@@ -351,11 +371,11 @@ internal static class WireLoadScenario
             new List<double>(rounds);
         var phaseStarted =
             Stopwatch.GetTimestamp();
+        // Player movements are delivered only to ready nearby AOI peers.
+        // All wire clients have completed WorldReady. Expected deliveries
+        // depend on the actual starting positions, not just shared MapID.
         var expectedPerRound =
-            (long)clients.Length *
-            Math.Max(
-                0,
-                clients.Length - 1);
+            CountDirectedAoiPeers(clients);
 
         try
         {
@@ -445,11 +465,10 @@ internal static class WireLoadScenario
         var phaseStarted =
             Stopwatch.GetTimestamp();
 
-        // Nearby ChatMessage returns one ChatBroadcast to the sender and
-        // publishes one to every other same-map client.
+        // Nearby chat is local AOI only, plus one own-response per sender.
+        // World/faction/club channels keep their independent routing rules.
         var expectedPerRound =
-            (long)clients.Length *
-            clients.Length;
+            clients.Length + CountDirectedAoiPeers(clients);
 
         try
         {
