@@ -62,6 +62,21 @@ class PacketResponseAuditTests(unittest.TestCase):
         self.assertEqual("INCOMPLETE_SERVER_FIELDS", error["status"])
         self.assertEqual(["MapID"], error["violations"][0]["missing"])
 
+    def test_rejects_any_incomplete_world_packet_variant(self):
+        self.fixture()
+        packet = self.root / "server/Application/PacketRouter.cs"
+        with packet.open("a", encoding="utf-8") as stream:
+            stream.write(
+                '\nnew { Type = "MoveEntity", EntityID = 1, X = 2, '
+                'Y = 3, Dir = 4 };\n'
+            )
+        result = scan(self.root)
+        issue = next(x for x in result["issues"]
+                     if x["type"] == "MoveEntity")
+        self.assertEqual("INCOMPLETE_SERVER_FIELDS", issue["status"])
+        self.assertEqual(2, issue["declarations_checked"])
+        self.assertEqual(["SpeedTime"], issue["violations"][0]["missing"])
+
     def test_detects_missing_client_handler(self):
         self.fixture()
         client = self.root / "client/scripts/network_manager.gd"
