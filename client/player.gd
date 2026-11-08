@@ -46,6 +46,8 @@ var attack_cooldown: float = 0.0
 var attack_speed: float = 1.0
 var ready_to_cast_skill_id: int = -1
 var pending_skill_id: int = -1
+var _pending_skill_preserve_combat_target: bool = false
+var _skill_aoe_self_center_cache: Dictionary = {}
 var confirmed_summoned_horse_uid: int = -1
 var can_cross_special_terrain: bool = false
 var navigation_repath_cooldown: float = 0.0
@@ -499,6 +501,7 @@ func _unhandled_input(event: InputEvent) -> void :
 			if current_state != "death":
 				combat_target = null
 				pending_skill_id = -1
+				_pending_skill_preserve_combat_target = false
 				is_emoting = false
 				# A fresh terrain click cancels latched autorun and returns
 				# to ordinary click-to-destination navigation.
@@ -690,8 +693,11 @@ func _handle_combat_tracking() -> void :
 
 			if pending_skill_id > 0:
 				_send_skill_request(pending_skill_id, target_id, target_type)
+				var preserve_target := _pending_skill_preserve_combat_target
 				pending_skill_id = -1
-				combat_target = null
+				_pending_skill_preserve_combat_target = false
+				if not preserve_target:
+					combat_target = null
 			elif attack_cooldown <= 0:
 
 
@@ -1144,7 +1150,11 @@ func _on_equip_response(success: bool, _message: String, data: Dictionary) -> vo
 			hud.update_status_panel()
 
 
-func begin_targeted_skill(target: Node2D, skill_id: int) -> void:
+func begin_targeted_skill(
+	target: Node2D,
+	skill_id: int,
+	preserve_combat_target: bool = false
+) -> void:
 	if not is_instance_valid(target) or skill_id <= 0:
 		return
 	# A target click supersedes held-mouse navigation and any pending
@@ -1154,6 +1164,104 @@ func begin_targeted_skill(target: Node2D, skill_id: int) -> void:
 		_stop_movement()
 	combat_target = target
 	pending_skill_id = skill_id
+	_pending_skill_preserve_combat_target = preserve_combat_target
+
+
+func _skill_cast_preferences_section() -> String:
+	var account := ""
+	if GlobalTempData:
+		account = str(GlobalTempData.login_user).strip_edges().to_lower()
+	if account.is_empty():
+		return GameConstants.SETTING_SECTION_GAME
+	return "%s:%s" % [
+		GameConstants.SETTING_SECTION_GAME,
+		account
+	]
+
+
+func _skill_aoe_preference_key(skill_id: int) -> String:
+	return "%s%d" % [
+		GameConstants.SETTING_KEY_SKILL_AOE_SELF_CENTER_PREFIX,
+		skill_id
+	]
+
+
+func is_skill_aoe_self_center(skill_id: int) -> bool:
+	if skill_id <= 0:
+		return false
+	if _skill_aoe_self_center_cache.has(skill_id):
+		return bool(_skill_aoe_self_center_cache[skill_id])
+
+	var config := ConfigFile.new()
+	var enabled := false
+	if config.load(GameConstants.CLIENT_SETTINGS_PATH) == OK:
+		enabled = bool(config.get_value(
+			_skill_cast_preferences_section(),
+			_skill_aoe_preference_key(skill_id),
+			false
+		))
+	_skill_aoe_self_center_cache[skill_id] = enabled
+	return enabled
+
+
+func set_skill_aoe_self_center(skill_id: int, enabled: bool) -> void:
+	if skill_id <= 0:
+		return
+	_skill_aoe_self_center_cache[skill_id] = enabled
+	var config := ConfigFile.new()
+	config.load(GameConstants.CLIENT_SETTINGS_PATH)
+	config.set_value(
+		_skill_cast_preferences_section(),
+		_skill_aoe_preference_key(skill_id),
+		enabled
+	)
+	config.save(GameConstants.CLIENT_SETTINGS_PATH)
+
+
+func _learned_skill_level(skill_id: int) -> int:
+	if data_model and "skill_list" in data_model:
+		for learned_skill in data_model.skill_list:
+			if int(learned_skill.get("skill_id", 0)) == skill_id:
+				return maxi(1, int(learned_skill.get("level", 1)))
+	return 1
+
+
+func is_skill_aoe_center_toggle_available(skill_id: int) -> bool:
+	if not SkillLoader or skill_id <= 0:
+		return false
+	var skill = SkillLoader.get_skill_data(skill_id)
+	if not skill:
+		return false
+	if "special_skill" in skill and str(skill.special_skill) == "畫面範圍攻擊":
+		return false
+
+	var level_data = skill.get_level_data(_learned_skill_level(skill_id))
+	if not level_data:
+		level_data = skill.get_level_data(1)
+	if not level_data or int(level_data.aoe_radius) <= 0:
+		return false
+
+	var skill_type := int(skill.skill_type)
+	if skill_type in [0, 1]:
+		return true
+	if skill_type == 7:
+		return int(level_data.base_damage) != 0 or int(level_data.damage_multiplier) != 0
+	return false
+
+
+func _can_reuse_combat_target_for_attack_skill(skill) -> bool:
+	if not is_instance_valid(combat_target) or not skill:
+		return false
+	if int(skill.skill_type) not in [0, 1]:
+		return false
+	# Current authoritative attack-skill path targets monsters. Do not reuse
+	# a player/pet target until those server target types explicitly support it.
+	return (
+		"current_hp" in combat_target
+		and "entity_id" in combat_target
+		and not combat_target is PetEntity
+		and int(combat_target.current_hp) > 0
+	)
 
 
 func prepare_skill(skill_id: int) -> void :
@@ -1178,7 +1286,33 @@ func prepare_skill(skill_id: int) -> void :
 				if s_lv and s_lv.cast_range > 0:
 					require_target = true
 
+		var self_center_aoe := (
+			is_skill_aoe_center_toggle_available(skill_id)
+			and is_skill_aoe_self_center(skill_id)
+		)
+		if self_center_aoe:
+			ready_to_cast_skill_id = -1
+			_pending_skill_preserve_combat_target = false
+			_send_skill_request(
+				skill_id,
+				int(data_model.db_id),
+				0
+			)
+			return
+
 		if require_target:
+			# Attack skills reuse the already selected combat target. This
+			# removes the old "press skill, then click the same monster again"
+			# step while preserving the target after the cast.
+			if _can_reuse_combat_target_for_attack_skill(skill):
+				ready_to_cast_skill_id = -1
+				begin_targeted_skill(
+					combat_target,
+					skill_id,
+					true
+				)
+				return
+
 			ready_to_cast_skill_id = skill_id
 			if CursorManager:
 				CursorManager.set_cursor_state("skill")
@@ -1188,7 +1322,7 @@ func prepare_skill(skill_id: int) -> void :
 					if hovered.has_method("_on_mouse_entered"):
 						hovered._on_mouse_entered()
 		else:
-
+			_pending_skill_preserve_combat_target = false
 			_send_skill_request(skill_id, -1, 1)
 
 func _send_skill_request(skill_id: int, target_id: int, target_type: int) -> void :
