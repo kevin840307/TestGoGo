@@ -131,6 +131,39 @@ class RealMapCoordinateContractTests(unittest.TestCase):
         self.assertGreater(checked_spawns, 0, "no real Enemy.dat/NPC.dat coordinates were checked")
         self.assertFalse(failures, "\n".join(failures[:40]))
 
+    def test_real_spawn_audit_matches_raw_blocking_conflicts(self) -> None:
+        checked = 0
+        for blocking_path in sorted(self.paths.maps.glob("Map*/Blocking.dat")):
+            match = re.fullmatch(r"Map(\\d+)", blocking_path.parent.name, re.IGNORECASE)
+            if not match:
+                continue
+            map_id = int(match.group(1))
+            meta = self.repo.get_editor_meta(map_id)
+            if not meta["blocking"]["hasBlocking"]:
+                continue
+
+            for kind, rows in (
+                ("enemies", self.repo.get_enemy_spawns(map_id)),
+                ("npcs", self.repo.get_npc_spawns(map_id)),
+            ):
+                expected = [
+                    index
+                    for index, row in enumerate(rows)
+                    if not self.repo.get_terrain(map_id, row["x"], row["y"])["walkable"]
+                ]
+                self.assertEqual(
+                    meta["spawnAudit"][kind]["invalidIndexes"],
+                    expected,
+                    f"Map{map_id:02d} {kind} audit mismatch",
+                )
+                self.assertEqual(
+                    meta["spawnAudit"][kind]["invalidCount"],
+                    len(expected),
+                )
+                checked += len(rows)
+
+        self.assertGreater(checked, 0)
+
     def test_real_blocked_cell_snap_lands_on_client_server_cell_center(self) -> None:
         found = False
         for blocking_path in sorted(self.paths.maps.glob("Map*/Blocking.dat")):
