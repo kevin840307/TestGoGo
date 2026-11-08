@@ -234,6 +234,8 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn('"ChangeMap"', source)
         self.assertIn('"BankTransfer"', source)
         self.assertIn('"DirectTransfer"', source)
+        self.assertIn('"RepairItemRequest"', source)
+        self.assertIn("repair persists max durability", source)
         self.assertIn('"CraftItemRequest"', source)
         self.assertIn('"DismantleItemRequest"', source)
         self.assertIn('Action = "BuyNpcItem"', source)
@@ -397,6 +399,33 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("ten buyers racing one five-count player-shop listing", source)
         self.assertIn("ten concurrent direct transfers never overspend", source)
         self.assertIn("EconomyConcurrencySmokeTests.Run();", main)
+
+
+    def test_asset_mutation_concurrency_suite_is_modular(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = (
+            SMOKE / "Integration" /
+            "AssetMutationConcurrencySmokeTests.cs"
+        )
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("ConcurrentRepairsCannotUndercharge", source)
+        self.assertIn("only one of two 60-cost repairs succeeds", source)
+        self.assertIn("failed concurrent repair rolls back", source)
+        self.assertIn("AssetMutationConcurrencySmokeTests.Run();", main)
+
+    def test_cross_feature_concurrency_suite_guards_mixed_money_writes(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = (
+            SMOKE / "Integration" /
+            "CrossFeatureConcurrencySmokeTests.cs"
+        )
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("TradeAndDirectTransferConserveMoney", source)
+        self.assertIn("trade and direct transfer both commit exactly once", source)
+        self.assertIn("mixed multiplayer money operations conserve", source)
+        self.assertIn("CrossFeatureConcurrencySmokeTests.Run();", main)
 
 
 if __name__ == "__main__":
