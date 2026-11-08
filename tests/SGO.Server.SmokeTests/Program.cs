@@ -8827,8 +8827,20 @@ try
         session.LastMonsterAiTick.AddSeconds(1),
         new[] { monster.EntityId });
 
+    var closeRangeStopPacket = closeRangePackets.Any(x =>
+    {
+        var json = JsonSerializer.Serialize(x);
+        return json.Contains(
+                   "\"Type\":\"MoveEntity\"") &&
+               json.Contains(
+                   $"\"EntityID\":{monster.EntityId}") &&
+               json.Contains(
+                   "\"SpeedTime\":0");
+    });
+
     Check(!monster.IsMoving &&
           monster.AiState == MonsterAiState.Attack &&
+          closeRangeStopPacket &&
           closeRangePackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
                   "\"Type\":\"SyncState\"") &&
@@ -8836,13 +8848,8 @@ try
                   "\"State\":\"attack\"")) &&
           closeRangePackets.Any(x =>
               JsonSerializer.Serialize(x).Contains(
-                  "\"Type\":\"EntityDamage\"")) &&
-          !closeRangePackets.Any(x =>
-              JsonSerializer.Serialize(x).Contains(
-                  "\"Type\":\"MoveEntity\"") &&
-              JsonSerializer.Serialize(x).Contains(
-                  $"\"EntityID\":{monster.EntityId}")),
-        "monster entering clear melee range attacks immediately instead of standing through an old cooldown");
+                  "\"Type\":\"EntityDamage\"")),
+        "monster entering clear melee range stops interpolation and attacks immediately instead of standing through an old cooldown");
 
     // Attack facing must use the exact target direction rather than movement
     // hysteresis. At about 26 degrees, movement may intentionally keep dir 6,
