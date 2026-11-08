@@ -539,6 +539,13 @@ func _spawn_entity_now(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
 	var entity_type = int(data.get("EntityType", 0))
 	if entity_type == 3:
+		# The queued packet may be several seconds old under a busy map.
+		# Use the stored absolute creation timestamp to preserve server item
+		# lifetime and ownership countdown at the *actual* render time.
+		if _ground_spawn_templates.has(entity_id):
+			var is_first_drop: bool = not bool(data.get("IsSnapshot", false))
+			data = _ground_spawn_data_at_current_time(entity_id)
+			data["IsSnapshot"] = not is_first_drop
 		# The player can move away while a ground SpawnEntity waits in
 		# the queue. Never allocate a distant item just to free it again.
 		var aoi: Dictionary = _ground_aoi_context()
