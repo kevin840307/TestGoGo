@@ -99,6 +99,7 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         source = module.read_text(encoding="utf-8-sig")
         self.assertIn("forged choice reward IDs are rejected", source)
         self.assertIn("replaying a consumed choice UID cannot duplicate", source)
+        self.assertIn("ten concurrent choice requests consume one box", source)
         self.assertIn("ChoiceRewardSmokeTests.Run(", main)
 
     def test_recovered_box_suite_guards_safe_multi_reward_behavior(self):
