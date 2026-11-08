@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import re
 import struct
 import tempfile
 import unittest
@@ -243,6 +244,30 @@ class AssetRepositoryTests(EditorFixture):
 
 
 class WebStructureTests(unittest.TestCase):
+    def test_all_static_frontend_id_selectors_exist_in_html(self) -> None:
+        web = GAME_EDITOR_ROOT / "web"
+        index = (web / "index.html").read_text(encoding="utf-8")
+        html_ids = set(re.findall(r'\bid="([^"]+)"', index))
+        missing: list[str] = []
+
+        for script_name in (
+            "app-core.js",
+            "app-skills.js",
+            "app-world.js",
+            "app-map-editor.js",
+            "app-tools.js",
+        ):
+            source = (web / script_name).read_text(encoding="utf-8")
+            for selector_id in re.findall(r"\$\('#([^']+)'\)", source):
+                if selector_id not in html_ids:
+                    missing.append(f"{script_name}: #{selector_id}")
+
+        self.assertFalse(
+            missing,
+            "\nStatic JS selectors missing from index.html:\n"
+            + "\n".join(sorted(set(missing))),
+        )
+
     def test_frontend_entrypoints_are_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
         index = (web / "index.html").read_text(encoding="utf-8")
