@@ -4,12 +4,14 @@ extends RefCounted
 const LOAD_QUALITY := 0
 const LOAD_BALANCED := 1
 const LOAD_LOW := 2
+# Legacy saved setting only. UI offers 0/1/2; saved 3 migrates to low resource.
 const LOAD_MULTIBOX := 3
 
 const COMBAT_NORMAL := 0
 const COMBAT_RESPONSE := 1
 # Backward-compatible alias for existing callers/config values.
 const COMBAT_PVP := COMBAT_RESPONSE
+# Legacy saved combat setting only. Saved 2 migrates to response first.
 const COMBAT_MASS := 2
 
 # Only three user-facing choices. Old persisted style values (3/4) are
@@ -53,10 +55,10 @@ static func fps_options() -> Array[int]:
 
 
 static func sanitize_load_mode(value: int) -> int:
-	return clampi(value, LOAD_QUALITY, LOAD_MULTIBOX)
+	return clampi(value, LOAD_QUALITY, LOAD_LOW)
 
 static func sanitize_combat_mode(value: int) -> int:
-	return clampi(value, COMBAT_NORMAL, COMBAT_MASS)
+	return clampi(value, COMBAT_NORMAL, COMBAT_RESPONSE)
 
 static func sanitize_simplify_mode(value: int) -> int:
 	if value <= SIMPLIFY_AUTO:
@@ -104,8 +106,8 @@ static func apply_visual_overrides(
 		if monster_mode == SIMPLIFY_AUTO
 		else monster_mode
 	)
-	# Both player and monster simplified visuals are texture-free built-in
-	# primitives. This flag remains for older diagnostics/callers.
+	# Both player and monster simplified visuals use one shared cached
+	# generated texture per entity type. Keep the flag for older callers.
 	result["use_primitive_monsters"] = bool(
 		result.get("simplify_noncritical_monsters", false)
 	)
@@ -115,15 +117,13 @@ static func load_mode_name(value: int) -> String:
 	match sanitize_load_mode(value):
 		LOAD_QUALITY: return "quality"
 		LOAD_BALANCED: return "balanced"
-		LOAD_LOW: return "low"
-		LOAD_MULTIBOX: return "multibox"
+		LOAD_LOW: return "low_resource"
 	return "balanced"
 
 static func combat_mode_name(value: int) -> String:
 	match sanitize_combat_mode(value):
 		COMBAT_NORMAL: return "normal"
 		COMBAT_RESPONSE: return "response"
-		COMBAT_MASS: return "mass"
 	return "normal"
 
 static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
@@ -167,28 +167,21 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 			profile["ground_aoi_enter_radius"] = 2000.0
 			profile["ground_aoi_exit_radius"] = 2400.0
 		LOAD_LOW:
-			profile["animation_interval"] = 1.0 / 20.0
-			profile["full_player_budget"] = 12
-			profile["full_monster_budget"] = 18
-			profile["effect_budget_percent"] = 35
+			# Low resource + responsive gameplay: release nonessential visual
+			# effects, simplify NPC-independent entity art and keep network/
+			# physics at their normal fixed tick rate. Never slow game time.
+			profile["animation_interval"] = 1.0 / 30.0
+			profile["full_player_budget"] = 20
+			profile["full_monster_budget"] = 10
+			profile["effect_budget_percent"] = 0
+			profile["combat_effects_enabled"] = false
+			# Visual AOI only; ground interaction and server packets are untouched.
 			profile["monster_aoi_enter_radius"] = 1250.0
 			profile["monster_aoi_exit_radius"] = 1650.0
 			profile["ground_aoi_enter_radius"] = 1450.0
 			profile["ground_aoi_exit_radius"] = 1850.0
 			profile["simplify_other_players"] = true
 			profile["simplify_noncritical_monsters"] = true
-		LOAD_MULTIBOX:
-			profile["animation_interval"] = 1.0 / 15.0
-			profile["full_player_budget"] = 8
-			profile["full_monster_budget"] = 10
-			profile["effect_budget_percent"] = 15
-			profile["monster_aoi_enter_radius"] = 950.0
-			profile["monster_aoi_exit_radius"] = 1350.0
-			profile["ground_aoi_enter_radius"] = 1100.0
-			profile["ground_aoi_exit_radius"] = 1500.0
-			profile["simplify_other_players"] = true
-			profile["simplify_noncritical_monsters"] = true
-			profile["use_primitive_monsters"] = true
 			profile["hide_far_noncombat_monsters"] = true
 			profile["aggressive_cache_trim"] = true
 
@@ -203,20 +196,8 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 			profile["simplify_other_players"] = load_mode >= LOAD_LOW
 			profile["simplify_noncritical_monsters"] = true
 			profile["hide_far_noncombat_monsters"] = true
-		COMBAT_MASS:
-			profile["full_player_budget"] = maxi(int(profile["full_player_budget"]), 20)
-			profile["full_monster_budget"] = mini(int(profile["full_monster_budget"]), 8)
-			# Zero means skip constructing combat-effect nodes and loading FX textures.
-			# Gameplay packets, skill direction, action state, and damage labels continue.
-			profile["effect_budget_percent"] = 0
-			profile["combat_effects_enabled"] = false
-			profile["simplify_other_players"] = true
-			profile["simplify_noncritical_monsters"] = true
-			profile["hide_far_noncombat_monsters"] = true
 
-	# Direct resolve() callers receive a complete style as well. MultiBox uses
-	# the cheapest minimal style; other automatic simplification keeps enough
-	# pixel detail to remain readable.
+	# Direct resolve() callers get the same shared cached orb style.
 	var auto_style := default_auto_style(load_mode)
 	profile["player_simplify_style"] = auto_style
 	profile["monster_simplify_style"] = auto_style
