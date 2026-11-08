@@ -4,12 +4,12 @@ extends PanelContainer
 signal skill_clicked(skill_id: int)
 signal aoe_center_mode_changed(skill_id: int, self_center: bool)
 
-@onready var icon_rect: TextureRect = $Margin / Content / IconCenter / Icon
-@onready var name_label: Label = $Margin / Content / NameRow / Name
-@onready var level_label: Label = $Margin / Content / NameRow / Level
-@onready var type_label: Label = $Margin / Content / Type
-@onready var summary_label: Label = $Margin / Content / Summary
-@onready var content_row: HBoxContainer = $Margin / Content
+@onready var icon_rect: TextureRect = get_node("Margin/Content/IconCenter/Icon") as TextureRect
+@onready var name_label: Label = get_node("Margin/Content/NameRow/Name") as Label
+@onready var level_label: Label = get_node("Margin/Content/NameRow/Level") as Label
+@onready var type_label: Label = get_node("Margin/Content/Type") as Label
+@onready var summary_label: Label = get_node("Margin/Content/Summary") as Label
+@onready var content_row: HBoxContainer = get_node("Margin/Content") as HBoxContainer
 
 var _skill_id: int = 0
 var _aoe_center_toggle: CheckButton = null
