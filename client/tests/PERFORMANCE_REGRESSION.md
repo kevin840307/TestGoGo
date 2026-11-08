@@ -1,5 +1,66 @@
 # SGO Client Performance Regression Checks
 
+## Idle AOI scan deduplication and transition diagnostics (2026-11-08)
+
+Evidence: supplied `godot(20261108-075204).log` (Godot 4.7.2 / RTX 3050).
+The run contained **32 frame-gap events**, including an initial HUD
+`426.56 ms` gap, player add-child `302.77 ms`, and several
+`~269–302 ms` stalls adjacent to **map transitions** rather than
+steady-state `world_running` work. Peak canvas node count was **7,085**,
+draw calls **1,164**, and known ground items **607**.
+
+Existing client AOI already avoids instantiating distant monsters and ground
+items, but the scheduler still scanned both complete known sets at fixed
+intervals **even when the observer remained stationary**:
+
+- Monster AOI: every **200 ms** (5 checks/sec). The server `MoveEntity`
+  path already updates deferred monster templates and can promote them
+  immediately; a stationary full scan is rarely needed.
+- Ground-drop AOI: every **250 ms** (4 checks/sec). `SpawnEntity` already
+  records every item, including deferred and out-of-range drops, and
+  `DespawnEntity` removes them; drop physics, expiry and ownership remain
+  server-authoritative.
+
+New behavior: when the observer or camera/radius changes, preserve the
+original 200/250ms scan cadence. When stationary, perform a complete scan
+**at least once every 1 second** as a fallback. This can skip up to roughly
+**80% of idle monster scans and 75% of idle ground scans**, but is **not**
+a measured CPU-percentage or GPU improvement. Newly arriving/moving actors
+still follow their existing immediate packet handlers; pickup-requesting
+ground objects are not unloaded. Map cleanup and re-entry clear the cached
+observer position to force a fresh scan.
+
+`[RENDER_STATS]` now includes cumulative, per-map
+`monster_aoi_scans`, `monster_aoi_skips`, `ground_aoi_scans`, and
+`ground_aoi_skips`. Compare those counters while standing still versus
+walking / using the big map / resizing the viewport. The numbers are
+**counts of scans**, not CPU samples.
+
+`[FRAME_GAP] stage=...` now identifies map loading, cleanup, scene
+instantiation, add-child and player reparent phases separately. This
+prevents a 280ms map transition from being attributed to normal world
+rendering, without hiding/ignoring the stall.
+
+Tests:
+
+```powershell
+godot --headless --path client --script res://tests/stationary_aoi_scan_regression.gd
+godot --headless --path client --script res://tests/aoi_monster_snapshot_order_regression.gd
+godot --headless --path client --script res://tests/aoi_pre_spawn_move_regression.gd
+godot --headless --path client --script res://tests/render_optimization_regression.gd
+python client/tests/resource_uid_reference_regression.py
+```
+
+Manual acceptance: remain still 30s as drops and monsters appear/disappear;
+walk continuously and stop; teleport twice; change map 13→15→13; vary
+camera zoom and client resolution; leave auto-combat active while Alt+Tab
+or running multiple clients. Verify that all monsters, nearby drops and
+NPC interactions continue and no item disappears or respawns at a stale
+location. Measure FPS and Godot/Windows memory before claiming 10-client
+improvement. **Runtime Godot tests have not been executed in this tool
+environment.**
+
+
 ## Login input readiness and smoothness (2026-11-08)
 
 The previous login flow started the looping OGV while
