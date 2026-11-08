@@ -1395,22 +1395,37 @@ func update_pet_status_panel() -> void :
 	for i in range(used_rows, existing_rows.size()):
 		existing_rows[i].queue_free()
 
+var _background_visuals_paused: bool = false
+
+func set_background_visuals_paused(paused: bool) -> void :
+	_background_visuals_paused = paused
+	if minimap_viewport:
+		minimap_viewport.render_target_update_mode = (
+			SubViewport.UPDATE_DISABLED if paused else SubViewport.UPDATE_ONCE
+		)
+	if is_instance_valid(minimap_npc_overlay) and minimap_npc_overlay.has_method("set_active"):
+		minimap_npc_overlay.set_active(not paused and not _is_hud_hidden)
+	if not paused:
+		_minimap_update_elapsed = MINIMAP_UPDATE_INTERVAL
+		_cursor_scan_elapsed = CURSOR_SCAN_IDLE_INTERVAL
+
 var _cursor_scan_elapsed: float = 0.0
 var _last_cursor_scan_position: Vector2 = Vector2(-99999.0, -99999.0)
 const CURSOR_SCAN_IDLE_INTERVAL: float = 0.10
 
 func _process(delta: float) -> void :
-	_cursor_scan_elapsed += delta
-	var mouse_position := get_viewport().get_mouse_position()
-	if mouse_position != _last_cursor_scan_position or _cursor_scan_elapsed >= CURSOR_SCAN_IDLE_INTERVAL:
-		_last_cursor_scan_position = mouse_position
-		_cursor_scan_elapsed = 0.0
-		_update_game_window_cursor_override()
+	if not _background_visuals_paused:
+		_cursor_scan_elapsed += delta
+		var mouse_position := get_viewport().get_mouse_position()
+		if mouse_position != _last_cursor_scan_position or _cursor_scan_elapsed >= CURSOR_SCAN_IDLE_INTERVAL:
+			_last_cursor_scan_position = mouse_position
+			_cursor_scan_elapsed = 0.0
+			_update_game_window_cursor_override()
 
-	_minimap_update_elapsed += delta
-	if _minimap_update_elapsed >= MINIMAP_UPDATE_INTERVAL:
-		_minimap_update_elapsed = fmod(_minimap_update_elapsed, MINIMAP_UPDATE_INTERVAL)
-		_update_minimap()
+		_minimap_update_elapsed += delta
+		if _minimap_update_elapsed >= MINIMAP_UPDATE_INTERVAL:
+			_minimap_update_elapsed = fmod(_minimap_update_elapsed, MINIMAP_UPDATE_INTERVAL)
+			_update_minimap()
 
 	if invite_box and invite_box.visible and _invite_time_left > 0:
 		_invite_time_left -= delta
