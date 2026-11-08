@@ -265,7 +265,8 @@ class EditorHandler(BaseHTTPRequestHandler):
                 if method == "DELETE":
                     raise ValueError("不支援 DELETE")
                 backup_id = str(body.get("id", "")).strip()
-                result = self.app.history.restore(backup_id)
+                with self.app.mutation_lock:
+                    result = self.app.history.restore(backup_id)
                 self.app.health.invalidate()
                 self._send_json(result)
                 return
@@ -281,17 +282,18 @@ class EditorHandler(BaseHTTPRequestHandler):
                 return
             if match := re.fullmatch(r"/api/enemies/(\d+)", path):
                 enemy_id = int(match.group(1))
-                if method == "DELETE":
-                    impact = self.app.health.references("enemy", str(enemy_id))
-                    if impact["count"] and not force:
-                        raise ValueError(
-                            f"怪物 {enemy_id} 仍有 {impact['count']} 筆引用；"
-                            "請先處理引用，或經使用者確認後以 force=1 刪除"
-                        )
-                    self.app.enemies.delete(enemy_id)
-                    result = {"ok": True}
-                else:
-                    result = self.app.enemies.save(enemy_id, body)
+                with self.app.mutation_lock:
+                    if method == "DELETE":
+                        impact = self.app.health.references("enemy", str(enemy_id))
+                        if impact["count"] and not force:
+                            raise ValueError(
+                                f"怪物 {enemy_id} 仍有 {impact['count']} 筆引用；"
+                                "請先處理引用，或經使用者確認後以 force=1 刪除"
+                            )
+                        self.app.enemies.delete(enemy_id)
+                        result = {"ok": True}
+                    else:
+                        result = self.app.enemies.save(enemy_id, body)
                 self.app.health.invalidate()
                 self._send_json(result)
                 return
@@ -359,17 +361,18 @@ class EditorHandler(BaseHTTPRequestHandler):
                 return
             if match := re.fullmatch(r"/api/scripts/(.+)", path):
                 name = urllib.parse.unquote(match.group(1))
-                if method == "DELETE":
-                    impact = self.app.health.references("script", name)
-                    if impact["count"] and not force:
-                        raise ValueError(
-                            f"NPC Script {name} 仍有 {impact['count']} 筆引用；"
-                            "請先處理引用，或經使用者確認後以 force=1 刪除"
-                        )
-                    self.app.quests.delete(name)
-                    result = {"ok": True}
-                else:
-                    result = self.app.quests.save(name, str(body.get("content", "")), bool(body.get("force", False)))
+                with self.app.mutation_lock:
+                    if method == "DELETE":
+                        impact = self.app.health.references("script", name)
+                        if impact["count"] and not force:
+                            raise ValueError(
+                                f"NPC Script {name} 仍有 {impact['count']} 筆引用；"
+                                "請先處理引用，或經使用者確認後以 force=1 刪除"
+                            )
+                        self.app.quests.delete(name)
+                        result = {"ok": True}
+                    else:
+                        result = self.app.quests.save(name, str(body.get("content", "")), bool(body.get("force", False)))
                 self.app.health.invalidate()
                 self._send_json(result)
                 return
