@@ -6712,6 +6712,21 @@ try
     // The current AOI contract only exposes players after WorldReady.
     // WorldReady's packet/snapshot handshake is covered separately above;
     // these test sessions simulate the already-ready world state.
+    //
+    // The preceding life-drain fixture intentionally moves the session to
+    // whichever map monster has the highest MaxHP. Restore the multiplayer
+    // fixture explicitly before asserting that these peers are nearby; AOI
+    // must not be tested against stale coordinates from an unrelated skill.
+    store.UpdateLocation(
+        account.Value,
+        id,
+        combatMapId,
+        combatEnemy.X,
+        combatEnemy.Y);
+    session.CurrentMapId = combatMapId;
+    session.LastX = combatEnemy.X;
+    session.LastY = combatEnemy.Y;
+    session.PendingMapSpawn = false;
     session.WorldReady = true;
     router.SyncPresence(session);
 
