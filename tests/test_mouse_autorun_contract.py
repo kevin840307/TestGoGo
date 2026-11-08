@@ -50,6 +50,14 @@ class MouseAutorunContractTests(unittest.TestCase):
         self.assertIn('AUTORUN_FRAME_SIZE: Vector2i = Vector2i(32, 32)', cursor)
         self.assertIn("AtlasTexture.new()", cursor)
         self.assertIn('frames.add_frame("autorun", frame_texture)', cursor)
+        self.assertIn('AUTORUN_VISUAL_SCALE: float = 1.35', cursor)
+        self.assertIn('cursor_sprite.scale = _original_cursor_scale', cursor)
+        self.assertIn('cursor_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST', cursor)
+        self.assertIn('text = "🔒 自動走路 ON', cursor)
+        self.assertIn("右鍵停止", cursor)
+        self.assertIn('mouse_filter = Control.MOUSE_FILTER_IGNORE', cursor)
+        self.assertIn("_autorun_status_label.visible = (", cursor)
+        self.assertIn('Auto-walk cursor sprite sheet must be 320x32 pixels.', cursor)
         self.assertIn("set_autorun_indicator(", cursor)
         self.assertIn('visual_state == "normal"', cursor)
         self.assertIn("not _is_game_window_hovered", cursor)
@@ -75,6 +83,8 @@ class MouseAutorunContractTests(unittest.TestCase):
         self.assertIn("player right-click menu behavior remains present", case)
         self.assertIn("mouse_autorun_regression.gd", windows)
         self.assertIn("mouse_autorun_regression.gd", ci)
+        self.assertIn("persistent readable lock-ON badge", case)
+        self.assertIn("restores regular sprite", case)
 
 
 if __name__ == "__main__":
