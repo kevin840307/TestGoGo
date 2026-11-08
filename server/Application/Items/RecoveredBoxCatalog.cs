@@ -87,23 +87,38 @@ public static partial class RecoveredBoxCatalog
         foreach (var name in names)
         {
             var reward = current.FindItemByName(name);
-            if (reward is null ||
-                reward.ItemId == itemIndex ||
-                !TryResolveKind(
+            if (reward is not null &&
+                reward.ItemId != itemIndex &&
+                TryResolveKind(
                     reward,
                     out var kind,
                     out var part))
             {
-                return null;
+                rewards.Add(new(
+                    reward.ItemId,
+                    reward.Name,
+                    kind,
+                    part,
+                    Math.Max(0, reward.Durability)));
+                continue;
             }
 
-            rewards.Add(new(
-                reward.ItemId,
-                reward.Name,
-                kind,
-                part,
-                Math.Max(0, reward.Durability)));
+            var setRewards =
+                ResolveExplicitSet(
+                    current,
+                    name,
+                    description);
+
+            if (setRewards.Count == 0)
+                return null;
+
+            rewards.AddRange(setRewards);
         }
+
+        rewards = rewards
+            .GroupBy(x => x.ItemIndex)
+            .Select(x => x.First())
+            .ToList();
 
         return rewards.Count == 0
             ? null
@@ -111,6 +126,98 @@ public static partial class RecoveredBoxCatalog
                 source.ItemId,
                 source.Name,
                 rewards);
+    }
+
+    private static IReadOnlyList<RecoveredBoxReward> ResolveExplicitSet(
+        CurrentClientDataCatalog current,
+        string quotedName,
+        string description)
+    {
+        if (!quotedName.EndsWith(
+                "套裝",
+                StringComparison.Ordinal) ||
+            !description.Contains(
+                "整套",
+                StringComparison.Ordinal))
+        {
+            return [];
+        }
+
+        var baseName =
+            quotedName[..^2];
+        var normalizedBase =
+            CurrentClientDataCatalog.NormalizeName(
+                baseName);
+
+        if (string.IsNullOrWhiteSpace(
+                normalizedBase))
+        {
+            return [];
+        }
+
+        var candidates =
+            new List<RecoveredBoxReward>();
+
+        foreach (var item in current.Items)
+        {
+            if (item.Category is not (
+                    "equip" or
+                    "weapon") &&
+                !item.Category.Equals(
+                    "equip",
+                    StringComparison.OrdinalIgnoreCase) &&
+                !item.Category.Equals(
+                    "weapon",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var normalizedName =
+                CurrentClientDataCatalog.NormalizeName(
+                    item.Name);
+
+            if (!normalizedName.StartsWith(
+                    normalizedBase,
+                    StringComparison.Ordinal) ||
+                !TryResolveKind(
+                    item,
+                    out var kind,
+                    out var part))
+            {
+                continue;
+            }
+
+            candidates.Add(new(
+                item.ItemId,
+                item.Name,
+                kind,
+                part,
+                Math.Max(
+                    0,
+                    item.Durability)));
+        }
+
+        // "整套" is accepted only when the current catalog yields a
+        // substantial, slot-unique set. Duplicate visual/equipment slots would
+        // make the recovered family ambiguous and therefore unsafe to grant.
+        if (candidates.Count < 3 ||
+            candidates
+                .Select(x => x.ItemIndex)
+                .Distinct()
+                .Count() != candidates.Count ||
+            candidates
+                .GroupBy(x => x.Part)
+                .Any(group =>
+                    group.Count() != 1))
+        {
+            return [];
+        }
+
+        return candidates
+            .OrderBy(x => x.Part)
+            .ThenBy(x => x.ItemIndex)
+            .ToArray();
     }
 
     private static bool TryResolveKind(
