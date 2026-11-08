@@ -9,19 +9,9 @@ public sealed class DollService
 {
     public const int HappinessDollItemId = 2126;
 
-    // Mirrors client/scripts/game_info_window.gd DOLL_INFOS for 幸福娃娃.
-    // The recovered client exposes no per-item weights, so currently every
-    // available reward is equally likely.
-    private static readonly int[] HappinessRewards =
-    [
-        1011, 1012, 1013, 50101, 50102, 50103, 2615, 2616,
-        19179, 19178, 19183, 19180, 19059, 19109, 19110, 19112,
-        19003, 19008, 19094, 19093, 19111, 18101, 19019, 18029,
-        18030, 18031, 18032, 18037, 18038, 18039, 19085, 19086,
-        19087, 19088, 2130, 2128, 2129, 19061, 19062, 19063,
-        19064, 19065, 19066, 19067, 19068, 19182, 19023, 19026,
-        19029, 2401, 2402, 2403, 2404, 18021
-    ];
+    // 2126 remains the only doll with global rare-reward announcements.
+    // All 2126..2134 reward pools live in DollRewardCatalog.
+
 
     private readonly IInventoryStore _inventory;
     private readonly ICharacterStore _characters;
@@ -46,7 +36,7 @@ public sealed class DollService
     }
 
     public bool Supports(int itemIndex)
-        => itemIndex == HappinessDollItemId ||
+        => DollRewardCatalog.Supports(itemIndex) ||
            _festivalRewards.Supports(itemIndex);
 
     private sealed record RewardCandidate(
@@ -199,18 +189,12 @@ public sealed class DollService
     private RewardCandidate[] BuildAvailableRewards(
         int sourceItemId)
     {
-        if (sourceItemId == HappinessDollItemId)
-        {
-            return HappinessRewards
-                .Select(id => new FestivalRandomReward(id, 1, 1))
-                .Select(TryBuildCandidate)
-                .Where(x => x is not null)
-                .Cast<RewardCandidate>()
-                .ToArray();
-        }
+        var rewardSpecs =
+            DollRewardCatalog.Supports(sourceItemId)
+                ? DollRewardCatalog.GetRewards(sourceItemId)
+                : _festivalRewards.GetRewards(sourceItemId);
 
-        return _festivalRewards
-            .GetRewards(sourceItemId)
+        return rewardSpecs
             .Select(TryBuildCandidate)
             .Where(x => x is not null)
             .Cast<RewardCandidate>()
