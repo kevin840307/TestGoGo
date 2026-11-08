@@ -50,6 +50,10 @@ const ACTION_STATE_MAX_MS: int = 900
 const NETWORK_MOVE_MIN_SPEED: float = 1.0
 const NETWORK_MOVE_MAX_SPEED: float = 205.0
 const NETWORK_MOVE_SNAP_EPSILON: float = 1.0
+# Keep diagnostics bounded even with hundreds of simultaneously chasing mobs.
+static var _debug_chase_packet_gap_logs: int = 0
+static var _debug_chase_state_idle_logs: int = 0
+static var _debug_chase_client_idle_logs: int = 0
 const MOVE_DIR_CONFIRM_COUNT: int = 2
 const MOVE_DIR_MAX_HOLD_MS: int = 450
 const VISIBILITY_RECT: Rect2 = Rect2(-180.0, -260.0, 360.0, 420.0)
@@ -147,6 +151,11 @@ func advance_network_runtime(delta: float) -> bool:
 		if current_state == "walk":
 			var idle_elapsed_ms := Time.get_ticks_msec() - last_move_packet_ms
 			if idle_elapsed_ms >= int(MOVE_IDLE_GRACE_SECONDS * 1000.0):
+				if OS.is_debug_build() and _debug_chase_client_idle_logs < 12 and is_instance_valid(target_indicator) and target_indicator.visible:
+					_debug_chase_client_idle_logs += 1
+					print("[MONSTER_CHASE_CLIENT_IDLE] id=%d packet_age_ms=%d remaining=%.1f" % [
+						entity_id, idle_elapsed_ms, global_position.distance_to(network_move_target)
+					])
 				current_state = "idle"
 				sync_animation()
 				return false
@@ -630,6 +639,11 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 	# an attack packet cannot flip a visually-correct chase direction.
 	var previous_state := current_state
 	var now_ms := Time.get_ticks_msec()
+	if OS.is_debug_build() and _debug_chase_state_idle_logs < 12 and new_state == "idle" and previous_state == "walk" and is_instance_valid(target_indicator) and target_indicator.visible:
+		_debug_chase_state_idle_logs += 1
+		print("[MONSTER_CHASE_SERVER_IDLE] id=%d packet_age_ms=%d remaining=%.1f" % [
+			entity_id, now_ms - last_move_packet_ms, global_position.distance_to(network_move_target)
+		])
 	var preserve_recent_move_facing := (
 		new_state == "attack" and
 		previous_state != "attack" and
@@ -684,7 +698,14 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 		_apply_network_target_direction(target_pos)
 
 	move_idle_generation += 1
-	last_move_packet_ms = Time.get_ticks_msec()
+	var now_ms: int = Time.get_ticks_msec()
+	var packet_gap_ms: int = now_ms - last_move_packet_ms if last_move_packet_ms > 0 else -1
+	if OS.is_debug_build() and _debug_chase_packet_gap_logs < 12 and packet_gap_ms > 375 and is_instance_valid(target_indicator) and target_indicator.visible:
+		_debug_chase_packet_gap_logs += 1
+		print("[MONSTER_CHASE_PACKET_GAP] id=%d gap_ms=%d distance=%.1f speed_time=%.3f" % [
+			entity_id, packet_gap_ms, global_position.distance_to(target_pos), speed_time
+		])
+	last_move_packet_ms = now_ms
 	network_move_target = target_pos
 
 	# Server uses SpeedTime <= 0.01 as an authoritative correction before
