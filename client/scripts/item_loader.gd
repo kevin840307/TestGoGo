@@ -121,7 +121,9 @@ func get_icon(icon_id: int) -> Texture2D:
 	if _icon_cache.has(icon_id): return _icon_cache[icon_id]
 	var path = ICON_PATH % icon_id
 	if ResourceLoader.exists(path):
-		var tex = load(path) as Texture2D
+		var tex = ResourceLoader.load(
+			path, "", ResourceLoader.CACHE_MODE_IGNORE
+		) as Texture2D
 		_icon_cache[icon_id] = tex
 		return tex
 	return null
@@ -131,7 +133,9 @@ func get_photo(photo_id: int) -> Texture2D:
 	if _photo_cache.has(photo_id): return _photo_cache[photo_id]
 	var path = PHOTO_PATH % photo_id
 	if ResourceLoader.exists(path):
-		var tex = load(path) as Texture2D
+		var tex = ResourceLoader.load(
+			path, "", ResourceLoader.CACHE_MODE_IGNORE
+		) as Texture2D
 		_photo_cache[photo_id] = tex
 		return tex
 	return null
@@ -141,7 +145,9 @@ func get_ground(ground_id: int) -> Texture2D:
 	if _ground_cache.has(ground_id): return _ground_cache[ground_id]
 	var path = GROUND_PATH % ground_id
 	if ResourceLoader.exists(path):
-		var tex = load(path) as Texture2D
+		var tex = ResourceLoader.load(
+			path, "", ResourceLoader.CACHE_MODE_IGNORE
+		) as Texture2D
 		_ground_cache[ground_id] = tex
 		return tex
 	return null

@@ -56,7 +56,9 @@ func get_pet_frames(outlook_name: String) -> SpriteFrames:
 
 	var json_text = FileAccess.open(json_path, FileAccess.READ).get_as_text()
 	var atlas_data: Dictionary = JSON.parse_string(json_text)
-	var big_texture = load(png_path) as Texture2D
+	var big_texture = ResourceLoader.load(
+		png_path, "", ResourceLoader.CACHE_MODE_IGNORE
+	) as Texture2D
 	var sf = SpriteFrames.new()
 	sf.remove_animation("default")
 

@@ -61,7 +61,9 @@ func get_icon(icon_id: int) -> Texture2D:
 
 	var path = ICON_PATH % icon_id
 	if ResourceLoader.exists(path):
-		var tex = load(path) as Texture2D
+		var tex = ResourceLoader.load(
+			path, "", ResourceLoader.CACHE_MODE_IGNORE
+		) as Texture2D
 		_icon_cache[icon_id] = tex
 		return tex
 

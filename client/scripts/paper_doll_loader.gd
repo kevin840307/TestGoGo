@@ -66,7 +66,9 @@ func _load_sr_atlas(base_path: String, allow_looping: bool) -> SpriteFrames:
 	if not ResourceLoader.exists(png_path) or not FileAccess.file_exists(json_path):
 		return null
 
-	var big_texture = load(png_path) as Texture2D
+	var big_texture = ResourceLoader.load(
+		png_path, "", ResourceLoader.CACHE_MODE_IGNORE
+	) as Texture2D
 	if not big_texture:
 		return null
 	var json_file = FileAccess.open(json_path, FileAccess.READ)
@@ -148,7 +150,9 @@ func get_sprite_frames(category: String, part_name: String) -> SpriteFrames:
 			return get_sprite_frames(boy_category, boy_part_name)
 		return null
 
-	var big_texture = load(png_path) as Texture2D
+	var big_texture = ResourceLoader.load(
+		png_path, "", ResourceLoader.CACHE_MODE_IGNORE
+	) as Texture2D
 	var json_text = FileAccess.open(json_path, FileAccess.READ).get_as_text()
 	var atlas_data: Dictionary = JSON.parse_string(json_text)
 

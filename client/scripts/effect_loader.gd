@@ -31,7 +31,9 @@ func get_effect(sub_path: String) -> SpriteFrames:
 			return null
 
 	if ResourceLoader.exists(full_path):
-		var source_frames = load(full_path) as SpriteFrames
+		var source_frames = ResourceLoader.load(
+			full_path, "", ResourceLoader.CACHE_MODE_IGNORE
+		) as SpriteFrames
 		if source_frames:
 			var frames = _build_timed_frames(source_frames, full_path)
 			frames.set_meta(AUDIO_RESOURCE_PATH_META, full_path)

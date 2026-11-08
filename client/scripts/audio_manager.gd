@@ -599,7 +599,9 @@ func _load_se_by_name(se_name: String) -> AudioStream:
 		_missing_se_names[se_name] = true
 		return null
 
-	var stream = load(se_path) as AudioStream
+	var stream = ResourceLoader.load(
+		se_path, "AudioStream", ResourceLoader.CACHE_MODE_IGNORE
+	) as AudioStream
 	if stream == null:
 		push_warning("[AudioManager] 無法載入音效檔案: %s" % se_path)
 		_missing_se_names[se_name] = true
@@ -693,7 +695,9 @@ func play_map_bgm(map_id: int) -> void :
 		return
 
 	_pending_bgm_path = bgm_path
-	var request_error: = ResourceLoader.load_threaded_request(bgm_path, "AudioStream")
+	var request_error: = ResourceLoader.load_threaded_request(
+		bgm_path, "AudioStream", false, ResourceLoader.CACHE_MODE_IGNORE
+	)
 	if request_error != OK:
 		var existing_status: = ResourceLoader.load_threaded_get_status(bgm_path)
 		if existing_status != ResourceLoader.THREAD_LOAD_IN_PROGRESS and existing_status != ResourceLoader.THREAD_LOAD_LOADED:
