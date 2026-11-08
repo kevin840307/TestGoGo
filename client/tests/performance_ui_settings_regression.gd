@@ -26,6 +26,16 @@ func _run() -> void:
 		"SpinBox arrow up from 120 reaches 144")
 	check(ClientPerformanceProfile.normalize_fps_spin_step(144, 139) == 120,
 		"SpinBox arrow down from 144 returns to 120")
+	var spin: SpinBox = SpinBox.new()
+	spin.min_value = 0.0
+	spin.max_value = 144.0
+	spin.step = 1.0
+	spin.custom_arrow_step = 5.0
+	spin.rounded = true
+	spin.value = 144.0
+	check(int(spin.value) == 144,
+		"real Godot SpinBox stores 144 without rounding it to a five-multiple")
+	spin.free()
 	check(ClientPerformanceProfile.normalize_fps_spin_step(60, 65) == 65,
 		"SpinBox standard arrow increments by five")
 	check(options.has(0) and options.has(30) and options.has(60) and options.has(120) and options.has(144),
@@ -53,7 +63,8 @@ func _run() -> void:
 		"SpinBox numeric entry and arrows normalize values and update settings")
 	var tscn: String = FileAccess.get_file_as_string("res://game_hud.tscn")
 	check(tscn.contains("[node name=\"OptionFpsLimit\" type=\"SpinBox\"")
-		and tscn.contains("step = 5.0"),
+		and tscn.contains("step = 1.0")
+		and tscn.contains("custom_arrow_step = 5.0"),
 		"FPS settings widget is an editable SpinBox with five FPS per click")
 	var original_cap: int = GameManager.current_foreground_fps_limit
 	var original_load: int = GameManager.current_performance_load_mode

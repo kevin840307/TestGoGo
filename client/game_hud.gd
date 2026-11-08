@@ -768,11 +768,14 @@ func _setup_window_manager() -> void :
 			# 0 = unlimited, 30..120 in steps of 5, or 144.
 			option_fps_limit.min_value = 0.0
 			option_fps_limit.max_value = 144.0
-			option_fps_limit.step = 5.0
+			# Range.step must be 1 so manually entered 144 is representable.
+			option_fps_limit.step = 1.0
+			option_fps_limit.custom_arrow_step = 5.0
+			option_fps_limit.custom_arrow_round = false
 			option_fps_limit.rounded = true
 			option_fps_limit.value = float(current_fps_limit)
 			option_fps_limit.editable = true
-			option_fps_limit.get_line_edit().select_all_on_focus = true
+			option_fps_limit.select_all_on_focus = true
 			if not option_fps_limit.value_changed.is_connected(_on_opt_fps_limit_value_changed):
 				option_fps_limit.value_changed.connect(_on_opt_fps_limit_value_changed)
 
@@ -2912,6 +2915,9 @@ func _on_opt_fps_limit_value_changed(raw_value: float) -> void:
 	# Reflect normalized values back to the numeric editor without recursion.
 	if int(round(option_fps_limit.value)) != selected:
 		option_fps_limit.set_value_no_signal(float(selected))
+		# Prevent a stale typed text value from restoring an invalid number
+		# when the LineEdit loses keyboard focus.
+		option_fps_limit.get_line_edit().text = str(selected)
 	if selected == current_fps_limit:
 		return
 	current_fps_limit = selected

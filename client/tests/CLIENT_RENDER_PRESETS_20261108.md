@@ -6,7 +6,7 @@ The changes touch ONLY the Godot Client. No Server code, packet schema, server-s
 
 - 效能模式: **畫質優先** enables old world enhancement; **一般** disables enhancement but retains normal player/monster artwork; **低負載** simplifies ordinary monsters/players and reduces effect updates; **多開** further prioritizes low-resource render paths.
 - The independent **畫質增強** switch has been removed; old setting is ignored, visual preset indices and per-account values remain compatible.
-- **畫面 FPS** uses an editable **SpinBox with up/down arrows** (no long dropdown): 不限制 = 0, 30..120 in 5-FPS increments, 144. The arrows skip directly 0↔30 and 120↔144. Numeric entry is normalized; default 60, saved per account. Changing graphic preset NEVER changes FPS. Low means smoother rendering via less work, *not lower FPS*.
+- **畫面 FPS** uses an editable **SpinBox with up/down arrows** (no long dropdown; Range.step=1 and custom_arrow_step=5 preserve manual 144): 不限制 = 0, 30..120 in 5-FPS increments, 144. The arrows skip directly 0↔30 and 120↔144. Numeric entry is normalized; default 60, saved per account. Changing graphic preset NEVER changes FPS. Low means smoother rendering via less work, *not lower FPS*.
 
 | Visual mode | Base effect budget | Monster visual AOI (enter/exit) | Ground item visual AOI (enter/exit) | World enhancement |
 |---|---:|---:|---:|---|
