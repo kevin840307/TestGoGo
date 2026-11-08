@@ -30,6 +30,13 @@ func _begin_login_select_loading_session() -> int:
 	_set_loading_progress(0.0, __login_select_session_id_id)
 	return __login_select_session_id_id
 
+func _debug_perf_checkpoint(checkpoint: String) -> void:
+	if not OS.is_debug_build():
+		return
+	if GameManager and GameManager.has_method("log_performance_checkpoint"):
+		GameManager.log_performance_checkpoint(checkpoint)
+
+
 func _set_loading_progress(value: float, session_id: int = -1) -> void :
 	if session_id >= 0 and session_id != _loading_session_id:
 		return
@@ -174,6 +181,7 @@ func _start_game_entry_flow() -> void :
 	_show_login_screen()
 
 func _show_login_screen() -> void :
+	_debug_perf_checkpoint("login_screen_ready")
 	if AudioManager and AudioManager.has_method("play_login_bgm"):
 		AudioManager.play_login_bgm()
 
@@ -239,6 +247,7 @@ func _start_character_selection_load() -> void :
 	if select_script_node and select_script_node.has_method("request_character_list"):
 		_connect_character_select_signals()
 		await select_script_node.request_character_list()
+		_debug_perf_checkpoint("character_select_ready")
 
 		if is_instance_valid(select_script_node):
 			select_script_node.modulate.a = 1.0
@@ -364,6 +373,7 @@ func _on_character_verified_and_enter_game(char_data: Dictionary, _map_id: Strin
 	var overlay = get_node_or_null("%LoadingOverlay")
 	var select_script_node = character_select_layer.get_node_or_null("CharacterSelect")
 	_world_loading_session_id = _begin_loading_session()
+	_debug_perf_checkpoint("world_load_start")
 
 
 	if overlay:
@@ -458,4 +468,5 @@ func _on_server_enter_world_success(server_full_data: Dictionary) -> void :
 
 		overlay.visible = false
 
+	_debug_perf_checkpoint("world_ready")
 	queue_free()
