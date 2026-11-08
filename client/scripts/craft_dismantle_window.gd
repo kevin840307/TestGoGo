@@ -81,7 +81,11 @@ func prepare_initial_async(progress_callback: Callable = Callable()) -> void :
 	await get_tree().process_frame
 	var craft_started_usec: int = Time.get_ticks_usec()
 	if crafting_panel and crafting_panel.has_method("refresh_availability_async"):
-		await crafting_panel.refresh_availability_async()
+		var availability_progress: Callable = Callable()
+		if progress_callback.is_valid():
+			availability_progress = func(ratio: float) -> void:
+				progress_callback.call(0.9 + clampf(ratio, 0.0, 1.0) * 0.1)
+		await crafting_panel.refresh_availability_async(availability_progress)
 	elif crafting_panel and crafting_panel.has_method("set_recipe_data"):
 		crafting_panel.set_recipe_data(recipe_data)
 	var craft_ms: float = float(Time.get_ticks_usec() - craft_started_usec) / 1000.0
