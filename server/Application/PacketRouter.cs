@@ -258,6 +258,13 @@ public sealed class PacketRouter
 
         if (characterId > 0)
         {
+            _playerShop.Disconnect(
+                state.ConnectionId,
+                state.PublishedMapId > 0
+                    ? state.PublishedMapId
+                    : state.CurrentMapId,
+                state.AccountId ?? 0,
+                characterId);
             _party.Disconnect(
                 characterId);
             _trade.Disconnect(
@@ -338,7 +345,15 @@ public sealed class PacketRouter
                     Message = loginSchemaError,
                     Characters = Array.Empty<object>()
                 }];
-            _sessions.Unregister(state.ConnectionId);
+            if (state.CharacterId.HasValue ||
+                state.PublishedCharacterId > 0)
+            {
+                DisconnectPresence(state);
+            }
+            else
+            {
+                _sessions.Unregister(state.ConnectionId);
+            }
 
             var id = _store.Login(req.Str("User"), req.Str("Pass"));
             state.AccountId = id;
@@ -5089,8 +5104,7 @@ public sealed class PacketRouter
             }
 
             case "LogoutRequest":
-                PersistPendingPosition(state);
-                _sessions.Unregister(state.ConnectionId);
+                DisconnectPresence(state);
                 state.AccountId = null;
                 state.CharacterId = null;
                 state.CurrentMapId = 0;
