@@ -112,6 +112,28 @@ var _audio_played_cues: Dictionary = {}
 var _audio_last_frame: int = -1
 static var _shared_controller_timed_frames_cache: Dictionary = {}
 static var _mecha_head_anchor_cache: Dictionary = {}
+# Bounded by 8 palette indices x effect types. Sharing identical material
+# parameters avoids allocating a new ShaderMaterial for each doll part.
+# The shader uses global TIME: identical materials preserve effect animation.
+static var _shared_palette_materials: Dictionary = {}
+
+
+static func get_shared_palette_material(color_index: int, effect_type: int) -> ShaderMaterial:
+	var hue: float = float(COLOR_INDEX_TO_DEGREES.get(color_index, 0.0))
+	var key: String = "%d:%.4f" % [effect_type, hue]
+	var material: ShaderMaterial = _shared_palette_materials.get(key, null) as ShaderMaterial
+	if is_instance_valid(material):
+		return material
+	material = ShaderMaterial.new()
+	material.shader = PALETTE_SHADER
+	material.set_shader_parameter("effect_type", effect_type)
+	material.set_shader_parameter("hue_shift", hue)
+	_shared_palette_materials[key] = material
+	return material
+
+
+static func get_shared_palette_material_count() -> int:
+	return _shared_palette_materials.size()
 
 const ACT_CONTROLLER_TIMELINES_META = "act_controller_timelines"
 const USE_RESOURCE_MECHA_HEAD_ANCHORS: = true
@@ -741,11 +763,9 @@ func _add_doll_part(node_key: String, item_id: int, prefix: String, category: St
 			apply_shader = true
 
 		if apply_shader:
-			var shader_mat = ShaderMaterial.new()
-			shader_mat.shader = PALETTE_SHADER
-			shader_mat.set_shader_parameter("effect_type", chosen_effect_type)
-			shader_mat.set_shader_parameter("hue_shift", COLOR_INDEX_TO_DEGREES.get(chosen_index, 0.0))
-			anim_sprite.material = shader_mat
+			# Materials are immutable after setup; reuse for identical hue/effect
+			# across multiple dolls and parts without changing shader visuals.
+			anim_sprite.material = get_shared_palette_material(chosen_index, chosen_effect_type)
 		else: anim_sprite.material = null
 
 func _on_sprite_frame_changed(part_key: String) -> void :
