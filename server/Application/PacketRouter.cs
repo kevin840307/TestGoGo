@@ -5002,13 +5002,13 @@ public sealed class PacketRouter
 
                 switch (channel)
                 {
-                    // Nearby: only players on the same map. The sender gets
-                    // the packet from the normal response path below.
+                    // Nearby chat is a visual proximity event. The
+                    // sender gets its own response; distant map peers do
+                    // not need to receive or decode its chat bubble.
                     case 0:
-                        _broadcasts.PublishToMap(
-                            state.CurrentMapId,
-                            chatPacket,
-                            state.ConnectionId);
+                        _broadcasts.PublishToPlayerObservers(
+                            state.ConnectionId,
+                            chatPacket);
                         break;
 
                     // Faction/world channel in the recovered UI has no
@@ -7503,10 +7503,8 @@ public sealed class PacketRouter
                     "PetIdleSpeech"))
                 continue;
 
-            _broadcasts.PublishToMap(
-                state.CurrentMapId,
-                packet,
-                state.ConnectionId);
+            _broadcasts.PublishToPlayerObservers(
+                state.ConnectionId, packet);
         }
     }
 
@@ -7521,10 +7519,8 @@ public sealed class PacketRouter
             dbid,
             assets);
 
-        _broadcasts.PublishToMap(
-            state.CurrentMapId,
-            packet,
-            state.ConnectionId);
+        _broadcasts.PublishToPlayerObservers(
+            state.ConnectionId, packet);
 
         return packet;
     }
@@ -7543,10 +7539,8 @@ public sealed class PacketRouter
         if (state.CurrentMapId > 0 &&
             state.CharacterId.HasValue)
         {
-            _broadcasts.PublishToMap(
-                state.CurrentMapId,
-                packet,
-                state.ConnectionId);
+            _broadcasts.PublishToPlayerObservers(
+                state.ConnectionId, packet);
         }
 
         return packet;
@@ -7570,8 +7564,8 @@ public sealed class PacketRouter
         if (state.CurrentMapId > 0 &&
             state.CharacterId == dbid)
         {
-            _broadcasts.PublishToMap(
-                state.CurrentMapId,
+            _broadcasts.PublishToPlayerObservers(
+                state.ConnectionId,
                 new
                 {
                     Type = "SyncStatus",
@@ -7601,8 +7595,7 @@ public sealed class PacketRouter
                     MoveSpeed = stats.MoveSpeed,
                     CritRate = stats.CritRate,
                     CritDamage = stats.CritDamage
-                },
-                state.ConnectionId);
+                });
         }
 
         return CharacterStatCalculator.ToPlayerStatusPacket(
