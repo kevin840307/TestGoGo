@@ -187,6 +187,10 @@ try {
             "--headless", "--path", "client",
             "--script", "res://tests/mouse_autorun_regression.gd"
         )
+        Invoke-Checked "Godot headless client regressions: map and dismount movement correction" $godotCommand @(
+            "--headless", "--path", "client",
+            "--script", "res://tests/player_map_movement_regression.gd"
+        )
         Invoke-Checked "Godot headless client regressions: multiclient render dedup" $godotCommand @(
             "--headless", "--path", "client",
             "--script", "res://tests/multiclient_render_dedup_regression.gd"
