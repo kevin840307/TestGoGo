@@ -8,7 +8,8 @@ public sealed record OnlinePlayerPresence(
     long CharacterId,
     int MapId,
     double X,
-    double Y);
+    double Y,
+    string CharacterName = "");
 
 public sealed class ServerBroadcastHub
 {
@@ -17,7 +18,8 @@ public sealed class ServerBroadcastHub
         long AccountId,
         long CharacterId,
         double X,
-        double Y);
+        double Y,
+        string CharacterName);
 
     private readonly ConcurrentDictionary<Guid, ConcurrentQueue<object>>
         _queues = new();
@@ -36,7 +38,7 @@ public sealed class ServerBroadcastHub
         var id = Guid.NewGuid();
         var queue = new ConcurrentQueue<object>();
         _queues[id] = queue;
-        _presence[id] = new Presence(0, 0, 0, 0, 0);
+        _presence[id] = new Presence(0, 0, 0, 0, 0, "");
         return (id, queue);
     }
 
@@ -46,7 +48,8 @@ public sealed class ServerBroadcastHub
         long? characterId,
         long? accountId = null,
         double x = 0,
-        double y = 0)
+        double y = 0,
+        string characterName = "")
     {
         if (connectionId == Guid.Empty ||
             !_queues.ContainsKey(connectionId))
@@ -57,7 +60,8 @@ public sealed class ServerBroadcastHub
             Math.Max(0, accountId ?? 0),
             Math.Max(0, characterId ?? 0),
             x,
-            y);
+            y,
+            characterName ?? "");
     }
 
     public void UpdatePosition(
@@ -94,7 +98,8 @@ public sealed class ServerBroadcastHub
                 pair.Value.CharacterId,
                 pair.Value.MapId,
                 pair.Value.X,
-                pair.Value.Y);
+                pair.Value.Y,
+                pair.Value.CharacterName);
         }
 
         return null;
@@ -123,7 +128,8 @@ public sealed class ServerBroadcastHub
                 x.Value.CharacterId,
                 x.Value.MapId,
                 x.Value.X,
-                x.Value.Y))
+                x.Value.Y,
+                x.Value.CharacterName))
             .ToArray();
 
     public IReadOnlyList<OnlinePlayerPresence> OnlinePlayers(
@@ -163,7 +169,7 @@ public sealed class ServerBroadcastHub
 
         return _playerAoi.Upsert(new OnlinePlayerPresence(
             connectionId, presence.AccountId, presence.CharacterId,
-            presence.MapId, presence.X, presence.Y));
+            presence.MapId, presence.X, presence.Y, presence.CharacterName));
     }
 
     public IReadOnlyList<PlayerSpatialAoi.Change> RemovePlayerAoi(
