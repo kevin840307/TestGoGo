@@ -20,8 +20,7 @@ internal static class HappinessDollSmokeTests
         long accountId,
         long characterId,
         long dollUid,
-        CurrentClientDataCatalog current,
-        IConfiguration config)
+        CurrentClientDataCatalog current)
     {
         // 2126 is a RANDOM pool, not a guaranteed 50102 battery. Test the
         // router with every legal result instead of relying on random luck.
@@ -104,9 +103,55 @@ internal static class HappinessDollSmokeTests
                 $" (reward={rewardedItemId}, deltas={string.Join(",", deltas.Select(x => $"{x.ItemId}:{x.Delta}"))})");
         }
 
-        // A separate deterministic fixture checks the rare-reward broadcast.
-        // The real 2126 pool is random; only 50102 is present in this catalog,
-        // so this assertion can never fail because another valid item rolled.
+        // Do not award the main test character an extra 50102 battery here:
+        // later HorseChargeRequest tests use its existing battery UID. A
+        // separate character and catalog keep this fixture deterministic and
+        // prevent accidental inventory-stack pollution.
+        var mainInventoryBeforeRare = InventoryCounts(
+            store.GetCharacterAssets(accountId, characterId).Inventory);
+        var rareUsername =
+            "doll-rare-" + Guid.NewGuid().ToString("N")[..16];
+        var rareCharacterName =
+            "DollRare" + Guid.NewGuid().ToString("N")[..12];
+        var registration = store.Register(
+            rareUsername,
+            "test-password",
+            "");
+        Check(
+            registration.Success,
+            $"register isolated rare-doll account (message={registration.Message})");
+
+        var rareAccountId = store.Login(
+            rareUsername,
+            "test-password");
+        Check(
+            rareAccountId.HasValue,
+            "login isolated rare-doll account");
+
+        using var create = Json(JsonSerializer.Serialize(new
+        {
+            Name = rareCharacterName,
+            Password = "1234",
+            Race = 0,
+            Hair = 1,
+            HairColor = 1,
+            Str = 5,
+            Dex = 5,
+            Con = 5,
+            Wis = 5
+        }));
+        var creation = store.Create(
+            rareAccountId!.Value,
+            create.RootElement);
+        Check(
+            creation.Success,
+            $"create isolated rare-doll character (message={creation.Message})");
+        var rareCharacterId = store.Characters(rareAccountId.Value)
+            .Select(x => Convert.ToInt64(x["DBID"]))
+            .Single(x => x > 0);
+
+        // The real 2126 pool is random. The fixture exposes only battery
+        // 50102, so the announcement outcome is guaranteed.
         var rareCatalog = new CurrentClientDataCatalog(
             new[]
             {
@@ -114,6 +159,13 @@ internal static class HappinessDollSmokeTests
                 current.FindItem(50102)!
             },
             Array.Empty<CurrentSkillDefinition>());
+        var rareConfig = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Gameplay:Dolls:Happiness:AnnouncementRewardIds"] = "50102",
+                ["Gameplay:Dolls:Happiness:AnnouncementMinimumPrice"] = "0"
+            })
+            .Build();
         var rareBroadcasts = new ServerBroadcastHub();
         var rareListener = rareBroadcasts.Register();
         var rareDolls = new DollService(
@@ -121,30 +173,31 @@ internal static class HappinessDollSmokeTests
             store,
             rareCatalog,
             rareBroadcasts,
-            config);
+            rareConfig);
 
         var rareDollUid = store.AddInventoryItem(
-            accountId,
-            characterId,
+            rareAccountId.Value,
+            rareCharacterId,
             DollService.HappinessDollItemId,
             1);
-        Check(rareDollUid > 0,
+        Check(
+            rareDollUid > 0,
             "seed isolated rare Happiness Doll reward fixture");
 
         var rareBefore = store.GetCharacterAssets(
-            accountId,
-            characterId);
+            rareAccountId.Value,
+            rareCharacterId);
         var rareBeforeBatteryCount = InventoryCounts(
             rareBefore.Inventory).GetValueOrDefault(50102);
 
         var rarePackets = rareDolls.Open(
-            accountId,
-            characterId,
+            rareAccountId.Value,
+            rareCharacterId,
             rareDollUid,
             DollService.HappinessDollItemId);
         var rareAfter = store.GetCharacterAssets(
-            accountId,
-            characterId);
+            rareAccountId.Value,
+            rareCharacterId);
         var rareAfterBatteryCount = InventoryCounts(
             rareAfter.Inventory).GetValueOrDefault(50102);
 
@@ -160,9 +213,16 @@ internal static class HappinessDollSmokeTests
             rareListener.Queue.TryDequeue(out var announcement) &&
             JsonSerializer.Serialize(announcement).Contains(
                 "\"Type\":\"SystemMessageBroadcast\"") &&
-            PacketTreeContainsString(announcement, "TestCharacter") &&
+            PacketTreeContainsString(announcement, rareCharacterName) &&
             PacketTreeContainsString(announcement, "魔靈電池"),
             "rare Happiness Doll reward publishes global announcement");
+
+        var mainInventoryAfterRare = InventoryCounts(
+            store.GetCharacterAssets(accountId, characterId).Inventory);
+        Check(
+            mainInventoryBeforeRare.OrderBy(x => x.Key).SequenceEqual(
+                mainInventoryAfterRare.OrderBy(x => x.Key)),
+            "rare Happiness Doll fixture does not mutate main test character inventory");
 
         rareBroadcasts.Unregister(rareListener.ConnectionId);
     }
