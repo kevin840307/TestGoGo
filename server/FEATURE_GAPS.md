@@ -47,7 +47,8 @@
 - **Client 維修契約**：新增獨立 `tests/test_client_repair_contract.py`，守住 `repair_window.gd` 的 Equip→`ItemID/Equip`、MECHA→`EquipUID/HorseEquip` 映射、滿耐久不送封包，以及 NetworkManager 的 `RepairItemRequest` schema；已加入 `run_protocol_checks.ps1`。
 - **Ground-item map lifecycle**：真 AES/WebSocket Wire 測試新增「丟物 → 離開原地圖 → 回原地圖 → `WorldReady` 收到同一 `EntityID` 且 `IsSnapshot=true` → 正常 `PickUpItemRequest` → 同圖 peer 收到 `DespawnEntity`」。這直接守住換圖回來地上物品不能消失的回歸。
 - **Session identity cleanup**：新增 `SessionIdentityCleanupSmokeTests.cs`，驗證已進世界的 socket 直接重新登入另一帳號，以及 `LogoutRequest`，都會在舊 AccountID/CharacterID 被清空前先執行 `DisconnectPresence`；舊玩家 Presence、Party/Trade、PlayerShop 記憶體狀態與 DB `InShop` 保留列都必須清乾淨。
-- **仍未完成**：上述新增程式目前仍缺有實際 steps 的 CI/.NET PASS 證據。PlayerShop disconnect vs Buy 已補；同一 socket 的封包處理與 transport disconnect 由 `lock(state)` 串行化，因此「同角色同時切圖又撿取」不是實際平行 race。ground-item 的切圖離開/返回 snapshot + pickup 已補真 Wire E2E；目前剩下真 Godot Scene/UI 的維修/交易/切圖互動、實際掉線/重連 UI 狀態，以及 10/50/100 人長時間 soak。
+- **PlayerShop crash recovery**：`SelectCharacterRequest` 在第一次資產 bootstrap 前呼叫 `RecoverStaleReservations`；若角色沒有任何 live in-memory shop，會解除 crash/restart 遺留的 DB `InShop=1`。測試會人工製造孤兒保留列，再重新登入選角，要求第一個世界狀態前已恢復可用資產。
+- **仍未完成**：上述新增程式目前仍缺有實際 steps 的 CI/.NET PASS 證據。PlayerShop disconnect vs Buy、正常 disconnect/logout/relogin cleanup、以及 crash 後孤兒 `InShop` recovery 都已補；同一 socket 的封包處理與 transport disconnect 由 `lock(state)` 串行化，因此「同角色同時切圖又撿取」不是實際平行 race。ground-item 的切圖離開/返回 snapshot + pickup 已補真 Wire E2E；目前剩下真 Godot Scene/UI 的維修/交易/切圖互動、實際掉線/重連 UI 狀態，以及 10/50/100 人長時間 soak。
 - **執行**：`dotnet run --project tests/SGO.Server.SmokeTests -- --suite concurrency`，再執行 `dotnet run --project tests/SGO.Server.WireSmokeTests -- <server-url>`；任何一項未 PASS 均不可把 P0-02 標示完成。
 
 ## P1 — 遊戲資料與舊版相容
@@ -82,7 +83,7 @@
 - `Integration/AssetMutationConcurrencySmokeTests.cs`：同角色多件裝備同時維修的資產 + 金錢 transaction 原子性。
 - `Integration/CrossFeatureConcurrencySmokeTests.cs`：Trade + DirectTransfer、Trade + PlayerShop Buy、Craft + DirectTransfer 同時碰同一角色時的跨功能資產/金錢守恆。
 - `Integration/PlayerShopLifecycleConcurrencySmokeTests.cs`：BuyItem vs CloseShop / Disconnect 的 Service/DB 生命周期競態，驗證關店、InShop 清理、資產與金錢守恆。
-- `Integration/SessionIdentityCleanupSmokeTests.cs`：同 socket relogin 與 LogoutRequest 的 Presence/PlayerShop/保留資產 cleanup。
+- `Integration/SessionIdentityCleanupSmokeTests.cs`：同 socket relogin、LogoutRequest，以及 crash/restart 孤兒 InShop row 的選角恢復。
 - `SGO.Server.WireSmokeTests` ground lifecycle：地面物品跨 map leave/return 仍由 WorldReady snapshot 重建，返回後可正常拾取並廣播 despawn。
 - `Integration/MarketplaceResponseContractSmokeTests.cs`：TradeSync 雙方動態 view、ShopSync/ShopViewResponse listing runtime contract，以及 PlayerShopService 10 buyer/5 item race。
 - `Integration/TradeTerminalRaceSmokeTests.cs`：受控攔截 DB commit，驗證取消／斷線在提交中不會同時產生 TradeCancel 與 TradeSuccess。
