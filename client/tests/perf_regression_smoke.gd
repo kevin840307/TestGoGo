@@ -109,6 +109,12 @@ func _run() -> void:
 		"server monster aggro establishes temporary AOI visibility")
 	_check(NetworkEntityManager._queued_spawn_ids.has(test_id),
 		"server monster aggro requeues an invisible cached monster")
+	_check(NetworkEntityManager._spawn_priority(
+			NetworkEntityManager._monster_spawn_templates[test_id], null
+		) < NetworkEntityManager._spawn_priority({
+			"EntityID": 42, "EntityType": 3
+		}, null),
+		"attacking monster bypasses a massive ground-item spawn backlog")
 	var combat_queue_entries: int = 0
 	for queued in NetworkEntityManager._spawn_queue:
 		if int(queued.get("EntityID", 0)) == test_id:
