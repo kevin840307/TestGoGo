@@ -113,7 +113,9 @@ public sealed class GmCommandService
     }
 
     private bool Enabled()
-        => _config.GetValue<bool?>("Game:GmCommandsEnabled") ?? true;
+        // Privileged commands must be explicitly enabled by the deployment.
+        // Tests opt in through configuration; production/default is denied.
+        => _config.GetValue<bool?>("Game:GmCommandsEnabled") ?? false;
 
     private IReadOnlyList<object> Position(long accountId, long dbid)
     {
