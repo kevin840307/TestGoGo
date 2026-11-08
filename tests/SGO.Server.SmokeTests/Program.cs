@@ -8404,6 +8404,14 @@ try
         combatMapId,
         Convert.ToInt32(monster.X + 2000),
         Convert.ToInt32(monster.Y));
+    var staleTargetRegistration = broadcastHub.Register();
+    broadcastHub.UpdatePresence(
+        staleTargetRegistration.ConnectionId,
+        combatMapId,
+        secondCharacterId,
+        account.Value,
+        monster.X + 2000,
+        monster.Y);
 
     monster.HasTarget = true;
     monster.TargetCharacterId = secondCharacterId;
@@ -8433,6 +8441,9 @@ try
             JsonSerializer.Serialize(x).Contains(
                 $"\"AttackerID\":{monster.EntityId}")),
         "monster releases stale foreign target and attacks nearby player in same tick");
+
+    broadcastHub.Unregister(
+        staleTargetRegistration.ConnectionId);
 
     monster.HasTarget = false;
     monster.TargetCharacterId = 0;
