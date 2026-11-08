@@ -567,12 +567,39 @@ public sealed class ServerBroadcastHub
         return values;
     }
 
+    private static object? ReadPacketValue(
+        object packet,
+        string property)
+    {
+        if (packet is
+            IReadOnlyDictionary<string, object> readOnly &&
+            readOnly.TryGetValue(
+                property,
+                out var readOnlyValue))
+        {
+            return readOnlyValue;
+        }
+
+        if (packet is
+            IDictionary<string, object> dictionary &&
+            dictionary.TryGetValue(
+                property,
+                out var dictionaryValue))
+        {
+            return dictionaryValue;
+        }
+
+        return packet.GetType()
+            .GetProperty(property)
+            ?.GetValue(packet);
+    }
+
     private static string? ReadPacketString(
         object packet,
         string property)
-        => packet.GetType()
-            .GetProperty(property)
-            ?.GetValue(packet)
+        => ReadPacketValue(
+                packet,
+                property)
             ?.ToString();
 
     private static long ReadPacketLong(
@@ -580,9 +607,9 @@ public sealed class ServerBroadcastHub
         string property)
     {
         var raw =
-            packet.GetType()
-                .GetProperty(property)
-                ?.GetValue(packet);
+            ReadPacketValue(
+                packet,
+                property);
         if (raw is null)
             return 0;
 
@@ -602,9 +629,9 @@ public sealed class ServerBroadcastHub
         double fallback = 0)
     {
         var raw =
-            packet.GetType()
-                .GetProperty(property)
-                ?.GetValue(packet);
+            ReadPacketValue(
+                packet,
+                property);
         if (raw is null)
             return fallback;
 
