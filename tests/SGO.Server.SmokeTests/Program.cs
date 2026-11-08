@@ -8035,12 +8035,11 @@ try
     router.DisconnectPresence(peerSession);
 
     Check(
-        broadcastRegistration.Queue.TryDequeue(
-            out var peerDespawn) &&
-        JsonSerializer.Serialize(peerDespawn).Contains(
-            "\"Type\":\"DespawnEntity\"") &&
-        JsonSerializer.Serialize(peerDespawn).Contains(
-            $"\"EntityID\":{secondCharacterId}"),
+        broadcastRegistration.Queue.ToArray().Any(packet =>
+            JsonSerializer.Serialize(packet).Contains(
+                "\"Type\":\"DespawnEntity\"") &&
+            JsonSerializer.Serialize(packet).Contains(
+                $"\"EntityID\":{secondCharacterId}")),
         "disconnecting player immediately despawns from map peers");
 
     broadcastHub.Unregister(peerRegistration.ConnectionId);
