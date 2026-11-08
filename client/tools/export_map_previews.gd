@@ -25,14 +25,33 @@ func _run() -> void:
 		return
 
 	var bounds_by_id := _load_bounds()
-	var map_ids := _requested_ids if not _requested_ids.is_empty() else _discover_map_ids()
-	if map_ids.is_empty():
+	var discovered_ids := _requested_ids if not _requested_ids.is_empty() else _discover_map_ids()
+	if discovered_ids.is_empty():
 		printerr("[MAP_PREVIEW] no map scenes listed/found. Expected %s or generated MapXX.scn files." % MANIFEST_PATH)
 		quit(3)
 		return
 
+	var map_ids: Array[int] = []
+	var missing_bounds_count := 0
+	for map_id in discovered_ids:
+		if bounds_by_id.has(str(map_id)):
+			map_ids.append(map_id)
+			continue
+		missing_bounds_count += 1
+		printerr("[MAP_PREVIEW] map bounds missing map=%d path=%s" % [map_id, BOUNDS_PATH])
+		# Explicit requests should fail loudly because the requested preview cannot
+		# be aligned. Default bulk export skips manifest scenes that have no known
+		# world bounds yet; otherwise a normal all-map export can never succeed.
+		if not _requested_ids.is_empty():
+			failed += 1
+
+	if map_ids.is_empty():
+		printerr("[MAP_PREVIEW] no exportable maps have valid bounds.")
+		quit(6)
+		return
+
 	var exported := 0
-	var failed := 0
+	var failed := 0 if _requested_ids.is_empty() else missing_bounds_count
 	var missing_scene_count := 0
 	for map_id in map_ids:
 		var scene_path := "res://maps/Map%02d.scn" % map_id
@@ -52,7 +71,7 @@ func _run() -> void:
 		quit(5)
 		return
 
-	print("[MAP_PREVIEW] complete exported=%d failed=%d missing_scene=%d output=%s" % [exported, failed, missing_scene_count, _output_dir])
+	print("[MAP_PREVIEW] complete exported=%d failed=%d missing_scene=%d missing_bounds=%d output=%s" % [exported, failed, missing_scene_count, missing_bounds_count, _output_dir])
 	quit(0 if failed == 0 else 4)
 
 
