@@ -309,7 +309,10 @@ func _bootstrap_before_login() -> void :
 	await get_tree().create_timer(0.30).timeout
 	if not is_inside_tree():
 		return
-	if not DisplayServer.window_is_focused():
+	var final_foreground: bool = DisplayServer.window_is_focused() and RenderingServer.render_loop_enabled
+	if GameManager:
+		final_foreground = final_foreground and bool(GameManager.get("_window_has_focus"))
+	if not final_foreground:
 		await _wait_for_login_visual_ready()
 	if is_inside_tree():
 		_start_game_entry_flow()
