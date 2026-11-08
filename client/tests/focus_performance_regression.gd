@@ -18,6 +18,10 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_check(GameManager.classify_frame_gap(34000, false, 30) == "background_throttle",
+		"current 30 FPS background cap is an intentional 33ms frame interval")
+	_check(GameManager.classify_frame_gap(150000, false, 30) == "background_stall",
+		"long background stalls remain detectable at 30 FPS")
 	_check(GameManager.classify_frame_gap(200000, false, 5) == "background_throttle",
 		"5 FPS intentional 200ms interval must not be called a lag spike")
 	_check(GameManager.classify_frame_gap(300000, false, 5) == "background_throttle",
