@@ -438,6 +438,12 @@ func clear_se_cache() -> void :
 	_missing_se_names.clear()
 	_last_se_played_at_msec.clear()
 
+func clear_runtime_cache() -> void :
+	stop_all_se()
+	clear_se_cache()
+	_map_bgm_cache.clear()
+	_map_bgm_cache_order.clear()
+
 func set_se_volume(percentage: float) -> void :
 	current_se_volume_pct = clampf(percentage, 0.0, 100.0)
 	_apply_se_volume()
