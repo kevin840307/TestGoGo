@@ -43,6 +43,48 @@ internal static class RecoveredBoxSmokeTests
                 2250) is null,
             "multi-version 2250 griffin-wing box is never auto-resolved without an exact reward");
 
+        var ancientSet =
+            RecoveredBoxCatalog.Resolve(
+                realCurrent,
+                2251);
+        Check(
+            ancientSet is not null &&
+            ancientSet.Rewards
+                .Select(x => x.ItemIndex)
+                .OrderBy(x => x)
+                .SequenceEqual(
+                    new[]
+                    {
+                        15189,
+                        15202,
+                        15215,
+                        15228,
+                        15241,
+                        15254
+                    }),
+            "2251 explicit full-set box resolves exactly the six ancient red-sun eagle pieces");
+
+        var replicaSet =
+            RecoveredBoxCatalog.Resolve(
+                realCurrent,
+                2252);
+        Check(
+            replicaSet is not null &&
+            replicaSet.Rewards
+                .Select(x => x.ItemIndex)
+                .OrderBy(x => x)
+                .SequenceEqual(
+                    new[]
+                    {
+                        15190,
+                        15203,
+                        15216,
+                        15229,
+                        15242,
+                        15255
+                    }),
+            "2252 explicit full-set box resolves exactly the six replica red-sun eagle pieces");
+
         var before = store.GetCharacterAssets(
             accountId,
             characterId);
