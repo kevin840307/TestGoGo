@@ -6394,7 +6394,14 @@ try
 
     // A previous combat smoke may legitimately leave some shared mobs dead.
     // Test life drain against a living authoritative map target.
-    var monster = session.Monsters.Values.First(x => x.IsAlive);
+    var monster = session.Monsters.Values
+        .Where(x => x.IsAlive)
+        .OrderByDescending(x => x.MaxHp)
+        .First();
+    // Isolate this skill fixture from prior shared-map combat smokes.
+    monster.CurrentHp = monster.MaxHp;
+    monster.RespawnAt = null;
+    monster.AiState = MonsterAiState.Idle;
 
     store.SetSkill(
         account.Value,
@@ -6882,6 +6889,12 @@ try
         1);
     store.Revive(account.Value, id);
 
+    // Life drain may legitimately kill its fixture monster. Restore only
+    // runtime combat state before testing taunt so one smoke case cannot
+    // poison the next shared-map behavior check.
+    monster.CurrentHp = monster.MaxHp;
+    monster.RespawnAt = null;
+    monster.AiState = MonsterAiState.Idle;
     monster.X = combatEnemy.X + 30;
     monster.Y = combatEnemy.Y;
     monster.HasTarget = false;
@@ -6917,12 +6930,17 @@ try
         peerSession,
         DateTimeOffset.UtcNow.AddSeconds(1));
 
-    Check(peerWorldPackets.Any(x =>
+    Check(
+        broadcastHub.IsPlayerAoiVisibleAs(
+            peerSession.ConnectionId,
+            session.ConnectionId,
+            id) &&
+        !peerWorldPackets.Any(x =>
             JsonSerializer.Serialize(x).Contains(
                 "\"EntityType\":0") &&
             JsonSerializer.Serialize(x).Contains(
                 $"\"EntityID\":{id}")),
-        "joining player receives existing same-map players in world snapshot");
+        "WorldReady AOI keeps the nearby player visible without duplicate full-map player snapshots");
 
     var senderMoneyBeforeTransfer = Convert.ToInt64(
         store.GetCharacter(account.Value, id)!["Money"]);
@@ -6981,9 +6999,9 @@ try
             session);
 
         Check(
-            responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "隊伍邀請已送出")) &&
+            PacketTreeContainsString(
+                responses,
+                "隊伍邀請已送出") &&
             peerRegistration.Queue.ToArray().Any(x =>
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"PartyInvite\"") &&
@@ -7337,9 +7355,9 @@ try
                     "\"Type\":\"ToggleAutoSaintResponse\"") &&
                 JsonSerializer.Serialize(x).Contains(
                     "\"IsOn\":false")) &&
-            responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "需要先學會治療風暴與心靈轉換")),
+            PacketTreeContainsString(
+                responses,
+                "需要先學會治療風暴與心靈轉換"),
             "auto saint refuses characters without both recovered support skills");
     }
 
@@ -7455,9 +7473,9 @@ try
         var responses = router.Handle(
             blockedManualAttack.RootElement,
             session);
-        Check(responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "自動聖靈啟動中，禁止手動攻擊")),
+        Check(PacketTreeContainsString(
+                responses,
+                "自動聖靈啟動中，禁止手動攻擊"),
             "auto saint preserves original stationary/manual-combat lock while its server rotation is active");
     }
 
@@ -7803,9 +7821,10 @@ try
                     "\"IsOpen\":true")) &&
             peerRegistration.Queue.ToArray().Any(x =>
                 JsonSerializer.Serialize(x).Contains(
-                    "\"Type\":\"SyncShopBoard\"") &&
-                JsonSerializer.Serialize(x).Contains(
-                    "測試商店")),
+                    "\"Type\":\"SyncShopBoard\"")) &&
+            PacketTreeContainsString(
+                peerRegistration.Queue.ToArray(),
+                "測試商店"),
             "opening player shop broadcasts the shop board to map peers");
     }
 
@@ -8506,9 +8525,9 @@ try
         account.Value,
         99_999_999,
         1);
-    Check(invalidAttackPackets.Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                "攻擊目標不存在")),
+    Check(PacketTreeContainsString(
+            invalidAttackPackets,
+            "攻擊目標不存在"),
         "invalid AttackEntity receives explicit response instead of NO_RESPONSE");
 
     var sawDeath = false;
@@ -8899,9 +8918,9 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"EntityDamage\"")) &&
               moonTarget.CurrentHp < before &&
-              !responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "此技能類型尚未支援")),
+              !PacketTreeContainsString(
+                responses,
+                "此技能類型尚未支援"),
             "月神審判 skill_type=7 casts and deals composite damage");
     }
 
@@ -8951,9 +8970,9 @@ try
               session.Monsters.ContainsKey(expectedTransitionTarget),
             "UseSkill loads destination monster runtime immediately after map change");
 
-        Check(!responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "技能目標無效")),
+        Check(!PacketTreeContainsString(
+                responses,
+                "技能目標無效"),
             "魔影術 does not report invalid target after map transition");
     }
 
@@ -8989,9 +9008,9 @@ try
             TargetY = (int)skillTarget.Y
         }));
         var noMpResponses = router.Handle(skillNoMp.RootElement, session);
-        Check(noMpResponses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "HP / MP / SP 不足")),
+        Check(PacketTreeContainsString(
+                noMpResponses,
+                "HP / MP / SP 不足"),
             "UseSkill returns explicit resource error instead of NO_RESPONSE");
     }
 
@@ -9084,9 +9103,9 @@ try
             session);
         Check(store.GetLifetimeDonation(account.Value) ==
                   beforeDonation + 250 &&
-              responses.Any(x =>
-                  JsonSerializer.Serialize(x).Contains(
-                      "目前累積贊助")),
+              PacketTreeContainsString(
+                  responses,
+                  "目前累積贊助"),
             "GM donation command adjusts lifetime donation for local gift testing");
     }
 
@@ -9177,9 +9196,9 @@ try
             session);
 
         Check(
-            !responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "此物品無法出售")) &&
+            !PacketTreeContainsString(
+                responses,
+                "此物品無法出售") &&
             responses.Any(x =>
                 PacketTreeContainsString(x, "出售成功")),
             "NPC selling uses current client can_sell metadata instead of legacy catalog");
@@ -9272,9 +9291,10 @@ try
                     "\"Type\":\"DespawnEntity\"")) &&
             responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains(
-                    "\"Type\":\"ItemPickupFeedback\"") &&
-                JsonSerializer.Serialize(x).Contains(
-                    "淺藍色初心褲子")),
+                    "\"Type\":\"ItemPickupFeedback\"")) &&
+            PacketTreeContainsString(
+                responses,
+                "淺藍色初心褲子"),
             "PickUpItemRequest restores persisted equipment, removes ground row and emits pickup feedback");
     }
 
@@ -9543,9 +9563,9 @@ try
             responses.Any(x =>
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"NpcDialogResponse\"")) &&
-            !responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "NPC 腳本執行失敗")),
+            !PacketTreeContainsString(
+                responses,
+                "NPC 腳本執行失敗"),
             "legacy train conductor schedule executes floor() and opens boarding choices");
     }
 
@@ -9671,9 +9691,9 @@ try
             session);
 
         Check(
-            responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "列車行程已失效")) &&
+            PacketTreeContainsString(
+                responses,
+                "列車行程已失效") &&
             store.GetCharacterAssets(
                     account.Value,
                     id)
@@ -9829,7 +9849,8 @@ try
             responseJson.Contains(
                 "\"Type\":\"PlayerStatusSync\"") &&
             responseJson.Contains("\"ExpDeath\":100") &&
-            responseJson.Contains(
+            PacketTreeContainsString(
+                responses,
                 "死亡經驗值已減少 90%"),
             "無罪之書 atomically leaves 10% death EXP, consumes one book and syncs ExpDeath");
     }
@@ -9870,9 +9891,9 @@ try
                 "exp_multiplier_percent",
                 DateTimeOffset.UtcNow
                     .ToUnixTimeMilliseconds()) == 200 &&
-            responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "雙倍經驗值已啟動 1 小時")) &&
+            PacketTreeContainsString(
+                responses,
+                "雙倍經驗值已啟動 1 小時") &&
             responses.Any(x =>
             {
                 var json = JsonSerializer.Serialize(x);
@@ -9939,9 +9960,9 @@ try
 
         Check(
             remainingCards == 1 &&
-            responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "相同效果仍在持續中")),
+            PacketTreeContainsString(
+                responses,
+                "相同效果仍在持續中"),
             "active double-EXP effect rejects reuse without consuming another card");
     }
 
