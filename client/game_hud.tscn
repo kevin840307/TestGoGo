@@ -3844,18 +3844,14 @@ theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
 selected = 0
-item_count = 5
+item_count = 3
 popup/item_0/text = "自動"
 popup/item_0/id = 0
-popup/item_1/text = "關閉"
+popup/item_1/text = "一般"
 popup/item_1/id = 1
-popup/item_2/text = "像素人"
+popup/item_2/text = "簡化（關係自動變色）"
 popup/item_2/id = 2
-popup/item_3/text = "裝甲人"
-popup/item_3/id = 3
-popup/item_4/text = "極簡"
-popup/item_4/id = 4
-tooltip_text = "人物與怪物分開設定。人物簡化使用內建像素繪製；隊伍、社團、可攻擊、一般玩家共用同一人物輪廓，只用亮色漸層外框辨識。"
+tooltip_text = "自動依效能設定切換；一般保留原始人物；簡化使用內建菱形光球。隊友綠、社團藍、可攻擊紅、一般白，無須另外選擇圖形。"
 
 [node name="LabelSimplifyMonsters" type="Label" parent="WindowsContainer/SettingsWindow"]
 layout_mode = 0
@@ -3881,18 +3877,14 @@ theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
 selected = 0
-item_count = 5
+item_count = 3
 popup/item_0/text = "自動"
 popup/item_0/id = 0
-popup/item_1/text = "關閉"
+popup/item_1/text = "一般"
 popup/item_1/id = 1
-popup/item_2/text = "像素魔物"
+popup/item_2/text = "簡化（白色光球）"
 popup/item_2/id = 2
-popup/item_3/text = "像素獸"
-popup/item_3/id = 3
-popup/item_4/text = "棋子"
-popup/item_4/id = 4
-tooltip_text = "只用文字選項。怪物以 Godot 內建像素圖形繪製，不載入替代圖片；普通攻擊、受擊、死亡都維持同一種簡化外觀。"
+tooltip_text = "自動依效能設定切換；一般保留原始怪物；簡化使用唯一的白色帶刺光球。攻擊、受擊與死亡不會切回原始圖片。"
 
 [node name="BtnBackToLogin" type="Button" parent="WindowsContainer/SettingsWindow" unique_id=791546295]
 layout_mode = 0
