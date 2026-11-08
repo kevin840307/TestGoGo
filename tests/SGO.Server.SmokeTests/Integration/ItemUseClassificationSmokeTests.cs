@@ -54,7 +54,7 @@ internal static class ItemUseClassificationSmokeTests
         Check(
             remaining == 1 &&
             packets.Any(x =>
-                PacketTreeContainsString(
+                SGO.Server.SmokeTests.SmokeAssert.PacketTreeContainsString(
                     x,
                     "製作材料／藍圖")),
             "double-clicking crafting blueprint gives explicit crafting guidance without consuming it");
@@ -130,7 +130,7 @@ internal static class ItemUseClassificationSmokeTests
             Check(
                 cardRemaining == 1 &&
                 cardPackets.Any(x =>
-                    PacketTreeContainsString(
+                    SGO.Server.SmokeTests.SmokeAssert.PacketTreeContainsString(
                         x,
                         "製作材料／藍圖")),
                 "legacy crafting card is not consumed when double-clicked");
@@ -157,7 +157,7 @@ internal static class ItemUseClassificationSmokeTests
 
             Check(
                 chestPackets.Any(x =>
-                    PacketTreeContainsString(
+                    SGO.Server.SmokeTests.SmokeAssert.PacketTreeContainsString(
                         x,
                         "需要堅固的鑰匙")) &&
                 store.GetCharacterAssets(
@@ -195,7 +195,7 @@ internal static class ItemUseClassificationSmokeTests
 
             Check(
                 chestPackets.Any(x =>
-                    PacketTreeContainsString(
+                    SGO.Server.SmokeTests.SmokeAssert.PacketTreeContainsString(
                         x,
                         "原始寶箱獎勵表尚未恢復")) &&
                 after.Inventory.Any(x =>
