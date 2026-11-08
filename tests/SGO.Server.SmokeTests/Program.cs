@@ -1599,7 +1599,10 @@ try
               heartbeatBase.AddSeconds(60)),
         "heartbeat policy uses 20-second Ping and 60-second timeout");
 
-    var worldRuntime = new WorldRuntimeService(world);
+    var blocking = new BlockingMapService(gameDataRoot);
+    var worldRuntime = new WorldRuntimeService(
+        world,
+        blocking);
     var party = new PartyService(
         store,
         broadcastHub);
@@ -1625,7 +1628,7 @@ try
     var combat = new CombatService(
         store,
         world,
-        new BlockingMapService(gameDataRoot),
+        blocking,
         currentCatalog,
         growth,
         battle,
@@ -1722,6 +1725,7 @@ try
         rank,
         questProgress,
         trade,
+        new ServerDiagnostics(),
         NullLogger<PacketRouter>.Instance,
         config);
     var session = new ClientSession
@@ -1991,6 +1995,8 @@ try
         realCurrentCatalog,
         broadcastHub,
         config);
+    var festivalRewards = new FestivalRewardCatalog(
+        Path.Combine(repoRoot, "client"));
     var festivalBoxUid = store.AddInventoryItem(
         account.Value,
         id,
@@ -3674,7 +3680,7 @@ try
             session);
 
         Check(
-            state: session.AutoSaintEnabled &&
+            session.AutoSaintEnabled &&
             session.AutoSaintMpThreshold == 25 &&
             session.AutoSaintSpThreshold == 35 &&
             responses.Any(x =>
@@ -3682,7 +3688,7 @@ try
                     "\"Type\":\"ToggleAutoSaintResponse\"") &&
                 JsonSerializer.Serialize(x).Contains(
                     "\"IsOn\":true")),
-            msg: "ToggleAutoSaint persists server-authoritative state and thresholds");
+            "ToggleAutoSaint persists server-authoritative state and thresholds");
     }
 
     using (var blockedMove = Json(
@@ -4914,9 +4920,9 @@ try
             id,
             activePetUid,
             0);
-        state.PetPositions.Remove(
+        session.PetPositions.Remove(
             activePetUid);
-        state.PetTargets.Remove(
+        session.PetTargets.Remove(
             activePetUid);
     }
 
