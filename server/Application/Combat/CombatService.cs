@@ -36,6 +36,11 @@ public sealed class CombatService
     // The client now interpolates continuously toward the latest authoritative
     // waypoint, so this value represents movement speed rather than tween timing.
     private const double MoveTweenSeconds = 0.25;
+#if DEBUG
+    // Small debug-only sample for diagnosing start-of-chase path stalls.
+    // Release builds do not emit path diagnostics or pay for formatting.
+    private int _debugPathBlockLogCount;
+#endif
     private const double WanderRadius = 260.0;
     private const double RespawnRandomRadius = 120.0;
     private const double WanderMinStep = 95.0;
@@ -939,6 +944,17 @@ public sealed class CombatService
                 {
                     // No collision-free next step. Do not animate running
                     // in place, spam idle packets, or repeatedly pathfind.
+#if DEBUG
+                    if (System.Threading.Interlocked.Increment(
+                            ref _debugPathBlockLogCount) <= 40)
+                    {
+                        _log.LogInformation(
+                            "[MONSTER_AI_PATH_BLOCK] Map={MapID} EntityID={EntityID} WasIdle={WasIdle} From=({X:F1},{Y:F1}) Target=({TargetX:F1},{TargetY:F1}) Distance={Distance:F1} ClearAttackPath={ClearAttackPath} RetryMs=750",
+                            monster.MapId, monster.EntityId, wasAlreadyIdle,
+                            monster.X, monster.Y, targetX, targetY,
+                            distance, hasClearAttackPath);
+                    }
+#endif
                     monster.NextPathRetryAt =
                         now + TimeSpan.FromMilliseconds(750);
                     SetAiState(monster, MonsterAiState.Idle);
