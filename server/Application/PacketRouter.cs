@@ -1264,6 +1264,77 @@ public sealed class PacketRouter
                     ];
                 }
 
+                if (itemIndex ==
+                    LanternTransformationCatalog.SourceItemId)
+                {
+                    var lantern =
+                        LanternTransformationCatalog.Resolve(
+                            _current,
+                            assetsBefore);
+
+                    if (lantern is null)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message =
+                                    "請先裝備可辨識的武器後再使用燈籠變身器"
+                            }
+                        ];
+                    }
+
+                    var mutation =
+                        _store.ApplyCosmeticOverridesFromItem(
+                            accountId,
+                            state.CharacterId.Value,
+                            itemUid,
+                            itemIndex,
+                            lantern.Overrides,
+                            lantern.ConsumeSource);
+
+                    if (!mutation.Success)
+                    {
+                        return
+                        [
+                            new
+                            {
+                                Type = "SystemMessageFlash",
+                                Message = mutation.Message
+                            }
+                        ];
+                    }
+
+                    var assets =
+                        _store.GetCharacterAssets(
+                            accountId,
+                            state.CharacterId.Value);
+
+                    return
+                    [
+                        new
+                        {
+                            Type = "InventorySync",
+                            Items = assets.Inventory,
+                            MaxSize = assets.InventoryMaxSize
+                        },
+                        BuildAndBroadcastAppearancePacket(
+                            state,
+                            accountId,
+                            state.CharacterId.Value,
+                            assets),
+                        BuildAndBroadcastItemEffect(
+                            state,
+                            itemIndex),
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "已套用燈籠武器外觀"
+                        }
+                    ];
+                }
+
                 if (CosmeticTransformationCatalog.Supports(
                         itemIndex))
                 {
