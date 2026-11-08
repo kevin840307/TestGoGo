@@ -8399,9 +8399,27 @@ try
     }
 
     // Pet AI should independently acquire and attack a nearby monster.
+    // Isolate this from earlier combat/follow fixtures: auto acquisition is
+    // intentionally disabled for a dead owner, and an old owner-leash grace
+    // timestamp can legitimately return a pet before it attacks.
+    store.Revive(account.Value, id);
+    store.UpdateLocation(
+        account.Value,
+        id,
+        combatMapId,
+        Convert.ToInt32(monster.X - 120),
+        Convert.ToInt32(monster.Y));
+    session.CurrentMapId = combatMapId;
+    session.LastX = monster.X - 120;
+    session.LastY = monster.Y;
+    session.PetOutOfRangeSince.Remove(petCombatUid);
+
     monster.CurrentHp = monster.MaxHp;
     monster.RespawnAt = null;
     monster.HasTarget = false;
+    monster.TargetCharacterId = 0;
+    monster.TargetPetUid = 0;
+    monster.AiState = MonsterAiState.Idle;
     monster.HoldingAttackRange = false;
     session.PetTargets.Clear();
     session.PetPositions[petCombatUid] = (monster.X - 80, monster.Y);
@@ -8418,23 +8436,49 @@ try
         session,
         autoPetTickAt);
 
-    Check(monster.CurrentHp < hpBeforeAutoPetAttack &&
-          monster.HasTarget &&
-          session.PetTargets.TryGetValue(
-              petCombatUid,
-              out var autoTargetId) &&
-          autoTargetId == monster.EntityId &&
-          autoPetPackets.Any(x =>
-              JsonSerializer.Serialize(x).Contains(
-                  "\"Type\":\"SyncState\"") &&
-              JsonSerializer.Serialize(x).Contains(
-                  $"\"EntityID\":{4_000_000L + petCombatUid}") &&
-              JsonSerializer.Serialize(x).Contains(
-                  "\"State\":\"attack\"")) &&
-          autoPetPackets.Any(x =>
-              JsonSerializer.Serialize(x).Contains(
-                  "\"Type\":\"EntityDamage\"")),
-        "summoned pet automatically acquires, sticks to and attacks nearby monster");
+    var autoPetHasAttackState = autoPetPackets.Any(x =>
+        JsonSerializer.Serialize(x).Contains(
+            "\"Type\":\"SyncState\"") &&
+        JsonSerializer.Serialize(x).Contains(
+            $"\"EntityID\":{4_000_000L + petCombatUid}") &&
+        JsonSerializer.Serialize(x).Contains(
+            "\"State\":\"attack\""));
+    var autoPetHasDamage = autoPetPackets.Any(x =>
+        JsonSerializer.Serialize(x).Contains(
+            "\"Type\":\"EntityDamage\""));
+    var autoPetHasTarget = session.PetTargets.TryGetValue(
+        petCombatUid,
+        out var autoTargetId) &&
+        autoTargetId == monster.EntityId;
+    var autoPetOwnerHp = Convert.ToInt32(
+        store.GetCharacter(account.Value, id)!["HP"]);
+    var autoPetStillActive = store.GetCharacterAssets(
+            account.Value,
+            id)
+        .Pets.Any(x =>
+            Convert.ToInt64(x["UID"]) == petCombatUid &&
+            Convert.ToInt32(x["State"]) == 1);
+
+    Check(
+        monster.CurrentHp < hpBeforeAutoPetAttack &&
+        monster.HasTarget &&
+        autoPetHasTarget &&
+        autoPetHasAttackState &&
+        autoPetHasDamage,
+        "summoned pet automatically acquires, sticks to and attacks nearby monster" +
+        (monster.CurrentHp < hpBeforeAutoPetAttack &&
+         monster.HasTarget &&
+         autoPetHasTarget &&
+         autoPetHasAttackState &&
+         autoPetHasDamage
+            ? ""
+            : $" (ownerHP={autoPetOwnerHp}, petActive={autoPetStillActive}, " +
+              $"monsterHP={hpBeforeAutoPetAttack}->{monster.CurrentHp}, " +
+              $"monsterHasTarget={monster.HasTarget}, petHasTarget={autoPetHasTarget}, " +
+              $"attackState={autoPetHasAttackState}, damage={autoPetHasDamage}, " +
+              $"petPos={session.PetPositions.GetValueOrDefault(petCombatUid)}, " +
+              $"ownerPos=({session.LastX},{session.LastY}), " +
+              $"packets={JsonSerializer.Serialize(autoPetPackets)})"));
 
     // Monster aggro must consider the summoned pet even when the pet has not
     // attacked first. Put the pet closer than the player and verify the
