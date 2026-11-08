@@ -9318,6 +9318,9 @@ try
         LastY = 11200,
         PendingMapSpawn = true
     };
+    accountSessions.Register(
+        account.Value,
+        reloggedSession.ConnectionId);
     router.SyncPresence(reloggedSession);
 
     var relogBootstrapPackets = router.Tick(
@@ -9382,6 +9385,9 @@ try
 
     router.DisconnectPresence(reloggedSession);
     broadcastHub.Unregister(reloggedRegistration.ConnectionId);
+    accountSessions.Register(
+        account.Value,
+        broadcastRegistration.ConnectionId);
 
     var returnPeerRegistration = broadcastHub.Register();
     var returnPeerSession = new ClientSession
