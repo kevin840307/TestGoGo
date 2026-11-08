@@ -474,7 +474,10 @@ public sealed class PacketRouter
                     req.Int("MallID"),
                     req.Int("Count", 1),
                     req.Int("Amount"),
-                    req.Int("RewardID"));
+                    req.Int("RewardID"),
+                    req.Str("LoginName"),
+                    req.Str("Password"),
+                    req.Str("RequestID"));
             }
 
             case "TrainTravelReady":
