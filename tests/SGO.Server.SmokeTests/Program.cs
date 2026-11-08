@@ -9532,7 +9532,9 @@ try
         CharacterId = peerCharacterId,
         CurrentMapId = 15,
         LastX = 9408,
-        LastY = 10336
+        LastY = 10336,
+        WorldReady = true,
+        PendingMapSpawn = false
     };
 
     store.UpdateLocation(
