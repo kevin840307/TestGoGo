@@ -197,14 +197,11 @@ internal static class SessionLifecycleSmokeTests
             "disconnect persists the final dirty in-memory position");
 
         Check(
-            DrainJson(
-                    oldMapObserver.Queue)
+            !DrainJson(oldMapObserver.Queue)
                 .Any(json =>
-                    json.Contains(
-                        "\"Type\":\"DespawnEntity\"") &&
-                    json.Contains(
-                        $"\"EntityID\":{characterId}")),
-            "disconnect publishes despawn to the old map");
+                    json.Contains("\"Type\":\"DespawnEntity\"") &&
+                    json.Contains($"\"EntityID\":{characterId}")),
+            "not-WorldReady map observer has no AOI edge and receives no stray despawn");
 
         Check(
             broadcasts.FindCharacter(
@@ -320,20 +317,16 @@ internal static class SessionLifecycleSmokeTests
                 newMapObserver.Queue);
 
         Check(
-            oldPackets.Any(json =>
-                json.Contains(
-                    "\"Type\":\"DespawnEntity\"") &&
-                json.Contains(
-                    $"\"EntityID\":{characterId}")),
-            "map transition despawns player from the old map");
+            !oldPackets.Any(json =>
+                json.Contains("\"Type\":\"DespawnEntity\"") &&
+                json.Contains($"\"EntityID\":{characterId}")),
+            "map transition does not send despawn to an observer outside AOI/not WorldReady");
 
         Check(
-            newPackets.Any(json =>
-                json.Contains(
-                    "\"Type\":\"SpawnEntity\"") &&
-                json.Contains(
-                    $"\"EntityID\":{characterId}")),
-            "map transition spawns player into the new map");
+            !newPackets.Any(json =>
+                json.Contains("\"Type\":\"SpawnEntity\"") &&
+                json.Contains($"\"EntityID\":{characterId}")),
+            "map transition does not expose player before nearby observer WorldReady");
 
         var afterTransition =
             store.GetCharacter(
