@@ -44,12 +44,13 @@
 | M-11 | IMPLEMENTED_UNVERIFIED | `DropAssetToGround` 持久層與 `DropItemRequest` 拒絕 count<=0、非單件裝備 count!=1，持久層另拒絕無效 UID/map/NaN 座標，避免非法請求悄悄消耗一件裝備。新增 `GroundDropRequestGuardSmokeTests.cs`，驗證錯誤請求不改 DB、合法部分丟棄、撿回及重複撿取的總數守恆。 | Concurrency + full + AES/WebSocket + Godot 實跑，物品總數不增不減 |
 | M-12 | TEST_GAP | Player/World AOI 已有 known-set 與在 enqueue 前檢查目前可見性；但 Spawn 與 Move/Despawn 可能由不同 socket/ticker 並行投遞，尚缺強制交錯排序的真傳輸壓力測試，不能僅憑 unit tests 推論所有情境「一定先 Spawn」。Client 現已防護「已知 queued monster 在重複 Spawn 時不可覆蓋 newer Move」，對第一個 Spawn 之前就到達的 Move 仍需驗證 Server queue 順序及補同步策略。 | 真兩 socket 受控 barrier：enter→同時 move / exit / reenter / disconnect / map-change，檢查接收端逐封包先 Spawn 再 delta、最終 entity count 與 authoritative map 快照一致，並跑 50/100 人 soak |
 | M-13 | IMPLEMENTED_UNVERIFIED | **WorldReady 舊快照重新產生已被撿走物品的反向競態**：先前 M-09 只防止「舊快照刪除新物品」。現在 `WorldEntitySpatialAoi.BeginSnapshot/ SnapshotScope` 追蹤正在查詢的快照；即使物品尚未加入 AOI，其他 Socket 在此期間完成 PickUp/Remove，也會保留暫時 tombstone。WorldReady 用 `TryUpsertWorldEntityFromSnapshot` 原子檢查刪除/較新座標/狀態版本，不接受過時資料且不寫入玩家 `GroundItems`；最後一個 scope 結束便釋放 tombstones，避免記憶體無限制成長。新增獨立 `WorldEntityAoiSnapshotLeaseSmokeTests.cs` 與真 SQLite `GroundSnapshotPersistenceRaceSmokeTests.cs`，涵蓋已索引/未索引拾取、重疊快照、較新的移動/狀態、DB 資產總數守恆。 | `--suite world` + `--suite concurrency` + full；真 2/10/50/100 sockets 以 barrier 同時做 WorldReady + DropItem + PickUp + ChangeMap，最終 DB／AOI／Client 數量一致且無 ghost、無重生、無漏掉新物。GitHub Actions 有實際 steps 的 PASS 才完成。 |
+| M-14 | IMPLEMENTED_UNVERIFIED | Windows `tests/run_local_verification.bat` 提供 `pull`（只允許指定分支且 ff-only）、`pull-all`（全面靜態/編譯/Smoke/Wire/Godot）、`world`、`concurrency` 及 `load <sizes> <soakSeconds>`。Load 使用現有真 AES/WebSocket `SGO.Server.WireLoadProbe`，`--move-pixels 4` 真移動，能設定 `10,50,100` 或 `100,500,1000`；僅指令可用，不代表 1000 人已成功。負載測試會建立測試帳號，必須使用 localhost + 隔離 DB。 | Windows PowerShell/.NET 8/Godot 實際測試 PASS、保存 JSON/Server logs；各人數 latency / CPU / RAM / AOI bytes & fail rate 達部署門檻，無 SQLite lock、物品複製或 Ghost |
 
 本輪不新增偽裝成功的未支援封包：已實作項目依
 `packet_*_audit.py`、真 Wire、Godot E2E 交叉驗證，
 PayPal/舊服點數仍為 `BLOCKED_EXTERNAL`。
-最近再次檢查（2026-11-08 07:34 UTC）的 GitHub Actions run
-[42459361532](https://github.com/kevin840307/SGO/actions/runs/42459361532)
+最近再次檢查（2026-11-08 07:49 UTC）的 GitHub Actions run
+[42460331402](https://github.com/kevin840307/SGO/actions/runs/42460331402)
 仍是 job `steps=null`，表示未取得 dotnet/Godot 的執行結果；
 **所有本輪新增 C# 程式和測試仍標記 IMPLEMENTED_UNVERIFIED**。最新分支也已追加 M-08～M-11；CI Runner 仍無步驟紀錄，不能推定已通過。
 
