@@ -27,6 +27,8 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_wire_load_probe_structure.py' -v
           python3 -m unittest discover -s tests -p 'test_feature_gap_tracker.py' -v
           python3 -m unittest discover -s tests -p 'test_release_logging_config.py' -v
+          python3 -m unittest discover -s tests -p 'test_admin_ui_structure.py' -v
+          python3 -m unittest discover -s tests -p 'test_global_rate_contract.py' -v
           python3 tests/packet_contract_audit.py --strict --output packet-contract-report.json
           python3 tests/packet_schema_audit.py --strict --output packet-schema-report.json
           python3 tests/packet_response_audit.py --strict --output packet-response-report.json
