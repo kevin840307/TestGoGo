@@ -24,20 +24,29 @@ func _run() -> void:
 	var normal_profile: Dictionary = {"foreground_fps": 120, "background_fps": 20}
 	_check(GameManager.fps_cap_for_focus(normal_profile, true, false) == 120,
 		"focused login screen renders at the configured 120 FPS")
-	_check(GameManager.fps_cap_for_focus(normal_profile, false, false) == 120,
-		"unfocused login and character selection are never forced down to 10/20 FPS")
-	_check(not GameManager.should_throttle_background_visuals(false, false),
-		"login startup never disables the render loop on focus loss")
+	_check(GameManager.fps_cap_for_focus(normal_profile, false, false) == 20,
+		"unfocused login and character selection use the same background cap")
+	_check(GameManager.should_throttle_background_visuals(false, false),
+		"unfocused login/startup also disables continuous rendering")
 	_check(GameManager.fps_cap_for_focus(normal_profile, true, true) == 120,
 		"active foreground game retains its configured FPS")
 	_check(GameManager.fps_cap_for_focus(normal_profile, false, true) == 20,
 		"unfocused active game alone receives the background FPS cap")
 	_check(GameManager.should_throttle_background_visuals(false, true),
 		"background rendering optimization remains enabled after entering the world")
-	_check(GameManager.fps_cap_for_focus(normal_profile, false, false) == 120,
-		"returning to login restores full FPS even while unfocused")
+	_check(GameManager.fps_cap_for_focus(normal_profile, false, false) == 20,
+		"returning to login stays in background presentation while unfocused")
 	_check(GameManager.configured_foreground_fps(normal_profile) == 120,
 		"foreground FPS is independent from a previously throttled Engine.max_fps")
+
+	_check(GameManager.foreground_from_window_state(true, false),
+		"focused non-minimized window is foreground")
+	_check(not GameManager.foreground_from_window_state(false, false),
+		"unfocused window is background")
+	_check(not GameManager.foreground_from_window_state(true, true),
+		"minimized window is background even if the OS focus query briefly says true")
+	_check(not GameManager.foreground_from_window_state(false, true),
+		"minimized and unfocused window remains background")
 	_check(GameManager.classify_frame_gap(100000, false, 10) == "background_throttle",
 		"a custom 10 FPS in-world background profile is classified correctly")
 	_check(GameManager.classify_frame_gap(250000, false, 10) == "background_stall",
@@ -127,8 +136,9 @@ func _run() -> void:
 	CursorManager.set_process(cursor_was_processing)
 
 	var context: String = GameManager._focus_perf_context()
-	_check(context.contains("focus=") and context.contains("focus_actual="),
-		"the log contains requested and actual focus state")
+	_check(context.contains("focus=") and context.contains("focus_actual=")
+		and context.contains("minimized="),
+		"the log contains requested focus, OS focus and minimized state")
 	_check(context.contains("fps_cap=") and context.contains("power_save="),
 		"the log records the active FPS cap and power-save mode")
 	_check(context.contains("render_loop=") and context.contains("audio_muted="),
