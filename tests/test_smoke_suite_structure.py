@@ -87,9 +87,10 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertEqual(
             main.count("EconomyRequestGuardSmokeTests.Run();"), 2
         )
-        self.assertIn("int.MaxValue, int.MaxValue", guards)
+        self.assertIn("9999, int.MaxValue", guards)
+        self.assertIn("itemIndex, int.MaxValue, int.MaxValue", guards)
         self.assertIn("repeated sale of consumed UID", guards)
-        self.assertIn("if (count <= 0 || unitPrice < 0)", store)
+        self.assertIn("count > maximumCount || unitPrice < 0", store)
         self.assertIn("var total = (long)unitPrice * count", store)
 
     def test_dynamic_action_schema_runtime_covers_every_action_rule(self):
