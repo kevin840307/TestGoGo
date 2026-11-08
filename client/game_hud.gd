@@ -2709,29 +2709,59 @@ func show_transfer_input_box(target_dbid: int, p_target_name: String) -> void :
 	)
 
 
+func _game_settings_section() -> String:
+	var account := ""
+	if GlobalTempData:
+		account = str(GlobalTempData.login_user).strip_edges().to_lower()
+	if account.is_empty():
+		return GameConstants.SETTING_SECTION_GAME
+	return "%s:%s" % [
+		GameConstants.SETTING_SECTION_GAME,
+		account
+	]
+
 func _load_game_settings() -> void :
 	var config = ConfigFile.new()
 	var err = config.load(GameConstants.CLIENT_SETTINGS_PATH)
+	var section := _game_settings_section()
+	var fallback_section := GameConstants.SETTING_SECTION_GAME
+
 	if err == OK:
-		current_pet_combat_mode = config.get_value(
-			GameConstants.SETTING_SECTION_GAME, 
-			GameConstants.SETTING_KEY_PET_COMBAT_MODE, 
-			GameConstants.SETTING_DEFAULT_PET_COMBAT_MODE
-		)
+		current_pet_combat_mode = int(config.get_value(
+			section,
+			GameConstants.SETTING_KEY_PET_COMBAT_MODE,
+			config.get_value(
+				fallback_section,
+				GameConstants.SETTING_KEY_PET_COMBAT_MODE,
+				GameConstants.SETTING_DEFAULT_PET_COMBAT_MODE
+			)
+		))
 		current_quality_enhancement_enabled = bool(config.get_value(
-			GameConstants.SETTING_SECTION_GAME, 
-			GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED, 
-			GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
+			section,
+			GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED,
+			config.get_value(
+				fallback_section,
+				GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED,
+				GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
+			)
 		))
 		current_performance_load_mode = ClientPerformanceProfile.sanitize_load_mode(int(config.get_value(
-			GameConstants.SETTING_SECTION_GAME,
+			section,
 			GameConstants.SETTING_KEY_PERFORMANCE_LOAD_MODE,
-			GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
+			config.get_value(
+				fallback_section,
+				GameConstants.SETTING_KEY_PERFORMANCE_LOAD_MODE,
+				GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
+			)
 		)))
 		current_combat_render_mode = ClientPerformanceProfile.sanitize_combat_mode(int(config.get_value(
-			GameConstants.SETTING_SECTION_GAME,
+			section,
 			GameConstants.SETTING_KEY_COMBAT_RENDER_MODE,
-			GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
+			config.get_value(
+				fallback_section,
+				GameConstants.SETTING_KEY_COMBAT_RENDER_MODE,
+				GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
+			)
 		)))
 	else:
 		current_pet_combat_mode = GameConstants.SETTING_DEFAULT_PET_COMBAT_MODE
@@ -2748,23 +2778,24 @@ func _load_game_settings() -> void :
 func _save_game_settings() -> void :
 	var config = ConfigFile.new()
 	config.load(GameConstants.CLIENT_SETTINGS_PATH)
+	var section := _game_settings_section()
 	config.set_value(
-		GameConstants.SETTING_SECTION_GAME, 
-		GameConstants.SETTING_KEY_PET_COMBAT_MODE, 
+		section,
+		GameConstants.SETTING_KEY_PET_COMBAT_MODE,
 		current_pet_combat_mode
 	)
 	config.set_value(
-		GameConstants.SETTING_SECTION_GAME, 
-		GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED, 
+		section,
+		GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED,
 		current_quality_enhancement_enabled
 	)
 	config.set_value(
-		GameConstants.SETTING_SECTION_GAME,
+		section,
 		GameConstants.SETTING_KEY_PERFORMANCE_LOAD_MODE,
 		current_performance_load_mode
 	)
 	config.set_value(
-		GameConstants.SETTING_SECTION_GAME,
+		section,
 		GameConstants.SETTING_KEY_COMBAT_RENDER_MODE,
 		current_combat_render_mode
 	)
