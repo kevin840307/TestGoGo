@@ -26,8 +26,9 @@ if /I "%RUN_MODE%"=="render" goto :run
 if /I "%RUN_MODE%"=="focus" goto :run
 if /I "%RUN_MODE%"=="resources" goto :run
 if /I "%RUN_MODE%"=="import" goto :run
+if /I "%RUN_MODE%"=="login" goto :run
 echo [ERROR] Unknown mode: %RUN_MODE%
-echo Usage: run_godot_client_tests.bat [all^|render^|focus^|resources^|import^|configure]
+echo Usage: run_godot_client_tests.bat [all^|render^|focus^|resources^|login^|import^|configure]
 goto :failed
 
 :menu
@@ -40,12 +41,14 @@ echo  [2] Import + Multi-client rendering / AOI cache regression
 echo  [3] Import + Background/focus performance regression
 echo  [4] Import + Sprite/material/resource reuse regression
 echo  [5] Import project only (refresh UID/class cache)
+echo  [6] Login startup regression (no 18-frame hang)
 echo  [P] Set/change Godot executable path (saved for next time)
 echo  [Q] Exit
 echo.
-choice /C 12345PQ /N /M "Select [1-5,P,Q]: "
-if errorlevel 7 goto :done
-if errorlevel 6 goto :configure
+choice /C 123456PQ /N /M "Select [1-6,P,Q]: "
+if errorlevel 8 goto :done
+if errorlevel 7 goto :configure
+if errorlevel 6 set "RUN_MODE=login" & goto :run
 if errorlevel 5 set "RUN_MODE=import" & goto :run
 if errorlevel 4 set "RUN_MODE=resources" & goto :run
 if errorlevel 3 set "RUN_MODE=focus" & goto :run
@@ -140,6 +143,8 @@ if /I "%RUN_MODE%"=="import" goto :success
 echo.
 echo [2/2] Running tests using scene mode (autoload enabled)...
 if /I "%RUN_MODE%"=="all" (
+    call :run_test login_visual_readiness_regression LOGIN_VISUAL_READY_REGRESSION
+    if errorlevel 1 goto :failed
     call :run_test multiclient_render_dedup_regression RENDER_DEDUP_REGRESSION
     if errorlevel 1 goto :failed
     call :run_test focus_performance_regression FOCUS_PERF_REGRESSION
@@ -157,6 +162,10 @@ if /I "%RUN_MODE%"=="focus" (
 )
 if /I "%RUN_MODE%"=="resources" (
     call :run_test render_resource_regression RENDER_RESOURCE_REGRESSION
+    if errorlevel 1 goto :failed
+)
+if /I "%RUN_MODE%"=="login" (
+    call :run_test login_visual_readiness_regression LOGIN_VISUAL_READY_REGRESSION
     if errorlevel 1 goto :failed
 )
 goto :success
