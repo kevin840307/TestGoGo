@@ -3,7 +3,7 @@ const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 
 const state = {
   view: 'dashboard',
-  status: null,
+  status: null, health: null,
   skills: [], selectedSkill: null, skillDirty: false,
   enemies: [], selectedEnemy: null, enemyDirty: false,
   maps: [], mapId: null, mapTab: 'enemies', mapRows: [],
@@ -111,7 +111,7 @@ async function go(view) {
 
 async function refreshCurrent() {
   switch (state.view) {
-    case 'dashboard': return loadStatus();
+    case 'dashboard': return Promise.all([loadStatus(), loadHealth()]);
     case 'skills': return loadSkills();
     case 'enemies': return loadEnemies();
     case 'maps': return loadMaps();
