@@ -362,7 +362,11 @@ var currentCatalog = new CurrentClientDataCatalog(
             "horsebattery",
             price: 1200,
             battery: 3600)
-    },
+    }.Concat(
+        realCurrentCatalog.Items.Where(item =>
+            item.Category.Equals(
+                "booster",
+                StringComparison.OrdinalIgnoreCase))),
     new[]
     {
         new CurrentSkillDefinition(20101, "Current Skill 20101"),
@@ -2888,6 +2892,14 @@ try
         Check(first.RootElement.Int("MapID") == 15,
             "enter world includes Map15");
     }
+
+    BoosterSmokeTests.Run(
+        router,
+        store,
+        session,
+        account.Value,
+        id,
+        currentCatalog);
 
     var petBeforeLevel = store.GetCharacterAssets(
             account.Value,
