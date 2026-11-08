@@ -197,7 +197,7 @@ export_map_previews.bat --map=13,22
 export_map_previews.bat --max-size=2048
 ```
 
-匯出器直接載入 `client/maps/MapXX.scn`，讀取 `client/maps/map_bounds.json`，並使用和 Editor 相同的 16px cell 對齊規則。輸出放在 `game-editor/.generated/map-previews/`，不提交進 Git。Editor 重新開啟 / 切地圖後會自動偵測；有預覽時顯示「地圖背景」開關，沒有預覽時仍使用 Blocking / Spawn Zone / 世界座標畫布。
+匯出器讀取 `client/maps/map_generated_manifest.json` 的 `scenes` 清單，再載入本機 recovered/generated 的 `client/maps/MapXX.scn`，並依 `client/maps/map_bounds.json` 使用和 Editor 相同的 16px cell 對齊規則。注意 `*.scn` 本來就被 repository 的 `.gitignore` 排除，所以乾淨 clone 只有 manifest、沒有 generated scene 是正常的；這種情況 exporter 會明確提示要使用完整 recovered/generated client workspace，而不是輸出假的地圖。輸出放在 `game-editor/.generated/map-previews/`，不提交進 Git。Editor 重新開啟 / 切地圖後會自動偵測；有預覽時顯示「地圖背景」開關，沒有預覽時仍使用 Blocking / Spawn Zone / 世界座標畫布。
 
 如果 Godot 不在 PATH，可先設定：
 
