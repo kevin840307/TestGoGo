@@ -34,6 +34,10 @@
         <p id="pageSubtitle" class="subtitle">伺服器健康狀態與多人運作摘要</p>
       </div>
       <div class="top-actions">
+        <div class="global-search-wrap">
+          <input id="globalPlayerSearch" class="global-search" placeholder="搜尋角色 / Character / Account / Connection">
+          <div id="globalSearchResults" class="search-results"></div>
+        </div>
         <span id="lastUpdated" class="muted">尚未更新</span>
         <button class="btn secondary" id="refreshBtn">立即更新</button>
       </div>
@@ -84,9 +88,21 @@
           </div>
           <div id="broadcastResult" class="hint"></div>
         </section>
-        <section class="card quiet-card">
-          <div class="card-head"><div><h2>GM 小工具</h2><p>管理操作集中於此，不混入監控頁</p></div></div>
-          <div class="empty-state">後續 GM 指令、玩家操作、物品/狀態工具都會集中在這個區域。</div>
+        <section class="card">
+          <div class="card-head"><div><h2>全服倍率</h2><p>角色經驗 / 金錢 / 掉寶機率，可設定開始時間與持續時間</p></div><span id="rateStatus" class="pill">Inactive</span></div>
+          <div class="rate-grid">
+            <label>角色經驗倍率<input id="rateExp" type="number" min="1" max="10" step="0.1" value="2"></label>
+            <label>金錢倍率<input id="rateMoney" type="number" min="1" max="10" step="0.1" value="1"></label>
+            <label>掉寶倍率<input id="rateDrop" type="number" min="1" max="10" step="0.1" value="2"></label>
+            <label>持續時間（分鐘）<input id="rateDuration" type="number" min="1" max="10080" step="1" value="60"></label>
+            <label class="rate-wide">開始時間（留空＝現在）<input id="rateStart" type="datetime-local"></label>
+          </div>
+          <div id="rateCurrent" class="rate-current"></div>
+          <div class="field-row">
+            <button class="btn" id="rateApplyBtn">套用倍率</button>
+            <button class="btn secondary" id="rateCancelBtn">取消活動</button>
+          </div>
+          <div id="rateResult" class="hint"></div>
         </section>
       </div>
     </section>
@@ -95,7 +111,7 @@
       <section class="card">
         <div class="card-head"><div><h2>在線玩家</h2><p>多人 session 與目前位置</p></div><span id="playersPageBadge" class="pill">0 players</span></div>
         <div class="table-wrap">
-          <table><thead><tr><th>Character</th><th>Account</th><th>Map</th><th>Position</th><th>Connection</th></tr></thead><tbody id="players"></tbody></table>
+          <table><thead><tr><th>Name</th><th>Character</th><th>Account</th><th>Map</th><th>Position</th><th>Connection</th></tr></thead><tbody id="players"></tbody></table>
         </div>
       </section>
     </section>
