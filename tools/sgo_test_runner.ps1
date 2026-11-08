@@ -2,6 +2,7 @@
 # PowerShell 5.1+; designed to stop on any failed build/smoke/probe.
 [CmdletBinding()]
 param(
+    [Parameter(Position=0)]
     [ValidateSet('Menu','BuildOnly','Full','Aoi','Wire100','WireAll')]
     [string]$Mode = 'Menu'
 )
