@@ -15,8 +15,10 @@ function renderScriptList() {
   $$('.script-item', host).forEach(x => x.onclick = () => openScript(decodeURIComponent(x.dataset.name)));
 }
 async function openScript(name) {
+  if (state.scriptDirty && state.selectedScript?.name !== name && !confirm('目前 NPC 腳本有尚未儲存的修改，確定要切換嗎？')) return;
   try {
     state.selectedScript = await api(`/api/scripts/${encodeURIComponent(name)}`);
+    state.scriptDirty = false;
     renderScriptList();
     const s = state.selectedScript;
     $('#script-title').textContent = s.name;
@@ -33,6 +35,7 @@ async function openScript(name) {
   } catch (e) { toast(e.message, 'error'); }
 }
 function newScript() {
+  if (state.scriptDirty && !confirm('目前 NPC 腳本有尚未儲存的修改，確定要建立新腳本嗎？')) return;
   const name = prompt('新 NPC 腳本檔名（例如 MyNpc.txt）');
   if (!name) return;
   state.selectedScript = {
@@ -40,6 +43,7 @@ function newScript() {
     content:'function start()\n\tSay("n1Hello", "End")\nend\n',
     encoding:'utf-8', functions:['start'], validation:null, _new:true
   };
+  state.scriptDirty = true;
   $('#script-title').textContent = state.selectedScript.name;
   $('#script-encoding').textContent = 'new / utf-8';
   $('#script-editor').disabled = false;
@@ -67,6 +71,7 @@ function insertScriptSnippet(kind) {
   editor.focus();
   editor.setSelectionRange(start + text.length, start + text.length);
   state.selectedScript.content = editor.value;
+  state.scriptDirty = true;
   $('#script-snippet').value = '';
   validateScript();
   updateCursor();
@@ -124,6 +129,7 @@ async function saveScript() {
       method:'PUT',
       body:{content:$('#script-editor').value}
     });
+    state.scriptDirty = false;
     toast('NPC 腳本已儲存');
     await loadScripts();
     await loadStatus();
@@ -136,6 +142,7 @@ async function deleteScript() {
   try {
     await api(`/api/scripts/${encodeURIComponent(name)}`, {method:'DELETE'});
     state.selectedScript = null;
+    state.scriptDirty = false;
     $('#script-title').textContent = '尚未選擇腳本';
     $('#script-encoding').textContent = '';
     $('#script-editor').value = '';
@@ -270,10 +277,8 @@ function emptyEditor(icon, title, desc) {
 $$('.nav-item').forEach(b => b.onclick = () => go(b.dataset.view));
 $$('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
 $('#refresh-view').onclick = async () => {
-  if (state.view === 'maps' && state.mapDirty) {
-    if (!confirmDiscardMapChanges()) return;
-    state.mapDirty = false;
-  }
+  if (!confirmDiscardCurrentChanges()) return;
+  clearViewDirty(state.view);
   try { await refreshCurrent(); } catch (e) { toast(e.message, 'error'); }
 };
 
@@ -308,10 +313,14 @@ $('#script-delete').onclick = deleteScript;
 $('#script-snippet').onchange = e => insertScriptSnippet(e.target.value);
 $('#script-editor').addEventListener('keyup', updateCursor);
 $('#script-editor').addEventListener('click', updateCursor);
+$('#script-editor').addEventListener('input', () => {
+  if (!state.selectedScript) return;
+  state.scriptDirty = true;
+  state.selectedScript.content = $('#script-editor').value;
+});
 $('#script-editor').addEventListener('input', debounce(async () => {
   if (!state.selectedScript) return;
   await validateScript();
-  state.selectedScript.content = $('#script-editor').value;
 }, 450));
 $('#script-editor').addEventListener('keydown', e => {
   if (e.key === 'Tab') {
@@ -319,6 +328,8 @@ $('#script-editor').addEventListener('keydown', e => {
     const t = e.target, start = t.selectionStart, end = t.selectionEnd;
     t.value = t.value.slice(0, start) + '\t' + t.value.slice(end);
     t.setSelectionRange(start + 1, start + 1);
+    state.scriptDirty = true;
+    if (state.selectedScript) state.selectedScript.content = t.value;
   }
 });
 $('#script-map-select').onchange = loadScriptMapNpcs;
