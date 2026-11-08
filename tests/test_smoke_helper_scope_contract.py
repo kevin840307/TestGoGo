@@ -59,6 +59,19 @@ class SmokeHelperScopeContractTests(unittest.TestCase):
                     r"\bstatic\s+bool\s+PacketTreeContainsString\s*\(",
                 )
 
+    def test_regeneration_crystal_decodes_chinese_refund_message(self):
+        # System.Text.Json's default encoder escapes Chinese text. Checking
+        # the serialized JSON for a raw CJK substring is always unreliable.
+        program = read("Program.cs")
+        self.assertIn(
+            'PacketTreeContainsString(\\n            responses, "退回 10 點")',
+            program,
+        )
+        self.assertNotIn(
+            'json.Contains("退回 10 點")',
+            program,
+        )
+
     def test_ground_snapshot_drop_has_nonnullable_guard(self):
         source = read(
             "Integration/GroundSnapshotPersistenceRaceSmokeTests.cs"
