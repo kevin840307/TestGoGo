@@ -182,6 +182,10 @@ static func is_login_frame_stable(focused: bool, rendering: bool, drawn: bool, f
 	return focused and rendering and drawn and frame_usec > 0 and frame_usec <= LOGIN_REVEAL_MAX_FRAME_USEC
 
 
+static func can_count_login_stable_frame(focused: bool, rendering: bool, drawn: bool, video_ready: bool, frame_usec: int) -> bool:
+	return video_ready and is_login_frame_stable(focused, rendering, drawn, frame_usec)
+
+
 static func can_reveal_login(focused: bool, video_ready: bool, stable_frames: int) -> bool:
 	return focused and video_ready and stable_frames >= LOGIN_REVEAL_STABLE_FRAMES
 
@@ -233,7 +237,7 @@ func _wait_for_login_visual_ready() -> void:
 		# Stable frames counted before the first decoded OGV frame do not
 		# establish video/UI readiness. Begin the consecutive-frame gate
 		# only AFTER media is ready (or the static fallback is selected).
-		if video_ready and is_login_frame_stable(focused, RenderingServer.render_loop_enabled, advanced, frame_usec):
+		if can_count_login_stable_frame(focused, RenderingServer.render_loop_enabled, advanced, video_ready, frame_usec):
 			stable_frames += 1
 		else:
 			stable_frames = 0
