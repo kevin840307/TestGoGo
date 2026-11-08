@@ -152,6 +152,27 @@ func _test_right_click_preserves_player_interaction() -> void:
 		"terrain left click remains available to regular click-to-move")
 	player.cancel_autorun_tracking()
 
+	# UI clicks must have the same priority without turning an ordinary
+	# MOUSE_FILTER_PASS HUD background into a false interactable click.
+	var ui = Control.new()
+	ui.mouse_filter = Control.MOUSE_FILTER_STOP
+	_check(player._autorun_click_has_priority(null, ui),
+		"UI controls stop continuous movement before processing their click")
+	ui.mouse_filter = Control.MOUSE_FILTER_PASS
+	_check(not player._autorun_click_has_priority(null, ui),
+		"full-screen PASS overlays do not hijack bare terrain clicks")
+	ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_check(not player._autorun_click_has_priority(null, ui),
+		"non-interactive UI cannot interrupt terrain walking")
+	ui.free()
+	var button = Button.new()
+	button.mouse_filter = Control.MOUSE_FILTER_PASS
+	_check(player._autorun_click_has_priority(null, button),
+		"PASS buttons still preempt autorun while retaining button events")
+	button.free()
+	_check(not player._autorun_click_has_priority(null, null),
+		"bare ground is still routed to one-shot click-to-move")
+
 	# These handlers own player context menus. Our _input must not consume the
 	# event before NetworkPlayer._input_event sees the same right click.
 	var player_source: String = FileAccess.get_file_as_string("res://player.gd")
