@@ -5,13 +5,14 @@ extends CanvasLayer
 # pointer. Keep this as a regular imported texture; no per-frame drawing.
 const AUTORUN_SHEET_PATH = "res://ui/cursor/C_AUTOWALK.spr.png"
 const AUTORUN_FRAME_COUNT: int = 10
-const AUTORUN_FRAME_SIZE: Vector2i = Vector2i(32, 32)
+const AUTORUN_FRAME_SIZE: Vector2i = Vector2i(40, 40)
 
 signal ctrl_state_changed(is_pressed: bool)
 
 @onready var cursor_sprite: AnimatedSprite2D = $CursorSprite
 
 var tooltip_label: RichTextLabel = null
+var _autorun_status_label: Label = null
 var current_hovered_entity: Node = null
 var _logical_cursor_state: String = "normal"
 var _is_game_window_hovered: bool = false
@@ -27,6 +28,28 @@ func _ready() -> void :
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
 	_register_autorun_cursor_animation()
 	cursor_sprite.play("normal")
+
+	# A 40x40 animated arrow alone is easy to miss in a busy scene. This
+	# persistent state label is purposefully separate from the sprite,
+	# ignores mouse events, and appears ONLY for ordinary terrain pointers.
+	_autorun_status_label = Label.new()
+	_autorun_status_label.text = "自動走路中"
+	_autorun_status_label.visible = false
+	_autorun_status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_autorun_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_autorun_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_autorun_status_label.add_theme_font_size_override("font_size", 14)
+	_autorun_status_label.add_theme_color_override(
+		"font_color", Color(0.80, 1.0, 0.87, 1.0)
+	)
+	var autorun_bg := StyleBoxFlat.new()
+	autorun_bg.bg_color = Color(0.035, 0.16, 0.18, 0.96)
+	autorun_bg.border_color = Color(0.35, 1.0, 0.73, 1.0)
+	autorun_bg.set_border_width_all(2)
+	autorun_bg.set_corner_radius_all(6)
+	autorun_bg.set_content_margin_all(5.0)
+	_autorun_status_label.add_theme_stylebox_override("normal", autorun_bg)
+	add_child(_autorun_status_label)
 
 	tooltip_label = RichTextLabel.new()
 	tooltip_label.bbcode_enabled = true
@@ -44,6 +67,8 @@ func _ready() -> void :
 func _process(_delta: float) -> void :
 	var m_pos = cursor_sprite.get_global_mouse_position()
 	cursor_sprite.global_position = m_pos
+	if is_instance_valid(_autorun_status_label) and _autorun_status_label.visible:
+		_autorun_status_label.global_position = m_pos + Vector2(45.0, 27.0)
 
 	if current_hovered_entity != null and not is_instance_valid(current_hovered_entity):
 		_refresh_cursor()
@@ -138,7 +163,7 @@ func set_autorun_indicator(enabled: bool) -> void:
 
 
 func is_autorun_indicator_visible() -> bool:
-	return _autorun_enabled and cursor_sprite.animation == "autorun" and not _is_game_window_hovered
+	return _autorun_enabled and cursor_sprite.animation == "autorun" and not _is_game_window_hovered and not is_native_popup_cursor_active()
 
 
 func _register_autorun_cursor_animation() -> void:
@@ -150,7 +175,7 @@ func _register_autorun_cursor_animation() -> void:
 		return
 	var atlas: Texture2D = load(AUTORUN_SHEET_PATH) as Texture2D
 	if atlas == null or atlas.get_width() != AUTORUN_FRAME_COUNT * AUTORUN_FRAME_SIZE.x or atlas.get_height() != AUTORUN_FRAME_SIZE.y:
-		push_warning("Auto-walk cursor sprite sheet must be 320x32 pixels.")
+		push_warning("Auto-walk cursor sprite sheet must be 400x40 pixels.")
 		return
 
 	var frames: SpriteFrames = cursor_sprite.sprite_frames.duplicate(true) as SpriteFrames
@@ -178,6 +203,8 @@ func push_native_popup_cursor() -> void:
 		cursor_sprite.visible = false
 	if is_instance_valid(tooltip_label):
 		tooltip_label.visible = false
+	if is_instance_valid(_autorun_status_label):
+		_autorun_status_label.visible = false
 
 func pop_native_popup_cursor() -> void:
 	_native_popup_cursor_depth = maxi(0, _native_popup_cursor_depth - 1)
@@ -217,6 +244,10 @@ func _apply_cursor_visual() -> void :
 			visual_state = "autorun"
 	if cursor_sprite.animation != visual_state:
 		cursor_sprite.play(visual_state)
+	if is_instance_valid(_autorun_status_label):
+		_autorun_status_label.visible = (
+			visual_state == "autorun" and not is_native_popup_cursor_active()
+		)
 
 func show_skill_target_tooltip(target_name: String, skill_name: String) -> void :
 	if not tooltip_label: return
