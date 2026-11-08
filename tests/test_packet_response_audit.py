@@ -77,6 +77,34 @@ class PacketResponseAuditTests(unittest.TestCase):
         self.assertEqual(2, issue["declarations_checked"])
         self.assertEqual(["SpeedTime"], issue["violations"][0]["missing"])
 
+    def test_nested_anonymous_object_does_not_truncate_outer_fields(self):
+        self.fixture()
+        server = self.root / "server/Application/PacketRouter.cs"
+        src = server.read_text(encoding="utf-8")
+        marker = 'new\n{\n    Type = "MallListResponse"'
+        start = src.index(marker)
+        end = src.index("}", start) + 1
+        replacement = """new
+{
+    Type = "MallListResponse",
+    Points = 100,
+    Items = new[]
+    {
+        new { MallID = 1, Name = "brace } inside string" }
+    },
+    Gifts = Array.Empty<object>()
+}"""
+        server.write_text(
+            src[:start] + replacement + src[end:],
+            encoding="utf-8"
+        )
+
+        results = scan(self.root)
+        mall = next(x for x in results["checks"]
+                    if x["type"] == "MallListResponse")
+        self.assertEqual("MATCHED", mall["status"])
+        self.assertEqual([], mall["violations"])
+
     def test_detects_missing_client_handler(self):
         self.fixture()
         client = self.root / "client/scripts/network_manager.gd"
