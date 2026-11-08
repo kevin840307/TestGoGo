@@ -188,6 +188,7 @@ static func can_reveal_login(focused: bool, video_ready: bool, stable_frames: in
 
 func _wait_for_login_visual_ready() -> void:
 	var started_usec: int = Time.get_ticks_usec()
+	var foreground_started_usec: int = 0
 	var previous_usec: int = started_usec
 	var previous_drawn: int = Engine.get_frames_drawn()
 	var stable_frames: int = 0
@@ -205,6 +206,12 @@ func _wait_for_login_visual_ready() -> void:
 		var focused: bool = DisplayServer.window_is_focused()
 		if GameManager:
 			focused = focused and bool(GameManager.get("_window_has_focus"))
+		if focused:
+			if foreground_started_usec == 0:
+				foreground_started_usec = now_usec
+		else:
+			foreground_started_usec = 0
+		var foreground_elapsed_usec: int = now_usec - foreground_started_usec if foreground_started_usec > 0 else 0
 		var drawn: int = Engine.get_frames_drawn()
 		var advanced: bool = drawn > previous_drawn
 		previous_drawn = drawn
@@ -212,9 +219,9 @@ func _wait_for_login_visual_ready() -> void:
 		if is_instance_valid(login_screen) and login_screen.has_method("is_background_video_frame_ready"):
 			video_ready = bool(login_screen.call("is_background_video_frame_ready"))
 		var elapsed_usec: int = now_usec - started_usec
-		if not fallback_used and (
-			(not video_ready and elapsed_usec >= LOGIN_VIDEO_READY_TIMEOUT_USEC)
-			or (focused and stable_frames < LOGIN_REVEAL_STABLE_FRAMES and elapsed_usec >= LOGIN_SETTLE_VIDEO_FALLBACK_USEC)
+		if not fallback_used and focused and (
+			(not video_ready and foreground_elapsed_usec >= LOGIN_VIDEO_READY_TIMEOUT_USEC)
+			or (stable_frames < LOGIN_REVEAL_STABLE_FRAMES and foreground_elapsed_usec >= LOGIN_SETTLE_VIDEO_FALLBACK_USEC)
 		):
 			fallback_used = true
 			if is_instance_valid(login_screen) and login_screen.has_method("use_static_background_after_video_timeout"):
