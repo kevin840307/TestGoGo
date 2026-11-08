@@ -20,11 +20,20 @@ public sealed class GroundDropPlacementService
     private readonly BlockingMapService _blocking;
     private readonly MonsterNavigationService _navigation;
     private readonly ConcurrentDictionary<int, byte> _reportedMissingMaps = new();
+    private readonly ConcurrentDictionary<int, byte> _reportedUnrepairableMaps = new();
 
     // The first missing-map warning is important; logging once for each
     // dropped item could overwhelm a server with 1000 active players.
     public bool ShouldReportMissingMap(int mapId)
         => _reportedMissingMaps.TryAdd(mapId, 0);
+
+    public bool ShouldReportUnrepairableMap(int mapId)
+        => _reportedUnrepairableMaps.TryAdd(mapId, 0);
+
+    public bool HasVerifiedBlockedPosition(int mapId, double x, double y)
+        => double.IsFinite(x) && double.IsFinite(y) &&
+           _blocking.HasMap(mapId) &&
+           _blocking.GetFlags(mapId, x, y) != 0;
 
     public GroundDropPlacementService(BlockingMapService blocking)
     {
