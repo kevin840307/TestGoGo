@@ -18,6 +18,7 @@ MODULES = {
     "Protocol/IdentitySchemaSmokeTests.cs": "IdentitySchemaSmokeTests",
     "Announcements/AnnouncementSmokeTests.cs": "AnnouncementSmokeTests",
     "World/BlockingMapSmokeTests.cs": "BlockingMapSmokeTests",
+    "World/MapAiOwnerSpatialIndexSmokeTests.cs": "MapAiOwnerSpatialIndexSmokeTests",
 }
 
 
@@ -32,6 +33,47 @@ class SmokeSuiteStructureTests(unittest.TestCase):
                 self.assertIn(f"class {name}", contents)
                 self.assertIn("public static void Run()", contents)
                 self.assertIn(f"{name}.Run();", main)
+
+    def test_shared_ai_spatial_index_preserves_exact_owner_semantics(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        ticker = (
+            ROOT / "server" / "Application" / "World" /
+            "SharedMapAiTicker.cs"
+        ).read_text(encoding="utf-8-sig")
+        index = (
+            ROOT / "server" / "Application" / "World" /
+            "MapAiOwnerSpatialIndex.cs"
+        ).read_text(encoding="utf-8-sig")
+        suite = (
+            SMOKE / "World" / "MapAiOwnerSpatialIndexSmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
+        self.assertIn("new MapAiOwnerSpatialIndex(", ticker)
+        self.assertIn("targetOwners.TryGetValue(", ticker)
+        self.assertIn("FindNearestOwnerIndex(", ticker)
+        self.assertIn("MapAiOwnerSpatialIndexSmokeTests.Run();", main)
+        self.assertIn("ReferenceScan(points, x, y)", suite)
+        self.assertIn("Parallel.For(0, 1000", suite)
+        self.assertIn("delta * delta <= bestDistance", index)
+
+    def test_money_concurrency_suites_use_exact_balances(self):
+        fixture = (
+            SMOKE / "Fixtures" / "ExactMoneyFixture.cs"
+        ).read_text(encoding="utf-8-sig")
+        self.assertIn("target - current", fixture)
+        self.assertIn("updated[\"Money\"]", fixture)
+        for file_name in (
+            "EconomyConcurrencySmokeTests.cs",
+            "AssetMutationConcurrencySmokeTests.cs",
+            "CrossFeatureConcurrencySmokeTests.cs",
+        ):
+            with self.subTest(suite=file_name):
+                suite = (
+                    SMOKE / "Integration" / file_name
+                ).read_text(encoding="utf-8-sig")
+                self.assertIn("ExactMoneyFixture.Set(", suite)
+                # An additive seed atop 10,000 starter money makes the
+                # low-balance overspend/repair assertions impossible.
+                self.assertNotIn("store.AdjustMoney(", suite)
 
     def test_dynamic_action_schema_runtime_covers_every_action_rule(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
