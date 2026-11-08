@@ -14,7 +14,7 @@ public static class DialogFormatter
         // stack and must not be shown as literal characters in the recovered client.
         if (text.Length >= 1)
         {
-            if (text[0] is 'n' or 'p' or 's')
+            if (text[0] is 'n' or 'p' or 's' or 'c')
             {
                 var index = 1;
                 while (index < text.Length && char.IsDigit(text[index]))
