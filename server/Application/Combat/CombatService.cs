@@ -1331,11 +1331,11 @@ public sealed class CombatService
         // Companion world entities use the recovered 4M/5M ranges. Their
         // owner already defines visibility through PlayerSpatialAoi, so
         // spawn/despawn/state/death visuals must never fall back to full-map.
-        return type is
-                   "SpawnEntity" or
-                   "DespawnEntity" or
-                   "SyncState" or
-                   "EntityDeath" &&
+        return (type is
+                    "SpawnEntity" or
+                    "DespawnEntity" or
+                    "SyncState" or
+                    "EntityDeath") &&
                entityId >= 4_000_000 &&
                entityId < 6_000_000;
     }
