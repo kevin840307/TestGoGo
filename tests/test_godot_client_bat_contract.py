@@ -15,10 +15,10 @@ class GodotClientBatContract(unittest.TestCase):
         cls.bat = SCRIPT.read_text(encoding="ascii")
 
     def test_launch_menu_and_valid_modes(self):
-        for name in ("all", "render", "focus", "resources", "import", "configure"):
+        for name in ("all", "render", "focus", "resources", "login", "import", "configure"):
             with self.subTest(mode=name):
                 self.assertIn('"%RUN_MODE%"=="' + name + '"', self.bat)
-        self.assertIn("choice /C 12345PQ /N", self.bat)
+        self.assertIn("choice /C 123456PQ /N", self.bat)
 
     def test_remembers_user_executable_without_git_tracking(self):
         for token in (
@@ -41,6 +41,7 @@ class GodotClientBatContract(unittest.TestCase):
             "multiclient_render_dedup_regression",
             "focus_performance_regression",
             "render_resource_regression",
+            "login_visual_readiness_regression",
         ):
             self.assertIn(name, self.bat)
 
