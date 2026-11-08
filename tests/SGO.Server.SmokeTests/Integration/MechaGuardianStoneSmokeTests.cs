@@ -12,7 +12,11 @@ internal static class MechaGuardianStoneSmokeTests
         SqliteGameStore store,
         CurrentClientDataCatalog current)
     {
-        var guardian = current.FindItem(50816);
+        var guardian =
+            current.FindItem(50816) ??
+            throw new InvalidOperationException(
+                "MA guardian stone 50816 is missing from current client data");
+
         Check(
             guardian is
             {
@@ -130,7 +134,7 @@ internal static class MechaGuardianStoneSmokeTests
                 characterId,
                 50816,
                 -1,
-                guardian!.EquipSlot,
+                guardian.EquipSlot,
                 guardian.Durability);
 
         var freshGuardian =
