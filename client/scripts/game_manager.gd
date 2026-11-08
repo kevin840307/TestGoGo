@@ -919,8 +919,10 @@ func _reconcile_world_render_policy(delta: float) -> void:
 			_log_focus_power_save("focus_poll_reconciled")
 	# In AFK mode, the background dashboard must NEVER bypass the
 	# normal no-focus/no-render policy. World simulation still runs.
-	var should_pause: bool = not should_draw_afk_dashboard(_window_has_focus) 		if _afk_active else should_throttle_background_visuals(
-			_window_has_focus, _has_active_world_visuals())
+	var should_pause: bool = should_throttle_background_visuals(
+		_window_has_focus, _has_active_world_visuals())
+	if _afk_active:
+		should_pause = not should_draw_afk_dashboard(_window_has_focus)
 	var desired_rendering: bool = not should_pause
 	var desired_fps: int = AFK_MONITOR_FPS if _afk_active else fps_cap_for_focus(
 		current_performance_profile, _window_has_focus, _has_active_world_visuals())
