@@ -9049,6 +9049,49 @@ try
             "攻擊目標不存在"),
         "invalid AttackEntity receives explicit response instead of NO_RESPONSE");
 
+    // AttackEntity uses the authoritative session runtime position. Earlier
+    // leash/AI fixtures intentionally move only the synthetic AI target or
+    // leave the owner far away, so restore a real nearby attack position
+    // before validating player kill/reward behavior.
+    var playerKillPosition = new[]
+        {
+            (X: monster.X + 80.0, Y: monster.Y),
+            (X: monster.X - 80.0, Y: monster.Y),
+            (X: monster.X, Y: monster.Y + 80.0),
+            (X: monster.X, Y: monster.Y - 80.0),
+            (X: monster.X + 56.0, Y: monster.Y + 56.0),
+            (X: monster.X + 56.0, Y: monster.Y - 56.0),
+            (X: monster.X - 56.0, Y: monster.Y + 56.0),
+            (X: monster.X - 56.0, Y: monster.Y - 56.0)
+        }
+        .FirstOrDefault(candidate =>
+            monsterNavigation.IsDirectClear(
+                monster.MapId,
+                monster.X,
+                monster.Y,
+                candidate.X,
+                candidate.Y));
+
+    Check(
+        playerKillPosition != default,
+        "player kill fixture finds nearby clear combat position");
+
+    session.LastX = playerKillPosition.X;
+    session.LastY = playerKillPosition.Y;
+    session.PositionDirty = false;
+    Check(
+        store.UpdateLocation(
+            account.Value,
+            id,
+            combatMapId,
+            Convert.ToInt32(playerKillPosition.X),
+            Convert.ToInt32(playerKillPosition.Y)),
+        "player kill fixture persists nearby combat position");
+    broadcastHub.UpdatePosition(
+        session.ConnectionId,
+        playerKillPosition.X,
+        playerKillPosition.Y);
+
     var sawDeath = false;
     IReadOnlyList<object> deathPackets = Array.Empty<object>();
 
