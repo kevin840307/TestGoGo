@@ -10749,6 +10749,16 @@ try
     session.CurrentMapId = originalMap;
     session.WorldReady = originalReady;
 
+    // The preceding duplicate-login fixture intentionally leaves this
+    // connection authenticated but without a selected character. The
+    // authenticated failure contract separately checks UNHANDLED_PACKET for
+    // a world session and WORLD_REQUIRED after it deliberately removes that
+    // world state, so restore a valid selected-character context first.
+    session.AccountId = account.Value;
+    session.CharacterId = id;
+    session.CurrentMapId = combatMapId;
+    session.WorldReady = true;
+
     RuntimeResponseContractSmokeTests.AssertAuthenticatedFailureResponses(
         router,
         session);
