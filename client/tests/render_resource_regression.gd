@@ -1,6 +1,7 @@
-extends SceneTree
+extends Node
 
-# godot --headless --path client --script res://tests/render_resource_regression.gd
+# Godot CLI project-mode test (autoload globals work):
+# godot --headless --path client --scene res://tests/render_resource_regression.tscn
 # Checks that resource reuse does not change ground clicks or targeting.
 const GROUND_ITEM_SCRIPT = preload("res://scripts/ground_item_entity.gd")
 const DAY_NIGHT_SCRIPT = preload("res://scripts/day_night_overlay.gd")
@@ -16,7 +17,7 @@ func _check(ok: bool, description: String) -> void:
 		push_error("[RENDER_RESOURCE_FAIL] " + description)
 
 
-func _initialize() -> void:
+func _ready() -> void:
 	call_deferred("_run")
 
 
@@ -47,7 +48,7 @@ func _run() -> void:
 		"nighttime lighting remains enabled")
 
 	var monster: MonsterEntity = MONSTER_SCENE.instantiate() as MonsterEntity
-	root.add_child(monster)
+	get_tree().root.add_child(monster)
 	_check(not is_instance_valid(monster.target_indicator),
 		"idle monster allocates no hidden target AnimatedSprite2D")
 	monster.set_target_indicator(false)
@@ -64,4 +65,4 @@ func _run() -> void:
 	print("[RENDER_RESOURCE_REGRESSION] %s" % (
 		"ALL PASS" if _failures == 0 else "FAILURES=%d" % _failures
 	))
-	quit(0 if _failures == 0 else 1)
+	get_tree().quit(0 if _failures == 0 else 1)
