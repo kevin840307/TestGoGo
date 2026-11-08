@@ -87,7 +87,7 @@ var _window_drag_pointer_offset: = Vector2.ZERO
 
 
 @onready var loading_overlay: CanvasLayer = %LoadingOverlay
-@onready var loading_bar: ProgressBar = %LoadingOverlay / LoadingBar
+@onready var loading_bar: SmoothLoadingBar = %LoadingOverlay / LoadingBar
 var _map_loading_tween: Tween
 
 
@@ -1702,6 +1702,11 @@ func _trigger_npc_bubble(entity_id: int, text: String, bubble_type: int, speaker
 
 
 
+func set_map_loading_progress(progress: float) -> void:
+	if is_instance_valid(loading_bar):
+		loading_bar.set_target_progress(progress)
+
+
 func show_map_loading(duration: float = 0.3) -> void :
 	if not loading_overlay or not loading_bar: return
 
@@ -1709,7 +1714,7 @@ func show_map_loading(duration: float = 0.3) -> void :
 		_map_loading_tween.kill()
 
 	loading_overlay.visible = true
-	loading_bar.value = 0.0
+	loading_bar.reset_progress()
 
 	_map_loading_tween = create_tween()
 	_map_loading_tween.set_parallel(true)
@@ -1724,9 +1729,12 @@ func hide_map_loading() -> void :
 	if _map_loading_tween and _map_loading_tween.is_running():
 		_map_loading_tween.kill()
 
-	if loading_bar: loading_bar.value = 100.0
+	if loading_bar: loading_bar.finish_progress()
 
-	var fade_tween = create_tween().set_parallel(true)
+	# Cancel a previous fade-out when a new map change starts, so an old
+	# finish callback cannot clear the newer overlay or send stale WorldReady.
+	_map_loading_tween = create_tween().set_parallel(true)
+	var fade_tween: Tween = _map_loading_tween
 	var has_fade_target = false
 
 

@@ -1009,11 +1009,11 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 				max_recorded_progress = progress[0]
 
 
-			if is_instance_valid(current_hud) and current_hud.loading_bar:
-				current_hud.loading_bar.value = minf(
+			if is_instance_valid(current_hud) and current_hud.has_method("set_map_loading_progress"):
+				current_hud.set_map_loading_progress(minf(
 					MAP_LOADING_RESOURCE_PROGRESS_MAX,
 					max_recorded_progress * MAP_LOADING_RESOURCE_PROGRESS_MAX
-				)
+				))
 
 			await get_tree().process_frame
 			if not _is_map_transition_current(transition_id):
@@ -1027,8 +1027,8 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 				"load_get_ms": float(Time.get_ticks_usec() - load_get_started_usec) / 1000.0, 
 				"progress": max_recorded_progress, 
 			})
-			if is_instance_valid(current_hud) and current_hud.loading_bar:
-				current_hud.loading_bar.value = MAP_LOADING_RESOURCE_PROGRESS_MAX
+			if is_instance_valid(current_hud) and current_hud.has_method("set_map_loading_progress"):
+				current_hud.set_map_loading_progress(MAP_LOADING_RESOURCE_PROGRESS_MAX)
 			break
 
 		else:
@@ -1069,8 +1069,8 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 		"old_map_still_valid": is_instance_valid(old_map), 
 	})
 
-	if is_instance_valid(current_hud) and current_hud.loading_bar:
-		current_hud.loading_bar.value = MAP_LOADING_INSTANTIATE_PROGRESS
+	if is_instance_valid(current_hud) and current_hud.has_method("set_map_loading_progress"):
+		current_hud.set_map_loading_progress(MAP_LOADING_INSTANTIATE_PROGRESS)
 	await get_tree().process_frame
 	if not _is_map_transition_current(transition_id):
 		return
@@ -1094,8 +1094,8 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 			target_map_id, ",".join(removed_legacy_layers)
 		])
 
-	if is_instance_valid(current_hud) and current_hud.loading_bar:
-		current_hud.loading_bar.value = MAP_LOADING_ADD_CHILD_PROGRESS
+	if is_instance_valid(current_hud) and current_hud.has_method("set_map_loading_progress"):
+		current_hud.set_map_loading_progress(MAP_LOADING_ADD_CHILD_PROGRESS)
 	await get_tree().process_frame
 	if not _is_map_transition_current(transition_id):
 		return
@@ -1109,8 +1109,8 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 	})
 	log_performance_checkpoint("map_transition_map_added")
 
-	if is_instance_valid(current_hud) and current_hud.loading_bar:
-		current_hud.loading_bar.value = MAP_LOADING_FINALIZE_PROGRESS
+	if is_instance_valid(current_hud) and current_hud.has_method("set_map_loading_progress"):
+		current_hud.set_map_loading_progress(MAP_LOADING_FINALIZE_PROGRESS)
 	await get_tree().process_frame
 	if not _is_map_transition_current(transition_id):
 		return

@@ -24,6 +24,7 @@
 [ext_resource type="Script" uid="uid://bi6fx43fy1ypt" path="res://scripts/npc_dialog_panel.gd" id="105_ikehs"]
 [ext_resource type="Texture2D" uid="uid://gnsdg20mifn0" path="res://ui/BG_NPC_MESSAGE.png" id="105_vcy0k"]
 [ext_resource type="Texture2D" uid="uid://cmdeoenkg40uh" path="res://ui/BG_LOADING.png" id="107_mot27"]
+[ext_resource type="Script" path="res://scripts/smooth_loading_bar.gd" id="sgo_smoothbar"]
 [ext_resource type="Texture2D" uid="uid://guvnfd7jjglr" path="res://ui/OK_BUTTON.png" id="110_lihbo"]
 [ext_resource type="Texture2D" uid="uid://dm7lx3ho16pu" path="res://ui/CLOSESCREEN.png" id="111_qcerj"]
 [ext_resource type="Script" uid="uid://ccmih0pb00sfy" path="res://scripts/quest_tracker_panel.gd" id="111_rauce"]
@@ -4078,6 +4079,7 @@ grow_vertical = 2
 texture = ExtResource("107_mot27")
 
 [node name="LoadingBar" type="ProgressBar" parent="LoadingOverlay" unique_id=2057668192]
+script = ExtResource("sgo_smoothbar")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5

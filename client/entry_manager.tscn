@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://up2wsogbtjhw" path="res://LoginScreen.tscn" id="2_qcu7r"]
 [ext_resource type="PackedScene" uid="uid://bbyywqosexgyt" path="res://character_select.tscn" id="3_da4uh"]
 [ext_resource type="Texture2D" uid="uid://cmdeoenkg40uh" path="res://ui/BG_LOADING.png" id="4_da4uh"]
+[ext_resource type="Script" path="res://scripts/smooth_loading_bar.gd" id="sgo_smoothbar"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1n7w4"]
 bg_color = Color(0.7490196, 0.8039216, 0.9843137, 0.5882353)
@@ -92,6 +93,7 @@ grow_vertical = 2
 texture = ExtResource("4_da4uh")
 
 [node name="LoadingBar" type="ProgressBar" parent="LoadingOverlay" unique_id=1289806519]
+script = ExtResource("sgo_smoothbar")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5

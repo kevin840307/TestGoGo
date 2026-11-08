@@ -164,6 +164,21 @@ This regression is covered by client `perf_regression_smoke.gd` and server
 `MapReadySnapshotSmokeTests.cs`; these automated tests have not been
 executed in this environment without Godot/.NET.
 
+## Smooth loading percentage regression
+
+The initial startup, login/character selection and in-world map transitions
+now share `scripts/smooth_loading_bar.gd`. The stage targets still represent
+real completed work; only the visual percentage is eased. Regressions and
+late packets cannot decrease the target. On success the bar eases to 100%
+during the existing fade without extending load or network lifecycles.
+
+Run `godot --headless --path client --script res://tests/smooth_loading_bar_regression.gd`.
+
+Check: launch → login, login → character select, character select → Map13,
+Map13 → Map15 → Map13, and a missing map path. Verify monotonic smooth fill,
+no abrupt 90→100 jumps, the same overlay teardown and exactly one original
+WorldReady handshake per transition.
+
 ## Manual end-to-end acceptance
 
 1. Startup prewarm → login form: mouse and login input are responsive; progress 0→100.

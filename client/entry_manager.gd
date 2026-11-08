@@ -20,9 +20,9 @@ func _begin_loading_session() -> int:
 	var overlay = get_node_or_null("%LoadingOverlay")
 	if overlay:
 		overlay.visible = true
-		var bar = overlay.get_node_or_null("LoadingBar") as ProgressBar
+		var bar = overlay.get_node_or_null("LoadingBar") as SmoothLoadingBar
 		if bar:
-			bar.value = 0.0
+			bar.reset_progress()
 	return _loading_session_id
 
 func _begin_login_select_loading_session() -> int:
@@ -44,9 +44,12 @@ func _set_loading_progress(value: float, session_id: int = -1) -> void :
 	if not overlay:
 		return
 	_loading_progress_value = maxf(_loading_progress_value, clampf(value, 0.0, 100.0))
-	var bar = overlay.get_node_or_null("LoadingBar") as ProgressBar
+	var bar = overlay.get_node_or_null("LoadingBar") as SmoothLoadingBar
 	if bar:
-		bar.value = _loading_progress_value
+		if _loading_progress_value >= 100.0:
+			bar.finish_progress()
+		else:
+			bar.set_target_progress(_loading_progress_value)
 
 func _ready() -> void :
 
