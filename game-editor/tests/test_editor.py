@@ -454,6 +454,8 @@ class WebStructureTests(unittest.TestCase):
             self.assertNotIn(unsafe, pref_block)
 
         self.assertIn("applyEditorPreferencesToControls()", tools)
+        self.assertRegex(core, r"\$\$\('\[data-map-tab\]'\)\.forEach")
+        self.assertNotRegex(core, r"(?<!\$)\$\('\.segmented \[data-map-tab\]'\)\.forEach")
         self.assertGreaterEqual(tools.count("saveEditorPreferences()"), 6)
         self.assertIn("saveEditorPreferences()", map_editor)
 
