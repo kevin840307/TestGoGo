@@ -39,10 +39,15 @@ var last_visual_move_dir: String = ""
 var last_visual_move_dir_ms: int = 0
 var fallback_action_generation: int = 0
 var action_state_started_ms: int = 0
-const MOVE_IDLE_GRACE_SECONDS: float = 0.12
+# Server monster movement is broadcast on a 250ms map tick. Keep WALK
+# active across one interval of packet jitter, unless an explicit server
+# SyncState overrides it.
+const MOVE_IDLE_GRACE_SECONDS: float = 0.35
 const FALLBACK_ACTION_RELEASE_SECONDS: float = 0.25
 const ACTION_STATE_MAX_MS: int = 900
-const NETWORK_MOVE_MIN_SPEED: float = 120.0
+# Short pathfinding/engage steps must not be accelerated beyond their
+# authoritative 250ms duration; otherwise they arrive early and pause.
+const NETWORK_MOVE_MIN_SPEED: float = 1.0
 const NETWORK_MOVE_MAX_SPEED: float = 205.0
 const NETWORK_MOVE_SNAP_EPSILON: float = 1.0
 const MOVE_DIR_CONFIRM_COUNT: int = 2
@@ -696,9 +701,10 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 		network_move_active = false
 		return
 
-	# Packet jitter or a missed waypoint must not turn the next packet into a
-	# short high-speed tween. Keep the newest authoritative target and move
-	# toward it at a bounded visual speed.
+	# Keep each short waypoint paced to SpeedTime (250ms in server AI),
+	# while capping extreme catch-up speed for delayed/lost packets.
+	# A large minimum speed made short steps complete early, then appear idle
+	# until the next server packet.
 	var requested_time: float = maxf(speed_time, 0.01)
 	var requested_speed: float = remaining / requested_time
 	network_move_speed = clampf(
