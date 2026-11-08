@@ -230,7 +230,10 @@ func _wait_for_login_visual_ready() -> void:
 			stable_frames = 0
 			if OS.is_debug_build():
 				print("[LOGIN_VIDEO_FALLBACK] elapsed_ms=%.1f" % (float(elapsed_usec) / 1000.0))
-		if is_login_frame_stable(focused, RenderingServer.render_loop_enabled, advanced, frame_usec):
+		# Stable frames counted before the first decoded OGV frame do not
+		# establish video/UI readiness. Begin the consecutive-frame gate
+		# only AFTER media is ready (or the static fallback is selected).
+		if video_ready and is_login_frame_stable(focused, RenderingServer.render_loop_enabled, advanced, frame_usec):
 			stable_frames += 1
 		else:
 			stable_frames = 0
