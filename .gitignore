@@ -90,6 +90,8 @@ venv/
 .pytest_cache/
 
 # Logs and local state
+# Local automated BAT/PowerShell test results (JSON, logs and isolated SQLite)
+/test-results/
 *.log
 logs/
 *.db
