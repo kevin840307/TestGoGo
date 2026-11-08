@@ -124,7 +124,8 @@ CurrentItemDefinition CurrentItem(
     int durability = 0,
     int canRepair = 1,
     int canTrade = 1,
-    string scriptName = "")
+    string scriptName = "",
+    string description = "")
     => new(
         id,
         name,
@@ -157,7 +158,8 @@ CurrentItemDefinition CurrentItem(
         durability,
         canRepair,
         canTrade,
-        scriptName);
+        scriptName,
+        description);
 
 var currentCatalog = new CurrentClientDataCatalog(
     new[]
@@ -227,6 +229,42 @@ var currentCatalog = new CurrentClientDataCatalog(
             "精靈再生水晶",
             "general",
             price: 1),
+
+        CurrentItem(
+            2209,
+            "聖殿騎士鎧甲裝備箱",
+            "general",
+            price: 1,
+            scriptName: "聖殿騎士鎧甲裝備箱",
+            description:
+                "聖殿騎士的鎧甲裝備箱，內有50、70及95級的『聖殿騎士鎧甲』供自由選擇。"),
+
+        CurrentItem(
+            15112,
+            "聖殿騎士鎧甲．懲戒",
+            "equip",
+            price: 1,
+            equipSlot: 3,
+            reqLevel: 95,
+            durability: 50),
+
+        CurrentItem(
+            15113,
+            "聖殿騎士鎧甲．復仇",
+            "equip",
+            price: 1,
+            equipSlot: 3,
+            reqLevel: 70,
+            durability: 50),
+
+        CurrentItem(
+            15114,
+            "聖殿騎士鎧甲",
+            "equip",
+            price: 1,
+            equipSlot: 3,
+            reqLevel: 50,
+            durability: 50),
 
         CurrentItem(
             2301,
