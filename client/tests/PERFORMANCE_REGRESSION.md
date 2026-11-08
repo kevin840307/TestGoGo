@@ -3,7 +3,7 @@
 ## Foreground/background performance diagnostics (focus-aware)
 
 Godot's focus power-save behavior is **intentional**: on focus loss the client
-sets `Engine.max_fps = 5`, disables the RenderingServer loop, mutes the Master
+sets `Engine.max_fps` to the configured background cap (currently 30), disables the RenderingServer loop, mutes the Master
 audio bus, and trims selected transient caches. On refocus it restores the
 previous FPS setting, rendering, and the previous mute state. This change adds
 **debug-only telemetry**, not new game/application throttling.
@@ -19,7 +19,7 @@ previous FPS setting, rendering, and the previous mute state. This change adds
   `render_stats_valid=false` when the render loop is disabled. Draw calls
   recorded during that period may be stale; do **not** compare them to
   foreground rendering.
-- `[FRAME_GAP]`: expected 5 FPS background intervals (~200 ms) are
+- `[FRAME_GAP]`: expected background intervals (currently ~33 ms at 30 FPS) are
   **not** emitted as stalls. Unexpectedly long background gaps remain logged
   as `kind=background_stall`; focused stalls are
   `kind=foreground_stall`. Focus transitions reset the frame-gap timestamp
@@ -36,7 +36,7 @@ godot --headless --path client --script res://tests/focus_performance_regression
 Manually verify: in-game foreground → Alt+Tab away for 10 seconds → return,
 and repeat during a map transition. Expect one `focus_out` and one
 `focus_in` event per transition, no repetitive 200 ms `FRAME_GAP` spam,
-a 5 FPS cap/render-loop-off/muted report while unfocused, and restored
+a configured FPS cap (currently 30)/render-loop-off/muted report while unfocused, and restored
 foreground settings and sound on return. Confirm skill, monster, dropped item,
 map transition and network behavior are unchanged. Never compare focused
 and unfocused samples as if they represented identical rendering workloads.
