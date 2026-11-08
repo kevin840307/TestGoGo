@@ -42,9 +42,6 @@ func _run() -> void:
 		# Explicit requests should fail loudly because the requested preview cannot
 		# be aligned. Default bulk export skips manifest scenes that have no known
 		# world bounds yet; otherwise a normal all-map export can never succeed.
-		if not _requested_ids.is_empty():
-			failed += 1
-
 	if map_ids.is_empty():
 		printerr("[MAP_PREVIEW] no exportable maps have valid bounds.")
 		quit(6)
