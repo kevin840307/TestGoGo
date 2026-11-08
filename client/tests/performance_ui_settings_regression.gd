@@ -47,9 +47,9 @@ func _run() -> void:
 	check(ClientPerformanceProfile.sanitize_fps_limit(0) == 0,
 		"unlimited FPS value persists")
 	var quality := ClientPerformanceProfile.resolve(ClientPerformanceProfile.LOAD_QUALITY, ClientPerformanceProfile.COMBAT_NORMAL)
-	var multibox := ClientPerformanceProfile.resolve(ClientPerformanceProfile.LOAD_MULTIBOX, ClientPerformanceProfile.COMBAT_NORMAL)
-	check(int(quality["foreground_fps"]) == int(multibox["foreground_fps"]),
-		"quality/multibox never alter foreground FPS")
+	var low := ClientPerformanceProfile.resolve(ClientPerformanceProfile.LOAD_LOW, ClientPerformanceProfile.COMBAT_NORMAL)
+	check(int(quality["foreground_fps"]) == int(low["foreground_fps"]),
+		"quality/low-resource never alter foreground FPS")
 	var hud_source: String = FileAccess.get_file_as_string("res://game_hud.gd")
 	check(not hud_source.contains("option_quality_enhancement")
 		and not hud_source.contains("current_quality_enhancement_enabled"),
@@ -62,6 +62,13 @@ func _run() -> void:
 		and hud_source.contains("option_fps_limit.set_value_no_signal(float(selected))"),
 		"SpinBox numeric entry and arrows normalize values and update settings")
 	var tscn: String = FileAccess.get_file_as_string("res://game_hud.tscn")
+	check(tscn.contains("popup/item_2/text = \"低資源\"")
+		and not tscn.contains("popup/item_3/text = \"多開\"")
+		and not tscn.contains("popup/item_2/text = \"大型戰鬥\""),
+		"removed last performance and combat choices; low resource remains")
+	check(ClientPerformanceProfile.sanitize_load_mode(3) == ClientPerformanceProfile.LOAD_LOW
+		and ClientPerformanceProfile.sanitize_combat_mode(2) == ClientPerformanceProfile.COMBAT_RESPONSE,
+		"legacy account settings migrate instead of selecting removed entries")
 	check(tscn.contains("[node name=\"OptionFpsLimit\" type=\"SpinBox\"")
 		and tscn.contains("step = 1.0")
 		and tscn.contains("custom_arrow_step = 5.0"),
@@ -93,19 +100,19 @@ func _run() -> void:
 	GameManager.set_foreground_fps_limit(60)
 	check(Engine.max_fps == 60,
 		"FPS limit updates immediately without restarting client")
-	GameManager.set_performance_modes(ClientPerformanceProfile.LOAD_BALANCED, ClientPerformanceProfile.COMBAT_MASS)
+	GameManager.set_performance_modes(ClientPerformanceProfile.LOAD_LOW, ClientPerformanceProfile.COMBAT_RESPONSE)
 	check(not GameManager.should_render_combat_effects() and int(GameManager.current_performance_profile.get("effect_budget_percent", -1)) == 0,
-		"Mass combat hides combat effect resources without limiting FPS")
+		"Low-resource responsive mode hides combat effects without limiting FPS")
 	var dummy: Node2D = Node2D.new()
 	check(FloatingTextManager._play_hit_effect(dummy, 0, true) == 0.0,
-		"Mass combat does not instantiate ordinary hit textures")
+		"Low-resource mode does not instantiate ordinary hit textures")
 	check(FloatingTextManager._spawn_effect_on_target(dummy, "Hit_Effect/Hit_Effect00", 95) == 0.0,
-		"Mass combat skips pooled effect creation")
+		"Low-resource mode skips pooled effect creation")
 	dummy.free()
 	var actor: BaseEntity = BaseEntity.new()
 	actor._play_skill_hit("Hit_Effect00")
 	check(actor._active_transient_skill_effects.is_empty(),
-		"Mass combat skips BaseEntity hit visual instantiation")
+		"Low-resource mode skips BaseEntity hit visual instantiation")
 	actor.free()
 	GameManager.set_performance_modes(original_load, original_combat)
 	GameManager.set_foreground_fps_limit(original_cap)
