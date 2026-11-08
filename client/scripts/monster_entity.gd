@@ -12,13 +12,6 @@ var current_dir: String = "1"
 var is_action_locked: bool = false
 var entity_scale: float = 1.0
 const GENERIC_MONSTER_CLICK_SIZE := Vector2(112.0, 136.0)
-const FAST_MONSTER_BODY_RADIUS: float = 29.0
-const FAST_MONSTER_COLORS := [
-	Color(0.31, 0.75, 0.92, 1.0),
-	Color(0.42, 0.82, 0.49, 1.0),
-	Color(0.80, 0.56, 0.92, 1.0),
-	Color(0.95, 0.68, 0.30, 1.0)
-]
 var _original_sprite_name: String = ""
 var _original_color_index: int = 0
 var _performance_simplified_visual: bool = false
@@ -198,47 +191,77 @@ func _primitive_direction_vector() -> Vector2:
 		"8": return Vector2(-0.707, 0.707)
 	return Vector2.DOWN
 
-func _draw_pixel_monster_a(center: Vector2, color: Color) -> void:
-	var dark := color.darkened(0.34)
-	var light := color.lightened(0.28)
-	var eye := Color(0.06, 0.08, 0.11, 1.0)
+func _simplified_monster_base_color() -> Color:
+	# Every ordinary monster using the same selected style has the same base
+	# appearance. Entity IDs no longer randomly recolor the simplified body.
+	match _performance_simplified_style:
+		ClientPerformanceProfile.SIMPLIFY_PIXEL_B:
+			return Color(0.78, 0.48, 0.24, 1.0)
+		ClientPerformanceProfile.SIMPLIFY_MINIMAL:
+			return Color(0.48, 0.66, 0.72, 1.0)
+	return Color(0.25, 0.66, 0.64, 1.0)
 
-	# Rounded toy/creature silhouette built only from 4px-aligned rectangles.
-	draw_rect(Rect2(center + Vector2(-24, -12), Vector2(48, 28)), dark)
-	draw_rect(Rect2(center + Vector2(-20, -20), Vector2(40, 36)), color)
-	draw_rect(Rect2(center + Vector2(-12, -28), Vector2(24, 8)), light)
-	draw_rect(Rect2(center + Vector2(-28, -8), Vector2(8, 20)), color)
-	draw_rect(Rect2(center + Vector2(20, -8), Vector2(8, 20)), color)
-	draw_rect(Rect2(center + Vector2(-20, 16), Vector2(12, 8)), dark)
-	draw_rect(Rect2(center + Vector2(8, 16), Vector2(12, 8)), dark)
-	draw_rect(Rect2(center + Vector2(-12, -8), Vector2(8, 8)), eye)
-	draw_rect(Rect2(center + Vector2(4, -8), Vector2(8, 8)), eye)
-	draw_rect(Rect2(center + Vector2(-8, 8), Vector2(16, 4)), dark)
+
+func _draw_pixel_monster_a(center: Vector2, color: Color) -> void:
+	var outline := Color(0.08, 0.12, 0.16, 1.0)
+	var dark := color.darkened(0.32)
+	var light := color.lightened(0.28)
+	var accent := Color(0.96, 0.70, 0.28, 1.0)
+	var eye := Color(0.98, 0.98, 0.86, 1.0)
+
+	# Q版魔物：大頭、角、短手腳與腹甲。全部鎖在 4px 網格，
+	# 讓輪廓接近原遊戲的可愛魔物，但不需要任何貼圖或 SpriteFrames。
+	draw_rect(Rect2(center + Vector2(-24, -24), Vector2(48, 44)), outline)
+	draw_rect(Rect2(center + Vector2(-20, -24), Vector2(40, 40)), color)
+	draw_rect(Rect2(center + Vector2(-16, -32), Vector2(8, 12)), accent)
+	draw_rect(Rect2(center + Vector2(8, -32), Vector2(8, 12)), accent)
+	draw_rect(Rect2(center + Vector2(-12, -20), Vector2(24, 8)), light)
+	draw_rect(Rect2(center + Vector2(-12, -8), Vector2(24, 20)), dark)
+	draw_rect(Rect2(center + Vector2(-28, -8), Vector2(8, 20)), outline)
+	draw_rect(Rect2(center + Vector2(20, -8), Vector2(8, 20)), outline)
+	draw_rect(Rect2(center + Vector2(-18, 16), Vector2(12, 10)), outline)
+	draw_rect(Rect2(center + Vector2(6, 16), Vector2(12, 10)), outline)
+	draw_rect(Rect2(center + Vector2(-12, -16), Vector2(8, 8)), eye)
+	draw_rect(Rect2(center + Vector2(4, -16), Vector2(8, 8)), eye)
+	draw_rect(Rect2(center + Vector2(-8, -14), Vector2(4, 4)), outline)
+	draw_rect(Rect2(center + Vector2(8, -14), Vector2(4, 4)), outline)
+	draw_rect(Rect2(center + Vector2(-4, 4), Vector2(8, 4)), accent)
+
 
 func _draw_pixel_monster_b(center: Vector2, color: Color) -> void:
-	var dark := color.darkened(0.38)
+	var outline := Color(0.09, 0.11, 0.14, 1.0)
+	var dark := color.darkened(0.34)
 	var light := color.lightened(0.24)
-	var accent := Color(0.96, 0.63, 0.22, 1.0)
+	var mane := Color(0.94, 0.63, 0.22, 1.0)
 	var facing := -1.0 if _primitive_direction_vector().x < -0.15 else 1.0
 
-	# Small beast silhouette: low body, head, crest, legs and tail.
-	draw_rect(Rect2(center + Vector2(-24, -12), Vector2(40, 28)), color)
-	draw_rect(Rect2(center + Vector2(12 * facing - 8, -20), Vector2(20, 24)), light)
-	draw_rect(Rect2(center + Vector2(16 * facing - 4, -28), Vector2(8, 8)), accent)
-	draw_rect(Rect2(center + Vector2(8 * facing - 4, -28), Vector2(8, 8)), accent)
-	draw_rect(Rect2(center + Vector2(-20, 16), Vector2(8, 12)), dark)
-	draw_rect(Rect2(center + Vector2(8, 16), Vector2(8, 12)), dark)
-	draw_rect(Rect2(center + Vector2(-32 * facing - 4, -8), Vector2(12, 8)), dark)
-	draw_rect(Rect2(center + Vector2(-40 * facing - 4, -16), Vector2(8, 8)), accent)
-	draw_rect(Rect2(center + Vector2(18 * facing - 2, -12), Vector2(4, 4)), Color(0.04, 0.06, 0.08, 1.0))
+	# 低身四足獸：身體、突出頭部、鬃毛、尾巴和四肢，視覺更接近
+	# 原版獸型怪物，但仍只有少量矩形 draw call。
+	draw_rect(Rect2(center + Vector2(-28, -12), Vector2(48, 32)), outline)
+	draw_rect(Rect2(center + Vector2(-24, -12), Vector2(44, 28)), color)
+	draw_rect(Rect2(center + Vector2(14 * facing - 10, -24), Vector2(24, 24)), outline)
+	draw_rect(Rect2(center + Vector2(14 * facing - 6, -20), Vector2(18, 18)), light)
+	draw_rect(Rect2(center + Vector2(6 * facing - 4, -28), Vector2(8, 12)), mane)
+	draw_rect(Rect2(center + Vector2(-2 * facing - 4, -24), Vector2(8, 12)), mane)
+	draw_rect(Rect2(center + Vector2(-22, 16), Vector2(8, 14)), dark)
+	draw_rect(Rect2(center + Vector2(-6, 16), Vector2(8, 14)), dark)
+	draw_rect(Rect2(center + Vector2(10, 16), Vector2(8, 14)), dark)
+	draw_rect(Rect2(center + Vector2(-34 * facing - 6, -8), Vector2(16, 8)), outline)
+	draw_rect(Rect2(center + Vector2(-42 * facing - 4, -16), Vector2(8, 12)), mane)
+	draw_rect(Rect2(center + Vector2(20 * facing - 2, -14), Vector2(4, 4)), outline)
+	draw_rect(Rect2(center + Vector2(18 * facing - 2, -6), Vector2(8, 4)), mane)
+
 
 func _draw_minimal_monster(center: Vector2, color: Color) -> void:
-	var dark := color.darkened(0.42)
-	draw_rect(Rect2(center + Vector2(-16, -16), Vector2(32, 32)), dark)
-	draw_rect(Rect2(center + Vector2(-12, -20), Vector2(24, 40)), color)
-	draw_rect(Rect2(center + Vector2(-20, -12), Vector2(40, 24)), color)
-	draw_rect(Rect2(center + Vector2(-8, -4), Vector2(4, 4)), Color.WHITE)
-	draw_rect(Rect2(center + Vector2(4, -4), Vector2(4, 4)), Color.WHITE)
+	var outline := Color(0.08, 0.11, 0.14, 1.0)
+	var dark := color.darkened(0.34)
+	draw_rect(Rect2(center + Vector2(-18, -22), Vector2(36, 44)), outline)
+	draw_rect(Rect2(center + Vector2(-14, -18), Vector2(28, 36)), color)
+	draw_rect(Rect2(center + Vector2(-22, -10), Vector2(8, 20)), dark)
+	draw_rect(Rect2(center + Vector2(14, -10), Vector2(8, 20)), dark)
+	draw_rect(Rect2(center + Vector2(-8, -8), Vector2(4, 4)), Color.WHITE)
+	draw_rect(Rect2(center + Vector2(4, -8), Vector2(4, 4)), Color.WHITE)
+
 
 func _draw_simplified_monster(center: Vector2, color: Color) -> void:
 	match _performance_simplified_style:
@@ -254,7 +277,7 @@ func _draw() -> void:
 		return
 
 	var state := current_state.to_lower()
-	var body_color: Color = FAST_MONSTER_COLORS[abs(entity_id) % FAST_MONSTER_COLORS.size()]
+	var body_color: Color = _simplified_monster_base_color()
 	if state == "hit":
 		body_color = body_color.lerp(Color(1.0, 0.28, 0.28, 1.0), 0.62)
 
