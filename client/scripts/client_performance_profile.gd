@@ -16,6 +16,21 @@ static func sanitize_load_mode(value: int) -> int:
 static func sanitize_combat_mode(value: int) -> int:
 	return clampi(value, COMBAT_NORMAL, COMBAT_MASS)
 
+static func load_mode_name(value: int) -> String:
+	match sanitize_load_mode(value):
+		LOAD_QUALITY: return "quality"
+		LOAD_BALANCED: return "balanced"
+		LOAD_LOW: return "low"
+		LOAD_MULTIBOX: return "multibox"
+	return "balanced"
+
+static func combat_mode_name(value: int) -> String:
+	match sanitize_combat_mode(value):
+		COMBAT_NORMAL: return "normal"
+		COMBAT_PVP: return "pvp"
+		COMBAT_MASS: return "mass"
+	return "normal"
+
 static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 	load_mode = sanitize_load_mode(load_mode)
 	combat_mode = sanitize_combat_mode(combat_mode)
