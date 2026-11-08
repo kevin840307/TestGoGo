@@ -253,6 +253,7 @@ class WebStructureTests(unittest.TestCase):
 
         for script_name in (
             "app-core.js",
+            "app-health.js",
             "app-skills.js",
             "app-world.js",
             "app-map-editor.js",
@@ -280,7 +281,7 @@ class WebStructureTests(unittest.TestCase):
     def test_frontend_entrypoints_are_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
         index = (web / "index.html").read_text(encoding="utf-8")
-        for script in ("app-core.js", "app-skills.js", "app-world.js", "app-map-math.js", "app-map-editor.js", "app-tools.js"):
+        for script in ("app-core.js", "app-health.js", "app-skills.js", "app-world.js", "app-map-math.js", "app-map-editor.js", "app-tools.js"):
             self.assertIn(f'src="/{script}"', index)
             self.assertTrue((web / script).is_file())
         self.assertTrue((web / "app.css").is_file())
@@ -336,6 +337,27 @@ class WebStructureTests(unittest.TestCase):
             self.assertIn(symbol, map_editor)
         self.assertIn("app-map-editor.js", workflow)
         self.assertNotIn("// Maps", (web / "app-world.js").read_text(encoding="utf-8"))
+
+    def test_health_dashboard_and_pre_save_validation_are_wired(self) -> None:
+        web = GAME_EDITOR_ROOT / "web"
+        index = (web / "index.html").read_text(encoding="utf-8")
+        health = (web / "app-health.js").read_text(encoding="utf-8")
+        map_editor = (web / "app-map-editor.js").read_text(encoding="utf-8")
+        editor = (GAME_EDITOR_ROOT / "editor.py").read_text(encoding="utf-8")
+        workflow = (GAME_EDITOR_ROOT.parent / ".github" / "workflows" / "server-build.yml").read_text(encoding="utf-8")
+
+        for control_id in (
+            "health-refresh", "health-errors", "health-warnings", "health-list",
+            "map-validation-modal", "map-validation-confirm",
+        ):
+            self.assertIn(f'id="{control_id}"', index)
+        self.assertIn("/api/health", editor)
+        self.assertIn("/api/references/", editor)
+        self.assertIn("/validate", editor)
+        self.assertIn("validateMapBeforeSave", health)
+        self.assertIn("showMapValidation", health)
+        self.assertIn("validateMapBeforeSave", map_editor)
+        self.assertIn("app-health.js", workflow)
 
     def test_collision_aware_map_ui_is_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
