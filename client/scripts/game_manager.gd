@@ -52,7 +52,9 @@ var _frame_gap_stage: String = "startup"
 var _frame_gap_stage_since_usec: int = 0
 const FRAME_GAP_WARN_USEC: int = 100000
 const RENDER_STATS_INTERVAL_SECONDS: float = 2.0
+const PERF_ANALYSIS_INTERVAL_SECONDS: float = 5.0
 var _render_stats_elapsed: float = 0.0
+var _perf_analysis_elapsed: float = 0.0
 var _prewarmed_hud_windows: Dictionary = {}
 
 var _train_travel_active: bool = false
@@ -95,6 +97,10 @@ func set_frame_gap_stage(stage: String) -> void :
 	_frame_gap_stage_since_usec = Time.get_ticks_usec()
 
 func _process(delta: float) -> void :
+	# Diagnostics are intentionally excluded from release exports.
+	if not OS.is_debug_build():
+		return
+
 	var now_usec := Time.get_ticks_usec()
 	if _frame_gap_last_usec > 0:
 		var gap_usec := now_usec - _frame_gap_last_usec
@@ -115,7 +121,14 @@ func _process(delta: float) -> void :
 		_render_stats_elapsed = 0.0
 		_print_render_stats()
 
+	_perf_analysis_elapsed += delta
+	if _perf_analysis_elapsed >= PERF_ANALYSIS_INTERVAL_SECONDS:
+		_perf_analysis_elapsed = 0.0
+		_print_performance_analysis("periodic")
+
 func _print_render_stats() -> void :
+	if not OS.is_debug_build():
+		return
 	if not is_instance_valid(current_map_node):
 		return
 
@@ -171,6 +184,63 @@ func _print_render_stats() -> void :
 		paper_doll_layers,
 	])
 
+func _print_performance_analysis(checkpoint: String) -> void:
+	if not OS.is_debug_build():
+		return
+
+	var fps: float = float(Performance.get_monitor(Performance.TIME_FPS))
+	var process_ms: float = float(Performance.get_monitor(Performance.TIME_PROCESS)) * 1000.0
+	var physics_ms: float = float(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS)) * 1000.0
+	var target_frame_ms: float = 1000.0 / maxf(fps, 1.0)
+	var cpu_frame_pct: float = clampf(
+		((process_ms + physics_ms) / maxf(target_frame_ms, 0.001)) * 100.0,
+		0.0,
+		999.0
+	)
+
+	var static_mem_mb: float = float(OS.get_static_memory_usage()) / 1048576.0
+	var static_peak_mb: float = float(OS.get_static_memory_peak_usage()) / 1048576.0
+	var texture_mem_mb: float = float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0
+	var video_mem_mb: float = float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0
+	var object_count: int = int(Performance.get_monitor(Performance.OBJECT_COUNT))
+	var node_count: int = int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))
+	var orphan_count: int = int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT))
+
+	var active_entities: int = 0
+	var active_monsters: int = 0
+	var deferred_monsters: int = 0
+	if NetworkEntityManager:
+		active_entities = NetworkEntityManager.active_entities.size()
+		if NetworkEntityManager.has_method("get_aoi_active_monster_count"):
+			active_monsters = int(NetworkEntityManager.get_aoi_active_monster_count())
+		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
+			deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
+
+	print("[PERF_ANALYSIS] checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d" % [
+		checkpoint,
+		fps,
+		process_ms,
+		physics_ms,
+		cpu_frame_pct,
+		static_mem_mb,
+		static_peak_mb,
+		video_mem_mb,
+		texture_mem_mb,
+		object_count,
+		node_count,
+		orphan_count,
+		active_entities,
+		active_monsters,
+		deferred_monsters,
+	])
+
+
+func log_performance_checkpoint(checkpoint: String) -> void:
+	if not OS.is_debug_build():
+		return
+	_print_performance_analysis(checkpoint)
+
+
 var _initial_loading_progress_value: float = 0.0
 
 func _report_initial_loading_progress(progress_callback: Callable, value: float, stage: String) -> void :
@@ -187,6 +257,8 @@ func _get_process_memory_mb() -> float:
 	return float(Performance.get_monitor(Performance.MEMORY_STATIC)) / 1048576.0
 
 func _append_transition_log(line: String) -> void :
+	if not OS.is_debug_build():
+		return
 	var log_path: = "user://map_transition_%d.log" % OS.get_process_id()
 	var file: = FileAccess.open(log_path, FileAccess.READ_WRITE)
 	if file == null:
