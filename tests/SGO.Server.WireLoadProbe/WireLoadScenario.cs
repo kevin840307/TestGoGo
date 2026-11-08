@@ -187,7 +187,8 @@ internal static class WireLoadScenario
         int rounds,
         int setupConcurrency,
         int mixedSeconds,
-        TimeSpan timeout)
+        TimeSpan timeout,
+        int movePixels = 0)
     {
         var clients =
             new WireLoadClient?[playerCount];
@@ -290,7 +291,8 @@ internal static class WireLoadScenario
                 await MeasureMovementAsync(
                     active,
                     rounds,
-                    timeout);
+                    timeout,
+                    movePixels);
 
             await Task.Delay(250);
             foreach (var client in active)
@@ -331,7 +333,8 @@ internal static class WireLoadScenario
                     url,
                     runId,
                     mixedSeconds,
-                    timeout);
+                    timeout,
+                    movePixels);
 
             var success =
                 movement.ActualDeliveries ==
@@ -403,7 +406,8 @@ internal static class WireLoadScenario
     private static async Task<WirePhaseResult> MeasureMovementAsync(
         WireLoadClient[] clients,
         int rounds,
-        TimeSpan timeout)
+        TimeSpan timeout,
+        int movePixels)
     {
         foreach (var client in clients)
             client.StartMeasurement();
@@ -430,7 +434,8 @@ internal static class WireLoadScenario
                 await Task.WhenAll(
                     clients.Select(
                         x => x.SendPositionAsync(
-                            timeout)));
+                            timeout,
+                            movePixels == 0 ? 0 : (round % 2 == 0 ? movePixels : -movePixels))));
 
                 var expected =
                     expectedPerRound *
@@ -469,6 +474,10 @@ internal static class WireLoadScenario
                 expectedPerRound *
                 rounds;
 
+            var corrections = clients.Sum(x => x.PositionCorrections);
+            if (corrections != 0)
+                throw new InvalidOperationException(
+                    $"real movement was rejected by collision/map validation: corrections={corrections} movePixels={movePixels}");
             if (actual != expectedTotal)
             {
                 throw new InvalidOperationException(
@@ -869,7 +878,8 @@ internal static class WireLoadScenario
         string url,
         string runId,
         int mixedSeconds,
-        TimeSpan timeout)
+        TimeSpan timeout,
+        int movePixels)
     {
         if (mixedSeconds <= 0)
             return WireMixedSoakResult.Empty();
@@ -940,7 +950,8 @@ internal static class WireLoadScenario
                 await Task.WhenAll(
                     clients.Select(
                         x => x.SendPositionAsync(
-                            timeout)));
+                            timeout,
+                            movePixels == 0 ? 0 : (tick % 2 == 0 ? movePixels : -movePixels))));
                 positionRequests +=
                     clients.Length;
 
@@ -998,6 +1009,12 @@ internal static class WireLoadScenario
             var runtimeErrors =
                 new List<string>(
                     health.Errors);
+            var positionCorrections = clients.Sum(x => x.PositionCorrections);
+            if (positionCorrections > 0)
+            {
+                runtimeErrors.Add(
+                    $"movement coordinates were rejected by map blocking: corrections={positionCorrections} movePixels={movePixels}");
+            }
 
             if (health.Summary.Samples < 2)
             {
