@@ -392,8 +392,8 @@ class WebStructureTests(unittest.TestCase):
 
     def test_map_tab_buttons_bind_with_query_all_not_single_query(self) -> None:
         tools = (GAME_EDITOR_ROOT / "web" / "app-tools.js").read_text(encoding="utf-8")
-        self.assertIn("$('[data-map-tab]').forEach", tools)
-        self.assertNotIn("$('[data-map-tab]').forEach", tools)
+        self.assertRegex(tools, r"\$\$\('\[data-map-tab\]'\)\.forEach")
+        self.assertNotRegex(tools, r"(?<!\$)\$\('\[data-map-tab\]'\)\.forEach")
 
     def test_asset_drag_drop_sends_source_name_for_format_guard(self) -> None:
         tools = (GAME_EDITOR_ROOT / "web" / "app-tools.js").read_text(encoding="utf-8")
