@@ -673,7 +673,12 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 	# Do not discard a final already-authorized MoveEntity waypoint just
 	# because SyncState(idle) reached the client before the render position.
 	# This is only presentation: new movement/combat packets still override it.
-	if new_state == "idle" and current_state == "walk" and network_move_active 			and global_position.distance_to(network_move_target) > NETWORK_MOVE_SNAP_EPSILON:
+	if (
+		new_state == "idle"
+		and current_state == "walk"
+		and network_move_active
+		and global_position.distance_to(network_move_target) > NETWORK_MOVE_SNAP_EPSILON
+	):
 		_idle_after_last_waypoint = true
 		return
 
