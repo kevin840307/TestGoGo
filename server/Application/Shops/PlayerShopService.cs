@@ -173,13 +173,12 @@ public sealed class PlayerShopService
 
         if (shop.IsOpen && mapId > 0)
         {
-            _broadcasts.PublishToMap(
-                mapId,
+            _broadcasts.PublishToPlayerObservers(
+                connectionId,
                 Board(
                     characterId,
                     false,
-                    shop.Name),
-                connectionId);
+                    shop.Name));
         }
     }
 
@@ -368,10 +367,9 @@ public sealed class PlayerShopService
             true,
             shop.Name);
 
-        _broadcasts.PublishToMap(
-            session.CurrentMapId,
-            board,
-            session.ConnectionId);
+        _broadcasts.PublishToPlayerObservers(
+            session.ConnectionId,
+            board);
 
         return [board];
     }
@@ -411,10 +409,9 @@ public sealed class PlayerShopService
             false,
             shop.Name);
 
-        _broadcasts.PublishToMap(
-            session.CurrentMapId,
-            board,
-            session.ConnectionId);
+        _broadcasts.PublishToPlayerObservers(
+            session.ConnectionId,
+            board);
 
         var assets = _store.GetCharacterAssets(
             accountId,
@@ -455,7 +452,10 @@ public sealed class PlayerShopService
                 targetDbid);
 
         if (target is null ||
-            target.MapId != session.CurrentMapId)
+            target.MapId != session.CurrentMapId ||
+            !_broadcasts.IsPlayerAoiVisible(
+                session.ConnectionId,
+                target.ConnectionId))
         {
             return [Flash("商店主人不在附近或已離線")];
         }
@@ -504,7 +504,10 @@ public sealed class PlayerShopService
                 sellerDbid);
 
         if (sellerPresence is null ||
-            sellerPresence.MapId != session.CurrentMapId)
+            sellerPresence.MapId != session.CurrentMapId ||
+            !_broadcasts.IsPlayerAoiVisible(
+                session.ConnectionId,
+                sellerPresence.ConnectionId))
         {
             return [Flash("商店主人不在附近或已離線")];
         }
@@ -571,8 +574,8 @@ public sealed class PlayerShopService
             if (shop.Listings.Count == 0)
             {
                 shop.IsOpen = false;
-                _broadcasts.PublishToMap(
-                    session.CurrentMapId,
+                _broadcasts.PublishToPlayerObservers(
+                    sellerPresence.ConnectionId,
                     Board(
                         sellerDbid,
                         false,
