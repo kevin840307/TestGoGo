@@ -28,6 +28,15 @@ foreach (var size in sizes)
             options.DbOpsPerWorker));
 }
 
+var distinctPlayerRows = new List<object>();
+foreach (var size in sizes)
+{
+    distinctPlayerRows.Add(
+        await DistinctPlayerSqliteLoadScenario.Measure(
+            size,
+            options.DbOpsPerWorker));
+}
+
 object? healthSamples = null;
 if (!string.IsNullOrWhiteSpace(
         options.HealthUrl))
@@ -64,11 +73,13 @@ var report = new
     },
     Fanout = fanoutRows,
     SqliteWriteContention = dbRows,
+    SqliteDistinctPlayerWrites = distinctPlayerRows,
     LiveHealth = healthSamples,
     Notes = new[]
     {
         "Fanout measures ServerBroadcastHub same-map delivery cost without WebSocket serialization.",
         "SQLite contention intentionally writes one character row from N workers; it is a worst-case lock-contention probe, not a normal session pattern.",
+        "SqliteDistinctPlayerWrites uses N different characters so normal 10/50/100-player persistence can be compared with the same-row worst case.",
         "SharedMapAI correctness is covered separately by SharedMapAiConcurrencySmokeTests. Live --health sampling reports real tick elapsed time under an externally generated load.",
         "This is a capacity measurement, not a correctness certificate or a fixed supported-player guarantee."
     }

@@ -19,6 +19,20 @@ class LoadProbeStructureTests(unittest.TestCase):
         self.assertIn("P99", source)
         self.assertIn("SharedAiElapsedMs", source)
         self.assertIn("CpuUtilizationPercent", source)
+        self.assertIn("SqliteDistinctPlayerWrites", source)
+
+        scenario = (
+            ROOT / "tests" / "SGO.Server.LoadProbe" /
+            "DistinctPlayerSqliteLoadScenario.cs"
+        )
+        self.assertTrue(scenario.is_file())
+        scenario_source = scenario.read_text(encoding="utf-8-sig")
+        self.assertIn("distinct-player SQLite probe failed", scenario_source)
+        self.assertIn("FinalStateFailures", scenario_source)
+        self.assertIn("OperationsPerSecond", scenario_source)
+        self.assertIn("P50", scenario_source)
+        self.assertIn("P95", scenario_source)
+        self.assertIn("P99", scenario_source)
 
     def test_server_health_exposes_runtime_ai_metrics(self):
         ticker = (
