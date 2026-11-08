@@ -259,8 +259,6 @@ func _draw() -> void:
 		body_color = body_color.lerp(Color(1.0, 0.28, 0.28, 1.0), 0.62)
 
 	var center := Vector2(0.0, -48.0)
-	if state == "walk":
-		center.y += 2.0 if ((Time.get_ticks_msec() / 180) as int) % 2 == 0 else 0.0
 	if state == "attack":
 		center += _primitive_direction_vector() * 8.0
 
@@ -492,9 +490,8 @@ func _input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) -> vo
 
 
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			# A selected combat target is always promoted to its full visual.
-			if _performance_simplified_visual:
-				set_performance_simplified(false)
+			# Targeting never reloads the original SPR while simplification is
+			# enabled. Attack/hit/death are drawn by the same pixel renderer.
 			var player = GameManager.current_player
 			if not is_instance_valid(player): return
 
