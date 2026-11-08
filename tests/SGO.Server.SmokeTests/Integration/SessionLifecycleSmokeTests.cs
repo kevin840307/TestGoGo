@@ -1,6 +1,7 @@
 using System.Text.Json;
 using SGO.Server.Application;
 using SGO.Server.Application.Messaging;
+using SGO.Server.Application.Shops;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Infrastructure.Persistence.Sqlite;
 
@@ -13,7 +14,8 @@ internal static class SessionLifecycleSmokeTests
     public static void Run(
         PacketRouter router,
         SqliteGameStore store,
-        ServerBroadcastHub broadcasts)
+        ServerBroadcastHub broadcasts,
+        PlayerShopService playerShop)
     {
         var suffix =
             Guid.NewGuid()
@@ -105,8 +107,76 @@ internal static class SessionLifecycleSmokeTests
         session.LastY = finalY;
         session.PositionDirty = true;
 
+        // Open a real player shop through PacketRouter before transport
+        // disconnect. DisconnectPresence must release durable InShop rows
+        // while the old account/character identity is still available.
+        const int lifecycleShopItemIndex = 4103;
+        var lifecycleShopUid = store.AddInventoryItem(
+            accountId.Value,
+            characterId,
+            lifecycleShopItemIndex,
+            1);
+        Check(
+            lifecycleShopUid > 0,
+            "seed player-shop item before lifecycle disconnect");
+
+        using (var addShopItem = Json(
+            JsonSerializer.Serialize(new
+            {
+                Type = "ShopAction",
+                Action = "AddItem",
+                UID = lifecycleShopUid,
+                TabType = 0,
+                Count = 1,
+                Price = 20
+            })))
+        {
+            var addResponses = router.Handle(
+                addShopItem.RootElement,
+                session);
+            Check(
+                JsonSerializer.Serialize(addResponses)
+                    .Contains("\"Type\":\"ShopSync\""),
+                "router player-shop AddItem succeeds before disconnect");
+        }
+
+        using (var openShop = Json(
+            JsonSerializer.Serialize(new
+            {
+                Type = "ShopAction",
+                Action = "OpenShop",
+                ShopName = "LifecycleShop"
+            })))
+        {
+            var openResponses = router.Handle(
+                openShop.RootElement,
+                session);
+            Check(
+                JsonSerializer.Serialize(openResponses)
+                    .Contains("\"Type\":\"SyncShopBoard\""),
+                "router player-shop OpenShop succeeds before disconnect");
+        }
+
+        Check(
+            playerShop.GetPublicState(characterId).IsOpen &&
+            store.GetCharacterAssets(accountId.Value, characterId)
+                .Inventory.Any(x =>
+                    Convert.ToInt32(x["ItemIndex"]) ==
+                        lifecycleShopItemIndex &&
+                    Convert.ToInt32(x["InShop"]) == 1),
+            "open player shop is published and durable before disconnect");
+
         router.DisconnectPresence(
             session);
+
+        Check(
+            !playerShop.GetPublicState(characterId).IsOpen &&
+            !store.GetCharacterAssets(accountId.Value, characterId)
+                .Inventory.Any(x =>
+                    Convert.ToInt32(x["ItemIndex"]) ==
+                        lifecycleShopItemIndex &&
+                    Convert.ToInt32(x["InShop"]) != 0),
+            "transport disconnect closes player shop and releases all reserved rows");
 
         var persisted =
             store.GetCharacter(
