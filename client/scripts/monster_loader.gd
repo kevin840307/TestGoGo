@@ -19,6 +19,20 @@ func trim_unreferenced_runtime_cache() -> int:
 func clear_runtime_cache() -> void :
 	_cache.clear()
 
+# Recovered sprites are packed edge-to-edge in a single large atlas.
+# filter_clip must be enabled: linear sampling otherwise pulls pixels from
+# adjacent frames when a monster first plays HIT/ATTACK or is scaled.
+# Keep the original RGBA alpha; never replace it with an opaque background.
+func make_clipped_frame_texture(
+		atlas: Texture2D, region: Rect2, origin: Vector2) -> AtlasTexture:
+	var frame := AtlasTexture.new()
+	frame.atlas = atlas
+	frame.region = region
+	frame.filter_clip = true
+	frame.set_meta("old_offset", origin)
+	return frame
+
+
 func get_monster_frames(monster_id: String, apply_act_timing: bool = false) -> SpriteFrames:
 	monster_id = monster_id.to_upper()
 	var cache_key = "%s:%s" % [monster_id, "timed" if apply_act_timing else "legacy"]
@@ -62,13 +76,11 @@ func get_monster_frames(monster_id: String, apply_act_timing: bool = false) -> S
 
 		for f_key in animations[anim_name]:
 			var meta = frames_meta[f_key]
-			var atlas_tex = AtlasTexture.new()
-			atlas_tex.atlas = big_texture
-			atlas_tex.region = Rect2(meta.x, meta.y, meta.w, meta.h)
-
-
-			atlas_tex.set_meta("old_offset", Vector2(meta.offset_x, meta.offset_y))
-
+			var frame_region := Rect2(meta.x, meta.y, meta.w, meta.h)
+			var atlas_tex := make_clipped_frame_texture(
+				big_texture, frame_region,
+				Vector2(meta.offset_x, meta.offset_y)
+			)
 			sf.add_frame(anim_name, atlas_tex)
 
 
