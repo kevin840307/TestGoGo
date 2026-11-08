@@ -966,8 +966,8 @@ async function saveMap() {
 
 async function openScriptFromMap(name) {
   if (!name) return;
-  if (state.mapDirty && !confirm('地圖尚未儲存，仍要離開去編輯 Script 嗎？')) return;
-  await go('scripts');
+  const changed = await go('scripts');
+  if (changed === false) return;
   await openScript(name);
 }
 
