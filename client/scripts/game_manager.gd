@@ -164,6 +164,9 @@ func _log_focus_power_save(event_name: String, trimmed_caches: bool = false) -> 
 
 
 func _process(delta: float) -> void :
+	# Focus/render recovery also runs in release exports. RenderingServer
+	# can stay disabled after a missed Windows focus notification otherwise.
+	_reconcile_world_render_policy(delta)
 	# Diagnostics are intentionally excluded from release exports.
 	if not OS.is_debug_build():
 		return
@@ -466,6 +469,12 @@ var _focused_max_fps: int = 0
 var _master_bus_was_muted_before_focus_loss: bool = false
 var _startup_loading_overlay_active: bool = false
 var _world_ready_for_background_saving: bool = false
+var _world_presented_msec: int = 0
+var _focus_policy_poll_elapsed: float = 0.0
+var _focus_poll_last_observed: bool = true
+var _focus_poll_same_readings: int = 0
+const WORLD_RENDER_GRACE_MSEC: int = 1200
+const WORLD_FOCUS_POLL_INTERVAL_SECONDS: float = 0.25
 var _startup_focus_observed_frames: int = 0
 var _last_background_cache_trim_msec: int = 0
 const BACKGROUND_CACHE_TRIM_COOLDOWN_MSEC: int = 60000
@@ -523,10 +532,66 @@ static func fps_cap_for_focus(profile: Dictionary, has_focus: bool, world_active
 	return configured_foreground_fps(profile)
 
 
+static func may_suspend_world_rendering(
+	presentation_finished: bool, has_map: bool, has_player: bool,
+	is_loading: bool, time_since_presentation_msec: int) -> bool:
+	# The render loop must stay alive while a black/loading overlay is
+	# fading, during the first world warmup, and throughout map changes.
+	return presentation_finished and has_map and has_player \
+		and not is_loading and time_since_presentation_msec >= WORLD_RENDER_GRACE_MSEC
+
+
 func _has_active_world_visuals() -> bool:
-	# Loading a character is not an active world yet; never disable rendering
-	# halfway through its first map/HUD initialization.
-	return _world_ready_for_background_saving and is_instance_valid(current_map_node) and is_instance_valid(current_player)
+	var since_presented: int = Time.get_ticks_msec() - _world_presented_msec \
+		if _world_presented_msec > 0 else 0
+	return may_suspend_world_rendering(
+		_world_ready_for_background_saving,
+		is_instance_valid(current_map_node), is_instance_valid(current_player),
+		is_changing_map or _startup_loading_overlay_active, since_presented)
+
+
+func notify_world_loading_overlay_hidden() -> void:
+	# Called ONLY after EntryManager/HUD has actually removed its opaque
+	# loading surface. Do not stop GPU drawing at the GameManager 100% mark.
+	if is_changing_map or not is_instance_valid(current_map_node) \
+		or not is_instance_valid(current_player):
+		return
+	_world_ready_for_background_saving = true
+	_world_presented_msec = Time.get_ticks_msec()
+	_refresh_focus_render_policy()
+	if OS.is_debug_build():
+		print("[WORLD_PRESENTED] render_loop=%s focus_internal=%s focus_os=%s grace_ms=%d" % [
+			str(RenderingServer.render_loop_enabled), str(_window_has_focus),
+			str(DisplayServer.window_is_focused()), WORLD_RENDER_GRACE_MSEC
+		])
+
+
+func _reconcile_world_render_policy(delta: float) -> void:
+	_focus_policy_poll_elapsed += delta
+	if _focus_policy_poll_elapsed < WORLD_FOCUS_POLL_INTERVAL_SECONDS:
+		return
+	_focus_policy_poll_elapsed = 0.0
+	var observed_focus: bool = DisplayServer.window_is_focused()
+	if observed_focus == _focus_poll_last_observed:
+		_focus_poll_same_readings += 1
+	else:
+		_focus_poll_last_observed = observed_focus
+		_focus_poll_same_readings = 1
+	# Missing/reordered Win32 focus notifications must not strand the
+	# renderer disabled until the player manually Alt+Tabs twice.
+	if observed_focus != _window_has_focus and _focus_poll_same_readings >= 2:
+		_set_window_focus_power_save(observed_focus)
+		if OS.is_debug_build():
+			_log_focus_power_save("focus_poll_reconciled")
+	var should_pause: bool = should_throttle_background_visuals(
+		_window_has_focus, _has_active_world_visuals())
+	var desired_rendering: bool = not should_pause
+	var desired_fps: int = fps_cap_for_focus(
+		current_performance_profile, _window_has_focus, _has_active_world_visuals())
+	if RenderingServer.render_loop_enabled != desired_rendering or Engine.max_fps != desired_fps:
+		_refresh_focus_render_policy()
+		if OS.is_debug_build():
+			_log_focus_power_save("render_policy_reconciled")
 
 
 func _refresh_focus_render_policy() -> void:
@@ -728,6 +793,11 @@ func _init_buildings_with_diagnostics(source_map_id: int, target_map_id: int) ->
 	set_frame_gap_stage("world_running")
 
 func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vector2, progress_callback: Callable = Callable()) -> bool:
+	# Reset inherited background state before the first visible loading
+	# frame: a previous focus-out must not black out this startup overlay.
+	_world_ready_for_background_saving = false
+	_world_presented_msec = 0
+	_refresh_focus_render_policy()
 	_initial_loading_progress_value = 0.0
 	var raw_num_str = map_id.replace("map", "")
 	var target_map_id: int = int(raw_num_str)
@@ -1009,9 +1079,9 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		current_hud.start_post_reveal_background_prewarm()
 
 	set_frame_gap_stage("world_ready")
-	_world_ready_for_background_saving = true
-	# Switch to background savings only after the initial world is ready.
-	_refresh_focus_render_policy()
+	# GameManager has built the world, but EntryManager still owns the black
+	# loading overlay and must send WorldReady / fade it out. Keep rendering
+	# enabled until notify_world_loading_overlay_hidden() is called.
 	_trace_map_change("initial_enter_completed", 0, target_map_id, {
 		"total_ms": float(Time.get_ticks_usec() - initial_started_usec) / 1000.0,
 	})
@@ -1054,6 +1124,7 @@ func cleanup_and_return_to_login() -> void :
 
 
 	# Returning to login restores smooth controls even if unfocused.
+	_world_presented_msec = 0
 	_refresh_focus_render_policy()
 	get_tree().change_scene_to_file("res://entry_manager.tscn")
 
@@ -1302,6 +1373,11 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 
 
 	is_changing_map = true
+	# The HUD loading overlay and its 0.4s fade must remain drawable even
+	# for a previously-unfocused client. Re-enable savings after HUD hides.
+	_world_ready_for_background_saving = false
+	_world_presented_msec = 0
+	_refresh_focus_render_policy()
 	set_frame_gap_stage("map_transition_loading")
 	log_performance_checkpoint("map_transition_begin")
 
