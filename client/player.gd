@@ -1,6 +1,8 @@
 
 extends BaseEntity
 
+const MOUSE_AUTORUN_STATE = preload("res://scripts/mouse_autorun_state.gd")
+
 @export var move_speed: float = 200.0
 
 var sync_timer: float = 0.0
@@ -29,6 +31,9 @@ var move_path_index: int = 0
 var is_moving: bool = false
 var is_interacting_with_npc: bool = false
 var is_mouse_holding: bool = false
+var _mouse_autorun = MOUSE_AUTORUN_STATE.new()
+var _autorun_blocked_retry_seconds: float = 0.0
+const AUTORUN_BLOCKED_RETRY_INTERVAL: float = 0.4
 
 var stuck_frames: int = 0
 const MAX_STUCK_FRAMES: int = 30
@@ -150,7 +155,7 @@ func _die() -> void :
 
 	is_moving = false
 	_movement_state_reported = false
-	is_mouse_holding = false
+	cancel_autorun_tracking()
 	combat_target = null
 	if CursorManager:
 		CursorManager.unregister_hover(self)
@@ -245,7 +250,7 @@ func _on_change_map_received(_map_id: int, _target_x: float, _target_y: float) -
 	_navigation_fallback_running = false
 	is_moving = false
 	_movement_state_reported = false
-	is_mouse_holding = false
+	cancel_autorun_tracking()
 	move_path = PackedVector2Array()
 	move_path_index = 0
 	move_destination = global_position
@@ -391,6 +396,26 @@ func parse_login_server_data(json_packet: Dictionary) -> void :
 			_die()
 		else:
 			sync_animation()
+
+
+# Terrain long-hold latches cursor-follow walking; next terrain click cancels
+# latch and performs one normal pathfinding request. Other interactables
+# call this to suspend autorun before starting their own navigation.
+func cancel_autorun_tracking(stop_movement: bool = false) -> void:
+	_mouse_autorun.cancel()
+	is_mouse_holding = false
+	_autorun_blocked_retry_seconds = 0.0
+	if CursorManager and CursorManager.has_method("set_autorun_indicator"):
+		CursorManager.set_autorun_indicator(false)
+	if stop_movement and (is_moving or _navigation_fallback_running):
+		_stop_movement()
+
+
+func _finish_mouse_autorun_hold() -> void:
+	_mouse_autorun.terrain_release(Time.get_ticks_msec())
+	is_mouse_holding = false
+	if CursorManager and CursorManager.has_method("set_autorun_indicator"):
+		CursorManager.set_autorun_indicator(_mouse_autorun.latched)
 
 
 func _unhandled_input(event: InputEvent) -> void :
@@ -759,7 +784,7 @@ func reset_map_navigation_state(map_id: int, authoritative_position: Vector2) ->
 	# server through _stop_movement().
 	_navigation_request_id += 1
 	_navigation_fallback_running = false
-	is_mouse_holding = false
+	cancel_autorun_tracking()
 	is_moving = false
 	move_path = PackedVector2Array()
 	move_path_index = 0
@@ -932,7 +957,7 @@ func apply_position_correction(corrected_position: Vector2) -> void :
 	_last_walkable_sync_map_id = corrected_map_id if corrected_map_id > 0 else 0
 	velocity = Vector2.ZERO
 	is_moving = false
-	is_mouse_holding = false
+	cancel_autorun_tracking()
 	move_path = PackedVector2Array()
 	move_path_index = 0
 	move_destination = corrected_position
@@ -1058,7 +1083,7 @@ func begin_targeted_skill(target: Node2D, skill_id: int) -> void:
 		return
 	# A target click supersedes held-mouse navigation and any pending
 	# asynchronous fallback path, but does not change cast/range rules.
-	is_mouse_holding = false
+	cancel_autorun_tracking()
 	if is_moving or _navigation_fallback_running or not move_path.is_empty():
 		_stop_movement()
 	combat_target = target
