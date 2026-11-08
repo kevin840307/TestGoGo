@@ -38,6 +38,7 @@ var _legacy_request_pending: = false
 var _legacy_pending_operation: = ""
 var _legacy_queried_login_name: = ""
 var _suppress_legacy_credentials_changed: = false
+var _external_request_sequence: int = 0
 
 func _ready() -> void :
 	if btn_close:
@@ -109,7 +110,10 @@ func _send_paypal_donation_request(amount: int) -> void :
 		return
 
 	_set_donation_request_pending(true)
-	NetworkManager.send_mall_action("CreatePayPalDonation", {"Amount": amount})
+	NetworkManager.send_mall_action("CreatePayPalDonation", {
+		"Amount": amount,
+		"RequestID": _next_external_request_id("paypal")
+	})
 
 func on_paypal_donation_created(success: bool, message: String, approval_url: String) -> void :
 	_set_donation_request_pending(false)
@@ -381,8 +385,19 @@ func _send_legacy_withdraw_request(amount: int) -> void :
 	NetworkManager.send_mall_action("WithdrawLegacyPoints", {
 		"LoginName": login_name, 
 		"Password": password, 
-		"Amount": amount
+		"Amount": amount,
+		"RequestID": _next_external_request_id("legacy")
 	})
+
+func _next_external_request_id(prefix: String) -> String:
+	_external_request_sequence += 1
+	return "%s-%d-%d-%d" % [
+		prefix,
+		int(Time.get_unix_time_from_system()),
+		Time.get_ticks_msec(),
+		_external_request_sequence
+	]
+
 
 func on_legacy_point_withdrawal_response(success: bool, operation: String, message: String, legacy_points: int) -> void :
 	if not _legacy_request_pending or operation != _legacy_pending_operation:
