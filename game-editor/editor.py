@@ -16,6 +16,7 @@ from sgo_editor.asset_repo import AssetRepository
 from sgo_editor.enemy_repo import EnemyRepository
 from sgo_editor.map_repo import MapRepository
 from sgo_editor.health_repo import HealthRepository
+from sgo_editor.history_repo import HistoryRepository
 from sgo_editor.paths import ProjectPaths
 from sgo_editor.quest_repo import QuestRepository
 from sgo_editor.skill_repo import SkillRepository
@@ -32,6 +33,7 @@ class EditorApplication:
         self.quests = QuestRepository(paths, backups)
         self.assets = AssetRepository(paths, backups)
         self.health = HealthRepository(paths, self.enemies, self.maps, self.quests, self.skills)
+        self.history = HistoryRepository(paths, backups)
         self.web_root = Path(__file__).resolve().parent / "web"
 
 
@@ -101,6 +103,16 @@ class EditorHandler(BaseHTTPRequestHandler):
             if path == "/api/health":
                 force = query.get("refresh", ["0"])[0] in {"1", "true", "yes"}
                 self._send_json(self.app.health.scan(force=force))
+                return
+            if path == "/api/history":
+                self._send_json(self.app.history.list(
+                    query.get("q", [""])[0],
+                    int(query.get("limit", ["300"])[0]),
+                ))
+                return
+            if path == "/api/history/detail":
+                backup_id = query.get("id", [""])[0]
+                self._send_json(self.app.history.detail(backup_id))
                 return
             if match := re.fullmatch(r"/api/references/(enemy|script)/(.+)", path):
                 kind = match.group(1)
@@ -183,6 +195,14 @@ class EditorHandler(BaseHTTPRequestHandler):
             query = urllib.parse.parse_qs(parsed.query)
             force = query.get("force", ["0"])[0].lower() in {"1", "true", "yes"}
             body = {} if method == "DELETE" else self._json_body()
+            if path == "/api/history/restore":
+                if method == "DELETE":
+                    raise ValueError("不支援 DELETE")
+                backup_id = str(body.get("id", "")).strip()
+                result = self.app.history.restore(backup_id)
+                self.app.health.invalidate()
+                self._send_json(result)
+                return
             if match := re.fullmatch(r"/api/skills/(\d+)", path):
                 skill_id = int(match.group(1))
                 if method == "DELETE":
