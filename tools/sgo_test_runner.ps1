@@ -271,7 +271,7 @@ try {
                 (Join-Path $repoRoot 'tests\SGO.Server.SmokeTests\SGO.Server.SmokeTests.csproj'),
                 '--', '--suite', 'all'
             )
-            $pythonChecks = @('tests\test_admin_ui_structure.py','tests\test_global_rate_contract.py','tests\test_gm_security.py','tests\test_windows_runner_contract.py','tests\test_skill_target_and_popup_cursor_contract.py','tests\test_primitive_monster_simplification_contract.py','tests\test_builtin_entity_simplification_contract.py','client\tests\resource_uid_reference_regression.py')
+            $pythonChecks = @('tests\test_admin_ui_structure.py','tests\test_global_rate_contract.py','tests\test_gm_security.py','tests\test_windows_runner_contract.py','tests\test_skill_target_and_popup_cursor_contract.py','tests\test_primitive_monster_simplification_contract.py','tests\test_builtin_entity_simplification_contract.py','tests\test_procedural_simplified_visuals_contract.py','client\tests\resource_uid_reference_regression.py')
             $existingChecks = @($pythonChecks | Where-Object { Test-Path -LiteralPath (Join-Path $repoRoot $_) })
             if ($existingChecks.Count -gt 0) {
                 $pythonTool = Get-Command py -ErrorAction SilentlyContinue
