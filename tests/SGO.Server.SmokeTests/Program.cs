@@ -8678,24 +8678,67 @@ try
         account.Value,
         monster.X + 80,
         monster.Y,
-        session.LastMonsterAiTick.AddSeconds(1));
+        session.LastMonsterAiTick.AddSeconds(1),
+        new[] { monster.EntityId });
 
-    Check(
+    var staleTargetReleased = staleTargetPackets.Any(x =>
+    {
+        var json = JsonSerializer.Serialize(x);
+        return json.Contains(
+                   "\"Type\":\"MonsterTarget\"") &&
+               json.Contains(
+                   $"\"EntityID\":{monster.EntityId}") &&
+               json.Contains(
+                   "\"HasTarget\":false");
+    });
+    var staleTargetReacquired =
         monster.HasTarget &&
         monster.TargetCharacterId == id &&
+        monster.TargetPetUid == 0 &&
+        staleTargetPackets.Any(x =>
+        {
+            var json = JsonSerializer.Serialize(x);
+            return json.Contains(
+                       "\"Type\":\"MonsterTarget\"") &&
+                   json.Contains(
+                       $"\"EntityID\":{monster.EntityId}") &&
+                   json.Contains(
+                       "\"HasTarget\":true") &&
+                   json.Contains(
+                       $"\"TargetID\":{id}");
+        });
+    var staleTargetAttacked =
         monster.AiState == MonsterAiState.Attack &&
         staleTargetPackets.Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                "\"HasTarget\":false")) &&
-        staleTargetPackets.Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                $"\"TargetID\":{id}")) &&
-        staleTargetPackets.Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                "\"Type\":\"EntityDamage\"") &&
-            JsonSerializer.Serialize(x).Contains(
-                $"\"AttackerID\":{monster.EntityId}")),
-        "monster releases stale foreign target and attacks nearby player in same tick");
+        {
+            var json = JsonSerializer.Serialize(x);
+            return json.Contains(
+                       "\"Type\":\"EntityDamage\"") &&
+                   json.Contains(
+                       $"\"TargetID\":{id}") &&
+                   json.Contains(
+                       $"\"AttackerID\":{monster.EntityId}");
+        });
+    var staleForeignCharacter = store.GetCharacter(
+        peerAccount.Value,
+        peerCharacterId)!;
+
+    Check(
+        staleTargetReleased &&
+        staleTargetReacquired &&
+        staleTargetAttacked,
+        "monster releases stale foreign target and attacks nearby player in same tick" +
+        (staleTargetReleased &&
+         staleTargetReacquired &&
+         staleTargetAttacked
+            ? ""
+            : $" (released={staleTargetReleased}, reacquired={staleTargetReacquired}, " +
+              $"attacked={staleTargetAttacked}, hasTarget={monster.HasTarget}, " +
+              $"targetChar={monster.TargetCharacterId}, targetPet={monster.TargetPetUid}, " +
+              $"state={monster.AiState}, foreignPos=({staleForeignCharacter["LocX"]}," +
+              $"{staleForeignCharacter["LocY"]}), monsterPos=({monster.X},{monster.Y}), " +
+              $"nearPlayer=({monster.X + 80},{monster.Y}), " +
+              $"packets={JsonSerializer.Serialize(staleTargetPackets)})"));
 
     accountSessions.Unregister(
         staleTargetRegistration.ConnectionId);
