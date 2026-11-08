@@ -23,6 +23,10 @@ const NORMAL_FEE_COLOR: = Color.WHITE
 const INSUFFICIENT_FEE_COLOR: = Color.RED
 const SEARCH_DEBOUNCE_SECONDS: = 0.15
 const REQUEST_COOLDOWN_SECONDS: = 0.6
+# The old fixed 24-recipe batch forced ~40-60 full frame waits even when
+# recipes were cheap. Use a capped time budget plus a hard per-frame limit.
+const STATIC_RECIPE_MAX_PER_FRAME: int = 64
+const STATIC_RECIPE_FRAME_BUDGET_USEC: int = 2500
 
 var all_recipes: Array = []
 var current_selected_recipe: Dictionary = {}
@@ -81,6 +85,10 @@ func set_recipe_data(recipes: Array) -> void :
 	else:
 		_update_tree()
 
+static func should_yield_static_recipe_batch(processed_since_yield: int, elapsed_usec: int) -> bool:
+	return processed_since_yield >= STATIC_RECIPE_MAX_PER_FRAME or elapsed_usec >= STATIC_RECIPE_FRAME_BUDGET_USEC
+
+
 func prepare_static_tree_async(recipes: Array) -> void :
 	all_recipes = recipes
 	_static_tree_built = false
@@ -103,6 +111,8 @@ func prepare_static_tree_async(recipes: Array) -> void :
 		categories[category] = category_item
 
 	var processed: int = 0
+	var processed_since_yield: int = 0
+	var batch_started_usec: int = Time.get_ticks_usec()
 	for recipe_value in all_recipes:
 		var recipe: Dictionary = recipe_value
 		if str(recipe.get("ActionType", "")) != "Craft":
@@ -134,8 +144,16 @@ func prepare_static_tree_async(recipes: Array) -> void :
 			"recipe_id": recipe_id,
 		})
 		processed += 1
-		if processed % 24 == 0:
+		processed_since_yield += 1
+		if should_yield_static_recipe_batch(
+			processed_since_yield,
+			Time.get_ticks_usec() - batch_started_usec
+		):
+			# Keep UI responsive, but don't burn an entire frame for every
+			# inexpensive group of 24 recipe rows.
 			await get_tree().process_frame
+			processed_since_yield = 0
+			batch_started_usec = Time.get_ticks_usec()
 
 	_static_tree_built = true
 
