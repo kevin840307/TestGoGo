@@ -378,8 +378,11 @@ class RealGameDataContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn('const BOUNDS_PATH := "res://maps/map_bounds.json"', exporter)
+        self.assertIn('const MANIFEST_PATH := "res://maps/map_generated_manifest.json"', exporter)
         self.assertIn("const CELL_SIZE := 16", exporter)
         self.assertIn('"res://maps/Map%02d.scn"', exporter)
+        self.assertIn('get("scenes", [])', exporter)
+        self.assertIn("generated MapXX.scn files are absent", exporter)
         self.assertIn("floorf(float(data[\"min_x\"]) / CELL_SIZE) * CELL_SIZE", exporter)
         self.assertIn("ceilf(float(data[\"max_x\"]) / CELL_SIZE) * CELL_SIZE", exporter)
         self.assertIn("image.save_png(output_path)", exporter)
