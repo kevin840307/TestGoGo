@@ -76,6 +76,52 @@ queue backlog、Godot Client 的首次載入/重繪/內存。
    player item conservation、10/50/100 client latency、
    bytes/sec、CPU/RAM/tick P95/P99 與 Godot regression。
 
+## 2026-11-08 再次核對目錄責任：AOI／資料守恆／Client 回歸
+
+現有目錄的責任大致合理，不建議只為改名稱就搬移大量檔案。
+這次新增的功能依使用者操作流程分類，不把「渲染」、「資產」與
+「傳輸」混在同一個類別：
+
+| 程式／測試 | 目前位置 | 是否合理／後續原則 |
+| --- | --- | --- |
+| `PlayerSpatialAoi`、`WorldEntitySpatialAoi`、`ServerBroadcastHub` | `server/Application/Messaging/` | 合理：只維護可見集合與封包投遞；不修改 DB。新增 `SnapshotScope` 是 AOI 記憶體生命週期，仍屬 Messaging；不應放在 SQLite 類別。 |
+| `PacketRouter` 的 WorldReady / PickUpItemRequest 相容路由 | `server/Application/PacketRouter.cs` | 現階段避免橫跨整個路由重寫。穩定後再將**單一功能**逐步搬至 `Application/World/GroundItemPacketHandler.cs`，前提是保持原封包格式、DI、AOI、交易測試全部 PASS。 |
+| `GroundItemRuntime` | `server/Domain/World/` | 合理：資料模型不應決定 WebSocket 或 Godot 顯示。 |
+| `DropAssetToGround`／`PickUpGroundItem` | `server/Infrastructure/Persistence/Sqlite/` | SQL transaction 是資產真相；不因 AOI 渲染離開而刪除持久化 row。下次拆存取層必須先有 PickUp/Drop/Trade/Shop/Craft 保全測試。 |
+| `network_entity_manager.gd` | `client/scripts/` | 接收既有 `NetworkManager` 事件、維護 Scene 與 AOI 視覺物件；不處理 Server 資產權限。 |
+| `network_entity_pending_moves.gd` | `client/scripts/` | 合理：不依賴 Scene 的純狀態輔助器（TTL、上限、Despawn 間隔防護），避免把封包排序細節複製到各類 Node。 |
+| `World/*Aoi*SmokeTests.cs` | `tests/SGO.Server.SmokeTests/World/` | 不依賴 DB，測 AOI 邊界、版本與交錯順序。 |
+| `Integration/Ground*SmokeTests.cs` | `tests/SGO.Server.SmokeTests/Integration/` | 真 SQLite/交易守恆與多人競態，跟純 AOI 測試分離。 |
+| `client/tests/aoi_*regression.gd` | `client/tests/` | 真 GDScript 驅動物件管理，涵蓋 queued/delayed/duplicate 封包與換圖。 |
+
+### 維護成本與多人效能驗收準則
+
+- **同一實體不應有三份真相**：SQLite 決定持久化物品，WorldRuntime
+  決定怪物生命值及座標，AOI 只決定對誰送哪個可見邊界事件，
+  Godot 的 Scene cache 只決定畫面渲染與過場效果。
+- **只對已知近距離者送 delta**：世界中相隔 9,000 單位的玩家
+  不需要彼此逐步 Move；進入 1,800 單位才 Spawn，超過
+  2,200 單位才 Despawn。Monster/ground 分別用 2,600/3,000
+  半徑（延續既有設定）；金錢、Party/Trade/Club、跨圖私訊
+  不應錯套 AOI 過濾。
+- **封包交錯下可恢復**：即使最初 Move 比 Spawn 早，
+  Client 也只暫存最新位置、不生成不存在的物件；Despawn
+  後舊 Move 不會復活，WorldReady 後由 authoritative 快照收斂。
+  這是容錯，不等於 Server 已證明所有多執行緒封包先後正確。
+- **不能讓壓力檢測拖慢正常遊戲**：未生成 Move cache 僅
+  O(256) 上限，過期掃描有時間節流，不做逐 frame 全表清理；
+  需真正測量 100/500/1,000 人的 bytes/sec、queue lag、GC、
+  CPU/RAM、P95/P99 和 EntityID ghost/leak。
+- **測試結構不回到單檔**：純協定放 `Protocol/`，AOI/座標放
+  `World/`，SQLite 跨功能併發放 `Integration/`，
+  可共享建角/金錢測資放 `Fixtures/`，Godot 實體事件放
+  `client/tests/`，由主 Runner 只做註冊。
+
+建議**先確保 CI Runner 能實際產生 steps 與 build/test PASS**，
+再逐個收斂 `PacketRouter.cs` 和 `SqliteGameStore.cs` 的大型
+領域方法；在缺少可用環境時直接全專案重新分類會產生很高的
+regression 風險，並不能保證效能更好。
+
 ## Naming policy
 
 Use client-facing names in new application/domain code:
