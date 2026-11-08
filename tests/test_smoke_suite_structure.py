@@ -418,6 +418,9 @@ class SmokeSuiteStructureTests(unittest.TestCase):
             "send_secure_packet({",
             "world_ready_response_received.connect(",
             "_bootstrap_complete()",
+            "return-map WorldReady rebuilds ground SpawnEntity in Godot",
+            "Godot can pick persisted ground item after leaving and returning",
+            "send_pickup_item_request(",
         ):
             self.assertIn(marker, source)
 
