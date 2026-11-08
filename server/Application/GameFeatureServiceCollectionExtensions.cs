@@ -48,7 +48,12 @@ public static class GameFeatureServiceCollectionExtensions
         services.AddSingleton<ShopService>();
         services.AddSingleton<PlayerShopService>();
         services.AddSingleton<GmCommandService>();
-        services.AddSingleton<GlobalRateService>();
+        services.AddSingleton(_ =>
+            new GlobalRateService(
+                Path.Combine(
+                    AppContext.BaseDirectory,
+                    "Data",
+                    "global-rates.json")));
 
         if (IsEnabled(configuration, "Bank", defaultValue: true))
         {
