@@ -45,6 +45,7 @@ public static class WebSocketEndpoint
             var broadcastRegistration = broadcasts.Register();
             var broadcastConnectionId = broadcastRegistration.ConnectionId;
             var broadcastQueue = broadcastRegistration.Queue;
+            var lastBroadcastBacklogWarning = DateTimeOffset.MinValue;
             state.ConnectionId = broadcastConnectionId;
             diagnostics.WebSocketConnected();
             diagnostics.Record(
@@ -161,6 +162,29 @@ public static class WebSocketEndpoint
 
                         if (!broadcastQueue.IsEmpty)
                         {
+                            var backlogCount = broadcastQueue.Count;
+                            if (backlogCount >= 500 &&
+                                now - lastBroadcastBacklogWarning >= TimeSpan.FromSeconds(10))
+                            {
+                                lastBroadcastBacklogWarning = now;
+                                diagnostics.BroadcastBacklogWarning();
+                                diagnostics.Record(
+                                    "Warning",
+                                    "BroadcastBacklog",
+                                    $"Queued={backlogCount}",
+                                    state.ConnectionId,
+                                    state.AccountId,
+                                    state.CharacterId,
+                                    state.CurrentMapId);
+                                log.LogWarning(
+                                    "[BROADCAST_BACKLOG] Queued={Queued} Connection={ConnectionID} Account={AccountID} Character={CharacterID} Map={MapID}",
+                                    backlogCount,
+                                    state.ConnectionId,
+                                    state.AccountId,
+                                    state.CharacterId,
+                                    state.CurrentMapId);
+                            }
+
                             var broadcastPackets = new List<object>();
                             while (broadcastQueue.TryDequeue(out var packet))
                                 broadcastPackets.Add(packet);
@@ -202,6 +226,7 @@ public static class WebSocketEndpoint
                 }
                 catch (Exception ex)
                 {
+                    diagnostics.WorldTickFailure();
                     diagnostics.PacketError();
                     diagnostics.Record(
                         "Error",
@@ -349,6 +374,18 @@ public static class WebSocketEndpoint
                         catch (Exception ex)
                         {
                             diagnostics.PacketError();
+                            if (ex is Microsoft.Data.Sqlite.SqliteException)
+                            {
+                                diagnostics.DatabaseFailure();
+                                diagnostics.Record(
+                                    "Error",
+                                    "Database",
+                                    $"{packetType}: {ex.GetType().Name}",
+                                    state.ConnectionId,
+                                    state.AccountId,
+                                    state.CharacterId,
+                                    state.CurrentMapId);
+                            }
                             diagnostics.Record(
                                 "Error",
                                 "PacketHandler",
