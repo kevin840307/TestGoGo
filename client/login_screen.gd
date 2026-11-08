@@ -39,6 +39,8 @@ var submitted_password: String = ""
 # Never emit account/password text or individual input events to logs.
 var _login_reveal_started_usec: int = 0
 var _login_startup_gap_reports: int = 0
+var _startup_form_interactive: bool = false
+var _startup_video_fallback: bool = false
 const LOGIN_STARTUP_MONITOR_SECONDS: float = 6.0
 const LOGIN_STARTUP_GAP_WARN_SECONDS: float = 0.05
 const LOGIN_STARTUP_MAX_GAP_REPORTS: int = 12
@@ -50,6 +52,52 @@ var email_regex: RegEx = RegEx.new()
 
 static func needs_non_ascii_rewrite(original: String, sanitized: String) -> bool:
 	return original != sanitized
+
+
+func prepare_form_behind_loading() -> void:
+	# Show and layout the *real* login scene while EntryManager's opaque
+	# loading overlay is above it. A video cannot be considered warmed if
+	# its parent was invisible during the supposed startup prewarm.
+	_startup_form_interactive = false
+	visible = true
+	modulate.a = 1.0
+	login_panel.visible = true
+	register_panel.visible = false
+	user_edit.editable = false
+	password_edit.editable = false
+	login_button.disabled = true
+	go_register_button.disabled = true
+	_hide_account_suggestions()
+
+
+func is_background_video_frame_ready() -> bool:
+	if _startup_video_fallback or not is_instance_valid(bg_video) or bg_video.stream == null:
+		return true
+	# Playing alone is insufficient: the first actual OGV frame may still
+	# require expensive decoding/texture allocation on the render thread.
+	return bg_video.is_playing() and bg_video.get_stream_position() >= 0.12
+
+
+func use_static_background_after_video_timeout() -> void:
+	# A failed/slow codec must not hold the login form hostage indefinitely.
+	# The existing black ColorRect is a safe fallback, not a broken video.
+	_startup_video_fallback = true
+	stop_background_video()
+
+
+func reveal_form_after_warmup() -> void:
+	# No input was possible while the opaque loading overlay covered the
+	# scene. Enable it only after focus, video and rendered frames settle.
+	_startup_form_interactive = true
+	user_edit.editable = true
+	password_edit.editable = true
+	login_button.disabled = false
+	go_register_button.disabled = false
+	login_panel.visible = true
+
+
+static func can_reveal_login(resources_ready: bool, focused: bool, video_ready: bool, stable_frames: int, minimum_stable_frames: int) -> bool:
+	return resources_ready and focused and video_ready and stable_frames >= minimum_stable_frames
 
 
 func warm_background_video() -> void:
@@ -173,7 +221,8 @@ func _on_login_button_pressed() -> void :
 	_commit_login_flow()
 
 func _commit_login_flow() -> void :
-	if is_submitting: return
+	if not _startup_form_interactive or is_submitting:
+		return
 
 	var username = user_edit.text.strip_edges()
 	var password = password_edit.text.strip_edges()
