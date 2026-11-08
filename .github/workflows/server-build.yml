@@ -42,6 +42,7 @@ jobs:
           node --check game-editor/web/app-world.js
           node --check game-editor/web/app-map-math.js
           node --check game-editor/web/app-map-editor.js
+          node --check game-editor/web/app-history.js
           node --check game-editor/web/app-tools.js
           node game-editor/tests/test_map_math.js
           python3 -m unittest discover -s game-editor/tests -v
