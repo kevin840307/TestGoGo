@@ -1149,14 +1149,25 @@ func finish_afk_mode(progress_callback: Callable = Callable()) -> bool:
 func _refresh_afk_map_visuals_after_change() -> void:
 	if not _afk_active or not is_instance_valid(current_map_node):
 		return
+	set_frame_gap_stage("afk_map_change_suspend")
 	_afk_map_cache.discard()
 	_afk_render_shell.discard()
 	current_map_node.visible = false
-	var suspended_entities: int = _set_afk_dynamic_visuals_suspended(true)
+	await get_tree().process_frame
+
+	var suspended_entities: int = await _set_afk_dynamic_visuals_suspended_batched(true)
+	if not _afk_active or not is_instance_valid(current_map_node):
+		return
+	set_frame_gap_stage("afk_map_change_shell")
+	await get_tree().process_frame
 	_afk_visual_stats = _enter_afk_render_shell()
 	_afk_visual_stats["suspended_entity_visuals"] = suspended_entities
 	_afk_visual_stats["released"] = int(_afk_visual_stats.get("freed_static_nodes", 0))
-	_clear_visual_runtime_caches()
+	await get_tree().process_frame
+
+	set_frame_gap_stage("afk_map_change_cache_release")
+	await _clear_visual_runtime_caches_batched()
+	set_frame_gap_stage("afk_active")
 	_log_afk_state("map_changed_unloaded", int(_afk_visual_stats.get("released", 0)))
 	_log_afk_memory("afk_map_changed")
 
