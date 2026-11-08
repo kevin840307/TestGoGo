@@ -1595,12 +1595,29 @@ try
     var legacyTrainTicketIds =
         new[] { 10505, 10506, 10507, 10508, 10509, 10510, 10511 };
 
-    Check(legacyTrainTicketIds.All(id =>
-              questItemMappings.ResolveItem(id) is
-              {
-                  TabType: 0
-              }),
-        "all seven legacy rail tickets map to current-client inventory items");
+    var legacyTrainTicketMappings =
+        legacyTrainTicketIds
+            .Select(id => (
+                LegacyId: id,
+                Mapping: questItemMappings.ResolveItem(id)))
+            .ToArray();
+    var unresolvedTrainTickets =
+        legacyTrainTicketMappings
+            .Where(x =>
+                x.Mapping is null ||
+                x.Mapping.TabType != 0)
+            .Select(x =>
+                x.Mapping is null
+                    ? $"{x.LegacyId}=unresolved"
+                    : $"{x.LegacyId}->{x.Mapping.ItemId}:{x.Mapping.Name}:tab{x.Mapping.TabType}")
+            .ToArray();
+
+    Check(
+        unresolvedTrainTickets.Length == 0,
+        "all seven legacy rail tickets map to current-client inventory items" +
+        (unresolvedTrainTickets.Length == 0
+            ? ""
+            : $" (missing: {string.Join(", ", unresolvedTrainTickets)})"));
 
     var broadcastHub = new ServerBroadcastHub();
     var broadcastRegistration = broadcastHub.Register();
