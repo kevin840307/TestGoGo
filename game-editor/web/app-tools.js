@@ -299,12 +299,12 @@ $('#enemy-new').onclick = newEnemy;
 $('#map-select').onchange = e => switchMap(e.target.value).catch(err => toast(err.message, 'error'));
 $$('[data-map-tab]').forEach(b => b.onclick = () => switchMapTab(b.dataset.mapTab).catch(err => toast(err.message, 'error')));
 $('#map-enemy-search').oninput = debounce(renderEnemyPalette, 100);
-$('#map-show-preview').onchange = e => { state.mapShowPreview = e.target.checked; renderMapVisual(); };
-$('#map-show-blocking').onchange = e => { state.mapShowBlocking = e.target.checked; renderMapVisual(); };
-$('#map-show-spawners').onchange = e => { state.mapShowSpawners = e.target.checked; renderMapVisual(); };
-$('#map-show-labels').onchange = e => { state.mapShowLabels = e.target.checked; renderMapVisual(); };
-$('#map-only-selected-type').onchange = e => { state.mapOnlySelectedType = e.target.checked; renderMapVisual(); };
-$('#map-snap-walkable').onchange = e => { state.mapSnapWalkable = e.target.checked; };
+$('#map-show-preview').onchange = e => { state.mapShowPreview = e.target.checked; saveEditorPreferences(); renderMapVisual(); };
+$('#map-show-blocking').onchange = e => { state.mapShowBlocking = e.target.checked; saveEditorPreferences(); renderMapVisual(); };
+$('#map-show-spawners').onchange = e => { state.mapShowSpawners = e.target.checked; saveEditorPreferences(); renderMapVisual(); };
+$('#map-show-labels').onchange = e => { state.mapShowLabels = e.target.checked; saveEditorPreferences(); renderMapVisual(); };
+$('#map-only-selected-type').onchange = e => { state.mapOnlySelectedType = e.target.checked; saveEditorPreferences(); renderMapVisual(); };
+$('#map-snap-walkable').onchange = e => { state.mapSnapWalkable = e.target.checked; saveEditorPreferences(); };
 $('#map-undo').onclick = undoMapEdit;
 $('#map-redo').onclick = redoMapEdit;
 $('#map-zoom-in').onclick = mapZoomIn;
@@ -349,6 +349,7 @@ $('#asset-file-input').onchange = e => replaceAsset(e.target.files?.[0]);
 
 (async function boot() {
   try {
+    applyEditorPreferencesToControls();
     await loadStatus();
     loadHealth().catch(e => toast(`健康檢查失敗：${e.message}`, 'error'));
     await go('dashboard');
