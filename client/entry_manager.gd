@@ -242,6 +242,8 @@ func _start_game_entry_flow() -> void :
 
 func _show_login_screen() -> void :
 	_debug_perf_checkpoint("login_screen_ready")
+	if GameManager and GameManager.has_method("log_world_visual_audit"):
+		GameManager.log_world_visual_audit("login_ready")
 	if login_screen:
 		login_screen.visible = true
 		login_screen.modulate.a = 1.0

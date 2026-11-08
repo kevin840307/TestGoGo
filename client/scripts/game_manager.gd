@@ -16,6 +16,7 @@ const TRAIN_VIDEO_TIMEOUT_SECONDS: = 120.0
 const WORLD_ENHANCEMENT_SCENE: = preload("res://world_enhancement.tscn")
 const AFK_VISUAL_CACHE = preload("res://scripts/afk_visual_cache.gd")
 const AFK_RENDER_SHELL = preload("res://scripts/afk_render_shell.gd")
+const WORLD_VISUAL_AUDIT = preload("res://scripts/world_visual_audit.gd")
 const AFK_MONITOR_FPS: int = 20
 const DAY_NIGHT_OVERLAY_SCENE: = preload("res://day_night_overlay.tscn")
 const TRAIN_VIDEO_PATHS: = {
@@ -53,6 +54,48 @@ var _afk_visual_stats: Dictionary = {}
 var _afk_master_was_muted_before: bool = false
 var _afk_memory_baseline: Dictionary = {}
 var _afk_forced_draw_count: int = 0
+var _last_world_map_audit_path: String = ""
+
+
+
+func log_world_visual_audit(phase: String) -> void:
+	if not OS.is_debug_build():
+		return
+	var map_data: Dictionary = WORLD_VISUAL_AUDIT.snapshot(current_map_node)
+	var hud_data: Dictionary = WORLD_VISUAL_AUDIT.snapshot(current_hud)
+	var player_data: Dictionary = WORLD_VISUAL_AUDIT.snapshot(current_player)
+	var entry_data: Dictionary = WORLD_VISUAL_AUDIT.snapshot(get_tree().current_scene)
+	var active_entities: int = NetworkEntityManager.active_entities.size() if NetworkEntityManager else 0
+	var cached_map: bool = (
+		not _last_world_map_audit_path.is_empty()
+		and ResourceLoader.has_cached(_last_world_map_audit_path)
+	)
+	print("[WORLD_VISUAL_AUDIT] phase=%s pid=%d map_nodes=%d map_sprite=%d map_animated=%d map_texture_nodes=%d map_unique_textures=%d map_sprite_frames=%d hud_nodes=%d hud_controls=%d hud_viewports=%d hud_texture_nodes=%d player_nodes=%d player_animated=%d entry_nodes=%d active_entities=%d prewarmed_windows=%d cached_map=%s cached_player=%s cached_hud=%s godot_static_mb=%.2f godot_texture_mb=%.2f godot_video_mb=%.2f metric_scope=godot_not_windows_working_set" % [
+		phase, OS.get_process_id(),
+		int(map_data["nodes"]), int(map_data["sprite2d"]),
+		int(map_data["animated_sprites"]), int(map_data["texture_rects"]),
+		int(map_data["unique_textures"]), int(map_data["unique_sprite_frames"]),
+		int(hud_data["nodes"]), int(hud_data["controls"]), int(hud_data["subviewports"]),
+		int(hud_data["texture_rects"]),
+		int(player_data["nodes"]), int(player_data["animated_sprites"]),
+		int(entry_data["nodes"]), active_entities,
+		_prewarmed_hud_windows.size(),
+		str(cached_map),
+		str(ResourceLoader.has_cached("res://player.tscn")),
+		str(ResourceLoader.has_cached("res://game_hud.tscn")),
+		_get_process_memory_mb(),
+		float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
+		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+	])
+
+
+func _audit_login_after_logout() -> void:
+	# The freed world and a newly instantiated EntryManager do not settle in
+	# the same frame. Record after deferred Node destruction has completed.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().create_timer(0.5).timeout
+	log_world_visual_audit("logout_settled")
 
 
 func _afk_memory_sample() -> Dictionary:
@@ -836,6 +879,7 @@ func begin_afk_mode() -> bool:
 		"monsters": current_simplify_monsters_mode,
 	}
 	_afk_memory_baseline = _afk_memory_sample()
+	log_world_visual_audit("afk_enter_before")
 	_afk_forced_draw_count = 0
 	_afk_active = true
 	_afk_started_msec = Time.get_ticks_msec()
@@ -863,6 +907,7 @@ func begin_afk_mode() -> bool:
 	_refresh_focus_render_policy()
 	_log_afk_state("enter_after", int(_afk_visual_stats.get("released", 0)))
 	_log_afk_memory("enter_after")
+	log_world_visual_audit("afk_enter_after")
 	if OS.is_debug_build():
 		_log_afk_memory_after_settle(_afk_started_msec)
 	return true
@@ -908,6 +953,7 @@ func finish_afk_mode(progress_callback: Callable = Callable()) -> bool:
 	_refresh_focus_render_policy()
 	_log_afk_state("restore_complete", int(restore_result.get("restored_entity_nodes", 0)), 0)
 	_log_afk_memory("restore_complete")
+	log_world_visual_audit("afk_restore_complete")
 	_afk_memory_baseline.clear()
 	_emit_afk_restore_progress(progress_callback, 100.0, "畫面已恢復")
 	return true
@@ -1500,6 +1546,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	var target_map_id: int = int(raw_num_str)
 	var formatted_map_name = "Map%02d" % target_map_id
 	var map_path = "res://maps/" + formatted_map_name + ".scn"
+	_last_world_map_audit_path = map_path
 	var initial_started_usec: int = Time.get_ticks_usec()
 	# Network entity packets may arrive immediately, but instantiating dozens of
 	# monsters while the first map/player/PaperDoll/HUD are initializing creates
@@ -1792,14 +1839,19 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	})
 	_report_initial_loading_progress(progress_callback, 100.0, "載入完成")
 	await get_tree().process_frame
+	log_world_visual_audit("world_enter_ready")
 	return true
 
 func cleanup_and_return_to_login() -> void :
+	log_world_visual_audit("logout_before")
 	_reset_afk_mode()
 	_world_ready_for_background_saving = false
 	_cancel_active_map_transition("cleanup_and_return_to_login")
 	_cancel_train_travel("cleanup_and_return_to_login")
-	AudioManager.stop_bgm()
+	if AudioManager and AudioManager.has_method("release_world_audio_for_login"):
+		AudioManager.release_world_audio_for_login()
+	else:
+		AudioManager.stop_bgm()
 
 
 	if is_instance_valid(current_player):
@@ -1832,7 +1884,9 @@ func cleanup_and_return_to_login() -> void :
 	# Returning to login restores smooth controls even if unfocused.
 	_world_presented_msec = 0
 	_refresh_focus_render_policy()
+	log_world_visual_audit("logout_cleanup_scheduled")
 	get_tree().change_scene_to_file("res://entry_manager.tscn")
+	call_deferred("_audit_login_after_logout")
 
 func _clear_visual_runtime_caches() -> void :
 	if DollLoader and DollLoader.has_method("clear_runtime_cache"):
@@ -2119,6 +2173,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 
 	var formatted_map_name = "Map%02d" % target_map_id
 	var map_path = "res://maps/" + formatted_map_name + ".scn"
+	_last_world_map_audit_path = map_path
 
 	if not ResourceLoader.exists(map_path):
 		_trace_map_change("map_missing", source_map_id, target_map_id)

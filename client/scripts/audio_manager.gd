@@ -477,6 +477,19 @@ func clear_runtime_cache() -> void :
 	_map_bgm_cache.clear()
 	_map_bgm_cache_order.clear()
 
+
+func release_world_audio_for_login() -> void:
+	# stop() does not release the AudioStream referenced by a player. Keep
+	# original login bootstrap intact; it will start the login BGM normally.
+	stop_bgm()
+	if is_instance_valid(bgm_player):
+		bgm_player.stream = null
+	for player in se_players:
+		if is_instance_valid(player):
+			player.stop()
+			player.stream = null
+	clear_runtime_cache()
+
 func set_se_volume(percentage: float) -> void :
 	current_se_volume_pct = clampf(percentage, 0.0, 100.0)
 	_apply_se_volume()
