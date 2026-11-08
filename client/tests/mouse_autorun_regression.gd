@@ -77,13 +77,16 @@ func _test_existing_cursor_precedence() -> void:
 			has_autorun_text_label = true
 	_check(not has_autorun_text_label,
 		"autorun animation has no text badge or extra input surface")
-	_check(CursorManager.cursor_sprite.scale.x > 1.0,
-		"only locked walking increases sprite visibility")
+	_check(is_equal_approx(CursorManager.cursor_sprite.scale.x, 1.0),
+		"locked walking uses native 1:1 sprite scale, not an enlarged 48px pointer")
+	_check(abs(CursorManager.cursor_sprite.sprite_frames.get_frame_texture(
+		"normal", 0).get_width() - 32) <= 6,
+		"locked cursor is close in size to original normal pointer")
 	_check(CursorManager.cursor_sprite.sprite_frames.get_frame_texture(
-		"autorun", 0).get_width() == 48 and
+		"autorun", 0).get_width() == 32 and
 		CursorManager.cursor_sprite.sprite_frames.get_frame_texture(
-			"autorun", 0).get_height() == 48,
-		"cursor atlas keeps the 480x48 PNG frame dimensions without cropping")
+			"autorun", 0).get_height() == 32,
+		"cursor atlas keeps sharpened 320x32 PNG dimensions without cropping")
 	CursorManager.set_cursor_state("attack")
 	_check(not CursorManager.is_autorun_indicator_visible() and
 		CursorManager.cursor_sprite.animation == "attack" and

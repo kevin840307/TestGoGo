@@ -1,12 +1,12 @@
 
 extends CanvasLayer
 
-# Ten transparent 48x48 frames from the selected classic-style autorun
-# sprite sheet. Preserve the original cursor for all other interactions.
+# Ten crisp 32x32 frames, pre-downsampled and sharpened from the approved
+# higher-resolution animation; preserve all other native cursor animations.
 const AUTORUN_SHEET_PATH = "res://ui/cursor/C_AUTOWALK.spr.png"
 const AUTORUN_FRAME_COUNT: int = 10
-const AUTORUN_FRAME_SIZE: Vector2i = Vector2i(48, 48)
-const AUTORUN_VISUAL_SCALE: float = 1.10
+const AUTORUN_FRAME_SIZE: Vector2i = Vector2i(32, 32)
+const AUTORUN_VISUAL_SCALE: float = 1.0
 
 signal ctrl_state_changed(is_pressed: bool)
 
@@ -166,7 +166,7 @@ func _register_autorun_cursor_animation() -> void:
 		return
 	var atlas: Texture2D = load(AUTORUN_SHEET_PATH) as Texture2D
 	if atlas == null or atlas.get_width() != AUTORUN_FRAME_COUNT * AUTORUN_FRAME_SIZE.x or atlas.get_height() != AUTORUN_FRAME_SIZE.y:
-		push_warning("Auto-walk cursor sprite sheet must be 480x48 pixels.")
+		push_warning("Auto-walk cursor sprite sheet must be 320x32 pixels.")
 		return
 
 	var frames: SpriteFrames = cursor_sprite.sprite_frames.duplicate(true) as SpriteFrames
