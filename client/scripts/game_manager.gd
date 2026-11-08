@@ -448,7 +448,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 			current_map_node.remove_child(legacy_collision)
 			legacy_collision.free()
 			removed_collision_nodes.append(collision_name)
-	if not removed_collision_nodes.is_empty():
+	if OS.is_debug_build() and not removed_collision_nodes.is_empty():
 		print("[MAP_INIT_OPT] removed_collision_nodes=%s" % ",".join(removed_collision_nodes))
 
 	# Keep the first world completely hidden while its nodes initialize.
@@ -469,7 +469,8 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	var root_add_started_usec: int = Time.get_ticks_usec()
 	get_tree().root.add_child(current_map_node)
 	var add_child_ms: float = float(Time.get_ticks_usec() - root_add_started_usec) / 1000.0
-	print("[MAP_INIT_TIMING] add_child_ms=%.2f" % add_child_ms)
+	if OS.is_debug_build():
+		print("[MAP_INIT_TIMING] add_child_ms=%.2f" % add_child_ms)
 	_trace_map_change("initial_map_added", 0, target_map_id, {
 		"instantiate_ms": instantiate_ms,
 		"add_child_ms": add_child_ms,
@@ -933,6 +934,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 
 
 	is_changing_map = true
+	log_performance_checkpoint("map_transition_begin")
 
 
 	if is_instance_valid(current_player):
@@ -1092,6 +1094,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 		"instantiate_ms": instantiate_ms, 
 		"add_child_ms": add_child_ms, 
 	})
+	log_performance_checkpoint("map_transition_map_added")
 
 	if is_instance_valid(current_hud) and current_hud.loading_bar:
 		current_hud.loading_bar.value = MAP_LOADING_FINALIZE_PROGRESS
@@ -1169,5 +1172,6 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 	if is_instance_valid(current_hud) and current_hud.has_method("hide_map_loading"):
 		current_hud.hide_map_loading()
 	_trace_map_change("loading_hide_requested", source_map_id, target_map_id)
+	log_performance_checkpoint("map_transition_ready")
 	if _train_travel_active and _train_travel_phase == "loading_map":
 		await _finish_train_travel_after_map_change()
