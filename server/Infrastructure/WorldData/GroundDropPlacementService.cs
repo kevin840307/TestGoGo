@@ -107,7 +107,9 @@ public sealed class GroundDropPlacementService
         out double x, out double y)
     {
         x = y = 0;
-        if (_blocking.GetFlags(mapId, anchorX, anchorY) != 0)
+        if (_blocking.GetFlags(mapId, anchorX, anchorY) != 0 ||
+            SquaredDistance(anchorX, anchorY, targetX, targetY) >
+            MaxRequestedDistanceSquared)
             return false;
 
         if (IsReachable(mapId, anchorX, anchorY, targetX, targetY))
