@@ -168,16 +168,44 @@ class ClientVisualPerformanceContractTests(unittest.TestCase):
         monster = source("client/scripts/monster_entity.gd")
         pet = source("client/scripts/pet_entity.gd")
         base = source("client/scripts/base_entity.gd")
+
+        def gd_function_block(text, signature):
+            start = text.index(signature)
+            end = text.find("\nfunc ", start + len(signature))
+            return text[start:] if end < 0 else text[start:end]
+
+        monster_layout = gd_function_block(
+            monster, "func _lock_ui_position() -> void :"
+        )
+        pet_layout = gd_function_block(
+            pet, "func _lock_ui_position() -> void :"
+        )
+
         self.assertIn('var _ui_position_generation: int = 0', monster)
-        self.assertIn('requested_generation != _ui_position_generation', monster)
-        self.assertIn('var frames: SpriteFrames = sprite.sprite_frames', monster)
-        self.assertIn('if not is_instance_valid(frames):', monster)
-        self.assertIn('frames.get_frame_count(base_anim) > 0', monster)
-        self.assertIn('var frames: SpriteFrames = sprite.sprite_frames', pet)
-        self.assertIn('if not is_instance_valid(frames):', pet)
+        self.assertIn(
+            'requested_generation != _ui_position_generation',
+            monster_layout,
+        )
+        self.assertIn(
+            'var frames: SpriteFrames = sprite.sprite_frames',
+            monster_layout,
+        )
+        self.assertIn('if not is_instance_valid(frames):', monster_layout)
+        self.assertIn('frames.get_frame_count(base_anim) > 0', monster_layout)
+        self.assertIn(
+            'var frames: SpriteFrames = sprite.sprite_frames',
+            pet_layout,
+        )
+        self.assertIn('if not is_instance_valid(frames):', pet_layout)
         self.assertIn('if data_model.transform_type <= 0 or not is_instance_valid(transform_sprite) or not is_instance_valid(transform_sprite.sprite_frames):', base)
-        self.assertNotIn('if not sprite.sprite_frames.has_animation(base_anim):', monster)
-        self.assertNotIn('if not sprite.sprite_frames.has_animation(base_anim):', pet)
+        self.assertNotIn(
+            'if not sprite.sprite_frames.has_animation(base_anim):',
+            monster_layout,
+        )
+        self.assertNotIn(
+            'if not sprite.sprite_frames.has_animation(base_anim):',
+            pet_layout,
+        )
 
     def test_behavioral_scripts_wired_to_runner(self):
         runner = source("tests/run_protocol_checks.ps1")
