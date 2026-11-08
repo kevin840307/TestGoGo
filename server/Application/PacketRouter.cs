@@ -3981,12 +3981,26 @@ public sealed class PacketRouter
                         state.CurrentMapId, state.CharacterId.Value);
                 }
 
+                var requestedCount = req.Int("Count", 1);
+                if (requestedCount <= 0 ||
+                    ((tabType is 1 or 3) && requestedCount != 1))
+                {
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "丟棄數量無效，物品已保留"
+                        }
+                    ];
+                }
+
                 var ground = _store.DropAssetToGround(
                     accountId,
                     state.CharacterId.Value,
                     req.Long("ItemUID"),
                     tabType,
-                    Math.Max(1, req.Int("Count", 1)),
+                    requestedCount,
                     state.CurrentMapId,
                     dropPosition.X,
                     dropPosition.Y);
