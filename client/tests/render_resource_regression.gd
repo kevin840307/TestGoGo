@@ -35,10 +35,29 @@ func _run() -> void:
 	var mat2: ShaderMaterial = GROUND_ITEM_SCRIPT.get_shared_palette_material(2)
 	_check(mat1 == mat1_again, "identical ground item palettes reuse material")
 	_check(mat1 != mat2, "different ground item palettes remain independent")
-	_check(is_equal_approx(float(mat1.get_shader_parameter("hue_shift")), 0.0),
-		"first original palette color stays the same")
-	_check(is_equal_approx(float(mat2.get_shader_parameter("hue_shift")), 90.0),
-		"second original palette color stays the same")
+	# Production COLOR_INDEX_TO_DEGREES defines 1=90 and 2=180,
+	# while index 0 is an unmodified texture. The earlier test expected
+	# 1=0/2=90 and incorrectly rejected the correct palette mapping.
+	_check(is_equal_approx(float(mat1.get_shader_parameter("hue_shift")), 90.0),
+		"palette index 1 preserves the original 90-degree hue shift")
+	_check(is_equal_approx(float(mat2.get_shader_parameter("hue_shift")), 180.0),
+		"palette index 2 preserves the original 180-degree hue shift")
+	# Check every original palette color and cache identity so that a later
+	# optimization cannot silently swap the colors of dropped items.
+	var expected_hue_by_index: Dictionary = {
+		0: 0.0, 1: 90.0, 2: 180.0, 3: 270.0,
+		4: 45.0, 5: 135.0, 6: 225.0, 7: 315.0
+	}
+	for color_index: int in expected_hue_by_index:
+		var palette: ShaderMaterial = GROUND_ITEM_SCRIPT.get_shared_palette_material(color_index)
+		var palette_again: ShaderMaterial = GROUND_ITEM_SCRIPT.get_shared_palette_material(color_index)
+		_check(palette == palette_again and
+			is_equal_approx(float(palette.get_shader_parameter("hue_shift")),
+				float(expected_hue_by_index[color_index])),
+			"palette index %d reuses the correct original hue-shift material" % color_index)
+	_check(is_equal_approx(float(mat1.get_shader_parameter("hue_shift")), 90.0) and
+		is_equal_approx(float(mat2.get_shader_parameter("hue_shift")), 180.0),
+		"looking up other palette colors does not change already-shared materials")
 
 	_check(not DAY_NIGHT_SCRIPT.should_render_night_overlay(0.0),
 		"fully transparent daytime shader does not draw fullscreen pass")
