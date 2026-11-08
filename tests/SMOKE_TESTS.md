@@ -201,6 +201,7 @@ SGO_TEST_SERVER_URL=ws://127.0.0.1:5678 godot --headless --path client --script 
   1024 owners / 2000 queries 與原本 full-scan reference 一致性、
   角色死亡但 pet 有效、等距 tie、併行只讀及無效輸入。
   由 `--suite world` 與 full suite 執行。
+- `Integration/EconomyRequestGuardSmokeTests.cs`：防偽造/錯誤數量/負單價/超量購買與出售。`BuyAsset` 允許的一般堆疊上限 9999、裝備單次 1 件，使用 long 計算 9999 × int.MaxValue 的價格；檢查拒絕時 DB money/item 不變，正常 Buy/Sell 後重複出售不能再次入帳。由 `--suite concurrency` 與 full suite 執行。
 - `Fixtures/ExactMoneyFixture.cs`：新角色預設有 **10,000**
   金錢；需要測 overspend / 不足額 / rollback 的測試必須先把
   金錢讀出並設定為**精確的 0、100、1000** 等值，不能
