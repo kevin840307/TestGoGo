@@ -1419,7 +1419,9 @@ func set_afk_dashboard_updates_enabled(enabled: bool) -> void:
 func _refresh_afk_dashboard() -> void:
 	# The SceneTree may still execute fixed gameplay while backgrounded.
 	# Do not update visual labels or traverse the HUD until refocused.
-	if not GameManager or not GameManager.is_afk_mode_active() 			or not GameManager.is_game_window_focused():
+	if not GameManager or not GameManager.is_afk_mode_active():
+		return
+	if not GameManager.is_game_window_focused():
 		return
 	_afk_hide_nonessential_roots()
 	var player: Node = GameManager.current_player
