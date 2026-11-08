@@ -352,8 +352,13 @@ godot --headless --path client --script res://tests/aoi_pre_spawn_move_regressio
 時清除 requester's cached ground target、讓附近觀察者
 收到 Despawn，並直接回應要求者 `DespawnEntity` +
 `SystemMessageFlash`。`受掉落者保護`／距離太遠等
-非終止失敗不會移除物品；需要真 AES/WebSocket 的
-多人競速測試確認發送順序、UI 不留 ghost 與資產不複製。
+非終止失敗不會移除物品。另外，未曾索引到本連線
+`GroundItems` 的重複撿物請求，若 SQLite 已無該物品，
+Server 對 ground ID（6M～9M）只回 requester 本機
+`DespawnEntity`；新的 `tests/SGO.Server.WireSmokeTests/Program.cs`
+真 AES 封包回歸會檢查**第一次成功獲得→重複撿取收到
+DespawnEntity＋失敗訊息**。仍需多人競速和 Godot Scene/UI
+實測確認發送順序、UI 不留 ghost 與資產不複製。
 
 來源契約的 Python tests 已拆成
 `tests/test_client_aoi_order_contract.py` 與
