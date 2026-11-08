@@ -60,6 +60,31 @@ func _run() -> void:
 		and player.target_position.is_equal_approx(new_pos),
 		"Map13 navigation targets start from the new spawn position")
 
+	# A successful dismount ACK rebases to the server's coordinates,
+	# regardless of any movement snapshot made while riding. This happens
+	# without any map transition and is the reported regression scenario.
+	player.global_position = old_pos
+	player.last_walkable_sync_position = old_pos
+	player.has_last_walkable_sync_position = true
+	player._last_walkable_sync_map_id = 13
+	player.is_moving = true
+	player.is_mouse_holding = true
+	player.move_path = PackedVector2Array([old_pos])
+	player.apply_position_correction(new_pos)
+	_check(player.global_position.is_equal_approx(new_pos),
+		"dismount ACK correction uses authoritative Map13 position")
+	_check(player.last_walkable_sync_position.is_equal_approx(new_pos)
+		and player._last_walkable_sync_map_id == 13,
+		"dismount resets stale movement anchor on the current map")
+	_check(not player.is_moving and not player.is_mouse_holding
+		and player.move_path.is_empty(),
+		"dismount clears queued movement and held-mouse repathing")
+	var network_source: String = FileAccess.get_file_as_string(
+		"res://scripts/network_manager.gd"
+	)
+	_check(network_source.contains("[MECHA_DISMOUNT_REBASE]"),
+		"dismount response handler includes authoritative rebase")
+
 	# An invalid click must stop movement without synthesizing a network
 	# position update. Keep this test independent of a live socket.
 	var source: String = FileAccess.get_file_as_string("res://player.gd")
