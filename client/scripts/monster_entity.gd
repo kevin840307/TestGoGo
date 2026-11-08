@@ -360,6 +360,9 @@ func _input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) -> vo
 
 
 		if event.button_index == MOUSE_BUTTON_LEFT:
+			# A selected combat target is always promoted to its full visual.
+			if _performance_simplified_visual:
+				set_performance_simplified(false)
 			var player = GameManager.current_player
 			if not is_instance_valid(player): return
 
