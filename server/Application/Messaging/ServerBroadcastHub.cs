@@ -184,6 +184,10 @@ public sealed class ServerBroadcastHub
     public bool IsPlayerAoiVisible(Guid viewer, Guid subject)
         => _playerAoi.IsVisible(viewer, subject);
 
+    public bool IsPlayerAoiVisibleAs(
+        Guid viewer, Guid subject, long subjectCharacterId)
+        => _playerAoi.IsVisibleAs(viewer, subject, subjectCharacterId);
+
     /// <summary>Only peer connections that already received SpawnEntity.
     /// Keeps world chat, party, private responses and commerce independent
     /// from proximity filtering.</summary>
