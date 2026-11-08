@@ -542,12 +542,12 @@ func _on_entity_despawned(data: Dictionary) -> void :
 func _on_entity_moved(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
 	if _monster_spawn_templates.has(entity_id):
-		# These spawn templates are already private owned copies.
-		# MoveEntity only changes top-level coordinates. Reuse the Dictionary
-		# rather than allocating one for every monster network packet.
-		var cached: Dictionary = _monster_spawn_templates[entity_id] as Dictionary
+		# Keep the original immutable-template behavior. In-place mutation
+		# of a shared deferred/queued snapshot can change spawn lifecycles.
+		var cached: Dictionary = (_monster_spawn_templates[entity_id] as Dictionary).duplicate()
 		cached["LocX"] = float(data.get("X", cached.get("LocX", 0.0)))
 		cached["LocY"] = float(data.get("Y", cached.get("LocY", 0.0)))
+		_monster_spawn_templates[entity_id] = cached
 		if _deferred_monster_spawns.has(entity_id):
 			_deferred_monster_spawns[entity_id] = cached
 			if _is_monster_inside_aoi(cached, MONSTER_AOI_ENTER_RADIUS):
