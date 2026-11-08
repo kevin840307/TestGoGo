@@ -20,6 +20,36 @@ internal static class ChoiceRewardSmokeTests
         CurrentClientDataCatalog current,
         CurrentClientDataCatalog realCurrent)
     {
+        var expectedRealChoiceCounts =
+            new Dictionary<int, int>
+            {
+                [2208] = 3,
+                [2209] = 3,
+                [2210] = 3,
+                [2211] = 6,
+                [2212] = 3
+            };
+
+        foreach (var expected in
+                 expectedRealChoiceCounts)
+        {
+            var resolved =
+                ChoiceRewardCatalog.Resolve(
+                    realCurrent,
+                    expected.Key);
+
+            Check(
+                resolved is not null &&
+                resolved.Options.Count ==
+                    expected.Value &&
+                resolved.Options
+                    .Select(x => x.ItemIndex)
+                    .Distinct()
+                    .Count() ==
+                    expected.Value,
+                $"real explicit choice box {expected.Key} resolves exactly {expected.Value} selectable rewards");
+        }
+
         var realChoice =
             ChoiceRewardCatalog.Resolve(
                 realCurrent,
