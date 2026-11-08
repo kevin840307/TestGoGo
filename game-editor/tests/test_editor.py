@@ -338,7 +338,7 @@ class WebStructureTests(unittest.TestCase):
         web = GAME_EDITOR_ROOT / "web"
         index = (web / "index.html").read_text(encoding="utf-8")
         map_editor = (web / "app-map-editor.js").read_text(encoding="utf-8")
-        workflow = (GAME_EDITOR_ROOT.parent / ".github" / "workflows" / "server-build.yml").read_text(encoding="utf-8")
+        workflow = (GAME_EDITOR_ROOT.parent / ".github" / "workflows" / "game-editor-e2e.yml").read_text(encoding="utf-8")
         for control_id in (
             "map-undo", "map-redo", "map-zoom-in", "map-zoom-out", "map-zoom-fit",
             "map-batch-arm", "map-batch-count", "map-batch-radius", "map-stage-scroller",
