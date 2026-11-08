@@ -275,6 +275,8 @@ function renderMapVisual() {
   const enemyMode = state.mapTab === 'enemies';
   $('#map-enemy-palette').hidden = !enemyMode;
   $('#map-npc-palette').hidden = enemyMode;
+  const onlyTypeToggle = $('#map-only-selected-type')?.closest('label');
+  if (onlyTypeToggle) onlyTypeToggle.hidden = !enemyMode;
   renderEnemyPalette();
 
   const stage = $('#map-stage');
@@ -524,6 +526,7 @@ function wireMapPanAndZoom() {
     const canPan = event.button === 1 || (state.mapSpaceDown && event.button === 0);
     if (!canPan) return;
     event.preventDefault();
+    state.mapSuppressClick = true;
     const startX = event.clientX;
     const startY = event.clientY;
     const startLeft = scroller.scrollLeft;
@@ -550,7 +553,7 @@ function setMapZoom(value, anchorClientX=null, anchorClientY=null) {
   if (!scroller || !stage) return;
 
   const oldZoom = state.mapZoom;
-  const nextZoom = Math.max(.75, Math.min(4, Number(value.toFixed(3))));
+  const nextZoom = Math.max(.25, Math.min(4, Number(value.toFixed(3))));
   if (Math.abs(nextZoom - oldZoom) < .001) return;
 
   let ax = scroller.clientWidth / 2;
@@ -575,14 +578,18 @@ function setMapZoom(value, anchorClientX=null, anchorClientY=null) {
 function mapZoomIn() { setMapZoom(state.mapZoom * 1.2); }
 function mapZoomOut() { setMapZoom(state.mapZoom / 1.2); }
 function mapFit() {
-  state.mapZoom = 1;
   const stage = $('#map-stage');
   const scroller = $('#map-stage-scroller');
-  if (stage) stage.style.width = '100%';
-  if (scroller) {
-    scroller.scrollLeft = 0;
-    scroller.scrollTop = 0;
-  }
+  if (!stage || !scroller) return;
+  const bounds = state.mapViewBounds || mapBounds();
+  const worldW = Math.max(1, bounds.maxX - bounds.minX);
+  const worldH = Math.max(1, bounds.maxY - bounds.minY);
+  const baseHeight = Math.max(1, scroller.clientWidth * worldH / worldW);
+  const fit = Math.max(.25, Math.min(1, scroller.clientHeight / baseHeight));
+  state.mapZoom = fit;
+  stage.style.width = `${Math.round(fit * 100)}%`;
+  scroller.scrollLeft = 0;
+  scroller.scrollTop = 0;
   updateMapZoomLabel();
 }
 function updateMapZoomLabel() {
