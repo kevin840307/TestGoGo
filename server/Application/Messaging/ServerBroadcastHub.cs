@@ -242,14 +242,21 @@ public sealed class ServerBroadcastHub
             entityId,
             notifyObservers);
 
+    // Capture before reading persisted drops. New AOI entities indexed
+    // after this point cannot be removed by an older DB snapshot.
+    public long CaptureWorldEntityGeneration()
+        => _worldAoi.CaptureEntityGeneration();
+
     public IReadOnlyList<WorldEntitySpatialAoi.Change> RemoveMissingWorldEntities(
         int mapId,
         int entityType,
-        IReadOnlySet<long> authoritativeIds)
+        IReadOnlySet<long> authoritativeIds,
+        long snapshotGeneration = long.MaxValue)
         => _worldAoi.RemoveMissingEntities(
             mapId,
             entityType,
-            authoritativeIds);
+            authoritativeIds,
+            snapshotGeneration);
 
     public bool IsWorldAoiVisible(
         Guid observerConnectionId,
