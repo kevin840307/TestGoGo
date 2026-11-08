@@ -303,6 +303,14 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn('"ChatBroadcast"', source)
         self.assertIn('"DropItemRequest"', source)
         self.assertIn('"PickUpItemRequest"', source)
+        self.assertIn(
+            "return-map WorldReady rebuilds persisted ground item snapshot",
+            source,
+        )
+        self.assertIn(
+            "owner can pick up lifecycle ground item after returning to map",
+            source,
+        )
         self.assertIn('"PetAction"', source)
         self.assertIn('"CommandAttack"', source)
         self.assertIn('"DriveMechaRequest"', source)
