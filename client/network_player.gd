@@ -237,6 +237,11 @@ func setup_layered_paper_dolls() -> void:
 	if is_instance_valid(transform_sprite):
 		transform_sprite.visible = false
 	if is_instance_valid(doll_engine):
+		# A player that was already rendered in full detail may still own many
+		# AnimatedSprite2D layers. Release those nodes when switching to the
+		# procedural mode; switching simplification off rebuilds them normally.
+		if doll_engine.has_method("clear_dolls"):
+			doll_engine.clear_dolls()
 		doll_engine.visible = false
 
 	if name_label:
