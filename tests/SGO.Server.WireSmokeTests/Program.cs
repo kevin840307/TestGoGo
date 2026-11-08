@@ -1931,6 +1931,72 @@ await AwaitType(
             message.GetString()),
     "peer receives one successful trade completion");
 
+// Persist one ground item across a complete leave/return map lifecycle. The
+// old client bug was that returning to a map could lose ground entities even
+// though SQLite still owned the authoritative row. WorldReady must rebuild it.
+var lifecycleGroundSeed = await SendGm(
+    "item 1001 1",
+    "InventorySync",
+    root =>
+        root.TryGetProperty("Items", out var items) &&
+        items.ValueKind == JsonValueKind.Array &&
+        items.EnumerateArray().Any(item =>
+            item.TryGetProperty("ItemIndex", out var itemIndex) &&
+            itemIndex.GetInt32() == 1001 &&
+            item.TryGetProperty("InBank", out var inBank) &&
+            inBank.GetInt32() == 0 &&
+            item.TryGetProperty("InShop", out var inShop) &&
+            inShop.GetInt32() == 0),
+    "GM seeds item for ground lifecycle map-return test");
+
+var lifecycleGroundUid = lifecycleGroundSeed
+    .GetProperty("Items")
+    .EnumerateArray()
+    .Where(item =>
+        item.GetProperty("ItemIndex").GetInt32() == 1001 &&
+        item.GetProperty("InBank").GetInt32() == 0 &&
+        item.GetProperty("InShop").GetInt32() == 0)
+    .Select(item => item.GetProperty("ItemUID").GetInt64())
+    .Max();
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "DropItemRequest",
+        TabType = 0,
+        ItemUID = lifecycleGroundUid,
+        Count = 1,
+        DropX = firstX,
+        DropY = firstY
+    });
+
+var lifecycleGroundSpawn = await AwaitType(
+    socket,
+    "SpawnEntity",
+    root =>
+        root.TryGetProperty("EntityType", out var entityType) &&
+        entityType.GetInt32() == 3 &&
+        root.TryGetProperty("ExtraData", out var extra) &&
+        extra.TryGetProperty("ItemIndex", out var itemIndex) &&
+        itemIndex.GetInt32() == 1001,
+    "ground lifecycle item is persisted before leaving map",
+    skipNonMatchingSameType: true);
+
+var lifecycleGroundEntityId =
+    lifecycleGroundSpawn.GetProperty("EntityID").GetInt32();
+
+await AwaitType(
+    peerSocket,
+    "SpawnEntity",
+    root =>
+        root.TryGetProperty("EntityID", out var entity) &&
+        entity.GetInt32() == lifecycleGroundEntityId &&
+        root.TryGetProperty("EntityType", out var entityType) &&
+        entityType.GetInt32() == 3,
+    "peer sees lifecycle ground item before owner leaves map",
+    skipNonMatchingSameType: true);
+
 // Exercise a complete map-presence transition while both clients remain live.
 // GM only selects the deterministic destination; ChangeMap/WorldReady and
 // presence despawn/spawn still use the normal transport/router path.
@@ -2025,6 +2091,46 @@ await ProbeOn(
             currentMapId,
     "return map WorldReady completes after presence respawn",
     allowInterleaved: true);
+
+await AwaitType(
+    socket,
+    "SpawnEntity",
+    root =>
+        root.TryGetProperty("EntityID", out var entity) &&
+        entity.GetInt32() == lifecycleGroundEntityId &&
+        root.TryGetProperty("EntityType", out var entityType) &&
+        entityType.GetInt32() == 3 &&
+        root.TryGetProperty("IsSnapshot", out var snapshot) &&
+        snapshot.ValueKind == JsonValueKind.True,
+    "return-map WorldReady rebuilds persisted ground item snapshot",
+    skipNonMatchingSameType: true);
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "PickUpItemRequest",
+        EntityID = lifecycleGroundEntityId
+    });
+
+await AwaitType(
+    socket,
+    "ItemPickupFeedback",
+    root =>
+        root.TryGetProperty("ItemIndex", out var itemIndex) &&
+        itemIndex.GetInt32() == 1001 &&
+        root.TryGetProperty("Count", out var count) &&
+        count.GetInt32() == 1,
+    "owner can pick up lifecycle ground item after returning to map");
+
+await AwaitType(
+    peerSocket,
+    "DespawnEntity",
+    root =>
+        root.TryGetProperty("EntityID", out var entity) &&
+        entity.GetInt32() == lifecycleGroundEntityId,
+    "peer receives lifecycle ground despawn after return-map pickup",
+    skipNonMatchingSameType: true);
 
 await ProbeOn(
     peerSocket,
