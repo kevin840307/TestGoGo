@@ -6015,17 +6015,58 @@ try
     }
     router.SyncPresence(session);
 
+    var speechUsername = $"speech-{Guid.NewGuid():N}";
+    var (speechCreated, speechCreateMessage) =
+        store.Register(speechUsername, "speech-password", "");
+    Check(
+        speechCreated,
+        $"create isolated pet-speech observer account: {speechCreateMessage}");
+    var speechAccount =
+        store.Login(speechUsername, "speech-password");
+    Check(
+        speechAccount.HasValue,
+        "login isolated pet-speech observer account");
+
+    using (var createSpeechCharacter = Json(
+        """
+        {"Name":"SpeechPeerCharacter","Password":"1357","Race":0,"Hair":1,"HairColor":1,"Str":4,"Dex":4,"Con":4,"Wis":4}
+        """))
+    {
+        var speechCreateResult = store.Create(
+            speechAccount!.Value,
+            createSpeechCharacter.RootElement);
+        Check(
+            speechCreateResult.Success,
+            $"create isolated pet-speech observer character: {speechCreateResult.Message}");
+    }
+
+    var speechCharacterId = Convert.ToInt64(
+        store.Characters(speechAccount!.Value)
+            .First(x =>
+                x.TryGetValue("NAME", out var speechName) &&
+                speechName?.ToString() == "SpeechPeerCharacter")["DBID"]);
+
+    store.UpdateLocation(
+        speechAccount.Value,
+        speechCharacterId,
+        session.CurrentMapId,
+        Convert.ToInt32(session.LastX + 50),
+        Convert.ToInt32(session.LastY));
+
     var speechPeer = broadcastHub.Register();
     var speechPeerSession = new ClientSession
     {
         ConnectionId = speechPeer.ConnectionId,
-        AccountId = account.Value,
-        CharacterId = secondCharacterId,
+        AccountId = speechAccount.Value,
+        CharacterId = speechCharacterId,
         CurrentMapId = session.CurrentMapId,
         LastX = session.LastX + 50,
         LastY = session.LastY,
         WorldReady = true
     };
+    accountSessions.Register(
+        speechAccount.Value,
+        speechPeer.ConnectionId);
     router.SyncPresence(speechPeerSession);
 
     Check(broadcastHub.IsPlayerAoiVisibleAs(
@@ -6079,8 +6120,7 @@ try
     Check(observerSpeech,
         "idle pet speech is broadcast only to ready and nearby AOI peers");
 
-    speechPeerSession.WorldReady = false;
-    router.SyncPresence(speechPeerSession);
+    router.DisconnectPresence(speechPeerSession);
     broadcastHub.Unregister(speechPeer.ConnectionId);
 
     var selected = store.GetCharacter(account.Value, id);
