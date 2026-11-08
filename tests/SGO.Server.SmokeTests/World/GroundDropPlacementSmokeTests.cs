@@ -82,6 +82,15 @@ internal static class GroundDropPlacementSmokeTests
               placement.ShouldReportMissingMap(100),
             "missing Blocking.dat diagnostic is rate-limited once per map");
 
+        Check(placement.TryResolve(1,
+                  10000, 10000, 10012, 10012, 40, 40,
+                  out var remoteInvalidMonster) &&
+              remoteInvalidMonster.CollisionVerified &&
+              blocking.GetFlags(1, remoteInvalidMonster.X,
+                  remoteInvalidMonster.Y) == 0 &&
+              Math.Abs(remoteInvalidMonster.X - 40) <= 16,
+            "far-away invalid monster origin falls back near player, without a huge collision ray");
+
         var blockedFolder = Path.Combine(fixture.Root, "Map", "Map02");
         Directory.CreateDirectory(blockedFolder);
         using (var writer = new BinaryWriter(
