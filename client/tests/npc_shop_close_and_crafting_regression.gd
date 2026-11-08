@@ -38,9 +38,9 @@ func _run() -> void:
 
 	var palette_shop: Control = SHOP_SCENE.instantiate() as Control
 	root.add_child(palette_shop)
-	var mat_a: Material = palette_shop._get_palette_mat(2, 1)
-	var mat_a2: Material = palette_shop._get_palette_mat(2, 1)
-	var mat_b: Material = palette_shop._get_palette_mat(3, 1)
+	var mat_a: Material = palette_shop.call("_get_palette_mat", 2, 1) as Material
+	var mat_a2: Material = palette_shop.call("_get_palette_mat", 2, 1) as Material
+	var mat_b: Material = palette_shop.call("_get_palette_mat", 3, 1) as Material
 	_check(mat_a == mat_a2, "same shop palette/effect reuses one material")
 	_check(mat_a != mat_b, "different shop palette colors keep independent materials")
 	palette_shop.queue_free()
