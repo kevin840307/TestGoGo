@@ -11,7 +11,10 @@ internal sealed record ServerHealthSample(
     int AiActiveMaps,
     int AiTickedMaps,
     int AiMonsterCount,
-    int AiAssignedMonsterCount);
+    int AiAssignedMonsterCount,
+    int AoiReadyPlayers,
+    int AoiWorldObservers,
+    int AoiWorldEntities);
 
 internal sealed record ServerRuntimeSummary(
     int Samples,
@@ -25,7 +28,10 @@ internal sealed record ServerRuntimeSummary(
     int MaxActiveSessions,
     int MaxActiveMaps,
     int MaxMonsterCount,
-    int MaxAssignedMonsterCount)
+    int MaxAssignedMonsterCount,
+    int MaxAoiReadyPlayers,
+    int MaxAoiWorldObservers,
+    int MaxAoiWorldEntities)
 {
     public static ServerRuntimeSummary Empty()
         => new(
@@ -37,6 +43,9 @@ internal sealed record ServerRuntimeSummary(
             0,
             0,
             LatencySummary.From([]),
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -81,7 +90,10 @@ internal sealed record ServerRuntimeSummary(
             ordered.Max(x => x.AiActiveSessions),
             ordered.Max(x => x.AiActiveMaps),
             ordered.Max(x => x.AiMonsterCount),
-            ordered.Max(x => x.AiAssignedMonsterCount));
+            ordered.Max(x => x.AiAssignedMonsterCount),
+            ordered.Max(x => x.AoiReadyPlayers),
+            ordered.Max(x => x.AoiWorldObservers),
+            ordered.Max(x => x.AoiWorldEntities));
     }
 }
 
@@ -202,6 +214,10 @@ internal static class ServerHealthSampler
             Property(
                 root,
                 "sharedMapAi");
+        var aoi =
+            Property(
+                root,
+                "aoi");
 
         return new ServerHealthSample(
             DateTimeOffset.UtcNow,
@@ -240,6 +256,18 @@ internal static class ServerHealthSampler
             Number(
                 ai,
                 "assignedMonsterCount")
+                .GetInt32(),
+            Number(
+                aoi,
+                "playerReady")
+                .GetInt32(),
+            Number(
+                aoi,
+                "worldObservers")
+                .GetInt32(),
+            Number(
+                aoi,
+                "worldEntities")
                 .GetInt32());
     }
 
