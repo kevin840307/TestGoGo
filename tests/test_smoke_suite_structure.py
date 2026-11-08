@@ -410,7 +410,18 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertTrue(module.is_file())
         source = module.read_text(encoding="utf-8-sig")
         self.assertIn("disconnect persists the final dirty in-memory position", source)
-        self.assertIn("map transition despawns player from the old map", source)
+        self.assertIn(
+            "server map reconcile clears old AOI immediately while destination waits for WorldReady",
+            source,
+        )
+        self.assertIn(
+            "map transition does not send despawn to an observer outside AOI/not WorldReady",
+            source,
+        )
+        self.assertIn(
+            "map transition does not expose player before nearby observer WorldReady",
+            source,
+        )
         self.assertIn("stale dirty position never overwrites", source)
         self.assertIn("SessionLifecycleSmokeTests.Run(", main)
 
