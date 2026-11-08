@@ -42,6 +42,7 @@ class MapRepository:
     def __init__(self, paths: ProjectPaths, backups: BackupManager):
         self.paths = paths
         self.backups = backups
+        self._blocking_cache: dict[int, tuple[tuple[int, int], tuple[int, int, bytes, Path]]] = {}
         self._blocking_png_cache: dict[int, tuple[tuple[Any, ...], bytes]] = {}
 
     def list_maps(self) -> list[dict[str, Any]]:
@@ -103,7 +104,16 @@ class MapRepository:
     def _read_blocking(self, map_id: int) -> tuple[int, int, bytes, Path] | None:
         path = self._map_dir(map_id) / "Blocking.dat"
         if not path.exists():
+            self._blocking_cache.pop(int(map_id), None)
+            self._blocking_png_cache.pop(int(map_id), None)
             return None
+
+        stat = path.stat()
+        cache_key = (stat.st_mtime_ns, stat.st_size)
+        cached = self._blocking_cache.get(int(map_id))
+        if cached is not None and cached[0] == cache_key:
+            return cached[1]
+
         data = path.read_bytes()
         if len(data) < 8:
             raise ValueError(f"Blocking.dat 太短: {path}")
@@ -113,7 +123,11 @@ class MapRepository:
         cell_count = width * height
         if cell_count > 50_000_000 or len(data) < 8 + cell_count:
             raise ValueError(f"Blocking.dat 資料不完整: {width}x{height}")
-        return width, height, data[8:8 + cell_count], path
+
+        result = (width, height, data[8:8 + cell_count], path)
+        self._blocking_cache[int(map_id)] = (cache_key, result)
+        self._blocking_png_cache.pop(int(map_id), None)
+        return result
 
     def _editor_bounds(self, map_id: int, blocking: tuple[int, int, bytes, Path] | None = None) -> dict[str, int]:
         bounds_data = self._read_json(self._bounds_path())
@@ -282,6 +296,44 @@ class MapRepository:
                     }
                     return result
         result["nearest"] = None
+        return result
+
+    def snap_points(self, map_id: int, points: list[dict[str, Any]], snap: bool = True) -> list[dict[str, Any]]:
+        if len(points) > 5000:
+            raise ValueError("單次座標檢查不可超過 5000 點")
+        result: list[dict[str, Any]] = []
+        for point in points:
+            x = float(point.get("x", 0))
+            y = float(point.get("y", 0))
+            terrain = self.get_terrain(map_id, x, y)
+            if terrain.get("walkable") or not snap:
+                result.append({
+                    "x": int(round(x)),
+                    "y": int(round(y)),
+                    "walkable": bool(terrain.get("walkable")),
+                    "special": bool(terrain.get("special")),
+                    "snapped": False,
+                })
+                continue
+
+            nearest = terrain.get("nearest")
+            if isinstance(nearest, dict):
+                result.append({
+                    "x": int(nearest["x"]),
+                    "y": int(nearest["y"]),
+                    "walkable": True,
+                    "special": False,
+                    "snapped": True,
+                })
+            else:
+                result.append({
+                    "x": int(round(x)),
+                    "y": int(round(y)),
+                    "walkable": False,
+                    "special": bool(terrain.get("special")),
+                    "snapped": False,
+                    "unresolved": True,
+                })
         return result
 
     @staticmethod
