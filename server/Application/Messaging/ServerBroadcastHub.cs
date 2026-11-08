@@ -31,7 +31,13 @@ public sealed class ServerBroadcastHub
     // expose a half-loaded player to distant peers.
     private readonly PlayerSpatialAoi _playerAoi = new();
 
+    // Dynamic world entities have a separate spatial index. Player AOI has a
+    // tighter radius; monsters/ground items keep extra visual headroom.
+    private readonly WorldEntitySpatialAoi _worldAoi = new();
+
     public int AoiReadyPlayers => _playerAoi.ReadyPlayerCount;
+    public int AoiWorldObservers => _worldAoi.ObserverCount;
+    public int AoiWorldEntities => _worldAoi.EntityCount;
 
     public (Guid ConnectionId, ConcurrentQueue<object> Queue) Register()
     {
@@ -154,6 +160,7 @@ public sealed class ServerBroadcastHub
         // WebSocketEndpoint calls PacketRouter.DisconnectPresence first;
         // remove here defensively for paths that terminate early.
         _playerAoi.Remove(connectionId);
+        _worldAoi.RemoveObserver(connectionId);
         _queues.TryRemove(connectionId, out _);
         _presence.TryRemove(connectionId, out _);
     }
@@ -181,6 +188,61 @@ public sealed class ServerBroadcastHub
         Guid connectionId)
         => _playerAoi.VisiblePeers(connectionId);
 
+    public IReadOnlyList<WorldEntitySpatialAoi.Change> ReconcileWorldAoi(
+        Guid connectionId)
+    {
+        if (!_presence.TryGetValue(
+                connectionId,
+                out var presence) ||
+            presence.AccountId <= 0 ||
+            presence.CharacterId <= 0 ||
+            presence.MapId <= 0)
+        {
+            _worldAoi.RemoveObserver(
+                connectionId);
+            return [];
+        }
+
+        return _worldAoi.UpsertObserver(
+            new OnlinePlayerPresence(
+                connectionId,
+                presence.AccountId,
+                presence.CharacterId,
+                presence.MapId,
+                presence.X,
+                presence.Y,
+                presence.CharacterName));
+    }
+
+    public void RemoveWorldAoiObserver(
+        Guid connectionId)
+        => _worldAoi.RemoveObserver(
+            connectionId);
+
+    public IReadOnlyList<WorldEntitySpatialAoi.Change> UpsertWorldEntity(
+        WorldAoiEntity entity)
+        => _worldAoi.UpsertEntity(
+            entity);
+
+    public IReadOnlyList<WorldEntitySpatialAoi.Change> RemoveWorldEntity(
+        long entityId,
+        bool notifyObservers = true)
+        => _worldAoi.RemoveEntity(
+            entityId,
+            notifyObservers);
+
+    public bool IsWorldAoiVisible(
+        Guid observerConnectionId,
+        long entityId)
+        => _worldAoi.IsVisible(
+            observerConnectionId,
+            entityId);
+
+    public IReadOnlyList<WorldAoiEntity> VisibleWorldEntities(
+        Guid observerConnectionId)
+        => _worldAoi.VisibleEntities(
+            observerConnectionId);
+
     public bool IsPlayerAoiVisible(Guid viewer, Guid subject)
         => _playerAoi.IsVisible(viewer, subject);
 
@@ -198,6 +260,30 @@ public sealed class ServerBroadcastHub
             // A simultaneous AOI exit may invalidate a copied recipient list.
             if (_playerAoi.IsVisible(observer, sourceConnectionId))
                 PublishToConnection(observer, packet);
+    }
+
+    public void PublishToWorldEntityObservers(
+        long entityId,
+        object packet,
+        Guid exceptConnectionId = default)
+    {
+        foreach (var observer in
+                 _worldAoi.ObserversOf(
+                     entityId))
+        {
+            if (observer == exceptConnectionId)
+                continue;
+
+            // The copied list can race an AOI exit; re-check before enqueue.
+            if (_worldAoi.IsVisible(
+                    observer,
+                    entityId))
+            {
+                PublishToConnection(
+                    observer,
+                    packet);
+            }
+        }
     }
 
     public void Publish(object packet)
