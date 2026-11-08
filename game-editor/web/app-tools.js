@@ -145,7 +145,8 @@ async function deleteScript() {
   try {
     const impact = await referenceImpact('script', name);
     if (!confirm(`確定刪除 NPC 腳本 ${name}？原檔會先備份。${formatReferenceImpact(impact)}`)) return;
-    await api(`/api/scripts/${encodeURIComponent(name)}`, {method:'DELETE'});
+    const force = impact.count ? '?force=1' : '';
+    await api(`/api/scripts/${encodeURIComponent(name)}${force}`, {method:'DELETE'});
     state.selectedScript = null;
     state.scriptDirty = false;
     $('#script-title').textContent = '尚未選擇腳本';
