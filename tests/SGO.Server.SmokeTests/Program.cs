@@ -2805,16 +2805,29 @@ try
             .EnumerateArray()
             .Single();
 
-    var clubRankEntry =
+    var clubRankEntries =
         clubRankResponse
-            .GetProperty("Ranks")
+            .GetProperty("RankList")
             .EnumerateArray()
-            .Single(x =>
+            .ToArray();
+
+    var clubRankEntry =
+        clubRankEntries
+            .FirstOrDefault(x =>
                 x.GetProperty("DBID").GetInt32() == clubId);
 
     Check(
+        clubRankEntry.ValueKind != JsonValueKind.Undefined &&
         clubRankEntry.GetProperty("Name").GetString() == "測試團",
-        "club ranking exposes ClubID while using leader ownership internally");
+        "club ranking exposes ClubID while using leader ownership internally; " +
+        "actual=" +
+        JsonSerializer.Serialize(
+            clubRankEntries.Select(x => new
+            {
+                DBID = x.GetProperty("DBID").GetInt32(),
+                Name = x.GetProperty("Name").GetString(),
+                Value = x.GetProperty("Value").GetInt32()
+            })));
 
     var clubLeaderSession = new ClientSession
     {
