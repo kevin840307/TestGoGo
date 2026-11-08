@@ -1,5 +1,7 @@
 # SGO 舊版 EXE → Godot/.NET 8 功能對等稽核（2026-11-08）
 
+> **注意：本頁是技術對照，不是已核准的開發清單。** 請以 [由使用者決定做或不做的選擇清單](LEGACY_FEATURE_SELECTION.md) 為準；技術 P0/P1 等只供分析，不代表要做。好友、複合機器人、Salon、社團進階均暫不開發；戰團基本功能維持。
+
 > 工作分支：`feature/local-server-net8`。此文件是**舊版功能覆蓋**稽核，不是現有 Godot 的封包對照表、也不是「測試已通過」的聲明。  
 > **需求優先順序**：好友（含黑名單、離線訊息）、複合機器人、Salon、社團／社交進階**全部放在最後（P-LAST，暫不開發）**；社團目前基本功能維持即可。它們不是目前發布阻塞。  
 > 詳細執行缺口仍見 [FEATURE_GAPS.md](FEATURE_GAPS.md)；封包基線見 [PACKET_CONTRACT.md](../tests/PACKET_CONTRACT.md)。
