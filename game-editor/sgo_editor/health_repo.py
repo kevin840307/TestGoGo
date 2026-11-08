@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import time
 from collections import Counter, defaultdict
@@ -596,7 +598,19 @@ class HealthRepository:
         else:
             raise ValueError("kind 必須是 enemy 或 script")
 
-        return {"kind": kind, "key": key, "count": len(refs), "references": refs}
+        token_payload = json.dumps(
+            refs,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return {
+            "kind": kind,
+            "key": key,
+            "count": len(refs),
+            "references": refs,
+            "token": hashlib.sha256(token_payload).hexdigest(),
+        }
 
     @staticmethod
     def _add_issue(
