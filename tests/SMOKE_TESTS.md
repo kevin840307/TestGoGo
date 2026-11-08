@@ -318,3 +318,40 @@ tests\run_local_verification.bat load 100,500,1000 600
 發送，會產生臨時測試帳號，不可對正式 DB/Server 執行。
 結果 JSON 放在 Windows `%TEMP%`。其中實測 1000 人是需要
 自行執行並取得結果的能力，不代表已在 CI 或此環境達標。
+
+## 2026-11-08 Client 預先移動封包與撿物失敗一致性（M-15～M-16）
+
+新增 `client/scripts/network_entity_pending_moves.gd`，
+把少數併發交錯造成的 `MoveEntity` 早於 `SpawnEntity` 的
+座標暫存獨立於 `network_entity_manager.gd`。
+只記錄尚未有實體、沒有怪物 canonical template 的事件，
+不為遠方未知物件建立場景；每個 EntityID 只保留最新 X/Y/Dir。
+暫存 3 秒、最多 256 個 ID，Despawn 後的 10 秒暫存
+tombstone 最多 512 個，所有資料在換圖時清除。
+不在 `_process` 每個 frame 重複掃描；只在封包活動期間
+定期清理。正式 Godot 測試：
+`client/tests/aoi_pre_spawn_move_regression.gd`：
+
+- 首次 Move→Spawn：使用最新位置，不跳回舊座標；
+- Spawn 已排隊但 Player/Pet Node 還沒 instantiate：
+  後來的 Move 仍會套到真正 instantiate 時；
+- Despawn→延遲 Move→新 Spawn：
+  舊的 Move 不得讓已離開 AOI 的物件復活；
+- 異常大量未知 Move 不能無限放大記憶體；
+- WorldReady／換圖需清除舊快取。
+
+執行（已加入 `tests/run_protocol_checks.ps1` 的 Godot 區段）：
+
+```powershell
+godot --headless --path client --script res://tests/aoi_pre_spawn_move_regression.gd
+```
+
+`PickUpItemRequest` 在 **SQLite 已明確確認物品不存在／過期**
+時清除 requester's cached ground target、讓附近觀察者
+收到 Despawn，並直接回應要求者 `DespawnEntity` +
+`SystemMessageFlash`。`受掉落者保護`／距離太遠等
+非終止失敗不會移除物品；需要真 AES/WebSocket 的
+多人競速測試確認發送順序、UI 不留 ghost 與資產不複製。
+
+目前新增測試與程式碼均已提交但 **沒有 .NET／Godot
+實際 PASS 證據**，不得將 Python 結構檢查代替真實測試。
