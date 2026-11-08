@@ -59,7 +59,7 @@ var _emotion_tween: Tween
 @onready var afk_runtime: Label = $AFKOverlay / MonitorCard / LblRuntime
 @onready var afk_resource_stats: Label = $AFKOverlay / MonitorCard / LblResources
 @onready var afk_btn_restore: Button = $AFKOverlay / MonitorCard / BtnRestore
-@onready var afk_restore_progress: ProgressBar = $AFKOverlay / MonitorCard / RestoreProgress
+@onready var afk_restore_progress: SmoothLoadingBar = $AFKOverlay / MonitorCard / RestoreProgress
 @onready var afk_update_timer: Timer = $AFKOverlay / UpdateTimer
 
 @onready var windows_container: Control = $WindowsContainer
