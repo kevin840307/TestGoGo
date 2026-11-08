@@ -21,11 +21,21 @@ public sealed class ServerBroadcastHub
         double Y,
         string CharacterName);
 
+    private sealed record CompanionSnapshot(
+        long EntityId,
+        object SpawnPacket,
+        double X,
+        double Y);
+
     private readonly ConcurrentDictionary<Guid, ConcurrentQueue<object>>
         _queues = new();
 
     private readonly ConcurrentDictionary<Guid, Presence>
         _presence = new();
+
+    private readonly object _companionGate = new();
+    private readonly Dictionary<Guid, Dictionary<long, CompanionSnapshot>>
+        _companionsByOwner = new();
 
     // Only WorldReady clients enter the grid. Character selection does not
     // expose a half-loaded player to distant peers.
@@ -161,6 +171,7 @@ public sealed class ServerBroadcastHub
         // remove here defensively for paths that terminate early.
         _playerAoi.Remove(connectionId);
         _worldAoi.RemoveObserver(connectionId);
+        ClearPlayerCompanions(connectionId);
         _queues.TryRemove(connectionId, out _);
         _presence.TryRemove(connectionId, out _);
     }
@@ -259,6 +270,142 @@ public sealed class ServerBroadcastHub
         Guid viewer, Guid subject, long subjectCharacterId)
         => _playerAoi.IsVisibleAs(viewer, subject, subjectCharacterId);
 
+    public bool TrackPlayerCompanionPacket(
+        Guid ownerConnectionId,
+        object packet)
+    {
+        if (ownerConnectionId == Guid.Empty)
+            return false;
+
+        var type =
+            ReadPacketString(
+                packet,
+                "Type");
+        var entityId =
+            ReadPacketLong(
+                packet,
+                "EntityID");
+
+        if (entityId < 4_000_000 ||
+            entityId >= 6_000_000)
+            return false;
+
+        lock (_companionGate)
+        {
+            if (type == "DespawnEntity")
+            {
+                if (_companionsByOwner.TryGetValue(
+                        ownerConnectionId,
+                        out var existing))
+                {
+                    existing.Remove(entityId);
+                    if (existing.Count == 0)
+                    {
+                        _companionsByOwner.Remove(
+                            ownerConnectionId);
+                    }
+                }
+                return false;
+            }
+
+            if (type == "SpawnEntity")
+            {
+                if (!_companionsByOwner.TryGetValue(
+                        ownerConnectionId,
+                        out var companions))
+                {
+                    companions =
+                        new Dictionary<long, CompanionSnapshot>();
+                    _companionsByOwner.Add(
+                        ownerConnectionId,
+                        companions);
+                }
+
+                var isNew =
+                    !companions.ContainsKey(
+                        entityId);
+                companions[entityId] =
+                    new CompanionSnapshot(
+                        entityId,
+                        packet,
+                        ReadPacketDouble(
+                            packet,
+                            "LocX"),
+                        ReadPacketDouble(
+                            packet,
+                            "LocY"));
+                return isNew;
+            }
+
+            if (type == "MoveEntity" &&
+                _companionsByOwner.TryGetValue(
+                    ownerConnectionId,
+                    out var tracked) &&
+                tracked.TryGetValue(
+                    entityId,
+                    out var snapshot))
+            {
+                tracked[entityId] =
+                    snapshot with
+                    {
+                        X = ReadPacketDouble(
+                            packet,
+                            "X",
+                            snapshot.X),
+                        Y = ReadPacketDouble(
+                            packet,
+                            "Y",
+                            snapshot.Y)
+                    };
+            }
+        }
+
+        return false;
+    }
+
+    public IReadOnlyList<object> PlayerCompanionSnapshots(
+        Guid ownerConnectionId)
+    {
+        lock (_companionGate)
+        {
+            if (!_companionsByOwner.TryGetValue(
+                    ownerConnectionId,
+                    out var companions))
+                return [];
+
+            return companions.Values
+                .OrderBy(x => x.EntityId)
+                .Select(BuildCurrentCompanionSpawn)
+                .ToArray();
+        }
+    }
+
+    public IReadOnlyList<long> PlayerCompanionEntityIds(
+        Guid ownerConnectionId)
+    {
+        lock (_companionGate)
+        {
+            if (!_companionsByOwner.TryGetValue(
+                    ownerConnectionId,
+                    out var companions))
+                return [];
+
+            return companions.Keys
+                .OrderBy(x => x)
+                .ToArray();
+        }
+    }
+
+    public void ClearPlayerCompanions(
+        Guid ownerConnectionId)
+    {
+        lock (_companionGate)
+        {
+            _companionsByOwner.Remove(
+                ownerConnectionId);
+        }
+    }
+
     /// <summary>Only peer connections that already received SpawnEntity.
     /// Keeps world chat, party, private responses and commerce independent
     /// from proximity filtering.</summary>
@@ -267,6 +414,10 @@ public sealed class ServerBroadcastHub
         object packet,
         Guid exceptConnectionId = default)
     {
+        TrackPlayerCompanionPacket(
+            sourceConnectionId,
+            packet);
+
         foreach (var observer in
                  _playerAoi.ObserversOf(
                      sourceConnectionId))
@@ -374,6 +525,97 @@ public sealed class ServerBroadcastHub
         }
 
         return false;
+    }
+
+    private static object BuildCurrentCompanionSpawn(
+        CompanionSnapshot snapshot)
+    {
+        var values =
+            new Dictionary<string, object?>(
+                StringComparer.Ordinal);
+
+        if (snapshot.SpawnPacket is
+            IReadOnlyDictionary<string, object> readOnly)
+        {
+            foreach (var pair in readOnly)
+                values[pair.Key] = pair.Value;
+        }
+        else if (snapshot.SpawnPacket is
+                 IDictionary<string, object> dictionary)
+        {
+            foreach (var pair in dictionary)
+                values[pair.Key] = pair.Value;
+        }
+        else
+        {
+            foreach (var property in
+                     snapshot.SpawnPacket
+                         .GetType()
+                         .GetProperties())
+            {
+                values[property.Name] =
+                    property.GetValue(
+                        snapshot.SpawnPacket);
+            }
+        }
+
+        values["Type"] = "SpawnEntity";
+        values["EntityID"] = snapshot.EntityId;
+        values["LocX"] = snapshot.X;
+        values["LocY"] = snapshot.Y;
+        values["IsSnapshot"] = true;
+        return values;
+    }
+
+    private static string? ReadPacketString(
+        object packet,
+        string property)
+        => packet.GetType()
+            .GetProperty(property)
+            ?.GetValue(packet)
+            ?.ToString();
+
+    private static long ReadPacketLong(
+        object packet,
+        string property)
+    {
+        var raw =
+            packet.GetType()
+                .GetProperty(property)
+                ?.GetValue(packet);
+        if (raw is null)
+            return 0;
+
+        try
+        {
+            return Convert.ToInt64(raw);
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private static double ReadPacketDouble(
+        object packet,
+        string property,
+        double fallback = 0)
+    {
+        var raw =
+            packet.GetType()
+                .GetProperty(property)
+                ?.GetValue(packet);
+        if (raw is null)
+            return fallback;
+
+        try
+        {
+            return Convert.ToDouble(raw);
+        }
+        catch
+        {
+            return fallback;
+        }
     }
 
     public void PublishToMap(
