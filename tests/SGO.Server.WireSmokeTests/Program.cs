@@ -1351,7 +1351,7 @@ await AwaitType(
             item.GetProperty("ItemUID").GetInt64() == choiceItemUid),
     "selected choice consumes source item exactly once");
 
-var selectedEquipSync = await AwaitType(
+await AwaitType(
     socket,
     "EquipSync",
     root =>
@@ -1360,13 +1360,6 @@ var selectedEquipSync = await AwaitType(
         equips.EnumerateArray().Any(equip =>
             equip.GetProperty("ItemIdx").GetInt32() == 15113),
     "selected armor is granted through equipment sync");
-
-var repairItemUid = selectedEquipSync
-    .GetProperty("Equips")
-    .EnumerateArray()
-    .First(equip => equip.GetProperty("ItemIdx").GetInt32() == 15113)
-    .GetProperty("ItemID")
-    .GetInt64();
 
 await AwaitType(
     socket,
@@ -1377,7 +1370,28 @@ await AwaitType(
     "successful choice acknowledges the one-time selected reward");
 
 // RepairItemRequest is verified on the same real encrypted client path.
-// The selected 15113 armor starts damaged (Damage=0) and has durability 50.
+// Seed a deliberately damaged copy instead of relying on normal reward grants,
+// which correctly create equipment at full durability.
+var damagedEquipSync = await SendGm(
+    "equip 15113 0",
+    "EquipSync",
+    root =>
+        root.TryGetProperty("Equips", out var equips) &&
+        equips.ValueKind == JsonValueKind.Array &&
+        equips.EnumerateArray().Any(equip =>
+            equip.GetProperty("ItemIdx").GetInt32() == 15113 &&
+            equip.GetProperty("Damage").GetInt32() == 0),
+    "GM seeds damaged armor for real-wire repair");
+
+var repairItemUid = damagedEquipSync
+    .GetProperty("Equips")
+    .EnumerateArray()
+    .First(equip =>
+        equip.GetProperty("ItemIdx").GetInt32() == 15113 &&
+        equip.GetProperty("Damage").GetInt32() == 0)
+    .GetProperty("ItemID")
+    .GetInt64();
+
 var repairMoneySeed = await SendGm(
     "money 10",
     "SyncMoney",
