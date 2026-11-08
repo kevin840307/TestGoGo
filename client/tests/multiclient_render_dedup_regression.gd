@@ -1,6 +1,7 @@
-extends SceneTree
+extends Node
 
-# godot --headless --path client --script res://tests/multiclient_render_dedup_regression.gd
+# Godot CLI project-mode test (autoload globals work):
+# godot --headless --path client --scene res://tests/multiclient_render_dedup_regression.tscn
 # No server, login, recipes or world map required.
 const HUD_SCRIPT = preload("res://game_hud.gd")
 const ENTITIES_SCRIPT = preload("res://scripts/network_entity_manager.gd")
@@ -16,7 +17,7 @@ func _check(ok: bool, label: String) -> void:
 		push_error("[RENDER_DEDUP_FAIL] " + label)
 
 
-func _initialize() -> void:
+func _ready() -> void:
 	call_deferred("_run")
 
 
@@ -88,4 +89,4 @@ func _run() -> void:
 	print("[RENDER_DEDUP_REGRESSION] %s" % (
 		"ALL PASS" if _failures == 0 else "FAILURES=%d" % _failures
 	))
-	quit(0 if _failures == 0 else 1)
+	get_tree().quit(0 if _failures == 0 else 1)
