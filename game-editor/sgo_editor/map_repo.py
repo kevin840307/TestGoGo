@@ -267,15 +267,37 @@ class MapRepository:
             "cellSize": self.CELL_SIZE,
             "error": self._blocking_errors.get(int(map_id), ""),
         }
+        spawn_audit: dict[str, Any] = {
+            "enemies": {"invalidIndexes": [], "invalidCount": 0},
+            "npcs": {"invalidIndexes": [], "invalidCount": 0},
+        }
         if blocking is not None:
             width, height, _, _ = blocking
             blocking_meta.update({"width": width, "height": height})
+            for key, rows in (
+                ("enemies", self.get_enemy_spawns(map_id)),
+                ("npcs", self.get_npc_spawns(map_id)),
+            ):
+                invalid_indexes: list[int] = []
+                for index, row in enumerate(rows):
+                    terrain = self._terrain_from_blocking(
+                        blocking,
+                        float(row["x"]),
+                        float(row["y"]),
+                    )
+                    if not terrain.get("walkable"):
+                        invalid_indexes.append(index)
+                spawn_audit[key] = {
+                    "invalidIndexes": invalid_indexes,
+                    "invalidCount": len(invalid_indexes),
+                }
 
         return {
             "id": int(map_id),
             "name": str(map_config.get("MapName", "")).strip() or f"Map{int(map_id):02d}",
             "bounds": bounds,
             "blocking": blocking_meta,
+            "spawnAudit": spawn_audit,
             "spawners": spawners,
         }
 
