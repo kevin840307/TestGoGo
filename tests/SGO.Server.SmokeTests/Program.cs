@@ -66,6 +66,7 @@ if (args.Length != 0)
             PlayerSpatialAoiSmokeTests.Run();
             PlayerCompanionAoiSmokeTests.Run();
             WorldEntitySpatialAoiSmokeTests.Run();
+            MapAiOwnerSpatialIndexSmokeTests.Run();
             Console.WriteLine("World/AOI smoke passed.");
             return;
         case "concurrency":
@@ -106,6 +107,7 @@ GroundDropPlacementSmokeTests.Run();
 PlayerSpatialAoiSmokeTests.Run();
 PlayerCompanionAoiSmokeTests.Run();
 WorldEntitySpatialAoiSmokeTests.Run();
+MapAiOwnerSpatialIndexSmokeTests.Run();
 ConcurrencySmokeTests.Run(repoRoot);
 EconomyConcurrencySmokeTests.Run();
 AssetMutationConcurrencySmokeTests.Run();
