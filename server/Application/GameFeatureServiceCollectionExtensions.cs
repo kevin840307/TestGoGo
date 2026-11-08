@@ -3,6 +3,7 @@ using SGO.Server.Application.Character;
 using SGO.Server.Application.Club;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Crafting;
+using SGO.Server.Application.Diagnostics;
 using SGO.Server.Application.Gm;
 using SGO.Server.Application.Items;
 using SGO.Server.Application.Messaging;
@@ -23,6 +24,7 @@ public static class GameFeatureServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.AddSingleton<ServerDiagnostics>();
         services.AddSingleton<WorldRuntimeService>();
         services.AddSingleton<SharedMapAiTicker>();
         services.AddHostedService(sp => sp.GetRequiredService<SharedMapAiTicker>());
