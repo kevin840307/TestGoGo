@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SGO.Server.Application.Abstractions;
 using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Infrastructure.Persistence.Sqlite;
 
@@ -165,9 +166,13 @@ internal static class MechaGuardianStoneSmokeTests
                 3,
                 guardian.Durability);
 
+        // Exercise the actual PacketRouter dependency contract (IGameStore
+        // extends IMechaStore), not just the concrete SQLite overload.
+        // The authoritative fifth argument must remain callable via the port.
+        IMechaStore mechaStore = store;
         Check(
             legacyGuardianUid > 0 &&
-            store.EquipHorseItem(
+            mechaStore.EquipHorseItem(
                 accountId.Value,
                 characterId,
                 legacyGuardianUid,
