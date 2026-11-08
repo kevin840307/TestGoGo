@@ -23,6 +23,10 @@ const SETTING_KEY_SIMPLIFY_PLAYERS_MODE = "simplify_players_mode"
 const SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE = ClientPerformanceProfile.SIMPLIFY_AUTO
 const SETTING_KEY_SIMPLIFY_MONSTERS_MODE = "simplify_monsters_mode"
 const SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE = ClientPerformanceProfile.SIMPLIFY_AUTO
+const SETTING_KEY_SIMPLIFY_PLAYERS_STYLE = "simplify_players_style"
+const SETTING_DEFAULT_SIMPLIFY_PLAYERS_STYLE = ClientPerformanceProfile.PLAYER_STYLE_PIXEL
+const SETTING_KEY_SIMPLIFY_MONSTERS_STYLE = "simplify_monsters_style"
+const SETTING_DEFAULT_SIMPLIFY_MONSTERS_STYLE = ClientPerformanceProfile.MONSTER_STYLE_BEAST
 const SETTING_KEY_SKILL_AOE_SELF_CENTER_PREFIX = "skill_aoe_self_center_"
 
 
