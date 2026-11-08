@@ -129,6 +129,39 @@ internal static class PlayerCompanionAoiSmokeTests
 
         hub.PublishToPlayerObservers(
             owner.ConnectionId,
+            new Dictionary<string, object>
+            {
+                ["Type"] = "MoveEntity",
+                ["EntityID"] = petEntityId,
+                ["X"] = 1_240.0,
+                ["Y"] = 1_080.0,
+                ["Dir"] = "2",
+                ["SpeedTime"] = 0.25
+            });
+
+        Check(
+            observer.Queue.TryDequeue(out _),
+            "dictionary-shaped companion packet still reaches visible observer");
+
+        var dictionaryMoved =
+            hub.PlayerCompanionSnapshots(
+                owner.ConnectionId);
+        Check(
+            dictionaryMoved.Count == 1 &&
+            Math.Abs(
+                PacketDouble(
+                    dictionaryMoved[0],
+                    "LocX") -
+                1_240.0) < 0.01 &&
+            Math.Abs(
+                PacketDouble(
+                    dictionaryMoved[0],
+                    "LocY") -
+                1_080.0) < 0.01,
+            "dictionary-shaped companion movement refreshes AOI snapshot");
+
+        hub.PublishToPlayerObservers(
+            owner.ConnectionId,
             new
             {
                 Type = "DespawnEntity",
