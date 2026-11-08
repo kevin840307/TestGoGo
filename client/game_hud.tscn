@@ -4532,6 +4532,16 @@ theme_override_colors/font_color = Color(0.69, 0.77, 0.84, 1)
 theme_override_font_sizes/font_size = 13
 text = "正在釋放可還原的視覺資源"
 
+[node name="RestoreProgress" type="ProgressBar" parent="AFKOverlay/MonitorCard"]
+visible = false
+layout_mode = 0
+offset_left = 24.0
+offset_top = 319.0
+offset_right = 460.0
+offset_bottom = 331.0
+show_percentage = false
+script = ExtResource("sgo_smoothbar")
+
 [node name="BtnRestore" type="Button" parent="AFKOverlay/MonitorCard"]
 layout_mode = 0
 offset_left = 134.0

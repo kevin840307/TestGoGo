@@ -729,10 +729,43 @@ func _enter_afk_render_shell() -> Dictionary:
 	return result
 
 
-func _restore_afk_render_shell() -> Dictionary:
+func _emit_afk_restore_progress(callback: Callable, percent: float, stage: String) -> void:
+	# UI-only reporting. The callback never sends packets or pauses physics.
+	if callback.is_valid():
+		callback.call(clampf(percent, 0.0, 100.0), stage)
+
+
+func _restore_afk_entity_visuals_batched(callback: Callable) -> void:
+	# Restore the exact existing scene/physics objects. Recreating entities
+	# here would change their identity and potentially break target/loot state.
+	var entities: Array[Node] = []
+	if is_instance_valid(current_player):
+		entities.append(current_player)
+	if NetworkEntityManager:
+		for entity in NetworkEntityManager.active_entities.values():
+			if is_instance_valid(entity):
+				entities.append(entity)
+	var total: int = entities.size()
+	var restored: int = 0
+	var batch_started_usec: int = Time.get_ticks_usec()
+	for node in entities:
+		if is_instance_valid(node) and node.has_method("set_afk_visual_suspended"):
+			node.set_afk_visual_suspended(false)
+		restored += 1
+		if restored % 4 == 0 or Time.get_ticks_usec() - batch_started_usec >= 6000:
+			_emit_afk_restore_progress(callback,
+				86.0 + 12.0 * float(restored) / float(maxi(1, total)),
+				"恢復角色、怪物與特效 (%d/%d)" % [restored, total])
+			await get_tree().process_frame
+			batch_started_usec = Time.get_ticks_usec()
+	_emit_afk_restore_progress(callback, 98.0, "角色視覺恢復完成")
+
+
+func _restore_afk_render_shell(progress_callback: Callable = Callable()) -> Dictionary:
 	if not _afk_render_shell.is_active():
 		return {"ok": true, "restored_static_map": false}
 	var path: String = _afk_map_path
+	_emit_afk_restore_progress(progress_callback, 4.0, "確認地圖資源")
 	if path.is_empty() or not ResourceLoader.exists(path):
 		return {"ok": false, "reason": "missing_map_resource"}
 
@@ -749,15 +782,21 @@ func _restore_afk_render_shell() -> Dictionary:
 		var progress: Array = []
 		var status: int = ResourceLoader.load_threaded_get_status(path, progress)
 		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			_emit_afk_restore_progress(progress_callback,
+				8.0 + 57.0 * (float(progress[0]) if not progress.is_empty() else 0.0),
+				"載入地圖貼圖與場景")
 			await get_tree().process_frame
 			continue
 		if status == ResourceLoader.THREAD_LOAD_LOADED:
+			_emit_afk_restore_progress(progress_callback, 65.0, "地圖資源載入完成")
 			packed = ResourceLoader.load_threaded_get(path) as PackedScene
 			break
 		return {"ok": false, "reason": "load_failed", "status": status}
 	if packed == null:
 		return {"ok": false, "reason": "null_packed_scene"}
 
+	_emit_afk_restore_progress(progress_callback, 68.0, "重建地圖視覺")
+	await get_tree().process_frame
 	var restored := packed.instantiate() as Node2D
 	if not is_instance_valid(restored):
 		return {"ok": false, "reason": "instantiate_failed"}
@@ -772,13 +811,16 @@ func _restore_afk_render_shell() -> Dictionary:
 		restored.free()
 		return attached
 	current_map_node = restored
+	_emit_afk_restore_progress(progress_callback, 76.0, "還原角色節點與地圖")
 	_apply_current_festival_theme()
 	if BuildingManager:
+		_emit_afk_restore_progress(progress_callback, 81.0, "初始化地圖裝飾")
 		await _init_buildings_with_diagnostics(
 			int(current_player.data_model.map_id) if is_instance_valid(current_player) and current_player.data_model else 0,
 			int(current_player.data_model.map_id) if is_instance_valid(current_player) and current_player.data_model else 0
 		)
 	attached["restored_static_map"] = true
+	_emit_afk_restore_progress(progress_callback, 85.0, "地圖視覺完成")
 	return attached
 
 
@@ -826,14 +868,15 @@ func begin_afk_mode() -> bool:
 	return true
 
 
-func finish_afk_mode() -> bool:
+func finish_afk_mode(progress_callback: Callable = Callable()) -> bool:
 	if not _afk_active or _afk_restoring or is_changing_map:
 		return false
 	if not is_instance_valid(current_map_node) or not is_instance_valid(current_player):
 		return false
 	_afk_restoring = true
 	_log_afk_state("restore_begin")
-	var restore_result: Dictionary = await _restore_afk_render_shell()
+	_emit_afk_restore_progress(progress_callback, 1.0, "準備恢復畫面")
+	var restore_result: Dictionary = await _restore_afk_render_shell(progress_callback)
 	if is_changing_map or not bool(restore_result.get("ok", false)):
 		_afk_restoring = false
 		_afk_visual_stats["restore_error"] = str(restore_result.get("reason", "map_change"))
@@ -854,16 +897,19 @@ func finish_afk_mode() -> bool:
 		int(_afk_saved_profile.get("players", ClientPerformanceProfile.SIMPLIFY_AUTO)),
 		int(_afk_saved_profile.get("monsters", ClientPerformanceProfile.SIMPLIFY_AUTO))
 	)
-	_set_afk_dynamic_visuals_suspended(false)
+	await _restore_afk_entity_visuals_batched(progress_callback)
 	_apply_low_resource_world_visual_policy()
 	if is_instance_valid(current_map_node):
 		current_map_node.visible = true
+	_emit_afk_restore_progress(progress_callback, 99.0, "顯示遊戲畫面")
+	await get_tree().process_frame
 	_afk_saved_profile.clear()
 	_afk_visual_stats.clear()
 	_refresh_focus_render_policy()
 	_log_afk_state("restore_complete", int(restore_result.get("restored_entity_nodes", 0)), 0)
 	_log_afk_memory("restore_complete")
 	_afk_memory_baseline.clear()
+	_emit_afk_restore_progress(progress_callback, 100.0, "畫面已恢復")
 	return true
 
 

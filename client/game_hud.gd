@@ -59,6 +59,7 @@ var _emotion_tween: Tween
 @onready var afk_runtime: Label = $AFKOverlay / MonitorCard / LblRuntime
 @onready var afk_resource_stats: Label = $AFKOverlay / MonitorCard / LblResources
 @onready var afk_btn_restore: Button = $AFKOverlay / MonitorCard / BtnRestore
+@onready var afk_restore_progress: ProgressBar = $AFKOverlay / MonitorCard / RestoreProgress
 @onready var afk_update_timer: Timer = $AFKOverlay / UpdateTimer
 
 @onready var windows_container: Control = $WindowsContainer
@@ -1389,21 +1390,43 @@ func _on_afk_restore_requested() -> void:
 	)
 
 
+func _on_afk_restore_progress(percent: float, stage: String) -> void:
+	if not is_inside_tree():
+		return
+	if afk_restore_progress and afk_restore_progress.visible:
+		afk_restore_progress.set_target_progress(percent)
+	if afk_resource_stats:
+		afk_resource_stats.text = "還原進度 %d%%｜%s" % [int(percent), stage]
+
+
 func _confirm_restore_afk() -> void:
 	if not GameManager or not GameManager.is_afk_mode_active():
 		return
 	if afk_btn_restore:
 		afk_btn_restore.disabled = true
+	if afk_restore_progress:
+		afk_restore_progress.visible = true
+		afk_restore_progress.reset_progress()
 	if afk_status:
 		afk_status.text = "正在分批還原遊戲資源…"
-	var restored: bool = await GameManager.finish_afk_mode()
+	var restored: bool = await GameManager.finish_afk_mode(
+		Callable(self, "_on_afk_restore_progress")
+	)
 	if not is_inside_tree():
 		return
 	if not restored:
 		if afk_btn_restore:
 			afk_btn_restore.disabled = false
+		if afk_restore_progress:
+			afk_restore_progress.visible = false
 		_refresh_afk_dashboard()
 		return
+	if afk_restore_progress:
+		afk_restore_progress.finish_progress()
+		await get_tree().create_timer(0.3).timeout
+		if not is_inside_tree():
+			return
+		afk_restore_progress.visible = false
 	if afk_update_timer:
 		afk_update_timer.stop()
 	if afk_overlay:
@@ -1478,7 +1501,7 @@ func _refresh_afk_dashboard() -> void:
 	if afk_runtime:
 		var elapsed: int = maxi(0, int((Time.get_ticks_msec() - _afk_entered_msec) / 1000))
 		afk_runtime.text = "掛機時間｜%02d:%02d:%02d" % [int(elapsed / 3600), int(elapsed / 60) % 60, elapsed % 60]
-	if afk_resource_stats:
+	if afk_resource_stats and not GameManager.is_afk_mode_restoring():
 		var stats: Dictionary = GameManager.afk_visual_stats()
 		var failed: int = int(stats.get("restore_missing", 0))
 		if failed > 0:
