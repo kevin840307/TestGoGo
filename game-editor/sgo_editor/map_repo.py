@@ -34,6 +34,8 @@ class _NpcRaw:
 
 
 class MapRepository:
+    INT32_MIN = -(2 ** 31)
+    INT32_MAX = 2 ** 31 - 1
     ENEMY_TAIL_SIZE = 207
     CELL_SIZE = 16
     BLOCKING_MASK = 0x07
@@ -595,11 +597,16 @@ class MapRepository:
         for item in items:
             idx = int(item.get("index", -1))
             tail = old[idx].tail if 0 <= idx < len(old) else bytes(self.ENEMY_TAIL_SIZE)
-            source_flags = int(item.get("sourceFlags", old[idx].source_flags if 0 <= idx < len(old) else 0))
-            enemy_id = int(item.get("enemyId", 0))
+            source_flags = self._int32(
+                item.get("sourceFlags", old[idx].source_flags if 0 <= idx < len(old) else 0),
+                "Enemy sourceFlags",
+            )
+            enemy_id = self._int32(item.get("enemyId", 0), "Enemy ID")
             if enemy_id <= 0:
                 raise ValueError("Enemy ID 必須大於 0")
-            records.append(_EnemyRaw(source_flags, enemy_id, int(item.get("x", 0)), int(item.get("y", 0)), tail))
+            x = self._int32(item.get("x", 0), "Enemy X")
+            y = self._int32(item.get("y", 0), "Enemy Y")
+            records.append(_EnemyRaw(source_flags, enemy_id, x, y, tail))
         payload = bytearray(struct.pack("<i", len(records)))
         for r in records:
             payload += struct.pack("<i", r.source_flags)
@@ -608,6 +615,19 @@ class MapRepository:
             payload += r.tail
         self.backups.atomic_write_bytes(path, bytes(payload), "map_enemy")
         return self.get_enemy_spawns(map_id)
+
+    @classmethod
+    def _int32(cls, value: Any, label: str) -> int:
+        try:
+            result = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{label} 必須是整數") from exc
+        if result < cls.INT32_MIN or result > cls.INT32_MAX:
+            raise ValueError(
+                f"{label} 超出 int32 範圍: {result}；"
+                f"合法範圍 {cls.INT32_MIN}..{cls.INT32_MAX}"
+            )
+        return result
 
     @staticmethod
     def _validate_source_indexes(items: list[dict[str, Any]], old_count: int, label: str) -> None:
@@ -652,6 +672,8 @@ class MapRepository:
             script, _, offset = self._read_cstring(data, offset, "ascii")
             _, name_bytes, offset = self._read_cstring(data, offset, "cp950")
             result.append(_NpcRaw(npc_type_id, x, y, reserved, script, name_bytes))
+        if offset != len(data):
+            raise ValueError(f"NPC.dat 有 {len(data) - offset} 個尾端多餘 bytes")
         return result
 
     def get_npc_spawns(self, map_id: int) -> list[dict[str, Any]]:
@@ -678,19 +700,23 @@ class MapRepository:
         for item in items:
             idx = int(item.get("index", -1))
             reserved = old[idx].reserved if 0 <= idx < len(old) else 0
-            npc_type_id = int(item.get("npcTypeId", 0))
+            npc_type_id = self._int32(item.get("npcTypeId", 0), "NPC Type ID")
             if npc_type_id <= 0:
                 raise ValueError("NPC Type ID 必須大於 0")
+            x = self._int32(item.get("x", 0), "NPC X")
+            y = self._int32(item.get("y", 0), "NPC Y")
             script = str(item.get("script", "")).strip()
             name = str(item.get("name", "")).strip()
             if not script or not name:
                 raise ValueError("NPC Script 與 Name 不可為空")
+            if "\x00" in script or "\x00" in name:
+                raise ValueError("NPC Script 與 Name 不可包含 NUL 字元")
             try:
                 script_bytes = script.encode("ascii")
                 name_bytes = name.encode("cp950")
             except UnicodeEncodeError as exc:
                 raise ValueError(f"NPC 名稱/腳本包含舊格式無法編碼的文字: {exc}") from exc
-            payload += struct.pack("<iiiB", npc_type_id, int(item.get("x", 0)), int(item.get("y", 0)), reserved)
+            payload += struct.pack("<iiiB", npc_type_id, x, y, reserved)
             payload += script_bytes + b"\x00"
             payload += name_bytes + b"\x00"
         self.backups.atomic_write_bytes(path, bytes(payload), "map_npc")
