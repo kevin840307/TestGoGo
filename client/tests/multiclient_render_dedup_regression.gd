@@ -4,6 +4,7 @@ extends SceneTree
 # No server, login, recipes or world map required.
 const HUD_SCRIPT = preload("res://game_hud.gd")
 const ENTITIES_SCRIPT = preload("res://scripts/network_entity_manager.gd")
+const GAME_MANAGER_SCRIPT = preload("res://scripts/game_manager.gd")
 var _failures: int = 0
 
 
@@ -34,6 +35,15 @@ func _run() -> void:
 		(HUD_SCRIPT.MINIMAP_WORLD_CULL_MASK & ENTITIES_SCRIPT.DYNAMIC_ENTITY_VISIBILITY_LAYER) == 0,
 		"dynamic monsters, players and ground items are excluded from static minimap texture"
 	)
+
+	_check(not GAME_MANAGER_SCRIPT.should_trim_background_caches(false, 0, 1000),
+		"startup without a world does not waste time clearing empty runtime caches")
+	_check(GAME_MANAGER_SCRIPT.should_trim_background_caches(true, 0, 1000),
+		"first focus-out in a loaded world may reclaim disposable caches")
+	_check(not GAME_MANAGER_SCRIPT.should_trim_background_caches(true, 1000, 2000),
+		"rapid Alt+Tab does not repeatedly clear and reload the same resources")
+	_check(GAME_MANAGER_SCRIPT.should_trim_background_caches(true, 1000, 61000),
+		"cache cleanup remains possible after the one-minute cooldown")
 
 	# SpawnEntity made the canonical deep copy before an active monster is
 	# created. Spawning from a slightly stale queued packet must not replace
