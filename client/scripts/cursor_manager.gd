@@ -16,6 +16,7 @@ var current_hovered_entity: Node = null
 var _logical_cursor_state: String = "normal"
 var _is_game_window_hovered: bool = false
 var _autorun_enabled: bool = false
+var _native_popup_cursor_depth: int = 0
 
 
 var hovered_items: Array = []
@@ -166,6 +167,29 @@ func _register_autorun_cursor_animation() -> void:
 		)
 		frames.add_frame("autorun", frame_texture)
 	cursor_sprite.sprite_frames = frames
+
+
+func push_native_popup_cursor() -> void:
+	_native_popup_cursor_depth += 1
+	if _native_popup_cursor_depth != 1:
+		return
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	if is_instance_valid(cursor_sprite):
+		cursor_sprite.visible = false
+	if is_instance_valid(tooltip_label):
+		tooltip_label.visible = false
+
+func pop_native_popup_cursor() -> void:
+	_native_popup_cursor_depth = maxi(0, _native_popup_cursor_depth - 1)
+	if _native_popup_cursor_depth != 0:
+		return
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+	if is_instance_valid(cursor_sprite):
+		cursor_sprite.visible = true
+	_apply_cursor_visual()
+
+func is_native_popup_cursor_active() -> bool:
+	return _native_popup_cursor_depth > 0
 
 
 func set_game_window_hovered(is_hovered: bool) -> void :
