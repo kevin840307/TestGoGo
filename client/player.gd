@@ -744,7 +744,7 @@ func _handle_movement(delta: float) -> void :
 	if stuck_frames >= MAX_STUCK_FRAMES:
 		_stop_movement()
 
-static func _calculate_step_velocity(to_target: Vector2, speed: float, delta: float) -> Vector2:
+func _calculate_step_velocity(to_target: Vector2, speed: float, delta: float) -> Vector2:
 	if delta <= 0.0 or speed <= 0.0:
 		return Vector2.ZERO
 	var remaining_distance: float = to_target.length()
