@@ -2577,6 +2577,16 @@ public sealed class PacketRouter
                                 assets);
                     }
 
+#if DEBUG
+                    if (horseUid == -1)
+                    {
+                        _log.LogInformation(
+                            "[MECHA_DISMOUNT_SERVER] DBID={DBID} Map={MapID} Position=({X:F1},{Y:F1}) SpecialAfter={Special}",
+                            state.CharacterId.Value, state.CurrentMapId,
+                            state.LastX, state.LastY, state.CanCrossSpecialTerrain);
+                    }
+#endif
+
                     response.Add(BuildAndBroadcastEffectiveStatusPacket(state, 
                         accountId,
                         state.CharacterId.Value,
