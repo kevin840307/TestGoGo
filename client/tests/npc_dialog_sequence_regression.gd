@@ -82,6 +82,20 @@ func _run() -> void:
 		"older close packets without batch ID retain compatible behavior")
 	seq.reset()
 
+	var continuation := {"EntityID": 31, "ScriptName": "MS008_A.txt",
+		"DialogBatchId": "execution-next", "DialogType": "ActionDialog",
+		"Text": "請繼續", "NextNode": "Step02"}
+	_check(seq.push_or_begin(continuation), "explicit Say continuation begins")
+	_check(seq.defer_close(), "terminal QuestEnd can be queued")
+	_check(seq.only_terminal_close_pending(),
+		"sole terminal close is distinguishable from actual speech")
+	seq.push_or_begin({"EntityID": 31, "ScriptName": "MS008_A.txt",
+		"DialogBatchId": "execution-next", "DialogType": "ActionDialog",
+		"Text": "後續台詞"})
+	_check(not seq.only_terminal_close_pending(),
+		"actual queued dialogue keeps priority over terminal close")
+	seq.reset()
+
 	# Real quest pattern: NQ024_A.txt calls Ask() then QuestEnd().
 	# Client must NOT close the ticket choices just because the Lua function ends.
 	var train := {"EntityID": 31, "ScriptName": "NQ024_A.txt",
@@ -110,7 +124,8 @@ func _run() -> void:
 		hud_source.contains("_on_npc_dialog_received(next_packet, true)") and
 		hud_source.contains("_legacy_dialog_sequence.defer_close()") and
 		hud_source.contains("_legacy_dialog_sequence.is_awaiting_choice()") and
-		hud_source.contains("_legacy_dialog_sequence.is_stale_close(packet)"),
+		hud_source.contains("_legacy_dialog_sequence.is_stale_close(packet)") and
+		hud_source.contains("_legacy_dialog_sequence.only_terminal_close_pending()"),
 		"HUD hides prior speech, consumes queued lines, and defers server close")
 	_check(manager_source.contains("hud.has_legacy_dialog_line_waiting()") and
 		manager_source.contains("hud.request_next_dialog_sentence()"),

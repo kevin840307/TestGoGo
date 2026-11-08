@@ -1668,7 +1668,12 @@ func _on_npc_dialog_close_requested(packet: Dictionary = {}) -> void:
 
 
 func request_next_dialog_sentence() -> void :
-	if _legacy_dialog_sequence.has_pending():
+	# A terminal QuestEnd() must not swallow an explicit Say(..., "Next")
+	# continuation. Queued actual Say/Ask messages still take precedence.
+	var resume_explicit_node := _next_dialog_node != "" and (
+		_legacy_dialog_sequence.only_terminal_close_pending()
+	)
+	if _legacy_dialog_sequence.has_pending() and not resume_explicit_node:
 		var next_packet: Dictionary = _legacy_dialog_sequence.take_next()
 		if str(next_packet.get("DialogType", "")) == "Close":
 			_on_npc_dialog_closed()

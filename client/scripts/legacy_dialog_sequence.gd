@@ -52,6 +52,12 @@ func has_pending() -> bool:
 	return not _pending.is_empty()
 
 
+func only_terminal_close_pending() -> bool:
+	return _pending.size() == 1 and (
+		str(_pending[0].get("DialogType", "")) == "Close"
+	)
+
+
 func take_next() -> Dictionary:
 	if _pending.is_empty():
 		return {}

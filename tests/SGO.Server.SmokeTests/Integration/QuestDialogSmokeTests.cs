@@ -99,6 +99,11 @@ internal static class QuestDialogSmokeTests
                 Ask("s你要購買什麼樣的票呢?", "單程車票", "取消", "BuyTicket0Reply")
                 QuestEnd()
             end
+
+            function say_continue()
+                Say("n1請繼續", "Step02")
+                QuestEnd()
+            end
             """);
 
         // These scripts exercise only Say/Ask/Color; no shop access is made.
@@ -192,6 +197,19 @@ internal static class QuestDialogSmokeTests
               ticketPackets[0].GetProperty("DialogBatchId").GetString() ==
                   ticketPackets[1].GetProperty("DialogBatchId").GetString(),
             "Lua Ask then QuestEnd preserves choices and groups its close packet");
+
+        var continuation = runtime.Execute(
+            "LegacyDialogTest.txt", "say_continue", 123, "守衛", null, _ => 0);
+        using var continuationDoc = JsonDocument.Parse(
+            JsonSerializer.Serialize(continuation.Packets));
+        var continuationPackets = continuationDoc.RootElement;
+        Check(continuationPackets.GetArrayLength() == 2 &&
+              continuationPackets[0].GetProperty("DialogType").GetString() == "ActionDialog" &&
+              continuationPackets[0].GetProperty("NextNode").GetString() == "Step02" &&
+              continuationPackets[1].GetProperty("DialogType").GetString() == "Close" &&
+              continuationPackets[0].GetProperty("DialogBatchId").GetString() ==
+                  continuationPackets[1].GetProperty("DialogBatchId").GetString(),
+            "Lua Say with NextNode followed by QuestEnd preserves continuation");
 
         var mediaExecution = runtime.Execute(
             "LegacyDialogTest.txt", "media", 123, "守衛", null, _ => 0);
