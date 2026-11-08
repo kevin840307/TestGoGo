@@ -62,8 +62,9 @@ if (args.Length != 0)
             return;
         case "world":
             BlockingMapSmokeTests.Run();
-        GroundDropPlacementSmokeTests.Run();
+            GroundDropPlacementSmokeTests.Run();
             PlayerSpatialAoiSmokeTests.Run();
+            PlayerCompanionAoiSmokeTests.Run();
             WorldEntitySpatialAoiSmokeTests.Run();
             Console.WriteLine("World/AOI smoke passed.");
             return;
@@ -103,6 +104,7 @@ var world = new WorldDataService(gameDataRoot);
 BlockingMapSmokeTests.Run();
 GroundDropPlacementSmokeTests.Run();
 PlayerSpatialAoiSmokeTests.Run();
+PlayerCompanionAoiSmokeTests.Run();
 WorldEntitySpatialAoiSmokeTests.Run();
 ConcurrencySmokeTests.Run(repoRoot);
 EconomyConcurrencySmokeTests.Run();
