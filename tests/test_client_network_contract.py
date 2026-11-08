@@ -75,6 +75,48 @@ class ClientNetworkContractTests(unittest.TestCase):
         fields = set(FIELD_READ.findall(block))
         self.assertTrue({"Points", "Items", "Gifts"} <= fields)
 
+    def test_dynamic_packet_builders_preserve_type_and_action(self):
+        # Literal Type scanners alone cannot prove computed Trade and
+        # Action helper packets still retain the expected wire envelope.
+        def method(name):
+            start = self.source.index("func " + name + "(")
+            end = self.source.find("\nfunc ", start + 5)
+            return self.source[start:end if end >= 0 else None]
+
+        for helper, expected in {
+            "send_trade_action": (
+                '"Type": action_type',
+                "packet.merge(extra_data)",
+                "send_secure_packet(packet)",
+            ),
+            "send_shop_action": (
+                '"Type": "ShopAction"',
+                '"Action": action_type',
+                "packet.merge(extra_data)",
+            ),
+            "send_pet_action": (
+                '"Type": "PetAction"',
+                '"Action": action',
+                '"PetUID": pet_uid',
+                "packet.merge(extra_data)",
+            ),
+            "send_mall_action": (
+                '"Type": "MallAction"',
+                '"Action": action',
+                "packet.merge(args)",
+            ),
+            "send_party_action": (
+                '"Type": "PartyAction"',
+                '"Action": action',
+                '"TargetDBID": target_dbid',
+            ),
+        }.items():
+            with self.subTest(helper=helper):
+                body = method(helper)
+                for fragment in expected:
+                    self.assertIn(fragment, body)
+                self.assertIn("send_secure_packet(", body)
+
     def test_choice_reward_packet_and_authoritative_reply(self):
         response = packet_block(self.source, "ItemChoiceRequired")
         fields = set(FIELD_READ.findall(response))
