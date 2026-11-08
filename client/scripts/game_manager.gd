@@ -326,7 +326,46 @@ func _trace_map_change(stage: String, source_map_id: int, target_map_id: int, de
 
 
 
+var _window_has_focus: bool = true
+var _focused_max_fps: int = 0
+var _master_bus_was_muted_before_focus_loss: bool = false
+const UNFOCUSED_MAX_FPS := 5
+
+func _notification(what: int) -> void :
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_set_window_focus_power_save(false)
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		_set_window_focus_power_save(true)
+
+func _set_window_focus_power_save(has_focus: bool) -> void :
+	if _window_has_focus == has_focus:
+		return
+	_window_has_focus = has_focus
+
+	var master_bus_index := AudioServer.get_bus_index("Master")
+
+	if not has_focus:
+		_focused_max_fps = Engine.max_fps
+		Engine.max_fps = UNFOCUSED_MAX_FPS
+
+		if master_bus_index >= 0:
+			_master_bus_was_muted_before_focus_loss = AudioServer.is_bus_mute(master_bus_index)
+			AudioServer.set_bus_mute(master_bus_index, true)
+	else:
+		Engine.max_fps = _focused_max_fps
+
+		if master_bus_index >= 0:
+			AudioServer.set_bus_mute(
+				master_bus_index,
+				_master_bus_was_muted_before_focus_loss
+			)
+
 func _ready() -> void :
+	_window_has_focus = DisplayServer.window_is_focused()
+	_focused_max_fps = Engine.max_fps
+	if not _window_has_focus:
+		_window_has_focus = true
+		_set_window_focus_power_save(false)
 
 	if NetworkManager:
 		NetworkManager.change_map_received.connect(_on_change_map_received)
