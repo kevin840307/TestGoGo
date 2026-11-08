@@ -360,6 +360,9 @@ class WebStructureTests(unittest.TestCase):
         self.assertIn("commitMapEdit", health)
         self.assertIn("validateMapBeforeSave", map_editor)
         self.assertIn("app-health.js", workflow)
+        self.assertIn("force=1", editor)
+        self.assertIn("?force=1", (web / "app-world.js").read_text(encoding="utf-8"))
+        self.assertIn("?force=1", (web / "app-tools.js").read_text(encoding="utf-8"))
 
     def test_collision_aware_map_ui_is_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
