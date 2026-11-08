@@ -87,12 +87,13 @@ class EditorHandler(BaseHTTPRequestHandler):
 
     @staticmethod
     def _map_mutation_payload(body: Any) -> tuple[list[dict[str, Any]], str, bool]:
-        # Legacy callers may still PUT a raw list. New editor callers use an
-        # envelope so stale-tab protection cannot be accidentally omitted.
-        if isinstance(body, list):
-            return body, "", False
+        # Map writes are revisioned on purpose. Accepting the old raw-list
+        # payload would bypass stale-tab protection and allow lost updates.
         if not isinstance(body, dict):
-            raise ValueError("地圖儲存 payload 必須是陣列或物件")
+            raise ValueError(
+                "地圖儲存 payload 必須包含 items 與 expectedRevision；"
+                "請重新載入地圖後再儲存"
+            )
         if "items" not in body or not isinstance(body.get("items"), list):
             raise ValueError("地圖儲存 payload 必須包含 items 陣列")
         expected_revision = str(body.get("expectedRevision", "")).strip()
