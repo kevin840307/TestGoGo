@@ -94,6 +94,26 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("目標已死亡", source)
         self.assertIn("MonsterConcurrencySmokeTests.Run(", main)
 
+    def test_item_integration_modules_are_invoked_and_domain_focused(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        modules = {
+            "Integration/ItemUseClassificationSmokeTests.cs":
+                ("ItemUseClassificationSmokeTests", "製作材料／藍圖"),
+            "Integration/WaspPackageSmokeTests.cs":
+                ("WaspPackageSmokeTests", "50340"),
+            "Integration/CosmeticTransformationSmokeTests.cs":
+                ("CosmeticTransformationSmokeTests", "effective combat stats"),
+        }
+
+        for relative, (name, evidence) in modules.items():
+            with self.subTest(module=name):
+                module = SMOKE / relative
+                self.assertTrue(module.is_file(), str(module))
+                source = module.read_text(encoding="utf-8-sig")
+                self.assertIn(f"class {name}", source)
+                self.assertIn(f"{name}.Run(", main)
+                self.assertIn(evidence, source)
+
     def test_prelogin_route_suite_has_explicit_context(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = SMOKE / "Protocol" / "PreloginPacketSmokeTests.cs"
