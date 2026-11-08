@@ -193,8 +193,9 @@ func _spawn_priority(data: Dictionary, player_pos: Variant) -> float:
 		return -250000000.0
 	if entity_type != 1:
 		return 0.0
+	# Keep original ground-item, player/pet and NPC spawn priorities.
 	if _is_combat_monster_revealed(int(data.get("EntityID", 0))):
-		return -375000000.0
+		return -125000000.0
 	if player_pos == null:
 		return 0.0
 	return (player_pos as Vector2).distance_squared_to(_monster_packet_position(data))
