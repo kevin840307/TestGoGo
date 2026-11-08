@@ -168,19 +168,21 @@ foreach ($stage in $stages) {
  else { Write-Host "Set ALL clients to same map and mode; test them in the same condition." }
  $ready=Read-Host "Enter after settings and map are ready; type Q to finish"
  if ($ready -match '^(?i:q|quit)$') { break }
- Write-Host "Warmup: $WarmupSeconds sec."
+ Write-Host "Return focus to Godot NOW. The BAT/CMD window is foreground after pressing Enter."
+ Write-Host "Warmup: $WarmupSeconds sec; use it to refocus your game window."
  if ($WarmupSeconds -gt 0) { Start-Sleep -Seconds $WarmupSeconds }
  # Consume historic login/warmup/performance-profile lines without
  # attributing them to the next 60-second measurement stage.
  foreach ($target in $targets) { ReadGodot $target $stage $true }
+$previous.Clear()
  [void]$completedStages.Add($stage)
  $end=[DateTime]::UtcNow.AddSeconds($DurationSeconds)
  $idx=0
  Write-Host "Recording $DurationSeconds sec. No map/mode/focus changes during the stage."
  while ([DateTime]::UtcNow -lt $end) {
   $idx++
-  $now=[DateTime]::UtcNow
   $gpu=GpuSnapshot
+  $now=[DateTime]::UtcNow
   foreach ($target in $targets) {
    $pidValue=[int]$target.pid
    try { $proc=Get-Process -Id $pidValue -ErrorAction Stop } catch { continue }
