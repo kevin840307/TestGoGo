@@ -54,6 +54,7 @@ tests/SGO.Server.SmokeTests/
 
 - `ConcurrencySmokeTests`：10 人同時撿同一掉物只能成功 1 人；重複/並行 FinalConfirm 交易只提交一次；重複 Lock 不會清除已確認狀態。
 - `TradeTerminalRaceSmokeTests`：用 DispatchProxy 暫停 DB commit，模擬取消與斷線撞上提交；終態僅能是一次成功，不能先發 Cancel 後發 Success。
+- `ChoiceRewardSmokeTests`：已知 2209 選項驗證、偽造拒絕、重放 UID、10 請求同時領同一寶箱只能成功一次。
 - `MonsterConcurrencySmokeTests`：10 人同時攻擊同一怪物，死亡/掉寶/獎勵不重複。
 - `SharedMapAiConcurrencySmokeTests`：10 人/10 怪同地圖，SharedMapAiTicker 每張地圖每 pass 只 tick 一次，怪物 owner arbitration 唯一。
 - `SessionLifecycleSmokeTests`：disconnect/reconnect/map-transition race 與 current-session ownership。
