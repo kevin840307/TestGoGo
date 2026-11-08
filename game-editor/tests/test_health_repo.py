@@ -25,6 +25,10 @@ class HealthRepositoryTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         (self.root / "client" / "Skills").mkdir(parents=True)
         (self.root / "client" / "Assets" / "GameInfo").mkdir(parents=True)
+        (self.root / "client" / "Assets" / "Effects" / "Skill_Effect").mkdir(parents=True)
+        (self.root / "client" / "Assets" / "Effects" / "Hit_Effect").mkdir(parents=True)
+        (self.root / "client" / "Assets" / "Effects" / "Normal_Effect").mkdir(parents=True)
+        (self.root / "client" / "Skills" / "Icon").mkdir(parents=True)
         (self.root / "client" / "maps").mkdir(parents=True)
         (self.root / "server").mkdir()
         dat = self.root / "Old" / "服務端" / "Dat"
@@ -47,6 +51,39 @@ class HealthRepositoryTests(unittest.TestCase):
         )
         (dat / "Quest" / "IncludeUser.txt").write_text(
             '#include "NpcOk.txt"\nfunction start()\nend\n',
+            encoding="utf-8",
+        )
+
+        (self.root / "client" / "Skills" / "Icon" / "ICON_001.png").write_bytes(b"PNG")
+        (self.root / "client" / "Assets" / "Effects" / "Skill_Effect" / "B_Skill_Use_00.tres").write_text(
+            "[gd_resource type=\"SpriteFrames\" format=3]\n",
+            encoding="utf-8",
+        )
+        (self.root / "client" / "Assets" / "Effects" / "Hit_Effect" / "Hit_Effect03.tres").write_text(
+            "[gd_resource type=\"SpriteFrames\" format=3]\n",
+            encoding="utf-8",
+        )
+        (self.root / "client" / "Skills" / "90001.tres").write_text(
+            '''[gd_resource type="Resource" script_class="SkillData" format=3]
+
+[ext_resource type="Script" path="res://scripts/skill_level_data.gd" id="1_level"]
+[ext_resource type="Script" path="res://scripts/skill_data.gd" id="2_skill"]
+
+[sub_resource type="Resource" id="Resource_level"]
+script = ExtResource("1_level")
+level = 1
+
+[resource]
+script = ExtResource("2_skill")
+id = 90001
+skill_name = "Health測試技能"
+description = "fixture"
+icon_id = 1
+fx_use = "Skill_Use_00"
+fx_hit = "Missing_Hit"
+fx_extra = "Hit_Effect03"
+levels = Array[ExtResource("1_level")]([SubResource("Resource_level")])
+''',
             encoding="utf-8",
         )
 
@@ -125,6 +162,42 @@ class HealthRepositoryTests(unittest.TestCase):
         types = [x["type"] for x in script["references"]]
         self.assertIn("map_npc", types)
         self.assertIn("quest_include", types)
+
+    def test_skill_effect_validation_matches_runtime_fallbacks(self) -> None:
+        report = self.health.scan(force=True)
+        missing = [
+            issue for issue in report["issues"]
+            if issue["category"] == "missing_skill_effect"
+        ]
+        self.assertEqual(len(missing), 1)
+        self.assertIn("fxHit", missing[0]["title"])
+        self.assertIn("Missing_Hit", missing[0]["detail"])
+        self.assertFalse(
+            any(
+                issue["category"] == "missing_skill_icon"
+                and issue.get("target", {}).get("id") == 90001
+                for issue in report["issues"]
+            )
+        )
+
+        use_candidates = self.health._skill_effect_candidates("fxUse", "Skill_Use_00")
+        self.assertTrue(any(path.name == "B_Skill_Use_00.tres" for path in use_candidates))
+        extra_candidates = self.health._skill_effect_candidates("fxExtra", "Hit_Effect03")
+        self.assertEqual(extra_candidates[0].name, "Hit_Effect03.tres")
+
+    def test_missing_icon_directory_is_one_project_warning_not_one_per_skill(self) -> None:
+        icon_dir = self.root / "client" / "Skills" / "Icon"
+        for path in icon_dir.iterdir():
+            path.unlink()
+        icon_dir.rmdir()
+        self.health.invalidate()
+        report = self.health.scan(force=True)
+        warnings = [
+            issue for issue in report["issues"]
+            if issue["category"] == "skill_icon_assets_unavailable"
+        ]
+        self.assertEqual(len(warnings), 1)
+        self.assertFalse(any(issue["category"] == "missing_skill_icon" for issue in report["issues"]))
 
     def test_health_cache_can_be_invalidated(self) -> None:
         first = self.health.scan(force=True)
