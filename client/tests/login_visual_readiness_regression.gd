@@ -33,6 +33,12 @@ func _run() -> void:
 		"a process frame with no GPU drawing cannot qualify")
 	_check(not ENTRY_SCRIPT.is_login_frame_stable(true, true, true, 149000),
 		"an initial 149ms decoder/GPU frame resets stability")
+	_check(not ENTRY_SCRIPT.can_count_login_stable_frame(true, true, true, false, 16000),
+		"fast frames BEFORE video is ready cannot count toward final readiness")
+	_check(ENTRY_SCRIPT.can_count_login_stable_frame(true, true, true, true, 16000),
+		"video-ready foreground drawn frames may count toward reveal")
+	_check(not ENTRY_SCRIPT.can_count_login_stable_frame(true, true, true, true, 149000),
+		"first video texture/upload spikes reset the stability counter")
 	_check(not ENTRY_SCRIPT.can_reveal_login(false, true, 100),
 		"even many good frames cannot reveal while Windows is unfocused")
 	_check(not ENTRY_SCRIPT.can_reveal_login(true, false, 100),
