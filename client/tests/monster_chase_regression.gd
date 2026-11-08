@@ -92,6 +92,10 @@ func _run() -> void:
 	offscreen_monster.network_move_to(Vector2(100.0, 0.0), 0.0)
 	_check(is_equal_approx(offscreen_monster.global_position.x, 100.0),
 		"explicit server zero-duration correction stays authoritative")
+	offscreen_monster.apply_offscreen_network_move(Vector2(135.0, 0.0))
+	_check(is_equal_approx(offscreen_monster.global_position.x, 100.0)
+		and offscreen_monster.network_move_active,
+		"legacy offscreen move helper also avoids direct position snapping")
 	offscreen_monster.free()
 
 	# Guard the actual network dispatcher as well, rather than only the
