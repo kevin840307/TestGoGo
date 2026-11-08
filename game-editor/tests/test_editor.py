@@ -328,6 +328,30 @@ class WebStructureTests(unittest.TestCase):
         self.assertIn("/editor-meta", editor)
         self.assertIn("/terrain", editor)
 
+    def test_all_editors_guard_unsaved_changes(self) -> None:
+        web = GAME_EDITOR_ROOT / "web"
+        core = (web / "app-core.js").read_text(encoding="utf-8")
+        skills = (web / "app-skills.js").read_text(encoding="utf-8")
+        enemies = (web / "app-world.js").read_text(encoding="utf-8")
+        tools = (web / "app-tools.js").read_text(encoding="utf-8")
+        map_editor = (web / "app-map-editor.js").read_text(encoding="utf-8")
+
+        for flag in ("skillDirty", "enemyDirty", "scriptDirty", "mapDirty"):
+            self.assertIn(flag, core)
+        self.assertIn("confirmDiscardCurrentChanges", core)
+        self.assertIn("state.skillDirty", skills)
+        self.assertIn("state.enemyDirty", enemies)
+        self.assertIn("state.scriptDirty", tools)
+        self.assertIn("beforeunload", map_editor)
+
+    def test_asset_drag_drop_sends_source_name_for_format_guard(self) -> None:
+        tools = (GAME_EDITOR_ROOT / "web" / "app-tools.js").read_text(encoding="utf-8")
+        editor = (GAME_EDITOR_ROOT / "editor.py").read_text(encoding="utf-8")
+        asset_repo = (GAME_EDITOR_ROOT / "sgo_editor" / "asset_repo.py").read_text(encoding="utf-8")
+        self.assertIn("sourceName:file.name", tools)
+        self.assertIn('body.get("sourceName"', editor)
+        self.assertIn("_canonical_extension", asset_repo)
+
     def test_editor_defaults_to_localhost_only(self) -> None:
         source = (GAME_EDITOR_ROOT / "editor.py").read_text(encoding="utf-8")
         self.assertIn('default="127.0.0.1"', source)
