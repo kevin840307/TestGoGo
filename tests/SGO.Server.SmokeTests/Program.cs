@@ -2846,6 +2846,13 @@ try
         CurrentMapId = 15
     };
 
+    void ActivateChatSession(ClientSession chatSession)
+    {
+        accountSessions.Register(
+            account.Value,
+            chatSession.ConnectionId);
+    }
+
     // Chat channel routing follows the recovered Godot channel enum:
     // 0 nearby, 1 faction/world, 2 club, 3 party.
     broadcastHub.UpdatePresence(
@@ -2870,6 +2877,7 @@ try
     using (var nearbyChat = Json(
         """{"Type":"ChatMessage","Message":"nearby-only","Channel":0,"BubbleType":2}"""))
     {
+        ActivateChatSession(clubLeaderSession);
         var responses = router.Handle(
             nearbyChat.RootElement,
             clubLeaderSession);
@@ -2900,6 +2908,7 @@ try
     using (var worldChat = Json(
         """{"Type":"ChatMessage","Message":"world-cross-map","Channel":1,"BubbleType":3}"""))
     {
+        ActivateChatSession(clubLeaderSession);
         router.Handle(
             worldChat.RootElement,
             clubLeaderSession);
@@ -2918,6 +2927,7 @@ try
     using (var clubChat = Json(
         """{"Type":"ChatMessage","Message":"club-cross-map","Channel":2,"BubbleType":4}"""))
     {
+        ActivateChatSession(clubLeaderSession);
         var responses = router.Handle(
             clubChat.RootElement,
             clubLeaderSession);
@@ -2935,6 +2945,7 @@ try
     using (var invalidChatChannel = Json(
         """{"Type":"ChatMessage","Message":"invalid","Channel":4,"BubbleType":0}"""))
     {
+        ActivateChatSession(clubLeaderSession);
         var responses = router.Handle(
             invalidChatChannel.RootElement,
             clubLeaderSession);
@@ -2954,6 +2965,7 @@ try
         {"Type":"ChatMessage","Message":"/name SecondCharacter cross-map-secret","Channel":0,"BubbleType":2}
         """))
     {
+        ActivateChatSession(clubMemberSession);
         var responses = router.Handle(
             privateChat.RootElement,
             clubMemberSession);
@@ -2980,6 +2992,7 @@ try
         {"Type":"ChatMessage","Message":"/name NobodyHere hello","Channel":0,"BubbleType":0}
         """))
     {
+        ActivateChatSession(clubMemberSession);
         var responses = router.Handle(
             missingPrivateTarget.RootElement,
             clubMemberSession);
@@ -3002,6 +3015,7 @@ try
     using (var leaderQuit = Json(
         """{"Type":"ChatMessage","Message":"/quit","Channel":0,"BubbleType":0}"""))
     {
+        ActivateChatSession(clubLeaderSession);
         var responses = router.Handle(
             leaderQuit.RootElement,
             clubLeaderSession);
@@ -3018,6 +3032,7 @@ try
     using (var promote = Json(
         """{"Type":"ChatMessage","Message":"/poweron 2 TestCharacter","Channel":0,"BubbleType":0}"""))
     {
+        ActivateChatSession(clubLeaderSession);
         var responses = router.Handle(
             promote.RootElement,
             clubLeaderSession);
@@ -3040,6 +3055,7 @@ try
     using (var memberQuit = Json(
         """{"Type":"ChatMessage","Message":"/quit","Channel":0,"BubbleType":0}"""))
     {
+        ActivateChatSession(clubMemberSession);
         var responses = router.Handle(
             memberQuit.RootElement,
             clubMemberSession);
@@ -3077,6 +3093,7 @@ try
     using (var fire = Json(
         """{"Type":"ChatMessage","Message":"/fire TestCharacter","Channel":0,"BubbleType":0}"""))
     {
+        ActivateChatSession(clubLeaderSession);
         var responses = router.Handle(
             fire.RootElement,
             clubLeaderSession);
@@ -3092,6 +3109,7 @@ try
     using (var dismiss = Json(
         """{"Type":"ChatMessage","Message":"/dismiss","Channel":0,"BubbleType":0}"""))
     {
+        ActivateChatSession(clubLeaderSession);
         var responses = router.Handle(
             dismiss.RootElement,
             clubLeaderSession);
@@ -3110,6 +3128,10 @@ try
         clubLeaderRegistration.ConnectionId);
     broadcastHub.Unregister(
         clubMemberRegistration.ConnectionId);
+
+    accountSessions.Register(
+        account.Value,
+        broadcastRegistration.ConnectionId);
 
     Check(store.GetQuestFlag(
               account.Value,
