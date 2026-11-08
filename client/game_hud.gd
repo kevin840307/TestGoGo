@@ -1,6 +1,11 @@
 
 extends CanvasLayer
 
+func _instantiate_lazy_hud_scene(path: String) -> Node:
+	var scene := ResourceLoader.load(path) as PackedScene
+	return scene.instantiate() if scene != null else null
+
+
 
 @onready var chat_panel: Control = $ChatPanel
 
@@ -110,13 +115,13 @@ var _window_drag_pointer_offset: = Vector2.ZERO
 var _map_loading_tween: Tween
 
 
-const BANK_WINDOW_SCENE = preload("res://bank_window.tscn")
+const BANK_WINDOW_SCENE_PATH: String = "res://bank_window.tscn"
 var current_bank_window: Control = null
 
-const REPAIR_WINDOW_SCENE = preload("res://repair_window.tscn")
+const REPAIR_WINDOW_SCENE_PATH: String = "res://repair_window.tscn"
 var current_repair_window: Control = null
 
-const ITEM_CHOICE_WINDOW_SCENE = preload("res://item_choice_window.tscn")
+const ITEM_CHOICE_WINDOW_SCENE_PATH: String = "res://item_choice_window.tscn"
 var current_item_choice_window: Control = null
 
 
@@ -127,12 +132,12 @@ var current_item_choice_window: Control = null
 @onready var btn_decline: TextureButton = $InviteBox / BtnDecline
 
 
-const NPC_SHOP_WINDOW_SCENE = preload("res://npc_shop_window.tscn")
+const NPC_SHOP_WINDOW_SCENE_PATH: String = "res://npc_shop_window.tscn"
 var current_npc_shop_window: Control = null
 
 @onready var pet_status_scroll: ScrollContainer = $WindowsContainer / PetStatusScroll
 @onready var pet_status_container: VBoxContainer = $WindowsContainer / PetStatusScroll / PetStatusContainer
-const PET_STATUS_ROW_SCENE = preload("res://pet_status_row.tscn")
+const PET_STATUS_ROW_SCENE_PATH: String = "res://pet_status_row.tscn"
 
 
 @onready var message_box: Panel = $MessageBox
@@ -159,17 +164,17 @@ var _invite_time_left: float = 0.0
 var _invite_timeout_callback: Callable
 var _last_invite_display_second: int = -1
 
-const PLAYER_CONTEXT_MENU_SCENE = preload("res://player_context_menu.tscn")
-const TRADE_WINDOW_SCENE = preload("res://trade_window.tscn")
+const PLAYER_CONTEXT_MENU_SCENE_PATH: String = "res://player_context_menu.tscn"
+const TRADE_WINDOW_SCENE_PATH: String = "res://trade_window.tscn"
 
 var current_trade_window: Control = null
 var context_menu_instance: Control = null
 
-const SHOP_WINDOW_SCENE = preload("res://shop_window.tscn")
+const SHOP_WINDOW_SCENE_PATH: String = "res://shop_window.tscn"
 var current_shop_window: Control = null
 
 @onready var buff_grid: GridContainer = $BuffGrid
-const BUFF_ICON_SCENE = preload("res://buff_icon.tscn")
+const BUFF_ICON_SCENE_PATH: String = "res://buff_icon.tscn"
 
 const MINIMAP_UPDATE_INTERVAL: = 0.05
 const MINIMAP_WORLD_CULL_MASK: = 1 << 0
@@ -195,15 +200,15 @@ func get_minimap_world_redraw_stats() -> Dictionary:
 	}
 
 
-const SHORTCUT_SLOT_SCENE = preload("res://shortcut_slot.tscn")
+const SHORTCUT_SLOT_SCENE_PATH: String = "res://shortcut_slot.tscn"
 
-const HORSE_PREVIEW_WINDOW_SCENE = preload("res://horse_preview_window.tscn")
+const HORSE_PREVIEW_WINDOW_SCENE_PATH: String = "res://horse_preview_window.tscn"
 var current_horse_preview_window: Control = null
 
-const PET_WINDOW_SCENE = preload("res://pet_window.tscn")
+const PET_WINDOW_SCENE_PATH: String = "res://pet_window.tscn"
 var current_pet_window: Control = null
 
-const RANK_WINDOW_SCENE = preload("res://rank_window.tscn")
+const RANK_WINDOW_SCENE_PATH: String = "res://rank_window.tscn"
 var current_rank_window: Control = null
 
 var craft_dismantle_window: Control = null
@@ -460,7 +465,7 @@ func _on_item_choice_required_received(
 	if is_instance_valid(current_item_choice_window):
 		current_item_choice_window.queue_free()
 
-	current_item_choice_window = ITEM_CHOICE_WINDOW_SCENE.instantiate()
+	current_item_choice_window = _instantiate_lazy_hud_scene(ITEM_CHOICE_WINDOW_SCENE_PATH)
 	if windows_container:
 		windows_container.add_child(current_item_choice_window)
 	else:
@@ -482,7 +487,7 @@ func show_bank_window() -> void :
 	if is_instance_valid(current_bank_window):
 		return
 
-	current_bank_window = BANK_WINDOW_SCENE.instantiate()
+	current_bank_window = _instantiate_lazy_hud_scene(BANK_WINDOW_SCENE_PATH)
 	if windows_container:
 		windows_container.add_child(current_bank_window)
 	else:
@@ -1688,7 +1693,7 @@ func update_pet_status_panel() -> void :
 		if i < existing_rows.size():
 			row_node = existing_rows[i]
 		else:
-			row_node = PET_STATUS_ROW_SCENE.instantiate()
+			row_node = _instantiate_lazy_hud_scene(PET_STATUS_ROW_SCENE_PATH)
 			pet_status_container.add_child(row_node)
 
 		if row_node.has_method("update_data"):
@@ -2196,7 +2201,7 @@ func show_player_context_menu(target_dbid: int, target_name: String) -> void :
 	if is_instance_valid(context_menu_instance):
 		context_menu_instance.queue_free()
 
-	context_menu_instance = PLAYER_CONTEXT_MENU_SCENE.instantiate()
+	context_menu_instance = _instantiate_lazy_hud_scene(PLAYER_CONTEXT_MENU_SCENE_PATH)
 	add_child(context_menu_instance)
 	context_menu_instance.global_position = get_viewport().get_mouse_position()
 	context_menu_instance.setup(target_dbid, target_name)
@@ -2262,7 +2267,7 @@ func _on_trade_start_received(session_id: String, target_name: String) -> void :
 	if is_instance_valid(current_trade_window):
 		current_trade_window.queue_free()
 
-	current_trade_window = TRADE_WINDOW_SCENE.instantiate()
+	current_trade_window = _instantiate_lazy_hud_scene(TRADE_WINDOW_SCENE_PATH)
 	windows_container.add_child(current_trade_window)
 	current_trade_window.setup(target_player, target_name)
 	_play_interface_activation_feedback(current_trade_window)
@@ -2302,7 +2307,7 @@ func _on_btn_shop_pressed() -> void :
 
 func _open_shop_window(shop_name: String, is_already_open: bool) -> void :
 	if is_instance_valid(current_shop_window): current_shop_window.queue_free()
-	current_shop_window = SHOP_WINDOW_SCENE.instantiate()
+	current_shop_window = _instantiate_lazy_hud_scene(SHOP_WINDOW_SCENE_PATH)
 	windows_container.add_child(current_shop_window)
 	current_shop_window.setup_as_owner(target_player, shop_name, is_already_open)
 	if current_shop_window.has_method("update_ui"): current_shop_window.update_ui()
@@ -2319,7 +2324,7 @@ func _on_shop_sync_received(items: Array = []) -> void :
 
 func _on_shop_view_response(shop_name: String, owner_dbid: int, items: Array) -> void :
 	if is_instance_valid(current_shop_window): current_shop_window.queue_free()
-	current_shop_window = SHOP_WINDOW_SCENE.instantiate()
+	current_shop_window = _instantiate_lazy_hud_scene(SHOP_WINDOW_SCENE_PATH)
 	windows_container.add_child(current_shop_window)
 	current_shop_window.setup_as_customer(shop_name, owner_dbid, items)
 	_play_interface_activation_feedback(current_shop_window)
@@ -2329,7 +2334,7 @@ func show_horse_preview(horse_data: Dictionary) -> void :
 	if is_instance_valid(current_horse_preview_window):
 		current_horse_preview_window.queue_free()
 
-	current_horse_preview_window = HORSE_PREVIEW_WINDOW_SCENE.instantiate()
+	current_horse_preview_window = _instantiate_lazy_hud_scene(HORSE_PREVIEW_WINDOW_SCENE_PATH)
 	windows_container.add_child(current_horse_preview_window)
 	_register_draggable_window(current_horse_preview_window)
 	current_horse_preview_window.setup(target_player, horse_data)
@@ -2341,7 +2346,7 @@ func show_pet_window(pet_uid: int) -> void :
 		current_pet_window.queue_free()
 
 
-	current_pet_window = PET_WINDOW_SCENE.instantiate()
+	current_pet_window = _instantiate_lazy_hud_scene(PET_WINDOW_SCENE_PATH)
 	windows_container.add_child(current_pet_window)
 	_register_draggable_window(current_pet_window)
 
@@ -2522,7 +2527,7 @@ func _init_shortcut_bar() -> void :
 
 
 	for i in range(12):
-		var slot = SHORTCUT_SLOT_SCENE.instantiate()
+		var slot = _instantiate_lazy_hud_scene(SHORTCUT_SLOT_SCENE_PATH)
 		container.add_child(slot)
 
 		slot.setup(i, "F%d" % (i + 1))
@@ -2747,7 +2752,7 @@ func _on_sync_buffs_received(buffs: Array) -> void :
 		if existing_icon:
 			existing_icon.update_time(rem_time, tot_time)
 		else:
-			var new_icon = BUFF_ICON_SCENE.instantiate()
+			var new_icon = _instantiate_lazy_hud_scene(BUFF_ICON_SCENE_PATH)
 			new_icon.name = b_name
 			buff_grid.add_child(new_icon)
 
@@ -2823,7 +2828,7 @@ func _on_npc_shop_view_response_received(shop_id: int, shop_name: String, items:
 		current_npc_shop_window.queue_free()
 
 
-	current_npc_shop_window = NPC_SHOP_WINDOW_SCENE.instantiate()
+	current_npc_shop_window = _instantiate_lazy_hud_scene(NPC_SHOP_WINDOW_SCENE_PATH)
 	windows_container.add_child(current_npc_shop_window)
 	current_npc_shop_window.setup(shop_id, shop_name, items)
 	_play_interface_activation_feedback(current_npc_shop_window)
@@ -3209,7 +3214,7 @@ func _on_open_repair_window_received(repair_type: int = 1) -> void :
 	if is_instance_valid(current_repair_window):
 		current_repair_window.queue_free()
 
-	current_repair_window = REPAIR_WINDOW_SCENE.instantiate()
+	current_repair_window = _instantiate_lazy_hud_scene(REPAIR_WINDOW_SCENE_PATH)
 	windows_container.add_child(current_repair_window)
 
 	if is_instance_valid(target_player):
@@ -3278,7 +3283,7 @@ func _on_open_rank_window_received(rank_type: int) -> void :
 		current_rank_window.queue_free()
 
 
-	current_rank_window = RANK_WINDOW_SCENE.instantiate()
+	current_rank_window = _instantiate_lazy_hud_scene(RANK_WINDOW_SCENE_PATH)
 
 
 

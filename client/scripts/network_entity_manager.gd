@@ -1,11 +1,11 @@
 
 extends Node
 
-const NETWORK_PLAYER_SCENE = preload("res://network_player.tscn")
-const MONSTER_SCENE = preload("res://monster_entity.tscn")
-const NPC_SCENE = preload("res://npc_entity.tscn")
-const GROUND_ITEM_SCENE = preload("res://ground_item_entity.tscn")
-const PET_SCENE = preload("res://pet_entity.tscn")
+const NETWORK_PLAYER_SCENE_PATH: String = "res://network_player.tscn"
+const MONSTER_SCENE_PATH: String = "res://monster_entity.tscn"
+const NPC_SCENE_PATH: String = "res://npc_entity.tscn"
+const GROUND_ITEM_SCENE_PATH: String = "res://ground_item_entity.tscn"
+const PET_SCENE_PATH: String = "res://pet_entity.tscn"
 const PENDING_AOI_MOVES = preload("res://scripts/network_entity_pending_moves.gd")
 const DYNAMIC_ENTITY_VISIBILITY_LAYER: = 1 << 1
 const DEBUG_MONSTER_NETWORK_LOGS: bool = false
@@ -26,6 +26,7 @@ const MONSTER_COMBAT_REVEAL_MSEC: int = 12000
 var active_entities: Dictionary = {}
 var _last_skill_casts: Dictionary = {}
 var _active_entity_types: Dictionary = {}
+var _entity_scene_cache: Dictionary = {}
 
 # Initial map sync can deliver dozens of entities back-to-back. Instantiating
 # every scene immediately makes all _ready()/texture/animation work land in the
@@ -63,6 +64,39 @@ static func should_run_stationary_aoi_scan(
 var _combat_reveal_until_msec: Dictionary = {}
 var _pending_aoi_moves = PENDING_AOI_MOVES.new()
 
+func _entity_scene_path(entity_type: int) -> String:
+	match entity_type:
+		0: return NETWORK_PLAYER_SCENE_PATH
+		1: return MONSTER_SCENE_PATH
+		2: return NPC_SCENE_PATH
+		3: return GROUND_ITEM_SCENE_PATH
+		4: return PET_SCENE_PATH
+	return ""
+
+
+func _get_entity_scene(entity_type: int) -> PackedScene:
+	if _entity_scene_cache.has(entity_type):
+		return _entity_scene_cache[entity_type] as PackedScene
+	var path: String = _entity_scene_path(entity_type)
+	if path.is_empty():
+		return null
+	var scene := ResourceLoader.load(path) as PackedScene
+	if scene != null:
+		_entity_scene_cache[entity_type] = scene
+	return scene
+
+
+func _instantiate_entity_scene(entity_type: int) -> Node2D:
+	var scene: PackedScene = _get_entity_scene(entity_type)
+	return scene.instantiate() as Node2D if scene != null else null
+
+
+func release_entity_scene_cache() -> int:
+	var released: int = _entity_scene_cache.size()
+	_entity_scene_cache.clear()
+	return released
+
+
 func get_active_entity(entity_id: int) -> Node2D:
 	var entity = active_entities.get(entity_id)
 	if not is_instance_valid(entity) or not entity.is_inside_tree() or entity.is_queued_for_deletion():
@@ -72,12 +106,15 @@ func get_active_entity(entity_id: int) -> Node2D:
 		return null
 	return entity
 
-func clear_map_entities() -> Dictionary:
+func clear_map_entities(immediate: bool = false) -> Dictionary:
 	var cleared_by_type: = {}
 	for entity in active_entities.values():
 		if is_instance_valid(entity):
 			_unregister_entity_hover(entity)
-			entity.queue_free()
+			if immediate:
+				entity.free()
+			else:
+				entity.queue_free()
 	for entity_type in _active_entity_types.values():
 		var type_key: = str(int(entity_type))
 		cleared_by_type[type_key] = int(cleared_by_type.get(type_key, 0)) + 1
@@ -831,7 +868,9 @@ func _spawn_entity_now(data: Dictionary) -> void :
 
 	match entity_type:
 		0:
-			new_entity = NETWORK_PLAYER_SCENE.instantiate()
+			new_entity = _instantiate_entity_scene(0)
+			if not is_instance_valid(new_entity):
+				return
 			var player_spawn_profile: Dictionary = GameManager.get_performance_profile() if GameManager else {}
 			var pre_simplify_player := bool(player_spawn_profile.get("simplify_other_players", false))
 			var pre_player_style := int(player_spawn_profile.get(
@@ -850,7 +889,9 @@ func _spawn_entity_now(data: Dictionary) -> void :
 		1:
 			var monster_spawn_started_usec: int = Time.get_ticks_usec()
 			var monster_instantiate_started_usec: int = monster_spawn_started_usec
-			new_entity = MONSTER_SCENE.instantiate()
+			new_entity = _instantiate_entity_scene(1)
+			if not is_instance_valid(new_entity):
+				return
 			var spawn_profile: Dictionary = GameManager.get_performance_profile() if GameManager else {}
 			var pre_simplified := bool(spawn_profile.get("simplify_noncritical_monsters", false))
 			var pre_style := int(spawn_profile.get(
@@ -885,13 +926,17 @@ func _spawn_entity_now(data: Dictionary) -> void :
 						monster_total_ms
 					])
 		2:
-			new_entity = NPC_SCENE.instantiate()
+			new_entity = _instantiate_entity_scene(2)
+			if not is_instance_valid(new_entity):
+				return
 			target_parent.add_child(new_entity)
 			new_entity.global_position = spawn_pos
 			if new_entity.has_method("initialize_npc"):
 				new_entity.initialize_npc(data)
 		3:
-			new_entity = GROUND_ITEM_SCENE.instantiate()
+			new_entity = _instantiate_entity_scene(3)
+			if not is_instance_valid(new_entity):
+				return
 			target_parent.add_child(new_entity)
 			new_entity.global_position = spawn_pos
 
@@ -939,7 +984,9 @@ func _spawn_entity_now(data: Dictionary) -> void :
 					visual_tween.tween_property(drop_sprite, "position", landing_offset, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 				)
 		4:
-			new_entity = PET_SCENE.instantiate()
+			new_entity = _instantiate_entity_scene(4)
+			if not is_instance_valid(new_entity):
+				return
 			target_parent.add_child(new_entity)
 			new_entity.global_position = spawn_pos
 			if new_entity.has_method("initialize_pet"):

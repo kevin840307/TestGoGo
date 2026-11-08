@@ -13,11 +13,11 @@ const MAP_LOADING_FINALIZE_PROGRESS: = 99.0
 const INITIAL_SPAWN_GATE_MAX_MSEC: int = 12000
 const TRAIN_TRAVEL_MAP_TIMEOUT_SECONDS: = 15.0
 const TRAIN_VIDEO_TIMEOUT_SECONDS: = 120.0
-const WORLD_ENHANCEMENT_SCENE: = preload("res://world_enhancement.tscn")
+const WORLD_ENHANCEMENT_SCENE_PATH: String = "res://world_enhancement.tscn"
 const AFK_VISUAL_CACHE = preload("res://scripts/afk_visual_cache.gd")
 const AFK_RENDER_SHELL = preload("res://scripts/afk_render_shell.gd")
 const AFK_MONITOR_FPS: int = 20
-const DAY_NIGHT_OVERLAY_SCENE: = preload("res://day_night_overlay.tscn")
+const DAY_NIGHT_OVERLAY_SCENE_PATH: String = "res://day_night_overlay.tscn"
 const TRAIN_VIDEO_PATHS: = {
 	"train_depart_king.ogv": "res://train_depart_king.ogv", 
 	"train_depart_knight.ogv": "res://train_depart_knight.ogv", 
@@ -1755,35 +1755,33 @@ func cleanup_and_return_to_login() -> void :
 	_cancel_train_travel("cleanup_and_return_to_login")
 	AudioManager.stop_bgm()
 
+	if NetworkEntityManager:
+		NetworkEntityManager.clear_map_entities(true)
 
 	if is_instance_valid(current_player):
-		current_player.queue_free()
-		current_player = null
-
-
-	if is_instance_valid(current_map_node):
-		current_map_node.queue_free()
-		current_map_node = null
-
-
+		current_player.free()
+	current_player = null
 	if is_instance_valid(current_hud):
-		current_hud.queue_free()
-		current_hud = null
+		current_hud.free()
+	current_hud = null
+	if is_instance_valid(current_map_node):
+		current_map_node.free()
+	current_map_node = null
+
 	_remove_day_night_overlay()
 	_remove_world_enhancement()
-
-
-	if NetworkEntityManager:
-		NetworkEntityManager.clear_map_entities()
 	_clear_visual_runtime_caches()
-
+	if ItemLoader and ItemLoader.has_method("clear_world_data"):
+		ItemLoader.clear_world_data()
+	if SkillLoader and SkillLoader.has_method("clear_world_data"):
+		SkillLoader.clear_world_data()
+	if PetLoader and PetLoader.has_method("clear_world_data"):
+		PetLoader.clear_world_data()
 
 	if GlobalTempData:
 		GlobalTempData.selected_player_data = {}
 		GlobalTempData.character_list = []
 
-
-	# Returning to login restores smooth controls even if unfocused.
 	_world_presented_msec = 0
 	_refresh_focus_render_policy()
 	get_tree().change_scene_to_file("res://entry_manager.tscn")
@@ -1803,6 +1801,8 @@ func _clear_visual_runtime_caches() -> void :
 		SkillLoader.clear_runtime_cache()
 	if AudioManager and AudioManager.has_method("clear_runtime_cache"):
 		AudioManager.clear_runtime_cache()
+	if NetworkEntityManager and NetworkEntityManager.has_method("release_entity_scene_cache"):
+		NetworkEntityManager.release_entity_scene_cache()
 	PaperDollEngine.clear_visual_runtime_cache()
 	FestivalThemeManager.clear_texture_cache()
 	for kind in _prewarmed_hud_windows.keys().duplicate():
@@ -1826,7 +1826,8 @@ func _apply_low_resource_world_visual_policy() -> void:
 
 func _ensure_day_night_overlay() -> void :
 	if not is_instance_valid(current_day_night_overlay):
-		current_day_night_overlay = DAY_NIGHT_OVERLAY_SCENE.instantiate() as CanvasLayer
+		var day_night_scene := ResourceLoader.load(DAY_NIGHT_OVERLAY_SCENE_PATH) as PackedScene
+		current_day_night_overlay = day_night_scene.instantiate() as CanvasLayer if day_night_scene else null
 		if current_day_night_overlay:
 			get_tree().root.add_child(current_day_night_overlay)
 	if is_instance_valid(current_day_night_overlay) and current_day_night_overlay.has_method("set_tracked_player"):
@@ -1847,7 +1848,8 @@ func set_world_enhancement_enabled(enabled: bool) -> void :
 func _ensure_world_enhancement() -> void :
 	if is_instance_valid(current_world_enhancement):
 		return
-	current_world_enhancement = WORLD_ENHANCEMENT_SCENE.instantiate() as CanvasLayer
+	var enhancement_scene := ResourceLoader.load(WORLD_ENHANCEMENT_SCENE_PATH) as PackedScene
+	current_world_enhancement = enhancement_scene.instantiate() as CanvasLayer if enhancement_scene else null
 	if current_world_enhancement:
 		get_tree().root.add_child(current_world_enhancement)
 

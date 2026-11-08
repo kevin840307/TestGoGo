@@ -16,6 +16,12 @@ func trim_unreferenced_runtime_cache() -> int:
 func clear_runtime_cache() -> void :
 	_frames_cache.clear()
 
+
+func clear_world_data() -> void:
+	clear_runtime_cache()
+	_config_cache.clear()
+	is_data_loaded = false
+
 func preload_all_pet_data() -> void :
 	if is_data_loaded: return
 

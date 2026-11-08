@@ -1,3 +1,21 @@
+## 2026-11-08 — Cold-login / logout lifetime cleanup
+
+The target is Windows process memory, not only Godot's static counter. World
+resources no longer remain strongly referenced just because an Autoload/script
+was loaded once.
+
+- Login does not index Item/Skill/Pet data and does not prewarm player/GameHUD
+  or optional world windows.
+- Those resources are prepared only after character verification under the
+  world-loading overlay.
+- NetworkEntityManager no longer permanently `preload()`s five entity
+  PackedScenes; they are lazy-cached and released by AFK/logout cleanup.
+- Returning to login immediately frees world/player/HUD/entity nodes and clears
+  rebuildable Item/Skill/Pet world indexes.
+- Optional GameHUD windows and inventory preview Player scene are lazy-loaded.
+- Server state, server AOI, packet cadence, NetworkManager, and 60 Hz gameplay
+  physics are unchanged.
+
 ## Memory diagnostics: collect evidence before more aggressive unloading
 
 The first safe cold-cache sweep does not necessarily reduce Windows RAM;
