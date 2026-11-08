@@ -12,13 +12,17 @@ const COMBAT_RESPONSE := 1
 const COMBAT_PVP := COMBAT_RESPONSE
 const COMBAT_MASS := 2
 
+# Only three user-facing choices. Old persisted style values (3/4) are
+# migrated to 2 so existing accounts keep simplification enabled.
 const SIMPLIFY_AUTO := 0
-const SIMPLIFY_OFF := 1
-const SIMPLIFY_PIXEL_A := 2
+const SIMPLIFY_NORMAL := 1
+const SIMPLIFY_SIMPLIFIED := 2
+# Legacy names kept for callers and older config files.
+const SIMPLIFY_OFF := SIMPLIFY_NORMAL
+const SIMPLIFY_ON := SIMPLIFY_SIMPLIFIED
+const SIMPLIFY_PIXEL_A := SIMPLIFY_SIMPLIFIED
 const SIMPLIFY_PIXEL_B := 3
 const SIMPLIFY_MINIMAL := 4
-# Backward-compatible name: old value 2 now means the default pixel style.
-const SIMPLIFY_ON := SIMPLIFY_PIXEL_A
 
 static func sanitize_load_mode(value: int) -> int:
 	return clampi(value, LOAD_QUALITY, LOAD_MULTIBOX)
@@ -27,22 +31,25 @@ static func sanitize_combat_mode(value: int) -> int:
 	return clampi(value, COMBAT_NORMAL, COMBAT_MASS)
 
 static func sanitize_simplify_mode(value: int) -> int:
-	return clampi(value, SIMPLIFY_AUTO, SIMPLIFY_MINIMAL)
+	if value <= SIMPLIFY_AUTO:
+		return SIMPLIFY_AUTO
+	if value == SIMPLIFY_NORMAL:
+		return SIMPLIFY_NORMAL
+	return SIMPLIFY_SIMPLIFIED
 
 static func simplify_mode_name(value: int) -> String:
 	match sanitize_simplify_mode(value):
 		SIMPLIFY_AUTO: return "auto"
-		SIMPLIFY_OFF: return "off"
-		SIMPLIFY_PIXEL_A: return "pixel_a"
-		SIMPLIFY_PIXEL_B: return "pixel_b"
-		SIMPLIFY_MINIMAL: return "minimal"
+		SIMPLIFY_NORMAL: return "normal"
+		SIMPLIFY_SIMPLIFIED: return "simplified"
 	return "auto"
 
 static func simplify_mode_enabled(value: int) -> bool:
-	return sanitize_simplify_mode(value) >= SIMPLIFY_PIXEL_A
+	return sanitize_simplify_mode(value) == SIMPLIFY_SIMPLIFIED
 
-static func default_auto_style(load_mode: int) -> int:
-	return SIMPLIFY_MINIMAL if sanitize_load_mode(load_mode) == LOAD_MULTIBOX else SIMPLIFY_PIXEL_A
+static func default_auto_style(_load_mode: int) -> int:
+	# One shared procedural orb per entity type, regardless of load preset.
+	return SIMPLIFY_SIMPLIFIED
 
 static func apply_visual_overrides(
 	profile: Dictionary,
