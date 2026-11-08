@@ -54,7 +54,12 @@ python tests/packet_contract_audit.py --strict
 python tests/packet_schema_audit.py --strict
 python tests/packet_response_audit.py --strict
 
-# .NET 領域與遊戲整合測試（目前共用同一個 Console 專案）
+# 不需舊服資料／SQLite，可分開快速執行（確認單一模組）
+dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite protocol
+dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite announcements
+dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release -- --suite world
+
+# 完整遊戲整合測試（預設 all，需要 Repository 的 legacy GameData）
 dotnet run --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -c Release
 
 # 包含真正本機 WebSocket 的完整測試
