@@ -50,8 +50,9 @@ class MouseAutorunContractTests(unittest.TestCase):
         npc = read("client/scripts/npc_entity.gd")
         monster = read("client/scripts/monster_entity.gd")
         drop = read("client/scripts/ground_item_entity.gd")
+        remote_player = read("client/network_player.gd")
         self.assertIn("func cancel_autorun_tracking(", player)
-        for source in (npc, monster, drop):
+        for source in (npc, monster, drop, remote_player):
             self.assertIn("cancel_autorun_tracking(true)", source)
 
     def test_offline_godot_behavior_is_in_both_runners(self):
