@@ -806,9 +806,16 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 			var aggro_gap_ms: int = now_ms - _debug_last_aggro_move_packet_ms
 			if _debug_chase_packet_gap_logs < 16 and aggro_gap_ms > 375:
 				_debug_chase_packet_gap_logs += 1
-				print("[MONSTER_CHASE_PACKET_GAP] id=%d gap_ms=%d state=%s distance=%.1f speed_time=%.3f" % [
+				var focus_changed: bool = GameManager.did_focus_change_during_interval(
+					_debug_last_aggro_move_packet_ms, now_ms
+				)
+				# Large packet intervals after Alt+Tab may include idle time
+				# or background rendering suspension; never call them a
+				# server/network defect without additional packet evidence.
+				print("[MONSTER_CHASE_PACKET_GAP] id=%d gap_ms=%d state=%s distance=%.1f speed_time=%.3f focus_changed_in_gap=%s %s" % [
 					entity_id, aggro_gap_ms, current_state,
-					global_position.distance_to(target_pos), speed_time
+					global_position.distance_to(target_pos), speed_time,
+					str(focus_changed), GameManager._focus_perf_context(),
 				])
 		_debug_last_aggro_move_packet_ms = now_ms
 	last_move_packet_ms = now_ms
