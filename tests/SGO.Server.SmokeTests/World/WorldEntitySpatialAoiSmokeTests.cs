@@ -193,19 +193,26 @@ internal static class WorldEntitySpatialAoiSmokeTests
             CharacterId = viewer.CharacterId + 1000
         };
 
+        var identityChanges =
+            aoi.UpsertObserver(viewer);
+
         Check(
-            aoi.UpsertObserver(viewer)
-                .Any(x =>
-                    x.Entity.EntityId ==
-                        identityGround.EntityId &&
-                    !x.Appeared) &&
-            !aoi.IsVisible(
+            identityChanges.Count(x =>
+                x.Entity.EntityId ==
+                    identityGround.EntityId &&
+                !x.Appeared) == 1 &&
+            identityChanges.Count(x =>
+                x.Entity.EntityId ==
+                    identityGround.EntityId &&
+                x.Appeared) == 1 &&
+            aoi.IsVisible(
                 viewer.ConnectionId,
                 identityGround.EntityId) &&
-            !aoi.ObserversOf(
+            aoi.ObserversOf(
                 identityGround.EntityId)
-                .Contains(viewer.ConnectionId),
-            "world AOI identity change despawns and clears old character entity knowledge");
+                .Count(x =>
+                    x == viewer.ConnectionId) == 1,
+            "world AOI identity change despawns old knowledge then respawns nearby entity for new identity");
     }
 
     private static void EntityRemovalNeverLeavesGhostKnownSets()
