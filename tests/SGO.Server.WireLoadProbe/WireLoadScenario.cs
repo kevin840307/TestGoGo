@@ -1019,6 +1019,27 @@ internal static class WireLoadScenario
                     $"shared AI observed only {health.Summary.MaxMonsterCount}/{monsterCount} seeded monsters");
             }
 
+            if (health.Summary.MaxAoiReadyPlayers <
+                clients.Length)
+            {
+                runtimeErrors.Add(
+                    $"player AOI observed only {health.Summary.MaxAoiReadyPlayers}/{clients.Length} ready players");
+            }
+
+            if (health.Summary.MaxAoiWorldObservers <
+                clients.Length)
+            {
+                runtimeErrors.Add(
+                    $"world AOI observed only {health.Summary.MaxAoiWorldObservers}/{clients.Length} ready observers");
+            }
+
+            if (health.Summary.MaxAoiWorldEntities <
+                monsterCount)
+            {
+                runtimeErrors.Add(
+                    $"world AOI tracked only {health.Summary.MaxAoiWorldEntities}/{monsterCount} seeded monsters");
+            }
+
             return new WireMixedSoakResult(
                 mixedSeconds,
                 monsterCount,
