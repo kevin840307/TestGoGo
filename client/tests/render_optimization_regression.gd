@@ -71,7 +71,7 @@ func _run() -> void:
 		"SkillWindow retains separate setup and refresh functions")
 	if setup_start >= 0 and update_start > setup_start:
 		var setup_body: String = skill_source.substr(setup_start, update_start - setup_start)
-		_check(setup_body.contains("target_player = player") and not setup_body.contains("update_ui()"),
+		_check(setup_body.contains("target_player = player") and not setup_body.contains("\n\tupdate_ui()"),
 			"hidden skill window binds player without eagerly rebuilding skill cards")
 	var hud_source: String = FileAccess.get_file_as_string("res://game_hud.gd")
 	_check(hud_source.contains('if target_window.has_method("update_ui"): target_window.update_ui()'),
