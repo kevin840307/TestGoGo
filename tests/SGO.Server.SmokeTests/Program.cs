@@ -62,6 +62,7 @@ if (args.Length != 0)
         case "world":
             BlockingMapSmokeTests.Run();
             PlayerSpatialAoiSmokeTests.Run();
+            WorldEntitySpatialAoiSmokeTests.Run();
             Console.WriteLine("World/AOI smoke passed.");
             return;
         case "concurrency":
@@ -99,6 +100,7 @@ var world = new WorldDataService(gameDataRoot);
 
 BlockingMapSmokeTests.Run();
 PlayerSpatialAoiSmokeTests.Run();
+WorldEntitySpatialAoiSmokeTests.Run();
 ConcurrencySmokeTests.Run(repoRoot);
 EconomyConcurrencySmokeTests.Run();
 AssetMutationConcurrencySmokeTests.Run();
