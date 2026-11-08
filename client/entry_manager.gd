@@ -70,6 +70,10 @@ func _ready() -> void :
 	var overlay := get_node_or_null("%LoadingOverlay")
 	if overlay:
 		overlay.visible = true
+	# Before initial login is ready, permit low-rate loading-bar redraw even
+	# if Windows briefly considers the newly launched app unfocused.
+	if GameManager and GameManager.has_method("set_startup_loading_overlay_active"):
+		GameManager.set_startup_loading_overlay_active(true)
 	_set_loading_progress(1.0)
 	_set_startup_loading_status("正在準備遊戲資源…")
 
@@ -216,6 +220,17 @@ func _bootstrap_before_login() -> void :
 func _start_game_entry_flow() -> void :
 	hide_loading_overlay()
 	_show_login_screen()
+	# Do not block login interaction for this fade. Once the original 1s
+	# login transition is visible, revert to the regular zero-render
+	# background policy even if the application remains unfocused.
+	_release_startup_render_after_login_reveal()
+
+
+func _release_startup_render_after_login_reveal() -> void:
+	await get_tree().create_timer(1.05).timeout
+	if GameManager and GameManager.has_method("set_startup_loading_overlay_active"):
+		GameManager.set_startup_loading_overlay_active(false)
+
 
 func _show_login_screen() -> void :
 	_debug_perf_checkpoint("login_screen_ready")
