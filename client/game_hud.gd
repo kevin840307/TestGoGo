@@ -97,6 +97,9 @@ var current_bank_window: Control = null
 const REPAIR_WINDOW_SCENE = preload("res://repair_window.tscn")
 var current_repair_window: Control = null
 
+const ITEM_CHOICE_WINDOW_SCENE = preload("res://item_choice_window.tscn")
+var current_item_choice_window: Control = null
+
 
 @onready var invite_box: Control = $InviteBox
 @onready var lbl_message: Label = $InviteBox / LblMessage
@@ -352,6 +355,10 @@ func _ready() -> void :
 			if not NetworkManager.item_pickup_feedback_received.is_connected(_on_item_pickup_feedback_received):
 				NetworkManager.item_pickup_feedback_received.connect(_on_item_pickup_feedback_received)
 
+		if NetworkManager.has_signal("item_choice_required_received"):
+			if not NetworkManager.item_choice_required_received.is_connected(_on_item_choice_required_received):
+				NetworkManager.item_choice_required_received.connect(_on_item_choice_required_received)
+
 		if NetworkManager.has_signal("system_message_chat_received"):
 			if not NetworkManager.system_message_chat_received.is_connected(show_system_message_chat):
 				NetworkManager.system_message_chat_received.connect(show_system_message_chat)
@@ -382,6 +389,31 @@ func _on_chat_panel_message_sent(channel: int, message: String, bubble_type: int
 	if NetworkManager:
 		if NetworkManager.has_method("send_secure_packet"):
 			NetworkManager.send_secure_packet({"Type": "ChatMessage", "Channel": channel, "Message": message, "BubbleType": bubble_type})
+
+
+func _on_item_choice_required_received(
+	item_uid: int,
+	_item_index: int,
+	title: String,
+	options: Array
+) -> void:
+	if item_uid <= 0 or options.is_empty():
+		show_rejection_message_box("目前沒有可用的獎勵選項。")
+		return
+
+	if is_instance_valid(current_item_choice_window):
+		current_item_choice_window.queue_free()
+
+	current_item_choice_window = ITEM_CHOICE_WINDOW_SCENE.instantiate()
+	if windows_container:
+		windows_container.add_child(current_item_choice_window)
+	else:
+		add_child(current_item_choice_window)
+
+	if current_item_choice_window.has_method("setup"):
+		current_item_choice_window.setup(item_uid, title, options)
+	current_item_choice_window.move_to_front()
+	_play_interface_activation_feedback(current_item_choice_window)
 
 
 func _on_open_bank_window_received() -> void :
