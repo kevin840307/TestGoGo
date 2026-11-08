@@ -923,7 +923,7 @@ func _stop_movement(send_final_position: bool = true) -> void :
 		var map_id: int = _get_navigation_map_id()
 		var send_position: bool = false
 		var sync_position: Vector2 = global_position
-		if map_id > 0 and LegacyPathfinder.is_walkable(
+		if send_final_position and map_id > 0 and LegacyPathfinder.is_walkable(
 			map_id,
 			global_position,
 			can_cross_special_terrain
@@ -932,7 +932,7 @@ func _stop_movement(send_final_position: bool = true) -> void :
 			has_last_walkable_sync_position = true
 			_last_walkable_sync_map_id = map_id
 			send_position = true
-		elif map_id > 0 and has_last_walkable_sync_position and _last_walkable_sync_map_id == map_id:
+		elif send_final_position and map_id > 0 and has_last_walkable_sync_position and _last_walkable_sync_map_id == map_id:
 			# Only fall back to a position proved walkable on THIS map.
 			# Never send an old-map coordinate after teleport/respawn.
 			sync_position = last_walkable_sync_position
