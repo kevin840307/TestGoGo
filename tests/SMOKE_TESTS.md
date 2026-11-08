@@ -37,11 +37,13 @@ tests/SGO.Server.SmokeTests/
     CurrentClientCatalogSmokeTests.cs
   Integration/
     ConcurrencySmokeTests.cs
+    TradeTerminalRaceSmokeTests.cs
     MonsterConcurrencySmokeTests.cs
     SharedMapAiConcurrencySmokeTests.cs
     SessionLifecycleSmokeTests.cs
     BoosterSmokeTests.cs
     RecoveredBoxSmokeTests.cs
+    ChoiceRewardSmokeTests.cs
     ItemUseClassificationSmokeTests.cs
     WaspPackageSmokeTests.cs
     CosmeticTransformationSmokeTests.cs
@@ -50,7 +52,8 @@ tests/SGO.Server.SmokeTests/
 
 重要的多人情境已獨立化：
 
-- `ConcurrencySmokeTests`：10 人同時撿同一掉物只能成功 1 人；重複/並行 FinalConfirm 交易只提交一次。
+- `ConcurrencySmokeTests`：10 人同時撿同一掉物只能成功 1 人；重複/並行 FinalConfirm 交易只提交一次；重複 Lock 不會清除已確認狀態。
+- `TradeTerminalRaceSmokeTests`：用 DispatchProxy 暫停 DB commit，模擬取消與斷線撞上提交；終態僅能是一次成功，不能先發 Cancel 後發 Success。
 - `MonsterConcurrencySmokeTests`：10 人同時攻擊同一怪物，死亡/掉寶/獎勵不重複。
 - `SharedMapAiConcurrencySmokeTests`：10 人/10 怪同地圖，SharedMapAiTicker 每張地圖每 pass 只 tick 一次，怪物 owner arbitration 唯一。
 - `SessionLifecycleSmokeTests`：disconnect/reconnect/map-transition race 與 current-session ownership。
@@ -66,6 +69,7 @@ tests/SGO.Server.SmokeTests/
 - Client A `SyncPosition` → Client B 收 `MoveEntity`。
 - Client A nearby `ChatMessage` → Client B 收 `ChatBroadcast`。
 - Party Invite → Accept → 雙方 `PartySync`。
+- 選擇型寶箱 `UseItemRequest` → `ItemChoiceRequired` → `UseItemChoiceRequest`，涵蓋偽造 ItemIndex、合法選項、UID 重放。
 - Trade Invite → Accept → Lock → `TradeFinalConfirmReq` → 雙方 `TradeSuccess`。
 - 多人 server-push 允許 interleaved packet，不假設「下一包一定是 response」。
 
@@ -97,7 +101,7 @@ dotnet run --project tests/SGO.ItemCoverageReport/SGO.ItemCoverageReport.csproj 
 
 - `SUPPORTED`：有明確 resolver/實作。
 - `NONCONSUMABLE_CRAFTING`：材料/藍圖，不由 UseItem 消耗。
-- `CHOICE_REQUIRED`：需要玩家選擇或原始機率資料，不得猜獎勵。
+- `CHOICE_REQUIRED`：尚無可靠可選清單或原始機率資料，不得猜獎勵；可可靠解析的選擇型箱已由 `ChoiceRewardCatalog` + Client UI 實作，列為 `SUPPORTED`。
 - `UNKNOWN_SCRIPT_EFFECT`：真正未識別；`--strict` 會直接 exit non-zero。
 
 ### Historical mapping
@@ -136,6 +140,7 @@ Windows runner 會優先讀 `GODOT_BIN`，否則尋找 `godot` / `godot4`。找�
 ```powershell
 godot --headless --path client --script res://tests/monster_chase_regression.gd
 godot --headless --path client --script res://tests/perf_regression_smoke.gd
+godot --headless --path client --script res://tests/item_choice_regression.gd
 ```
 
 沒有 Godot 時 runner 會明確印 `[SKIP]`，不會把「沒跑」寫成 PASS。
