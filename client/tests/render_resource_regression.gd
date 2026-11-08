@@ -95,6 +95,17 @@ func _run() -> void:
 	monster.set_target_indicator(false)
 	_check(is_instance_valid(monster.target_indicator) and not monster.target_indicator.visible,
 		"clearing target hides but does not recreate marker")
+	# Target markers may also have no frames when an effect resource is
+	# missing. They must not call AnimatedSprite2D.play("default") either.
+	if is_instance_valid(monster.target_indicator):
+		monster.target_indicator.stop()
+		monster.target_indicator.sprite_frames = null
+		monster.target_indicator.visible = true
+		monster.call("_on_screen_entered")
+		_check(not monster.target_indicator.is_playing(),
+			"missing target icon frames do not trigger default animation error")
+		monster.target_indicator.visible = false
+
 	# Simplification releases SpriteFrames entirely. A screen-entered event
 	# must never try to play an absent "default" animation.
 	monster.set_performance_simplified(true)
