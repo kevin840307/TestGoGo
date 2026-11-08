@@ -37,6 +37,7 @@ tests/SGO.Server.SmokeTests/
     CurrentClientCatalogSmokeTests.cs
   Integration/
     ConcurrencySmokeTests.cs
+    EconomyConcurrencySmokeTests.cs
     TradeTerminalRaceSmokeTests.cs
     MonsterConcurrencySmokeTests.cs
     SharedMapAiConcurrencySmokeTests.cs
@@ -53,6 +54,7 @@ tests/SGO.Server.SmokeTests/
 重要的多人情境已獨立化：
 
 - `ConcurrencySmokeTests`：10 人同時撿同一掉物只能成功 1 人；重複/並行 FinalConfirm 交易只提交一次；重複 Lock 不會清除已確認狀態。
+- `EconomyConcurrencySmokeTests`：10 個並發請求覆蓋 NPC 購買不得超額扣款/生物品、同 UID 出售只入帳一次、銀行同堆疊搬移守恆、玩家商店 10 人搶 5 件商品只成交 5 次、直接轉帳金額守恆。
 - `TradeTerminalRaceSmokeTests`：用 DispatchProxy 暫停 DB commit，模擬取消與斷線撞上提交；終態僅能是一次成功，不能先發 Cancel 後發 Success。
 - `ChoiceRewardSmokeTests`：已知 2209 選項驗證、偽造拒絕、重放 UID、10 請求同時領同一寶箱只能成功一次。
 - `MonsterConcurrencySmokeTests`：10 人同時攻擊同一怪物，死亡/掉寶/獎勵不重複。

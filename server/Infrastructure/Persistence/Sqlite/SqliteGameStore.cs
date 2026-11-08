@@ -19,6 +19,20 @@ public sealed class SqliteGameStore : IGameStore
         _connectionString = new SqliteConnectionStringBuilder { DataSource = dbPath }.ToString();
 
         using var db = Open();
+
+        // WAL keeps readers from blocking the single SQLite writer during
+        // multiplayer bursts. Set it once at store startup because journal
+        // mode is persistent for the database file; busy_timeout remains
+        // connection-local in Open().
+        using (var concurrency = db.CreateCommand())
+        {
+            concurrency.CommandText = """
+                PRAGMA journal_mode=WAL;
+                PRAGMA synchronous=NORMAL;
+                """;
+            concurrency.ExecuteNonQuery();
+        }
+
         SqliteSchemaMigrator.Apply(db);
     }
 
@@ -8715,21 +8729,17 @@ public sealed class SqliteGameStore : IGameStore
                 return new(false, "不支援的商品類型", buyerMoney, sellerMoney, false);
         }
 
-        var buyerNewMoney =
-            checked(buyerMoney - total);
-        var sellerNewMoney =
-            checked(sellerMoney + total);
-
         using (var debit = db.CreateCommand())
         {
             debit.Transaction = tx;
             debit.CommandText = """
                 UPDATE characters
-                   SET money=$money
+                   SET money=money-$total
                  WHERE id=$id
                    AND account_id=$account
+                   AND money >= $total
                 """;
-            Arg(debit, "$money", buyerNewMoney);
+            Arg(debit, "$total", total);
             Arg(debit, "$id", buyerDbid);
             Arg(debit, "$account", buyerAccountId);
             if (debit.ExecuteNonQuery() != 1)
@@ -8741,16 +8751,25 @@ public sealed class SqliteGameStore : IGameStore
             credit.Transaction = tx;
             credit.CommandText = """
                 UPDATE characters
-                   SET money=$money
+                   SET money=money+$total
                  WHERE id=$id
                    AND account_id=$account
+                   AND money <= $maxBeforeCredit
                 """;
-            Arg(credit, "$money", sellerNewMoney);
+            Arg(credit, "$total", total);
+            Arg(credit, "$maxBeforeCredit", long.MaxValue - total);
             Arg(credit, "$id", sellerDbid);
             Arg(credit, "$account", sellerAccountId);
             if (credit.ExecuteNonQuery() != 1)
                 return new(false, "購買失敗", buyerMoney, sellerMoney, false);
         }
+
+        var buyerNewMoney = ReadMoney(
+            buyerAccountId,
+            buyerDbid);
+        var sellerNewMoney = ReadMoney(
+            sellerAccountId,
+            sellerDbid);
 
         tx.Commit();
 
@@ -8881,7 +8900,9 @@ public sealed class SqliteGameStore : IGameStore
             spend.CommandText = """
                 UPDATE characters
                    SET money = money - $total
-                 WHERE id=$id AND account_id=$a
+                 WHERE id=$id
+                   AND account_id=$a
+                   AND money >= $total
                 """;
             Arg(spend, "$total", total);
             Arg(spend, "$id", dbid);
@@ -8890,8 +8911,23 @@ public sealed class SqliteGameStore : IGameStore
                 return new(false, "購買失敗", 0, currentMoney);
         }
 
+        long newMoney;
+        using (var readMoney = db.CreateCommand())
+        {
+            readMoney.Transaction = tx;
+            readMoney.CommandText = """
+                SELECT money
+                  FROM characters
+                 WHERE id=$id AND account_id=$a
+                """;
+            Arg(readMoney, "$id", dbid);
+            Arg(readMoney, "$a", accountId);
+            newMoney = Convert.ToInt64(
+                readMoney.ExecuteScalar() ?? currentMoney);
+        }
+
         tx.Commit();
-        return new(true, "購買成功", uid, currentMoney - total);
+        return new(true, "購買成功", uid, newMoney);
     }
 
     public bool SellAsset(

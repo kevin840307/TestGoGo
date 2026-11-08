@@ -268,5 +268,18 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("replaying a consumed doll UID cannot grant", source)
         self.assertIn("DollRewardSmokeTests.Run(", main)
 
+    def test_economy_concurrency_suite_covers_shared_money_and_asset_races(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = SMOKE / "Integration" / "EconomyConcurrencySmokeTests.cs"
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("ten concurrent NPC purchases cannot overspend", source)
+        self.assertIn("ten concurrent sells of one UID pay exactly once", source)
+        self.assertIn("ten concurrent bank moves conserve", source)
+        self.assertIn("ten buyers racing one five-count player-shop listing", source)
+        self.assertIn("ten concurrent direct transfers never overspend", source)
+        self.assertIn("EconomyConcurrencySmokeTests.Run();", main)
+
+
 if __name__ == "__main__":
     unittest.main()

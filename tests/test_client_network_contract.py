@@ -12,6 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 NETWORK_MANAGER = ROOT / "client" / "scripts" / "network_manager.gd"
 MALL_WINDOW = ROOT / "client" / "scripts" / "mall_window.gd"
+BANK_WINDOW = ROOT / "client" / "scripts" / "bank_window.gd"
+PLAYER_SHOP_WINDOW = ROOT / "client" / "scripts" / "shop_window.gd"
 CASE = re.compile(r'^\t\t"([A-Za-z][A-Za-z0-9_]*)"\s*:', re.M)
 FIELD_READ = re.compile(r'data\.(?:get|has)\(\s*["\']([A-Za-z][A-Za-z0-9_]*)["\']')
 
@@ -116,6 +118,39 @@ class ClientNetworkContractTests(unittest.TestCase):
                 for fragment in expected:
                     self.assertIn(fragment, body)
                 self.assertIn("send_secure_packet(", body)
+
+    def test_economy_request_builders_keep_server_schema(self):
+        bank = BANK_WINDOW.read_text(encoding="utf-8-sig")
+        for fragment in (
+            '"Type": "BankTransfer"',
+            '"UID": item_uid',
+            '"ToBank": to_bank',
+            '"Amount": amount',
+            '"TabType": SharedInventoryPanel.TabType.GENERAL',
+        ):
+            self.assertIn(fragment, bank)
+
+        player_shop = PLAYER_SHOP_WINDOW.read_text(encoding="utf-8-sig")
+        for fragment in (
+            'send_shop_action("OpenShop", {"ShopName": s_name})',
+            'send_shop_action("AddItem", {"UID": uid, "Count": count, "Price": price, "TabType": tab})',
+            'send_shop_action("RemoveItem", {"UID": uid, "TabType": tab})',
+            'send_shop_action("BuyItem", {"TargetDBID": shop_owner_dbid, "UID": uid, "Count": buy_count})',
+        ):
+            self.assertIn(fragment, player_shop)
+
+        for fragment in (
+            '"Type": "CraftItemRequest"',
+            '"RecipeID": recipe_id',
+            '"BatchCount": amount',
+            '"Type": "DismantleItemRequest"',
+            '"ItemUIDs": target_uids',
+            '"ItemType": item_type',
+            '"Type": "RepairItemRequest"',
+            '"ItemType": item_type',
+            '"UID": uid',
+        ):
+            self.assertIn(fragment, self.source)
 
     def test_choice_reward_packet_and_authoritative_reply(self):
         response = packet_block(self.source, "ItemChoiceRequired")

@@ -32,7 +32,7 @@
 | ID | 狀態 | 現況與真正剩餘缺口 | 已有自動驗證 | 完成驗收 |
 | --- | --- | --- | --- | --- |
 | P0-01 | IMPLEMENTED_UNVERIFIED | **真實傳輸已從單人擴成雙 Client**。AES/WebSocket 已涵蓋註冊→登入→建角→重登→選角→bootstrap→WorldReady→商城→登出，並新增兩個真實 socket 的 Party/Trade、聊天/移動、掉寶撿取、寵物/機甲、戰鬥/技能、切圖及選擇型寶箱封包流程。仍缺真正 Godot Scene/UI 驅動的整段多人互動驗證。 | `tests/SGO.Server.WireSmokeTests/Program.cs`、`client/tests/*.gd`、`test_client_network_contract.py` | 有 Godot executable 的環境跑完 headless client tests，並補真正 Scene/UI 驅動的戰鬥／切圖 E2E |
-| P0-02 | IMPLEMENTED_UNVERIFIED | **多人競態程式與測試已補**：10 人同撿一個掉物、重複/同時 TradeFinalConfirm、10 人同怪擊殺、斷線/重連/切圖 race、10 人同地圖 SharedMapAiTicker owner arbitration、重複 TradeLock 冪等、最後確認與取消/斷線的受控提交競態測試。掉物改成 SQLite `DELETE ... RETURNING` 原子 claim；交易 FinalConfirm 改 single-owner commit。剩餘是有 runner 的實際執行證據與 50/100 人性能測量，不再是邏輯缺測。 | `Integration/ConcurrencySmokeTests.cs`、`MonsterConcurrencySmokeTests.cs`、`SessionLifecycleSmokeTests.cs`、`SharedMapAiConcurrencySmokeTests.cs` | Smoke 真正 PASS；同怪/同掉物/交易不重複；SharedMapAI 一張地圖每 scheduler pass 只處理一次 |
+| P0-02 | IMPLEMENTED_UNVERIFIED | **多人競態程式與測試已補**：10 人同撿一個掉物、重複/同時 TradeFinalConfirm、10 人同怪擊殺、斷線/重連/切圖 race、10 人同地圖 SharedMapAiTicker owner arbitration、重複 TradeLock 冪等、最後確認與取消/斷線的受控提交競態；另外新增 NPC 商店超額競購、同 UID 重複出售、銀行同堆疊搬移、玩家商店 10 人搶同商品、直接轉帳守恆。掉物使用 SQLite `DELETE ... RETURNING` 原子 claim；交易 FinalConfirm 使用 single-owner commit；經濟扣款改 DB 條件式原子更新，SQLite 啟用 WAL 降低多人讀寫互卡。剩餘是有 runner 的實際執行證據與 50/100 人性能測量，不再是主要邏輯缺測。 | `Integration/ConcurrencySmokeTests.cs`、`MonsterConcurrencySmokeTests.cs`、`SessionLifecycleSmokeTests.cs`、`SharedMapAiConcurrencySmokeTests.cs` | Smoke 真正 PASS；同怪/同掉物/交易不重複；SharedMapAI 一張地圖每 scheduler pass 只處理一次 |
 | P0-03 | TEST_GAP | **CI 基礎設施仍擋住實際 PASS 證據**。2026-11-08 最新確認 run `42444106514` 仍在取得 Runner 前結束，job `steps=null`，不是 build/test failure。 | workflow 與 `tests/run_protocol_checks.ps1` 已包含 strict audits、build、domain/full smoke、concurrency、Wire E2E、coverage reports | 取得至少一筆有實際 steps 的 run，所有 Python/.NET/Wire 檢查全 PASS |
 | P0-04 | TEST_GAP | 固定 Type/Action、請求 schema、40+ 關鍵 Server→Client response shape、nested anonymous response、`ItemChoiceRequired` / `UseItemChoiceRequest`、Trade/Shop/Pet/Mall/Party 動態封包 helper 的 Client 組裝契約、Godot packet ownership 已守門。剩餘主要是動態 Dictionary／computed payload 的完整值型別與 optional-field 語意，不是固定路由缺 handler。 | `packet_*_audit.py`、`PacketSchemaValidator.cs`、`test_client_network_contract.py` | 所有動態 payload 也有 runtime contract/E2E；失敗路徑均回 typed `PacketError` 或既有相容失敗 response |
 
@@ -51,7 +51,7 @@
 | --- | --- | --- | --- | --- |
 | P2-01 | BLOCKED_EXTERNAL | **PayPal 付款**需要 provider credentials/API/Webhook endpoint | `CreatePayPalDonation` 明確失敗，不建立假的訂單或點數 | 真 provider sandbox：簽章、Webhook 冪等、退款/重送、可稽核入帳 |
 | P2-02 | BLOCKED_EXTERNAL | **舊服點數查詢/提領**需要真實 legacy account/point source | Query/Withdraw 明確失敗，不模擬舊服餘額 | 真來源身分驗證 + 原子單次轉移 + 重試不重複入帳 |
-| P2-03 | TECH_DEBT | **50/100 人性能容量**。正確性已有 10 人 race/shared-AI coverage；仍需實際壓測 AOI fanout、AI tick wall-time、SQLite write latency/lock、封包 bytes/sec | Shared AI 已由每 socket tick 改成每 map 單一 250ms scheduler；client hot-path/headless perf regressions已建立 | 10/50/100 人報告含 tick P50/P95/P99、DB latency、bytes/sec、CPU/RAM，依瓶頸再優化 |
+| P2-03 | TECH_DEBT | **50/100 人性能容量**。正確性已有 10 人 race/shared-AI/economy coverage，SQLite 也已啟用 WAL + 5s busy timeout；仍需實際壓測 AOI fanout、AI tick wall-time、SQLite write latency/lock、封包 bytes/sec | Shared AI 已由每 socket tick 改成每 map 單一 250ms scheduler；client hot-path/headless perf regressions已建立 | 10/50/100 人報告含 tick P50/P95/P99、DB latency、bytes/sec、CPU/RAM，依瓶頸再優化 |
 | P2-04 | TECH_DEBT | **其他 DB Provider**。Domain/Application 已經透過 store interfaces 隔離，但目前 production persistence 只有 SQLite | 不宣稱 PostgreSQL/其他 DB 已支援 | 真有替換需求時新增 provider，跑同一組交易/掉物/資產/重連 contract tests |
 
 ## 已完成的測試結構
@@ -63,6 +63,7 @@
 - `Announcements/AnnouncementSmokeTests.cs`。
 - `GameData/CurrentClientCatalogSmokeTests.cs`。
 - `Integration/ConcurrencySmokeTests.cs`：10 人同掉物 + Trade duplicate confirm / duplicate Lock。
+- `Integration/EconomyConcurrencySmokeTests.cs`：NPC 購買、同 UID 出售、銀行搬移、玩家商店搶購、直接轉帳的 10-way race 與資產/金錢守恆。
 - `Integration/TradeTerminalRaceSmokeTests.cs`：受控攔截 DB commit，驗證取消／斷線在提交中不會同時產生 TradeCancel 與 TradeSuccess。
 - `Integration/MonsterConcurrencySmokeTests.cs`：10 人同怪死亡 race。
 - `Integration/SharedMapAiConcurrencySmokeTests.cs`：10 人/10 怪 SharedMapAiTicker ownership。
