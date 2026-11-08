@@ -38,6 +38,10 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_client_network_contract.py", "-v"
     )
+    Invoke-Checked "Godot AOI packet ordering static contracts" "python" @(
+        "-m", "unittest", "discover", "-s", "tests",
+        "-p", "test_client_aoi_order_contract.py", "-v"
+    )
     Invoke-Checked "Godot client repair contract tests" "python" @(
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_client_repair_contract.py", "-v"
