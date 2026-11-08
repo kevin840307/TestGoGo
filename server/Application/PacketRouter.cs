@@ -3800,6 +3800,15 @@ public sealed class PacketRouter
 
                 if (ground is null)
                 {
+                    _diagnostics.DatabaseFailure();
+                    _diagnostics.Record(
+                        "Warning",
+                        "GroundDrop",
+                        $"DropAssetToGround rejected UID={req.Long("ItemUID")} TabType={tabType}",
+                        state.ConnectionId,
+                        state.AccountId,
+                        state.CharacterId,
+                        state.CurrentMapId);
                     return
                     [
                         new
@@ -3899,6 +3908,20 @@ public sealed class PacketRouter
 
                 if (!picked)
                 {
+                    if (message.Contains("不存在", StringComparison.Ordinal) ||
+                        message.Contains("消失", StringComparison.Ordinal))
+                    {
+                        _diagnostics.PickupConflict();
+                        _diagnostics.Record(
+                            "Warning",
+                            "PickupConflict",
+                            $"EntityID={entityId} GroundItemID={ground.GroundItemId} Result={message}",
+                            state.ConnectionId,
+                            state.AccountId,
+                            state.CharacterId,
+                            state.CurrentMapId);
+                    }
+
                     return
                     [
                         new
