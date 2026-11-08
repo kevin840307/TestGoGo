@@ -1050,11 +1050,47 @@ public sealed class CombatService
                     "PlayEffect"))
                 continue;
 
-            _broadcasts.PublishToMap(
-                session.CurrentMapId,
-                packet,
-                session.ConnectionId);
+            // Player-origin visuals must not fan out across the whole
+            // map. Monster/world-authoritative updates remain map events
+            // until their own spatial Spawn/Despawn ownership is tracked.
+            // Never suppress a monster EntityDeath or damage notification
+            // just because it was generated during a player's attack.
+            if (IsPlayerOriginAoiPacket(
+                    packet, type, session.CharacterId))
+            {
+                _broadcasts.PublishToPlayerObservers(
+                    session.ConnectionId, packet);
+            }
+            else
+            {
+                _broadcasts.PublishToMap(
+                    session.CurrentMapId,
+                    packet,
+                    session.ConnectionId);
+            }
         }
+    }
+
+    internal static bool IsPlayerOriginAoiPacket(
+        object packet, string? type, long? characterId)
+    {
+        if (!characterId.HasValue || characterId.Value <= 0)
+            return false;
+
+        var property = type switch
+        {
+            "SkillCast" => "CasterID",
+            "SyncState" => "EntityID",
+            "EntityDamage" => "AttackerID",
+            "PlayEffect" => "EntityID",
+            _ => null
+        };
+        if (property is null)
+            return false;
+
+        var raw = packet.GetType().GetProperty(property)?.GetValue(packet);
+        return raw is not null &&
+               Convert.ToInt64(raw) == characterId.Value;
     }
 
     private static void SetAiState(
