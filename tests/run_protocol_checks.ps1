@@ -70,6 +70,12 @@ try {
     Invoke-Checked ".NET Server build" "dotnet" @(
         "build", "server/SGO.Server.csproj", "-c", "Release"
     )
+    Invoke-Checked "Scripted item coverage report" "dotnet" @(
+        "run", "--project",
+        "tests/SGO.ItemCoverageReport/SGO.ItemCoverageReport.csproj",
+        "-c", "Release", "--", "--output",
+        (Join-Path $logRoot "item-use-coverage.json")
+    )
     Invoke-Checked ".NET game smoke test build" "dotnet" @(
         "build", "tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj",
         "-c", "Release"
