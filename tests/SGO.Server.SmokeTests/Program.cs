@@ -9159,12 +9159,42 @@ try
           monster.RespawnAt.HasValue,
         "monster reaches death state and schedules respawn");
 
+    var expBeforeKill =
+        Convert.ToInt32(rewardBeforeKill["ExpAcc"]);
+    var expAfterKill =
+        Convert.ToInt32(rewardAfterKill["ExpAcc"]);
+    var moneyBeforeKill =
+        Convert.ToInt64(rewardBeforeKill["Money"]);
+    var moneyAfterKill =
+        Convert.ToInt64(rewardAfterKill["Money"]);
+    var expRewardPersisted =
+        expAfterKill > expBeforeKill ||
+        (expBeforeKill == int.MaxValue &&
+         expAfterKill == int.MaxValue);
+    var positiveExpFeedback = deathPackets.Any(x =>
+    {
+        var json = JsonSerializer.Serialize(x);
+        return json.Contains(
+                   "\"Type\":\"ItemPickupFeedback\"") &&
+               json.Contains(
+                   "獲得經驗值") &&
+               !json.Contains(
+                   "獲得經驗值 0");
+    });
+
     Check(
-        Convert.ToInt32(rewardAfterKill["ExpAcc"]) >
-            Convert.ToInt32(rewardBeforeKill["ExpAcc"]) &&
-        Convert.ToInt64(rewardAfterKill["Money"]) >
-            Convert.ToInt64(rewardBeforeKill["Money"]),
-        "monster kill persists character EXP and money rewards");
+        expRewardPersisted &&
+        moneyAfterKill > moneyBeforeKill &&
+        positiveExpFeedback,
+        "monster kill persists character EXP and money rewards, including saturated EXP" +
+        (expRewardPersisted &&
+         moneyAfterKill > moneyBeforeKill &&
+         positiveExpFeedback
+            ? ""
+            : $" (exp={expBeforeKill}->{expAfterKill}, " +
+              $"money={moneyBeforeKill}->{moneyAfterKill}, " +
+              $"positiveExpFeedback={positiveExpFeedback}, " +
+              $"packets={JsonSerializer.Serialize(deathPackets)})"));
 
     var activePetAfterPlayerKill = store.GetCharacterAssets(
             account.Value,
