@@ -63,6 +63,8 @@ var _emotion_tween: Tween
 @onready var option_volume_effect: Control = $WindowsContainer / SettingsWindow / OptionVolumeEffect
 @onready var option_auto_saint: Control = $WindowsContainer / SettingsWindow / OptionAutoSaint
 @onready var option_quality_enhancement: Control = $WindowsContainer / SettingsWindow / OptionQualityEnhancement
+@onready var option_performance_load: Control = $WindowsContainer / SettingsWindow / OptionPerformanceLoad
+@onready var option_combat_render: Control = $WindowsContainer / SettingsWindow / OptionCombatRender
 var mall_window: Control = null
 var announcement_window: Control = null
 var game_info_window: Control = null
@@ -240,6 +242,8 @@ var _hud_tween: Tween
 var _sys_msg_tween: Tween
 var current_pet_combat_mode: int = 1
 var current_quality_enhancement_enabled: bool = GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
+var current_performance_load_mode: int = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
+var current_combat_render_mode: int = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
 
 
 func _ready() -> void :
@@ -763,6 +767,22 @@ func _setup_window_manager() -> void :
 
 			if not option_quality_enhancement.gui_input.is_connected(_on_option_gui_input):
 				option_quality_enhancement.gui_input.connect(_on_option_gui_input.bind(option_quality_enhancement))
+
+		if option_performance_load is OptionButton:
+			option_performance_load.select(current_performance_load_mode)
+			if not option_performance_load.item_selected.is_connected(_on_opt_performance_load_item_selected):
+				option_performance_load.item_selected.connect(_on_opt_performance_load_item_selected)
+			option_performance_load.focus_mode = Control.FOCUS_NONE
+			if not option_performance_load.gui_input.is_connected(_on_option_gui_input):
+				option_performance_load.gui_input.connect(_on_option_gui_input.bind(option_performance_load))
+
+		if option_combat_render is OptionButton:
+			option_combat_render.select(current_combat_render_mode)
+			if not option_combat_render.item_selected.is_connected(_on_opt_combat_render_item_selected):
+				option_combat_render.item_selected.connect(_on_opt_combat_render_item_selected)
+			option_combat_render.focus_mode = Control.FOCUS_NONE
+			if not option_combat_render.gui_input.is_connected(_on_option_gui_input):
+				option_combat_render.gui_input.connect(_on_option_gui_input.bind(option_combat_render))
 
 	if btn_quest and not btn_quest.pressed.is_connected(_toggle_lazy_window.bind("quest")):
 		btn_quest.pressed.connect(_toggle_lazy_window.bind("quest"))
@@ -2703,9 +2723,27 @@ func _load_game_settings() -> void :
 			GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED, 
 			GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
 		))
+		current_performance_load_mode = ClientPerformanceProfile.sanitize_load_mode(int(config.get_value(
+			GameConstants.SETTING_SECTION_GAME,
+			GameConstants.SETTING_KEY_PERFORMANCE_LOAD_MODE,
+			GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
+		)))
+		current_combat_render_mode = ClientPerformanceProfile.sanitize_combat_mode(int(config.get_value(
+			GameConstants.SETTING_SECTION_GAME,
+			GameConstants.SETTING_KEY_COMBAT_RENDER_MODE,
+			GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
+		)))
 	else:
 		current_pet_combat_mode = GameConstants.SETTING_DEFAULT_PET_COMBAT_MODE
 		current_quality_enhancement_enabled = GameConstants.SETTING_DEFAULT_QUALITY_ENHANCEMENT_ENABLED
+		current_performance_load_mode = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
+		current_combat_render_mode = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
+
+	if GameManager:
+		GameManager.set_performance_modes(
+			current_performance_load_mode,
+			current_combat_render_mode
+		)
 
 func _save_game_settings() -> void :
 	var config = ConfigFile.new()
@@ -2719,6 +2757,16 @@ func _save_game_settings() -> void :
 		GameConstants.SETTING_SECTION_GAME, 
 		GameConstants.SETTING_KEY_QUALITY_ENHANCEMENT_ENABLED, 
 		current_quality_enhancement_enabled
+	)
+	config.set_value(
+		GameConstants.SETTING_SECTION_GAME,
+		GameConstants.SETTING_KEY_PERFORMANCE_LOAD_MODE,
+		current_performance_load_mode
+	)
+	config.set_value(
+		GameConstants.SETTING_SECTION_GAME,
+		GameConstants.SETTING_KEY_COMBAT_RENDER_MODE,
+		current_combat_render_mode
 	)
 	config.save(GameConstants.CLIENT_SETTINGS_PATH)
 
@@ -2736,6 +2784,24 @@ func _on_opt_quality_enhancement_item_selected(index: int) -> void :
 	_save_game_settings()
 	if GameManager:
 		GameManager.set_world_enhancement_enabled(current_quality_enhancement_enabled)
+
+func _on_opt_performance_load_item_selected(index: int) -> void:
+	current_performance_load_mode = ClientPerformanceProfile.sanitize_load_mode(index)
+	_save_game_settings()
+	if GameManager:
+		GameManager.set_performance_modes(
+			current_performance_load_mode,
+			current_combat_render_mode
+		)
+
+func _on_opt_combat_render_item_selected(index: int) -> void:
+	current_combat_render_mode = ClientPerformanceProfile.sanitize_combat_mode(index)
+	_save_game_settings()
+	if GameManager:
+		GameManager.set_performance_modes(
+			current_performance_load_mode,
+			current_combat_render_mode
+		)
 
 
 func show_revive_prompt(caster_name: String, skill_id: int, skill_level: int, hp_pct: int, mp_pct: int) -> void :
