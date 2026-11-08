@@ -99,8 +99,8 @@ public sealed class CombatService
         PartyService party,
         PetEvolutionService petEvolution,
         QuestProgressService questProgress,
-        GlobalRateService globalRates,
-        ILogger<CombatService> log)
+        ILogger<CombatService> log,
+        GlobalRateService? globalRates = null)
     {
         _store = store;
         _world = world;
@@ -115,7 +115,7 @@ public sealed class CombatService
         _party = party;
         _petEvolution = petEvolution;
         _questProgress = questProgress;
-        _globalRates = globalRates;
+        _globalRates = globalRates ?? new GlobalRateService();
         _log = log;
     }
 
