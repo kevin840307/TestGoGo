@@ -119,7 +119,9 @@ async function deleteEnemy() {
   try {
     const impact = await referenceImpact('enemy', String(state.selectedEnemy.id));
     if (!confirm(`確定刪除怪物 ${state.selectedEnemy.id}？${formatReferenceImpact(impact)}`)) return;
-    const force = impact.count ? '?force=1' : '';
+    const force = impact.count
+      ? `?force=1&referenceToken=${encodeURIComponent(impact.token || '')}`
+      : '';
     await api(`/api/enemies/${state.selectedEnemy.id}${force}`, {method:'DELETE'});
     state.selectedEnemy = null;
     state.enemyDirty = false;
