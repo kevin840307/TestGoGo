@@ -5869,22 +5869,49 @@ public sealed class PacketRouter
                 authoritativeIds),
             skipObserver: state.ConnectionId);
 
-        foreach (var ground in
-                 groundItems)
+        foreach (var ground in groundItems)
         {
-            state.GroundItems[
-                ground.EntityId] = ground;
+            var resolvedGround = ground;
+            if (_dropPlacement.TryRecoverPersistedDrop(
+                    ground.MapId, ground.X, ground.Y,
+                    out var corrected))
+            {
+                // This is an old DB row created before the collision-aware
+                // drop policy. Conditional UPDATE prevents concurrent map
+                // loads from shuffling it or recreating an already-picked item.
+                var latest = _store.RelocateGroundItemIfUnchanged(
+                    ground.GroundItemId,
+                    ground.MapId,
+                    ground.X, ground.Y,
+                    corrected.X, corrected.Y);
+                if (latest is null)
+                    continue; // concurrently picked/expired
 
+                resolvedGround = latest;
+                if (resolvedGround.X != ground.X ||
+                    resolvedGround.Y != ground.Y)
+                {
+                    _log.LogInformation(
+                        "[GROUND_DROP_LEGACY_RELOCATED] Map={MapId} Entity={EntityId} From=({FromX:F0},{FromY:F0}) To=({ToX:F0},{ToY:F0})",
+                        ground.MapId, ground.EntityId,
+                        ground.X, ground.Y,
+                        resolvedGround.X, resolvedGround.Y);
+                }
+            }
+
+            state.GroundItems[resolvedGround.EntityId] = resolvedGround;
+            // The snapshot factory closes over the persisted, reconciled
+            // location so new AOI observers never see the blocked old tile.
             PublishWorldAoiChanges(
                 _broadcasts.UpsertWorldEntity(
                     new WorldAoiEntity(
-                        ground.EntityId,
+                        resolvedGround.EntityId,
                         3,
-                        ground.MapId,
-                        ground.X,
-                        ground.Y,
+                        resolvedGround.MapId,
+                        resolvedGround.X,
+                        resolvedGround.Y,
                         () => BuildGroundItemSpawnPacket(
-                            ground,
+                            resolvedGround,
                             isSnapshot: true))),
                 skipObserver: state.ConnectionId);
         }
