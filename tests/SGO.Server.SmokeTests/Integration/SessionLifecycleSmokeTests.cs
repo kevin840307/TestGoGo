@@ -306,6 +306,17 @@ internal static class SessionLifecycleSmokeTests
             !reconnect.PositionDirty,
             "map reconcile replaces stale dirty client coordinates with authoritative destination");
 
+        var reconciledPresence =
+            broadcasts.FindCharacter(
+                characterId);
+        Check(
+            reconciledPresence is not null &&
+            reconciledPresence.MapId == newMap &&
+            !broadcasts.VisiblePlayerPeers(
+                    reconnect.ConnectionId)
+                .Any(),
+            "server map reconcile clears old AOI immediately while destination waits for WorldReady");
+
         router.SyncPresence(
             reconnect);
 
