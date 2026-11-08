@@ -4829,8 +4829,19 @@ try
             "NPC shop sells an unactivated horse-category mecha card from inventory without deleting/creating a horse row");
     }
 
-    var baseAttackBeforeEquip = Convert.ToInt32(
-        store.GetCharacter(account.Value, id)!["Attack"]);
+    // Compare effective stats, not the persisted base Attack column.
+    // Earlier club research grants this character ClubTechAttack; using the
+    // base column here incorrectly expects base+10 and fails even when the
+    // equipment bonus and the PlayerStatusSync packet are both correct.
+    var attackBeforeEquip = CharacterStatCalculator.Calculate(
+        store.GetCharacter(account.Value, id)!,
+        store.GetCharacterAssets(account.Value, id),
+        currentCatalog).Attack;
+    var weaponAttackBonus =
+        currentCatalog.FindItem(weaponShopItem.ItemIndex)?.Atk ?? 0;
+    Check(weaponAttackBonus > 0,
+        "equipped test weapon has a positive attack bonus in current client data");
+    var expectedAttackAfterEquip = attackBeforeEquip + weaponAttackBonus;
 
     using (var equip = Json(JsonSerializer.Serialize(new { Type = "EquipRequest", ItemUID = equipUid, TargetSlot = 5 })))
     {
@@ -4841,14 +4852,20 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "\"Success\":true")),
             "EquipRequest succeeds");
-        Check(store.GetCharacterAssets(account.Value, id).Equips
+        var equippedAssets = store.GetCharacterAssets(account.Value, id);
+        Check(equippedAssets.Equips
                 .Any(x => Convert.ToInt64(x["ItemID"]) == equipUid &&
                           Convert.ToInt32(x["Part"]) == 5),
             "equipped slot persists");
-        Check(responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains("\"Type\":\"PlayerStatusSync\"") &&
-                JsonSerializer.Serialize(x).Contains($"\"Attack\":{baseAttackBeforeEquip + 10}")),
-            "equipping weapon increases effective attack");
+        var attackAfterEquip = CharacterStatCalculator.Calculate(
+            store.GetCharacter(account.Value, id)!,
+            equippedAssets,
+            currentCatalog).Attack;
+        Check(attackAfterEquip == expectedAttackAfterEquip &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains("\"Type\":\"PlayerStatusSync\"") &&
+                  JsonSerializer.Serialize(x).Contains($"\"Attack\":{expectedAttackAfterEquip}")),
+            $"equipping weapon increases effective attack (before={attackBeforeEquip}, bonus={weaponAttackBonus}, expected={expectedAttackAfterEquip}, actual={attackAfterEquip})");
     }
 
     using (var unequip = Json(
@@ -4861,10 +4878,20 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "\"Success\":true")),
             "UnequipRequest succeeds");
-        Check(store.GetCharacterAssets(account.Value, id).Equips
+        var unequippedAssets = store.GetCharacterAssets(account.Value, id);
+        Check(unequippedAssets.Equips
                 .Any(x => Convert.ToInt64(x["ItemID"]) == equipUid &&
                           Convert.ToInt32(x["Part"]) == 255),
             "unequipped slot persists");
+        var attackAfterUnequip = CharacterStatCalculator.Calculate(
+            store.GetCharacter(account.Value, id)!,
+            unequippedAssets,
+            currentCatalog).Attack;
+        Check(attackAfterUnequip == attackBeforeEquip &&
+              responses.Any(x =>
+                  JsonSerializer.Serialize(x).Contains("\"Type\":\"PlayerStatusSync\"") &&
+                  JsonSerializer.Serialize(x).Contains($"\"Attack\":{attackBeforeEquip}")),
+            $"unequipping weapon restores effective attack (before={attackBeforeEquip}, actual={attackAfterUnequip})");
     }
 
     using (var drive = Json(JsonSerializer.Serialize(new { Type = "DriveMechaRequest", HorseUID = horseUid })))
