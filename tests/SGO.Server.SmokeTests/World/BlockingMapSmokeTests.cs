@@ -1,4 +1,5 @@
 using SGO.Server.Infrastructure.WorldData;
+using SGO.Server.SmokeTests.Fixtures;
 using static SGO.Server.SmokeTests.SmokeAssert;
 
 namespace SGO.Server.SmokeTests.World;
@@ -8,9 +9,8 @@ internal static class BlockingMapSmokeTests
 {
     public static void Run()
     {
-        var blockingTestRoot = Path.Combine(
-            Path.GetTempPath(),
-            "sgo-blocking-" + Guid.NewGuid().ToString("N"));
+        using var blockingFixture = new TemporaryDirectoryFixture("sgo-blocking-");
+        var blockingTestRoot = blockingFixture.Root;
         var blockingMapRoot = Path.Combine(
             blockingTestRoot,
             "Map",
@@ -42,9 +42,8 @@ internal static class BlockingMapSmokeTests
                   1, 8, 8, 40, 8, false),
             "Blocking.dat movement rejects a segment crossing blocked cell");
 
-        var cornerRoot = Path.Combine(
-            Path.GetTempPath(),
-            "sgo-blocking-corner-" + Guid.NewGuid().ToString("N"));
+        using var cornerFixture = new TemporaryDirectoryFixture("sgo-blocking-corner-");
+        var cornerRoot = cornerFixture.Root;
         var cornerMapRoot = Path.Combine(
             cornerRoot,
             "Map",
@@ -78,9 +77,7 @@ internal static class BlockingMapSmokeTests
                   false),
             "Blocking.dat server validation allows a short legal route around a corner");
 
-        Directory.Delete(
-            cornerRoot,
-            recursive: true);
+        // The disposable fixture cleans the corner-map directory on exit.
 
         // Monster movement must use strict line segments, not ValidateMove's
         // permissive local-route rule for received player positions.
@@ -146,8 +143,6 @@ internal static class BlockingMapSmokeTests
                   99, 8, 8, 24, 8, false),
             "missing Blocking.dat fails closed");
 
-        Directory.Delete(
-            blockingTestRoot,
-            recursive: true);
+        // The fixture cleans up every temporary Blocking.dat when the suite exits.
     }
 }
