@@ -242,8 +242,20 @@ public sealed class ServerBroadcastHub
             entityId,
             notifyObservers);
 
-    // Capture before reading persisted drops. New AOI entities indexed
-    // after this point cannot be removed by an older DB snapshot.
+    // A scope keeps only in-flight removal history. WorldReady's SELECT
+    // and re-index pass must use the same scope so a concurrent pickup
+    // cannot be undone by an older SQLite row.
+    public WorldEntitySpatialAoi.SnapshotScope BeginWorldEntitySnapshot()
+        => _worldAoi.BeginSnapshot();
+
+    public bool TryUpsertWorldEntityFromSnapshot(
+        WorldAoiEntity entity,
+        WorldEntitySpatialAoi.SnapshotScope snapshot,
+        out IReadOnlyList<WorldEntitySpatialAoi.Change> changes)
+        => _worldAoi.TryUpsertEntityFromSnapshot(
+            entity, snapshot, out changes);
+
+    // Retained for existing non-leased generation checks and probes.
     public long CaptureWorldEntityGeneration()
         => _worldAoi.CaptureEntityGeneration();
 
