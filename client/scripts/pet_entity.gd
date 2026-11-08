@@ -49,6 +49,9 @@ var level_up_effect: AnimatedSprite2D = null
 var idle_speech_fade_tween: Tween = null
 var _render_visible: bool = true
 var _render_notifier: VisibleOnScreenNotifier2D = null
+var _afk_visual_suspended: bool = false
+var _visual_outlook: String = ""
+var _visual_color_index: int = 0
 const RENDER_VISIBILITY_RECT: Rect2 = Rect2(-180.0, -220.0, 360.0, 380.0)
 
 func _ready() -> void :
@@ -80,6 +83,8 @@ func _ready() -> void :
 
 func _on_render_screen_entered() -> void :
 	_render_visible = true
+	if _afk_visual_suspended:
+		return
 	if is_instance_valid(sprite) and not sprite.is_playing():
 		sprite.play()
 	if is_instance_valid(ui_container):
@@ -119,24 +124,65 @@ func initialize_pet(data: Dictionary, extra: Dictionary) -> void :
 	name_label.text = pet_name
 
 
-	var outlook = str(extra.get("Sprite", ""))
-	if MonsterLoader and outlook != "":
-		var sf = MonsterLoader.get_monster_frames(outlook)
-		if sf:
-			sprite.sprite_frames = sf
+	_visual_outlook = str(extra.get("Sprite", ""))
+	_visual_color_index = int(extra.get("ColorIndex", 0))
+	if GameManager and GameManager.is_afk_mode_active():
+		set_afk_visual_suspended(true)
+		return
 
-
-	var color_idx = int(extra.get("ColorIndex", 0))
-	if color_idx > 0:
-		var mat = ShaderMaterial.new()
-		mat.shader = PALETTE_SHADER
-		mat.set_shader_parameter("effect_type", 0)
-		mat.set_shader_parameter("hue_shift", COLOR_INDEX_TO_DEGREES.get(color_idx, 0.0))
-		sprite.material = mat
-
-	sync_animation()
+	_restore_visual_resources()
 	_lock_ui_position()
 	_update_sprite_offset()
+
+
+func set_afk_visual_suspended(suspended: bool) -> void:
+	if _afk_visual_suspended == suspended:
+		return
+	_afk_visual_suspended = suspended
+	if suspended:
+		if is_instance_valid(sprite):
+			sprite.stop()
+			sprite.sprite_frames = null
+			sprite.material = null
+			sprite.visible = false
+		if is_instance_valid(level_up_effect):
+			level_up_effect.stop()
+			level_up_effect.sprite_frames = null
+			level_up_effect.material = null
+			level_up_effect.visible = false
+		if is_instance_valid(idle_speech_bubble):
+			idle_speech_bubble.visible = false
+		if is_instance_valid(ui_container):
+			ui_container.visible = false
+		return
+	_restore_visual_resources()
+
+
+func is_afk_visual_suspended() -> bool:
+	return _afk_visual_suspended
+
+
+func _restore_visual_resources() -> void:
+	if not is_instance_valid(sprite):
+		return
+	sprite.sprite_frames = null
+	if MonsterLoader and not _visual_outlook.is_empty():
+		var frames: SpriteFrames = MonsterLoader.get_monster_frames(_visual_outlook)
+		if frames:
+			sprite.sprite_frames = frames
+	if _visual_color_index > 0:
+		var material := ShaderMaterial.new()
+		material.shader = PALETTE_SHADER
+		material.set_shader_parameter("effect_type", 0)
+		material.set_shader_parameter("hue_shift", COLOR_INDEX_TO_DEGREES.get(_visual_color_index, 0.0))
+		sprite.material = material
+	else:
+		sprite.material = null
+	sprite.visible = _render_visible
+	if is_instance_valid(ui_container):
+		ui_container.visible = _render_visible
+	sync_animation()
+
 
 func _lock_ui_position() -> void :
 	if not is_instance_valid(sprite) or not is_instance_valid(sprite.sprite_frames) or not is_instance_valid(ui_container):
@@ -170,6 +216,8 @@ func _lock_ui_position() -> void :
 	ui_container.position = Vector2(-ui_container.size.x / 2.0, fixed_head_y)
 
 func show_idle_speech_bubble(text: String) -> void :
+	if _afk_visual_suspended:
+		return
 	if not idle_speech_bubble or not idle_speech_label or not idle_speech_timer:
 		return
 
@@ -428,6 +476,8 @@ func update_hp(new_hp: int, hit_delay: float = 0.3, is_miss: bool = false) -> vo
 		sync_animation()
 
 func show_damage_number(damage: int, is_crit: bool = false, hit_delay: float = 0.3, split_count: int = 1, skill_id: int = 0, is_primary: bool = true) -> void :
+	if _afk_visual_suspended:
+		return
 	if FloatingTextManager:
 		FloatingTextManager.show_damage(self, damage, is_crit, hit_delay, split_count, skill_id, is_primary)
 
@@ -455,6 +505,8 @@ func _die(hit_delay: float = 0.0) -> void :
 	fade_tween.tween_callback(queue_free)
 
 func show_level_up(is_mecha: bool = false) -> void :
+	if _afk_visual_suspended:
+		return
 	if not is_instance_valid(level_up_effect):
 		level_up_effect = AnimatedSprite2D.new()
 		level_up_effect.name = "LevelUpEffect"

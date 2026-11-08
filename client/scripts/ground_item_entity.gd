@@ -13,6 +13,9 @@ var _last_protection_display_second: int = -1
 var _remaining_expires_at_msec: int = 0
 var _protect_expires_at_msec: int = 0
 var _protection_timer: Timer = null
+var _afk_visual_suspended: bool = false
+var _visual_icon_id: int = 0
+var _visual_color_index: int = 0
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var name_label: Label = $LabelContainer / NameLabel
@@ -110,40 +113,57 @@ func initialize_ground_item(data: Dictionary) -> void :
 	_update_protection_visuals()
 	_schedule_protection_update()
 
-	var icon_id = ItemLoader.get_item_property(item_index, "icon_id", 1) - 1
-	sprite.texture = ItemLoader.get_ground(icon_id)
+	_visual_icon_id = ItemLoader.get_item_property(item_index, "icon_id", 1) - 1
+	_visual_color_index = int(ItemLoader.get_item_property(item_index, "color_index", 0))
+	if GameManager and GameManager.is_afk_mode_active():
+		set_afk_visual_suspended(true)
+	else:
+		_restore_ground_visual()
 
 
+func set_afk_visual_suspended(suspended: bool) -> void:
+	if _afk_visual_suspended == suspended:
+		return
+	_afk_visual_suspended = suspended
+	if suspended:
+		if is_instance_valid(sprite):
+			sprite.texture = null
+			sprite.material = null
+			sprite.visible = false
+		if is_instance_valid(label_container):
+			label_container.visible = false
+		return
+	_restore_ground_visual()
+	if is_instance_valid(sprite):
+		sprite.visible = true
+	if is_instance_valid(label_container):
+		label_container.visible = true
+	_update_protection_visuals()
+
+
+func is_afk_visual_suspended() -> bool:
+	return _afk_visual_suspended
+
+
+func _restore_ground_visual() -> void:
+	if not is_instance_valid(sprite):
+		return
+	sprite.texture = ItemLoader.get_ground(_visual_icon_id) if _visual_icon_id > 0 else null
 	if sprite.texture:
-		var tex_h = sprite.texture.get_height()
-		var tex_w = sprite.texture.get_width()
-
-
-		var offset_y = - tex_h + (tex_h * 0.2)
-		sprite.offset = Vector2( - tex_w / 2.0, offset_y)
-
-
-		if has_node("CollisionShape2D"):
-			var col_shape = $CollisionShape2D
-
-
+		var tex_h: float = sprite.texture.get_height()
+		var tex_w: float = sprite.texture.get_width()
+		var offset_y: float = -tex_h + (tex_h * 0.2)
+		sprite.offset = Vector2(-tex_w / 2.0, offset_y)
+		var col_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
+		if is_instance_valid(col_shape):
 			col_shape.shape = get_shared_click_shape(Vector2(tex_w, tex_h))
-
-
 			col_shape.position = sprite.offset
-
-
-
-		if has_node("LabelContainer"):
-			var container = get_node("LabelContainer")
-			var container_height = container.size.y
-			container.position = Vector2(-100, (offset_y - (tex_h / 2.0)) - container_height - 15)
-
-
-	var color_index: int = int(ItemLoader.get_item_property(item_index, "color_index", 0))
-	if color_index > 0:
-		# There are no later per-item shader uniform mutations.
-		sprite.material = get_shared_palette_material(color_index)
+		if is_instance_valid(label_container):
+			label_container.position = Vector2(-100, (offset_y - (tex_h / 2.0)) - label_container.size.y - 15)
+	if _visual_color_index > 0:
+		sprite.material = get_shared_palette_material(_visual_color_index)
+	else:
+		sprite.material = null
 
 
 func _on_mouse_entered() -> void :

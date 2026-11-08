@@ -250,6 +250,8 @@ func _die() -> void :
 		_play_death_effect()
 
 func _play_death_effect() -> void :
+	if _afk_visual_suspended:
+		return
 
 	if is_riding_mecha():
 		if name_label: name_label.position.y = -160.0
@@ -322,10 +324,14 @@ func revive() -> void :
 	sync_animation()
 
 func show_damage_number(damage: int, is_crit: bool = false, hit_delay: float = 0.3, split_count: int = 1, skill_id: int = 0, is_primary: bool = true) -> void :
+	if _afk_visual_suspended:
+		return
 	if FloatingTextManager:
 		FloatingTextManager.show_damage(self, damage, is_crit, hit_delay, split_count, skill_id, is_primary)
 
 func show_level_up(is_mecha: bool = false) -> void :
+	if _afk_visual_suspended:
+		return
 	if not is_instance_valid(level_up_effect): return
 
 
@@ -1444,6 +1450,8 @@ func play_mecha_transform() -> void :
 		print("[Mecha過場-網路玩家] ❌ 錯誤：mecha_transform_effect 節點未建立或已損毀！")
 
 func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = {}, rich_text: bool = false) -> void :
+	if _afk_visual_suspended:
+		return
 	if not chat_bubble_bg or not chat_bubble_label: return
 	chat_bubble_bg.texture = LEGACY_BUBBLE_SKIN.get_texture(bubble_type)
 	# Leave ordinary messages on the original Label.
@@ -1634,6 +1642,8 @@ func execute_mecha_transition(setup_func: Callable) -> void :
 		transition_tween.kill()
 
 	setup_func.call()
+	if _afk_visual_suspended:
+		return
 
 	if is_instance_valid(mecha_transform_effect):
 		if mecha_transform_effect.sprite_frames:

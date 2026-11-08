@@ -29,6 +29,8 @@ var is_bubble_active: bool = false
 var npc_script_name: String = ""
 var is_portal: bool = false
 var _pending_initialize_data: Dictionary = {}
+var _afk_visual_suspended: bool = false
+var _visual_sprite_name: String = ""
 
 func _ready() -> void :
 	chat_bubble_bg.visible = false
@@ -79,11 +81,36 @@ func _apply_npc_data(data: Dictionary) -> void :
 	name_label.text = npc_name
 
 	var extra = data.get("ExtraData", {})
-	var sprite_name = str(extra.get("Sprite", ""))
+	_visual_sprite_name = str(extra.get("Sprite", ""))
 	npc_script_name = str(extra.get("Script", ""))
 	is_portal = bool(extra.get("IsPortal", npc_script_name.begins_with("Portal_")))
 
-	_load_visuals(sprite_name)
+	if GameManager and GameManager.is_afk_mode_active():
+		set_afk_visual_suspended(true)
+	else:
+		_load_visuals(_visual_sprite_name)
+
+func set_afk_visual_suspended(suspended: bool) -> void:
+	if _afk_visual_suspended == suspended:
+		return
+	_afk_visual_suspended = suspended
+	if suspended:
+		if is_instance_valid(sprite):
+			sprite.texture = null
+			sprite.visible = false
+		if is_instance_valid(visual_center):
+			visual_center.visible = false
+		return
+	if is_instance_valid(visual_center):
+		visual_center.visible = true
+	if is_instance_valid(sprite):
+		sprite.visible = true
+	_load_visuals(_visual_sprite_name)
+
+
+func is_afk_visual_suspended() -> bool:
+	return _afk_visual_suspended
+
 
 func _load_visuals(sprite_name: String) -> void :
 	if sprite_name == "": return
@@ -210,6 +237,8 @@ func _input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) -> vo
 
 
 func show_chat_bubble(text: String, bubble_type: int = 0, margins: Dictionary = {}, rich_text: bool = false) -> void :
+	if _afk_visual_suspended:
+		return
 	if not chat_bubble_bg or not chat_bubble_label: return
 
 	chat_bubble_bg.texture = LEGACY_BUBBLE_SKIN.get_texture(bubble_type)

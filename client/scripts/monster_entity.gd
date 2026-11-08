@@ -519,6 +519,8 @@ func _input_event(_viewport: Viewport, event: InputEvent, _shape_idx: int) -> vo
 
 
 func show_damage_number(damage: int, is_crit: bool = false, hit_delay: float = 0.3, split_count: int = 1, skill_id: int = 0, is_primary: bool = true) -> void :
+	if _afk_visual_suspended:
+		return
 	if FloatingTextManager:
 		FloatingTextManager.show_damage(self, damage, is_crit, hit_delay, split_count, skill_id, is_primary)
 
@@ -1278,6 +1280,11 @@ func _ensure_target_indicator() -> void:
 
 
 func set_target_indicator(has_target: bool) -> void :
+	if _afk_visual_suspended:
+		if is_instance_valid(target_indicator):
+			target_indicator.stop()
+			target_indicator.visible = false
+		return
 	if has_target and not is_instance_valid(target_indicator):
 		_ensure_target_indicator()
 	if is_instance_valid(target_indicator):
