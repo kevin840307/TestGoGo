@@ -116,6 +116,9 @@ func _ready() -> void :
 	NetworkManager.entity_death_received.connect(_on_entity_death_received)
 	NetworkManager.monster_target_changed.connect(_on_monster_target_changed)
 	NetworkManager.pet_idle_speech_received.connect(_on_pet_idle_speech_received)
+	if GameManager and GameManager.has_signal("performance_profile_changed"):
+		if not GameManager.performance_profile_changed.is_connected(_on_performance_profile_changed):
+			GameManager.performance_profile_changed.connect(_on_performance_profile_changed)
 	if NetworkManager.has_signal("skill_cast_received"):
 		if not NetworkManager.skill_cast_received.is_connected(_on_skill_cast_received):
 			NetworkManager.skill_cast_received.connect(_on_skill_cast_received)
@@ -123,6 +126,55 @@ func _ready() -> void :
 	if NetworkManager.has_signal("entity_heal_received"):
 		if not NetworkManager.entity_heal_received.is_connected(_on_entity_heal_received):
 			NetworkManager.entity_heal_received.connect(_on_entity_heal_received)
+
+func _is_local_combat_target(entity: Node2D) -> bool:
+	var player = GameManager.current_player if GameManager else null
+	return (
+		is_instance_valid(player)
+		and "combat_target" in player
+		and is_instance_valid(player.combat_target)
+		and player.combat_target == entity
+	)
+
+func _should_simplify_player(entity: Node2D) -> bool:
+	if not GameManager or not is_instance_valid(entity):
+		return false
+	var profile: Dictionary = GameManager.get_performance_profile()
+	return bool(profile.get("simplify_other_players", false)) and not _is_local_combat_target(entity)
+
+func _should_simplify_monster(entity_id: int, entity: Node2D) -> bool:
+	if not GameManager or not is_instance_valid(entity):
+		return false
+	var profile: Dictionary = GameManager.get_performance_profile()
+	if not bool(profile.get("simplify_noncritical_monsters", false)):
+		return false
+	if _is_combat_monster_revealed(entity_id) or _is_local_combat_target(entity):
+		return false
+	return true
+
+func _apply_performance_visual_to_entity(entity_id: int, entity_type: int, entity: Node2D) -> void:
+	if not is_instance_valid(entity) or not entity.has_method("set_performance_simplified"):
+		return
+	match entity_type:
+		0:
+			entity.set_performance_simplified(_should_simplify_player(entity))
+		1:
+			entity.set_performance_simplified(_should_simplify_monster(entity_id, entity))
+
+func _refresh_performance_visuals() -> void:
+	for raw_id in active_entities.keys():
+		var entity_id := int(raw_id)
+		var entity := get_active_entity(entity_id)
+		if not is_instance_valid(entity):
+			continue
+		_apply_performance_visual_to_entity(
+			entity_id,
+			int(_active_entity_types.get(entity_id, -1)),
+			entity
+		)
+
+func _on_performance_profile_changed(_profile: Dictionary) -> void:
+	_refresh_performance_visuals()
 
 func get_aoi_active_monster_count() -> int:
 	var count: int = 0
@@ -235,7 +287,10 @@ func _reveal_combat_monster(entity_id: int, reason: String) -> void:
 		return
 	var already_revealed: bool = _is_combat_monster_revealed(entity_id)
 	_combat_reveal_until_msec[entity_id] = Time.get_ticks_msec() + MONSTER_COMBAT_REVEAL_MSEC
-	if get_active_entity(entity_id):
+	var active_monster := get_active_entity(entity_id)
+	if is_instance_valid(active_monster):
+		if active_monster.has_method("set_performance_simplified"):
+			active_monster.set_performance_simplified(false)
 		return
 	if not _queued_spawn_ids.has(entity_id):
 		_deferred_monster_spawns[entity_id] = _monster_spawn_templates[entity_id]
@@ -793,6 +848,7 @@ func _spawn_entity_now(data: Dictionary) -> void :
 		new_entity.visibility_layer = DYNAMIC_ENTITY_VISIBILITY_LAYER
 		active_entities[entity_id] = new_entity
 		_active_entity_types[entity_id] = entity_type
+		_apply_performance_visual_to_entity(entity_id, entity_type, new_entity)
 
 func _unregister_entity_hover(entity: Node) -> void :
 	if CursorManager and is_instance_valid(entity):
