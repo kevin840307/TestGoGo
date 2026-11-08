@@ -82,6 +82,18 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
                 buyerSession,
                 round);
         }
+
+        for (var round = 0; round < 8; round++)
+        {
+            RaceBuyAgainstDisconnect(
+                store,
+                service,
+                seller,
+                buyer,
+                sellerSession,
+                buyerSession,
+                round);
+        }
     }
 
     private static void RaceBuyAgainstClose(
@@ -92,6 +104,63 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
         ClientSession sellerSession,
         ClientSession buyerSession,
         int round)
+        => RaceBuyAgainstTerminal(
+            store,
+            service,
+            seller,
+            buyer,
+            sellerSession,
+            buyerSession,
+            "close",
+            round,
+            () => service.Handle(
+                sellerSession,
+                seller.AccountId,
+                "CloseShop",
+                0,
+                0,
+                0,
+                0,
+                0,
+                ""));
+
+    private static void RaceBuyAgainstDisconnect(
+        SqliteGameStore store,
+        PlayerShopService service,
+        Player seller,
+        Player buyer,
+        ClientSession sellerSession,
+        ClientSession buyerSession,
+        int round)
+        => RaceBuyAgainstTerminal(
+            store,
+            service,
+            seller,
+            buyer,
+            sellerSession,
+            buyerSession,
+            "disconnect",
+            round,
+            () =>
+            {
+                service.Disconnect(
+                    sellerSession.ConnectionId,
+                    sellerSession.CurrentMapId,
+                    seller.AccountId,
+                    seller.CharacterId);
+                return Array.Empty<object>();
+            });
+
+    private static void RaceBuyAgainstTerminal(
+        SqliteGameStore store,
+        PlayerShopService service,
+        Player seller,
+        Player buyer,
+        ClientSession sellerSession,
+        ClientSession buyerSession,
+        string terminalName,
+        int round,
+        Func<IReadOnlyList<object>> terminate)
     {
         const int itemIndex = 4103;
         const long unitPrice = 20;
@@ -103,7 +172,7 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
             1);
         Check(
             seededUid > 0,
-            $"seed player-shop lifecycle item round {round}");
+            $"seed player-shop lifecycle item {terminalName} round {round}");
 
         var sellerCopiesBefore = CountInventory(
             store,
@@ -130,7 +199,7 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
         var listingUid = ShopListingUid(add);
         Check(
             listingUid > 0,
-            $"player-shop listing created round {round}");
+            $"player-shop listing created {terminalName} round {round}");
 
         var open = service.Handle(
             sellerSession,
@@ -141,10 +210,10 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
             0,
             0,
             0,
-            $"Race {round}");
+            $"Race {terminalName} {round}");
         Check(
             HasPacket(open, "SyncShopBoard"),
-            $"player shop opens before lifecycle race round {round}");
+            $"player shop opens before {terminalName} race round {round}");
 
         using var ready = new CountdownEvent(2);
         using var start = new ManualResetEventSlim(false);
@@ -154,7 +223,7 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
             ready.Signal();
             if (!start.Wait(TimeSpan.FromSeconds(10)))
                 throw new TimeoutException(
-                    "player-shop buy/close start barrier timed out");
+                    $"player-shop buy/{terminalName} start barrier timed out");
 
             return service.Handle(
                 buyerSession,
@@ -168,30 +237,21 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
                 "");
         });
 
-        var closeTask = Task.Run(() =>
+        var terminalTask = Task.Run(() =>
         {
             ready.Signal();
             if (!start.Wait(TimeSpan.FromSeconds(10)))
                 throw new TimeoutException(
-                    "player-shop close/buy start barrier timed out");
+                    $"player-shop {terminalName}/buy start barrier timed out");
 
-            return service.Handle(
-                sellerSession,
-                seller.AccountId,
-                "CloseShop",
-                0,
-                0,
-                0,
-                0,
-                0,
-                "");
+            return terminate();
         });
 
         try
         {
             Check(
                 ready.Wait(TimeSpan.FromSeconds(10)),
-                $"buy and close reached barrier round {round}");
+                $"buy and {terminalName} reached barrier round {round}");
         }
         finally
         {
@@ -200,9 +260,9 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
 
         Check(
             Task.WaitAll(
-                new Task[] { buyTask, closeTask },
+                new Task[] { buyTask, terminalTask },
                 TimeSpan.FromSeconds(20)),
-            $"buy versus close terminates round {round}");
+            $"buy versus {terminalName} terminates round {round}");
 
         var buySucceeded =
             HasFlash(buyTask.Result, "購買成功");
@@ -210,7 +270,7 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
         Check(
             !service.GetPublicState(
                 seller.CharacterId).IsOpen,
-            $"shop is closed after buy/close race round {round}");
+            $"shop is closed after buy/{terminalName} race round {round}");
 
         var sellerCopiesAfter = CountInventory(
             store,
@@ -226,12 +286,12 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
         Check(
             sellerCopiesAfter + buyerCopiesAfter ==
             sellerCopiesBefore + buyerCopiesBefore,
-            $"buy/close race conserves total item count round {round}");
+            $"buy/{terminalName} race conserves total item count round {round}");
 
         Check(
             sellerMoneyAfter + buyerMoneyAfter ==
             sellerMoneyBefore + buyerMoneyBefore,
-            $"buy/close race conserves total money round {round}");
+            $"buy/{terminalName} race conserves total money round {round}");
 
         if (buySucceeded)
         {
@@ -240,7 +300,7 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
                 buyerCopiesAfter == buyerCopiesBefore + 1 &&
                 sellerMoneyAfter == sellerMoneyBefore + unitPrice &&
                 buyerMoneyAfter == buyerMoneyBefore - unitPrice,
-                $"winning buy commits item and money exactly once round {round}");
+                $"winning buy commits item and money exactly once against {terminalName} round {round}");
         }
         else
         {
@@ -249,7 +309,7 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
                 buyerCopiesAfter == buyerCopiesBefore &&
                 sellerMoneyAfter == sellerMoneyBefore &&
                 buyerMoneyAfter == buyerMoneyBefore,
-                $"winning close prevents any partial purchase round {round}");
+                $"winning {terminalName} prevents any partial purchase round {round}");
         }
 
         var sellerAssets = store.GetCharacterAssets(
@@ -259,7 +319,7 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
             !sellerAssets.Inventory.Any(x =>
                 Convert.ToInt32(x["ItemIndex"]) == itemIndex &&
                 Convert.ToInt32(x["InShop"]) != 0),
-            $"closing shop leaves no reserved inventory rows round {round}");
+            $"{terminalName} leaves no reserved inventory rows round {round}");
     }
 
     private static long ShopListingUid(
