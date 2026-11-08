@@ -3548,7 +3548,7 @@ anchor_bottom = 0.5
 offset_left = -323.0
 offset_top = -313.0
 offset_right = -51.0
-offset_bottom = 137.0
+offset_bottom = 227.0
 grow_horizontal = 0
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_qcerj")
@@ -3847,6 +3847,72 @@ popup/item_1/id = 1
 popup/item_2/text = "大型戰鬥"
 popup/item_2/id = 2
 tooltip_text = "PK/大型戰鬥會優先保留玩家、目標與戰鬥資訊，降低怪物與非必要特效的視覺預算。"
+
+[node name="LabelSimplifyPlayers" type="Label" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 378.0
+offset_right = 142.0
+offset_bottom = 406.0
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
+text = "簡化其他玩家"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="OptionSimplifyPlayers" type="OptionButton" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 380.0
+offset_right = 250.0
+offset_bottom = 405.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+alignment = 1
+selected = 0
+item_count = 3
+popup/item_0/text = "自動"
+popup/item_0/id = 0
+popup/item_1/text = "關閉"
+popup/item_1/id = 1
+popup/item_2/text = "開啟"
+popup/item_2/id = 2
+tooltip_text = "自動會跟隨效能模式；關閉保留其他玩家原始外觀；開啟強制使用簡化外觀。自己與目前戰鬥目標不會被簡化。"
+
+[node name="LabelSimplifyMonsters" type="Label" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 420.0
+offset_right = 142.0
+offset_bottom = 448.0
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
+text = "簡化普通怪物"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="OptionSimplifyMonsters" type="OptionButton" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 422.0
+offset_right = 250.0
+offset_bottom = 447.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+alignment = 1
+selected = 0
+item_count = 3
+popup/item_0/text = "自動"
+popup/item_0/id = 0
+popup/item_1/text = "關閉"
+popup/item_1/id = 1
+popup/item_2/text = "開啟"
+popup/item_2/id = 2
+tooltip_text = "自動會跟隨效能/戰鬥模式；關閉保留普通怪物原始外觀；開啟強制簡化。戰鬥目標與重要怪物仍保留完整外觀。"
 
 [node name="BtnBackToLogin" type="Button" parent="WindowsContainer/SettingsWindow" unique_id=791546295]
 layout_mode = 1
