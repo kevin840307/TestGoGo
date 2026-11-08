@@ -901,10 +901,14 @@ class SmokeSuiteStructureTests(unittest.TestCase):
 
     def test_protocol_assertions_not_reintroduced_in_monolith(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
+        blocking_suite = (
+            SMOKE / "World" / "BlockingMapSmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
         self.assertNotIn("PacketSchemaValidator.TryValidate(", main)
         self.assertNotIn("AnnouncementCatalog.Read(", main)
         self.assertNotIn("var blockingTestRoot =", main)
-        self.assertNotIn("MonsterNavigationService(blocking)", main)
+        self.assertIn("var blockingTestRoot =", blocking_suite)
+        self.assertIn("MonsterNavigationService(blocking)", blocking_suite)
         self.assertNotIn("static JsonDocument Json(", main)
         self.assertNotIn("static void Check(", main)
 
