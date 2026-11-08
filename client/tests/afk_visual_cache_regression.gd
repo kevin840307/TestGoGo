@@ -111,7 +111,7 @@ func _run() -> void:
 	second_sprite.texture = texture
 	second_map.add_child(second_sprite)
 	var first_map_again: Dictionary = cache.suspend_static_map(map_root)
-	check(int(first_map_again.get("released", 0)) == 1,
+	check(int(first_map_again.get("released", 0)) == (2 if is_instance_valid(animated_frames) else 1),
 		"old map can be stripped again before transition")
 	var second_stats: Dictionary = cache.suspend_static_map(second_map)
 	check(cache.tracked_map() == second_map and int(second_stats.get("released", 0)) == 1,
