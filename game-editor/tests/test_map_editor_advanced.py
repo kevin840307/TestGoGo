@@ -105,6 +105,26 @@ class AdvancedMapEditorRepositoryTests(unittest.TestCase):
         self.assertEqual(rows[0]["x"], 24)
         self.assertEqual(rows[0]["y"], 24)
 
+    def test_repository_rejects_duplicate_or_forged_legacy_source_indexes(self) -> None:
+        self._write_blocking(bytes(16))
+        enemy_payload = (
+            struct.pack("<i", 2)
+            + struct.pack("<i", 7) + b"1\x00" + struct.pack("<ii", 24, 24) + bytes(MapRepository.ENEMY_TAIL_SIZE)
+            + struct.pack("<i", 8) + b"1\x00" + struct.pack("<ii", 40, 40) + bytes(MapRepository.ENEMY_TAIL_SIZE)
+        )
+        (self.paths.maps / "Map13" / "Enemy.dat").write_bytes(enemy_payload)
+        rows = self.repo.get_enemy_spawns(13)
+
+        duplicate = [dict(rows[0]), dict(rows[1])]
+        duplicate[1]["index"] = duplicate[0]["index"]
+        with self.assertRaisesRegex(ValueError, "重複 source index"):
+            self.repo.save_enemy_spawns(13, duplicate)
+
+        forged = [dict(rows[0]), dict(rows[1])]
+        forged[0]["index"] = 12345
+        with self.assertRaisesRegex(ValueError, "source index 超出範圍"):
+            self.repo.save_enemy_spawns(13, forged)
+
     def test_batch_limit_blocks_accidental_huge_editor_request(self) -> None:
         self._write_blocking(bytes(16))
         with self.assertRaises(ValueError):
