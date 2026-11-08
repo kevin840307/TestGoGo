@@ -141,6 +141,27 @@ levels = Array[ExtResource("1_level")]([SubResource("Resource_level")])
         self.assertFalse(result["ok"])
         self.assertTrue(any(x["category"] == "missing_enemy" for x in result["errors"]))
 
+    def test_pre_save_validation_rejects_forged_or_duplicate_source_indexes(self) -> None:
+        rows = self.maps.get_enemy_spawns(13)
+
+        duplicate = [dict(row) for row in rows]
+        duplicate[1]["index"] = duplicate[0]["index"]
+        report = self.health.validate_map_items(13, "enemies", duplicate)
+        self.assertFalse(report["ok"])
+        self.assertTrue(any(x["category"] == "duplicate_source_index" for x in report["errors"]))
+
+        forged = [dict(row) for row in rows]
+        forged[0]["index"] = 9999
+        report = self.health.validate_map_items(13, "enemies", forged)
+        self.assertFalse(report["ok"])
+        self.assertTrue(any(x["category"] == "invalid_source_index" for x in report["errors"]))
+
+        malformed = [dict(row) for row in rows]
+        malformed[0]["index"] = "not-an-int"
+        report = self.health.validate_map_items(13, "enemies", malformed)
+        self.assertFalse(report["ok"])
+        self.assertTrue(any(x["category"] == "invalid_source_index" for x in report["errors"]))
+
     def test_pre_save_validation_returns_blocking_repair_preview(self) -> None:
         rows = self.maps.get_enemy_spawns(13)
         rows[0] = {**rows[0], "x": 24, "y": 24}
