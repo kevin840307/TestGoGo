@@ -42,7 +42,7 @@ func _run() -> void:
 	_check(overlay != null and overlay.mouse_filter == Control.MOUSE_FILTER_STOP,
 		"loading overlay shields incomplete crafting controls")
 	var close_button: BaseButton = craft.get_node("Background/BtnClose") as BaseButton
-	_check(close_button != null and overlay.get_parent() == content,
+	_check(close_button != null and overlay != null and overlay.get_parent() == content,
 		"progress is inside content so close button is not blocked")
 	var progress: ProgressBar = craft.get("_initial_loading_progress") as ProgressBar
 	var stage: Label = craft.get("_initial_loading_label") as Label
@@ -52,11 +52,28 @@ func _run() -> void:
 	_check(stage != null and stage.text.contains("50%"),
 		"progress text shows percentage while building recipes")
 	craft.call("_set_initial_loading_progress", 0.95)
-	_check(stage.text.contains("更新可合成數量"),
+	_check(stage != null and stage.text.contains("更新可合成數量"),
 		"final 10% marks player-specific crafting availability refresh")
 	craft.call("_set_initial_loading_progress", 1.5)
 	_check(progress != null and is_equal_approx(progress.value, 100.0),
 		"progress remains clamped at 100%")
+
+	# A lightweight empty recipe tree is enough to verify cache reuse,
+	# without running the real 1453-recipe first-use build.
+	var crafting_panel: Control = craft.get_node(
+		"Background/ContentContainer/CraftingPanel"
+	) as Control
+	await crafting_panel.prepare_static_tree_async([])
+	var tree: Tree = crafting_panel.get_node("RecipeTree") as Tree
+	var old_root: TreeItem = tree.get_root()
+	crafting_panel.call("update_ui")
+	_check(tree.get_root() == old_root,
+		"reopening with no filter refreshes availability without rebuilding cached Tree")
+	var search: LineEdit = crafting_panel.get_node("SearchInput") as LineEdit
+	search.text = "deliberate_filter"
+	crafting_panel.call("update_ui")
+	_check(tree.get_root() != old_root,
+		"an explicit search can still rebuild the filtered Tree")
 
 	# Protect both former eager paths against future regressions.
 	# They should neither preload the craft scene during login nor build the
