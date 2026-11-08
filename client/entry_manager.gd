@@ -159,7 +159,8 @@ func _prewarm_game_hud_resources() -> void :
 			_set_loading_progress(92.0)
 
 		var elapsed_ms: float = float(Time.get_ticks_usec() - started_usec) / 1000.0
-		print("[LOGIN_HUD_PREWARM] kind=%s total_ms=%.2f" % [kind, elapsed_ms])
+		if OS.is_debug_build():
+			print("[LOGIN_HUD_PREWARM] kind=%s total_ms=%.2f" % [kind, elapsed_ms])
 		await get_tree().process_frame
 
 func _bootstrap_before_login() -> void :
