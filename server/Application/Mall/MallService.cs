@@ -9,15 +9,25 @@ public sealed class MallService
     private readonly IMallStore _store;
     private readonly IConfiguration? _configuration;
     private readonly CurrentClientDataCatalog? _current;
+    private readonly IPayPalDonationProvider _payPal;
+    private readonly ILegacyPointProvider _legacyPoints;
 
     public MallService(
         IMallStore store,
         IConfiguration? configuration = null,
-        CurrentClientDataCatalog? current = null)
+        CurrentClientDataCatalog? current = null,
+        IPayPalDonationProvider? payPal = null,
+        ILegacyPointProvider? legacyPoints = null)
     {
         _store = store;
         _configuration = configuration;
         _current = current;
+        _payPal =
+            payPal ??
+            new NullPayPalDonationProvider();
+        _legacyPoints =
+            legacyPoints ??
+            new NullLegacyPointProvider();
     }
 
     public IReadOnlyList<object> Handle(
@@ -27,7 +37,10 @@ public sealed class MallService
         int mallId,
         int count,
         int amount,
-        int rewardId)
+        int rewardId,
+        string legacyLoginName = "",
+        string legacyPassword = "",
+        string requestId = "")
     {
         action = action.Trim();
 
@@ -44,28 +57,23 @@ public sealed class MallService
                     count);
 
             case "CreatePayPalDonation":
-                return [new
-                {
-                    Type = "PayPalDonationCreated",
-                    Success = false,
-                    Message = amount is >= 500 and <= 50_000
-                        ? "伺服器尚未設定 PayPal 金流，未建立任何付款訂單"
-                        : "贊助金額必須介於 500 至 50000",
-                    ApprovalUrl = ""
-                }];
+                return CreatePayPalDonation(
+                    accountId,
+                    amount,
+                    requestId);
 
             case "QueryLegacyPoints":
+                return QueryLegacyPoints(
+                    legacyLoginName,
+                    legacyPassword);
+
             case "WithdrawLegacyPoints":
-                return [new
-                {
-                    Type = "LegacyPointWithdrawalResponse",
-                    Success = false,
-                    Operation = action == "QueryLegacyPoints"
-                        ? "Query"
-                        : "Withdraw",
-                    Message = "尚未設定舊服點數資料來源，未進行任何點數移轉",
-                    LegacyPoints = 0
-                }];
+                return WithdrawLegacyPoints(
+                    accountId,
+                    legacyLoginName,
+                    legacyPassword,
+                    amount,
+                    requestId);
 
             case "ClaimDonationGift":
                 return ClaimDonationGift(
@@ -80,6 +88,192 @@ public sealed class MallService
                     Message = "不支援的商城操作"
                 }];
         }
+    }
+
+    public ExternalMallCreditResult SettlePayPalDonation(
+        long accountId,
+        string externalTransactionId,
+        long amount)
+        => _store.CreditExternalMallPoints(
+            accountId,
+            "paypal",
+            externalTransactionId,
+            amount,
+            amount);
+
+    private IReadOnlyList<object> CreatePayPalDonation(
+        long accountId,
+        int amount,
+        string requestId)
+    {
+        if (amount is < 500 or > 50_000)
+        {
+            return [new
+            {
+                Type = "PayPalDonationCreated",
+                Success = false,
+                Message = "贊助金額必須介於 500 至 50000",
+                ApprovalUrl = ""
+            }];
+        }
+
+        requestId = NormalizeRequestId(
+            requestId,
+            "paypal",
+            accountId);
+
+        var result = _payPal.CreateOrder(
+            accountId,
+            amount,
+            requestId);
+
+        return [new
+        {
+            Type = "PayPalDonationCreated",
+            Success = result.Success,
+            Message = result.Message,
+            ApprovalUrl = result.Success
+                ? result.ApprovalUrl
+                : ""
+        }];
+    }
+
+    private IReadOnlyList<object> QueryLegacyPoints(
+        string loginName,
+        string password)
+    {
+        var result = _legacyPoints.Query(
+            loginName,
+            password);
+
+        return [new
+        {
+            Type = "LegacyPointWithdrawalResponse",
+            Success = result.Success,
+            Operation = "Query",
+            Message = result.Message,
+            LegacyPoints = Math.Max(
+                0,
+                result.LegacyPoints)
+        }];
+    }
+
+    private IReadOnlyList<object> WithdrawLegacyPoints(
+        long accountId,
+        string loginName,
+        string password,
+        int amount,
+        string requestId)
+    {
+        if (amount <= 0)
+        {
+            return [new
+            {
+                Type = "LegacyPointWithdrawalResponse",
+                Success = false,
+                Operation = "Withdraw",
+                Message = "提領點數必須大於 0",
+                LegacyPoints = 0
+            }];
+        }
+
+        requestId = NormalizeRequestId(
+            requestId,
+            "legacy",
+            accountId);
+
+        var external = _legacyPoints.Withdraw(
+            loginName,
+            password,
+            amount,
+            requestId);
+
+        if (!external.Success)
+        {
+            return [new
+            {
+                Type = "LegacyPointWithdrawalResponse",
+                Success = false,
+                Operation = "Withdraw",
+                Message = external.Message,
+                LegacyPoints = Math.Max(
+                    0,
+                    external.LegacyPoints)
+            }];
+        }
+
+        if (external.TransferredPoints <= 0 ||
+            string.IsNullOrWhiteSpace(
+                external.ExternalTransactionId))
+        {
+            return [new
+            {
+                Type = "LegacyPointWithdrawalResponse",
+                Success = false,
+                Operation = "Withdraw",
+                Message = "舊服點數來源回傳的交易資料無效，未進行本服入帳",
+                LegacyPoints = Math.Max(
+                    0,
+                    external.LegacyPoints)
+            }];
+        }
+
+        var credit = _store.CreditExternalMallPoints(
+            accountId,
+            "legacy",
+            external.ExternalTransactionId,
+            external.TransferredPoints,
+            0);
+
+        if (!credit.Success)
+        {
+            return [new
+            {
+                Type = "LegacyPointWithdrawalResponse",
+                Success = false,
+                Operation = "Withdraw",
+                Message =
+                    $"{external.Message}；本服入帳失敗：{credit.Message}",
+                LegacyPoints = Math.Max(
+                    0,
+                    external.LegacyPoints)
+            }];
+        }
+
+        return
+        [
+            new
+            {
+                Type = "LegacyPointWithdrawalResponse",
+                Success = true,
+                Operation = "Withdraw",
+                Message = credit.AlreadyApplied
+                    ? "此提領交易已完成，未重複入帳"
+                    : external.Message,
+                LegacyPoints = Math.Max(
+                    0,
+                    external.LegacyPoints)
+            },
+            new
+            {
+                Type = "MallPointsSync",
+                Points = credit.NewBalance
+            }
+        ];
+    }
+
+    private static string NormalizeRequestId(
+        string requestId,
+        string prefix,
+        long accountId)
+    {
+        requestId = requestId.Trim();
+        if (!string.IsNullOrWhiteSpace(requestId) &&
+            requestId.Length <= 200)
+            return requestId;
+
+        return
+            $"{prefix}-{accountId}-{Guid.NewGuid():N}";
     }
 
     private IReadOnlyList<object> BuyItem(
