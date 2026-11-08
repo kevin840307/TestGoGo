@@ -128,12 +128,15 @@ func _add_skill_card(skill_entry: Dictionary) -> void :
 	if skill_resource and SkillLoader:
 		icon_texture = SkillLoader.get_icon(int(skill_resource.get("icon_id")))
 
-	# PackedScene.instantiate() is declared as Node. Cast to the actual
-	# SkillCard script type before accessing custom methods and signals.
-	var card: SkillCard = SKILL_CARD_SCENE.instantiate() as SkillCard
-	if card == null:
-		push_error("[SkillWindow] SkillCard scene has an unexpected root type")
+	# Keep SkillWindow independent from the SkillCard class symbol. A card
+	# script regression must not make this entire window fail to parse/load.
+	var card := SKILL_CARD_SCENE.instantiate()
+	if card == null or not card.has_method("setup"):
+		push_error("[SkillWindow] SkillCard scene/script failed to load")
+		if is_instance_valid(card):
+			card.queue_free()
 		return
+
 	skill_grid.add_child(card)
 	var show_aoe_center_toggle := (
 		is_instance_valid(target_player)
@@ -145,7 +148,8 @@ func _add_skill_card(skill_entry: Dictionary) -> void :
 		and target_player.has_method("is_skill_aoe_self_center")
 		and bool(target_player.call("is_skill_aoe_self_center", skill_id))
 	)
-	card.setup(
+	card.call(
+		"setup",
 		skill_resource,
 		skill_id,
 		skill_level,
@@ -154,10 +158,31 @@ func _add_skill_card(skill_entry: Dictionary) -> void :
 		show_aoe_center_toggle,
 		self_center
 	)
-	card.skill_clicked.connect(_on_skill_clicked)
-	card.aoe_center_mode_changed.connect(_on_aoe_center_mode_changed)
-	card.mouse_entered.connect(_show_skill_tooltip.bind(skill_id, skill_level, icon_texture))
-	card.mouse_exited.connect(_hide_skill_tooltip)
+
+	if card.has_signal("skill_clicked"):
+		card.connect(
+			"skill_clicked",
+			Callable(self, "_on_skill_clicked")
+		)
+	if card.has_signal("aoe_center_mode_changed"):
+		card.connect(
+			"aoe_center_mode_changed",
+			Callable(self, "_on_aoe_center_mode_changed")
+		)
+	if card.has_signal("mouse_entered"):
+		card.connect(
+			"mouse_entered",
+			_show_skill_tooltip.bind(
+				skill_id,
+				skill_level,
+				icon_texture
+			)
+		)
+	if card.has_signal("mouse_exited"):
+		card.connect(
+			"mouse_exited",
+			Callable(self, "_hide_skill_tooltip")
+		)
 
 
 func _clear_skill_grid() -> void :
