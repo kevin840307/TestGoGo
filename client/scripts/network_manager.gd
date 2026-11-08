@@ -741,34 +741,11 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 			if success and GameManager.current_player and "data_model" in GameManager.current_player:
 				var p_data = GameManager.current_player.data_model
 
+				# DriveMechaResponse is only the authoritative drive/recall ACK.
+				# Effective combat stats are refreshed by the following
+				# PlayerStatusSync packet from the server.
 				p_data.summoned_horse_uid = h_uid
 				p_data.rider_state["SummonedHorseUID"] = h_uid
-
-				if data.has("MaxHP"): p_data.max_hp = int(data.get("MaxHP", p_data.max_hp))
-				if data.has("MaxMP"): p_data.max_mp = int(data.get("MaxMP", p_data.max_mp))
-				if data.has("MaxSP"): p_data.max_sp = int(data.get("MaxSP", p_data.max_sp))
-				if data.has("Attack"): p_data.attack = int(data.get("Attack", p_data.attack))
-				if data.has("Defense"): p_data.defense = int(data.get("Defense", p_data.defense))
-				if data.has("MagicAttack"): p_data.magic_attack = int(data.get("MagicAttack", p_data.magic_attack))
-				if data.has("MagicDefense"): p_data.magic_defense = int(data.get("MagicDefense", p_data.magic_defense))
-				if data.has("Hit"): p_data.hit = int(data.get("Hit", p_data.hit))
-				if data.has("Dodge"): p_data.dodge = int(data.get("Dodge", p_data.dodge))
-				if data.has("Lucky"): p_data.lucky = int(data.get("Lucky", p_data.lucky))
-				if data.has("AttackSpeed"): p_data.attack_speed = int(data.get("AttackSpeed", p_data.attack_speed))
-				if data.has("AttackRange"): p_data.attack_range = int(data.get("AttackRange", p_data.attack_range))
-				if data.has("MoveSpeed"): p_data.move_speed = int(data.get("MoveSpeed", p_data.move_speed))
-				if data.has("CritRate"): p_data.crit_rate = int(data.get("CritRate", p_data.crit_rate))
-				if data.has("CritDamage"): p_data.crit_damage = int(data.get("CritDamage", p_data.crit_damage))
-
-
-				if GameManager.current_hud and GameManager.current_hud.has_method("update_status_panel"):
-					GameManager.current_hud.update_status_panel()
-
-
-				if GameManager.current_hud and GameManager.current_hud.has_method("get_node_or_null"):
-					var char_win = GameManager.current_hud.get_node_or_null("WindowsContainer/CharacterWindow")
-					if char_win and char_win.visible and char_win.has_method("update_ui"):
-						char_win.update_ui()
 
 				if GameManager.current_hud and GameManager.current_hud.has_method("_refresh_inventory_if_open"):
 					GameManager.current_hud._refresh_inventory_if_open()
