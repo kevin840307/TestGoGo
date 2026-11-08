@@ -67,6 +67,12 @@ internal static class CurrentClientCatalogSmokeTests
             "double-EXP cards resolve 2x multiplier and original 1h/3h durations");
 
         Check(
+            catalog.FindItem(30371) is { WeaponStyle: "Sword" } &&
+            catalog.FindItem(31139) is { WeaponStyle: "Gun" } &&
+            catalog.FindItem(31214) is { WeaponStyle: "TwinGun" },
+            "real weapon catalog exposes melee single-gun and twin-gun animation styles");
+
+        Check(
             catalog.FindItem(2459) is { ScriptName: "無罪之書" },
             "real innocence book exposes its authoritative client script name");
     }
