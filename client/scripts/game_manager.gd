@@ -854,6 +854,12 @@ static func should_throttle_background_visuals(has_focus: bool, world_active: bo
 	return not has_focus and world_active
 
 
+static func should_draw_afk_dashboard(has_focus: bool) -> bool:
+	# AFK mode preserves network and physics, NOT background GPU rendering.
+	# The dashboard is only painted while the app is focused.
+	return has_focus
+
+
 static func fps_cap_for_focus(profile: Dictionary, has_focus: bool, world_active: bool) -> int:
 	if should_throttle_background_visuals(has_focus, world_active):
 		return maxi(1, int(profile.get("background_fps", UNFOCUSED_MAX_FPS)))
@@ -911,8 +917,10 @@ func _reconcile_world_render_policy(delta: float) -> void:
 		_set_window_focus_power_save(observed_focus)
 		if OS.is_debug_build():
 			_log_focus_power_save("focus_poll_reconciled")
-	var should_pause: bool = should_throttle_background_visuals(
-		_window_has_focus, _has_active_world_visuals()) and not _afk_active
+	# In AFK mode, the background dashboard must NEVER bypass the
+	# normal no-focus/no-render policy. World simulation still runs.
+	var should_pause: bool = not should_draw_afk_dashboard(_window_has_focus) 		if _afk_active else should_throttle_background_visuals(
+			_window_has_focus, _has_active_world_visuals())
 	var desired_rendering: bool = not should_pause
 	var desired_fps: int = AFK_MONITOR_FPS if _afk_active else fps_cap_for_focus(
 		current_performance_profile, _window_has_focus, _has_active_world_visuals())
@@ -928,11 +936,13 @@ func _reconcile_world_render_policy(delta: float) -> void:
 
 func _refresh_focus_render_policy() -> void:
 	if _afk_active:
-		# AFK status dashboard must remain visible even when unfocused.
-		# Godot physics_ticks_per_second stays unchanged (60 by default).
+		# Only draw the status dashboard while focused. On Alt+Tab the
+		# RenderingServer fully stops issuing visual frames, but the SceneTree,
+		# fixed physics, socket processing, combat and pickups continue.
+		# Do not set Engine.max_fps below the active simulation tick budget.
 		Engine.max_fps = AFK_MONITOR_FPS
-		RenderingServer.render_loop_enabled = true
-		_set_background_visual_processing(true)
+		RenderingServer.render_loop_enabled = should_draw_afk_dashboard(_window_has_focus)
+		_set_background_visual_processing(not _window_has_focus)
 		return
 	var world_background: bool = should_throttle_background_visuals(
 		_window_has_focus, _has_active_world_visuals())
