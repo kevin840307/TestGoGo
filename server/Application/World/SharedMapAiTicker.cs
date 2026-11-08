@@ -7,6 +7,15 @@ using SGO.Server.Domain.Sessions;
 
 namespace SGO.Server.Application.World;
 
+public sealed record SharedMapAiTickDiagnostics(
+    DateTimeOffset TickAt,
+    double ElapsedMs,
+    int ActiveSessions,
+    int ActiveMaps,
+    int TickedMaps,
+    int MonsterCount,
+    int AssignedMonsterCount);
+
 /// <summary>
 /// A single 250ms scheduler for all active maps. Monster AI and respawns are
 /// executed once for each map tick, not once by every websocket's timer.
@@ -22,6 +31,18 @@ public sealed class SharedMapAiTicker : BackgroundService
     private readonly ServerBroadcastHub _broadcasts;
     private readonly AccountSessionRegistry _accounts;
     private readonly ILogger<SharedMapAiTicker> _log;
+    private SharedMapAiTickDiagnostics _lastDiagnostics =
+        new(
+            DateTimeOffset.MinValue,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0);
+
+    public SharedMapAiTickDiagnostics LastDiagnostics
+        => _lastDiagnostics;
 
     public SharedMapAiTicker(
         CombatService combat,
@@ -75,6 +96,7 @@ public sealed class SharedMapAiTicker : BackgroundService
 
     public int TickOnce(DateTimeOffset now)
     {
+        var started = Stopwatch.GetTimestamp();
         var activeByMap = _sessions.Values
             .Where(s => s.WorldReady &&
                         s.CurrentMapId > 0 &&
@@ -83,7 +105,12 @@ public sealed class SharedMapAiTicker : BackgroundService
             .GroupBy(s => s.CurrentMapId)
             .ToArray();
 
+        var activeSessionCount =
+            activeByMap.Sum(group => group.Count());
         var tickedMaps = 0;
+        var monsterCount = 0;
+        var assignedMonsterCount = 0;
+
         foreach (var group in activeByMap)
         {
             // Empty city/maps need no player HP queries and no monster AI.
@@ -91,6 +118,7 @@ public sealed class SharedMapAiTicker : BackgroundService
             var map = _world.GetMap(group.Key);
             lock (map.SyncRoot)
             {
+                monsterCount += map.Monsters.Count;
                 if (map.Monsters.Count == 0)
                 {
                     tickedMaps++;
@@ -207,6 +235,7 @@ public sealed class SharedMapAiTicker : BackgroundService
                     owner ??= players[0];
                     assignments[owner.Session.ConnectionId].Add(
                         monster.EntityId);
+                    assignedMonsterCount++;
                 }
             }
 
@@ -255,6 +284,15 @@ public sealed class SharedMapAiTicker : BackgroundService
 
             tickedMaps++;
         }
+
+        _lastDiagnostics = new SharedMapAiTickDiagnostics(
+            now,
+            Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+            activeSessionCount,
+            activeByMap.Length,
+            tickedMaps,
+            monsterCount,
+            assignedMonsterCount);
 
         return tickedMaps;
     }
