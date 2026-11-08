@@ -1177,7 +1177,7 @@ public sealed class CombatService
         }
     }
 
-    private static bool TryResolveMonsterAoiEntityId(
+    internal static bool TryResolveMonsterAoiEntityId(
         ClientSession session,
         object packet,
         string? type,
