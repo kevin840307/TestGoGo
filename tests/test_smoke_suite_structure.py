@@ -447,6 +447,8 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("trade and direct transfer both commit exactly once", source)
         self.assertIn("TradeAndPlayerShopPurchaseConserveMoney", source)
         self.assertIn("trade and player-shop purchase both commit exactly once", source)
+        self.assertIn("CraftAndDirectTransferComposeAtomically", source)
+        self.assertIn("craft and direct transfer both commit exactly once", source)
         self.assertIn("mixed multiplayer money operations conserve", source)
         self.assertIn("CrossFeatureConcurrencySmokeTests.Run();", main)
 
