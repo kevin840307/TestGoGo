@@ -138,10 +138,14 @@ def summarize(sessions):
                 warnings.append("VRAM 計數器無數據")
             if not row["render_samples"]:
                 warnings.append("無 Godot 圖形 Log（可能為附加既有程序）")
-            expected = stage.split("-")[0]
+            stage_parts = stage.split("-")
+            expected = stage_parts[2] if stage_parts[0] == "multi" and len(stage_parts) > 2 else stage_parts[0]
+            requested_simplify = stage_parts[-1] if stage_parts[-1] in ("on", "off") else ""
             observed = row["mode_observed"].split(", ")
             if expected in ("balanced", "low", "multibox") and row["mode_observed"] and expected not in observed:
                 warnings.append("標籤與 Godot 實際模式不一致")
+            if requested_simplify and row["monster_simplify_observed"] and requested_simplify not in row["monster_simplify_observed"].split(", "):
+                warnings.append("標籤與 Godot 怪物簡化設定不一致")
             row["warnings"] = "；".join(warnings)
             summary.append(row)
     return summary
@@ -200,7 +204,9 @@ def render_html(rows, session_count):
         ("ram_working_mb", "RAM MB"), ("ram_private_mb", "Private MB"),
         ("gpu_3d_percent", "GPU 3D %"), ("gpu_vram_dedicated_mb", "VRAM MB"),
         ("fps", "FPS"), ("draw_calls", "Draw Calls"),
-        ("visible_monsters", "怪物"), ("process_ms", "Process ms"), ("warnings", "資料品質")
+        ("visible_monsters", "怪物"), ("process_ms", "Process ms"),
+        ("mode_observed", "Godot 實際模式"), ("monster_simplify_observed", "怪物簡化"),
+        ("warnings", "資料品質")
     ]
     table_header = "".join(f"<th>{escape(title)}</th>" for _, title in headings)
     table_rows = []
