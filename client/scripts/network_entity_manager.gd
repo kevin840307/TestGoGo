@@ -164,6 +164,19 @@ func _enqueue_spawn_by_priority(data: Dictionary) -> void :
 			break
 	_spawn_queue.insert(insert_index, data)
 
+func _get_current_queued_spawn_data(data: Dictionary) -> Dictionary:
+	# Movement packets may arrive while a monster is waiting in the spawn
+	# queue. The queued snapshot must not overwrite its newer authoritative
+	# position when the entity is finally instantiated.
+	if int(data.get("EntityType", -1)) != 1:
+		return data
+	var entity_id: int = int(data.get("EntityID", 0))
+	var latest = _monster_spawn_templates.get(entity_id, null)
+	if latest is Dictionary:
+		return (latest as Dictionary).duplicate()
+	return data
+
+
 func set_initial_spawn_boost(enabled: bool) -> void :
 	_initial_spawn_boost = enabled
 
@@ -290,7 +303,9 @@ func _process(delta: float) -> void :
 			var data: Dictionary = _spawn_queue.pop_front()
 			var entity_id := int(data.get("EntityID", 0))
 			_queued_spawn_ids.erase(entity_id)
-			_spawn_entity_now(data)
+			# Always take the most recent cached monster coordinates instead
+			# of using the stale queue-time snapshot.
+			_spawn_entity_now(_get_current_queued_spawn_data(data))
 			spawned_count += 1
 
 		var elapsed_usec := Time.get_ticks_usec() - frame_started_usec
