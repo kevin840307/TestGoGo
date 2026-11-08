@@ -1,3 +1,4 @@
 .backups/
 __pycache__/
 *.pyc
+.generated/\nnode_modules/\nplaywright-report/\ntest-results/\n
