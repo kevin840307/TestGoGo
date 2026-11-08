@@ -2050,10 +2050,9 @@ public sealed class CombatService
         if (isPartyReturn)
         {
             var originMapId = session.CurrentMapId;
-            _broadcasts.PublishToMap(
-                originMapId,
-                packets[0],
-                session.ConnectionId);
+            _broadcasts.PublishToPlayerObservers(
+                session.ConnectionId,
+                packets[0]);
 
             var members = _party.GetMembers(
                 session.CharacterId.Value);
