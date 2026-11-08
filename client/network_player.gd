@@ -22,18 +22,9 @@ var _has_snapshot_target: bool = false
 var _observed_snapshot_speed: float = 0.0
 var _pending_idle: bool = false
 var _performance_simplified_visual: bool = false
-const GENERIC_PLAYER_RACE := "Boy"
-const GENERIC_PLAYER_HAIR := "Hair000"
-const GENERIC_PLAYER_EQUIPS := {
-	0: 0,
-	1: -1,
-	2: -1,
-	3: -1,
-	4: -1,
-	5: 0,
-	6: 0,
-	7: 0,
-}
+var _performance_simplified_style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+const SIMPLIFIED_PLAYER_CLICK_SIZE := Vector2(96.0, 132.0)
+const NORMAL_PLAYER_CLICK_SIZE := Vector2(80.0, 120.0)
 
 const SAFE_MAP_IDS: Array = [4, 9, 15, 17, 22, 39, 40, 53, 75, 93]
 
@@ -71,40 +62,200 @@ func _ready() -> void :
 		setup_layered_paper_dolls()
 		sync_animation()
 
-func set_performance_simplified(enabled: bool) -> void:
-	if _performance_simplified_visual == enabled:
+func _normalize_simplified_style(style: int) -> int:
+	var normalized := ClientPerformanceProfile.sanitize_simplify_mode(style)
+	if normalized < ClientPerformanceProfile.SIMPLIFY_PIXEL_A:
+		return ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+	return normalized
+
+func prepare_performance_visual(
+	simplified: bool,
+	style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+) -> void:
+	# Called before add_child() so simplified network players never need to
+	# build the full layered paper doll during spawn.
+	_performance_simplified_visual = simplified
+	_performance_simplified_style = _normalize_simplified_style(style)
+
+func set_performance_simplified(
+	enabled: bool,
+	style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+) -> void:
+	var normalized_style := _normalize_simplified_style(style)
+	if (
+		_performance_simplified_visual == enabled
+		and _performance_simplified_style == normalized_style
+	):
 		return
 	_performance_simplified_visual = enabled
+	_performance_simplified_style = normalized_style
 	setup_layered_paper_dolls()
+	_apply_interact_area_size()
 	sync_animation()
+	queue_redraw()
 
 func is_performance_simplified() -> bool:
 	return _performance_simplified_visual
+
+func _simplified_relation_color() -> Color:
+	var local_player = GameManager.current_player if GameManager else null
+	if is_instance_valid(local_player) and "data_model" in local_player:
+		var local_data = local_player.data_model
+		var my_party := str(local_data.party_id)
+		if not my_party.is_empty() and my_party == str(data_model.party_id):
+			return Color(0.28, 1.0, 0.56, 1.0)
+
+		var my_club := int(local_data.club_id)
+		if my_club > 0 and my_club == int(data_model.club_id):
+			return Color(0.32, 0.70, 1.0, 1.0)
+
+		var in_safe_zone := int(data_model.map_id) in SAFE_MAP_IDS
+		if (
+			int(local_data.pk_status) == 1
+			and int(data_model.pk_status) == 1
+			and int(data_model.hp) > 0
+			and not in_safe_zone
+		):
+			return Color(1.0, 0.28, 0.30, 1.0)
+
+	return Color(0.82, 0.88, 0.98, 1.0)
+
+func _simplified_body_color() -> Color:
+	match _performance_simplified_style:
+		ClientPerformanceProfile.SIMPLIFY_PIXEL_B:
+			return Color(0.28, 0.50, 0.72, 1.0)
+		ClientPerformanceProfile.SIMPLIFY_MINIMAL:
+			return Color(0.62, 0.68, 0.78, 1.0)
+		_:
+			return Color(0.36, 0.62, 0.82, 1.0)
+
+func _simplified_direction_vector() -> Vector2:
+	match current_dir:
+		"1": return Vector2(0.0, 1.0)
+		"2": return Vector2(0.707, 0.707)
+		"3": return Vector2(1.0, 0.0)
+		"4": return Vector2(0.707, -0.707)
+		"5": return Vector2(0.0, -1.0)
+		"6": return Vector2(-0.707, -0.707)
+		"7": return Vector2(-1.0, 0.0)
+		"8": return Vector2(-0.707, 0.707)
+	return Vector2.DOWN
+
+func _draw_relation_glow(center: Vector2, color: Color) -> void:
+	# Three cheap alpha layers imitate a bright gradient without shaders,
+	# textures or per-player materials.
+	var glow_1 := Color(color.r, color.g, color.b, 0.10)
+	var glow_2 := Color(color.r, color.g, color.b, 0.18)
+	var glow_3 := Color(color.r, color.g, color.b, 0.34)
+	draw_rect(Rect2(center + Vector2(-28, -40), Vector2(56, 76)), glow_1)
+	draw_rect(Rect2(center + Vector2(-24, -36), Vector2(48, 68)), glow_2)
+	draw_rect(Rect2(center + Vector2(-20, -32), Vector2(40, 60)), glow_3, false, 2.0)
+
+func _draw_pixel_human_a(center: Vector2, body: Color, relation: Color, attacking: bool) -> void:
+	var dark := body.darkened(0.38)
+	var skin := Color(0.96, 0.78, 0.62, 1.0)
+	var hair := Color(0.16, 0.20, 0.28, 1.0)
+	_draw_relation_glow(center, relation)
+	draw_rect(Rect2(center + Vector2(-12, -32), Vector2(24, 20)), skin)
+	draw_rect(Rect2(center + Vector2(-12, -36), Vector2(24, 8)), hair)
+	draw_rect(Rect2(center + Vector2(-16, -12), Vector2(32, 28)), body)
+	draw_rect(Rect2(center + Vector2(-20, -8), Vector2(8, 24)), dark)
+	draw_rect(Rect2(center + Vector2(12, -8), Vector2(8, 24)), dark)
+	draw_rect(Rect2(center + Vector2(-12, 16), Vector2(8, 20)), dark)
+	draw_rect(Rect2(center + Vector2(4, 16), Vector2(8, 20)), dark)
+	draw_rect(Rect2(center + Vector2(-8, -24), Vector2(4, 4)), Color(0.05, 0.06, 0.08, 1.0))
+	draw_rect(Rect2(center + Vector2(4, -24), Vector2(4, 4)), Color(0.05, 0.06, 0.08, 1.0))
+	if attacking:
+		var direction := _simplified_direction_vector()
+		var arm_center := center + direction * 12.0
+		draw_rect(Rect2(arm_center + Vector2(-4, -4), Vector2(8, 20)), relation)
+
+func _draw_pixel_human_b(center: Vector2, body: Color, relation: Color, attacking: bool) -> void:
+	var dark := body.darkened(0.42)
+	var light := body.lightened(0.28)
+	_draw_relation_glow(center, relation)
+	# More armored/chibi silhouette while keeping exactly the same relation cue.
+	draw_rect(Rect2(center + Vector2(-16, -34), Vector2(32, 16)), dark)
+	draw_rect(Rect2(center + Vector2(-12, -30), Vector2(24, 16)), light)
+	draw_rect(Rect2(center + Vector2(-20, -14), Vector2(40, 28)), body)
+	draw_rect(Rect2(center + Vector2(-24, -8), Vector2(8, 20)), dark)
+	draw_rect(Rect2(center + Vector2(16, -8), Vector2(8, 20)), dark)
+	draw_rect(Rect2(center + Vector2(-14, 14), Vector2(10, 22)), dark)
+	draw_rect(Rect2(center + Vector2(4, 14), Vector2(10, 22)), dark)
+	draw_rect(Rect2(center + Vector2(-4, -34), Vector2(8, 8)), relation)
+	if attacking:
+		var direction := _simplified_direction_vector()
+		var tip := center + direction * 24.0
+		draw_rect(Rect2(tip + Vector2(-3, -3), Vector2(6, 18)), relation.lightened(0.2))
+
+func _draw_minimal_human(center: Vector2, body: Color, relation: Color) -> void:
+	_draw_relation_glow(center, relation)
+	draw_rect(Rect2(center + Vector2(-10, -30), Vector2(20, 20)), body.lightened(0.18))
+	draw_rect(Rect2(center + Vector2(-14, -10), Vector2(28, 28)), body)
+	draw_rect(Rect2(center + Vector2(-10, 18), Vector2(8, 18)), body.darkened(0.4))
+	draw_rect(Rect2(center + Vector2(2, 18), Vector2(8, 18)), body.darkened(0.4))
+
+func _draw() -> void:
+	if not _performance_simplified_visual:
+		return
+
+	var state := current_state.to_lower()
+	var relation := _simplified_relation_color()
+	var body := _simplified_body_color()
+	if state.begins_with("hit"):
+		body = body.lerp(Color(1.0, 0.32, 0.32, 1.0), 0.58)
+
+	var center := Vector2(0.0, -50.0)
+	var attacking := state.begins_with("attack")
+	if attacking:
+		center += _simplified_direction_vector() * 5.0
+
+	if is_dead or state == "death":
+		draw_set_transform(center + Vector2(0, 24), 0.0, Vector2(1.30, 0.34))
+	else:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+	match _performance_simplified_style:
+		ClientPerformanceProfile.SIMPLIFY_PIXEL_B:
+			_draw_pixel_human_b(center if not is_dead else Vector2.ZERO, body, relation, attacking)
+		ClientPerformanceProfile.SIMPLIFY_MINIMAL:
+			_draw_minimal_human(center if not is_dead else Vector2.ZERO, body, relation)
+		_:
+			_draw_pixel_human_a(center if not is_dead else Vector2.ZERO, body, relation, attacking)
+
+	if is_dead or state == "death":
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func setup_layered_paper_dolls() -> void:
 	if not _performance_simplified_visual:
 		super.setup_layered_paper_dolls()
 		return
-	if not is_instance_valid(doll_engine):
-		return
+
 	if is_instance_valid(transform_sprite):
 		transform_sprite.visible = false
-	doll_engine.visible = true
-	doll_engine.build_human_model(
-		GENERIC_PLAYER_RACE,
-		GENERIC_PLAYER_HAIR,
-		0,
-		0,
-		GENERIC_PLAYER_EQUIPS
-	)
+	if is_instance_valid(doll_engine):
+		doll_engine.visible = false
+
 	if name_label:
-		name_label.position.y = -130.0
+		name_label.position.y = -112.0
 		name_label.visible = not data_model.is_shop_open
 	if title_label:
-		title_label.position.y = -150.0
+		title_label.position.y = -132.0
 	if club_label:
-		club_label.position.y = -170.0
-	_refresh_appearance_visibility()
+		club_label.position.y = -152.0
+	queue_redraw()
+
+func sync_animation() -> void:
+	if _performance_simplified_visual:
+		# State/direction still change authoritatively; only the expensive
+		# layered SpriteFrames animation is replaced by one redraw.
+		if is_instance_valid(doll_engine):
+			doll_engine.visible = false
+		if is_instance_valid(transform_sprite):
+			transform_sprite.visible = false
+		queue_redraw()
+		return
+	super.sync_animation()
 
 func _exit_tree() -> void :
 	if CursorManager:
@@ -221,6 +372,8 @@ func update_appearance_from_server(data: Dictionary) -> void :
 	data_model.transform_type = int(data.get("TransformType", data_model.transform_type))
 	data_model.transform_id = str(data.get("TransformID", data_model.transform_id))
 	data_model.transform_color_index = int(data.get("TransformColorIndex", data_model.transform_color_index))
+	if _performance_simplified_visual:
+		queue_redraw()
 
 	var mecha_parts_changed = false
 	if data.has("MechaBody") or data.has("MechaWeapon") or data.has("MechaEngine") or old_mecha_type != data_model.mecha_type:
@@ -342,6 +495,8 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		return
 	_pending_idle = false
 	current_state = new_state
+	if _performance_simplified_visual:
+		queue_redraw()
 	if new_state.begins_with("emote_"):
 		is_emoting = true
 		if is_instance_valid(doll_engine):
@@ -487,9 +642,8 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 				GameManager.current_hud.show_player_context_menu(data_model.db_id, data_model.character_name)
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_LEFT:
-			# PvP readability wins over the low-load visual once this player is targeted.
-			if _performance_simplified_visual:
-				set_performance_simplified(false)
+			# Targeting does not reload the full paper doll. Hostility/relationship
+			# stays visible through the built-in outline.
 			var local_player = GameManager.current_player if GameManager else null
 			if local_player and is_instance_valid(local_player):
 				var in_safe_zone = data_model.map_id in SAFE_MAP_IDS
@@ -522,7 +676,11 @@ func _setup_interact_area() -> void :
 	interact_area.name = "InteractArea"
 	var collision = CollisionShape2D.new()
 	var rect = RectangleShape2D.new()
-	rect.size = Vector2(80, 120)
+	rect.size = (
+		SIMPLIFIED_PLAYER_CLICK_SIZE
+		if _performance_simplified_visual
+		else NORMAL_PLAYER_CLICK_SIZE
+	)
 	collision.shape = rect
 	collision.position = Vector2(0, -40)
 	interact_area.add_child(collision)
@@ -536,6 +694,20 @@ func _setup_interact_area() -> void :
 	self.input_pickable = false
 
 
+func _apply_interact_area_size() -> void:
+	if not is_instance_valid(interact_area) or interact_area.get_child_count() == 0:
+		return
+	var collision := interact_area.get_child(0) as CollisionShape2D
+	if not is_instance_valid(collision):
+		return
+	var rect := collision.shape as RectangleShape2D
+	if not is_instance_valid(rect):
+		return
+	rect.size = (
+		SIMPLIFIED_PLAYER_CLICK_SIZE
+		if _performance_simplified_visual
+		else NORMAL_PLAYER_CLICK_SIZE
+	)
 
 
 func adjust_interact_area_for_death(is_dead_state: bool) -> void :
