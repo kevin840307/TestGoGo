@@ -292,6 +292,32 @@ func play_mecha_transform() -> void:
 	super.play_mecha_transform()
 
 
+func _on_party_sync_received(p_id: String, leader_id: int, members: Array) -> void:
+	super._on_party_sync_received(p_id, leader_id, members)
+	if _performance_simplified_visual:
+		queue_redraw()
+
+
+func _on_entity_name_color_updated(
+	p_entity_id: int,
+	color_state: int,
+	pk_status: int = -1,
+	red_man_kill_left: int = -1,
+	party_id: String = ""
+) -> void:
+	super._on_entity_name_color_updated(
+		p_entity_id,
+		color_state,
+		pk_status,
+		red_man_kill_left,
+		party_id
+	)
+	# Even when this packet belongs to the local player, its PK/party state
+	# can change how every simplified remote player should be outlined.
+	if _performance_simplified_visual:
+		queue_redraw()
+
+
 func _exit_tree() -> void :
 	if CursorManager:
 		CursorManager.unregister_hover(self)
