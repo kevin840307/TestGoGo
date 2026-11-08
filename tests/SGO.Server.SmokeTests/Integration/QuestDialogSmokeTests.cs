@@ -117,6 +117,18 @@ internal static class QuestDialogSmokeTests
 
         Check(dialogs.GetArrayLength() == 6,
             "Lua quest preserves all six dialogue events");
+        var batchId = dialogs[0].GetProperty("DialogBatchId").GetString();
+        Check(!string.IsNullOrEmpty(batchId) &&
+              Enumerable.Range(0, dialogs.GetArrayLength()).All(i =>
+                  dialogs[i].GetProperty("DialogBatchId").GetString() == batchId),
+            "one Lua execution assigns the same ID to all Say/Ask packets");
+        var repeat = runtime.Execute(
+            "LegacyDialogTest.txt", "start", 123, "守衛", null, _ => 0);
+        using var repeatDoc = JsonDocument.Parse(
+            JsonSerializer.Serialize(repeat.Packets));
+        Check(repeatDoc.RootElement[0].GetProperty("DialogBatchId").GetString()
+                  != batchId,
+            "a second execution on the same NPC receives a distinct batch ID");
 
         var colored = dialogs[0];
         Check(colored.GetProperty("Text").GetString() ==
@@ -176,8 +188,10 @@ internal static class QuestDialogSmokeTests
               ticketPackets[0].GetProperty("Options").GetArrayLength() == 2 &&
               ticketPackets[0].GetProperty("Options")[0]
                   .GetProperty("TargetNode").GetString() == "BuyTicket0Reply#0" &&
-              ticketPackets[1].GetProperty("DialogType").GetString() == "Close",
-            "Lua Ask then QuestEnd keeps choices in the original packet stream");
+              ticketPackets[1].GetProperty("DialogType").GetString() == "Close" &&
+              ticketPackets[0].GetProperty("DialogBatchId").GetString() ==
+                  ticketPackets[1].GetProperty("DialogBatchId").GetString(),
+            "Lua Ask then QuestEnd preserves choices and groups its close packet");
 
         var mediaExecution = runtime.Execute(
             "LegacyDialogTest.txt", "media", 123, "守衛", null, _ => 0);

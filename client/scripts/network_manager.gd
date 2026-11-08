@@ -61,6 +61,9 @@ signal pet_idle_speech_received(entity_id: int, message: String)
 
 signal npc_dialog_received(data: Dictionary)
 signal npc_dialog_closed()
+# Supplemental metadata for batch-aware Lua dialogue; keep the old no-argument
+# signal for any existing callers.
+signal npc_dialog_close_packet(data: Dictionary)
 signal change_map_received(map_id: int, target_x: float, target_y: float)
 signal train_travel_started(data: Dictionary)
 signal festival_theme_received(theme: String)
@@ -667,8 +670,11 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 			festival_activity_received.emit(str(data.get("Festival", "")))
 
 		"NpcDialogResponse":
-			if data.get("DialogType", "") == "Close": npc_dialog_closed.emit()
-			else: npc_dialog_received.emit(data)
+			if data.get("DialogType", "") == "Close":
+				npc_dialog_close_packet.emit(data)
+				npc_dialog_closed.emit()
+			else:
+				npc_dialog_received.emit(data)
 
 		"SystemMessageFlash": system_message_flash_received.emit(data.get("Message", ""))
 		"SystemMessageChat": system_message_chat_received.emit(data.get("Message", ""))

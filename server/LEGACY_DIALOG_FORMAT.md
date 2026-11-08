@@ -41,6 +41,7 @@ Server 執行 Lua 時以私有控制標記代替原先空字串，再於 `Dialog
 - `LegacyPrefix`：原版前綴，例如 `p7`、`n1`、`h`。
 - `DialogLayout`：`Default`、`Narration`、`Help`、`Media`。
 - `LegacyMedia`：只有原始 `m#imageA#imageB#audio#` 會附帶 `ImageA`、`ImageB`、`Audio` 欄位。沒有對應素材時不推測圖像或音效。
+- `DialogBatchId`：每次 `QuestRuntime.Execute()` 的 Lua 對話使用同一個批次 ID，下一次執行則取得新 ID。`Close` 也會攜帶此欄位，以避免舊回應關閉新的選項／對話。
 
 原有 `DialogType`、`NextNode`、`Options`、`TargetNode`、`BubbleType` 均未改動；選項 callback 邏輯不變。玩家聊天仍使用原本的 `Label`，只有經過 NPC 對話流程的富文字才建立輕量 `RichTextLabel`。
 
@@ -49,6 +50,8 @@ Server 執行 Lua 時以私有控制標記代替原先空字串，再於 `Dialog
 對照 `Old/服務端/Dat/Quest/NQ024_A.txt`：`start()` 先呼叫 `BuyTicket0()`，在裡面 `Ask(..., "BuyTicket0Reply")`，然後在 `start()` 結尾執行 `QuestEnd()`。這種 **Ask → QuestEnd 是合法的舊版用法**；任務函式返回不代表使用者已經選擇。因此 Client 現在在互動選項可見時保留選項，直到玩家選擇或明確關閉，而不讓尾端 `QuestEnd` 立刻關掉買票視窗。
 
 同時在 `legacy_dialog_sequence.gd` 維護是否正在等待選項的狀態；一般 `Say`、空選項以及非舊版 Lua NPC 封包仍維持原有流程。選項觸發後會重設對話狀態，避免影響下一次 NPC 互動。
+
+對於連續點擊或同一 NPC 反覆執行 Lua 的情況，Server 對每次執行的 `Say/Ask/QuestEnd` 加上同一個 `DialogBatchId`；Client 依批次識別新舊對話，舊批次的延遲 `Close` 不會關閉新對話。`NetworkManager` 保留原本的無參數 `npc_dialog_closed` Signal，另外提供帶封包資訊的 `npc_dialog_close_packet`，減少對其他使用者的影響。
 
 額外的原版佐證：`Old/服務端/CDELua.dll` 的可讀字串包含 `Say("p7Error while running the chunk!")`，所以 `p7` 不只表示物品獲得，也是系統結果及錯誤提示。原始人物表情映射仍不臆測。
 

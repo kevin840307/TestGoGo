@@ -6,6 +6,7 @@ extends RefCounted
 var _active := false
 var _entity_id := 0
 var _script_name := ""
+var _batch_id := ""
 var _pending: Array[Dictionary] = []
 var _awaiting_choice := false
 
@@ -13,11 +14,13 @@ var _awaiting_choice := false
 func push_or_begin(packet: Dictionary) -> bool:
 	var entity_id := int(packet.get("EntityID", 0))
 	var script_name := str(packet.get("ScriptName", ""))
-	if not _active or entity_id != _entity_id or script_name != _script_name:
+	var batch_id := str(packet.get("DialogBatchId", ""))
+	if not _active or entity_id != _entity_id or script_name != _script_name or batch_id != _batch_id:
 		reset()
 		_active = true
 		_entity_id = entity_id
 		_script_name = script_name
+		_batch_id = batch_id
 		return true
 
 	_pending.append(packet.duplicate(true))
@@ -55,6 +58,15 @@ func take_next() -> Dictionary:
 	return _pending.pop_front()
 
 
+# A Close packet from an older Lua execution must not dismiss the
+# current dialogue, even if it came from the same NPC and script name.
+func is_stale_close(packet: Dictionary) -> bool:
+	if not _active:
+		return false
+	var incoming := str(packet.get("DialogBatchId", ""))
+	return incoming != "" and _batch_id != "" and incoming != _batch_id
+
+
 func is_active() -> bool:
 	return _active
 
@@ -63,5 +75,6 @@ func reset() -> void:
 	_active = false
 	_entity_id = 0
 	_script_name = ""
+	_batch_id = ""
 	_awaiting_choice = false
 	_pending.clear()

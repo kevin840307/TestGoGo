@@ -66,6 +66,22 @@ func _run() -> void:
 	seq.reset()
 	_check(not seq.defer_close(), "no active dialogue means close is immediate")
 
+	var batch_a := {"EntityID": 31, "ScriptName": "NQ024_A.txt",
+		"DialogBatchId": "execution-A", "DialogType": "ActionDialog", "Text": "第一批"}
+	var batch_b := {"EntityID": 31, "ScriptName": "NQ024_A.txt",
+		"DialogBatchId": "execution-B", "DialogType": "ActionDialog", "Text": "第二批"}
+	_check(seq.push_or_begin(batch_a), "batch A shows immediately")
+	_check(not seq.push_or_begin(batch_a), "same execution is queued")
+	_check(seq.push_or_begin(batch_b), "new execution from the same NPC supersedes old")
+	_check(not seq.has_pending(), "old batch queued lines are discarded")
+	_check(seq.is_stale_close({"DialogBatchId": "execution-A"}),
+		"late close from prior Lua execution does not dismiss the new one")
+	_check(not seq.is_stale_close({"DialogBatchId": "execution-B"}),
+		"close for the active Lua batch remains valid")
+	_check(not seq.is_stale_close({}),
+		"older close packets without batch ID retain compatible behavior")
+	seq.reset()
+
 	# Real quest pattern: NQ024_A.txt calls Ask() then QuestEnd().
 	# Client must NOT close the ticket choices just because the Lua function ends.
 	var train := {"EntityID": 31, "ScriptName": "NQ024_A.txt",
@@ -87,15 +103,21 @@ func _run() -> void:
 	var hud_source := FileAccess.get_file_as_string("res://game_hud.gd")
 	var manager_source := FileAccess.get_file_as_string(
 		"res://scripts/network_entity_manager.gd")
+	var network_source := FileAccess.get_file_as_string(
+		"res://scripts/network_manager.gd")
 	_check(hud_source.contains("func has_legacy_dialog_line_waiting()") and
 		hud_source.contains("_hide_current_dialog_bubbles()") and
 		hud_source.contains("_on_npc_dialog_received(next_packet, true)") and
 		hud_source.contains("_legacy_dialog_sequence.defer_close()") and
-		hud_source.contains("_legacy_dialog_sequence.is_awaiting_choice()"),
+		hud_source.contains("_legacy_dialog_sequence.is_awaiting_choice()") and
+		hud_source.contains("_legacy_dialog_sequence.is_stale_close(packet)"),
 		"HUD hides prior speech, consumes queued lines, and defers server close")
 	_check(manager_source.contains("hud.has_legacy_dialog_line_waiting()") and
 		manager_source.contains("hud.request_next_dialog_sentence()"),
 		"existing click-to-continue hook remains connected")
+	_check(network_source.contains("npc_dialog_close_packet.emit(data)") and
+		network_source.contains("npc_dialog_closed.emit()"),
+		"batch-aware close metadata does not remove original close signal")
 
 	print("[NPC_SEQUENCE] ", "ALL PASS" if failures == 0 else
 		"%d FAILURES" % failures)

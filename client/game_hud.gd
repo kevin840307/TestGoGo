@@ -304,8 +304,11 @@ func _ready() -> void :
 		if NetworkManager.has_signal("npc_dialog_received"):
 			if not NetworkManager.npc_dialog_received.is_connected(_on_npc_dialog_received):
 				NetworkManager.npc_dialog_received.connect(_on_npc_dialog_received)
-		if NetworkManager.has_signal("npc_dialog_closed"):
-			if not NetworkManager.npc_dialog_closed.is_connected(_on_npc_dialog_closed):
+		if NetworkManager.has_signal("npc_dialog_close_packet"):
+			if not NetworkManager.npc_dialog_close_packet.is_connected(_on_npc_dialog_close_requested):
+				NetworkManager.npc_dialog_close_packet.connect(_on_npc_dialog_close_requested)
+		elif NetworkManager.has_signal("npc_dialog_closed"):
+			if not NetworkManager.npc_dialog_closed.is_connected(_on_npc_dialog_close_requested):
 				NetworkManager.npc_dialog_closed.connect(_on_npc_dialog_close_requested)
 
 		if NetworkManager.has_signal("open_bank_window_received"):
@@ -1650,7 +1653,10 @@ func has_legacy_dialog_line_waiting() -> bool:
 	return _legacy_dialog_line_waiting
 
 
-func _on_npc_dialog_close_requested() -> void:
+func _on_npc_dialog_close_requested(packet: Dictionary = {}) -> void:
+	# A late close for an older Lua execution must not dismiss a newer batch.
+	if _legacy_dialog_sequence.is_stale_close(packet):
+		return
 	# Original quests may call QuestEnd() directly after Ask(). Keep its options
 	# clickable; option handlers already close/reset the dialogue when selected.
 	if _legacy_dialog_sequence.is_awaiting_choice():

@@ -75,6 +75,9 @@ public sealed class QuestRuntime
         QuestRuntimeBindings? bindings = null)
     {
         var result = new QuestExecutionResult();
+        // One identity per Execute() keeps interleaved NPC responses and
+        // delayed QuestEnd() from closing a newer conversation.
+        var dialogBatchId = Guid.NewGuid().ToString("N");
 
         if (functionName.Equals("End", StringComparison.OrdinalIgnoreCase) ||
             functionName.Equals("QuestEnd", StringComparison.OrdinalIgnoreCase))
@@ -84,6 +87,7 @@ public sealed class QuestRuntime
                 Type = "NpcDialogResponse",
                 EntityID = entityId,
                 ScriptName = scriptName,
+                DialogBatchId = dialogBatchId,
                 DialogType = "Close"
             });
             return result;
@@ -522,6 +526,7 @@ public sealed class QuestRuntime
                 Type = "NpcDialogResponse",
                 EntityID = entityId,
                 ScriptName = scriptName,
+                DialogBatchId = dialogBatchId,
                 DialogType = "Close"
             });
         });
@@ -584,6 +589,7 @@ public sealed class QuestRuntime
                 Type = "NpcDialogResponse",
                 EntityID = entityId,
                 ScriptName = scriptName,
+                DialogBatchId = dialogBatchId,
                 DialogType = "ActionDialog",
                 Text = dialog.Text,
                 PlainText = dialog.PlainText,
@@ -620,6 +626,7 @@ public sealed class QuestRuntime
                 Type = "NpcDialogResponse",
                 EntityID = entityId,
                 ScriptName = scriptName,
+                DialogBatchId = dialogBatchId,
                 DialogType = "Dialog",
                 Text = dialog.Text,
                 PlainText = dialog.PlainText,
