@@ -3,7 +3,7 @@ const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 
 const state = {
   view: 'dashboard',
-  status: null, health: null,
+  status: null, health: null, history: [], selectedHistory: null,
   skills: [], selectedSkill: null, skillDirty: false,
   enemies: [], selectedEnemy: null, enemyDirty: false,
   maps: [], mapId: null, mapTab: 'enemies', mapRows: [],
@@ -23,6 +23,7 @@ const VIEW_META = {
   maps: ['視覺化地圖編輯器', '使用遊戲座標、Blocking.dat 與怪物區域直接放置怪物 / NPC。'],
   scripts: ['NPC 腳本編輯器', '編輯 Quest Lua、檢查 callback 與 #include，並從地圖 NPC 直接跳轉。'],
   assets: ['素材管理', '預覽並替換 client/Assets 素材；寫入前自動備份。'],
+  history: ['變更歷史', '查看 Editor 自動備份、比較差異並安全還原。'],
 };
 
 async function api(path, options={}) {
@@ -117,6 +118,7 @@ async function refreshCurrent() {
     case 'maps': return loadMaps();
     case 'scripts': return loadScripts();
     case 'assets': return loadAssets();
+    case 'history': return loadHistory();
   }
 }
 
