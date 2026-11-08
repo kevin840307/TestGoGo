@@ -72,6 +72,15 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("ItemEffect_14", source)
         self.assertIn("expired booster rows", source)
 
+    def test_choice_reward_suite_is_modular_and_replay_safe(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = SMOKE / "Integration" / "ChoiceRewardSmokeTests.cs"
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("forged choice reward IDs are rejected", source)
+        self.assertIn("replaying a consumed choice UID cannot duplicate", source)
+        self.assertIn("ChoiceRewardSmokeTests.Run(", main)
+
     def test_recovered_box_suite_guards_safe_multi_reward_behavior(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = SMOKE / "Integration" / "RecoveredBoxSmokeTests.cs"
