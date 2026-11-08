@@ -210,7 +210,7 @@ func _test_right_click_preserves_player_interaction() -> void:
 		"PASS buttons still preempt autorun while retaining button events")
 	button.free()
 	_check(not player._autorun_click_has_priority(null, null),
-		"bare ground is still routed to one-shot click-to-move")
+		"bare terrain has no special entity/UI click priority; latched stop is handled globally")
 
 	# These handlers own player context menus. Our _input must not consume the
 	# event before NetworkPlayer._input_event sees the same right click.
@@ -221,7 +221,7 @@ func _test_right_click_preserves_player_interaction() -> void:
 	var input_body: String = player_source.substr(input_start, input_end - input_start)
 	_check(input_start >= 0 and input_end > input_start
 		and not input_body.contains("set_input_as_handled"),
-		"global right-click stop never consumes original player context-menu event")
+		"neither left nor right click-to-stop consumes the original player context-menu event")
 	_check(network_source.contains("show_player_context_menu"),
 		"player right-click menu behavior remains present")
 	player.free()
