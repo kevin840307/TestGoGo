@@ -36,5 +36,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: server-smoke-windows-log
-          path: smoke.log
+          path: |
+            smoke.log
+            test-results/**
           if-no-files-found: ignore
