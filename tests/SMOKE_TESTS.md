@@ -69,6 +69,7 @@ tests/SGO.Server.SmokeTests/
 - 註冊、登入、三角色 slot、建角、重登、選角。
 - EnterWorld bootstrap、WorldReady、商城 list、登出。
 - 第二個真 WebSocket client 完成相同登入/進圖。
+- 經濟封包走真 wire：BankTransfer、DirectTransfer，以及玩家商店 AddItem → OpenShop → ViewShop → BuyItem，並驗證雙方金錢/物品/商店列表同步。
 - Client A `SyncPosition` → Client B 收 `MoveEntity`。
 - Client A nearby `ChatMessage` → Client B 收 `ChatBroadcast`。
 - Party Invite → Accept → 雙方 `PartySync`。

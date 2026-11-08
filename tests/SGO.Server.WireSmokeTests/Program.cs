@@ -600,6 +600,275 @@ await AwaitType(
             nearbyText,
     "peer receives nearby chat from first player over map broadcast");
 
+// Economy packets also run over the real encrypted two-client path. Use
+// isolated item IDs so these checks cannot pollute the later drop/pickup test.
+var bankSeed = await SendGm(
+    "item 19 2",
+    "InventorySync",
+    root =>
+        root.TryGetProperty("Items", out var items) &&
+        items.ValueKind == JsonValueKind.Array &&
+        items.EnumerateArray().Any(item =>
+            item.TryGetProperty("ItemIndex", out var itemIndex) &&
+            itemIndex.GetInt32() == 19 &&
+            item.TryGetProperty("Count", out var count) &&
+            count.GetInt32() == 2 &&
+            item.TryGetProperty("InBank", out var inBank) &&
+            inBank.GetInt32() == 0),
+    "GM seeds isolated bank-transfer stack");
+
+var bankItemUid =
+    bankSeed.GetProperty("Items")
+        .EnumerateArray()
+        .Where(item =>
+            item.GetProperty("ItemIndex").GetInt32() == 19 &&
+            item.GetProperty("Count").GetInt32() == 2 &&
+            item.GetProperty("InBank").GetInt32() == 0)
+        .Select(item => item.GetProperty("ItemUID").GetInt64())
+        .Max();
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "BankTransfer",
+        UID = bankItemUid,
+        ToBank = true,
+        Amount = 1,
+        TabType = 0
+    });
+
+await AwaitType(
+    socket,
+    "InventorySync",
+    root =>
+    {
+        if (!root.TryGetProperty("Items", out var items) ||
+            items.ValueKind != JsonValueKind.Array)
+            return false;
+
+        var matching = items
+            .EnumerateArray()
+            .Where(item =>
+                item.TryGetProperty("ItemIndex", out var itemIndex) &&
+                itemIndex.GetInt32() == 19)
+            .ToArray();
+
+        return matching
+                   .Where(item => item.GetProperty("InBank").GetInt32() == 0)
+                   .Sum(item => item.GetProperty("Count").GetInt32()) == 1 &&
+               matching
+                   .Where(item => item.GetProperty("InBank").GetInt32() == 1)
+                   .Sum(item => item.GetProperty("Count").GetInt32()) == 1;
+    },
+    "BankTransfer moves exactly one item over encrypted WebSocket");
+
+var senderMoneySeed = await SendGm(
+    "money 100",
+    "SyncMoney",
+    root =>
+        root.TryGetProperty("Money", out var money) &&
+        money.ValueKind == JsonValueKind.Number,
+    "GM seeds sender money for direct-transfer wire test");
+
+var peerMoneySeed = await SendGmOn(
+    peerSocket,
+    "money 0",
+    "SyncMoney",
+    root =>
+        root.TryGetProperty("Money", out var money) &&
+        money.ValueKind == JsonValueKind.Number,
+    "GM reads peer money before direct-transfer wire test");
+
+var senderMoneyBeforeTransfer =
+    senderMoneySeed.GetProperty("Money").GetInt64();
+var peerMoneyBeforeTransfer =
+    peerMoneySeed.GetProperty("Money").GetInt64();
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "DirectTransfer",
+        TargetDBID = peerDbid,
+        Amount = 25
+    });
+
+var senderMoneyAfterTransferPacket = await AwaitType(
+    socket,
+    "SyncMoney",
+    root =>
+        root.TryGetProperty("Money", out var money) &&
+        money.GetInt64() == senderMoneyBeforeTransfer - 25,
+    "DirectTransfer debits sender exactly once");
+
+var peerMoneyAfterTransferPacket = await AwaitType(
+    peerSocket,
+    "SyncMoney",
+    root =>
+        root.TryGetProperty("Money", out var money) &&
+        money.GetInt64() == peerMoneyBeforeTransfer + 25,
+    "DirectTransfer credits nearby peer exactly once");
+
+var senderMoneyAfterTransfer =
+    senderMoneyAfterTransferPacket.GetProperty("Money").GetInt64();
+var peerMoneyAfterTransfer =
+    peerMoneyAfterTransferPacket.GetProperty("Money").GetInt64();
+
+var playerShopSeed = await SendGm(
+    "item 1 1",
+    "InventorySync",
+    root =>
+        root.TryGetProperty("Items", out var items) &&
+        items.ValueKind == JsonValueKind.Array &&
+        items.EnumerateArray().Any(item =>
+            item.TryGetProperty("ItemIndex", out var itemIndex) &&
+            itemIndex.GetInt32() == 1 &&
+            item.TryGetProperty("InBank", out var inBank) &&
+            inBank.GetInt32() == 0 &&
+            item.TryGetProperty("InShop", out var inShop) &&
+            inShop.GetInt32() == 0),
+    "GM seeds tradeable player-shop item");
+
+var playerShopItemUid =
+    playerShopSeed.GetProperty("Items")
+        .EnumerateArray()
+        .Where(item =>
+            item.GetProperty("ItemIndex").GetInt32() == 1 &&
+            item.GetProperty("InBank").GetInt32() == 0 &&
+            item.GetProperty("InShop").GetInt32() == 0)
+        .Select(item => item.GetProperty("ItemUID").GetInt64())
+        .Max();
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "ShopAction",
+        Action = "AddItem",
+        UID = playerShopItemUid,
+        TabType = 0,
+        Count = 1,
+        Price = 7
+    });
+
+await AwaitType(
+    socket,
+    "ShopSync",
+    root =>
+        root.TryGetProperty("Items", out var items) &&
+        items.ValueKind == JsonValueKind.Array &&
+        items.EnumerateArray().Any(item =>
+            item.TryGetProperty("UID", out var uid) &&
+            uid.GetInt64() == playerShopItemUid &&
+            item.TryGetProperty("ItemIndex", out var itemIndex) &&
+            itemIndex.GetInt32() == 1 &&
+            item.TryGetProperty("Price", out var price) &&
+            price.GetInt64() == 7),
+    "ShopAction AddItem reserves seller item over real wire");
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "ShopAction",
+        Action = "OpenShop",
+        ShopName = "WireShop"
+    });
+
+await AwaitType(
+    socket,
+    "SyncShopBoard",
+    root =>
+        root.TryGetProperty("EntityID", out var entity) &&
+        entity.GetInt64() == dbid &&
+        root.TryGetProperty("IsOpen", out var isOpen) &&
+        isOpen.ValueKind == JsonValueKind.True,
+    "seller opens player shop over real wire",
+    skipNonMatchingSameType: true);
+
+await AwaitType(
+    peerSocket,
+    "SyncShopBoard",
+    root =>
+        root.TryGetProperty("EntityID", out var entity) &&
+        entity.GetInt64() == dbid &&
+        root.TryGetProperty("IsOpen", out var isOpen) &&
+        isOpen.ValueKind == JsonValueKind.True,
+    "nearby peer receives player-shop board broadcast",
+    skipNonMatchingSameType: true);
+
+await SendPacket(
+    peerSocket,
+    new
+    {
+        Type = "ShopAction",
+        Action = "ViewShop",
+        TargetDBID = dbid
+    });
+
+await AwaitType(
+    peerSocket,
+    "ShopViewResponse",
+    root =>
+        root.TryGetProperty("OwnerDBID", out var owner) &&
+        owner.GetInt64() == dbid &&
+        root.TryGetProperty("Items", out var items) &&
+        items.ValueKind == JsonValueKind.Array &&
+        items.EnumerateArray().Any(item =>
+            item.TryGetProperty("UID", out var uid) &&
+            uid.GetInt64() == playerShopItemUid),
+    "peer views seller player shop over real wire");
+
+await SendPacket(
+    peerSocket,
+    new
+    {
+        Type = "ShopAction",
+        Action = "BuyItem",
+        TargetDBID = dbid,
+        UID = playerShopItemUid,
+        Count = 1
+    });
+
+await AwaitType(
+    peerSocket,
+    "SyncMoney",
+    root =>
+        root.TryGetProperty("Money", out var money) &&
+        money.GetInt64() == peerMoneyAfterTransfer - 7,
+    "player-shop purchase debits buyer over real wire");
+
+await AwaitType(
+    peerSocket,
+    "InventorySync",
+    root =>
+        root.TryGetProperty("Items", out var items) &&
+        items.ValueKind == JsonValueKind.Array &&
+        items.EnumerateArray().Any(item =>
+            item.TryGetProperty("ItemIndex", out var itemIndex) &&
+            itemIndex.GetInt32() == 1 &&
+            item.TryGetProperty("InShop", out var inShop) &&
+            inShop.GetInt32() == 0),
+    "player-shop purchase transfers item to buyer");
+
+await AwaitType(
+    socket,
+    "SyncMoney",
+    root =>
+        root.TryGetProperty("Money", out var money) &&
+        money.GetInt64() == senderMoneyAfterTransfer + 7,
+    "player-shop purchase credits seller exactly once");
+
+await AwaitType(
+    socket,
+    "ShopSync",
+    root =>
+        root.TryGetProperty("Items", out var items) &&
+        items.ValueKind == JsonValueKind.Array &&
+        items.GetArrayLength() == 0,
+    "sold-out player shop publishes empty authoritative listing");
+
 // Seed through the normal privileged ChatMessage command path, then exercise
 // the actual gameplay packets. The isolated test server explicitly enables GM;
 // production defaults GM commands off.
@@ -1656,9 +1925,24 @@ async Task<JsonElement> SendGm(
     Func<JsonElement, bool> assert,
     string description,
     bool skipNonMatchingSameType = false)
+    => await SendGmOn(
+        socket,
+        command,
+        responseType,
+        assert,
+        description,
+        skipNonMatchingSameType);
+
+async Task<JsonElement> SendGmOn(
+    ClientWebSocket targetSocket,
+    string command,
+    string responseType,
+    Func<JsonElement, bool> assert,
+    string description,
+    bool skipNonMatchingSameType = false)
 {
     await SendPacket(
-        socket,
+        targetSocket,
         new
         {
             Type = "ChatMessage",
@@ -1668,7 +1952,7 @@ async Task<JsonElement> SendGm(
         });
 
     return await AwaitType(
-        socket,
+        targetSocket,
         responseType,
         assert,
         description,
