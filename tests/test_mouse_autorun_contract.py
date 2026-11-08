@@ -21,6 +21,12 @@ class MouseAutorunContractTests(unittest.TestCase):
         self.assertIn("func poll_long_hold(", state)
         self.assertIn("var was_latched: bool = _mouse_autorun.terrain_press(", player)
         self.assertIn("is_mouse_holding = not was_latched", player)
+        # First left-click after a latch stops movement without starting a
+        # second route; release clears the same-click suppression.
+        self.assertIn("var _autorun_left_press_cancelled: bool = false", player)
+        self.assertIn("_autorun_left_press_cancelled = true", player)
+        self.assertIn("_autorun_left_press_cancelled = false", player)
+        self.assertIn("if _autorun_left_press_cancelled:", player)
         self.assertIn("_mouse_autorun.terrain_release(", player)
         self.assertIn("if is_mouse_holding or _mouse_autorun.latched:", player)
         self.assertIn("AUTORUN_BLOCKED_RETRY_INTERVAL: float = 0.4", player)
@@ -32,6 +38,8 @@ class MouseAutorunContractTests(unittest.TestCase):
         last = player.index("func _unhandled_input(", first)
         handler = player[first:last]
         self.assertIn("MOUSE_BUTTON_RIGHT", handler)
+        self.assertIn("MOUSE_BUTTON_LEFT", handler)
+        self.assertIn("elif _mouse_autorun.latched:", handler)
         self.assertIn("cancel_autorun_tracking(true)", handler)
         self.assertIn("CursorManager.current_hovered_entity", handler)
         self.assertIn("gui_get_hovered_control()", handler)
@@ -80,6 +88,8 @@ class MouseAutorunContractTests(unittest.TestCase):
         ci = read(".github/workflows/server-build.yml")
         self.assertIn("terrain requires one full second", case)
         self.assertIn("right-click stops latched movement", case)
+        self.assertIn("first bare-terrain left click stops latched walking", case)
+        self.assertIn("release clears one-click suppression", case)
         self.assertIn("player right-click menu behavior remains present", case)
         self.assertIn("mouse_autorun_regression.gd", windows)
         self.assertIn("mouse_autorun_regression.gd", ci)
