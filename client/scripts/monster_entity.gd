@@ -88,6 +88,25 @@ const COLOR_INDEX_TO_DEGREES = {
 # hundreds of identical ColorIndex values; their own scene/UI state remains
 # independent and the existing Shader/TIME animation stays unchanged.
 static var _shared_palette_materials: Dictionary = {}
+# Every monster previously allocated a separate RectangleShape2D even when
+# thousands of identical sprites have the same click hitbox. The rectangle
+# is immutable after setup; share one Shape2D per texture dimensions.
+static var _shared_click_shapes: Dictionary = {}
+
+
+static func get_shared_monster_click_shape(texture_size: Vector2) -> RectangleShape2D:
+	var key := Vector2i(int(texture_size.x), int(texture_size.y))
+	var shape := _shared_click_shapes.get(key) as RectangleShape2D
+	if is_instance_valid(shape):
+		return shape
+	shape = RectangleShape2D.new()
+	shape.size = Vector2(key)
+	_shared_click_shapes[key] = shape
+	return shape
+
+
+static func get_shared_monster_click_shape_count() -> int:
+	return _shared_click_shapes.size()
 
 
 static func get_shared_monster_palette_material(color_index: int) -> ShaderMaterial:
@@ -554,11 +573,9 @@ func _generate_dynamic_collision_shape() -> void :
 			var offset = tex.get_meta("old_offset") if tex.has_meta("old_offset") else Vector2.ZERO
 
 
-			var rect = RectangleShape2D.new()
-			rect.size = tex_size
-
-
-			collision_shape.shape = rect
+			# Identical monsters can reuse the same immutable shape; its
+			# position still belongs to each individual CollisionShape2D.
+			collision_shape.shape = get_shared_monster_click_shape(tex_size)
 
 
 			var center_y = - offset.y + (tex_size.y / 2.0)
