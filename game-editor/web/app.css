@@ -326,3 +326,49 @@ tbody tr.selected { background:var(--accent-soft); box-shadow:inset 3px 0 var(--
 .map-marker.invalid { border-color:rgba(255,112,122,.9); background:rgba(86,25,32,.92); box-shadow:0 0 0 2px rgba(255,112,122,.12),0 5px 14px rgba(0,0,0,.25); }
 .map-marker.invalid span { color:#ff9da5; }
 .map-marker.invalid::before { content:"!"; position:absolute; right:-6px; top:-7px; width:14px; height:14px; border-radius:50%; display:grid; place-items:center; background:#ff707a; color:#fff; font-size:8px; font-weight:900; box-shadow:0 2px 6px rgba(0,0,0,.35); }
+
+
+/* Project health / validation */
+.health-panel { grid-column:1/-1; overflow:hidden; }
+.health-summary { display:grid; grid-template-columns:repeat(3,minmax(100px,1fr)); gap:10px; padding:0 14px 12px; }
+.health-stat { border:1px solid var(--line-soft); background:#0e151f; border-radius:9px; padding:10px 12px; }
+.health-stat span,.health-stat strong { display:block; }
+.health-stat span { color:var(--muted); font-size:9px; text-transform:uppercase; letter-spacing:.08em; }
+.health-stat strong { margin-top:4px; font-size:20px; }
+#health-errors { color:#ff9da5; }
+#health-warnings { color:#f1cf84; }
+#health-total { color:#cfe0f6; }
+.health-list { display:grid; gap:7px; padding:0 14px 14px; max-height:360px; overflow:auto; }
+.health-issue { border:1px solid var(--line-soft); background:#0e151f; border-radius:9px; padding:9px 10px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.health-issue.error { border-color:rgba(255,112,122,.25); background:rgba(255,112,122,.045); }
+.health-issue.warning { border-color:rgba(244,198,107,.2); background:rgba(244,198,107,.035); }
+.health-issue-main { display:flex; align-items:flex-start; gap:9px; min-width:0; }
+.health-severity { flex:0 0 auto; border-radius:999px; padding:3px 6px; font-size:7px; font-weight:900; letter-spacing:.06em; background:#1a2330; color:#9dadc2; }
+.health-issue.error .health-severity { color:#ffb2b7; background:rgba(255,112,122,.12); }
+.health-issue.warning .health-severity { color:#f4d993; background:rgba(244,198,107,.11); }
+.health-issue b,.health-issue span { display:block; }
+.health-issue b { font-size:10px; color:#d5deeb; }
+.health-issue-main > div > span { margin-top:3px; color:var(--muted); font-size:9px; line-height:1.45; }
+.health-repair { margin-top:5px; color:#9dc7ff; font:9px "Cascadia Code",Consolas,monospace; }
+.health-open { flex:0 0 auto; padding:6px 8px; font-size:9px; }
+.health-empty { padding:13px; border:1px solid var(--line-soft); border-radius:9px; font-size:10px; }
+.health-empty.good { color:#91e8c1; border-color:rgba(87,211,155,.2); background:rgba(87,211,155,.05); }
+.health-empty.bad { color:#ffadb3; border-color:rgba(255,112,122,.22); background:rgba(255,112,122,.05); }
+
+.modal-backdrop { position:fixed; inset:0; z-index:500; background:rgba(4,8,13,.72); display:grid; place-items:center; padding:24px; }
+.modal-backdrop[hidden] { display:none; }
+.modal-card { width:min(720px,calc(100vw - 36px)); max-height:calc(100vh - 48px); overflow:hidden; border:1px solid #2b3a4f; background:#0e151f; border-radius:14px; box-shadow:0 24px 70px rgba(0,0,0,.52); display:grid; grid-template-rows:auto 1fr auto; }
+.modal-head { padding:14px 16px; border-bottom:1px solid var(--line-soft); display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.modal-head h2 { margin:0; font-size:16px; }
+.modal-body { padding:14px 16px; overflow:auto; }
+.modal-actions { padding:12px 16px; border-top:1px solid var(--line-soft); display:flex; justify-content:flex-end; gap:8px; }
+.validation-change-summary { border:1px solid var(--line-soft); background:#0a1119; border-radius:9px; padding:9px 10px; color:#b7c4d5; font-size:10px; margin-bottom:10px; }
+.validation-group { border:1px solid var(--line-soft); border-radius:9px; overflow:hidden; margin-top:9px; }
+.validation-group h3 { margin:0; padding:8px 10px; font-size:10px; border-bottom:1px solid var(--line-soft); }
+.validation-group.bad h3 { color:#ffadb3; background:rgba(255,112,122,.06); }
+.validation-group.warn h3 { color:#f1cf84; background:rgba(244,198,107,.05); }
+.validation-group.neutral h3 { color:#a9c9f8; background:rgba(110,168,254,.05); }
+.validation-row { display:grid; grid-template-columns:70px 1fr; gap:8px; padding:7px 10px; border-top:1px solid rgba(255,255,255,.035); font-size:9px; }
+.validation-row:first-of-type { border-top:0; }
+.validation-row b { color:#aebdce; }
+.validation-row span { color:#8797ad; }
