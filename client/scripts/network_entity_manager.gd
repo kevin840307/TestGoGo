@@ -777,6 +777,17 @@ func _spawn_entity_now(data: Dictionary) -> void :
 	match entity_type:
 		0:
 			new_entity = NETWORK_PLAYER_SCENE.instantiate()
+			var player_spawn_profile: Dictionary = GameManager.get_performance_profile() if GameManager else {}
+			var pre_simplify_player := bool(player_spawn_profile.get("simplify_other_players", false))
+			var pre_player_style := int(player_spawn_profile.get(
+				"player_simplify_style",
+				ClientPerformanceProfile.SIMPLIFY_PIXEL_A
+			))
+			if new_entity.has_method("prepare_performance_visual"):
+				new_entity.prepare_performance_visual(
+					pre_simplify_player,
+					pre_player_style
+				)
 			target_parent.add_child(new_entity)
 			new_entity.global_position = spawn_pos
 			if new_entity.has_method("initialize_network_player"):
