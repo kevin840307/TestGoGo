@@ -60,13 +60,18 @@ var report = new
         rows.Count(x =>
             x.Status ==
             "CHOICE_REQUIRED"),
+    DataAmbiguousCount =
+        rows.Count(x =>
+            x.Status ==
+            "DATA_AMBIGUOUS"),
     Items =
         rows,
     Limits = new[]
     {
         "Static/data-driven coverage: a SUPPORTED classification does not replace gameplay E2E.",
-        "CHOICE_REQUIRED means the item needs an explicit player-selection flow and is intentionally not guessed.",
-        "UNKNOWN_SCRIPT_EFFECT must remain a visible gap; the server must not consume it with a fake success response."
+        "CHOICE_REQUIRED means the item still needs a reliable player-selection/random rule and is intentionally not guessed.",
+        "DATA_AMBIGUOUS means legacy text maps to multiple current variants; runtime must reject without consuming the source.",
+        "UNKNOWN_SCRIPT_EFFECT must remain a visible code/data gap; strict mode fails until it is classified or implemented."
     }
 };
 
@@ -101,7 +106,8 @@ Console.WriteLine(
 foreach (var row in rows.Where(x =>
              x.Status is
                  "UNKNOWN_SCRIPT_EFFECT" or
-                 "CHOICE_REQUIRED"))
+                 "CHOICE_REQUIRED" or
+                 "DATA_AMBIGUOUS"))
 {
     Console.WriteLine(
         $"{row.Status}: {row.ItemId} {row.Name} " +
@@ -248,6 +254,18 @@ CoverageRow Classify(
             item.ScriptName,
             "CHOICE_REQUIRED",
             "description requires a player/random choice; server must not guess");
+    }
+
+    if (AmbiguousRewardCatalog.IsAmbiguous(
+            current,
+            item.ItemId))
+    {
+        return new(
+            item.ItemId,
+            item.Name,
+            item.ScriptName,
+            "DATA_AMBIGUOUS",
+            "legacy reward name matches multiple current-client variants; server refuses to guess");
     }
 
     return new(
