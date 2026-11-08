@@ -419,6 +419,8 @@ var _focused_max_fps: int = 0
 var _master_bus_was_muted_before_focus_loss: bool = false
 var _startup_loading_overlay_active: bool = false
 var _startup_focus_observed_frames: int = 0
+var _last_background_cache_trim_msec: int = 0
+const BACKGROUND_CACHE_TRIM_COOLDOWN_MSEC: int = 60000
 const UNFOCUSED_MAX_FPS := 30
 const STARTUP_UNFOCUSED_PROGRESS_FPS := 10
 
@@ -467,6 +469,10 @@ func _notification(what: int) -> void :
 	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
 		_set_window_focus_power_save(true)
 
+static func should_trim_background_caches(has_world: bool, last_trim_msec: int, now_msec: int) -> bool:
+	return has_world and (last_trim_msec <= 0 or now_msec - last_trim_msec >= BACKGROUND_CACHE_TRIM_COOLDOWN_MSEC)
+
+
 func _set_window_focus_power_save(has_focus: bool) -> void :
 	if _window_has_focus == has_focus:
 		return
@@ -478,6 +484,7 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 	_frame_gap_last_usec = _focus_last_change_usec
 
 	var master_bus_index := AudioServer.get_bus_index("Master")
+	var caches_trimmed: bool = false
 
 	if not has_focus:
 		_focused_max_fps = Engine.max_fps
@@ -487,7 +494,16 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 		# minimap/cursor scanning and day-night screen-UV updates.
 		# Pause visuals only; network, timers and server world state continue.
 		_set_background_visual_processing(true)
-		_trim_unfocused_runtime_caches()
+		# Alt+Tab rarely frees much static memory while live scenes still
+		# reference their textures. Repeatedly clearing caches instead forces
+		# redecoding/reloading resources when cycling among 10 clients.
+		# Keep the first trim once a world exists, but debounce subsequent
+		# trims so background clients don't pay this churn each focus event.
+		var now_msec: int = Time.get_ticks_msec()
+		if should_trim_background_caches(is_instance_valid(current_map_node), _last_background_cache_trim_msec, now_msec):
+			_trim_unfocused_runtime_caches()
+			_last_background_cache_trim_msec = now_msec
+			caches_trimmed = true
 
 		if master_bus_index >= 0:
 			_master_bus_was_muted_before_focus_loss = AudioServer.is_bus_mute(master_bus_index)
@@ -503,7 +519,7 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 				_master_bus_was_muted_before_focus_loss
 			)
 
-	_log_focus_power_save("focus_in" if has_focus else "focus_out", not has_focus)
+	_log_focus_power_save("focus_in" if has_focus else "focus_out", caches_trimmed)
 
 func _set_background_visual_processing(paused: bool) -> void :
 	if CursorManager:
