@@ -39,7 +39,12 @@ func _run() -> void:
 
 	# The server sends ChangeMap to Map13. Invalidate the previous map's
 	# anchor BEFORE the new map scene has finished loading.
+	# A latched terrain hold must never follow the mouse into the
+	# next map; old-map paths must be dropped before teleporting.
+	player._mouse_autorun.latched = true
 	player._on_change_map_received(13, new_pos.x, new_pos.y)
+	_check(not player._mouse_autorun.latched,
+		"ChangeMap clears two-second cursor-follow autorun")
 	_check(not player.has_last_walkable_sync_position
 		and player._last_walkable_sync_map_id == 0,
 		"ChangeMap invalidates the previous map's sync anchor")
@@ -69,6 +74,7 @@ func _run() -> void:
 	player._last_walkable_sync_map_id = 13
 	player.is_moving = true
 	player.is_mouse_holding = true
+	player._mouse_autorun.latched = true
 	player.move_path = PackedVector2Array([old_pos])
 	player.apply_position_correction(new_pos)
 	_check(player.global_position.is_equal_approx(new_pos),
@@ -77,8 +83,8 @@ func _run() -> void:
 		and player._last_walkable_sync_map_id == 13,
 		"dismount resets stale movement anchor on the current map")
 	_check(not player.is_moving and not player.is_mouse_holding
-		and player.move_path.is_empty(),
-		"dismount clears queued movement and held-mouse repathing")
+		and not player._mouse_autorun.latched and player.move_path.is_empty(),
+		"dismount clears queued movement, held-mouse and latched autorun")
 	var network_source: String = FileAccess.get_file_as_string(
 		"res://scripts/network_manager.gd"
 	)
