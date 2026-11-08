@@ -598,17 +598,25 @@ public sealed class PartyService
             presence.MapId <= 0)
             return;
 
-        _broadcasts.PublishToMap(
-            presence.MapId,
-            new
-            {
-                Type = "UpdateNameColor",
-                EntityID = characterId,
-                ColorState = 0,
-                PKStatus = -1,
-                RedManKillLeft = -1,
-                PartyID = partyId
-            });
+        var packet = new
+        {
+            Type = "UpdateNameColor",
+            EntityID = characterId,
+            ColorState = 0,
+            PKStatus = -1,
+            RedManKillLeft = -1,
+            PartyID = partyId
+        };
+
+        // The player needs its own color state; nearby peers already know the
+        // entity through PlayerSpatialAoi. Future peers get PartyID from the
+        // normal SpawnEntity snapshot, so no full-map fanout is necessary.
+        _broadcasts.PublishToCharacter(
+            characterId,
+            packet);
+        _broadcasts.PublishToPlayerObservers(
+            presence.ConnectionId,
+            packet);
     }
 
     private object BuildSyncPacket(
