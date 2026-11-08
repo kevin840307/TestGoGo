@@ -224,5 +224,14 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("using static SGO.Server.SmokeTests.SmokeAssert;", main)
 
 
+    def test_lantern_transform_suite_is_isolated_and_replay_safe(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = SMOKE / "Integration" / "LanternTransformationSmokeTests.cs"
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("lantern transform consumes source while preserving", source)
+        self.assertIn("replaying consumed lantern source cannot duplicate", source)
+        self.assertIn("LanternTransformationSmokeTests.Run(", main)
+
 if __name__ == "__main__":
     unittest.main()
