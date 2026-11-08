@@ -113,6 +113,7 @@ function showMapValidation(report) {
     const body = $('#map-validation-body');
     const confirmButton = $('#map-validation-confirm');
     const cancelButton = $('#map-validation-cancel');
+    const applyButton = $('#map-validation-apply');
     const closeButton = $('#map-validation-close');
 
     const errors = report.errors || [];
@@ -141,17 +142,38 @@ function showMapValidation(report) {
     confirmButton.hidden = errors.length > 0;
     confirmButton.textContent = warnings.length ? '接受警告並儲存' : '儲存';
     cancelButton.textContent = errors.length ? '返回修正' : '取消';
+    applyButton.hidden = suggestions.length === 0;
+    applyButton.textContent = suggestions.length ? `套用 ${suggestions.length} 筆建議位置` : '套用建議位置';
     modal.hidden = false;
 
     const finish = value => {
       modal.hidden = true;
       confirmButton.onclick = null;
       cancelButton.onclick = null;
+      applyButton.onclick = null;
       closeButton.onclick = null;
       modal.onclick = null;
       resolve(value);
     };
     confirmButton.onclick = () => finish(true);
+    applyButton.onclick = () => {
+      let applied = 0;
+      for (const suggestion of suggestions) {
+        const index = Number(suggestion.rowIndex);
+        const row = state.mapRows[index];
+        if (!row || !suggestion.to) continue;
+        row.x = Number(suggestion.to.x);
+        row.y = Number(suggestion.to.y);
+        applied++;
+      }
+      if (applied) {
+        commitMapEdit(`已套用 ${applied} 筆 Blocking 修復建議`);
+        renderMapTable();
+        renderMapVisual();
+        toast(`已套用 ${applied} 筆建議位置，請確認後再次儲存`);
+      }
+      finish(false);
+    };
     cancelButton.onclick = () => finish(false);
     closeButton.onclick = () => finish(false);
     modal.onclick = e => { if (e.target === modal) finish(false); };
