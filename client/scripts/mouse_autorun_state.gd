@@ -2,7 +2,8 @@ extends RefCounted
 
 # Pure input-state policy. No Scene, pathfinding, or network dependencies.
 # Terrain long-hold latches continuous walking after button release; the
-# next terrain click returns to ordinary one-click destination navigation.
+# first subsequent click stops walking; after its release, ordinary
+# one-click destination navigation is available again.
 const HOLD_TO_LATCH_MSEC: int = 1000
 
 var latched: bool = false
