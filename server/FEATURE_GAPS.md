@@ -87,6 +87,26 @@
 - `tests/quest_host_audit.py --strict`：1,566 份 Quest host surface 守門。
 - `test_smoke_suite_structure.py`：防止上述模組悄悄被移回 monolith，並守住真雙 Client Wire flow。
 
+
+## Server 診斷與本機管理 UI
+
+目前 Server 已有統一的 in-memory diagnostics ring buffer（最近 500 筆）與 `/admin` 本機管理頁，並新增以下 operational diagnostics：
+
+- WebSocket connect/disconnect、非法 message、超大 packet、解碼錯誤。
+- `PACKET_HANDLER_FAILED`、`INVALID_PACKET`、`UNHANDLED_PACKET`、未登入操作、`SLOW_PACKET`。
+- Shared Map AI：慢 tick、respawn/tick exception、單圖玩家/怪物壓力門檻。
+- Broadcast：單連線 queue backlog（>=500）節流告警。
+- Trade：交易中重入、雙方 final confirm 競態、commit failure。
+- Ground item：搶撿競態（已不存在/已消失）與 drop mutation rejected。
+- Database：packet path 發生 `SqliteException` 時分類為 DB failure。
+- Runtime resource：Working Set >= 1 GB、1 分鐘內成長 >= 256 MB、Gen2 GC 壓力；每分鐘最多記一筆，避免 log storm。
+- counters 已同步顯示於 `/admin`：AI slow、map pressure、broadcast backlog、trade/pickup conflict、DB/world tick/resource warnings。
+- `/admin` 已整理為正式 Server Console：Runtime、Shared Map AI、GameData、地圖分布、在線玩家、事件 Level/關鍵字篩選、全服公告與 2 秒自動刷新。
+- 管理 API 與頁面仍只允許 loopback，外部玩家無法直接存取。
+
+自動測試新增 `Integration/ServerDiagnosticsSmokeTests.cs`，守住 counters 與 500 筆 ring buffer 行為。真正的 CPU/RAM threshold 與長時間 backlog/GC 情境仍應由 50/100 人 WireLoadProbe / soak 驗收。
+
+
 ## 「全部補齊」目前的邊界
 
 **Repository 內可安全推定的固定封包、主要功能、競態修正與自動化守門會繼續補。**
