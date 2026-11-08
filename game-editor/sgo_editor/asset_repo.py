@@ -55,10 +55,30 @@ class AssetRepository:
         mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
         return path, mime
 
-    def replace(self, relative: str, base64_content: str) -> dict[str, Any]:
+    @staticmethod
+    def _canonical_extension(value: str) -> str:
+        ext = Path(value).suffix.lower()
+        return ".jpg" if ext == ".jpeg" else ext
+
+    def replace(
+        self,
+        relative: str,
+        base64_content: str,
+        source_name: str | None = None,
+    ) -> dict[str, Any]:
         path = safe_child(self.paths.assets, relative)
+        if not path.exists() or not path.is_file():
+            raise FileNotFoundError(f"找不到要替換的素材 {relative}")
         if path.suffix.lower() not in self.ALLOWED_EXTENSIONS:
             raise ValueError(f"不允許替換此副檔名: {path.suffix}")
+        if source_name:
+            target_ext = self._canonical_extension(path.name)
+            source_ext = self._canonical_extension(source_name)
+            if target_ext != source_ext:
+                raise ValueError(
+                    f"替換素材格式不一致: 目標 {path.suffix.lower()}，"
+                    f"來源 {Path(source_name).suffix.lower() or '(無副檔名)'}"
+                )
         try:
             payload = base64.b64decode(base64_content, validate=True)
         except Exception as exc:
