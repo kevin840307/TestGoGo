@@ -726,7 +726,8 @@ var currentCatalog = new CurrentClientDataCatalog(
             "偵察",
             "偵察"),
         new CurrentSkillDefinition(26104, "魔影術"),
-        new CurrentSkillDefinition(45111, "月神審判")
+        new CurrentSkillDefinition(45111, "月神審判"),
+        new CurrentSkillDefinition(99002, "Smoke Self Center AOE")
     },
     new[]
     {
@@ -939,6 +940,16 @@ var currentCatalog = new CurrentClientDataCatalog(
             300, 300,
             0, 100, 0,
             0, 0, 2,
+            0, 0,
+            0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0,
+            0, 0, 0, 0),
+        new CurrentSkillLevelDefinition(
+            99002, 1, 1, 0,
+            500, 300,
+            0, 0, 0,
+            10, 100, 0,
             0, 0,
             0, 0, 0,
             0, 0, 0, 0,
@@ -6044,6 +6055,12 @@ try
         combat,
         store,
         world);
+
+    SkillCastCenterSmokeTests.Run(
+        combat,
+        store,
+        session,
+        account.Value);
 
     var monster = session.Monsters.Values.First();
 
