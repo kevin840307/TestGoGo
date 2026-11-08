@@ -253,7 +253,14 @@ class SmokeSuiteStructureTests(unittest.TestCase):
             "CurrentClientCatalogSmokeTests.Run(realCurrentCatalog);",
             main,
         )
-        self.assertNotIn("var festivalRewards =", main)
+        # Guard the extracted catalog contract itself, not a generic local
+        # variable name. Program.cs may legitimately construct a
+        # FestivalRewardCatalog for an end-to-end reward-box integration.
+        catalog_assertion = (
+            "real client Festival_Data random reward boxes are available to server"
+        )
+        self.assertIn(catalog_assertion, source)
+        self.assertNotIn(catalog_assertion, main)
         self.assertIn("ResolveExperienceCard(2460)", source)
         self.assertIn("ResolveSkillBook(3701)", source)
 
