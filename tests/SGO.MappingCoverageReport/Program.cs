@@ -12,8 +12,13 @@ var gameDataRoot =
 
 var current =
     new CurrentClientDataCatalog(clientRoot);
+var legacyRoot =
+    Path.Combine(
+        repoRoot,
+        "Old",
+        "ClientData");
 var legacy =
-    new LegacyClientDataCatalog(clientRoot);
+    new LegacyClientDataCatalog(legacyRoot);
 var shops =
     new ShopCatalog(
         gameDataRoot,
