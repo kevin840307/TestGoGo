@@ -1578,6 +1578,8 @@ try
         questProgress,
         NullLogger<CombatService>.Instance);
 
+    ServerDiagnosticsSmokeTests.Run();
+
     SharedMapAiConcurrencySmokeTests.Run(
         combat,
         worldRuntime,
