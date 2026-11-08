@@ -1443,6 +1443,11 @@ try
         ConnectionId = broadcastRegistration.ConnectionId
     };
 
+    SessionLifecycleSmokeTests.Run(
+        router,
+        store,
+        broadcastHub);
+
     PreloginPacketSmokeTests.Run(router, session);
 
     var (created, _) = store.Register("offline", "test-password", "");
