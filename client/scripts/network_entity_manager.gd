@@ -11,6 +11,10 @@ const DEBUG_MONSTER_NETWORK_LOGS: bool = false
 const MONSTER_AOI_ENTER_RADIUS: float = 1800.0
 const MONSTER_AOI_EXIT_RADIUS: float = 2200.0
 const MONSTER_AOI_UPDATE_INTERVAL: float = 0.20
+# Defer distant ground-drop scenes but always retain server snapshots.
+const GROUND_AOI_ENTER_RADIUS: float = 2000.0
+const GROUND_AOI_EXIT_RADIUS: float = 2400.0
+const GROUND_AOI_UPDATE_INTERVAL: float = 0.25
 # Keep server-confirmed combat monsters present even across AOI boundaries.
 const MONSTER_COMBAT_REVEAL_MSEC: int = 12000
 
@@ -34,6 +38,9 @@ var _initial_spawn_boost: bool = false
 var _monster_spawn_templates: Dictionary = {}
 var _deferred_monster_spawns: Dictionary = {}
 var _monster_aoi_elapsed: float = 0.0
+var _ground_spawn_templates: Dictionary = {}
+var _deferred_ground_spawns: Dictionary = {}
+var _ground_aoi_elapsed: float = 0.0
 var _combat_reveal_until_msec: Dictionary = {}
 
 func get_active_entity(entity_id: int) -> Node2D:
@@ -121,6 +128,45 @@ func _monster_packet_position(data: Dictionary) -> Vector2:
 		float(data.get("LocX", data.get("X", 0.0))),
 		float(data.get("LocY", data.get("Y", 0.0)))
 	)
+
+static func is_ground_inside_aoi(data: Dictionary, center: Vector2, radius: float) -> bool:
+	var location := Vector2(float(data.get("LocX", 0.0)), float(data.get("LocY", 0.0)))
+	return location.distance_squared_to(center) <= radius * radius
+
+
+func _ground_aoi_context() -> Dictionary:
+	var center: Variant = _get_local_player_position()
+	var enter_radius: float = GROUND_AOI_ENTER_RADIUS
+	# The camera, not the player, defines what should be drawable.
+	var camera: Camera2D = get_viewport().get_camera_2d()
+	if is_instance_valid(camera):
+		center = camera.global_position
+		var view_size: Vector2 = get_viewport().get_visible_rect().size
+		var zoom: float = maxf(0.05, minf(absf(camera.zoom.x), absf(camera.zoom.y)))
+		enter_radius = maxf(enter_radius, view_size.length() * 0.5 / zoom + 512.0)
+	return {"center": center, "enter": enter_radius, "exit": maxf(GROUND_AOI_EXIT_RADIUS, enter_radius + 400.0)}
+
+
+func get_ground_aoi_stats() -> Dictionary:
+	return {"known": _ground_spawn_templates.size(), "deferred": _deferred_ground_spawns.size()}
+
+
+func _ground_spawn_data_at_current_time(entity_id: int) -> Dictionary:
+	var cached: Dictionary = _ground_spawn_templates.get(entity_id, {})
+	if cached.is_empty():
+		return {}
+	var data: Dictionary = cached.duplicate()
+	var extra: Dictionary = (cached.get("ExtraData", {}) as Dictionary).duplicate()
+	var cached_at: int = int(cached.get("_aoi_cached_at", Time.get_ticks_msec()))
+	var age: float = maxf(0.0, float(Time.get_ticks_msec() - cached_at) / 1000.0)
+	for key: String in ["RemainingTime", "ProtectTimeSeconds"]:
+		if extra.has(key):
+			extra[key] = maxf(0.0, float(extra[key]) - age)
+	data["ExtraData"] = extra
+	# Reappearing old items must not replay the fresh-monster-drop bounce.
+	data["IsSnapshot"] = true
+	return data
+
 
 func _is_monster_inside_aoi(data: Dictionary, radius: float) -> bool:
 	var player_pos = _get_local_player_position()
