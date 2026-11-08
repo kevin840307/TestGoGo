@@ -153,7 +153,7 @@ internal static class WaspPackageSmokeTests
                     horseUid)
                 .Select(x =>
                     Convert.ToInt32(
-                        x["EquipIndex"]))
+                        x["EquipIdx"]))
                 .OrderBy(x => x)
                 .ToArray();
 
