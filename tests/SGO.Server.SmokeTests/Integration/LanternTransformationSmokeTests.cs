@@ -177,7 +177,8 @@ internal static class LanternTransformationSmokeTests
                         "\"Type\":\"UpdateAppearance\"") &&
                     json.Contains(
                         "\"Weapon\":31639") &&
-                    json.Contains(
+                    PacketTreeContainsString(
+                        packets,
                         "已套用燈籠武器外觀"),
                     "lantern transformer broadcasts melee lantern appearance through normal router path");
             }
@@ -228,9 +229,9 @@ internal static class LanternTransformationSmokeTests
 
                 Check(
                     packets.Any(x =>
-                        JsonSerializer.Serialize(x)
-                            .Contains(
-                                "找不到物品")) &&
+                        PacketTreeContainsString(
+                            x,
+                            "找不到物品")) &&
                     store.GetCosmeticOverrides(
                             accountId.Value,
                             characterId)
