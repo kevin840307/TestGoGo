@@ -131,6 +131,62 @@ class EditorHttpIntegrationTests(unittest.TestCase):
         self.assertEqual(after["items"][0]["x"], 24)
         self.assertEqual(after["items"][0]["y"], 24)
 
+    def test_force_delete_rejects_stale_reference_confirmation_token(self) -> None:
+        status, initial = self.request("GET", "/api/maps/13/enemies?envelope=1")
+        self.assertEqual(status, 200)
+        first_rows = [{
+            "index": -1,
+            "enemyId": 1,
+            "x": 24,
+            "y": 24,
+            "sourceFlags": 0,
+        }]
+        status, saved = self.request(
+            "PUT",
+            "/api/maps/13/enemies",
+            {"items": first_rows, "expectedRevision": initial["revision"]},
+        )
+        self.assertEqual(status, 200)
+
+        status, impact = self.request("GET", "/api/references/enemy/1")
+        self.assertEqual(status, 200)
+        self.assertEqual(impact["count"], 1)
+        old_token = impact["token"]
+
+        changed_rows = [
+            dict(saved["items"][0]),
+            {
+                "index": -1,
+                "enemyId": 1,
+                "x": 40,
+                "y": 40,
+                "sourceFlags": 0,
+            },
+        ]
+        status, changed = self.request(
+            "PUT",
+            "/api/maps/13/enemies",
+            {"items": changed_rows, "expectedRevision": saved["revision"]},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(len(changed["items"]), 2)
+
+        status, rejected = self.request(
+            "DELETE",
+            "/api/enemies/1?force=1&referenceToken=" + old_token,
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("引用在確認刪除後已發生變化", rejected["error"])
+
+        status, enemy = self.request("GET", "/api/enemies/1")
+        self.assertEqual(status, 200)
+        self.assertEqual(int(enemy["id"]), 1)
+
+        status, current_impact = self.request("GET", "/api/references/enemy/1")
+        self.assertEqual(status, 200)
+        self.assertEqual(current_impact["count"], 2)
+        self.assertNotEqual(current_impact["token"], old_token)
+
     def test_raw_list_map_put_is_rejected_to_prevent_revision_bypass(self) -> None:
         status, payload = self.request(
             "PUT",
