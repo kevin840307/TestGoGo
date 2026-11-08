@@ -16,6 +16,57 @@ const state = {
   assets: [], assetTarget: null,
 };
 
+const EDITOR_PREFS_KEY = 'sgo-editor-prefs-v1';
+const EDITOR_PREF_FIELDS = [
+  'mapId', 'mapTab', 'mapSelectedEnemyId',
+  'mapShowPreview', 'mapShowBlocking', 'mapShowSpawners', 'mapShowLabels',
+  'mapOnlySelectedType', 'mapSnapWalkable',
+];
+
+function loadEditorPreferences() {
+  let raw = null;
+  try { raw = JSON.parse(localStorage.getItem(EDITOR_PREFS_KEY) || 'null'); } catch {}
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+
+  if (Number.isInteger(Number(raw.mapId)) && Number(raw.mapId) > 0) state.mapId = Number(raw.mapId);
+  if (raw.mapTab === 'enemies' || raw.mapTab === 'npcs') state.mapTab = raw.mapTab;
+  if (Number.isInteger(Number(raw.mapSelectedEnemyId)) && Number(raw.mapSelectedEnemyId) > 0) {
+    state.mapSelectedEnemyId = Number(raw.mapSelectedEnemyId);
+  }
+  for (const key of [
+    'mapShowPreview', 'mapShowBlocking', 'mapShowSpawners', 'mapShowLabels',
+    'mapOnlySelectedType', 'mapSnapWalkable',
+  ]) {
+    if (typeof raw[key] === 'boolean') state[key] = raw[key];
+  }
+}
+
+function saveEditorPreferences() {
+  const payload = {};
+  for (const key of EDITOR_PREF_FIELDS) payload[key] = state[key];
+  try { localStorage.setItem(EDITOR_PREFS_KEY, JSON.stringify(payload)); } catch {}
+}
+
+function applyEditorPreferencesToControls() {
+  const pairs = [
+    ['map-show-preview', 'mapShowPreview'],
+    ['map-show-blocking', 'mapShowBlocking'],
+    ['map-show-spawners', 'mapShowSpawners'],
+    ['map-show-labels', 'mapShowLabels'],
+    ['map-only-selected-type', 'mapOnlySelectedType'],
+    ['map-snap-walkable', 'mapSnapWalkable'],
+  ];
+  for (const [id, key] of pairs) {
+    const control = document.getElementById(id);
+    if (control) control.checked = !!state[key];
+  }
+  $('.segmented [data-map-tab]').forEach(button => {
+    button.classList.toggle('active', button.dataset.mapTab === state.mapTab);
+  });
+}
+
+loadEditorPreferences();
+
 const VIEW_META = {
   dashboard: ['專案總覽', '集中管理遊戲資料、舊格式與素材。'],
   skills: ['技能編輯器', 'CRUD 技能與每級數值；保留未知的 TRES 欄位。'],
