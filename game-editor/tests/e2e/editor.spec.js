@@ -183,6 +183,35 @@ test('map add drag undo redo save and reload persists real coordinates', async (
   await expect(page.locator('#map-inspector-y')).toHaveValue(String(movedY));
 });
 
+test('safe map view preferences persist across reload without editor payload', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('sgo-editor-help-v1', 'dismissed');
+    localStorage.removeItem('sgo-editor-prefs-v1');
+  });
+  await page.goto(baseUrl);
+  await page.locator('[data-view="maps"]').click();
+
+  await page.locator('#map-show-labels').uncheck();
+  await page.locator('#map-snap-walkable').uncheck();
+  await page.locator('[data-map-tab="npcs"]').click();
+  await expect(page.locator('#map-show-labels')).not.toBeChecked();
+  await expect(page.locator('#map-snap-walkable')).not.toBeChecked();
+
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('sgo-editor-prefs-v1')));
+  expect(stored.mapTab).toBe('npcs');
+  expect(stored.mapShowLabels).toBe(false);
+  expect(stored.mapSnapWalkable).toBe(false);
+  for (const unsafe of ['mapRows', 'mapUndo', 'mapRedo', 'mapClipboard', 'mapDirty']) {
+    expect(Object.prototype.hasOwnProperty.call(stored, unsafe)).toBe(false);
+  }
+
+  await page.reload();
+  await page.locator('[data-view="maps"]').click();
+  await expect(page.locator('[data-map-tab="npcs"]')).toHaveClass(/active/);
+  await expect(page.locator('#map-show-labels')).not.toBeChecked();
+  await expect(page.locator('#map-snap-walkable')).not.toBeChecked();
+});
+
 test('first-run help can be dismissed and remembered', async ({ page }) => {
   await page.goto(baseUrl);
   await expect(page.locator('#help-modal')).toBeVisible();
