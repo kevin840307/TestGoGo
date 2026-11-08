@@ -1180,7 +1180,8 @@ public sealed class SqliteGameStore : IGameStore
         long points,
         long lifetimeDonation)
     {
-        source = source.Trim();
+        source =
+            source.Trim().ToLowerInvariant();
         externalTransactionId =
             externalTransactionId.Trim();
 
