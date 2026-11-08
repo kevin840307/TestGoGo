@@ -255,6 +255,13 @@ internal static class MarketplaceResponseContractSmokeTests
         Check(sourceUid > 0,
             "seed five-count service-level player-shop listing");
 
+        var buyerCopiesBefore = buyers.Sum(
+            x => CountInventory(store, x, itemIndex));
+        var sellerCopiesBefore = CountInventory(
+            store, seller, itemIndex);
+        var sellerMoneyBefore = Money(store, seller);
+        var buyerMoneyBefore = buyers.Sum(x => Money(store, x));
+
         var broadcasts = new ServerBroadcastHub();
         var sellerReg = broadcasts.Register();
         var sellerSession = Session(sellerReg.ConnectionId, seller, 15);
@@ -316,13 +323,16 @@ internal static class MarketplaceResponseContractSmokeTests
         var sellerCopies = CountInventory(store, seller, itemIndex);
         var sellerMoney = Money(store, seller);
         var buyerMoney = buyers.Sum(x => Money(store, x));
-        Check(totalBuyerCopies == 5 && sellerCopies == 0,
-            "service-level player-shop race conserves exactly five items");
         Check(
-            sellerMoney == 100 &&
-            buyerMoney == 900 &&
-            sellerMoney + buyerMoney == 1000,
-            "service-level player-shop race conserves total money");
+            totalBuyerCopies == buyerCopiesBefore + 5 &&
+            sellerCopies == sellerCopiesBefore - 5,
+            "service-level player-shop race transfers exactly five items without assuming empty starter inventory");
+        Check(
+            sellerMoney == sellerMoneyBefore + 100 &&
+            buyerMoney == buyerMoneyBefore - 100 &&
+            sellerMoney + buyerMoney ==
+                sellerMoneyBefore + buyerMoneyBefore,
+            "service-level player-shop race conserves total money without assuming zero starter balance");
 
         var publicState = service.GetPublicState(seller.CharacterId);
         Check(!publicState.IsOpen,
