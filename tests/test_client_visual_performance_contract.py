@@ -142,6 +142,7 @@ class ClientVisualPerformanceContractTests(unittest.TestCase):
         focus_policy = manager[focus_start:focus_end]
         self.assertNotIn("NetworkManager", focus_policy)
         self.assertNotIn("physics_ticks_per_second =", focus_policy)
+        self.assertNotIn("get_tree().paused", focus_policy)
         self.assertIn("RenderingServer.render_loop_enabled", focus_policy)
 
     def test_removed_last_preset_migrates_to_responsive_low_resource(self):
