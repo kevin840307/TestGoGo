@@ -373,6 +373,9 @@ public sealed class TradeService
     {
         lock (_sync)
         {
+            if (!IsActiveLocked(trade))
+                return [Flash("交易已結束")];
+
             if (self.Locked)
                 return [Flash("已鎖定交易，不能再修改物品")];
 
@@ -451,6 +454,9 @@ public sealed class TradeService
     {
         lock (_sync)
         {
+            if (!IsActiveLocked(trade))
+                return [Flash("交易已結束")];
+
             if (self.Locked)
                 return [Flash("已鎖定交易，不能再修改物品")];
 
@@ -495,6 +501,9 @@ public sealed class TradeService
 
         lock (_sync)
         {
+            if (!IsActiveLocked(trade))
+                return [Flash("交易已結束")];
+
             if (self.Locked)
                 return [Flash("已鎖定交易，不能再修改金額")];
 
@@ -515,6 +524,9 @@ public sealed class TradeService
 
         lock (_sync)
         {
+            if (!IsActiveLocked(trade))
+                return [Flash("交易已結束")];
+
             self.Locked = true;
             self.Confirmed = false;
             bothLocked =
@@ -544,6 +556,9 @@ public sealed class TradeService
     {
         lock (_sync)
         {
+            if (!IsActiveLocked(trade))
+                return [Flash("交易已結束")];
+
             if (!self.Locked ||
                 !other.Locked)
             {
@@ -581,7 +596,8 @@ public sealed class TradeService
         {
             Cancel(
                 trade,
-                result.Message);
+                result.Message,
+                force: true);
             return [];
         }
 
@@ -897,10 +913,21 @@ public sealed class TradeService
 
     private void Cancel(
         TradeRuntime trade,
-        string message)
+        string message,
+        bool force = false)
     {
         lock (_sync)
+        {
+            // A completed trade may already have been removed from the
+            // registry. Repeated cancel/disconnect must not emit a second
+            // terminal event. Once a durable commit starts, ordinary
+            // cancellation cannot undo it.
+            if (!IsActiveLocked(trade) ||
+                (trade.CommitStarted && !force))
+                return;
+
             RemoveTradeLocked(trade);
+        }
 
         PublishBoth(
             trade,
@@ -910,6 +937,11 @@ public sealed class TradeService
                 Message = message
             });
     }
+
+    private bool IsActiveLocked(TradeRuntime trade)
+        => _sessions.TryGetValue(
+               trade.SessionId, out var active) &&
+           ReferenceEquals(active, trade);
 
     private void RemoveTradeLocked(
         TradeRuntime trade)
