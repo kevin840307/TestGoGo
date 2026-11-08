@@ -45,7 +45,7 @@ func _run() -> void:
 	check(not RenderingServer.render_loop_enabled,
 		"AFK focus-out disables the entire GPU render loop")
 	check(Engine.max_fps == old_fps,
-		"AFK focus-out preserves the user's active main-loop FPS pacing")
+		"AFK focus-out does not need to alter main-loop pacing")
 	check(Engine.physics_ticks_per_second == old_physics_hz,
 		"AFK focus-out leaves fixed simulation tick rate untouched")
 
@@ -57,20 +57,17 @@ func _run() -> void:
 
 	GameManager._window_has_focus = true
 	GameManager._refresh_focus_render_policy()
-	check(not RenderingServer.render_loop_enabled,
-		"AFK refocus keeps the continuous GPU render loop disabled")
-	check(Engine.max_fps == old_fps,
-		"AFK refocus still does not alter the user's FPS setting")
-	check(GameManager.request_afk_dashboard_frame(),
-		"focused AFK dashboard can request one explicit frame")
-	check(not RenderingServer.render_loop_enabled,
-		"manual dashboard frame does not restart continuous rendering")
+	check(RenderingServer.render_loop_enabled,
+		"focused AFK enables only the low-cost dashboard render loop")
+	check(Engine.max_fps == GameManager.AFK_MONITOR_FPS,
+		"focused AFK dashboard is capped at 20 FPS")
 	check(Engine.physics_ticks_per_second == old_physics_hz,
 		"AFK refocus does not modify fixed physics")
 
 	GameManager._window_has_focus = false
-	check(not GameManager.request_afk_dashboard_frame(),
-		"unfocused AFK never requests a GPU dashboard frame")
+	GameManager._refresh_focus_render_policy()
+	check(not RenderingServer.render_loop_enabled,
+		"unfocused AFK immediately disables dashboard rendering")
 
 	GameManager._afk_active = old_afk
 	GameManager._window_has_focus = old_focus
