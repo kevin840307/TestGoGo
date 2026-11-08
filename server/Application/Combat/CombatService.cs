@@ -56,6 +56,7 @@ public sealed class CombatService
     private readonly WorldRuntimeService _runtime;
     private readonly BlockingMapService _blocking;
     private readonly MonsterNavigationService _navigation;
+    private readonly GroundDropPlacementService _dropPlacement;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly PartyService _party;
     private readonly PetEvolutionService _petEvolution;
@@ -106,6 +107,7 @@ public sealed class CombatService
         _world = world;
         _blocking = blocking;
         _navigation = new MonsterNavigationService(blocking);
+        _dropPlacement = new GroundDropPlacementService(blocking);
         _current = current;
         _growth = growth;
         _battle = battle;
@@ -3178,14 +3180,35 @@ public sealed class CombatService
             var offsetY = (((offsetIndex / 5) % 5) - 2) * 10.0;
             offsetIndex++;
 
+            if (!_dropPlacement.TryResolve(
+                    monster.MapId,
+                    monster.X, monster.Y,
+                    monster.X + offsetX, monster.Y + offsetY,
+                    session.LastX, session.LastY,
+                    out var placement))
+            {
+                _log.LogWarning(
+                    "[GROUND_DROP_NO_SAFE_TILE] Map={MapId} Monster={MonsterId} Item={ItemId} MonsterPos=({X:F0},{Y:F0}) PlayerPos=({PX:F0},{PY:F0})",
+                    monster.MapId, monster.EntityId, drop.ItemId,
+                    monster.X, monster.Y, session.LastX, session.LastY);
+                continue;
+            }
+
+            if (!placement.CollisionVerified)
+            {
+                _log.LogWarning(
+                    "[GROUND_DROP_MAP_MISSING] Map={MapId} Monster={MonsterId} Blocking.dat unavailable; legacy placement retained",
+                    monster.MapId, monster.EntityId);
+            }
+
             var ground = _store.CreateGroundItem(
                 dbid,
                 drop.TabType,
                 drop.ItemId,
                 1,
                 monster.MapId,
-                monster.X + offsetX,
-                monster.Y + offsetY,
+                placement.X,
+                placement.Y,
                 damage: _current.FindItem(drop.ItemId)?.Durability ?? 0,
                 protectSeconds: _drops.OwnerProtectionSeconds,
                 lifetimeSeconds: 60);
