@@ -98,7 +98,7 @@ func set_frame_gap_stage(stage: String) -> void :
 	_frame_gap_stage = stage
 	_frame_gap_stage_since_usec = Time.get_ticks_usec()
 
-# A 5 FPS background cap intentionally produces ~200ms frame intervals.
+# Background FPS caps intentionally increase frame intervals (e.g., 30 FPS = ~33ms).
 # Distinguish that normal throttling from genuinely stalled background frames.
 func classify_frame_gap(gap_usec: int, has_focus: bool, fps_cap: int) -> String:
 	if has_focus:
@@ -142,7 +142,7 @@ func _process(delta: float) -> void :
 		var gap_usec := now_usec - _frame_gap_last_usec
 		if gap_usec >= FRAME_GAP_WARN_USEC:
 			var gap_kind: String = classify_frame_gap(gap_usec, _window_has_focus, Engine.max_fps)
-			# 5 FPS in the background is intentional, not a 200ms frame stall.
+			# A normal background frame interval is intentional, not a stall.
 			# Preserve unusually long background gaps as real diagnostics.
 			if gap_kind != "background_throttle":
 				var stage_age_ms := float(now_usec - _frame_gap_stage_since_usec) / 1000.0 if _frame_gap_stage_since_usec > 0 else -1.0
