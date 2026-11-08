@@ -305,6 +305,16 @@ public interface IInventoryStore : ICharacterAssetReader
         int rewardCount = 1,
         int rewardPart = 255,
         int rewardDamage = 0);
+    (bool Success, string Message, long RewardUid) OpenFixedRewardBox(
+        long accountId,
+        long dbid,
+        long boxUid,
+        int boxItemIndex,
+        int rewardItemIndex,
+        AssetPurchaseKind rewardKind,
+        int rewardCount = 1,
+        int rewardPart = 255,
+        int rewardDamage = 0);
     Dictionary<string, object>? UseRecoveryItem(
         long accountId,
         long dbid,
