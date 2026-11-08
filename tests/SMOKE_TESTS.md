@@ -193,3 +193,38 @@ SGO_TEST_SERVER_URL=ws://127.0.0.1:5678 godot --headless --path client --script 
 7. 修舊功能盡量維持 wire Type/field 相容；新增語意優先用可選欄位或新 Type。
 
 完整仍未完成/外部阻塞項目請看 [server/FEATURE_GAPS.md](../server/FEATURE_GAPS.md)。
+
+## 2026-11-08 新增回歸守門：AI Owner 與精確金錢測資
+
+- `World/MapAiOwnerSpatialIndexSmokeTests.cs`：單獨測試
+  `MapAiOwnerSpatialIndex`；包含小集合、大型稀疏座標、
+  1024 owners / 2000 queries 與原本 full-scan reference 一致性、
+  角色死亡但 pet 有效、等距 tie、併行只讀及無效輸入。
+  由 `--suite world` 與 full suite 執行。
+- `Fixtures/ExactMoneyFixture.cs`：新角色預設有 **10,000**
+  金錢；需要測 overspend / 不足額 / rollback 的測試必須先把
+  金錢讀出並設定為**精確的 0、100、1000** 等值，不能
+  `AdjustMoney(+100)` 後假設餘額為 100。
+  `EconomyConcurrencySmokeTests`、
+  `AssetMutationConcurrencySmokeTests`、
+  `CrossFeatureConcurrencySmokeTests` 共享 Fixture。
+- `test_smoke_suite_structure.py`：檢查新 owner index 被 AI
+  ticker 呼叫、world suite 正確登錄，且三個金錢競態 suite
+  不再直接以 `AdjustMoney` 加法初始化。
+- Client 仍使用 `ground_item_aoi_regression.gd`、
+  `multiclient_render_dedup_regression.gd`、
+  `real_server_network_e2e.gd` 驗證 render/AOI/真 WebSocket；
+  這一輪沒有修改 Client 邏輯，並非宣稱這些用例已實際 PASS。
+
+建議依序執行：
+
+```powershell
+python -m unittest discover -s tests -p test_smoke_suite_structure.py -v
+dotnet run --project tests/SGO.Server.SmokeTests -c Release -- --suite world
+dotnet run --project tests/SGO.Server.SmokeTests -c Release -- --suite concurrency
+powershell -ExecutionPolicy Bypass -File tests/run_protocol_checks.ps1
+```
+
+注意：結構測試通過不能替代 C# 編譯或實際
+10/50/100 客戶端壓測；沒有實際執行紀錄前都只標
+`IMPLEMENTED_UNVERIFIED`。
