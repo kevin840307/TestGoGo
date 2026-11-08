@@ -2430,14 +2430,33 @@ try
         1,
         "我是第一名");
 
-    Check(JsonSerializer.Serialize(rankMessage)
-              .Contains("\"Success\":true") &&
-          JsonSerializer.Serialize(
-              rank.GetRankData(
-                  account.Value,
-                  secondCharacterId,
-                  1))
-              .Contains("我是第一名"),
+    using var rankUpdateDocument =
+        JsonDocument.Parse(
+            JsonSerializer.Serialize(rankMessage));
+    using var rankReloadDocument =
+        JsonDocument.Parse(
+            JsonSerializer.Serialize(
+                rank.GetRankData(
+                    account.Value,
+                    secondCharacterId,
+                    1)));
+
+    var rankUpdateResponse =
+        rankUpdateDocument.RootElement
+            .EnumerateArray()
+            .Single();
+    var rankReloadResponse =
+        rankReloadDocument.RootElement
+            .EnumerateArray()
+            .Single();
+
+    Check(
+        rankUpdateResponse
+            .GetProperty("Success")
+            .GetBoolean() &&
+        rankReloadResponse
+            .GetProperty("Top1Message")
+            .GetString() == "我是第一名",
         "rank #1 can persist and reload top message");
 
     Check(JsonSerializer.Serialize(
