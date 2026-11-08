@@ -38,6 +38,10 @@ try {
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_client_network_contract.py", "-v"
     )
+    Invoke-Checked "Godot client repair contract tests" "python" @(
+        "-m", "unittest", "discover", "-s", "tests",
+        "-p", "test_client_repair_contract.py", "-v"
+    )
     Invoke-Checked "GM security regression tests" "python" @(
         "-m", "unittest", "discover", "-s", "tests",
         "-p", "test_gm_security.py", "-v"
