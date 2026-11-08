@@ -162,6 +162,8 @@ internal static class MarketplaceResponseContractSmokeTests
             sellerReg.ConnectionId, 15, seller.CharacterId, seller.AccountId, 1000, 1000);
         broadcasts.UpdatePresence(
             buyerReg.ConnectionId, 15, buyer.CharacterId, buyer.AccountId, 1010, 1000);
+        broadcasts.ReconcilePlayerAoi(sellerReg.ConnectionId);
+        broadcasts.ReconcilePlayerAoi(buyerReg.ConnectionId);
 
         var service = new PlayerShopService(
             store,
@@ -276,6 +278,10 @@ internal static class MarketplaceResponseContractSmokeTests
                 1010 + index, 1000);
             return Session(reg.ConnectionId, buyer, 15);
         }).ToArray();
+
+        broadcasts.ReconcilePlayerAoi(sellerReg.ConnectionId);
+        foreach (var buyerSession in buyerSessions)
+            broadcasts.ReconcilePlayerAoi(buyerSession.ConnectionId);
 
         var service = new PlayerShopService(
             store,
