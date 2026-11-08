@@ -63,6 +63,10 @@ internal static class PlayerShopLifecycleConcurrencySmokeTests
             buyer.AccountId,
             1010,
             1000);
+        broadcasts.ReconcilePlayerAoi(
+            sellerReg.ConnectionId);
+        broadcasts.ReconcilePlayerAoi(
+            buyerReg.ConnectionId);
 
         var service = new PlayerShopService(
             store,
