@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Domain.Assets;
@@ -19,6 +21,7 @@ internal static class CrossFeatureConcurrencySmokeTests
 
     public static void Run()
     {
+        CharacterFixtureNamesDoNotCollide();
         using var temp =
             new TemporaryDirectoryFixture("sgo-cross-feature-concurrency-");
         var store = new SqliteGameStore(
@@ -351,6 +354,38 @@ internal static class CrossFeatureConcurrencySmokeTests
             "craft plus transfer consumes one ingredient and grants one result");
     }
 
+    // The recovered client expects a short character name. Simply
+    // truncating "Xshop_trade_a"/"Xshop_trade_b" to 12 characters produced
+    // the identical "Xshop_trade_", so the second Create() correctly
+    // failed its database uniqueness constraint before the race began.
+    // Keep names readable while retaining a deterministic suffix hash.
+    private static string FixtureCharacterName(string suffix)
+    {
+        var preferred = $"X{suffix}";
+        if (preferred.Length <= 12)
+            return preferred;
+
+        var digest = SHA256.HashData(Encoding.UTF8.GetBytes(suffix));
+        return preferred[..6] + Convert.ToHexString(digest)[..6];
+    }
+
+    private static void CharacterFixtureNamesDoNotCollide()
+    {
+        var suffixes = new[]
+        {
+            "trade_a", "trade_b", "sender_c",
+            "shop_trade_a", "shop_trade_b", "shop_seller",
+            "craft_a", "craft_b"
+        };
+        var names = suffixes.Select(FixtureCharacterName).ToArray();
+        Check(names.All(name => name.Length is >= 1 and <= 12) &&
+              names.Distinct(StringComparer.OrdinalIgnoreCase).Count() == names.Length,
+            "cross-feature fixture names are unique and client-compatible");
+        Check(FixtureCharacterName("shop_trade_a") !=
+              FixtureCharacterName("shop_trade_b"),
+            "shop_trade_a and shop_trade_b no longer truncate to the same character name");
+    }
+
     private static Player CreatePlayer(
         SqliteGameStore store,
         string suffix)
@@ -363,9 +398,7 @@ internal static class CrossFeatureConcurrencySmokeTests
         var accountId = store.Login(username, password);
         Check(accountId.HasValue, $"login cross-feature player {suffix}");
 
-        var characterName = $"X{suffix}";
-        if (characterName.Length > 12)
-            characterName = characterName[..12];
+        var characterName = FixtureCharacterName(suffix);
 
         using var create = Json(
             JsonSerializer.Serialize(new
@@ -382,7 +415,8 @@ internal static class CrossFeatureConcurrencySmokeTests
             }));
 
         var created = store.Create(accountId!.Value, create.RootElement);
-        Check(created.Success, $"create cross-feature character {suffix}");
+        Check(created.Success,
+            $"create cross-feature character {suffix} (name={characterName}; result={created.Message})");
 
         var dbid = store.Characters(accountId.Value)
             .Select(x => Convert.ToInt64(x["DBID"]))
