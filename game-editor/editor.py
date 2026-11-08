@@ -217,7 +217,11 @@ class EditorHandler(BaseHTTPRequestHandler):
                     self._send_json(self.app.quests.save(name, str(body.get("content", "")), bool(body.get("force", False))))
                 return
             if path == "/api/assets" and method != "DELETE":
-                self._send_json(self.app.assets.replace(str(body.get("path", "")), str(body.get("contentBase64", ""))))
+                self._send_json(self.app.assets.replace(
+                    str(body.get("path", "")),
+                    str(body.get("contentBase64", "")),
+                    str(body.get("sourceName", "")) or None,
+                ))
                 return
             self._send_json({"error": "找不到 API"}, 404)
         except Exception as exc:
