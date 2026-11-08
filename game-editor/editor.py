@@ -180,6 +180,8 @@ class EditorHandler(BaseHTTPRequestHandler):
         try:
             parsed = urllib.parse.urlsplit(self.path)
             path = parsed.path
+            query = urllib.parse.parse_qs(parsed.query)
+            force = query.get("force", ["0"])[0].lower() in {"1", "true", "yes"}
             body = {} if method == "DELETE" else self._json_body()
             if match := re.fullmatch(r"/api/skills/(\d+)", path):
                 skill_id = int(match.group(1))
@@ -194,6 +196,12 @@ class EditorHandler(BaseHTTPRequestHandler):
             if match := re.fullmatch(r"/api/enemies/(\d+)", path):
                 enemy_id = int(match.group(1))
                 if method == "DELETE":
+                    impact = self.app.health.references("enemy", str(enemy_id))
+                    if impact["count"] and not force:
+                        raise ValueError(
+                            f"怪物 {enemy_id} 仍有 {impact['count']} 筆引用；"
+                            "請先處理引用，或經使用者確認後以 force=1 刪除"
+                        )
                     self.app.enemies.delete(enemy_id)
                     result = {"ok": True}
                 else:
@@ -248,6 +256,12 @@ class EditorHandler(BaseHTTPRequestHandler):
             if match := re.fullmatch(r"/api/scripts/(.+)", path):
                 name = urllib.parse.unquote(match.group(1))
                 if method == "DELETE":
+                    impact = self.app.health.references("script", name)
+                    if impact["count"] and not force:
+                        raise ValueError(
+                            f"NPC Script {name} 仍有 {impact['count']} 筆引用；"
+                            "請先處理引用，或經使用者確認後以 force=1 刪除"
+                        )
                     self.app.quests.delete(name)
                     result = {"ok": True}
                 else:
