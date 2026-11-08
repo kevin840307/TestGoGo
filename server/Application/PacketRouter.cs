@@ -215,6 +215,8 @@ public sealed class PacketRouter
                 _broadcasts.RemovePlayerAoi(state.ConnectionId));
             _broadcasts.RemoveWorldAoiObserver(
                 state.ConnectionId);
+            _broadcasts.ClearPlayerCompanions(
+                state.ConnectionId);
         }
 
         _broadcasts.UpdatePresence(
@@ -268,6 +270,8 @@ public sealed class PacketRouter
             _broadcasts.RemovePlayerAoi(state.ConnectionId));
         _broadcasts.RemoveWorldAoiObserver(
             state.ConnectionId);
+        _broadcasts.ClearPlayerCompanions(
+            state.ConnectionId);
 
         _broadcasts.UpdatePresence(
             state.ConnectionId,
@@ -301,6 +305,21 @@ public sealed class PacketRouter
 
             if (!change.Appeared)
             {
+                // Remove companion entities before their owner so a client
+                // never retains an orphan pet after the player leaves AOI.
+                foreach (var companionId in
+                         _broadcasts.PlayerCompanionEntityIds(
+                             change.Subject.ConnectionId))
+                {
+                    _broadcasts.PublishToConnection(
+                        change.ObserverConnectionId,
+                        new
+                        {
+                            Type = "DespawnEntity",
+                            EntityID = companionId
+                        });
+                }
+
                 _broadcasts.PublishToConnection(
                     change.ObserverConnectionId,
                     new
@@ -322,9 +341,22 @@ public sealed class PacketRouter
                 spawnCache[change.Subject.ConnectionId] = packet;
             }
 
-            if (packet is not null)
+            if (packet is null)
+                continue;
+
+            // Owner must exist before its separate pet entities.
+            _broadcasts.PublishToConnection(
+                change.ObserverConnectionId,
+                packet);
+
+            foreach (var companion in
+                     _broadcasts.PlayerCompanionSnapshots(
+                         change.Subject.ConnectionId))
+            {
                 _broadcasts.PublishToConnection(
-                    change.ObserverConnectionId, packet);
+                    change.ObserverConnectionId,
+                    companion);
+            }
         }
     }
 
@@ -5724,8 +5756,13 @@ public sealed class PacketRouter
                 player.CharacterId,
                 player.X,
                 player.Y);
-            if (spawn is not null)
-                packets.Add(spawn);
+            if (spawn is null)
+                continue;
+
+            packets.Add(spawn);
+            packets.AddRange(
+                _broadcasts.PlayerCompanionSnapshots(
+                    player.ConnectionId));
         }
 
         return packets;
@@ -7227,11 +7264,25 @@ public sealed class PacketRouter
             state.PetPositions[petUid] = (spawnX, spawnY);
             state.PetLastAttackAt.Remove(petUid);
 
-            packets.Add(BuildPetSpawnPacket(
-                dbid,
-                pet,
-                spawnX,
-                spawnY));
+            var spawnPacket =
+                BuildPetSpawnPacket(
+                    dbid,
+                    pet,
+                    spawnX,
+                    spawnY);
+            var firstTracked =
+                _broadcasts.TrackPlayerCompanionPacket(
+                    state.ConnectionId,
+                    spawnPacket);
+
+            packets.Add(spawnPacket);
+
+            if (firstTracked)
+            {
+                _broadcasts.PublishToPlayerObservers(
+                    state.ConnectionId,
+                    spawnPacket);
+            }
         }
 
         return packets;
@@ -7269,11 +7320,25 @@ public sealed class PacketRouter
                 state.PetPositions[petUid] = position;
             }
 
-            packets.Add(BuildPetSpawnPacket(
-                dbid,
-                pet,
-                position.X,
-                position.Y));
+            var spawnPacket =
+                BuildPetSpawnPacket(
+                    dbid,
+                    pet,
+                    position.X,
+                    position.Y);
+            var firstTracked =
+                _broadcasts.TrackPlayerCompanionPacket(
+                    state.ConnectionId,
+                    spawnPacket);
+
+            packets.Add(spawnPacket);
+
+            if (firstTracked)
+            {
+                _broadcasts.PublishToPlayerObservers(
+                    state.ConnectionId,
+                    spawnPacket);
+            }
         }
 
         return packets;
