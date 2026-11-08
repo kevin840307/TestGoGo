@@ -1213,6 +1213,28 @@ public sealed class SqliteGameStore : IGameStore
             accountId,
             tx);
 
+        using (var account = db.CreateCommand())
+        {
+            account.Transaction = tx;
+            account.CommandText = """
+                SELECT COUNT(*)
+                  FROM account_mall_points
+                 WHERE account_id=$account
+                """;
+            Arg(account, "$account", accountId);
+
+            if (Convert.ToInt32(
+                    account.ExecuteScalar() ?? 0) != 1)
+            {
+                return new(
+                    false,
+                    false,
+                    "本服商城帳號不存在",
+                    0,
+                    0);
+            }
+        }
+
         long ReadBalance(string column)
         {
             using var read = db.CreateCommand();
