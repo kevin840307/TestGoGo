@@ -49,15 +49,15 @@
       </div>
       <div class="dashboard-grid">
         <article class="panel hero-panel">
-          <div><p class="eyebrow">SAFE WORKFLOW</p><h2>編輯原始資料，不碰遊戲 Runtime</h2></div>
-          <p>每次寫入前會自動備份；技能、CP950 CSV、Enemy.dat、NPC.dat、Quest script 都由各自的 adapter 處理，避免格式互相污染。</p>
-          <div class="badge-row"><span class="badge good">Atomic write</span><span class="badge good">Auto backup</span><span class="badge good">Path guard</span><span class="badge neutral">No runtime hook</span></div>
+          <div><p class="eyebrow">INTUITIVE WORKFLOW</p><h2>先看名字與畫面，需要時才碰 ID</h2></div>
+          <p>工具以搜尋、預覽、點選、拖曳為主；底層仍安全編輯原始資料。每次寫入前自動備份，不掛進遊戲 Runtime。</p>
+          <div class="badge-row"><span class="badge good">Visual first</span><span class="badge good">Auto backup</span><span class="badge good">Path guard</span><span class="badge neutral">No runtime hook</span></div>
         </article>
         <article class="panel quick-panel">
           <div class="panel-title"><div><p class="eyebrow">QUICK ACCESS</p><h2>常用工作</h2></div></div>
-          <button class="quick-action" data-go="skills"><b>建立 / 調整技能</b><span>等級、傷害、MP、CD、特效</span></button>
-          <button class="quick-action" data-go="maps"><b>調整地圖怪物</b><span>出生點、Enemy ID、座標</span></button>
-          <button class="quick-action" data-go="scripts"><b>修改 NPC 腳本</b><span>Function outline、callback 檢查</span></button>
+          <button class="quick-action" data-go="skills"><b>建立 / 調整技能</b><span>常用數值先顯示，進階數值收起來</span></button>
+          <button class="quick-action" data-go="maps"><b>視覺化放置怪物 / NPC</b><span>搜尋名稱、點地圖新增、拖曳改位置</span></button>
+          <button class="quick-action" data-go="scripts"><b>修改 NPC 腳本</b><span>函式導覽、範本、即時檢查</span></button>
         </article>
       </div>
     </section>
@@ -66,13 +66,13 @@
       <div class="workspace two-column">
         <article class="panel list-panel">
           <div class="panel-toolbar">
-            <div class="search"><span>⌕</span><input id="skill-search" placeholder="搜尋技能 ID / 名稱" /></div>
-            <button class="button primary" id="skill-new">新增</button>
+            <div class="search"><span>⌕</span><input id="skill-search" placeholder="搜尋技能名稱或 ID" /></div>
+            <button class="button primary" id="skill-new">＋ 新增技能</button>
           </div>
           <div class="table-wrap"><table><thead><tr><th>ID</th><th>技能</th><th>類型</th><th>Lv</th></tr></thead><tbody id="skill-list"></tbody></table></div>
         </article>
         <article class="panel editor-panel" id="skill-editor">
-          <div class="empty-state"><div class="empty-icon">✦</div><h3>選擇一個技能</h3><p>右側會顯示技能資訊與每級參數。</p></div>
+          <div class="empty-state"><div class="empty-icon">✦</div><h3>選擇一個技能</h3><p>常用欄位會先顯示，進階設定需要時再展開。</p></div>
         </article>
       </div>
     </section>
@@ -81,13 +81,13 @@
       <div class="workspace two-column">
         <article class="panel list-panel">
           <div class="panel-toolbar">
-            <div class="search"><span>⌕</span><input id="enemy-search" placeholder="搜尋怪物 ID / 名稱 / Sprite" /></div>
-            <button class="button primary" id="enemy-new">新增</button>
+            <div class="search"><span>⌕</span><input id="enemy-search" placeholder="搜尋怪物名稱、ID 或 Sprite" /></div>
+            <button class="button primary" id="enemy-new">＋ 新增怪物</button>
           </div>
           <div class="table-wrap"><table><thead><tr><th>ID</th><th>怪物</th><th>Lv</th><th>HP</th></tr></thead><tbody id="enemy-list"></tbody></table></div>
         </article>
         <article class="panel editor-panel" id="enemy-editor">
-          <div class="empty-state"><div class="empty-icon">♜</div><h3>選擇一隻怪物</h3><p>只改常用欄位，其他 legacy CSV 欄位會保留。</p></div>
+          <div class="empty-state"><div class="empty-icon">♜</div><h3>選擇一隻怪物</h3><p>名稱與預覽優先；Legacy 欄位仍會完整保留。</p></div>
         </article>
       </div>
     </section>
@@ -96,13 +96,46 @@
       <article class="panel map-panel">
         <div class="panel-toolbar map-toolbar">
           <div class="field compact"><label>地圖</label><select id="map-select"></select></div>
-          <div class="segmented"><button class="active" data-map-tab="enemies">怪物出生點</button><button data-map-tab="npcs">NPC</button></div>
+          <div class="segmented"><button class="active" data-map-tab="enemies">怪物</button><button data-map-tab="npcs">NPC</button></div>
           <div class="toolbar-spacer"></div>
-          <button class="button ghost" id="map-add">新增一筆</button>
-          <button class="button primary" id="map-save">儲存地圖資料</button>
+          <button class="button ghost" id="map-add">＋ 新增</button>
+          <button class="button primary" id="map-save">儲存地圖</button>
         </div>
         <div class="map-meta" id="map-meta"></div>
-        <div class="table-wrap map-table"><table><thead id="map-head"></thead><tbody id="map-body"></tbody></table></div>
+
+        <div class="map-visual-layout">
+          <aside class="map-palette">
+            <div id="map-enemy-palette">
+              <p class="eyebrow">MONSTER PALETTE</p>
+              <div class="search compact-search"><span>⌕</span><input id="map-enemy-search" placeholder="搜尋怪物名稱" /></div>
+              <p class="helper">選怪物後，直接點地圖就能放置。拖曳地圖上的標記可移動。</p>
+              <div class="map-enemy-list" id="map-enemy-list"></div>
+            </div>
+            <div id="map-npc-palette" hidden>
+              <p class="eyebrow">NPC MODE</p>
+              <p class="helper">點地圖新增 NPC，再從右側設定名稱、腳本與類型。</p>
+            </div>
+          </aside>
+
+          <div class="map-canvas-panel">
+            <div class="map-stage-toolbar">
+              <span id="map-stage-hint">選一隻怪物後點地圖新增；拖曳標記可移動。</span>
+              <span id="map-stage-coord">X — / Y —</span>
+            </div>
+            <div class="map-stage" id="map-stage">
+              <div class="map-stage-empty" id="map-stage-empty">目前沒有資料，從左側選擇後點這裡新增。</div>
+            </div>
+          </div>
+
+          <aside class="map-inspector" id="map-inspector">
+            <div class="empty-state compact-empty"><div class="empty-icon">⌖</div><h3>選擇地圖物件</h3><p>點一下標記即可編輯。</p></div>
+          </aside>
+        </div>
+
+        <details class="advanced-table">
+          <summary>進階：直接查看 / 編輯原始清單</summary>
+          <div class="table-wrap map-table"><table><thead id="map-head"></thead><tbody id="map-body"></tbody></table></div>
+        </details>
       </article>
     </section>
 
@@ -110,15 +143,25 @@
       <div class="workspace script-workspace">
         <article class="panel script-browser">
           <div class="panel-toolbar">
-            <div class="search"><span>⌕</span><input id="script-search" placeholder="搜尋 .txt 腳本" /></div>
-            <button class="button primary" id="script-new">新增</button>
+            <div class="search"><span>⌕</span><input id="script-search" placeholder="搜尋 NPC / 腳本名稱" /></div>
+            <button class="button primary" id="script-new">＋ 新增</button>
           </div>
           <div class="script-list" id="script-list"></div>
         </article>
         <article class="panel code-panel">
           <div class="code-toolbar">
             <div><strong id="script-title">尚未選擇腳本</strong><span id="script-encoding"></span></div>
-            <div class="code-actions"><button class="button danger" id="script-delete" disabled>刪除</button><button class="button ghost" id="script-validate" disabled>驗證</button><button class="button primary" id="script-save" disabled>儲存</button></div>
+            <div class="code-actions">
+              <select class="mini-select" id="script-snippet" disabled>
+                <option value="">＋ 插入常用範本</option>
+                <option value="say">Say 對話</option>
+                <option value="ask">Ask 選項</option>
+                <option value="function">新增 Function</option>
+              </select>
+              <button class="button danger" id="script-delete" disabled>刪除</button>
+              <button class="button ghost" id="script-validate" disabled>檢查</button>
+              <button class="button primary" id="script-save" disabled>儲存</button>
+            </div>
           </div>
           <textarea id="script-editor" class="code-editor" spellcheck="false" disabled placeholder="選擇左側腳本開始編輯"></textarea>
           <div class="code-status"><span id="cursor-status">Ln 1, Col 1</span><span>Legacy Lua / Quest Script</span></div>
@@ -135,8 +178,10 @@
       <article class="panel asset-panel">
         <div class="panel-toolbar">
           <div class="field compact"><label>分類</label><select id="asset-folder"></select></div>
-          <div class="search wide"><span>⌕</span><input id="asset-search" placeholder="搜尋素材檔名或路徑" /></div>
-          <div class="toolbar-spacer"></div><span class="muted" id="asset-count"></span>
+          <div class="search wide"><span>⌕</span><input id="asset-search" placeholder="搜尋素材名稱或路徑" /></div>
+          <div class="toolbar-spacer"></div>
+          <span class="helper inline-helper">可直接把新檔案拖到素材卡片上替換</span>
+          <span class="muted" id="asset-count"></span>
         </div>
         <div class="asset-grid" id="asset-grid"></div>
       </article>
