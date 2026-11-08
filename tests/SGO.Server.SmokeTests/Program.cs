@@ -1506,6 +1506,53 @@ try
     Check(enemyDrops.OwnerProtectionSeconds == 15,
         "enemy.cfg OwnedDropItemTimeout drives server loot protection");
 
+    var dropMultiplierObservedIncrease = false;
+    foreach (var enemyId in Enumerable.Range(1, 300))
+    {
+        if (enemyDrops.GetDrops(enemyId).Count == 0)
+            continue;
+
+        for (var sequence = 1; sequence <= 200; sequence++)
+        {
+            var baseline = enemyDrops.RollDrops(
+                enemyId,
+                entityId: 900000 + enemyId,
+                killSequence: sequence,
+                lucky: 0,
+                dropMultiplier: 1.0);
+            var boosted = enemyDrops.RollDrops(
+                enemyId,
+                entityId: 900000 + enemyId,
+                killSequence: sequence,
+                lucky: 0,
+                dropMultiplier: 10.0);
+
+            var baselineIds = baseline
+                .Select(x => x.ItemId)
+                .ToHashSet();
+            var boostedIds = boosted
+                .Select(x => x.ItemId)
+                .ToHashSet();
+
+            Check(
+                baselineIds.IsSubsetOf(boostedIds),
+                "global drop multiplier preserves baseline drops for identical deterministic roll");
+
+            if (boostedIds.Count > baselineIds.Count)
+            {
+                dropMultiplierObservedIncrease = true;
+                break;
+            }
+        }
+
+        if (dropMultiplierObservedIncrease)
+            break;
+    }
+
+    Check(
+        dropMultiplierObservedIncrease,
+        "global drop multiplier increases at least one real recovered drop outcome");
+
     var legacyTrainTicketIds =
         new[] { 10505, 10506, 10507, 10508, 10509, 10510, 10511 };
 
