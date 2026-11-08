@@ -49,11 +49,10 @@ public sealed class WorldEntitySpatialAoi
 
     private sealed class EntityEntry(
         WorldAoiEntity entity,
-        long indexedGeneration)
+        long generation)
     {
         public WorldAoiEntity Entity = entity;
-        public readonly long IndexedGeneration = indexedGeneration;
-        public long LastMutationGeneration = indexedGeneration;
+        public long LastMutationGeneration = generation;
         public readonly HashSet<Guid> Observers = new();
         public (int MapId, int CellX, int CellY) Cell =
             CellOf(entity.MapId, entity.X, entity.Y);
