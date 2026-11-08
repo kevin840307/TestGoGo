@@ -75,9 +75,9 @@ func _run() -> void:
 	NetworkEntityManager._on_entity_moved({
 		"EntityID": test_id, "X": 30.0, "Y": 40.0, "SpeedTime": 0.25
 	})
-	_check(is_equal_approx(float(owned_template.get("LocX", -1.0)), 30.0)
-		and is_equal_approx(float(owned_template.get("LocY", -1.0)), 40.0),
-		"MoveEntity reuses owned monster template rather than copying it")
+	_check(is_equal_approx(float(owned_template.get("LocX", -1.0)), 10.0)
+		and is_equal_approx(float(owned_template.get("LocY", -1.0)), 20.0),
+		"MoveEntity preserves the pre-update template snapshot without aliasing")
 	var updated: Dictionary = NetworkEntityManager._monster_spawn_templates.get(test_id, {})
 	_check(is_equal_approx(float(updated.get("LocX", -1.0)), 30.0)
 		and is_equal_approx(float(updated.get("LocY", -1.0)), 40.0),
