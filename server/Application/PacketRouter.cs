@@ -5898,6 +5898,15 @@ public sealed class PacketRouter
                         resolvedGround.X, resolvedGround.Y);
                 }
             }
+            else if (_dropPlacement.HasVerifiedBlockedPosition(
+                         ground.MapId, ground.X, ground.Y) &&
+                     _dropPlacement.ShouldReportUnrepairableMap(
+                         ground.MapId))
+            {
+                _log.LogWarning(
+                    "[GROUND_DROP_LEGACY_UNREPAIRED] Map={MapId} Entity={EntityId} Location=({X:F0},{Y:F0}) No legal nearby tile; original DB item preserved",
+                    ground.MapId, ground.EntityId, ground.X, ground.Y);
+            }
 
             state.GroundItems[resolvedGround.EntityId] = resolvedGround;
             // The snapshot factory closes over the persisted, reconciled
