@@ -262,12 +262,33 @@ public sealed class SharedMapAiTicker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(Interval);
+#if DEBUG
+        DateTimeOffset? lastTickStarted = null;
+        var tickGapLogCount = 0;
+#endif
         try
         {
             while (await timer.WaitForNextTickAsync(stoppingToken))
             {
+                var tickStartedAt = DateTimeOffset.UtcNow;
+#if DEBUG
+                // Distinguish a true scheduler stall from a normal idle/
+                // wandering interval between a monster's MoveEntity packets.
+                if (lastTickStarted.HasValue)
+                {
+                    var gap = tickStartedAt - lastTickStarted.Value;
+                    if (gap > TimeSpan.FromMilliseconds(500) &&
+                        tickGapLogCount++ < 25)
+                    {
+                        _log.LogInformation(
+                            "[MAP_AI_TICK_GAP] GapMs={GapMs:F1} ActiveSessions={ActiveSessions}",
+                            gap.TotalMilliseconds, _sessions.Count);
+                    }
+                }
+                lastTickStarted = tickStartedAt;
+#endif
                 var start = Stopwatch.GetTimestamp();
-                TickOnce(DateTimeOffset.UtcNow);
+                TickOnce(tickStartedAt);
                 var elapsed = Stopwatch.GetElapsedTime(start);
                 if (elapsed > Interval)
                     _log.LogWarning(
