@@ -143,6 +143,18 @@ internal static class BlockingMapSmokeTests
                   99, 8, 8, 24, 8, false),
             "missing Blocking.dat fails closed");
 
+        // Dismount must not remove terrain access when still standing on
+        // mecha-only flag 3. DriveMechaRequest checks the current position
+        // with a zero-length on-foot movement before updating the rider.
+        Check(!blocking.IsMoveAllowed(
+                   1, 72, 8, 72, 8, false) &&
+              blocking.IsMoveAllowed(
+                   1, 72, 8, 72, 8, true),
+            "dismount rejects current cell when it is mecha-only terrain");
+        Check(blocking.IsMoveAllowed(
+                  1, 24, 8, 24, 8, false),
+            "dismount accepts a regular walkable tile");
+
         // The fixture cleans up every temporary Blocking.dat when the suite exits.
     }
 }
