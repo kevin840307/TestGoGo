@@ -16,6 +16,8 @@
 - **修復預覽**：Blocking 衝突會顯示原座標與最近合法座標，可一鍵套用到 Editor 草稿，確認後再另行儲存；不會偷偷直接改檔。
 - **變更歷史 / 還原**：直接瀏覽 `.backups` 內的 Editor 自動備份；文字檔顯示 unified diff，二進位檔顯示大小與 SHA256。還原前會再備份目前版本，避免「還原」本身成為不可逆操作。
 - **Health 篩選**：Project Health 支援關鍵字、Error/Warning、category 篩選，資料很多時不必人工捲整份清單。
+- **首次使用導引**：第一次開啟會顯示精簡流程與常用快捷鍵；之後可從右上角「? 使用說明」隨時叫出。
+- **真實地圖背景**：可由 Godot 直接載入實際 `MapXX.scn`，依與 Editor 相同的 `map_bounds.json + 16px cell` 契約輸出 PNG；Editor 有圖就自動疊上，沒有圖仍安全退回 Blocking / 座標畫布。
 
 > NPC 腳本的即時檢查是 Editor 端的快速靜態檢查，用來提早抓常見錯誤；Server 執行時仍以 `QuestRuntime + MoonSharp` 為最終語意。
 
@@ -46,7 +48,7 @@ Editor 會自動從 repository root 找：
 
 ## 測試
 
-不需要 pytest 或額外 pip package：
+一般 repository / contract / JavaScript syntax 測試不需要 pytest 或額外 pip package：
 
 ```bat
 cd game-editor
@@ -58,6 +60,15 @@ run_tests.bat
 ```bash
 python -m unittest discover -s game-editor/tests -v
 ```
+
+真正的 Chromium E2E：
+
+```bat
+cd game-editor
+run_e2e.bat
+```
+
+E2E 會建立獨立 temp SGO 專案並啟動真正的 `editor.py`，再由 Chromium 實際操作「進地圖 → 新增怪物 → 拖曳 → Undo / Redo → 儲存 → Reload → 確認座標仍一致」，不會修改 repository 的真實 `Enemy.dat / NPC.dat`。
 
 測試涵蓋：
 
@@ -83,6 +94,9 @@ python -m unittest discover -s game-editor/tests -v
 - Backup history list / search / text diff / binary hash / deleted-file restore
 - Restore 前自動備份目前版本，以及 unmanaged path / traversal 防護
 - History UI/API wiring、Health 搜尋 / severity / category filter wiring
+- 首次使用 Help / 快捷鍵 UI、地圖 preview layer 與 preview endpoint
+- Godot MapXX.scn preview exporter 與 Editor bounds 契約一致性
+- Playwright Chromium 真實瀏覽器流程：新增 / 拖曳 / Undo / Redo / Save / Reload
 
 ## 變更歷史與安全還原
 
@@ -160,6 +174,32 @@ CI 會額外跑：
 Editor 改的是 repository 內的 **source-of-truth**，不是 `bin/Debug` 或 publish 產物。例如 NPC Quest 直接改 `Old/服務端/Dat/Quest`；目前 `SGO.Server.csproj` build/publish 時會把 `Old/服務端/Dat/**/*` link 到 `GameData`，因此下次 build 會自然帶入修改。
 
 
-## 地圖底圖說明
+## 真實地圖背景預覽
 
-目前遊戲內的大地圖本身不是讀取單一 `MapXX.png`，而是 Godot `SubViewport` 直接重畫當前 World2D。因此 Web Editor 不假裝存在一張不存在的完整地圖圖片；Editor 改用與遊戲一致的世界座標範圍與 `Blocking.dat` 作為可操作底層。若未來加入預先輸出的地圖縮圖，可再直接疊到同一個座標畫布，不需要重寫怪物 / NPC 編輯邏輯。
+遊戲內的大地圖本身是 Godot `SubViewport` 重畫當前 World2D，不是既有的單一 `MapXX.png`。因此 Editor 不使用假的拼圖，而是提供可重複產生的實際場景預覽：
+
+```bat
+cd C:\SGO\Recovered\game-editor
+export_map_previews.bat
+```
+
+可只輸出指定地圖：
+
+```bat
+export_map_previews.bat --map=13,22
+```
+
+或調整最長邊輸出尺寸：
+
+```bat
+export_map_previews.bat --max-size=2048
+```
+
+匯出器直接載入 `client/maps/MapXX.scn`，讀取 `client/maps/map_bounds.json`，並使用和 Editor 相同的 16px cell 對齊規則。輸出放在 `game-editor/.generated/map-previews/`，不提交進 Git。Editor 重新開啟 / 切地圖後會自動偵測；有預覽時顯示「地圖背景」開關，沒有預覽時仍使用 Blocking / Spawn Zone / 世界座標畫布。
+
+如果 Godot 不在 PATH，可先設定：
+
+```bat
+set GODOT=C:\path\to\Godot_v4.x.exe
+export_map_previews.bat
+```
