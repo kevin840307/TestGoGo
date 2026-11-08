@@ -184,9 +184,11 @@ test('map add drag undo redo save and reload persists real coordinates', async (
 });
 
 test('safe map view preferences persist across reload without editor payload', async ({ page }) => {
+  // Each Playwright test gets a fresh browser context, so preferences start
+  // empty already. Only suppress first-run help; do not clear prefs in an
+  // init script because init scripts run again on page.reload().
   await page.addInitScript(() => {
     localStorage.setItem('sgo-editor-help-v1', 'dismissed');
-    localStorage.removeItem('sgo-editor-prefs-v1');
   });
   await page.goto(baseUrl);
   await page.locator('[data-view="maps"]').click();
