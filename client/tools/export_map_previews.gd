@@ -1,6 +1,7 @@
 extends SceneTree
 
 const BOUNDS_PATH := "res://maps/map_bounds.json"
+const MANIFEST_PATH := "res://maps/map_generated_manifest.json"
 const DEFAULT_MAX_SIZE := 1600
 const CELL_SIZE := 16
 
@@ -26,20 +27,32 @@ func _run() -> void:
 	var bounds_by_id := _load_bounds()
 	var map_ids := _requested_ids if not _requested_ids.is_empty() else _discover_map_ids()
 	if map_ids.is_empty():
-		printerr("[MAP_PREVIEW] no MapXX.scn files found")
+		printerr("[MAP_PREVIEW] no map scenes listed/found. Expected %s or generated MapXX.scn files." % MANIFEST_PATH)
 		quit(3)
 		return
 
 	var exported := 0
 	var failed := 0
+	var missing_scene_count := 0
 	for map_id in map_ids:
+		var scene_path := "res://maps/Map%02d.scn" % map_id
+		if not ResourceLoader.exists(scene_path):
+			missing_scene_count += 1
+			printerr("[MAP_PREVIEW] generated scene missing map=%d path=%s" % [map_id, scene_path])
+			continue
 		var ok := await _export_map(map_id, bounds_by_id)
 		if ok:
 			exported += 1
 		else:
 			failed += 1
 
-	print("[MAP_PREVIEW] complete exported=%d failed=%d output=%s" % [exported, failed, _output_dir])
+	if exported == 0 and missing_scene_count > 0:
+		printerr("[MAP_PREVIEW] no previews exported because generated MapXX.scn files are absent.")
+		printerr("[MAP_PREVIEW] These scenes are listed by map_generated_manifest.json but ignored by Git; use a complete recovered/generated client workspace.")
+		quit(5)
+		return
+
+	print("[MAP_PREVIEW] complete exported=%d failed=%d missing_scene=%d output=%s" % [exported, failed, missing_scene_count, _output_dir])
 	quit(0 if failed == 0 else 4)
 
 
@@ -67,25 +80,44 @@ func _load_bounds() -> Dictionary:
 
 func _discover_map_ids() -> Array[int]:
 	var ids: Array[int] = []
-	var dir := DirAccess.open("res://maps")
-	if dir == null:
-		return ids
-	dir.list_dir_begin()
-	while true:
-		var name := dir.get_next()
-		if name.is_empty():
-			break
-		if dir.current_is_dir():
-			continue
-		if not name.begins_with("Map") or not name.ends_with(".scn"):
-			continue
-		var id_text := name.trim_prefix("Map").trim_suffix(".scn")
-		if not id_text.is_valid_int():
-			continue
-		var map_id := int(id_text)
-		if map_id > 0:
-			ids.append(map_id)
-	dir.list_dir_end()
+
+	# MapXX.scn files are generated/recovered assets and intentionally ignored by
+	# Git. The checked-in manifest is therefore the authoritative list of scenes
+	# that should exist in a complete local client workspace.
+	if FileAccess.file_exists(MANIFEST_PATH):
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(MANIFEST_PATH))
+		if typeof(parsed) == TYPE_DICTIONARY:
+			var scenes: Variant = (parsed as Dictionary).get("scenes", [])
+			if typeof(scenes) == TYPE_ARRAY:
+				for raw_scene: Variant in scenes:
+					var name := str(raw_scene).get_file()
+					if not name.begins_with("Map") or not name.ends_with(".scn"):
+						continue
+					var id_text := name.trim_prefix("Map").trim_suffix(".scn")
+					if id_text.is_valid_int():
+						var map_id := int(id_text)
+						if map_id > 0 and not ids.has(map_id):
+							ids.append(map_id)
+
+	if ids.is_empty():
+		var dir := DirAccess.open("res://maps")
+		if dir != null:
+			dir.list_dir_begin()
+			while true:
+				var name := dir.get_next()
+				if name.is_empty():
+					break
+				if dir.current_is_dir():
+					continue
+				if not name.begins_with("Map") or not name.ends_with(".scn"):
+					continue
+				var id_text := name.trim_prefix("Map").trim_suffix(".scn")
+				if id_text.is_valid_int():
+					var map_id := int(id_text)
+					if map_id > 0:
+						ids.append(map_id)
+			dir.list_dir_end()
+
 	ids.sort()
 	return ids
 
