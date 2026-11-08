@@ -93,7 +93,7 @@ Dashboard 的健康檢查會主動找出：
 - Skill `fx_use / fx_hit / fx_extra` 按 Client 真正 EffectLoader fallback 規則找不到素材
 - Skill Icon 目錄存在時，檢查 `ICON_%03d.png`；若整個 Icon 目錄尚未 recovered，只產生一筆專案級 Warning，不製造幾百筆假警告
 
-刪除 Enemy 或 NPC Script 前，Editor 會先列出 Map / `#include` 的引用影響。Health issue 的「前往」可以直接跳到對應 Map、NPC Script 或 Skill。
+刪除 Enemy 或 NPC Script 前，Editor 會先列出 Map / `#include` 的引用影響。後端也有 reference guard：仍被引用的資料不能被普通 DELETE API 直接移除，只有 UI 已向使用者明確確認後才會送出 `force=1`。Health issue 的「前往」可以直接跳到對應 Map、NPC Script 或 Skill。
 
 ## 座標與遊戲格契約
 
@@ -137,6 +137,7 @@ CI 會額外跑：
 - `Blocking.dat` 依 mtime/size 快取，批量移動與批量放置在一次 request 內共用同一份 collision grid。
 - Blocking PNG / collision grid / JSON metadata cache 都有限制容量，長時間切換大量地圖不會無限累積記憶體。
 - 地圖拖曳時只更新 DOM 標記位置；放開後才做 Blocking 驗證與完整 render，避免 pointermove 每幀打 API。
+- 啟動 Editor 時不等待完整 Project Health 掃描才顯示 UI；健康檢查會在 Dashboard 載入後更新，避免大量 Quest/Map 掃描拖慢第一畫面。
 
 ## 資料來源原則
 
