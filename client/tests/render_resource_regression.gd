@@ -48,7 +48,8 @@ func _run() -> void:
 		0: 0.0, 1: 90.0, 2: 180.0, 3: 270.0,
 		4: 45.0, 5: 135.0, 6: 225.0, 7: 315.0
 	}
-	for color_index: int in expected_hue_by_index:
+	for raw_color_index in expected_hue_by_index.keys():
+		var color_index: int = int(raw_color_index)
 		var palette: ShaderMaterial = GROUND_ITEM_SCRIPT.get_shared_palette_material(color_index)
 		var palette_again: ShaderMaterial = GROUND_ITEM_SCRIPT.get_shared_palette_material(color_index)
 		_check(palette == palette_again and
