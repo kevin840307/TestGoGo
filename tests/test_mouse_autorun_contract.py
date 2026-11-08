@@ -1,4 +1,4 @@
-"""Static integration guard for Godot's two-second cursor-follow autorun.
+"""Static integration guard for Godot's one-second cursor-follow autorun.
 
 Behavior is exercised in client/tests/mouse_autorun_regression.gd. These
 assertions protect source wiring on CI hosts without a Godot binary.
@@ -14,10 +14,10 @@ def read(relative: str) -> str:
 
 
 class MouseAutorunContractTests(unittest.TestCase):
-    def test_two_second_latch_and_next_terrain_click(self):
+    def test_one_second_latch_and_next_terrain_click(self):
         state = read("client/scripts/mouse_autorun_state.gd")
         player = read("client/player.gd")
-        self.assertIn("HOLD_TO_LATCH_MSEC: int = 2000", state)
+        self.assertIn("HOLD_TO_LATCH_MSEC: int = 1000", state)
         self.assertIn("func poll_long_hold(", state)
         self.assertIn("var was_latched: bool = _mouse_autorun.terrain_press(", player)
         self.assertIn("is_mouse_holding = not was_latched", player)
@@ -43,11 +43,17 @@ class MouseAutorunContractTests(unittest.TestCase):
 
     def test_cursor_icon_preserves_interactable_priority(self):
         cursor = read("client/scripts/cursor_manager.gd")
-        indicator = read("client/scripts/autorun_cursor_indicator.gd")
+        sheet = ROOT / "client" / "ui" / "cursor" / "C_AUTOWALK.spr.png"
+        self.assertTrue(sheet.is_file(), "Generated cursor PNG is committed")
+        self.assertEqual(sheet.read_bytes()[:8], bytes.fromhex("89504e470d0a1a0a"))
+        self.assertIn('AUTORUN_FRAME_COUNT: int = 10', cursor)
+        self.assertIn('AUTORUN_FRAME_SIZE: Vector2i = Vector2i(32, 32)', cursor)
+        self.assertIn("AtlasTexture.new()", cursor)
+        self.assertIn('frames.add_frame("autorun", frame_texture)', cursor)
         self.assertIn("set_autorun_indicator(", cursor)
         self.assertIn('visual_state == "normal"', cursor)
         self.assertIn("not _is_game_window_hovered", cursor)
-        self.assertIn("draw_colored_polygon(", indicator)
+        self.assertNotIn("autorun_cursor_indicator.gd", cursor)
         self.assertIn('["attack", "check", "player", "pick"]', cursor)
 
     def test_gameplay_and_lifecycle_cancel_latch(self):
@@ -64,7 +70,7 @@ class MouseAutorunContractTests(unittest.TestCase):
         case = read("client/tests/mouse_autorun_regression.gd")
         windows = read("tests/run_protocol_checks.ps1")
         ci = read(".github/workflows/server-build.yml")
-        self.assertIn("terrain requires two full seconds", case)
+        self.assertIn("terrain requires one full second", case)
         self.assertIn("right-click stops latched movement", case)
         self.assertIn("player right-click menu behavior remains present", case)
         self.assertIn("mouse_autorun_regression.gd", windows)
