@@ -1,8 +1,12 @@
 # SGO Local Server (.NET 8 + SQLite)
 
-A **localhost-only prototype** built to match the recovered Godot client's WebSocket protocol. It is not yet a playable offline MMO.
+An **in-development** localhost-oriented .NET 8 game server matching the recovered Godot client's WebSocket protocol. Feature implementations and automated test programs exist, but end-to-end gameplay reliability and multiplayer load capacity are not yet fully verified.
 
 ## 2026-11-08 功能與驗證狀態
+
+- [2004/2009 舊版 EXE ↔ 新版 53 項功能對照](LEGACY_EXE_PARITY_AUDIT.md)：舊版證據、已實作/差異、優先級與驗收；**好友、複合機器人、Salon、社團進階一律暫不開發**。
+- [2009 Client.exe 原版 105 個 `.itf` UI 資源索引](LEGACY_EXE_UI_RESOURCE_INDEX.md)：收藏主畫面 `095_Collection.itf` 和其餘 UI 的 IDA 行號、對應範圍。
+
 
 - [未完成／需驗證的功能清單](FEATURE_GAPS.md)：P0／P1／P2、依賴與驗收條件。
 - [封包契約狀態](../tests/PACKET_CONTRACT.md)：Client/Server Type／Action、欄位 Schema 與靜態檢查範圍。
@@ -47,16 +51,7 @@ Implemented at a high level:
 - Unknown/no-response/failed packet diagnostics in server logs.
 - SQLite behind `IGameStore` so a MySQL provider can be added later.
 
-Important current gaps:
-
-- Full `UseSkill` casting/damage/effect/cooldown implementation.
-- Complete legacy-name -> current-ID coverage for every item/shop.
-- Complete original drops/EXP/level-up/stat-point formulas.
-- Exact current NPC visual mapping for every NPC.
-- Remaining Lua host functions and full quest persistence.
-- True shared multi-client world state.
-- MySQL provider implementation.
-- Automated Godot-client E2E tests.
+**目前真正的未完成項目以 [FEATURE_GAPS.md](FEATURE_GAPS.md) 為準**；該文件會隨每次改動更新，不能用本 README 歷史階段描述認定功能尚未實作。舊版 EXE 的功能完整度請看 [LEGACY_EXE_PARITY_AUDIT.md](LEGACY_EXE_PARITY_AUDIT.md)。現有主要風險包括特殊技能與舊道具/Quest 語意、多人資產競態、真實 Godot Scene UI E2E、50/100 人長時間負載和 CI 可讀執行證據。好友／複合機器人／Salon／社團進階為 **P-LAST 暫不開發**，不是近期待辦。
 
 ## Build and publish
 
@@ -65,7 +60,7 @@ dotnet build server/SGO.Server.csproj -c Release
 dotnet publish server/SGO.Server.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
 ```
 
-CI builds on Windows via GitHub Actions. No end-to-end Godot gameplay tests have been run.
+CI builds on Windows via GitHub Actions. Godot E2E test programs exist, but a passing, inspectable execution record on the current commit has not been established; consult FEATURE_GAPS.md.
 
 
 ## Game world data
