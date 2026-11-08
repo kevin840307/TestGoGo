@@ -396,9 +396,19 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertTrue(module.is_file())
         source = module.read_text(encoding="utf-8-sig")
         self.assertIn("RaceBuyAgainstClose", source)
-        self.assertIn("buy/close race conserves total item count", source)
-        self.assertIn("buy/close race conserves total money", source)
-        self.assertIn("closing shop leaves no reserved inventory rows", source)
+        self.assertIn("RaceBuyAgainstDisconnect", source)
+        self.assertIn(
+            "buy/{terminalName} race conserves total item count",
+            source,
+        )
+        self.assertIn(
+            "buy/{terminalName} race conserves total money",
+            source,
+        )
+        self.assertIn(
+            "{terminalName} leaves no reserved inventory rows",
+            source,
+        )
         self.assertIn(
             "PlayerShopLifecycleConcurrencySmokeTests.Run(",
             concurrency,
