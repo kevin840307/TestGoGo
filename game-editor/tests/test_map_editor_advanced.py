@@ -76,6 +76,13 @@ class AdvancedMapEditorRepositoryTests(unittest.TestCase):
         self.assertTrue(second["walkable"])
         self.assertNotEqual(first_png, second_png)
 
+    def test_invalid_blocking_file_degrades_without_crashing_editor(self) -> None:
+        self.blocking.write_bytes(b"")
+        meta = self.repo.get_editor_meta(13)
+        self.assertFalse(meta["blocking"]["hasBlocking"])
+        self.assertIn("太短", meta["blocking"]["error"])
+        self.assertIsNone(self.repo._read_blocking(13))
+
     def test_batch_limit_blocks_accidental_huge_editor_request(self) -> None:
         self._write_blocking(bytes(16))
         with self.assertRaises(ValueError):
