@@ -15,7 +15,10 @@ function renderScriptList() {
   $$('.script-item', host).forEach(x => x.onclick = () => openScript(decodeURIComponent(x.dataset.name)));
 }
 async function openScript(name) {
-  if (state.scriptDirty && state.selectedScript?.name !== name && !confirm('目前 NPC 腳本有尚未儲存的修改，確定要切換嗎？')) return;
+  if (state.scriptDirty) {
+    if (state.selectedScript?.name === name) return;
+    if (!confirm('目前 NPC 腳本有尚未儲存的修改，確定要切換嗎？')) return;
+  }
   try {
     state.selectedScript = await api(`/api/scripts/${encodeURIComponent(name)}`);
     state.scriptDirty = false;
