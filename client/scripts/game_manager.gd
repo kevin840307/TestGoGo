@@ -99,6 +99,46 @@ func log_world_visual_audit(phase: String) -> void:
 	])
 
 
+func _collect_windows_working_set_trim_result(
+	reason: String,
+	result_path: String,
+	target_pid: int
+) -> void:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	for _attempt in range(12):
+		await tree.create_timer(0.25).timeout
+		if not FileAccess.file_exists(result_path):
+			continue
+		var raw: String = FileAccess.get_file_as_string(result_path).strip_edges()
+		DirAccess.remove_absolute(result_path)
+		var parts: PackedStringArray = raw.split("|")
+		if parts.size() < 3:
+			if OS.is_debug_build():
+				print("[WORKING_SET_TRIM_RESULT] reason=%s target_pid=%d invalid=%s" % [
+					reason, target_pid, raw,
+				])
+			return
+		var ok: bool = str(parts[0]).to_lower() == "true"
+		var before_bytes: int = int(parts[1])
+		var after_bytes: int = int(parts[2])
+		if OS.is_debug_build():
+			print("[WORKING_SET_TRIM_RESULT] reason=%s target_pid=%d success=%s before_mb=%.2f after_mb=%.2f released_mb=%.2f" % [
+				reason,
+				target_pid,
+				str(ok),
+				float(before_bytes) / 1048576.0,
+				float(after_bytes) / 1048576.0,
+				float(maxi(0, before_bytes - after_bytes)) / 1048576.0,
+			])
+		return
+	if OS.is_debug_build():
+		print("[WORKING_SET_TRIM_RESULT] reason=%s target_pid=%d result_timeout=true" % [
+			reason, target_pid,
+		])
+
+
 func _request_windows_working_set_trim(reason: String) -> int:
 	# Godot's resource counters can return to the login baseline while Windows
 	# still keeps released allocator/driver pages resident in this process.
@@ -120,14 +160,26 @@ func _request_windows_working_set_trim(reason: String) -> int:
 		return -1
 
 	var target_pid: int = OS.get_process_id()
+	var result_path: String = ProjectSettings.globalize_path(
+		"user://working_set_trim_%d_%d.txt" % [target_pid, Time.get_ticks_msec()]
+	)
+	var escaped_result_path: String = result_path.replace("'", "''")
 	var ps_command: String = (
 		"$ErrorActionPreference='SilentlyContinue';"
+		+ "$result='%s';$ok=$false;$before=0L;$after=0L;" % escaped_result_path
+		+ "try{"
 		+ "$sig='[System.Runtime.InteropServices.DllImport(\"psapi.dll\")] "
 		+ "public static extern bool EmptyWorkingSet(System.IntPtr hProcess);';"
 		+ "Add-Type -MemberDefinition $sig -Name NativeMethods -Namespace SgoMemory "
-		+ "-ErrorAction SilentlyContinue;"
-		+ "$p=Get-Process -Id %d -ErrorAction SilentlyContinue;" % target_pid
-		+ "if($null -ne $p){[SgoMemory.NativeMethods]::EmptyWorkingSet($p.Handle)|Out-Null}"
+		+ "-ErrorAction Stop;"
+		+ "$p=Get-Process -Id %d -ErrorAction Stop;" % target_pid
+		+ "$before=$p.WorkingSet64;"
+		+ "$ok=[SgoMemory.NativeMethods]::EmptyWorkingSet($p.Handle);"
+		+ "Start-Sleep -Milliseconds 80;"
+		+ "$p.Refresh();$after=$p.WorkingSet64;"
+		+ "}catch{};"
+		+ "Set-Content -LiteralPath $result "
+		+ "-Value (($ok.ToString())+'|'+$before+'|'+$after) -Encoding ASCII"
 	)
 	var args := PackedStringArray([
 		"-NoLogo",
@@ -137,6 +189,8 @@ func _request_windows_working_set_trim(reason: String) -> int:
 		"-Command", ps_command,
 	])
 	var helper_pid: int = OS.create_process("powershell.exe", args, false)
+	if helper_pid > 0:
+		_collect_windows_working_set_trim_result(reason, result_path, target_pid)
 	if OS.is_debug_build():
 		print("[WORKING_SET_TRIM] reason=%s target_pid=%d helper_pid=%d requested=%s current_static_mb=%.2f peak_static_mb=%.2f" % [
 			reason, target_pid, helper_pid, str(helper_pid > 0),
@@ -153,8 +207,20 @@ func _settle_renderer_and_trim_working_set(reason: String) -> void:
 	if tree == null:
 		return
 	await tree.process_frame
+	var before: Dictionary = _afk_memory_sample()
 	RenderingServer.force_sync()
 	await tree.process_frame
+	var after: Dictionary = _afk_memory_sample()
+	if OS.is_debug_build():
+		print("[MEMORY_SETTLE] reason=%s static_mb=%.2f->%.2f texture_mb=%.2f->%.2f video_mb=%.2f->%.2f" % [
+			reason,
+			float(before.get("godot_static_mb", 0.0)),
+			float(after.get("godot_static_mb", 0.0)),
+			float(before.get("godot_texture_mb", 0.0)),
+			float(after.get("godot_texture_mb", 0.0)),
+			float(before.get("godot_video_mb", 0.0)),
+			float(after.get("godot_video_mb", 0.0)),
+		])
 	_request_windows_working_set_trim(reason)
 
 
