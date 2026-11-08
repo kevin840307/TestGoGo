@@ -3200,10 +3200,54 @@ public sealed class CombatService
                     session.LastX, session.LastY,
                     out var placement))
             {
+                // An extremely damaged/misconfigured map can have no
+                // accessible foot-walkable tile at either anchor. Do not
+                // silently lose rolled rewards. The recovered enemy drop
+                // catalog produces only tabs 0 (item) and 1 (equipment).
+                var rewardUid = drop.TabType switch
+                {
+                    1 => _store.AddEquipment(
+                        accountId, dbid, drop.ItemId,
+                        damage: _current.FindItem(drop.ItemId)?.Durability ?? 0),
+                    0 => _store.AddInventoryItem(
+                        accountId, dbid, drop.ItemId, 1),
+                    _ => 0L
+                };
+
                 _log.LogWarning(
-                    "[GROUND_DROP_NO_SAFE_TILE] Map={MapId} Monster={MonsterId} Item={ItemId} MonsterPos=({X:F0},{Y:F0}) PlayerPos=({PX:F0},{PY:F0})",
+                    "[GROUND_DROP_NO_SAFE_TILE] Map={MapId} Monster={MonsterId} Item={ItemId} RewardedDirectly={Rewarded}",
                     monster.MapId, monster.EntityId, drop.ItemId,
-                    monster.X, monster.Y, session.LastX, session.LastY);
+                    rewardUid > 0);
+
+                if (rewardUid > 0)
+                {
+                    var recoveryAssets = _store.GetCharacterAssets(
+                        accountId, dbid);
+                    if (drop.TabType == 1)
+                    {
+                        packets.Add(new
+                        {
+                            Type = "EquipSync",
+                            Equips = recoveryAssets.Equips,
+                            MaxSize = recoveryAssets.EquipMaxSize
+                        });
+                    }
+                    else
+                    {
+                        packets.Add(new
+                        {
+                            Type = "InventorySync",
+                            Items = recoveryAssets.Inventory,
+                            MaxSize = recoveryAssets.InventoryMaxSize
+                        });
+                    }
+
+                    packets.Add(new
+                    {
+                        Type = "SystemMessageFlash",
+                        Message = $"地面沒有可掉落的位置，已將 {drop.Name} 放入背包"
+                    });
+                }
                 continue;
             }
 
