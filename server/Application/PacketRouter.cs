@@ -3188,7 +3188,8 @@ public sealed class PacketRouter
                     accountId,
                     state.CharacterId.Value,
                     equipUid,
-                    horseUid);
+                    horseUid,
+                    item.EquipSlot);
 
                 var assets = _store.GetCharacterAssets(
                     accountId,
