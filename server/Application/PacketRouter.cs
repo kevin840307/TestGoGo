@@ -5932,6 +5932,12 @@ public sealed class PacketRouter
                     ground.MapId, ground.EntityId, ground.X, ground.Y);
             }
 
+            // A short-lived drop can expire after the SELECT begins but
+            // before this queued WorldReady reconstruction reaches the row.
+            // Never create a new visual entity with zero remaining lifetime.
+            if (resolvedGround.IsExpired(DateTimeOffset.UtcNow))
+                continue;
+
             // The SELECT above may have completed before another socket
             // picked up this row or updated its position. Atomic generation
             // checks against the in-flight snapshot lease prevent a stale
