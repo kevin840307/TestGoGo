@@ -160,6 +160,18 @@ internal static class SharedMapAiConcurrencySmokeTests
                 tickedMaps == 1,
                 "ten players on one map still produce exactly one shared map tick");
 
+            var firstDiagnostics =
+                ticker.LastDiagnostics;
+            Check(
+                firstDiagnostics.TickAt == tickAt &&
+                firstDiagnostics.ActiveSessions == 10 &&
+                firstDiagnostics.ActiveMaps == 1 &&
+                firstDiagnostics.TickedMaps == 1 &&
+                firstDiagnostics.MonsterCount == 10 &&
+                firstDiagnostics.AssignedMonsterCount == 10 &&
+                firstDiagnostics.ElapsedMs >= 0,
+                "shared AI diagnostics report sessions maps monsters assignments and elapsed time");
+
             lock (map.SyncRoot)
             {
                 Check(
