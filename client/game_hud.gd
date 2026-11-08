@@ -1623,6 +1623,7 @@ func _on_npc_dialog_received(data: Dictionary, from_queue: bool = false) -> void
 		return
 
 	if dialog_type == "ActionDialog":
+		_legacy_dialog_sequence.note_presented(data)
 		_legacy_dialog_line_waiting = from_queue or data.has("LegacyPrefix")
 		_next_dialog_node = str(data.get("NextNode", ""))
 
@@ -1639,6 +1640,7 @@ func _on_npc_dialog_received(data: Dictionary, from_queue: bool = false) -> void
 		return
 
 	if is_instance_valid(npc_dialog_panel) and npc_dialog_panel.has_method("show_dialog"):
+		_legacy_dialog_sequence.note_presented(data)
 		var was_visible = npc_dialog_panel.visible
 		npc_dialog_panel.show_dialog(text, options, legacy_prefix, dialog_layout)
 		if not was_visible:
@@ -1649,8 +1651,11 @@ func has_legacy_dialog_line_waiting() -> bool:
 
 
 func _on_npc_dialog_close_requested() -> void:
-	# Prevent QuestEnd() from erasing an unread Say(), but keep existing Ask()
-	# behavior (including immediate close when no speech is being displayed).
+	# Original quests may call QuestEnd() directly after Ask(). Keep its options
+	# clickable; option handlers already close/reset the dialogue when selected.
+	if _legacy_dialog_sequence.is_awaiting_choice():
+		return
+	# Otherwise preserve every queued Say before respecting script termination.
 	if _legacy_dialog_line_waiting and _legacy_dialog_sequence.defer_close():
 		return
 	_on_npc_dialog_closed()

@@ -94,6 +94,11 @@ internal static class QuestDialogSmokeTests
             function media()
                 Say("m#STORY_NAME_00A.spr#STORY_NAME_00B.spr#030.mp3#", "Next")
             end
+
+            function ticket()
+                Ask("s你要購買什麼樣的票呢?", "單程車票", "取消", "BuyTicket0Reply")
+                QuestEnd()
+            end
             """);
 
         // These scripts exercise only Say/Ask/Color; no shop access is made.
@@ -158,6 +163,21 @@ internal static class QuestDialogSmokeTests
                   .GetProperty("TargetNode").GetString() == "Answer#0" &&
               sequence[3].GetProperty("DialogType").GetString() == "Close",
             "Lua emits Say, Say, Ask and QuestEnd in original story order");
+
+        // NQ024_A.txt uses Ask() then QuestEnd() within its start() path.
+        // Server retains both packets; the client must not dismiss Ask early.
+        var ticket = runtime.Execute(
+            "LegacyDialogTest.txt", "ticket", 123, "票務員", null, _ => 0);
+        using var ticketDoc = JsonDocument.Parse(
+            JsonSerializer.Serialize(ticket.Packets));
+        var ticketPackets = ticketDoc.RootElement;
+        Check(ticketPackets.GetArrayLength() == 2 &&
+              ticketPackets[0].GetProperty("DialogType").GetString() == "Dialog" &&
+              ticketPackets[0].GetProperty("Options").GetArrayLength() == 2 &&
+              ticketPackets[0].GetProperty("Options")[0]
+                  .GetProperty("TargetNode").GetString() == "BuyTicket0Reply#0" &&
+              ticketPackets[1].GetProperty("DialogType").GetString() == "Close",
+            "Lua Ask then QuestEnd keeps choices in the original packet stream");
 
         var mediaExecution = runtime.Execute(
             "LegacyDialogTest.txt", "media", 123, "守衛", null, _ => 0);

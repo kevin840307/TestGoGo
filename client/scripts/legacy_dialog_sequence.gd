@@ -7,6 +7,7 @@ var _active := false
 var _entity_id := 0
 var _script_name := ""
 var _pending: Array[Dictionary] = []
+var _awaiting_choice := false
 
 
 func push_or_begin(packet: Dictionary) -> bool:
@@ -21,6 +22,20 @@ func push_or_begin(packet: Dictionary) -> bool:
 
 	_pending.append(packet.duplicate(true))
 	return false
+
+
+# Lua QuestEnd() is often at the end of a function that just showed Ask().
+# The open choice must remain actionable until the user presses one option.
+func note_presented(packet: Dictionary) -> void:
+	var options: Array = packet.get("Options", [])
+	_awaiting_choice = (
+		str(packet.get("DialogType", "")) == "Dialog" and
+		not options.is_empty()
+	)
+
+
+func is_awaiting_choice() -> bool:
+	return _active and _awaiting_choice
 
 
 func defer_close() -> bool:
@@ -48,4 +63,5 @@ func reset() -> void:
 	_active = false
 	_entity_id = 0
 	_script_name = ""
+	_awaiting_choice = false
 	_pending.clear()

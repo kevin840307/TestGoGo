@@ -35,6 +35,8 @@ func _run() -> void:
 			{"Text": "取消", "TargetNode": "Answer#1"}]}
 
 	_check(seq.push_or_begin(first), "first Say appears immediately")
+	seq.note_presented(first)
+	_check(not seq.is_awaiting_choice(), "Say is not a pending choice")
 	_check(not seq.push_or_begin(second), "second Say waits for click")
 	_check(not seq.push_or_begin(final_ask), "Ask waits behind preceding Say")
 	_check(seq.defer_close(), "QuestEnd is deferred instead of erasing dialogue")
@@ -43,6 +45,8 @@ func _run() -> void:
 		"click advances to next Say in order")
 	var queued_ask: Dictionary = seq.take_next()
 	_check(queued_ask.get("Text") == "選擇", "Ask appears only after both Say lines")
+	seq.note_presented(queued_ask)
+	_check(seq.is_awaiting_choice(), "Ask stays open for player selection")
 	var choices: Array = queued_ask.get("Options", [])
 	_check(choices.size() == 2 and choices[1].get("TargetNode") == "Answer#1",
 		"choice destinations and ordering are untouched")
@@ -50,7 +54,8 @@ func _run() -> void:
 		"deferred QuestEnd is consumed at the end")
 	_check(not seq.has_pending(), "queue is empty when consumed")
 	seq.reset()
-	_check(not seq.is_active(), "closing resets active quest state")
+	_check(not seq.is_active() and not seq.is_awaiting_choice(),
+		"closing resets active quest state and choice state")
 
 	_check(seq.push_or_begin(first), "new interaction opens normally")
 	_check(not seq.push_or_begin(second), "old dialogue has pending lines")
@@ -61,13 +66,32 @@ func _run() -> void:
 	seq.reset()
 	_check(not seq.defer_close(), "no active dialogue means close is immediate")
 
+	# Real quest pattern: NQ024_A.txt calls Ask() then QuestEnd().
+	# Client must NOT close the ticket choices just because the Lua function ends.
+	var train := {"EntityID": 31, "ScriptName": "NQ024_A.txt",
+		"DialogType": "Dialog", "Text": "你要買哪種票?",
+		"Options": [{"Text": "單程", "TargetNode": "BuyTicket0Reply#0"},
+			{"Text": "取消", "TargetNode": "BuyTicket0Reply#1"}]}
+	_check(seq.push_or_begin(train), "train ticket question begins as a new dialogue")
+	seq.note_presented(train)
+	_check(seq.is_awaiting_choice(),
+		"Ask then QuestEnd must keep the options clickable")
+	_check(not seq.has_pending(), "no artificial close was queued for Ask")
+	seq.reset()
+	_check(not seq.is_awaiting_choice(), "selection cleanup clears choice hold")
+	_check(seq.push_or_begin(first), "dialogue may begin after a completed choice")
+	seq.note_presented({"DialogType": "Dialog", "Options": []})
+	_check(not seq.is_awaiting_choice(), "non-interactive dialogue does not hold close")
+	seq.reset()
+
 	var hud_source := FileAccess.get_file_as_string("res://game_hud.gd")
 	var manager_source := FileAccess.get_file_as_string(
 		"res://scripts/network_entity_manager.gd")
 	_check(hud_source.contains("func has_legacy_dialog_line_waiting()") and
 		hud_source.contains("_hide_current_dialog_bubbles()") and
 		hud_source.contains("_on_npc_dialog_received(next_packet, true)") and
-		hud_source.contains("_legacy_dialog_sequence.defer_close()"),
+		hud_source.contains("_legacy_dialog_sequence.defer_close()") and
+		hud_source.contains("_legacy_dialog_sequence.is_awaiting_choice()"),
 		"HUD hides prior speech, consumes queued lines, and defers server close")
 	_check(manager_source.contains("hud.has_legacy_dialog_line_waiting()") and
 		manager_source.contains("hud.request_next_dialog_sentence()"),

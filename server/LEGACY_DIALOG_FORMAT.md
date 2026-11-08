@@ -11,7 +11,8 @@
 | `p` | 玩家／非 NPC 互動選單 | 顯示玩家來源標籤與原選項 |
 | `p1` | 玩家一般發言 | 於玩家上方顯示氣泡 |
 | `n2..n6`, `p2..p6` | 角色情緒／演出差異（具體對照未知） | 保留 `LegacyPrefix`，暫不臆測表情貼圖 |
-| `n7`, `p7` | 旁白、獲得／失去物品等事件 | 事件文字以較柔和的斜體顯示 |
+| `n7` | NPC 動作、旁白或事件描述 | 事件文字以較柔和的斜體顯示 |
+| `p7` | 結果／系統提示（物品獲得、錯誤等） | 事件文字以較柔和的斜體顯示 |
 | `s` | 特殊角色／場景對話（具體外觀未知） | 保留來源；選單加特殊對話標籤 |
 | `b` | 教學段落，`#` 隔段 | 轉成雙換行、使用可捲動說明顯示 |
 | `h` | 長篇說明頁 | 可捲動、頂端對齊文字 |
@@ -43,6 +44,14 @@ Server 執行 Lua 時以私有控制標記代替原先空字串，再於 `Dialog
 
 原有 `DialogType`、`NextNode`、`Options`、`TargetNode`、`BubbleType` 均未改動；選項 callback 邏輯不變。玩家聊天仍使用原本的 `Label`，只有經過 NPC 對話流程的富文字才建立輕量 `RichTextLabel`。
 
+## Ask 選項的原版關閉語意（第四階段）
+
+對照 `Old/服務端/Dat/Quest/NQ024_A.txt`：`start()` 先呼叫 `BuyTicket0()`，在裡面 `Ask(..., "BuyTicket0Reply")`，然後在 `start()` 結尾執行 `QuestEnd()`。這種 **Ask → QuestEnd 是合法的舊版用法**；任務函式返回不代表使用者已經選擇。因此 Client 現在在互動選項可見時保留選項，直到玩家選擇或明確關閉，而不讓尾端 `QuestEnd` 立刻關掉買票視窗。
+
+同時在 `legacy_dialog_sequence.gd` 維護是否正在等待選項的狀態；一般 `Say`、空選項以及非舊版 Lua NPC 封包仍維持原有流程。選項觸發後會重設對話狀態，避免影響下一次 NPC 互動。
+
+額外的原版佐證：`Old/服務端/CDELua.dll` 的可讀字串包含 `Say("p7Error while running the chunk!")`，所以 `p7` 不只表示物品獲得，也是系統結果及錯誤提示。原始人物表情映射仍不臆測。
+
 ## 對話逐句播放（第三階段）
 
 **已確認原版腳本會在一個函式內連續執行 `Say()`、`Say()`、`Ask()`、`QuestEnd()`。** Server 原本會順序送出所有封包，但 Client 立即逐筆覆蓋畫面，造成前幾句無法閱讀、`QuestEnd()` 立即關閉。
@@ -70,6 +79,6 @@ godot --headless --path client --script res://tests/npc_legacy_dialog_regression
 godot --headless --path client --script res://tests/npc_dialog_sequence_regression.gd
 ```
 
-測試涵蓋 Lua `Say/Ask/Color`、NPC／玩家來源、`p7`、`b/h`、顏色 span、選項 `TargetNode`、普通英文文字／未知前綴不被誤刪、選項控制碼淨化、快速重開選單、Godot 富文字氣泡與純文字回退／元件重用。
+測試額外包含 `NQ024_A` 型態的 `Ask → QuestEnd` 選項保持可選。其他測試涵蓋 Lua `Say/Ask/Color`、NPC／玩家來源、`p7`、`b/h`、顏色 span、選項 `TargetNode`、普通英文文字／未知前綴不被誤刪、選項控制碼淨化、快速重開選單、Godot 富文字氣泡與純文字回退／元件重用。
 
 **尚待原始 Client 資產／行為比對**：編號 `2..6` 的確切情緒／頭像、`s/c` 的精確視覺、`m#` 原版 `.spr/.mp3` 檔案的轉換與播放、`b` 教學排版及不同解析度的介面微調。這些不應宣稱已與原版 100% 相同。
