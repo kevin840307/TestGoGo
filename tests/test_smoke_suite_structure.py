@@ -225,6 +225,67 @@ class SmokeSuiteStructureTests(unittest.TestCase):
         self.assertIn("stale dirty position never overwrites", source)
         self.assertIn("SessionLifecycleSmokeTests.Run(", main)
 
+    def test_session_lifecycle_closes_player_shop_on_transport_disconnect(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        lifecycle = (
+            SMOKE / "Integration" / "SessionLifecycleSmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
+        router = (
+            ROOT / "server" / "Application" / "PacketRouter.cs"
+        ).read_text(encoding="utf-8-sig")
+
+        start = router.index("public void DisconnectPresence")
+        end = router.index("public IReadOnlyList<object> Handle", start)
+        disconnect = router[start:end]
+
+        self.assertIn("_playerShop.Disconnect(", disconnect)
+        self.assertIn(
+            "transport disconnect closes player shop and releases all reserved rows",
+            lifecycle,
+        )
+        self.assertIn("PlayerShopService playerShop", lifecycle)
+        self.assertIn("SessionLifecycleSmokeTests.Run(", main)
+
+    def test_session_identity_cleanup_suite_covers_relogin_and_logout(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = (
+            SMOKE / "Integration" /
+            "SessionIdentityCleanupSmokeTests.cs"
+        )
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        router = (
+            ROOT / "server" / "Application" / "PacketRouter.cs"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn(
+            "same socket can authenticate second account after cleanup",
+            source,
+        )
+        self.assertIn(
+            "relogin releases old account player-shop reservations",
+            source,
+        )
+        self.assertIn(
+            "LogoutRequest releases player-shop reservations before identity reset",
+            source,
+        )
+        self.assertIn("DisconnectPresence(state);", router)
+        self.assertIn("SessionIdentityCleanupSmokeTests.Run(", main)
+
+    def test_player_shop_lifecycle_suite_covers_disconnect_vs_buy(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        module = (
+            SMOKE / "Integration" /
+            "PlayerShopLifecycleConcurrencySmokeTests.cs"
+        )
+        self.assertTrue(module.is_file())
+        source = module.read_text(encoding="utf-8-sig")
+        self.assertIn("RaceBuyAgainstDisconnect(", source)
+        self.assertIn("buy versus {terminalName} terminates", source)
+        self.assertIn("{terminalName} leaves no reserved inventory rows", source)
+        self.assertIn("PlayerShopLifecycleConcurrencySmokeTests.Run(", main)
+
     def test_wire_smoke_keeps_real_two_client_party_and_trade_flow(self):
         source = WIRE_SMOKE.read_text(encoding="utf-8-sig")
         self.assertIn("using var peerSocket = new ClientWebSocket();", source)
