@@ -75,6 +75,23 @@ class SmokeSuiteStructureTests(unittest.TestCase):
                 # low-balance overspend/repair assertions impossible.
                 self.assertNotIn("store.AdjustMoney(", suite)
 
+    def test_economy_request_guards_are_in_every_concurrency_run(self):
+        main = PROGRAM.read_text(encoding="utf-8-sig")
+        guards = (
+            SMOKE / "Integration" / "EconomyRequestGuardSmokeTests.cs"
+        ).read_text(encoding="utf-8-sig")
+        store = (
+            ROOT / "server" / "Infrastructure" / "Persistence" /
+            "Sqlite" / "SqliteGameStore.cs"
+        ).read_text(encoding="utf-8-sig")
+        self.assertEqual(
+            main.count("EconomyRequestGuardSmokeTests.Run();"), 2
+        )
+        self.assertIn("int.MaxValue, int.MaxValue", guards)
+        self.assertIn("repeated sale of consumed UID", guards)
+        self.assertIn("if (count <= 0 || unitPrice < 0)", store)
+        self.assertIn("var total = (long)unitPrice * count", store)
+
     def test_dynamic_action_schema_runtime_covers_every_action_rule(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         module = (
