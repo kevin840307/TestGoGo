@@ -25,6 +25,7 @@ internal static class EconomyConcurrencySmokeTests
         ConcurrentBankTransferConservesStack(store);
         ConcurrentPlayerShopPurchaseConservesAssetsAndMoney(store);
         ConcurrentDirectTransferConservesMoney(store);
+        ConcurrentBidirectionalTransfersConserveMoney(store);
     }
 
     private static void ConcurrentNpcPurchasesNeverOverspend(
@@ -240,6 +241,70 @@ internal static class EconomyConcurrencySmokeTests
             receiverMoney == 90 &&
             senderMoney + receiverMoney == 100,
             "ten concurrent direct transfers never overspend and conserve money");
+    }
+
+    // Concurrent transfers in BOTH directions exercise lock ordering and
+    // cross-account atomicity; a one-way overspend test cannot catch deadlocks.
+    private static void ConcurrentBidirectionalTransfersConserveMoney(
+        SqliteGameStore store)
+    {
+        var first = CreatePlayer(store, "cross_a");
+        var second = CreatePlayer(store, "cross_b");
+        Check(
+            store.AdjustMoney(first.AccountId, first.CharacterId, 1000) is not null &&
+            store.AdjustMoney(second.AccountId, second.CharacterId, 1000) is not null,
+            "seed both accounts for bidirectional-transfer race");
+
+        using var ready = new CountdownEvent(20);
+        using var start = new ManualResetEventSlim(false);
+
+        Task<bool> Send(Player from, Player to, int amount) =>
+            Task.Run(() =>
+            {
+                ready.Signal();
+                if (!start.Wait(TimeSpan.FromSeconds(20)))
+                    throw new TimeoutException("bidirectional transfer start barrier timed out");
+                return store.TransferMoney(
+                    from.AccountId,
+                    from.CharacterId,
+                    to.CharacterId,
+                    amount).Success;
+            });
+
+        var attempts = Enumerable.Range(0, 10)
+            .SelectMany(_ => new[]
+            {
+                Send(first, second, 7),
+                Send(second, first, 11)
+            })
+            .ToArray();
+
+        try
+        {
+            Check(
+                ready.Wait(TimeSpan.FromSeconds(20)),
+                "all bidirectional-transfer contenders reached start barrier");
+        }
+        finally
+        {
+            start.Set();
+        }
+
+        Check(
+            Task.WaitAll(attempts, TimeSpan.FromSeconds(30)),
+            "twenty opposite-direction transfers terminate without deadlock");
+
+        Check(
+            attempts.All(x => x.Result),
+            "all fully funded opposite-direction transfers succeed");
+
+        var firstMoney = Money(store, first);
+        var secondMoney = Money(store, second);
+        Check(
+            firstMoney == 1040 &&
+            secondMoney == 960 &&
+            firstMoney + secondMoney == 2000,
+            "opposite-direction transfers preserve both balances and total money");
     }
 
     private static Player CreatePlayer(
