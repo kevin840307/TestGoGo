@@ -57,10 +57,18 @@ func _run() -> void:
 
 	GameManager._window_has_focus = true
 	GameManager._refresh_focus_render_policy()
-	check(RenderingServer.render_loop_enabled,
-		"AFK refocus immediately resumes monitor rendering")
+	check(not RenderingServer.render_loop_enabled,
+		"AFK refocus keeps the continuous GPU render loop disabled")
+	check(GameManager.request_afk_dashboard_frame(),
+		"focused AFK dashboard can request one explicit frame")
+	check(not RenderingServer.render_loop_enabled,
+		"manual dashboard frame does not restart continuous rendering")
 	check(Engine.physics_ticks_per_second == old_physics_hz,
 		"AFK refocus does not modify fixed physics")
+
+	GameManager._window_has_focus = false
+	check(not GameManager.request_afk_dashboard_frame(),
+		"unfocused AFK never requests a GPU dashboard frame")
 
 	GameManager._afk_active = old_afk
 	GameManager._window_has_focus = old_focus
