@@ -48,6 +48,7 @@ public sealed class PacketRouter
     private readonly IGameStore _store;
     private readonly WorldDataService _world;
     private readonly BlockingMapService _blocking;
+    private readonly GroundDropPlacementService _dropPlacement;
     private readonly QuestRuntime _quests;
     private readonly CombatService _combat;
     private readonly ResourceRecoveryService _resourceRecovery;
@@ -115,6 +116,7 @@ public sealed class PacketRouter
         _store = store;
         _world = world;
         _blocking = blocking;
+        _dropPlacement = new GroundDropPlacementService(blocking);
         _quests = quests;
         _combat = combat;
         _resourceRecovery = resourceRecovery;
@@ -3914,6 +3916,38 @@ public sealed class PacketRouter
                     return responses;
                 }
 
+                // Validate the intended mouse drop point BEFORE opening
+                // the DB transaction that removes the inventory asset.
+                // Never accept a blocked/wall-side client-supplied location.
+                if (!_dropPlacement.TryResolve(
+                    state.CurrentMapId,
+                    state.LastX, state.LastY,
+                    req.Int("DropX", (int)state.LastX),
+                    req.Int("DropY", (int)state.LastY),
+                    state.LastX, state.LastY,
+                    out var dropPosition))
+                {
+                    _log.LogWarning(
+                        "[GROUND_DROP_NO_SAFE_TILE] DBID={DBID} Map={MapID} Position=({X:F0},{Y:F0})",
+                        state.CharacterId.Value, state.CurrentMapId,
+                        state.LastX, state.LastY);
+                    return
+                    [
+                        new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "附近沒有可放置物品的地面，物品已保留"
+                        }
+                    ];
+                }
+
+                if (!dropPosition.CollisionVerified)
+                {
+                    _log.LogWarning(
+                        "[GROUND_DROP_MAP_MISSING] Map={MapID} DBID={DBID} Blocking.dat unavailable; legacy placement retained",
+                        state.CurrentMapId, state.CharacterId.Value);
+                }
+
                 var ground = _store.DropAssetToGround(
                     accountId,
                     state.CharacterId.Value,
@@ -3921,8 +3955,8 @@ public sealed class PacketRouter
                     tabType,
                     Math.Max(1, req.Int("Count", 1)),
                     state.CurrentMapId,
-                    req.Int("DropX", (int)state.LastX),
-                    req.Int("DropY", (int)state.LastY));
+                    dropPosition.X,
+                    dropPosition.Y);
 
                 if (ground is null)
                 {
