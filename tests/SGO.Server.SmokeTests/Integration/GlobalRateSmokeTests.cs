@@ -90,6 +90,41 @@ internal static class GlobalRateSmokeTests
                 File.Delete(persistedPath + ".tmp");
         }
 
+        var concurrent = new GlobalRateService();
+        var writerA = Task.Run(() =>
+        {
+            for (var i = 0; i < 1000; i++)
+                concurrent.Set(2.0, 3.0, 4.0, DateTimeOffset.UtcNow, TimeSpan.FromMinutes(5));
+        });
+        var writerB = Task.Run(() =>
+        {
+            for (var i = 0; i < 1000; i++)
+                concurrent.Set(5.0, 6.0, 7.0, DateTimeOffset.UtcNow, TimeSpan.FromMinutes(5));
+        });
+        var reader = Task.Run(() =>
+        {
+            for (var i = 0; i < 3000; i++)
+            {
+                var snap = concurrent.Snapshot();
+                var first =
+                    snap.ExperienceMultiplier == 2.0 &&
+                    snap.MoneyMultiplier == 3.0 &&
+                    snap.DropMultiplier == 4.0;
+                var second =
+                    snap.ExperienceMultiplier == 5.0 &&
+                    snap.MoneyMultiplier == 6.0 &&
+                    snap.DropMultiplier == 7.0;
+                var baseline =
+                    snap.ExperienceMultiplier == 1.0 &&
+                    snap.MoneyMultiplier == 1.0 &&
+                    snap.DropMultiplier == 1.0;
+                Check(
+                    first || second || baseline,
+                    "concurrent readers never observe a torn global-rate snapshot");
+            }
+        });
+        Task.WaitAll(writerA, writerB, reader);
+
         service.Cancel();
         var cancelled = service.Snapshot();
         Check(
