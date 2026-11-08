@@ -9816,7 +9816,7 @@ try
         session.LastY + 20);
 
     var runtimeTickNow =
-        DateTimeOffset.UtcNow;
+        session.LastMonsterAiTick.AddMinutes(1);
     session.LastCompanionRuntimeAt =
         runtimeTickNow.AddSeconds(-2);
     session.LastCompanionClientSyncAt =
@@ -10102,11 +10102,14 @@ try
     session.CurrentMapId = combatMapId; // active map with real monsters
     session.WorldReady = false;
     mapAi.Register(session);
+    var sharedTickerAt =
+        session.LastMonsterAiTick.AddMinutes(1);
     Check(session.SharedAiManaged &&
-          mapAi.TickOnce(DateTimeOffset.UtcNow) == 0,
+          mapAi.TickOnce(sharedTickerAt) == 0,
         "shared map scheduler ignores maps without world-ready players");
     session.WorldReady = true;
-    var sharedTickTime = DateTimeOffset.UtcNow.AddSeconds(1);
+    var sharedTickTime =
+        sharedTickerAt.AddSeconds(1);
     Check(mapAi.TickOnce(sharedTickTime) == 1 &&
           session.LastMonsterAiTick == sharedTickTime,
         "shared map scheduler ticks an active map once");
