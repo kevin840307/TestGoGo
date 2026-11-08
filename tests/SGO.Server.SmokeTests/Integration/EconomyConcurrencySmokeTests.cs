@@ -176,6 +176,13 @@ internal static class EconomyConcurrencySmokeTests
                 store, buyer.AccountId, buyer.CharacterId, 100,
                 "player-shop race buyer");
 
+        var sellerMoneyBefore =
+            Money(store, seller);
+        var buyerMoneyBefore =
+            buyers.Sum(x => Money(store, x));
+        var totalMoneyBefore =
+            sellerMoneyBefore + buyerMoneyBefore;
+
         const int itemIndex = 999_923;
         var uid = store.AddInventoryItem(
             seller.AccountId,
@@ -217,11 +224,19 @@ internal static class EconomyConcurrencySmokeTests
             buyerCopies == 5 &&
             CountInventory(store, seller, itemIndex) == 0,
             "ten buyers racing one five-count player-shop listing receive exactly five items");
+        var sellerMoneyAfter =
+            Money(store, seller);
+        var totalMoneyAfter =
+            sellerMoneyAfter + buyerMoney;
+
         Check(
-            Money(store, seller) == 100 &&
-            buyerMoney == 900 &&
-            Money(store, seller) + buyerMoney == 1000,
-            "concurrent player-shop purchase conserves total money");
+            sellerMoneyAfter == sellerMoneyBefore + 100 &&
+            buyerMoney == buyerMoneyBefore - 100 &&
+            totalMoneyAfter == totalMoneyBefore,
+            $"concurrent player-shop purchase conserves total money " +
+            $"(sellerBefore={sellerMoneyBefore}, sellerAfter={sellerMoneyAfter}, " +
+            $"buyersBefore={buyerMoneyBefore}, buyersAfter={buyerMoney}, " +
+            $"totalBefore={totalMoneyBefore}, totalAfter={totalMoneyAfter})");
     }
 
     private static void ConcurrentDirectTransferConservesMoney(
