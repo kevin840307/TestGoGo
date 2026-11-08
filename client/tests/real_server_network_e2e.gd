@@ -34,6 +34,15 @@ var _world_ready_message := ""
 var _chat_done := false
 var _chat_message := ""
 
+var _inventory_generation := 0
+var _last_inventory: Array = []
+var _ground_spawn_done := false
+var _ground_spawn_data: Dictionary = {}
+var _pickup_done := false
+var _pickup_data: Dictionary = {}
+var _change_map_done := false
+var _change_map_id := 0
+
 var _bootstrap := {
 	"InventorySync": false,
 	"EquipSync": false,
@@ -84,6 +93,9 @@ func _run() -> void:
 	NetworkManager.quest_synced.connect(_on_quests)
 	NetworkManager.festival_theme_received.connect(_on_festival)
 	NetworkManager.chat_broadcast_received.connect(_on_chat)
+	NetworkManager.entity_spawned.connect(_on_entity_spawned)
+	NetworkManager.item_pickup_feedback_received.connect(_on_item_pickup_feedback)
+	NetworkManager.change_map_received.connect(_on_change_map)
 
 	var token := int(Time.get_ticks_usec() % 1000000000)
 	var username := "gde2e%d%d" % [OS.get_process_id(), token]
@@ -244,6 +256,139 @@ func _run() -> void:
 		"post-world nearby chat round-trips without payload drift"
 	)
 
+	# Ground-item lifecycle through the production Godot NetworkManager:
+	# seed -> drop -> leave map -> return -> WorldReady snapshot -> pickup.
+	var inventory_before_seed := _inventory_generation
+	NetworkManager.send_secure_packet({
+		"Type": "ChatMessage",
+		"Channel": 0,
+		"Message": "/gm item 1001 1",
+		"BubbleType": 0,
+	})
+	if not await _wait_for(
+		func(): return _inventory_generation > inventory_before_seed,
+		12.0
+	):
+		_check(false, "GM seed InventorySync reaches Godot before ground lifecycle")
+		_finish()
+		return
+
+	var ground_item_uid := 0
+	for item in _last_inventory:
+		if (
+			item is Dictionary
+			and int(item.get("ItemIndex", 0)) == 1001
+			and int(item.get("InBank", 0)) == 0
+			and int(item.get("InShop", 0)) == 0
+		):
+			ground_item_uid = max(
+				ground_item_uid,
+				int(item.get("ItemUID", 0))
+			)
+	_check(ground_item_uid > 0, "Godot sees seeded item UID for ground lifecycle")
+	if ground_item_uid <= 0:
+		_finish()
+		return
+
+	var first_x := int(_enter_data.get("LocX", 0))
+	var first_y := int(_enter_data.get("LocY", 0))
+	_ground_spawn_done = false
+	_ground_spawn_data.clear()
+	NetworkManager.send_secure_packet({
+		"Type": "DropItemRequest",
+		"TabType": 0,
+		"ItemUID": ground_item_uid,
+		"Count": 1,
+		"DropX": first_x,
+		"DropY": first_y,
+	})
+	if not await _wait_for(func(): return _ground_spawn_done, 12.0):
+		_check(false, "DropItemRequest produces ground SpawnEntity in Godot")
+		_finish()
+		return
+
+	var ground_entity_id := int(_ground_spawn_data.get("EntityID", 0))
+	_check(
+		ground_entity_id > 0,
+		"Godot receives authoritative ground EntityID before map change"
+	)
+	if ground_entity_id <= 0:
+		_finish()
+		return
+
+	_change_map_done = false
+	NetworkManager.send_secure_packet({
+		"Type": "ChatMessage",
+		"Channel": 0,
+		"Message": "/gm map 16 %d %d" % [first_x, first_y],
+		"BubbleType": 0,
+	})
+	if not await _wait_for(
+		func(): return _change_map_done and _change_map_id == 16,
+		12.0
+	):
+		_check(false, "Godot receives ChangeMap to lifecycle destination")
+		_finish()
+		return
+
+	_world_ready_done = false
+	NetworkManager.send_world_ready(16)
+	if not await _wait_for(func(): return _world_ready_done, 12.0):
+		_check(false, "destination WorldReady ACK reaches Godot")
+		_finish()
+		return
+	_check(
+		_world_ready_ok and _world_ready_map_id == 16,
+		"destination WorldReady succeeds in Godot ground lifecycle"
+	)
+
+	_change_map_done = false
+	NetworkManager.send_secure_packet({
+		"Type": "ChatMessage",
+		"Channel": 0,
+		"Message": "/gm map %d %d %d" % [map_id, first_x, first_y],
+		"BubbleType": 0,
+	})
+	if not await _wait_for(
+		func(): return _change_map_done and _change_map_id == map_id,
+		12.0
+	):
+		_check(false, "Godot receives ChangeMap back to original map")
+		_finish()
+		return
+
+	_ground_spawn_done = false
+	_ground_spawn_data.clear()
+	_world_ready_done = false
+	NetworkManager.send_world_ready(map_id)
+	if not await _wait_for(func(): return _world_ready_done, 12.0):
+		_check(false, "return-map WorldReady ACK reaches Godot")
+		_finish()
+		return
+	if not await _wait_for(func(): return _ground_spawn_done, 12.0):
+		_check(false, "return-map WorldReady rebuilds ground SpawnEntity in Godot")
+		_finish()
+		return
+
+	_check(
+		int(_ground_spawn_data.get("EntityID", 0)) == ground_entity_id
+		and bool(_ground_spawn_data.get("IsSnapshot", false)),
+		"Godot receives same persisted ground EntityID as a return-map snapshot"
+	)
+
+	_pickup_done = false
+	_pickup_data.clear()
+	NetworkManager.send_pickup_item_request(ground_entity_id)
+	if not await _wait_for(func(): return _pickup_done, 12.0):
+		_check(false, "Godot receives ItemPickupFeedback after map-return pickup")
+		_finish()
+		return
+	_check(
+		int(_pickup_data.get("ItemIndex", 0)) == 1001
+		and int(_pickup_data.get("Count", 0)) == 1,
+		"Godot can pick persisted ground item after leaving and returning"
+	)
+
 	_finish()
 
 
@@ -303,7 +448,9 @@ func _on_world_ready(success: bool, map_id: int, message: String) -> void:
 	_world_ready_done = true
 
 
-func _on_inventory(_items: Array, _max_size: int) -> void:
+func _on_inventory(items: Array, _max_size: int) -> void:
+	_last_inventory = items.duplicate(true)
+	_inventory_generation += 1
 	_bootstrap["InventorySync"] = true
 
 
@@ -348,3 +495,24 @@ func _on_chat(
 		_bubble_type: int) -> void:
 	_chat_message = message
 	_chat_done = true
+
+
+func _on_entity_spawned(data: Dictionary) -> void:
+	if (
+		int(data.get("EntityType", -1)) == 3
+		and data.get("ExtraData", {}) is Dictionary
+		and int(data.get("ExtraData", {}).get("ItemIndex", 0)) == 1001
+	):
+		_ground_spawn_data = data.duplicate(true)
+		_ground_spawn_done = true
+
+
+func _on_item_pickup_feedback(data: Dictionary) -> void:
+	if int(data.get("ItemIndex", 0)) == 1001:
+		_pickup_data = data.duplicate(true)
+		_pickup_done = true
+
+
+func _on_change_map(map_id: int, _target_x: float, _target_y: float) -> void:
+	_change_map_id = map_id
+	_change_map_done = true
