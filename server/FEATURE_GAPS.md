@@ -93,6 +93,7 @@
 目前 Server 已有統一的 in-memory diagnostics ring buffer（最近 500 筆）與 `/admin` 本機管理頁，並新增以下 operational diagnostics：
 
 - WebSocket connect/disconnect、非法 message、超大 packet、解碼錯誤。
+- Logging level 已明確區分：Release/Production 預設 `SGO=Information`，不輸出 Debug/Trace；Development 由 `appsettings.Development.json` 覆寫為 `SGO=Debug`。Warning/Error 與必要 Information 不依賴 Debug，因此正式版仍保留異常線索。
 - `PACKET_HANDLER_FAILED`、`INVALID_PACKET`、`UNHANDLED_PACKET`、未登入操作、`SLOW_PACKET`。
 - Shared Map AI：慢 tick、respawn/tick exception、單圖玩家/怪物壓力門檻。
 - Broadcast：單連線 queue backlog（>=500）節流告警。
