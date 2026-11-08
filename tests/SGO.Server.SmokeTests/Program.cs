@@ -91,6 +91,7 @@ var world = new WorldDataService(gameDataRoot);
 
 BlockingMapSmokeTests.Run();
 ConcurrencySmokeTests.Run(repoRoot);
+MallExternalIntegrationSmokeTests.Run();
 
 var realCurrentCatalog = new CurrentClientDataCatalog(
     Path.Combine(repoRoot, "client"));
