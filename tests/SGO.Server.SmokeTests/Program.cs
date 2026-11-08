@@ -61,7 +61,8 @@ if (args.Length != 0)
             return;
         case "world":
             BlockingMapSmokeTests.Run();
-            Console.WriteLine("Blocking-map smoke passed.");
+            PlayerSpatialAoiSmokeTests.Run();
+            Console.WriteLine("World/AOI smoke passed.");
             return;
         case "concurrency":
             ConcurrencySmokeTests.Run(
@@ -97,6 +98,7 @@ Check(Directory.Exists(gameDataRoot), "server data directory exists");
 var world = new WorldDataService(gameDataRoot);
 
 BlockingMapSmokeTests.Run();
+PlayerSpatialAoiSmokeTests.Run();
 ConcurrencySmokeTests.Run(repoRoot);
 EconomyConcurrencySmokeTests.Run();
 AssetMutationConcurrencySmokeTests.Run();
