@@ -1351,7 +1351,7 @@ await AwaitType(
             item.GetProperty("ItemUID").GetInt64() == choiceItemUid),
     "selected choice consumes source item exactly once");
 
-await AwaitType(
+var selectedEquipSync = await AwaitType(
     socket,
     "EquipSync",
     root =>
@@ -1361,6 +1361,13 @@ await AwaitType(
             equip.GetProperty("ItemIdx").GetInt32() == 15113),
     "selected armor is granted through equipment sync");
 
+var repairItemUid = selectedEquipSync
+    .GetProperty("Equips")
+    .EnumerateArray()
+    .First(equip => equip.GetProperty("ItemIdx").GetInt32() == 15113)
+    .GetProperty("ItemID")
+    .GetInt64();
+
 await AwaitType(
     socket,
     "SystemMessageFlash",
@@ -1368,6 +1375,55 @@ await AwaitType(
         root.TryGetProperty("Message", out var message) &&
         (message.GetString() ?? "").Contains("已選擇獎勵"),
     "successful choice acknowledges the one-time selected reward");
+
+// RepairItemRequest is verified on the same real encrypted client path.
+// The selected 15113 armor starts damaged (Damage=0) and has durability 50.
+var repairMoneySeed = await SendGm(
+    "money 10",
+    "SyncMoney",
+    root =>
+        root.TryGetProperty("Money", out var money) &&
+        money.ValueKind == JsonValueKind.Number,
+    "GM seeds money for real-wire equipment repair");
+
+var repairMoneyBefore =
+    repairMoneySeed.GetProperty("Money").GetInt64();
+
+await SendPacket(
+    socket,
+    new
+    {
+        Type = "RepairItemRequest",
+        ItemType = "Equip",
+        UID = repairItemUid
+    });
+
+await AwaitType(
+    socket,
+    "SystemMessageFlash",
+    root =>
+        root.TryGetProperty("Message", out var message) &&
+        (message.GetString() ?? "").Contains("維修完成"),
+    "RepairItemRequest reaches authoritative server repair flow");
+
+await AwaitType(
+    socket,
+    "SyncMoney",
+    root =>
+        root.TryGetProperty("Money", out var money) &&
+        money.GetInt64() < repairMoneyBefore,
+    "repair deducts authoritative money over encrypted WebSocket");
+
+await AwaitType(
+    socket,
+    "EquipSync",
+    root =>
+        root.TryGetProperty("Equips", out var equips) &&
+        equips.ValueKind == JsonValueKind.Array &&
+        equips.EnumerateArray().Any(equip =>
+            equip.GetProperty("ItemID").GetInt64() == repairItemUid &&
+            equip.GetProperty("Damage").GetInt32() == 50),
+    "repair persists max durability and returns updated EquipSync");
 
 await SendPacket(
     socket,
