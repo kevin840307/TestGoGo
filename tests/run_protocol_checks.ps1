@@ -63,7 +63,7 @@ try {
         (Join-Path $logRoot "packet-response.json")
     )
     Invoke-Checked "Legacy quest host coverage" "python" @(
-        "tests/quest_host_audit.py", "--output",
+        "tests/quest_host_audit.py", "--strict", "--output",
         (Join-Path $logRoot "quest-host.json")
     )
 
@@ -73,7 +73,7 @@ try {
     Invoke-Checked "Scripted item coverage report" "dotnet" @(
         "run", "--project",
         "tests/SGO.ItemCoverageReport/SGO.ItemCoverageReport.csproj",
-        "-c", "Release", "--", "--output",
+        "-c", "Release", "--", "--strict", "--output",
         (Join-Path $logRoot "item-use-coverage.json")
     )
     Invoke-Checked "Historical mapping coverage report" "dotnet" @(
