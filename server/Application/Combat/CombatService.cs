@@ -1100,7 +1100,9 @@ public sealed class CombatService
                 // Spawn/Despawn is queued before Move/State/Damage.
                 RegisterMonsterAoi(
                     monster,
-                    session.ConnectionId);
+                    type == "SpawnEntity"
+                        ? session.ConnectionId
+                        : default);
 
                 if (type != "SpawnEntity")
                 {
