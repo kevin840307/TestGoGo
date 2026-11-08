@@ -1,78 +1,85 @@
 # SGO Client ↔ Server 功能缺口與驗收清單
 
-> 基準：`feature/local-server-net8`，2026-11-08 重新核對。
-> **本文件是待完成項目的唯一人工維護清單**；完整 Type / Action 清單應以
+> 基準：`feature/local-server-net8`，2026-11-08 持續重新核對。
+> **本文件是待完成項目的唯一人工維護清單**；Type／Action／欄位完整清單以
 > `tests/packet_contract_audit.py`、`tests/packet_schema_audit.py`、
 > `tests/packet_response_audit.py` 每次執行產生的報告為準。
-> **存在 Handler、測試程式已編寫、或靜態稽核顯示 ROUTED，均不代表實機功能 PASS。**
+> **Handler 存在、測試已寫、靜態稽核 ROUTED 都不等於實機 PASS。**
 
 ## 狀態規則
 
 | 狀態 | 定義 |
 | --- | --- |
-| `PARTIAL` | 已有部分功能，但至少有明確缺少的路徑／規則 |
-| `BLOCKED_EXTERNAL` | 需要付款服務、舊服資料庫或外部授權，不應以假的成功回應代替 |
-| `IMPLEMENTED_UNVERIFIED` | 已有程式碼，尚未取得指定 E2E／長期測試 PASS 證據 |
-| `TEST_GAP` | 缺的是回歸／整合／壓力測試，不表示功能一定壞掉 |
-| `TECH_DEBT` | 影響維護或效能，可分階段改善 |
+| `PARTIAL` | 已有安全實作，但仍有明確未完成的資料／互動語意 |
+| `BLOCKED_EXTERNAL` | 需要付款服務、舊服資料庫或外部授權；不可用假的成功回應代替 |
+| `IMPLEMENTED_UNVERIFIED` | 程式與自動測試已補，尚缺可實際執行的 CI／Godot 實機證據 |
+| `TEST_GAP` | 缺的是驗證證據或尚未能自動化的測試，不代表功能一定壞掉 |
+| `TECH_DEBT` | 非封包缺漏，但會影響長期效能、維護或部署彈性 |
 
-每項從清單移除前：附上實際 commit、通過的測試名稱／紀錄，並檢查既有 Client 相容性。
+每項從清單移除前，都要保留 commit／測試／實際 Client 相容性證據。
 
-## 協定稽核已知部分完成對照
+## 協定稽核仍標示 PARTIAL 的路由
 
-- `UseItemRequest` → **P1-01**（未識別道具腳本效果仍部分完成）。
-- `MallAction` → **P2-01／P2-02**（點數購買／禮物可用；真實金流、舊服資料依賴外部服務）。
-- `PayPalDonationCreated` → **P2-01**（未接入供應商時明確回傳失敗）。
-- `LegacyPointWithdrawalResponse` → **P2-02**（未接入舊服資料時明確回傳失敗）。
+- `UseItemRequest` → **P1-01**：已支援大量可安全判定的 scripted item；需要玩家選擇或原始機率不明的效果仍不得猜測。
+- `MallAction` → **P2-01／P2-02**：一般商城、點數購買、Donation Gift 已可用；PayPal／舊服點數需外部來源。
+- `PayPalDonationCreated` → **P2-01**：沒有 provider 時明確 `Success=false`。
+- `LegacyPointWithdrawalResponse` → **P2-02**：沒有舊服來源時明確失敗，不會假入帳。
 
-`tests/test_feature_gap_tracker.py` 會檢查契約稽核標示 `PARTIAL` 的封包有列在此文件，避免 Type 對上就被當成已完成。
+`tests/test_feature_gap_tracker.py` 會檢查所有稽核標示 `PARTIAL` 的 wire route 在本文件都有對應。
 
-## P0 — 封包、資料一致性及驗證基礎
+## P0 — 協定、多人一致性、實際驗證
 
-| ID | 狀態 | 具體待辦 | 主要位置 | 完成驗收 |
+| ID | 狀態 | 現況與真正剩餘缺口 | 已有自動驗證 | 完成驗收 |
 | --- | --- | --- | --- | --- |
-| P0-01 | TEST_GAP | **實際 Godot ↔ .NET 封包 E2E**：登入、角色建立／選取、WorldReady、切圖、怪物同步、技能、掉寶、拾取、交易、寵物／機甲、商城點數、登出 | `client/scripts/network_manager.gd`、`server/Application/PacketRouter.cs` | 真實 Client 逐項操作，兩端封包及資料一致；失敗案例有回應，不會無限等待 |
-| P0-02 | TEST_GAP | **多人同步與並行安全**：2／10 人同地圖、相同怪物同時擊殺、交易兩端同時確認、同一掉寶同時拾取、切圖與斷線 | `SharedMapAiTicker`、`CombatService`、`TradeService`、`PacketRouter` | 單怪更新一次、獎勵與物品不重複、角色位置不倒退，重連後狀態一致 |
-| P0-03 | TEST_GAP | **CI 真正執行**：2026-11-08 本輪最新 push run `42431097198` 仍在取得 Runner 前失敗，job `steps=null`；因此尚無 Build／Smoke／Wire 全綠證據，不能把 workflow failure 當成程式測試失敗 | `.github/workflows/server-build.yml`、`tests/run_protocol_checks.ps1` | 取得有實際 steps 的 CI run：Python 契約、.NET build、遊戲 Smoke、AES/WebSocket smoke 全 PASS |
-| P0-04 | TEST_GAP | **完整欄位契約**：已補 Server → Client 巢狀 anonymous object 解析、`DriveMechaResponse` 明確 ACK 契約，以及 Godot `network_manager.gd` client ownership 回歸測試；仍缺非固定 Dictionary、動態組裝、全部欄位型別與錯誤分支 | `tests/packet_*_audit.py`、`tests/test_client_network_contract.py`、`server/Protocol/PacketSchemaValidator.cs` | 報告列出每個實際用到的 Type／Action、必要／選填欄位、型別、成功與失敗回應；無未分類路由 |
+| P0-01 | IMPLEMENTED_UNVERIFIED | **真實傳輸已從單人擴成雙 Client**。AES/WebSocket 已涵蓋註冊→登入→建角→重登→選角→bootstrap→WorldReady→商城→登出，並新增兩個真實 socket 的 Party Invite/Accept/PartySync 與 Trade Invite/Accept/Lock/FinalConfirm/Success。仍缺真正 Godot Scene/UI 驅動的切圖、戰鬥、掉寶、寵物、機甲流程。 | `tests/SGO.Server.WireSmokeTests/Program.cs`、`client/tests/*.gd`、`test_client_network_contract.py` | 有 Godot executable 的環境跑完 headless client tests，並補真正 Scene/UI 驅動的戰鬥／切圖 E2E |
+| P0-02 | IMPLEMENTED_UNVERIFIED | **多人競態程式與測試已補**：10 人同撿一個掉物、重複/同時 TradeFinalConfirm、10 人同怪擊殺、斷線/重連/切圖 race、10 人同地圖 SharedMapAiTicker owner arbitration。掉物改成 SQLite `DELETE ... RETURNING` 原子 claim；交易 FinalConfirm 改 single-owner commit。剩餘是有 runner 的實際執行證據與 50/100 人性能測量，不再是邏輯缺測。 | `Integration/ConcurrencySmokeTests.cs`、`MonsterConcurrencySmokeTests.cs`、`SessionLifecycleSmokeTests.cs`、`SharedMapAiConcurrencySmokeTests.cs` | Smoke 真正 PASS；同怪/同掉物/交易不重複；SharedMapAI 一張地圖每 scheduler pass 只處理一次 |
+| P0-03 | TEST_GAP | **CI 基礎設施仍擋住實際 PASS 證據**。2026-11-08 run `42438420106` 仍在取得 Runner 前結束，job `steps=null`，不是 build/test failure。 | workflow 與 `tests/run_protocol_checks.ps1` 已包含 strict audits、build、domain/full smoke、concurrency、Wire E2E、coverage reports | 取得至少一筆有實際 steps 的 run，所有 Python/.NET/Wire 檢查全 PASS |
+| P0-04 | TEST_GAP | 固定 Type/Action、請求 schema、40+ 關鍵 Server→Client response shape、nested anonymous response、Godot packet ownership 已守門。剩餘主要是動態 Dictionary／computed payload 的完整值型別與 optional-field 語意，不是固定路由缺 handler。 | `packet_*_audit.py`、`PacketSchemaValidator.cs`、`test_client_network_contract.py` | 所有動態 payload 也有 runtime contract/E2E；失敗路徑均回 typed `PacketError` 或既有相容失敗 response |
 
-## P1 — 已知部分實作功能
+## P1 — 遊戲資料與舊版相容
 
-| ID | 狀態 | 具體待辦 | 主要位置 | 完成驗收 |
+| ID | 狀態 | 現況與真正剩餘缺口 | 已有自動驗證 | 完成驗收 |
 | --- | --- | --- | --- | --- |
-| P1-01 | PARTIAL | **未識別的舊版物品腳本效果**：目前已實作多種恢復、機甲、寶箱、召喚及技能道具，但未有對照規則的效果仍應拒絕，不可誤給獎勵 | `PacketRouter.UseItemRequest`、`server/Application/Items/` | 依新版 Client 定義建立 ID → 效果 → 資產變更 → 封包 → 測試對照表，逐項完成 |
-| P1-02 | PARTIAL | **NPC／Lua 任務相容性**：仍需逐份檢查舊腳本的 Host Function、條件、持久化與任務獎勵 | `server/Infrastructure/Quest/QuestRuntime.cs`、`QuestProgressService.cs` | 每個支援腳本的成功／拒絕／重登情境可重現，未支援指令有明確診斷 |
-| P1-03 | PARTIAL | **歷史資源／商品對照**：舊版 ID 不保證對應新版物品；需要處理剩餘碰撞與資料缺漏 | `server/Infrastructure/GameData/` | 產出可審核的 ID／名稱／來源／狀態對照；不確定的項目明確跳過 |
-| P1-04 | IMPLEMENTED_UNVERIFIED | **多寵物、技能、固定獎勵寶箱近期新增路徑**：最新提交有實作及部分 SmokeTests，但仍需要 Client 實機操作與重連驗證 | `client/`、`CombatService`、`PacketRouter`、`SqliteGameStore` | 召喚與狀態同步、技能傷害、開箱扣道具及獎勵均在重登入後一致 |
+| P1-01 | PARTIAL | **Scripted item 已改為全量可執行 coverage**。現有實作涵蓋恢復、容量卡、多寵物、機甲/蜂型套件、技能書、EXP 卡、booster、變身、外觀變身、幸福娃娃、Festival reward、固定/可安全還原寶箱、製作藍圖分類等。Coverage 現在 `--strict`：只要仍有 `UNKNOWN_SCRIPT_EFFECT` 就直接 fail。描述要求玩家選擇、或原始隨機機率不可可靠推定的項目維持 `CHOICE_REQUIRED`，Server 不會猜獎勵或誤消耗。 | `tests/SGO.ItemCoverageReport/`、`BoosterSmokeTests.cs`、`RecoveredBoxSmokeTests.cs`、`ItemUseClassificationSmokeTests.cs`、`WaspPackageSmokeTests.cs`、`CosmeticTransformationSmokeTests.cs` | strict report 的 `UNKNOWN_SCRIPT_EFFECT=0`；CHOICE_REQUIRED 另有明確 Client 選擇流程後才能視為完整 |
+| P1-02 | PARTIAL | **Quest Host 相容已改為全 1,566 份腳本稽核**，CI/local runner 使用 `--strict`，任何直接呼叫未綁 host function 都 fail。曾實際出錯的 `Add_Gift.txt/CheckGift` 已直接執行 smoke，`AddGift` 無 provider 時安全走原腳本 `None()` callback。仍不能宣稱 1,566 份腳本的每一條業務分支、持久化與獎勵都已做 E2E。 | `tests/quest_host_audit.py`、`test_quest_host_audit.py`、主 Smoke 的真實 QuestRuntime 案例 | strict host audit=0 unbound；高使用率 NPC/Quest 持續補成功/拒絕/重登 integration，不再出現 nil global |
+| P1-03 | IMPLEMENTED_UNVERIFIED | **歷史資源 ID 不再直接信任**：同 ID 名稱/分類不同視為 collision；先用名稱安全 remap，找不到就 `SKIPPED/UNMAPPED`。新增 machine-readable mapping report，列出 SAFE_SAME_ID / NAME_REMAP / LEGACY_ID_COLLISION / SKIPPED 與 legacy drop RESOLVED/UNMAPPED。 | `ShopCatalog.MappingInfo/Warnings`、`EnemyDropCatalog.ResolveItem`、`tests/SGO.MappingCoverageReport/` | 報告可審核；任何不確定項目保持跳過而非錯配；需要的遺留內容逐項補正確名稱/來源 |
+| P1-04 | IMPLEMENTED_UNVERIFIED | 多寵物、技能、booster、固定/還原寶箱、蜂型機甲、外觀變身等近期功能均已有持久化/Router smoke；還缺真正 Godot 實機操作結果。 | 多個 `Integration/*SmokeTests.cs` + Client contract/headless regression | 使用真實 Client 操作後重登，資產、狀態、外觀、技能與召喚狀態一致 |
 
-## P2 — 依賴外部系統／效能改善
+## P2 — 外部依賴與非封包阻塞項目
 
-| ID | 狀態 | 具體待辦 | 主要位置 | 完成驗收 |
+| ID | 狀態 | 具體待辦 | 目前安全行為 | 完成驗收 |
 | --- | --- | --- | --- | --- |
-| P2-01 | BLOCKED_EXTERNAL | **PayPal 付款**：`CreatePayPalDonation` 會回傳 `Success=false`，並沒有建立實際付款訂單 | `server/Application/Mall/MallService.cs` | 取得付款提供者設定後，驗證服務端簽章、Webhook 冪等與可稽核的點數入帳 |
-| P2-02 | BLOCKED_EXTERNAL | **舊服點數查詢／提領**：`QueryLegacyPoints`、`WithdrawLegacyPoints` 回傳未設定來源 | `MallService.cs` | 接入真實來源、驗證身分、單次且原子轉移、記錄與重試不重複入帳 |
-| P2-03 | TECH_DEBT | **大量玩家的傳輸與資料庫成本**：測量 AOI 廣播、AI Tick 的資料查詢與地圖快照流量，不先假設可支援固定人數 | `ServerBroadcastHub`、`SharedMapAiTicker`、`WorldRuntimeService` | 提供 10／50／100 人負載與封包、Tick、DB 指標，再按瓶頸優化 |
-| P2-04 | TECH_DEBT | **更換資料庫 Provider**：目前使用 SQLite，其他 Provider 尚未作實際替換驗證 | `server/Infrastructure/Persistence/` | 有需要時新增 Provider 並通過相同持久化與交易語意測試 |
+| P2-01 | BLOCKED_EXTERNAL | **PayPal 付款**需要 provider credentials/API/Webhook endpoint | `CreatePayPalDonation` 明確失敗，不建立假的訂單或點數 | 真 provider sandbox：簽章、Webhook 冪等、退款/重送、可稽核入帳 |
+| P2-02 | BLOCKED_EXTERNAL | **舊服點數查詢/提領**需要真實 legacy account/point source | Query/Withdraw 明確失敗，不模擬舊服餘額 | 真來源身分驗證 + 原子單次轉移 + 重試不重複入帳 |
+| P2-03 | TECH_DEBT | **50/100 人性能容量**。正確性已有 10 人 race/shared-AI coverage；仍需實際壓測 AOI fanout、AI tick wall-time、SQLite write latency/lock、封包 bytes/sec | Shared AI 已由每 socket tick 改成每 map 單一 250ms scheduler；client hot-path/headless perf regressions已建立 | 10/50/100 人報告含 tick P50/P95/P99、DB latency、bytes/sec、CPU/RAM，依瓶頸再優化 |
+| P2-04 | TECH_DEBT | **其他 DB Provider**。Domain/Application 已經透過 store interfaces 隔離，但目前 production persistence 只有 SQLite | 不宣稱 PostgreSQL/其他 DB 已支援 | 真有替換需求時新增 provider，跑同一組交易/掉物/資產/重連 contract tests |
 
-## 測試架構整理狀態
+## 已完成的測試結構
 
-- `tests/SGO.Server.SmokeTests/Program.cs` 原先約 **9,518 行**，大量不同領域案例集中在一份檔案。
-- **本輪已搬出**無需資料庫的請求 Schema、Action Schema、UID／DBID、公告等獨立測試：
-  - `Protocol/RequestSchemaSmokeTests.cs`
-  - `Protocol/ActionSchemaSmokeTests.cs`
-  - `Protocol/IdentitySchemaSmokeTests.cs`
-  - `Protocol/PreloginPacketSmokeTests.cs`
-  - `World/BlockingMapSmokeTests.cs`
-  - `Announcements/AnnouncementSmokeTests.cs`
-  - `Fixtures/TemporaryDirectoryFixture.cs`（測試暫存資料自動清理）
-- 共用 `SmokeAssert.cs`，仍由原 Smoke runner 呼叫，避免增加額外測試框架依賴。
-- 新增 `tests/test_client_network_contract.py`：直接檢查 Godot `network_manager.gd` 的封包責任邊界；目前鎖住機甲 ACK、`PlayerStatusSync` 能力值來源與商城 `Gifts` 消費欄位，CI 與 PowerShell runner 都會執行。
-- `packet_response_audit.py` 已改為平衡 C# anonymous initializer 大括號，避免 `MallListResponse` 這類巢狀 `new { ... }` 被第一個 `}` 截斷造成假缺欄位。
-- `GameData/CurrentClientCatalogSmokeTests.cs` 已從大型 `Program.cs` 抽出真實 Client skill/item/reward 對照，並由 `test_smoke_suite_structure.py` 防止測試再塞回主檔。
-- **2026-11-08 路由來源複核**：逐檔比對 95 個 Godot `.gd` 腳本及 Server 固定回傳 Type 的來源，未發現新的固定 Type 遺漏對接；`BankTransfer` 由 `BankPacketHandler` 模組處理，而不是 `PacketRouter.case`。此結論**不包含**動態組合的所有欄位、實際多人遊戲流程與外部服務可用性。
-- **待拆**的世界／交易／任務等大型整合案例需先建立可複用的 fixture（獨立 SQLite、地圖資料、Player sessions），然後分成不同測試模組；不可只把原本依賴同一個可變 Session 的程式碼切開，否則容易產生跨測試污染。
-- 新增測試請優先放進相關領域檔案；不要繼續往 `Program.cs` 最前面塞大量獨立 `using (Json(...))`。
+目前不再把新案例全部塞回原本約 9,518 行的 `Program.cs`。已拆出：
 
-## 已接線不等於功能完成
+- `Protocol/`：Request / Action / Identity / Prelogin schema。
+- `World/BlockingMapSmokeTests.cs`：Blocking、穿牆、A*。
+- `Announcements/AnnouncementSmokeTests.cs`。
+- `GameData/CurrentClientCatalogSmokeTests.cs`。
+- `Integration/ConcurrencySmokeTests.cs`：10 人同掉物 + Trade duplicate confirm。
+- `Integration/MonsterConcurrencySmokeTests.cs`：10 人同怪死亡 race。
+- `Integration/SharedMapAiConcurrencySmokeTests.cs`：10 人/10 怪 SharedMapAiTicker ownership。
+- `Integration/SessionLifecycleSmokeTests.cs`：disconnect/reconnect/map transition race。
+- `Integration/BoosterSmokeTests.cs`、`RecoveredBoxSmokeTests.cs`、`ItemUseClassificationSmokeTests.cs`、`WaspPackageSmokeTests.cs`、`CosmeticTransformationSmokeTests.cs`。
+- `tests/SGO.Server.WireSmokeTests/`：真 AES/WebSocket，現已含兩 client Party/Trade。
+- `client/tests/monster_chase_regression.gd`、`perf_regression_smoke.gd`：Godot headless regression；Windows runner 有 Godot 時自動執行。
+- `tests/SGO.ItemCoverageReport/`：scripted item 全量分類，`--strict` 未知效果守門。
+- `tests/SGO.MappingCoverageReport/`：歷史 ID/名稱 remap、collision、skipped/unmapped 報告。
+- `tests/quest_host_audit.py --strict`：1,566 份 Quest host surface 守門。
+- `test_smoke_suite_structure.py`：防止上述模組悄悄被移回 monolith，並守住真雙 Client Wire flow。
 
-目前已知正向能力包含世界、戰鬥、玩家商店、銀行、組隊／戰團、製作／分解、背包、寵物／機甲、公告清單、設定型商城點數與禮物等，但每一類的**驗證完成度**不相同。需使用 `tests/PACKET_CONTRACT.md` 的工具檢查 Type／Action 覆蓋，並以真實 Client 行為作為最終驗收依據。
+## 「全部補齊」目前的邊界
+
+**Repository 內可安全推定的固定封包、主要功能、競態修正與自動化守門會繼續補。**
+但以下兩類不會用猜測偽裝成完成：
+
+1. **外部服務**：PayPal、舊服點數來源，沒有 credentials/source 就只能保持明確失敗。
+2. **原始語意不足**：描述只說「任選/隨機」但沒有可靠選項流程或原始機率的舊道具，不會擅自給獎；會留在 `CHOICE_REQUIRED`，直到 Client 選擇流程/可靠資料補上。
+
+完整 wire route 仍以自動產出的 contract reports 為準。
