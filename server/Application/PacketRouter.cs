@@ -4091,7 +4091,8 @@ public sealed class PacketRouter
                 var pickupTerrain = _dropPlacement.CheckPickup(
                     state.CurrentMapId,
                     state.LastX, state.LastY,
-                    ground.X, ground.Y);
+                    ground.X, ground.Y,
+                    canCrossSpecialTerrain: state.CanCrossSpecialTerrain);
                 if (pickupTerrain is GroundPickupReachability.TooFar or
                     GroundPickupReachability.Blocked)
                 {
