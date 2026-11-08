@@ -156,8 +156,13 @@ func _calculate_max_craftable_cached(recipe: Dictionary, counts: Dictionary, mon
 	var cost: int = int(recipe.get("MoneyCost", 0))
 	if cost > 0:
 		max_craft = mini(max_craft, int(money / cost))
-	var inputs: Array = recipe.get("Inputs", []).duplicate(true)
+	# Ingredient dictionaries are read-only here. Most recipes have no
+	# blueprint, so avoid recursively cloning all inputs on every availability
+	# refresh. When a blueprint is present, copy only the outer array before
+	# appending the virtual ingredient.
+	var inputs: Array = recipe.get("Inputs", [])
 	if int(recipe.get("BlueprintID", 0)) > 0:
+		inputs = inputs.duplicate()
 		inputs.append({"ItemID": recipe.get("BlueprintID"), "Count": 1})
 	for req_value in inputs:
 		var req: Dictionary = req_value
