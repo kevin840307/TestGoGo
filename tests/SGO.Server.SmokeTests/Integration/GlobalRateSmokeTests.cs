@@ -81,6 +81,36 @@ internal static class GlobalRateSmokeTests
             Check(
                 reloaded == persisted,
                 "global rate schedule survives service restart");
+
+            persistent.Cancel();
+            var cancelledReload =
+                new GlobalRateService(persistedPath).Snapshot();
+            Check(
+                cancelledReload.EffectiveExperience(DateTimeOffset.UtcNow) == 1.0 &&
+                cancelledReload.EffectiveMoney(DateTimeOffset.UtcNow) == 1.0 &&
+                cancelledReload.EffectiveDrop(DateTimeOffset.UtcNow) == 1.0,
+                "cancelled persisted schedule stays cancelled after restart");
+
+            persistent.Set(
+                4.0,
+                4.0,
+                4.0,
+                DateTimeOffset.UtcNow.AddHours(-2),
+                TimeSpan.FromMinutes(30));
+            var expiredReload =
+                new GlobalRateService(persistedPath).Snapshot();
+            Check(
+                expiredReload.EffectiveExperience(DateTimeOffset.UtcNow) == 1.0 &&
+                expiredReload.EffectiveMoney(DateTimeOffset.UtcNow) == 1.0 &&
+                expiredReload.EffectiveDrop(DateTimeOffset.UtcNow) == 1.0,
+                "expired persisted schedule cannot reactivate after restart");
+
+            File.WriteAllText(persistedPath, "{broken-json");
+            var brokenReload =
+                new GlobalRateService(persistedPath).Snapshot();
+            Check(
+                brokenReload.EffectiveExperience(DateTimeOffset.UtcNow) == 1.0,
+                "corrupt optional rate state falls back to safe 1x");
         }
         finally
         {
