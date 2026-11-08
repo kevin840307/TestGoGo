@@ -18,6 +18,16 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var options: Array[int] = ClientPerformanceProfile.fps_options()
+	check(ClientPerformanceProfile.normalize_fps_spin_step(0, 5) == 30,
+		"SpinBox arrow up from unlimited jumps to 30")
+	check(ClientPerformanceProfile.normalize_fps_spin_step(30, 25) == 0,
+		"SpinBox arrow down from 30 jumps to unlimited")
+	check(ClientPerformanceProfile.normalize_fps_spin_step(120, 125) == 144,
+		"SpinBox arrow up from 120 reaches 144")
+	check(ClientPerformanceProfile.normalize_fps_spin_step(144, 139) == 120,
+		"SpinBox arrow down from 144 returns to 120")
+	check(ClientPerformanceProfile.normalize_fps_spin_step(60, 65) == 65,
+		"SpinBox standard arrow increments by five")
 	check(options.has(0) and options.has(30) and options.has(60) and options.has(120) and options.has(144),
 		"unlimited, 30, 60, 120, 144 FPS are selectable")
 	check(options.has(35) and options.has(40) and options.has(45) and options.has(50),
@@ -37,6 +47,28 @@ func _run() -> void:
 	check(hud_source.contains("GameManager.set_foreground_fps_limit")
 		and hud_source.contains("SETTING_KEY_FOREGROUND_FPS_LIMIT"),
 		"FPS saved per account and applied to GameManager")
+	check(hud_source.contains("option_fps_limit is SpinBox")
+		and hud_source.contains("option_fps_limit.value_changed.connect(_on_opt_fps_limit_value_changed)")
+		and hud_source.contains("option_fps_limit.set_value_no_signal(float(selected))"),
+		"SpinBox numeric entry and arrows normalize values and update settings")
+	var tscn: String = FileAccess.get_file_as_string("res://game_hud.tscn")
+	check(tscn.contains("[node name=\"OptionFpsLimit\" type=\"SpinBox\"")
+		and tscn.contains("step = 5.0"),
+		"FPS settings widget is an editable SpinBox with five FPS per click")
+	var original_cap: int = GameManager.current_foreground_fps_limit
+	var original_load: int = GameManager.current_performance_load_mode
+	var original_combat: int = GameManager.current_combat_render_mode
+	GameManager.set_foreground_fps_limit(45)
+	check(GameManager.current_foreground_fps_limit == 45 and Engine.max_fps == 45,
+		"changing FPS limit actually applies to Engine.max_fps")
+	GameManager.set_performance_modes(ClientPerformanceProfile.LOAD_LOW, ClientPerformanceProfile.COMBAT_NORMAL)
+	check(Engine.max_fps == 45,
+		"switching to Low does not override selected foreground FPS")
+	GameManager.set_foreground_fps_limit(60)
+	check(Engine.max_fps == 60,
+		"FPS limit updates immediately without restarting client")
+	GameManager.set_performance_modes(original_load, original_combat)
+	GameManager.set_foreground_fps_limit(original_cap)
 	var game_manager_source: String = FileAccess.get_file_as_string("res://scripts/game_manager.gd")
 	check(game_manager_source.contains(
 		"set_world_enhancement_enabled(current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY)"),

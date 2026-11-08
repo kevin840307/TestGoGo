@@ -3722,7 +3722,7 @@ text = "自動聖靈"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="OptionFpsLimit" type="OptionButton" parent="WindowsContainer/SettingsWindow" unique_id=37759114]
+[node name="OptionFpsLimit" type="SpinBox" parent="WindowsContainer/SettingsWindow" unique_id=37759114]
 layout_mode = 0
 offset_left = 150.0
 offset_top = 248.0
@@ -3733,6 +3733,14 @@ theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
+min_value = 0.0
+max_value = 144.0
+step = 5.0
+value = 60.0
+rounded = true
+editable = true
+suffix = " FPS"
+tooltip_text = "上下鍵每次加減 5 FPS，也可輸入；0 = 不限制，支援 30～120（每 5 FPS）與 144。切換畫質不影響此設定。"
 
 [node name="LabelFpsLimit" type="Label" parent="WindowsContainer/SettingsWindow" unique_id=663293368]
 layout_mode = 0

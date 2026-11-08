@@ -38,6 +38,20 @@ class ClientVisualPerformanceContractTests(unittest.TestCase):
         self.assertNotIn('name="OptionQualityEnhancement"', scene)
         self.assertIn('popup/item_1/text = "一般"', scene)
 
+    def test_fps_spinbox_has_real_editing_and_step_controls(self):
+        profile = source("client/scripts/client_performance_profile.gd")
+        scene = source("client/game_hud.tscn")
+        hud = source("client/game_hud.gd")
+        self.assertIn('name="OptionFpsLimit" type="SpinBox"', scene)
+        self.assertIn('min_value = 0.0', scene)
+        self.assertIn('max_value = 144.0', scene)
+        self.assertIn('step = 5.0', scene)
+        self.assertIn("static func normalize_fps_spin_step", profile)
+        self.assertIn("option_fps_limit.value_changed.connect(", hud)
+        self.assertIn("option_fps_limit.editable = true", hud)
+        self.assertIn("option_fps_limit.set_value_no_signal(float(selected))", hud)
+        self.assertNotIn("option_fps_limit is OptionButton", hud)
+
     def test_fps_per_account_and_logging(self):
         hud = source("client/game_hud.gd")
         manager = source("client/scripts/game_manager.gd")

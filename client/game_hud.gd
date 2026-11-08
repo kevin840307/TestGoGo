@@ -763,19 +763,18 @@ func _setup_window_manager() -> void :
 			if not option_auto_saint.gui_input.is_connected(_on_option_gui_input):
 				option_auto_saint.gui_input.connect(_on_option_gui_input.bind(option_auto_saint))
 
-		if option_fps_limit is OptionButton:
-			option_fps_limit.clear()
-			for fps_value: int in ClientPerformanceProfile.fps_options():
-				option_fps_limit.add_item("不限制" if fps_value == 0 else "%d FPS" % fps_value, fps_value)
-			for fps_index: int in range(option_fps_limit.item_count):
-				if option_fps_limit.get_item_id(fps_index) == current_fps_limit:
-					option_fps_limit.select(fps_index)
-					break
-			if not option_fps_limit.item_selected.is_connected(_on_opt_fps_limit_item_selected):
-				option_fps_limit.item_selected.connect(_on_opt_fps_limit_item_selected)
-			option_fps_limit.focus_mode = Control.FOCUS_NONE
-			if not option_fps_limit.gui_input.is_connected(_on_option_gui_input):
-				option_fps_limit.gui_input.connect(_on_option_gui_input.bind(option_fps_limit))
+		if option_fps_limit is SpinBox:
+			# Editable value + built-in up/down buttons, independent of quality.
+			# 0 = unlimited, 30..120 in steps of 5, or 144.
+			option_fps_limit.min_value = 0.0
+			option_fps_limit.max_value = 144.0
+			option_fps_limit.step = 5.0
+			option_fps_limit.rounded = true
+			option_fps_limit.value = float(current_fps_limit)
+			option_fps_limit.editable = true
+			option_fps_limit.get_line_edit().select_all_on_focus = true
+			if not option_fps_limit.value_changed.is_connected(_on_opt_fps_limit_value_changed):
+				option_fps_limit.value_changed.connect(_on_opt_fps_limit_value_changed)
 
 		if option_performance_load is OptionButton:
 			option_performance_load.select(current_performance_load_mode)
@@ -2904,10 +2903,18 @@ func _on_opt_pet_mode_item_selected(index: int) -> void :
 	if NetworkManager and NetworkManager.has_method("send_set_global_pet_mode"):
 		NetworkManager.send_set_global_pet_mode(current_pet_combat_mode)
 
-func _on_opt_fps_limit_item_selected(index: int) -> void:
-	if not option_fps_limit is OptionButton:
+func _on_opt_fps_limit_value_changed(raw_value: float) -> void:
+	if not option_fps_limit is SpinBox:
 		return
-	current_fps_limit = ClientPerformanceProfile.sanitize_fps_limit(option_fps_limit.get_item_id(index))
+	var selected: int = ClientPerformanceProfile.normalize_fps_spin_step(
+		current_fps_limit, int(round(raw_value))
+	)
+	# Reflect normalized values back to the numeric editor without recursion.
+	if int(round(option_fps_limit.value)) != selected:
+		option_fps_limit.set_value_no_signal(float(selected))
+	if selected == current_fps_limit:
+		return
+	current_fps_limit = selected
 	_save_game_settings()
 	if GameManager:
 		GameManager.set_foreground_fps_limit(current_fps_limit)

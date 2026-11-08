@@ -30,6 +30,20 @@ static func sanitize_fps_limit(value: int) -> int:
 	return clampi(int(round(float(value) / 5.0)) * 5, 30, 120)
 
 
+static func normalize_fps_spin_step(previous: int, requested: int) -> int:
+	# SpinBox increments by five; jump over the unsupported gaps at
+	# 0 <-> 30 and 120 <-> 144 rather than trapping the arrow buttons.
+	if previous == 0 and requested > 0 and requested <= 5:
+		return 30
+	if previous == 30 and requested >= 25 and requested < 30:
+		return 0
+	if previous == 120 and requested > 120 and requested <= 125:
+		return 144
+	if previous == 144 and requested >= 139 and requested < 144:
+		return 120
+	return sanitize_fps_limit(requested)
+
+
 static func fps_options() -> Array[int]:
 	var options: Array[int] = [0]
 	for fps: int in range(30, 121, 5):
