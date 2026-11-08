@@ -24,10 +24,57 @@ The primary design goals are:
 - `MonsterNavigationService` strictly checks each monster movement segment
   against `Blocking.dat` and uses a bounded A* path search when direct
   chase movement is blocked. Melee line of sight is blocked by walls.
-- The map simulation is still in one process and uses map locks; per-map
-  actor queues, spatial interest management and multi-instance channels are
-  later scaling work. No 24-hour or real-client throughput guarantee
-  should be inferred from the smoke tests alone.
+- The map simulation is still in one process and uses map locks. Player
+  and world entity AOI are **already implemented** as separate 1024-unit
+  spatial grids with known sets under `Application/Messaging/`. Per-map
+  actor queues and multi-instance channels remain future scaling work.
+  No 24-hour or real-client throughput guarantee follows from smoke tests.
+
+## 2026-11-08 實際模組邊界與多人效能
+
+| 位置 | 目前責任 | 不應承擔 |
+| --- | --- | --- |
+| `Transport/WebSockets` | WebSocket lifecycle、AES transport、接收/送出 queue | 決定怪物誰能看見、改金錢 |
+| `Protocol` | 固定 wire Type/Action/欄位格式驗證 | NPC、道具與戰鬥規則 |
+| `Application/Messaging` | Player AOI、World AOI、player companion snapshot、通知投遞 | 資產增減及 DB 最終真相 |
+| `Application/World` | 單圖 250ms AI 排程、怪物 owner 分派、世界 runtime 存取 | 每人複製一套怪物 |
+| `Application/{Combat,Trade,Shops,Bank,Crafting}` | 各種具體遊戲規則及狀態轉移 | 自己拼接 AES 或持有任意 SQL |
+| `Domain` | 狀態模型與遊戲規則需要的實體 | 網路、持久化 provider |
+| `Infrastructure/Persistence/Sqlite` | 真正持久化的 money/item 交易、ground row、schema | 使用 AOI 作為 DB 權限或刪資料依據 |
+| `client/scripts/network_entity_manager.gd` | Client 視覺物件、地面物 visual AOI、產生/去重 | 決定物品擁有權、最終死亡或掉寶 |
+
+**現有網路 AOI 和 AI owner 查找是兩件事。** Player AOI
+(enter 1800 / exit 2200) 與 World AOI (enter 2600 / exit 3000)
+只控制「要送給誰」；怪物 AI 仍必須為每隻怪找一位執行者。
+`SharedMapAiTicker` 在每次 map tick 使用
+`MapAiOwnerSpatialIndex` 快照玩家與寵物位置，索引不限制 AOI
+半徑，保留原先的精確最近 owner 結果與 CharacterId tie-break；
+已有 target 的怪物則直接查 dictionary。這不應改變怪物會追誰，
+只減少原本 O(monsters × players/pets) 的重複掃描。
+
+目前仍需優先量測：每 250ms `GetCharacter` 的讀取數、
+`TickAi` / pathfinding 熱點、SQL write contention、WebSocket
+queue backlog、Godot Client 的首次載入/重繪/內存。
+不能因 spatial index 的理論成本改善就宣稱真實 FPS、CPU 或
+100 人容量已經過壓測。
+
+### 小步重構原則
+
+1. **先有驗收再拆檔**：`SqliteGameStore.cs` 現在仍是大型綜合
+   provider。可在已建立對應 transaction / protocol contract 測試後，
+   以 `partial` 或小 store 類別逐功能抽出
+   Economy/Inventory/Trade/World；不能同時更動 SQL 與封包語意。
+2. **分離過長 Smoke Program**：獨立案例維持
+   `tests/SGO.Server.SmokeTests/{World,Integration,Protocol,Fixtures}`；
+   以 `--suite world`、`--suite concurrency`、full 加入，避免
+   再把測試塞進大檔案。金錢測資透過 `ExactMoneyFixture`
+   設定**精確餘額**，而非在新角色預設 10,000 上直接加錢。
+3. **不把 AOI 誤用在經濟功能**：Party/Trade/Club/Global 仍按業務
+   送出，地面物存在與裝備交易由 SQLite transaction 最終決定。
+4. **以可觀察結果做效能迭代**：每次更動都需比較
+   WorldReady→Spawn、離開→Despawn、near/far leak、
+   player item conservation、10/50/100 client latency、
+   bytes/sec、CPU/RAM/tick P95/P99 與 Godot regression。
 
 ## Naming policy
 
