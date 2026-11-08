@@ -348,6 +348,7 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 		_focused_max_fps = Engine.max_fps
 		Engine.max_fps = UNFOCUSED_MAX_FPS
 		RenderingServer.render_loop_enabled = false
+		_trim_unfocused_runtime_caches()
 
 		if master_bus_index >= 0:
 			_master_bus_was_muted_before_focus_loss = AudioServer.is_bus_mute(master_bus_index)
@@ -361,6 +362,20 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 				master_bus_index,
 				_master_bus_was_muted_before_focus_loss
 			)
+
+func _trim_unfocused_runtime_caches() -> void :
+	if EffectLoader and EffectLoader.has_method("clear_runtime_cache"):
+		EffectLoader.clear_runtime_cache()
+	if MonsterLoader and MonsterLoader.has_method("clear_runtime_cache"):
+		MonsterLoader.clear_runtime_cache()
+	if PetLoader and PetLoader.has_method("clear_runtime_cache"):
+		PetLoader.clear_runtime_cache()
+	if ItemLoader and ItemLoader.has_method("clear_runtime_cache"):
+		ItemLoader.clear_runtime_cache()
+	if SkillLoader and SkillLoader.has_method("clear_runtime_cache"):
+		SkillLoader.clear_runtime_cache()
+	if AudioManager and AudioManager.has_method("clear_runtime_cache"):
+		AudioManager.clear_runtime_cache()
 
 func _ready() -> void :
 	_window_has_focus = DisplayServer.window_is_focused()
