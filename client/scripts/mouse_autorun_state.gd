@@ -18,6 +18,17 @@ func terrain_press(now_msec: int) -> bool:
 	return was_latched
 
 
+# Switch the cursor as soon as the threshold is crossed, even while
+# the button is still down. Return true exactly for the transition.
+func poll_long_hold(now_msec: int) -> bool:
+	if latched or not holding or _press_started_msec < 0:
+		return false
+	if now_msec - _press_started_msec < HOLD_TO_LATCH_MSEC:
+		return false
+	latched = true
+	return true
+
+
 func terrain_release(now_msec: int) -> bool:
 	if holding and _press_started_msec >= 0:
 		if now_msec - _press_started_msec >= HOLD_TO_LATCH_MSEC:
