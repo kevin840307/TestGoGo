@@ -281,9 +281,10 @@ public sealed class PacketRouter
                 continue;
 
             // Concurrent movement may supersede a queued edge change.
-            if (_broadcasts.IsPlayerAoiVisible(
+            if (_broadcasts.IsPlayerAoiVisibleAs(
                     change.ObserverConnectionId,
-                    change.Subject.ConnectionId) != change.Appeared)
+                    change.Subject.ConnectionId,
+                    change.Subject.CharacterId) != change.Appeared)
                 continue;
 
             if (!change.Appeared)
