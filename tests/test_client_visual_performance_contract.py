@@ -19,8 +19,9 @@ class ClientVisualPerformanceContractTests(unittest.TestCase):
         self.assertIn("static func fps_options()", profile)
         self.assertIn("range(30, 121, 5)", profile)
         self.assertIn('profile["monster_aoi_enter_radius"] = 1250.0', profile)
-        self.assertIn('profile["monster_aoi_enter_radius"] = 950.0', profile)
-        self.assertIn('profile["effect_budget_percent"] = 15', profile)
+        self.assertNotIn('profile["monster_aoi_enter_radius"] = 950.0', profile)
+        self.assertIn('profile["effect_budget_percent"] = 0', profile)
+        self.assertIn('profile["combat_effects_enabled"] = false', profile)
         for cap in ('profile["foreground_fps"] = 45', 'profile["foreground_fps"] = 120'):
             self.assertNotIn(cap, profile)
 
@@ -74,7 +75,7 @@ class ClientVisualPerformanceContractTests(unittest.TestCase):
         self.assertIn("resolve_visual_aoi_radii(", manager)
         self.assertIn("_pending_aoi_moves.record_move(", manager)
 
-    def test_fixed_physics_network_and_mass_effect_suppression(self):
+    def test_fixed_physics_network_and_low_resource_effect_suppression(self):
         manager = source("client/scripts/game_manager.gd")
         network = source("client/scripts/network_manager.gd")
         profile = source("client/scripts/client_performance_profile.gd")
@@ -94,6 +95,25 @@ class ClientVisualPerformanceContractTests(unittest.TestCase):
         self.assertIn('func stop_combat_visual_effects()', floating)
         self.assertIn('not GameManager.should_render_combat_effects()', floating)
         self.assertIn('_try_finish_buff_animation()', actor)
+
+    def test_removed_last_preset_migrates_to_responsive_low_resource(self):
+        profile = source("client/scripts/client_performance_profile.gd")
+        scene = source("client/game_hud.tscn")
+        manager = source("client/scripts/game_manager.gd")
+        self.assertIn("return clampi(value, LOAD_QUALITY, LOAD_LOW)", profile)
+        self.assertIn("return clampi(value, COMBAT_NORMAL, COMBAT_RESPONSE)", profile)
+        self.assertIn('popup/item_2/text = "低資源"', scene)
+        self.assertIn('popup/item_1/text = "反應優先"', scene)
+        self.assertNotIn('popup/item_3/text = "多開"', scene)
+        self.assertNotIn('popup/item_2/text = "大型戰鬥"', scene)
+        self.assertIn('profile["simplify_other_players"] = true', profile)
+        self.assertIn('profile["simplify_noncritical_monsters"] = true', profile)
+        self.assertIn('profile["effect_budget_percent"] = 0', profile)
+        self.assertIn('profile["combat_effects_enabled"] = false', profile)
+        self.assertIn('_apply_low_resource_world_visual_policy()', manager)
+        self.assertIn('_remove_day_night_overlay()', manager)
+        self.assertIn('MonsterLoader.clear_runtime_cache()', manager)
+        self.assertIn('EffectLoader.clear_runtime_cache()', manager)
 
     def test_async_sprite_layout_rechecks_after_frame_await(self):
         monster = source("client/scripts/monster_entity.gd")
