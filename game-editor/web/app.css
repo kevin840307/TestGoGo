@@ -319,3 +319,5 @@ tbody tr.selected { background:var(--accent-soft); box-shadow:inset 3px 0 var(--
   .map-stage-tools .map-stage-legend { display:none; }
   .map-selection-count { display:none; }
 }
+
+.map-stage-scroller > .map-stage { min-height:0; }
