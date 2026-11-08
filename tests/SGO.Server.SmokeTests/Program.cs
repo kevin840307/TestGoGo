@@ -8884,25 +8884,77 @@ try
     // Chase with an effectively zero movement step.
     monster.HasTarget = true;
     monster.TargetCharacterId = id;
+    monster.TargetPetUid = 0;
     monster.IsMoving = true;
     monster.AiState = MonsterAiState.Chase;
     monster.LastAttackAt = session.LastMonsterAiTick;
+
+    const double noisyEngageDistance = 90.0000000000001;
+    var floatingBoundaryTarget = new[]
+        {
+            (Dx: 1.0, Dy: 0.0),
+            (Dx: -1.0, Dy: 0.0),
+            (Dx: 0.0, Dy: 1.0),
+            (Dx: 0.0, Dy: -1.0),
+            (Dx: Math.Sqrt(0.5), Dy: Math.Sqrt(0.5)),
+            (Dx: Math.Sqrt(0.5), Dy: -Math.Sqrt(0.5)),
+            (Dx: -Math.Sqrt(0.5), Dy: Math.Sqrt(0.5)),
+            (Dx: -Math.Sqrt(0.5), Dy: -Math.Sqrt(0.5))
+        }
+        .Select(direction => (
+            X: monster.X + direction.Dx * noisyEngageDistance,
+            Y: monster.Y + direction.Dy * noisyEngageDistance))
+        .FirstOrDefault(candidate =>
+            monsterNavigation.IsDirectClear(
+                monster.MapId,
+                monster.X,
+                monster.Y,
+                candidate.X,
+                candidate.Y));
+
+    Check(
+        floatingBoundaryTarget != default,
+        "floating engage-boundary fixture finds a clear Blocking.dat path");
+
+    var floatingBoundaryStartX = monster.X;
+    var floatingBoundaryStartY = monster.Y;
     var floatingBoundaryPackets = combat.TickAi(
         session,
         account.Value,
-        monster.X + 90.0000000000001,
-        monster.Y,
-        session.LastMonsterAiTick.AddMilliseconds(250));
+        floatingBoundaryTarget.X,
+        floatingBoundaryTarget.Y,
+        session.LastMonsterAiTick.AddMilliseconds(250),
+        new[] { monster.EntityId });
+
+    var floatingBoundaryStopPacket = floatingBoundaryPackets.Any(x =>
+    {
+        var json = JsonSerializer.Serialize(x);
+        return json.Contains(
+                   "\"Type\":\"MoveEntity\"") &&
+               json.Contains(
+                   $"\"EntityID\":{monster.EntityId}") &&
+               json.Contains(
+                   "\"SpeedTime\":0");
+    });
+    var floatingBoundaryChaseMove = floatingBoundaryPackets.Any(x =>
+    {
+        var json = JsonSerializer.Serialize(x);
+        return json.Contains(
+                   "\"Type\":\"MoveEntity\"") &&
+               json.Contains(
+                   $"\"EntityID\":{monster.EntityId}") &&
+               json.Contains(
+                   "\"SpeedTime\":0.25");
+    });
 
     Check(
         monster.AiState == MonsterAiState.Attack &&
         !monster.IsMoving &&
-        !floatingBoundaryPackets.Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                "\"Type\":\"MoveEntity\"") &&
-            JsonSerializer.Serialize(x).Contains(
-                $"\"EntityID\":{monster.EntityId}")),
-        "monster treats floating-point noise at the 90px engage boundary as in range instead of zero-step chasing");
+        Math.Abs(monster.X - floatingBoundaryStartX) < 0.001 &&
+        Math.Abs(monster.Y - floatingBoundaryStartY) < 0.001 &&
+        floatingBoundaryStopPacket &&
+        !floatingBoundaryChaseMove,
+        "monster treats floating-point noise at the 90px engage boundary as in range without zero-step chasing");
 
     monster.HasTarget = true;
     monster.AiState = MonsterAiState.Chase;
