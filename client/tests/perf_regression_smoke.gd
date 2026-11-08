@@ -81,6 +81,23 @@ func _run() -> void:
 	var extra: Dictionary = updated.get("ExtraData", {})
 	_check(int(extra.get("Level", -1)) == 9 and int(extra.get("CurrentHP", -1)) == 175,
 		"AOI movement preserves nested monster data")
+	# A queued monster must use the newest authoritative position if
+	# MoveEntity arrives before the scene is instantiated.
+	var stale_spawn: Dictionary = template.duplicate(true)
+	var resolved_spawn: Dictionary = NetworkEntityManager._get_current_queued_spawn_data(stale_spawn)
+	_check(is_equal_approx(float(resolved_spawn.get("LocX", -1.0)), 30.0)
+		and is_equal_approx(float(resolved_spawn.get("LocY", -1.0)), 40.0),
+		"queued monster spawn uses latest MoveEntity position")
+	_check(int((resolved_spawn.get("ExtraData", {}) as Dictionary).get("MaxHP", -1)) == 200,
+		"latest queued spawn preserves health metadata")
+	_check(int(stale_spawn.get("LocX", -1)) == 10,
+		"queued source snapshot remains unchanged")
+	_check(NetworkEntityManager._get_current_queued_spawn_data({"EntityID": 102, "EntityType": 2}).get("EntityType", -1) == 2,
+		"NPC queued spawn data is unchanged")
+	_check(MonsterEntity.NETWORK_MOVE_MIN_SPEED <= 10.0,
+		"short monster waypoints are not forced to excessive speed")
+	_check(MonsterEntity.MOVE_IDLE_GRACE_SECONDS >= 0.25,
+		"monster walk animation covers the 250ms server tick")
 	NetworkEntityManager._monster_spawn_templates.erase(test_id)
 	NetworkEntityManager._deferred_monster_spawns.erase(test_id)
 	NetworkEntityManager._remove_queued_spawn(test_id)
