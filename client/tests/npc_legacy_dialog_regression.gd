@@ -69,6 +69,14 @@ func _run() -> void:
 	panel.show_dialog("普通對話", [{"Text": "好", "TargetNode": "Next#0"}], "n", "Default")
 	_check(question.vertical_alignment == VERTICAL_ALIGNMENT_CENTER,
 		"normal dialogue resets help-page alignment")
+	_check(options.get_child_count() == 1,
+		"rapid consecutive Ask() calls immediately remove stale options")
+	if options.get_child_count() == 1:
+		_check((options.get_child(0) as Button).text == "好",
+			"only the newest option is selectable")
+		(options.get_child(0) as Button).pressed.emit()
+	_check(chosen.size() == 2 and chosen[1] == "Next#0",
+		"latest choice retains its node without a stale callback")
 
 	var bubble := NinePatchRect.new()
 	var label := Label.new()
@@ -84,8 +92,13 @@ func _run() -> void:
 		_check(rich != null and rich.visible and not label.visible,
 			"legacy Say() color displays in rich bubble")
 		bubble_formatter.display(bubble, label, "一般聊天訊息", false)
-		_check(label.visible and label.text == "一般聊天訊息" and not rich.visible,
+		_check(label.visible and label.text == "一般聊天訊息" and
+			is_instance_valid(rich) and not rich.visible,
 			"ordinary chat keeps its original Label")
+		bubble_formatter.display(bubble, label, "再次[color=#002DC6]變色[/color]", true)
+		_check(bubble.get_child_count() == 2 and
+			is_instance_valid(rich) and rich.visible,
+			"repeated rich dialogue reuses the same overlay without extra allocations")
 	bubble.queue_free()
 	panel.queue_free()
 	print("[NPC_DIALOG] ", "ALL PASS" if failures == 0 else "%d FAILURES" % failures)

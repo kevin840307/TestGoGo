@@ -25,16 +25,11 @@ public static class DialogFormatter
     public static LegacyDialogText Parse(string? value, string defaultSpeaker = "NPC")
     {
         var source = value ?? "";
-        var prefix = "";
-        if (source.Length > 0 && source[0] is 'n' or 'p' or 's' or 'c' or 'b' or 'h')
-        {
-            var index = 1;
-            while (index < source.Length && char.IsAsciiDigit(source[index]))
-                index++;
-
-            prefix = source[..index];
-            source = source[index..];
-        }
+        // Do not eat the first letter of ordinary unmarked dialogue
+        // ("hello", "please", "shop", etc.). Only known, single-digit
+        // legacy forms may be removed.
+        var prefix = ReadLegacyPrefix(source);
+        source = source[prefix.Length..];
 
         var layout = prefix.Length > 0 && prefix[0] is 'h' or 'b'
             ? "Help"
@@ -62,6 +57,40 @@ public static class DialogFormatter
 
     // Preserve old callers that only need to remove the legacy prefix.
     public static string CleanText(string? value) => Parse(value).Text;
+
+    // Choice buttons are plain Godot Buttons, not RichTextLabels. Strip Lua
+    // color directives without interpreting a choice's first letter as a prefix.
+    public static string PlainInlineText(string? value)
+        => RenderColors(value ?? "").Plain;
+
+    private static string ReadLegacyPrefix(string text)
+    {
+        if (text.Length == 0) return "";
+        var code = text[0];
+        if (code is not ('n' or 'p' or 's' or 'c' or 'b' or 'h'))
+            return "";
+
+        if (text.Length >= 2 && char.IsAsciiDigit(text[1]))
+        {
+            // No original source evidence for n8/n9, p12 or s3:
+            // preserve unrecognized directives instead of silently losing text.
+            if (code is not ('n' or 'p') ||
+                text[1] < '1' || text[1] > '7' ||
+                (text.Length >= 3 && char.IsAsciiDigit(text[2])))
+                return "";
+
+            return text[..2];
+        }
+
+        // Bare single-letter prefixes are used in the Chinese original quest
+        // scripts. ASCII words are not presentation controls.
+        if (text.Length >= 2 && char.IsAsciiLetter(text[1]))
+            return "";
+
+        return text[..1];
+    }
+
+
 
     private static (string Rich, string Plain) RenderColors(string source)
     {

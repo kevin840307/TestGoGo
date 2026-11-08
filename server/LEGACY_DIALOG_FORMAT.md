@@ -42,6 +42,14 @@ Server 執行 Lua 時以私有控制標記代替原先空字串，再於 `Dialog
 
 原有 `DialogType`、`NextNode`、`Options`、`TargetNode`、`BubbleType` 均未改動；選項 callback 邏輯不變。玩家聊天仍使用原本的 `Label`，只有經過 NPC 對話流程的富文字才建立輕量 `RichTextLabel`。
 
+## 相容性與防回歸（第二階段）
+
+- **嚴格辨識前綴**：僅辨識原版已觀察到的單字母控制碼及 `n1..n7`／`p1..p7`。例如 `hello`、`please`、`shop` 等普通英文必須原樣顯示；`n8`、`p12`、`s3` 等尚未確認格式也不得擅自截斷。
+- **選項純文字保護**：Lua 可在選項字串內接上 `Color()`，但 Godot `Button` 不支援 BBCode，因此保留選項文字、移除不應顯示的控制標記；`TargetNode` 及索引完全不變。
+- **連續 Ask 保護**：新選單顯示時立即將舊按鈕從畫面移除，避免同一影格收到多個回應時出現舊選項或重複按鈕。
+- **重用 RichTextLabel**：富文字氣泡沿用單一顯示元件，下一則普通聊天會切回原本的 `Label`。
+- 未經證實的原版 NPC 表情、`s/c` 版型、`m#` 多媒體不臆測貼圖或修改任務流程。
+
 ## 驗證
 
 ```powershell
@@ -49,6 +57,6 @@ dotnet run --project tests/SGO.Server.SmokeTests -- --suite protocol
 godot --headless --path client --script res://tests/npc_legacy_dialog_regression.gd
 ```
 
-測試涵蓋 Lua `Say/Ask/Color`、NPC／玩家來源、`p7`、`b/h`、顏色 span、選項 `TargetNode`、Godot 富文字氣泡與純文字回退。
+測試涵蓋 Lua `Say/Ask/Color`、NPC／玩家來源、`p7`、`b/h`、顏色 span、選項 `TargetNode`、普通英文文字／未知前綴不被誤刪、選項控制碼淨化、快速重開選單、Godot 富文字氣泡與純文字回退／元件重用。
 
 **尚待原始 Client 資產／行為比對**：編號 `2..6` 的確切情緒／頭像、`s/c` 的精確視覺、`m#` 的舊媒體演出、`b` 教學排版及不同解析度的介面微調。這些不應宣稱已與原版 100% 相同。

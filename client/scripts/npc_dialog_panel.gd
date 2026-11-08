@@ -26,6 +26,9 @@ func show_dialog(question_text: String, options: Array, legacy_prefix: String = 
 
 
 	for child in options_container.get_children():
+		# queue_free() is deferred; detach immediately so consecutive Ask()
+		# packets cannot leave old clickable buttons for one extra frame.
+		options_container.remove_child(child)
 		child.queue_free()
 
 

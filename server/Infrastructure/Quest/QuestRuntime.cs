@@ -606,8 +606,11 @@ public sealed class QuestRuntime
 
             for (var i = 1; i < args.Count - 1; i++)
             {
+                // Original Lua may concatenate Color() into a choice label.
+                // Godot Button has no BBCode parser: keep its text plain and
+                // preserve the original target and choice ordering.
                 options.Add(new {
-                    Text = args[i].CastToString(),
+                    Text = DialogFormatter.PlainInlineText(args[i].CastToString()),
                     TargetNode = $"{target}#{i - 1}"
                 });
             }
