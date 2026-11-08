@@ -27,14 +27,23 @@ internal static class MechaGuardianStoneSmokeTests
             },
             "MA guardian stone 50816 is authoritative mecha slot 6");
 
+        // Register enforces 3-40 characters; the full 32-digit GUID plus
+        // "guardian-slot-" was 46 chars and made this fixture always fail.
+        // Keep 16 random hex digits so repeated/parallel runs remain isolated.
         var username =
-            $"guardian-slot-{Guid.NewGuid():N}";
+            "guardian-slot-" + Guid.NewGuid().ToString("N")[..16];
         Check(
-            store.Register(
-                username,
-                "test-password",
-                "").Success,
-            "register isolated guardian-stone account");
+            username.Length is >= 3 and <= 40,
+            $"guardian-stone fixture account name meets registration limit (length={username.Length})");
+
+        var registration = store.Register(
+            username,
+            "test-password",
+            "");
+        Check(
+            registration.Success,
+            $"register isolated guardian-stone account " +
+            $"(username={username}, message={registration.Message})");
 
         var accountId =
             store.Login(
