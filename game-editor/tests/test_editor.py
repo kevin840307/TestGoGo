@@ -257,6 +257,7 @@ class WebStructureTests(unittest.TestCase):
             "app-skills.js",
             "app-world.js",
             "app-map-editor.js",
+            "app-history.js",
             "app-tools.js",
         ):
             source = (web / script_name).read_text(encoding="utf-8")
@@ -281,7 +282,7 @@ class WebStructureTests(unittest.TestCase):
     def test_frontend_entrypoints_are_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
         index = (web / "index.html").read_text(encoding="utf-8")
-        for script in ("app-core.js", "app-health.js", "app-skills.js", "app-world.js", "app-map-math.js", "app-map-editor.js", "app-tools.js"):
+        for script in ("app-core.js", "app-health.js", "app-skills.js", "app-world.js", "app-map-math.js", "app-map-editor.js", "app-history.js", "app-tools.js"):
             self.assertIn(f'src="/{script}"', index)
             self.assertTrue((web / script).is_file())
         self.assertTrue((web / "app.css").is_file())
@@ -348,6 +349,7 @@ class WebStructureTests(unittest.TestCase):
 
         for control_id in (
             "health-refresh", "health-errors", "health-warnings", "health-list",
+            "health-search", "health-severity", "health-category",
             "map-validation-modal", "map-validation-apply", "map-validation-confirm",
         ):
             self.assertIn(f'id="{control_id}"', index)
@@ -363,6 +365,35 @@ class WebStructureTests(unittest.TestCase):
         self.assertIn("force=1", editor)
         self.assertIn("?force=1", (web / "app-world.js").read_text(encoding="utf-8"))
         self.assertIn("?force=1", (web / "app-tools.js").read_text(encoding="utf-8"))
+
+    def test_backup_history_diff_restore_ui_and_api_are_wired(self) -> None:
+        web = GAME_EDITOR_ROOT / "web"
+        index = (web / "index.html").read_text(encoding="utf-8")
+        history = (web / "app-history.js").read_text(encoding="utf-8")
+        core = (web / "app-core.js").read_text(encoding="utf-8")
+        editor = (GAME_EDITOR_ROOT / "editor.py").read_text(encoding="utf-8")
+        workflow = (GAME_EDITOR_ROOT.parent / ".github" / "workflows" / "server-build.yml").read_text(encoding="utf-8")
+
+        for control_id in (
+            "history-search", "history-refresh", "history-list",
+            "history-detail-title", "history-detail-meta", "history-diff", "history-restore",
+        ):
+            self.assertIn(f'id="{control_id}"', index)
+        self.assertIn("data-view=\"history\"", index)
+        self.assertIn("case 'history': return loadHistory()", core)
+        self.assertIn("/api/history", editor)
+        self.assertIn("/api/history/restore", editor)
+        self.assertIn("restoreSelectedHistory", history)
+        self.assertIn("backupSha256", history)
+        self.assertIn("app-history.js", workflow)
+
+    def test_health_filters_are_wired(self) -> None:
+        web = GAME_EDITOR_ROOT / "web"
+        health = (web / "app-health.js").read_text(encoding="utf-8")
+        self.assertIn("refreshHealthCategoryOptions", health)
+        self.assertIn("health-search", health)
+        self.assertIn("health-severity", health)
+        self.assertIn("health-category", health)
 
     def test_collision_aware_map_ui_is_wired(self) -> None:
         web = GAME_EDITOR_ROOT / "web"
