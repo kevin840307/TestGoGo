@@ -31,6 +31,32 @@ public sealed class MapAiOwnerSpatialIndex
         public Node? Higher { get; }
     }
 
+    // Reuse comparison delegates during each map tick: building a new
+    // comparer at every KD-node would generate avoidable GC pressure.
+    private static readonly IComparer<MapAiOwnerPoint> CompareX =
+        Comparer<MapAiOwnerPoint>.Create((left, right) =>
+        {
+            var first = left.X.CompareTo(right.X);
+            if (first != 0)
+                return first;
+            var second = left.Y.CompareTo(right.Y);
+            return second != 0
+                ? second
+                : left.OwnerIndex.CompareTo(right.OwnerIndex);
+        });
+
+    private static readonly IComparer<MapAiOwnerPoint> CompareY =
+        Comparer<MapAiOwnerPoint>.Create((left, right) =>
+        {
+            var first = left.Y.CompareTo(right.Y);
+            if (first != 0)
+                return first;
+            var second = left.X.CompareTo(right.X);
+            return second != 0
+                ? second
+                : left.OwnerIndex.CompareTo(right.OwnerIndex);
+        });
+
     private readonly MapAiOwnerPoint[] _small;
     private readonly Node? _root;
 
@@ -85,21 +111,7 @@ public sealed class MapAiOwnerSpatialIndex
             points,
             start,
             end - start,
-            Comparer<MapAiOwnerPoint>.Create((left, right) =>
-            {
-                var primary = axis == 0
-                    ? left.X.CompareTo(right.X)
-                    : left.Y.CompareTo(right.Y);
-                if (primary != 0)
-                    return primary;
-
-                var secondary = axis == 0
-                    ? left.Y.CompareTo(right.Y)
-                    : left.X.CompareTo(right.X);
-                return secondary != 0
-                    ? secondary
-                    : left.OwnerIndex.CompareTo(right.OwnerIndex);
-            }));
+            axis == 0 ? CompareX : CompareY);
 
         var middle = start + (end - start) / 2;
         // Construct children after capturing the median; sorting a child
