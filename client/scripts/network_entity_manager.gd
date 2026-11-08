@@ -560,7 +560,15 @@ func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String
 		if int(_active_entity_types.get(entity_id, -1)) == 1:
 			if new_state in ["walk", "attack", "hit"]:
 				_runtime_monster_ids[entity_id] = true
-			elif new_state in ["idle", "death", "die"]:
+			elif new_state == "idle":
+				# An early idle may be deferred until the last server-approved
+				# waypoint has been rendered. Keep that monster in the runtime
+				# loop; advance_network_runtime will remove it on arrival.
+				if target_node.has_method("is_finishing_last_move_before_idle") and target_node.is_finishing_last_move_before_idle():
+					_runtime_monster_ids[entity_id] = true
+				else:
+					_runtime_monster_ids.erase(entity_id)
+			elif new_state in ["death", "die"]:
 				_runtime_monster_ids.erase(entity_id)
 
 func _on_pet_idle_speech_received(entity_id: int, message: String) -> void :
