@@ -4,6 +4,7 @@ using SGO.Server.Infrastructure.Quest;
 using SGO.Server.Infrastructure.WorldData;
 using SGO.Server.Infrastructure.Persistence;
 using SGO.Server.Transport.WebSockets;
+using SGO.Server.Transport.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,6 +79,7 @@ app.MapGet("/health", (IConfiguration config) => Results.Ok(new
     }
 }));
 
+app.MapMallIntegrationEndpoints();
 app.MapSgoWebSocket();
 
 app.Run();
