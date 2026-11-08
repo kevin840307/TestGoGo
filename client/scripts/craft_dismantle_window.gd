@@ -45,7 +45,8 @@ func prepare_static_async() -> void :
 	if crafting_panel and crafting_panel.has_method("prepare_static_tree_async"):
 		await crafting_panel.prepare_static_tree_async(_cached_recipe_data)
 	_static_prepared = true
-	print("[CRAFT_STATIC_PREWARM] recipes=%d total_ms=%.2f" % [
+	if OS.is_debug_build():
+		print("[CRAFT_STATIC_PREWARM] recipes=%d total_ms=%.2f" % [
 		_cached_recipe_data.size(),
 		float(Time.get_ticks_usec() - started_usec) / 1000.0,
 	])
@@ -67,7 +68,8 @@ func prepare_initial_async() -> void :
 	var craft_ms: float = float(Time.get_ticks_usec() - craft_started_usec) / 1000.0
 
 	_initial_prepared = true
-	print("[CRAFT_INIT_TIMING] recipes=%d craft_ms=%.2f dismantle_ms=0.00 total_ms=%.2f deferred_dismantle=true" % [
+	if OS.is_debug_build():
+		print("[CRAFT_INIT_TIMING] recipes=%d craft_ms=%.2f dismantle_ms=0.00 total_ms=%.2f deferred_dismantle=true" % [
 		recipe_data.size(),
 		craft_ms,
 		float(Time.get_ticks_usec() - total_started_usec) / 1000.0,
@@ -91,7 +93,8 @@ func prepare_dismantle_background_async() -> void :
 		dismantling_panel.set_recipe_data(_cached_recipe_data)
 	_dismantle_prepared = true
 	_dismantle_preparing = false
-	print("[DISMANTLE_BACKGROUND_PREWARM] recipes=%d total_ms=%.2f" % [
+	if OS.is_debug_build():
+		print("[DISMANTLE_BACKGROUND_PREWARM] recipes=%d total_ms=%.2f" % [
 		_cached_recipe_data.size(),
 		float(Time.get_ticks_usec() - started_usec) / 1000.0,
 	])
@@ -123,7 +126,8 @@ func _show_dismantling() -> void :
 	if not _dismantle_prepared:
 		var started_usec: int = Time.get_ticks_usec()
 		await prepare_dismantle_background_async()
-		print("[DISMANTLE_ON_DEMAND] total_ms=%.2f" % (float(Time.get_ticks_usec() - started_usec) / 1000.0))
+		if OS.is_debug_build():
+			print("[DISMANTLE_ON_DEMAND] total_ms=%.2f" % (float(Time.get_ticks_usec() - started_usec) / 1000.0))
 
 	if crafting_panel: crafting_panel.visible = false
 	if dismantling_panel: dismantling_panel.visible = true
