@@ -42,12 +42,12 @@ internal static class PlayerShopAoiSmokeTests
                 store,
                 "buyer");
 
-        Check(
-            store.AdjustMoney(
-                buyer.AccountId,
-                buyer.CharacterId,
-                100) is not null,
-            "seed AOI shop buyer money");
+        ExactMoneyFixture.Set(
+            store,
+            buyer.AccountId,
+            buyer.CharacterId,
+            100,
+            "AOI shop buyer");
 
         const int itemIndex = 4103;
         var sourceUid =
@@ -343,8 +343,11 @@ internal static class PlayerShopAoiSmokeTests
         SqliteGameStore store,
         string suffix)
     {
+        var unique =
+            Guid.NewGuid()
+                .ToString("N")[..8];
         var username =
-            $"shop_aoi_{suffix}_{Guid.NewGuid():N}";
+            $"aoi_{suffix}_{unique}";
         const string password =
             "test-password";
 
