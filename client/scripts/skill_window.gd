@@ -64,12 +64,16 @@ func update_ui() -> void :
 		_show_unavailable_state()
 		return
 
-	var data = target_player.data_model
-	if not data:
+	# CharacterBody2D does not statically declare the game player's
+	# data_model field; read it through Object.get after checking presence.
+	var data: Variant = target_player.get("data_model")
+	if data == null:
 		_show_unavailable_state()
 		return
 
-	var learned_skills: Array = data.skill_list.duplicate(true) if "skill_list" in data else []
+	var learned_skills: Array = []
+	if "skill_list" in data:
+		learned_skills = (data.get("skill_list") as Array).duplicate(true)
 	learned_skills.sort_custom( func(a, b):
 		return int(a.get("skill_id", 0)) < int(b.get("skill_id", 0))
 	)
@@ -124,17 +128,22 @@ func _add_skill_card(skill_entry: Dictionary) -> void :
 	if skill_resource and SkillLoader:
 		icon_texture = SkillLoader.get_icon(int(skill_resource.get("icon_id")))
 
-	var card: = SKILL_CARD_SCENE.instantiate()
+	# PackedScene.instantiate() is declared as Node. Cast to the actual
+	# SkillCard script type before accessing custom methods and signals.
+	var card: SkillCard = SKILL_CARD_SCENE.instantiate() as SkillCard
+	if card == null:
+		push_error("[SkillWindow] SkillCard scene has an unexpected root type")
+		return
 	skill_grid.add_child(card)
 	var show_aoe_center_toggle := (
 		is_instance_valid(target_player)
 		and target_player.has_method("is_skill_aoe_center_toggle_available")
-		and target_player.is_skill_aoe_center_toggle_available(skill_id)
+		and bool(target_player.call("is_skill_aoe_center_toggle_available", skill_id))
 	)
 	var self_center := (
 		show_aoe_center_toggle
 		and target_player.has_method("is_skill_aoe_self_center")
-		and target_player.is_skill_aoe_self_center(skill_id)
+		and bool(target_player.call("is_skill_aoe_self_center", skill_id))
 	)
 	card.setup(
 		skill_resource,
@@ -267,7 +276,7 @@ func _get_empty_description() -> String:
 
 func _on_skill_clicked(skill_id: int) -> void :
 	if is_instance_valid(target_player) and target_player.has_method("prepare_skill"):
-		target_player.prepare_skill(skill_id)
+		target_player.call("prepare_skill", skill_id)
 
 
 func _on_aoe_center_mode_changed(skill_id: int, self_center: bool) -> void:
@@ -275,10 +284,7 @@ func _on_aoe_center_mode_changed(skill_id: int, self_center: bool) -> void:
 		is_instance_valid(target_player)
 		and target_player.has_method("set_skill_aoe_self_center")
 	):
-		target_player.set_skill_aoe_self_center(
-			skill_id,
-			self_center
-		)
+		target_player.call("set_skill_aoe_self_center", skill_id, self_center)
 
 
 func _show_skill_tooltip(skill_id: int, level: int, icon_texture: Texture2D) -> void :
