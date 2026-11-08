@@ -5155,6 +5155,298 @@ public sealed class SqliteGameStore : IGameStore
             result.RewardUid);
     }
 
+    public FixedRewardBundleResult OpenFixedRewardBundle(
+        long accountId,
+        long dbid,
+        long boxUid,
+        int boxItemIndex,
+        IReadOnlyList<FixedRewardGrant> rewards)
+    {
+        if (boxUid <= 0 ||
+            boxItemIndex <= 0 ||
+            rewards.Count == 0 ||
+            rewards.Any(x =>
+                x.ItemIndex <= 0 ||
+                x.Count <= 0))
+        {
+            return new(
+                false,
+                "寶箱獎勵資料無效",
+                Array.Empty<long>());
+        }
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+
+        if (!OwnsCharacter(
+                db,
+                accountId,
+                dbid,
+                tx))
+        {
+            return new(
+                false,
+                "角色不存在",
+                Array.Empty<long>());
+        }
+
+        using (var source = db.CreateCommand())
+        {
+            source.Transaction = tx;
+            source.CommandText = """
+                SELECT count,item_index
+                  FROM inventory_items
+                 WHERE uid=$uid
+                   AND character_id=$id
+                   AND in_bank=0
+                   AND in_shop=0
+                 LIMIT 1
+                """;
+            Arg(source, "$uid", boxUid);
+            Arg(source, "$id", dbid);
+
+            using var reader = source.ExecuteReader();
+            if (!reader.Read() ||
+                reader.GetInt32(0) <= 0 ||
+                reader.GetInt32(1) != boxItemIndex)
+            {
+                return new(
+                    false,
+                    "找不到可使用的寶箱",
+                    Array.Empty<long>());
+            }
+        }
+
+        int CountRows(
+            string table,
+            string extra = "")
+        {
+            using var count = db.CreateCommand();
+            count.Transaction = tx;
+            count.CommandText =
+                $"SELECT COUNT(*) FROM {table} WHERE character_id=$id {extra}";
+            Arg(count, "$id", dbid);
+            return Convert.ToInt32(
+                count.ExecuteScalar() ?? 0);
+        }
+
+        var rewardUids = new List<long>(
+            rewards.Count);
+
+        foreach (var reward in rewards)
+        {
+            var count = Math.Clamp(
+                reward.Count,
+                1,
+                999);
+
+            switch (reward.Kind)
+            {
+                case AssetPurchaseKind.General:
+                case AssetPurchaseKind.HorseBattery:
+                {
+                    long existingUid = 0;
+                    int existingCount = 0;
+
+                    using (var existing = db.CreateCommand())
+                    {
+                        existing.Transaction = tx;
+                        existing.CommandText = """
+                            SELECT uid,count
+                              FROM inventory_items
+                             WHERE character_id=$id
+                               AND item_index=$idx
+                               AND in_bank=0
+                               AND in_shop=0
+                             ORDER BY uid
+                             LIMIT 1
+                            """;
+                        Arg(existing, "$id", dbid);
+                        Arg(existing, "$idx", reward.ItemIndex);
+
+                        using var reader = existing.ExecuteReader();
+                        if (reader.Read())
+                        {
+                            existingUid = reader.GetInt64(0);
+                            existingCount = reader.GetInt32(1);
+                        }
+                    }
+
+                    if (existingUid > 0)
+                    {
+                        if (existingCount + count > 999)
+                        {
+                            return new(
+                                false,
+                                "獎勵疊加數量將超過 999，未消耗寶箱",
+                                Array.Empty<long>());
+                        }
+
+                        using var update = db.CreateCommand();
+                        update.Transaction = tx;
+                        update.CommandText = """
+                            UPDATE inventory_items
+                               SET count=count+$count
+                             WHERE uid=$uid
+                               AND character_id=$id
+                            """;
+                        Arg(update, "$count", count);
+                        Arg(update, "$uid", existingUid);
+                        Arg(update, "$id", dbid);
+
+                        if (update.ExecuteNonQuery() != 1)
+                        {
+                            return new(
+                                false,
+                                "獎勵發放失敗，未消耗寶箱",
+                                Array.Empty<long>());
+                        }
+
+                        rewardUids.Add(existingUid);
+                    }
+                    else
+                    {
+                        var capacities =
+                            ReadCharacterCapacities(
+                                db,
+                                dbid,
+                                tx);
+                        if (CountRows(
+                                "inventory_items",
+                                "AND in_bank=0 AND in_shop=0") >=
+                            capacities.Inventory)
+                        {
+                            return new(
+                                false,
+                                "背包空間不足，未消耗寶箱",
+                                Array.Empty<long>());
+                        }
+
+                        using var add = db.CreateCommand();
+                        add.Transaction = tx;
+                        add.CommandText = """
+                            INSERT INTO inventory_items(
+                                character_id,item_index,count,in_bank,in_shop)
+                            VALUES($id,$idx,$count,0,0);
+                            SELECT last_insert_rowid();
+                            """;
+                        Arg(add, "$id", dbid);
+                        Arg(add, "$idx", reward.ItemIndex);
+                        Arg(add, "$count", count);
+
+                        rewardUids.Add(
+                            Convert.ToInt64(
+                                add.ExecuteScalar()));
+                    }
+
+                    break;
+                }
+
+                case AssetPurchaseKind.Equipment:
+                {
+                    var capacities =
+                        ReadCharacterCapacities(
+                            db,
+                            dbid,
+                            tx);
+
+                    if (CountRows(
+                            "equipment_items",
+                            "AND in_bank=0 AND in_shop=0") >=
+                        capacities.Equip)
+                    {
+                        return new(
+                            false,
+                            "裝備欄空間不足，未消耗寶箱",
+                            Array.Empty<long>());
+                    }
+
+                    using var add = db.CreateCommand();
+                    add.Transaction = tx;
+                    add.CommandText = """
+                        INSERT INTO equipment_items(
+                            character_id,item_index,damage,color,part,in_bank,in_shop)
+                        VALUES($id,$idx,$damage,0,$part,0,0);
+                        SELECT last_insert_rowid();
+                        """;
+                    Arg(add, "$id", dbid);
+                    Arg(add, "$idx", reward.ItemIndex);
+                    Arg(add, "$damage", Math.Max(0, reward.Damage));
+                    Arg(add, "$part",
+                        reward.Part is >= 0 and <= 6
+                            ? reward.Part
+                            : 255);
+
+                    rewardUids.Add(
+                        Convert.ToInt64(
+                            add.ExecuteScalar()));
+                    break;
+                }
+
+                case AssetPurchaseKind.HorseEquipment:
+                {
+                    var capacities =
+                        ReadCharacterCapacities(
+                            db,
+                            dbid,
+                            tx);
+
+                    if (CountRows(
+                            "horse_equipment",
+                            "AND in_bank=0 AND in_shop=0") >=
+                        capacities.HorseEquip)
+                    {
+                        return new(
+                            false,
+                            "機甲裝備欄空間不足，未消耗寶箱",
+                            Array.Empty<long>());
+                    }
+
+                    using var add = db.CreateCommand();
+                    add.Transaction = tx;
+                    add.CommandText = """
+                        INSERT INTO horse_equipment(
+                            character_id,equip_index,horse_uid,damage,color,part,in_bank,in_shop)
+                        VALUES($id,$idx,-1,$damage,0,$part,0,0);
+                        SELECT last_insert_rowid();
+                        """;
+                    Arg(add, "$id", dbid);
+                    Arg(add, "$idx", reward.ItemIndex);
+                    Arg(add, "$damage", Math.Max(0, reward.Damage));
+                    Arg(add, "$part",
+                        reward.Part is >= 0 and <= 3
+                            ? reward.Part
+                            : ResolveHorseEquipPart(
+                                reward.ItemIndex));
+
+                    rewardUids.Add(
+                        Convert.ToInt64(
+                            add.ExecuteScalar()));
+                    break;
+                }
+
+                default:
+                    return new(
+                        false,
+                        "此寶箱包含尚未支援的獎勵類型，未消耗寶箱",
+                        Array.Empty<long>());
+            }
+        }
+
+        ConsumeInventoryItem(
+            db,
+            tx,
+            dbid,
+            boxUid);
+
+        tx.Commit();
+
+        return new(
+            true,
+            "開箱成功",
+            rewardUids);
+    }
+
     public long AddEquipment(long accountId, long dbid, int itemIndex, int part = 255, int damage = 0, int color = 0)
     {
         using var db = Open();
