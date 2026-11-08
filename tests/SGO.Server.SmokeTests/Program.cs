@@ -9185,16 +9185,16 @@ try
         expAfterKill > expBeforeKill ||
         (expBeforeKill == int.MaxValue &&
          expAfterKill == int.MaxValue);
-    var positiveExpFeedback = deathPackets.Any(x =>
-    {
-        var json = JsonSerializer.Serialize(x);
-        return json.Contains(
-                   "\"Type\":\"ItemPickupFeedback\"") &&
-               json.Contains(
-                   "獲得經驗值") &&
-               !json.Contains(
-                   "獲得經驗值 0");
-    });
+    var positiveExpFeedback =
+        deathPackets.Any(x =>
+            JsonSerializer.Serialize(x).Contains(
+                "\"Type\":\"ItemPickupFeedback\"")) &&
+        PacketTreeContainsString(
+            deathPackets,
+            "獲得經驗值") &&
+        !PacketTreeContainsString(
+            deathPackets,
+            "獲得經驗值 0");
 
     Check(
         expRewardPersisted &&
