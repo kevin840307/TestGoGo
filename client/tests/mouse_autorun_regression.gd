@@ -123,6 +123,35 @@ func _test_right_click_preserves_player_interaction() -> void:
 		player._navigation_request_id > old_request,
 		"right-click invalidates an in-flight asynchronous detour")
 
+	# A left click on a monster, another player or an NPC should stop
+	# movement before the existing entity handler gets that same click.
+	var left = InputEventMouseButton.new()
+	left.button_index = MOUSE_BUTTON_LEFT
+	left.pressed = true
+	var fake_monster: Node = Node.new()
+	CursorManager.current_hovered_entity = fake_monster
+	player._mouse_autorun.terrain_press(1000)
+	player._mouse_autorun.poll_long_hold(3000)
+	player.is_moving = true
+	player.move_path = PackedVector2Array([Vector2(60.0, 60.0)])
+	player._input(left)
+	_check(not player._mouse_autorun.latched and not player.is_moving
+		and player.move_path.is_empty(),
+		"left-clicking another entity stops continuous movement first")
+	_check(CursorManager.current_hovered_entity == fake_monster,
+		"auto-walk cancellation does not clear original clicked entity")
+	CursorManager.current_hovered_entity = null
+	fake_monster.free()
+
+	# Bare terrain left clicks must not be intercepted by the global
+	# mouse handler; Player._unhandled_input owns one-shot click navigation.
+	player._mouse_autorun.terrain_press(4000)
+	player._mouse_autorun.poll_long_hold(6000)
+	player._input(left)
+	_check(player._mouse_autorun.latched,
+		"terrain left click remains available to regular click-to-move")
+	player.cancel_autorun_tracking()
+
 	# These handlers own player context menus. Our _input must not consume the
 	# event before NetworkPlayer._input_event sees the same right click.
 	var player_source: String = FileAccess.get_file_as_string("res://player.gd")
