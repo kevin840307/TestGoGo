@@ -1440,6 +1440,11 @@ try
 {
     var dbPath = Path.Combine(temp, "game.db");
     var store = new SqliteGameStore(dbPath);
+
+    MechaGuardianStoneSmokeTests.Run(
+        store,
+        realCurrentCatalog);
+
     var growth = new LegacyPlayerGrowthCatalog(gameDataRoot);
     var petGrowth = new LegacyPetGrowthCatalog(gameDataRoot);
     var petSkills = new PetSkillCatalog(
