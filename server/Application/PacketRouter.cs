@@ -5849,6 +5849,13 @@ public sealed class PacketRouter
     {
         state.GroundItems.Clear();
 
+        // Capture the AOI index generation BEFORE querying SQLite. The SELECT
+        // and AOI purge are not one atomic operation: another player can
+        // drop/commit an item after this query starts but before we prune
+        // stale index entries. Never purge an entity indexed after the query
+        // boundary, even if this snapshot could not yet see its DB row.
+        var snapshotGeneration =
+            _broadcasts.CaptureWorldEntityGeneration();
         var groundItems =
             _store.GetGroundItems(
                     state.CurrentMapId)
@@ -5867,7 +5874,8 @@ public sealed class PacketRouter
             _broadcasts.RemoveMissingWorldEntities(
                 state.CurrentMapId,
                 3,
-                authoritativeIds),
+                authoritativeIds,
+                snapshotGeneration),
             skipObserver: state.ConnectionId);
 
         foreach (var ground in groundItems)
