@@ -10104,6 +10104,7 @@ public sealed class SqliteGameStore : IGameStore
         long accountId,
         long dbid,
         long itemUid,
+        int sourceItemIndex,
         int horseIndex,
         string name,
         string horseType,
@@ -10129,7 +10130,7 @@ public sealed class SqliteGameStore : IGameStore
             using var r = item.ExecuteReader();
             if (!r.Read() ||
                 r.GetInt32(0) <= 0 ||
-                r.GetInt32(1) != horseIndex)
+                r.GetInt32(1) != sourceItemIndex)
                 return null;
         }
 
