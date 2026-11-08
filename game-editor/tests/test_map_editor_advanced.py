@@ -83,6 +83,28 @@ class AdvancedMapEditorRepositoryTests(unittest.TestCase):
         self.assertIn("太短", meta["blocking"]["error"])
         self.assertIsNone(self.repo._read_blocking(13))
 
+    def test_spawn_audit_reports_existing_blocking_conflicts_without_mutating(self) -> None:
+        cells = bytearray(16)
+        cells[5] = 1
+        self._write_blocking(bytes(cells))
+
+        enemy_payload = (
+            struct.pack("<i", 1)
+            + struct.pack("<i", 9)
+            + b"1\x00"
+            + struct.pack("<ii", 24, 24)
+            + bytes(MapRepository.ENEMY_TAIL_SIZE)
+        )
+        (self.paths.maps / "Map13" / "Enemy.dat").write_bytes(enemy_payload)
+
+        meta = self.repo.get_editor_meta(13)
+        self.assertEqual(meta["spawnAudit"]["enemies"]["invalidCount"], 1)
+        self.assertEqual(meta["spawnAudit"]["enemies"]["invalidIndexes"], [0])
+
+        rows = self.repo.get_enemy_spawns(13)
+        self.assertEqual(rows[0]["x"], 24)
+        self.assertEqual(rows[0]["y"], 24)
+
     def test_batch_limit_blocks_accidental_huge_editor_request(self) -> None:
         self._write_blocking(bytes(16))
         with self.assertRaises(ValueError):
