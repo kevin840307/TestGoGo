@@ -16,6 +16,7 @@ const TRAIN_VIDEO_TIMEOUT_SECONDS: = 120.0
 const WORLD_ENHANCEMENT_SCENE_PATH: String = "res://world_enhancement.tscn"
 const AFK_VISUAL_CACHE = preload("res://scripts/afk_visual_cache.gd")
 const AFK_RENDER_SHELL = preload("res://scripts/afk_render_shell.gd")
+const AFK_MONITOR_SCRIPT = preload("res://scripts/afk_monitor_overlay.gd")
 const AFK_MONITOR_FPS: int = 20
 const DAY_NIGHT_OVERLAY_SCENE_PATH: String = "res://day_night_overlay.tscn"
 const TRAIN_VIDEO_PATHS: = {
@@ -53,6 +54,8 @@ var _afk_visual_stats: Dictionary = {}
 var _afk_master_was_muted_before: bool = false
 var _afk_memory_baseline: Dictionary = {}
 var _afk_forced_draw_count: int = 0
+var _afk_monitor: CanvasLayer = null
+var _afk_hud_compacted: bool = false
 
 
 func _afk_memory_sample() -> Dictionary:
@@ -782,6 +785,65 @@ func _restore_afk_render_shell() -> Dictionary:
 	return attached
 
 
+
+func _free_afk_monitor() -> void:
+	if is_instance_valid(_afk_monitor):
+		_afk_monitor.free()
+	_afk_monitor = null
+
+
+func _compact_hud_for_afk() -> void:
+	if not _afk_active or _afk_restoring or _afk_hud_compacted:
+		return
+	if not is_instance_valid(_afk_monitor):
+		_afk_monitor = AFK_MONITOR_SCRIPT.new() as CanvasLayer
+		get_tree().root.add_child(_afk_monitor)
+		if _afk_monitor.has_method("setup"):
+			_afk_monitor.setup(_afk_started_msec)
+
+	var old_hud: CanvasLayer = current_hud
+	current_hud = null
+	if is_instance_valid(old_hud):
+		old_hud.free()
+	_afk_hud_compacted = true
+
+	# The now-dead HUD was the last strong owner of many embedded window
+	# resources. Sweep visual caches only after freeing it.
+	_clear_visual_runtime_caches()
+	if OS.is_debug_build():
+		print("[AFK_HUD_COMPACT] freed_full_hud=true nodes=%d static_mb=%.2f transport_unchanged=true" % [
+			int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+			_get_process_memory_mb()
+		])
+
+
+func _restore_hud_after_afk() -> bool:
+	if is_instance_valid(current_hud):
+		return true
+	var hud_scene := ResourceLoader.load("res://game_hud.tscn") as PackedScene
+	if hud_scene == null:
+		return false
+	var rebuilt := hud_scene.instantiate() as CanvasLayer
+	if rebuilt == null:
+		return false
+	rebuilt.visible = false
+	get_tree().root.add_child(rebuilt)
+	current_hud = rebuilt
+	if rebuilt.has_method("initialize_hud"):
+		# restore_only prevents pet-mode/announcement network requests.
+		rebuilt.initialize_hud(current_player, true)
+
+	var deadline: int = Time.get_ticks_msec() + 1800
+	while (
+		is_instance_valid(rebuilt)
+		and rebuilt.has_method("is_initial_hud_ready")
+		and not rebuilt.is_initial_hud_ready()
+		and Time.get_ticks_msec() < deadline
+	):
+		await get_tree().process_frame
+	return is_instance_valid(rebuilt)
+
+
 func begin_afk_mode() -> bool:
 	if _afk_active or _afk_restoring or is_changing_map:
 		return false
@@ -828,6 +890,10 @@ func begin_afk_mode() -> bool:
 	_log_afk_memory("enter_after")
 	if OS.is_debug_build():
 		_log_afk_memory_after_settle(_afk_started_msec)
+	# begin_afk_mode() is called from GameHUD. Freeing that HUD inside its
+	# own button callback would invalidate the current stack frame, so compact
+	# it on the next idle turn.
+	call_deferred("_compact_hud_for_afk")
 	return true
 
 
@@ -842,6 +908,11 @@ func finish_afk_mode() -> bool:
 	if is_changing_map or not bool(restore_result.get("ok", false)):
 		_afk_restoring = false
 		_afk_visual_stats["restore_error"] = str(restore_result.get("reason", "map_change"))
+		_log_afk_state("restore_retry_needed")
+		return false
+	if _afk_hud_compacted and not await _restore_hud_after_afk():
+		_afk_restoring = false
+		_afk_visual_stats["restore_error"] = "hud_restore_failed"
 		_log_afk_state("restore_retry_needed")
 		return false
 	_afk_active = false
@@ -868,6 +939,10 @@ func finish_afk_mode() -> bool:
 	_apply_low_resource_world_visual_policy()
 	if is_instance_valid(current_map_node):
 		current_map_node.visible = true
+	if is_instance_valid(current_hud):
+		current_hud.visible = true
+	_afk_hud_compacted = false
+	_free_afk_monitor()
 	_afk_saved_profile.clear()
 	_afk_visual_stats.clear()
 	_refresh_focus_render_policy()
@@ -900,6 +975,8 @@ func _refresh_afk_map_visuals_after_change() -> void:
 func _reset_afk_mode() -> void:
 	if _afk_active:
 		_leave_afk_audio_silence(false)
+	_free_afk_monitor()
+	_afk_hud_compacted = false
 	_afk_active = false
 	_afk_restoring = false
 	_afk_saved_profile.clear()

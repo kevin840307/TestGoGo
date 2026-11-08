@@ -1539,8 +1539,10 @@ func _on_unequip_requested(target_slot: int) -> void :
 			NetworkManager.send_secure_packet({"Type": "UnequipRequest", "TargetSlot": target_slot})
 
 var _initial_hud_ready: bool = false
+var _initial_hud_restore_only: bool = false
 
-func initialize_hud(player: CharacterBody2D) -> void :
+func initialize_hud(player: CharacterBody2D, restore_only: bool = false) -> void :
+	_initial_hud_restore_only = restore_only
 	var hud_started_usec := Time.get_ticks_usec()
 	target_player = player
 	_last_displayed_coords = null
@@ -1588,11 +1590,13 @@ func _initialize_hud_deferred() -> void :
 	if shortcuts_ms >= 25.0:
 		print("[HUD_INIT_TIMING] shortcuts_ms=%.2f" % shortcuts_ms)
 
-	if NetworkManager and NetworkManager.has_method("send_set_global_pet_mode"):
-		NetworkManager.send_set_global_pet_mode(current_pet_combat_mode)
+	if not _initial_hud_restore_only:
+		if NetworkManager and NetworkManager.has_method("send_set_global_pet_mode"):
+			NetworkManager.send_set_global_pet_mode(current_pet_combat_mode)
 
 	_initial_hud_ready = true
-	call_deferred("_open_initial_announcement_lazy")
+	if not _initial_hud_restore_only:
+		call_deferred("_open_initial_announcement_lazy")
 
 func _open_initial_announcement_lazy() -> void :
 	await get_tree().process_frame
