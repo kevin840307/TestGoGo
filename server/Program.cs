@@ -64,6 +64,9 @@ var shopCatalog =
 var sharedMapAiTicker =
     app.Services.GetRequiredService<
         SGO.Server.Application.World.SharedMapAiTicker>();
+var broadcastHub =
+    app.Services.GetRequiredService<
+        SGO.Server.Application.Messaging.ServerBroadcastHub>();
 
 if (!currentClientData.IsAvailable)
 {
@@ -102,6 +105,12 @@ app.MapGet("/health", (IConfiguration config) => Results.Ok(new
     currentSkillCount = currentClientData.Skills.Count,
     currentPetCount = currentClientData.Pets.Count,
     sharedMapAi = sharedMapAiTicker.LastDiagnostics,
+    aoi = new
+    {
+        playerReady = broadcastHub.AoiReadyPlayers,
+        worldObservers = broadcastHub.AoiWorldObservers,
+        worldEntities = broadcastHub.AoiWorldEntities
+    },
     runtime = new
     {
         workingSetBytes = Environment.WorkingSet,
