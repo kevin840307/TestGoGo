@@ -7,7 +7,9 @@ const LOAD_LOW := 2
 const LOAD_MULTIBOX := 3
 
 const COMBAT_NORMAL := 0
-const COMBAT_PVP := 1
+const COMBAT_RESPONSE := 1
+# Backward-compatible alias for existing callers/config values.
+const COMBAT_PVP := COMBAT_RESPONSE
 const COMBAT_MASS := 2
 
 const SIMPLIFY_AUTO := 0
@@ -61,7 +63,7 @@ static func load_mode_name(value: int) -> String:
 static func combat_mode_name(value: int) -> String:
 	match sanitize_combat_mode(value):
 		COMBAT_NORMAL: return "normal"
-		COMBAT_PVP: return "pvp"
+		COMBAT_RESPONSE: return "response"
 		COMBAT_MASS: return "mass"
 	return "normal"
 
@@ -118,8 +120,10 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 			profile["aggressive_cache_trim"] = true
 
 	match combat_mode:
-		COMBAT_PVP:
-			# PvP protects player readability and frame-time stability.
+		COMBAT_RESPONSE:
+			# Reaction-first mode preserves combat readability and frame-time
+			# stability for focused fights regardless of whether the target is
+			# another player, a boss, or a small group of monsters.
 			profile["full_player_budget"] = maxi(int(profile["full_player_budget"]), 16)
 			profile["full_monster_budget"] = mini(int(profile["full_monster_budget"]), 10)
 			profile["effect_budget_percent"] = mini(int(profile["effect_budget_percent"]), 65)
