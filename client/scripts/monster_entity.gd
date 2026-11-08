@@ -57,6 +57,8 @@ const NETWORK_MOVE_SNAP_EPSILON: float = 1.0
 static var _debug_chase_packet_gap_logs: int = 0
 static var _debug_chase_state_idle_logs: int = 0
 static var _debug_chase_client_idle_logs: int = 0
+static var _debug_authoritative_snap_logs: int = 0
+var _debug_last_aggro_move_packet_ms: int = 0
 const MOVE_DIR_CONFIRM_COUNT: int = 2
 const MOVE_DIR_MAX_HOLD_MS: int = 450
 const VISIBILITY_RECT: Rect2 = Rect2(-180.0, -260.0, 360.0, 420.0)
@@ -732,12 +734,18 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 
 	move_idle_generation += 1
 	var now_ms: int = Time.get_ticks_msec()
-	var packet_gap_ms: int = now_ms - last_move_packet_ms if last_move_packet_ms > 0 else -1
-	if OS.is_debug_build() and _debug_chase_packet_gap_logs < 12 and packet_gap_ms > 375 and is_instance_valid(target_indicator) and target_indicator.visible:
-		_debug_chase_packet_gap_logs += 1
-		print("[MONSTER_CHASE_PACKET_GAP] id=%d gap_ms=%d distance=%.1f speed_time=%.3f" % [
-			entity_id, packet_gap_ms, global_position.distance_to(target_pos), speed_time
-		])
+	if OS.is_debug_build() and is_instance_valid(target_indicator) and target_indicator.visible:
+		# Ignore the first move after aggro: the previous packet may have been
+		# a normal wander step several seconds earlier, not a missed chase tick.
+		if _debug_last_aggro_move_packet_ms > 0:
+			var aggro_gap_ms: int = now_ms - _debug_last_aggro_move_packet_ms
+			if _debug_chase_packet_gap_logs < 16 and aggro_gap_ms > 375:
+				_debug_chase_packet_gap_logs += 1
+				print("[MONSTER_CHASE_PACKET_GAP] id=%d gap_ms=%d state=%s distance=%.1f speed_time=%.3f" % [
+					entity_id, aggro_gap_ms, current_state,
+					global_position.distance_to(target_pos), speed_time
+				])
+		_debug_last_aggro_move_packet_ms = now_ms
 	last_move_packet_ms = now_ms
 	network_move_target = target_pos
 
@@ -745,6 +753,17 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	# entering attack state. Snap first so the following SyncState("attack")
 	# cannot freeze the monster at an older visual position.
 	if speed_time <= 0.01:
+		# Server attack-position corrections remain instantaneous for
+		# authoritative combat. Report sizeable on-screen jumps so we can
+		# distinguish them from viewport-edge snapping in Debug builds.
+		if OS.is_debug_build() and _debug_authoritative_snap_logs < 20:
+			var snap_distance: float = global_position.distance_to(target_pos)
+			if snap_distance >= 16.0 and _is_on_screen:
+				_debug_authoritative_snap_logs += 1
+				print("[MONSTER_AUTHORITATIVE_SNAP] id=%d distance=%.1f state=%s from=%s to=%s" % [
+					entity_id, snap_distance, current_state,
+					str(global_position), str(target_pos)
+				])
 		global_position = target_pos
 		network_move_active = false
 		network_move_speed = 0.0
@@ -868,6 +887,9 @@ func _on_animation_finished() -> void :
 
 func set_target_indicator(has_target: bool) -> void :
 	if is_instance_valid(target_indicator):
+		if OS.is_debug_build() and target_indicator.visible != has_target:
+			# Reset the chase-packet baseline on aggro changes.
+			_debug_last_aggro_move_packet_ms = 0
 		target_indicator.visible = has_target
 		if has_target:
 			if not target_indicator.is_playing():
