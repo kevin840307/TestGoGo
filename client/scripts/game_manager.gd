@@ -601,6 +601,12 @@ func finish_afk_mode() -> bool:
 		_afk_restoring = false
 		_log_afk_state("restore_deferred_map_change")
 		return false
+	if int(restore_result.get("missing", 0)) > 0:
+		# Keep the dashboard visible rather than revealing missing graphics.
+		_afk_restoring = false
+		_afk_visual_stats["restore_missing"] = int(restore_result["missing"])
+		_log_afk_state("restore_retry_needed", 0, int(restore_result["missing"]))
+		return false
 	_afk_active = false
 	_afk_restoring = false
 	if is_instance_valid(current_player) and current_player.has_method("end_afk_navigation_anchor"):

@@ -25,8 +25,18 @@ func suspended_count() -> int:
 
 
 static func _visual_property(node: Node) -> String:
-	# AnimatedSprite2D / TileMapLayer / Particle and scripted map actors are
-	# excluded: they can drive animation_finished or physics gameplay signals.
+	# Legacy AnimatedMapObject only adjusts frame offsets; it has no gameplay
+	# behavior. Other script-backed nodes or animated event handlers stay live.
+	if node is AnimatedSprite2D:
+		var animated: AnimatedSprite2D = node as AnimatedSprite2D
+		var script: Script = animated.get_script() as Script
+		if script != null and script.resource_path != "res://animated_map_object.gd":
+			return ""
+		if not animated.animation_finished.get_connections().is_empty():
+			return ""
+		if script == null and not animated.frame_changed.get_connections().is_empty():
+			return ""
+		return "sprite_frames"
 	if node.get_script() != null:
 		return ""
 	if node is Sprite2D or node is TextureRect or node is Polygon2D or node is NinePatchRect:
@@ -72,11 +82,18 @@ func suspend_static_map(map_node: Node) -> Dictionary:
 			if current is Resource and is_instance_valid(current):
 				var path: String = _restorable_path(current)
 				if not path.is_empty():
-					_resources.append({
+					var record: Dictionary = {
 						"node": weakref(node),
 						"property": property_name,
-						"path": path
-					})
+						"path": path,
+					}
+					if node is AnimatedSprite2D:
+						var animated: AnimatedSprite2D = node as AnimatedSprite2D
+						record["animation"] = animated.animation
+						record["frame"] = animated.frame
+						record["playing"] = animated.is_playing()
+						animated.stop()
+					_resources.append(record)
 					node.set(property_name, null)
 					released += 1
 				else:
@@ -91,6 +108,8 @@ func suspend_static_map(map_node: Node) -> Dictionary:
 func restore_static_map(batch_size: int = 24) -> Dictionary:
 	var restored: int = 0
 	var missing: int = 0
+	var stale: int = 0
+	var retry: Array[Dictionary] = []
 	var offset: int = 0
 	# Capture a stable snapshot: a server-initiated map transition can replace
 	# the active map while we await render frames during restore.
@@ -106,16 +125,28 @@ func restore_static_map(batch_size: int = 24) -> Dictionary:
 			var reference: WeakRef = record["node"]
 			var node: Node = reference.get_ref() as Node
 			if not is_instance_valid(node) or node.is_queued_for_deletion():
-				missing += 1
+				stale += 1
 				continue
 			var path: String = record["path"]
 			var resource: Resource = ResourceLoader.load(path)
 			if resource == null:
 				missing += 1
+				retry.append(record)
 				continue
 			# Only touch the property we unloaded; building/NPC animation state
 			# and visibility are intentionally left at their latest value.
 			node.set(record["property"], resource)
+			if node is AnimatedSprite2D and resource is SpriteFrames:
+				var animated: AnimatedSprite2D = node as AnimatedSprite2D
+				var frames: SpriteFrames = resource as SpriteFrames
+				var previous_animation: StringName = record.get("animation", &"default")
+				if frames.has_animation(previous_animation):
+					animated.animation = previous_animation
+					var frame_count: int = frames.get_frame_count(previous_animation)
+					if frame_count > 0:
+						animated.frame = clampi(int(record.get("frame", 0)), 0, frame_count - 1)
+						if bool(record.get("playing", false)):
+							animated.play()
 			restored += 1
 		offset = end
 		if offset < count:
@@ -123,9 +154,5 @@ func restore_static_map(batch_size: int = 24) -> Dictionary:
 			if tree != null:
 				await tree.process_frame
 	if tracked_map() == restore_map:
-		discard()
-	return {"restored": restored, "missing": missing}
-
-
-static func map_resources_unloaded(record_count: int) -> bool:
-	return record_count >= 0
+		_resources = retry
+	return {"restored": restored, "missing": missing, "stale": stale}

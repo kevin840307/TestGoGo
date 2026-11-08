@@ -55,6 +55,16 @@ func _run() -> void:
 	drop_sprite.texture = texture
 	dynamic_drop.add_child(drop_sprite)
 
+	var animated: AnimatedSprite2D = AnimatedSprite2D.new()
+	var animated_frames: SpriteFrames = load("res://Assets/Effects/Hit_Effect/Hit_Effect00.tres") as SpriteFrames
+	check(is_instance_valid(animated_frames), "external animated SpriteFrames resource exists")
+	if is_instance_valid(animated_frames):
+		animated.sprite_frames = animated_frames
+		map_root.add_child(animated)
+		var animations: PackedStringArray = animated_frames.get_animation_names()
+		if not animations.is_empty():
+			animated.play(animations[0])
+
 	var probe: TickProbe = TickProbe.new()
 	map_root.add_child(probe)
 	var physics_before: int = Engine.physics_ticks_per_second
@@ -62,9 +72,11 @@ func _run() -> void:
 
 	var cache: AfkVisualCache = AfkVisualCache.new()
 	var stats: Dictionary = cache.suspend_static_map(map_root)
-	check(int(stats.get("released", 0)) == 1,
-		"only static world textures are released, never live actor/drop graphics")
+	check(int(stats.get("released", 0)) == (2 if is_instance_valid(animated_frames) else 1),
+		"only static map textures/animations are released, never actor/drop graphics")
 	check(static_sprite.texture == null, "static visual resource released")
+	if is_instance_valid(animated_frames):
+		check(animated.sprite_frames == null, "static animation resource released")
 	check(actor_sprite.texture == texture and drop_sprite.texture == texture,
 		"live character and ground-item visuals are untouched")
 	check(dynamic_actor.get_parent() == map_root and dynamic_drop.get_parent() == map_root,
@@ -81,10 +93,13 @@ func _run() -> void:
 		"render FPS selection has not changed the physics rate")
 
 	var restore: Dictionary = await cache.restore_static_map(1)
-	check(int(restore.get("restored", 0)) == 1 and cache.suspended_count() == 0,
+	check(int(restore.get("restored", 0)) == (2 if is_instance_valid(animated_frames) else 1) and cache.suspended_count() == 0,
 		"original resource is restored and snapshot discarded")
 	check(static_sprite.texture != null,
 		"static texture can be loaded back without recreating gameplay nodes")
+	if is_instance_valid(animated_frames):
+		check(animated.sprite_frames != null and animated.sprite_frames.has_animation(animated.animation),
+			"static animated SpriteFrames restore the previous animation")
 	check(dynamic_actor.get_parent() == map_root and dynamic_drop.get_parent() == map_root,
 		"combat actor and pickup survive unload/reload")
 	Engine.max_fps = cap_before

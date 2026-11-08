@@ -51,6 +51,8 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('node is CollisionObject2D', cache)
         self.assertIn('node.name == "Entities"', cache)
         self.assertIn('node.get_script() != null', cache)
+        self.assertIn('return "sprite_frames"', cache)
+        self.assertIn('res://animated_map_object.gd', cache)
         self.assertIn('node.set(property_name, null)', cache)
         self.assertIn('ResourceLoader.exists(path)', cache)
         self.assertIn('"node": weakref(node)', cache)
@@ -58,6 +60,8 @@ class AfkModeContract(unittest.TestCase):
         self.assertNotIn('remove_child(', cache)
         self.assertIn('var restore_map: Node = tracked_map()', cache)
         self.assertIn('if tracked_map() == restore_map:', cache)
+        self.assertIn('_resources = retry', cache)
+        self.assertIn('record["playing"]', cache)
 
     def test_restore_preserves_user_preferences_and_map_change(self):
         game = read("client/scripts/game_manager.gd")
