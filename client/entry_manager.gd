@@ -90,8 +90,9 @@ func _ready() -> void :
 	# actually had a chance to render. Startup must not look like a hang.
 	call_deferred("_bootstrap_before_login")
 
+# Optional crafting UI is deliberately excluded: building 1453 recipe rows
+# can cost 18 seconds during cold startup, even when the player never crafts.
 const GAME_HUD_INSTANCE_PREWARM: Dictionary = {
-	"craft": "res://craft_dismantle_window.tscn",
 	"game_info": "res://game_info_window.tscn",
 }
 
@@ -102,7 +103,6 @@ const GAME_HUD_PREWARM_PATHS: Array[String] = [
 	"res://mall_window.tscn",
 	"res://announcement_window.tscn",
 	"res://game_info_window.tscn",
-	"res://craft_dismantle_window.tscn",
 	"res://big_map_window.tscn",
 	"res://world_map_window.tscn",
 ]
@@ -162,19 +162,7 @@ func _prewarm_game_hud_resources() -> void :
 		if GameManager and GameManager.has_method("cache_prewarmed_hud_window"):
 			GameManager.cache_prewarmed_hud_window(kind, window)
 
-		# Craft's expensive 1453-row static recipe tree is independent of the
-		# selected character. Build it here while the player is still on the
-		# login/character-select screens; in-world initialization only refreshes
-		# player-specific availability and dismantle ownership.
-		if kind == "craft" and window.has_method("prepare_static_async"):
-			_set_loading_progress(60.0)
-			_set_startup_loading_status("預先建立合成配方…")
-			var craft_progress_callback: Callable = func(ratio: float) -> void:
-				_set_loading_progress(60.0 + clampf(ratio, 0.0, 1.0) * 25.0)
-				_set_startup_loading_status("預先建立合成配方 %d%%…" % int(clampf(ratio, 0.0, 1.0) * 100.0))
-			await window.prepare_static_async(craft_progress_callback)
-			_set_loading_progress(85.0)
-		elif kind == "game_info":
+		if kind == "game_info":
 			_set_loading_progress(92.0)
 			_set_startup_loading_status("準備角色資訊視窗…")
 
@@ -215,8 +203,8 @@ func _bootstrap_before_login() -> void :
 
 	# A looping OGV/video decoder and synchronous login BGM load can hitch
 	# when they FIRST start in the same frame as account input appears.
-	# Warm both during the existing loading overlay, after the heavy recipe
-	# work has ended, so neither competes with the first typing frames.
+	# Warm both during the existing loading overlay so neither competes
+	# with the first typing frames. Craft recipes are built on demand.
 	_set_startup_loading_status("準備登入背景及音樂…")
 	if is_instance_valid(login_screen) and login_screen.has_method("warm_background_video"):
 		login_screen.warm_background_video()
