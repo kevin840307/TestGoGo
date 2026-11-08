@@ -46,6 +46,32 @@ Check Client `[PLAYER_MAP_NAV_RESET]`, `[PLAYER_MAP_ID_REPAIR]`, and
 `[PLAYER_SYNC_SKIPPED]` (Debug builds), along with Server `[MOVE_BLOCKED]`.
 The server's collision and anti-wall validation must remain unchanged.
 
+## Mecha dismount rollback: same-map repro
+
+The user reported the `Map13 From=(3104,2918) To=(1268,317)`
+`local_route_failed` errors specifically **after dismounting**. That delta
+is much too large to be a normal short click. The server-side validation
+should NOT be weakened.
+
+Reproduce with Debug client and Debug server:
+
+1. Load Map13 and stand on regular walkable ground; mount a mecha.
+2. Move a short distance, stop, dismount, then click a nearby location.
+3. Verify `[MECHA_DISMOUNT_SERVER]` and
+   `[MECHA_DISMOUNT_REBASE]` report the same map and server location;
+   observe the displayed `diff` and confirm it is not silently reused.
+4. Confirm no repeated `[MOVE_BLOCKED]` jumps to `(1268,317)`.
+5. Repeat after teleporting between maps; NPC, skills, character appearance
+   and ordinary mounted movement must remain unchanged.
+6. On a mecha-only special-terrain tile, dismount must be rejected with the
+   explanatory message. Walk back to regular ground and retry.
+
+The encrypted real-WebSocket suite also validates the authoritative map/X/Y
+on successful `DriveMechaResponse`, then remounts to preserve the original
+combat setup. Run it only against the dedicated isolated test server.
+`dotnet run --project tests/SGO.Server.SmokeTests -- --suite world`
+checks the special-terrain dismount invariant without requiring a live server.
+
 It is **not** an end-to-end game test. In this editing environment Godot was unavailable; these tests have not been executed.
 
 ## Manual end-to-end acceptance
