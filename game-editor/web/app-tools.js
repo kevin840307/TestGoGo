@@ -272,20 +272,20 @@ $('#skill-new').onclick = newSkill;
 $('#enemy-search').oninput = debounce(() => loadEnemies().catch(e => toast(e.message, 'error')));
 $('#enemy-new').onclick = newEnemy;
 
-$('#map-select').onchange = async e => {
-  state.mapId = Number(e.target.value);
-  await loadMapRows();
-};
-$$('[data-map-tab]').forEach(b => b.onclick = async () => {
-  $$('[data-map-tab]').forEach(x => x.classList.remove('active'));
-  b.classList.add('active');
-  state.mapTab = b.dataset.mapTab;
-  await loadMapRows();
-});
+$('#map-select').onchange = e => switchMap(e.target.value).catch(err => toast(err.message, 'error'));
+$('[data-map-tab]').forEach(b => b.onclick = () => switchMapTab(b.dataset.mapTab).catch(err => toast(err.message, 'error')));
 $('#map-enemy-search').oninput = debounce(renderEnemyPalette, 100);
 $('#map-show-blocking').onchange = e => { state.mapShowBlocking = e.target.checked; renderMapVisual(); };
 $('#map-show-spawners').onchange = e => { state.mapShowSpawners = e.target.checked; renderMapVisual(); };
+$('#map-show-labels').onchange = e => { state.mapShowLabels = e.target.checked; renderMapVisual(); };
+$('#map-only-selected-type').onchange = e => { state.mapOnlySelectedType = e.target.checked; renderMapVisual(); };
 $('#map-snap-walkable').onchange = e => { state.mapSnapWalkable = e.target.checked; };
+$('#map-undo').onclick = undoMapEdit;
+$('#map-redo').onclick = redoMapEdit;
+$('#map-zoom-in').onclick = mapZoomIn;
+$('#map-zoom-out').onclick = mapZoomOut;
+$('#map-zoom-fit').onclick = mapFit;
+$('#map-batch-arm').onclick = armBatchPlacement;
 $('#map-add').onclick = addMapRow;
 $('#map-save').onclick = saveMap;
 
