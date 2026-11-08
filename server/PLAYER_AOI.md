@@ -264,6 +264,36 @@ powershell -ExecutionPolicy Bypass -File tests/run_protocol_checks.ps1
 
 長時間多人驗收可把 WireLoadProbe 的 `--mixed-seconds` 提高到 600、3600 或更久。
 
+## 2026-11-08 追加：地面掉落快照競態與靜態刷新
+
+- `WorldEntitySpatialAoi.UpsertEntity` 現在遇到**同 map、同 type、
+  同 X/Y** 時只更新最新 SpawnPacketFactory，不再重新掃附近的
+  observers。若怪物確實移動（即使還在同一 spatial cell），仍會
+  檢查進入/離開及 known-set。新驗證：
+  `World/WorldEntityAoiStationaryRefreshSmokeTests.cs`。
+- A 玩家正在載入地圖並讀取地面物 DB 快照時，B 可能同時成功丟
+  物。原本 A 用舊 ID 集合做 `RemoveMissingWorldEntities`，
+  有機會把 B **剛索引的地面物**從 AOI 清掉；DB row 不會因此刪除，
+  但 Client 可能不再收到靠近時的 Spawn。
+  現在 A 在查詢 DB **之前**擷取 WorldEntity AOI generation，
+  清理時只可移除 generation 小於等於該版本的舊 entity。
+  B 後來的地面物不受 A 的舊快照影響；下一次真正的新快照
+  仍能移除已過期的地面物。新驗證：
+  `World/WorldEntityAoiSnapshotRaceSmokeTests.cs`。
+- `client/scripts/network_entity_manager.gd` 在隊列等待建立怪物
+  時，若先收到新的 `MoveEntity`，之後重複的舊
+  `SpawnEntity` 不可把 LocX/LocY 改回舊位置。
+  `client/tests/aoi_monster_snapshot_order_regression.gd` 測
+  Spawn→Move→重複 Spawn→Despawn→新 Spawn→換圖清理，
+  並已納入 `tests/run_protocol_checks.ps1`。
+- `DropItemRequest` / `DropAssetToGround` 現在拒絕非法數量及
+  非單件裝備數量；`Integration/GroundDropRequestGuardSmokeTests.cs`
+  以持久化 DB 核對部分丟棄、撿回、重複撿取守恆。
+
+以上屬於已提交、**待 .NET/Godot 真正執行驗證**。
+CI 無 Runner steps 時不可標示通過；不能將 unit-level AOI
+驗證混同 100 人真 WebSocket 容量測試。
+
 ## 9. 目前驗證狀態
 
 程式、測試與壓測 harness 已提交，但此工作環境沒有 .NET SDK / Godot，GitHub Actions 目前也持續在取得 Runner 前結束（job `steps=null`）。
