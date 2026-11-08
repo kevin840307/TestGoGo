@@ -59,11 +59,10 @@ func _on_tab_changed(_new_tab: int) -> void :
 	])
 
 func _on_inventory_visibility_changed() -> void :
-	if not visible or _equip_tab_prewarmed or _equip_tab_prewarm_running:
-		return
-	# The general backpack opens quickly. Use the time while the player is
-	# looking at it to prepare the expensive 200+ equipment rows offscreen.
-	call_deferred("_prewarm_equip_tab_async")
+	# Do not prebuild hundreds of hidden equipment rows. They are derived UI,
+	# not authoritative state, and needlessly raise the process working-set
+	# high-water mark. The equipment tab already builds its rows on demand.
+	return
 
 func _prewarm_equip_tab_async() -> void :
 	if _equip_tab_prewarmed or _equip_tab_prewarm_running:

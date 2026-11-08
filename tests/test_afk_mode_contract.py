@@ -162,6 +162,10 @@ class AfkModeContract(unittest.TestCase):
         setup = inventory[setup_start:setup_end]
         self.assertIn("setup_player(player)", setup)
         self.assertNotIn("update_ui()", setup)
+        visibility_start = inventory.index("func _on_inventory_visibility_changed() -> void :")
+        visibility_end = inventory.index("\nfunc ", visibility_start + 1)
+        visibility = inventory[visibility_start:visibility_end]
+        self.assertNotIn('call_deferred("_prewarm_equip_tab_async")', visibility)
 
         self.assertIn("func release_rebuildable_visual_state_batched", shared)
         self.assertIn("_item_list_render_generation += 1", shared)
