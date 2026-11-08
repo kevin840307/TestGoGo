@@ -61,6 +61,8 @@ Protocol 動態 action 也已獨立化：`DynamicActionSchemaCoverageSmokeTests`
 
 多人交易/玩家商店的動態 Dictionary 另外由 `MarketplaceResponseContractSmokeTests` 驗證：TradeSync 的雙方視角與 lock/money state、ShopSync/ShopViewResponse 的 listing 欄位與寵物 nested ExtraData 都走真 service runtime；Client headless AES dispatcher 也餵入相同類型的 Trade/Shop payload，避免 Server 正確但 Godot 消費型別退化。
 
+Client 真傳輸另有 `real_server_network_e2e.gd`：protocol runner 啟動隔離 Server 後，Godot 直接使用 production `NetworkManager` / `WebSocketPeer` 完成 register/login/create/relogin/select、九個 bootstrap sync、WorldReady ACK 與 nearby chat round-trip。它與 server-free dispatcher regression 分離，沒有 Godot executable 時會明確 skip，不會假裝 PASS。
+
 重要的多人情境已獨立化：
 
 - `ConcurrencySmokeTests`：10 人同時撿同一掉物只能成功 1 人；重複/並行 FinalConfirm 交易只提交一次；重複 Lock 不會清除已確認狀態。
@@ -174,6 +176,8 @@ godot --headless --path client --script res://tests/monster_chase_regression.gd
 godot --headless --path client --script res://tests/perf_regression_smoke.gd
 godot --headless --path client --script res://tests/item_choice_regression.gd
 godot --headless --path client --script res://tests/network_response_contract_regression.gd
+# 下列測試需要本機 .NET Server 已啟動
+SGO_TEST_SERVER_URL=ws://127.0.0.1:5678 godot --headless --path client --script res://tests/real_server_network_e2e.gd
 ```
 
 沒有 Godot 時 runner 會明確印 `[SKIP]`，不會把「沒跑」寫成 PASS。

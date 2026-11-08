@@ -242,6 +242,27 @@ try {
         "--timeout-seconds", "20",
         "--output", (Join-Path $logRoot "wire-load-probe.json")
     )
+    if ($null -ne $godotCommand) {
+        $previousTestServerUrl = $env:SGO_TEST_SERVER_URL
+        $env:SGO_TEST_SERVER_URL = "ws://127.0.0.1:5678/"
+        try {
+            Invoke-Checked "Godot real-server NetworkManager E2E" $godotCommand @(
+                "--headless", "--path", "client",
+                "--script", "res://tests/real_server_network_e2e.gd"
+            )
+        }
+        finally {
+            if ($null -eq $previousTestServerUrl) {
+                Remove-Item Env:SGO_TEST_SERVER_URL -ErrorAction SilentlyContinue
+            }
+            else {
+                $env:SGO_TEST_SERVER_URL = $previousTestServerUrl
+            }
+        }
+    }
+    else {
+        Write-Host "[SKIP] Godot real-server NetworkManager E2E: set GODOT_BIN or install godot/godot4." -ForegroundColor Yellow
+    }
     Write-Host "[PASS] All local protocol checks passed." -ForegroundColor Green
 }
 finally {

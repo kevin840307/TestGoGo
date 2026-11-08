@@ -33,6 +33,21 @@ class ClientNetworkContractTests(unittest.TestCase):
     def setUpClass(cls):
         cls.source = NETWORK_MANAGER.read_text(encoding="utf-8-sig")
 
+    def test_world_ready_ack_is_observable(self):
+        block = packet_block(self.source, "WorldReadyResponse")
+        fields = set(FIELD_READ.findall(block))
+        self.assertTrue(
+            {"Success", "MapID", "Message"} <= fields
+        )
+        self.assertIn(
+            "signal world_ready_response_received(",
+            self.source,
+        )
+        self.assertIn(
+            "world_ready_response_received.emit(",
+            block,
+        )
+
     def test_drive_mecha_response_is_ack_only(self):
         block = packet_block(self.source, "DriveMechaResponse")
         fields = set(FIELD_READ.findall(block))

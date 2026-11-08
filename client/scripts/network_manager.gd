@@ -141,6 +141,7 @@ signal dismantle_item_response_received(success: bool, message: String, result_i
 
 
 signal toggle_auto_saint_response_received(is_on: bool)
+signal world_ready_response_received(success: bool, map_id: int, message: String)
 
 
 
@@ -1313,13 +1314,20 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 
 		"WorldReadyResponse":
 			var ready_ok: bool = bool(data.get("Success", false))
+			var ready_map_id: int = int(data.get("MapID", 0))
+			var ready_message: String = str(data.get("Message", ""))
+			world_ready_response_received.emit(
+				ready_ok,
+				ready_map_id,
+				ready_message
+			)
 			if GameManager and GameManager.has_method("trace_map_diagnostic"):
 				GameManager.trace_map_diagnostic("world_ready_ack", {
-					"map_id": int(data.get("MapID", 0)),
+					"map_id": ready_map_id,
 					"success": ready_ok,
 				})
 			if not ready_ok:
-				push_warning("[WORLD_READY_REJECTED] %s" % str(data.get("Message", "")))
+				push_warning("[WORLD_READY_REJECTED] %s" % ready_message)
 
 		"UpdateShortcutResponse":
 			var shortcut_ok := bool(data.get("Success", false))

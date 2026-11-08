@@ -306,7 +306,7 @@ internal static class WireLoadScenario
             if (!success)
             {
                 errors.Add(
-                    "wire multiplayer conservation mismatch");
+                    "wire multiplayer/load validation mismatch");
             }
 
             return new WireLoadScenarioResult(

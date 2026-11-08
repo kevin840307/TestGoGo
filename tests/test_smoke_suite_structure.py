@@ -307,6 +307,42 @@ class SmokeSuiteStructureTests(unittest.TestCase):
             main,
         )
 
+    def test_real_godot_server_network_e2e_is_isolated_and_wired(self):
+        script = (
+            ROOT / "client" / "tests" /
+            "real_server_network_e2e.gd"
+        )
+        self.assertTrue(script.is_file())
+        source = script.read_text(encoding="utf-8-sig")
+        for marker in (
+            "send_register_account_request(",
+            "send_login_request(",
+            "send_create_character_request(",
+            "send_select_character_request(",
+            "send_world_ready(",
+            "send_secure_packet({",
+            "world_ready_response_received.connect(",
+            "_bootstrap_complete()",
+        ):
+            self.assertIn(marker, source)
+
+        runner = (
+            ROOT / "tests" / "run_protocol_checks.ps1"
+        ).read_text(encoding="utf-8-sig")
+        workflow = (
+            ROOT / ".github" / "workflows" /
+            "server-build.yml"
+        ).read_text(encoding="utf-8-sig")
+        for wiring in (runner, workflow):
+            self.assertIn(
+                "real_server_network_e2e.gd",
+                wiring,
+            )
+            self.assertIn(
+                "SGO_TEST_SERVER_URL",
+                wiring,
+            )
+
     def test_protocol_assertions_not_reintroduced_in_monolith(self):
         main = PROGRAM.read_text(encoding="utf-8-sig")
         self.assertNotIn("PacketSchemaValidator.TryValidate(", main)

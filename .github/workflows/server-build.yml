@@ -86,6 +86,17 @@ jobs:
           fi
           dotnet run --no-build --project tests/SGO.Server.WireSmokeTests/SGO.Server.WireSmokeTests.csproj -c Release -- ws://127.0.0.1:5678/ 2>&1 | tee wire.log
           dotnet run --no-build --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -c Release -- --url ws://127.0.0.1:5678/ --sizes 10,50,100 --rounds 2 --setup-concurrency 10 --mixed-seconds 5 --timeout-seconds 20 --output wire-load-probe-report.json 2>&1 | tee wire-load-probe.log
+          GODOT_CMD=""
+          if command -v godot >/dev/null 2>&1; then
+            GODOT_CMD="$(command -v godot)"
+          elif command -v godot4 >/dev/null 2>&1; then
+            GODOT_CMD="$(command -v godot4)"
+          fi
+          if [ -n "$GODOT_CMD" ]; then
+            SGO_TEST_SERVER_URL=ws://127.0.0.1:5678/ "$GODOT_CMD" --headless --path client --script res://tests/real_server_network_e2e.gd 2>&1 | tee godot-real-server-network.log
+          else
+            echo "[SKIP] Godot real-server NetworkManager E2E: godot/godot4 not installed on runner."
+          fi
       - name: Upload diagnostic logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -101,6 +112,7 @@ jobs:
             wire.log
             wire-load-probe.log
             wire-load-probe-report.json
+            godot-real-server-network.log
             server.log
             packet-contract-report.json
             packet-schema-report.json
