@@ -161,17 +161,19 @@ if not exist "%PERF_ROOT%" (
     exit /b 2
 )
 py -3 --version >nul 2>nul
-if not errorlevel 1 (
-    py -3 "%~dp0client\tests\performance\generate_report.py" --root "%PERF_ROOT%"
-    exit /b %errorlevel%
-)
+if not errorlevel 1 goto :generate_perf_with_py
 python --version >nul 2>nul
-if not errorlevel 1 (
-    python "%~dp0client\tests\performance\generate_report.py" --root "%PERF_ROOT%"
-    exit /b %errorlevel%
-)
+if not errorlevel 1 goto :generate_perf_with_python
 echo [ERROR] Python 3 is required to generate offline charts. Raw CSV is retained.
 exit /b 2
+
+:generate_perf_with_py
+py -3 "%~dp0client\tests\performance\generate_report.py" --root "%PERF_ROOT%"
+exit /b %errorlevel%
+
+:generate_perf_with_python
+python "%~dp0client\tests\performance\generate_report.py" --root "%PERF_ROOT%"
+exit /b %errorlevel%
 
 :perf_success
 if not exist "%PERF_ROOT%\report.html" goto :failed
