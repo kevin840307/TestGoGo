@@ -73,7 +73,7 @@ function GpuSnapshot {
  } catch { $script:gpuMemoryCounterAvailable=$false }
  return @{threeD=$threeD;all=$all;dedicated=$dedicated}
 }
-function ReadGodot([object]$target,[string]$stage) {
+function ReadGodot([object]$target,[string]$stage,[bool]$discardEvents=$false) {
  $path=[string]$target.log_path
  if ($path -eq "" -or -not (Test-Path -LiteralPath $path)) { return }
  try { $lines=[IO.File]::ReadAllLines($path) } catch { return }
@@ -91,7 +91,7 @@ function ReadGodot([object]$target,[string]$stage) {
   $kind=""
   if ($line.StartsWith("[RENDER_STATS]")) { $kind="render" }
   if ($line.StartsWith("[PERF_ANALYSIS]")) { $kind="process" }
-  if ($kind -eq "") { continue }
+  if ($kind -eq "" -or $discardEvents) { continue }
   $v=Fields $line
   $event=[pscustomobject][ordered]@{
    timestamp_utc=[DateTime]::UtcNow.ToString("o");run_id=$runId
@@ -170,6 +170,9 @@ foreach ($stage in $stages) {
  if ($ready -match '^(?i:q|quit)$') { break }
  Write-Host "Warmup: $WarmupSeconds sec."
  if ($WarmupSeconds -gt 0) { Start-Sleep -Seconds $WarmupSeconds }
+ # Consume historic login/warmup/performance-profile lines without
+ # attributing them to the next 60-second measurement stage.
+ foreach ($target in $targets) { ReadGodot $target $stage $true }
  [void]$completedStages.Add($stage)
  $end=[DateTime]::UtcNow.AddSeconds($DurationSeconds)
  $idx=0
