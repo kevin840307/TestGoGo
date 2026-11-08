@@ -14,7 +14,11 @@ const COMBAT_MASS := 2
 
 const SIMPLIFY_AUTO := 0
 const SIMPLIFY_OFF := 1
-const SIMPLIFY_ON := 2
+const SIMPLIFY_PIXEL_A := 2
+const SIMPLIFY_PIXEL_B := 3
+const SIMPLIFY_MINIMAL := 4
+# Backward-compatible name: old value 2 now means the default pixel style.
+const SIMPLIFY_ON := SIMPLIFY_PIXEL_A
 
 static func sanitize_load_mode(value: int) -> int:
 	return clampi(value, LOAD_QUALITY, LOAD_MULTIBOX)
@@ -23,14 +27,22 @@ static func sanitize_combat_mode(value: int) -> int:
 	return clampi(value, COMBAT_NORMAL, COMBAT_MASS)
 
 static func sanitize_simplify_mode(value: int) -> int:
-	return clampi(value, SIMPLIFY_AUTO, SIMPLIFY_ON)
+	return clampi(value, SIMPLIFY_AUTO, SIMPLIFY_MINIMAL)
 
 static func simplify_mode_name(value: int) -> String:
 	match sanitize_simplify_mode(value):
 		SIMPLIFY_AUTO: return "auto"
 		SIMPLIFY_OFF: return "off"
-		SIMPLIFY_ON: return "on"
+		SIMPLIFY_PIXEL_A: return "pixel_a"
+		SIMPLIFY_PIXEL_B: return "pixel_b"
+		SIMPLIFY_MINIMAL: return "minimal"
 	return "auto"
+
+static func simplify_mode_enabled(value: int) -> bool:
+	return sanitize_simplify_mode(value) >= SIMPLIFY_PIXEL_A
+
+static func default_auto_style(load_mode: int) -> int:
+	return SIMPLIFY_MINIMAL if sanitize_load_mode(load_mode) == LOAD_MULTIBOX else SIMPLIFY_PIXEL_A
 
 static func apply_visual_overrides(
 	profile: Dictionary,
@@ -41,14 +53,24 @@ static func apply_visual_overrides(
 	player_mode = sanitize_simplify_mode(player_mode)
 	monster_mode = sanitize_simplify_mode(monster_mode)
 	if player_mode != SIMPLIFY_AUTO:
-		result["simplify_other_players"] = player_mode == SIMPLIFY_ON
+		result["simplify_other_players"] = simplify_mode_enabled(player_mode)
 	if monster_mode != SIMPLIFY_AUTO:
-		result["simplify_noncritical_monsters"] = monster_mode == SIMPLIFY_ON
+		result["simplify_noncritical_monsters"] = simplify_mode_enabled(monster_mode)
+
 	result["simplify_players_mode"] = player_mode
 	result["simplify_monsters_mode"] = monster_mode
-	# "Simplify monsters" has one visual meaning everywhere:
-	# texture-free Godot primitive rendering. Do not silently fall back to a
-	# generic monster sprite in Low/Balanced/manual modes.
+	result["player_simplify_style"] = (
+		default_auto_style(int(result.get("load_mode", LOAD_BALANCED)))
+		if player_mode == SIMPLIFY_AUTO
+		else player_mode
+	)
+	result["monster_simplify_style"] = (
+		default_auto_style(int(result.get("load_mode", LOAD_BALANCED)))
+		if monster_mode == SIMPLIFY_AUTO
+		else monster_mode
+	)
+	# Both player and monster simplified visuals are texture-free built-in
+	# primitives. This flag remains for older diagnostics/callers.
 	result["use_primitive_monsters"] = bool(
 		result.get("simplify_noncritical_monsters", false)
 	)
@@ -85,6 +107,8 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 		"simplify_other_players": false,
 		"simplify_noncritical_monsters": false,
 		"use_primitive_monsters": false,
+		"player_simplify_style": SIMPLIFY_PIXEL_A,
+		"monster_simplify_style": SIMPLIFY_PIXEL_A,
 		"hide_far_noncombat_monsters": false,
 		"aggressive_cache_trim": false,
 	}
@@ -140,8 +164,12 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 			profile["simplify_noncritical_monsters"] = true
 			profile["hide_far_noncombat_monsters"] = true
 
-	# Keep direct resolve() callers consistent with apply_visual_overrides():
-	# every simplified noncritical monster uses the built-in primitive path.
+	# Direct resolve() callers receive a complete style as well. MultiBox uses
+	# the cheapest minimal style; other automatic simplification keeps enough
+	# pixel detail to remain readable.
+	var auto_style := default_auto_style(load_mode)
+	profile["player_simplify_style"] = auto_style
+	profile["monster_simplify_style"] = auto_style
 	profile["use_primitive_monsters"] = bool(
 		profile.get("simplify_noncritical_monsters", false)
 	)
