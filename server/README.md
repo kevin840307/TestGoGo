@@ -2,6 +2,14 @@
 
 A **localhost-only prototype** built to match the recovered Godot client's WebSocket protocol. It is not yet a playable offline MMO.
 
+## 2026-11-08 功能與驗證狀態
+
+- [未完成／需驗證的功能清單](FEATURE_GAPS.md)：P0／P1／P2、依賴與驗收條件。
+- [封包契約狀態](../tests/PACKET_CONTRACT.md)：Client/Server Type／Action、欄位 Schema 與靜態檢查範圍。
+- [可維護的測試架構](../tests/SMOKE_TESTS.md)：領域分檔、共用 fixture、端到端測試與本機指令。
+
+**請勿以 Handler 存在或測試程式已提交，推論所有功能或 Godot E2E 已通過。**
+
 ## Start
 
 ```powershell
