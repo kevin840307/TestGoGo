@@ -3768,8 +3768,7 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"PetSync\"")) &&
             responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "寵物進化")),
+                PacketTreeContainsString(x, "寵物進化")),
             "PetAction AllocateStat consumes UseExp, applies STR growth, and evolves when requirements are met");
     }
 
@@ -4052,8 +4051,7 @@ try
                     "\"Type\":\"SystemMessageBroadcast\"") &&
                 JsonSerializer.Serialize(x).Contains(
                     "TestCharacter") &&
-                JsonSerializer.Serialize(x).Contains(
-                    "全服測試訊息")),
+                PacketTreeContainsString(x, "全服測試訊息")),
             "MegaphoneMessage consumes one item and publishes global announcement");
     }
 
@@ -4094,8 +4092,7 @@ try
                 JsonSerializer.Serialize(x).Contains(
                     "\"Type\":\"SkillSync\"")) &&
             responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "已學會 加速術 Lv.1")),
+                PacketTreeContainsString(x, "已學會 加速術 Lv.1")),
             "UseItemRequest consumes a resolved skill book and syncs learned skill");
     }
 
@@ -4152,8 +4149,7 @@ try
 
         Check(
             responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains(
-                    "自動聖靈啟動中")),
+                PacketTreeContainsString(x, "自動聖靈啟動中")),
             "AutoSaint blocks manual combat on the server");
     }
 
@@ -4235,8 +4231,7 @@ try
                   JsonSerializer.Serialize(x).Contains(
                       "\"Type\":\"InventorySync\"")) &&
               responses.Any(x =>
-                  JsonSerializer.Serialize(x).Contains(
-                      "幸福娃娃送給你")),
+                  PacketTreeContainsString(x, "幸福娃娃送給你")),
             "UseItemRequest opens Happiness Doll, consumes one and grants one reward");
 
         Check(
@@ -5081,7 +5076,9 @@ try
             responses);
 
         Check(
-            json.Contains(card.Label + "擴充完成") &&
+            PacketTreeContainsString(
+                responses,
+                card.Label + "擴充完成") &&
             json.Contains("\"Type\":\"InventorySync\"") &&
             json.Contains("\"Type\":\"EquipSync\"") &&
             json.Contains("\"Type\":\"PetSync\"") &&
@@ -5593,7 +5590,7 @@ try
     {
         var responses = router.Handle(tooLow.RootElement, session);
         Check(responses.Any(x =>
-                JsonSerializer.Serialize(x).Contains("機甲等級不足")),
+                PacketTreeContainsString(x, "機甲等級不足")),
             "Lv1 mecha cannot equip Lv20 Beast Spirit card");
     }
 
