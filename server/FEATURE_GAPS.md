@@ -52,8 +52,12 @@
   - `Protocol/RequestSchemaSmokeTests.cs`
   - `Protocol/ActionSchemaSmokeTests.cs`
   - `Protocol/IdentitySchemaSmokeTests.cs`
+  - `Protocol/PreloginPacketSmokeTests.cs`
+  - `World/BlockingMapSmokeTests.cs`
   - `Announcements/AnnouncementSmokeTests.cs`
+  - `Fixtures/TemporaryDirectoryFixture.cs`（測試暫存資料自動清理）
 - 共用 `SmokeAssert.cs`，仍由原 Smoke runner 呼叫，避免增加額外測試框架依賴。
+- **2026-11-08 路由來源複核**：逐檔比對 95 個 Godot `.gd` 腳本及 Server 固定回傳 Type 的來源，未發現新的固定 Type 遺漏對接；`BankTransfer` 由 `BankPacketHandler` 模組處理，而不是 `PacketRouter.case`。此結論**不包含**動態組合的所有欄位、實際多人遊戲流程與外部服務可用性。
 - **待拆**的世界／交易／任務等大型整合案例需先建立可複用的 fixture（獨立 SQLite、地圖資料、Player sessions），然後分成不同測試模組；不可只把原本依賴同一個可變 Session 的程式碼切開，否則容易產生跨測試污染。
 - 新增測試請優先放進相關領域檔案；不要繼續往 `Program.cs` 最前面塞大量獨立 `using (Json(...))`。
 
