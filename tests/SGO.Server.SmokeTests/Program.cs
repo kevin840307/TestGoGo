@@ -5616,7 +5616,10 @@ try
             json.Contains("\"Success\":true");
         var statusSync = json.Contains(
             "\"Type\":\"PlayerStatusSync\"");
-        var refundMessage = json.Contains("退回 10 點");
+        // System.Text.Json escapes CJK characters by default. Decode
+        // the packet tree before comparing user-visible Chinese text.
+        var refundMessage = PacketTreeContainsString(
+            responses, "退回 10 點");
 
         Check(
             statsReset && pointsRefunded && growthRecalculated &&
