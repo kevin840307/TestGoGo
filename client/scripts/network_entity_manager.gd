@@ -6,6 +6,7 @@ const MONSTER_SCENE = preload("res://monster_entity.tscn")
 const NPC_SCENE = preload("res://npc_entity.tscn")
 const GROUND_ITEM_SCENE = preload("res://ground_item_entity.tscn")
 const PET_SCENE = preload("res://pet_entity.tscn")
+const PENDING_AOI_MOVES = preload("res://scripts/network_entity_pending_moves.gd")
 const DYNAMIC_ENTITY_VISIBILITY_LAYER: = 1 << 1
 const DEBUG_MONSTER_NETWORK_LOGS: bool = false
 const MONSTER_AOI_ENTER_RADIUS: float = 1800.0
@@ -42,6 +43,7 @@ var _ground_spawn_templates: Dictionary = {}
 var _deferred_ground_spawns: Dictionary = {}
 var _ground_aoi_elapsed: float = 0.0
 var _combat_reveal_until_msec: Dictionary = {}
+var _pending_aoi_moves = PENDING_AOI_MOVES.new()
 
 func get_active_entity(entity_id: int) -> Node2D:
 	var entity = active_entities.get(entity_id)
@@ -71,6 +73,7 @@ func clear_map_entities() -> Dictionary:
 	_monster_spawn_templates.clear()
 	_deferred_monster_spawns.clear()
 	_combat_reveal_until_msec.clear()
+	_pending_aoi_moves.clear()
 	_monster_aoi_elapsed = 0.0
 	_ground_spawn_templates.clear()
 	_deferred_ground_spawns.clear()
@@ -278,11 +281,22 @@ func _enqueue_spawn_by_priority(data: Dictionary) -> void :
 	_spawn_queue.insert(low, data)
 
 func _get_current_queued_spawn_data(data: Dictionary) -> Dictionary:
-	# Movement packets may arrive while a monster is waiting in the spawn
-	# queue. The queued snapshot must not overwrite its newer authoritative
-	# position when the entity is finally instantiated.
+	# MoveEntity can arrive after SpawnEntity but before a player's/pet's
+	# queued scene exists. Apply the newest buffered move at instantiate time.
+	# For monsters, their canonical template already tracks every move.
 	if int(data.get("EntityType", -1)) != 1:
-		return data
+		var entity_id: int = int(data.get("EntityID", 0))
+		var buffered: Dictionary = _pending_aoi_moves.consume_spawn_move(
+			entity_id, Time.get_ticks_msec()
+		)
+		if buffered.is_empty():
+			return data
+		var latest: Dictionary = data.duplicate()
+		latest["LocX"] = buffered.get("X", latest.get("LocX", 0.0))
+		latest["LocY"] = buffered.get("Y", latest.get("LocY", 0.0))
+		if str(buffered.get("Dir", "")) != "":
+			latest["Dir"] = buffered["Dir"]
+		return latest
 	var entity_id: int = int(data.get("EntityID", 0))
 	var latest = _monster_spawn_templates.get(entity_id, null)
 	if latest is Dictionary:
@@ -399,6 +413,18 @@ func _on_entity_spawned(data: Dictionary) -> void :
 	var entity_id := int(data.get("EntityID", 0))
 	if entity_id <= 0:
 		return
+	# The first MoveEntity can precede SpawnEntity when two server tasks
+	# publish concurrently. Use its latest coordinates without allocating
+	# a visual object before the server confirmed the entity exists.
+	var buffered_move: Dictionary = _pending_aoi_moves.consume_spawn_move(
+		entity_id, Time.get_ticks_msec()
+	)
+	if not buffered_move.is_empty():
+		data = data.duplicate(true)
+		data["LocX"] = buffered_move["X"]
+		data["LocY"] = buffered_move["Y"]
+		if str(buffered_move.get("Dir", "")) != "":
+			data["Dir"] = buffered_move["Dir"]
 	var entity_type: int = int(data.get("EntityType", -1))
 	if entity_type == 1:
 		var cached: Dictionary = data.duplicate(true)
@@ -487,6 +513,7 @@ func _process(delta: float) -> void :
 		_monster_spawn_templates.clear()
 		_deferred_monster_spawns.clear()
 		_combat_reveal_until_msec.clear()
+		_pending_aoi_moves.clear()
 		_ground_spawn_templates.clear()
 		_deferred_ground_spawns.clear()
 		_ground_aoi_elapsed = 0.0
@@ -704,6 +731,8 @@ func _finalize_entity_death(entity: Node, clear_hover: bool) -> void :
 
 func _on_entity_despawned(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
+	# A delayed MoveEntity after an AOI exit must not revive an actor.
+	_pending_aoi_moves.mark_despawned(entity_id, Time.get_ticks_msec())
 	var target_node = get_active_entity(entity_id)
 	if target_node:
 		var local_player = GameManager.current_player
@@ -725,6 +754,8 @@ func _on_entity_despawned(data: Dictionary) -> void :
 
 func _on_entity_moved(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
+	if entity_id <= 0:
+		return
 	if _monster_spawn_templates.has(entity_id):
 		# Keep the original immutable-template behavior. In-place mutation
 		# of a shared deferred/queued snapshot can change spawn lifecycles.
@@ -739,6 +770,8 @@ func _on_entity_moved(data: Dictionary) -> void :
 				_queue_cached_monster_spawn(entity_id)
 			return
 	var target_node = get_active_entity(entity_id)
+	if not target_node and not _monster_spawn_templates.has(entity_id) and not _ground_spawn_templates.has(entity_id):
+		_pending_aoi_moves.record_move(entity_id, data, Time.get_ticks_msec())
 	if target_node:
 		if DEBUG_MONSTER_NETWORK_LOGS and int(_active_entity_types.get(entity_id, -1)) == 1:
 			print("[MONSTER_NET_MOVE] id=", entity_id,
