@@ -162,13 +162,33 @@ func _test_right_click_preserves_player_interaction() -> void:
 	CursorManager.current_hovered_entity = null
 	fake_monster.free()
 
-	# Bare terrain left clicks must not be intercepted by the global
-	# mouse handler; Player._unhandled_input owns one-shot click navigation.
+	# A FIRST click on bare terrain must STOP the latched walk, not
+	# immediately send another A* request in Player._unhandled_input.
+	# The event itself is still free for the original entity/UI handlers.
+	var left_release = InputEventMouseButton.new()
+	left_release.button_index = MOUSE_BUTTON_LEFT
+	left_release.pressed = false
+	player._input(left_release)
 	player._mouse_autorun.terrain_press(4000)
 	player._mouse_autorun.poll_long_hold(5000)
+	player.is_moving = true
+	player.move_path = PackedVector2Array([Vector2(120.0, 120.0)])
+	var initial_request_id: int = player._navigation_request_id
 	player._input(left)
-	_check(player._mouse_autorun.latched,
-		"terrain left click remains available to regular click-to-move")
+	_check(not player._mouse_autorun.latched and not player.is_moving
+		and player.move_path.is_empty() and player._autorun_left_press_cancelled,
+		"first bare-terrain left click stops latched walking and marks this press as cancelled")
+	_check(player._navigation_request_id > initial_request_id,
+		"left-click stop cancels any in-flight pathfinding request")
+	var player_source_after_stop: String = FileAccess.get_file_as_string("res://player.gd")
+	var unhandled_start: int = player_source_after_stop.find("func _unhandled_input(")
+	var unhandled_section: String = player_source_after_stop.substr(unhandled_start)
+	_check(unhandled_section.contains("if _autorun_left_press_cancelled:\n\t\t\t\treturn"),
+		"same left click cannot restart terrain navigation in the unhandled handler")
+	player._input(left_release)
+	_check(not player._autorun_left_press_cancelled and
+		not player._mouse_autorun.latched,
+		"release clears one-click suppression, allowing the next normal terrain click")
 	player.cancel_autorun_tracking()
 
 	# UI clicks must have the same priority without turning an ordinary
