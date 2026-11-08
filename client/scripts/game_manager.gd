@@ -1064,6 +1064,21 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 	current_map_node = map_resource.instantiate()
 	var instantiate_ms: = float(Time.get_ticks_usec() - instantiate_started_usec) / 1000.0
 
+	# Match the first-map loading path: Blocking.dat is authoritative, so the
+	# legacy collision TileMapLayers are unused. Remove them BEFORE add_child
+	# to avoid registering thousands of unnecessary physics cells on teleport.
+	var removed_legacy_layers: Array[String] = []
+	for collision_name: String in ["CollisionContainer", "CollisionLayer"]:
+		var legacy_collision := current_map_node.get_node_or_null(collision_name)
+		if is_instance_valid(legacy_collision):
+			current_map_node.remove_child(legacy_collision)
+			legacy_collision.free()
+			removed_legacy_layers.append(collision_name)
+	if OS.is_debug_build() and not removed_legacy_layers.is_empty():
+		print("[MAP_TRANSITION_OPT] map=%d removed_collision_nodes=%s" % [
+			target_map_id, ",".join(removed_legacy_layers)
+		])
+
 	if is_instance_valid(current_hud) and current_hud.loading_bar:
 		current_hud.loading_bar.value = MAP_LOADING_ADD_CHILD_PROGRESS
 	await get_tree().process_frame
