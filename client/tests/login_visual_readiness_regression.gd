@@ -3,6 +3,7 @@ extends SceneTree
 # godot --headless --path client --script res://tests/login_visual_readiness_regression.gd
 # Does not start a server, preload recipes, inspect passwords or render a game.
 const ENTRY_SCRIPT = preload("res://entry_manager.gd")
+const ENTRY_SCENE = preload("res://entry_manager.tscn")
 const LOGIN_SCENE = preload("res://LoginScreen.tscn")
 var _failures: int = 0
 
@@ -40,6 +41,14 @@ func _run() -> void:
 		"17 steady foreground frames are insufficient")
 	_check(ENTRY_SCRIPT.can_reveal_login(true, true, 18),
 		"18 steady foreground frames allow login form reveal")
+
+	var entry: Control = ENTRY_SCENE.instantiate() as Control
+	_check(entry != null, "entry scene can be instantiated with its loading overlay")
+	if entry != null:
+		var loading_background: ColorRect = entry.get_node_or_null("LoadingOverlay/BlackBackground") as ColorRect
+		_check(loading_background != null and loading_background.mouse_filter == Control.MOUSE_FILTER_STOP,
+			"opaque startup loading overlay blocks clicks into the unrevealed login form")
+		entry.free()
 
 	# Test actual control state changes without playing the heavyweight OGV.
 	var screen: Control = LOGIN_SCENE.instantiate() as Control
