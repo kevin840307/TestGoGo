@@ -4214,37 +4214,69 @@ public sealed class CombatService
             return buffs;
 
         var nowUtcMs = now.ToUnixTimeMilliseconds();
-        buffs.AddRange(
-            _store.GetActiveTimedEffects(
-                    accountId,
-                    characterId,
-                    nowUtcMs)
-                .Select(effect =>
-                {
-                    var remainingSeconds = Math.Max(
-                        0.0,
-                        (effect.ExpiresUtcMs - nowUtcMs) / 1000.0);
-                    var totalSeconds = effect.DurationSeconds > 0
-                        ? effect.DurationSeconds
-                        : remainingSeconds;
-                    var buffName = effect.EffectKey switch
-                    {
-                        "exp_multiplier_percent" =>
-                            $"ExperienceBoost_{effect.EffectValue}",
-                        _ => $"TimedEffect_{effect.EffectKey}"
-                    };
+        var timedEffects = _store.GetActiveTimedEffects(
+            accountId,
+            characterId,
+            nowUtcMs);
 
-                    return (object)new
-                    {
-                        BuffName = buffName,
-                        SourceType = effect.SourceType,
-                        Value = effect.SourceValue > 0
-                            ? effect.SourceValue
-                            : effect.EffectValue,
-                        RemainingTime = remainingSeconds,
-                        TotalTime = totalSeconds
-                    };
-                }));
+        foreach (var sourceGroup in timedEffects.GroupBy(effect => new
+                 {
+                     effect.SourceType,
+                     effect.SourceValue,
+                     effect.StartedUtcMs,
+                     effect.ExpiresUtcMs,
+                     effect.DurationSeconds
+                 }))
+        {
+            var remainingSeconds = Math.Max(
+                0.0,
+                (sourceGroup.Key.ExpiresUtcMs - nowUtcMs) / 1000.0);
+            var totalSeconds = sourceGroup.Key.DurationSeconds > 0
+                ? sourceGroup.Key.DurationSeconds
+                : remainingSeconds;
+
+            // Item-backed bundles (for example one Booster carrying HP, ATK
+            // and LUK rows) are one logical HUD buff and should render once.
+            if (sourceGroup.Key.SourceType == 1 &&
+                sourceGroup.Key.SourceValue > 0)
+            {
+                var exp = sourceGroup.FirstOrDefault(effect =>
+                    effect.EffectKey == "exp_multiplier_percent");
+
+                buffs.Add(new
+                {
+                    BuffName = exp is not null
+                        ? $"ExperienceBoost_{exp.EffectValue}"
+                        : $"ItemEffect_{sourceGroup.Key.SourceValue}",
+                    SourceType = sourceGroup.Key.SourceType,
+                    Value = sourceGroup.Key.SourceValue,
+                    RemainingTime = remainingSeconds,
+                    TotalTime = totalSeconds
+                });
+                continue;
+            }
+
+            foreach (var effect in sourceGroup)
+            {
+                var buffName = effect.EffectKey switch
+                {
+                    "exp_multiplier_percent" =>
+                        $"ExperienceBoost_{effect.EffectValue}",
+                    _ => $"TimedEffect_{effect.EffectKey}"
+                };
+
+                buffs.Add(new
+                {
+                    BuffName = buffName,
+                    SourceType = effect.SourceType,
+                    Value = effect.SourceValue > 0
+                        ? effect.SourceValue
+                        : effect.EffectValue,
+                    RemainingTime = remainingSeconds,
+                    TotalTime = totalSeconds
+                });
+            }
+        }
 
         var character = _store.GetCharacter(
             accountId,
