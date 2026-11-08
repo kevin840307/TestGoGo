@@ -204,19 +204,12 @@ public sealed class PacketRouter
                 state.PublishedCharacterId);
         }
 
-        if (changed &&
-            state.PublishedMapId > 0 &&
-            state.PublishedCharacterId > 0)
-        {
-            _broadcasts.PublishToMap(
-                state.PublishedMapId,
-                new
-                {
-                    Type = "DespawnEntity",
-                    EntityID = state.PublishedCharacterId
-                },
-                state.ConnectionId);
-        }
+        // A selected character must not appear for every player across
+        // the whole map. Only WorldReady clients join the spatial AOI.
+        // Remove old visibility before a map/identity transition.
+        if (changed || !state.WorldReady)
+            PublishPlayerAoiChanges(
+                _broadcasts.RemovePlayerAoi(state.ConnectionId));
 
         _broadcasts.UpdatePresence(
             state.ConnectionId,
@@ -226,21 +219,9 @@ public sealed class PacketRouter
             hasCurrent ? state.LastX : 0,
             hasCurrent ? state.LastY : 0);
 
-        if (changed &&
-            hasCurrent)
-        {
-            var spawn = BuildPlayerSpawnPacket(
-                state.AccountId!.Value,
-                nextCharacterId);
-
-            if (spawn is not null)
-            {
-                _broadcasts.PublishToMap(
-                    nextMapId,
-                    spawn,
-                    state.ConnectionId);
-            }
-        }
+        if (hasCurrent && state.WorldReady)
+            PublishPlayerAoiChanges(
+                _broadcasts.ReconcilePlayerAoi(state.ConnectionId));
 
         state.PublishedMapId = nextMapId;
         state.PublishedCharacterId = nextCharacterId;
@@ -271,18 +252,9 @@ public sealed class PacketRouter
                 characterId);
         }
 
-        if (state.PublishedMapId > 0 &&
-            state.PublishedCharacterId > 0)
-        {
-            _broadcasts.PublishToMap(
-                state.PublishedMapId,
-                new
-                {
-                    Type = "DespawnEntity",
-                    EntityID = state.PublishedCharacterId
-                },
-                state.ConnectionId);
-        }
+        // Only clients that actually saw this player need the despawn.
+        PublishPlayerAoiChanges(
+            _broadcasts.RemovePlayerAoi(state.ConnectionId));
 
         _broadcasts.UpdatePresence(
             state.ConnectionId,
@@ -292,6 +264,54 @@ public sealed class PacketRouter
 
         state.PublishedMapId = 0;
         state.PublishedCharacterId = 0;
+    }
+
+    private void PublishPlayerAoiChanges(
+        IReadOnlyList<PlayerSpatialAoi.Change> changes,
+        Guid skipObserver = default)
+    {
+        if (changes.Count == 0)
+            return;
+
+        var spawnCache = new Dictionary<Guid, object?>();
+        foreach (var change in changes)
+        {
+            if (change.ObserverConnectionId == skipObserver)
+                continue;
+
+            // Concurrent movement may supersede a queued edge change.
+            if (_broadcasts.IsPlayerAoiVisible(
+                    change.ObserverConnectionId,
+                    change.Subject.ConnectionId) != change.Appeared)
+                continue;
+
+            if (!change.Appeared)
+            {
+                _broadcasts.PublishToConnection(
+                    change.ObserverConnectionId,
+                    new
+                    {
+                        Type = "DespawnEntity",
+                        EntityID = change.Subject.CharacterId
+                    });
+                continue;
+            }
+
+            if (!spawnCache.TryGetValue(
+                    change.Subject.ConnectionId, out var packet))
+            {
+                packet = BuildPlayerSpawnPacket(
+                    change.Subject.AccountId,
+                    change.Subject.CharacterId,
+                    change.Subject.X,
+                    change.Subject.Y);
+                spawnCache[change.Subject.ConnectionId] = packet;
+            }
+
+            if (packet is not null)
+                _broadcasts.PublishToConnection(
+                    change.ObserverConnectionId, packet);
+        }
     }
 
     public IReadOnlyList<object> Handle(JsonElement req, ClientSession state)
@@ -1011,6 +1031,9 @@ public sealed class PacketRouter
                     state.ConnectionId,
                     x,
                     y);
+                if (state.WorldReady)
+                    PublishPlayerAoiChanges(
+                        _broadcasts.ReconcilePlayerAoi(state.ConnectionId));
 
                 var now = DateTimeOffset.UtcNow;
                 if (now - state.LastPositionPersistAt >=
@@ -1023,8 +1046,8 @@ public sealed class PacketRouter
                     PositionBroadcastInterval)
                 {
                     state.LastPositionBroadcastAt = now;
-                    _broadcasts.PublishToMap(
-                        state.CurrentMapId,
+                    _broadcasts.PublishToPlayerObservers(
+                        state.ConnectionId,
                         new
                         {
                             Type = "MoveEntity",
@@ -1033,8 +1056,7 @@ public sealed class PacketRouter
                             Y = y,
                             Dir = req.Str("Dir", "1"),
                             SpeedTime = 0.10
-                        },
-                        state.ConnectionId);
+                        });
                 }
 
                 return [];
@@ -4798,16 +4820,15 @@ public sealed class PacketRouter
                         state.CharacterId.Value,
                         playerState);
 
-                    _broadcasts.PublishToMap(
-                        state.CurrentMapId,
+                    _broadcasts.PublishToPlayerObservers(
+                        state.ConnectionId,
                         new
                         {
                             Type = "SyncState",
                             EntityID = state.CharacterId.Value,
                             State = playerState,
                             Dir = req.Str("Dir", "1")
-                        },
-                        state.ConnectionId);
+                        });
                 }
                 return [];
 
@@ -5545,16 +5566,25 @@ public sealed class PacketRouter
     private IReadOnlyList<object> BuildOtherPlayerSnapshotPackets(
         ClientSession state)
     {
-        var packets = new List<object>();
+        if (!state.WorldReady || state.CurrentMapId <= 0)
+            return [];
 
-        foreach (var player in _broadcasts.PlayersInMap(
-                     state.CurrentMapId,
-                     state.ConnectionId))
+        // Perform the first reconcile only after the client has loaded the
+        // real Godot map. New pair edges publish SpawnEntity to existing
+        // observers; the local client receives the snapshot as the normal
+        // response to WorldReady (never an early background queue packet).
+        PublishPlayerAoiChanges(
+            _broadcasts.ReconcilePlayerAoi(state.ConnectionId),
+            skipObserver: state.ConnectionId);
+
+        var packets = new List<object>();
+        foreach (var player in _broadcasts.VisiblePlayerPeers(state.ConnectionId))
         {
             var spawn = BuildPlayerSpawnPacket(
                 player.AccountId,
-                player.CharacterId);
-
+                player.CharacterId,
+                player.X,
+                player.Y);
             if (spawn is not null)
                 packets.Add(spawn);
         }
@@ -5564,7 +5594,9 @@ public sealed class PacketRouter
 
     private object? BuildPlayerSpawnPacket(
         long accountId,
-        long dbid)
+        long dbid,
+        double? runtimeX = null,
+        double? runtimeY = null)
     {
         var character = _store.GetCharacter(
             accountId,
@@ -5603,6 +5635,11 @@ public sealed class PacketRouter
             ["IsShopOpen"] = shopState.IsOpen,
             ["ShopName"] = shopState.ShopName
         };
+        if (runtimeX.HasValue && runtimeY.HasValue)
+        {
+            extra["LocX"] = runtimeX.Value;
+            extra["LocY"] = runtimeY.Value;
+        }
 
         return new
         {
@@ -5610,8 +5647,8 @@ public sealed class PacketRouter
             EntityID = dbid,
             EntityType = 0,
             Name = character["NAME"],
-            LocX = character["LocX"],
-            LocY = character["LocY"],
+            LocX = runtimeX ?? Convert.ToDouble(character["LocX"]),
+            LocY = runtimeY ?? Convert.ToDouble(character["LocY"]),
             ExtraData = extra
         };
     }
