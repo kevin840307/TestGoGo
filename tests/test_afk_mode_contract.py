@@ -135,6 +135,8 @@ class AfkModeContract(unittest.TestCase):
         manager = read("client/scripts/game_manager.gd")
         audio = read("client/scripts/audio_manager.gd")
         self.assertIn("func set_afk_custom_cursor_enabled(enabled: bool)", cursor)
+        self.assertIn("Keep the main", cursor)
+        self.assertIn("cursor_sprite.visible = true", cursor)
         self.assertIn("Input.mouse_mode = Input.MOUSE_MODE_HIDDEN", cursor)
         self.assertIn("if _afk_custom_cursor_enabled:", cursor)
         self.assertIn("CursorManager.set_afk_custom_cursor_enabled(_afk_active)", manager)

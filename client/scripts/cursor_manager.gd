@@ -76,6 +76,9 @@ func _ready() -> void :
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 func _process(_delta: float) -> void :
+	# Root and PopupMenu are separate viewports. The root cursor stays alive
+	# while a popup is open so leaving the popup never creates an invisible
+	# pointer region.
 	var m_pos = cursor_sprite.get_global_mouse_position()
 	cursor_sprite.global_position = m_pos
 	if _afk_custom_cursor_enabled:
@@ -226,8 +229,12 @@ func show_popup_game_cursor(popup_window: Window) -> void:
 	_popup_cursor_window = popup_window
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
 
+	# PopupMenu is rendered in a separate Window/Viewport. Keep the main
+	# cursor visible in the root viewport and render a second cursor in the
+	# popup viewport. This gives seamless handoff when the pointer crosses
+	# the popup bounds instead of disappearing outside the select list.
 	if is_instance_valid(cursor_sprite):
-		cursor_sprite.visible = false
+		cursor_sprite.visible = true
 	if is_instance_valid(tooltip_label):
 		tooltip_label.visible = false
 

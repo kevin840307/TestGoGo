@@ -47,3 +47,6 @@ func _run() -> void:
 	Input.mouse_mode = original_mouse_mode
 	print("[AFK_CURSOR_AUDIO_REGRESSION] %s" % ("ALL PASS" if failures == 0 else "FAILURES=%d" % failures))
 	quit(0 if failures == 0 else 1)
+
+# Popup cursor boundary regression note: OptionButton's PopupMenu is a separate Window.
+# The root custom cursor must remain visible while the popup-specific cursor is active.
