@@ -47,7 +47,7 @@ Server 執行 Lua 時以私有控制標記代替原先空字串，再於 `Dialog
 
 **已確認原版腳本會在一個函式內連續執行 `Say()`、`Say()`、`Ask()`、`QuestEnd()`。** Server 原本會順序送出所有封包，但 Client 立即逐筆覆蓋畫面，造成前幾句無法閱讀、`QuestEnd()` 立即關閉。
 
-Client 現在以 `legacy_dialog_sequence.gd` **只緩衝同一 NPC（EntityID + ScriptName）的後續對話事件**，第一句立即顯示、其餘等待使用者點擊再顯示，`Ask()` 最後才呈現選項；尾端的 `QuestEnd()` 在 NPC 正顯示 `Say()` 時延後處理。不同 NPC 的對話會清除舊佇列。選項按下後仍使用原本的 `NpcOptionRequest`、`TargetNode`，不插入新的 Server 狀態機。
+Client 現在以 `legacy_dialog_sequence.gd` **只緩衝同一 NPC（EntityID + ScriptName）的後續對話事件**，第一句立即顯示、其餘等待使用者點擊再顯示，切換時收起前一句 NPC／玩家氣泡，`Ask()` 最後才呈現選項；尾端的 `QuestEnd()` 在 NPC 正顯示 `Say()` 時延後處理。不同 NPC 的對話會清除舊佇列。選項按下後仍使用原本的 `NpcOptionRequest`、`TargetNode`，不插入新的 Server 狀態機。
 
 - 已有 `NextNode` 的 `Say()`：若目前批次沒有待顯示事件，點擊後仍送出原本的 `NpcOptionRequest`。
 - 沒有 `NextNode` 的 `Say()`：若有後續 `Say()/Ask()`，點擊會顯示下一筆；若無，按原本結束方式關閉。

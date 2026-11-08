@@ -65,9 +65,10 @@ func _run() -> void:
 	var manager_source := FileAccess.get_file_as_string(
 		"res://scripts/network_entity_manager.gd")
 	_check(hud_source.contains("func has_legacy_dialog_line_waiting()") and
+		hud_source.contains("_hide_current_dialog_bubbles()") and
 		hud_source.contains("_on_npc_dialog_received(next_packet, true)") and
 		hud_source.contains("_legacy_dialog_sequence.defer_close()"),
-		"HUD consumes queued lines and defers server close")
+		"HUD hides prior speech, consumes queued lines, and defers server close")
 	_check(manager_source.contains("hud.has_legacy_dialog_line_waiting()") and
 		manager_source.contains("hud.request_next_dialog_sentence()"),
 		"existing click-to-continue hook remains connected")

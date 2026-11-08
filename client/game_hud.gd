@@ -1662,6 +1662,7 @@ func request_next_dialog_sentence() -> void :
 		if str(next_packet.get("DialogType", "")) == "Close":
 			_on_npc_dialog_closed()
 		else:
+			_hide_current_dialog_bubbles()
 			_on_npc_dialog_received(next_packet, true)
 		return
 	if _next_dialog_node == "":
@@ -1702,15 +1703,7 @@ func _on_npc_dialog_closed() -> void :
 	if npc_dialog_panel: npc_dialog_panel.visible = false
 
 
-	if _current_npc_entity_id != 0 and NetworkEntityManager:
-		if "active_entities" in NetworkEntityManager and NetworkEntityManager.active_entities.has(_current_npc_entity_id):
-			var entity = NetworkEntityManager.active_entities[_current_npc_entity_id]
-			if is_instance_valid(entity) and entity.has_method("hide_chat_bubble"):
-				entity.hide_chat_bubble()
-
-
-	if is_instance_valid(target_player) and target_player.has_method("hide_chat_bubble"):
-		target_player.hide_chat_bubble()
+	_hide_current_dialog_bubbles()
 
 
 	_current_npc_entity_id = 0
@@ -1720,6 +1713,16 @@ func _on_npc_dialog_closed() -> void :
 
 	if is_instance_valid(target_player):
 		target_player.set("is_interacting_with_npc", false)
+
+func _hide_current_dialog_bubbles() -> void:
+	if _current_npc_entity_id != 0 and NetworkEntityManager:
+		if "active_entities" in NetworkEntityManager and NetworkEntityManager.active_entities.has(_current_npc_entity_id):
+			var entity = NetworkEntityManager.active_entities[_current_npc_entity_id]
+			if is_instance_valid(entity) and entity.has_method("hide_chat_bubble"):
+				entity.hide_chat_bubble()
+	if is_instance_valid(target_player) and target_player.has_method("hide_chat_bubble"):
+		target_player.hide_chat_bubble()
+
 
 func _trigger_npc_bubble(entity_id: int, text: String, bubble_type: int, speaker: String = "NPC", rich_text: bool = false) -> void :
 	var margins = BUBBLE_TEXT_MARGINS.get(bubble_type, BUBBLE_TEXT_MARGINS[0])
