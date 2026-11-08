@@ -348,6 +348,65 @@ internal static class SessionLifecycleSmokeTests
                 "lifecycle fixture login succeeds through router");
         }
 
+        var preWorldRequests =
+            new object[]
+            {
+                new
+                {
+                    Type = "UseItemRequest",
+                    ItemUID = 1L
+                },
+                new
+                {
+                    Type = "BankTransfer",
+                    UID = 1L,
+                    TabType = 0,
+                    Amount = 1,
+                    ToBank = true
+                },
+                new
+                {
+                    Type = "MallAction",
+                    Action = "OpenMall"
+                },
+                new
+                {
+                    Type = "TradeLock"
+                },
+                new
+                {
+                    Type = "PetAction",
+                    Action = "Summon",
+                    PetUID = 1L
+                },
+                new
+                {
+                    Type = "PartyAction",
+                    Action = "Create"
+                }
+            };
+
+        foreach (var request in preWorldRequests)
+        {
+            using var packet = Json(
+                JsonSerializer.Serialize(
+                    request));
+            var responses =
+                router.Handle(
+                    packet.RootElement,
+                    session);
+            var json =
+                JsonSerializer.Serialize(
+                    responses);
+
+            Check(
+                json.Contains(
+                    "\"Type\":\"PacketError\"") &&
+                json.Contains(
+                    "\"Code\":\"WORLD_REQUIRED\""),
+                "authenticated gameplay request before character selection returns WORLD_REQUIRED");
+        }
+
         using var select = Json(
             JsonSerializer.Serialize(new
             {
