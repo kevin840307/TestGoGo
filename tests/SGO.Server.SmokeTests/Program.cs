@@ -5253,6 +5253,11 @@ try
               JsonSerializer.Serialize(x).Contains("\"EntityType\":1")),
         "monster map initializes server-shared combat entities");
 
+    MonsterConcurrencySmokeTests.Run(
+        combat,
+        store,
+        world);
+
     var monster = session.Monsters.Values.First();
 
     store.SetSkill(
