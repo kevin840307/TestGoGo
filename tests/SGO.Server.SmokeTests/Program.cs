@@ -366,7 +366,11 @@ var currentCatalog = new CurrentClientDataCatalog(
         realCurrentCatalog.Items.Where(item =>
             item.Category.Equals(
                 "booster",
-                StringComparison.OrdinalIgnoreCase))),
+                StringComparison.OrdinalIgnoreCase) ||
+            item.ItemId is
+                2256 or
+                15230 or
+                15243)),
     new[]
     {
         new CurrentSkillDefinition(20101, "Current Skill 20101"),
@@ -2900,6 +2904,15 @@ try
         account.Value,
         id,
         currentCatalog);
+
+    RecoveredBoxSmokeTests.Run(
+        router,
+        store,
+        session,
+        account.Value,
+        id,
+        currentCatalog,
+        realCurrentCatalog);
 
     var petBeforeLevel = store.GetCharacterAssets(
             account.Value,
