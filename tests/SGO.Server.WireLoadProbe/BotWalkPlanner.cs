@@ -10,6 +10,8 @@ internal sealed class BotWalkPlanner
     private readonly int _radius;
     private readonly (int X, int Y) _center;
 
+    public string GameDataRoot { get; }
+
     public BotWalkPlanner(int map, int centerX, int centerY, int radius)
     {
         _map = map;
@@ -23,11 +25,11 @@ internal sealed class BotWalkPlanner
                 "Debug", "net8.0", "GameData"),
             Path.Combine(Directory.GetCurrentDirectory(), "Old", "服務端", "Dat")
         };
-        _blocking = roots
-            .Select(root => new BlockingMapService(root))
-            .FirstOrDefault(service => service.HasMap(map))
+        GameDataRoot = roots.FirstOrDefault(root =>
+            new BlockingMapService(root).HasMap(map))
             ?? throw new InvalidOperationException(
                 "Cannot find Blocking.dat for the chosen map. Build the server first.");
+        _blocking = new BlockingMapService(GameDataRoot);
 
         _navigation = new MonsterNavigationService(_blocking);
         // Round user-supplied pixel coordinates to walkable cell centers.
