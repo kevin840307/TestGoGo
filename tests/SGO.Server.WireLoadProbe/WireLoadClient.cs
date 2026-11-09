@@ -32,6 +32,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
     private Task? _receiveTask;
     private Exception? _receiveFailure;
     private volatile bool _measure;
+    private volatile bool _interactiveBots;
     private long _moveBroadcasts;
     private long _positionCorrections;
     private long _chatBroadcasts;
@@ -146,6 +147,13 @@ internal sealed class WireLoadClient : IAsyncDisposable
             ref _receivedBytes,
             0);
         _measure = true;
+    }
+
+    public void EnableInteractiveBots()
+    {
+        ClearInbox();
+        _interactiveBots = true;
+        StartMeasurement(dropCombatNoise: true);
     }
 
     public void StopMeasurement()
@@ -763,6 +771,9 @@ internal sealed class WireLoadClient : IAsyncDisposable
                         ref _combatEvents);
                     continue;
                 }
+
+                if (_interactiveBots)
+                    continue;
 
                 await _inbox.Writer.WriteAsync(
                     packet,
