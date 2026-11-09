@@ -65,16 +65,22 @@ static func should_show_duplicate_drop(
 	var other_count: int = 0
 	var near_sq := neighborhood_radius * neighborhood_radius
 	var observer_sq := observer_radius * observer_radius
+	var candidate_distance_sq: float = at.distance_squared_to(observer)
 	for raw_id in records:
 		var other_id: int = int(raw_id)
-		if other_id >= candidate_id:
+		if other_id == candidate_id:
 			continue
 		var record: Dictionary = records[raw_id]
 		var other_extra: Dictionary = record.get("ExtraData", {})
 		if int(other_extra.get("ItemIndex", 0)) != item_id:
 			continue
 		var position := Vector2(float(record.get("LocX", 0.0)), float(record.get("LocY", 0.0)))
-		if position.distance_squared_to(observer) > observer_sq:
+		var other_distance_sq: float = position.distance_squared_to(observer)
+		if other_distance_sq > observer_sq:
+			continue
+		# Prefer the five nearest clickable drops to the local observer;
+		# resolve equal distances deterministically with the entity ID.
+		if other_distance_sq > candidate_distance_sq or (is_equal_approx(other_distance_sq, candidate_distance_sq) and other_id > candidate_id):
 			continue
 		if position.distance_squared_to(at) <= near_sq:
 			other_count += 1
