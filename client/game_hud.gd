@@ -263,7 +263,7 @@ var current_performance_load_mode: int = GameConstants.SETTING_DEFAULT_PERFORMAN
 var current_combat_render_mode: int = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
 var current_simplify_players_mode: int = GameConstants.SETTING_DEFAULT_OTHER_PLAYERS_VISIBILITY
 var current_simplify_effects: bool = GameConstants.SETTING_DEFAULT_SIMPLIFY_EFFECTS
-var current_simplify_drops: bool = GameConstants.SETTING_DEFAULT_SIMPLIFY_GROUND_DROPS
+var current_simplify_drops: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_GROUND_DROPS
 var current_show_damage_numbers: bool = GameConstants.SETTING_DEFAULT_SHOW_DAMAGE_NUMBERS
 var current_simplify_monsters_mode: int = GameConstants.SETTING_DEFAULT_ORDINARY_MONSTERS_VISIBILITY
 var _afk_hidden_roots: Array[Dictionary] = []
@@ -850,7 +850,7 @@ func _setup_window_manager() -> void :
 			if not new_option.gui_input.is_connected(_on_option_gui_input):
 				new_option.gui_input.connect(_on_option_gui_input.bind(new_option))
 		option_simplify_effects.select(1 if current_simplify_effects else 0)
-		option_simplify_drops.select(1 if current_simplify_drops else 0)
+		option_simplify_drops.select(current_simplify_drops)
 		option_show_damage.select(0 if current_show_damage_numbers else 1)
 		if not option_simplify_effects.item_selected.is_connected(_on_opt_simplify_effects_item_selected):
 			option_simplify_effects.item_selected.connect(_on_opt_simplify_effects_item_selected)
@@ -3241,8 +3241,8 @@ func _load_game_settings() -> void :
 		)))
 		current_simplify_effects = bool(config.get_value(section, GameConstants.SETTING_KEY_SIMPLIFY_EFFECTS,
 			config.get_value(fallback_section, GameConstants.SETTING_KEY_SIMPLIFY_EFFECTS, GameConstants.SETTING_DEFAULT_SIMPLIFY_EFFECTS)))
-		current_simplify_drops = bool(config.get_value(section, GameConstants.SETTING_KEY_SIMPLIFY_GROUND_DROPS,
-			config.get_value(fallback_section, GameConstants.SETTING_KEY_SIMPLIFY_GROUND_DROPS, GameConstants.SETTING_DEFAULT_SIMPLIFY_GROUND_DROPS)))
+		current_simplify_drops = ClientPerformanceProfile.sanitize_ground_drop_display_mode(int(config.get_value(section, GameConstants.SETTING_KEY_SIMPLIFY_GROUND_DROPS,
+			config.get_value(fallback_section, GameConstants.SETTING_KEY_SIMPLIFY_GROUND_DROPS, GameConstants.SETTING_DEFAULT_SIMPLIFY_GROUND_DROPS))))
 		current_show_damage_numbers = bool(config.get_value(section, GameConstants.SETTING_KEY_SHOW_DAMAGE_NUMBERS,
 			config.get_value(fallback_section, GameConstants.SETTING_KEY_SHOW_DAMAGE_NUMBERS, GameConstants.SETTING_DEFAULT_SHOW_DAMAGE_NUMBERS)))
 	else:
@@ -3375,7 +3375,7 @@ func _on_opt_simplify_effects_item_selected(index: int) -> void:
 	_apply_visual_detail_settings()
 
 func _on_opt_simplify_drops_item_selected(index: int) -> void:
-	current_simplify_drops = index == 1
+	current_simplify_drops = ClientPerformanceProfile.sanitize_ground_drop_display_mode(index)
 	_apply_visual_detail_settings()
 
 func _on_opt_show_damage_item_selected(index: int) -> void:
