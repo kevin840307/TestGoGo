@@ -113,9 +113,18 @@ func update(player_position: Vector2, profile: Dictionary, delta: float) -> void
 		return
 	_elapsed = 0.0
 
+	_scan_batch(player_position, enter_radius, exit_radius)
+
+
+func _scan_batch(
+	player_position: Vector2,
+	enter_radius: float,
+	exit_radius: float,
+	batch_size: int = SCAN_BATCH_SIZE
+) -> void:
 	var enter_sq: float = enter_radius * enter_radius
 	var exit_sq: float = exit_radius * exit_radius
-	var count: int = mini(SCAN_BATCH_SIZE, _entries.size())
+	var count: int = mini(maxi(1, batch_size), _entries.size())
 	for _i in range(count):
 		if _entries.is_empty():
 			break
@@ -127,7 +136,6 @@ func update(player_position: Vector2, profile: Dictionary, delta: float) -> void
 		var sprite := entry.get("node", null) as Sprite2D
 		if not is_instance_valid(sprite):
 			continue
-
 		var distance_sq: float = player_position.distance_squared_to(entry.get("position", Vector2.ZERO))
 		var loaded: bool = is_instance_valid(sprite.texture)
 		entry["loaded"] = loaded
@@ -137,7 +145,6 @@ func update(player_position: Vector2, profile: Dictionary, delta: float) -> void
 			_unloaded += 1
 			_entries[index] = entry
 			continue
-
 		if not loaded and distance_sq <= enter_sq:
 			var resource_path: String = str(entry.get("path", ""))
 			var shared := _find_live_texture(resource_path)
@@ -148,6 +155,47 @@ func update(player_position: Vector2, profile: Dictionary, delta: float) -> void
 				_entries[index] = entry
 			else:
 				_request_path(resource_path)
+
+
+func prime_near(
+	tree: SceneTree,
+	player_position: Vector2,
+	profile: Dictionary,
+	max_passes: int = 6
+) -> Dictionary:
+	if tree == null or _entries.is_empty():
+		return stats()
+	var enter_radius: float = float(profile.get("map_visual_aoi_enter_radius", 3200.0))
+	var exit_radius: float = float(profile.get("map_visual_aoi_exit_radius", enter_radius + 800.0))
+	exit_radius = maxf(exit_radius, enter_radius + 400.0)
+	_last_enter_radius = enter_radius
+	_last_exit_radius = exit_radius
+	var batches: int = maxi(1, int(ceil(float(_entries.size()) / float(SCAN_BATCH_SIZE))))
+	for _pass in range(maxi(1, max_passes)):
+		for _batch in range(batches):
+			_scan_batch(player_position, enter_radius, exit_radius)
+			_poll_pending_paths(player_position, enter_radius)
+			await tree.process_frame
+		for _wait in range(20):
+			_poll_pending_paths(player_position, enter_radius)
+			if _pending_paths.is_empty():
+				break
+			await tree.process_frame
+		if _count_near_unloaded(player_position, enter_radius) == 0 and _pending_paths.is_empty():
+			break
+	return stats()
+
+
+func _count_near_unloaded(player_position: Vector2, enter_radius: float) -> int:
+	var enter_sq: float = enter_radius * enter_radius
+	var missing: int = 0
+	for entry in _entries:
+		var sprite := entry.get("node", null) as Sprite2D
+		if not is_instance_valid(sprite) or is_instance_valid(sprite.texture):
+			continue
+		if player_position.distance_squared_to(entry.get("position", Vector2.ZERO)) <= enter_sq:
+			missing += 1
+	return missing
 
 
 func _request_path(resource_path: String) -> void:

@@ -643,6 +643,28 @@ func _clear_map_visual_aoi() -> void:
 	_map_visual_aoi_log_elapsed = 0.0
 
 
+func _prime_map_visual_aoi(progress_callback: Callable = Callable()) -> void:
+	if not is_instance_valid(current_map_node) or not is_instance_valid(current_player):
+		return
+	if not _map_visual_aoi_streamer.is_bound_to(current_map_node):
+		_bind_map_visual_aoi()
+	if progress_callback.is_valid():
+		progress_callback.call(50.0, "載入附近地圖素材")
+	var prime_stats: Dictionary = await _map_visual_aoi_streamer.prime_near(
+		get_tree(),
+		current_player.global_position,
+		current_performance_profile
+	)
+	if OS.is_debug_build():
+		print("[MAP_VISUAL_AOI] event=prime indexed=%d loaded=%d unloaded=%d pending_paths=%d texture_mb=%.1f" % [
+			int(prime_stats.get("indexed", 0)),
+			int(prime_stats.get("loaded", 0)),
+			int(prime_stats.get("unloaded", 0)),
+			int(prime_stats.get("pending_paths", 0)),
+			float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
+		])
+
+
 func _multiclient_gpu_context() -> String:
 	# Performance.RENDER_VIDEO_MEM_USED is Godot's resource allocation metric,
 	# not GPU utilization or a Windows/WDDM process-VRAM measurement.
@@ -1425,6 +1447,7 @@ func finish_afk_mode(progress_callback: Callable = Callable()) -> bool:
 		])
 	await _restore_afk_entity_visuals_batched(progress_callback)
 	_bind_map_visual_aoi()
+	await _prime_map_visual_aoi(progress_callback)
 	_apply_low_resource_world_visual_policy()
 	if is_instance_valid(current_map_node):
 		current_map_node.visible = true
@@ -2221,6 +2244,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		camera.force_update_scroll()
 
 	_bind_map_visual_aoi()
+	await _prime_map_visual_aoi(progress_callback)
 	_apply_low_resource_world_visual_policy()
 	set_world_enhancement_enabled(current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY)
 
@@ -2916,6 +2940,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 			camera.force_update_scroll()
 
 	_bind_map_visual_aoi()
+	await _prime_map_visual_aoi()
 	if is_instance_valid(current_hud) and current_hud.has_method("update_map_info"):
 		current_hud.update_map_info(target_map_id, current_map_node.name)
 	if CursorManager:
