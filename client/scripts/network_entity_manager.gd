@@ -58,6 +58,8 @@ var _ground_aoi_last_context: Variant = null
 var _ground_aoi_stationary_elapsed: float = 0.0
 var _ground_aoi_full_scans: int = 0
 var _ground_aoi_reused_scans: int = 0
+var _player_visibility_elapsed: float = 0.0
+const PLAYER_VISIBILITY_REFRESH_INTERVAL: float = 0.5
 
 
 static func should_run_stationary_aoi_scan(
@@ -108,6 +110,7 @@ func clear_map_entities() -> Dictionary:
 	_ground_aoi_stationary_elapsed = 0.0
 	_ground_aoi_full_scans = 0
 	_ground_aoi_reused_scans = 0
+	_player_visibility_elapsed = 0.0
 	return {"total": cleared_total, "by_type": cleared_by_type}
 
 func _ready() -> void :
@@ -160,21 +163,46 @@ func _should_simplify_monster(_entity_id: int, entity: Node2D) -> bool:
 	# not reasons to reload the original monster artwork.
 	return true
 
+func _should_show_player(entity: Node2D, profile: Dictionary) -> bool:
+	var party: bool = entity.has_method("is_local_party_member") and bool(entity.is_local_party_member())
+	var enemy: bool = entity.has_method("is_local_hostile_player") and bool(entity.is_local_hostile_player())
+	return ClientPerformanceProfile.should_show_other_player(
+		int(profile.get("other_players_visibility", ClientPerformanceProfile.PLAYER_SHOW_ALL)),
+		party, enemy
+	)
+
+func _should_show_monster(entity: Node2D, profile: Dictionary) -> bool:
+	var protected: bool = entity.has_method("can_use_performance_simplification") and not bool(entity.can_use_performance_simplification())
+	return ClientPerformanceProfile.should_show_ordinary_monster(
+		int(profile.get("ordinary_monsters_visibility", ClientPerformanceProfile.MONSTER_SHOW_ALL)),
+		protected
+	)
+
+func _should_display_ground_drop(entity_id: int, data: Dictionary, center: Vector2, radius: float) -> bool:
+	if not GameManager or not bool(GameManager.current_performance_profile.get("ground_drops_simplified", false)):
+		return true
+	return ClientPerformanceProfile.should_show_duplicate_drop(
+		entity_id, data, _ground_spawn_templates, center, radius
+	)
+
 func _apply_performance_visual_to_entity(entity_id: int, entity_type: int, entity: Node2D) -> void:
 	if not is_instance_valid(entity) or not entity.has_method("set_performance_simplified"):
 		return
 	var profile: Dictionary = GameManager.get_performance_profile() if GameManager else {}
 	match entity_type:
 		0:
+			var show_player: bool = _should_show_player(entity, profile)
 			entity.set_performance_simplified(
-				_should_simplify_player(entity),
+				_should_simplify_player(entity) or not show_player,
 				int(profile.get(
 					"player_simplify_style",
 					ClientPerformanceProfile.SIMPLIFY_PIXEL_A
 				))
 			)
+			entity.visible = show_player
 		1:
-			var simplify_monster := _should_simplify_monster(entity_id, entity)
+			var show_monster: bool = _should_show_monster(entity, profile)
+			var simplify_monster := _should_simplify_monster(entity_id, entity) or not show_monster
 			entity.set_performance_simplified(
 				simplify_monster,
 				int(profile.get(
@@ -182,6 +210,7 @@ func _apply_performance_visual_to_entity(entity_id: int, entity_type: int, entit
 					ClientPerformanceProfile.SIMPLIFY_PIXEL_A
 				))
 			)
+			entity.visible = show_monster
 
 func _refresh_performance_visuals() -> void:
 	for raw_id in active_entities.keys():
@@ -197,6 +226,9 @@ func _refresh_performance_visuals() -> void:
 
 func _on_performance_profile_changed(_profile: Dictionary) -> void:
 	_refresh_performance_visuals()
+	_player_visibility_elapsed = 0.0
+	# Changes to display density should immediately reconsider deferred drops.
+	_ground_aoi_last_context = null
 	# Never alter packet subscriptions; re-evaluate scene nodes immediately.
 	_monster_aoi_last_observer = null
 	_ground_aoi_last_context = null
@@ -538,6 +570,8 @@ func restore_ground_items_after_afk() -> Dictionary:
 			continue
 		if not is_ground_inside_aoi(cached, center, enter_radius):
 			continue
+		if not _should_display_ground_drop(entity_id, cached, center, enter_radius):
+			continue
 		_queue_deferred_ground_spawn(entity_id)
 		queued += 1
 	return {
@@ -844,7 +878,11 @@ func _update_ground_aoi(delta: float) -> void:
 		var drop: Node2D = get_active_entity(entity_id)
 		if not is_instance_valid(drop) or not _ground_spawn_templates.has(entity_id):
 			continue
-		if center.distance_squared_to(drop.global_position) <= exit_radius_sq:
+		var still_in_aoi: bool = center.distance_squared_to(drop.global_position) <= exit_radius_sq
+		var cap_allows: bool = _should_display_ground_drop(
+			entity_id, _ground_spawn_templates[entity_id], center, enter_radius
+		)
+		if still_in_aoi and cap_allows:
 			continue
 		# The player may be walking to pick up an item outside the screen.
 		# Keep the target alive until its pending pickup request resolves.
@@ -858,7 +896,7 @@ func _update_ground_aoi(delta: float) -> void:
 	for raw_id in _deferred_ground_spawns.keys():
 		var entity_id: int = int(raw_id)
 		var cached: Dictionary = _deferred_ground_spawns.get(entity_id, {})
-		if is_ground_inside_aoi(cached, center, enter_radius):
+		if is_ground_inside_aoi(cached, center, enter_radius) and _should_display_ground_drop(entity_id, cached, center, enter_radius):
 			_queue_deferred_ground_spawn(entity_id)
 
 
@@ -922,6 +960,10 @@ func _on_entity_spawned(data: Dictionary) -> void :
 		if aoi["center"] != null and not is_ground_inside_aoi(
 			cached_ground, aoi["center"], float(aoi["enter"])
 		):
+			_deferred_ground_spawns[entity_id] = cached_ground
+			_remove_queued_spawn(entity_id)
+			return
+		if aoi["center"] != null and not _should_display_ground_drop(entity_id, cached_ground, aoi["center"], float(aoi["enter"])):
 			_deferred_ground_spawns[entity_id] = cached_ground
 			_remove_queued_spawn(entity_id)
 			return
@@ -998,6 +1040,17 @@ func _run_entity_runtime(delta: float) -> void :
 
 	_update_monster_aoi(delta)
 	_update_ground_aoi(delta)
+	_player_visibility_elapsed += delta
+	if _player_visibility_elapsed >= PLAYER_VISIBILITY_REFRESH_INTERVAL:
+		_player_visibility_elapsed = 0.0
+		var visibility_profile: Dictionary = GameManager.current_performance_profile
+		if int(visibility_profile.get("other_players_visibility", 0)) != ClientPerformanceProfile.PLAYER_SHOW_ALL:
+			for player_id in _active_entity_types.keys():
+				if int(_active_entity_types[player_id]) != 0:
+					continue
+				var remote_player: Node2D = get_active_entity(int(player_id))
+				if is_instance_valid(remote_player):
+					_apply_performance_visual_to_entity(int(player_id), 0, remote_player)
 
 	if not _spawn_queue_paused and not _spawn_queue.is_empty():
 		# Never starve the spawn queue after the world becomes visible.
@@ -1076,6 +1129,9 @@ func _spawn_entity_now(data: Dictionary) -> void :
 		):
 			_deferred_ground_spawns[entity_id] = _ground_spawn_templates.get(entity_id, data)
 			return
+		if aoi["center"] != null and not _should_display_ground_drop(entity_id, data, aoi["center"], float(aoi["enter"])):
+			_deferred_ground_spawns[entity_id] = _ground_spawn_templates.get(entity_id, data)
+			return
 	if entity_type == 1:
 		# The authoritative SpawnEntity handler already made one deep copy.
 		# A queued spawn must reuse that canonical record instead of doing a
@@ -1106,7 +1162,7 @@ func _spawn_entity_now(data: Dictionary) -> void :
 		0:
 			new_entity = NETWORK_PLAYER_SCENE.instantiate()
 			var player_spawn_profile: Dictionary = GameManager.get_performance_profile() if GameManager else {}
-			var pre_simplify_player := bool(player_spawn_profile.get("simplify_other_players", false))
+			var pre_simplify_player := bool(player_spawn_profile.get("simplify_other_players", false)) or int(player_spawn_profile.get("other_players_visibility", 0)) != ClientPerformanceProfile.PLAYER_SHOW_ALL
 			var pre_player_style := int(player_spawn_profile.get(
 				"player_simplify_style",
 				ClientPerformanceProfile.SIMPLIFY_PIXEL_A
@@ -1125,7 +1181,10 @@ func _spawn_entity_now(data: Dictionary) -> void :
 			var monster_instantiate_started_usec: int = monster_spawn_started_usec
 			new_entity = MONSTER_SCENE.instantiate()
 			var spawn_profile: Dictionary = GameManager.get_performance_profile() if GameManager else {}
-			var pre_simplified := bool(spawn_profile.get("simplify_noncritical_monsters", false))
+			var pre_simplified := bool(spawn_profile.get("simplify_noncritical_monsters", false)) or (
+			int(spawn_profile.get("ordinary_monsters_visibility", 0)) == ClientPerformanceProfile.MONSTER_HIDE_ORDINARY
+			and not bool((data.get("ExtraData", {}) as Dictionary).get("IsWorldBoss", false))
+		)
 			var pre_style := int(spawn_profile.get(
 				"monster_simplify_style",
 				ClientPerformanceProfile.SIMPLIFY_PIXEL_A
@@ -1264,6 +1323,9 @@ func _on_entity_despawned(data: Dictionary) -> void :
 	_ground_spawn_templates.erase(entity_id)
 	_deferred_ground_spawns.erase(entity_id)
 	_remove_queued_spawn(entity_id)
+	# Despawning a duplicate can make the sixth item eligible for display.
+	_ground_aoi_last_context = null
+	_ground_aoi_elapsed = GROUND_AOI_UPDATE_INTERVAL
 
 func _on_entity_moved(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
