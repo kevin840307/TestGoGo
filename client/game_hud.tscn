@@ -3559,42 +3559,166 @@ vertical_alignment = 1
 [node name="SettingsWindow" type="Panel" parent="WindowsContainer" unique_id=1136737761]
 visible = false
 layout_mode = 1
-anchors_preset = 6
-anchor_left = 1.0
+anchors_preset = 8
+anchor_left = 0.5
 anchor_top = 0.5
-anchor_right = 1.0
+anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -323.0
-offset_top = -313.0
-offset_right = -51.0
-offset_bottom = 227.0
-grow_horizontal = 0
+offset_left = -270.0
+offset_top = -220.0
+offset_right = 270.0
+offset_bottom = 220.0
+grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_qcerj")
 
 [node name="LabelTitle" type="Label" parent="WindowsContainer/SettingsWindow" unique_id=15840599]
 layout_mode = 0
-offset_left = 10.0
-offset_top = 5.0
-offset_right = 73.0
-offset_bottom = 31.0
-theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 18
-text = "系統"
+offset_left = 22.0
+offset_top = 12.0
+offset_right = 280.0
+offset_bottom = 43.0
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.92, 0.97, 1, 1)
+text = "系統設定"
 vertical_alignment = 1
 
-[node name="OptionPetMode" type="OptionButton" parent="WindowsContainer/SettingsWindow" unique_id=412295753]
+[node name="BtnClose" type="Button" parent="WindowsContainer/SettingsWindow"]
 layout_mode = 0
-offset_left = 150.0
-offset_top = 150.0
-offset_right = 250.0
-offset_bottom = 175.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_constants/outline_size = 2
+offset_left = 486.0
+offset_top = 12.0
+offset_right = 520.0
+offset_bottom = 43.0
+text = "✕"
+tooltip_text = "關閉系統設定"
+
+[node name="Tabs" type="TabContainer" parent="WindowsContainer/SettingsWindow"]
+layout_mode = 0
+offset_left = 19.0
+offset_top = 54.0
+offset_right = 521.0
+offset_bottom = 368.0
+theme_override_font_sizes/font_size = 16
+all_tabs_in_front = true
+use_hidden_tabs_for_min_size = false
+
+[node name="General" type="Control" parent="WindowsContainer/SettingsWindow/Tabs"]
+layout_mode = 2
+
+[node name="LabelVolumeBg" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/General"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 18.0
+offset_right = 231.0
+offset_bottom = 49.0
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+theme_override_colors/font_color = Color(0.83, 0.89, 0.95, 1)
+text = "背景音樂音量"
+vertical_alignment = 1
+
+[node name="OptionVolumeBg" type="OptionButton" parent="WindowsContainer/SettingsWindow/Tabs/General"]
+layout_mode = 0
+offset_left = 236.0
+offset_top = 20.0
+offset_right = 478.0
+offset_bottom = 50.0
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 15
 alignment = 1
-selected = 0
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+selected = 5
+item_count = 11
+popup/item_0/text = "0%"
+popup/item_0/id = 0
+popup/item_1/text = "10%"
+popup/item_1/id = 1
+popup/item_2/text = "20%"
+popup/item_2/id = 2
+popup/item_3/text = "30%"
+popup/item_3/id = 3
+popup/item_4/text = "40%"
+popup/item_4/id = 4
+popup/item_5/text = "50%"
+popup/item_5/id = 5
+popup/item_6/text = "60%"
+popup/item_6/id = 6
+popup/item_7/text = "70%"
+popup/item_7/id = 7
+popup/item_8/text = "80%"
+popup/item_8/id = 8
+popup/item_9/text = "90%"
+popup/item_9/id = 9
+popup/item_10/text = "100%"
+popup/item_10/id = 10
+
+[node name="LabelVolumeEffect" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/General"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 72.0
+offset_right = 231.0
+offset_bottom = 103.0
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.83, 0.89, 0.95, 1)
+text = "音效音量"
+vertical_alignment = 1
+
+[node name="OptionVolumeEffect" type="OptionButton" parent="WindowsContainer/SettingsWindow/Tabs/General"]
+layout_mode = 0
+offset_left = 236.0
+offset_top = 74.0
+offset_right = 478.0
+offset_bottom = 104.0
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 15
+alignment = 1
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+selected = 5
+item_count = 11
+popup/item_0/text = "0%"
+popup/item_0/id = 0
+popup/item_1/text = "10%"
+popup/item_1/id = 1
+popup/item_2/text = "20%"
+popup/item_2/id = 2
+popup/item_3/text = "30%"
+popup/item_3/id = 3
+popup/item_4/text = "40%"
+popup/item_4/id = 4
+popup/item_5/text = "50%"
+popup/item_5/id = 5
+popup/item_6/text = "60%"
+popup/item_6/id = 6
+popup/item_7/text = "70%"
+popup/item_7/id = 7
+popup/item_8/text = "80%"
+popup/item_8/id = 8
+popup/item_9/text = "90%"
+popup/item_9/id = 9
+popup/item_10/text = "100%"
+popup/item_10/id = 10
+
+[node name="LabelPetMode" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/General"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 126.0
+offset_right = 231.0
+offset_bottom = 157.0
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.83, 0.89, 0.95, 1)
+text = "寵物戰鬥模式"
+vertical_alignment = 1
+
+[node name="OptionPetMode" type="OptionButton" parent="WindowsContainer/SettingsWindow/Tabs/General"]
+layout_mode = 0
+offset_left = 236.0
+offset_top = 128.0
+offset_right = 478.0
+offset_bottom = 158.0
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 15
+alignment = 1
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+selected = 1
 item_count = 3
 popup/item_0/text = "和平模式"
 popup/item_0/id = 0
@@ -3603,89 +3727,27 @@ popup/item_1/id = 1
 popup/item_2/text = "主動戰鬥"
 popup/item_2/id = 2
 
-[node name="OptionVolumeBg" type="OptionButton" parent="WindowsContainer/SettingsWindow" unique_id=878719380]
+[node name="LabelAutoSaint" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/General"]
 layout_mode = 0
-offset_left = 150.0
-offset_top = 51.0
-offset_right = 250.0
-offset_bottom = 76.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_constants/outline_size = 2
+offset_left = 20.0
+offset_top = 180.0
+offset_right = 231.0
+offset_bottom = 211.0
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
-alignment = 1
-selected = 5
-item_count = 11
-popup/item_0/text = "0%"
-popup/item_0/id = 0
-popup/item_1/text = "10%"
-popup/item_1/id = 1
-popup/item_2/text = "20%"
-popup/item_2/id = 2
-popup/item_3/text = "30%"
-popup/item_3/id = 3
-popup/item_4/text = "40%"
-popup/item_4/id = 4
-popup/item_5/text = "50%"
-popup/item_5/id = 5
-popup/item_6/text = "60%"
-popup/item_6/id = 6
-popup/item_7/text = "70%"
-popup/item_7/id = 7
-popup/item_8/text = "80%"
-popup/item_8/id = 8
-popup/item_9/text = "90%"
-popup/item_9/id = 9
-popup/item_10/text = "100%"
-popup/item_10/id = 10
+theme_override_colors/font_color = Color(0.83, 0.89, 0.95, 1)
+text = "自動聖靈"
+vertical_alignment = 1
 
-[node name="OptionVolumeEffect" type="OptionButton" parent="WindowsContainer/SettingsWindow" unique_id=1443463132]
+[node name="OptionAutoSaint" type="OptionButton" parent="WindowsContainer/SettingsWindow/Tabs/General"]
 layout_mode = 0
-offset_left = 150.0
-offset_top = 101.0
-offset_right = 250.0
-offset_bottom = 126.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_constants/outline_size = 2
+offset_left = 236.0
+offset_top = 182.0
+offset_right = 478.0
+offset_bottom = 212.0
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
-selected = 5
-item_count = 11
-popup/item_0/text = "0%"
-popup/item_0/id = 0
-popup/item_1/text = "10%"
-popup/item_1/id = 1
-popup/item_2/text = "20%"
-popup/item_2/id = 2
-popup/item_3/text = "30%"
-popup/item_3/id = 3
-popup/item_4/text = "40%"
-popup/item_4/id = 4
-popup/item_5/text = "50%"
-popup/item_5/id = 5
-popup/item_6/text = "60%"
-popup/item_6/id = 6
-popup/item_7/text = "70%"
-popup/item_7/id = 7
-popup/item_8/text = "80%"
-popup/item_8/id = 8
-popup/item_9/text = "90%"
-popup/item_9/id = 9
-popup/item_10/text = "100%"
-popup/item_10/id = 10
-
-[node name="OptionAutoSaint" type="OptionButton" parent="WindowsContainer/SettingsWindow" unique_id=1564728060]
-layout_mode = 0
-offset_left = 150.0
-offset_top = 199.0
-offset_right = 250.0
-offset_bottom = 224.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
-alignment = 1
 selected = 0
 item_count = 2
 popup/item_0/text = "關閉"
@@ -3693,65 +3755,28 @@ popup/item_0/id = 0
 popup/item_1/text = "開啟"
 popup/item_1/id = 1
 
-[node name="Label" type="Label" parent="WindowsContainer/SettingsWindow" unique_id=318871646]
+[node name="Performance" type="Control" parent="WindowsContainer/SettingsWindow/Tabs"]
+layout_mode = 2
+
+[node name="LabelFpsLimit" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/Performance"]
 layout_mode = 0
-offset_left = 23.0
-offset_top = 148.0
-offset_right = 143.0
-offset_bottom = 176.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 231.0
+offset_bottom = 51.0
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
-text = "寵物戰鬥模式"
-horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.83, 0.89, 0.95, 1)
+text = "畫面 FPS"
 vertical_alignment = 1
 
-[node name="Label2" type="Label" parent="WindowsContainer/SettingsWindow" unique_id=2117332607]
+[node name="OptionFpsLimit" type="SpinBox" parent="WindowsContainer/SettingsWindow/Tabs/Performance"]
 layout_mode = 0
-offset_left = 23.0
-offset_top = 49.0
-offset_right = 143.0
-offset_bottom = 77.0
-theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
-text = "背景音樂音量"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Label3" type="Label" parent="WindowsContainer/SettingsWindow" unique_id=359661909]
-layout_mode = 0
-offset_left = 23.0
-offset_top = 99.0
-offset_right = 143.0
-offset_bottom = 127.0
-theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
-text = "音效音量"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Label4" type="Label" parent="WindowsContainer/SettingsWindow" unique_id=534547136]
-layout_mode = 0
-offset_left = 22.0
-offset_top = 197.0
-offset_right = 142.0
-offset_bottom = 225.0
-theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
-text = "自動聖靈"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="OptionFpsLimit" type="SpinBox" parent="WindowsContainer/SettingsWindow" unique_id=37759114]
-layout_mode = 0
-offset_left = 150.0
-offset_top = 248.0
-offset_right = 250.0
-offset_bottom = 273.0
+offset_left = 236.0
+offset_top = 22.0
+offset_right = 478.0
+offset_bottom = 52.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
-alignment = 1
 min_value = 0.0
 max_value = 144.0
 step = 1.0
@@ -3760,43 +3785,29 @@ value = 60.0
 rounded = true
 editable = true
 suffix = " FPS"
-tooltip_text = "上下鍵每次加減 5 FPS，也可輸入；0 = 不限制（會關閉 VSync），支援 30～120（每 5 FPS）與 144。切換畫質不影響此設定。"
+tooltip_text = "FPS 只控制渲染，不會影響封包與遊戲邏輯；0 為不限制。"
 
-[node name="LabelFpsLimit" type="Label" parent="WindowsContainer/SettingsWindow" unique_id=663293368]
+[node name="LabelPerformanceLoad" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/Performance"]
 layout_mode = 0
-offset_left = 22.0
-offset_top = 246.0
-offset_right = 142.0
-offset_bottom = 274.0
+offset_left = 20.0
+offset_top = 77.0
+offset_right = 231.0
+offset_bottom = 108.0
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
-text = "畫面 FPS"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="LabelPerformanceLoad" type="Label" parent="WindowsContainer/SettingsWindow"]
-layout_mode = 0
-offset_left = 22.0
-offset_top = 290.0
-offset_right = 142.0
-offset_bottom = 318.0
-theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
+theme_override_colors/font_color = Color(0.83, 0.89, 0.95, 1)
 text = "效能模式"
-horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="OptionPerformanceLoad" type="OptionButton" parent="WindowsContainer/SettingsWindow"]
+[node name="OptionPerformanceLoad" type="OptionButton" parent="WindowsContainer/SettingsWindow/Tabs/Performance"]
 layout_mode = 0
-offset_left = 150.0
-offset_top = 292.0
-offset_right = 250.0
-offset_bottom = 317.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_constants/outline_size = 2
+offset_left = 236.0
+offset_top = 79.0
+offset_right = 478.0
+offset_bottom = 109.0
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 selected = 1
 item_count = 3
 popup/item_0/text = "畫質優先"
@@ -3805,111 +3816,195 @@ popup/item_1/text = "一般"
 popup/item_1/id = 1
 popup/item_2/text = "低資源"
 popup/item_2/id = 2
-tooltip_text = "低資源：簡化怪物和其他玩家、關閉非必要戰鬥特效及日夜畫面效果，保留戰鬥與操作反應。FPS 獨立設定。"
+tooltip_text = "只影響 Client 畫質和視覺負擔；不減少 Server/Client 傳輸與邏輯更新。"
 
-[node name="LabelCombatRender" type="Label" parent="WindowsContainer/SettingsWindow"]
+[node name="LabelCombatRender" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/Performance"]
 layout_mode = 0
-offset_left = 22.0
-offset_top = 334.0
-offset_right = 142.0
-offset_bottom = 362.0
+offset_left = 20.0
+offset_top = 134.0
+offset_right = 231.0
+offset_bottom = 165.0
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
+theme_override_colors/font_color = Color(0.83, 0.89, 0.95, 1)
 text = "戰鬥模式"
-horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="OptionCombatRender" type="OptionButton" parent="WindowsContainer/SettingsWindow"]
+[node name="OptionCombatRender" type="OptionButton" parent="WindowsContainer/SettingsWindow/Tabs/Performance"]
 layout_mode = 0
-offset_left = 150.0
-offset_top = 336.0
-offset_right = 250.0
-offset_bottom = 361.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_constants/outline_size = 2
+offset_left = 236.0
+offset_top = 136.0
+offset_right = 478.0
+offset_bottom = 166.0
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 selected = 0
 item_count = 2
 popup/item_0/text = "一般"
 popup/item_0/id = 0
 popup/item_1/text = "反應優先"
 popup/item_1/id = 1
-tooltip_text = "反應優先適合 PK、Boss；若想進一步節省資源，選擇效能模式的「低資源」即可關閉非必要戰鬥特效。"
+tooltip_text = "只影響渲染負載與視覺排程，不降低戰鬥反應速度。"
 
-[node name="LabelSimplifyPlayers" type="Label" parent="WindowsContainer/SettingsWindow"]
+[node name="Visibility" type="Control" parent="WindowsContainer/SettingsWindow/Tabs"]
+layout_mode = 2
+
+[node name="LabelSimplifyEffects" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/Visibility"]
 layout_mode = 0
-offset_left = 22.0
-offset_top = 378.0
-offset_right = 142.0
-offset_bottom = 406.0
+offset_left = 20.0
+offset_top = 14.0
+offset_right = 231.0
+offset_bottom = 45.0
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
-text = "簡化其他玩家"
-horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.83, 0.89, 0.95, 1)
+text = "簡化特效"
 vertical_alignment = 1
 
-[node name="OptionSimplifyPlayers" type="OptionButton" parent="WindowsContainer/SettingsWindow"]
+[node name="OptionSimplifyEffects" type="OptionButton" parent="WindowsContainer/SettingsWindow/Tabs/Visibility"]
 layout_mode = 0
-offset_left = 150.0
-offset_top = 380.0
-offset_right = 250.0
-offset_bottom = 405.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_constants/outline_size = 2
+offset_left = 236.0
+offset_top = 16.0
+offset_right = 478.0
+offset_bottom = 46.0
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 selected = 0
-item_count = 3
-popup/item_0/text = "自動"
+item_count = 2
+popup/item_0/text = "顯示特效"
 popup/item_0/id = 0
-popup/item_1/text = "一般"
+popup/item_1/text = "簡化（略過非必要特效）"
 popup/item_1/id = 1
-popup/item_2/text = "簡化"
-popup/item_2/id = 2
-tooltip_text = "自動依效能設定切換；一般保留原始人物；簡化使用內建菱形光球。隊友綠、社團藍、可攻擊紅、一般白，無須另外選擇圖形。"
+tooltip_text = "保留傷害計算與戰鬥封包，只略過 Client 的非必要戰鬥特效。"
 
-[node name="LabelSimplifyMonsters" type="Label" parent="WindowsContainer/SettingsWindow"]
+[node name="LabelSimplifyDrops" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/Visibility"]
 layout_mode = 0
-offset_left = 22.0
-offset_top = 420.0
-offset_right = 142.0
-offset_bottom = 448.0
+offset_left = 20.0
+offset_top = 68.0
+offset_right = 231.0
+offset_bottom = 99.0
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxFlat_op860")
-text = "簡化普通怪物"
-horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.83, 0.89, 0.95, 1)
+text = "簡化掉落物"
 vertical_alignment = 1
 
-[node name="OptionSimplifyMonsters" type="OptionButton" parent="WindowsContainer/SettingsWindow"]
+[node name="OptionSimplifyDrops" type="OptionButton" parent="WindowsContainer/SettingsWindow/Tabs/Visibility"]
 layout_mode = 0
-offset_left = 150.0
-offset_top = 422.0
-offset_right = 250.0
-offset_bottom = 447.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_constants/outline_size = 2
+offset_left = 236.0
+offset_top = 70.0
+offset_right = 478.0
+offset_bottom = 100.0
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
 theme_override_font_sizes/font_size = 15
-theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 alignment = 1
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
 selected = 0
-item_count = 3
-popup/item_0/text = "自動"
+item_count = 2
+popup/item_0/text = "全部顯示"
 popup/item_0/id = 0
-popup/item_1/text = "一般"
+popup/item_1/text = "附近同種最多 5 個"
 popup/item_1/id = 1
-popup/item_2/text = "簡化"
+tooltip_text = "僅限制附近相同 ItemIndex 的畫面物件；所有掉落物仍可由 Server 管理，不會刪除。"
+
+[node name="LabelShowDamage" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/Visibility"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 122.0
+offset_right = 231.0
+offset_bottom = 153.0
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.83, 0.89, 0.95, 1)
+text = "傷害數字"
+vertical_alignment = 1
+
+[node name="OptionShowDamage" type="OptionButton" parent="WindowsContainer/SettingsWindow/Tabs/Visibility"]
+layout_mode = 0
+offset_left = 236.0
+offset_top = 124.0
+offset_right = 478.0
+offset_bottom = 154.0
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 15
+alignment = 1
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+selected = 0
+item_count = 2
+popup/item_0/text = "顯示"
+popup/item_0/id = 0
+popup/item_1/text = "不顯示"
+popup/item_1/id = 1
+tooltip_text = "只控制浮動傷害數字，仍會處理傷害、命中和戰鬥封包。"
+
+[node name="LabelSimplifyPlayers" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/Visibility"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 176.0
+offset_right = 231.0
+offset_bottom = 207.0
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.83, 0.89, 0.95, 1)
+text = "顯示其他玩家"
+vertical_alignment = 1
+
+[node name="OptionSimplifyPlayers" type="OptionButton" parent="WindowsContainer/SettingsWindow/Tabs/Visibility"]
+layout_mode = 0
+offset_left = 236.0
+offset_top = 178.0
+offset_right = 478.0
+offset_bottom = 208.0
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 15
+alignment = 1
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+selected = 0
+item_count = 4
+popup/item_0/text = "全顯示"
+popup/item_0/id = 0
+popup/item_1/text = "只顯示敵人"
+popup/item_1/id = 1
+popup/item_2/text = "只顯示隊友"
 popup/item_2/id = 2
-tooltip_text = "自動依效能設定切換；一般保留原始怪物；簡化使用唯一的白色帶刺光球。攻擊、受擊與死亡不會切回原始圖片。"
+popup/item_3/text = "都不顯示"
+popup/item_3/id = 3
+tooltip_text = "固定選項，不受畫質或效能模式改變；本地玩家不受影響。"
+
+[node name="LabelSimplifyMonsters" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/Visibility"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 230.0
+offset_right = 231.0
+offset_bottom = 261.0
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.83, 0.89, 0.95, 1)
+text = "顯示普通怪物"
+vertical_alignment = 1
+
+[node name="OptionSimplifyMonsters" type="OptionButton" parent="WindowsContainer/SettingsWindow/Tabs/Visibility"]
+layout_mode = 0
+offset_left = 236.0
+offset_top = 232.0
+offset_right = 478.0
+offset_bottom = 262.0
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 15
+alignment = 1
+theme_override_styles/normal = SubResource("StyleBoxEmpty_5rq5p")
+selected = 0
+item_count = 2
+popup/item_0/text = "顯示"
+popup/item_0/id = 0
+popup/item_1/text = "不顯示"
+popup/item_1/id = 1
+tooltip_text = "固定選項，不受效能模式改變。世界 Boss 保留顯示。"
 
 [node name="BtnBackToLogin" type="Button" parent="WindowsContainer/SettingsWindow" unique_id=791546295]
 layout_mode = 0
-offset_left = 21.0
-offset_top = 486.0
-offset_right = 131.0
-offset_bottom = 516.0
+offset_left = 118.0
+offset_top = 387.0
+offset_right = 276.0
+offset_bottom = 423.0
 theme_override_font_sizes/font_size = 16
 theme_override_styles/normal = SubResource("StyleBoxFlat_gge44")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_mpvlv")
@@ -3918,17 +4013,15 @@ text = "回選擇伺服器"
 
 [node name="BtnQuit" type="Button" parent="WindowsContainer/SettingsWindow" unique_id=1181727582]
 layout_mode = 0
-offset_left = 156.0
-offset_top = 486.0
-offset_right = 256.0
-offset_bottom = 516.0
+offset_left = 300.0
+offset_top = 387.0
+offset_right = 422.0
+offset_bottom = 423.0
 theme_override_font_sizes/font_size = 16
 theme_override_styles/normal = SubResource("StyleBoxFlat_gge44")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_mpvlv")
 theme_override_styles/hover = SubResource("StyleBoxFlat_4tm8i")
-text = "離開遊戲
-
-"
+text = "離開遊戲"
 
 [node name="NpcDialogPanel" type="Control" parent="WindowsContainer" unique_id=904564712]
 visible = false
