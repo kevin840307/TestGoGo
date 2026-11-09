@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -10,10 +11,12 @@ internal static class InteractiveBots
         var map = 13;
         var x = 4331;
         var y = 5346;
+        var radius = 280;
         var interval = 350;
         var duration = 0;
         var spawn = 5;
         var concurrency = 5;
+        var level = 150;
         var combat = true;
         var timeout = TimeSpan.FromSeconds(30);
         string? output = null;
@@ -21,7 +24,8 @@ internal static class InteractiveBots
         for (var i = 0; i < args.Length; i++)
         {
             string Next() => i + 1 < args.Length
-                ? args[++i] : throw new ArgumentException("Missing value after " + args[i]);
+                ? args[++i]
+                : throw new ArgumentException("Missing value after " + args[i]);
             switch (args[i])
             {
                 case "--players": count = int.Parse(Next()); break;
@@ -29,16 +33,21 @@ internal static class InteractiveBots
                 case "--map": map = int.Parse(Next()); break;
                 case "--x": x = int.Parse(Next()); break;
                 case "--y": y = int.Parse(Next()); break;
+                case "--radius": radius = int.Parse(Next()); break;
                 case "--interval-ms": interval = int.Parse(Next()); break;
                 case "--seconds": duration = int.Parse(Next()); break;
                 case "--monsters": spawn = int.Parse(Next()); break;
+                case "--level": level = int.Parse(Next()); break;
                 case "--setup-concurrency": concurrency = int.Parse(Next()); break;
-                case "--timeout-seconds": timeout = TimeSpan.FromSeconds(int.Parse(Next())); break;
+                case "--timeout-seconds":
+                    timeout = TimeSpan.FromSeconds(int.Parse(Next()));
+                    break;
                 case "--output": output = Next(); break;
                 case "--no-combat": combat = false; break;
                 case "--help":
-                    Console.WriteLine("dotnet run -c Release --project tests/SGO.Server.WireLoadProbe -- --bots --players 20 --map 13 --x 4331 --y 5346 --seconds 0");
-                    Console.WriteLine("--seconds 0 runs until Ctrl+C; --no-combat disables monster spawn/attacks.");
+                    Console.WriteLine("dotnet run -c Release --project tests/SGO.Server.WireLoadProbe -- --bots --players 20 --map 13 --x 4331 --y 5346 --radius 280 --monsters 5 --level 150");
+                    Console.WriteLine("Random walkable positions, chasing nearby AOI monsters, normal attacks, single-target skills 20101/23102, occasional area skill 23103.");
+                    Console.WriteLine("--seconds 0 keeps players online until Ctrl+C. --no-combat disables attacking and monster spawning.");
                     return 0;
                 default: throw new ArgumentException("Unknown bot option: " + args[i]);
             }
@@ -46,50 +55,82 @@ internal static class InteractiveBots
 
         if (count < 1 || count > 1000) throw new ArgumentOutOfRangeException(nameof(count), "1..1000");
         if (interval < 150 || interval > 60000) throw new ArgumentOutOfRangeException(nameof(interval), "150..60000");
-        if (duration < 0 || spawn < 0 || spawn > 100 || concurrency < 1 || concurrency > 50)
-            throw new ArgumentException("Invalid seconds/monsters/setup-concurrency");
+        if (radius < 32 || radius > 700 || level < 1 || level > 255 ||
+            duration < 0 || spawn < 0 || spawn > 100 ||
+            concurrency < 1 || concurrency > 50)
+            throw new ArgumentException("Invalid radius/level/seconds/monsters/setup-concurrency");
         if (combat && spawn == 0) throw new ArgumentException("Combat needs --monsters > 0");
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("ws" or "wss"))
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            uri.Scheme is not ("ws" or "wss"))
             throw new ArgumentException("--url must be ws:// or wss://");
-        // Run only against a local/private test server. Never create accounts on an arbitrary public host.
-        if (!(uri.IsLoopback || uri.Host.EndsWith(".internal", StringComparison.OrdinalIgnoreCase)))
+        if (!(uri.IsLoopback ||
+              uri.Host.EndsWith(".internal", StringComparison.OrdinalIgnoreCase)))
             throw new ArgumentException("Bots require a loopback or .internal test server");
 
+        // Fail before registering any test accounts if the collision data is unavailable.
+        var walks = new BotWalkPlanner(map, x, y, radius);
+        var locations = Enumerable.Range(0, count)
+            .Select(_ => walks.RandomPoint())
+            .ToArray();
+
         using var stop = new CancellationTokenSource();
-        Console.CancelKeyPress += (_, e) => { e.Cancel = true; stop.Cancel(); };
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            stop.Cancel();
+        };
         if (duration > 0) stop.CancelAfter(TimeSpan.FromSeconds(duration));
 
         var run = Guid.NewGuid().ToString("N")[..10];
         var clients = new WireLoadClient?[count];
-        var errors = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        var errors = new ConcurrentQueue<string>();
         var launched = 0;
         var start = Stopwatch.StartNew();
-        Console.WriteLine($"[BOTS] run={run} players={count} map={map} center=({x},{y}) interval={interval}ms");
-        Console.WriteLine("[BOTS] Use a disposable database and enable Game__GmCommandsEnabled=true.");
+
+        Console.WriteLine($"[BOTS] run={run} count={count} map={map} center=({walks.Center.X},{walks.Center.Y}) radius={radius}");
+        Console.WriteLine("[BOTS] Use a disposable database with Game__GmCommandsEnabled=true.");
+        Console.WriteLine("[BOTS] Preparing level/HP/DEF, learning normal single-target + small AOE skills.");
+
         try
         {
             using var slots = new SemaphoreSlim(concurrency);
             await Task.WhenAll(Enumerable.Range(0, count).Select(async n =>
             {
-                await slots.WaitAsync(stop.Token);
+                try
+                {
+                    await slots.WaitAsync(stop.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+
                 try
                 {
                     if (stop.IsCancellationRequested) return;
-                    var client = await WireLoadClient.ConnectAndEnterAsync(url, run, n, timeout);
+                    var bot = await WireLoadClient.ConnectAndEnterAsync(url, run, n, timeout);
                     try
                     {
-                        // Keep the actors close enough for a real observer to see them.
-                        await client.TeleportAsync(map, x + (n % 8) * 12, y + (n / 8) * 12, timeout);
-                        // Non-anchor bots can discard unsolicited AOI packets immediately.
-                        if (n != 0) client.EnableInteractiveBots();
-                        clients[n] = client;
+                        var location = locations[n];
+                        await bot.TeleportAsync(map, location.X, location.Y, timeout);
+                        // All buffs use existing GM commands; no server stat or
+                        // combat logic is changed. Full HP/MP/SP follows maxstats.
+                        await bot.PrepareCombatAsync(timeout, level);
+                        if (combat)
+                        {
+                            await bot.LearnBotSkillAsync(20101, timeout); // 赤色光彈
+                            await bot.LearnBotSkillAsync(23102, timeout); // 烈火爆劍
+                            await bot.LearnBotSkillAsync(23103, timeout); // 赤星爆炸 (small AOE)
+                        }
+                        if (n != 0) bot.EnableInteractiveBots();
+                        clients[n] = bot;
                         var ready = Interlocked.Increment(ref launched);
                         if (ready % 10 == 0 || ready == count)
-                            Console.WriteLine($"[BOTS] entered {ready}/{count}");
+                            Console.WriteLine($"[BOTS] prepared {ready}/{count}");
                     }
                     catch
                     {
-                        await client.DisposeAsync();
+                        await bot.DisposeAsync();
                         throw;
                     }
                 }
@@ -97,88 +138,176 @@ internal static class InteractiveBots
                 {
                     errors.Enqueue($"setup #{n}: {ex.Message}");
                 }
-                finally { slots.Release(); }
+                finally
+                {
+                    slots.Release();
+                }
             }));
 
             var live = clients.OfType<WireLoadClient>().ToArray();
             if (live.Length == 0)
-                throw new InvalidOperationException("No bots entered. Check GM enabled, WebSocket URL and account creation.");
-            var monsters = new List<int>();
+                throw new InvalidOperationException(
+                    "No bot entered: check local server, GM permission and character creation.");
+
             if (combat)
             {
+                // Spawn real server monsters in verified walkable coordinates.
+                // They also respawn through the normal shared world AI.
                 for (var i = 0; i < spawn; i++)
                 {
                     try
                     {
-                        var target = await live[0].SpawnMonsterAsync(
-                            245, x + 24 + (i % 5) * 14, y + (i / 5) * 14, timeout);
-                        monsters.Add(target);
+                        var loc = walks.RandomPoint();
+                        await live[0].SpawnMonsterAsync(245, loc.X, loc.Y, timeout);
                     }
-                    catch (Exception ex) { errors.Enqueue($"spawn #{i}: {ex.Message}"); }
+                    catch (Exception ex)
+                    {
+                        errors.Enqueue($"spawn #{i}: {ex.Message}");
+                    }
                 }
-                if (monsters.Count == 0)
-                    Console.WriteLine("[BOTS] No test monsters spawned; movement still runs.");
             }
 
-            foreach (var client in live) client.EnableInteractiveBots();
-            Console.WriteLine($"[BOTS] Active={live.Length}, spawned={monsters.Count}. Open your regular game client now. Ctrl+C stops.");
-            long moves = 0, attacks = 0;
+            foreach (var bot in live) bot.EnableInteractiveBots();
+            Console.WriteLine($"[BOTS] online={live.Length}; open Godot on the same map/server. Ctrl+C to stop.");
+            long moves = 0, attacks = 0, singleSkills = 0, areaSkills = 0, heals = 0;
+            var goals = new (int X, int Y)[count];
+            for (var i = 0; i < count; i++)
+                goals[i] = walks.RandomPoint();
+
             var cycle = 0;
             while (!stop.IsCancellationRequested)
             {
-                var jobs = live.Select(async (bot, i) =>
+                var tick = cycle;
+                await Task.WhenAll(live.Select(async bot =>
                 {
                     try
                     {
-                        // Walk a short 40px out-and-back path in 4px steps.
-                        // This exercises visible movement without GM teleporting every tick.
-                        var phase = (cycle + i % 5) % 20;
-                        var offset = 4 * (phase <= 10 ? phase : 20 - phase);
-                        await bot.SendPositionAsync(timeout, offset);
-                        Interlocked.Increment(ref moves);
-                        if (monsters.Count > 0 && (cycle + i) % 2 == 0)
+                        var nearest = combat
+                            ? bot.BotWorld.Nearest(bot.X, bot.Y, 600)
+                            : null;
+
+                        var distanceSq = nearest is null
+                            ? double.PositiveInfinity
+                            : Math.Pow(nearest.X - bot.X, 2) +
+                              Math.Pow(nearest.Y - bot.Y, 2);
+
+                        // Use real A* navigation toward a living AOI monster.
+                        // When nothing is nearby, wander toward random reachable points.
+                        if (nearest is null || distanceSq > 150 * 150)
                         {
-                            await bot.SendAttackAsync(monsters[(cycle / 2 + i) % monsters.Count], timeout);
-                            Interlocked.Increment(ref attacks);
+                            var goal = nearest is not null
+                                ? (X: nearest.X, Y: nearest.Y)
+                                : (X: (double)goals[bot.Index].X,
+                                   Y: (double)goals[bot.Index].Y);
+
+                            if (walks.TryStep(bot.X, bot.Y, goal.X, goal.Y,
+                                    out var nx, out var ny))
+                            {
+                                await bot.SendBotPositionAsync(nx, ny, timeout);
+                                Interlocked.Increment(ref moves);
+                            }
+                            else
+                            {
+                                goals[bot.Index] = walks.RandomPoint();
+                            }
+                        }
+
+                        // Never attack by a cached fixed entity ID. Pick a living
+                        // monster from this bot's actual AOI snapshot every tick.
+                        if (nearest is not null && distanceSq <= 185 * 185)
+                        {
+                            var phase = (tick + bot.Index * 7);
+                            if (phase % 34 == 0)
+                            {
+                                await bot.SendBotSkillAsync(23103, nearest.EntityId, timeout);
+                                Interlocked.Increment(ref areaSkills);
+                            }
+                            else if (phase % 8 == 0)
+                            {
+                                var skill = (phase / 8) % 2 == 0 ? 20101 : 23102;
+                                await bot.SendBotSkillAsync(skill, nearest.EntityId, timeout);
+                                Interlocked.Increment(ref singleSkills);
+                            }
+                            else
+                            {
+                                await bot.SendAttackAsync(nearest.EntityId, timeout);
+                                Interlocked.Increment(ref attacks);
+                            }
+                        }
+
+                        // Keep HP and mana for sustained observation; the heal
+                        // command is enabled only on this isolated test server.
+                        var state = bot.BotWorld;
+                        if ((tick + bot.Index) % Math.Max(1, 20000 / interval) == 0)
+                        {
+                            await bot.SendBotHealAsync(timeout);
+                            Interlocked.Increment(ref heals);
                         }
                     }
                     catch (Exception ex)
                     {
-                        if (errors.Count < 100) errors.Enqueue($"bot #{bot.Index}: {ex.Message}");
+                        if (errors.Count < 100)
+                            errors.Enqueue($"bot #{bot.Index}: {ex.Message}");
                     }
-                });
-                await Task.WhenAll(jobs);
+                }));
+
                 cycle++;
                 if (cycle % Math.Max(1, 10000 / interval) == 0)
                 {
-                    Console.WriteLine($"[BOTS] elapsed={start.Elapsed:hh\\:mm\\:ss} online={live.Length} move={moves} attack={attacks} corrections={live.Sum(b => b.PositionCorrections)} errors={errors.Count}");
+                    var damage = live.Sum(b => b.BotWorld.DamageHits);
+                    var casts = live.Sum(b => b.BotWorld.SkillCasts);
+                    Console.WriteLine(
+                        $"[BOTS] {start.Elapsed.TotalSeconds:F0}s online={live.Length} move={moves} attack={attacks} single={singleSkills} aoe={areaSkills} confirmedHits={damage} confirmedCasts={casts} corrections={live.Sum(b => b.PositionCorrections)} errors={errors.Count}");
                 }
-                try { await Task.Delay(interval, stop.Token); }
-                catch (OperationCanceledException) { break; }
+
+                try
+                {
+                    await Task.Delay(interval, stop.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
             }
 
             var report = new
             {
-                RunId = run, Requested = count, Connected = live.Length,
-                ElapsedSeconds = start.Elapsed.TotalSeconds, MapId = map,
-                MovementPackets = moves, AttackPackets = attacks,
+                RunId = run,
+                Requested = count,
+                Connected = live.Length,
+                ElapsedSeconds = start.Elapsed.TotalSeconds,
+                MapId = map,
+                RandomSpawnRadius = radius,
+                Level = level,
+                MovementPackets = moves,
+                AttackPackets = attacks,
+                SingleTargetSkillPackets = singleSkills,
+                SmallAreaSkillPackets = areaSkills,
+                TestRecoveryPackets = heals,
+                ConfirmedDamageHits = live.Sum(b => b.BotWorld.DamageHits),
+                ConfirmedSkillCasts = live.Sum(b => b.BotWorld.SkillCasts),
+                ObservedMonsterDeaths = live.Sum(b => b.BotWorld.MonsterDeaths),
                 PositionCorrections = live.Sum(b => b.PositionCorrections),
                 SentBytes = live.Sum(b => b.SentBytes),
                 ReceivedBytes = live.Sum(b => b.ReceivedBytes),
                 Errors = errors.ToArray()
             };
-            Console.WriteLine(JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
-            if (output != null)
+
+            var json = JsonSerializer.Serialize(report,
+                new JsonSerializerOptions { WriteIndented = true });
+            Console.WriteLine(json);
+
+            if (output is not null)
             {
-                var path = Path.GetFullPath(output);
-                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                await File.WriteAllTextAsync(path, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
+                var fullPath = Path.GetFullPath(output);
+                Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+                await File.WriteAllTextAsync(fullPath, json + Environment.NewLine);
             }
-            return errors.IsEmpty && live.Length == count ? 0 : 1;
-        }
-        catch (OperationCanceledException)
-        {
-            return 1;
+
+            return errors.IsEmpty && live.Length == count &&
+                (!combat || (report.ConfirmedDamageHits > 0 &&
+                             report.ConfirmedSkillCasts > 0))
+                ? 0 : 1;
         }
         catch (Exception ex)
         {
@@ -187,8 +316,9 @@ internal static class InteractiveBots
         }
         finally
         {
-            foreach (var client in clients)
-                if (client != null) await client.DisposeAsync();
+            foreach (var bot in clients)
+                if (bot is not null)
+                    await bot.DisposeAsync();
         }
     }
 }
