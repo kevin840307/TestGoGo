@@ -12,10 +12,38 @@ internal sealed class BotWalkPlanner
 
     public string GameDataRoot { get; }
 
-    public BotWalkPlanner(int map, int centerX, int centerY, int radius)
+    public static BotWalkPlanner ForRandomMapLocation(int map, int radius)
     {
-        _map = map;
-        _radius = radius;
+        var root = FindDataRoot(map);
+        var blocking = new BlockingMapService(root);
+        var enemies = new WorldDataService(root).GetEnemies(map)
+            .Where(e => e.Level < 65535 && e.X >= 0 && e.Y >= 0)
+            .OrderBy(e => e.EntityId)
+            .ToArray();
+        if (enemies.Length == 0)
+            throw new InvalidOperationException(
+                $"Map{map} has no enemy spawn locations to anchor the bot crowd.");
+
+        // Prefer a real enemy spawn position on a regular walkable tile.
+        // Each run chooses a fresh crowd center in an actual play area.
+        var start = Random.Shared.Next(enemies.Length);
+        for (var offset = 0; offset < enemies.Length; offset++)
+        {
+            var enemy = enemies[(start + offset) % enemies.Length];
+            if (blocking.GetFlags(map, enemy.X, enemy.Y) != 0)
+                continue;
+            var planner = new BotWalkPlanner(map, enemy.X, enemy.Y, radius);
+            Console.WriteLine(
+                $"[BOTS] Random Map{map} play area picked from Enemy.dat " +
+                $"at ({planner.Center.X},{planner.Center.Y}).");
+            return planner;
+        }
+        throw new InvalidOperationException(
+            $"Map{map} has no enemy spawn point on a walkable Blocking.dat cell.");
+    }
+
+    private static string FindDataRoot(int map)
+    {
         var roots = new[]
         {
             Path.Combine(AppContext.BaseDirectory, "GameData"),
@@ -25,10 +53,17 @@ internal sealed class BotWalkPlanner
                 "Debug", "net8.0", "GameData"),
             Path.Combine(Directory.GetCurrentDirectory(), "Old", "服務端", "Dat")
         };
-        GameDataRoot = roots.FirstOrDefault(root =>
+        return roots.FirstOrDefault(root =>
             new BlockingMapService(root).HasMap(map))
             ?? throw new InvalidOperationException(
-                "Cannot find Blocking.dat for the chosen map. Build the server first.");
+                $"Cannot find Map{map} Blocking.dat. Build the server first.");
+    }
+
+    public BotWalkPlanner(int map, int centerX, int centerY, int radius)
+    {
+        _map = map;
+        _radius = radius;
+        GameDataRoot = FindDataRoot(map);
         _blocking = new BlockingMapService(GameDataRoot);
 
         _navigation = new MonsterNavigationService(_blocking);
