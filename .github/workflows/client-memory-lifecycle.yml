@@ -18,6 +18,8 @@ on:
       - 'client/game_hud.tscn'
       - 'client/game_hud.gd'
       - 'client/tools/build_map_visual_aoi_base.gd'
+      - 'client/tests/map_early_detach_regression.gd'
+      - 'client/tests/atlas_script_parse_regression.gd'
       - 'tools/Prepare-SGO-MapVisuals.ps1'
       - 'tests/test_client_memory_lifecycle_contract.py'
       - '.github/workflows/client-memory-lifecycle.yml'
