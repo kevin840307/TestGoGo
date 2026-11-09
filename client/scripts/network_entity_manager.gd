@@ -20,6 +20,9 @@ const GROUND_AOI_ENTER_RADIUS: float = 2000.0
 const GROUND_AOI_EXIT_RADIUS: float = 2400.0
 const GROUND_AOI_UPDATE_INTERVAL: float = 0.25
 const GROUND_AOI_STATIONARY_SCAN_INTERVAL: float = 1.0
+# AFK keeps ground-drop packets as dictionaries and releases their presentation
+# nodes in small batches. 64 at foreground cadence avoids a long teardown frame.
+const AFK_GROUND_COMPACT_BATCH_SIZE: int = 64
 # Keep server-confirmed combat monsters present even across AOI boundaries.
 const MONSTER_COMBAT_REVEAL_MSEC: int = 12000
 
@@ -299,6 +302,112 @@ func get_ground_aoi_stats() -> Dictionary:
 	}
 
 
+func _is_afk_ground_data_only() -> bool:
+	return GameManager and GameManager.is_afk_mode_active()
+
+
+func compact_ground_items_for_afk_batched(
+	batch_size: int = AFK_GROUND_COMPACT_BATCH_SIZE
+) -> Dictionary:
+	# Ground drops are presentation-only on the AFK screen. Keep their
+	# authoritative SpawnEntity dictionaries so Despawn/new snapshots continue
+	# to work, but release Sprite/Label/Collision/Timer nodes. A pickup already
+	# in progress is intentionally preserved until its request resolves.
+	var ground_ids: Array[int] = []
+	for raw_id in _active_entity_types.keys():
+		var entity_id: int = int(raw_id)
+		if int(_active_entity_types.get(entity_id, -1)) == 3:
+			ground_ids.append(entity_id)
+
+	var released_nodes: int = 0
+	var preserved_requesting: int = 0
+	var stale_nodes: int = 0
+	var since_yield: int = 0
+	var safe_batch: int = maxi(1, batch_size)
+	for entity_id in ground_ids:
+		var drop: Node2D = get_active_entity(entity_id)
+		var cached: Dictionary = _ground_spawn_templates.get(entity_id, {})
+		if not is_instance_valid(drop):
+			if not cached.is_empty():
+				_deferred_ground_spawns[entity_id] = cached
+			active_entities.erase(entity_id)
+			_active_entity_types.erase(entity_id)
+			stale_nodes += 1
+			continue
+		if bool(drop.get_meta("is_requesting", false)):
+			preserved_requesting += 1
+			continue
+		if not cached.is_empty():
+			_deferred_ground_spawns[entity_id] = cached
+		_unregister_entity_hover(drop)
+		drop.queue_free()
+		active_entities.erase(entity_id)
+		_active_entity_types.erase(entity_id)
+		released_nodes += 1
+		since_yield += 1
+		if since_yield >= safe_batch:
+			since_yield = 0
+			await get_tree().process_frame
+
+	var retained_queue: Array[Dictionary] = []
+	var queued_to_data: int = 0
+	for queued_data in _spawn_queue:
+		if int(queued_data.get("EntityType", -1)) != 3:
+			retained_queue.append(queued_data)
+			continue
+		var entity_id: int = int(queued_data.get("EntityID", 0))
+		_queued_spawn_ids.erase(entity_id)
+		var cached: Dictionary = _ground_spawn_templates.get(entity_id, queued_data)
+		if not cached.is_empty():
+			_deferred_ground_spawns[entity_id] = cached
+		queued_to_data += 1
+	_spawn_queue = retained_queue
+
+	# Let the last batch's queue_free calls settle while the window is still at
+	# the normal foreground cadence. NetworkManager and fixed physics continue.
+	if released_nodes > 0 or queued_to_data > 0:
+		await get_tree().process_frame
+	return {
+		"released_nodes": released_nodes,
+		"preserved_requesting": preserved_requesting,
+		"stale_nodes": stale_nodes,
+		"queued_to_data": queued_to_data,
+		"known": _ground_spawn_templates.size(),
+		"deferred": _deferred_ground_spawns.size(),
+	}
+
+
+func restore_ground_items_after_afk() -> Dictionary:
+	# Do not block AFK restore rebuilding hundreds of drop scenes. Re-enable
+	# only current-AOI packets in the normal one-entity-per-frame spawn queue.
+	_ground_aoi_last_context = null
+	_ground_aoi_stationary_elapsed = 0.0
+	var aoi: Dictionary = _ground_aoi_context()
+	if aoi["center"] == null:
+		return {
+			"queued": 0,
+			"known": _ground_spawn_templates.size(),
+			"deferred": _deferred_ground_spawns.size(),
+		}
+	var center: Vector2 = aoi["center"] as Vector2
+	var enter_radius: float = float(aoi["enter"])
+	var queued: int = 0
+	for raw_id in _deferred_ground_spawns.keys():
+		var entity_id: int = int(raw_id)
+		var cached: Dictionary = _deferred_ground_spawns.get(entity_id, {})
+		if cached.is_empty():
+			continue
+		if not is_ground_inside_aoi(cached, center, enter_radius):
+			continue
+		_queue_deferred_ground_spawn(entity_id)
+		queued += 1
+	return {
+		"queued": queued,
+		"known": _ground_spawn_templates.size(),
+		"deferred": _deferred_ground_spawns.size(),
+	}
+
+
 func _ground_spawn_data_at_current_time(entity_id: int) -> Dictionary:
 	var cached: Dictionary = _ground_spawn_templates.get(entity_id, {})
 	if cached.is_empty():
@@ -542,6 +651,10 @@ func _queue_deferred_ground_spawn(entity_id: int) -> void:
 
 
 func _update_ground_aoi(delta: float) -> void:
+	if _is_afk_ground_data_only():
+		_ground_aoi_elapsed = 0.0
+		_ground_aoi_last_context = null
+		return
 	_ground_aoi_elapsed += delta
 	if _ground_aoi_elapsed < GROUND_AOI_UPDATE_INTERVAL:
 		return
@@ -644,6 +757,10 @@ func _on_entity_spawned(data: Dictionary) -> void :
 		_ground_spawn_templates[entity_id] = cached_ground
 		if get_active_entity(entity_id):
 			_deferred_ground_spawns.erase(entity_id)
+			return
+		if _is_afk_ground_data_only():
+			_deferred_ground_spawns[entity_id] = cached_ground
+			_remove_queued_spawn(entity_id)
 			return
 		var aoi: Dictionary = _ground_aoi_context()
 		if aoi["center"] != null and not is_ground_inside_aoi(

@@ -189,6 +189,43 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('"visited_nodes": visited', cache)
         self.assertIn('int(stats.get("retained_embedded", 0))', hud)
 
+    def test_afk_ground_drops_are_data_only_without_touching_combat_entities(self):
+        game = read("client/scripts/game_manager.gd")
+        entities = read("client/scripts/network_entity_manager.gd")
+        self.assertIn("func compact_ground_items_for_afk_batched(", entities)
+        self.assertIn("func restore_ground_items_after_afk()", entities)
+        self.assertIn("func _is_afk_ground_data_only()", entities)
+        self.assertIn('bool(drop.get_meta("is_requesting", false))', entities)
+        self.assertIn("_deferred_ground_spawns[entity_id] = cached", entities)
+        self.assertIn("drop.queue_free()", entities)
+        self.assertIn("if _is_afk_ground_data_only():", entities)
+        self.assertIn("[AFK_DATA_ONLY_GROUND]", game)
+
+        begin = game[
+            game.index("func begin_afk_mode(progress_callback: Callable = Callable())"):
+            game.index("func finish_afk_mode(progress_callback: Callable = Callable())")
+        ]
+        self.assertIn("await NetworkEntityManager.compact_ground_items_for_afk_batched()", begin)
+        self.assertLess(
+            begin.index("compact_ground_items_for_afk_batched"),
+            begin.index("set_performance_modes(ClientPerformanceProfile.LOAD_MULTIBOX"),
+        )
+        self.assertNotIn("clear_map_entities()", begin)
+
+        finish = game[
+            game.index("func finish_afk_mode(progress_callback: Callable = Callable())"):
+            game.index("func _refresh_afk_map_visuals_after_change", game.index("func finish_afk_mode"))
+        ]
+        self.assertIn("NetworkEntityManager.restore_ground_items_after_afk()", finish)
+        self.assertLess(finish.index("_afk_active = false"), finish.index("restore_ground_items_after_afk"))
+
+        compact_start = entities.index("func compact_ground_items_for_afk_batched(")
+        compact_end = entities.index("\nfunc ", compact_start + 1)
+        compact = entities[compact_start:compact_end]
+        self.assertNotIn("NetworkManager.set_process", compact)
+        self.assertNotIn("NetworkManager.set_physics_process", compact)
+        self.assertNotIn("_monster_spawn_templates.clear()", compact)
+
     def test_afk_releases_rebuildable_hud_rows_and_inventory_is_lazy(self):
         hud = read("client/game_hud.gd")
         inventory = read("client/scripts/inventory_window.gd")
