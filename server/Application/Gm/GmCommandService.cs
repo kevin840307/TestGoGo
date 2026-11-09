@@ -78,6 +78,10 @@ public sealed class GmCommandService
                 "level" => Level(parts, accountId, dbid),
                 "maxstats" or "maxstat"
                     => MaxStats(accountId, dbid),
+                // Explicit opt-in to protect ordinary game servers from
+                // synthetic stats. Production never enables this by default.
+                "testbot" when _config.GetValue<bool>("Game:TestBotCommandsEnabled")
+                    => TestBotProfile(accountId, dbid),
                 "attackspeed" or "aspd"
                     => AttackSpeed(parts, accountId, dbid),
                 "money" => Money(parts, accountId, dbid),
@@ -256,6 +260,43 @@ public sealed class GmCommandService
         };
 
         return responses;
+    }
+
+    private IReadOnlyList<object> TestBotProfile(
+        long accountId,
+        long dbid)
+    {
+        // Never affect a regular character's progression automatically:
+        // this GM command exists only in an explicitly enabled test server.
+        var ch = _store.SetLevel(accountId, dbid, 1);
+        if (ch is null)
+            return [Chat("TestBot profile: level update failed")];
+
+        ch = _store.SetPrimaryStats(accountId, dbid, 5, 5, 5, 5, 0);
+        if (ch is null)
+            return [Chat("TestBot profile: attributes update failed")];
+
+        ch = _store.ApplyGrowthStats(
+            accountId, dbid,
+            20000, 5000, 5000,
+            1, 1000,
+            1, 1000,
+            1, 25,
+            Math.Max(1, Convert.ToInt32(ch["MoveSpeed"])));
+
+        if (ch is null)
+            return [Chat("TestBot profile: combat stats update failed")];
+
+        ch = _store.Revive(accountId, dbid);
+        if (ch is null)
+            return [Chat("TestBot profile: refill failed")];
+
+        var assets = _store.GetCharacterAssets(accountId, dbid);
+        return
+        [
+            CharacterStatCalculator.ToPlayerStatusPacket(ch, assets, _current),
+            Chat("TestBot profile applied: Lv1 ATK=1 MATK=1, HP=20000, DEF=1000")
+        ];
     }
 
     private IReadOnlyList<object> MaxStats(
