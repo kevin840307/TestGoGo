@@ -10,13 +10,13 @@ const META_TEXTURE_PATH: StringName = &"map_visual_texture_path"
 
 # FestivalThemeManager may swap these at runtime and stores the normal texture
 # in metadata. Keep them resident so AOI streaming cannot break seasonal swaps.
-const FESTIVAL_SWAPPABLE_TOKENS := PackedStringArray([
+const FESTIVAL_SWAPPABLE_TOKENS := [
 	"C_STICK_A_L", "C_STICK_A_R", "K_STICK_A_L", "K_STICK_A_R",
 	"MC_STICK_01A", "MC_STICK_01B", "R007_R_CENOCAPH",
 	"R_STICK_A_L", "R_STICK_A_R", "GRASS_02", "GRASS_03",
 	"ON_BOX_05", "ON_BOX_06", "ON_BOX_07", "PLANT_01", "PLANT_05",
 	"TREE_02",
-])
+]
 
 var _root_id: int = 0
 var _entries: Array[Dictionary] = []
