@@ -44,11 +44,35 @@ func _run() -> void:
 	check(POLICY.should_show_duplicate_drop(15, records[15], records, Vector2.ZERO, 5.0), "drops outside observation radius not counted")
 	check(records.size() == 8 and records.has(15) and records.has(16), "no drop records removed")
 
+	check(POLICY.sanitize_ground_drop_display_mode(3) == POLICY.GROUND_DROPS_HIDDEN,
+		"invalid ground mode migrates to hidden")
+	check(not POLICY.should_show_ground_drop(POLICY.GROUND_DROPS_HIDDEN,
+		10, records[10], records, Vector2.ZERO, 1000.0), "hide drops discards visual only")
+	check(POLICY.should_show_ground_drop(POLICY.GROUND_DROPS_ALL,
+		16, records[16], records, Vector2.ZERO, 1000.0), "full display keeps all drops")
+	var visible: Dictionary = POLICY.select_visible_ground_drop_ids(records, Vector2.ZERO, 1000.0)
+	check(visible.size() == 6, "five drops of item 101 plus separate item 102")
+	check(visible.has(10) and visible.has(14) and visible.has(17),
+		"five nearest same-kind items remain clickable")
+	check(not visible.has(15) and not visible.has(16), "distant duplicate items excluded")
+	var near_far: Dictionary = POLICY.select_visible_ground_drop_ids(records, Vector2(72, 0), 1000.0)
+	check(near_far.has(16) and near_far.has(12) and not near_far.has(10),
+		"moving the observer reselects the five nearest drops")
+	check(records.size() == 8, "visibility filtering leaves canonical item state untouched")
+
+
 	var scene_source: String = FileAccess.get_file_as_string("res://game_hud.tscn")
 	check(scene_source.contains('[node name="Tabs" type="TabContainer"'), "system setting categories have tabs")
 	check(scene_source.contains('anchor_left = 0.5') and scene_source.contains('anchor_right = 0.5'), "setting window centered")
 	check(scene_source.contains('popup/item_3/text = "都不顯示"'), "fixed four-state other-player visibility")
 	check(scene_source.contains('[node name="OptionSimplifyDrops" type="OptionButton"'), "duplicate ground drop selector exists")
+	check(scene_source.contains('popup/item_2/text = "不顯示掉落物"'), "hide all ground items option exists")
+	var manager_source: String = FileAccess.get_file_as_string("res://scripts/network_entity_manager.gd")
+	# Optional in the synthetic CI sandbox where only the standalone policy is copied.
+	if not manager_source.is_empty():
+		check(manager_source.contains("func _trim_ground_visuals_budgeted()"), "drop visuals freed over successive frames")
+		check(manager_source.contains("_ground_spawn_templates[entity_id] = cached_ground"), "ground snapshots retained regardless of display mode")
+		check(manager_source.contains("func _should_display_ground_drop("), "all spawn and AOI paths share display policy")
 	check(scene_source.contains('[node name="OptionShowDamage" type="OptionButton"'), "damage number selector exists")
 	check(scene_source.contains('[node name="OptionSimplifyEffects" type="OptionButton"'), "effect simplification selector exists")
 	print("[DISPLAY_SETTINGS_REGRESSION] %s" % ("ALL PASS" if failures == 0 else "FAILURES=%d" % failures))
