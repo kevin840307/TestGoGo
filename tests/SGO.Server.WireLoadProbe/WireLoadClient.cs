@@ -298,6 +298,22 @@ internal sealed class WireLoadClient : IAsyncDisposable
             timeout);
     }
 
+    public async Task PrepareWeakBotProfileAsync(TimeSpan timeout)
+    {
+        // Test-only GM command is separately gated by
+        // Game__TestBotCommandsEnabled=true on an isolated server.
+        // Fail explicitly instead of pretending the bot has low attack.
+        var status = await SendGmForTypeAsync(
+            "testbot", "PlayerStatusSync", timeout);
+        var attack = status.TryGetProperty("Attack", out var value)
+            ? value.GetInt32() : -1;
+        var maxHp = status.TryGetProperty("MaxHP", out var hp)
+            ? hp.GetInt32() : -1;
+        if (attack < 0 || attack > 5 || maxHp < 10000)
+            throw new InvalidOperationException(
+                $"Test bot needs low attack / high HP: ATK={attack} MaxHP={maxHp}");
+    }
+
     public Task LearnBotSkillAsync(int skillId, TimeSpan timeout)
         => SendGmForTypeAsync(
             $"skill {skillId} 1",
