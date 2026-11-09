@@ -117,6 +117,25 @@ def scan(root: Path) -> dict:
         source = path.read_text(encoding="utf-8-sig", errors="replace")
         clean = _strip_comments_and_strings(source)
         locals_ = set(FUNCTION.findall(clean))
+        # QuestRuntime expands #include from the quest root before executing Lua.
+        # Included script functions are not missing host APIs.
+        include_stack = [path]
+        visited_includes = {path.resolve()}
+        while include_stack:
+            current = include_stack.pop()
+            include_source = current.read_text(encoding="utf-8-sig", errors="replace")
+            for include_name in re.findall(
+                r'(?im)^\s*#include\s+"([^"]+)"', include_source
+            ):
+                include_path = (quest_root / include_name).resolve()
+                if not include_path.is_file() or include_path in visited_includes:
+                    continue
+                visited_includes.add(include_path)
+                included = include_path.read_text(
+                    encoding="utf-8-sig", errors="replace"
+                )
+                locals_.update(FUNCTION.findall(_strip_comments_and_strings(included)))
+                include_stack.append(include_path)
 
         for match in CALL.finditer(clean):
             name = match.group(1)
