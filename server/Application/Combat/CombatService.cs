@@ -235,12 +235,12 @@ public sealed class CombatService
             return [];
 
         var currentCharacterId = session.CharacterId.Value;
-        var currentHp = _store.GetCharacterHp(
+        var character = _store.GetCharacter(
             accountId,
             currentCharacterId);
         var playerAlive =
-            currentHp.HasValue &&
-            currentHp.Value > 0;
+            character is not null &&
+            Convert.ToInt32(character["HP"]) > 0;
 
         var assets = _store.GetCharacterAssets(
             accountId,
