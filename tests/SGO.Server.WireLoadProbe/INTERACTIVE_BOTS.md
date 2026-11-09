@@ -21,14 +21,14 @@ dotnet run -c Release --project .\server\SGO.Server.csproj
 dotnet run -c Release --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.WireLoadProbe.csproj -- --bots --players 20 --map 13 --interval-ms 350 --seconds 0 --output bots-result.json
 ```
 
-啟動時，程式讀取 Map13 真實 `Enemy.dat`，從怪物出生位置中**隨機選擇可走的練功區中心**，再於其附近 `Blocking.dat` 可通行位置隨機分配角色和測試怪物。每次執行的中心位置都可能不同。不需要再提供 `--x`、`--y`；若希望限定觀察區域，仍可選擇手動輸入兩個座標。
+啟動時，程式讀取 Map13 真實 `Enemy.dat` 與 `Blocking.dat`，**每個機器人獨立抽取地圖任一合法怪物出生區**，再在區域內隨機挑選可通行的起點。玩家不再全部集中於預設中心的 280px 內。怪物也會依機器人隨機分散召喚（使用該地圖的有效怪物種類）。不需要 `--x`、`--y`；若要強制集中於固定觀察區域，仍可手動輸入。機器人活動範圍涵蓋各練功區，尋怪不再有人為 600px 上限；**真正攻擊仍依正常 Server 攻擊距離及技能判定，絕不隔空打怪**。
 
 預設 `--radius 280`，可自行設定 `--radius 500`（最多 700）；預設召喚怪物數隨玩家人數增加、最多 100 隻，亦可手動指定 `--monsters 20`。
 
 ## 3. 長時間戰鬥行為
 
 - 每個測試角色 **Lv1、ATK=1、MATK=1、DEF=1000、HP=20000**（透過獨立測試 GM 指令建立），另有足夠 MP/SP。定期補血，方便觀察長時間多人攻擊。
-- 主要使用正常 `AttackEntity` 普通攻擊；偶爾使用單體技能 `20101` 赤色光彈、`23102` 烈火爆劍（Lv1）。
+- 主要使用正常 `AttackEntity` 普通攻擊；並用同樣的 `SyncState` 讓觀察者看到機器人的攻擊動畫。偶爾使用單體技能 `20101` 赤色光彈、`23102` 烈火爆劍（Lv1）。
 - **完全不施放範圍技能**，不使用 `23103` 赤星爆炸，也不使用 `99001` 星界震盪。
 - 怪物存活狀態由 AOI `SpawnEntity`／`EntityDamage`／`EntityDeath`／`DespawnEntity` 更新；如果距離太遠會沿 Server 現有 A* 尋路靠近，沒怪時隨機走動。
 - 怪物死亡後由 Server 原有重生流程管理；**不會透過工具重建假的怪物**。
@@ -50,3 +50,17 @@ dotnet build -c Release .\tests\SGO.Server.WireLoadProbe\SGO.Server.WireLoadProb
 ```
 
 目前修改已提交 GitHub，但尚未在此工作環境完成 .NET 8 編譯、Godot 渲染及實際負載驗證，不宣稱壓測 PASS。
+
+## 6. 如果看起來沒有打怪
+
+最新 CLI 會逐步輸出部分玩家的 `websocket-connected / register-account / login / create-character / enter-world / bootstrap / world-ready` 等初始化進度，並於每一位玩家成功時印出 `ready #NNN`。某個帳號失敗時會立即印出 `SETUP FAILED #NNN` 與原因，不需要一直等待 10 人完成才知道哪一步失敗。
+
+正式進入戰鬥後，每約 10 秒印出：
+
+- `visibleTargets`：所有機器人收到的 AOI 活怪數總和。若是 0，先查 WorldReady/SpawnEntity 和怪物位置。
+- `attack`：已送出的實際 AttackEntity 封包數；若為 0，查尋路與目標距離。
+- `confirmedHits`：收到含機器人 AttackerID 的真正 EntityDamage 事件數；如果 `attack > 0` 但仍是 0，查 Server 攻擊判定。
+- `rejected`：Server 回傳距離太遠、目標不存在、技能尚未學會、冷卻等訊息累計次數。
+- `NO CONFIRMED HITS`：首次機器人座標、最近怪物距離、最近一條 Server Flash，方便直接判斷。
+
+啟動工具前須**重啟**測試 Server 讓兩個環境變數生效。僅看到 `[BOTS] run=...` 不代表玩家已成功登入，直到 `[BOTS] online=...` 才代表進入主循環。
