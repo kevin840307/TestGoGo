@@ -49,6 +49,49 @@ func is_bound_to(root: Node) -> bool:
 	return is_instance_valid(root) and _root_id == root.get_instance_id()
 
 
+# Used on a newly instantiated legacy map BEFORE attaching it to the
+# SceneTree. Detach distant static image references immediately, not several
+# frames after the HUD has already been constructed. Map base scenes built by
+# build_map_visual_aoi_base.gd start out with these images already detached.
+# No collision, Building, festival, scripted or network entity is modified.
+func detach_far_before_attach(root: Node, player_position: Vector2, profile: Dictionary) -> Dictionary:
+	var indexed: int = 0
+	var detached: int = 0
+	if not is_instance_valid(root):
+		return {"indexed": indexed, "detached": detached}
+	var enter_radius: float = float(profile.get("map_visual_aoi_enter_radius", 3200.0))
+	var exit_radius: float = maxf(
+		float(profile.get("map_visual_aoi_exit_radius", enter_radius + 800.0)),
+		enter_radius + 400.0
+	)
+	var exit_sq: float = exit_radius * exit_radius
+	var pending: Array[Node] = [root]
+	while not pending.is_empty():
+		var node: Node = pending.pop_back()
+		if not is_instance_valid(node):
+			continue
+		for child in node.get_children():
+			pending.append(child)
+		if not (node is Sprite2D):
+			continue
+		var sprite := node as Sprite2D
+		if sprite.get_script() != null or _inside_dynamic_container(sprite, root):
+			continue
+		var texture := sprite.texture
+		if not is_instance_valid(texture):
+			continue
+		var path: String = texture.resource_path
+		if not path.begins_with("res://") or _is_festival_swappable(path):
+			continue
+		indexed += 1
+		if sprite.global_position.distance_squared_to(player_position) <= exit_sq:
+			continue
+		sprite.set_meta(META_TEXTURE_PATH, path)
+		sprite.texture = null
+		detached += 1
+	return {"indexed": indexed, "detached": detached}
+
+
 func bind_map(root: Node) -> Dictionary:
 	clear()
 	if not is_instance_valid(root):
@@ -268,6 +311,10 @@ func _find_live_texture(resource_path: String) -> Texture2D:
 func _inside_dynamic_container(node: Node, root: Node) -> bool:
 	var cursor: Node = node.get_parent()
 	while is_instance_valid(cursor) and cursor != root:
+		# Building Sprite_OUT/Sprite_IN are switched by gameplay signals;
+		# static-map texture AOI must not blank either of these states.
+		if cursor.is_in_group("Building"):
+			return true
 		if str(cursor.name) in [
 			"Entities", "EntityContainer", "MonsterContainer",
 			"NpcContainer", "NPCContainer", "DropContainer"
