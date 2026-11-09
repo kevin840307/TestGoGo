@@ -68,8 +68,8 @@ jobs:
           printf '%s\n' 'extends Node' 'func is_loaded() -> bool:' '    return false' 'func get_effective_tick_rate_hz() -> float:' '    return 0.0' 'func get_resource_timeline(_path: String, _action: String) -> Array:' '    return []' > "$RUNNER_TEMP/sgomap/tests/timing_stub.gd"
           printf '%s\n' '[autoload]' 'AudioManager="*res://tests/audio_stub.gd"' 'AnimationTimingManager="*res://tests/timing_stub.gd"' >> "$RUNNER_TEMP/sgomap/project.godot"
           printf '%s\\n' '[gd_scene load_steps=2 format=3]' '[ext_resource type="Script" path="res://tests/atlas_scene_loader_regression.gd" id="1"]' '' '[node name="AtlasTest" type="Node"]' 'script = ExtResource("1")' > "$RUNNER_TEMP/sgomap/tests/atlas_scene_loader_regression.tscn"
-          sed -i '/config\/name=/a run/main_scene="res://tests/atlas_scene_loader_regression.tscn"' "$RUNNER_TEMP/sgomap/project.godot"
-          timeout --kill-after=5s 30s "$RUNNER_TEMP/Godot_v4.7.2-stable_linux.x86_64" --headless --path "$RUNNER_TEMP/sgomap" --quit-after 60 | tee "$RUNNER_TEMP/atlas-compile.log"
+          printf '%s\n' 'config_version=5' '[application]' 'config/name="SGO Loader Compile"' 'run/main_scene="res://tests/atlas_scene_loader_regression.tscn"' '[autoload]' 'AudioManager="*res://tests/audio_stub.gd"' 'AnimationTimingManager="*res://tests/timing_stub.gd"' > "$RUNNER_TEMP/sgomap/project.godot"
+          timeout --kill-after=5s 30s "$RUNNER_TEMP/Godot_v4.7.2-stable_linux.x86_64" --headless --path "$RUNNER_TEMP/sgomap" "res://tests/atlas_scene_loader_regression.tscn" --quit-after 60 | tee "$RUNNER_TEMP/atlas-compile.log"
           grep -Fq "[ATLAS_SCRIPT_PARSE_PASS]" "$RUNNER_TEMP/atlas-compile.log"
       - name: Existing HUD and visual performance contracts
         run: |
