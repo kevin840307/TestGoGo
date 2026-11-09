@@ -53,6 +53,26 @@ foreach (var packet in packets)
         "legacy queue preserves exact FIFO ordering");
 }
 Check(!hub.HasPendingPlayerPriority(normal.ConnectionId), "legacy mode has no hidden second queue");
+
+// A large stationary-ground and monster burst must not delay a newly queued
+// player update, nor may it silently discard or reorder ordinary messages.
+for (var i = 0; i < 1000; i++)
+{
+    hub.PublishToConnection(fast.ConnectionId,
+        new { Type = "MoveEntity", EntityID = 8_000_000L + i, X = i, Y = 0 });
+    hub.PublishToConnection(fast.ConnectionId,
+        new { Type = "SpawnEntity", EntityType = 3, EntityID = 5_000_000L + i });
+}
+var latePlayerMove = new { Type = "MoveEntity", EntityID = 37L, X = 7, Y = 8 };
+hub.PublishToConnection(fast.ConnectionId, latePlayerMove);
+Check(hub.TryDequeuePlayerPriority(fast.ConnectionId, out var urgent) &&
+      ReferenceEquals(urgent, latePlayerMove),
+      "player move is dequeued first even after 2000 ordinary AOI events");
+Check(fast.Queue.Count == 2000, "all 2000 monster and drop updates remain queued");
+var ordinarySeen = 0;
+while (fast.Queue.TryDequeue(out _))
+    ordinarySeen++;
+Check(ordinarySeen == 2000, "every ordinary item survives the priority burst");
 hub.Unregister(fast.ConnectionId);
 hub.Unregister(normal.ConnectionId);
 Check(!hub.HasPendingPlayerPriority(fast.ConnectionId), "unregister cleans priority queue");
