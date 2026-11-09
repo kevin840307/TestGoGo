@@ -9,6 +9,7 @@ internal sealed class BotWalkPlanner
     private readonly int _map;
     private readonly int _radius;
     private readonly (int X, int Y) _center;
+    private readonly (int X, int Y)[] _mapSpawnSites;
 
     public string GameDataRoot { get; }
 
@@ -67,6 +68,22 @@ internal sealed class BotWalkPlanner
         _blocking = new BlockingMapService(GameDataRoot);
 
         _navigation = new MonsterNavigationService(_blocking);
+        // Each bot may start anywhere a real map monster can spawn,
+        // independently of the observer center and radius.
+        _mapSpawnSites = new WorldDataService(GameDataRoot)
+            .GetEnemies(map)
+            .Where(e => e.Level < 65535)
+            .Select(e => (
+                X: (int)Math.Floor(e.X / (double)BlockingMapService.CellSize) *
+                    BlockingMapService.CellSize + BlockingMapService.CellSize / 2,
+                Y: (int)Math.Floor(e.Y / (double)BlockingMapService.CellSize) *
+                    BlockingMapService.CellSize + BlockingMapService.CellSize / 2))
+            .Where(p => Walkable(p.X, p.Y))
+            .Distinct()
+            .ToArray();
+        if (_mapSpawnSites.Length == 0)
+            throw new InvalidOperationException(
+                $"Map{map} has no walkable monster spawn areas.");
         // Requested map positions may be visual landmarks or blocked cells.
         // Search within the spawn radius before failing. The original 96px
         // search rejected Map13 (4331,5346), whose nearest clear tile is
@@ -87,6 +104,34 @@ internal sealed class BotWalkPlanner
                 $"using nearest valid ({_center.X},{_center.Y}) " +
                 $"distance={offset:F0}px (Blocking.dat).");
         }
+    }
+
+    public (int X, int Y) RandomMapPoint()
+    {
+        // No fixed grind radius: sample any walkable enemy spawn across map.
+        // A small local jitter spreads players without placing them in walls.
+        var site = _mapSpawnSites[Random.Shared.Next(_mapSpawnSites.Length)];
+        return RandomPointNear(site.X, site.Y, 112);
+    }
+
+    public (int X, int Y) RandomPointNear(int x, int y, int radius)
+    {
+        var safe = FindNear(x, y, 64) ??
+            throw new InvalidOperationException("Origin has no walkable tile");
+        var size = BlockingMapService.CellSize;
+        for (var i = 0; i < 160; i++)
+        {
+            var radians = Random.Shared.NextDouble() * 2.0 * Math.PI;
+            var distance = Math.Sqrt(Random.Shared.NextDouble()) * radius;
+            var px = (int)Math.Floor(
+                (safe.X + Math.Cos(radians) * distance) / size) * size + size / 2;
+            var py = (int)Math.Floor(
+                (safe.Y + Math.Sin(radians) * distance) / size) * size + size / 2;
+            if (Walkable(px, py) &&
+                _navigation.IsDirectClear(_map, safe.X, safe.Y, px, py))
+                return (px, py);
+        }
+        return safe;
     }
 
     public (int X, int Y) Center => _center;
