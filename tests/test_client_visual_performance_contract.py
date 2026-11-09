@@ -227,10 +227,24 @@ class ClientVisualPerformanceContractTests(unittest.TestCase):
         self.assertIn("sprite.get_script() != null", streamer)
         self.assertIn("_inside_dynamic_container", streamer)
         self.assertIn("FESTIVAL_SWAPPABLE_TOKENS", streamer)
+        self.assertIn("META_TEXTURE_PATH", streamer)
+        self.assertIn('res://maps/streamed/Map%02d_base.scn', manager)
+        self.assertIn("[MAP_STREAM_SOURCE]", manager)
         self.assertNotIn("NetworkManager", streamer)
         self.assertNotIn("set_physics_process", streamer)
         self.assertNotIn("physics_ticks_per_second", streamer)
         self.assertNotIn("Blocking", streamer)
+
+    def test_aoi_base_generator_strips_static_texture_dependencies_before_runtime(self):
+        generator = source("client/tools/build_map_visual_aoi_base.gd")
+        manager = source("client/scripts/game_manager.gd")
+        self.assertIn("sprite.set_meta(META_TEXTURE_PATH, path)", generator)
+        self.assertIn("sprite.texture = null", generator)
+        self.assertIn("ResourceSaver.save(base, output_path)", generator)
+        self.assertIn("ResourceLoader.CACHE_MODE_IGNORE_DEEP", generator)
+        self.assertIn("_inside_dynamic_or_building", generator)
+        self.assertIn("FESTIVAL_SWAPPABLE_TOKENS", generator)
+        self.assertIn("_resolve_map_scene_path", manager)
 
     def test_behavioral_scripts_wired_to_runner(self):
         runner = source("tests/run_protocol_checks.ps1")

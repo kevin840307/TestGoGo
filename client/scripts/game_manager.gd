@@ -1027,11 +1027,18 @@ func _leave_afk_audio_silence(restart_map_music: bool) -> void:
 
 
 
+func _resolve_map_scene_path(map_id: int) -> String:
+	var streamed_path: String = "res://maps/streamed/Map%02d_base.scn" % map_id
+	if ResourceLoader.exists(streamed_path):
+		return streamed_path
+	return "res://maps/Map%02d.scn" % map_id
+
+
 func _afk_current_map_path() -> String:
 	if is_instance_valid(current_player) and current_player.data_model:
 		var map_id: int = int(current_player.data_model.map_id)
 		if map_id > 0:
-			return "res://maps/Map%02d.scn" % map_id
+			return _resolve_map_scene_path(map_id)
 	return ""
 
 
@@ -2058,8 +2065,14 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	var raw_num_str = map_id.replace("map", "")
 	var target_map_id: int = int(raw_num_str)
 	var formatted_map_name = "Map%02d" % target_map_id
-	var map_path = "res://maps/" + formatted_map_name + ".scn"
+	var map_path = _resolve_map_scene_path(target_map_id)
 	_last_world_map_audit_path = map_path
+	if OS.is_debug_build():
+		print("[MAP_STREAM_SOURCE] map=%d source=%s path=%s" % [
+			target_map_id,
+			"aoi_base" if map_path.contains("/streamed/") else "legacy_full",
+			map_path,
+		])
 	var initial_started_usec: int = Time.get_ticks_usec()
 	# Network entity packets may arrive immediately, but instantiating dozens of
 	# monsters while the first map/player/PaperDoll/HUD are initializing creates
@@ -2703,8 +2716,14 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 		current_hud.show_map_loading(MAP_LOADING_FADE_IN_SECONDS)
 
 	var formatted_map_name = "Map%02d" % target_map_id
-	var map_path = "res://maps/" + formatted_map_name + ".scn"
+	var map_path = _resolve_map_scene_path(target_map_id)
 	_last_world_map_audit_path = map_path
+	if OS.is_debug_build():
+		print("[MAP_STREAM_SOURCE] map=%d source=%s path=%s" % [
+			target_map_id,
+			"aoi_base" if map_path.contains("/streamed/") else "legacy_full",
+			map_path,
+		])
 
 	if not ResourceLoader.exists(map_path):
 		_trace_map_change("map_missing", source_map_id, target_map_id)

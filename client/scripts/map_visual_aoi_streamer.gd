@@ -5,7 +5,8 @@ class_name MapVisualAoiStreamer
 # navigation, networking, physics, or authoritative entity state.
 const UPDATE_INTERVAL_SECONDS: float = 0.10
 const SCAN_BATCH_SIZE: int = 240
-const MAX_PENDING_PATHS: int = 12
+const MAX_PENDING_PATHS: int = 24
+const META_TEXTURE_PATH: StringName = &"map_visual_texture_path"
 
 # FestivalThemeManager may swap these at runtime and stores the normal texture
 # in metadata. Keep them resident so AOI streaming cannot break seasonal swaps.
@@ -61,16 +62,20 @@ func bind_map(root: Node) -> Dictionary:
 			continue
 		for child in node.get_children():
 			pending.append(child)
-		if not node is Sprite2D:
+		if not (node is Sprite2D):
 			continue
 
 		var sprite := node as Sprite2D
 		if sprite.get_script() != null or _inside_dynamic_container(sprite, root):
 			continue
 		var texture := sprite.texture
-		if not is_instance_valid(texture):
-			continue
-		var resource_path: String = texture.resource_path
+		var resource_path: String = ""
+		var loaded: bool = false
+		if is_instance_valid(texture):
+			resource_path = texture.resource_path
+			loaded = true
+		elif sprite.has_meta(META_TEXTURE_PATH):
+			resource_path = str(sprite.get_meta(META_TEXTURE_PATH))
 		if not resource_path.begins_with("res://"):
 			continue
 		if _is_festival_swappable(resource_path):
@@ -81,8 +86,10 @@ func bind_map(root: Node) -> Dictionary:
 			"node": sprite,
 			"path": resource_path,
 			"position": sprite.global_position,
-			"loaded": true,
+			"loaded": loaded,
 		})
+		if not loaded:
+			_unloaded += 1
 		if not _path_indices.has(resource_path):
 			_path_indices[resource_path] = []
 		(_path_indices[resource_path] as Array).append(index)
