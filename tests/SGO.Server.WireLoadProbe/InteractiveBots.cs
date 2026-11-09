@@ -90,7 +90,7 @@ internal static class InteractiveBots
             throw new InvalidOperationException(
                 "The map contains no valid Enemy.dat entries; cannot spawn test monsters.");
         var locations = Enumerable.Range(0, count)
-            .Select(_ => walks.RandomPoint())
+            .Select(_ => x.HasValue ? walks.RandomPoint() : walks.RandomMapPoint())
             .ToArray();
 
         using var stop = new CancellationTokenSource();
@@ -107,7 +107,9 @@ internal static class InteractiveBots
         var launched = 0;
         var start = Stopwatch.StartNew();
 
-        Console.WriteLine($"[BOTS] run={run} count={count} map={map} center=({walks.Center.X},{walks.Center.Y}) radius={radius}");
+        Console.WriteLine($"[BOTS] run={run} count={count} map={map} " +
+            (x.HasValue ? $"center=({walks.Center.X},{walks.Center.Y}) radius={radius}"
+                : "placement=all walkable enemy zones (no fixed patrol radius)"));
         Console.WriteLine("[BOTS] Requires disposable DB + Game__GmCommandsEnabled=true + Game__TestBotCommandsEnabled=true.");
         Console.WriteLine("[BOTS] Lv1, ATK=1, DEF=1000, HP=20000; normal attacks + rare simple single-target skills.");
 
@@ -128,25 +130,39 @@ internal static class InteractiveBots
                 try
                 {
                     if (stop.IsCancellationRequested) return;
-                    var bot = await WireLoadClient.ConnectAndEnterAsync(url, run, n, timeout);
+                    var stage = "connect";
+                    var bot = await WireLoadClient.ConnectAndEnterAsync(
+                        url, run, n, timeout,
+                        (idx, next) =>
+                        {
+                            stage = next;
+                            if (idx < 3 || idx % 10 == 0)
+                                Console.WriteLine($"[BOTS] #{idx:D3} stage={next}");
+                        });
                     try
                     {
                         var location = locations[n];
+                        Console.WriteLine($"[BOTS] #{n:D3} enter={bot.CharacterId} " +
+                            $"destination=({location.X},{location.Y})");
                         await bot.TeleportAsync(map, location.X, location.Y, timeout);
+                        if (n < 3)
+                            Console.WriteLine($"[BOTS] #{n:D3} stage=test-profile");
                         // The profile is restricted to an explicitly enabled
                         // test server. Ordinary GM level/maxstats would make
                         // attacks too powerful to test sustained combat.
                         await bot.PrepareWeakBotProfileAsync(timeout);
                         if (combat)
                         {
+                            if (n < 3)
+                                Console.WriteLine($"[BOTS] #{n:D3} stage=learn-single-target-skills");
                             await bot.LearnBotSkillAsync(20101, timeout); // 赤色光彈
                             await bot.LearnBotSkillAsync(23102, timeout); // 烈火爆劍
                          }
                         if (n != 0) bot.EnableInteractiveBots();
                         clients[n] = bot;
                         var ready = Interlocked.Increment(ref launched);
-                        if (ready % 10 == 0 || ready == count)
-                            Console.WriteLine($"[BOTS] prepared {ready}/{count}");
+                        Console.WriteLine($"[BOTS] ready #{n:D3} ({ready}/{count}) " +
+                            $"position=({bot.X},{bot.Y})");
                     }
                     catch
                     {
@@ -156,7 +172,9 @@ internal static class InteractiveBots
                 }
                 catch (Exception ex)
                 {
-                    errors.Enqueue($"setup #{n}: {ex.Message}");
+                    errors.Enqueue($"setup #{n}: {ex.GetType().Name}: {ex.Message}");
+                    Console.Error.WriteLine($"[BOTS] SETUP FAILED #{n:D3}: " +
+                        $"{ex.GetType().Name}: {ex.Message}");
                 }
                 finally
                 {
@@ -195,7 +213,7 @@ internal static class InteractiveBots
             long moves = 0, attacks = 0, singleSkills = 0, heals = 0;
             var goals = new (int X, int Y)[count];
             for (var i = 0; i < count; i++)
-                goals[i] = walks.RandomPoint();
+                goals[i] = walks.RandomPointNear(locations[i].X, locations[i].Y, radius);
 
             var cycle = 0;
             while (!stop.IsCancellationRequested)
@@ -206,7 +224,7 @@ internal static class InteractiveBots
                     try
                     {
                         var nearest = combat
-                            ? bot.BotWorld.Nearest(bot.X, bot.Y, 600)
+                            ? bot.BotWorld.Nearest(bot.X, bot.Y, double.PositiveInfinity)
                             : null;
 
                         var distanceSq = nearest is null
@@ -216,7 +234,7 @@ internal static class InteractiveBots
 
                         // Use real A* navigation toward a living AOI monster.
                         // When nothing is nearby, wander toward random reachable points.
-                        if (nearest is null || distanceSq > 150 * 150)
+                        if (nearest is null || distanceSq > 128 * 128)
                         {
                             var goal = nearest is not null
                                 ? (X: nearest.X, Y: nearest.Y)
@@ -231,16 +249,18 @@ internal static class InteractiveBots
                             }
                             else
                             {
-                                goals[bot.Index] = walks.RandomPoint();
+                                goals[bot.Index] = walks.RandomPointNear(
+                                    bot.X, bot.Y, radius);
                             }
                         }
 
                         // Never attack by a cached fixed entity ID. Pick a living
                         // monster from this bot's actual AOI snapshot every tick.
-                        if (nearest is not null && distanceSq <= 185 * 185)
+                        if (nearest is not null && distanceSq <= 170 * 170)
                         {
                             var phase = (tick + bot.Index * 7);
-                            if (phase % 60 == 0 || phase % 20 == 0)
+                            if ((phase % 60 == 0 || phase % 20 == 0) &&
+                                distanceSq <= 130 * 130)
                             {
                                 // Only normal single-target skills. Never cast
                                 // 99001/23103 or any AOE during load tests.
@@ -276,8 +296,17 @@ internal static class InteractiveBots
                 {
                     var damage = live.Sum(b => b.BotWorld.DamageHits);
                     var casts = live.Sum(b => b.BotWorld.SkillCasts);
+                    var visible = live.Sum(b => b.BotWorld.VisibleMonsters);
+                    var rejected = live.Sum(b => b.BotWorld.RejectedAttackMessages);
                     Console.WriteLine(
-                        $"[BOTS] {start.Elapsed.TotalSeconds:F0}s online={live.Length} move={moves} attack={attacks} single={singleSkills} confirmedHits={damage} confirmedCasts={casts} corrections={live.Sum(b => b.PositionCorrections)} errors={errors.Count}");
+                        $"[BOTS] {start.Elapsed.TotalSeconds:F0}s online={live.Length} " +
+                        $"visibleTargets={visible} move={moves} attack={attacks} " +
+                        $"single={singleSkills} confirmedHits={damage} " +
+                        $"confirmedCasts={casts} rejected={rejected} " +
+                        $"corrections={live.Sum(b => b.PositionCorrections)} errors={errors.Count}");
+                    if (tick > 25 && damage == 0 && attacks == 0 && visible == 0)
+                        Console.WriteLine("[BOTS] No visible monsters: inspect WorldReady/AOI " +
+                            "and spawned monster positions; bots are still patrolling.");
                 }
 
                 try
@@ -297,7 +326,8 @@ internal static class InteractiveBots
                 Connected = live.Length,
                 ElapsedSeconds = start.Elapsed.TotalSeconds,
                 MapId = map,
-                RandomSpawnRadius = radius,
+                PatrolRadius = radius,
+                Placement = x.HasValue ? "near-user-point" : "map-wide-enemy-spawn-zones",
                 Level = 1,
                 MovementPackets = moves,
                 AttackPackets = attacks,
@@ -306,6 +336,8 @@ internal static class InteractiveBots
                 ConfirmedDamageHits = live.Sum(b => b.BotWorld.DamageHits),
                 ConfirmedSkillCasts = live.Sum(b => b.BotWorld.SkillCasts),
                 ObservedMonsterDeaths = live.Sum(b => b.BotWorld.MonsterDeaths),
+                VisibleTargets = live.Sum(b => b.BotWorld.VisibleMonsters),
+                RejectedAttackMessages = live.Sum(b => b.BotWorld.RejectedAttackMessages),
                 PositionCorrections = live.Sum(b => b.PositionCorrections),
                 SentBytes = live.Sum(b => b.SentBytes),
                 ReceivedBytes = live.Sum(b => b.ReceivedBytes),
