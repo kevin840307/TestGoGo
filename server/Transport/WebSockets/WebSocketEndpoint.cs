@@ -93,6 +93,110 @@ public static class WebSocketEndpoint
                 }
             }
 
+            // Keep per-client AOI broadcasts independent of the 250 ms world
+            // simulation. High-priority player updates cannot be held behind
+            // a burst of ground-item scene creation/monster snapshots.
+            // The underlying ConcurrentQueue remains FIFO; only unrelated
+            // player events are promoted within a bounded send batch.
+            static int BroadcastPriority(object packet)
+            {
+                var type = packet.GetType();
+                var kind = type.GetProperty("Type")?.GetValue(packet) as string;
+                if (kind is not (
+                    "MoveEntity" or "SpawnEntity" or "DespawnEntity"
+                    or "SyncState" or "EntityDamage" or "EntityHeal"))
+                    return 1;
+
+                if (kind == "SpawnEntity")
+                {
+                    var entityType = type.GetProperty("EntityType")?.GetValue(packet);
+                    return Convert.ToInt32(entityType ?? -1) == 0 ? 0 : 1;
+                }
+
+                if (kind is "MoveEntity" or "DespawnEntity" or "SyncState")
+                {
+                    var entity = type.GetProperty("EntityID")?.GetValue(packet);
+                    var entityId = Convert.ToInt64(entity ?? -1L);
+                    return entityId > 0 && entityId < 1_000_000 ? 0 : 1;
+                }
+
+                var targetType = type.GetProperty("TargetType")?.GetValue(packet);
+                return Convert.ToInt32(targetType ?? -1) == 0 ? 0 : 1;
+            }
+
+            var broadcastSendTask = Task.Run(async () =>
+            {
+                try
+                {
+                    using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(25));
+                    while (!worldTickToken.IsCancellationRequested &&
+                           socket.State == WebSocketState.Open &&
+                           await timer.WaitForNextTickAsync(worldTickToken))
+                    {
+                        if (broadcastQueue.IsEmpty)
+                            continue;
+
+                        const int maxBatch = 256;
+                        var playerUpdates = new List<object>(32);
+                        var otherUpdates = new List<object>(maxBatch);
+                        for (var i = 0; i < maxBatch &&
+                             broadcastQueue.TryDequeue(out var broadcastPacket); i++)
+                        {
+                            if (BroadcastPriority(broadcastPacket) == 0)
+                                playerUpdates.Add(broadcastPacket);
+                            else
+                                otherUpdates.Add(broadcastPacket);
+                        }
+
+                        // Send all queued updates, never discard gameplay or
+                        // ground-item data. The send gate preserves WS thread
+                        // safety across request replies, world ticks and AOI.
+                        if (playerUpdates.Count > 0)
+                            await SendPacketsAsync(playerUpdates, worldTickToken);
+                        if (otherUpdates.Count > 0)
+                            await SendPacketsAsync(otherUpdates, worldTickToken);
+
+                        var now = DateTimeOffset.UtcNow;
+                        if (!broadcastQueue.IsEmpty &&
+                            now - lastBroadcastBacklogCheck >= TimeSpan.FromSeconds(2))
+                        {
+                            lastBroadcastBacklogCheck = now;
+                            var backlogCount = broadcastQueue.Count;
+                            if (backlogCount >= 500 &&
+                                now - lastBroadcastBacklogWarning >= TimeSpan.FromSeconds(10))
+                            {
+                                lastBroadcastBacklogWarning = now;
+                                diagnostics.BroadcastBacklogWarning();
+                                diagnostics.Record(
+                                    "Warning",
+                                    "BroadcastBacklog",
+                                    $"Queued={backlogCount}",
+                                    state.ConnectionId,
+                                    state.AccountId,
+                                    state.CharacterId,
+                                    state.CurrentMapId);
+                                log.LogWarning(
+                                    "[BROADCAST_BACKLOG] Queued={Queued} Connection={ConnectionID} Account={AccountID} Character={CharacterID} Map={MapID}",
+                                    backlogCount,
+                                    state.ConnectionId,
+                                    state.AccountId,
+                                    state.CharacterId,
+                                    state.CurrentMapId);
+                            }
+                        }
+                    }
+                }
+                catch (OperationCanceledException) { }
+                catch (WebSocketException) { }
+                catch (Exception ex)
+                {
+                    diagnostics.PacketError();
+                    log.LogError(ex,
+                        "[BROADCAST_SEND_FAILED] Connection={ConnectionID}",
+                        state.ConnectionId);
+                }
+            });
+
             var worldTickTask = Task.Run(async () =>
             {
                 try
@@ -158,47 +262,6 @@ public static class WebSocketEndpoint
                         {
                             await SendPacketsAsync(
                                 [new { Type = "Ping" }],
-                                worldTickToken);
-                        }
-
-                        if (!broadcastQueue.IsEmpty)
-                        {
-                            // ConcurrentQueue.Count can be non-trivial under a
-                            // large backlog. Never run that diagnostic scan on
-                            // every 250 ms world tick.
-                            if (now - lastBroadcastBacklogCheck >= TimeSpan.FromSeconds(2))
-                            {
-                                lastBroadcastBacklogCheck = now;
-                                var backlogCount = broadcastQueue.Count;
-                                if (backlogCount >= 500 &&
-                                    now - lastBroadcastBacklogWarning >= TimeSpan.FromSeconds(10))
-                                {
-                                    lastBroadcastBacklogWarning = now;
-                                    diagnostics.BroadcastBacklogWarning();
-                                    diagnostics.Record(
-                                        "Warning",
-                                        "BroadcastBacklog",
-                                        $"Queued={backlogCount}",
-                                        state.ConnectionId,
-                                        state.AccountId,
-                                        state.CharacterId,
-                                        state.CurrentMapId);
-                                    log.LogWarning(
-                                        "[BROADCAST_BACKLOG] Queued={Queued} Connection={ConnectionID} Account={AccountID} Character={CharacterID} Map={MapID}",
-                                        backlogCount,
-                                        state.ConnectionId,
-                                        state.AccountId,
-                                        state.CharacterId,
-                                        state.CurrentMapId);
-                                }
-                            }
-
-                            var broadcastPackets = new List<object>();
-                            while (broadcastQueue.TryDequeue(out var packet))
-                                broadcastPackets.Add(packet);
-
-                            await SendPacketsAsync(
-                                broadcastPackets,
                                 worldTickToken);
                         }
 
@@ -584,6 +647,15 @@ public static class WebSocketEndpoint
                 catch
                 {
                     // Connection shutdown owns cancellation/close semantics.
+                }
+
+                try
+                {
+                    await broadcastSendTask;
+                }
+                catch
+                {
+                    // Broadcast sender shares the connection lifetime.
                 }
 
                 if (socket.State == WebSocketState.Open)
