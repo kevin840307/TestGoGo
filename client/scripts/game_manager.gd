@@ -2186,6 +2186,17 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 	await get_tree().process_frame
 	set_frame_gap_stage("initial_map_instantiate")
 	current_map_node = map_resource.instantiate()
+	# Release the legacy PackedScene's transient texture graph before HUD
+	# warmup. The active map itself owns its near-field visual resources.
+	map_resource = null
+	if is_instance_valid(current_map_node):
+		var early_detach: Dictionary = _map_visual_aoi_streamer.detach_far_before_attach(
+			current_map_node, spawn_position, current_performance_profile
+		)
+		if OS.is_debug_build():
+			print("[MAP_INITIAL_TEXTURE_DETACH] map=%d indexed=%d detached=%d" % [
+				target_map_id, int(early_detach.get("indexed", 0)), int(early_detach.get("detached", 0))
+			])
 
 	# Blocking.dat is the authoritative navigation/collision source. Older map
 	# scenes may still contain a huge legacy CollisionContainer TileMapLayer.
@@ -2895,6 +2906,15 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 	set_frame_gap_stage("map_transition_instantiate")
 	var instantiate_started_usec: = Time.get_ticks_usec()
 	current_map_node = map_resource.instantiate()
+	map_resource = null
+	if is_instance_valid(current_map_node) and not _afk_active:
+		var early_detach: Dictionary = _map_visual_aoi_streamer.detach_far_before_attach(
+			current_map_node, Vector2(target_x, target_y), current_performance_profile
+		)
+		if OS.is_debug_build():
+			print("[MAP_INITIAL_TEXTURE_DETACH] map=%d indexed=%d detached=%d" % [
+				target_map_id, int(early_detach.get("indexed", 0)), int(early_detach.get("detached", 0))
+			])
 	var instantiate_ms: = float(Time.get_ticks_usec() - instantiate_started_usec) / 1000.0
 
 	# Match the first-map loading path: Blocking.dat is authoritative, so the
