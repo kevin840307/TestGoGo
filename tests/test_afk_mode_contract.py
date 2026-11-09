@@ -134,40 +134,30 @@ class AfkModeContract(unittest.TestCase):
         self.assertNotIn('Engine.time_scale =', read("client/scripts/game_manager.gd"))
         self.assertNotIn('Engine.physics_ticks_per_second =', read("client/scripts/game_manager.gd"))
 
-    def test_windows_working_set_trim_is_post_teardown_only(self):
+    def test_memory_settle_never_launches_external_trim_or_blocks_renderer(self):
         game = read("client/scripts/game_manager.gd")
-        self.assertIn("func _request_windows_working_set_trim(reason: String) -> int:", game)
-        self.assertIn('OS.get_name() != "Windows"', game)
-        self.assertIn("EmptyWorkingSet", game)
-        self.assertIn("SetProcessWorkingSetSize", game)
-        self.assertIn('OS.create_process("powershell.exe"', game)
-        self.assertIn("Add-Type -TypeDefinition", game)
-        self.assertIn("__DQ__psapi.dll__DQ__", game)
-        self.assertIn("$src.Replace('__DQ__',[char]34)", game)
-        self.assertNotIn("RenderingServer.force_sync()", game)
+        self.assertIn("func _settle_released_memory(reason: String) -> void:", game)
+        self.assertIn("external_trim=false", game)
         self.assertIn("renderer_force_sync=false", game)
-        self.assertIn("[MEMORY_SETTLE]", game)
-        self.assertIn("[WORKING_SET_TRIM_RESULT]", game)
-        self.assertIn("WorkingSet64", game)
-        self.assertIn("Exception.Message", game)
-        self.assertIn("FileAccess.get_file_as_string", game)
-        self.assertIn('await _settle_renderer_and_trim_working_set("afk_settled_3s")', game)
-        self.assertIn('await _settle_renderer_and_trim_working_set("logout_settled")', game)
+        self.assertNotIn("powershell.exe", game)
+        self.assertNotIn("EmptyWorkingSet", game)
+        self.assertNotIn("SetProcessWorkingSetSize", game)
+        self.assertNotIn("RenderingServer.force_sync()", game)
+        self.assertNotIn("WORKING_SET_TRIM", game)
+        self.assertIn('await _settle_released_memory("afk_settled_3s")', game)
+        self.assertIn('await _settle_released_memory("logout_settled")', game)
 
-        trim_start = game.index("func _request_windows_working_set_trim(reason: String) -> int:")
-        trim_end = game.index("\nfunc ", trim_start + 1)
-        trim = game[trim_start:trim_end]
-        self.assertNotIn("NetworkManager", trim)
-        self.assertNotIn("set_physics_process", trim)
-        self.assertNotIn("Engine.physics_ticks_per_second", trim)
-        self.assertIn('reason not in ["afk_settled_3s", "logout_settled"]', trim)
-        self.assertNotIn("current_static_mb > 220.0", trim)
-        self.assertIn("peak_static_mb - current_static_mb < 64.0", trim)
-
+        settle_start = game.index("func _settle_released_memory(reason: String) -> void:")
+        settle_end = game.index("\nfunc ", settle_start + 1)
+        settle = game[settle_start:settle_end]
+        self.assertNotIn("NetworkManager", settle)
+        self.assertNotIn("set_physics_process", settle)
+        self.assertNotIn("OS.create_process", settle)
 
     def test_large_debug_audits_never_block_afk_fixed_cadence(self):
         game = read("client/scripts/game_manager.gd")
         self.assertIn("total_nodes > 5000", game)
+        self.assertIn("expensive_stage and total_nodes > 2000", game)
         self.assertIn("skipped_heavy=true", game)
         self.assertIn("reason=protect_fixed_cadence", game)
 

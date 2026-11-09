@@ -106,146 +106,23 @@ func log_world_visual_audit(phase: String) -> void:
 	])
 
 
-func _collect_windows_working_set_trim_result(
-	reason: String,
-	result_path: String,
-	target_pid: int
-) -> void:
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return
-	for _attempt in range(20):
-		await tree.create_timer(0.25).timeout
-		if not FileAccess.file_exists(result_path):
-			continue
-		var raw: String = FileAccess.get_file_as_string(result_path).strip_edges()
-		DirAccess.remove_absolute(result_path)
-		var parts: PackedStringArray = raw.split("|", true, 3)
-		if parts.size() < 3:
-			if OS.is_debug_build():
-				print("[WORKING_SET_TRIM_RESULT] reason=%s target_pid=%d invalid=%s" % [
-					reason, target_pid, raw,
-				])
-			return
-		var ok: bool = str(parts[0]).to_lower() == "true"
-		var before_bytes: int = int(parts[1])
-		var after_bytes: int = int(parts[2])
-		var error_text: String = str(parts[3]) if parts.size() >= 4 else ""
-		if OS.is_debug_build():
-			print("[WORKING_SET_TRIM_RESULT] reason=%s target_pid=%d success=%s before_mb=%.2f after_mb=%.2f released_mb=%.2f error=%s" % [
-				reason,
-				target_pid,
-				str(ok),
-				float(before_bytes) / 1048576.0,
-				float(after_bytes) / 1048576.0,
-				float(maxi(0, before_bytes - after_bytes)) / 1048576.0,
-				error_text,
-			])
-		return
-	if OS.is_debug_build():
-		print("[WORKING_SET_TRIM_RESULT] reason=%s target_pid=%d result_timeout=true" % [
-			reason, target_pid,
-		])
-
-
-func _request_windows_working_set_trim(reason: String) -> int:
-	# This path is allowed only after AFK/logout teardown has already happened.
-	# It never changes networking, fixed physics, combat or authoritative state.
-	if OS.get_name() != "Windows":
-		return -1
-	if reason not in ["afk_settled_3s", "logout_settled"]:
-		return -1
-
-	var measured: Dictionary = _afk_memory_sample()
-	var current_static_mb: float = float(measured.get("godot_static_mb", 0.0))
-	var peak_static_mb: float = float(measured.get("godot_peak_mb", 0.0))
-	# A high current value is exactly the case we now want to measure. Only
-	# require proof that a substantial allocation wave has already been freed.
-	if peak_static_mb - current_static_mb < 64.0:
-		if OS.is_debug_build():
-			print("[WORKING_SET_TRIM] reason=%s skipped=true current_static_mb=%.2f peak_static_mb=%.2f" % [
-				reason, current_static_mb, peak_static_mb,
-			])
-		return -1
-
-	var target_pid: int = OS.get_process_id()
-	var result_path: String = ProjectSettings.globalize_path(
-		"user://working_set_trim_%d_%d.txt" % [target_pid, Time.get_ticks_msec()]
-	)
-	var escaped_result_path: String = result_path.replace("'", "''")
-	# Windows command-line parsing stripped literal double quotes from the
-	# previous -Command payload. Keep quote placeholders in the argument and
-	# materialize them inside PowerShell after process creation.
-	var csharp_source: String = (
-		"using System;"
-		+ "using System.Runtime.InteropServices;"
-		+ "namespace SgoMemory {"
-		+ "public static class NativeMethods {"
-		+ "[DllImport(__DQ__psapi.dll__DQ__, SetLastError=true)]"
-		+ "[return: MarshalAs(UnmanagedType.Bool)]"
-		+ "public static extern bool EmptyWorkingSet(IntPtr hProcess);"
-		+ "[DllImport(__DQ__kernel32.dll__DQ__, SetLastError=true)]"
-		+ "[return: MarshalAs(UnmanagedType.Bool)]"
-		+ "public static extern bool SetProcessWorkingSetSize(IntPtr hProcess, IntPtr min, IntPtr max);"
-		+ "}}"
-	)
-	var escaped_csharp: String = csharp_source.replace("'", "''")
-	var ps_command: String = (
-		"$ErrorActionPreference='Stop';"
-		+ "$result='%s';$ok=$false;$before=0L;$after=0L;$err='';$p=$null;" % escaped_result_path
-		+ "try{"
-		+ "$p=Get-Process -Id %d -ErrorAction Stop;" % target_pid
-		+ "$before=$p.WorkingSet64;"
-		+ "$src='%s';$src=$src.Replace('__DQ__',[char]34);" % escaped_csharp
-		+ "Add-Type -TypeDefinition $src -Language CSharp -ErrorAction Stop;"
-		+ "$ok=[SgoMemory.NativeMethods]::EmptyWorkingSet($p.Handle);"
-		+ "if(-not $ok){"
-		+ "$minusOne=[IntPtr](-1);"
-		+ "$ok=[SgoMemory.NativeMethods]::SetProcessWorkingSetSize($p.Handle,$minusOne,$minusOne);"
-		+ "};"
-		+ "Start-Sleep -Milliseconds 80;"
-		+ "$p.Refresh();$after=$p.WorkingSet64;"
-		+ "}catch{"
-		+ "$err=$_.Exception.Message.Replace([Environment]::NewLine,' ').Replace('|','/');"
-		+ "if($null -ne $p){try{$p.Refresh();$after=$p.WorkingSet64}catch{}}"
-		+ "};"
-		+ "Set-Content -LiteralPath $result "
-		+ "-Value (($ok.ToString())+'|'+$before+'|'+$after+'|'+$err) -Encoding UTF8"
-	)
-	var args := PackedStringArray([
-		"-NoLogo",
-		"-NoProfile",
-		"-NonInteractive",
-		"-WindowStyle", "Hidden",
-		"-Command", ps_command,
-	])
-	var helper_pid: int = OS.create_process("powershell.exe", args, false)
-	if helper_pid > 0:
-		_collect_windows_working_set_trim_result(reason, result_path, target_pid)
-	if OS.is_debug_build():
-		print("[WORKING_SET_TRIM] reason=%s target_pid=%d helper_pid=%d requested=%s current_static_mb=%.2f peak_static_mb=%.2f" % [
-			reason, target_pid, helper_pid, str(helper_pid > 0),
-			current_static_mb, peak_static_mb,
-		])
-	return helper_pid
-
-func _settle_renderer_and_trim_working_set(reason: String) -> void:
-	# Do not force a synchronous renderer flush here. The real log showed it can
-	# introduce a ~2 s main-thread gap and reduce fixed-physics cadence. Deferred
-	# frees already had several frames/seconds to settle before this point.
+func _settle_released_memory(reason: String) -> void:
+	# Never launch an external helper or force renderer synchronization here.
+	# Real-device logs showed those attempts caused 1.5-2.4 s frame gaps and
+	# pulled fixed physics below 60 Hz. At this point we only record Godot's
+	# already-settled live allocation after one deferred frame.
 	var tree: SceneTree = get_tree()
 	if tree == null:
 		return
 	await tree.process_frame
 	var measured: Dictionary = _afk_memory_sample()
 	if OS.is_debug_build():
-		print("[MEMORY_SETTLE] reason=%s static_mb=%.2f texture_mb=%.2f video_mb=%.2f renderer_force_sync=false" % [
+		print("[MEMORY_SETTLE] reason=%s static_mb=%.2f texture_mb=%.2f video_mb=%.2f external_trim=false renderer_force_sync=false" % [
 			reason,
 			float(measured.get("godot_static_mb", 0.0)),
 			float(measured.get("godot_texture_mb", 0.0)),
 			float(measured.get("godot_video_mb", 0.0)),
 		])
-	_request_windows_working_set_trim(reason)
 
 func _audit_login_after_logout() -> void:
 	# The freed world and a newly instantiated EntryManager do not settle in
@@ -255,7 +132,7 @@ func _audit_login_after_logout() -> void:
 	await get_tree().create_timer(0.5).timeout
 	log_world_visual_audit("logout_settled")
 	_log_afk_memory_audit("logout_settled")
-	await _settle_renderer_and_trim_working_set("logout_settled")
+	await _settle_released_memory("logout_settled")
 
 
 func _afk_memory_sample() -> Dictionary:
@@ -340,7 +217,10 @@ func _log_afk_memory_audit(stage: String) -> void:
 		return
 	var total_nodes: int = int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))
 	var active_entity_count: int = NetworkEntityManager.active_entities.size() if NetworkEntityManager else 0
-	if total_nodes > 5000:
+	var expensive_stage: bool = stage in [
+		"afk_settled_3s", "afk_restore_complete", "logout_before"
+	]
+	if (expensive_stage and total_nodes > 2000) or total_nodes > 5000:
 		print("[AFK_MEMORY_AUDIT] stage=%s pid=%d skipped_heavy=true total_nodes=%d active_entities=%d reason=protect_fixed_cadence" % [
 			stage, OS.get_process_id(), total_nodes, active_entity_count,
 		])
@@ -387,7 +267,7 @@ func _log_afk_memory_after_settle(started_msec: int) -> void:
 	_log_afk_memory("afk_settled_3s")
 	log_world_visual_audit("afk_settled_3s")
 	_log_afk_memory_audit("afk_settled_3s")
-	await _settle_renderer_and_trim_working_set("afk_settled_3s")
+	await _settle_released_memory("afk_settled_3s")
 
 
 var current_world_enhancement: CanvasLayer = null
