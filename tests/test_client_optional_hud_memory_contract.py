@@ -52,8 +52,12 @@ class OptionalHudMemoryContract(unittest.TestCase):
     def test_world_enter_does_not_instantiate_unopened_optional_windows(self):
         body = function_body(self.hud, "prepare_lazy_windows_before_reveal")
         self.assertIn("[OPTIONAL_HUD_LAZY]", body)
-        self.assertNotIn("_ensure_lazy_window(", body)
-        self.assertNotIn("scene.instantiate(", body)
+        statements = "\n".join(
+            line for line in body.splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        self.assertNotIn("_ensure_lazy_window(", statements)
+        self.assertNotIn("scene.instantiate(", statements)
         self.assertIn('deferred_windows=%d', body)
         self.assertIn("await current_hud.prepare_lazy_windows_before_reveal()", self.game)
 
