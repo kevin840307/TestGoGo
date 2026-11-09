@@ -36,7 +36,7 @@ internal sealed class BotWalkPlanner
         var anchor = FindNear(centerX, centerY, 96)
             ?? throw new ArgumentException(
                 "No walkable tile near the requested observation center.");
-        _center = anchor.Value;
+        _center = anchor;
     }
 
     public (int X, int Y) Center => _center;
