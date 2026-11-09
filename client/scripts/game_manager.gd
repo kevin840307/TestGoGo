@@ -411,7 +411,7 @@ var current_foreground_fps_limit: int = 60
 var current_simplify_players_mode: int = ClientPerformanceProfile.PLAYER_SHOW_ALL
 var current_simplify_monsters_mode: int = ClientPerformanceProfile.MONSTER_SHOW_ALL
 var current_effects_simplified: bool = false
-var current_ground_drops_simplified: bool = false
+var current_ground_drop_display_mode: int = ClientPerformanceProfile.GROUND_DROPS_ALL
 var current_damage_numbers_visible: bool = true
 var current_performance_profile: Dictionary = ClientPerformanceProfile.apply_visibility_overrides(
 	ClientPerformanceProfile.resolve(
@@ -1519,7 +1519,7 @@ func _rebuild_performance_profile() -> void:
 	)
 	current_performance_profile["foreground_fps"] = current_foreground_fps_limit
 	current_performance_profile["effects_simplified"] = current_effects_simplified
-	current_performance_profile["ground_drops_simplified"] = current_ground_drops_simplified
+	current_performance_profile["ground_drop_display_mode"] = current_ground_drop_display_mode
 	current_performance_profile["show_damage_numbers"] = current_damage_numbers_visible
 	if current_effects_simplified:
 		current_performance_profile["combat_effects_enabled"] = false
@@ -1598,11 +1598,12 @@ func set_entity_visibility_modes(player_mode: int, monster_mode: int) -> void:
 func set_visual_simplification_modes(player_mode: int, monster_mode: int) -> void:
 	set_entity_visibility_modes(player_mode, monster_mode)
 
-func set_visual_detail_options(simplify_effects: bool, simplify_drops: bool, show_damage: bool) -> void:
-	if current_effects_simplified == simplify_effects and current_ground_drops_simplified == simplify_drops and current_damage_numbers_visible == show_damage:
+func set_visual_detail_options(simplify_effects: bool, ground_drop_mode: int, show_damage: bool) -> void:
+	var sanitized_mode: int = ClientPerformanceProfile.sanitize_ground_drop_display_mode(ground_drop_mode)
+	if current_effects_simplified == simplify_effects and current_ground_drop_display_mode == sanitized_mode and current_damage_numbers_visible == show_damage:
 		return
 	current_effects_simplified = simplify_effects
-	current_ground_drops_simplified = simplify_drops
+	current_ground_drop_display_mode = sanitized_mode
 	current_damage_numbers_visible = show_damage
 	_rebuild_performance_profile()
 	_apply_performance_profile()
