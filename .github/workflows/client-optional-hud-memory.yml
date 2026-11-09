@@ -10,6 +10,8 @@ on:
       - 'client/scripts/game_manager.gd'
       - 'client/scripts/network_manager.gd'
       - 'tests/test_client_optional_hud_memory_contract.py'
+      - 'client/scripts/floating_text_manager.gd'
+      - 'tests/test_floating_pool_logout_contract.py'
       - '.github/workflows/client-optional-hud-memory.yml'
   workflow_dispatch:
 
@@ -27,6 +29,8 @@ jobs:
           python-version: '3.12'
       - name: Optional HUD cold-login, first-open, and logout contract
         run: python -m unittest discover -s tests -p 'test_client_optional_hud_memory_contract.py' -v
+      - name: Logout combat pool resource contract
+        run: python -m unittest discover -s tests -p 'test_floating_pool_logout_contract.py' -v
       - name: Existing visual/performance regression contracts
         run: |
           python -m unittest discover -s tests -p 'test_client_visual_performance_contract.py' -v
