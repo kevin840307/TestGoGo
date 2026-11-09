@@ -1,0 +1,83 @@
+name: AFK runtime memory experiment
+
+on:
+  push:
+    branches:
+      - feature/local-server-net8
+    paths:
+      - 'tools/SGO.AfkProbe/**'
+      - 'server/Protocol/ClientProtocol.cs'
+      - '.github/workflows/afk-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-afk-probe:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build dedicated probe and local server
+        shell: pwsh
+        run: |
+          dotnet build tools/SGO.AfkProbe/SGO.AfkProbe.csproj -c Release --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build server/SGO.Server.csproj -c Release --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet publish tools/SGO.AfkProbe/SGO.AfkProbe.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Protocol/state self-test and standalone memory baseline
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path results | Out-Null
+          $probe = '.\tools\SGO.AfkProbe\bin\Release\net8.0\win-x64\publish\SGO.AfkProbe.exe'
+          & $probe --self-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $probe --synthetic --seconds 4 --output results/synthetic.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $data = Get-Content results/synthetic.json -Raw | ConvertFrom-Json
+          if ($data.State.Monsters -lt 1 -or $data.Memory.PeakWorkingSetMB -le 0) {
+            throw 'No valid synthetic memory samples'
+          }
+          & ./tools/SGO.AfkProbe/Measure-WindowsMemory.ps1 -ProcessIds $PID -Stage Standalone -Samples 2 -OutputCsv results/windows-sampler.csv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Real localhost encrypted-wire integration
+        shell: pwsh
+        run: |
+          $env:Game__ListenUrl = 'http://127.0.0.1:5678'
+          $server = Start-Process dotnet -ArgumentList @('run','--project','server/SGO.Server.csproj','-c','Release','--no-build') -PassThru -RedirectStandardOutput results/server.stdout.log -RedirectStandardError results/server.stderr.log
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 90; $i++) {
+              try {
+                $health = Invoke-WebRequest -Uri 'http://127.0.0.1:5678/health' -TimeoutSec 2
+                if ($health.StatusCode -eq 200) { $ready = $true; break }
+              } catch {}
+              Start-Sleep -Seconds 1
+            }
+            if (-not $ready) { throw 'Local test server did not become healthy' }
+            $probe = '.\tools\SGO.AfkProbe\bin\Release\net8.0\win-x64\publish\SGO.AfkProbe.exe'
+            & $probe --url ws://127.0.0.1:5678/ --smoke-account --seconds 8 --output results/real-wire.json
+            if ($LASTEXITCODE -ne 0) { throw "Real encrypted wire probe failed: $LASTEXITCODE" }
+            $data = Get-Content results/real-wire.json -Raw | ConvertFrom-Json
+            if ($data.State.Mode -ne 'real_encrypted_wire' -or
+                $data.State.MapId -le 0 -or
+                $data.State.Packets -lt 1 -or
+                $data.Memory.FinalPrivateBytesMB -le 0) {
+              throw 'No valid real-server memory / world state'
+            }
+          } finally {
+            Stop-Process -Id $server.Id -ErrorAction SilentlyContinue
+          }
+      - name: Upload Windows measurements and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: afk-runtime-memory-windows
+          path: results/**
+          if-no-files-found: ignore
