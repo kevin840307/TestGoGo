@@ -62,7 +62,7 @@ jobs:
             }
             if (-not $ready) { throw 'Local test server did not become healthy' }
             $probe = '.\tools\SGO.AfkProbe\bin\Release\net8.0\win-x64\publish\SGO.AfkProbe.exe'
-            $probeProcess = Start-Process -FilePath $probe -PassThru -ArgumentList @('--url','ws://127.0.0.1:5678/','--smoke-account','--test-map','13','--seconds','15','--output','results/real-wire.json') -RedirectStandardOutput results/real-wire.stdout.log -RedirectStandardError results/real-wire.stderr.log
+            $probeProcess = Start-Process -FilePath $probe -PassThru -ArgumentList @('--url','ws://127.0.0.1:5678/','--smoke-account','--test-map','13','--enable-auto-saint','--seconds','15','--output','results/real-wire.json') -RedirectStandardOutput results/real-wire.stdout.log -RedirectStandardError results/real-wire.stderr.log
             & ./tools/SGO.AfkProbe/Measure-WindowsMemory.ps1 -ProcessIds $probeProcess.Id -Stage Standalone -Samples 18 -OutputCsv results/probe-windows-memory.csv
             if (-not $probeProcess.WaitForExit(60000)) {
               Stop-Process -Id $probeProcess.Id -ErrorAction SilentlyContinue
@@ -74,6 +74,7 @@ jobs:
                 $data.State.MapId -le 0 -or
                 $data.State.Packets -lt 1 -or
                 $data.State.Monsters -lt 1 -or
+                $data.State.AutoSaintEnabled -ne $true -or
                 $data.Memory.FinalPrivateBytesMB -le 0) {
               throw 'No valid real-server memory / world state'
             }

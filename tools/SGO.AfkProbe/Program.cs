@@ -95,6 +95,8 @@ try
             options.TestMap.Value, cancelled.Token);
     if (options.EnableAutoSaint)
     {
+        if (options.DisposableTestAccount)
+            await session.PrepareDisposableAutoSaintAsync(cancelled.Token);
         var enabled = await session.EnableAutoSaintAsync(
             options.MpThreshold, options.SpThreshold, cancelled.Token);
         if (!enabled)

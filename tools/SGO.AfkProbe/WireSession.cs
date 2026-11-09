@@ -176,6 +176,17 @@ internal sealed class WireSession : IAsyncDisposable
         RequireSuccess(ready, "Test Map WorldReady");
     }
 
+    internal Task PrepareDisposableAutoSaintAsync(CancellationToken ct)
+        // No credentials, user accounts or production DB can reach this path:
+        // the caller only enables it for --smoke-account on localhost.
+        => SendAsync(new
+        {
+            Type = "ChatMessage",
+            Channel = 0,
+            BubbleType = 0,
+            Message = "/gm skill all 1"
+        }, ct);
+
     internal async Task<bool> EnableAutoSaintAsync(
         int mpThreshold, int spThreshold, CancellationToken ct)
     {

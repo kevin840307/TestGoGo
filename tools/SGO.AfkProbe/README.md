@@ -52,6 +52,9 @@ dotnet run --project tools/SGO.AfkProbe -c Release -- --url ws://127.0.0.1:5678/
 
 Optional `--enable-auto-saint --mp-threshold 30 --sp-threshold 30` sends
 the **existing server command**; the server must confirm it is enabled.
+For the generated localhost `--smoke-account` test only, this also grants
+skills using the local GM command; never use it against a production database.
+A successful toggle is NOT proof of full combat/loot/pathfinding equivalence.
 The program **does not implement or claim equivalent movement/combat/pickup**
 for arbitrary AFK bots.
 

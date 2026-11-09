@@ -49,8 +49,8 @@ internal sealed record ProbeArguments(
 
         if (synthetic && (smoke || autoSaint || values.ContainsKey("--user")))
             throw new ArgumentException("Synthetic mode cannot connect or log in");
-        if (smoke && autoSaint)
-            throw new ArgumentException("Disposable character has no learned AutoSaint skills");
+        // CI's disposable account may grant its own skills on localhost before
+        // enabling this server-owned automation; real accounts are untouched.
 
         Uri? endpoint = null;
         string? login = null;
