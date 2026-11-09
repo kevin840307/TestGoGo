@@ -1,10 +1,10 @@
+using System.Text.Json;
+
 if (args.Length > 0 && args[0] == "--bots")
 {
     Environment.ExitCode = await InteractiveBots.RunAsync(args[1..]);
     return;
 }
-
-using System.Text.Json;
 
 var options = Options.Parse(args);
 var results = new List<WireLoadScenarioResult>();
