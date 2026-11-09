@@ -268,7 +268,8 @@ internal static class InteractiveBots
                             }
                             else
                             {
-                                await bot.SendAttackAsync(nearest.EntityId, timeout);
+                                await bot.SendBotAttackWithAnimationAsync(
+                                    nearest.EntityId, nearest.X, nearest.Y, timeout);
                                 Interlocked.Increment(ref attacks);
                             }
                         }
