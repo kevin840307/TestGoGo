@@ -37,6 +37,9 @@ test server's database; do not use a production DB.
 
 ```powershell
 dotnet run --project tools/SGO.AfkProbe -c Release -- --url ws://127.0.0.1:5678/ --smoke-account --seconds 30 --output afk-wire.json
+
+# Optional local-only Map13 monster AOI test (uses GM command on test account):
+dotnet run --project tools/SGO.AfkProbe -c Release -- --url ws://127.0.0.1:5678/ --smoke-account --test-map 13 --seconds 30 --output afk-map13.json
 ```
 
 For a *dedicated* existing test account only, use an environment variable
@@ -80,9 +83,9 @@ or continuity. No 100MB saving is promised.
 1. Actual reconnect/atomic handoff is **not implemented**.
 2. The standalone program only supports server-driven AutoSaint, not every
    client-originated combat, movement, pathfinding, loot or pet action.
-3. Character auto-battle, item economy and map transition equivalence need
+3. CI's Map13 probe covers monster AOI snapshots but does not enable AutoSaint, move, or pick up drops.\n4. Character auto-battle, item economy and map transition equivalence need
    tests before integrating with the original AFK UI.
-4. CI Windows probe results are **a different machine** from the user's
+5. CI Windows probe results are **a different machine** from the user's
    Windows 10 + RTX 3050; user-machine acceptance remains necessary.
-5. If Windows Private Bytes are not meaningfully lower, do not integrate this
+6. If Windows Private Bytes are not meaningfully lower, do not integrate this
    architecture. Stop and report the measurement.
