@@ -21,8 +21,10 @@ public sealed class CombatService
     private static readonly TimeSpan NiciaPlateauRespawnDelay = TimeSpan.FromSeconds(2);
     private const int NiciaPlateauMapId = 13;
     private static readonly TimeSpan MonsterAttackCooldown = TimeSpan.FromMilliseconds(1400);
-    private static readonly TimeSpan WanderMinInterval = TimeSpan.FromMilliseconds(1200);
-    private static readonly TimeSpan WanderMaxInterval = TimeSpan.FromMilliseconds(2800);
+    // Idle/wandering movement has no combat urgency. Use sparse, staggered
+    // position changes, but preserve the 250ms chase, attack and AOI ticks.
+    private static readonly TimeSpan WanderMinInterval = TimeSpan.FromMilliseconds(2000);
+    private static readonly TimeSpan WanderMaxInterval = TimeSpan.FromMilliseconds(4000);
 
     private const double AggroRadius = 420.0;
     private const double LoseTargetRadius = 700.0;
