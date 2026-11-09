@@ -23,6 +23,7 @@ const GROUND_AOI_STATIONARY_SCAN_INTERVAL: float = 1.0
 # AFK keeps ground-drop packets as dictionaries and releases their presentation
 # nodes in small batches. 64 at foreground cadence avoids a long teardown frame.
 const AFK_GROUND_COMPACT_BATCH_SIZE: int = 64
+const AFK_MONSTER_COMPACT_BATCH_SIZE: int = 48
 # Keep server-confirmed combat monsters present even across AOI boundaries.
 const MONSTER_COMBAT_REVEAL_MSEC: int = 12000
 
@@ -306,6 +307,144 @@ func _is_afk_ground_data_only() -> bool:
 	return GameManager and GameManager.is_afk_mode_active()
 
 
+func _is_afk_monster_data_only() -> bool:
+	return GameManager and GameManager.is_afk_mode_active()
+
+
+func compact_monsters_for_afk_batched(
+	batch_size: int = AFK_MONSTER_COMPACT_BATCH_SIZE
+) -> Dictionary:
+	# AFK keeps authoritative monster packets as Dictionaries and removes the
+	# heavyweight CharacterBody2D presentation scenes. Keep at most the
+	# player's current manual combat target so an in-flight manual attack is
+	# not interrupted. Server-driven automation does not depend on these Nodes.
+	var monster_ids: Array[int] = []
+	for raw_id in _active_entity_types.keys():
+		var entity_id: int = int(raw_id)
+		if int(_active_entity_types.get(entity_id, -1)) == 1:
+			monster_ids.append(entity_id)
+
+	var local_player = GameManager.current_player if GameManager else null
+	var released_nodes: int = 0
+	var preserved_combat_target: int = 0
+	var stale_nodes: int = 0
+	var since_yield: int = 0
+	var safe_batch: int = maxi(1, batch_size)
+
+	for entity_id in monster_ids:
+		var monster: Node2D = get_active_entity(entity_id)
+		var cached: Dictionary = _monster_spawn_templates.get(entity_id, {})
+		if not is_instance_valid(monster):
+			if not cached.is_empty():
+				_deferred_monster_spawns[entity_id] = cached
+			active_entities.erase(entity_id)
+			_active_entity_types.erase(entity_id)
+			_runtime_monster_ids.erase(entity_id)
+			stale_nodes += 1
+			continue
+
+		var is_current_manual_target: bool = (
+			is_instance_valid(local_player)
+			and "combat_target" in local_player
+			and is_instance_valid(local_player.combat_target)
+			and local_player.combat_target == monster
+		)
+		if is_current_manual_target:
+			preserved_combat_target += 1
+			continue
+
+		if not cached.is_empty():
+			# Prefer the latest authoritative template position. Only fill
+			# missing state fields from the scene before destroying it.
+			var compacted: Dictionary = cached.duplicate()
+			if "current_state" in monster:
+				compacted["State"] = str(monster.current_state)
+			if "current_dir" in monster:
+				compacted["Dir"] = str(monster.current_dir)
+			if "current_hp" in monster:
+				var extra: Dictionary = (compacted.get("ExtraData", {}) as Dictionary).duplicate()
+				extra["CurrentHP"] = int(monster.current_hp)
+				if "max_hp" in monster:
+					extra["MaxHP"] = int(monster.max_hp)
+				compacted["ExtraData"] = extra
+			_monster_spawn_templates[entity_id] = compacted
+			_deferred_monster_spawns[entity_id] = compacted
+
+		_unregister_entity_hover(monster)
+		monster.queue_free()
+		active_entities.erase(entity_id)
+		_active_entity_types.erase(entity_id)
+		_runtime_monster_ids.erase(entity_id)
+		released_nodes += 1
+		since_yield += 1
+		if since_yield >= safe_batch:
+			since_yield = 0
+			await get_tree().process_frame
+
+	# A monster still waiting in the visual spawn queue is already pure data;
+	# remove it from the queue so AFK cannot instantiate it later.
+	var retained_queue: Array[Dictionary] = []
+	var queued_to_data: int = 0
+	for queued_data in _spawn_queue:
+		if int(queued_data.get("EntityType", -1)) != 1:
+			retained_queue.append(queued_data)
+			continue
+		var entity_id: int = int(queued_data.get("EntityID", 0))
+		_queued_spawn_ids.erase(entity_id)
+		var cached: Dictionary = _monster_spawn_templates.get(entity_id, queued_data)
+		if not cached.is_empty():
+			_deferred_monster_spawns[entity_id] = cached
+		queued_to_data += 1
+	_spawn_queue = retained_queue
+
+	if released_nodes > 0 or queued_to_data > 0:
+		await get_tree().process_frame
+
+	return {
+		"released_nodes": released_nodes,
+		"preserved_combat_target": preserved_combat_target,
+		"stale_nodes": stale_nodes,
+		"queued_to_data": queued_to_data,
+		"known": _monster_spawn_templates.size(),
+		"deferred": _deferred_monster_spawns.size(),
+		"active_nodes": get_aoi_active_monster_count(),
+	}
+
+
+func restore_monsters_after_afk() -> Dictionary:
+	# Resume presentation only for monsters inside the current visual AOI.
+	# The existing one-per-frame spawn queue prevents restore from causing a
+	# large frame spike; packets received during AFK already updated templates.
+	_monster_aoi_last_observer = null
+	_monster_aoi_stationary_elapsed = 0.0
+	var player_pos = _get_local_player_position()
+	if player_pos == null:
+		return {
+			"queued": 0,
+			"known": _monster_spawn_templates.size(),
+			"deferred": _deferred_monster_spawns.size(),
+		}
+	var local_pos: Vector2 = player_pos as Vector2
+	var enter_radius_sq: float = _monster_aoi_radii().x * _monster_aoi_radii().x
+	var queued: int = 0
+	for raw_id in _deferred_monster_spawns.keys():
+		var entity_id: int = int(raw_id)
+		var cached = _deferred_monster_spawns.get(entity_id, null)
+		if not cached is Dictionary:
+			continue
+		if (
+			local_pos.distance_squared_to(_monster_packet_position(cached)) <= enter_radius_sq
+			or _is_combat_monster_revealed(entity_id)
+		):
+			_queue_cached_monster_spawn(entity_id)
+			queued += 1
+	return {
+		"queued": queued,
+		"known": _monster_spawn_templates.size(),
+		"deferred": _deferred_monster_spawns.size(),
+	}
+
+
 func compact_ground_items_for_afk_batched(
 	batch_size: int = AFK_GROUND_COMPACT_BATCH_SIZE
 ) -> Dictionary:
@@ -464,6 +603,10 @@ func _reveal_combat_monster(entity_id: int, reason: String) -> void:
 			active_monster
 		)
 		return
+	if _is_afk_monster_data_only():
+		_deferred_monster_spawns[entity_id] = _monster_spawn_templates[entity_id]
+		_remove_queued_spawn(entity_id)
+		return
 	if not _queued_spawn_ids.has(entity_id):
 		_deferred_monster_spawns[entity_id] = _monster_spawn_templates[entity_id]
 		_queue_cached_monster_spawn(entity_id)
@@ -593,6 +736,10 @@ func _unload_monster_for_aoi(entity_id: int, monster: Node2D) -> void :
 	_runtime_monster_ids.erase(entity_id)
 
 func _update_monster_aoi(delta: float) -> void :
+	if _is_afk_monster_data_only():
+		_monster_aoi_elapsed = 0.0
+		_monster_aoi_last_observer = null
+		return
 	_monster_aoi_elapsed += delta
 	if _monster_aoi_elapsed < MONSTER_AOI_UPDATE_INTERVAL:
 		return
@@ -744,6 +891,10 @@ func _on_entity_spawned(data: Dictionary) -> void :
 		# entity into the deferred queue while it is still on the map.
 		if get_active_entity(entity_id):
 			_deferred_monster_spawns.erase(entity_id)
+			return
+		if _is_afk_monster_data_only():
+			_deferred_monster_spawns[entity_id] = cached
+			_remove_queued_spawn(entity_id)
 			return
 		if not _can_spawn_monster(cached, _monster_aoi_radii().x):
 			_defer_monster_spawn(cached)
@@ -1123,6 +1274,8 @@ func _on_entity_moved(data: Dictionary) -> void :
 		_monster_spawn_templates[entity_id] = cached
 		if _deferred_monster_spawns.has(entity_id):
 			_deferred_monster_spawns[entity_id] = cached
+			if _is_afk_monster_data_only():
+				return
 			if _is_monster_inside_aoi(cached, _monster_aoi_radii().x):
 				_queue_cached_monster_spawn(entity_id)
 			return
@@ -1162,6 +1315,14 @@ func _on_entity_moved(data: Dictionary) -> void :
 				_runtime_monster_ids[entity_id] = true
 
 func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String) -> void :
+	if _monster_spawn_templates.has(entity_id):
+		var cached: Dictionary = (_monster_spawn_templates[entity_id] as Dictionary).duplicate()
+		cached["State"] = new_state
+		if not new_dir.is_empty():
+			cached["Dir"] = new_dir
+		_monster_spawn_templates[entity_id] = cached
+		if _deferred_monster_spawns.has(entity_id):
+			_deferred_monster_spawns[entity_id] = cached
 	if new_state == "attack" or new_state.begins_with("attack_"):
 		_reveal_combat_monster(entity_id, "attack_state")
 	var target_node = get_active_entity(entity_id)
@@ -1206,6 +1367,15 @@ func _on_pet_idle_speech_received(entity_id: int, message: String) -> void :
 
 func _on_entity_appearance_updated(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
+	if _monster_spawn_templates.has(entity_id):
+		var cached: Dictionary = (_monster_spawn_templates[entity_id] as Dictionary).duplicate(true)
+		for key in data.keys():
+			if key == "EntityID":
+				continue
+			cached[key] = data[key]
+		_monster_spawn_templates[entity_id] = cached
+		if _deferred_monster_spawns.has(entity_id):
+			_deferred_monster_spawns[entity_id] = cached
 	var target_node = get_active_entity(entity_id)
 	if target_node and target_node.has_method("update_appearance_from_server"):
 		target_node.update_appearance_from_server(data)

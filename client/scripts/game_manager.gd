@@ -1264,6 +1264,22 @@ func begin_afk_mode(progress_callback: Callable = Callable()) -> bool:
 			int(ground_data_only.get("deferred", 0)),
 		])
 	_emit_afk_restore_progress(progress_callback, 18.0, "地上物品資料化完成")
+
+	set_frame_gap_stage("afk_enter_monster_data_only")
+	_emit_afk_restore_progress(progress_callback, 20.0, "將怪物切換為純資料")
+	var monster_data_only: Dictionary = {}
+	if NetworkEntityManager and NetworkEntityManager.has_method("compact_monsters_for_afk_batched"):
+		monster_data_only = await NetworkEntityManager.compact_monsters_for_afk_batched()
+	if OS.is_debug_build():
+		print("[AFK_DATA_ONLY_MONSTER] event=enter released=%d preserved_target=%d queued_to_data=%d known=%d deferred=%d active_nodes=%d" % [
+			int(monster_data_only.get("released_nodes", 0)),
+			int(monster_data_only.get("preserved_combat_target", 0)),
+			int(monster_data_only.get("queued_to_data", 0)),
+			int(monster_data_only.get("known", 0)),
+			int(monster_data_only.get("deferred", 0)),
+			int(monster_data_only.get("active_nodes", 0)),
+		])
+	_emit_afk_restore_progress(progress_callback, 28.0, "怪物資料化完成")
 	set_frame_gap_stage("afk_enter_suspend_entities")
 
 	set_performance_modes(ClientPerformanceProfile.LOAD_MULTIBOX, ClientPerformanceProfile.COMBAT_MASS)
@@ -1278,6 +1294,7 @@ func begin_afk_mode(progress_callback: Callable = Callable()) -> bool:
 	_afk_visual_stats = _enter_afk_render_shell()
 	_afk_visual_stats["suspended_entity_visuals"] = suspended_entities
 	_afk_visual_stats["data_only_ground_items"] = int(ground_data_only.get("released_nodes", 0))
+	_afk_visual_stats["data_only_monsters"] = int(monster_data_only.get("released_nodes", 0))
 	_afk_visual_stats["released"] = int(_afk_visual_stats.get("freed_static_nodes", 0))
 	# AfkRenderShell queues the old static map. Settle that frame before
 	# dropping loader caches so the two destruction waves cannot combine.
@@ -1330,6 +1347,16 @@ func finish_afk_mode(progress_callback: Callable = Callable()) -> bool:
 		int(_afk_saved_profile.get("players", ClientPerformanceProfile.SIMPLIFY_AUTO)),
 		int(_afk_saved_profile.get("monsters", ClientPerformanceProfile.SIMPLIFY_AUTO))
 	)
+	var monster_restore: Dictionary = {}
+	if NetworkEntityManager and NetworkEntityManager.has_method("restore_monsters_after_afk"):
+		monster_restore = NetworkEntityManager.restore_monsters_after_afk()
+	if OS.is_debug_build():
+		print("[AFK_DATA_ONLY_MONSTER] event=restore queued=%d known=%d deferred=%d" % [
+			int(monster_restore.get("queued", 0)),
+			int(monster_restore.get("known", 0)),
+			int(monster_restore.get("deferred", 0)),
+		])
+
 	var ground_restore: Dictionary = {}
 	if NetworkEntityManager and NetworkEntityManager.has_method("restore_ground_items_after_afk"):
 		ground_restore = NetworkEntityManager.restore_ground_items_after_afk()

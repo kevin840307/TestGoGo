@@ -252,6 +252,51 @@ class AfkModeContract(unittest.TestCase):
         self.assertNotIn("NetworkManager.set_physics_process", compact)
         self.assertNotIn("_monster_spawn_templates.clear()", compact)
 
+    def test_afk_monsters_are_data_only_and_restore_from_authoritative_templates(self):
+        game = read("client/scripts/game_manager.gd")
+        entities = read("client/scripts/network_entity_manager.gd")
+        self.assertIn("func compact_monsters_for_afk_batched(", entities)
+        self.assertIn("func restore_monsters_after_afk()", entities)
+        self.assertIn("func _is_afk_monster_data_only()", entities)
+        self.assertIn("_monster_spawn_templates[entity_id] = compacted", entities)
+        self.assertIn("_deferred_monster_spawns[entity_id] = compacted", entities)
+        self.assertIn("monster.queue_free()", entities)
+        self.assertIn("preserved_combat_target", entities)
+        self.assertIn("if _is_afk_monster_data_only():", entities)
+        self.assertIn("[AFK_DATA_ONLY_MONSTER]", game)
+
+        begin = game[
+            game.index("func begin_afk_mode(progress_callback: Callable = Callable())"):
+            game.index("func finish_afk_mode(progress_callback: Callable = Callable())")
+        ]
+        self.assertIn("await NetworkEntityManager.compact_monsters_for_afk_batched()", begin)
+        self.assertLess(
+            begin.index("compact_monsters_for_afk_batched"),
+            begin.index("_set_afk_dynamic_visuals_suspended_batched"),
+        )
+
+        finish = game[
+            game.index("func finish_afk_mode(progress_callback: Callable = Callable())"):
+            game.index("func _refresh_afk_map_visuals_after_change", game.index("func finish_afk_mode"))
+        ]
+        self.assertIn("NetworkEntityManager.restore_monsters_after_afk()", finish)
+        self.assertLess(finish.index("_afk_active = false"), finish.index("restore_monsters_after_afk"))
+
+        compact_start = entities.index("func compact_monsters_for_afk_batched(")
+        compact_end = entities.index("\nfunc restore_monsters_after_afk", compact_start)
+        compact = entities[compact_start:compact_end]
+        self.assertNotIn("NetworkManager.set_process", compact)
+        self.assertNotIn("NetworkManager.set_physics_process", compact)
+        self.assertNotIn("_monster_spawn_templates.clear()", compact)
+
+        move_start = entities.index("func _on_entity_moved")
+        move_end = entities.index("\nfunc ", move_start + 1)
+        self.assertIn("_is_afk_monster_data_only()", entities[move_start:move_end])
+
+        aoi_start = entities.index("func _update_monster_aoi")
+        aoi_end = entities.index("\nfunc ", aoi_start + 1)
+        self.assertIn("_is_afk_monster_data_only()", entities[aoi_start:aoi_end])
+
     def test_afk_releases_rebuildable_hud_rows_and_inventory_is_lazy(self):
         hud = read("client/game_hud.gd")
         inventory = read("client/scripts/inventory_window.gd")
