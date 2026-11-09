@@ -320,6 +320,17 @@ internal sealed class WireLoadClient : IAsyncDisposable
             "SkillSync",
             timeout);
 
+    public Task RefreshWeakBotProfileAsync(TimeSpan timeout)
+        => SendPacketAsync(
+            new
+            {
+                Type = "ChatMessage",
+                Channel = 0,
+                Message = "/gm testbot",
+                BubbleType = 0
+            },
+            timeout);
+
     public Task SendBotHealAsync(TimeSpan timeout)
         => SendPacketAsync(
             new { Type = "ChatMessage", Channel = 0,
