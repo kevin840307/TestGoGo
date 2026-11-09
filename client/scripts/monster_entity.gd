@@ -21,6 +21,7 @@ var _performance_simplified_style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL
 var _performance_visual_protected: bool = false
 var _afk_visual_suspended: bool = false
 var _afk_ui_was_visible: bool = true
+var _afk_root_was_visible: bool = true
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 var ui_container: Control = null
@@ -175,7 +176,16 @@ func prepare_performance_visual(
 	_performance_simplified_style = _normalize_simplified_style(style)
 
 func is_primitive_simplified() -> bool:
-	return _primitive_simplified_visual
+	# A simplified mode flag is not the same as an actually rendered primitive.
+	return _primitive_simplified_visual and not _afk_visual_suspended
+
+
+func is_render_visible() -> bool:
+	return (
+		not _afk_visual_suspended
+		and visible
+		and _is_on_screen
+	)
 
 func _normalize_simplified_style(style: int) -> int:
 	var normalized := ClientPerformanceProfile.sanitize_simplify_mode(style)
@@ -344,7 +354,7 @@ func advance_network_runtime(delta: float) -> bool:
 	return true
 
 func is_runtime_visible() -> bool:
-	return _is_on_screen
+	return not _afk_visual_suspended and _is_on_screen
 
 
 func is_finishing_last_move_before_idle() -> bool:
@@ -637,6 +647,10 @@ func set_afk_visual_suspended(suspended: bool) -> void:
 		return
 	_afk_visual_suspended = suspended
 	if suspended:
+		_afk_root_was_visible = visible
+		# Canvas visibility is presentation-only: CharacterBody2D collision,
+		# authoritative position and fixed/network updates remain alive.
+		visible = false
 		if is_instance_valid(sprite):
 			sprite.stop()
 			sprite.visible = false
@@ -655,6 +669,7 @@ func set_afk_visual_suspended(suspended: bool) -> void:
 			ui_container.visible = false
 		queue_redraw()
 		return
+	visible = _afk_root_was_visible
 	if is_instance_valid(ui_container):
 		ui_container.visible = _afk_ui_was_visible
 	_apply_performance_sprite()

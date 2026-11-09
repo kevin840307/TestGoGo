@@ -81,7 +81,11 @@ func log_world_visual_audit(phase: String) -> void:
 		not _last_world_map_audit_path.is_empty()
 		and ResourceLoader.has_cached(_last_world_map_audit_path)
 	)
-	print("[WORLD_VISUAL_AUDIT] phase=%s pid=%d map_nodes=%d map_sprite=%d map_animated=%d map_texture_nodes=%d map_unique_textures=%d map_sprite_frames=%d hud_nodes=%d hud_controls=%d hud_viewports=%d hud_texture_nodes=%d player_nodes=%d player_animated=%d entry_nodes=%d active_entities=%d prewarmed_windows=%d cached_map=%s cached_player=%s cached_hud=%s godot_static_mb=%.2f godot_texture_mb=%.2f godot_video_mb=%.2f metric_scope=godot_not_windows_working_set" % [
+	var audit_texture_mb: float = float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0
+	var audit_buffer_mb: float = float(Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED)) / 1048576.0
+	var audit_video_mb: float = float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0
+	var audit_misc_mb: float = maxf(0.0, audit_video_mb - audit_texture_mb - audit_buffer_mb)
+	print("[WORLD_VISUAL_AUDIT] phase=%s pid=%d map_nodes=%d map_sprite=%d map_animated=%d map_texture_nodes=%d map_unique_textures=%d map_sprite_frames=%d hud_nodes=%d hud_controls=%d hud_viewports=%d hud_texture_nodes=%d player_nodes=%d player_animated=%d entry_nodes=%d active_entities=%d prewarmed_windows=%d cached_map=%s cached_player=%s cached_hud=%s godot_static_mb=%.2f godot_texture_mb=%.2f godot_buffer_mb=%.2f godot_video_misc_mb=%.2f godot_video_mb=%.2f metric_scope=godot_not_windows_working_set" % [
 		phase, OS.get_process_id(),
 		int(map_data["nodes"]), int(map_data["sprite2d"]),
 		int(map_data["animated_sprites"]), int(map_data["texture_rects"]),
@@ -95,8 +99,10 @@ func log_world_visual_audit(phase: String) -> void:
 		str(ResourceLoader.has_cached("res://player.tscn")),
 		str(ResourceLoader.has_cached("res://game_hud.tscn")),
 		_get_process_memory_mb(),
-		float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
-		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+		audit_texture_mb,
+		audit_buffer_mb,
+		audit_misc_mb,
+		audit_video_mb,
 	])
 	# A named list of top retained visual resource paths makes the next
 	# memory profile actionable without changing render or network behavior.
@@ -219,10 +225,12 @@ func _settle_released_memory(reason: String) -> void:
 	await tree.process_frame
 	var measured: Dictionary = _afk_memory_sample()
 	if OS.is_debug_build():
-		print("[MEMORY_SETTLE] reason=%s static_mb=%.2f texture_mb=%.2f video_mb=%.2f external_trim=deferred_native renderer_force_sync=false" % [
+		print("[MEMORY_SETTLE] reason=%s static_mb=%.2f texture_mb=%.2f buffer_mb=%.2f video_misc_mb=%.2f video_mb=%.2f external_trim=deferred_native renderer_force_sync=false" % [
 			reason,
 			float(measured.get("godot_static_mb", 0.0)),
 			float(measured.get("godot_texture_mb", 0.0)),
+			float(measured.get("godot_buffer_mb", 0.0)),
+			float(measured.get("godot_video_misc_mb", 0.0)),
 			float(measured.get("godot_video_mb", 0.0)),
 		])
 
@@ -249,13 +257,18 @@ func _audit_login_after_logout() -> void:
 
 func _afk_memory_sample() -> Dictionary:
 	# These are Godot allocator/resource counters, NOT Windows working set
-	# and NOT OS-level process dedicated VRAM. Match pid to the Windows
-	# profiler to validate whether real process RAM ever falls.
+	# and NOT OS-level process dedicated VRAM. Split the video total so a
+	# post-world high-water mark can be distinguished from live textures.
+	var texture_mb: float = float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0
+	var buffer_mb: float = float(Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED)) / 1048576.0
+	var video_mb: float = float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0
 	return {
 		"godot_static_mb": float(Performance.get_monitor(Performance.MEMORY_STATIC)) / 1048576.0,
 		"godot_peak_mb": float(Performance.get_monitor(Performance.MEMORY_STATIC_MAX)) / 1048576.0,
-		"godot_texture_mb": float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
-		"godot_video_mb": float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+		"godot_texture_mb": texture_mb,
+		"godot_buffer_mb": buffer_mb,
+		"godot_video_mb": video_mb,
+		"godot_video_misc_mb": maxf(0.0, video_mb - texture_mb - buffer_mb),
 		"resource_objects": int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT)),
 		"node_objects": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
 	}
@@ -267,13 +280,15 @@ func _log_afk_memory(stage: String) -> void:
 	var measured: Dictionary = _afk_memory_sample()
 	var before: Dictionary = _afk_memory_baseline
 	var stats: Dictionary = _afk_visual_stats
-	print("[AFK_MEMORY] stage=%s pid=%d godot_static_mb=%.2f delta_static_mb=%+.2f godot_static_peak_mb=%.2f godot_texture_mb=%.2f delta_texture_mb=%+.2f godot_video_mb=%.2f delta_video_mb=%+.2f resource_objects=%d delta_resources=%+d node_objects=%d released_refs=%d retained_embedded=%d retained_generated=%d retained_missing=%d excluded_scripted_subtrees=%d excluded_collision_subtrees=%d excluded_entity_subtrees=%d visited_nodes=%d visual_candidates=%d resource_candidates=%d metric_scope=godot_not_windows_working_set" % [
+	print("[AFK_MEMORY] stage=%s pid=%d godot_static_mb=%.2f delta_static_mb=%+.2f godot_static_peak_mb=%.2f godot_texture_mb=%.2f delta_texture_mb=%+.2f godot_buffer_mb=%.2f godot_video_misc_mb=%.2f godot_video_mb=%.2f delta_video_mb=%+.2f resource_objects=%d delta_resources=%+d node_objects=%d released_refs=%d retained_embedded=%d retained_generated=%d retained_missing=%d excluded_scripted_subtrees=%d excluded_collision_subtrees=%d excluded_entity_subtrees=%d visited_nodes=%d visual_candidates=%d resource_candidates=%d metric_scope=godot_not_windows_working_set" % [
 		stage, OS.get_process_id(),
 		float(measured.get("godot_static_mb", 0.0)),
 		float(measured.get("godot_static_mb", 0.0)) - float(before.get("godot_static_mb", 0.0)),
 		float(measured.get("godot_peak_mb", 0.0)),
 		float(measured.get("godot_texture_mb", 0.0)),
 		float(measured.get("godot_texture_mb", 0.0)) - float(before.get("godot_texture_mb", 0.0)),
+		float(measured.get("godot_buffer_mb", 0.0)),
+		float(measured.get("godot_video_misc_mb", 0.0)),
 		float(measured.get("godot_video_mb", 0.0)),
 		float(measured.get("godot_video_mb", 0.0)) - float(before.get("godot_video_mb", 0.0)),
 		int(measured.get("resource_objects", 0)),
@@ -678,7 +693,11 @@ func _print_render_stats() -> void :
 			monster_aoi_enter_radius = float(ground_aoi.get("monster_enter_radius", 0.0))
 			ground_aoi_enter_radius = float(ground_aoi.get("ground_enter_radius", 0.0))
 
-	print("[RENDER_STATS] mode=%s combat=%s fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f visible_monsters=%d simplified_monsters=%d primitive_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d simplified_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d ground_known=%d ground_deferred=%d monster_aoi_scans=%d monster_aoi_skips=%d ground_aoi_scans=%d ground_aoi_skips=%d monster_aoi_radius=%.0f ground_aoi_radius=%.0f paper_doll_layers=%d minimap_world_redraws=%d minimap_world_skips=%d render_stats_valid=%s %s %s" % [
+	var render_texture_mb: float = float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0
+	var render_buffer_mb: float = float(Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED)) / 1048576.0
+	var render_video_mb: float = float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0
+	var render_misc_mb: float = maxf(0.0, render_video_mb - render_texture_mb - render_buffer_mb)
+	print("[RENDER_STATS] mode=%s combat=%s fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f buffer_mem_mb=%.1f video_misc_mb=%.1f visible_monsters=%d simplified_monsters=%d primitive_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d simplified_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d ground_known=%d ground_deferred=%d monster_aoi_scans=%d monster_aoi_skips=%d ground_aoi_scans=%d ground_aoi_skips=%d monster_aoi_radius=%.0f ground_aoi_radius=%.0f paper_doll_layers=%d minimap_world_redraws=%d minimap_world_skips=%d render_stats_valid=%s %s %s" % [
 		ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
 		ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
 		int(Performance.get_monitor(Performance.TIME_FPS)),
@@ -686,8 +705,10 @@ func _print_render_stats() -> void :
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)),
 		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
-		float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
-		float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
+		render_video_mb,
+		render_texture_mb,
+		render_buffer_mb,
+		render_misc_mb,
 		visible_monsters,
 		simplified_monsters,
 		primitive_monsters,
@@ -731,7 +752,9 @@ func _print_performance_analysis(checkpoint: String) -> void:
 	var static_mem_mb: float = float(OS.get_static_memory_usage()) / 1048576.0
 	var static_peak_mb: float = float(OS.get_static_memory_peak_usage()) / 1048576.0
 	var texture_mem_mb: float = float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0
+	var buffer_mem_mb: float = float(Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED)) / 1048576.0
 	var video_mem_mb: float = float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0
+	var video_misc_mb: float = maxf(0.0, video_mem_mb - texture_mem_mb - buffer_mem_mb)
 	var object_count: int = int(Performance.get_monitor(Performance.OBJECT_COUNT))
 	var node_count: int = int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))
 	var orphan_count: int = int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT))
@@ -746,7 +769,7 @@ func _print_performance_analysis(checkpoint: String) -> void:
 		if NetworkEntityManager.has_method("get_aoi_deferred_monster_count"):
 			deferred_monsters = int(NetworkEntityManager.get_aoi_deferred_monster_count())
 
-	print("[PERF_ANALYSIS] mode=%s combat=%s checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d combat_fx_enabled=%s cpu_metric=frame_budget_ratio cpu_process_time_ms=%.3f quality_enhanced=%s %s %s" % [
+	print("[PERF_ANALYSIS] mode=%s combat=%s checkpoint=%s fps=%.1f process_ms=%.3f physics_ms=%.3f cpu_frame_pct=%.1f static_mem_mb=%.1f static_peak_mb=%.1f video_mem_mb=%.1f texture_mem_mb=%.1f buffer_mem_mb=%.1f video_misc_mb=%.1f objects=%d nodes=%d orphan_nodes=%d active_entities=%d active_monsters=%d deferred_monsters=%d combat_fx_enabled=%s cpu_metric=frame_budget_ratio cpu_process_time_ms=%.3f quality_enhanced=%s %s %s" % [
 		ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
 		ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
 		checkpoint,
@@ -758,6 +781,8 @@ func _print_performance_analysis(checkpoint: String) -> void:
 		static_peak_mb,
 		video_mem_mb,
 		texture_mem_mb,
+		buffer_mem_mb,
+		video_misc_mb,
 		object_count,
 		node_count,
 		orphan_count,
