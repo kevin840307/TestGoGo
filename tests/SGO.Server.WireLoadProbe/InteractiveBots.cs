@@ -130,9 +130,10 @@ internal static class InteractiveBots
                 {
                     try
                     {
-                        // Alternating small movements keep server-side position validation active.
-                        // The authoritative position stays near the safe GM-provided spawn point.
-                        var offset = (cycle + i) % 2 == 0 ? 4 : -4;
+                        // Walk a short 40px out-and-back path in 4px steps.
+                        // This exercises visible movement without GM teleporting every tick.
+                        var phase = (cycle + i % 5) % 20;
+                        var offset = 4 * (phase <= 10 ? phase : 20 - phase);
                         await bot.SendPositionAsync(timeout, offset);
                         Interlocked.Increment(ref moves);
                         if (monsters.Count > 0 && (cycle + i) % 2 == 0)
