@@ -1,0 +1,55 @@
+name: Windows private commit memory audit
+
+on:
+  push:
+    branches:
+      - feature/local-server-net8
+    paths:
+      - 'tools/SGO.WindowsMemoryAudit/**'
+      - '.github/workflows/windows-memory-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  classify-windows-memory:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build and verify 64 MiB private commit classification
+        shell: pwsh
+        run: |
+          dotnet build tools/SGO.WindowsMemoryAudit/SGO.WindowsMemoryAudit.csproj -c Release --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --no-build --project tools/SGO.WindowsMemoryAudit -c Release -- --self-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Capture external same-PID snapshot
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path results | Out-Null
+          dotnet run --no-build --project tools/SGO.WindowsMemoryAudit -c Release -- --pid $PID --stage Login --output results/vm-login.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --no-build --project tools/SGO.WindowsMemoryAudit -c Release -- --pid $PID --stage Game --output results/vm-game.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --no-build --project tools/SGO.WindowsMemoryAudit -c Release -- --pid $PID --stage AFK --output results/vm-afk.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --no-build --project tools/SGO.WindowsMemoryAudit -c Release -- --pid $PID --stage Logout --output results/vm-logout.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./tools/SGO.WindowsMemoryAudit/Compare-WindowsMemoryStages.ps1 -Login results/vm-login.json -Game results/vm-game.json -AFK results/vm-afk.json -Logout results/vm-logout.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $s = Get-Content results/vm-login.json -Raw | ConvertFrom-Json
+          if ($s.PrivateBytesMB -le 0 -or $s.RegionsVisited -lt 1 -or $s.ProcessId -ne $PID) {
+            throw 'Windows memory audit did not inspect the requested process'
+          }
+      - name: Upload memory audit JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-memory-audit
+          path: results/vm-*.json
+          if-no-files-found: ignore
