@@ -34,7 +34,7 @@ class ResourceLifetimeContract(unittest.TestCase):
 
     def test_large_map_packed_scene_released_and_detached_before_attach(self):
         initial = body(self.gm, "enter_game_world")
-        transition = body(self.gm, "_execute_map_transition")
+        transition = body(self.gm, "_on_change_map_received")
         # Both first entry and map transition must release intermediate scene
         # dependencies before the new Node enters the SceneTree.
         for phase in (initial, transition):
