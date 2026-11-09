@@ -211,6 +211,8 @@ func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: 
 		await get_tree().create_timer(fx_duration * 0.3).timeout
 
 	if not is_instance_valid(target) or not target.is_inside_tree(): return
+	if GameManager and not GameManager.should_show_damage_numbers():
+		return
 
 	# Skill 99001 can kill dozens of monsters in the same packet batch.
 	# Spawn its number immediately while the target node still exists; queued
