@@ -9,6 +9,8 @@ on:
       - 'client/Skills/**'
       - 'client/Assets/GameInfo/**'
       - 'tests/SGO.Server.SmokeTests/**'
+      - 'tests/quest_host_audit.py'
+      - 'tests/test_quest_host_audit.py'
       - '.github/workflows/server-smoke-windows.yml'
   workflow_dispatch:
 
