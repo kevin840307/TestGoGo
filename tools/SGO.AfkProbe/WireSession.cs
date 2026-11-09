@@ -141,6 +141,41 @@ internal sealed class WireSession : IAsyncDisposable
         RequireSuccess(ready, "WorldReady");
     }
 
+    internal async Task EnterDisposableTestMapAsync(
+        int map, CancellationToken ct)
+    {
+        if (map == State.MapId) return;
+        // Allowed only for the auto-generated CI/local throwaway account;
+        // no map/position changes are initiated for real user sessions.
+        await SendAsync(new
+        {
+            Type = "ChatMessage",
+            Channel = 0,
+            BubbleType = 0,
+            Message = "/gm map " + map + " 4331 5346"
+        }, ct);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(25));
+        while (true)
+        {
+            var packet = await ReceiveAsync(timeout.Token);
+            var type = AfkState.ReadString(packet, "Type");
+            if (type == "ChangeMap")
+            {
+                if (State.MapId != map)
+                    throw new InvalidDataException("Unexpected GM test-map destination");
+                break;
+            }
+            if (type == "PacketError")
+                throw new InvalidOperationException(
+                    "Server rejected disposable test map switch");
+        }
+        var ready = await RequestAsync(
+            new { Type = "WorldReady", MapID = State.MapId },
+            "WorldReadyResponse", TimeSpan.FromSeconds(25), ct);
+        RequireSuccess(ready, "Test Map WorldReady");
+    }
+
     internal async Task<bool> EnableAutoSaintAsync(
         int mpThreshold, int spThreshold, CancellationToken ct)
     {

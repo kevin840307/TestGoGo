@@ -90,6 +90,9 @@ try
         options.Login!, options.Password!,
         options.CharacterId, options.DisposableTestAccount,
         cancelled.Token);
+    if (options.TestMap.HasValue)
+        await session.EnterDisposableTestMapAsync(
+            options.TestMap.Value, cancelled.Token);
     if (options.EnableAutoSaint)
     {
         var enabled = await session.EnableAutoSaintAsync(

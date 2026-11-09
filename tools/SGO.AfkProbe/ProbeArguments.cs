@@ -11,6 +11,7 @@ internal sealed record ProbeArguments(
     int MpThreshold,
     int SpThreshold,
     int Seconds,
+    int? TestMap,
     string? Output)
 {
     internal static ProbeArguments Parse(string[] args)
@@ -30,7 +31,7 @@ internal sealed record ProbeArguments(
             if (args[i] is not (
                 "--url" or "--user" or "--password-env" or
                 "--character-id" or "--seconds" or "--output" or
-                "--mp-threshold" or "--sp-threshold"))
+                "--mp-threshold" or "--sp-threshold" or "--test-map"))
                 throw new ArgumentException("Unknown option: " + args[i]);
             if (i + 1 >= args.Length || args[i + 1].StartsWith("--"))
                 throw new ArgumentException("Missing value for " + args[i]);
@@ -89,6 +90,17 @@ internal sealed record ProbeArguments(
             }
         }
 
+        int? testMap = null;
+        if (values.TryGetValue("--test-map", out var mapArg))
+        {
+            if (!smoke || synthetic)
+                throw new ArgumentException("--test-map requires --smoke-account");
+            if (!int.TryParse(mapArg, out var parsedMap) ||
+                parsedMap is < 1 or > 500)
+                throw new ArgumentException("--test-map must be 1..500");
+            testMap = parsedMap;
+        }
+
         int mp = values.TryGetValue("--mp-threshold", out var mpArg)
             ? int.Parse(mpArg) : 30;
         int sp = values.TryGetValue("--sp-threshold", out var spArg)
@@ -97,7 +109,7 @@ internal sealed record ProbeArguments(
             throw new ArgumentException("Thresholds must be 0..100");
         return new ProbeArguments(
             endpoint, login, password, characterId, smoke,
-            synthetic, autoSaint, mp, sp, seconds,
+            synthetic, autoSaint, mp, sp, seconds, testMap,
             values.GetValueOrDefault("--output"));
     }
 }
