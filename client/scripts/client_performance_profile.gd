@@ -70,6 +70,47 @@ static func should_show_other_player(mode: int, same_party: bool, hostile: bool)
 static func should_show_ordinary_monster(mode: int, protected_monster: bool) -> bool:
 	return protected_monster or sanitize_monster_visibility(mode) == MONSTER_SHOW_ALL
 
+# Recalculate once per AOI change, not once per drop (N²).
+# Five nearest entities of each ItemIndex within the viewer's AOI survive.
+# Only IDs are selected; no authoritative packets or item rows are altered.
+static func select_visible_ground_drop_ids(
+	records: Dictionary, observer: Vector2, observer_radius: float, max_per_item: int = 5
+) -> Dictionary:
+	var selected: Dictionary = {}
+	if max_per_item <= 0:
+		return selected
+	var candidates: Array[Dictionary] = []
+	var radius_sq: float = observer_radius * observer_radius
+	for raw_id in records:
+		var record: Dictionary = records[raw_id]
+		var location := Vector2(float(record.get("LocX", 0.0)), float(record.get("LocY", 0.0)))
+		var distance_sq: float = location.distance_squared_to(observer)
+		if distance_sq > radius_sq:
+			continue
+		var extra: Dictionary = record.get("ExtraData", {})
+		candidates.append({
+			"id": int(raw_id),
+			"item": int(extra.get("ItemIndex", 0)),
+			"distance_sq": distance_sq,
+		})
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if a["distance_sq"] == b["distance_sq"]:
+			return int(a["id"]) < int(b["id"])
+		return float(a["distance_sq"]) < float(b["distance_sq"])
+	)
+	var counted: Dictionary = {}
+	for candidate in candidates:
+		var item_id: int = int(candidate["item"])
+		if item_id <= 0:
+			selected[int(candidate["id"])] = true
+			continue
+		var count: int = int(counted.get(item_id, 0))
+		if count >= max_per_item:
+			continue
+		counted[item_id] = count + 1
+		selected[int(candidate["id"])] = true
+	return selected
+
 static func should_show_duplicate_drop(
 	candidate_id: int, candidate: Dictionary, records: Dictionary,
 	observer: Vector2, observer_radius: float,
