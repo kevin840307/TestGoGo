@@ -408,9 +408,12 @@ var current_festival_activity: String = ""
 var current_performance_load_mode: int = ClientPerformanceProfile.LOAD_BALANCED
 var current_combat_render_mode: int = ClientPerformanceProfile.COMBAT_NORMAL
 var current_foreground_fps_limit: int = 60
-var current_simplify_players_mode: int = ClientPerformanceProfile.SIMPLIFY_AUTO
-var current_simplify_monsters_mode: int = ClientPerformanceProfile.SIMPLIFY_AUTO
-var current_performance_profile: Dictionary = ClientPerformanceProfile.apply_visual_overrides(
+var current_simplify_players_mode: int = ClientPerformanceProfile.PLAYER_SHOW_ALL
+var current_simplify_monsters_mode: int = ClientPerformanceProfile.MONSTER_SHOW_ALL
+var current_effects_simplified: bool = false
+var current_ground_drops_simplified: bool = false
+var current_damage_numbers_visible: bool = true
+var current_performance_profile: Dictionary = ClientPerformanceProfile.apply_visibility_overrides(
 	ClientPerformanceProfile.resolve(
 		current_performance_load_mode,
 		current_combat_render_mode
@@ -1362,7 +1365,7 @@ func begin_afk_mode(progress_callback: Callable = Callable()) -> bool:
 	set_frame_gap_stage("afk_enter_suspend_entities")
 
 	set_performance_modes(ClientPerformanceProfile.LOAD_MULTIBOX, ClientPerformanceProfile.COMBAT_MASS)
-	set_visual_simplification_modes(ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED, ClientPerformanceProfile.SIMPLIFY_SIMPLIFIED)
+	# AFK's renderer suspension must not overwrite account visibility choices.
 	var suspended_entities: int = await _set_afk_dynamic_visuals_suspended_batched(
 		true, progress_callback
 	)
@@ -1423,8 +1426,8 @@ func finish_afk_mode(progress_callback: Callable = Callable()) -> bool:
 		int(_afk_saved_profile.get("combat", ClientPerformanceProfile.COMBAT_NORMAL))
 	)
 	set_visual_simplification_modes(
-		int(_afk_saved_profile.get("players", ClientPerformanceProfile.SIMPLIFY_AUTO)),
-		int(_afk_saved_profile.get("monsters", ClientPerformanceProfile.SIMPLIFY_AUTO))
+		int(_afk_saved_profile.get("players", ClientPerformanceProfile.PLAYER_SHOW_ALL)),
+		int(_afk_saved_profile.get("monsters", ClientPerformanceProfile.MONSTER_SHOW_ALL))
 	)
 	var monster_restore: Dictionary = {}
 	if NetworkEntityManager and NetworkEntityManager.has_method("restore_monsters_after_afk"):
@@ -1506,7 +1509,7 @@ func _reset_afk_mode() -> void:
 
 
 func _rebuild_performance_profile() -> void:
-	current_performance_profile = ClientPerformanceProfile.apply_visual_overrides(
+	current_performance_profile = ClientPerformanceProfile.apply_visibility_overrides(
 		ClientPerformanceProfile.resolve(
 			current_performance_load_mode,
 			current_combat_render_mode
@@ -1515,6 +1518,12 @@ func _rebuild_performance_profile() -> void:
 		current_simplify_monsters_mode
 	)
 	current_performance_profile["foreground_fps"] = current_foreground_fps_limit
+	current_performance_profile["effects_simplified"] = current_effects_simplified
+	current_performance_profile["ground_drops_simplified"] = current_ground_drops_simplified
+	current_performance_profile["show_damage_numbers"] = current_damage_numbers_visible
+	if current_effects_simplified:
+		current_performance_profile["combat_effects_enabled"] = false
+		current_performance_profile["effect_budget_percent"] = 0
 
 static func needs_vsync_disabled(cap: int, refresh_hz: float) -> bool:
 	# Engine.max_fps=0 alone does not unlock FPS when VSync is on.
@@ -1579,11 +1588,29 @@ func set_performance_modes(load_mode: int, combat_mode: int) -> void:
 		if EffectLoader and EffectLoader.has_method("clear_runtime_cache"):
 			EffectLoader.clear_runtime_cache()
 
-func set_visual_simplification_modes(player_mode: int, monster_mode: int) -> void:
-	current_simplify_players_mode = ClientPerformanceProfile.sanitize_simplify_mode(player_mode)
-	current_simplify_monsters_mode = ClientPerformanceProfile.sanitize_simplify_mode(monster_mode)
+func set_entity_visibility_modes(player_mode: int, monster_mode: int) -> void:
+	current_simplify_players_mode = ClientPerformanceProfile.sanitize_player_visibility(player_mode)
+	current_simplify_monsters_mode = ClientPerformanceProfile.sanitize_monster_visibility(monster_mode)
 	_rebuild_performance_profile()
 	_apply_performance_profile()
+
+# Compatibility with older call sites; now controls display visibility only.
+func set_visual_simplification_modes(player_mode: int, monster_mode: int) -> void:
+	set_entity_visibility_modes(player_mode, monster_mode)
+
+func set_visual_detail_options(simplify_effects: bool, simplify_drops: bool, show_damage: bool) -> void:
+	if current_effects_simplified == simplify_effects and current_ground_drops_simplified == simplify_drops and current_damage_numbers_visible == show_damage:
+		return
+	current_effects_simplified = simplify_effects
+	current_ground_drops_simplified = simplify_drops
+	current_damage_numbers_visible = show_damage
+	_rebuild_performance_profile()
+	_apply_performance_profile()
+	if not show_damage and FloatingTextManager and FloatingTextManager.has_method("hide_damage_numbers"):
+		FloatingTextManager.hide_damage_numbers()
+
+func should_show_damage_numbers() -> bool:
+	return current_damage_numbers_visible
 
 func get_simplify_players_mode() -> int:
 	return current_simplify_players_mode
