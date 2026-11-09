@@ -107,13 +107,13 @@ func _collect_windows_working_set_trim_result(
 	var tree: SceneTree = get_tree()
 	if tree == null:
 		return
-	for _attempt in range(12):
+	for _attempt in range(20):
 		await tree.create_timer(0.25).timeout
 		if not FileAccess.file_exists(result_path):
 			continue
 		var raw: String = FileAccess.get_file_as_string(result_path).strip_edges()
 		DirAccess.remove_absolute(result_path)
-		var parts: PackedStringArray = raw.split("|")
+		var parts: PackedStringArray = raw.split("|", true, 3)
 		if parts.size() < 3:
 			if OS.is_debug_build():
 				print("[WORKING_SET_TRIM_RESULT] reason=%s target_pid=%d invalid=%s" % [
@@ -123,14 +123,16 @@ func _collect_windows_working_set_trim_result(
 		var ok: bool = str(parts[0]).to_lower() == "true"
 		var before_bytes: int = int(parts[1])
 		var after_bytes: int = int(parts[2])
+		var error_text: String = str(parts[3]) if parts.size() >= 4 else ""
 		if OS.is_debug_build():
-			print("[WORKING_SET_TRIM_RESULT] reason=%s target_pid=%d success=%s before_mb=%.2f after_mb=%.2f released_mb=%.2f" % [
+			print("[WORKING_SET_TRIM_RESULT] reason=%s target_pid=%d success=%s before_mb=%.2f after_mb=%.2f released_mb=%.2f error=%s" % [
 				reason,
 				target_pid,
 				str(ok),
 				float(before_bytes) / 1048576.0,
 				float(after_bytes) / 1048576.0,
 				float(maxi(0, before_bytes - after_bytes)) / 1048576.0,
+				error_text,
 			])
 		return
 	if OS.is_debug_build():
@@ -140,18 +142,15 @@ func _collect_windows_working_set_trim_result(
 
 
 func _request_windows_working_set_trim(reason: String) -> int:
-	# Godot's resource counters can return to the login baseline while Windows
-	# still keeps released allocator/driver pages resident in this process.
-	# EmptyWorkingSet asks Windows to evict only those resident pages; it does
-	# not pause networking, physics, combat, or mutate authoritative game data.
+	# Godot can return to the login allocator baseline while Windows still keeps
+	# released pages resident. Run the OS request in a helper process so the
+	# gameplay thread never blocks on PowerShell or the Win32 call itself.
 	if OS.get_name() != "Windows":
 		return -1
 
 	var measured: Dictionary = _afk_memory_sample()
 	var current_static_mb: float = float(measured.get("godot_static_mb", 0.0))
 	var peak_static_mb: float = float(measured.get("godot_peak_mb", 0.0))
-	# Do not trim during ordinary gameplay or startup. This is intentionally
-	# limited to cases where a large world allocation has already been freed.
 	if current_static_mb > 220.0 or peak_static_mb - current_static_mb < 64.0:
 		if OS.is_debug_build():
 			print("[WORKING_SET_TRIM] reason=%s skipped=true current_static_mb=%.2f peak_static_mb=%.2f" % [
@@ -164,22 +163,45 @@ func _request_windows_working_set_trim(reason: String) -> int:
 		"user://working_set_trim_%d_%d.txt" % [target_pid, Time.get_ticks_msec()]
 	)
 	var escaped_result_path: String = result_path.replace("'", "''")
+	# Use a complete C# type instead of Add-Type -MemberDefinition. This makes
+	# P/Invoke compilation deterministic on Windows PowerShell 5.1 and pwsh.
+	# SetProcessWorkingSetSize(-1, -1) is kept only as a fallback if the Psapi
+	# wrapper reports failure.
+	var csharp_source: String = (
+		"using System;"
+		+ "using System.Runtime.InteropServices;"
+		+ "namespace SgoMemory {"
+		+ "public static class NativeMethods {"
+		+ "[DllImport(\"psapi.dll\", SetLastError=true)]"
+		+ "[return: MarshalAs(UnmanagedType.Bool)]"
+		+ "public static extern bool EmptyWorkingSet(IntPtr hProcess);"
+		+ "[DllImport(\"kernel32.dll\", SetLastError=true)]"
+		+ "[return: MarshalAs(UnmanagedType.Bool)]"
+		+ "public static extern bool SetProcessWorkingSetSize(IntPtr hProcess, IntPtr min, IntPtr max);"
+		+ "}}"
+	)
+	var escaped_csharp: String = csharp_source.replace("'", "''")
 	var ps_command: String = (
-		"$ErrorActionPreference='SilentlyContinue';"
-		+ "$result='%s';$ok=$false;$before=0L;$after=0L;" % escaped_result_path
+		"$ErrorActionPreference='Stop';"
+		+ "$result='%s';$ok=$false;$before=0L;$after=0L;$err='';$p=$null;" % escaped_result_path
 		+ "try{"
-		+ "$sig='[System.Runtime.InteropServices.DllImport(\"psapi.dll\")] "
-		+ "public static extern bool EmptyWorkingSet(System.IntPtr hProcess);';"
-		+ "Add-Type -MemberDefinition $sig -Name NativeMethods -Namespace SgoMemory "
-		+ "-ErrorAction Stop;"
 		+ "$p=Get-Process -Id %d -ErrorAction Stop;" % target_pid
 		+ "$before=$p.WorkingSet64;"
+		+ "$src='%s';" % escaped_csharp
+		+ "Add-Type -TypeDefinition $src -Language CSharp -ErrorAction Stop;"
 		+ "$ok=[SgoMemory.NativeMethods]::EmptyWorkingSet($p.Handle);"
+		+ "if(-not $ok){"
+		+ "$minusOne=[IntPtr](-1);"
+		+ "$ok=[SgoMemory.NativeMethods]::SetProcessWorkingSetSize($p.Handle,$minusOne,$minusOne);"
+		+ "};"
 		+ "Start-Sleep -Milliseconds 80;"
 		+ "$p.Refresh();$after=$p.WorkingSet64;"
-		+ "}catch{};"
+		+ "}catch{"
+		+ "$err=$_.Exception.Message.Replace([Environment]::NewLine,' ').Replace('|','/');"
+		+ "if($null -ne $p){try{$p.Refresh();$after=$p.WorkingSet64}catch{}}"
+		+ "};"
 		+ "Set-Content -LiteralPath $result "
-		+ "-Value (($ok.ToString())+'|'+$before+'|'+$after) -Encoding ASCII"
+		+ "-Value (($ok.ToString())+'|'+$before+'|'+$after+'|'+$err) -Encoding ASCII"
 	)
 	var args := PackedStringArray([
 		"-NoLogo",
@@ -198,31 +220,23 @@ func _request_windows_working_set_trim(reason: String) -> int:
 		])
 	return helper_pid
 
-
 func _settle_renderer_and_trim_working_set(reason: String) -> void:
-	# Node/resource frees are deferred and the rendering server may process them
-	# asynchronously. Let both queues settle before asking Windows to trim the
-	# already-released pages from the process working set.
+	# Do not call RenderingServer.force_sync() here. The real log showed it can
+	# introduce a ~2 s main-thread gap and reduce fixed-physics cadence. Deferred
+	# frees already had several frames/seconds to settle before this point.
 	var tree: SceneTree = get_tree()
 	if tree == null:
 		return
 	await tree.process_frame
-	var before: Dictionary = _afk_memory_sample()
-	RenderingServer.force_sync()
-	await tree.process_frame
-	var after: Dictionary = _afk_memory_sample()
+	var measured: Dictionary = _afk_memory_sample()
 	if OS.is_debug_build():
-		print("[MEMORY_SETTLE] reason=%s static_mb=%.2f->%.2f texture_mb=%.2f->%.2f video_mb=%.2f->%.2f" % [
+		print("[MEMORY_SETTLE] reason=%s static_mb=%.2f texture_mb=%.2f video_mb=%.2f renderer_force_sync=false" % [
 			reason,
-			float(before.get("godot_static_mb", 0.0)),
-			float(after.get("godot_static_mb", 0.0)),
-			float(before.get("godot_texture_mb", 0.0)),
-			float(after.get("godot_texture_mb", 0.0)),
-			float(before.get("godot_video_mb", 0.0)),
-			float(after.get("godot_video_mb", 0.0)),
+			float(measured.get("godot_static_mb", 0.0)),
+			float(measured.get("godot_texture_mb", 0.0)),
+			float(measured.get("godot_video_mb", 0.0)),
 		])
 	_request_windows_working_set_trim(reason)
-
 
 func _audit_login_after_logout() -> void:
 	# The freed world and a newly instantiated EntryManager do not settle in
