@@ -751,6 +751,8 @@ func _print_render_stats() -> void :
 
 	var aoi_active_monsters: int = 0
 	var aoi_deferred_monsters: int = 0
+	var ground_display_selected: int = -1
+	var ground_display_pending_trim: int = 0
 	if NetworkEntityManager:
 		if NetworkEntityManager.has_method("get_aoi_active_monster_count"):
 			aoi_active_monsters = int(NetworkEntityManager.get_aoi_active_monster_count())
@@ -760,6 +762,8 @@ func _print_render_stats() -> void :
 			var ground_aoi: Dictionary = NetworkEntityManager.get_ground_aoi_stats()
 			ground_known = int(ground_aoi.get("known", 0))
 			ground_deferred = int(ground_aoi.get("deferred", 0))
+			ground_display_selected = int(ground_aoi.get("selected", -1))
+			ground_display_pending_trim = int(ground_aoi.get("pending_trim", 0))
 			monster_aoi_scans = int(ground_aoi.get("monster_full_scans", 0))
 			monster_aoi_skips = int(ground_aoi.get("monster_skipped_scans", 0))
 			ground_aoi_scans = int(ground_aoi.get("ground_full_scans", 0))
@@ -771,7 +775,7 @@ func _print_render_stats() -> void :
 	var render_buffer_mb: float = float(Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED)) / 1048576.0
 	var render_video_mb: float = float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0
 	var render_misc_mb: float = maxf(0.0, render_video_mb - render_texture_mb - render_buffer_mb)
-	print("[RENDER_STATS] mode=%s combat=%s fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f buffer_mem_mb=%.1f video_misc_mb=%.1f visible_monsters=%d simplified_monsters=%d primitive_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d simplified_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d ground_known=%d ground_deferred=%d monster_aoi_scans=%d monster_aoi_skips=%d ground_aoi_scans=%d ground_aoi_skips=%d monster_aoi_radius=%.0f ground_aoi_radius=%.0f paper_doll_layers=%d minimap_world_redraws=%d minimap_world_skips=%d render_stats_valid=%s %s %s" % [
+	print("[RENDER_STATS] mode=%s combat=%s fps=%d draw_calls=%d objects=%d primitives=%d canvas_nodes=%d video_mem_mb=%.1f texture_mem_mb=%.1f buffer_mem_mb=%.1f video_misc_mb=%.1f visible_monsters=%d simplified_monsters=%d primitive_monsters=%d aoi_active_monsters=%d aoi_deferred_monsters=%d visible_players=%d simplified_players=%d visible_pets=%d ground_items=%d ground_nearby_visible=%d ground_known=%d ground_deferred=%d ground_mode=%d ground_selected=%d ground_pending_trim=%d monster_aoi_scans=%d monster_aoi_skips=%d ground_aoi_scans=%d ground_aoi_skips=%d monster_aoi_radius=%.0f ground_aoi_radius=%.0f paper_doll_layers=%d minimap_world_redraws=%d minimap_world_skips=%d render_stats_valid=%s %s %s" % [
 		ClientPerformanceProfile.load_mode_name(current_performance_load_mode),
 		ClientPerformanceProfile.combat_mode_name(current_combat_render_mode),
 		int(Performance.get_monitor(Performance.TIME_FPS)),
@@ -795,6 +799,9 @@ func _print_render_stats() -> void :
 		ground_items_visible_nearby,
 		ground_known,
 		ground_deferred,
+		current_ground_drop_display_mode,
+		ground_display_selected,
+		ground_display_pending_trim,
 		monster_aoi_scans,
 		monster_aoi_skips,
 		ground_aoi_scans,
