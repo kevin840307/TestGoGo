@@ -284,6 +284,26 @@ internal sealed class WireLoadClient : IAsyncDisposable
             },
             timeout);
 
+    public async Task SendBotAttackWithAnimationAsync(
+        int targetEntityId,
+        double targetX,
+        double targetY,
+        TimeSpan timeout)
+    {
+        // Normal Godot players play their local attack animation immediately.
+        // A headless bot has no player scene, so notify observing clients of
+        // its action using the existing SyncState contract as well.
+        var dx = targetX - X;
+        var dy = targetY - Y;
+        var angle = Math.Atan2(dy, dx);
+        var octant = ((int)Math.Round(angle / (Math.PI / 4)) + 8) % 8;
+        var direction = (octant + 1).ToString();
+        await SendPacketAsync(
+            new { Type = "SyncState", State = "attack_1", Dir = direction },
+            timeout);
+        await SendAttackAsync(targetEntityId, timeout);
+    }
+
     public async Task PrepareCombatAsync(
         TimeSpan timeout,
         int level = 255)
