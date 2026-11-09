@@ -25,6 +25,18 @@ const SETTING_KEY_SIMPLIFY_PLAYERS_MODE = "simplify_players_mode"
 const SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE = ClientPerformanceProfile.SIMPLIFY_AUTO
 const SETTING_KEY_SIMPLIFY_MONSTERS_MODE = "simplify_monsters_mode"
 const SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE = ClientPerformanceProfile.SIMPLIFY_AUTO
+
+# Explicit visibility options supersede legacy automatic simplification UI.
+const SETTING_KEY_OTHER_PLAYERS_VISIBILITY = "other_players_visibility"
+const SETTING_DEFAULT_OTHER_PLAYERS_VISIBILITY = ClientPerformanceProfile.PLAYER_SHOW_ALL
+const SETTING_KEY_ORDINARY_MONSTERS_VISIBILITY = "ordinary_monsters_visibility"
+const SETTING_DEFAULT_ORDINARY_MONSTERS_VISIBILITY = ClientPerformanceProfile.MONSTER_SHOW_ALL
+const SETTING_KEY_SIMPLIFY_EFFECTS = "simplify_effects"
+const SETTING_DEFAULT_SIMPLIFY_EFFECTS = false
+const SETTING_KEY_SIMPLIFY_GROUND_DROPS = "simplify_ground_drops"
+const SETTING_DEFAULT_SIMPLIFY_GROUND_DROPS = false
+const SETTING_KEY_SHOW_DAMAGE_NUMBERS = "show_damage_numbers"
+const SETTING_DEFAULT_SHOW_DAMAGE_NUMBERS = true
 const SETTING_KEY_SKILL_AOE_SELF_CENTER_PREFIX = "skill_aoe_self_center_"
 
 
