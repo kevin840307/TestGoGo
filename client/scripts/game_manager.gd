@@ -157,11 +157,11 @@ func _request_windows_memory_trim_powershell_fallback(
 	var escaped_source: String = type_source.replace("'", "''")
 	var command: String = (
 		"$ErrorActionPreference='Stop';"
-		+ "$ok=$false;$before=0L;$after=0L;$err='';$h=[IntPtr]::Zero;"
+		+ "$ok=$false;$before=0L;$after=0L;$privateBefore=0L;$privateAfter=0L;$err='';$h=[IntPtr]::Zero;"
 		+ "$result='%s';" % escaped_result
 		+ "try{"
 		+ "$p=Get-Process -Id %d -ErrorAction Stop;" % target_pid
-		+ "$before=$p.WorkingSet64;"
+		+ "$before=$p.WorkingSet64;$privateBefore=$p.PrivateMemorySize64;"
 		+ "Add-Type -TypeDefinition '%s' -Language CSharp -ErrorAction Stop;" % escaped_source
 		+ "$h=[SgoWorkingSetNative]::OpenProcess(0x1100,$false,%d);" % target_pid
 		+ "if($h -eq [IntPtr]::Zero){throw 'OpenProcess failed: '+[Runtime.InteropServices.Marshal]::GetLastWin32Error()};"
@@ -169,10 +169,10 @@ func _request_windows_memory_trim_powershell_fallback(
 		+ "$ok=[SgoWorkingSetNative]::SetProcessWorkingSetSize($h,$minusOne,$minusOne);"
 		+ "if(-not $ok){throw 'SetProcessWorkingSetSize failed: '+[Runtime.InteropServices.Marshal]::GetLastWin32Error()};"
 		+ "Start-Sleep -Milliseconds 120;"
-		+ "$p.Refresh();$after=$p.WorkingSet64;"
+		+ "$p.Refresh();$after=$p.WorkingSet64;$privateAfter=$p.PrivateMemorySize64;"
 		+ "}catch{$err=$_.Exception.Message.Replace('|','/').Replace([Environment]::NewLine,' ')}"
 		+ "finally{if($h -ne [IntPtr]::Zero){[SgoWorkingSetNative]::CloseHandle($h)|Out-Null}};"
-		+ "Set-Content -LiteralPath $result -Value (($ok.ToString())+'|'+$before+'|'+$after+'|'+$err) -Encoding ASCII"
+		+ "Set-Content -LiteralPath $result -Value (($ok.ToString())+'|'+$before+'|'+$after+'|'+$privateBefore+'|'+$privateAfter+'|'+$err) -Encoding ASCII"
 	)
 	var args := PackedStringArray([
 		"-NoLogo",
@@ -198,16 +198,23 @@ func _collect_windows_memory_trim_result(reason: String, result_path: String) ->
 		await tree.create_timer(0.1).timeout
 		if FileAccess.file_exists(result_path):
 			var raw: String = FileAccess.get_file_as_string(result_path).strip_edges()
-			var parts: PackedStringArray = raw.split("|", true, 3)
-			var success: bool = parts.size() >= 3 and parts[0].to_lower() == "true"
+			var parts: PackedStringArray = raw.split("|", true, 5)
+			var success: bool = parts.size() >= 5 and parts[0].to_lower() == "true"
 			var before_bytes: float = float(parts[1]) if parts.size() >= 2 else 0.0
 			var after_bytes: float = float(parts[2]) if parts.size() >= 3 else 0.0
-			var error_text: String = parts[3] if parts.size() >= 4 else ""
+			var private_before_bytes: float = float(parts[3]) if parts.size() >= 4 else 0.0
+			var private_after_bytes: float = float(parts[4]) if parts.size() >= 5 else 0.0
+			var error_text: String = parts[5] if parts.size() >= 6 else ""
 			if OS.is_debug_build():
-				print("[OS_MEMORY_TRIM_RESULT] reason=%s success=%s before_mb=%.2f after_mb=%.2f released_mb=%.2f error=%s" % [
-					reason, str(success), before_bytes / 1048576.0,
+				print("[OS_MEMORY_TRIM_RESULT] reason=%s success=%s working_set_mb=%.2f->%.2f ws_released_mb=%.2f private_mb=%.2f->%.2f private_released_mb=%.2f error=%s" % [
+					reason,
+					str(success),
+					before_bytes / 1048576.0,
 					after_bytes / 1048576.0,
 					maxf(0.0, before_bytes - after_bytes) / 1048576.0,
+					private_before_bytes / 1048576.0,
+					private_after_bytes / 1048576.0,
+					maxf(0.0, private_before_bytes - private_after_bytes) / 1048576.0,
 					error_text,
 				])
 			DirAccess.remove_absolute(result_path)

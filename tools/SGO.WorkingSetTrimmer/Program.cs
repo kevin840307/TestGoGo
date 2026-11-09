@@ -25,6 +25,8 @@ var resultPath = selfTest
 
 long before = 0;
 long after = 0;
+long privateBefore = 0;
+long privateAfter = 0;
 var ok = false;
 var error = string.Empty;
 IntPtr handle = IntPtr.Zero;
@@ -33,6 +35,7 @@ try
 {
     using var target = Process.GetProcessById(targetPid);
     before = target.WorkingSet64;
+    privateBefore = target.PrivateMemorySize64;
     handle = Native.OpenProcess(
         PROCESS_SET_QUOTA | PROCESS_QUERY_LIMITED_INFORMATION,
         false,
@@ -47,6 +50,7 @@ try
     Thread.Sleep(120);
     target.Refresh();
     after = target.WorkingSet64;
+    privateAfter = target.PrivateMemorySize64;
 }
 catch (Exception ex)
 {
@@ -59,8 +63,10 @@ finally
 }
 
 Directory.CreateDirectory(Path.GetDirectoryName(resultPath) ?? ".");
-File.WriteAllText(resultPath, $"{ok}|{before}|{after}|{error}");
-Console.WriteLine($"success={ok} before_mb={before / 1048576.0:F2} after_mb={after / 1048576.0:F2}");
+File.WriteAllText(resultPath, $"{ok}|{before}|{after}|{privateBefore}|{privateAfter}|{error}");
+Console.WriteLine(
+    $"success={ok} working_set_mb={before / 1048576.0:F2}->{after / 1048576.0:F2} " +
+    $"private_mb={privateBefore / 1048576.0:F2}->{privateAfter / 1048576.0:F2}");
 if (selfTest)
 {
     try { File.Delete(resultPath); } catch { }
