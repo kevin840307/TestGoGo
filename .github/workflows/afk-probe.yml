@@ -62,8 +62,13 @@ jobs:
             }
             if (-not $ready) { throw 'Local test server did not become healthy' }
             $probe = '.\tools\SGO.AfkProbe\bin\Release\net8.0\win-x64\publish\SGO.AfkProbe.exe'
-            & $probe --url ws://127.0.0.1:5678/ --smoke-account --test-map 13 --seconds 10 --output results/real-wire.json
-            if ($LASTEXITCODE -ne 0) { throw "Real encrypted wire probe failed: $LASTEXITCODE" }
+            $probeProcess = Start-Process -FilePath $probe -PassThru -ArgumentList @('--url','ws://127.0.0.1:5678/','--smoke-account','--test-map','13','--seconds','15','--output','results/real-wire.json') -RedirectStandardOutput results/real-wire.stdout.log -RedirectStandardError results/real-wire.stderr.log
+            & ./tools/SGO.AfkProbe/Measure-WindowsMemory.ps1 -ProcessIds $probeProcess.Id -Stage Standalone -Samples 18 -OutputCsv results/probe-windows-memory.csv
+            if (-not $probeProcess.WaitForExit(60000)) {
+              Stop-Process -Id $probeProcess.Id -ErrorAction SilentlyContinue
+              throw 'Standalone probe exceeded time limit'
+            }
+            if ($probeProcess.ExitCode -ne 0) { throw "Real encrypted wire probe failed: $($probeProcess.ExitCode)" }
             $data = Get-Content results/real-wire.json -Raw | ConvertFrom-Json
             if ($data.State.Mode -ne 'real_encrypted_wire' -or
                 $data.State.MapId -le 0 -or
