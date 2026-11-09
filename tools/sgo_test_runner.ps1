@@ -256,6 +256,12 @@ try {
         'build', (Join-Path $repoRoot 'server\SGO.Server.csproj'), '-c', 'Release', '--nologo')
     Run-External "2b. Build Windows working-set helper / Release" $dotnet @(
         'build', (Join-Path $repoRoot 'tools\SGO.WorkingSetTrimmer\SGO.WorkingSetTrimmer.csproj'), '-c', 'Release', '--nologo')
+    if ($env:OS -eq 'Windows_NT') {
+        Run-External "2c. Publish Windows working-set helper / single-file" $dotnet @(
+            'publish', (Join-Path $repoRoot 'tools\SGO.WorkingSetTrimmer\SGO.WorkingSetTrimmer.csproj'),
+            '-c', 'Release', '-r', 'win-x64', '--self-contained', 'true',
+            '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '--nologo')
+    }
     foreach ($project in @(
         'tests\SGO.Server.SmokeTests\SGO.Server.SmokeTests.csproj',
         'tests\SGO.Server.LoadProbe\SGO.Server.LoadProbe.csproj',

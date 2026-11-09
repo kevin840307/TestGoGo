@@ -112,12 +112,81 @@ func log_world_visual_audit(phase: String) -> void:
 func _windows_memory_trim_helper_path() -> String:
 	if OS.get_name() != "Windows":
 		return ""
+
 	var packaged: String = OS.get_executable_path().get_base_dir().path_join("SGO.WorkingSetTrimmer.exe")
 	if FileAccess.file_exists(packaged):
 		return packaged
+
 	var client_root: String = ProjectSettings.globalize_path("res://")
-	var dev_path: String = client_root.path_join("../tools/SGO.WorkingSetTrimmer/bin/Release/net8.0/SGO.WorkingSetTrimmer.exe").simplify_path()
-	return dev_path if FileAccess.file_exists(dev_path) else ""
+	var helper_root: String = client_root.path_join("../tools/SGO.WorkingSetTrimmer").simplify_path()
+	var candidates := PackedStringArray([
+		helper_root.path_join("bin/Release/net8.0/SGO.WorkingSetTrimmer.exe"),
+		helper_root.path_join("bin/Debug/net8.0/SGO.WorkingSetTrimmer.exe"),
+		helper_root.path_join("bin/Release/net8.0/win-x64/publish/SGO.WorkingSetTrimmer.exe"),
+	])
+	for candidate in candidates:
+		var normalized: String = candidate.simplify_path()
+		if FileAccess.file_exists(normalized):
+			return normalized
+	return ""
+
+
+func _request_windows_memory_trim_powershell_fallback(
+	reason: String,
+	result_path: String
+) -> int:
+	# Native helper is preferred. This fallback exists so editor/dev runs do
+	# not silently skip the experiment when the helper has not been built yet.
+	# The child process performs P/Invoke; the Godot main thread never waits.
+	var target_pid: int = OS.get_process_id()
+	var escaped_result: String = result_path.replace("'", "''")
+	var type_source: String = (
+		"using System;"
+		+ "using System.Runtime.InteropServices;"
+		+ "public static class SgoWorkingSetNative {"
+		+ "[DllImport(\"kernel32.dll\", SetLastError=true)] "
+		+ "public static extern IntPtr OpenProcess(uint access,bool inherit,int pid);"
+		+ "[DllImport(\"kernel32.dll\", SetLastError=true)] "
+		+ "[return: MarshalAs(UnmanagedType.Bool)] "
+		+ "public static extern bool SetProcessWorkingSetSize(IntPtr p,IntPtr min,IntPtr max);"
+		+ "[DllImport(\"kernel32.dll\", SetLastError=true)] "
+		+ "[return: MarshalAs(UnmanagedType.Bool)] "
+		+ "public static extern bool CloseHandle(IntPtr p);"
+		+ "}"
+	)
+	var escaped_source: String = type_source.replace("'", "''")
+	var command: String = (
+		"$ErrorActionPreference='Stop';"
+		+ "$ok=$false;$before=0L;$after=0L;$err='';$h=[IntPtr]::Zero;"
+		+ "$result='%s';" % escaped_result
+		+ "try{"
+		+ "$p=Get-Process -Id %d -ErrorAction Stop;" % target_pid
+		+ "$before=$p.WorkingSet64;"
+		+ "Add-Type -TypeDefinition '%s' -Language CSharp -ErrorAction Stop;" % escaped_source
+		+ "$h=[SgoWorkingSetNative]::OpenProcess(0x1100,$false,%d);" % target_pid
+		+ "if($h -eq [IntPtr]::Zero){throw 'OpenProcess failed: '+[Runtime.InteropServices.Marshal]::GetLastWin32Error()};"
+		+ "$minusOne=[IntPtr](-1);"
+		+ "$ok=[SgoWorkingSetNative]::SetProcessWorkingSetSize($h,$minusOne,$minusOne);"
+		+ "if(-not $ok){throw 'SetProcessWorkingSetSize failed: '+[Runtime.InteropServices.Marshal]::GetLastWin32Error()};"
+		+ "Start-Sleep -Milliseconds 120;"
+		+ "$p.Refresh();$after=$p.WorkingSet64;"
+		+ "}catch{$err=$_.Exception.Message.Replace('|','/').Replace([Environment]::NewLine,' ')}"
+		+ "finally{if($h -ne [IntPtr]::Zero){[SgoWorkingSetNative]::CloseHandle($h)|Out-Null}};"
+		+ "Set-Content -LiteralPath $result -Value (($ok.ToString())+'|'+$before+'|'+$after+'|'+$err) -Encoding ASCII"
+	)
+	var args := PackedStringArray([
+		"-NoLogo",
+		"-NoProfile",
+		"-NonInteractive",
+		"-WindowStyle", "Hidden",
+		"-Command", command,
+	])
+	var helper_pid: int = OS.create_process("powershell.exe", args, false)
+	if OS.is_debug_build():
+		print("[OS_MEMORY_TRIM_FALLBACK] reason=%s backend=powershell helper_pid=%d target_pid=%d main_thread_wait=false" % [
+			reason, helper_pid, target_pid,
+		])
+	return helper_pid
 
 
 func _collect_windows_memory_trim_result(reason: String, result_path: String) -> void:
@@ -152,28 +221,33 @@ func _collect_windows_memory_trim_result(reason: String, result_path: String) ->
 func _request_windows_memory_trim(reason: String) -> bool:
 	if OS.get_name() != "Windows" or _windows_trim_inflight:
 		return false
-	var helper_path: String = _windows_memory_trim_helper_path()
-	if helper_path.is_empty():
-		if OS.is_debug_build():
-			print("[OS_MEMORY_TRIM] reason=%s requested=false helper_missing=true" % reason)
-		return false
 	var result_path: String = ProjectSettings.globalize_path(
 		"user://native_working_set_trim_%d_%d.txt" % [OS.get_process_id(), Time.get_ticks_msec()]
 	)
-	_windows_trim_inflight = true
-	var helper_pid: int = OS.create_process(
-		helper_path,
-		PackedStringArray([str(OS.get_process_id()), result_path]),
-		false
-	)
+	var helper_path: String = _windows_memory_trim_helper_path()
+	var helper_pid: int = -1
+	var backend: String = "native"
+	if not helper_path.is_empty():
+		helper_pid = OS.create_process(
+			helper_path,
+			PackedStringArray([str(OS.get_process_id()), result_path]),
+			false
+		)
+	else:
+		backend = "powershell_fallback"
+		helper_pid = _request_windows_memory_trim_powershell_fallback(reason, result_path)
+
 	if helper_pid <= 0:
-		_windows_trim_inflight = false
 		if OS.is_debug_build():
-			print("[OS_MEMORY_TRIM] reason=%s requested=false helper_launch_failed=true" % reason)
+			print("[OS_MEMORY_TRIM] reason=%s requested=false helper_launch_failed=true backend=%s" % [
+				reason, backend,
+			])
 		return false
+
+	_windows_trim_inflight = true
 	if OS.is_debug_build():
-		print("[OS_MEMORY_TRIM] reason=%s requested=true helper_pid=%d target_pid=%d main_thread_wait=false" % [
-			reason, helper_pid, OS.get_process_id(),
+		print("[OS_MEMORY_TRIM] reason=%s requested=true backend=%s helper_pid=%d target_pid=%d main_thread_wait=false" % [
+			reason, backend, helper_pid, OS.get_process_id(),
 		])
 	_collect_windows_memory_trim_result(reason, result_path)
 	return true
