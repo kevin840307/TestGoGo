@@ -106,8 +106,21 @@ public static class WebSocketEndpoint
                 var kind = type.GetProperty("Type")?.GetValue(packet) as string;
                 if (kind is not (
                     "MoveEntity" or "SpawnEntity" or "DespawnEntity"
-                    or "SyncState" or "EntityDamage" or "EntityHeal"))
+                    or "SyncState" or "EntityDamage" or "EntityHeal"
+                    or "EntityDeath" or "SkillCast"))
                     return 1;
+
+                if (kind == "SkillCast")
+                {
+                    var casterType = type.GetProperty("CasterType")?.GetValue(packet);
+                    return Convert.ToInt32(casterType ?? -1) == 0 ? 0 : 1;
+                }
+
+                if (kind == "EntityDeath")
+                {
+                    var entityType = type.GetProperty("EntityType")?.GetValue(packet);
+                    return Convert.ToInt32(entityType ?? -1) == 0 ? 0 : 1;
+                }
 
                 if (kind == "SpawnEntity")
                 {
