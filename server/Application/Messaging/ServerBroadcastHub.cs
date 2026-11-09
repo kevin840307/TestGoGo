@@ -708,7 +708,7 @@ public sealed class ServerBroadcastHub
                 presence.MapId != mapId)
                 continue;
 
-            pair.Value.Enqueue(packet);
+            EnqueueBroadcast(pair.Key, pair.Value, packet);
         }
     }
 }
