@@ -58,6 +58,15 @@ func stop_combat_visual_effects() -> void:
 			effect.visible = false
 
 
+func hide_damage_numbers() -> void:
+	# Only discard visual labels, not combat packets or hit-effect sprites.
+	_damage_queue.clear()
+	_damage_queue_head = 0
+	for label in _text_pool:
+		if is_instance_valid(label):
+			_reset_label_tweens(label)
+			label.visible = false
+
 func release_world_runtime_for_login() -> void:
 	_damage_queue.clear()
 	_damage_queue_head = 0
@@ -130,6 +139,9 @@ func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: 
 
 	if damage > 0 or skill_id > 0:
 		fx_duration = _play_hit_effect(target, skill_id, is_primary)
+	# Do not suppress hit FX just because floating damage text is disabled.
+	if damage > 0 and GameManager and not GameManager.should_show_damage_numbers():
+		return
 
 	if damage <= 0:
 
@@ -161,7 +173,7 @@ func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: 
 				miss_effect.modulate.a = 1.0
 
 				miss_effect.play(anim_name)
-		else:
+		elif not GameManager or GameManager.should_show_damage_numbers():
 
 			var dmg_lbl = _get_free_label()
 			if dmg_lbl:
