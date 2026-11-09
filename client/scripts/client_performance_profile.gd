@@ -26,6 +26,69 @@ const SIMPLIFY_PIXEL_A := SIMPLIFY_SIMPLIFIED
 const SIMPLIFY_PIXEL_B := 3
 const SIMPLIFY_MINIMAL := 4
 
+# Visibility is a separate, persistent choice; it never changes with quality.
+const PLAYER_SHOW_ALL := 0
+const PLAYER_SHOW_ENEMIES := 1
+const PLAYER_SHOW_PARTY := 2
+const PLAYER_SHOW_NONE := 3
+const MONSTER_SHOW_ALL := 0
+const MONSTER_HIDE_ORDINARY := 1
+
+static func sanitize_player_visibility(value: int) -> int:
+	return clampi(value, PLAYER_SHOW_ALL, PLAYER_SHOW_NONE)
+
+static func sanitize_monster_visibility(value: int) -> int:
+	return clampi(value, MONSTER_SHOW_ALL, MONSTER_HIDE_ORDINARY)
+
+static func should_show_other_player(mode: int, same_party: bool, hostile: bool) -> bool:
+	match sanitize_player_visibility(mode):
+		PLAYER_SHOW_ENEMIES: return hostile
+		PLAYER_SHOW_PARTY: return same_party
+		PLAYER_SHOW_NONE: return false
+	return true
+
+static func should_show_ordinary_monster(mode: int, protected_monster: bool) -> bool:
+	return protected_monster or sanitize_monster_visibility(mode) == MONSTER_SHOW_ALL
+
+static func should_show_duplicate_drop(
+	candidate_id: int, candidate: Dictionary, records: Dictionary,
+	observer: Vector2, observer_radius: float,
+	max_nearby: int = 5, neighborhood_radius: float = 180.0
+) -> bool:
+	if max_nearby <= 0:
+		return false
+	var extra: Dictionary = candidate.get("ExtraData", {})
+	var item_id: int = int(extra.get("ItemIndex", 0))
+	if item_id <= 0:
+		return true
+	var at := Vector2(float(candidate.get("LocX", 0.0)), float(candidate.get("LocY", 0.0)))
+	var other_count: int = 0
+	var near_sq := neighborhood_radius * neighborhood_radius
+	var observer_sq := observer_radius * observer_radius
+	for raw_id in records:
+		var other_id: int = int(raw_id)
+		if other_id >= candidate_id:
+			continue
+		var record: Dictionary = records[raw_id]
+		var other_extra: Dictionary = record.get("ExtraData", {})
+		if int(other_extra.get("ItemIndex", 0)) != item_id:
+			continue
+		var position := Vector2(float(record.get("LocX", 0.0)), float(record.get("LocY", 0.0)))
+		if position.distance_squared_to(observer) > observer_sq:
+			continue
+		if position.distance_squared_to(at) <= near_sq:
+			other_count += 1
+			if other_count >= max_nearby:
+				return false
+	return true
+
+static func apply_visibility_overrides(profile: Dictionary, player_mode: int, monster_mode: int) -> Dictionary:
+	var result: Dictionary = profile.duplicate(true)
+	result["other_players_visibility"] = sanitize_player_visibility(player_mode)
+	result["ordinary_monsters_visibility"] = sanitize_monster_visibility(monster_mode)
+	return result
+
+
 static func sanitize_fps_limit(value: int) -> int:
 	if value == 0 or value == 144:
 		return value
