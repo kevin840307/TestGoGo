@@ -207,6 +207,31 @@ class ClientVisualPerformanceContractTests(unittest.TestCase):
             pet_layout,
         )
 
+    def test_static_map_visual_aoi_streaming_is_presentation_only(self):
+        profile = source("client/scripts/client_performance_profile.gd")
+        manager = source("client/scripts/game_manager.gd")
+        streamer = source("client/scripts/map_visual_aoi_streamer.gd")
+
+        for key in (
+            '"map_visual_aoi_enter_radius": 5000.0',
+            'profile["map_visual_aoi_enter_radius"] = 3400.0',
+            'profile["map_visual_aoi_enter_radius"] = 2400.0',
+        ):
+            self.assertIn(key, profile)
+        self.assertIn("MAP_VISUAL_AOI_STREAMER", manager)
+        self.assertIn("_update_map_visual_aoi(delta)", manager)
+        self.assertIn("[MAP_VISUAL_AOI]", manager)
+        self.assertIn("sprite.texture = null", streamer)
+        self.assertIn("ResourceLoader.load_threaded_request(", streamer)
+        self.assertIn("ResourceLoader.CACHE_MODE_IGNORE", streamer)
+        self.assertIn("sprite.get_script() != null", streamer)
+        self.assertIn("_inside_dynamic_container", streamer)
+        self.assertIn("FESTIVAL_SWAPPABLE_TOKENS", streamer)
+        self.assertNotIn("NetworkManager", streamer)
+        self.assertNotIn("set_physics_process", streamer)
+        self.assertNotIn("physics_ticks_per_second", streamer)
+        self.assertNotIn("Blocking", streamer)
+
     def test_behavioral_scripts_wired_to_runner(self):
         runner = source("tests/run_protocol_checks.ps1")
         for test in (

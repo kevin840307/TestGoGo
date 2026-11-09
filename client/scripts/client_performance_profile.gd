@@ -145,6 +145,10 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 		"monster_aoi_exit_radius": 2600.0,
 		"ground_aoi_enter_radius": 2400.0,
 		"ground_aoi_exit_radius": 2800.0,
+		# Static map presentation AOI. This changes only Sprite2D texture
+		# residency/draw work; Blocking/A*, collision and server AOI are untouched.
+		"map_visual_aoi_enter_radius": 5000.0,
+		"map_visual_aoi_exit_radius": 5800.0,
 		"simplify_other_players": false,
 		"simplify_noncritical_monsters": false,
 		"use_primitive_monsters": false,
@@ -166,6 +170,8 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 			profile["monster_aoi_exit_radius"] = 2200.0
 			profile["ground_aoi_enter_radius"] = 2000.0
 			profile["ground_aoi_exit_radius"] = 2400.0
+			profile["map_visual_aoi_enter_radius"] = 3400.0
+			profile["map_visual_aoi_exit_radius"] = 4200.0
 		LOAD_LOW:
 			# Low resource + responsive gameplay: release nonessential visual
 			# effects, simplify NPC-independent entity art and keep network/
@@ -180,6 +186,8 @@ static func resolve(load_mode: int, combat_mode: int) -> Dictionary:
 			profile["monster_aoi_exit_radius"] = 1650.0
 			profile["ground_aoi_enter_radius"] = 1450.0
 			profile["ground_aoi_exit_radius"] = 1850.0
+			profile["map_visual_aoi_enter_radius"] = 2400.0
+			profile["map_visual_aoi_exit_radius"] = 3200.0
 			profile["simplify_other_players"] = true
 			profile["simplify_noncritical_monsters"] = true
 			profile["hide_far_noncombat_monsters"] = true

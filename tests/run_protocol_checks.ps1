@@ -199,6 +199,10 @@ try {
             "--headless", "--path", "client",
             "--script", "res://tests/performance_visual_aoi_regression.gd"
         )
+        Invoke-Checked "Godot client regressions: static map visual AOI streaming" $godotCommand @(
+            "--headless", "--path", "client",
+            "--script", "res://tests/map_visual_aoi_streaming_regression.gd"
+        )
         Invoke-Checked "Godot headless client regressions: queued monster AOI replay" $godotCommand @(
             "--headless", "--path", "client",
             "--script", "res://tests/aoi_monster_snapshot_order_regression.gd"

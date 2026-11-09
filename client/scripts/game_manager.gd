@@ -18,6 +18,7 @@ const AFK_VISUAL_CACHE = preload("res://scripts/afk_visual_cache.gd")
 const AFK_RENDER_SHELL = preload("res://scripts/afk_render_shell.gd")
 const WORLD_VISUAL_AUDIT = preload("res://scripts/world_visual_audit.gd")
 const AFK_MEMORY_AUDIT = preload("res://scripts/afk_memory_audit.gd")
+const MAP_VISUAL_AOI_STREAMER = preload("res://scripts/map_visual_aoi_streamer.gd")
 const AFK_MONITOR_FPS: int = 20
 const DAY_NIGHT_OVERLAY_SCENE: = preload("res://day_night_overlay.tscn")
 const TRAIN_VIDEO_PATHS: = {
@@ -58,6 +59,8 @@ var _afk_forced_draw_count: int = 0
 var _last_world_map_audit_path: String = ""
 var _pending_afk_working_set_trim: bool = false
 var _windows_trim_inflight: bool = false
+var _map_visual_aoi_streamer = MAP_VISUAL_AOI_STREAMER.new()
+var _map_visual_aoi_log_elapsed: float = 0.0
 
 
 
@@ -559,6 +562,7 @@ func _process(delta: float) -> void :
 	# Focus/render recovery also runs in release exports. RenderingServer
 	# can stay disabled after a missed Windows focus notification otherwise.
 	_reconcile_world_render_policy(delta)
+	_update_map_visual_aoi(delta)
 	# Diagnostics are intentionally excluded from release exports.
 	if not OS.is_debug_build():
 		return
@@ -593,6 +597,51 @@ func _process(delta: float) -> void :
 	if _perf_analysis_elapsed >= PERF_ANALYSIS_INTERVAL_SECONDS:
 		_perf_analysis_elapsed = 0.0
 		_print_performance_analysis("periodic")
+
+func _update_map_visual_aoi(delta: float) -> void:
+	if (
+		_afk_active
+		or _afk_restoring
+		or is_changing_map
+		or not is_instance_valid(current_map_node)
+		or not is_instance_valid(current_player)
+	):
+		return
+	if not _map_visual_aoi_streamer.is_bound_to(current_map_node):
+		_map_visual_aoi_streamer.bind_map(current_map_node)
+	_map_visual_aoi_streamer.update(
+		current_player.global_position,
+		current_performance_profile,
+		delta
+	)
+	if OS.is_debug_build():
+		_map_visual_aoi_log_elapsed += delta
+		if _map_visual_aoi_log_elapsed >= 5.0:
+			_map_visual_aoi_log_elapsed = 0.0
+			var aoi_stats: Dictionary = _map_visual_aoi_streamer.stats()
+			print("[MAP_VISUAL_AOI] indexed=%d loaded=%d unloaded=%d pending_paths=%d enter_radius=%.0f exit_radius=%.0f texture_mb=%.1f buffer_mb=%.1f" % [
+				int(aoi_stats.get("indexed", 0)),
+				int(aoi_stats.get("loaded", 0)),
+				int(aoi_stats.get("unloaded", 0)),
+				int(aoi_stats.get("pending_paths", 0)),
+				float(aoi_stats.get("enter_radius", 0.0)),
+				float(aoi_stats.get("exit_radius", 0.0)),
+				float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
+				float(Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED)) / 1048576.0,
+			])
+
+
+func _bind_map_visual_aoi() -> void:
+	if is_instance_valid(current_map_node):
+		var stats: Dictionary = _map_visual_aoi_streamer.bind_map(current_map_node)
+		if OS.is_debug_build():
+			print("[MAP_VISUAL_AOI] event=bind indexed=%d" % int(stats.get("indexed", 0)))
+
+
+func _clear_map_visual_aoi() -> void:
+	_map_visual_aoi_streamer.clear()
+	_map_visual_aoi_log_elapsed = 0.0
+
 
 func _multiclient_gpu_context() -> String:
 	# Performance.RENDER_VIDEO_MEM_USED is Godot's resource allocation metric,
@@ -1246,6 +1295,7 @@ func begin_afk_mode(progress_callback: Callable = Callable()) -> bool:
 	if current_player.has_method("begin_afk_navigation_anchor"):
 		current_player.begin_afk_navigation_anchor()
 	current_map_node.visible = false
+	_clear_map_visual_aoi()
 	_remove_day_night_overlay()
 	_remove_world_enhancement()
 	_emit_afk_restore_progress(progress_callback, 12.0, "隱藏遊戲畫面")
@@ -1367,6 +1417,7 @@ func finish_afk_mode(progress_callback: Callable = Callable()) -> bool:
 			int(ground_restore.get("deferred", 0)),
 		])
 	await _restore_afk_entity_visuals_batched(progress_callback)
+	_bind_map_visual_aoi()
 	_apply_low_resource_world_visual_policy()
 	if is_instance_valid(current_map_node):
 		current_map_node.visible = true
@@ -2156,6 +2207,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		camera.reset_smoothing()
 		camera.force_update_scroll()
 
+	_bind_map_visual_aoi()
 	_apply_low_resource_world_visual_policy()
 	set_world_enhancement_enabled(current_performance_load_mode == ClientPerformanceProfile.LOAD_QUALITY)
 
@@ -2328,6 +2380,7 @@ func cleanup_and_return_to_login() -> void :
 		current_player = null
 
 
+	_clear_map_visual_aoi()
 	if is_instance_valid(current_map_node):
 		current_map_node.queue_free()
 		current_map_node = null
@@ -2740,6 +2793,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 		if is_instance_valid(player_parent):
 			player_parent.remove_child(current_player)
 
+	_clear_map_visual_aoi()
 	var old_map: = current_map_node
 	current_map_node = null
 	if is_instance_valid(old_map):
@@ -2842,6 +2896,7 @@ func _on_change_map_received(target_map_id: int, target_x: float, target_y: floa
 			camera.reset_smoothing()
 			camera.force_update_scroll()
 
+	_bind_map_visual_aoi()
 	if is_instance_valid(current_hud) and current_hud.has_method("update_map_info"):
 		current_hud.update_map_info(target_map_id, current_map_node.name)
 	if CursorManager:
