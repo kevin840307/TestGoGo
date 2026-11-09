@@ -618,6 +618,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
             var packet =
                 await ReadInboxAsync(
                     deadline.Token);
+            BotWorld.Observe(packet, CharacterId);
 
             if (!packet.TryGetProperty(
                     "Type",
