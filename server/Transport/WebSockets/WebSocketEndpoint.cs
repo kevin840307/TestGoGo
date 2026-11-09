@@ -42,7 +42,7 @@ public static class WebSocketEndpoint
             var buffer = new byte[64 * 1024];
             using var message = new MemoryStream();
             using var sendGate = new SemaphoreSlim(1, 1);
-            var broadcastRegistration = broadcasts.Register();
+            var broadcastRegistration = broadcasts.Register(prioritizePlayerEvents: true);
             var broadcastConnectionId = broadcastRegistration.ConnectionId;
             var broadcastQueue = broadcastRegistration.Queue;
             var broadcastSignal = broadcasts.GetBroadcastSignal(
@@ -152,15 +152,29 @@ public static class WebSocketEndpoint
                         while (broadcastSignal.TryRead(out _)) { }
                         do
                         {
-                            if (broadcastQueue.IsEmpty)
+                            if (broadcastQueue.IsEmpty &&
+                                !broadcasts.HasPendingPlayerPriority(broadcastConnectionId))
                                 break;
 
-                        const int maxBatch = 256;
-                        var playerUpdates = new List<object>(32);
-                        var otherUpdates = new List<object>(maxBatch);
-                        for (var i = 0; i < maxBatch &&
+                        // Serve the newest high-priority lane before ordinary
+                        // monster and ground-item traffic. Bound the low batch
+                        // so a fresh player MoveEntity never waits behind
+                        // hundreds of unrelated item SpawnEntity messages.
+                        const int priorityBatch = 64;
+                        const int ordinaryBatch = 64;
+                        var playerUpdates = new List<object>(priorityBatch);
+                        var otherUpdates = new List<object>(ordinaryBatch);
+                        for (var i = 0; i < priorityBatch &&
+                             broadcasts.TryDequeuePlayerPriority(
+                                 broadcastConnectionId, out var urgentPacket); i++)
+                        {
+                            playerUpdates.Add(urgentPacket);
+                        }
+                        for (var i = 0; i < ordinaryBatch &&
                              broadcastQueue.TryDequeue(out var broadcastPacket); i++)
                         {
+                            // Defensive compatibility for packets that were
+                            // queued before the fast-lane registration.
                             if (BroadcastPriority(broadcastPacket) == 0)
                                 playerUpdates.Add(broadcastPacket);
                             else
@@ -176,11 +190,13 @@ public static class WebSocketEndpoint
                             await SendPacketsAsync(otherUpdates, worldTickToken);
 
                         var now = DateTimeOffset.UtcNow;
-                        if (!broadcastQueue.IsEmpty &&
+                        if ((!broadcastQueue.IsEmpty ||
+                             broadcasts.HasPendingPlayerPriority(broadcastConnectionId)) &&
                             now - lastBroadcastBacklogCheck >= TimeSpan.FromSeconds(2))
                         {
                             lastBroadcastBacklogCheck = now;
-                            var backlogCount = broadcastQueue.Count;
+                            var backlogCount = broadcastQueue.Count +
+                                broadcasts.PlayerPriorityBacklogCount(broadcastConnectionId);
                             if (backlogCount >= 500 &&
                                 now - lastBroadcastBacklogWarning >= TimeSpan.FromSeconds(10))
                             {
@@ -204,7 +220,8 @@ public static class WebSocketEndpoint
                             }
                         }
                         }
-                        while (!broadcastQueue.IsEmpty &&
+                        while ((!broadcastQueue.IsEmpty ||
+                                broadcasts.HasPendingPlayerPriority(broadcastConnectionId)) &&
                                !worldTickToken.IsCancellationRequested &&
                                socket.State == WebSocketState.Open);
                     }
