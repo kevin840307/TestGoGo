@@ -9,8 +9,8 @@ if (args.Length == 1 && args[0] == "--self-test")
         Type = "SpawnEntity",
         EntityType = 1,
         EntityID = 15,
-        X = 12,
-        Y = 34,
+        LocX = 12,
+        LocY = 34,
         ExtraData = new { CurrentHP = 90 }
     };
     using var roundTrip = ClientProtocol.Decode(ClientProtocol.Encode(input));
@@ -18,6 +18,12 @@ if (args.Length == 1 && args[0] == "--self-test")
     state.Apply(roundTrip.RootElement);
     if (state.Monsters != 1)
         throw new Exception("Spawn did not create data-only monster");
+    using var ground = JsonDocument.Parse(
+        "{\"Type\":\"SpawnEntity\",\"EntityType\":3,\"EntityID\":701,\"LocX\":22,\"LocY\":11}");
+    state.Apply(ground.RootElement);
+    if (state.GroundItems != 1)
+        throw new Exception("Ground spawn was not retained");
+
     using var hit = JsonDocument.Parse(
         "{\"Type\":\"EntityDamage\",\"TargetID\":15,\"CurrentHP\":25}");
     state.Apply(hit.RootElement);

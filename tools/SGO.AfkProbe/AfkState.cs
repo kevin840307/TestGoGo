@@ -58,17 +58,30 @@ internal sealed class AfkState
                 AutoSaintEnabled = ReadBool(packet, "IsOn");
                 break;
             case "SpawnEntity":
-                if (id == 0 || ReadInt(packet, "EntityType") != 1)
-                    break;
-                if (!_monsters.ContainsKey(id) && _monsters.Count >= MaxSnapshots)
+                if (id == 0) break;
+                var entityType = ReadInt(packet, "EntityType", -1);
+                if (entityType == 1)
                 {
-                    RejectedEntities++;
-                    break;
+                    if (!_monsters.ContainsKey(id) && _monsters.Count >= MaxSnapshots)
+                    {
+                        RejectedEntities++;
+                        break;
+                    }
+                    var data = ReadObject(packet, "ExtraData");
+                    _monsters[id] = new MonsterSnapshot(
+                        id, ReadDouble(packet, "LocX"), ReadDouble(packet, "LocY"),
+                        ReadInt(data, "CurrentHP"), ReadString(packet, "State"));
                 }
-                var data = ReadObject(packet, "ExtraData");
-                _monsters[id] = new MonsterSnapshot(
-                    id, ReadDouble(packet, "X"), ReadDouble(packet, "Y"),
-                    ReadInt(data, "CurrentHP"), ReadString(packet, "State"));
+                else if (entityType == 3)
+                {
+                    if (!_groundItems.ContainsKey(id) && _groundItems.Count >= MaxSnapshots)
+                    {
+                        RejectedEntities++;
+                        break;
+                    }
+                    _groundItems[id] = new GroundSnapshot(
+                        id, ReadDouble(packet, "LocX"), ReadDouble(packet, "LocY"));
+                }
                 break;
             case "MoveEntity":
                 if (_monsters.TryGetValue(id, out var moving))
