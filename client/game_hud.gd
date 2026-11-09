@@ -69,15 +69,19 @@ var _emotion_tween: Tween
 @onready var party_window: Control = $WindowsContainer / PartyWindow
 @onready var clan_window: Control = $WindowsContainer / ClanWindow
 @onready var settings_window: Control = $WindowsContainer / SettingsWindow
-@onready var option_pet_mode: Control = $WindowsContainer / SettingsWindow / OptionPetMode
-@onready var option_volume_bg: Control = $WindowsContainer / SettingsWindow / OptionVolumeBg
-@onready var option_volume_effect: Control = $WindowsContainer / SettingsWindow / OptionVolumeEffect
-@onready var option_auto_saint: Control = $WindowsContainer / SettingsWindow / OptionAutoSaint
-@onready var option_fps_limit: Control = $WindowsContainer / SettingsWindow / OptionFpsLimit
-@onready var option_performance_load: Control = $WindowsContainer / SettingsWindow / OptionPerformanceLoad
-@onready var option_combat_render: Control = $WindowsContainer / SettingsWindow / OptionCombatRender
-@onready var option_simplify_players: Control = $WindowsContainer / SettingsWindow / OptionSimplifyPlayers
-@onready var option_simplify_monsters: Control = $WindowsContainer / SettingsWindow / OptionSimplifyMonsters
+@onready var settings_tabs: TabContainer = $WindowsContainer / SettingsWindow / Tabs
+@onready var option_simplify_effects: OptionButton = $WindowsContainer / SettingsWindow / Tabs / Visibility / OptionSimplifyEffects
+@onready var option_simplify_drops: OptionButton = $WindowsContainer / SettingsWindow / Tabs / Visibility / OptionSimplifyDrops
+@onready var option_show_damage: OptionButton = $WindowsContainer / SettingsWindow / Tabs / Visibility / OptionShowDamage
+@onready var option_pet_mode: Control = $WindowsContainer / SettingsWindow / Tabs / General / OptionPetMode
+@onready var option_volume_bg: Control = $WindowsContainer / SettingsWindow / Tabs / General / OptionVolumeBg
+@onready var option_volume_effect: Control = $WindowsContainer / SettingsWindow / Tabs / General / OptionVolumeEffect
+@onready var option_auto_saint: Control = $WindowsContainer / SettingsWindow / Tabs / General / OptionAutoSaint
+@onready var option_fps_limit: Control = $WindowsContainer / SettingsWindow / Tabs / Performance / OptionFpsLimit
+@onready var option_performance_load: Control = $WindowsContainer / SettingsWindow / Tabs / Performance / OptionPerformanceLoad
+@onready var option_combat_render: Control = $WindowsContainer / SettingsWindow / Tabs / Performance / OptionCombatRender
+@onready var option_simplify_players: Control = $WindowsContainer / SettingsWindow / Tabs / Visibility / OptionSimplifyPlayers
+@onready var option_simplify_monsters: Control = $WindowsContainer / SettingsWindow / Tabs / Visibility / OptionSimplifyMonsters
 var mall_window: Control = null
 var announcement_window: Control = null
 var game_info_window: Control = null
@@ -257,8 +261,11 @@ var current_pet_combat_mode: int = 1
 var current_fps_limit: int = GameConstants.SETTING_DEFAULT_FOREGROUND_FPS_LIMIT
 var current_performance_load_mode: int = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
 var current_combat_render_mode: int = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
-var current_simplify_players_mode: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE
-var current_simplify_monsters_mode: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE
+var current_simplify_players_mode: int = GameConstants.SETTING_DEFAULT_OTHER_PLAYERS_VISIBILITY
+var current_simplify_effects: bool = GameConstants.SETTING_DEFAULT_SIMPLIFY_EFFECTS
+var current_simplify_drops: bool = GameConstants.SETTING_DEFAULT_SIMPLIFY_GROUND_DROPS
+var current_show_damage_numbers: bool = GameConstants.SETTING_DEFAULT_SHOW_DAMAGE_NUMBERS
+var current_simplify_monsters_mode: int = GameConstants.SETTING_DEFAULT_ORDINARY_MONSTERS_VISIBILITY
 var _afk_hidden_roots: Array[Dictionary] = []
 var _afk_entered_msec: int = 0
 var _afk_transition_ui_locked: bool = false
@@ -712,6 +719,10 @@ func _setup_window_manager() -> void :
 			inventory_window.unequip_requested.connect(_on_unequip_requested)
 
 	if settings_window:
+		if is_instance_valid(settings_tabs):
+			settings_tabs.set_tab_title(0, "一般")
+			settings_tabs.set_tab_title(1, "效能")
+			settings_tabs.set_tab_title(2, "顯示")
 		var btn_back_login = settings_window.get_node_or_null("BtnBackToLogin")
 		if btn_back_login is BaseButton:
 			btn_back_login.pressed.connect(_on_btn_back_to_login_pressed)
@@ -725,7 +736,7 @@ func _setup_window_manager() -> void :
 
 
 
-		var opt_volume_bg = settings_window.get_node_or_null("OptionVolumeBg")
+		var opt_volume_bg = settings_window.get_node_or_null("Tabs/General/OptionVolumeBg")
 		if opt_volume_bg is OptionButton:
 
 
@@ -746,7 +757,7 @@ func _setup_window_manager() -> void :
 				opt_volume_bg.item_selected.connect(_on_opt_volume_bg_item_selected)
 			opt_volume_bg.focus_mode = Control.FOCUS_NONE
 
-		var opt_volume_effect = settings_window.get_node_or_null("OptionVolumeEffect")
+		var opt_volume_effect = settings_window.get_node_or_null("Tabs/General/OptionVolumeEffect")
 		if opt_volume_effect is OptionButton:
 			var saved_se_pct = AudioManager.get_se_volume() if AudioManager else 100.0
 
@@ -834,6 +845,20 @@ func _setup_window_manager() -> void :
 			if not option_simplify_monsters.gui_input.is_connected(_on_option_gui_input):
 				option_simplify_monsters.gui_input.connect(_on_option_gui_input.bind(option_simplify_monsters))
 
+		for new_option in [option_simplify_effects, option_simplify_drops, option_show_damage]:
+			new_option.focus_mode = Control.FOCUS_NONE
+			if not new_option.gui_input.is_connected(_on_option_gui_input):
+				new_option.gui_input.connect(_on_option_gui_input.bind(new_option))
+		option_simplify_effects.select(1 if current_simplify_effects else 0)
+		option_simplify_drops.select(1 if current_simplify_drops else 0)
+		option_show_damage.select(0 if current_show_damage_numbers else 1)
+		if not option_simplify_effects.item_selected.is_connected(_on_opt_simplify_effects_item_selected):
+			option_simplify_effects.item_selected.connect(_on_opt_simplify_effects_item_selected)
+		if not option_simplify_drops.item_selected.is_connected(_on_opt_simplify_drops_item_selected):
+			option_simplify_drops.item_selected.connect(_on_opt_simplify_drops_item_selected)
+		if not option_show_damage.item_selected.is_connected(_on_opt_show_damage_item_selected):
+			option_show_damage.item_selected.connect(_on_opt_show_damage_item_selected)
+
 		for option in [
 			option_pet_mode,
 			option_volume_bg,
@@ -843,7 +868,10 @@ func _setup_window_manager() -> void :
 			option_performance_load,
 			option_combat_render,
 			option_simplify_players,
-			option_simplify_monsters
+			option_simplify_monsters,
+			option_simplify_effects,
+			option_simplify_drops,
+			option_show_damage
 		]:
 			if option is OptionButton:
 				_bind_option_popup_cursor(option)
@@ -3021,7 +3049,7 @@ func _on_open_create_club_window_received() -> void :
 func _on_opt_volume_bg_item_selected(index: int) -> void :
 	if not is_instance_valid(settings_window): return
 
-	var opt = settings_window.get_node_or_null("OptionVolumeBg") as OptionButton
+	var opt = settings_window.get_node_or_null("Tabs/General/OptionVolumeBg") as OptionButton
 	if opt:
 
 		var text = opt.get_item_text(index)
@@ -3037,7 +3065,7 @@ func _on_opt_volume_bg_item_selected(index: int) -> void :
 func _on_opt_volume_effect_item_selected(index: int) -> void :
 	if not is_instance_valid(settings_window): return
 
-	var opt = settings_window.get_node_or_null("OptionVolumeEffect") as OptionButton
+	var opt = settings_window.get_node_or_null("Tabs/General/OptionVolumeEffect") as OptionButton
 	if opt:
 		var text = opt.get_item_text(index)
 		var val_str = text.replace("%", "").strip_edges()
@@ -3193,31 +3221,40 @@ func _load_game_settings() -> void :
 				GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
 			)
 		)))
-		current_simplify_players_mode = ClientPerformanceProfile.sanitize_simplify_mode(int(config.get_value(
+		current_simplify_players_mode = ClientPerformanceProfile.sanitize_player_visibility(int(config.get_value(
 			section,
-			GameConstants.SETTING_KEY_SIMPLIFY_PLAYERS_MODE,
+			GameConstants.SETTING_KEY_OTHER_PLAYERS_VISIBILITY,
 			config.get_value(
 				fallback_section,
-				GameConstants.SETTING_KEY_SIMPLIFY_PLAYERS_MODE,
-				GameConstants.SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE
+				GameConstants.SETTING_KEY_OTHER_PLAYERS_VISIBILITY,
+				GameConstants.SETTING_DEFAULT_OTHER_PLAYERS_VISIBILITY
 			)
 		)))
-		current_simplify_monsters_mode = ClientPerformanceProfile.sanitize_simplify_mode(int(config.get_value(
+		current_simplify_monsters_mode = ClientPerformanceProfile.sanitize_monster_visibility(int(config.get_value(
 			section,
-			GameConstants.SETTING_KEY_SIMPLIFY_MONSTERS_MODE,
+			GameConstants.SETTING_KEY_ORDINARY_MONSTERS_VISIBILITY,
 			config.get_value(
 				fallback_section,
-				GameConstants.SETTING_KEY_SIMPLIFY_MONSTERS_MODE,
-				GameConstants.SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE
+				GameConstants.SETTING_KEY_ORDINARY_MONSTERS_VISIBILITY,
+				GameConstants.SETTING_DEFAULT_ORDINARY_MONSTERS_VISIBILITY
 			)
 		)))
+		current_simplify_effects = bool(config.get_value(section, GameConstants.SETTING_KEY_SIMPLIFY_EFFECTS,
+			config.get_value(fallback_section, GameConstants.SETTING_KEY_SIMPLIFY_EFFECTS, GameConstants.SETTING_DEFAULT_SIMPLIFY_EFFECTS)))
+		current_simplify_drops = bool(config.get_value(section, GameConstants.SETTING_KEY_SIMPLIFY_GROUND_DROPS,
+			config.get_value(fallback_section, GameConstants.SETTING_KEY_SIMPLIFY_GROUND_DROPS, GameConstants.SETTING_DEFAULT_SIMPLIFY_GROUND_DROPS)))
+		current_show_damage_numbers = bool(config.get_value(section, GameConstants.SETTING_KEY_SHOW_DAMAGE_NUMBERS,
+			config.get_value(fallback_section, GameConstants.SETTING_KEY_SHOW_DAMAGE_NUMBERS, GameConstants.SETTING_DEFAULT_SHOW_DAMAGE_NUMBERS)))
 	else:
 		current_pet_combat_mode = GameConstants.SETTING_DEFAULT_PET_COMBAT_MODE
 		current_fps_limit = GameConstants.SETTING_DEFAULT_FOREGROUND_FPS_LIMIT
 		current_performance_load_mode = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
 		current_combat_render_mode = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
-		current_simplify_players_mode = GameConstants.SETTING_DEFAULT_SIMPLIFY_PLAYERS_MODE
-		current_simplify_monsters_mode = GameConstants.SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE
+		current_simplify_players_mode = GameConstants.SETTING_DEFAULT_OTHER_PLAYERS_VISIBILITY
+		current_simplify_monsters_mode = GameConstants.SETTING_DEFAULT_ORDINARY_MONSTERS_VISIBILITY
+		current_simplify_effects = GameConstants.SETTING_DEFAULT_SIMPLIFY_EFFECTS
+		current_simplify_drops = GameConstants.SETTING_DEFAULT_SIMPLIFY_GROUND_DROPS
+		current_show_damage_numbers = GameConstants.SETTING_DEFAULT_SHOW_DAMAGE_NUMBERS
 
 	if GameManager:
 		GameManager.set_foreground_fps_limit(current_fps_limit)
@@ -3225,9 +3262,12 @@ func _load_game_settings() -> void :
 			current_performance_load_mode,
 			current_combat_render_mode
 		)
-		GameManager.set_visual_simplification_modes(
+		GameManager.set_entity_visibility_modes(
 			current_simplify_players_mode,
 			current_simplify_monsters_mode
+		)
+		GameManager.set_visual_detail_options(
+			current_simplify_effects, current_simplify_drops, current_show_damage_numbers
 		)
 
 func _save_game_settings() -> void :
@@ -3252,14 +3292,17 @@ func _save_game_settings() -> void :
 	)
 	config.set_value(
 		section,
-		GameConstants.SETTING_KEY_SIMPLIFY_PLAYERS_MODE,
+		GameConstants.SETTING_KEY_OTHER_PLAYERS_VISIBILITY,
 		current_simplify_players_mode
 	)
 	config.set_value(
 		section,
-		GameConstants.SETTING_KEY_SIMPLIFY_MONSTERS_MODE,
+		GameConstants.SETTING_KEY_ORDINARY_MONSTERS_VISIBILITY,
 		current_simplify_monsters_mode
 	)
+	config.set_value(section, GameConstants.SETTING_KEY_SIMPLIFY_EFFECTS, current_simplify_effects)
+	config.set_value(section, GameConstants.SETTING_KEY_SIMPLIFY_GROUND_DROPS, current_simplify_drops)
+	config.set_value(section, GameConstants.SETTING_KEY_SHOW_DAMAGE_NUMBERS, current_show_damage_numbers)
 	config.save(GameConstants.CLIENT_SETTINGS_PATH)
 
 
@@ -3309,23 +3352,42 @@ func _on_opt_combat_render_item_selected(index: int) -> void:
 		)
 
 func _on_opt_simplify_players_item_selected(index: int) -> void:
-	current_simplify_players_mode = ClientPerformanceProfile.sanitize_simplify_mode(index)
+	current_simplify_players_mode = ClientPerformanceProfile.sanitize_player_visibility(index)
 	_save_game_settings()
 	if GameManager:
-		GameManager.set_visual_simplification_modes(
+		GameManager.set_entity_visibility_modes(
 			current_simplify_players_mode,
 			current_simplify_monsters_mode
 		)
 
 func _on_opt_simplify_monsters_item_selected(index: int) -> void:
-	current_simplify_monsters_mode = ClientPerformanceProfile.sanitize_simplify_mode(index)
+	current_simplify_monsters_mode = ClientPerformanceProfile.sanitize_monster_visibility(index)
 	_save_game_settings()
 	if GameManager:
-		GameManager.set_visual_simplification_modes(
+		GameManager.set_entity_visibility_modes(
 			current_simplify_players_mode,
 			current_simplify_monsters_mode
 		)
 
+
+func _on_opt_simplify_effects_item_selected(index: int) -> void:
+	current_simplify_effects = index == 1
+	_apply_visual_detail_settings()
+
+func _on_opt_simplify_drops_item_selected(index: int) -> void:
+	current_simplify_drops = index == 1
+	_apply_visual_detail_settings()
+
+func _on_opt_show_damage_item_selected(index: int) -> void:
+	current_show_damage_numbers = index == 0
+	_apply_visual_detail_settings()
+
+func _apply_visual_detail_settings() -> void:
+	_save_game_settings()
+	if GameManager:
+		GameManager.set_visual_detail_options(
+			current_simplify_effects, current_simplify_drops, current_show_damage_numbers
+		)
 
 func show_revive_prompt(caster_name: String, skill_id: int, skill_level: int, hp_pct: int, mp_pct: int) -> void :
 	var msg = "「%s」嘗試將你復活\n(恢復HP %d%% / MP %d%%)\n\n你想要現在復活嗎？" % [caster_name, hp_pct, mp_pct]
