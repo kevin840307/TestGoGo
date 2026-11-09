@@ -261,6 +261,8 @@ var current_simplify_players_mode: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_
 var current_simplify_monsters_mode: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_MONSTERS_MODE
 var _afk_hidden_roots: Array[Dictionary] = []
 var _afk_entered_msec: int = 0
+var _afk_transition_ui_locked: bool = false
+var _afk_enter_progress_bucket: int = -1
 
 
 func _ready() -> void :
@@ -1340,14 +1342,21 @@ func _on_afk_mode_requested() -> void:
 	)
 
 
-func _on_afk_enter_progress(percent: float, stage: String) -> void:
-	if not is_inside_tree():
+func _on_afk_enter_progress(percent: float, _stage: String) -> void:
+	if not is_inside_tree() or not _afk_transition_ui_locked:
 		return
+	# One owner writes transition text. Update only coarse buckets so the
+	# label is not reshaped every teardown frame.
+	var bucket: int = clampi(int(percent / 25.0) * 25, 0, 100)
+	if percent >= 99.0:
+		bucket = 100
+	if bucket == _afk_enter_progress_bucket:
+		return
+	_afk_enter_progress_bucket = bucket
 	if afk_status:
 		afk_status.text = "正在切換掛機模式…"
 	if afk_resource_stats:
-		afk_resource_stats.text = "準備 %d%%｜%s" % [int(percent), stage]
-
+		afk_resource_stats.text = "正在卸載視覺資源… %d%%" % bucket
 
 func _restore_afk_hidden_roots_after_failed_enter() -> void:
 	for snapshot in _afk_hidden_roots:
@@ -1364,6 +1373,10 @@ func _confirm_begin_afk() -> void:
 
 	# Keep the current AFK UI, but actually draw it before memory teardown.
 	_afk_hidden_roots.clear()
+	_afk_transition_ui_locked = true
+	_afk_enter_progress_bucket = -1
+	if afk_update_timer:
+		afk_update_timer.stop()
 	if afk_btn_restore:
 		afk_btn_restore.disabled = true
 	if afk_overlay:
@@ -1393,6 +1406,7 @@ func _confirm_begin_afk() -> void:
 	if not is_inside_tree():
 		return
 	if not entered:
+		_afk_transition_ui_locked = false
 		_restore_afk_hidden_roots_after_failed_enter()
 		if afk_overlay:
 			afk_overlay.visible = false
@@ -1401,6 +1415,7 @@ func _confirm_begin_afk() -> void:
 		return
 
 	_afk_entered_msec = Time.get_ticks_msec()
+	_afk_transition_ui_locked = false
 	set_background_visuals_paused(true)
 	if afk_btn_restore:
 		afk_btn_restore.disabled = false
@@ -1511,18 +1526,21 @@ func _on_afk_restore_requested() -> void:
 	)
 
 
-func _on_afk_restore_progress(percent: float, stage: String) -> void:
-	if not is_inside_tree():
+func _on_afk_restore_progress(percent: float, _stage: String) -> void:
+	if not is_inside_tree() or not _afk_transition_ui_locked:
 		return
 	if afk_restore_progress and afk_restore_progress.visible:
 		afk_restore_progress.set_target_progress(percent)
 	if afk_resource_stats:
-		afk_resource_stats.text = "還原進度 %d%%｜%s" % [int(percent), stage]
-
+		afk_resource_stats.text = "正在還原遊戲資源…"
 
 func _confirm_restore_afk() -> void:
 	if not GameManager or not GameManager.is_afk_mode_active():
 		return
+	_afk_transition_ui_locked = true
+	_afk_transition_ui_locked = false
+	if afk_update_timer:
+		afk_update_timer.stop()
 	if afk_btn_restore:
 		afk_btn_restore.disabled = true
 	if afk_restore_progress:
@@ -1536,6 +1554,7 @@ func _confirm_restore_afk() -> void:
 	if not is_inside_tree():
 		return
 	if not restored:
+		_afk_transition_ui_locked = false
 		if afk_btn_restore:
 			afk_btn_restore.disabled = false
 		if afk_restore_progress:
@@ -1577,6 +1596,8 @@ func set_afk_dashboard_updates_enabled(enabled: bool) -> void:
 
 
 func _refresh_afk_dashboard() -> void:
+	if _afk_transition_ui_locked:
+		return
 	# The SceneTree may still execute fixed gameplay while backgrounded.
 	# Do not update visual labels or traverse the HUD until refocused.
 	if not GameManager or not GameManager.is_afk_mode_active():

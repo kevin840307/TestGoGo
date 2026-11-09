@@ -98,6 +98,20 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('_resources = retry', cache)
         self.assertIn('record["playing"]', cache)
 
+    def test_afk_transition_text_has_single_writer_and_no_frame_by_frame_flicker(self):
+        hud = read("client/game_hud.gd")
+        self.assertIn("var _afk_transition_ui_locked: bool = false", hud)
+        self.assertIn("var _afk_enter_progress_bucket: int = -1", hud)
+        self.assertIn("if _afk_transition_ui_locked:", hud)
+        self.assertIn("afk_update_timer.stop()", hud)
+        self.assertIn("正在卸載視覺資源… %d%%", hud)
+        self.assertIn("int(percent / 25.0) * 25", hud)
+        self.assertIn("正在還原遊戲資源…", hud)
+        enter = hud[hud.index("func _on_afk_enter_progress"):hud.index("func _confirm_begin_afk")]
+        restore = hud[hud.index("func _on_afk_restore_progress"):hud.index("func _confirm_restore_afk")]
+        self.assertNotIn("%s", enter)
+        self.assertNotIn("%s", restore)
+
     def test_afk_restore_avoids_normal_theme_scan_and_sync_paper_doll_rebuild(self):
         game = read("client/scripts/game_manager.gd")
         base = read("client/scripts/base_entity.gd")
