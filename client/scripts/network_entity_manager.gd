@@ -647,24 +647,29 @@ func _remove_queued_spawn(entity_id: int) -> void :
 
 func _spawn_priority(data: Dictionary, player_pos: Variant) -> float:
 	var entity_type: int = int(data.get("EntityType", -1))
-	# Ground items are authoritative interactables and should appear first.
-	if entity_type == 3:
-		return -1000000000.0
-	# Players/pets/NPCs are more important than distant monsters.
-	if entity_type == 0 or entity_type == 4:
-		return -500000000.0
-	if entity_type == 2:
-		return -250000000.0
-	if entity_type != 1:
-		return 0.0
-	# A server-confirmed attacker must not wait behind hundreds of
-	# ground drops in a post-map snapshot. Only combat monsters bypass
-	# the normal ground-item > NPC > monster ordering; no entity is dropped.
-	if _is_combat_monster_revealed(int(data.get("EntityID", 0))):
+	# A scene spawn may take milliseconds. Under many-player combat and
+	# hundreds of dropped items, players must never sit behind drop visuals.
+	# All packets still enter authoritative state immediately; this priority
+	# only orders expensive presentation scene instantiation.
+	if entity_type == 0:
+		return -3000000000.0
+	if entity_type == 1 and _is_combat_monster_revealed(int(data.get("EntityID", 0))):
 		return -2000000000.0
-	if player_pos == null:
+	if entity_type == 4:
+		return -1500000000.0
+	if entity_type == 1:
+		var distance: float = 0.0
+		if player_pos != null:
+			distance = (player_pos as Vector2).distance_squared_to(_monster_packet_position(data))
+		return -1000000000.0 + distance
+	if entity_type == 2:
+		return -500000000.0
+	# Ground drops are cached with their authoritative expiration / owner
+	# data when the packet arrives. Drawing their sprites can wait behind
+	# players and monsters without delaying pickup or changing game logic.
+	if entity_type == 3:
 		return 0.0
-	return (player_pos as Vector2).distance_squared_to(_monster_packet_position(data))
+	return 100000000.0
 
 func _enqueue_spawn_by_priority(data: Dictionary) -> void :
 	# The queue remains sorted by priority. The former linear scan called
