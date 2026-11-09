@@ -34,6 +34,26 @@ const PLAYER_SHOW_NONE := 3
 const MONSTER_SHOW_ALL := 0
 const MONSTER_HIDE_ORDINARY := 1
 
+# Display preference only; never changes physics ticks, FPS or authoritative drops.
+const GROUND_DROPS_ALL := 0
+const GROUND_DROPS_LIMIT_DUPLICATES := 1
+const GROUND_DROPS_HIDDEN := 2
+
+static func sanitize_ground_drop_display_mode(value: int) -> int:
+	return clampi(value, GROUND_DROPS_ALL, GROUND_DROPS_HIDDEN)
+
+static func should_show_ground_drop(
+	mode: int, candidate_id: int, candidate: Dictionary,
+	records: Dictionary, observer: Vector2, observer_radius: float
+) -> bool:
+	match sanitize_ground_drop_display_mode(mode):
+		GROUND_DROPS_HIDDEN:
+			return false
+		GROUND_DROPS_LIMIT_DUPLICATES:
+			return should_show_duplicate_drop(candidate_id, candidate, records, observer, observer_radius)
+	return true
+
+
 static func sanitize_player_visibility(value: int) -> int:
 	return clampi(value, PLAYER_SHOW_ALL, PLAYER_SHOW_NONE)
 
