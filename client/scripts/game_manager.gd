@@ -64,7 +64,8 @@ func log_world_visual_audit(phase: String) -> void:
 		return
 	var total_nodes: int = int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))
 	var active_entity_count: int = NetworkEntityManager.active_entities.size() if NetworkEntityManager else 0
-	if total_nodes > 5000 and phase in ["logout_before", "afk_settled_3s", "afk_restore_complete"]:
+	var expensive_phase: bool = phase in ["logout_before", "afk_settled_3s", "afk_restore_complete"]
+	if (expensive_phase and total_nodes > 2000) or total_nodes > 5000:
 		print("[WORLD_VISUAL_AUDIT] phase=%s pid=%d skipped_heavy=true total_nodes=%d active_entities=%d reason=protect_fixed_cadence" % [
 			phase, OS.get_process_id(), total_nodes, active_entity_count,
 		])
@@ -1003,8 +1004,11 @@ func _restore_afk_entity_visuals_batched(callback: Callable) -> void:
 	var restored: int = 0
 	var batch_started_usec: int = Time.get_ticks_usec()
 	for node in entities:
-		if is_instance_valid(node) and node.has_method("set_afk_visual_suspended"):
-			node.set_afk_visual_suspended(false)
+		if is_instance_valid(node):
+			if node.has_method("restore_afk_visual_async"):
+				await node.restore_afk_visual_async()
+			elif node.has_method("set_afk_visual_suspended"):
+				node.set_afk_visual_suspended(false)
 		restored += 1
 		if restored % 4 == 0 or Time.get_ticks_usec() - batch_started_usec >= 6000:
 			_emit_afk_restore_progress(callback,
@@ -1068,7 +1072,7 @@ func _restore_afk_render_shell(progress_callback: Callable = Callable()) -> Dict
 		return attached
 	current_map_node = restored
 	_emit_afk_restore_progress(progress_callback, 76.0, "還原角色節點與地圖")
-	_apply_current_festival_theme()
+	_apply_current_festival_theme(true)
 	if BuildingManager:
 		_emit_afk_restore_progress(progress_callback, 81.0, "初始化地圖裝飾")
 		await _init_buildings_with_diagnostics(
@@ -1780,7 +1784,7 @@ func set_festival_activity(festival: String) -> void :
 	current_festival_activity = normalized_festival
 	festival_activity_changed.emit(current_festival_activity)
 
-func _apply_current_festival_theme() -> Dictionary:
+func _apply_current_festival_theme(fresh_normal_scene: bool = false) -> Dictionary:
 	if not is_instance_valid(current_map_node):
 		return {
 			"theme": current_festival_theme, 
@@ -1788,9 +1792,19 @@ func _apply_current_festival_theme() -> Dictionary:
 			"changed": 0, 
 			"failed": 0, 
 		}
+	var normalized_theme: String = FestivalThemeManager.normalize_theme(current_festival_theme)
+	if fresh_normal_scene and normalized_theme == FestivalThemeManager.NORMAL:
+		if OS.is_debug_build():
+			print("[FESTIVAL_THEME] skipped_fresh_normal=true")
+		return {
+			"theme": normalized_theme,
+			"matched": 0,
+			"changed": 0,
+			"failed": 0,
+		}
 	set_frame_gap_stage("festival_theme_apply")
 	var started_usec := Time.get_ticks_usec()
-	var result: Dictionary = FestivalThemeManager.apply_theme_to_map(current_map_node, current_festival_theme)
+	var result: Dictionary = FestivalThemeManager.apply_theme_to_map(current_map_node, normalized_theme)
 	var elapsed_ms := float(Time.get_ticks_usec() - started_usec) / 1000.0
 	if elapsed_ms >= 50.0:
 		print("[INIT_TIMING] festival_theme_ms=%.2f" % elapsed_ms)
@@ -2030,7 +2044,7 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 
 	_report_initial_loading_progress(progress_callback, 79.0, "套用地圖環境")
 	await get_tree().process_frame
-	_apply_current_festival_theme()
+	_apply_current_festival_theme(true)
 	await get_tree().process_frame
 
 	_report_initial_loading_progress(progress_callback, 81.0, "初始化地圖物件")

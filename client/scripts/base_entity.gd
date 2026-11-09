@@ -148,6 +148,20 @@ func is_render_visible() -> bool:
 	return _render_visible
 
 
+func restore_afk_visual_async() -> void:
+	# AFK strips layered paper-doll resources aggressively. Rebuild them with
+	# the same frame-yielding path used by first world entry so returning from
+	# AFK does not create one large main-thread frame. Logical state is already
+	# live; this touches presentation only.
+	if not _afk_visual_suspended:
+		return
+	_afk_visual_suspended = false
+	if is_instance_valid(ui_container):
+		ui_container.visible = _render_visible
+	await setup_layered_paper_dolls_initial_async()
+	sync_animation()
+
+
 func set_afk_visual_suspended(suspended: bool) -> void:
 	if _afk_visual_suspended == suspended:
 		return

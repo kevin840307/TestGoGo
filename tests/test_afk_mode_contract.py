@@ -98,6 +98,18 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn('_resources = retry', cache)
         self.assertIn('record["playing"]', cache)
 
+    def test_afk_restore_avoids_normal_theme_scan_and_sync_paper_doll_rebuild(self):
+        game = read("client/scripts/game_manager.gd")
+        base = read("client/scripts/base_entity.gd")
+        self.assertIn("fresh_normal_scene: bool = false", game)
+        self.assertIn("fresh_normal_scene and normalized_theme == FestivalThemeManager.NORMAL", game)
+        self.assertIn("[FESTIVAL_THEME] skipped_fresh_normal=true", game)
+        self.assertIn("_apply_current_festival_theme(true)", game)
+        self.assertIn("func restore_afk_visual_async() -> void:", base)
+        self.assertIn("await setup_layered_paper_dolls_initial_async()", base)
+        self.assertIn('node.has_method("restore_afk_visual_async")', game)
+        self.assertIn("await node.restore_afk_visual_async()", game)
+
     def test_restore_preserves_user_preferences_and_map_change(self):
         game = read("client/scripts/game_manager.gd")
         self.assertIn('var _afk_saved_profile: Dictionary', game)
@@ -157,6 +169,7 @@ class AfkModeContract(unittest.TestCase):
     def test_large_debug_audits_never_block_afk_fixed_cadence(self):
         game = read("client/scripts/game_manager.gd")
         self.assertIn("total_nodes > 5000", game)
+        self.assertIn("expensive_phase and total_nodes > 2000", game)
         self.assertIn("expensive_stage and total_nodes > 2000", game)
         self.assertIn("skipped_heavy=true", game)
         self.assertIn("reason=protect_fixed_cadence", game)
