@@ -26,17 +26,21 @@ require(profile, "return SIMPLIFY_SIMPLIFIED")
 require(profile, "static func default_auto_style(_load_mode: int)")
 require(profile, 'result["use_primitive_monsters"] = bool(')
 
-for option in ("OptionSimplifyPlayers", "OptionSimplifyMonsters"):
+for option, values in (
+    ("OptionSimplifyPlayers", ("全顯示", "只顯示敵人", "只顯示隊友", "都不顯示")),
+    ("OptionSimplifyMonsters", ("顯示", "不顯示")),
+):
     match = re.search(
-        rf'\[node name="{option}" type="OptionButton".*?(?=\n\[node |\Z)',
+        rf'\\[node name="{option}" type="OptionButton".*?(?=\\n\\[node |\\Z)',
         hud, re.S,
     )
     assert match, f"missing selector {option}"
-    block = match.group()
-    require(block, "item_count = 3")
-    for idx, name in enumerate(("自動", "一般", "簡化")):
-        require(block, f'popup/item_{idx}/text = "{name}"')
-    assert "popup/item_3/" not in block and "popup/item_4/" not in block
+    widget = match.group()
+    require(widget, f"item_count = {len(values)}")
+    for idx, name in enumerate(values):
+        require(widget, f'popup/item_{idx}/text = "{name}"')
+    assert f"popup/item_{len(values)}/" not in widget
+
 
 require(monster, "func _draw_simplified_monster")
 require(monster, "SIMPLIFIED_ORB_CACHE.monster_texture()")
@@ -72,4 +76,4 @@ require(cache, "static var _monster_texture: Texture2D")
 require(cache, "static var _player_texture: Texture2D")
 require(cache, "ImageTexture.create_from_image(image)")
 assert cache.count("ImageTexture.create_from_image(image)") == 1
-print("PASS: three selectors, one cached ImageTexture per entity type, relation colors, hitboxes and no original sprite fallback")
+print("PASS: fixed 4/2 visibility options, existing cached orb path and unchanged hitboxes")
