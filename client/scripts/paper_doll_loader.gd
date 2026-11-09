@@ -116,6 +116,9 @@ func _load_sr_atlas(base_path: String, allow_looping: bool) -> SpriteFrames:
 
 	var sprite_frames = SpriteFrames.new()
 	sprite_frames.remove_animation("default")
+	# One immutable AtlasTexture per recovered JSON frame key. The same frame
+	# can be referenced by multiple animations; no extra texture decode.
+	var atlas_frames_by_key: Dictionary = {}
 	for anim_name_value in animations.keys():
 		var anim_name = str(anim_name_value)
 		var frame_keys = animations[anim_name_value]
@@ -136,19 +139,20 @@ func _load_sr_atlas(base_path: String, allow_looping: bool) -> SpriteFrames:
 			for required_field in ["x", "y", "w", "h", "offset_x", "offset_y"]:
 				if not meta.has(required_field):
 					return null
-			var atlas_texture = AtlasTexture.new()
-			atlas_texture.atlas = big_texture
-			atlas_texture.region = Rect2(
-				float(meta["x"]), 
-				float(meta["y"]), 
-				float(meta["w"]), 
-				float(meta["h"])
-			)
-			atlas_texture.set_meta("old_offset", Vector2(float(meta["offset_x"]), float(meta["offset_y"])))
-			if meta.has("source_action"):
-				atlas_texture.set_meta("source_action", str(meta["source_action"]))
-			if meta.has("source_frame"):
-				atlas_texture.set_meta("source_frame", int(meta["source_frame"]))
+			var atlas_texture: AtlasTexture = atlas_frames_by_key.get(str(frame_key), null) as AtlasTexture
+			if not is_instance_valid(atlas_texture):
+				atlas_texture = AtlasTexture.new()
+				atlas_texture.atlas = big_texture
+				atlas_texture.region = Rect2(
+					float(meta["x"]), float(meta["y"]),
+					float(meta["w"]), float(meta["h"])
+				)
+				atlas_texture.set_meta("old_offset", Vector2(float(meta["offset_x"]), float(meta["offset_y"])))
+				if meta.has("source_action"):
+					atlas_texture.set_meta("source_action", str(meta["source_action"]))
+				if meta.has("source_frame"):
+					atlas_texture.set_meta("source_frame", int(meta["source_frame"]))
+				atlas_frames_by_key[str(frame_key)] = atlas_texture
 			sprite_frames.add_frame(anim_name, atlas_texture)
 	return sprite_frames
 
@@ -192,6 +196,7 @@ func get_sprite_frames(category: String, part_name: String) -> SpriteFrames:
 
 	var animations = atlas_data.get("animations", {})
 	var frames_meta = atlas_data.get("frames", {})
+	var atlas_frames_by_key: Dictionary = {}
 
 	for anim_name in animations.keys():
 		sf.add_animation(anim_name)
@@ -199,14 +204,14 @@ func get_sprite_frames(category: String, part_name: String) -> SpriteFrames:
 		sf.set_animation_speed(anim_name, 8.0)
 
 		for f_key in animations[anim_name]:
-			var meta = frames_meta[f_key]
-			var atlas_tex = AtlasTexture.new()
-			atlas_tex.atlas = big_texture
-			atlas_tex.region = Rect2(meta.x, meta.y, meta.w, meta.h)
-
-
-			atlas_tex.set_meta("old_offset", Vector2(meta.offset_x, meta.offset_y))
-
+			var atlas_tex: AtlasTexture = atlas_frames_by_key.get(str(f_key), null) as AtlasTexture
+			if not is_instance_valid(atlas_tex):
+				var meta = frames_meta[f_key]
+				atlas_tex = AtlasTexture.new()
+				atlas_tex.atlas = big_texture
+				atlas_tex.region = Rect2(meta.x, meta.y, meta.w, meta.h)
+				atlas_tex.set_meta("old_offset", Vector2(meta.offset_x, meta.offset_y))
+				atlas_frames_by_key[str(f_key)] = atlas_tex
 			sf.add_frame(anim_name, atlas_tex)
 
 	_cache[category][part_name] = sf
