@@ -424,6 +424,9 @@ func get_ground_aoi_stats() -> Dictionary:
 	return {
 		"known": _ground_spawn_templates.size(),
 		"deferred": _deferred_ground_spawns.size(),
+		"display_mode": _ground_drop_mode(),
+		"selected": _ground_display_winners.size() if _ground_drop_mode() == ClientPerformanceProfile.GROUND_DROPS_LIMIT_DUPLICATES else -1,
+		"pending_trim": _ground_trim_queue.size(),
 		"ground_full_scans": _ground_aoi_full_scans,
 		"ground_skipped_scans": _ground_aoi_reused_scans,
 		"monster_full_scans": _monster_aoi_full_scans,
