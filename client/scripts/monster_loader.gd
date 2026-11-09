@@ -33,6 +33,20 @@ func make_clipped_frame_texture(
 	return frame
 
 
+# Both legacy and timed variants may reference one immutable atlas. Reuse
+# it from an existing SpriteFrames instead of decoding the PNG twice.
+static func _atlas_from_sprite_frames(frames: SpriteFrames) -> Texture2D:
+	if not is_instance_valid(frames):
+		return null
+	for animation_name in frames.get_animation_names():
+		if frames.get_frame_count(animation_name) <= 0:
+			continue
+		var frame := frames.get_frame_texture(animation_name, 0) as AtlasTexture
+		if is_instance_valid(frame) and is_instance_valid(frame.atlas):
+			return frame.atlas
+	return null
+
+
 func get_monster_frames(monster_id: String, apply_act_timing: bool = false) -> SpriteFrames:
 	monster_id = monster_id.to_upper()
 	var cache_key = "%s:%s" % [monster_id, "timed" if apply_act_timing else "legacy"]
@@ -50,9 +64,16 @@ func get_monster_frames(monster_id: String, apply_act_timing: bool = false) -> S
 		return null
 
 
-	var big_texture = ResourceLoader.load(
-		png_path, "", ResourceLoader.CACHE_MODE_IGNORE
-	) as Texture2D
+	var other_key: String = "%s:%s" % [monster_id, "legacy" if apply_act_timing else "timed"]
+	var big_texture: Texture2D = null
+	if _cache.has(other_key):
+		big_texture = _atlas_from_sprite_frames(_cache[other_key] as SpriteFrames)
+	if not is_instance_valid(big_texture):
+		big_texture = ResourceLoader.load(
+			png_path, "", ResourceLoader.CACHE_MODE_IGNORE
+		) as Texture2D
+	if not is_instance_valid(big_texture):
+		return null
 	var json_text = FileAccess.open(json_path, FileAccess.READ).get_as_text()
 	var atlas_data: Dictionary = JSON.parse_string(json_text)
 
@@ -62,7 +83,8 @@ func get_monster_frames(monster_id: String, apply_act_timing: bool = false) -> S
 
 	var animations = atlas_data.get("animations", {})
 	var frames_meta = atlas_data.get("frames", {})
-
+	# One immutable AtlasTexture for each canonical recovered JSON frame key.
+	var atlas_frames_by_key: Dictionary = {}
 
 	for anim_name in animations.keys():
 		sf.add_animation(anim_name)
@@ -77,12 +99,14 @@ func get_monster_frames(monster_id: String, apply_act_timing: bool = false) -> S
 		sf.set_animation_speed(anim_name, animation_fps)
 
 		for f_key in animations[anim_name]:
-			var meta = frames_meta[f_key]
-			var frame_region := Rect2(meta.x, meta.y, meta.w, meta.h)
-			var atlas_tex := make_clipped_frame_texture(
-				big_texture, frame_region,
-				Vector2(meta.offset_x, meta.offset_y)
-			)
+			var atlas_tex: AtlasTexture = atlas_frames_by_key.get(str(f_key), null) as AtlasTexture
+			if not is_instance_valid(atlas_tex):
+				var meta = frames_meta[f_key]
+				atlas_tex = make_clipped_frame_texture(
+					big_texture, Rect2(meta.x, meta.y, meta.w, meta.h),
+					Vector2(meta.offset_x, meta.offset_y)
+				)
+				atlas_frames_by_key[str(f_key)] = atlas_tex
 			sf.add_frame(anim_name, atlas_tex)
 
 
