@@ -80,6 +80,8 @@ internal static class InteractiveBots
                     {
                         // Keep the actors close enough for a real observer to see them.
                         await client.TeleportAsync(map, x + (n % 8) * 12, y + (n / 8) * 12, timeout);
+                        // Non-anchor bots can discard unsolicited AOI packets immediately.
+                        if (n != 0) client.EnableInteractiveBots();
                         clients[n] = client;
                         var ready = Interlocked.Increment(ref launched);
                         if (ready % 10 == 0 || ready == count)
