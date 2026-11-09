@@ -297,9 +297,12 @@ internal sealed class WireLoadClient : IAsyncDisposable
         var dy = targetY - Y;
         var angle = Math.Atan2(dy, dx);
         var octant = ((int)Math.Round(angle / (Math.PI / 4)) + 8) % 8;
-        var direction = (octant + 1).ToString();
+        // Match the actual BaseEntity direction ordering and unarmed
+        // attack animation (attack_aa), not the non-existent "attack_1".
+        var directions = new[] { "6", "7", "8", "1", "2", "3", "4", "5" };
+        var direction = directions[octant];
         await SendPacketAsync(
-            new { Type = "SyncState", State = "attack_1", Dir = direction },
+            new { Type = "SyncState", State = "attack_aa", Dir = direction },
             timeout);
         await SendAttackAsync(targetEntityId, timeout);
     }
