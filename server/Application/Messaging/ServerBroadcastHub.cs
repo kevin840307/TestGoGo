@@ -30,6 +30,10 @@ public sealed class ServerBroadcastHub
 
     private readonly ConcurrentDictionary<Guid, ConcurrentQueue<object>>
         _queues = new();
+    // Opt-in WebSocket fast lane. Legacy in-process registrations keep the
+    // original single queue, preserving their ordering and test contracts.
+    private readonly ConcurrentDictionary<Guid, ConcurrentQueue<object>>
+        _playerPriorityQueues = new();
 
     // Wake only active senders. A single bounded notification coalesces
     // bursts; there is no 25ms polling timer per connected WebSocket.
@@ -44,10 +48,52 @@ public sealed class ServerBroadcastHub
         ConcurrentQueue<object> queue,
         object packet)
     {
-        queue.Enqueue(packet);
+        // Prioritize only independent player-origin packets. Gameplay and
+        // ground-item updates are NEVER dropped or coalesced.
+        if (_playerPriorityQueues.TryGetValue(connectionId, out var playerQueue) &&
+            IsPlayerPriorityPacket(packet))
+        {
+            playerQueue.Enqueue(packet);
+        }
+        else
+        {
+            queue.Enqueue(packet);
+        }
         if (_queueSignals.TryGetValue(connectionId, out var signal))
             signal.Writer.TryWrite(1);
     }
+
+    private static bool IsPlayerPriorityPacket(object packet)
+    {
+        var type = ReadPacketString(packet, "Type");
+        return type switch
+        {
+            "SpawnEntity" or "EntityDeath" =>
+                ReadPacketLong(packet, "EntityType") == 0,
+            "MoveEntity" or "SyncState" or "DespawnEntity" =>
+                ReadPacketLong(packet, "EntityID") is > 0 and < 1_000_000,
+            "EntityDamage" or "EntityHeal" =>
+                ReadPacketLong(packet, "TargetType") == 0,
+            "SkillCast" =>
+                ReadPacketLong(packet, "CasterType") == 0,
+            _ => false,
+        };
+    }
+
+    public bool TryDequeuePlayerPriority(Guid connectionId, out object packet)
+    {
+        packet = null!;
+        return _playerPriorityQueues.TryGetValue(connectionId, out var queue) &&
+               queue.TryDequeue(out packet!);
+    }
+
+    public bool HasPendingPlayerPriority(Guid connectionId)
+        => _playerPriorityQueues.TryGetValue(connectionId, out var queue) &&
+           !queue.IsEmpty;
+
+    public int PlayerPriorityBacklogCount(Guid connectionId)
+        => _playerPriorityQueues.TryGetValue(connectionId, out var queue)
+            ? queue.Count : 0;
 
     private readonly ConcurrentDictionary<Guid, Presence>
         _presence = new();
@@ -68,10 +114,13 @@ public sealed class ServerBroadcastHub
     public int AoiWorldObservers => _worldAoi.ObserverCount;
     public int AoiWorldEntities => _worldAoi.EntityCount;
 
-    public (Guid ConnectionId, ConcurrentQueue<object> Queue) Register()
+    public (Guid ConnectionId, ConcurrentQueue<object> Queue) Register(
+        bool prioritizePlayerEvents = false)
     {
         var id = Guid.NewGuid();
         var queue = new ConcurrentQueue<object>();
+        if (prioritizePlayerEvents)
+            _playerPriorityQueues[id] = new ConcurrentQueue<object>();
         _queueSignals[id] = Channel.CreateBounded<byte>(
             new BoundedChannelOptions(1)
             {
@@ -199,6 +248,7 @@ public sealed class ServerBroadcastHub
         _worldAoi.RemoveObserver(connectionId);
         ClearPlayerCompanions(connectionId);
         _queues.TryRemove(connectionId, out _);
+        _playerPriorityQueues.TryRemove(connectionId, out _);
         if (_queueSignals.TryRemove(connectionId, out var signal))
             signal.Writer.TryComplete();
         _presence.TryRemove(connectionId, out _);
