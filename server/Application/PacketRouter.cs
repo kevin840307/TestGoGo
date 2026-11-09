@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using SGO.Server.Application.Announcements;
@@ -4973,19 +4974,47 @@ public sealed class PacketRouter
                     ];
                 }
 
+                var skillId = req.Int("SkillID");
+                var targetId = req.Int("TargetID");
+                var profileStarted = Stopwatch.GetTimestamp();
+
+                var ensureStarted = Stopwatch.GetTimestamp();
                 var packets = EnsureCurrentCombatMapLoaded(
                     state,
                     accountId);
+                var ensureMapMs =
+                    Stopwatch.GetElapsedTime(ensureStarted)
+                        .TotalMilliseconds;
 
+                var combatStarted = Stopwatch.GetTimestamp();
                 packets.AddRange(_combat.UseSkill(
                     state,
                     accountId,
-                    req.Int("SkillID"),
-                    req.Int("TargetID"),
+                    skillId,
+                    targetId,
                     req.Int("TargetType", 1),
                     req.Int("TargetX"),
                     req.Int("TargetY"),
                     DateTimeOffset.UtcNow));
+                var combatMs =
+                    Stopwatch.GetElapsedTime(combatStarted)
+                        .TotalMilliseconds;
+                var totalMs =
+                    Stopwatch.GetElapsedTime(profileStarted)
+                        .TotalMilliseconds;
+
+                if (totalMs >= 100.0)
+                {
+                    _log.LogWarning(
+                        "[USE_SKILL_PROFILE] TotalMs={TotalMs:F1} EnsureMapMs={EnsureMapMs:F1} CombatMs={CombatMs:F1} SkillID={SkillID} TargetID={TargetID} Map={MapID} Character={CharacterID}",
+                        totalMs,
+                        ensureMapMs,
+                        combatMs,
+                        skillId,
+                        targetId,
+                        state.CurrentMapId,
+                        state.CharacterId);
+                }
 
                 return packets;
             }
