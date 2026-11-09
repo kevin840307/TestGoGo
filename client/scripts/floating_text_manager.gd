@@ -77,6 +77,30 @@ func release_world_runtime_for_login() -> void:
 			_reset_label_tweens(label)
 			label.visible = false
 
+	# Pool growth is only needed while large batches of combat numbers play.
+	# The previous logout hid these permanently-owned nodes, so subsequent
+	# login screens retained every pool expansion from prior world sessions.
+	# Keep the cold-login reserve for fast first combat; release the surplus.
+	var released_labels: int = _shrink_combat_pool(_text_pool, INITIAL_POOL_SIZE)
+	var released_effects: int = _shrink_combat_pool(_effect_pool, INITIAL_POOL_SIZE)
+	if OS.is_debug_build():
+		print("[FLOATING_POOL_RELEASE] phase=logout labels_released=%d effects_released=%d labels_kept=%d effects_kept=%d" % [
+			released_labels, released_effects, _text_pool.size(), _effect_pool.size()
+		])
+
+
+# Only called after runtime effects and label tweens have been stopped.
+# Pool arrays and SceneTree must stop owning the surplus before the next
+# login screen settles. Godot performs the actual free at frame end.
+static func _shrink_combat_pool(pool: Array, keep_count: int) -> int:
+	var released: int = 0
+	while pool.size() > maxi(0, keep_count):
+		var node: Node = pool.pop_back() as Node
+		if is_instance_valid(node):
+			node.queue_free()
+			released += 1
+	return released
+
 
 func _get_free_effect() -> AnimatedSprite2D:
 	for eff in _effect_pool:
