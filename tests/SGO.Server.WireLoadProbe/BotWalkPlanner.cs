@@ -32,11 +32,26 @@ internal sealed class BotWalkPlanner
         _blocking = new BlockingMapService(GameDataRoot);
 
         _navigation = new MonsterNavigationService(_blocking);
-        // Round user-supplied pixel coordinates to walkable cell centers.
-        var anchor = FindNear(centerX, centerY, 96)
+        // Requested map positions may be visual landmarks or blocked cells.
+        // Search within the spawn radius before failing. The original 96px
+        // search rejected Map13 (4331,5346), whose nearest clear tile is
+        // (4424,5528), approximately 204px away.
+        var searchRadius = Math.Max(radius, 256);
+        var anchor = FindNear(centerX, centerY, searchRadius)
             ?? throw new ArgumentException(
-                "No walkable tile near the requested observation center.");
+                $"No walkable tile within {searchRadius}px of ({centerX},{centerY}) " +
+                $"on Map{map}. Choose a different center or increase --radius.");
         _center = anchor;
+        var offset = Math.Sqrt(
+            Math.Pow(_center.X - centerX, 2) +
+            Math.Pow(_center.Y - centerY, 2));
+        if (offset > BlockingMapService.CellSize)
+        {
+            Console.WriteLine(
+                $"[BOTS] Center ({centerX},{centerY}) is not walkable; " +
+                $"using nearest valid ({_center.X},{_center.Y}) " +
+                $"distance={offset:F0}px (Blocking.dat).");
+        }
     }
 
     public (int X, int Y) Center => _center;
@@ -49,20 +64,27 @@ internal sealed class BotWalkPlanner
         var size = BlockingMapService.CellSize;
         var cx = (int)Math.Floor(x / (double)size);
         var cy = (int)Math.Floor(y / (double)size);
-        for (var r = 0; r <= radius / size; r++)
+        var cells = (int)Math.Ceiling(radius / (double)size) + 1;
+        var maxDistanceSquared = (long)radius * radius;
+        var bestDistanceSquared = long.MaxValue;
+        (int X, int Y)? best = null;
+
+        for (var dy = -cells; dy <= cells; dy++)
+        for (var dx = -cells; dx <= cells; dx++)
         {
-            for (var dy = -r; dy <= r; dy++)
-            for (var dx = -r; dx <= r; dx++)
-            {
-                if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != r)
-                    continue;
-                var px = (cx + dx) * size + size / 2;
-                var py = (cy + dy) * size + size / 2;
-                if (Walkable(px, py))
-                    return (px, py);
-            }
+            var px = (cx + dx) * size + size / 2;
+            var py = (cy + dy) * size + size / 2;
+            var squared = (long)(px - x) * (px - x) +
+                          (long)(py - y) * (py - y);
+            if (squared > maxDistanceSquared ||
+                squared >= bestDistanceSquared ||
+                !Walkable(px, py))
+                continue;
+
+            best = (px, py);
+            bestDistanceSquared = squared;
         }
-        return null;
+        return best;
     }
 
     public (int X, int Y) RandomPoint()
