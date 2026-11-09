@@ -98,6 +98,27 @@ func set_performance_simplified(
 func is_performance_simplified() -> bool:
 	return _performance_simplified_visual
 
+# Display-only relationship classification. Server PK and party rules remain authoritative.
+func is_local_party_member() -> bool:
+	var local = GameManager.current_player if GameManager else null
+	if not is_instance_valid(local) or not "data_model" in local or local.data_model == null:
+		return false
+	var my_party: String = str(local.data_model.party_id)
+	return my_party not in ["", "0", "-1"] and my_party == str(data_model.party_id)
+
+func is_local_hostile_player() -> bool:
+	var local = GameManager.current_player if GameManager else null
+	if not is_instance_valid(local) or not "data_model" in local or local.data_model == null:
+		return false
+	if is_local_party_member():
+		return false
+	var my_data = local.data_model
+	if int(my_data.map_id) in SAFE_MAP_IDS:
+		return false
+	if int(my_data.pk_status) != 1 or int(data_model.pk_status) != 1 or int(data_model.hp) <= 0:
+		return false
+	return not local.has_method("can_attack") or bool(local.can_attack())
+
 func _simplified_relation_color() -> Color:
 	var local_player = GameManager.current_player if GameManager else null
 	if is_instance_valid(local_player) and "data_model" in local_player:
