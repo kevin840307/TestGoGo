@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
+using SGO.Server.Infrastructure.WorldData;
 
 internal static class InteractiveBots
 {
@@ -69,6 +70,13 @@ internal static class InteractiveBots
 
         // Fail before registering any test accounts if the collision data is unavailable.
         var walks = new BotWalkPlanner(map, x, y, radius);
+        var mapEnemy = new WorldDataService(walks.GameDataRoot)
+            .GetEnemies(map)
+            .OrderBy(enemy => enemy.MaxHp)
+            .FirstOrDefault();
+        if (combat && mapEnemy is null)
+            throw new InvalidOperationException(
+                "The map contains no valid Enemy.dat entries; cannot spawn test monsters.");
         var locations = Enumerable.Range(0, count)
             .Select(_ => walks.RandomPoint())
             .ToArray();
@@ -157,8 +165,11 @@ internal static class InteractiveBots
                 {
                     try
                     {
-                        var loc = walks.RandomPoint();
-                        await live[0].SpawnMonsterAsync(245, loc.X, loc.Y, timeout);
+                        // Use an actual enemy listed for the chosen map,
+                        // not a hardcoded ID from a different zone.
+                        var loc = locations[i % locations.Length];
+                        await live[0].SpawnMonsterAsync(
+                            mapEnemy!.EnemyId, loc.X, loc.Y, timeout);
                     }
                     catch (Exception ex)
                     {
@@ -237,7 +248,6 @@ internal static class InteractiveBots
 
                         // Keep HP and mana for sustained observation; the heal
                         // command is enabled only on this isolated test server.
-                        var state = bot.BotWorld;
                         if ((tick + bot.Index) % Math.Max(1, 20000 / interval) == 0)
                         {
                             await bot.SendBotHealAsync(timeout);
