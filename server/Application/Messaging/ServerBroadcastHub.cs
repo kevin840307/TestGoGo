@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Threading.Channels;
 
 namespace SGO.Server.Application.Messaging;
 
@@ -30,6 +31,24 @@ public sealed class ServerBroadcastHub
     private readonly ConcurrentDictionary<Guid, ConcurrentQueue<object>>
         _queues = new();
 
+    // Wake only active senders. A single bounded notification coalesces
+    // bursts; there is no 25ms polling timer per connected WebSocket.
+    private readonly ConcurrentDictionary<Guid, Channel<byte>>
+        _queueSignals = new();
+
+    public ChannelReader<byte> GetBroadcastSignal(Guid connectionId)
+        => _queueSignals[connectionId].Reader;
+
+    private void EnqueueBroadcast(
+        Guid connectionId,
+        ConcurrentQueue<object> queue,
+        object packet)
+    {
+        queue.Enqueue(packet);
+        if (_queueSignals.TryGetValue(connectionId, out var signal))
+            signal.Writer.TryWrite(1);
+    }
+
     private readonly ConcurrentDictionary<Guid, Presence>
         _presence = new();
 
@@ -53,6 +72,13 @@ public sealed class ServerBroadcastHub
     {
         var id = Guid.NewGuid();
         var queue = new ConcurrentQueue<object>();
+        _queueSignals[id] = Channel.CreateBounded<byte>(
+            new BoundedChannelOptions(1)
+            {
+                SingleReader = true,
+                SingleWriter = false,
+                FullMode = BoundedChannelFullMode.DropWrite
+            });
         _queues[id] = queue;
         _presence[id] = new Presence(0, 0, 0, 0, 0, "");
         return (id, queue);
@@ -173,6 +199,8 @@ public sealed class ServerBroadcastHub
         _worldAoi.RemoveObserver(connectionId);
         ClearPlayerCompanions(connectionId);
         _queues.TryRemove(connectionId, out _);
+        if (_queueSignals.TryRemove(connectionId, out var signal))
+            signal.Writer.TryComplete();
         _presence.TryRemove(connectionId, out _);
     }
 
@@ -482,8 +510,8 @@ public sealed class ServerBroadcastHub
 
     public void Publish(object packet)
     {
-        foreach (var queue in _queues.Values)
-            queue.Enqueue(packet);
+        foreach (var pair in _queues)
+            EnqueueBroadcast(pair.Key, pair.Value, packet);
     }
 
     public void PublishToAllExcept(
@@ -504,7 +532,7 @@ public sealed class ServerBroadcastHub
                 continue;
             }
 
-            pair.Value.Enqueue(packet);
+            EnqueueBroadcast(pair.Key, pair.Value, packet);
         }
     }
 
@@ -518,7 +546,7 @@ public sealed class ServerBroadcastHub
                 out var queue))
             return false;
 
-        queue.Enqueue(packet);
+        EnqueueBroadcast(connectionId, queue, packet);
         return true;
     }
 
@@ -539,7 +567,7 @@ public sealed class ServerBroadcastHub
                     out var queue))
                 continue;
 
-            queue.Enqueue(packet);
+            EnqueueBroadcast(pair.Key, queue, packet);
             return true;
         }
 
