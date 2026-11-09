@@ -10,14 +10,14 @@ internal static class InteractiveBots
         var count = 20;
         var url = "ws://127.0.0.1:5678/";
         var map = 13;
-        var x = 4331;
-        var y = 5346;
+        int? x = null;
+        int? y = null;
         var radius = 280;
         var interval = 350;
         var duration = 0;
-        var spawn = 5;
+        var spawn = -1;
         var concurrency = 5;
-        var level = 150;
+        var level = 1;
         var combat = true;
         var timeout = TimeSpan.FromSeconds(30);
         string? output = null;
@@ -46,17 +46,21 @@ internal static class InteractiveBots
                 case "--output": output = Next(); break;
                 case "--no-combat": combat = false; break;
                 case "--help":
-                    Console.WriteLine("dotnet run -c Release --project tests/SGO.Server.WireLoadProbe -- --bots --players 20 --map 13 --x 4331 --y 5346 --radius 280 --monsters 5 --level 150");
-                    Console.WriteLine("Random walkable positions, chasing nearby AOI monsters, normal attacks, single-target skills 20101/23102, occasional area skill 23103.");
+                    Console.WriteLine("dotnet run -c Release --project tests/SGO.Server.WireLoadProbe -- --bots --players 20 --map 13");
+                    Console.WriteLine("Random walkable monster-area positions; Lv1 low-attack, high-HP/DEF bots, normal attacks and rare single-target skills.");
                     Console.WriteLine("--seconds 0 keeps players online until Ctrl+C. --no-combat disables attacking and monster spawning.");
                     return 0;
                 default: throw new ArgumentException("Unknown bot option: " + args[i]);
             }
         }
 
+        if (spawn == -1)
+            spawn = Math.Clamp(count, 5, 100);
+        if (x.HasValue != y.HasValue)
+            throw new ArgumentException("Supply both --x and --y or neither (automatic map placement).");
         if (count < 1 || count > 1000) throw new ArgumentOutOfRangeException(nameof(count), "1..1000");
         if (interval < 150 || interval > 60000) throw new ArgumentOutOfRangeException(nameof(interval), "150..60000");
-        if (radius < 32 || radius > 700 || level < 1 || level > 255 ||
+        if (radius < 32 || radius > 700 || level != 1 ||
             duration < 0 || spawn < 0 || spawn > 100 ||
             concurrency < 1 || concurrency > 50)
             throw new ArgumentException("Invalid radius/level/seconds/monsters/setup-concurrency");
@@ -69,11 +73,19 @@ internal static class InteractiveBots
             throw new ArgumentException("Bots require a loopback or .internal test server");
 
         // Fail before registering any test accounts if the collision data is unavailable.
-        var walks = new BotWalkPlanner(map, x, y, radius);
-        var mapEnemy = new WorldDataService(walks.GameDataRoot)
+        var walks = x.HasValue
+            ? new BotWalkPlanner(map, x.Value, y!.Value, radius)
+            : BotWalkPlanner.ForRandomMapLocation(map, radius);
+        // Use a reasonably sturdy map enemy, so low-damage bots can
+        // demonstrate many hits instead of instantly one-shotting mobs.
+        var enemyOptions = new WorldDataService(walks.GameDataRoot)
             .GetEnemies(map)
+            .Where(enemy => enemy.Level < 65535)
             .OrderBy(enemy => enemy.MaxHp)
-            .FirstOrDefault();
+            .ToArray();
+        var mapEnemy = enemyOptions.Length > 0
+            ? enemyOptions[(enemyOptions.Length * 3) / 4]
+            : null;
         if (combat && mapEnemy is null)
             throw new InvalidOperationException(
                 "The map contains no valid Enemy.dat entries; cannot spawn test monsters.");
@@ -96,8 +108,8 @@ internal static class InteractiveBots
         var start = Stopwatch.StartNew();
 
         Console.WriteLine($"[BOTS] run={run} count={count} map={map} center=({walks.Center.X},{walks.Center.Y}) radius={radius}");
-        Console.WriteLine("[BOTS] Use a disposable database with Game__GmCommandsEnabled=true.");
-        Console.WriteLine("[BOTS] Preparing level/HP/DEF, learning normal single-target + small AOE skills.");
+        Console.WriteLine("[BOTS] Requires disposable DB + Game__GmCommandsEnabled=true + Game__TestBotCommandsEnabled=true.");
+        Console.WriteLine("[BOTS] Lv1, ATK=1, DEF=1000, HP=20000; normal attacks + rare simple single-target skills.");
 
         try
         {
@@ -121,15 +133,15 @@ internal static class InteractiveBots
                     {
                         var location = locations[n];
                         await bot.TeleportAsync(map, location.X, location.Y, timeout);
-                        // All buffs use existing GM commands; no server stat or
-                        // combat logic is changed. Full HP/MP/SP follows maxstats.
-                        await bot.PrepareCombatAsync(timeout, level);
+                        // The profile is restricted to an explicitly enabled
+                        // test server. Ordinary GM level/maxstats would make
+                        // attacks too powerful to test sustained combat.
+                        await bot.PrepareWeakBotProfileAsync(timeout);
                         if (combat)
                         {
                             await bot.LearnBotSkillAsync(20101, timeout); // 赤色光彈
                             await bot.LearnBotSkillAsync(23102, timeout); // 烈火爆劍
-                            await bot.LearnBotSkillAsync(23103, timeout); // 赤星爆炸 (small AOE)
-                        }
+                         }
                         if (n != 0) bot.EnableInteractiveBots();
                         clients[n] = bot;
                         var ready = Interlocked.Increment(ref launched);
@@ -180,7 +192,7 @@ internal static class InteractiveBots
 
             foreach (var bot in live) bot.EnableInteractiveBots();
             Console.WriteLine($"[BOTS] online={live.Length}; open Godot on the same map/server. Ctrl+C to stop.");
-            long moves = 0, attacks = 0, singleSkills = 0, areaSkills = 0, heals = 0;
+            long moves = 0, attacks = 0, singleSkills = 0, heals = 0;
             var goals = new (int X, int Y)[count];
             for (var i = 0; i < count; i++)
                 goals[i] = walks.RandomPoint();
@@ -228,14 +240,11 @@ internal static class InteractiveBots
                         if (nearest is not null && distanceSq <= 185 * 185)
                         {
                             var phase = (tick + bot.Index * 7);
-                            if (phase % 34 == 0)
+                            if (phase % 60 == 0 || phase % 20 == 0)
                             {
-                                await bot.SendBotSkillAsync(23103, nearest.EntityId, timeout);
-                                Interlocked.Increment(ref areaSkills);
-                            }
-                            else if (phase % 8 == 0)
-                            {
-                                var skill = (phase / 8) % 2 == 0 ? 20101 : 23102;
+                                // Only normal single-target skills. Never cast
+                                // 99001/23103 or any AOE during load tests.
+                                var skill = phase % 60 == 0 ? 23102 : 20101;
                                 await bot.SendBotSkillAsync(skill, nearest.EntityId, timeout);
                                 Interlocked.Increment(ref singleSkills);
                             }
@@ -267,7 +276,7 @@ internal static class InteractiveBots
                     var damage = live.Sum(b => b.BotWorld.DamageHits);
                     var casts = live.Sum(b => b.BotWorld.SkillCasts);
                     Console.WriteLine(
-                        $"[BOTS] {start.Elapsed.TotalSeconds:F0}s online={live.Length} move={moves} attack={attacks} single={singleSkills} aoe={areaSkills} confirmedHits={damage} confirmedCasts={casts} corrections={live.Sum(b => b.PositionCorrections)} errors={errors.Count}");
+                        $"[BOTS] {start.Elapsed.TotalSeconds:F0}s online={live.Length} move={moves} attack={attacks} single={singleSkills} confirmedHits={damage} confirmedCasts={casts} corrections={live.Sum(b => b.PositionCorrections)} errors={errors.Count}");
                 }
 
                 try
@@ -288,12 +297,11 @@ internal static class InteractiveBots
                 ElapsedSeconds = start.Elapsed.TotalSeconds,
                 MapId = map,
                 RandomSpawnRadius = radius,
-                Level = level,
+                Level = 1,
                 MovementPackets = moves,
                 AttackPackets = attacks,
                 SingleTargetSkillPackets = singleSkills,
-                SmallAreaSkillPackets = areaSkills,
-                TestRecoveryPackets = heals,
+                 TestRecoveryPackets = heals,
                 ConfirmedDamageHits = live.Sum(b => b.BotWorld.DamageHits),
                 ConfirmedSkillCasts = live.Sum(b => b.BotWorld.SkillCasts),
                 ObservedMonsterDeaths = live.Sum(b => b.BotWorld.MonsterDeaths),
