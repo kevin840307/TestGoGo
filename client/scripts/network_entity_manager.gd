@@ -60,6 +60,14 @@ var _ground_aoi_full_scans: int = 0
 var _ground_aoi_reused_scans: int = 0
 var _player_visibility_elapsed: float = 0.0
 const PLAYER_VISIBILITY_REFRESH_INTERVAL: float = 0.5
+# Display-only trimming is spread across frames; network processing is untouched.
+const GROUND_VISUAL_TRIM_PER_FRAME: int = 12
+var _ground_display_winners: Dictionary = {}
+var _ground_display_cache_dirty: bool = true
+var _ground_display_cache_center: Vector2 = Vector2.INF
+var _ground_display_cache_radius: float = -1.0
+var _ground_trim_queue: Array[int] = []
+var _ground_trim_pending: Dictionary = {}
 
 
 static func should_run_stationary_aoi_scan(
@@ -110,6 +118,12 @@ func clear_map_entities() -> Dictionary:
 	_ground_aoi_stationary_elapsed = 0.0
 	_ground_aoi_full_scans = 0
 	_ground_aoi_reused_scans = 0
+	_ground_display_winners.clear()
+	_ground_display_cache_dirty = true
+	_ground_display_cache_center = Vector2.INF
+	_ground_display_cache_radius = -1.0
+	_ground_trim_queue.clear()
+	_ground_trim_pending.clear()
 	_player_visibility_elapsed = 0.0
 	return {"total": cleared_total, "by_type": cleared_by_type}
 
@@ -178,12 +192,95 @@ func _should_show_monster(entity: Node2D, profile: Dictionary) -> bool:
 		protected
 	)
 
-func _should_display_ground_drop(entity_id: int, data: Dictionary, center: Vector2, radius: float) -> bool:
-	if not GameManager or not bool(GameManager.current_performance_profile.get("ground_drops_simplified", false)):
-		return true
-	return ClientPerformanceProfile.should_show_duplicate_drop(
-		entity_id, data, _ground_spawn_templates, center, radius
+func _ground_drop_mode() -> int:
+	if not GameManager:
+		return ClientPerformanceProfile.GROUND_DROPS_ALL
+	return ClientPerformanceProfile.sanitize_ground_drop_display_mode(
+		int(GameManager.current_performance_profile.get(
+			"ground_drop_display_mode", ClientPerformanceProfile.GROUND_DROPS_ALL
+		))
 	)
+
+func _should_display_ground_drop(entity_id: int, _data: Dictionary, center: Vector2, radius: float) -> bool:
+	var mode: int = _ground_drop_mode()
+	if mode == ClientPerformanceProfile.GROUND_DROPS_ALL:
+		return true
+	if mode == ClientPerformanceProfile.GROUND_DROPS_HIDDEN:
+		return false
+	# No nested scan per ground-item node. Recompute winners once for the
+	# observer AOI or newly arrived/removed drop, then O(1) membership checks.
+	if _ground_display_cache_dirty or _ground_display_cache_radius != radius or _ground_display_cache_center.distance_squared_to(center) > 6400.0:
+		_ground_display_winners = ClientPerformanceProfile.select_visible_ground_drop_ids(
+			_ground_spawn_templates, center, radius, 5
+		)
+		_ground_display_cache_center = center
+		_ground_display_cache_radius = radius
+		_ground_display_cache_dirty = false
+	return _ground_display_winners.has(entity_id)
+
+func _schedule_ground_visual_trim(entity_id: int, drop: Node2D) -> void:
+	# Hiding is immediate, freeing is budgeted: no large same-frame teardown.
+	if _ground_trim_pending.has(entity_id) or not is_instance_valid(drop):
+		return
+	if bool(drop.get_meta("is_requesting", false)):
+		return
+	drop.visible = false
+	if drop is CollisionObject2D:
+		(drop as CollisionObject2D).input_pickable = false
+	_unregister_entity_hover(drop)
+	_ground_trim_pending[entity_id] = true
+	_ground_trim_queue.append(entity_id)
+
+func _trim_ground_visuals_budgeted() -> void:
+	var checked: int = mini(GROUND_VISUAL_TRIM_PER_FRAME, _ground_trim_queue.size())
+	for i in range(checked):
+		var entity_id: int = _ground_trim_queue.pop_front()
+		_ground_trim_pending.erase(entity_id)
+		var drop: Node2D = get_active_entity(entity_id)
+		if not is_instance_valid(drop) or not _ground_spawn_templates.has(entity_id):
+			continue
+		if bool(drop.get_meta("is_requesting", false)):
+			continue
+		var aoi: Dictionary = _ground_aoi_context()
+		var allowed: bool = aoi["center"] != null and _should_display_ground_drop(
+			entity_id, _ground_spawn_templates[entity_id], aoi["center"], float(aoi["enter"])
+		)
+		if allowed:
+			drop.visible = true
+			if drop is CollisionObject2D:
+				(drop as CollisionObject2D).input_pickable = true
+			continue
+		_deferred_ground_spawns[entity_id] = _ground_spawn_templates[entity_id]
+		drop.queue_free()
+		active_entities.erase(entity_id)
+		_active_entity_types.erase(entity_id)
+
+func _refresh_ground_drop_visibility() -> void:
+	_ground_display_cache_dirty = true
+	_ground_aoi_last_context = null
+	_ground_aoi_elapsed = GROUND_AOI_UPDATE_INTERVAL
+	var aoi: Dictionary = _ground_aoi_context()
+	if aoi["center"] == null:
+		return
+	var center: Vector2 = aoi["center"]
+	var enter_radius: float = float(aoi["enter"])
+	var mode: int = _ground_drop_mode()
+	for raw_id in _active_entity_types.keys():
+		var entity_id: int = int(raw_id)
+		if int(_active_entity_types.get(entity_id, -1)) != 3:
+			continue
+		var drop: Node2D = get_active_entity(entity_id)
+		if not is_instance_valid(drop):
+			continue
+		if mode == ClientPerformanceProfile.GROUND_DROPS_ALL or _should_display_ground_drop(
+			entity_id, _ground_spawn_templates.get(entity_id, {}), center, enter_radius
+		):
+			if not _ground_trim_pending.has(entity_id):
+				drop.visible = true
+				if drop is CollisionObject2D:
+					(drop as CollisionObject2D).input_pickable = true
+		else:
+			_schedule_ground_visual_trim(entity_id, drop)
 
 func _apply_performance_visual_to_entity(entity_id: int, entity_type: int, entity: Node2D) -> void:
 	if not is_instance_valid(entity) or not entity.has_method("set_performance_simplified"):
@@ -234,6 +331,7 @@ func _on_performance_profile_changed(_profile: Dictionary) -> void:
 	_ground_aoi_last_context = null
 	_monster_aoi_elapsed = MONSTER_AOI_UPDATE_INTERVAL
 	_ground_aoi_elapsed = GROUND_AOI_UPDATE_INTERVAL
+	_refresh_ground_drop_visibility()
 
 func get_aoi_active_monster_count() -> int:
 	var count: int = 0
@@ -838,6 +936,7 @@ func _queue_deferred_ground_spawn(entity_id: int) -> void:
 
 func _update_ground_aoi(delta: float) -> void:
 	if _is_afk_ground_data_only():
+		_ground_display_cache_dirty = true
 		_ground_aoi_elapsed = 0.0
 		_ground_aoi_last_context = null
 		return
@@ -883,6 +982,9 @@ func _update_ground_aoi(delta: float) -> void:
 			entity_id, _ground_spawn_templates[entity_id], center, enter_radius
 		)
 		if still_in_aoi and cap_allows:
+			continue
+		if not cap_allows:
+			_schedule_ground_visual_trim(entity_id, drop)
 			continue
 		# The player may be walking to pick up an item outside the screen.
 		# Keep the target alive until its pending pickup request resolves.
@@ -949,6 +1051,8 @@ func _on_entity_spawned(data: Dictionary) -> void :
 		var cached_ground: Dictionary = data.duplicate(true)
 		cached_ground["_aoi_cached_at"] = Time.get_ticks_msec()
 		_ground_spawn_templates[entity_id] = cached_ground
+		_ground_display_cache_dirty = true
+		_ground_aoi_last_context = null
 		if get_active_entity(entity_id):
 			_deferred_ground_spawns.erase(entity_id)
 			return
@@ -963,7 +1067,11 @@ func _on_entity_spawned(data: Dictionary) -> void :
 			_deferred_ground_spawns[entity_id] = cached_ground
 			_remove_queued_spawn(entity_id)
 			return
-		if aoi["center"] != null and not _should_display_ground_drop(entity_id, cached_ground, aoi["center"], float(aoi["enter"])):
+		if not _should_display_ground_drop(
+			entity_id, cached_ground,
+			aoi["center"] if aoi["center"] != null else Vector2.ZERO,
+			float(aoi["enter"])
+		):
 			_deferred_ground_spawns[entity_id] = cached_ground
 			_remove_queued_spawn(entity_id)
 			return
@@ -1033,11 +1141,16 @@ func _run_entity_runtime(delta: float) -> void :
 		_pending_aoi_moves.clear()
 		_ground_spawn_templates.clear()
 		_deferred_ground_spawns.clear()
+		_ground_display_winners.clear()
+		_ground_display_cache_dirty = true
+		_ground_trim_queue.clear()
+		_ground_trim_pending.clear()
 		_ground_aoi_elapsed = 0.0
 		_monster_aoi_last_observer = null
 		_ground_aoi_last_context = null
 		return
 
+	_trim_ground_visuals_budgeted()
 	_update_monster_aoi(delta)
 	_update_ground_aoi(delta)
 	_player_visibility_elapsed += delta
@@ -1129,7 +1242,11 @@ func _spawn_entity_now(data: Dictionary) -> void :
 		):
 			_deferred_ground_spawns[entity_id] = _ground_spawn_templates.get(entity_id, data)
 			return
-		if aoi["center"] != null and not _should_display_ground_drop(entity_id, data, aoi["center"], float(aoi["enter"])):
+		if not _should_display_ground_drop(
+			entity_id, data,
+			aoi["center"] if aoi["center"] != null else Vector2.ZERO,
+			float(aoi["enter"])
+		):
 			_deferred_ground_spawns[entity_id] = _ground_spawn_templates.get(entity_id, data)
 			return
 	if entity_type == 1:
@@ -1322,6 +1439,8 @@ func _on_entity_despawned(data: Dictionary) -> void :
 	_combat_reveal_until_msec.erase(entity_id)
 	_ground_spawn_templates.erase(entity_id)
 	_deferred_ground_spawns.erase(entity_id)
+	_ground_display_cache_dirty = true
+	_ground_trim_pending.erase(entity_id)
 	_remove_queued_spawn(entity_id)
 	# Despawning a duplicate can make the sixth item eligible for display.
 	_ground_aoi_last_context = null
