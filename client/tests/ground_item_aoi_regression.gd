@@ -88,6 +88,30 @@ func _run() -> void:
 			ordered = false
 			break
 	_check(ordered, "binary priority insertion preserves stable order for equal-priority drops")
+	# A large drop snapshot must never delay the creation of players.
+	manager.call("_enqueue_spawn_by_priority", {
+		"EntityID": 300801, "EntityType": 0, "LocX": 20.0, "LocY": 40.0
+	})
+	queue = manager.get("_spawn_queue") as Array
+	_check(int((queue[0] as Dictionary).get("EntityID", -1)) == 300801,
+		"player scene spawn bypasses hundreds of queued ground drops")
+
+	manager.call("_enqueue_spawn_by_priority", {
+		"EntityID": 1200001, "EntityType": 1, "LocX": 30.0, "LocY": 50.0
+	})
+	queue = manager.get("_spawn_queue") as Array
+	_check(int((queue[1] as Dictionary).get("EntityID", -1)) == 1200001,
+		"nearby monster instantiates before ground-drop visuals")
+
+	manager.call("_enqueue_spawn_by_priority", {
+		"EntityID": 300802, "EntityType": 0, "LocX": 60.0, "LocY": 70.0
+	})
+	queue = manager.get("_spawn_queue") as Array
+	_check(int((queue[0] as Dictionary).get("EntityID", -1)) == 300801 and
+		int((queue[1] as Dictionary).get("EntityID", -1)) == 300802,
+		"player arrival order stays stable independently of monster and drop backlog")
+	_check(queue.size() == 259,
+		"priority staging never discards ground items or other entities")
 	manager.free()
 
 	print("[GROUND_AOI_REGRESSION] %s" % (
