@@ -1,0 +1,33 @@
+name: Client optional HUD memory contract
+
+on:
+  push:
+    branches:
+      - feature/local-server-net8
+    paths:
+      - 'client/entry_manager.gd'
+      - 'client/game_hud.gd'
+      - 'client/scripts/game_manager.gd'
+      - 'client/scripts/network_manager.gd'
+      - 'tests/test_client_optional_hud_memory_contract.py'
+      - '.github/workflows/client-optional-hud-memory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hud-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Optional HUD cold-login, first-open, and logout contract
+        run: python -m unittest discover -s tests -p 'test_client_optional_hud_memory_contract.py' -v
+      - name: Existing visual/performance regression contracts
+        run: |
+          python -m unittest discover -s tests -p 'test_client_visual_performance_contract.py' -v
+          python -m unittest discover -s tests -p 'test_afk_mode_contract.py' -v
