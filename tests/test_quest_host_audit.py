@@ -47,6 +47,33 @@ end
         self.assertEqual(0, result["unsupported_call_count"])
         self.assertEqual({}, result["unsupported_calls"])
 
+    def test_included_lua_function_is_not_mistaken_for_unbound_host(self):
+        self.write(
+            "Old/服務端/Dat/Quest/EQ_COMMON.txt",
+            "function Fail()\n    QuestEnd()\nend\n",
+        )
+        self.write(
+            "Old/服務端/Dat/Quest/EQ_A.txt",
+            '#include "EQ_COMMON.txt"\nfunction start()\n    Fail()\nend\n',
+        )
+        result = scan(self.root)
+        self.assertEqual({}, result["unsupported_calls"])
+
+    def test_nested_include_function_is_resolved(self):
+        self.write(
+            "Old/服務端/Dat/Quest/EQ_DEEP.txt",
+            "function Fail()\n    QuestEnd()\nend\n",
+        )
+        self.write(
+            "Old/服務端/Dat/Quest/EQ_COMMON.txt",
+            '#include "EQ_DEEP.txt"\n',
+        )
+        self.write(
+            "Old/服務端/Dat/Quest/EQ_A.txt",
+            '#include "EQ_COMMON.txt"\nfunction start()\n    Fail()\nend\n',
+        )
+        self.assertEqual({}, scan(self.root)["unsupported_calls"])
+
     def test_unbound_host_call_reports_file_and_line(self):
         self.write(
             "Old/服務端/Dat/Quest/bad.txt",
