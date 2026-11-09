@@ -56,6 +56,8 @@ var _afk_master_was_muted_before: bool = false
 var _afk_memory_baseline: Dictionary = {}
 var _afk_forced_draw_count: int = 0
 var _last_world_map_audit_path: String = ""
+var _pending_afk_working_set_trim: bool = false
+var _windows_trim_inflight: bool = false
 
 
 
@@ -107,6 +109,87 @@ func log_world_visual_audit(phase: String) -> void:
 	])
 
 
+func _windows_memory_trim_helper_path() -> String:
+	if OS.get_name() != "Windows":
+		return ""
+	var packaged: String = OS.get_executable_path().get_base_dir().path_join("SGO.WorkingSetTrimmer.exe")
+	if FileAccess.file_exists(packaged):
+		return packaged
+	var client_root: String = ProjectSettings.globalize_path("res://")
+	var dev_path: String = client_root.path_join("../tools/SGO.WorkingSetTrimmer/bin/Release/net8.0/SGO.WorkingSetTrimmer.exe").simplify_path()
+	return dev_path if FileAccess.file_exists(dev_path) else ""
+
+
+func _collect_windows_memory_trim_result(reason: String, result_path: String) -> void:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		_windows_trim_inflight = false
+		return
+	for _attempt in range(30):
+		await tree.create_timer(0.1).timeout
+		if FileAccess.file_exists(result_path):
+			var raw: String = FileAccess.get_file_as_string(result_path).strip_edges()
+			var parts: PackedStringArray = raw.split("|", true, 3)
+			var success: bool = parts.size() >= 3 and parts[0].to_lower() == "true"
+			var before_bytes: float = float(parts[1]) if parts.size() >= 2 else 0.0
+			var after_bytes: float = float(parts[2]) if parts.size() >= 3 else 0.0
+			var error_text: String = parts[3] if parts.size() >= 4 else ""
+			if OS.is_debug_build():
+				print("[OS_MEMORY_TRIM_RESULT] reason=%s success=%s before_mb=%.2f after_mb=%.2f released_mb=%.2f error=%s" % [
+					reason, str(success), before_bytes / 1048576.0,
+					after_bytes / 1048576.0,
+					maxf(0.0, before_bytes - after_bytes) / 1048576.0,
+					error_text,
+				])
+			DirAccess.remove_absolute(result_path)
+			_windows_trim_inflight = false
+			return
+	if OS.is_debug_build():
+		print("[OS_MEMORY_TRIM_RESULT] reason=%s success=false error=timeout" % reason)
+	_windows_trim_inflight = false
+
+
+func _request_windows_memory_trim(reason: String) -> bool:
+	if OS.get_name() != "Windows" or _windows_trim_inflight:
+		return false
+	var helper_path: String = _windows_memory_trim_helper_path()
+	if helper_path.is_empty():
+		if OS.is_debug_build():
+			print("[OS_MEMORY_TRIM] reason=%s requested=false helper_missing=true" % reason)
+		return false
+	var result_path: String = ProjectSettings.globalize_path(
+		"user://native_working_set_trim_%d_%d.txt" % [OS.get_process_id(), Time.get_ticks_msec()]
+	)
+	_windows_trim_inflight = true
+	var helper_pid: int = OS.create_process(
+		helper_path,
+		PackedStringArray([str(OS.get_process_id()), result_path]),
+		false
+	)
+	if helper_pid <= 0:
+		_windows_trim_inflight = false
+		if OS.is_debug_build():
+			print("[OS_MEMORY_TRIM] reason=%s requested=false helper_launch_failed=true" % reason)
+		return false
+	if OS.is_debug_build():
+		print("[OS_MEMORY_TRIM] reason=%s requested=true helper_pid=%d target_pid=%d main_thread_wait=false" % [
+			reason, helper_pid, OS.get_process_id(),
+		])
+	_collect_windows_memory_trim_result(reason, result_path)
+	return true
+
+
+func _run_pending_afk_trim_after_focus_out() -> void:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	await tree.create_timer(1.0).timeout
+	if not _pending_afk_working_set_trim or not _afk_active or _window_has_focus:
+		return
+	_pending_afk_working_set_trim = false
+	_request_windows_memory_trim("afk_unfocused")
+
+
 func _settle_released_memory(reason: String) -> void:
 	# Never launch an external helper or force renderer synchronization here.
 	# Real-device logs showed those attempts caused 1.5-2.4 s frame gaps and
@@ -118,12 +201,22 @@ func _settle_released_memory(reason: String) -> void:
 	await tree.process_frame
 	var measured: Dictionary = _afk_memory_sample()
 	if OS.is_debug_build():
-		print("[MEMORY_SETTLE] reason=%s static_mb=%.2f texture_mb=%.2f video_mb=%.2f external_trim=false renderer_force_sync=false" % [
+		print("[MEMORY_SETTLE] reason=%s static_mb=%.2f texture_mb=%.2f video_mb=%.2f external_trim=deferred_native renderer_force_sync=false" % [
 			reason,
 			float(measured.get("godot_static_mb", 0.0)),
 			float(measured.get("godot_texture_mb", 0.0)),
 			float(measured.get("godot_video_mb", 0.0)),
 		])
+
+	if reason == "afk_settled_3s":
+		if _window_has_focus:
+			_pending_afk_working_set_trim = true
+			if OS.is_debug_build():
+				print("[OS_MEMORY_TRIM] reason=afk_settled_3s deferred_until_unfocused=true")
+		else:
+			_request_windows_memory_trim("afk_settled_unfocused")
+	elif reason == "logout_settled":
+		_request_windows_memory_trim("logout_settled")
 
 func _audit_login_after_logout() -> void:
 	# The freed world and a newly instantiated EntryManager do not settle in
@@ -1099,6 +1192,7 @@ func begin_afk_mode(progress_callback: Callable = Callable()) -> bool:
 	}
 	_afk_memory_baseline = _afk_memory_sample()
 	_afk_forced_draw_count = 0
+	_pending_afk_working_set_trim = false
 	_afk_active = true
 	_afk_started_msec = Time.get_ticks_msec()
 	_log_afk_memory("enter_before")
@@ -1179,6 +1273,7 @@ func finish_afk_mode(progress_callback: Callable = Callable()) -> bool:
 		return false
 	_afk_active = false
 	_afk_restoring = false
+	_pending_afk_working_set_trim = false
 	_leave_afk_audio_silence(true)
 	if is_instance_valid(current_player) and current_player.has_method("end_afk_navigation_anchor"):
 		current_player.end_afk_navigation_anchor()
@@ -1250,6 +1345,7 @@ func _reset_afk_mode() -> void:
 		_leave_afk_audio_silence(false)
 	_afk_active = false
 	_afk_restoring = false
+	_pending_afk_working_set_trim = false
 	_afk_saved_profile.clear()
 	_afk_visual_stats.clear()
 	_afk_map_cache.discard()
@@ -1693,6 +1789,8 @@ func _set_window_focus_power_save(has_focus: bool) -> void :
 		# Leave all animation, HUD, map, BGM and recently used assets warm.
 		# No synchronous unloading is permitted in an Alt+Tab handler.
 		_log_background_memory("focus_out")
+		if _afk_active and _pending_afk_working_set_trim:
+			call_deferred("_run_pending_afk_trim_after_focus_out")
 		if master_bus_index >= 0:
 			if not _afk_active:
 				_master_bus_was_muted_before_focus_loss = AudioServer.is_bus_mute(master_bus_index)

@@ -11,6 +11,8 @@ on:
       - 'tests/SGO.Server.SmokeTests/**'
       - 'tests/quest_host_audit.py'
       - 'tests/test_quest_host_audit.py'
+      - 'client/scripts/game_manager.gd'
+      - 'tools/SGO.WorkingSetTrimmer/**'
       - '.github/workflows/server-smoke-windows.yml'
   workflow_dispatch:
 
@@ -24,6 +26,13 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      - name: Build and self-test working-set helper
+        shell: pwsh
+        run: |
+          dotnet build tools/SGO.WorkingSetTrimmer/SGO.WorkingSetTrimmer.csproj -c Release --nologo
+          & .\tools\SGO.WorkingSetTrimmer\bin\Release\net8.0\SGO.WorkingSetTrimmer.exe --self-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Full game integration smoke
         shell: pwsh

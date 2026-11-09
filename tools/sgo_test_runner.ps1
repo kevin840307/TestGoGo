@@ -254,6 +254,8 @@ try {
 
     Run-External "2. Build .NET Server / Release" $dotnet @(
         'build', (Join-Path $repoRoot 'server\SGO.Server.csproj'), '-c', 'Release', '--nologo')
+    Run-External "2b. Build Windows working-set helper / Release" $dotnet @(
+        'build', (Join-Path $repoRoot 'tools\SGO.WorkingSetTrimmer\SGO.WorkingSetTrimmer.csproj'), '-c', 'Release', '--nologo')
     foreach ($project in @(
         'tests\SGO.Server.SmokeTests\SGO.Server.SmokeTests.csproj',
         'tests\SGO.Server.LoadProbe\SGO.Server.LoadProbe.csproj',

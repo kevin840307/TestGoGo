@@ -160,25 +160,23 @@ class AfkModeContract(unittest.TestCase):
         self.assertNotIn('Engine.time_scale =', read("client/scripts/game_manager.gd"))
         self.assertNotIn('Engine.physics_ticks_per_second =', read("client/scripts/game_manager.gd"))
 
-    def test_memory_settle_never_launches_external_trim_or_blocks_renderer(self):
+    def test_native_working_set_helper_is_deferred_off_gameplay_focus(self):
         game = read("client/scripts/game_manager.gd")
-        self.assertIn("func _settle_released_memory(reason: String) -> void:", game)
-        self.assertIn("external_trim=false", game)
-        self.assertIn("renderer_force_sync=false", game)
+        helper = read("tools/SGO.WorkingSetTrimmer/Program.cs")
+        runner = read("tools/sgo_test_runner.ps1")
+        self.assertIn("func _request_windows_memory_trim(reason: String) -> bool:", game)
+        self.assertIn("SGO.WorkingSetTrimmer.exe", game)
+        self.assertIn("main_thread_wait=false", game)
+        self.assertIn("deferred_until_unfocused=true", game)
+        self.assertIn('call_deferred("_run_pending_afk_trim_after_focus_out")', game)
+        self.assertIn('await tree.create_timer(1.0).timeout', game)
+        self.assertIn('reason == "logout_settled"', game)
         self.assertNotIn("powershell.exe", game)
-        self.assertNotIn("EmptyWorkingSet", game)
-        self.assertNotIn("SetProcessWorkingSetSize", game)
         self.assertNotIn("RenderingServer.force_sync()", game)
-        self.assertNotIn("WORKING_SET_TRIM", game)
-        self.assertIn('await _settle_released_memory("afk_settled_3s")', game)
-        self.assertIn('await _settle_released_memory("logout_settled")', game)
-
-        settle_start = game.index("func _settle_released_memory(reason: String) -> void:")
-        settle_end = game.index("\nfunc ", settle_start + 1)
-        settle = game[settle_start:settle_end]
-        self.assertNotIn("NetworkManager", settle)
-        self.assertNotIn("set_physics_process", settle)
-        self.assertNotIn("OS.create_process", settle)
+        self.assertIn("SetProcessWorkingSetSize", helper)
+        self.assertIn("new IntPtr(-1)", helper)
+        self.assertIn("PROCESS_SET_QUOTA", helper)
+        self.assertIn("Build Windows working-set helper", runner)
 
     def test_large_debug_audits_never_block_afk_fixed_cadence(self):
         game = read("client/scripts/game_manager.gd")
