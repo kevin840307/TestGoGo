@@ -130,12 +130,10 @@ internal static class InteractiveBots
                 try
                 {
                     if (stop.IsCancellationRequested) return;
-                    var stage = "connect";
                     var bot = await WireLoadClient.ConnectAndEnterAsync(
                         url, run, n, timeout,
                         (idx, next) =>
                         {
-                            stage = next;
                             if (idx < 3 || idx % 10 == 0)
                                 Console.WriteLine($"[BOTS] #{idx:D3} stage={next}");
                         });
@@ -304,9 +302,24 @@ internal static class InteractiveBots
                         $"single={singleSkills} confirmedHits={damage} " +
                         $"confirmedCasts={casts} rejected={rejected} " +
                         $"corrections={live.Sum(b => b.PositionCorrections)} errors={errors.Count}");
-                    if (tick > 25 && damage == 0 && attacks == 0 && visible == 0)
-                        Console.WriteLine("[BOTS] No visible monsters: inspect WorldReady/AOI " +
-                            "and spawned monster positions; bots are still patrolling.");
+                    if (tick > 25 && damage == 0)
+                    {
+                        var sample = live[0];
+                        var target = sample.BotWorld.Nearest(
+                            sample.X, sample.Y, double.PositiveInfinity);
+                        var range = target is null
+                            ? "none"
+                            : Math.Sqrt(Math.Pow(target.X - sample.X, 2) +
+                                Math.Pow(target.Y - sample.Y, 2)).ToString("F0");
+                        Console.WriteLine(
+                            $"[BOTS] NO CONFIRMED HITS yet: targets={visible} " +
+                            $"firstBot=({sample.X},{sample.Y}) nearestRange={range}px " +
+                            $"lastServerFlash='{sample.BotWorld.LastFlash}' " +
+                            $"attempts={attacks}. " +
+                            (visible == 0
+                                ? "Check AOI SpawnEntity and monster placement."
+                                : "Check approach path and rejected attack messages."));
+                    }
                 }
 
                 try
