@@ -80,7 +80,8 @@ internal sealed class WireLoadClient : IAsyncDisposable
         string url,
         string runId,
         int index,
-        TimeSpan timeout)
+        TimeSpan timeout,
+        Action<int, string>? progress = null)
     {
         var client = new WireLoadClient(index);
 
@@ -94,12 +95,14 @@ internal sealed class WireLoadClient : IAsyncDisposable
                     connectTimeout.Token);
             }
 
+            progress?.Invoke(index, "websocket-connected");
             client._receiveTask =
                 client.ReceiveLoopAsync();
 
             await client.SetupAsync(
                 runId,
-                timeout);
+                timeout,
+                progress);
 
             return client;
         }
@@ -204,6 +207,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
             change.GetProperty("Y")
                 .GetDouble());
 
+        progress?.Invoke(Index, "world-ready");
         var ready = await RequestAsync(
             new
             {
@@ -430,7 +434,8 @@ internal sealed class WireLoadClient : IAsyncDisposable
 
     private async Task SetupAsync(
         string runId,
-        TimeSpan timeout)
+        TimeSpan timeout,
+        Action<int, string>? progress = null)
     {
         var loginName =
             $"wire-load-{runId}-{Index:D3}";
@@ -439,6 +444,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
         const string password =
             "WireLoad-123";
 
+        progress?.Invoke(Index, "register-account");
         var register = await RequestAsync(
             new
             {
@@ -454,6 +460,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
             register,
             "register");
 
+        progress?.Invoke(Index, "login");
         var login = await RequestAsync(
             new
             {
@@ -483,6 +490,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
                 .GetProperty("ACCID")
                 .GetInt64();
 
+        progress?.Invoke(Index, "create-character");
         var create = await RequestAsync(
             new
             {
@@ -505,6 +513,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
             create,
             "create character");
 
+        progress?.Invoke(Index, "relogin");
         var relogin = await RequestAsync(
             new
             {
@@ -540,6 +549,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
             character.GetProperty("DBID")
                 .GetInt64();
 
+        progress?.Invoke(Index, "enter-world");
         var enter = await RequestAsync(
             new
             {
@@ -559,6 +569,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
             enter.GetProperty("LocY")
                 .GetDouble());
 
+        progress?.Invoke(Index, "bootstrap");
         await CollectBootstrapAsync(timeout);
 
         var ready = await RequestAsync(
@@ -573,6 +584,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
         RequireSuccess(
             ready,
             "WorldReady");
+        progress?.Invoke(Index, "entered-world");
     }
 
     private async Task CollectBootstrapAsync(
