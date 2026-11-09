@@ -16,6 +16,15 @@ internal sealed class BotWorldState
     private int _maxHp = -1;
     private string _lastFlash = "";
 
+    public int VisibleMonsters
+    {
+        get { lock (_sync) return _monsters.Values.Count(m => m.HP > 0); }
+    }
+
+    public long RejectedAttackMessages
+        => Interlocked.Read(ref _rejectedAttackMessages);
+    private long _rejectedAttackMessages;
+
     public long DamageHits => Interlocked.Read(ref _damageHits);
     public long SkillCasts => Interlocked.Read(ref _skillCasts);
     public long MonsterDeaths => Interlocked.Read(ref _monsterDeaths);
@@ -130,7 +139,15 @@ internal sealed class BotWorldState
                 case "SystemMessageFlash":
                     if (packet.TryGetProperty("Message", out var msg) &&
                         msg.ValueKind == JsonValueKind.String)
+                    {
                         _lastFlash = msg.GetString() ?? "";
+                        if (_lastFlash.Contains("太遠", StringComparison.Ordinal) ||
+                            _lastFlash.Contains("無法攻擊", StringComparison.Ordinal) ||
+                            _lastFlash.Contains("目標不存在", StringComparison.Ordinal) ||
+                            _lastFlash.Contains("尚未學會", StringComparison.Ordinal) ||
+                            _lastFlash.Contains("技能冷卻", StringComparison.Ordinal))
+                            Interlocked.Increment(ref _rejectedAttackMessages);
+                    }
                     break;
             }
         }
