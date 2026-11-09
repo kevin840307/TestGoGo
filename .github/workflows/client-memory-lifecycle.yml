@@ -64,7 +64,8 @@ jobs:
           printf '%s\n' 'extends Node' 'func get_se_event_candidates(_path: String, _action: String, _frame: int) -> Array:' '    return []' 'func play_se_candidates(_candidates: Array) -> bool:' '    return false' > "$RUNNER_TEMP/sgomap/tests/audio_stub.gd"
           printf '%s\n' 'extends Node' 'func is_loaded() -> bool:' '    return false' 'func get_effective_tick_rate_hz() -> float:' '    return 0.0' 'func get_resource_timeline(_path: String, _action: String) -> Array:' '    return []' > "$RUNNER_TEMP/sgomap/tests/timing_stub.gd"
           printf '%s\n' '[autoload]' 'AudioManager="*res://tests/audio_stub.gd"' 'AnimationTimingManager="*res://tests/timing_stub.gd"' >> "$RUNNER_TEMP/sgomap/project.godot"
-          "$RUNNER_TEMP/Godot_v4.7.2-stable_linux.x86_64" --headless --path "$RUNNER_TEMP/sgomap" --script res://tests/atlas_script_parse_regression.gd
+          timeout --kill-after=5s 30s "$RUNNER_TEMP/Godot_v4.7.2-stable_linux.x86_64" --headless --path "$RUNNER_TEMP/sgomap" --script res://tests/atlas_script_parse_regression.gd | tee "$RUNNER_TEMP/atlas-compile.log"
+          grep -Fq "[ATLAS_SCRIPT_PARSE_PASS]" "$RUNNER_TEMP/atlas-compile.log"
       - name: Existing HUD and visual performance contracts
         run: |
           python -m unittest discover -s tests -p 'test_client_optional_hud_memory_contract.py' -v
