@@ -255,11 +255,12 @@ internal static class InteractiveBots
                             }
                         }
 
-                        // Keep HP and mana for sustained observation; the heal
-                        // command is enabled only on this isolated test server.
+                        // Kills can grant EXP and raise bot attack. Reapply the
+                        // isolated test profile periodically, staggered across
+                        // clients, keeping each bot Lv1/ATK1 and HP/DEF high.
                         if ((tick + bot.Index) % Math.Max(1, 20000 / interval) == 0)
                         {
-                            await bot.SendBotHealAsync(timeout);
+                            await bot.RefreshWeakBotProfileAsync(timeout);
                             Interlocked.Increment(ref heals);
                         }
                     }
