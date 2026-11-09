@@ -195,7 +195,8 @@ internal sealed class WireLoadClient : IAsyncDisposable
                     out var foundMap) &&
                 foundMap.GetInt32() ==
                     mapId,
-            timeout);
+            timeout,
+            failOnGmError: true);
 
         MapId =
             change.GetProperty("MapID")
@@ -448,7 +449,8 @@ internal sealed class WireLoadClient : IAsyncDisposable
                     out var foundEnemyId) &&
                 foundEnemyId.GetInt32() ==
                     enemyId,
-            timeout);
+            timeout,
+            failOnGmError: true);
 
         BotWorld.Observe(packet, CharacterId);
         return packet.GetProperty(
