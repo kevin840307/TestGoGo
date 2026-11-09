@@ -1,0 +1,38 @@
+name: Godot Client visual allocation contract
+
+on:
+  push:
+    branches:
+      - feature/local-server-net8
+    paths:
+      - 'client/scripts/game_manager.gd'
+      - 'client/scripts/map_visual_aoi_streamer.gd'
+      - 'client/scripts/paper_doll_loader.gd'
+      - 'client/scripts/monster_loader.gd'
+      - 'client/game_hud.tscn'
+      - 'client/game_hud.gd'
+      - 'client/tools/build_map_visual_aoi_base.gd'
+      - 'tools/Prepare-SGO-MapVisuals.ps1'
+      - 'tests/test_client_memory_lifecycle_contract.py'
+      - '.github/workflows/client-memory-lifecycle.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  resource-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Map streaming, atlas sharing and viewport lifecycle
+        run: python -m unittest discover -s tests -p 'test_client_memory_lifecycle_contract.py' -v
+      - name: Existing HUD and visual performance contracts
+        run: |
+          python -m unittest discover -s tests -p 'test_client_optional_hud_memory_contract.py' -v
+          python -m unittest discover -s tests -p 'test_client_visual_performance_contract.py' -v
+          python -m unittest discover -s tests -p 'test_afk_mode_contract.py' -v
