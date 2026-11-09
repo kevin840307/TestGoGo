@@ -23,7 +23,7 @@ dotnet run -c Release --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.Wire
 ```
 
 - `--players`：模擬人數 1～1000，各有獨立帳號／角色及加密 WebSocket。
-- `--map --x --y`：觀察中心（地圖、像素座標）。如果中心被擋住，會尋找半徑 96px 內最近的可走格；找不到則停止。
+- `--map --x --y`：觀察中心（地圖、像素座標）。若該位置被擋住，會在 `max(--radius, 256px)` 範圍內找出**真正距離最近**的可走格並印出修正座標；找不到則停止，不會跳過碰撞。已確認 Map13 `(4331,5346)` 的 Blocking flag=7、最近可走格為 `(4424,5528)`（約 204px），因此預設 `--radius 280` 可正常選擇可通行中心。
 - `--radius 280`：每個玩家隨機落在**以中心為圓心**的可走位置。程式直接使用 Server 的 `Blocking.dat` 驗證，且必須可從觀察中心移動抵達；不會盲目傳送到阻擋格。
 - `--level 150`：所有機器人先使用既有 GM level/maxstats/heal 提升 HP、防禦、能力值與補滿 HP/MP/SP，並定期補充資源，避免容易死掉。
 - `--monsters 5`：用所選地圖 `Enemy.dat` 中的有效怪物 ID，在可通行位置召喚 5 隻；怪物死亡後由 Server 原有重生邏輯處理。
