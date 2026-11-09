@@ -93,21 +93,15 @@ func _ready() -> void :
 	# actually had a chance to render. Startup must not look like a hang.
 	call_deferred("_bootstrap_before_login")
 
-# Optional crafting UI is deliberately excluded: building 1453 recipe rows
-# can cost 18 seconds during cold startup, even when the player never crafts.
-const GAME_HUD_INSTANCE_PREWARM: Dictionary = {
-	"game_info": "res://game_info_window.tscn",
-}
+# Avoid allocating optional HUD windows during login when the player may
+# never open them. GameInfo's _ready/layout was formerly paid on cold login.
+# Core scenes stay warm for responsive world entry; optional views use the
+# existing async _ensure_lazy_window() path on first interaction.
+const GAME_HUD_INSTANCE_PREWARM: Dictionary = {}
 
 const GAME_HUD_PREWARM_PATHS: Array[String] = [
 	"res://player.tscn",
 	"res://game_hud.tscn",
-	"res://quest_window.tscn",
-	"res://mall_window.tscn",
-	"res://announcement_window.tscn",
-	"res://game_info_window.tscn",
-	"res://big_map_window.tscn",
-	"res://world_map_window.tscn",
 ]
 
 func _prewarm_game_hud_resources() -> void :

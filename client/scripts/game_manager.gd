@@ -2291,12 +2291,10 @@ func enter_game_world(char_data: Dictionary, map_id: String, spawn_position: Vec
 		)
 		await get_tree().process_frame
 
-	# Heavy optional windows are instantiated while the loading overlay is still
-	# covering the world, one per frame. Their scenes were already prewarmed on
-	# login/character-select screens, so first user opening is only a visibility
-	# toggle instead of a first-load hitch.
+	# The HUD still subscribes to every gameplay packet, but optional reference
+	# windows are now created on first open rather than retained unseen.
 	if is_instance_valid(current_hud) and current_hud.has_method("prepare_lazy_windows_before_reveal"):
-		_report_initial_loading_progress(progress_callback, 77.0, "預先準備遊戲視窗")
+		_report_initial_loading_progress(progress_callback, 77.0, "準備按需載入功能視窗")
 		await current_hud.prepare_lazy_windows_before_reveal()
 
 	_report_initial_loading_progress(progress_callback, 79.0, "套用地圖環境")
@@ -2424,6 +2422,11 @@ func cleanup_and_return_to_login() -> void :
 
 
 	if is_instance_valid(current_hud):
+		# The release hook must run while the HUD is still valid. Previously
+		# _clear_visual_runtime_caches() tried this only after current_hud=null,
+		# so it could never detach hidden optional windows at logout.
+		if current_hud.has_method("release_afk_visual_preloads"):
+			current_hud.release_afk_visual_preloads()
 		current_hud.queue_free()
 		current_hud = null
 	_remove_day_night_overlay()

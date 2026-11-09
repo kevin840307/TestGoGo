@@ -1009,28 +1009,16 @@ func _ensure_lazy_window(kind: String) -> Control:
 	return window
 
 func prepare_lazy_windows_before_reveal(progress_callback: Callable = Callable()) -> void :
-	var kinds: Array[String] = [
-		"quest",
-		"mall",
-		"announcement",
-		"game_info",
-		# Craft uses first-open, time-budgeted recipe construction with a
-		# visible in-window progress indicator; not part of map reveal.
-		"big_map",
-		"world_map",
-	]
-	var total: int = kinds.size()
-	for index: int in range(total):
-		if not is_inside_tree():
-			return
-		var kind: String = kinds[index]
-		var window := await _ensure_lazy_window(kind)
-		if is_instance_valid(window):
-			window.visible = false
-			window.modulate.a = 0.0
-		if progress_callback.is_valid():
-			progress_callback.call(index + 1, total, kind)
-		await get_tree().process_frame
+	# All six optional windows used to be instantiated here, retaining their
+	# Node trees and resources through the entire world session even unopened.
+	# _toggle_lazy_window(), _toggle_big_map(), _toggle_world_map() and the
+	# mall/announcement handlers already await _ensure_lazy_window() on use.
+	# Keep only the essential HUD active, without touching its packet handlers
+	# or character data. First opening an optional window may load briefly.
+	if OS.is_debug_build():
+		print("[OPTIONAL_HUD_LAZY] event=world_enter eager_windows=0 deferred_windows=%d" % LAZY_WINDOW_PATHS.size())
+	if progress_callback.is_valid():
+		progress_callback.call(0, 0, "按需載入功能視窗")
 
 func _prewarm_lazy_window_scenes() -> void :
 	for kind_value in LAZY_WINDOW_PATHS.keys():
