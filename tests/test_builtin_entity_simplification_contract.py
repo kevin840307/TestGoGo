@@ -31,7 +31,7 @@ for option, values in (
     ("OptionSimplifyMonsters", ("顯示", "不顯示")),
 ):
     match = re.search(
-        rf'\\[node name="{option}" type="OptionButton".*?(?=\\n\\[node |\\Z)',
+        rf'\[node name="{option}" type="OptionButton".*?(?=\n\[node |\Z)',
         hud, re.S,
     )
     assert match, f"missing selector {option}"
