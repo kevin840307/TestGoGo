@@ -56,6 +56,17 @@ public interface ICharacterStore
 {
     List<Dictionary<string, object>> Characters(long accountId);
     Dictionary<string, object>? GetCharacter(long accountId, long dbid);
+
+    // Hot-path AI only needs liveness. Providers should override this with a
+    // narrow query; the default preserves compatibility for lightweight test
+    // stores without changing their existing contracts.
+    int? GetCharacterHp(long accountId, long dbid)
+    {
+        var character = GetCharacter(accountId, dbid);
+        return character is null
+            ? null
+            : Convert.ToInt32(character["HP"]);
+    }
     (bool Success, string Message) Create(
         long accountId,
         JsonElement data);

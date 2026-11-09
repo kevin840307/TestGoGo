@@ -155,6 +155,14 @@ internal static class SharedMapAiConcurrencySmokeTests
                     registration.ConnectionId));
             }
 
+            var firstVitals = sessions[0];
+            var firstHp = store.GetCharacterHp(
+                firstVitals.AccountId,
+                firstVitals.CharacterId);
+            Check(
+                firstHp.HasValue && firstHp.Value > 0,
+                "shared AI lightweight HP snapshot reads the live character without full bootstrap");
+
             var tickAt =
                 DateTimeOffset.UtcNow.AddSeconds(1);
             var tickedMaps =

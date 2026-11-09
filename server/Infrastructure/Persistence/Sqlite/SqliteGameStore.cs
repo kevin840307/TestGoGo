@@ -215,6 +215,25 @@ public sealed class SqliteGameStore : IGameStore
         return character;
     }
 
+    public int? GetCharacterHp(long accountId, long dbid)
+    {
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT hp
+              FROM characters
+             WHERE account_id=$a
+               AND id=$id
+             LIMIT 1
+            """;
+        Arg(cmd, "$a", accountId);
+        Arg(cmd, "$id", dbid);
+        var raw = cmd.ExecuteScalar();
+        return raw is null || raw is DBNull
+            ? null
+            : Convert.ToInt32(raw);
+    }
+
     private static SqliteCommand CharacterQuery(SqliteConnection db)
     {
         var cmd = db.CreateCommand();

@@ -176,11 +176,10 @@ public sealed class SharedMapAiTicker : BackgroundService
                             session.AccountId.Value, session.ConnectionId))
                         continue;
 
-                    var character = _characters.GetCharacter(
+                    var hp = _characters.GetCharacterHp(
                         session.AccountId.Value,
                         session.CharacterId.Value);
-                    var isAlive = character is not null &&
-                        Convert.ToInt32(character["HP"]) > 0;
+                    var isAlive = hp.HasValue && hp.Value > 0;
                     players.Add(new PlayerContext(
                         session, session.CharacterId.Value,
                         isAlive, session.LastX, session.LastY,
