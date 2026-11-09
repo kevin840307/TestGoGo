@@ -592,7 +592,9 @@ stretch = true
 [node name="SubViewport" type="SubViewport" parent="MiniMapPanel/ViewportContainer" unique_id=1625482300]
 handle_input_locally = false
 size = Vector2i(147, 101)
-render_target_update_mode = 4
+# Keep the tiny minimap render target disabled until the HUD script
+# explicitly binds it to the active world and calls UPDATE_ONCE.
+render_target_update_mode = 0
 
 [node name="MiniMapCamera" type="Camera2D" parent="MiniMapPanel/ViewportContainer/SubViewport" unique_id=570014179]
 
