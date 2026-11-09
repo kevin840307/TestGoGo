@@ -20,6 +20,7 @@ var _primitive_simplified_visual: bool = false
 var _performance_simplified_style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
 var _performance_visual_protected: bool = false
 var _afk_visual_suspended: bool = false
+var _afk_ui_was_visible: bool = true
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 var ui_container: Control = null
@@ -210,7 +211,9 @@ func _draw_simplified_monster(center: Vector2, tint: Color) -> void:
 	)
 
 func _draw() -> void:
-	if not _primitive_simplified_visual:
+	# AFK is a presentation shell. Keep the MonsterEntity node alive for
+	# authoritative movement/combat/collision, but draw absolutely nothing.
+	if _afk_visual_suspended or not _primitive_simplified_visual:
 		return
 
 	var state := current_state.to_lower()
@@ -647,8 +650,13 @@ func set_afk_visual_suspended(suspended: bool) -> void:
 				visual.visible = false
 		if is_instance_valid(bg_texture_rect):
 			bg_texture_rect.texture = null
+		if is_instance_valid(ui_container):
+			_afk_ui_was_visible = ui_container.visible
+			ui_container.visible = false
 		queue_redraw()
 		return
+	if is_instance_valid(ui_container):
+		ui_container.visible = _afk_ui_was_visible
 	_apply_performance_sprite()
 	sync_animation()
 	queue_redraw()

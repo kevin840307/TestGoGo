@@ -321,6 +321,10 @@ class AfkModeContract(unittest.TestCase):
         for source in (pet, ground, npc):
             self.assertIn("func set_afk_visual_suspended(suspended: bool)", source)
             self.assertNotIn("set_physics_process(false)", source)
+        monster = read("client/scripts/monster_entity.gd")
+        self.assertIn("if _afk_visual_suspended or not _primitive_simplified_visual:", monster)
+        self.assertIn("ui_container.visible = false", monster)
+        self.assertNotIn("set_physics_process(false)", monster)
         self.assertIn("AFK strips pet SpriteFrames and UI", render_test)
         self.assertIn("AFK strips ground-item texture and labels", render_test)
         self.assertIn("AFK strips NPC texture and visual UI", render_test)
