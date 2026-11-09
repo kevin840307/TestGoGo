@@ -62,6 +62,13 @@ var _last_world_map_audit_path: String = ""
 func log_world_visual_audit(phase: String) -> void:
 	if not OS.is_debug_build():
 		return
+	var total_nodes: int = int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))
+	var active_entity_count: int = NetworkEntityManager.active_entities.size() if NetworkEntityManager else 0
+	if total_nodes > 5000 and phase in ["logout_before", "afk_settled_3s", "afk_restore_complete"]:
+		print("[WORLD_VISUAL_AUDIT] phase=%s pid=%d skipped_heavy=true total_nodes=%d active_entities=%d reason=protect_fixed_cadence" % [
+			phase, OS.get_process_id(), total_nodes, active_entity_count,
+		])
+		return
 	var map_data: Dictionary = WORLD_VISUAL_AUDIT.snapshot(current_map_node)
 	var hud_data: Dictionary = WORLD_VISUAL_AUDIT.snapshot(current_hud)
 	var player_data: Dictionary = WORLD_VISUAL_AUDIT.snapshot(current_player)
@@ -142,16 +149,19 @@ func _collect_windows_working_set_trim_result(
 
 
 func _request_windows_working_set_trim(reason: String) -> int:
-	# Godot can return to the login allocator baseline while Windows still keeps
-	# released pages resident. Run the OS request in a helper process so the
-	# gameplay thread never blocks on PowerShell or the Win32 call itself.
+	# This path is allowed only after AFK/logout teardown has already happened.
+	# It never changes networking, fixed physics, combat or authoritative state.
 	if OS.get_name() != "Windows":
+		return -1
+	if reason not in ["afk_settled_3s", "logout_settled"]:
 		return -1
 
 	var measured: Dictionary = _afk_memory_sample()
 	var current_static_mb: float = float(measured.get("godot_static_mb", 0.0))
 	var peak_static_mb: float = float(measured.get("godot_peak_mb", 0.0))
-	if current_static_mb > 220.0 or peak_static_mb - current_static_mb < 64.0:
+	# A high current value is exactly the case we now want to measure. Only
+	# require proof that a substantial allocation wave has already been freed.
+	if peak_static_mb - current_static_mb < 64.0:
 		if OS.is_debug_build():
 			print("[WORKING_SET_TRIM] reason=%s skipped=true current_static_mb=%.2f peak_static_mb=%.2f" % [
 				reason, current_static_mb, peak_static_mb,
@@ -163,19 +173,18 @@ func _request_windows_working_set_trim(reason: String) -> int:
 		"user://working_set_trim_%d_%d.txt" % [target_pid, Time.get_ticks_msec()]
 	)
 	var escaped_result_path: String = result_path.replace("'", "''")
-	# Use a complete C# type instead of Add-Type -MemberDefinition. This makes
-	# P/Invoke compilation deterministic on Windows PowerShell 5.1 and pwsh.
-	# SetProcessWorkingSetSize(-1, -1) is kept only as a fallback if the Psapi
-	# wrapper reports failure.
+	# Windows command-line parsing stripped literal double quotes from the
+	# previous -Command payload. Keep quote placeholders in the argument and
+	# materialize them inside PowerShell after process creation.
 	var csharp_source: String = (
 		"using System;"
 		+ "using System.Runtime.InteropServices;"
 		+ "namespace SgoMemory {"
 		+ "public static class NativeMethods {"
-		+ "[DllImport(\"psapi.dll\", SetLastError=true)]"
+		+ "[DllImport(__DQ__psapi.dll__DQ__, SetLastError=true)]"
 		+ "[return: MarshalAs(UnmanagedType.Bool)]"
 		+ "public static extern bool EmptyWorkingSet(IntPtr hProcess);"
-		+ "[DllImport(\"kernel32.dll\", SetLastError=true)]"
+		+ "[DllImport(__DQ__kernel32.dll__DQ__, SetLastError=true)]"
 		+ "[return: MarshalAs(UnmanagedType.Bool)]"
 		+ "public static extern bool SetProcessWorkingSetSize(IntPtr hProcess, IntPtr min, IntPtr max);"
 		+ "}}"
@@ -187,7 +196,7 @@ func _request_windows_working_set_trim(reason: String) -> int:
 		+ "try{"
 		+ "$p=Get-Process -Id %d -ErrorAction Stop;" % target_pid
 		+ "$before=$p.WorkingSet64;"
-		+ "$src='%s';" % escaped_csharp
+		+ "$src='%s';$src=$src.Replace('__DQ__',[char]34);" % escaped_csharp
 		+ "Add-Type -TypeDefinition $src -Language CSharp -ErrorAction Stop;"
 		+ "$ok=[SgoMemory.NativeMethods]::EmptyWorkingSet($p.Handle);"
 		+ "if(-not $ok){"
@@ -201,7 +210,7 @@ func _request_windows_working_set_trim(reason: String) -> int:
 		+ "if($null -ne $p){try{$p.Refresh();$after=$p.WorkingSet64}catch{}}"
 		+ "};"
 		+ "Set-Content -LiteralPath $result "
-		+ "-Value (($ok.ToString())+'|'+$before+'|'+$after+'|'+$err) -Encoding ASCII"
+		+ "-Value (($ok.ToString())+'|'+$before+'|'+$after+'|'+$err) -Encoding UTF8"
 	)
 	var args := PackedStringArray([
 		"-NoLogo",
@@ -328,6 +337,13 @@ func _afk_memory_audit_cache_sources() -> Array:
 
 func _log_afk_memory_audit(stage: String) -> void:
 	if not OS.is_debug_build():
+		return
+	var total_nodes: int = int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))
+	var active_entity_count: int = NetworkEntityManager.active_entities.size() if NetworkEntityManager else 0
+	if total_nodes > 5000:
+		print("[AFK_MEMORY_AUDIT] stage=%s pid=%d skipped_heavy=true total_nodes=%d active_entities=%d reason=protect_fixed_cadence" % [
+			stage, OS.get_process_id(), total_nodes, active_entity_count,
+		])
 		return
 	var roots: Dictionary = {
 		"map": current_map_node,

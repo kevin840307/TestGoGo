@@ -142,6 +142,8 @@ class AfkModeContract(unittest.TestCase):
         self.assertIn("SetProcessWorkingSetSize", game)
         self.assertIn('OS.create_process("powershell.exe"', game)
         self.assertIn("Add-Type -TypeDefinition", game)
+        self.assertIn("__DQ__psapi.dll__DQ__", game)
+        self.assertIn("$src.Replace('__DQ__',[char]34)", game)
         self.assertNotIn("RenderingServer.force_sync()", game)
         self.assertIn("renderer_force_sync=false", game)
         self.assertIn("[MEMORY_SETTLE]", game)
@@ -158,9 +160,16 @@ class AfkModeContract(unittest.TestCase):
         self.assertNotIn("NetworkManager", trim)
         self.assertNotIn("set_physics_process", trim)
         self.assertNotIn("Engine.physics_ticks_per_second", trim)
-        self.assertIn("current_static_mb > 220.0", trim)
+        self.assertIn('reason not in ["afk_settled_3s", "logout_settled"]', trim)
+        self.assertNotIn("current_static_mb > 220.0", trim)
         self.assertIn("peak_static_mb - current_static_mb < 64.0", trim)
 
+
+    def test_large_debug_audits_never_block_afk_fixed_cadence(self):
+        game = read("client/scripts/game_manager.gd")
+        self.assertIn("total_nodes > 5000", game)
+        self.assertIn("skipped_heavy=true", game)
+        self.assertIn("reason=protect_fixed_cadence", game)
 
     def test_afk_memory_logs_explain_why_ram_does_not_drop(self):
         game = read("client/scripts/game_manager.gd")
