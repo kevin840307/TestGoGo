@@ -49,6 +49,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
     }
 
     public int Index { get; }
+    public BotWorldState BotWorld { get; } = new();
     public long CharacterId { get; private set; }
     public int MapId { get; private set; }
     public int X { get; private set; }
@@ -151,8 +152,9 @@ internal sealed class WireLoadClient : IAsyncDisposable
 
     public void EnableInteractiveBots()
     {
-        ClearInbox();
         _interactiveBots = true;
+        while (_inbox.Reader.TryRead(out var packet))
+            BotWorld.Observe(packet, CharacterId);
         StartMeasurement(dropCombatNoise: true);
     }
 
@@ -279,10 +281,11 @@ internal sealed class WireLoadClient : IAsyncDisposable
             timeout);
 
     public async Task PrepareCombatAsync(
-        TimeSpan timeout)
+        TimeSpan timeout,
+        int level = 255)
     {
         await SendGmForTypeAsync(
-            "level 255",
+            $"level {level}",
             "PlayerStatusSync",
             timeout);
         await SendGmForTypeAsync(
@@ -292,6 +295,58 @@ internal sealed class WireLoadClient : IAsyncDisposable
         await SendGmForTypeAsync(
             "heal",
             "PlayerStatusSync",
+            timeout);
+    }
+
+    public Task LearnBotSkillAsync(int skillId, TimeSpan timeout)
+        => SendGmForTypeAsync(
+            $"skill {skillId} 1",
+            "SkillSync",
+            timeout);
+
+    public Task SendBotHealAsync(TimeSpan timeout)
+        => SendPacketAsync(
+            new { Type = "ChatMessage", Channel = 0,
+                  Message = "/gm heal", BubbleType = 0 },
+            timeout);
+
+    public async Task SendBotPositionAsync(int x, int y, TimeSpan timeout)
+    {
+        // Record optimistic position; the server's PositionCorrection wins
+        // when a blocked step is rejected.
+        var beforeX = X;
+        var beforeY = Y;
+        X = x;
+        Y = y;
+        try
+        {
+            await SendPacketAsync(
+                new { Type = "SyncPosition", X = x, Y = y, Dir = "1" },
+                timeout);
+        }
+        catch
+        {
+            X = beforeX;
+            Y = beforeY;
+            throw;
+        }
+    }
+
+    public Task SendBotSkillAsync(
+        int skillId, int targetEntityId, TimeSpan timeout)
+    {
+        var selfCentered = skillId == 99001;
+        return SendPacketAsync(
+            new
+            {
+                Type = "UseSkill",
+                SkillID = skillId,
+                TargetID = selfCentered
+                    ? checked((int)CharacterId) : targetEntityId,
+                TargetType = selfCentered ? 0 : 1,
+                TargetX = X,
+                TargetY = Y
+            },
             timeout);
     }
 
@@ -329,6 +384,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
                     enemyId,
             timeout);
 
+        BotWorld.Observe(packet, CharacterId);
         return packet.GetProperty(
                 "EntityID")
             .GetInt32();
@@ -707,6 +763,20 @@ internal sealed class WireLoadClient : IAsyncDisposable
                         },
                         TimeSpan.FromSeconds(5));
                     continue;
+                }
+
+                if (_interactiveBots)
+                {
+                    BotWorld.Observe(packet, CharacterId);
+                    if (type == "PositionCorrection")
+                    {
+                        if (packet.TryGetProperty("X", out var correctedX) &&
+                            correctedX.TryGetInt32(out var valueX))
+                            X = valueX;
+                        if (packet.TryGetProperty("Y", out var correctedY) &&
+                            correctedY.TryGetInt32(out var valueY))
+                            Y = valueY;
+                    }
                 }
 
                 if (_measure &&
