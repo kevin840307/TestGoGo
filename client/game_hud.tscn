@@ -3915,12 +3915,14 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_chat_input")
 theme_override_styles/hover = SubResource("StyleBoxFlat_chat_input_focus")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_chat_input_focus")
 selected = 0
-item_count = 2
+item_count = 3
 popup/item_0/text = "全部顯示"
 popup/item_0/id = 0
 popup/item_1/text = "附近同種最多 5 個"
 popup/item_1/id = 1
-tooltip_text = "僅限制附近相同 ItemIndex 的畫面物件；所有掉落物仍可由 Server 管理，不會刪除。"
+popup/item_2/text = "不顯示掉落物"
+popup/item_2/id = 2
+tooltip_text = "只控制地面掉落物的畫面節點，保留完整 Spawn/Despawn 與伺服器物品資料。不顯示時無法直接滑鼠點擊撿取。"
 
 [node name="LabelShowDamage" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/Visibility"]
 layout_mode = 0
