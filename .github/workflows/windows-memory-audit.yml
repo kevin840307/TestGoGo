@@ -42,6 +42,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & ./tools/SGO.WindowsMemoryAudit/Compare-WindowsMemoryStages.ps1 -Login results/vm-login.json -Game results/vm-game.json -AFK results/vm-afk.json -Logout results/vm-logout.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./tools/SGO.WindowsMemoryAudit/Start-GameMemoryAudit.ps1 -GamePid $PID -Automatic -OutputDirectory results/guided
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Test-Path results/guided/vm-logout.json)) { throw 'Guided snapshot collection failed' }
           $s = Get-Content results/vm-login.json -Raw | ConvertFrom-Json
           if ($s.PrivateBytesMB -le 0 -or $s.RegionsVisited -lt 1 -or $s.ProcessId -ne $PID) {
             throw 'Windows memory audit did not inspect the requested process'

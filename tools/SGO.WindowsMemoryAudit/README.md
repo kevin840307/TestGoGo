@@ -29,7 +29,22 @@ Self-test reserves and touches 64 MiB inside the audit process, verifies
 that private committed memory and Windows Private Bytes increase by
 at least 48 MiB, and then frees this memory. It never touches Godot.
 
-## Four stages on the same client process
+## Recommended one-command guided capture
+
+After pulling this branch, start Godot and keep it at the login screen.
+Find the new PID from the Godot log. In PowerShell (repository root) run:
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/SGO.WindowsMemoryAudit/Start-GameMemoryAudit.ps1 -GamePid 11232
+
+Replace 11232 with the CURRENT Godot PID. The script pauses at each
+stage until Enter is pressed, then takes a read-only snapshot. On logout
+it also waits 10 seconds before measuring. It produces four JSON files
+in a timestamped results folder and a stage-by-stage comparison.
+
+Do not treat the old PID 11232 as current. All four snapshots must belong
+to the same still-running Godot process.
+
+## Four stages on the same client process (manual alternative)
 
 Copy the Godot PID from its [BACKGROUND_MEMORY] log line. Example PID
 11232 is from a previous run and MUST be replaced after restart.
