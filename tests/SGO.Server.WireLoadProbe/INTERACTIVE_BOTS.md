@@ -1,10 +1,10 @@
-# 多人機器人互動測試（真實 WebSocket）
+# 多人 NPC 式測試機器人（真實 WebSocket 玩家）
 
-在 **TestGoGo / feature/local-server-net8** 的專案根目錄執行。這是可與正常 Godot Client 同時連進同一台**本機測試 Server** 的長時間測試，不是原本跑完即退出的 WireLoadProbe。
+此工具只增加在測試程式中，不修改 Server AOI、角色成長、戰鬥、技能計算或 Godot Client。**請使用獨立 SQLite 測試資料庫**；每次執行會建立新的帳號與角色。Server 要啟用 GM 指令。
 
-## 1. 在 PowerShell 視窗 A 啟動獨立 Server
+## A. 開啟 Server
 
-請使用測試資料庫，**不可指向平常遊玩的 SQLite**，因為會新增許多帳號、角色及怪物。
+PowerShell 視窗 A，從專案根目錄執行：
 
 ```powershell
 $env:Database__Sqlite__Path = (Join-Path (Get-Location) "server/Data/bot-test.db")
@@ -12,31 +12,58 @@ $env:Game__GmCommandsEnabled = "true"
 dotnet run -c Release --project .\server\SGO.Server.csproj
 ```
 
-## 2. 在 PowerShell 視窗 B 啟動機器人
+> 這是一份獨立的測試 DB。測試後可直接刪除；切勿把這個設定指到正式資料庫。
+
+## B. 開啟 20 人測試
+
+PowerShell 視窗 B，從**同一個專案根目錄**執行：
 
 ```powershell
-dotnet run -c Release --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.WireLoadProbe.csproj -- --bots --players 20 --map 13 --x 4331 --y 5346 --interval-ms 350 --seconds 0 --monsters 5 --output bots-result.json
+dotnet run -c Release --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.WireLoadProbe.csproj -- --bots --players 20 --map 13 --x 4331 --y 5346 --radius 280 --interval-ms 350 --seconds 0 --monsters 5 --level 150 --output bots-result.json
 ```
 
-- `--players 20`：同時登入 20 個**獨立註冊的真實帳號／角色**，可改 10、50、100，最大允許 1000。
-- `--map 13 --x 4331 --y 5346`：把機器人聚集在尼西亞台地的觀測位置（靠 GM 傳送，請依該地圖可走位置調整）。
-- `--interval-ms 350`：每個機器人約每 350 毫秒發送一次位置更新；沿 X 方向以 4px 步長往返最多 40px。
-- `--monsters 5`：建立 5 隻敵人 ID=245；機器人交錯傳送真實 `AttackEntity`。
-- `--seconds 0`：不限制時間；按 Ctrl+C 停止並寫出摘要。也可以用 `--seconds 300` 跑五分鐘。
-- `--no-combat`：只走路，不生成怪物／攻擊；這時也可用 `--monsters 0`。
-- `--setup-concurrency 5`：同時進行的帳號建立數量，避免瞬間過載。
-- `--output bots-result.json`：保存送出位置／攻擊封包數、接收 bytes、PositionCorrection 及錯誤統計。
+- `--players`：模擬人數 1～1000，各有獨立帳號／角色及加密 WebSocket。
+- `--map --x --y`：觀察中心（地圖、像素座標）。如果中心被擋住，會尋找半徑 96px 內最近的可走格；找不到則停止。
+- `--radius 280`：每個玩家隨機落在**以中心為圓心**的可走位置。程式直接使用 Server 的 `Blocking.dat` 驗證，且必須可從觀察中心移動抵達；不會盲目傳送到阻擋格。
+- `--level 150`：所有機器人先使用既有 GM level/maxstats/heal 提升 HP、防禦、能力值與補滿 HP/MP/SP，並定期補充資源，避免容易死掉。
+- `--monsters 5`：用所選地圖 `Enemy.dat` 中的有效怪物 ID，在可通行位置召喚 5 隻；怪物死亡後由 Server 原有重生邏輯處理。
+- `--interval-ms 350`：走路／AI 指令間隔。移動透過原本 `SyncPosition` 封包，路徑採用 Server 既有的 A* 服務，每一步驗證可走性。
+- `--seconds 0`：一直跑到 Ctrl+C；`--seconds 300` 則五分鐘結束。
+- `--no-combat`：只做亂走，停用攻擊、技能及召喚測試怪物。
 
-機器人使用與原測試相同的 `ClientProtocol` AES/WebSocket 加密、註冊、登入、選角與 `WorldReady`。不啟動 Godot 視窗；所有人都由同一個 .NET 測試程序維持連線。
+## C. 戰鬥模式
 
-## 3. 在正常遊戲 Client 觀察
+機器人只會選擇**從 Server AOI SpawnEntity 收到的活怪**，收到 `EntityDamage` 更新血量、`EntityDeath/DespawnEntity` 就移除目標、`SpawnEntity` 重生後再重新選怪；沒有固定攻擊已死亡的怪物 ID。
 
-保留以上兩個終端機，正常啟動 Godot 遊戲，連到**同一個測試 Server**，登入並傳送到 Map 13 的相近座標，觀察附近的機器人是否出現、持續移動、攻擊及離開 AOI。可先 10 人，再 50、100 人。按 Ctrl+C 停止測試後，觀察其他玩家是否正常從畫面消失。
+尋到怪物後，若距離太遠會透過阻擋地圖 A* 接近；在攻擊距離內則輪流使用：
 
-注意：這是**封包級模擬角色**，不是完整 Godot 自動尋路或自動打怪 AI。移動路線是附近的 4px 小步往返；如果前方是阻擋格，Server 會回 `PositionCorrection`，摘要會計數。攻擊的是啟動時生成的敵人；敵人死亡後不會由此工具自動重新生成，需手動重啟一輪測試。也不會模擬技能、撿物、裝備或完整的 Client 畫面效能。
+- 普通攻擊 `AttackEntity`：主要攻擊。
+- `20101` 赤色光彈：簡單單體技能。
+- `23102` 烈火爆劍：另一個單體技能。
+- `23103` 赤星爆炸：偶爾使用的簡單小範圍技能（半徑 200）。
 
-## 4. 測試環境與狀態
+**不會使用 99001 星界震盪。** 使用正常 `UseSkill` 封包，因此技能冷卻、MP/SP 消耗、傷害和 AOI 廣播都經過 Server 原本的流程；不是假動畫。
 
-本模式僅允許 `ws://127.0.0.1`、本機 loopback 或 `.internal` 測試主機，以降低誤連正式環境的風險。需要 Server 啟用測試用 GM 指令。執行結束時自動關閉模擬 WebSocket 連線。
+## D. 開正常 Client 觀察
 
-程式碼已提交到 TestGoGo 測試分支；**尚未在有 .NET 8 SDK、可啟動完整 SGO Server 的環境實際編譯和做端對端驗證**，因此不宣稱已通過壓力測試。請確認 .NET 8 SDK 已安裝，若有 build 或執行錯誤，附上終端機輸出。
+兩個終端機保持執行，正常登入 Godot Client，連到同一個測試 Server，前往 Map 13 的座標 (4331, 5346) 附近，觀察角色移動、靠近怪物、普攻、單體技能、小範圍技能、掉落與 AOI。測試結束按 Ctrl+C。
+
+`bots-result.json` 包含：
+- `MovementPackets`、`AttackPackets`、`SingleTargetSkillPackets`、`SmallAreaSkillPackets`：已發送封包量。
+- `ConfirmedDamageHits`：真實收到自身 `EntityDamage` 的傷害事件數，不能用 AttackPackets 直接代替。
+- `ConfirmedSkillCasts`：真實收到自身 `SkillCast` 的次數。
+- `ObservedMonsterDeaths`：AOI 中觀測到的怪物死亡數。
+- `PositionCorrections`：Server 拒絕走路並更正座標的次數。
+- `Errors`：帳號創建、GM 命令、封包與移動發生的錯誤。
+
+正常攻擊成功至少應觀測到 `ConfirmedDamageHits > 0` 且 `ConfirmedSkillCasts > 0`；如歸零，先檢查 `Errors`、遊戲內聊天的 GM 回覆、該地圖是否有敵人資料、`PositionCorrections`。
+
+## E. 驗證狀態
+
+已把實作更新於 GitHub 的 `feature/local-server-net8` 分支，**但本次環境沒有 .NET 8 SDK 執行環境，因此尚未完成實際編譯與連線驗證，不能宣稱功能 PASS**。可先執行：
+
+```powershell
+dotnet build -c Release .\tests\SGO.Server.WireLoadProbe\SGO.Server.WireLoadProbe.csproj
+```
+
+如編譯錯誤，將錯誤輸出附上；如果編譯過關，請先用 `--players 10` 驗證再增加到 20、50、100。
