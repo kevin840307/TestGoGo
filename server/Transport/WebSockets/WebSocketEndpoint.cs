@@ -45,6 +45,8 @@ public static class WebSocketEndpoint
             var broadcastRegistration = broadcasts.Register();
             var broadcastConnectionId = broadcastRegistration.ConnectionId;
             var broadcastQueue = broadcastRegistration.Queue;
+            var broadcastSignal = broadcasts.GetBroadcastSignal(
+                broadcastConnectionId);
             var lastBroadcastBacklogWarning = DateTimeOffset.MinValue;
             var lastBroadcastBacklogCheck = DateTimeOffset.MinValue;
             state.ConnectionId = broadcastConnectionId;
@@ -93,9 +95,9 @@ public static class WebSocketEndpoint
                 }
             }
 
-            // Keep per-client AOI broadcasts independent of the 250 ms world
-            // simulation. High-priority player updates cannot be held behind
-            // a burst of ground-item scene creation/monster snapshots.
+            // Send AOI broadcasts as soon as the hub signals new traffic,
+            // independent of the 250 ms world simulation. This avoids idle
+            // per-client timers and still prioritizes player updates.
             // The underlying ConcurrentQueue remains FIFO; only unrelated
             // player events are promoted within a bounded send batch.
             static int BroadcastPriority(object packet)
@@ -128,13 +130,17 @@ public static class WebSocketEndpoint
             {
                 try
                 {
-                    using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(25));
                     while (!worldTickToken.IsCancellationRequested &&
                            socket.State == WebSocketState.Open &&
-                           await timer.WaitForNextTickAsync(worldTickToken))
+                           await broadcastSignal.WaitToReadAsync(worldTickToken))
                     {
-                        if (broadcastQueue.IsEmpty)
-                            continue;
+                        // One pending signal represents any number of queued
+                        // packets; no wakeups at all when an AOI is idle.
+                        while (broadcastSignal.TryRead(out _)) { }
+                        do
+                        {
+                            if (broadcastQueue.IsEmpty)
+                                break;
 
                         const int maxBatch = 256;
                         var playerUpdates = new List<object>(32);
@@ -184,6 +190,10 @@ public static class WebSocketEndpoint
                                     state.CurrentMapId);
                             }
                         }
+                        }
+                        while (!broadcastQueue.IsEmpty &&
+                               !worldTickToken.IsCancellationRequested &&
+                               socket.State == WebSocketState.Open);
                     }
                 }
                 catch (OperationCanceledException) { }
