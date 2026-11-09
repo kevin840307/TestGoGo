@@ -326,7 +326,8 @@ internal sealed class WireLoadClient : IAsyncDisposable
                 packet.TryGetProperty("MaxHP", out var maxHp) &&
                 maxHp.ValueKind == JsonValueKind.Number &&
                 maxHp.GetInt32() >= 10000,
-            timeout);
+            timeout,
+            failOnGmError: true);
     }
 
     public Task LearnBotSkillAsync(int skillId, TimeSpan timeout)
@@ -600,9 +601,17 @@ internal sealed class WireLoadClient : IAsyncDisposable
 
         while (pending.Count > 0)
         {
-            var packet =
-                await ReadInboxAsync(
-                    deadline.Token);
+            JsonElement packet;
+            try
+            {
+                packet = await ReadInboxAsync(deadline.Token);
+            }
+            catch (OperationCanceledException) when (deadline.IsCancellationRequested)
+            {
+                throw new TimeoutException(
+                    "Bootstrap packets missing: " +
+                    string.Join(", ", pending.OrderBy(x => x)));
+            }
 
             if (!packet.TryGetProperty(
                     "Type",
@@ -652,34 +661,50 @@ internal sealed class WireLoadClient : IAsyncDisposable
         return await WaitForPacketAsync(
             responseType,
             _ => true,
-            timeout);
+            timeout,
+            failOnGmError: true);
     }
 
     private async Task<JsonElement> WaitForPacketAsync(
         string responseType,
         Func<JsonElement, bool> predicate,
-        TimeSpan timeout)
+        TimeSpan timeout,
+        bool failOnGmError = false)
     {
-        using var deadline =
-            new CancellationTokenSource(timeout);
-
+        using var deadline = new CancellationTokenSource(timeout);
         while (true)
         {
-            var packet =
-                await ReadInboxAsync(
-                    deadline.Token);
-            BotWorld.Observe(packet, CharacterId);
-
-            if (!packet.TryGetProperty(
-                    "Type",
-                    out var typeElement) ||
-                typeElement.GetString() !=
-                    responseType)
+            JsonElement packet;
+            try
             {
-                continue;
+                packet = await ReadInboxAsync(deadline.Token);
             }
-
-            if (predicate(packet))
+            catch (OperationCanceledException) when (deadline.IsCancellationRequested)
+            {
+                throw new TimeoutException(
+                    $"Waiting for {responseType} exceeded {timeout.TotalSeconds:F0}s; " +
+                    "check server logs, game GM permissions and map bootstrap.");
+            }
+            BotWorld.Observe(packet, CharacterId);
+            if (!packet.TryGetProperty("Type", out var typeElement))
+                continue;
+            var kind = typeElement.GetString();
+            if (failOnGmError && kind == "SystemMessageChat" &&
+                packet.TryGetProperty("Message", out var text) &&
+                text.ValueKind == JsonValueKind.String)
+            {
+                var message = text.GetString() ?? "";
+                if (message.Contains("未知 GM 指令", StringComparison.Ordinal) ||
+                    message.Contains("GM 指令失敗", StringComparison.Ordinal) ||
+                    message.Contains("GM 指令目前", StringComparison.Ordinal) ||
+                    message.Contains("GM 指令需要", StringComparison.Ordinal) ||
+                    message.Contains("GM 指令已關閉", StringComparison.Ordinal) ||
+                    message.Contains("傳送失敗", StringComparison.Ordinal))
+                    throw new InvalidOperationException(
+                        "Server refused GM command: " + message +
+                        "; verify Game__GmCommandsEnabled and Game__TestBotCommandsEnabled.");
+            }
+            if (kind == responseType && predicate(packet))
                 return packet;
         }
     }
