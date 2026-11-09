@@ -221,7 +221,7 @@ func _request_windows_working_set_trim(reason: String) -> int:
 	return helper_pid
 
 func _settle_renderer_and_trim_working_set(reason: String) -> void:
-	# Do not call RenderingServer.force_sync() here. The real log showed it can
+	# Do not force a synchronous renderer flush here. The real log showed it can
 	# introduce a ~2 s main-thread gap and reduce fixed-physics cadence. Deferred
 	# frees already had several frames/seconds to settle before this point.
 	var tree: SceneTree = get_tree()
