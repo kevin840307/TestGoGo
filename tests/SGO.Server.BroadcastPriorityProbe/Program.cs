@@ -104,6 +104,7 @@ using (var decoded = ClientProtocol.Decode(
           packet.GetProperty("Y").GetDouble() == 12 &&
           Math.Abs(packet.GetProperty("SpeedTime").GetDouble() - 0.75) < 0.0001 &&
           Math.Abs(packet.GetProperty("SnapshotSpanSeconds").GetDouble() - 1.0) < 0.0001 &&
+          packet.GetProperty("CoalescedMoves").GetInt32() == 4 &&
           Math.Abs(packet.GetProperty("MoveSpeed").GetDouble() - 100.0) < 0.0001,
         "world movement keeps newest destination, true span and entity movement speed");
 }
@@ -323,8 +324,9 @@ using (var decoded = ClientProtocol.Decode(
     Check(packet.GetProperty("X").GetDouble() == 60 &&
           packet.GetProperty("Y").GetDouble() == 5 &&
           packet.GetProperty("Dir").GetString() == "6" &&
-          Math.Abs(packet.GetProperty("SpeedTime").GetDouble() - 0.30) < 0.0001,
-        "coalesced movement retains newest position and aggregated server interval");
+          Math.Abs(packet.GetProperty("SpeedTime").GetDouble() - 0.30) < 0.0001 &&
+          packet.GetProperty("CoalescedMoves").GetInt32() == 3,
+        "coalesced movement retains newest position, interval and diagnostic count");
 }
 
 // Preserve the existing client nominal-interval bounds under a long backlog.
