@@ -22,6 +22,26 @@ public sealed record EffectiveCharacterStats(
 
 public static class CharacterStatCalculator
 {
+    // Ordinary weapon reach is encoded as an additive AttackRange item stat.
+    // The first 120 units on the equipped weapon denote standard close-combat
+    // reach, not a bonus relative to fighting unarmed. This is based solely
+    // on the numeric attack_range and equipped weapon slot, never weapon type.
+    // Accessories, buffs and a weapon's numeric excess above 120 still count.
+    public static int GetEquippedWeaponAttackRange(
+        CharacterAssets assets, CurrentClientDataCatalog current)
+    {
+        foreach (var eq in assets.Equips)
+        {
+            if (Convert.ToInt32(eq.GetValueOrDefault("Part", 255)) != 5 ||
+                Convert.ToInt32(eq.GetValueOrDefault("InBank", 0)) != 0 ||
+                Convert.ToInt32(eq.GetValueOrDefault("InShop", 0)) != 0)
+                continue;
+            return Math.Max(0,
+                current.FindItem(Convert.ToInt32(eq["ItemIdx"]))?.AttackRange ?? 0);
+        }
+        return 0;
+    }
+
     public static EffectiveCharacterStats Calculate(
         Dictionary<string, object> character,
         CharacterAssets assets,
