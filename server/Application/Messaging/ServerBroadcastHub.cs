@@ -96,10 +96,22 @@ public sealed class ServerBroadcastHub
         // hundreds of milliseconds of walking for a single short step.
         // Zero means this packet did not provide a trustworthy interval.
         public double TotalServerSeconds { get; set; } =
-            ReadPacketDouble(packet, "SpeedTime") is > 0.01 and <= 1.0
-                ? ReadPacketDouble(packet, "SpeedTime")
-                : 0;
+            ReadMovementServerSpan(packet);
         public int MoveCount { get; set; } = 1;
+    }
+
+    // A movement packet can already represent a delayed/coalesced server
+    // interval before it reaches this observer queue. Prefer that full span
+    // over the compatibility-capped SpeedTime.
+    private static double ReadMovementServerSpan(object packet)
+    {
+        var speedTime = ReadPacketDouble(packet, "SpeedTime");
+        if (speedTime is <= 0.01 or > 1.0)
+            return 0;
+        var extended = ReadPacketDouble(packet, "SnapshotSpanSeconds");
+        return extended is > 0.75 and <= 8.0
+            ? extended
+            : speedTime;
     }
 
     private sealed class PlayerPriorityMovementState
@@ -119,17 +131,15 @@ public sealed class ServerBroadcastHub
         public long EntityId { get; } = entityId;
         public object LatestPacket { get; set; } = packet;
         public double TotalServerSeconds { get; set; } =
-            ReadPacketDouble(packet, "SpeedTime") is > 0 and <= 0.75
-                ? ReadPacketDouble(packet, "SpeedTime")
-                : 0;
+            ReadMovementServerSpan(packet);
         // Weighted path length lets the client preserve original-style
         // entity movement speed even when several unsent waypoints collapse
         // into one latest destination.
         public double TotalPathDistance { get; set; } =
             ReadPacketDouble(packet, "MoveSpeed") > 0 &&
-            ReadPacketDouble(packet, "SpeedTime") is > 0 and <= 0.75
+            ReadMovementServerSpan(packet) > 0
                 ? ReadPacketDouble(packet, "MoveSpeed") *
-                  ReadPacketDouble(packet, "SpeedTime")
+                  ReadMovementServerSpan(packet)
                 : 0;
         public int MoveCount { get; set; } = 1;
     }
@@ -176,11 +186,12 @@ public sealed class ServerBroadcastHub
                             // The old MoveEntity has not left this queue yet.
                             // No need to transmit a historical intermediate
                             // point before the latest authoritative position.
-                            var nextSeconds = ReadPacketDouble(packet, "SpeedTime");
+                            var nextSeconds = ReadMovementServerSpan(packet);
                             slot.TotalServerSeconds =
-                                slot.TotalServerSeconds > 0 &&
-                                nextSeconds is > 0 and <= 0.75
-                                    ? slot.TotalServerSeconds + nextSeconds
+                                slot.TotalServerSeconds > 0 && nextSeconds > 0
+                                    ? Math.Min(
+                                        8.0,
+                                        slot.TotalServerSeconds + nextSeconds)
                                     : 0;
                             slot.MoveCount++;
                             slot.LatestPacket = packet;
@@ -254,10 +265,11 @@ public sealed class ServerBroadcastHub
             {
                 if (movement.Pending.TryGetValue(entityId, out var slot))
                 {
+                    var nextSeconds = ReadMovementServerSpan(packet);
                     var previousSeconds = slot.TotalServerSeconds;
                     slot.TotalServerSeconds =
-                        previousSeconds > 0
-                            ? Math.Min(8.0, previousSeconds + speedTime)
+                        previousSeconds > 0 && nextSeconds > 0
+                            ? Math.Min(8.0, previousSeconds + nextSeconds)
                             : 0;
                     var retainedSeconds = Math.Max(
                         0.0, slot.TotalServerSeconds - previousSeconds);
