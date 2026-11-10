@@ -12,7 +12,6 @@ var protect_time: float = 0.0
 var _last_protection_display_second: int = -1
 var _remaining_expires_at_msec: int = 0
 var _protect_expires_at_msec: int = 0
-var _protection_timer: Timer = null
 var _afk_visual_suspended: bool = false
 var _visual_icon_id: int = 0
 var _visual_color_index: int = 0
@@ -298,23 +297,17 @@ func _sync_deadline_times() -> void :
 	remaining_time = maxf(0.0, float(_remaining_expires_at_msec - now_msec) / 1000.0) if _remaining_expires_at_msec > 0 else 0.0
 	protect_time = maxf(0.0, float(_protect_expires_at_msec - now_msec) / 1000.0) if _protect_expires_at_msec > 0 else 0.0
 
-func _schedule_protection_update() -> void :
+# Reuse one central 1Hz pulse in NetworkEntityManager instead of allocating
+# a Timer, timeout signal and closure for every visible drop. All item expiry
+# and pickup rules stay server-authoritative.
+func _schedule_protection_update() -> void:
 	_sync_deadline_times()
-	if protect_time <= 0.0 or owner_dbid == 0:
-		if is_instance_valid(_protection_timer):
-			_protection_timer.stop()
-		return
+	if protect_time > 0.0 and owner_dbid != 0:
+		if not is_in_group("sgo_protected_ground_item"):
+			add_to_group("sgo_protected_ground_item")
+	elif is_in_group("sgo_protected_ground_item"):
+		remove_from_group("sgo_protected_ground_item")
 
-	if not is_instance_valid(_protection_timer):
-		_protection_timer = Timer.new()
-		_protection_timer.one_shot = true
-		_protection_timer.timeout.connect(_on_protection_timer_timeout)
-		add_child(_protection_timer)
-
-	var displayed_second: = int(ceil(protect_time))
-	var until_next_second: = protect_time - float(displayed_second - 1)
-	_protection_timer.start(maxf(0.01, until_next_second))
-
-func _on_protection_timer_timeout() -> void :
+func refresh_protection_label() -> void:
 	_update_protection_visuals()
 	_schedule_protection_update()
