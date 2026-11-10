@@ -1,0 +1,66 @@
+name: Godot multiplayer movement regressions
+
+on:
+  push:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'client/network_player.gd'
+      - 'client/scripts/remote_player_motion.gd'
+      - 'client/scripts/multiplayer_motion_audit.gd'
+      - 'client/scripts/network_entity_manager.gd'
+      - 'client/scripts/network_manager.gd'
+      - 'client/scripts/monster_entity.gd'
+      - 'client/tests/monster_chase_regression.gd'
+      - 'client/tests/remote_multiplayer_motion_regression.gd'
+      - 'client/tests/multiplayer_motion_audit_regression.gd'
+      - '.github/workflows/client-multiplayer-motion.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  godot-motion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot 4.7.2 from official Godot release
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" \
+            --output /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.7.2-stable_linux.x86_64
+          /tmp/Godot_v4.7.2-stable_linux.x86_64 --version
+      - name: Import project resources once (required by monster visual scene)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 660s /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path client --editor --import --quit \
+            2>&1 | tee godot-import.log
+      - name: Remote player, monster and timing-audit movement regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for script in \
+            remote_multiplayer_motion_regression.gd \
+            monster_chase_regression.gd \
+            multiplayer_motion_audit_regression.gd \
+            aoi_pre_spawn_move_regression.gd \
+            aoi_monster_snapshot_order_regression.gd; do
+            echo "==== $script ===="
+            timeout 110s /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path client \
+              --script "res://tests/$script" 2>&1 | tee -a godot-motion.log
+          done
+      - name: Upload Godot logs for reproducible diagnosis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-multiplayer-motion
+          retention-days: 7
+          path: |
+            godot-import.log
+            godot-motion.log
