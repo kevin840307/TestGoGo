@@ -1,0 +1,18 @@
+name: Legacy Paradise EXE listing architecture audit
+on:
+  push:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'tools/analyze_paradise_lst.py'
+      - '.github/workflows/legacy-exe-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect checked-in Paradise.exe.lst for original runtime structure
+        run: python3 tools/analyze_paradise_lst.py
