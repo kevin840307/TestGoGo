@@ -9708,8 +9708,29 @@ public sealed class SqliteGameStore : IGameStore
     {
         var nowMs = now.ToUnixTimeMilliseconds();
         using var db = Open();
-        using var tx = db.BeginTransaction();
 
+        // Every connected player calls this once per second. Starting a
+        // write transaction before checking for expired items caused N
+        // players to fight over SQLite's one WAL writer even on empty maps.
+        // A read-only probe avoids unnecessary BEGIN IMMEDIATE. If any
+        // expired row exists, keep the original transactional select+delete
+        // unchanged below so multiple concurrent pickups/cleaners stay safe.
+        using (var probe = db.CreateCommand())
+        {
+            probe.CommandText = """
+                SELECT 1 FROM ground_items
+                 WHERE map_id=$map
+                   AND expires_utc_ms > 0
+                   AND expires_utc_ms <= $now
+                 LIMIT 1
+                """;
+            Arg(probe, "$map", mapId);
+            Arg(probe, "$now", nowMs);
+            if (probe.ExecuteScalar() is null)
+                return [];
+        }
+
+        using var tx = db.BeginTransaction();
         var entityIds = new List<int>();
         using (var select = db.CreateCommand())
         {
