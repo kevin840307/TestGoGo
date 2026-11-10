@@ -86,6 +86,16 @@ try
         location.Value.X == 300 && location.Value.Y == 300,
         "fenced periodic write cannot reappear after map transition");
 
+    service.Stage(accountId.Value, charId, 13, 355, 355);
+    service.FenceAndDiscard(accountId.Value, charId);
+    Check(store.UpdateLocation(accountId.Value, charId, 13, 800, 800),
+        "same-map GM warp commits an explicit position");
+    await Task.Delay(250);
+    location = store.GetCharacterLocation(accountId.Value, charId);
+    Check(location.HasValue && location.Value.MapId == 13 &&
+        location.Value.X == 800 && location.Value.Y == 800,
+        "same-map teleport fence rejects stale same-map queued position");
+
     await service.StopAsync(CancellationToken.None);
     Console.WriteLine("[POSITION_PERSIST_TEST] ALL PASS");
 }
