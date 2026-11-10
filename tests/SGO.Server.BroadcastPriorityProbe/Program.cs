@@ -141,6 +141,41 @@ Check(hub.TryDequeueOrdinary(worldBoundary.ConnectionId, out var worldAfter) &&
     "monster movement after combat remains after the boundary");
 hub.Unregister(worldBoundary.ConnectionId);
 
+// SpeedTime <= 0.01 is an authoritative correction (for example the final
+// attack-position snap). It must remain a separate FIFO packet and must also
+// prevent a later normal waypoint from folding back before that correction.
+var correctionBoundary = hub.Register(prioritizePlayerEvents: true);
+var preCorrectionMove = new
+{
+    Type = "MoveEntity", EntityID = 8_130_047L,
+    X = 30, Y = 12, Dir = "6", SpeedTime = 0.25
+};
+var authoritativeCorrection = new
+{
+    Type = "MoveEntity", EntityID = 8_130_047L,
+    X = 34, Y = 12, Dir = "6", SpeedTime = 0.0
+};
+var postCorrectionMove = new
+{
+    Type = "MoveEntity", EntityID = 8_130_047L,
+    X = 50, Y = 12, Dir = "6", SpeedTime = 0.25
+};
+hub.PublishToConnection(correctionBoundary.ConnectionId, preCorrectionMove);
+hub.PublishToConnection(correctionBoundary.ConnectionId, authoritativeCorrection);
+hub.PublishToConnection(correctionBoundary.ConnectionId, postCorrectionMove);
+Check(correctionBoundary.Queue.Count == 3,
+    "authoritative zero-time correction is never merged with visual waypoints");
+Check(hub.TryDequeueOrdinary(correctionBoundary.ConnectionId, out var preCorrection) &&
+      ReferenceEquals(preCorrection, preCorrectionMove),
+    "movement before authoritative correction remains before it");
+Check(hub.TryDequeueOrdinary(correctionBoundary.ConnectionId, out var exactCorrection) &&
+      ReferenceEquals(exactCorrection, authoritativeCorrection),
+    "authoritative correction packet identity and FIFO position are preserved");
+Check(hub.TryDequeueOrdinary(correctionBoundary.ConnectionId, out var postCorrection) &&
+      ReferenceEquals(postCorrection, postCorrectionMove),
+    "movement after authoritative correction gets a fresh queue slot");
+hub.Unregister(correctionBoundary.ConnectionId);
+
 // Severe observer backpressure should scale with moving actors, not historical
 // waypoints: 1000 snapshots distributed across 20 monsters => 20 queue slots.
 var worldBurst = hub.Register(prioritizePlayerEvents: true);
