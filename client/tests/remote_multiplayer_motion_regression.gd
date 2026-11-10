@@ -140,5 +140,28 @@ func _run() -> void:
 	_check(merged._prediction_horizon_seconds <= 0.12 + 0.001,
 		"historical coalesced movement cannot predict 2s into the future")
 
+
+	# A large same-map movement can still be visible in the current 5000-unit
+	# viewport AOI. Do not classify it as a teleport solely by distance.
+	var outer_visible := RemotePlayerMotion.new()
+	outer_visible.reset(Vector2.ZERO)
+	outer_visible.receive(Vector2(1800.0, 0.0), 1000, 0.10)
+	_check(outer_visible.visual_position.is_equal_approx(Vector2.ZERO),
+		"1800px delayed visible movement does not hard-reset the remote avatar")
+	var outer_step := outer_visible.advance(1.0 / 60.0)
+	_check(outer_step.x > 0.0 and outer_step.x < 1800.0,
+		"large visible movement begins bounded interpolation instead of teleporting")
+
+	# Runtime NetworkPlayer supplies the entity's expected movement speed.
+	# Backlog recovery is allowed, but capped to 2x normal movement speed.
+	var expected_speed_motion := RemotePlayerMotion.new()
+	expected_speed_motion.reset(Vector2.ZERO)
+	expected_speed_motion.receive(
+		Vector2(400.0, 0.0), 3000, 0.75, 5200.0, 2.0, 200.0
+	)
+	var expected_step := expected_speed_motion.advance(1.0 / 60.0).x
+	_check(expected_step <= 400.0 / 60.0 + 0.05,
+		"200px/s remote player backlog catch-up is capped near 400px/s")
+
 	print("[REMOTE_MOTION_TEST] ", "ALL PASS" if failures == 0 else "%d FAILURES" % failures)
 	quit(0 if failures == 0 else 1)
