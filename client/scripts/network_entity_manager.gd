@@ -1195,33 +1195,9 @@ func _run_entity_runtime(delta: float) -> void :
 		_ground_aoi_last_context = null
 		return
 
-	_trim_ground_visuals_budgeted()
-	_update_monster_aoi(delta)
-	_update_ground_aoi(delta)
-	# One clock for every protected ground label. No Timer node per item.
-	# Visual only: 60Hz simulation, pickups and network packets are unchanged.
-	_ground_protection_tick_elapsed += delta
-	if _ground_protection_tick_elapsed >= 1.0:
-		_ground_protection_tick_elapsed = fmod(_ground_protection_tick_elapsed, 1.0)
-		var now_ms: int = Time.get_ticks_msec()
-		for raw_id in _recent_fatal_monsters.keys():
-			if int(_recent_fatal_monsters[raw_id]["expires"]) <= now_ms:
-				_recent_fatal_monsters.erase(raw_id)
-		for item in get_tree().get_nodes_in_group("sgo_protected_ground_item"):
-			if is_instance_valid(item) and item.has_method("refresh_protection_label"):
-				item.refresh_protection_label()
-	_player_visibility_elapsed += delta
-	if _player_visibility_elapsed >= PLAYER_VISIBILITY_REFRESH_INTERVAL:
-		_player_visibility_elapsed = 0.0
-		var visibility_profile: Dictionary = GameManager.current_performance_profile
-		if int(visibility_profile.get("other_players_visibility", 0)) != ClientPerformanceProfile.PLAYER_SHOW_ALL:
-			for player_id in _active_entity_types.keys():
-				if int(_active_entity_types[player_id]) != 0:
-					continue
-				var remote_player: Node2D = get_active_entity(int(player_id))
-				if is_instance_valid(remote_player):
-					_apply_performance_visual_to_entity(int(player_id), 0, remote_player)
-
+	# Spawn already queued player visuals before scanning hundreds of drops
+	# and deferred monsters. The exact same per-frame budget is retained.
+	# Packet handling and all fixed-rate combat/physics remain unchanged.
 	if not _spawn_queue_paused and not _spawn_queue.is_empty():
 		# Never starve the spawn queue after the world becomes visible.
 		# Normal runtime spawning is limited to one entity per frame so existing
@@ -1254,6 +1230,34 @@ func _run_entity_runtime(delta: float) -> void :
 				float(elapsed_usec) / 1000.0,
 				_spawn_queue.size()
 			])
+
+	_trim_ground_visuals_budgeted()
+	_update_monster_aoi(delta)
+	_update_ground_aoi(delta)
+	# One clock for every protected ground label. No Timer node per item.
+	# Visual only: 60Hz simulation, pickups and network packets are unchanged.
+	_ground_protection_tick_elapsed += delta
+	if _ground_protection_tick_elapsed >= 1.0:
+		_ground_protection_tick_elapsed = fmod(_ground_protection_tick_elapsed, 1.0)
+		var now_ms: int = Time.get_ticks_msec()
+		for raw_id in _recent_fatal_monsters.keys():
+			if int(_recent_fatal_monsters[raw_id]["expires"]) <= now_ms:
+				_recent_fatal_monsters.erase(raw_id)
+		for item in get_tree().get_nodes_in_group("sgo_protected_ground_item"):
+			if is_instance_valid(item) and item.has_method("refresh_protection_label"):
+				item.refresh_protection_label()
+	_player_visibility_elapsed += delta
+	if _player_visibility_elapsed >= PLAYER_VISIBILITY_REFRESH_INTERVAL:
+		_player_visibility_elapsed = 0.0
+		var visibility_profile: Dictionary = GameManager.current_performance_profile
+		if int(visibility_profile.get("other_players_visibility", 0)) != ClientPerformanceProfile.PLAYER_SHOW_ALL:
+			for player_id in _active_entity_types.keys():
+				if int(_active_entity_types[player_id]) != 0:
+					continue
+				var remote_player: Node2D = get_active_entity(int(player_id))
+				if is_instance_valid(remote_player):
+					_apply_performance_visual_to_entity(int(player_id), 0, remote_player)
+
 
 	if _runtime_monster_ids.is_empty():
 		return
