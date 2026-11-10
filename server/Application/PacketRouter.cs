@@ -7543,7 +7543,7 @@ public sealed class PacketRouter
         // loading inventory, all equipment, every stored pet and the full
         // character on every online player's world tick.
         var activePets = _store.GetActivePetFollowSnapshot(accountId, dbid).ToArray();
-        if (activePets.Count == 0)
+        if (activePets.Length == 0)
             return [];
 
         var hp = _store.GetCharacterHp(accountId, dbid);
