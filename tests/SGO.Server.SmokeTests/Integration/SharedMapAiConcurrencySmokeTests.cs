@@ -254,7 +254,14 @@ internal static class SharedMapAiConcurrencySmokeTests
             var oldHp = distantTarget.CurrentHp;
             try
             {
-                distantTarget.X = attacker.Session.LastX + 400;
+                var attackStats = store.GetCharacter(
+                    attacker.AccountId, attacker.CharacterId);
+                var baseAttackRange = Math.Max(
+                    80,
+                    Convert.ToInt32(attackStats!["AttackRange"]));
+                // Inside the old +120 tolerance, outside the new +24.
+                distantTarget.X = attacker.Session.LastX +
+                    baseAttackRange + 64;
                 distantTarget.Y = attacker.Session.LastY;
                 var outOfRange = combat.Attack(
                     attacker.Session,
