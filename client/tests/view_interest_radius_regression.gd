@@ -58,13 +58,14 @@ func _run() -> void:
 		Vector2(0.0, 0.5),
 		Vector2.ZERO
 	)
+	var half_scale_interest := ViewInterestRadius.calculate_from_canvas(
+		Rect2(Vector2.ZERO, Vector2(1920, 1080)),
+		half_scale,
+		Vector2(1920, 1080)
+	)
 	_check(
-		ViewInterestRadius.calculate_from_canvas(
-			Rect2(Vector2.ZERO, Vector2(1920, 1080)),
-			half_scale,
-			Vector2(1920, 1080)
-		) > four_k,
-		"actual Canvas2D zoom-out expands server interest beyond 4K default"
+		absf(half_scale_interest - four_k) < 1.0,
+		"1920x1080 at 0.5 Canvas scale matches the same world coverage as 4K default"
 	)
 	var offset_canvas := Transform2D(
 		Vector2.RIGHT,
