@@ -111,6 +111,29 @@ public sealed class ServerBroadcastHub
     private readonly ConcurrentDictionary<Guid, PlayerPriorityMovementState>
         _playerPriorityMovementStates = new();
 
+    // Active WebSockets also collapse stale, unsent movement snapshots for
+    // world actors (monsters/pets). These are visual waypoints, not gameplay
+    // actions. Spawn/Despawn/state/combat packets remain FIFO boundaries.
+    private sealed class PendingWorldMove(long entityId, object packet)
+    {
+        public long EntityId { get; } = entityId;
+        public object LatestPacket { get; set; } = packet;
+        public double TotalServerSeconds { get; set; } =
+            ReadPacketDouble(packet, "SpeedTime") is > 0 and <= 0.75
+                ? ReadPacketDouble(packet, "SpeedTime")
+                : 0;
+        public int MoveCount { get; set; } = 1;
+    }
+
+    private sealed class WorldMovementState
+    {
+        public readonly object Gate = new();
+        public readonly Dictionary<long, PendingWorldMove> Pending = new();
+    }
+
+    private readonly ConcurrentDictionary<Guid, WorldMovementState>
+        _worldMovementStates = new();
+
     // Wake only active senders. A single bounded notification coalesces
     // bursts; there is no 25ms polling timer per connected WebSocket.
     private readonly ConcurrentDictionary<Guid, Channel<byte>>
@@ -188,10 +211,122 @@ public sealed class ServerBroadcastHub
         }
         else
         {
-            queue.Enqueue(packet);
+            EnqueueOrdinaryBroadcast(connectionId, queue, packet);
         }
         if (_queueSignals.TryGetValue(connectionId, out var signal))
             signal.Writer.TryWrite(1);
+    }
+
+    private void EnqueueOrdinaryBroadcast(
+        Guid connectionId,
+        ConcurrentQueue<object> queue,
+        object packet)
+    {
+        if (!_worldMovementStates.TryGetValue(connectionId, out var movement))
+        {
+            queue.Enqueue(packet);
+            return;
+        }
+
+        lock (movement.Gate)
+        {
+            var type = ReadPacketString(packet, "Type");
+            var entityId = ReadPacketLong(packet, "EntityID");
+
+            // Player movement is already handled by the urgent lane. World
+            // actor IDs use the ordinary lane and may replace only another
+            // still-unsent movement snapshot for the exact same actor.
+            if (type == "MoveEntity" && entityId >= 1_000_000)
+            {
+                if (movement.Pending.TryGetValue(entityId, out var slot))
+                {
+                    var nextSeconds = ReadPacketDouble(packet, "SpeedTime");
+                    slot.TotalServerSeconds =
+                        slot.TotalServerSeconds > 0 &&
+                        nextSeconds is > 0 and <= 0.75
+                            ? slot.TotalServerSeconds + nextSeconds
+                            : 0;
+                    slot.MoveCount++;
+                    slot.LatestPacket = packet;
+                }
+                else
+                {
+                    slot = new PendingWorldMove(entityId, packet);
+                    movement.Pending.Add(entityId, slot);
+                    queue.Enqueue(slot);
+                }
+                return;
+            }
+
+            // Any event touching a world actor is a causal boundary. Leave
+            // the old queued movement before this event, but force later
+            // movement to allocate a fresh queue slot after the event.
+            RemovePendingWorldActor(movement, entityId);
+            RemovePendingWorldActor(movement, ReadPacketLong(packet, "TargetID"));
+            RemovePendingWorldActor(movement, ReadPacketLong(packet, "AttackerID"));
+            RemovePendingWorldActor(movement, ReadPacketLong(packet, "CasterID"));
+            queue.Enqueue(packet);
+        }
+    }
+
+    private static void RemovePendingWorldActor(
+        WorldMovementState movement,
+        long entityId)
+    {
+        if (entityId >= 1_000_000)
+            movement.Pending.Remove(entityId);
+    }
+
+    public bool TryDequeueOrdinary(Guid connectionId, out object packet)
+    {
+        packet = null!;
+        if (!_queues.TryGetValue(connectionId, out var queue))
+            return false;
+
+        if (!_worldMovementStates.TryGetValue(connectionId, out var movement))
+            return queue.TryDequeue(out packet!);
+
+        lock (movement.Gate)
+        {
+            if (!queue.TryDequeue(out var queued))
+                return false;
+
+            if (queued is PendingWorldMove slot)
+            {
+                if (movement.Pending.TryGetValue(slot.EntityId, out var current) &&
+                    ReferenceEquals(current, slot))
+                    movement.Pending.Remove(slot.EntityId);
+
+                if (slot.MoveCount > 1 && slot.TotalServerSeconds > 0)
+                {
+                    var newest = slot.LatestPacket;
+                    packet = new
+                    {
+                        Type = "MoveEntity",
+                        EntityID = slot.EntityId,
+                        X = ReadPacketDouble(newest, "X"),
+                        Y = ReadPacketDouble(newest, "Y"),
+                        Dir = ReadPacketString(newest, "Dir") ?? "1",
+                        // Keep visual catch-up bounded: replaying every old
+                        // 250ms waypoint is worse than moving smoothly to the
+                        // latest authoritative point. The full span remains
+                        // available for diagnostics/future presentation logic.
+                        SpeedTime = Math.Clamp(slot.TotalServerSeconds, 0.05, 0.75),
+                        SnapshotSpanSeconds = Math.Clamp(slot.TotalServerSeconds, 0.05, 8.0)
+                    };
+                }
+                else
+                {
+                    packet = slot.LatestPacket;
+                }
+            }
+            else
+            {
+                packet = queued;
+            }
+
+            return true;
+        }
     }
 
     private static bool IsPlayerPriorityPacket(object packet)
@@ -307,6 +442,7 @@ public sealed class ServerBroadcastHub
         {
             _playerPriorityMovementStates[id] = new PlayerPriorityMovementState();
             _playerPriorityQueues[id] = new ConcurrentQueue<object>();
+            _worldMovementStates[id] = new WorldMovementState();
         }
         _queueSignals[id] = Channel.CreateBounded<byte>(
             new BoundedChannelOptions(1)
@@ -437,6 +573,7 @@ public sealed class ServerBroadcastHub
         _queues.TryRemove(connectionId, out _);
         _playerPriorityQueues.TryRemove(connectionId, out _);
         _playerPriorityMovementStates.TryRemove(connectionId, out _);
+        _worldMovementStates.TryRemove(connectionId, out _);
         if (_queueSignals.TryRemove(connectionId, out var signal))
             signal.Writer.TryComplete();
         _presence.TryRemove(connectionId, out _);
