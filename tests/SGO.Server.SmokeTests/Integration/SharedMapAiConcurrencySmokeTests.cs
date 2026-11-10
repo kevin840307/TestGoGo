@@ -270,7 +270,8 @@ internal static class SharedMapAiConcurrencySmokeTests
                     targetType: 1);
                 Check(
                     outOfRange.Any(packet =>
-                        JsonSerializer.Serialize(packet).Contains("目標距離太遠")) &&
+                        packet.GetType().GetProperty("Message")?.GetValue(packet)
+                            ?.ToString()?.Contains("目標距離太遠", StringComparison.Ordinal) == true) &&
                     distantTarget.CurrentHp == oldHp,
                     "melee attack rejects distant target without dealing damage " +
                     $"(monsterHP={oldHp}->{distantTarget.CurrentHp}, " +
