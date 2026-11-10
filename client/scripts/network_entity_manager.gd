@@ -1230,11 +1230,12 @@ func _process(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	# AFK monitors render at 20 FPS, but spawn queues, monster interpolation
-	# and targeting stay on the normal fixed 60Hz physics cadence.
-	if not GameManager or not GameManager.is_afk_mode_active():
-		return
-	_run_entity_runtime(delta)
+	# The network socket and all remote movement advance at fixed physics
+	# cadence, regardless of render FPS. Keep AFK entity housekeeping here,
+	# but ALWAYS update monster waypoints once per physics tick.
+	if GameManager and GameManager.is_afk_mode_active():
+		_run_entity_runtime(delta)
+	_advance_monster_network_motion(delta)
 
 
 func _run_entity_runtime(delta: float) -> void :
@@ -1326,6 +1327,13 @@ func _run_entity_runtime(delta: float) -> void :
 					_apply_performance_visual_to_entity(int(player_id), 0, remote_player)
 
 
+
+# Keep movement out of _process: when rendering stalls under 20 peers,
+# a 250ms packet must not be executed in one lurch on the next draw frame.
+# This helper is invoked exactly once per fixed physics tick, in ALL modes.
+func _advance_monster_network_motion(delta: float) -> void:
+	if not GameManager or not is_instance_valid(GameManager.current_map_node) or GameManager.current_map_node.is_queued_for_deletion():
+		return
 	if _runtime_monster_ids.is_empty():
 		return
 
