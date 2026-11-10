@@ -8,6 +8,7 @@ var winners: Dictionary = {}
 var dirty: bool = true
 var last_center: Vector2 = Vector2.INF
 var last_radius: float = -1.0
+var last_cap: int = -1
 var rebuild_count: int = 0
 var last_visited_items: int = 0
 
@@ -49,14 +50,16 @@ func clear() -> void:
 	dirty = true
 	last_center = Vector2.INF
 	last_radius = -1.0
+	last_cap = -1
 	last_visited_items = 0
 
 func find_nearest(center: Vector2, radius: float, cap: int = 5) -> Dictionary:
-	if not dirty and center == last_center and is_equal_approx(radius, last_radius):
+	if not dirty and center == last_center and is_equal_approx(radius, last_radius) and cap == last_cap:
 		return winners
 	dirty = false
 	last_center = center
 	last_radius = radius
+	last_cap = cap
 	rebuild_count += 1
 	last_visited_items = 0
 	winners = {}
