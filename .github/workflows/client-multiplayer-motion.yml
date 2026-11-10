@@ -28,6 +28,9 @@ on:
       - 'client/tests/viewport_aoi_radius_regression.gd'
       - 'client/scripts/network_manager.gd'
       - 'client/scripts/network_entity_manager.gd'
+      - 'client/scripts/monster_entity.gd'
+      - 'client/scripts/monster_waypoint_speed.gd'
+      - 'client/tests/monster_waypoint_math_regression.gd'
       - 'client/tests/remote_multiplayer_motion_regression.gd'
       - '.github/workflows/client-multiplayer-motion.yml'
   workflow_dispatch:
