@@ -503,6 +503,22 @@ public sealed class ServerBroadcastHub
         };
     }
 
+    public void UpdateViewInterest(
+        Guid connectionId,
+        double viewInterestRadius)
+    {
+        if (!_presence.TryGetValue(
+                connectionId,
+                out var current))
+            return;
+
+        _presence[connectionId] = current with
+        {
+            ViewInterestRadius =
+                PlayerSpatialAoi.NormalizeEnterRadius(viewInterestRadius)
+        };
+    }
+
     public OnlinePlayerPresence? FindCharacter(long characterId)
     {
         if (characterId <= 0)
