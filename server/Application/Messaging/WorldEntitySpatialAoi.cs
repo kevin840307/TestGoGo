@@ -58,7 +58,8 @@ public sealed class WorldEntitySpatialAoi
         public OnlinePlayerPresence Player = player;
         public double EnterRadius = NormalizeObserverEnterRadius(
             player.ViewInterestRadius);
-        public double ExitRadius = ObserverExitRadiusFor(EnterRadius);
+        public double ExitRadius = ObserverExitRadiusFor(
+            player.ViewInterestRadius);
         public readonly HashSet<long> Visible = new();
         public (int MapId, int CellX, int CellY) Cell =
             CellOf(player.MapId, player.X, player.Y);
