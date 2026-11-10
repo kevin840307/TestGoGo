@@ -56,5 +56,29 @@ func _run() -> void:
 	_check(motion.authoritative_position.is_equal_approx(Vector2(40.0, 0.0)),
 		"render prediction never changes the confirmed server position")
 
+	# A >1s websocket delay must not visually run backwards to stale
+	# server coordinates. Prediction is capped, then holds until a genuine
+	# server idle/correction/move packet arrives.
+	var delayed := RemotePlayerMotion.new()
+	delayed.reset(Vector2.ZERO)
+	delayed.receive(Vector2(20.0, 0.0), 1000, 0.10)
+	for i in 60:
+		delayed.advance(1.0 / 60.0)
+	var before_long_gap: float = delayed.visual_position.x
+	for i in 120:
+		delayed.advance(1.0 / 60.0)
+	_check(delayed.visual_position.x >= before_long_gap - 0.5
+		and delayed.visual_position.x <= 60.1,
+		"missing 2s packets hold capped visual lead instead of rubber-banding")
+	_check(delayed.authoritative_position.is_equal_approx(Vector2(20.0, 0.0)),
+		"held visual offset never advances the authoritative gameplay position")
+	delayed.stop_prediction()
+	var idle_visual: Vector2 = delayed.advance(0.1)
+	_check(idle_visual.x < before_long_gap + 0.1,
+		"authoritative idle signal releases bounded prediction")
+	delayed.receive(Vector2(4000.0, 4000.0), 4000, 0.1, 500.0)
+	_check(delayed.visual_position.is_equal_approx(Vector2(4000.0, 4000.0)),
+		"map/teleport discontinuity snaps immediately to the new server position")
+
 	print("[REMOTE_MOTION_TEST] ", "ALL PASS" if failures == 0 else "%d FAILURES" % failures)
 	quit(0 if failures == 0 else 1)
