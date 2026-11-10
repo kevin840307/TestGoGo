@@ -254,17 +254,22 @@ public sealed class ServerBroadcastHub
             {
                 if (movement.Pending.TryGetValue(entityId, out var slot))
                 {
+                    var previousSeconds = slot.TotalServerSeconds;
                     slot.TotalServerSeconds =
-                        slot.TotalServerSeconds > 0
-                            ? Math.Min(8.0, slot.TotalServerSeconds + speedTime)
+                        previousSeconds > 0
+                            ? Math.Min(8.0, previousSeconds + speedTime)
                             : 0;
+                    var retainedSeconds = Math.Max(
+                        0.0, slot.TotalServerSeconds - previousSeconds);
                     var nextMoveSpeed = ReadPacketDouble(packet, "MoveSpeed");
                     if (slot.TotalPathDistance > 0 &&
-                        nextMoveSpeed > 0)
+                        nextMoveSpeed > 0 &&
+                        retainedSeconds > 0)
                     {
-                        slot.TotalPathDistance += nextMoveSpeed * speedTime;
+                        slot.TotalPathDistance +=
+                            nextMoveSpeed * retainedSeconds;
                     }
-                    else
+                    else if (slot.TotalServerSeconds < 8.0)
                     {
                         slot.TotalPathDistance = 0;
                     }
