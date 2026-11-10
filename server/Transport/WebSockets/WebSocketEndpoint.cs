@@ -68,7 +68,8 @@ public static class WebSocketEndpoint
 
             async Task SendPacketsAsync(
                 IReadOnlyList<object> packets,
-                CancellationToken cancellationToken)
+                CancellationToken cancellationToken,
+                bool broadcastPacket = false)
             {
                 if (packets.Count == 0 ||
                     socket.State != WebSocketState.Open)
@@ -79,8 +80,9 @@ public static class WebSocketEndpoint
                 {
                     foreach (var packet in packets)
                     {
-                        var output = Encoding.UTF8.GetBytes(
-                            ClientProtocol.Encode(packet));
+                        var output = broadcastPacket
+                            ? broadcasts.EncodeBroadcastPacket(packet)
+                            : Encoding.UTF8.GetBytes(ClientProtocol.Encode(packet));
 
                         await socket.SendAsync(
                             output.AsMemory(),
@@ -149,9 +151,9 @@ public static class WebSocketEndpoint
                         // ground-item data. The send gate preserves WS thread
                         // safety across request replies, world ticks and AOI.
                         if (playerUpdates.Count > 0)
-                            await SendPacketsAsync(playerUpdates, worldTickToken);
+                            await SendPacketsAsync(playerUpdates, worldTickToken, broadcastPacket: true);
                         if (otherUpdates.Count > 0)
-                            await SendPacketsAsync(otherUpdates, worldTickToken);
+                            await SendPacketsAsync(otherUpdates, worldTickToken, broadcastPacket: true);
 
                         var now = DateTimeOffset.UtcNow;
                         if ((!broadcastQueue.IsEmpty ||
