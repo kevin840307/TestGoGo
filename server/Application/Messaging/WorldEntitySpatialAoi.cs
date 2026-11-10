@@ -283,7 +283,8 @@ public sealed class WorldEntitySpatialAoi
                     entity.Entity.MapId,
                     entity.Entity.X,
                     entity.Entity.Y,
-                    Math.Pow(wasVisible ? entry.ExitRadius : entry.EnterRadius, 2));
+                    wasVisible ? entry.ExitRadius * entry.ExitRadius
+                        : entry.EnterRadius * entry.EnterRadius);
 
                 if (wasVisible == nowVisible)
                     continue;
@@ -541,7 +542,8 @@ public sealed class WorldEntitySpatialAoi
                 entry.Entity.MapId,
                 entry.Entity.X,
                 entry.Entity.Y,
-                Math.Pow(wasVisible ? observer.ExitRadius : observer.EnterRadius, 2));
+                wasVisible ? observer.ExitRadius * observer.ExitRadius
+                    : observer.EnterRadius * observer.EnterRadius);
 
             if (wasVisible == nowVisible)
                 continue;
