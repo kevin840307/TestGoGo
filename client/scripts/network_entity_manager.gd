@@ -975,6 +975,15 @@ func _update_ground_aoi(delta: float) -> void:
 		_ground_aoi_elapsed = 0.0
 		_ground_aoi_last_context = null
 		return
+	# Hidden drops still have authoritative cached data for pickup, owner and
+	# expiry. With thousands of drops, scanning each cached entry every 250ms
+	# wastes CPU even though zero Sprite/Label nodes should be displayed.
+	# _on_performance_profile_changed() handles visual teardown immediately
+	# and resets the context when the user re-enables ground display.
+	if _ground_drop_mode() == ClientPerformanceProfile.GROUND_DROPS_HIDDEN:
+		_ground_aoi_elapsed = 0.0
+		_ground_aoi_last_context = null
+		return
 	_ground_aoi_elapsed += delta
 	if _ground_aoi_elapsed < GROUND_AOI_UPDATE_INTERVAL:
 		return
