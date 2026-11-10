@@ -233,125 +233,149 @@ internal static class InteractiveBots
             for (var i = 0; i < count; i++)
                 goals[i] = walks.RandomPointNear(locations[i].X, locations[i].Y, radius);
 
-            var cycle = 0;
-            while (!stop.IsCancellationRequested)
+            // Simulate independent real players, not a synchronized spike
+            // of 20 Attack/SyncState/Move packets every 350ms. Each bot owns
+            // its own monotonic action counter and a jittered wall-clock loop.
+            async Task RunBotAsync(WireLoadClient bot)
             {
-                var tick = cycle;
-                await Task.WhenAll(live.Select(async bot =>
-                {
-                    try
-                    {
-                        var nearest = combat
-                            ? bot.BotWorld.Nearest(bot.X, bot.Y, double.PositiveInfinity)
-                            : null;
-
-                        var distanceSq = nearest is null
-                            ? double.PositiveInfinity
-                            : Math.Pow(nearest.X - bot.X, 2) +
-                              Math.Pow(nearest.Y - bot.Y, 2);
-
-                        // Use real A* navigation toward a living AOI monster.
-                        // When nothing is nearby, wander toward random reachable points.
-                        if (nearest is null || distanceSq > 128 * 128)
-                        {
-                            var goal = nearest is not null
-                                ? (X: nearest.X, Y: nearest.Y)
-                                : (X: (double)goals[bot.Index].X,
-                                   Y: (double)goals[bot.Index].Y);
-
-                            if (walks.TryStep(bot.X, bot.Y, goal.X, goal.Y,
-                                    out var nx, out var ny))
-                            {
-                                await bot.SendBotPositionAsync(nx, ny, timeout);
-                                Interlocked.Increment(ref moves);
-                            }
-                            else
-                            {
-                                goals[bot.Index] = walks.RandomPointNear(
-                                    bot.X, bot.Y, radius);
-                            }
-                        }
-
-                        // Never attack by a cached fixed entity ID. Pick a living
-                        // monster from this bot's actual AOI snapshot every tick.
-                        if (nearest is not null && distanceSq <= 170 * 170)
-                        {
-                            var phase = (tick + bot.Index * 7);
-                            if ((phase % 60 == 0 || phase % 20 == 0) &&
-                                distanceSq <= 130 * 130)
-                            {
-                                // Only normal single-target skills. Never cast
-                                // 99001/23103 or any AOE during load tests.
-                                var skill = phase % 60 == 0 ? 23102 : 20101;
-                                await bot.SendBotSkillAsync(skill, nearest.EntityId, timeout);
-                                Interlocked.Increment(ref singleSkills);
-                            }
-                            else
-                            {
-                                await bot.SendBotAttackWithAnimationAsync(
-                                    nearest.EntityId, nearest.X, nearest.Y, timeout);
-                                Interlocked.Increment(ref attacks);
-                            }
-                        }
-
-                        // Kills can grant EXP and raise bot attack. Reapply the
-                        // isolated test profile periodically, staggered across
-                        // clients, keeping each bot Lv1/ATK1 and HP/DEF high.
-                        if ((tick + bot.Index) % Math.Max(1, 20000 / interval) == 0)
-                        {
-                            await bot.RefreshWeakBotProfileAsync(timeout);
-                            Interlocked.Increment(ref heals);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        if (errors.Count < 100)
-                            errors.Enqueue($"bot #{bot.Index}: {ex.Message}");
-                    }
-                }));
-
-                cycle++;
-                if (cycle % Math.Max(1, 10000 / interval) == 0)
-                {
-                    var damage = live.Sum(b => b.BotWorld.DamageHits);
-                    var casts = live.Sum(b => b.BotWorld.SkillCasts);
-                    var visible = live.Sum(b => b.BotWorld.VisibleMonsters);
-                    var rejected = live.Sum(b => b.BotWorld.RejectedAttackMessages);
-                    Console.WriteLine(
-                        $"[BOTS] {start.Elapsed.TotalSeconds:F0}s online={live.Length} " +
-                        $"visibleTargets={visible} move={moves} attack={attacks} " +
-                        $"single={singleSkills} confirmedHits={damage} " +
-                        $"confirmedCasts={casts} rejected={rejected} " +
-                        $"corrections={live.Sum(b => b.PositionCorrections)} errors={errors.Count}");
-                    if (tick > 25 && damage == 0)
-                    {
-                        var sample = live[0];
-                        var target = sample.BotWorld.Nearest(
-                            sample.X, sample.Y, double.PositiveInfinity);
-                        var range = target is null
-                            ? "none"
-                            : Math.Sqrt(Math.Pow(target.X - sample.X, 2) +
-                                Math.Pow(target.Y - sample.Y, 2)).ToString("F0");
-                        Console.WriteLine(
-                            $"[BOTS] NO CONFIRMED HITS yet: targets={visible} " +
-                            $"firstBot=({sample.X},{sample.Y}) nearestRange={range}px " +
-                            $"lastServerFlash='{sample.BotWorld.LastFlash}' " +
-                            $"attempts={attacks}. " +
-                            (visible == 0
-                                ? "Check AOI SpawnEntity and monster placement."
-                                : "Check approach path and rejected attack messages."));
-                    }
-                }
-
+                var tick = 0;
                 try
                 {
-                    await Task.Delay(interval, stop.Token);
+                    // Spread initial actions across the full base interval.
+                    await Task.Delay(
+                        Random.Shared.Next(0, interval + 1), stop.Token);
+                    while (!stop.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            var nearest = combat
+                                ? bot.BotWorld.Nearest(
+                                    bot.X, bot.Y, double.PositiveInfinity)
+                                : null;
+                            var distanceSq = nearest is null
+                                ? double.PositiveInfinity
+                                : Math.Pow(nearest.X - bot.X, 2) +
+                                  Math.Pow(nearest.Y - bot.Y, 2);
+
+                            if (nearest is null || distanceSq > 128 * 128)
+                            {
+                                var goal = nearest is not null
+                                    ? (X: nearest.X, Y: nearest.Y)
+                                    : (X: (double)goals[bot.Index].X,
+                                       Y: (double)goals[bot.Index].Y);
+                                if (walks.TryStep(bot.X, bot.Y, goal.X, goal.Y,
+                                        out var nx, out var ny))
+                                {
+                                    await bot.SendBotPositionAsync(nx, ny, timeout);
+                                    Interlocked.Increment(ref moves);
+                                }
+                                else
+                                {
+                                    goals[bot.Index] = walks.RandomPointNear(
+                                        bot.X, bot.Y, radius);
+                                }
+                            }
+
+                            // Server still validates real combat range. Never
+                            // alter authoritative damage or simulate a fake hit.
+                            if (nearest is not null && distanceSq <= 170 * 170)
+                            {
+                                var phase = tick + bot.Index * 7;
+                                if (phase % 20 == 0 && distanceSq <= 130 * 130)
+                                {
+                                    // No area skills, rare single-target only.
+                                    var skill = phase % 60 == 0 ? 23102 : 20101;
+                                    await bot.SendBotSkillAsync(
+                                        skill, nearest.EntityId, timeout);
+                                    Interlocked.Increment(ref singleSkills);
+                                }
+                                else
+                                {
+                                    await bot.SendBotAttackWithAnimationAsync(
+                                        nearest.EntityId, nearest.X, nearest.Y,
+                                        timeout);
+                                    Interlocked.Increment(ref attacks);
+                                }
+                            }
+
+                            // Retain weak Lv1 bot stats even after kill rewards.
+                            if ((tick + bot.Index) %
+                                Math.Max(1, 20000 / interval) == 0)
+                            {
+                                await bot.RefreshWeakBotProfileAsync(timeout);
+                                Interlocked.Increment(ref heals);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            if (errors.Count < 100)
+                                errors.Enqueue(
+                                    $"bot #{bot.Index}: {ex.GetType().Name}: {ex.Message}");
+                        }
+
+                        tick++;
+                        // 75%-125% of base cadence; no global barrier.
+                        var swing = Math.Max(1, interval / 4);
+                        var actionDelay = Math.Max(
+                            150, interval + Random.Shared.Next(-swing, swing + 1));
+                        await Task.Delay(actionDelay, stop.Token);
+                    }
+                }
+                catch (OperationCanceledException) when (stop.IsCancellationRequested)
+                {
+                    // Expected Ctrl+C or timed-run cancellation.
+                }
+            }
+
+            var workers = live.Select(RunBotAsync).ToArray();
+            Console.WriteLine(
+                $"[BOTS] independent action loops started: {workers.Length}; " +
+                $"base={interval}ms, randomized 75%-125% per player.");
+
+            while (!stop.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(10000, stop.Token);
                 }
                 catch (OperationCanceledException)
                 {
                     break;
                 }
+
+                var damage = live.Sum(b => b.BotWorld.DamageHits);
+                var casts = live.Sum(b => b.BotWorld.SkillCasts);
+                var visible = live.Sum(b => b.BotWorld.VisibleMonsters);
+                var rejected = live.Sum(b => b.BotWorld.RejectedAttackMessages);
+                Console.WriteLine(
+                    $"[BOTS] {start.Elapsed.TotalSeconds:F0}s online={live.Length} " +
+                    $"visibleTargets={visible} move={Interlocked.Read(ref moves)} " +
+                    $"attack={Interlocked.Read(ref attacks)} " +
+                    $"single={Interlocked.Read(ref singleSkills)} " +
+                    $"confirmedHits={damage} confirmedCasts={casts} " +
+                    $"rejected={rejected} " +
+                    $"corrections={live.Sum(b => b.PositionCorrections)} " +
+                    $"errors={errors.Count}");
+
+                if (start.Elapsed.TotalSeconds > 10 && damage == 0)
+                {
+                    var sample = live[0];
+                    var target = sample.BotWorld.Nearest(
+                        sample.X, sample.Y, double.PositiveInfinity);
+                    var range = target is null
+                        ? "none"
+                        : Math.Sqrt(Math.Pow(target.X - sample.X, 2) +
+                            Math.Pow(target.Y - sample.Y, 2)).ToString("F0");
+                    Console.WriteLine(
+                        $"[BOTS] NO CONFIRMED HITS: targets={visible} " +
+                        $"firstBot=({sample.X},{sample.Y}) nearestRange={range}px " +
+                        $"lastServerFlash='{sample.BotWorld.LastFlash}' " +
+                        $"attempts={Interlocked.Read(ref attacks)}");
+                }
             }
+
+            // Finish in-flight sends before disposing WebSocket sessions.
+            await Task.WhenAll(workers);
 
             var report = new
             {
