@@ -198,19 +198,38 @@ internal sealed class BotWalkPlanner
 
     public bool TryStep(int fromX, int fromY, double goalX, double goalY,
         out int nextX, out int nextY)
+        => TryStep(fromX, fromY, goalX, goalY, 16, out nextX, out nextY);
+
+    public bool TryStep(int fromX, int fromY, double goalX, double goalY,
+        double maxStep, out int nextX, out int nextY)
     {
         nextX = fromX;
         nextY = fromY;
+        maxStep = Math.Clamp(maxStep, 16.0, 64.0);
         if (!_navigation.TryNextStep(_map, fromX, fromY,
-            goalX, goalY, 16, out var nx, out var ny))
+                goalX, goalY, maxStep, out var nx, out var ny))
             return false;
 
         var ix = (int)Math.Round(nx);
         var iy = (int)Math.Round(ny);
-        if (ix == fromX && iy == fromY)
+        if ((ix != fromX || iy != fromY) &&
+            _blocking.ValidateMove(_map, fromX, fromY,
+                ix, iy, false).Allowed)
+        {
+            nextX = ix;
+            nextY = iy;
+            return true;
+        }
+
+        // On a tight corner, safely fall back to one grid cell.
+        if (!_navigation.TryNextStep(_map, fromX, fromY,
+                goalX, goalY, 16, out nx, out ny))
             return false;
-        if (!_blocking.ValidateMove(_map, fromX, fromY,
-            ix, iy, false).Allowed)
+        ix = (int)Math.Round(nx);
+        iy = (int)Math.Round(ny);
+        if ((ix == fromX && iy == fromY) ||
+            !_blocking.ValidateMove(_map, fromX, fromY,
+                ix, iy, false).Allowed)
             return false;
         nextX = ix;
         nextY = iy;
