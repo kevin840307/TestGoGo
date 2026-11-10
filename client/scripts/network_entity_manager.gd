@@ -432,6 +432,7 @@ func _monster_aoi_radii() -> Vector2:
 		if player_pos != null:
 			required_radius += camera.global_position.distance_to(player_pos as Vector2)
 	var radii: Vector2 = resolve_visual_aoi_radii(profile, true, required_radius)
+	var was_crowded: bool = _monster_crowd_visual_only
 	# Adaptive display distance is enabled only for the "auto" visual choice
 	# in balanced/low profiles. Manual normal/quality modes retain the exact
 	# user-selected AOI, regardless of monster density.
@@ -447,6 +448,11 @@ func _monster_aoi_radii() -> Vector2:
 			_monster_crowd_visual_only = true
 		elif known_monsters <= MONSTER_CROWD_EXIT_COUNT:
 			_monster_crowd_visual_only = false
+	if was_crowded != _monster_crowd_visual_only and OS.is_debug_build():
+		print("[MONSTER_VISUAL_CROWD_AOI] active=%s known=%d base_radius=%.0f camera_required=%.0f" % [
+			str(_monster_crowd_visual_only), _monster_spawn_templates.size(),
+			radii.x, required_radius
+		])
 	if not _monster_crowd_visual_only:
 		return radii
 	return resolve_crowded_monster_visual_radii(radii, required_radius)
