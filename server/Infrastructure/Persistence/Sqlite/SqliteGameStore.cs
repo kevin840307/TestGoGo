@@ -142,6 +142,35 @@ public sealed class SqliteGameStore : IGameStore
         return r.Read() && Verify(password, r.GetString(1)) ? r.GetInt64(0) : null;
     }
 
+    public bool IsLoadTestBot(long accountId, long characterId)
+    {
+        if (accountId <= 0 || characterId <= 0)
+            return false;
+
+        // Verify both account and character from the existing game DB:
+        // ordinary characters can never be reset by /gm testbot.
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT a.username, a.email, c.name
+              FROM accounts a
+              JOIN characters c ON c.account_id = a.id
+             WHERE a.id = $accountId
+               AND c.id = $characterId
+             LIMIT 1
+            """;
+        Arg(cmd, "$accountId", accountId);
+        Arg(cmd, "$characterId", characterId);
+        using var reader = cmd.ExecuteReader();
+        return reader.Read() &&
+               reader.GetString(0).StartsWith(
+                   "wire-load-", StringComparison.Ordinal) &&
+               reader.GetString(1).EndsWith(
+                   "@example.invalid", StringComparison.OrdinalIgnoreCase) &&
+               reader.GetString(2).StartsWith(
+                   "WL", StringComparison.Ordinal);
+    }
+
     private static void RepairOversizedCharacterExperience(SqliteConnection db, long accountId)
     {
         using var cmd = db.CreateCommand();
