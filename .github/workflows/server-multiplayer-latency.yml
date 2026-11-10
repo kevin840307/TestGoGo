@@ -1,0 +1,90 @@
+name: Multiplayer 20-player wire latency
+on:
+  push:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'server/Application/Messaging/ServerBroadcastHub.cs'
+      - 'server/Transport/WebSockets/WebSocketEndpoint.cs'
+      - 'tests/SGO.Server.WireLoadProbe/**'
+      - '.github/workflows/server-multiplayer-latency.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  twenty-peers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build standalone server and real encrypted WebSocket probe
+        run: |
+          dotnet build server/SGO.Server.csproj -c Release --nologo
+          dotnet build tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -c Release --nologo
+      - name: Twenty clients - AOI movement, chat, combat and mixed load
+        shell: bash
+        run: |
+          set -euo pipefail
+          export Database__Provider=Sqlite
+          export Database__Sqlite__Path="$RUNNER_TEMP/ephemeral-wire-20.db"
+          export Game__ListenUrl="http://127.0.0.1:5678"
+          export Game__GmCommandsEnabled=true
+          export SGO_CLIENT_ROOT="$GITHUB_WORKSPACE/client"
+          dotnet run -c Release --no-build --project server/SGO.Server.csproj > server-wire20.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 90); do
+            if curl -fsS --max-time 2 http://127.0.0.1:5678/health > server-health.json; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              cat server-wire20.log
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "Server /health was not ready"
+            tail -n 100 server-wire20.log
+            exit 1
+          fi
+          timeout --signal=TERM --kill-after=5s 360s dotnet run -c Release --no-build --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -- \
+            --url ws://127.0.0.1:5678/ \
+            --sizes 20 --rounds 3 --setup-concurrency 8 \
+            --mixed-seconds 8 --move-pixels 4 --timeout-seconds 30 \
+            --output wire20-result.json | tee wire20-output.log
+          python3 - <<'PY'
+          import json
+          d=json.load(open("wire20-result.json",encoding="utf-8"))
+          for r in d["Results"]:
+              print("[WIRE20] players=%s success=%s setup=%s errors=%s" %
+                    (r["Players"],r["Success"],r["SetupSuccesses"],r["Errors"]))
+              for field in ["Movement","NearbyChat"]:
+                  p=r.get(field,{})
+                  print("[WIRE20] %s deliveries=%s/%s p50=%.1fms p95=%.1fms p99=%.1fms" %
+                        (field,p.get("ActualDeliveries",0),p.get("ExpectedDeliveries",0),
+                         p.get("RoundLatencyMs",{}).get("P50",0),
+                         p.get("RoundLatencyMs",{}).get("P95",0),
+                         p.get("RoundLatencyMs",{}).get("P99",0)))
+              runtime=r.get("MixedSoak",{}).get("Runtime",{})
+              print("[WIRE20] ai_tick_p95_ms=%s cpu_percent=%s peak_memory_bytes=%s" %
+                    (runtime.get("AiTickElapsedMs",{}).get("P95"),
+                     runtime.get("CpuPercentOfMachine"),runtime.get("MaxWorkingSetBytes")))
+          PY
+      - name: Upload wire stats and server diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sgo-multiplayer-wire20
+          retention-days: 7
+          path: |
+            wire20-result.json
+            wire20-output.log
+            server-wire20.log
+            server-health.json
