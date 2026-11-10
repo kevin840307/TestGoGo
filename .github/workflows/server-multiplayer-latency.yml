@@ -133,6 +133,20 @@ jobs:
                       if match: slow.append(float(match.group(1)))
               print("[WIRE20_PHASE] %s slow_handlers=%d max_ms=%.1f" %
                     (packet_type,len(slow),max(slow,default=0.0)))
+          gm_commands=defaultdict(list)
+          for line in lines:
+              if "[SLOW_GM_COMMAND]" not in line:
+                  continue
+              command=re.search(r"Command=([a-z0-9_-]+)",line)
+              duration=re.search(r"ElapsedMs=([0-9.]+)",line)
+              if command and duration:
+                  gm_commands[command.group(1)].append(float(duration.group(1)))
+          for command,durations in sorted(gm_commands.items()):
+              print("[WIRE20_GM] command=%s slow_count=%d max_ms=%.1f" %
+                    (command,len(durations),max(durations)))
+          for group in ("SLOW_CHAT_PHASE","SLOW_LOCATION_RECONCILE","POSITION_BATCH_FAILED"):
+              print("[WIRE20_DIAG] %s events=%d" %
+                    (group,sum("["+group+"]" in line for line in lines)))
           PY
       - name: Upload wire stats and server diagnostics
         if: always()
