@@ -13,6 +13,10 @@ public sealed class ClientSession
     public bool PresenceAoiInitialized { get; set; }
     public double LastPresenceAoiX { get; set; }
     public double LastPresenceAoiY { get; set; }
+    // Client-reported visible-world radius. This affects only delivery AOI;
+    // combat, collision and authoritative movement remain server-owned.
+    public double ViewInterestRadius { get; set; } = 1800;
+    public double LastPresenceAoiInterestRadius { get; set; }
     public long? AccountId { get; set; }
     public long? CharacterId { get; set; }
     public string CharacterName { get; set; } = "";
