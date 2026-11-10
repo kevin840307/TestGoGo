@@ -2,6 +2,7 @@ extends SceneTree
 
 # Server-free deterministic oracle test of display-only ground drop selection.
 const PROFILE = preload("res://scripts/client_performance_profile.gd")
+const SPATIAL_INDEX = preload("res://scripts/ground_drop_spatial_index.gd")
 var _failures: int = 0
 
 func _check(ok: bool, label: String) -> void:
@@ -84,6 +85,46 @@ func _run() -> void:
 			_check(_same_ids(actual, expected),
 				"matches sorted reference for limit=%d radius=%.0f" % [limit, radius])
 	_check(records.size() == count_before, "authoritative drop dictionary unchanged")
+
+	# Real presentation index stores only compact positions/item types.
+	# Compare to the independent sorting oracle at several AOI sizes and caps.
+	var index = SPATIAL_INDEX.new()
+	for raw_id in records:
+		index.upsert(int(raw_id), records[raw_id])
+	_check(index.records.size() == count_before, "all 4504 drops indexed as data only")
+	for limit: int in [1, 5, 10]:
+		for radius: float in [5.0, 500.0, 1500.0]:
+			var oracle: Dictionary = _reference_select(records, Vector2.ZERO, radius, limit)
+			var indexed: Dictionary = index.find_nearest(Vector2.ZERO, radius, limit)
+			_check(_same_ids(indexed, oracle),
+				"spatial top-K agrees with reference for cap=%d radius=%.0f" % [limit, radius])
+	var selected_once: Dictionary = index.find_nearest(Vector2.ZERO, 500.0, 5)
+	var builds_before: int = index.rebuild_count
+	_check(_same_ids(selected_once, index.find_nearest(Vector2.ZERO, 500.0, 5)),
+		"same query returns the exact same ground winners")
+	_check(index.rebuild_count == builds_before,
+		"stationary observer does not rebuild ground candidates")
+	_check(index.last_visited_items < count_before,
+		"spatial radius examines fewer drops than the entire map")
+	# A duplicate snapshot should not invalidate the presentation cache.
+	index.upsert(1, records[1])
+	index.find_nearest(Vector2.ZERO, 500.0, 5)
+	_check(index.rebuild_count == builds_before, "duplicate server snapshot causes no redraw selection")
+	var relocated: Dictionary = records[1].duplicate(true)
+	relocated["LocX"] = 7000.0
+	index.upsert(1, relocated)
+	var revised: Dictionary = records.duplicate()
+	revised[1] = relocated
+	_check(_same_ids(index.find_nearest(Vector2.ZERO, 500.0, 5),
+		_reference_select(revised, Vector2.ZERO, 500.0, 5)), "moving ground item updates spatial cell")
+	index.erase(2)
+	revised.erase(2)
+	_check(_same_ids(index.find_nearest(Vector2.ZERO, 500.0, 5),
+		_reference_select(revised, Vector2.ZERO, 500.0, 5)), "item despawn selects a replacement")
+	index.clear()
+	_check(index.records.is_empty() and index.cells.is_empty(),
+		"map switch clears cached spatial records")
+
 	var unknown: Dictionary = PROFILE.select_visible_ground_drop_ids(
 		records, Vector2.ZERO, 500.0, 5
 	)
