@@ -14,6 +14,9 @@ internal static class InteractiveBots
         int? y = null;
         var radius = 280;
         var interval = 350;
+        // Combat cadence is deliberately independent of fast movement
+        // updates. Normal bots should not swing 3 times per second.
+        var attackIntervalMs = 1000;
         var duration = 0;
         // Use existing map monsters by default; --monsters may add test spawns.
         var spawn = 0;
@@ -37,6 +40,7 @@ internal static class InteractiveBots
                 case "--y": y = int.Parse(Next()); break;
                 case "--radius": radius = int.Parse(Next()); break;
                 case "--interval-ms": interval = int.Parse(Next()); break;
+                case "--attack-ms": attackIntervalMs = int.Parse(Next()); break;
                 case "--seconds": duration = int.Parse(Next()); break;
                 case "--monsters": spawn = int.Parse(Next()); break;
                 case "--level": level = int.Parse(Next()); break;
@@ -60,6 +64,8 @@ internal static class InteractiveBots
             throw new ArgumentException("Supply both --x and --y or neither (automatic map placement).");
         if (count < 1 || count > 1000) throw new ArgumentOutOfRangeException(nameof(count), "1..1000");
         if (interval < 150 || interval > 60000) throw new ArgumentOutOfRangeException(nameof(interval), "150..60000");
+        if (attackIntervalMs < 300 || attackIntervalMs > 30000)
+            throw new ArgumentOutOfRangeException(nameof(attackIntervalMs), "300..30000");
         if (radius < 32 || radius > 700 || level != 1 ||
             duration < 0 || spawn < 0 || spawn > 100 ||
             concurrency < 1 || concurrency > 50)
@@ -113,7 +119,7 @@ internal static class InteractiveBots
         Console.WriteLine($"[BOTS] Extra test monster spawns: {spawn} (0 = use existing map monsters).");
         Console.WriteLine("[BOTS] New bot accounts persist in the existing Server database.");
         Console.WriteLine("[BOTS] Requires Game__GmCommandsEnabled=true and Game__TestBotCommandsEnabled=true on Server.");
-        Console.WriteLine("[BOTS] Lv1, ATK=1, DEF=1000, HP=20000; normal attacks + rare simple single-target skills.");
+        Console.WriteLine($"[BOTS] Lv1, ATK=1, DEF=1000, HP=20000; single-target damage capped at 1; attack cadence={attackIntervalMs}ms.");
 
         try
         {
@@ -239,6 +245,9 @@ internal static class InteractiveBots
             async Task RunBotAsync(WireLoadClient bot)
             {
                 var tick = 0;
+                var attackCount = 0;
+                var nextAttackAt = DateTimeOffset.UtcNow.AddMilliseconds(
+                    Random.Shared.Next(0, attackIntervalMs + 1));
                 try
                 {
                     // Spread initial actions across the full base interval.
@@ -257,7 +266,15 @@ internal static class InteractiveBots
                                 : Math.Pow(nearest.X - bot.X, 2) +
                                   Math.Pow(nearest.Y - bot.Y, 2);
 
-                            if (nearest is null || distanceSq > 128 * 128)
+                            // Movement and attack are separate cadences.
+                            // A melee bot must actually approach a target, and
+                            // wall-separated targets require pathfinding.
+                            var hasClearPath = nearest is not null &&
+                                walks.HasClearPath(
+                                    bot.X, bot.Y, nearest.X, nearest.Y);
+                            if (nearest is null ||
+                                distanceSq > 92 * 92 ||
+                                !hasClearPath)
                             {
                                 var goal = nearest is not null
                                     ? (X: nearest.X, Y: nearest.Y)
@@ -278,13 +295,17 @@ internal static class InteractiveBots
 
                             // Server still validates real combat range. Never
                             // alter authoritative damage or simulate a fake hit.
-                            if (nearest is not null && distanceSq <= 170 * 170)
+                            if (nearest is not null &&
+                                distanceSq <= 92 * 92 &&
+                                hasClearPath &&
+                                DateTimeOffset.UtcNow >= nextAttackAt)
                             {
-                                var phase = tick + bot.Index * 7;
-                                if (phase % 20 == 0 && distanceSq <= 130 * 130)
+                                attackCount++;
+                                // One low-damage single-target skill per 20
+                                // attacks; no AOEs or simulated distance hits.
+                                if (attackCount % 20 == 0)
                                 {
-                                    // No area skills, rare single-target only.
-                                    var skill = phase % 60 == 0 ? 23102 : 20101;
+                                    var skill = attackCount % 60 == 0 ? 23102 : 20101;
                                     await bot.SendBotSkillAsync(
                                         skill, nearest.EntityId, timeout);
                                     Interlocked.Increment(ref singleSkills);
@@ -296,6 +317,10 @@ internal static class InteractiveBots
                                         timeout);
                                     Interlocked.Increment(ref attacks);
                                 }
+                                var jitter = Math.Max(1, attackIntervalMs / 5);
+                                nextAttackAt = DateTimeOffset.UtcNow.AddMilliseconds(
+                                    attackIntervalMs +
+                                    Random.Shared.Next(-jitter, jitter + 1));
                             }
 
                             // Retain weak Lv1 bot stats even after kill rewards.
@@ -393,6 +418,7 @@ internal static class InteractiveBots
                 AttackPackets = attacks,
                 SingleTargetSkillPackets = singleSkills,
                  TestRecoveryPackets = heals,
+                AttackIntervalMs = attackIntervalMs,
                 ConfirmedDamageHits = live.Sum(b => b.BotWorld.DamageHits),
                 ConfirmedSkillCasts = live.Sum(b => b.BotWorld.SkillCasts),
                 ObservedMonsterDeaths = live.Sum(b => b.BotWorld.MonsterDeaths),
