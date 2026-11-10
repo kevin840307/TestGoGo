@@ -461,23 +461,37 @@ func _current_view_interest_radius() -> int:
 	var viewport: Viewport = get_viewport()
 	if not is_instance_valid(viewport):
 		return int(VIEW_INTEREST_RADIUS.MIN_RADIUS)
-	var viewport_rect: Rect2 = viewport.get_visible_rect()
+
+	var player: Node2D = null
 	if GameManager and is_instance_valid(GameManager.current_player):
-		return roundi(VIEW_INTEREST_RADIUS.calculate_from_canvas(
-			viewport_rect,
+		player = GameManager.current_player
+
+	# Match the actual viewport logic used by NetworkEntityManager: reporting
+	# the same transformed corners prevents a server/client AOI disagreement.
+	if is_instance_valid(player):
+		var exact_radius: float = VIEW_INTEREST_RADIUS.calculate_from_canvas(
+			viewport.get_visible_rect(),
 			viewport.get_canvas_transform(),
-			GameManager.current_player.global_position
-		))
-	# WorldReady normally has a player. Keep a safe fallback for bootstrap
-	# callers without assuming the old 800x600 camera.
+			player.global_position
+		)
+		if exact_radius > 0.0:
+			return roundi(exact_radius)
+
+	# A singular transform can briefly occur during transitions. Keep a safe,
+	# bounded fallback instead of reporting zero or an unbounded radius.
+	var view_size: Vector2 = viewport.get_visible_rect().size
 	var camera: Camera2D = viewport.get_camera_2d()
 	var zoom: float = 1.0
+	var camera_player_offset: float = 0.0
 	if is_instance_valid(camera):
 		zoom = minf(absf(camera.zoom.x), absf(camera.zoom.y))
+		if is_instance_valid(player):
+			camera_player_offset = camera.global_position.distance_to(
+				player.global_position
+			)
 	return roundi(VIEW_INTEREST_RADIUS.calculate(
-		viewport_rect.size, zoom, 0.0
+		view_size, zoom, camera_player_offset
 	))
-
 
 func _send_view_interest_if_changed() -> void:
 	if socket.get_ready_state() != WebSocketPeer.STATE_OPEN:

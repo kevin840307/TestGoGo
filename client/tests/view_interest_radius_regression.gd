@@ -79,5 +79,44 @@ func _run() -> void:
 		) > 1800.0,
 		"camera offset is included in server interest radius"
 	)
+	var ultrawide_rect := Rect2(Vector2.ZERO, Vector2(3440.0, 1440.0))
+	var exact_ultrawide := ViewInterestRadius.calculate_from_canvas(
+		ultrawide_rect, Transform2D.IDENTITY, Vector2(1720.0, 720.0)
+	)
+	_check(
+		absf(exact_ultrawide - ultrawide) < 0.1,
+		"server interest uses the same real ultrawide Canvas2D corners"
+	)
+	var offset_canvas := Transform2D(
+		Vector2.RIGHT, Vector2.DOWN, Vector2(-600.0, 0.0)
+	)
+	var offset_interest := ViewInterestRadius.calculate_from_canvas(
+		ultrawide_rect, offset_canvas, Vector2(1720.0, 720.0)
+	)
+	_check(
+		offset_interest > exact_ultrawide + 400.0,
+		"camera/canvas offset expands server interest instead of clipping edge actors"
+	)
+	var anisotropic_canvas := Transform2D(
+		Vector2(0.6, 0.0), Vector2(0.0, 0.9), Vector2.ZERO
+	)
+	var anisotropic_observer: Vector2 = (
+		anisotropic_canvas.affine_inverse() * ultrawide_rect.get_center()
+	)
+	var anisotropic_interest := ViewInterestRadius.calculate_from_canvas(
+		ultrawide_rect, anisotropic_canvas, anisotropic_observer
+	)
+	_check(
+		anisotropic_interest > exact_ultrawide,
+		"non-uniform canvas stretch is measured in world space"
+	)
+	_check(
+		ViewInterestRadius.calculate_from_canvas(
+			Rect2(Vector2.ZERO, Vector2.ZERO),
+			Transform2D.IDENTITY,
+			Vector2.ZERO
+		) == 0.0,
+		"invalid canvas reports fallback sentinel without widening AOI"
+	)
 	print("[VIEW_INTEREST_TEST] ", "ALL PASS" if failed == 0 else "%d FAILURES" % failed)
 	quit(0 if failed == 0 else 1)
