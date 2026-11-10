@@ -10,6 +10,8 @@ on:
       - 'server/Application/World/SharedMapAiTicker.cs'
       - 'server/Application/PacketRouter.cs'
       - 'tests/SGO.Server.WireLoadProbe/**'
+      - 'tests/SGO.Server.PositionPersistenceProbe/**'
+      - 'server/Application/World/PositionPersistenceService.cs'
       - '.github/workflows/server-multiplayer-latency.yml'
   workflow_dispatch:
 
@@ -29,6 +31,15 @@ jobs:
         run: |
           dotnet build server/SGO.Server.csproj -c Release --nologo
           dotnet build tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -c Release --nologo
+          dotnet build tests/SGO.Server.PositionPersistenceProbe/SGO.Server.PositionPersistenceProbe.csproj -c Release --nologo
+      - name: Verify batch position durability and map fences on SQLite
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet run -c Release --no-build \
+            --project tests/SGO.Server.PositionPersistenceProbe/SGO.Server.PositionPersistenceProbe.csproj \
+            2>&1 | tee position-persist-test.log
+          grep -Fq '[POSITION_PERSIST_TEST] ALL PASS' position-persist-test.log
       - name: Twenty clients - AOI movement, chat, combat and mixed load
         shell: bash
         run: |
@@ -133,4 +144,5 @@ jobs:
             wire20-result.json
             wire20-output.log
             server-wire20.log
+            position-persist-test.log
             server-health.json
