@@ -9,8 +9,12 @@ var combat_target: Node2D = null
 # Visual-only prediction between authoritative position snapshots.
 # No change to the network, physics, combat or click/targeting path.
 const REMOTE_MOTION = preload("res://scripts/remote_player_motion.gd")
-const MIN_TELEPORT_DISTANCE: float = 1200.0
-const TELEPORT_SPEED_WINDOW: float = 1.0
+# A MoveEntity inside the bounded 5000-world-unit viewport AOI is not a
+# teleport merely because packets were delayed. Real map transitions use
+# despawn/spawn/change-map paths; keep the same-map discontinuity threshold
+# beyond normal visible interest.
+const MIN_TELEPORT_DISTANCE: float = 5200.0
+const TELEPORT_SPEED_WINDOW: float = 6.0
 var _remote_motion = REMOTE_MOTION.new()
 var _pending_idle: bool = false
 var _last_remote_move_received_msec: int = -1
@@ -496,7 +500,7 @@ func network_move_to(new_pos: Vector2, speed_time: float = 1.0,
 	# more packets or restarting a tween at every new position packet.
 	_remote_motion.receive(
 		new_pos, received_msec, speed_time, teleport_distance,
-		extended_server_seconds
+		extended_server_seconds, movement_speed_basis
 	)
 	target_position = new_pos
 	global_position = _remote_motion.visual_position
