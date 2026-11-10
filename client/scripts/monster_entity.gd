@@ -76,9 +76,12 @@ const NETWORK_MOVE_MAX_SPEED: float = 900.0
 # does not produce a stop at every server tick. Combat and correction packets
 # continue to override movement immediately.
 const NETWORK_MOVE_VISUAL_SLACK_SECONDS: float = 0.01
-const AUTHORITATIVE_VISUAL_CORRECTION_SECONDS: float = 0.24
 const AUTHORITATIVE_VISUAL_CORRECTION_MIN_DISTANCE: float = 8.0
-const AUTHORITATIVE_VISUAL_CORRECTION_MAX_DISTANCE: float = 160.0
+# Attack-entry position corrections keep the authoritative body exact, while
+# the sprite/UI may remain visually continuous across a delayed backlog.
+# The server lose-target radius is 700, so anything larger is treated as a
+# genuine discontinuity instead of being disguised.
+const AUTHORITATIVE_VISUAL_CORRECTION_MAX_DISTANCE: float = 700.0
 const NETWORK_MOVE_SNAP_EPSILON: float = 1.0
 # Keep diagnostics bounded even with hundreds of simultaneously chasing mobs.
 static var _debug_chase_packet_gap_logs: int = 0
@@ -1084,17 +1087,20 @@ func _ease_authoritative_visual_correction(previous_world_pos: Vector2) -> void:
 
 	# Ease the render-only offset back to zero. Never move the body itself:
 	# server-authoritative collision / skill target positions remain unchanged.
+	var correction_seconds: float = MONSTER_WAYPOINT_SPEED.correction_visual_seconds(
+		distance
+	)
 	_authoritative_visual_tween = create_tween()
 	_authoritative_visual_tween.set_parallel(true)
 	if is_instance_valid(sprite):
 		_authoritative_visual_tween.tween_property(
 			sprite, "position", _sprite_visual_base,
-			AUTHORITATIVE_VISUAL_CORRECTION_SECONDS
+			correction_seconds
 		).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	if is_instance_valid(ui_container):
 		_authoritative_visual_tween.tween_property(
 			ui_container, "position", _ui_visual_base,
-			AUTHORITATIVE_VISUAL_CORRECTION_SECONDS
+			correction_seconds
 		).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 
@@ -1117,7 +1123,12 @@ static func calculate_network_move_speed(distance: float, duration: float) -> fl
 	)
 
 
-func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
+func network_move_to(
+	target_pos: Vector2,
+	speed_time: float = 1.0,
+	snapshot_span_seconds: float = 0.0,
+	server_move_speed: float = 0.0
+) -> void :
 	if current_hp <= 0:
 		return
 	_idle_after_last_waypoint = false
@@ -1187,10 +1198,19 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 		network_move_active = false
 		return
 
-	# Follow server waypoint duration, not a fixed 205px/s ceiling. The
-	# latter leaves a monster behind whenever one 250ms waypoint exceeds
-	# ~53px and causes ever-growing stutter under multiplayer bursts.
-	network_move_speed = calculate_network_move_speed(remaining, speed_time)
+	# Match the original client's destination + entity-speed model. A normal
+	# packet follows the server's movement speed; coalesced historical
+	# waypoints may catch up only at a bounded multiple of that speed.
+	network_move_speed = MONSTER_WAYPOINT_SPEED.calculate_server_driven(
+		remaining,
+		speed_time,
+		server_move_speed,
+		snapshot_span_seconds,
+		NETWORK_MOVE_VISUAL_SLACK_SECONDS,
+		NETWORK_MOVE_MIN_SPEED,
+		NETWORK_MOVE_MAX_SPEED,
+		NETWORK_MOVE_SNAP_EPSILON
+	)
 
 	# Combat animation owns the body while it is playing, but keep the newest
 	# movement target buffered. When ATTACK/HIT finishes, movement resumes
