@@ -2,6 +2,7 @@
 extends BaseEntity
 
 const MOUSE_AUTORUN_STATE = preload("res://scripts/mouse_autorun_state.gd")
+const NORMAL_ATTACK_RANGE = preload("res://scripts/normal_attack_range.gd")
 
 @export var move_speed: float = 200.0
 
@@ -691,7 +692,12 @@ func _handle_combat_tracking() -> void :
 
 
 	var dist = global_position.distance_to(combat_target.global_position)
-	var required_range = float(data_model.attack_range)
+	# For ordinary attacks, convert the numeric base + equipment range stat
+	# to actual world-space reach. Weapon names/styles are not consulted.
+	# Skill CastRange (including its existing fallback) remains unchanged.
+	var required_range: float = NORMAL_ATTACK_RANGE.from_stat(
+		int(data_model.attack_range)
+	) if pending_skill_id <= 0 else float(data_model.attack_range)
 
 	if pending_skill_id > 0 and SkillLoader:
 		var s_res = SkillLoader.get_skill_data(pending_skill_id)
