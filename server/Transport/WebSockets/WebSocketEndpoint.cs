@@ -213,6 +213,7 @@ public static class WebSocketEndpoint
                     // producing irregular monster movement.
                     using var worldTimer =
                         new PeriodicTimer(TimeSpan.FromMilliseconds(250));
+                    var lastSlowWorldTickLogAt = DateTimeOffset.MinValue;
 
                     while (!worldTickToken.IsCancellationRequested &&
                            socket.State == WebSocketState.Open &&
@@ -224,9 +225,16 @@ public static class WebSocketEndpoint
                         var shouldPing = false;
                         var heartbeatTimedOut = false;
                         var superseded = false;
+                        var tickStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+                        var lockStarted = tickStarted;
+                        var lockWaitMs = 0.0;
+                        var presenceMs = 0.0;
+                        var routerTickMs = 0.0;
 
                         lock (state)
                         {
+                            lockWaitMs = System.Diagnostics.Stopwatch.GetElapsedTime(
+                                lockStarted).TotalMilliseconds;
                             superseded =
                                 state.AccountId.HasValue &&
                                 !sessions.IsCurrent(
@@ -235,10 +243,18 @@ public static class WebSocketEndpoint
 
                             if (!superseded)
                             {
+                                var presenceStarted =
+                                    System.Diagnostics.Stopwatch.GetTimestamp();
                                 router.SyncPresence(state);
+                                presenceMs = System.Diagnostics.Stopwatch.GetElapsedTime(
+                                    presenceStarted).TotalMilliseconds;
+                                var routerTickStarted =
+                                    System.Diagnostics.Stopwatch.GetTimestamp();
                                 packets = router.Tick(
                                     state,
                                     now);
+                                routerTickMs = System.Diagnostics.Stopwatch.GetElapsedTime(
+                                    routerTickStarted).TotalMilliseconds;
 
                                 shouldPing =
                                     ConnectionHeartbeat.ShouldPing(
@@ -258,6 +274,26 @@ public static class WebSocketEndpoint
                                 state.CloseRequested = true;
                                 packets = Array.Empty<object>();
                             }
+                        }
+
+                        // One warning per connection per 5s at most.
+                        // This only observes the existing 250ms cadence;
+                        // network, gameplay and physics are not throttled.
+                        var worldTickMs = System.Diagnostics.Stopwatch.GetElapsedTime(
+                            tickStarted).TotalMilliseconds;
+                        if (worldTickMs > 250 &&
+                            now - lastSlowWorldTickLogAt >= TimeSpan.FromSeconds(5))
+                        {
+                            lastSlowWorldTickLogAt = now;
+                            log.LogWarning(
+                                "[SLOW_WORLD_TICK] TotalMs={TotalMs:F1} LockWaitMs={LockWaitMs:F1} PresenceMs={PresenceMs:F1} RouterTickMs={RouterTickMs:F1} Connection={ConnectionID} Character={CharacterID} Map={MapID}",
+                                worldTickMs,
+                                lockWaitMs,
+                                presenceMs,
+                                routerTickMs,
+                                state.ConnectionId,
+                                state.CharacterId,
+                                state.CurrentMapId);
                         }
 
                         await SendPacketsAsync(
