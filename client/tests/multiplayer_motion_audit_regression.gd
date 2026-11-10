@@ -25,19 +25,27 @@ func _run() -> void:
 	audit.record_move(101, 0, 1100, 0.1, 20.0)
 	audit.record_move(1200101, 1, 1000, 0.25, 35.0)
 	audit.record_move(1200101, 1, 1250, 0.25, 45.0)
+	audit.record_move(1200101, 1, 3250, 0.75, 300.0, 2.0, 8)
 	var stats: Dictionary = audit.snapshot()
 	var players: Dictionary = stats.get("players", {})
 	var monsters: Dictionary = stats.get("monsters", {})
 	_check(int(players.get("moves", 0)) == 2
-		and int(monsters.get("moves", 0)) == 2,
+		and int(monsters.get("moves", 0)) == 3,
 		"remote player and monster statistics remain separated")
 	_check(is_equal_approx(float(players.get("receive_gap_avg_ms", 0.0)), 100.0)
-		and is_equal_approx(float(monsters.get("receive_gap_avg_ms", 0.0)), 250.0),
+		and is_equal_approx(float(monsters.get("receive_gap_avg_ms", 0.0)), 1125.0),
 		"receive gap measures actor time, not the global mixed-packet rate")
-	_check(is_equal_approx(float(monsters.get("server_interval_avg_ms", 0.0)), 250.0),
+	_check(is_equal_approx(float(monsters.get("server_interval_avg_ms", 0.0)), 416.6666666667),
 		"server SpeedTime is tracked independently of receive gap")
-	_check(str(monsters.get("receive_gap_p95_bucket_ms", "")) == "<=350",
+	_check(str(monsters.get("receive_gap_p95_bucket_ms", "")) == ">1000",
 		"p95 reports an explicit approximate latency bucket")
+
+	_check(int(monsters.get("coalesced_packets", 0)) == 1
+		and int(monsters.get("coalesced_moves_total", 0)) == 8
+		and is_equal_approx(float(monsters.get("coalesced_span_max_ms", 0.0)), 2000.0),
+		"coalesced movement counts and true span remain visible in 10s audit")
+	_check(int(players.get("coalesced_packets", 0)) == 0,
+		"ordinary single player snapshots do not create backlog false positives")
 
 	# Despawn/reset must not preserve stale actor jitter or long-session state.
 	audit.forget_entity(101)

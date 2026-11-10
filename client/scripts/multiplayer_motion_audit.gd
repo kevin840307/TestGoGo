@@ -25,7 +25,8 @@ func forget_entity(entity_id: int) -> void:
 
 
 func record_move(entity_id: int, entity_type: int, now_msec: int,
-	server_seconds: float, waypoint_distance_px: float) -> void:
+	server_seconds: float, waypoint_distance_px: float,
+	snapshot_span_seconds: float = 0.0, coalesced_moves: int = 1) -> void:
 	if entity_id <= 0:
 		return
 	if _report_start_msec < 0:
@@ -42,7 +43,9 @@ func record_move(entity_id: int, entity_type: int, now_msec: int,
 			"distance_sum": 0.0, "distance_max": 0.0,
 			"distance_hist": [0, 0, 0, 0, 0, 0, 0],
 			"server_sum_ms": 0.0, "server_min_ms": 999999.0,
-			"server_max_ms": 0.0
+			"server_max_ms": 0.0,
+			"coalesced_packets": 0, "coalesced_moves_total": 0,
+			"coalesced_span_max_ms": 0.0
 		}
 	stats["count"] = int(stats["count"]) + 1
 
@@ -66,6 +69,12 @@ func record_move(entity_id: int, entity_type: int, now_msec: int,
 	stats["server_sum_ms"] = float(stats["server_sum_ms"]) + server_ms
 	stats["server_min_ms"] = minf(float(stats["server_min_ms"]), server_ms)
 	stats["server_max_ms"] = maxf(float(stats["server_max_ms"]), server_ms)
+	if coalesced_moves > 1:
+		stats["coalesced_packets"] = int(stats["coalesced_packets"]) + 1
+		stats["coalesced_moves_total"] = int(stats["coalesced_moves_total"]) + coalesced_moves
+		stats["coalesced_span_max_ms"] = maxf(
+			float(stats["coalesced_span_max_ms"]), maxf(0.0, snapshot_span_seconds) * 1000.0
+		)
 	_stats_by_type[group] = stats
 
 	# Long sessions cannot retain every historical AOI incarnation.
@@ -113,6 +122,9 @@ func snapshot() -> Dictionary:
 			"server_interval_avg_ms": float(stats["server_sum_ms"]) / float(maxi(count, 1)),
 			"server_interval_min_ms": float(stats["server_min_ms"]),
 			"server_interval_max_ms": float(stats["server_max_ms"]),
+			"coalesced_packets": int(stats["coalesced_packets"]),
+			"coalesced_moves_total": int(stats["coalesced_moves_total"]),
+			"coalesced_span_max_ms": float(stats["coalesced_span_max_ms"]),
 			"waypoint_distance_avg_px": float(stats["distance_sum"]) / float(maxi(count, 1)),
 			"waypoint_distance_p95_bucket_px": _approx_p95(
 				stats["distance_hist"], DISTANCE_BUCKET_UPPER_PX

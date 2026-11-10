@@ -1660,7 +1660,9 @@ func _on_entity_moved(data: Dictionary) -> void :
 			_motion_audit.record_move(
 				entity_id, int(_active_entity_types.get(entity_id, -1)),
 				Time.get_ticks_msec(), speed_time,
-				target_node.global_position.distance_to(target_pos)
+				target_node.global_position.distance_to(target_pos),
+				float(data.get("SnapshotSpanSeconds", 0.0)),
+				int(data.get("CoalescedMoves", 1))
 			)
 		var derives_direction_from_target: bool = target_node.has_method("_apply_network_target_direction")
 
@@ -1681,7 +1683,7 @@ func _on_entity_moved(data: Dictionary) -> void :
 			if int(_active_entity_types.get(entity_id, -1)) == 0:
 				# A backpressured socket can merge several player snapshots.
 				# Preserve their true elapsed server time for remote prediction;
-				# monsters/pets keep their existing movement contract.
+				# pets keep their existing movement contract.
 				target_node.network_move_to(
 					target_pos, speed_time,
 					float(data.get("SnapshotSpanSeconds", 0.0))
