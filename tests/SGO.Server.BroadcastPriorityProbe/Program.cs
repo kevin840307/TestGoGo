@@ -132,21 +132,13 @@ for (var i = 0; i < peers.Length; i++)
 var everyPeerHasAllEvents = true;
 foreach (var peer in peers)
 {
+    // World/monster traffic must remain exact FIFO; ten historical visual
+    // positions for the SAME player coalesce into the newest unsent point.
     var valid = peer.Queue.Count == 300
-        && hub.PlayerPriorityBacklogCount(peer.ConnectionId) == 10;
-    long lastPlayerX = -1;
-    for (var expectedX = 0; expectedX < 150; expectedX += 15)
-    {
-        if (!hub.TryDequeuePlayerPriority(peer.ConnectionId, out var playerPacket))
-        {
-            valid = false;
-            break;
-        }
-        var x = (int)(playerPacket.GetType().GetProperty("X")?.GetValue(playerPacket) ?? -1);
-        if (x != expectedX || x < lastPlayerX)
-            valid = false;
-        lastPlayerX = x;
-    }
+        && hub.PlayerPriorityBacklogCount(peer.ConnectionId) == 1;
+    valid &= hub.TryDequeuePlayerPriority(peer.ConnectionId, out var latest)
+        && (int)(latest.GetType().GetProperty("X")?.GetValue(latest) ?? -1) == 135
+        && !hub.HasPendingPlayerPriority(peer.ConnectionId);
     var groundAndMonsterCount = 0;
     while (peer.Queue.TryDequeue(out _))
         groundAndMonsterCount++;
@@ -155,7 +147,29 @@ foreach (var peer in peers)
     hub.Unregister(peer.ConnectionId);
 }
 Check(everyPeerHasAllEvents,
-    "twenty observers retain independent player FIFO and all 6000 world packets");
+    "twenty observers preserve 6000 world events and the newest per-player visual position");
+
+// A combat/animation boundary MUST break position coalescing: never
+// reorder attack state or remove the last movement before combat.
+var boundary = hub.Register(prioritizePlayerEvents: true);
+var moveBeforeAttack = new { Type = "MoveEntity", EntityID = 123L, X = 10 };
+var stateAttack = new { Type = "SyncState", EntityID = 123L, State = "attack_aa" };
+var moveAfterAttack = new { Type = "MoveEntity", EntityID = 123L, X = 20 };
+hub.PublishToConnection(boundary.ConnectionId, moveBeforeAttack);
+hub.PublishToConnection(boundary.ConnectionId, stateAttack);
+hub.PublishToConnection(boundary.ConnectionId, moveAfterAttack);
+Check(hub.PlayerPriorityBacklogCount(boundary.ConnectionId) == 3,
+    "combat animation boundary prevents combining the two player positions");
+Check(hub.TryDequeuePlayerPriority(boundary.ConnectionId, out var before) &&
+      ReferenceEquals(before, moveBeforeAttack),
+    "movement before attack preserved in causal order");
+Check(hub.TryDequeuePlayerPriority(boundary.ConnectionId, out var middle) &&
+      ReferenceEquals(middle, stateAttack),
+    "player combat animation remains in causal order");
+Check(hub.TryDequeuePlayerPriority(boundary.ConnectionId, out var after) &&
+      ReferenceEquals(after, moveAfterAttack),
+    "new movement after attack preserved without merging across event");
+hub.Unregister(boundary.ConnectionId);
 
 // Repeated per-observer AES+JSON work is amortized for immutable scalar
 // broadcasts only. Confirm simultaneous observers get the same frame while
