@@ -1680,11 +1680,22 @@ func _on_entity_moved(data: Dictionary) -> void :
 			# Server correction packets (SpeedTime == 0) remain authoritative.
 			if int(_active_entity_types.get(entity_id, -1)) == 0:
 				# A backpressured socket can merge several player snapshots.
-				# Preserve their true elapsed server time for remote prediction;
-				# monsters/pets keep their existing movement contract.
+				# Preserve their true elapsed server time for remote prediction.
 				target_node.network_move_to(
 					target_pos, speed_time,
 					float(data.get("SnapshotSpanSeconds", 0.0))
+				)
+			elif is_monster:
+				# Monster movement follows the original-client model more
+				# closely: destination updates are separate from movement speed.
+				# Coalescing may span seconds, so pass both the full historical
+				# span and the Server-derived speed instead of compressing the
+				# entire distance into the 750ms compatibility SpeedTime cap.
+				target_node.network_move_to(
+					target_pos,
+					speed_time,
+					float(data.get("SnapshotSpanSeconds", 0.0)),
+					float(data.get("MoveSpeed", 0.0))
 				)
 			else:
 				target_node.network_move_to(target_pos, speed_time)
