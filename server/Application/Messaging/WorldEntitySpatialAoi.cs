@@ -27,11 +27,25 @@ public sealed class WorldEntitySpatialAoi
     // eliminating full-map dynamic traffic on large maps.
     public const double EnterRadius = 2600;
     public const double ExitRadius = 3000;
+    public const double MaxEnterRadius = PlayerSpatialAoi.MaxEnterRadius;
+    public const double MaxExitRadius = PlayerSpatialAoi.MaxExitRadius;
 
-    private const double EnterRadiusSquared =
-        EnterRadius * EnterRadius;
-    private const double ExitRadiusSquared =
-        ExitRadius * ExitRadius;
+    public static double NormalizeObserverEnterRadius(double requested)
+    {
+        if (double.IsNaN(requested) || double.IsInfinity(requested))
+            return EnterRadius;
+        return Math.Clamp(
+            Math.Max(EnterRadius, requested),
+            EnterRadius,
+            MaxEnterRadius);
+    }
+
+    public static double ObserverExitRadiusFor(double enterRadius)
+        => Math.Clamp(
+            NormalizeObserverEnterRadius(enterRadius) +
+                (ExitRadius - EnterRadius),
+            ExitRadius,
+            MaxExitRadius);
 
     public sealed record Change(
         Guid ObserverConnectionId,
@@ -42,6 +56,9 @@ public sealed class WorldEntitySpatialAoi
         OnlinePlayerPresence player)
     {
         public OnlinePlayerPresence Player = player;
+        public double EnterRadius = NormalizeObserverEnterRadius(
+            player.ViewInterestRadius);
+        public double ExitRadius = ObserverExitRadiusFor(EnterRadius);
         public readonly HashSet<long> Visible = new();
         public (int MapId, int CellX, int CellY) Cell =
             CellOf(player.MapId, player.X, player.Y);
@@ -237,6 +254,9 @@ public sealed class WorldEntitySpatialAoi
                     AddObserverCell(entry);
                 }
                 entry.Player = player;
+                entry.EnterRadius = NormalizeObserverEnterRadius(
+                    player.ViewInterestRadius);
+                entry.ExitRadius = ObserverExitRadiusFor(entry.EnterRadius);
             }
 
             var candidates =
@@ -246,7 +266,7 @@ public sealed class WorldEntitySpatialAoi
             foreach (var entityId in
                      NearbyEntityIds(
                          entry.Cell,
-                         ExitRadius))
+                         entry.ExitRadius))
             {
                 candidates.Add(entityId);
             }
@@ -274,8 +294,8 @@ public sealed class WorldEntitySpatialAoi
                     entity.Entity.X,
                     entity.Entity.Y,
                     wasVisible
-                        ? ExitRadiusSquared
-                        : EnterRadiusSquared);
+                        ? entry.ExitRadius * entry.ExitRadius
+                        : entry.EnterRadius * entry.EnterRadius);
 
                 if (wasVisible == nowVisible)
                     continue;
@@ -506,7 +526,7 @@ public sealed class WorldEntitySpatialAoi
         foreach (var observerId in
                  NearbyObserverIds(
                      entry.Cell,
-                     ExitRadius))
+                     MaxExitRadius))
         {
             candidates.Add(observerId);
         }
@@ -534,8 +554,8 @@ public sealed class WorldEntitySpatialAoi
                 entry.Entity.X,
                 entry.Entity.Y,
                 wasVisible
-                    ? ExitRadiusSquared
-                    : EnterRadiusSquared);
+                    ? observer.ExitRadius * observer.ExitRadius
+                    : observer.EnterRadius * observer.EnterRadius);
 
             if (wasVisible == nowVisible)
                 continue;
@@ -814,7 +834,8 @@ public sealed class WorldEntitySpatialAoi
            first.AccountId == second.AccountId &&
            first.CharacterId == second.CharacterId &&
            first.X == second.X &&
-           first.Y == second.Y;
+           first.Y == second.Y &&
+           first.ViewInterestRadius == second.ViewInterestRadius;
 
     private static (
         int MapId,
