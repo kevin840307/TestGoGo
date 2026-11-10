@@ -59,11 +59,11 @@ Check(hub.TryDequeuePlayerPriority(fast.ConnectionId, out var playerHit) &&
     "player-origin damage to a monster takes urgent lane without delaying combat");
 
 
-Check(fast.Queue.TryDequeue(out var low1) && ReferenceEquals(low1, monsterMove),
-    "monster movement is preserved");
-Check(fast.Queue.TryDequeue(out var low2) && ReferenceEquals(low2, itemSpawn),
+Check(hub.TryDequeueOrdinary(fast.ConnectionId, out var low1) && ReferenceEquals(low1, monsterMove),
+    "single monster movement is preserved exactly");
+Check(hub.TryDequeueOrdinary(fast.ConnectionId, out var low2) && ReferenceEquals(low2, itemSpawn),
     "ground item spawn is preserved");
-Check(fast.Queue.TryDequeue(out var low3) && ReferenceEquals(low3, monsterDamage),
+Check(hub.TryDequeueOrdinary(fast.ConnectionId, out var low3) && ReferenceEquals(low3, monsterDamage),
     "monster damage is preserved");
 Check(fast.Queue.IsEmpty, "no duplicate packets or lost ordinary packets");
 
@@ -73,6 +73,132 @@ foreach (var packet in packets)
         "legacy queue preserves exact FIFO ordering");
 }
 Check(!hub.HasPendingPlayerPriority(normal.ConnectionId), "legacy mode has no hidden second queue");
+
+// A busy WebSocket must not replay stale monster waypoints one by one.
+// Four 250ms snapshots for one actor become one newest destination while
+// retaining the historical span for diagnostics and bounded visual catch-up.
+var worldMovePeer = hub.Register(prioritizePlayerEvents: true);
+for (var i = 1; i <= 4; i++)
+{
+    hub.PublishToConnection(worldMovePeer.ConnectionId, new
+    {
+        Type = "MoveEntity",
+        EntityID = 8_130_045L,
+        X = i * 25,
+        Y = 12,
+        Dir = "6",
+        SpeedTime = 0.25
+    });
+}
+Check(worldMovePeer.Queue.Count == 1,
+    "four unsent snapshots for one monster occupy one ordinary queue slot");
+Check(hub.TryDequeueOrdinary(worldMovePeer.ConnectionId, out var latestWorldMove),
+    "coalesced world movement dequeues normally");
+using (var decoded = ClientProtocol.Decode(
+    Encoding.UTF8.GetString(hub.EncodeBroadcastPacket(latestWorldMove))))
+{
+    var packet = decoded.RootElement;
+    Check(packet.GetProperty("EntityID").GetInt64() == 8_130_045L &&
+          packet.GetProperty("X").GetDouble() == 100 &&
+          packet.GetProperty("Y").GetDouble() == 12 &&
+          Math.Abs(packet.GetProperty("SpeedTime").GetDouble() - 0.75) < 0.0001 &&
+          Math.Abs(packet.GetProperty("SnapshotSpanSeconds").GetDouble() - 1.0) < 0.0001,
+        "world movement keeps newest destination with bounded catch-up and true snapshot span");
+}
+hub.Unregister(worldMovePeer.ConnectionId);
+
+// Combat/state is a hard causal boundary: never combine a later waypoint
+// across attack/hit/death or other actor events.
+var worldBoundary = hub.Register(prioritizePlayerEvents: true);
+var worldBeforeAttack = new
+{
+    Type = "MoveEntity", EntityID = 8_130_046L,
+    X = 10, Y = 12, Dir = "6", SpeedTime = 0.25
+};
+var worldAttack = new
+{
+    Type = "SyncState", EntityID = 8_130_046L,
+    State = "attack", Dir = "6"
+};
+var worldAfterAttack = new
+{
+    Type = "MoveEntity", EntityID = 8_130_046L,
+    X = 20, Y = 12, Dir = "6", SpeedTime = 0.25
+};
+hub.PublishToConnection(worldBoundary.ConnectionId, worldBeforeAttack);
+hub.PublishToConnection(worldBoundary.ConnectionId, worldAttack);
+hub.PublishToConnection(worldBoundary.ConnectionId, worldAfterAttack);
+Check(worldBoundary.Queue.Count == 3,
+    "monster state boundary prevents movement coalescing across combat");
+Check(hub.TryDequeueOrdinary(worldBoundary.ConnectionId, out var worldBefore) &&
+      ReferenceEquals(worldBefore, worldBeforeAttack),
+    "monster movement before combat remains first");
+Check(hub.TryDequeueOrdinary(worldBoundary.ConnectionId, out var worldMiddle) &&
+      ReferenceEquals(worldMiddle, worldAttack),
+    "monster combat state remains in causal order");
+Check(hub.TryDequeueOrdinary(worldBoundary.ConnectionId, out var worldAfter) &&
+      ReferenceEquals(worldAfter, worldAfterAttack),
+    "monster movement after combat remains after the boundary");
+hub.Unregister(worldBoundary.ConnectionId);
+
+// SpeedTime <= 0.01 is an authoritative correction (for example the final
+// attack-position snap). It must remain a separate FIFO packet and must also
+// prevent a later normal waypoint from folding back before that correction.
+var correctionBoundary = hub.Register(prioritizePlayerEvents: true);
+var preCorrectionMove = new
+{
+    Type = "MoveEntity", EntityID = 8_130_047L,
+    X = 30, Y = 12, Dir = "6", SpeedTime = 0.25
+};
+var authoritativeCorrection = new
+{
+    Type = "MoveEntity", EntityID = 8_130_047L,
+    X = 34, Y = 12, Dir = "6", SpeedTime = 0.0
+};
+var postCorrectionMove = new
+{
+    Type = "MoveEntity", EntityID = 8_130_047L,
+    X = 50, Y = 12, Dir = "6", SpeedTime = 0.25
+};
+hub.PublishToConnection(correctionBoundary.ConnectionId, preCorrectionMove);
+hub.PublishToConnection(correctionBoundary.ConnectionId, authoritativeCorrection);
+hub.PublishToConnection(correctionBoundary.ConnectionId, postCorrectionMove);
+Check(correctionBoundary.Queue.Count == 3,
+    "authoritative zero-time correction is never merged with visual waypoints");
+Check(hub.TryDequeueOrdinary(correctionBoundary.ConnectionId, out var preCorrection) &&
+      ReferenceEquals(preCorrection, preCorrectionMove),
+    "movement before authoritative correction remains before it");
+Check(hub.TryDequeueOrdinary(correctionBoundary.ConnectionId, out var exactCorrection) &&
+      ReferenceEquals(exactCorrection, authoritativeCorrection),
+    "authoritative correction packet identity and FIFO position are preserved");
+Check(hub.TryDequeueOrdinary(correctionBoundary.ConnectionId, out var postCorrection) &&
+      ReferenceEquals(postCorrection, postCorrectionMove),
+    "movement after authoritative correction gets a fresh queue slot");
+hub.Unregister(correctionBoundary.ConnectionId);
+
+// Severe observer backpressure should scale with moving actors, not historical
+// waypoints: 1000 snapshots distributed across 20 monsters => 20 queue slots.
+var worldBurst = hub.Register(prioritizePlayerEvents: true);
+for (var i = 0; i < 1000; i++)
+{
+    hub.PublishToConnection(worldBurst.ConnectionId, new
+    {
+        Type = "MoveEntity",
+        EntityID = 8_200_000L + i % 20,
+        X = i,
+        Y = i % 7,
+        Dir = "3",
+        SpeedTime = 0.25
+    });
+}
+Check(worldBurst.Queue.Count == 20,
+    "1000 unsent monster waypoints collapse to 20 newest per-actor slots");
+var worldBurstSeen = 0;
+while (hub.TryDequeueOrdinary(worldBurst.ConnectionId, out _))
+    worldBurstSeen++;
+Check(worldBurstSeen == 20,
+    "all 20 moving monsters retain one newest waypoint after coalescing");
+hub.Unregister(worldBurst.ConnectionId);
 
 // A large stationary-ground and monster burst must not delay a newly queued
 // player update, nor may it silently discard or reorder ordinary messages.
@@ -90,7 +216,7 @@ Check(hub.TryDequeuePlayerPriority(fast.ConnectionId, out var urgent) &&
       "player move is dequeued first even after 2000 ordinary AOI events");
 Check(fast.Queue.Count == 2000, "all 2000 monster and drop updates remain queued");
 var ordinarySeen = 0;
-while (fast.Queue.TryDequeue(out _))
+while (hub.TryDequeueOrdinary(fast.ConnectionId, out _))
     ordinarySeen++;
 Check(ordinarySeen == 2000, "every ordinary item survives the priority burst");
 // Simulate twenty independent observers receiving mixed player and world
@@ -132,15 +258,16 @@ for (var i = 0; i < peers.Length; i++)
 var everyPeerHasAllEvents = true;
 foreach (var peer in peers)
 {
-    // World/monster traffic must remain exact FIFO; ten historical visual
-    // positions for the SAME player coalesce into the newest unsent point.
+    // World/monster traffic keeps one ordered slot per independent actor;
+    // ten historical visual positions for the SAME player coalesce into the
+    // newest urgent point.
     var valid = peer.Queue.Count == 300
         && hub.PlayerPriorityBacklogCount(peer.ConnectionId) == 1;
     valid &= hub.TryDequeuePlayerPriority(peer.ConnectionId, out var latest)
         && (int)(latest.GetType().GetProperty("X")?.GetValue(latest) ?? -1) == 135
         && !hub.HasPendingPlayerPriority(peer.ConnectionId);
     var groundAndMonsterCount = 0;
-    while (peer.Queue.TryDequeue(out _))
+    while (hub.TryDequeueOrdinary(peer.ConnectionId, out _))
         groundAndMonsterCount++;
     valid &= groundAndMonsterCount == 300;
     everyPeerHasAllEvents &= valid;
