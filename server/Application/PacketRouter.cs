@@ -874,7 +874,7 @@ public sealed class PacketRouter
                 {
                     state.CharacterId = null;
                     state.CharacterName = "";
-                state.CharacterRace = 0;
+                    state.CharacterRace = 0;
                     state.CurrentMapId = 0;
                     state.PendingMapSpawn = false;
                 }
@@ -5254,6 +5254,23 @@ public sealed class PacketRouter
                 if (message.Length > 200)
                     message = message[..200];
 
+                // This identity came from the authorized EnterWorld load.
+                // Ordinary chat should never open SQLite or hold the
+                // player's packet lock while a writer is busy. Existing
+                // standalone smoke tests may populate only CharacterId,
+                // so keep the DB lookup as a compatibility fallback.
+                var senderName = state.CharacterName;
+                var senderRace = state.CharacterRace;
+                if (string.IsNullOrWhiteSpace(senderName))
+                {
+                    var currentCharacter = _store.GetCharacter(
+                        accountId, selfDbid);
+                    if (currentCharacter is null)
+                        return [];
+                    senderName = currentCharacter["NAME"]?.ToString() ?? "";
+                    senderRace = Convert.ToInt32(currentCharacter["Race"]);
+                }
+
                 if (message.StartsWith(
                         "/gm",
                         StringComparison.OrdinalIgnoreCase))
@@ -5346,23 +5363,6 @@ public sealed class PacketRouter
 
                 if (clubCommand is not null)
                     return clubCommand;
-
-                // This identity came from the authorized EnterWorld load.
-                // Ordinary chat should never open SQLite or hold the
-                // player's packet lock while a writer is busy. Existing
-                // standalone smoke tests may populate only CharacterId,
-                // so keep the DB lookup as a compatibility fallback.
-                var senderName = state.CharacterName;
-                var senderRace = state.CharacterRace;
-                if (string.IsNullOrWhiteSpace(senderName))
-                {
-                    var currentCharacter = _store.GetCharacter(
-                        accountId, selfDbid);
-                    if (currentCharacter is null)
-                        return [];
-                    senderName = currentCharacter["NAME"]?.ToString() ?? "";
-                    senderRace = Convert.ToInt32(currentCharacter["Race"]);
-                }
 
                 var channel = req.Int("Channel", 0);
                 if (channel is < 0 or > 3)
