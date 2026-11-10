@@ -16,6 +16,9 @@ public sealed class ClientSession
     public long? AccountId { get; set; }
     public long? CharacterId { get; set; }
     public string CharacterName { get; set; } = "";
+    // Immutable base race from the authoritative EnterWorld character load.
+    // Avoid a SQLite GetCharacter() on every ordinary nearby chat packet.
+    public int CharacterRace { get; set; }
     public int CurrentMapId { get; set; }
     public double LastX { get; set; }
     public double LastY { get; set; }
