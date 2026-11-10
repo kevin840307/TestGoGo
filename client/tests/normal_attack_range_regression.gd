@@ -24,6 +24,16 @@ func _run() -> void:
 	var close_reach: float = _legacy_reach(45.0)
 	check(is_equal_approx(close_reach, sqrt(1825.0)),
 		"recovered legacy 45^2 - 200 threshold")
+	check(is_equal_approx(REACH.threshold_squared(80, 0), 1825.0),
+		"original squared attack bound is 1825 for unarmed")
+	check(REACH.within_range_squared(1824.0, 80, 0),
+		"distance squared below threshold allows normal attack")
+	check(not REACH.within_range_squared(1825.0, 80, 0),
+		"exact equal distance follows original jge -> approach")
+	check(not REACH.within_range_squared(1826.0, 80, 0),
+		"distance squared above threshold continues approach")
+	check(REACH.threshold_squared(80 + 120, 120) == 1825.0,
+		"normal sword uses identical strict squared threshold as unarmed")
 	check(is_equal_approx(REACH.from_stat(80, 0), close_reach),
 		"unarmed stays at original default close reach")
 	check(is_equal_approx(REACH.from_stat(80 + 120, 120), close_reach),
