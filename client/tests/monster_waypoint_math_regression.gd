@@ -30,6 +30,22 @@ func _run() -> void:
 		"350ms jittered bot waypoint retains its own server duration")
 	_check(MonsterWaypointSpeed.calculate(1000.0, 0.25) <= 900.0,
 		"large temporary network backlog has a bounded catch-up speed")
+	# Keep the full Server span for a coalesced multi-waypoint move,
+	# without changing 250ms movement or authoritative combat snaps.
+	var playback := MonsterWaypointSpeed.playback_duration(0.75, 2.0)
+	_check(playback > 0.75 and playback <= 1.25,
+		"coalesced world movement gets bounded full-span playback")
+	_check(MonsterWaypointSpeed.calculate(200.0, playback) <
+		MonsterWaypointSpeed.calculate(200.0, 0.75),
+		"historical movement cannot cause a compressed 750ms sprint")
+	_check(is_equal_approx(MonsterWaypointSpeed.playback_duration(0.25, 0.0), 0.25),
+		"normal 250ms world movement is unchanged")
+	_check(is_equal_approx(MonsterWaypointSpeed.playback_duration(0.0, 2.0), 0.0),
+		"combat correction is still immediate")
+	_check(MonsterWaypointSpeed.should_linger_outside_aoi(2240.0, 2200.0, 400)
+		and not MonsterWaypointSpeed.should_linger_outside_aoi(2240.0, 2200.0, 1000)
+		and not MonsterWaypointSpeed.should_linger_outside_aoi(3000.0, 2200.0, 0),
+		"only viewport-fringe monsters may linger briefly")
 	var full_hd_viewport := Rect2(Vector2.ZERO, Vector2(1920.0, 1080.0))
 	_check(MonsterWaypointSpeed.is_near_viewport(
 		full_hd_viewport, Vector2(1900.0, 1000.0)),
