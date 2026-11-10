@@ -26,7 +26,9 @@ public sealed record SharedMapAiTickProfile(
     double SessionLockWaitMs,
     double TickAiMs,
     double DirectPublishMs,
-    double OtherMs);
+    double OtherMs,
+    double PlayerSessionLockWaitMs = 0,
+    double HpSnapshotMs = 0);
 
 /// <summary>
 /// A single 250ms scheduler for all active maps. Monster AI and respawns are
@@ -133,6 +135,8 @@ public sealed class SharedMapAiTicker : BackgroundService
                 .TotalMilliseconds;
 
         var playerSnapshotMs = 0.0;
+        var playerSessionLockWaitMs = 0.0;
+        var hpSnapshotMs = 0.0;
         var respawnMs = 0.0;
         var assignmentMs = 0.0;
         var sessionLockWaitMs = 0.0;
@@ -176,8 +180,12 @@ public sealed class SharedMapAiTicker : BackgroundService
                 double playerX;
                 double playerY;
                 (double X, double Y)[] petPositions;
+                var snapshotLockStarted = Stopwatch.GetTimestamp();
                 lock (session)
                 {
+                    // Measure contention separately from snapshot and SQL.
+                    playerSessionLockWaitMs +=
+                        Stopwatch.GetElapsedTime(snapshotLockStarted).TotalMilliseconds;
                     if (!session.SharedAiManaged ||
                         !session.WorldReady ||
                         session.CurrentMapId != group.Key ||
@@ -212,8 +220,10 @@ public sealed class SharedMapAiTicker : BackgroundService
             // Snapshot the HP of all map players with one narrow read. Death,
             // revive and battle rules remain authoritative in CombatService;
             // this is only the already-existing owner assignment liveness.
+            var hpSnapshotStarted = Stopwatch.GetTimestamp();
             var mapHp = _characters.GetCharacterHpSnapshot(
                 players.Select(p => (p.AccountId, p.CharacterId)).ToArray());
+            hpSnapshotMs += Stopwatch.GetElapsedTime(hpSnapshotStarted).TotalMilliseconds;
             for (var i = 0; i < players.Count; i++)
             {
                 var p = players[i];
@@ -445,7 +455,9 @@ public sealed class SharedMapAiTicker : BackgroundService
             sessionLockWaitMs,
             tickAiMs,
             directPublishMs,
-            Math.Max(0.0, totalMs - accountedMs));
+            Math.Max(0.0, totalMs - accountedMs),
+            playerSessionLockWaitMs,
+            hpSnapshotMs);
 
         _lastDiagnostics = new SharedMapAiTickDiagnostics(
             now,
@@ -531,6 +543,8 @@ public sealed class SharedMapAiTicker : BackgroundService
                         $"Total={profile.TotalMs:F1}ms " +
                         $"SessionSnapshot={profile.SessionSnapshotMs:F1}ms " +
                         $"PlayerSnapshot={profile.PlayerSnapshotMs:F1}ms " +
+                        $"PlayerLockWait={profile.PlayerSessionLockWaitMs:F1}ms " +
+                        $"HpSnapshot={profile.HpSnapshotMs:F1}ms " +
                         $"Respawn={profile.RespawnMs:F1}ms " +
                         $"Assignment={profile.AssignmentMs:F1}ms " +
                         $"SessionLockWait={profile.SessionLockWaitMs:F1}ms " +
@@ -550,10 +564,12 @@ public sealed class SharedMapAiTicker : BackgroundService
                         "[MAP_AI_SLOW_TICK] ElapsedMs={ElapsedMs:F1}",
                         elapsed.TotalMilliseconds);
                     _log.LogWarning(
-                        "[MAP_AI_PROFILE] TotalMs={TotalMs:F1} SessionSnapshotMs={SessionSnapshotMs:F1} PlayerSnapshotMs={PlayerSnapshotMs:F1} RespawnMs={RespawnMs:F1} AssignmentMs={AssignmentMs:F1} SessionLockWaitMs={SessionLockWaitMs:F1} TickAiMs={TickAiMs:F1} DirectPublishMs={DirectPublishMs:F1} OtherMs={OtherMs:F1} ActiveSessions={ActiveSessions} ActiveMaps={ActiveMaps} Monsters={Monsters} Assigned={Assigned}",
+                        "[MAP_AI_PROFILE] TotalMs={TotalMs:F1} SessionSnapshotMs={SessionSnapshotMs:F1} PlayerSnapshotMs={PlayerSnapshotMs:F1} PlayerSessionLockWaitMs={PlayerSessionLockWaitMs:F1} HpSnapshotMs={HpSnapshotMs:F1} RespawnMs={RespawnMs:F1} AssignmentMs={AssignmentMs:F1} SessionLockWaitMs={SessionLockWaitMs:F1} TickAiMs={TickAiMs:F1} DirectPublishMs={DirectPublishMs:F1} OtherMs={OtherMs:F1} ActiveSessions={ActiveSessions} ActiveMaps={ActiveMaps} Monsters={Monsters} Assigned={Assigned}",
                         profile.TotalMs,
                         profile.SessionSnapshotMs,
                         profile.PlayerSnapshotMs,
+                        profile.PlayerSessionLockWaitMs,
+                        profile.HpSnapshotMs,
                         profile.RespawnMs,
                         profile.AssignmentMs,
                         profile.SessionLockWaitMs,
