@@ -1056,6 +1056,25 @@ public sealed class PacketRouter
                 ];
             }
 
+            case "ViewportAoi":
+            {
+                // Unlike SyncPosition, a stationary player's resized
+                // viewport must update the visibility known-sets immediately.
+                // No collision checks, persistence, AI or movement broadcast.
+                if (!state.WorldReady || !state.CharacterId.HasValue ||
+                    state.CurrentMapId <= 0)
+                    return [];
+                if (_broadcasts.SetViewRadius(
+                        state.ConnectionId, req.Int("Radius", 1800)))
+                {
+                    PublishPlayerAoiChanges(
+                        _broadcasts.ReconcilePlayerAoi(state.ConnectionId));
+                    PublishWorldAoiChanges(
+                        _broadcasts.ReconcileWorldAoi(state.ConnectionId));
+                }
+                return [];
+            }
+
             case "WorldReady":
             {
                 if (!state.CharacterId.HasValue || state.CurrentMapId <= 0)
@@ -1087,6 +1106,8 @@ public sealed class PacketRouter
                     ];
                 }
 
+                _broadcasts.SetViewRadius(
+                    state.ConnectionId, req.Int("ViewRadius", 1800));
                 state.WorldReady = true;
 
                 // Map loading is asynchronous on the Godot client. Ground-item
