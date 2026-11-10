@@ -874,6 +874,7 @@ public sealed class PacketRouter
                 {
                     state.CharacterId = null;
                     state.CharacterName = "";
+                state.CharacterRace = 0;
                     state.CurrentMapId = 0;
                     state.PendingMapSpawn = false;
                 }
@@ -956,6 +957,7 @@ public sealed class PacketRouter
                 state.CharacterName = character.TryGetValue("NAME", out var selectedName)
                     ? selectedName?.ToString() ?? $"角色{dbid}"
                     : $"角色{dbid}";
+                state.CharacterRace = Convert.ToInt32(character["Race"]);
                 state.CurrentMapId = Convert.ToInt32(character["MapID"]);
                 state.LastX = Convert.ToDouble(character["LocX"]);
                 state.LastY = Convert.ToDouble(character["LocY"]);
@@ -5236,12 +5238,6 @@ public sealed class PacketRouter
                     return [];
 
                 var selfDbid = state.CharacterId.Value;
-                var character = _store.GetCharacter(
-                    accountId,
-                    selfDbid);
-                if (character is null)
-                    return [];
-
                 var message = req.Str("Message").Trim();
                 if (message.Length == 0)
                 {
@@ -5294,30 +5290,18 @@ public sealed class PacketRouter
                     var privateText = parts[2];
                     OnlinePlayerPresence? target = null;
 
+                    // Authenticated online presence already includes the
+                    // target name. Do not open one SQLite connection per
+                    // online player for a private-chat name lookup.
                     foreach (var presence in
                              _broadcasts.OnlinePlayers(
                                  state.ConnectionId))
                     {
-                        var targetCharacter =
-                            _store.GetCharacter(
-                                presence.AccountId,
-                                presence.CharacterId);
-
-                        if (targetCharacter is null ||
-                            !targetCharacter.TryGetValue(
-                                "NAME",
-                                out var rawTargetName))
-                        {
-                            continue;
-                        }
-
                         if (!string.Equals(
-                                rawTargetName?.ToString(),
+                                presence.CharacterName,
                                 targetName,
                                 StringComparison.OrdinalIgnoreCase))
-                        {
                             continue;
-                        }
 
                         target = presence;
                         break;
@@ -5340,8 +5324,8 @@ public sealed class PacketRouter
                     {
                         Type = "ChatBroadcast",
                         EntityID = selfDbid,
-                        SenderName = character["NAME"],
-                        Race = character["Race"],
+                        SenderName = senderName,
+                        Race = senderRace,
                         Channel = 4,
                         Message = privateText,
                         BubbleType = 0
@@ -5362,6 +5346,23 @@ public sealed class PacketRouter
 
                 if (clubCommand is not null)
                     return clubCommand;
+
+                // This identity came from the authorized EnterWorld load.
+                // Ordinary chat should never open SQLite or hold the
+                // player's packet lock while a writer is busy. Existing
+                // standalone smoke tests may populate only CharacterId,
+                // so keep the DB lookup as a compatibility fallback.
+                var senderName = state.CharacterName;
+                var senderRace = state.CharacterRace;
+                if (string.IsNullOrWhiteSpace(senderName))
+                {
+                    var currentCharacter = _store.GetCharacter(
+                        accountId, selfDbid);
+                    if (currentCharacter is null)
+                        return [];
+                    senderName = currentCharacter["NAME"]?.ToString() ?? "";
+                    senderRace = Convert.ToInt32(currentCharacter["Race"]);
+                }
 
                 var channel = req.Int("Channel", 0);
                 if (channel is < 0 or > 3)
@@ -5385,8 +5386,8 @@ public sealed class PacketRouter
                 {
                     Type = "ChatBroadcast",
                     EntityID = selfDbid,
-                    SenderName = character["NAME"],
-                    Race = character["Race"],
+                    SenderName = senderName,
+                    Race = senderRace,
                     Channel = channel,
                     Message = message,
                     BubbleType = bubbleType
@@ -5531,6 +5532,7 @@ public sealed class PacketRouter
                 state.AccountId = null;
                 state.CharacterId = null;
                 state.CharacterName = "";
+                state.CharacterRace = 0;
                 state.CurrentMapId = 0;
                 state.PendingMapSpawn = false;
                 state.Monsters.Clear();
