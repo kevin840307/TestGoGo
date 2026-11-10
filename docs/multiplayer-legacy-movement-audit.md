@@ -61,6 +61,23 @@
 - 基本 regression：`remote_multiplayer_motion_regression.gd`、`monster_chase_regression.gd`（`a6d9d5d6`、`98342d1f`）。
 - **以上需持續測試，不能視為已通過 20 人遊玩驗收。**
 
+## 3.1 2026-11-10 實際多人壓測證據（重要）
+
+GitHub Actions：[20 人 wire latency 測試 #42813635362](https://github.com/kevin840307/TestGoGo/actions/runs/42813635362)，測試完成且 `Success=True`，**但不是延遲達標**：
+
+- 移動：`1140/1140` 個 delivery；`RoundLatencyMs P50=929.2ms`、`P95=4008.4ms`、`P99=4008.4ms`。這是**該測試的 round latency 統計**，不能直接冒充玩家端畫面每一包的 one-way latency。
+- 附近聊天：`1200/1200`，`P50=5.5ms`、`P95=12.6ms`。
+- 共用 AI tick：`P95=14.3128ms`；然而 log 也出現 `[SLOW_PACKET_DETAIL] Type=SyncPosition HandlerMs=3000.8`、`AttackEntity HandlerMs=1002.3`、`[SLOW_WORLD_TICK] LockWaitMs=768.0`。
+
+**結論：多人慢不是單純 Client 渲染；Server 的移動請求偶爾會阻塞上千毫秒。** 只用平滑動畫不能填補秒級過期位置。故 P0 需同步收集 `[SLOW_MOVEMENT_HANDLER]`（Collision/AOI/Persist/Broadcast 分段）、`[SLOW_PACKET_DETAIL]`、`[MAP_AI_PROFILE]`，判定 SQLite 寫入、AOI 列舉或其他請求占鎖的責任；**不可先猜測是某一個鎖、直接刪交易/驗證或大幅改寫 Server**。
+
+新提交的純 Client 診斷及測試（在本文建立後進行）：
+
+- `client/scripts/multiplayer_motion_audit.gd`：Debug 模式每 10 秒聚合每類 actor 的收包間隔、Server SpeedTime、距離最新 waypoint 的追點距離，有限 actor 記憶體，沒有逐封包印 Log。
+- `client/scripts/network_manager.gd`：Debug 模式 `[MULTIPLAYER_PACKET_AUDIT]` 聚合 Socket 收包量、分類、佇列峰值、每個 physics tick 處理預算耗盡次數；不變更收包上限、排序或 FPS。
+- `client/tests/multiplayer_motion_audit_regression.gd`：保證 player/monster 統計隔離、Server 時間與收包時間分開、換圖/消失清理。
+- `.github/workflows/client-multiplayer-motion.yml`：獨立安裝已確認存在的 Godot 4.7.2 stable，匯入資源並執行 remote player、monster、AOI、audit 的 headless regression。此 workflow 與原有 Quest strict audit 失敗互不阻塞。
+
 ## 4. 預計實作順序（先文件、再程式、再量測）
 
 ### P0：證據與時間線（先做）
