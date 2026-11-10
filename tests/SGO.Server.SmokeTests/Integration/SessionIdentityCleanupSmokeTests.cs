@@ -43,6 +43,8 @@ internal static class SessionIdentityCleanupSmokeTests
             session,
             first);
         router.SyncPresence(session);
+        VerifyAoiSnapshotOnlyChangesWithPosition(
+            router, session);
 
         OpenShop(
             router,
@@ -191,6 +193,47 @@ internal static class SessionIdentityCleanupSmokeTests
             recoverySession);
         broadcasts.Unregister(
             recoveryRegistration.ConnectionId);
+    }
+
+    private static void VerifyAoiSnapshotOnlyChangesWithPosition(
+        PacketRouter router,
+        ClientSession session)
+    {
+        var originalX = session.LastX;
+        var originalY = session.LastY;
+
+        session.WorldReady = true;
+        router.SyncPresence(session);
+        Check(
+            session.PresenceAoiInitialized &&
+            session.LastPresenceAoiX == originalX &&
+            session.LastPresenceAoiY == originalY,
+            "world-ready player initializes both spatial AOI indexes");
+
+        router.SyncPresence(session);
+        Check(
+            session.PresenceAoiInitialized &&
+            session.LastPresenceAoiX == originalX &&
+            session.LastPresenceAoiY == originalY,
+            "repeated idle socket tick preserves reconciled player AOI position");
+
+        session.LastX = originalX + 40;
+        session.LastY = originalY + 20;
+        router.SyncPresence(session);
+        Check(
+            session.LastPresenceAoiX == session.LastX &&
+            session.LastPresenceAoiY == session.LastY,
+            "approved player position change updates AOI without waiting for world tick");
+
+        session.WorldReady = false;
+        router.SyncPresence(session);
+        Check(
+            !session.PresenceAoiInitialized,
+            "leaving world removes AOI observer even when map identity stays unchanged");
+
+        session.LastX = originalX;
+        session.LastY = originalY;
+        router.SyncPresence(session);
     }
 
     private static void LoginAndSelect(
