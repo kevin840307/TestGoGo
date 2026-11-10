@@ -96,7 +96,7 @@ public sealed class ServerBroadcastHub
         // hundreds of milliseconds of walking for a single short step.
         // Zero means this packet did not provide a trustworthy interval.
         public double TotalServerSeconds { get; set; } =
-            ReadPacketDouble(packet, "SpeedTime") is > 0 and <= 0.75
+            ReadPacketDouble(packet, "SpeedTime") is > 0.01 and <= 1.0
                 ? ReadPacketDouble(packet, "SpeedTime")
                 : 0;
         public int MoveCount { get; set; } = 1;
@@ -232,19 +232,22 @@ public sealed class ServerBroadcastHub
         {
             var type = ReadPacketString(packet, "Type");
             var entityId = ReadPacketLong(packet, "EntityID");
+            var speedTime = ReadPacketDouble(packet, "SpeedTime");
 
             // Player movement is already handled by the urgent lane. World
             // actor IDs use the ordinary lane and may replace only another
-            // still-unsent movement snapshot for the exact same actor.
-            if (type == "MoveEntity" && entityId >= 1_000_000)
+            // still-unsent movement waypoint for the exact same actor.
+            // SpeedTime <= 0.01 is an authoritative correction used around
+            // combat and must remain an exact FIFO boundary, never a visual
+            // waypoint that can be replaced by a later movement.
+            if (type == "MoveEntity" && entityId >= 1_000_000 &&
+                speedTime is > 0.01 and <= 1.0)
             {
                 if (movement.Pending.TryGetValue(entityId, out var slot))
                 {
-                    var nextSeconds = ReadPacketDouble(packet, "SpeedTime");
                     slot.TotalServerSeconds =
-                        slot.TotalServerSeconds > 0 &&
-                        nextSeconds is > 0 and <= 0.75
-                            ? slot.TotalServerSeconds + nextSeconds
+                        slot.TotalServerSeconds > 0
+                            ? Math.Min(8.0, slot.TotalServerSeconds + speedTime)
                             : 0;
                     slot.MoveCount++;
                     slot.LatestPacket = packet;
