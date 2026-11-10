@@ -43,7 +43,11 @@ jobs:
           set -euo pipefail
           project="$RUNNER_TEMP/sgo-motion-test"
           mkdir -p "$project/scripts" "$project/tests"
-          printf 'config_version=5\\n[application]\\nconfig/name="SGO Multiplayer Motion Tests"\\n' > "$project/project.godot"
+          cat > "$project/project.godot" <<'EOF'
+          config_version=5
+          [application]
+          config/name="SGO Multiplayer Motion Tests"
+          EOF
           cp client/scripts/remote_player_motion.gd "$project/scripts/"
           cp client/scripts/multiplayer_motion_audit.gd "$project/scripts/"
           cp client/scripts/monster_waypoint_speed.gd "$project/scripts/"
@@ -60,8 +64,8 @@ jobs:
             timeout 40s /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path "$project" \
               --script "res://tests/$script" 2>&1 | tee -a godot-motion.log
           done
-          grep -q '\\[REMOTE_MOTION_TEST\\] ALL PASS' godot-motion.log
-          grep -q '\\[MONSTER_WAYPOINT_TEST\\] ALL PASS' godot-motion.log
+          grep -Fq '[REMOTE_MOTION_TEST] ALL PASS' godot-motion.log
+          grep -Fq '[REMOTE_MOTION_TEST] ALL PASS' godot-motion.log
           grep -q '\\[MOTION_AUDIT\\] ALL PASS' godot-motion.log
       - name: Scene/packet integration regressions (requires original art)
         shell: bash
