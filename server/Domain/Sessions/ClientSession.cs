@@ -43,6 +43,8 @@ public sealed class ClientSession
     public bool PositionDirty { get; set; }
     public DateTimeOffset LastPositionPersistAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastPositionBroadcastAt { get; set; } = DateTimeOffset.MinValue;
+    // Rate-limit diagnostics only; never changes movement/update cadence.
+    public DateTimeOffset LastSlowMovementDiagAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastLocationReconcileAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastPingAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastPongAt { get; set; } = DateTimeOffset.UtcNow;
