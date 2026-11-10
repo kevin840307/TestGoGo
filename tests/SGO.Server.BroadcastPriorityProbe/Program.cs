@@ -87,7 +87,8 @@ for (var i = 1; i <= 4; i++)
         X = i * 25,
         Y = 12,
         Dir = "6",
-        SpeedTime = 0.25
+        SpeedTime = 0.25,
+        MoveSpeed = 100.0
     });
 }
 Check(worldMovePeer.Queue.Count == 1,
@@ -102,8 +103,9 @@ using (var decoded = ClientProtocol.Decode(
           packet.GetProperty("X").GetDouble() == 100 &&
           packet.GetProperty("Y").GetDouble() == 12 &&
           Math.Abs(packet.GetProperty("SpeedTime").GetDouble() - 0.75) < 0.0001 &&
-          Math.Abs(packet.GetProperty("SnapshotSpanSeconds").GetDouble() - 1.0) < 0.0001,
-        "world movement keeps newest destination with bounded catch-up and true snapshot span");
+          Math.Abs(packet.GetProperty("SnapshotSpanSeconds").GetDouble() - 1.0) < 0.0001 &&
+          Math.Abs(packet.GetProperty("MoveSpeed").GetDouble() - 100.0) < 0.0001,
+        "world movement keeps newest destination, true span and entity movement speed");
 }
 hub.Unregister(worldMovePeer.ConnectionId);
 
