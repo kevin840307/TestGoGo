@@ -79,19 +79,19 @@ func _run() -> void:
 		) > 1800.0,
 		"camera offset is included in server interest radius"
 	)
-	var ultrawide_rect := Rect2(Vector2.ZERO, Vector2(3440.0, 1440.0))
+	var ultrawide_rect_exact := Rect2(Vector2.ZERO, Vector2(3440.0, 1440.0))
 	var exact_ultrawide := ViewInterestRadius.calculate_from_canvas(
-		ultrawide_rect, Transform2D.IDENTITY, Vector2(1720.0, 720.0)
+		ultrawide_rect_exact, Transform2D.IDENTITY, Vector2(1720.0, 720.0)
 	)
 	_check(
 		absf(exact_ultrawide - ultrawide) < 0.1,
 		"server interest uses the same real ultrawide Canvas2D corners"
 	)
-	var offset_canvas := Transform2D(
+	var offset_canvas_wide := Transform2D(
 		Vector2.RIGHT, Vector2.DOWN, Vector2(-600.0, 0.0)
 	)
 	var offset_interest := ViewInterestRadius.calculate_from_canvas(
-		ultrawide_rect, offset_canvas, Vector2(1720.0, 720.0)
+		ultrawide_rect_exact, offset_canvas_wide, Vector2(1720.0, 720.0)
 	)
 	_check(
 		offset_interest > exact_ultrawide + 400.0,
@@ -104,7 +104,7 @@ func _run() -> void:
 		anisotropic_canvas.affine_inverse() * ultrawide_rect.get_center()
 	)
 	var anisotropic_interest := ViewInterestRadius.calculate_from_canvas(
-		ultrawide_rect, anisotropic_canvas, anisotropic_observer
+		ultrawide_rect_exact, anisotropic_canvas, anisotropic_observer
 	)
 	_check(
 		anisotropic_interest > exact_ultrawide,
