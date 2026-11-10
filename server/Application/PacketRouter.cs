@@ -5284,7 +5284,34 @@ public sealed class PacketRouter
                         "/gm",
                         StringComparison.OrdinalIgnoreCase))
                 {
-                    return _gm.Execute(message, state);
+                    // The load probe uses /gm map and /gm spawn during
+                    // setup, and these may perform SQLite mutations.
+                    // Classify their cost separately from actual ChatMessage
+                    // traffic so a slow GM setup is not misdiagnosed as
+                    // normal 20-player chat latency.
+                    var gmStarted = Stopwatch.GetTimestamp();
+                    var gmPackets = _gm.Execute(message, state);
+                    var gmMs = Stopwatch.GetElapsedTime(
+                        gmStarted).TotalMilliseconds;
+                    var gmNow = DateTimeOffset.UtcNow;
+                    if (gmMs >= 250 &&
+                        gmNow - state.LastSlowChatDiagAt >=
+                            TimeSpan.FromSeconds(5))
+                    {
+                        state.LastSlowChatDiagAt = gmNow;
+                        var tokens = message.Split(' ',
+                            3,
+                            StringSplitOptions.RemoveEmptyEntries);
+                        var gmVerb = tokens.Length >= 2
+                            ? tokens[1].ToLowerInvariant()
+                            : "<missing>";
+                        // Never print command arguments (which can contain
+                        // player data); only the command class and elapsed.
+                        _log.LogWarning(
+                            "[SLOW_GM_COMMAND] Command={Command} ElapsedMs={ElapsedMs:F1} Character={Character}",
+                            gmVerb, gmMs, selfDbid);
+                    }
+                    return gmPackets;
                 }
 
                 if (message.StartsWith(
