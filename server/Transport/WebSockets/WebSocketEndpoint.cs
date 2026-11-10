@@ -171,12 +171,12 @@ public static class WebSocketEndpoint
                             playerUpdates.Add(urgentPacket);
                         }
                         for (var i = 0; i < ordinaryBatch &&
-                             broadcastQueue.TryDequeue(out var broadcastPacket); i++)
+                             broadcasts.TryDequeueOrdinary(
+                                 broadcastConnectionId, out var broadcastPacket); i++)
                         {
-                            // This WebSocket registered its dedicated player
-                            // lane before the broadcast queue became visible.
-                            // Ordinary packets therefore require no expensive
-                            // reflection-based reclassification here.
+                            // World movement snapshots may collapse to the
+                            // newest still-unsent waypoint. Combat/state/loot
+                            // boundaries remain exact FIFO and are never lost.
                             otherUpdates.Add(broadcastPacket);
                         }
 
