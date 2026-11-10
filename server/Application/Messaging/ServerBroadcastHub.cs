@@ -100,9 +100,9 @@ public sealed class ServerBroadcastHub
         public int MoveCount { get; set; } = 1;
     }
 
-    // A packet can be late before it even enters the broadcast queue.
-    // Respect its full server interval before coalescing later movements.
-    // Zero-time combat corrections are never ordinary movement.
+    // A movement packet can already represent a delayed/coalesced server
+    // interval before it reaches this observer queue. Prefer that full span
+    // over the compatibility-capped SpeedTime.
     private static double ReadMovementServerSpan(object packet)
     {
         var speedTime = ReadPacketDouble(packet, "SpeedTime");
@@ -110,7 +110,8 @@ public sealed class ServerBroadcastHub
             return 0;
         var extended = ReadPacketDouble(packet, "SnapshotSpanSeconds");
         return extended is > 0.75 and <= 8.0
-            ? extended : speedTime;
+            ? extended
+            : speedTime;
     }
 
     private sealed class PlayerPriorityMovementState
@@ -131,6 +132,15 @@ public sealed class ServerBroadcastHub
         public object LatestPacket { get; set; } = packet;
         public double TotalServerSeconds { get; set; } =
             ReadMovementServerSpan(packet);
+        // Weighted path length lets the client preserve original-style
+        // entity movement speed even when several unsent waypoints collapse
+        // into one latest destination.
+        public double TotalPathDistance { get; set; } =
+            ReadPacketDouble(packet, "MoveSpeed") > 0 &&
+            ReadMovementServerSpan(packet) > 0
+                ? ReadPacketDouble(packet, "MoveSpeed") *
+                  ReadMovementServerSpan(packet)
+                : 0;
         public int MoveCount { get; set; } = 1;
     }
 
@@ -179,7 +189,9 @@ public sealed class ServerBroadcastHub
                             var nextSeconds = ReadMovementServerSpan(packet);
                             slot.TotalServerSeconds =
                                 slot.TotalServerSeconds > 0 && nextSeconds > 0
-                                    ? Math.Min(8.0, slot.TotalServerSeconds + nextSeconds)
+                                    ? Math.Min(
+                                        8.0,
+                                        slot.TotalServerSeconds + nextSeconds)
                                     : 0;
                             slot.MoveCount++;
                             slot.LatestPacket = packet;
@@ -254,10 +266,25 @@ public sealed class ServerBroadcastHub
                 if (movement.Pending.TryGetValue(entityId, out var slot))
                 {
                     var nextSeconds = ReadMovementServerSpan(packet);
+                    var previousSeconds = slot.TotalServerSeconds;
                     slot.TotalServerSeconds =
-                        slot.TotalServerSeconds > 0 && nextSeconds > 0
-                            ? Math.Min(8.0, slot.TotalServerSeconds + nextSeconds)
+                        previousSeconds > 0 && nextSeconds > 0
+                            ? Math.Min(8.0, previousSeconds + nextSeconds)
                             : 0;
+                    var retainedSeconds = Math.Max(
+                        0.0, slot.TotalServerSeconds - previousSeconds);
+                    var nextMoveSpeed = ReadPacketDouble(packet, "MoveSpeed");
+                    if (slot.TotalPathDistance > 0 &&
+                        nextMoveSpeed > 0 &&
+                        retainedSeconds > 0)
+                    {
+                        slot.TotalPathDistance +=
+                            nextMoveSpeed * retainedSeconds;
+                    }
+                    else if (slot.TotalServerSeconds < 8.0)
+                    {
+                        slot.TotalPathDistance = 0;
+                    }
                     slot.MoveCount++;
                     slot.LatestPacket = packet;
                 }
@@ -324,7 +351,12 @@ public sealed class ServerBroadcastHub
                         // latest authoritative point. The full span remains
                         // available for diagnostics/future presentation logic.
                         SpeedTime = Math.Clamp(slot.TotalServerSeconds, 0.05, 0.75),
-                        SnapshotSpanSeconds = Math.Clamp(slot.TotalServerSeconds, 0.05, 8.0)
+                        SnapshotSpanSeconds = Math.Clamp(slot.TotalServerSeconds, 0.05, 8.0),
+                        CoalescedMoves = slot.MoveCount,
+                        MoveSpeed = slot.TotalPathDistance > 0 &&
+                                    slot.TotalServerSeconds > 0
+                            ? slot.TotalPathDistance / slot.TotalServerSeconds
+                            : ReadPacketDouble(newest, "MoveSpeed")
                     };
                 }
                 else
@@ -402,7 +434,8 @@ public sealed class ServerBroadcastHub
                         // New clients can use the full elapsed *server* span
                         // to avoid false speed-up after queued snapshots.
                         SpeedTime = Math.Clamp(slot.TotalServerSeconds, 0.05, 0.75),
-                        SnapshotSpanSeconds = Math.Clamp(slot.TotalServerSeconds, 0.05, 8.0)
+                        SnapshotSpanSeconds = Math.Clamp(slot.TotalServerSeconds, 0.05, 8.0),
+                        CoalescedMoves = slot.MoveCount
                     };
                 }
                 else

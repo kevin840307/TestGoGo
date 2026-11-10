@@ -14,6 +14,8 @@ const SMOOTHING_RATE: float = 14.0
 # Safety cap for a delayed 2s+ packet: spring smoothing must not turn one
 # badly delayed snapshot into a visible 100px jump in one physics frame.
 const MAX_VISUAL_CATCHUP_SPEED: float = 900.0
+const MIN_EXPECTED_CATCHUP_SPEED: float = 280.0
+const EXPECTED_SPEED_CATCHUP_MULTIPLIER: float = 2.0
 
 var visual_position: Vector2 = Vector2.ZERO
 var authoritative_position: Vector2 = Vector2.ZERO
@@ -23,6 +25,7 @@ var _prediction_horizon_seconds: float = 0.14
 var _packet_age_seconds: float = 0.0
 var _last_received_msec: int = -1
 var _has_sample: bool = false
+var _visual_catchup_speed: float = MAX_VISUAL_CATCHUP_SPEED
 
 
 func reset(position: Vector2) -> void:
@@ -34,26 +37,49 @@ func reset(position: Vector2) -> void:
 	_packet_age_seconds = 0.0
 	_last_received_msec = -1
 	_has_sample = false
+	_visual_catchup_speed = MAX_VISUAL_CATCHUP_SPEED
 
 
 func receive(position: Vector2, received_msec: int,
 	nominal_seconds: float = 0.1, teleport_threshold: float = 1200.0,
-	extended_server_seconds: float = 0.0) -> void:
+	extended_server_seconds: float = 0.0,
+	expected_speed: float = 0.0) -> void:
 	if not position.is_finite():
 		return
-	if visual_position.distance_to(position) >= teleport_threshold:
-		reset(position)
-		_last_received_msec = received_msec
-		_has_sample = true
-		return
-
+	if is_finite(expected_speed) and expected_speed > 1.0:
+		_visual_catchup_speed = clampf(
+			expected_speed * EXPECTED_SPEED_CATCHUP_MULTIPLIER,
+			MIN_EXPECTED_CATCHUP_SPEED,
+			MAX_VISUAL_CATCHUP_SPEED
+		)
+	else:
+		_visual_catchup_speed = MAX_VISUAL_CATCHUP_SPEED
 	# Legacy SpeedTime stays <= 750ms. Only explicitly labeled
 	# coalesced snapshots may cover a longer interval; never mistake the
 	# old default SpeedTime=1.0 (missing on the wire) for such a span.
 	var extended_valid: bool = (
-		extended_server_seconds > MAX_SAMPLE_SECONDS
+		is_finite(extended_server_seconds)
+		and extended_server_seconds > MAX_SAMPLE_SECONDS
 		and extended_server_seconds <= MAX_EXTENDED_SAMPLE_SECONDS
 	)
+	# A large coordinate delta is not automatically a teleport when Server
+	# explicitly says it represents several seconds of coalesced walking.
+	# Untagged or physically implausible discontinuities still hard reset.
+	var historical_distance: float = authoritative_position.distance_to(position)
+	var plausible_coalesced_walk: bool = (
+		_has_sample
+		and extended_valid
+		and historical_distance <= maxf(
+			teleport_threshold,
+			MAX_ESTIMATED_SPEED * extended_server_seconds * 1.10
+		)
+	)
+	if visual_position.distance_to(position) >= teleport_threshold \
+			and not plausible_coalesced_walk:
+		reset(position)
+		_last_received_msec = received_msec
+		_has_sample = true
+		return
 	var fallback: float = clampf(
 		extended_server_seconds if extended_valid else nominal_seconds,
 		MIN_SAMPLE_SECONDS, MAX_EXTENDED_SAMPLE_SECONDS if extended_valid else MAX_SAMPLE_SECONDS
@@ -134,7 +160,7 @@ func advance(delta: float) -> Vector2:
 	var alpha: float = 1.0 - exp(-SMOOTHING_RATE * step_seconds)
 	var eased_position: Vector2 = visual_position.lerp(desired, alpha)
 	visual_position = visual_position.move_toward(
-		eased_position, MAX_VISUAL_CATCHUP_SPEED * step_seconds
+		eased_position, _visual_catchup_speed * step_seconds
 	)
 	if visual_position.distance_squared_to(desired) < 0.001:
 		visual_position = desired

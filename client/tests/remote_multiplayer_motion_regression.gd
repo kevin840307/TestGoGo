@@ -140,5 +140,37 @@ func _run() -> void:
 	_check(merged._prediction_horizon_seconds <= 0.12 + 0.001,
 		"historical coalesced movement cannot predict 2s into the future")
 
+
+	# A large same-map movement can still be legitimate when Server says it
+	# represents several seconds of coalesced walking. Untagged jumps keep
+	# the historical teleport behavior.
+	var outer_visible := RemotePlayerMotion.new()
+	outer_visible.reset(Vector2.ZERO)
+	outer_visible.receive(Vector2(20.0, 0.0), 1000, 0.10)
+	outer_visible.advance(1.0 / 60.0)
+	var outer_before: Vector2 = outer_visible.visual_position
+	outer_visible.receive(Vector2(1800.0, 0.0), 4000, 0.75, 1200.0, 3.0)
+	_check(outer_visible.visual_position.distance_to(outer_before) < 0.1,
+		"tagged 1800px coalesced visible walk does not hard-reset the remote avatar")
+	var outer_step := outer_visible.advance(1.0 / 60.0)
+	_check(outer_step.x > outer_before.x and outer_step.x < 1800.0,
+		"large coalesced visible movement begins bounded interpolation")
+	var untagged_warp := RemotePlayerMotion.new()
+	untagged_warp.reset(Vector2.ZERO)
+	untagged_warp.receive(Vector2(1800.0, 0.0), 1000, 0.10)
+	_check(untagged_warp.visual_position.x == 1800.0,
+		"untagged 1800px discontinuity remains an immediate authoritative warp")
+
+	# Runtime NetworkPlayer supplies the entity's expected movement speed.
+	# Backlog recovery is allowed, but capped to 2x normal movement speed.
+	var expected_speed_motion := RemotePlayerMotion.new()
+	expected_speed_motion.reset(Vector2.ZERO)
+	expected_speed_motion.receive(
+		Vector2(400.0, 0.0), 3000, 0.75, 1200.0, 2.0, 200.0
+	)
+	var expected_step := expected_speed_motion.advance(1.0 / 60.0).x
+	_check(expected_step <= 400.0 / 60.0 + 0.05,
+		"200px/s remote player backlog catch-up is capped near 400px/s")
+
 	print("[REMOTE_MOTION_TEST] ", "ALL PASS" if failures == 0 else "%d FAILURES" % failures)
 	quit(0 if failures == 0 else 1)

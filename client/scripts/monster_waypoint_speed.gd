@@ -15,20 +15,69 @@ static func calculate(distance: float, duration: float,
 	return clampf(distance / visual_duration, min_speed, max_speed)
 
 
-# Coalesced world moves carry the total Server span as a separate field.
-# SpeedTime is capped for compatibility. Avoid replaying a 2s historical
-# displacement as a 750ms dash, but do not add multiple seconds of lag.
-static func playback_duration(nominal_seconds: float, snapshot_span_seconds: float) -> float:
-	if not is_finite(nominal_seconds) or not is_finite(snapshot_span_seconds):
-		return nominal_seconds
-	if nominal_seconds <= 0.01 or snapshot_span_seconds <= 0.75 or snapshot_span_seconds > 8.0:
-		return nominal_seconds
-	return minf(maxf(nominal_seconds, snapshot_span_seconds * 0.65), 1.25)
+# Original-client-style pacing: movement speed is an entity property, while
+# packets update the destination. Use Server-provided movement speed as the
+# primary rate, and only allow bounded catch-up when the client is visibly
+# behind a coalesced/new waypoint.
+static func calculate_server_driven(
+	distance: float,
+	duration: float,
+	server_speed: float,
+	snapshot_span: float = 0.0,
+	visual_slack: float = 0.01,
+	min_speed: float = 1.0,
+	max_speed: float = 900.0,
+	snap_epsilon: float = 1.0
+) -> float:
+	if not is_finite(distance) or not is_finite(duration):
+		return 0.0
+	if distance <= snap_epsilon or duration <= 0.01:
+		return 0.0
+	if not is_finite(server_speed) or server_speed <= 0.0:
+		return calculate(
+			distance, duration, visual_slack,
+			min_speed, max_speed, snap_epsilon
+		)
+
+	var nominal_speed: float = clampf(server_speed, min_speed, max_speed)
+	var required_speed: float = distance / maxf(duration + visual_slack, 0.01)
+	# A merged packet represents historical waypoints. Catch up faster than
+	# nominal, but never turn several seconds of backlog into a 900px/s dash.
+	var merged: bool = (
+		is_finite(snapshot_span)
+		and snapshot_span > duration + 0.05
+	)
+	var catchup_multiplier: float = 2.0 if merged else 1.5
+	var bounded_required: float = minf(
+		required_speed,
+		nominal_speed * catchup_multiplier
+	)
+	return clampf(maxf(nominal_speed, bounded_required), min_speed, max_speed)
 
 
-# Avoid re-instantiating a monster near the edge during brief camera
-# or monster oscillation. Distant actors can still unload immediately.
-static func should_linger_outside_aoi(distance: float, exit_radius: float, elapsed_ms: int) -> bool:
+static func correction_visual_seconds(
+	distance: float,
+	min_seconds: float = 0.18,
+	max_seconds: float = 1.0,
+	target_pixels_per_second: float = 650.0
+) -> float:
+	if not is_finite(distance) or distance <= 0.0:
+		return min_seconds
+	return clampf(
+		distance / maxf(1.0, target_pixels_per_second),
+		min_seconds,
+		max_seconds
+	)
+
+
+# Avoid re-instantiating a monster at a newer authoritative coordinate during
+# brief camera/monster oscillation at the visual AOI fringe. This is purely a
+# Client scene-lifetime guard; Server Despawn still removes the actor.
+static func should_linger_outside_aoi(
+	distance: float,
+	exit_radius: float,
+	elapsed_ms: int
+) -> bool:
 	return distance <= exit_radius + 500.0 and elapsed_ms < 1000
 
 

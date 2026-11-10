@@ -59,7 +59,10 @@ func _run() -> void:
 				motion.receive(
 					confirmed,
 					arrival_msec,
-					float(cadence) / PHYSICS_HZ
+					float(cadence) / PHYSICS_HZ,
+					1200.0,
+					0.0,
+					200.0
 				)
 			var before_x: float = motion.visual_position.x
 			var after_x: float = motion.advance(1.0 / PHYSICS_HZ).x
@@ -105,6 +108,8 @@ func _run() -> void:
 	_check(biggest_player_step <=
 		RemotePlayerMotion.MAX_VISUAL_CATCHUP_SPEED / PHYSICS_HZ + 0.01,
 		"maximum remote-player draw step remains bounded under 20-player load")
+	_check(biggest_player_step <= 400.0 / PHYSICS_HZ + 0.05,
+		"expected 200px/s players never use the old 900px/s visual catch-up burst")
 	print("[MULTI20_MOTION_STATS] players=", PLAYER_COUNT,
 		" monsters=", MONSTER_COUNT,
 		" simulated_seconds=", simulated_seconds,

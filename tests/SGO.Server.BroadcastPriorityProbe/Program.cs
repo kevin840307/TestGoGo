@@ -87,7 +87,8 @@ for (var i = 1; i <= 4; i++)
         X = i * 25,
         Y = 12,
         Dir = "6",
-        SpeedTime = 0.25
+        SpeedTime = 0.25,
+        MoveSpeed = 100.0
     });
 }
 Check(worldMovePeer.Queue.Count == 1,
@@ -102,13 +103,15 @@ using (var decoded = ClientProtocol.Decode(
           packet.GetProperty("X").GetDouble() == 100 &&
           packet.GetProperty("Y").GetDouble() == 12 &&
           Math.Abs(packet.GetProperty("SpeedTime").GetDouble() - 0.75) < 0.0001 &&
-          Math.Abs(packet.GetProperty("SnapshotSpanSeconds").GetDouble() - 1.0) < 0.0001,
-        "world movement keeps newest destination with bounded catch-up and true snapshot span");
+          Math.Abs(packet.GetProperty("SnapshotSpanSeconds").GetDouble() - 1.0) < 0.0001 &&
+          packet.GetProperty("CoalescedMoves").GetInt32() == 4 &&
+          Math.Abs(packet.GetProperty("MoveSpeed").GetDouble() - 100.0) < 0.0001,
+        "world movement keeps newest destination, true span and entity movement speed");
 }
 hub.Unregister(worldMovePeer.ConnectionId);
 
-// The Server may already have stalled for 2s BEFORE the first move entered
-// this queue. Coalescing must not replace that history with SpeedTime=750ms.
+// A packet may already carry a multi-second Server span before it enters this
+// observer queue. Re-coalescing must retain that pre-queue history.
 var worldLatePeer = hub.Register(prioritizePlayerEvents: true);
 hub.PublishToConnection(worldLatePeer.ConnectionId, new
 {
@@ -126,7 +129,9 @@ Check(hub.TryDequeueOrdinary(worldLatePeer.ConnectionId, out var worldLate),
 using (var decoded = ClientProtocol.Decode(
     Encoding.UTF8.GetString(hub.EncodeBroadcastPacket(worldLate))))
 {
-    Check(Math.Abs(decoded.RootElement.GetProperty("SnapshotSpanSeconds").GetDouble() - 2.25) < 0.0001,
+    Check(Math.Abs(
+              decoded.RootElement.GetProperty("SnapshotSpanSeconds").GetDouble()
+              - 2.25) < 0.0001,
         "world queue retains full time before and during outbound backlog");
 }
 hub.Unregister(worldLatePeer.ConnectionId);
@@ -345,8 +350,9 @@ using (var decoded = ClientProtocol.Decode(
     Check(packet.GetProperty("X").GetDouble() == 60 &&
           packet.GetProperty("Y").GetDouble() == 5 &&
           packet.GetProperty("Dir").GetString() == "6" &&
-          Math.Abs(packet.GetProperty("SpeedTime").GetDouble() - 0.30) < 0.0001,
-        "coalesced movement retains newest position and aggregated server interval");
+          Math.Abs(packet.GetProperty("SpeedTime").GetDouble() - 0.30) < 0.0001 &&
+          packet.GetProperty("CoalescedMoves").GetInt32() == 3,
+        "coalesced movement retains newest position, interval and diagnostic count");
 }
 
 // Preserve the existing client nominal-interval bounds under a long backlog.
@@ -363,11 +369,14 @@ Check(hub.TryDequeuePlayerPriority(timedPeer.ConnectionId, out var boundedMove) 
           boundedMove.GetType().GetProperty("SpeedTime")?.GetValue(boundedMove)) - 0.75) < 0.0001,
     "large queued visual movement caps interval to the supported client limit");
 Check(Math.Abs(Convert.ToDouble(
-          boundedMove.GetType().GetProperty("SnapshotSpanSeconds")?.GetValue(boundedMove)) - 2.0) < 0.0001,
-    "coalesced movement separately retains true 2-second server elapsed time");
+          boundedMove.GetType().GetProperty("SnapshotSpanSeconds")?.GetValue(boundedMove)) - 2.0) < 0.0001 &&
+      Convert.ToInt32(
+          boundedMove.GetType().GetProperty("CoalescedMoves")?.GetValue(boundedMove)) == 20,
+    "coalesced movement retains true 2-second span and 20-snapshot diagnostic count");
 hub.Unregister(timedPeer.ConnectionId);
 
-// Player priority-lane coalescing must preserve a pre-queue delay too.
+// Player priority-lane coalescing must also retain a delay that happened
+// before the first packet entered the outbound queue.
 var delayedPlayerPeer = hub.Register(prioritizePlayerEvents: true);
 hub.PublishToConnection(delayedPlayerPeer.ConnectionId, new
 {
@@ -380,12 +389,15 @@ hub.PublishToConnection(delayedPlayerPeer.ConnectionId, new
     Type = "MoveEntity", EntityID = 456L,
     X = 520, Y = 0, Dir = "6", SpeedTime = 0.10
 });
-Check(hub.TryDequeuePlayerPriority(delayedPlayerPeer.ConnectionId, out var delayedPlayer),
+Check(hub.TryDequeuePlayerPriority(
+        delayedPlayerPeer.ConnectionId, out var delayedPlayer),
     "delayed player movement remains urgent");
 using (var decoded = ClientProtocol.Decode(
     Encoding.UTF8.GetString(hub.EncodeBroadcastPacket(delayedPlayer))))
 {
-    Check(Math.Abs(decoded.RootElement.GetProperty("SnapshotSpanSeconds").GetDouble() - 2.10) < 0.0001,
+    Check(Math.Abs(
+              decoded.RootElement.GetProperty("SnapshotSpanSeconds").GetDouble()
+              - 2.10) < 0.0001,
         "player coalescer retains pre-queue stall duration");
 }
 hub.Unregister(delayedPlayerPeer.ConnectionId);

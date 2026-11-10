@@ -1708,11 +1708,14 @@ func _on_entity_moved(data: Dictionary) -> void :
 					float(data.get("SnapshotSpanSeconds", 0.0))
 				)
 			elif is_monster:
-				# Old server packets omit the span. New coalesced packets use
-				# the original server interval, not a capped 750ms sprint.
+				# Preserve the full historical span and the Server-derived
+				# movement rate. The Client renders destination + entity speed,
+				# while coalesced backlog is allowed only bounded catch-up.
 				target_node.network_move_to(
-					target_pos, speed_time,
-					float(data.get("SnapshotSpanSeconds", 0.0))
+					target_pos,
+					speed_time,
+					float(data.get("SnapshotSpanSeconds", 0.0)),
+					float(data.get("MoveSpeed", 0.0))
 				)
 			else:
 				target_node.network_move_to(target_pos, speed_time)
