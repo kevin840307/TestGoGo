@@ -7,6 +7,12 @@ public sealed class ClientSession
     public Guid ConnectionId { get; set; }
     public int PublishedMapId { get; set; }
     public long PublishedCharacterId { get; set; }
+    // Session-local visual AOI snapshot. The socket's 250ms tick and
+    // frequent AttackEntity/UseSkill packets must not rescan both spatial
+    // indexes when this player's identity/map/position did not change.
+    public bool PresenceAoiInitialized { get; set; }
+    public double LastPresenceAoiX { get; set; }
+    public double LastPresenceAoiY { get; set; }
     public long? AccountId { get; set; }
     public long? CharacterId { get; set; }
     public string CharacterName { get; set; } = "";
