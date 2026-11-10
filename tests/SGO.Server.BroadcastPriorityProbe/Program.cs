@@ -107,6 +107,30 @@ using (var decoded = ClientProtocol.Decode(
 }
 hub.Unregister(worldMovePeer.ConnectionId);
 
+// The Server may already have stalled for 2s BEFORE the first move entered
+// this queue. Coalescing must not replace that history with SpeedTime=750ms.
+var worldLatePeer = hub.Register(prioritizePlayerEvents: true);
+hub.PublishToConnection(worldLatePeer.ConnectionId, new
+{
+    Type = "MoveEntity", EntityID = 8_130_055L,
+    X = 100, Y = 12, Dir = "6",
+    SpeedTime = 0.75, SnapshotSpanSeconds = 2.0
+});
+hub.PublishToConnection(worldLatePeer.ConnectionId, new
+{
+    Type = "MoveEntity", EntityID = 8_130_055L,
+    X = 125, Y = 12, Dir = "6", SpeedTime = 0.25
+});
+Check(hub.TryDequeueOrdinary(worldLatePeer.ConnectionId, out var worldLate),
+    "delayed world movement dequeues");
+using (var decoded = ClientProtocol.Decode(
+    Encoding.UTF8.GetString(hub.EncodeBroadcastPacket(worldLate))))
+{
+    Check(Math.Abs(decoded.RootElement.GetProperty("SnapshotSpanSeconds").GetDouble() - 2.25) < 0.0001,
+        "world queue retains full time before and during outbound backlog");
+}
+hub.Unregister(worldLatePeer.ConnectionId);
+
 // Combat/state is a hard causal boundary: never combine a later waypoint
 // across attack/hit/death or other actor events.
 var worldBoundary = hub.Register(prioritizePlayerEvents: true);
@@ -342,6 +366,29 @@ Check(Math.Abs(Convert.ToDouble(
           boundedMove.GetType().GetProperty("SnapshotSpanSeconds")?.GetValue(boundedMove)) - 2.0) < 0.0001,
     "coalesced movement separately retains true 2-second server elapsed time");
 hub.Unregister(timedPeer.ConnectionId);
+
+// Player priority-lane coalescing must preserve a pre-queue delay too.
+var delayedPlayerPeer = hub.Register(prioritizePlayerEvents: true);
+hub.PublishToConnection(delayedPlayerPeer.ConnectionId, new
+{
+    Type = "MoveEntity", EntityID = 456L,
+    X = 500, Y = 0, Dir = "6",
+    SpeedTime = 0.75, SnapshotSpanSeconds = 2.0
+});
+hub.PublishToConnection(delayedPlayerPeer.ConnectionId, new
+{
+    Type = "MoveEntity", EntityID = 456L,
+    X = 520, Y = 0, Dir = "6", SpeedTime = 0.10
+});
+Check(hub.TryDequeuePlayerPriority(delayedPlayerPeer.ConnectionId, out var delayedPlayer),
+    "delayed player movement remains urgent");
+using (var decoded = ClientProtocol.Decode(
+    Encoding.UTF8.GetString(hub.EncodeBroadcastPacket(delayedPlayer))))
+{
+    Check(Math.Abs(decoded.RootElement.GetProperty("SnapshotSpanSeconds").GetDouble() - 2.10) < 0.0001,
+        "player coalescer retains pre-queue stall duration");
+}
+hub.Unregister(delayedPlayerPeer.ConnectionId);
 
 // Repeated per-observer AES+JSON work is amortized for immutable scalar
 // broadcasts only. Confirm simultaneous observers get the same frame while

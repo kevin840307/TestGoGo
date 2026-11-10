@@ -51,6 +51,7 @@ var _spawn_queue: Array[Dictionary] = []
 var _queued_spawn_ids: Dictionary = {}
 var _last_spawn_enqueue_usec: int = 0
 var _runtime_monster_ids: Dictionary = {}
+var _monster_exit_started_msec: Dictionary = {}
 var _spawn_queue_paused: bool = false
 var _initial_spawn_boost: bool = false
 var _monster_spawn_templates: Dictionary = {}
@@ -119,6 +120,7 @@ func clear_map_entities() -> Dictionary:
 	_spawn_queue.clear()
 	_queued_spawn_ids.clear()
 	_runtime_monster_ids.clear()
+	_monster_exit_started_msec.clear()
 	_monster_spawn_templates.clear()
 	_deferred_monster_spawns.clear()
 	_combat_reveal_until_msec.clear()
@@ -971,6 +973,7 @@ func _unload_monster_for_aoi(entity_id: int, monster: Node2D) -> void :
 	active_entities.erase(entity_id)
 	_active_entity_types.erase(entity_id)
 	_runtime_monster_ids.erase(entity_id)
+	_monster_exit_started_msec.erase(entity_id)
 
 func _update_monster_aoi(delta: float) -> void :
 	if _is_afk_monster_data_only():
@@ -1020,24 +1023,40 @@ func _update_monster_aoi(delta: float) -> void :
 	_monster_aoi_full_scans += 1
 	var exit_radius_sq: float = radii.y * radii.y
 	var enter_radius_sq: float = radii.x * radii.x
+	var exit_check_msec: int = Time.get_ticks_msec()
 	for raw_id in _active_entity_types.keys():
 		var entity_id: int = int(raw_id)
 		if int(_active_entity_types.get(entity_id, -1)) != 1:
 			continue
 		var monster := get_active_entity(entity_id)
-		if is_instance_valid(monster) and local_pos.distance_squared_to(monster.global_position) > exit_radius_sq:
-			# One-frame camera/VisibleOnScreenNotifier latency must never
-			# unload a monster that still appears in the actual viewport.
-			# This guards against edge re-instantiation at its newest
-			# server snapshot (a perceived long-range teleport).
-			if monster.has_method("_is_near_current_viewport") and bool(
-				monster._is_near_current_viewport(monster.global_position)
-			):
-				continue
-			# Active local targets always stay visible. Under crowd pressure,
-			# remote combat elsewhere must not pin hundreds of monster nodes.
-			if (_monster_crowd_visual_only or not _is_combat_monster_revealed(entity_id)) and not _is_local_combat_target(monster):
-				_unload_monster_for_aoi(entity_id, monster)
+		if not is_instance_valid(monster):
+			_monster_exit_started_msec.erase(entity_id)
+			continue
+		var distance_sq: float = local_pos.distance_squared_to(monster.global_position)
+		if distance_sq <= exit_radius_sq:
+			_monster_exit_started_msec.erase(entity_id)
+			continue
+		# Never unload a monster still inside the actual Canvas2D viewport.
+		if monster.has_method("_is_near_current_viewport") and bool(
+			monster._is_near_current_viewport(monster.global_position)
+		):
+			_monster_exit_started_msec.erase(entity_id)
+			continue
+		# A brief camera/monster oscillation at the AOI perimeter would
+		# otherwise free and recreate the scene at a new server coordinate.
+		# Keep only fringe monsters for 1s; far-away scenes free immediately.
+		var exit_since: int = int(_monster_exit_started_msec.get(entity_id, 0))
+		if exit_since <= 0:
+			exit_since = exit_check_msec
+			_monster_exit_started_msec[entity_id] = exit_since
+		if MONSTER_VIEW_RADIUS.should_linger_outside_aoi(
+			sqrt(distance_sq), radii.y, exit_check_msec - exit_since
+		):
+			continue
+		# Local targets stay instantiated. Other combat monsters can be
+		# trimmed under crowd pressure, as before.
+		if (_monster_crowd_visual_only or not _is_combat_monster_revealed(entity_id)) and not _is_local_combat_target(monster):
+			_unload_monster_for_aoi(entity_id, monster)
 	for raw_id in _deferred_monster_spawns.keys():
 		var entity_id: int = int(raw_id)
 		var cached = _deferred_monster_spawns.get(entity_id, null)
@@ -1282,6 +1301,7 @@ func _run_entity_runtime(delta: float) -> void :
 		_spawn_queue.clear()
 		_queued_spawn_ids.clear()
 		_runtime_monster_ids.clear()
+		_monster_exit_started_msec.clear()
 		_monster_spawn_templates.clear()
 		_deferred_monster_spawns.clear()
 		_combat_reveal_until_msec.clear()
@@ -1609,6 +1629,7 @@ func _on_entity_despawned(data: Dictionary) -> void :
 	if _last_skill_casts.has(entity_id):
 		_last_skill_casts.erase(entity_id)
 	_runtime_monster_ids.erase(entity_id)
+	_monster_exit_started_msec.erase(entity_id)
 	_monster_spawn_templates.erase(entity_id)
 	_deferred_monster_spawns.erase(entity_id)
 	_combat_reveal_until_msec.erase(entity_id)
@@ -1682,6 +1703,13 @@ func _on_entity_moved(data: Dictionary) -> void :
 				# A backpressured socket can merge several player snapshots.
 				# Preserve their true elapsed server time for remote prediction;
 				# monsters/pets keep their existing movement contract.
+				target_node.network_move_to(
+					target_pos, speed_time,
+					float(data.get("SnapshotSpanSeconds", 0.0))
+				)
+			elif is_monster:
+				# Old server packets omit the span. New coalesced packets use
+				# the original server interval, not a capped 750ms sprint.
 				target_node.network_move_to(
 					target_pos, speed_time,
 					float(data.get("SnapshotSpanSeconds", 0.0))
