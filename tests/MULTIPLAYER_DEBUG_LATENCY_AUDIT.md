@@ -96,3 +96,46 @@ dotnet run -c Debug --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.WireLo
 ```
 
 本輪修改已提交 GitHub，但尚未在此環境實際跑過 dotnet / Godot 編譯及壓力測試，**不能宣稱卡頓已經消除**。如果仍遲滯，優先蒐集新 Server `MAP_AI_PROFILE` 與 `SLOW_PACKET_DETAIL`，對照 Client `NETWORK_RUNTIME_BACKLOG`／`ENTITY_SPAWN_TIMING`／`MONSTER_VISUAL_CROWD_AOI`，分辨 Server lock、AI 計算或 Client 場景建立耗時。
+
+
+## 2026-11-10：第三輪 — 遠端角色一格一格走、封包反壓與重複 AOI
+
+### 確認的設計問題
+
+- Server `PacketRouter` 每 **100ms 至多廣播一個**玩家位置，但舊版 `MoveEntity.SpeedTime` 固定 `0.10`，即使該玩家實際每 350ms 才移動一次。Client 的 `network_player.gd` 另外把測量間隔硬限 `0.25s`，且**每收到一筆快照就重啟插值**。結果長間隔時會「移動—停頓—再移動」，不是單純 FPS 問題。
+- 多人測試 Bot 原本**每次 `SyncPosition` 固定只走 16px，約每 350ms 才一格**。這不是一般角色的流暢移動，而且不需要增加封包量即可改善。
+- Server 過去對每筆 `SyncPosition` 都驗證地圖／刷新 AOI，即使座標沒有變；`SyncPresence` 又在每次封包和 250ms socket Tick 重複執行玩家／世界 AOI 兩種索引更新。
+- WebSocket 優先佇列遇到網路反壓時會累積同角色很多**過時且未送出的** `MoveEntity`。如果全部依序補播，觀察者會慢慢走過早已過期的舊路徑。
+
+### 已修改（不降低固定更新與遊戲邏輯）
+
+1. **遠端角色視覺插值**：新增 `client/scripts/remote_player_motion.gd`，整合到 `client/network_player.gd`。`MoveEntity` 保留 Server 權威終點，物理更新每幀用連續位置＋小幅、有上限的速度預測更新畫面，避免每個封包重啟短 tween。推測最多 40px、0.28 秒；超過長時間沒封包會向最後權威位置平滑修正；收到 `SyncState idle/attack/hit/death` 停止預測。真正大幅傳送（>=1200px）仍直接同步，避免跨牆插值。此預測結果只用於**遠端渲染**，絕不進入 Server 戰鬥／拾取／座標權威。
+2. **Server 不發冗餘位置**：`SyncPosition` 若 X/Y 未變，直接回傳，不做碰撞／SQL dirties／AOI／廣播；有更新時 `SpeedTime` 是當前與上次廣播之間的實際間隔（限制 0.05～0.75 秒），而非寫死 0.10。原本的 100ms 廣播節流與 Ping/Gameplay 事件不變。
+3. **有背壓時合併過期玩家移動快照**：`ServerBroadcastHub` 僅對 WebSocket 玩家優先佇列的 **同 EntityID 尚未送出的 MoveEntity** 更新成最新位置，不增加 WebSocket 發送次數。遇到同角色 `SpawnEntity`、`DespawnEntity`、`SyncState`、`SkillCast`、`EntityDamage` 等事件必須截斷合併區間；其他封包（傷害、技能、掉落、怪物 AI／AOI）**不會被合併或丟棄**。隊列出站時維持原有同角色重要事件順序。
+4. **減少熱路徑多餘 AOI**：`PacketRouter.SyncPresence` 只在角色／地圖／WorldReady／座標改變後才執行昂貴的玩家與世界空間索引 reconcile；`SyncPosition` 已執行的 reconcile 不再緊接著做第二次。其他怪物／掉落物由其自身 AOI upsert 即時處理，沒有降低封包處理速度。
+5. **測試 Bot 真正連續的步幅**：`BotWalkPlanner` 允許依 `--interval-ms` 選擇最高 64px 的路段，350ms 約走 49px；仍以 Blocking.dat + A* 做整段驗證，遇到窄路則退回 16px 安全步長。仍每 ~350ms 才送 1 筆位置，並未提高封包頻率。
+6. **Debug 診斷**：`[REMOTE_PLAYER_PACKET_GAP]` 在遠端角色走路時出現 500ms 以上位置封包間隔才印，且全域最多 12 筆，不造成大量 Debug log。
+
+### 新增回歸測試
+
+```powershell
+godot --headless --path client --script res://tests/remote_player_motion_regression.gd
+dotnet run -c Debug --project .\tests\SGO.Server.SmokeTests\SGO.Server.SmokeTests.csproj
+```
+
+- Godot 驗證 350ms 快照不單幀跨 16px、不在新位置封包立即瞬移、權威 idle 收斂、地圖傳送可立即定位與 burst 收包有界。
+- `PlayerSpatialAoiSmokeTests` 驗證被合併的玩家移動快照只剩最新位置，但攻擊動作、Despawn 邊界之前與之後的 MoveEntity 仍保持順序。
+- `SessionIdentityCleanupSmokeTests` 驗證 WorldReady 初始化、未移動 socket Tick 不需重新 reconcile、改變位置會刷新 AOI、離開 WorldReady 會移除觀察者；重複 `SyncPosition` 不會污損 DB 位置狀態。
+
+### 真實多人 Debug 重測
+
+**同一個既有 Server 與資料庫**；先在 Server 與 Godot Client 都更新並重啟，使用 F5 / `-c Debug`。Bot 命令不變：
+
+```powershell
+git pull origin feature/local-server-net8
+dotnet run -c Debug --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.WireLoadProbe.csproj -- --bots --players 20 --map 13 --seconds 120 --monsters 0 --interval-ms 350 --attack-ms 1000 --output bots-result.json
+```
+
+比對：角色走路是否仍一格一格、`[REMOTE_PLAYER_PACKET_GAP]` 次數、`[NETWORK_RUNTIME_BACKLOG]` 剩餘封包、`[MAP_AI_PROFILE]` TickAi/SessionLockWait、`[ENTITY_SPAWN_TIMING]` 與 `bots-result.json` 每位平均接收 bytes。**如果 Client 平滑但 Server 仍長時間停止送怪物 MoveEntity，仍須另行拆解 CombatService/SharedMapAiTicker 的熱路徑**，不能藉由 Client 預測假造傷害或伺服器位置。
+
+**測試限制**：此工作環境沒有 .NET 8 SDK 與 Godot CLI；GitHub 上已新增程式碼／測試，但尚未實際執行編譯及 20 人端對端驗證，所有效能效果以重測 Log 為準。
