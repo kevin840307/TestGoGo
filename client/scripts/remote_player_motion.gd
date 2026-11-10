@@ -100,15 +100,13 @@ func advance(delta: float) -> Vector2:
 		)
 		desired += lead
 
-		# A missing packet must not cause unlimited extrapolation.
-		# Ease back to the last confirmed position only after a long gap,
-		# not between ordinary 100-350ms movement snapshots.
-		var stale_after: float = maxf(0.65, _sample_seconds * 2.0)
-		if _packet_age_seconds > stale_after:
-			var stale_blend: float = clampf(
-				(_packet_age_seconds - stale_after) * 2.5, 0.0, 1.0
-			)
-			desired = desired.lerp(authoritative_position, stale_blend)
+		# A missing packet must never extrapolate forever; the lead has
+		# already stopped increasing after MAX_PREDICTION_SECONDS and is
+		# capped at MAX_PREDICTION_PIXELS. Do not slowly rubber-band back to
+		# the old authoritative point solely because a packet was delayed:
+		# that causes remote actors to visibly walk backward, then forward.
+		# New authoritative positions/idle/death/teleport still supersede
+		# this presentation-only held offset immediately.
 
 	var step_seconds: float = clampf(delta, 0.0, 0.10)
 	var alpha: float = 1.0 - exp(-SMOOTHING_RATE * step_seconds)
