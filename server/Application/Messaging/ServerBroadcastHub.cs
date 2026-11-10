@@ -281,6 +281,28 @@ public sealed class ServerBroadcastHub
 
     private readonly ConcurrentDictionary<Guid, Presence>
         _presence = new();
+    private readonly ConcurrentDictionary<Guid, double>
+        _requestedViewRadii = new();
+
+    // Viewport-only changes are stored without any database/position mutation.
+    // Reconciliation is explicitly requested only when the quantized value changes.
+    public bool SetViewRadius(Guid connectionId, double radius)
+    {
+        if (!_presence.ContainsKey(connectionId))
+            return false;
+        var normalized = Math.Clamp(
+            double.IsFinite(radius) ? radius : PlayerSpatialAoi.EnterRadius,
+            PlayerSpatialAoi.EnterRadius, PlayerSpatialAoi.MaxViewRadius);
+        if (_requestedViewRadii.TryGetValue(connectionId, out var previous) &&
+            previous == normalized)
+            return false;
+        _requestedViewRadii[connectionId] = normalized;
+        return true;
+    }
+
+    private double GetViewRadius(Guid connectionId)
+        => _requestedViewRadii.TryGetValue(connectionId, out var radius)
+            ? radius : PlayerSpatialAoi.EnterRadius;
 
     private readonly object _companionGate = new();
     private readonly Dictionary<Guid, Dictionary<long, CompanionSnapshot>>
@@ -440,6 +462,7 @@ public sealed class ServerBroadcastHub
         if (_queueSignals.TryRemove(connectionId, out var signal))
             signal.Writer.TryComplete();
         _presence.TryRemove(connectionId, out _);
+        _requestedViewRadii.TryRemove(connectionId, out _);
     }
 
     /// <summary>Update one *ready* player's AOI relations after position,
@@ -454,7 +477,8 @@ public sealed class ServerBroadcastHub
 
         return _playerAoi.Upsert(new OnlinePlayerPresence(
             connectionId, presence.AccountId, presence.CharacterId,
-            presence.MapId, presence.X, presence.Y, presence.CharacterName));
+            presence.MapId, presence.X, presence.Y, presence.CharacterName),
+            GetViewRadius(connectionId));
     }
 
     public IReadOnlyList<PlayerSpatialAoi.Change> RemovePlayerAoi(
@@ -488,7 +512,8 @@ public sealed class ServerBroadcastHub
                 presence.MapId,
                 presence.X,
                 presence.Y,
-                presence.CharacterName));
+                presence.CharacterName),
+            GetViewRadius(connectionId));
     }
 
     public void RemoveWorldAoiObserver(
