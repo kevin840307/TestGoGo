@@ -964,6 +964,8 @@ public sealed class PacketRouter
                 state.PositionDirty = false;
                 state.LastPositionPersistAt = DateTimeOffset.UtcNow;
                 state.LastPositionBroadcastAt = DateTimeOffset.MinValue;
+                state.LastBroadcastPositionX = null;
+                state.LastBroadcastPositionY = null;
                 state.LastResourceRecoveryAt = DateTimeOffset.UtcNow;
                 state.LastCompanionRuntimeAt = DateTimeOffset.UtcNow;
                 state.LastCompanionClientSyncAt = DateTimeOffset.UtcNow;
@@ -1261,6 +1263,8 @@ public sealed class PacketRouter
                                 (now - state.LastPositionBroadcastAt).TotalSeconds,
                                 0.05, 0.75);
                     state.LastPositionBroadcastAt = now;
+                    state.LastBroadcastPositionX = x;
+                    state.LastBroadcastPositionY = y;
                     _broadcasts.PublishToPlayerObservers(
                         state.ConnectionId,
                         new
@@ -5213,6 +5217,38 @@ public sealed class PacketRouter
                         accountId,
                         state.CharacterId.Value,
                         playerState);
+
+                    // The local Client sends its final SyncPosition BEFORE
+                    // SyncState(idle). A valid final position can fall inside
+                    // the 100ms continuous-movement broadcast throttle.
+                    // Publish that unsent endpoint exactly once before idle,
+                    // otherwise observers stop at an older position and later
+                    // rubber-band when combat/another movement corrects it.
+                    // No extra packets are emitted for an already published
+                    // endpoint, so standing players and repeated idle states
+                    // cannot create a movement broadcast loop.
+                    if (state.WorldReady &&
+                        playerState.Equals("idle",
+                            StringComparison.OrdinalIgnoreCase) &&
+                        state.PositionDirty &&
+                        (state.LastBroadcastPositionX != state.LastX ||
+                         state.LastBroadcastPositionY != state.LastY))
+                    {
+                        state.LastBroadcastPositionX = state.LastX;
+                        state.LastBroadcastPositionY = state.LastY;
+                        state.LastPositionBroadcastAt = DateTimeOffset.UtcNow;
+                        _broadcasts.PublishToPlayerObservers(
+                            state.ConnectionId,
+                            new
+                            {
+                                Type = "MoveEntity",
+                                EntityID = state.CharacterId.Value,
+                                X = state.LastX,
+                                Y = state.LastY,
+                                Dir = req.Str("Dir", "1"),
+                                SpeedTime = 0.0
+                            });
+                    }
 
                     _broadcasts.PublishToPlayerObservers(
                         state.ConnectionId,

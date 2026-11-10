@@ -93,6 +93,27 @@ func _run() -> void:
 	_check(burst.authoritative_position.x == 420.0,
 		"catch-up cap affects only visuals; new authoritative coordinate applies immediately")
 
+	# Stop after a position that fell inside Server's 100ms broadcast
+	# throttle. The final MoveEntity (SpeedTime=0) and SyncState(idle)
+	# must converge to the actual approved endpoint without a hard jump.
+	var final_stop := RemotePlayerMotion.new()
+	final_stop.reset(Vector2.ZERO)
+	final_stop.receive(Vector2(20.0, 0.0), 1000, 0.10)
+	for i in 25:
+		final_stop.advance(1.0 / 60.0)
+	final_stop.receive(Vector2(32.0, 0.0), 1100, 0.0)
+	final_stop.stop_prediction()
+	var stop_before: Vector2 = final_stop.visual_position
+	var stop_first: Vector2 = final_stop.advance(1.0 / 60.0)
+	_check(stop_first.distance_to(stop_before) <=
+		RemotePlayerMotion.MAX_VISUAL_CATCHUP_SPEED / 60.0 + 0.01,
+		"final stop correction cannot jump a remote avatar in one frame")
+	for i in 90:
+		final_stop.advance(1.0 / 60.0)
+	_check(final_stop.authoritative_position.x == 32.0
+		and final_stop.visual_position.distance_to(Vector2(32.0, 0.0)) < 0.5,
+		"final stop position converges to last server-approved endpoint")
+
 	delayed.receive(Vector2(4000.0, 4000.0), 4000, 0.1, 500.0)
 	_check(delayed.visual_position.is_equal_approx(Vector2(4000.0, 4000.0)),
 		"map/teleport discontinuity snaps immediately to the new server position")

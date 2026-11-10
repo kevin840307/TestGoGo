@@ -519,7 +519,10 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		_remote_motion.stop_prediction()
 	if new_state == "idle":
 		if global_position.distance_squared_to(target_position) > 4.0:
+			# Stop walking immediately, but keep bounded visual correction
+			# running until the last authoritative endpoint is reached.
 			_pending_idle = true
+			current_state = "idle"
 			set_physics_process(true)
 			return
 	_pending_idle = false

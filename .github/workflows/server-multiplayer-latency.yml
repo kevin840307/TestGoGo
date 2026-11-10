@@ -13,6 +13,12 @@ on:
       - 'tests/SGO.Server.PositionPersistenceProbe/**'
       - 'server/Application/World/PositionPersistenceService.cs'
       - '.github/workflows/server-multiplayer-latency.yml'
+  pull_request:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'server/**'
+      - 'tests/SGO.Server.WireLoadProbe/**'
+      - '.github/workflows/server-multiplayer-latency.yml'
   workflow_dispatch:
 
 permissions:

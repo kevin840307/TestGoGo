@@ -267,6 +267,27 @@ internal sealed class WireLoadClient : IAsyncDisposable
             },
             timeout);
 
+    public Task SendStateAsync(string state, TimeSpan timeout)
+        => SendPacketAsync(
+            new { Type = "SyncState", State = state, Dir = "1" },
+            timeout);
+
+    public Task<JsonElement> WaitForExactMoveAsync(
+        long entityId,
+        int x,
+        int y,
+        TimeSpan timeout)
+        => WaitForPacketAsync(
+            "MoveEntity",
+            packet =>
+                packet.TryGetProperty("EntityID", out var id) &&
+                id.GetInt64() == entityId &&
+                packet.TryGetProperty("X", out var px) &&
+                px.GetDouble() == x &&
+                packet.TryGetProperty("Y", out var py) &&
+                py.GetDouble() == y,
+            timeout);
+
     public Task SendNearbyChatAsync(
         string message,
         TimeSpan timeout)

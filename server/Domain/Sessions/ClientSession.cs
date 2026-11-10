@@ -46,6 +46,11 @@ public sealed class ClientSession
     public bool PositionDirty { get; set; }
     public DateTimeOffset LastPositionPersistAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastPositionBroadcastAt { get; set; } = DateTimeOffset.MinValue;
+    // Last coordinates published to AOI peers, distinct from the latest
+    // validated SyncPosition. The final stop snapshot must not be lost to
+    // the normal 100ms continuous-movement throttle.
+    public double? LastBroadcastPositionX { get; set; }
+    public double? LastBroadcastPositionY { get; set; }
     // Rate-limit diagnostics only; never changes movement/update cadence.
     public DateTimeOffset LastSlowMovementDiagAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastSlowChatDiagAt { get; set; } = DateTimeOffset.MinValue;
