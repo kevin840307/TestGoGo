@@ -22,6 +22,7 @@ on:
     paths:
       - 'client/network_player.gd'
       - 'client/scripts/remote_player_motion.gd'
+      - 'client/scripts/network_entity_manager.gd'
       - 'client/tests/remote_multiplayer_motion_regression.gd'
       - '.github/workflows/client-multiplayer-motion.yml'
   workflow_dispatch:

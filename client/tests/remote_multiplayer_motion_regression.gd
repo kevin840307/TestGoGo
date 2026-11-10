@@ -118,5 +118,27 @@ func _run() -> void:
 	_check(delayed.visual_position.is_equal_approx(Vector2(4000.0, 4000.0)),
 		"map/teleport discontinuity snaps immediately to the new server position")
 
+	# 350ms bot snapshots must not run only 120ms then stand still.
+	var sparse := RemotePlayerMotion.new()
+	sparse.reset(Vector2.ZERO)
+	sparse.receive(Vector2(70.0, 0.0), 1000, 0.35)
+	var sparse_continuous: bool = true
+	for i in 19:
+		var previous_x: float = sparse.visual_position.x
+		var next_x: float = sparse.advance(1.0 / 60.0).x
+		if next_x <= previous_x + 0.001:
+			sparse_continuous = false
+	_check(sparse_continuous,
+		"350ms snapshots remain visually moving throughout the packet interval")
+
+	# Coalesced 2-second movement reports elapsed server time separately.
+	var merged := RemotePlayerMotion.new()
+	merged.reset(Vector2.ZERO)
+	merged.receive(Vector2(400.0, 0.0), 3000, 0.75, 1200.0, 2.0)
+	_check(absf(merged._velocity.x - 200.0) < 0.01,
+		"coalesced movement uses full 2s server interval instead of 750ms")
+	_check(merged._prediction_horizon_seconds <= 0.12 + 0.001,
+		"historical coalesced movement cannot predict 2s into the future")
+
 	print("[REMOTE_MOTION_TEST] ", "ALL PASS" if failures == 0 else "%d FAILURES" % failures)
 	quit(0 if failures == 0 else 1)

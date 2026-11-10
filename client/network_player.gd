@@ -472,7 +472,8 @@ func update_appearance_from_server(data: Dictionary) -> void :
 
 
 
-func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
+func network_move_to(new_pos: Vector2, speed_time: float = 1.0,
+	extended_server_seconds: float = 0.0) -> void :
 	if is_dead:
 		return
 	_pending_idle = false
@@ -494,7 +495,8 @@ func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
 	# Advance visually at physics cadence between them, without requiring
 	# more packets or restarting a tween at every new position packet.
 	_remote_motion.receive(
-		new_pos, received_msec, speed_time, teleport_distance
+		new_pos, received_msec, speed_time, teleport_distance,
+		extended_server_seconds
 	)
 	target_position = new_pos
 	global_position = _remote_motion.visual_position
@@ -517,11 +519,8 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		_remote_motion.stop_prediction()
 	if new_state == "idle":
 		if global_position.distance_squared_to(target_position) > 4.0:
-			# The server's final endpoint is authoritative, but the renderer
-			# may be visually ahead by up to 40px from dead reckoning.
-			# Keep the bounded visual correction in physics while displaying
-			# IDLE now; otherwise the character visibly walks backwards
-			# until it reaches the last approved coordinate.
+			# Stop walking immediately, but keep bounded visual correction
+			# running until the last authoritative endpoint is reached.
 			_pending_idle = true
 			current_state = "idle"
 			set_physics_process(true)

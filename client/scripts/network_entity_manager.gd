@@ -1642,7 +1642,16 @@ func _on_entity_moved(data: Dictionary) -> void :
 			# a monster crossing the viewport boundary could visibly teleport.
 			# VisibleOnScreenNotifier2D still pauses offscreen sprite animation.
 			# Server correction packets (SpeedTime == 0) remain authoritative.
-			target_node.network_move_to(target_pos, speed_time)
+			if int(_active_entity_types.get(entity_id, -1)) == 0:
+				# A backpressured socket can merge several player snapshots.
+				# Preserve their true elapsed server time for remote prediction;
+				# monsters/pets keep their existing movement contract.
+				target_node.network_move_to(
+					target_pos, speed_time,
+					float(data.get("SnapshotSpanSeconds", 0.0))
+				)
+			else:
+				target_node.network_move_to(target_pos, speed_time)
 			if is_monster and speed_time > 0.01:
 				_runtime_monster_ids[entity_id] = true
 
