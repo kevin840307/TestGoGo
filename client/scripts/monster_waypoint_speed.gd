@@ -70,6 +70,17 @@ static func correction_visual_seconds(
 	)
 
 
+# Avoid re-instantiating a monster at a newer authoritative coordinate during
+# brief camera/monster oscillation at the visual AOI fringe. This is purely a
+# Client scene-lifetime guard; Server Despawn still removes the actor.
+static func should_linger_outside_aoi(
+	distance: float,
+	exit_radius: float,
+	elapsed_ms: int
+) -> bool:
+	return distance <= exit_radius + 500.0 and elapsed_ms < 1000
+
+
 # A screen notifier may update one frame after a large/zoomed camera makes
 # an actor visible. Resolve the camera-transformed position against the
 # actual viewport instead of assuming an 800x600 visible world.
