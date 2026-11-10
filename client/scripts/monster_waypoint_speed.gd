@@ -15,6 +15,23 @@ static func calculate(distance: float, duration: float,
 	return clampf(distance / visual_duration, min_speed, max_speed)
 
 
+# Coalesced world moves carry the total Server span as a separate field.
+# SpeedTime is capped for compatibility. Avoid replaying a 2s historical
+# displacement as a 750ms dash, but do not add multiple seconds of lag.
+static func playback_duration(nominal_seconds: float, snapshot_span_seconds: float) -> float:
+	if not is_finite(nominal_seconds) or not is_finite(snapshot_span_seconds):
+		return nominal_seconds
+	if nominal_seconds <= 0.01 or snapshot_span_seconds <= 0.75 or snapshot_span_seconds > 8.0:
+		return nominal_seconds
+	return minf(maxf(nominal_seconds, snapshot_span_seconds * 0.65), 1.25)
+
+
+# Avoid re-instantiating a monster near the edge during brief camera
+# or monster oscillation. Distant actors can still unload immediately.
+static func should_linger_outside_aoi(distance: float, exit_radius: float, elapsed_ms: int) -> bool:
+	return distance <= exit_radius + 500.0 and elapsed_ms < 1000
+
+
 # A screen notifier may update one frame after a large/zoomed camera makes
 # an actor visible. Resolve the camera-transformed position against the
 # actual viewport instead of assuming an 800x600 visible world.
