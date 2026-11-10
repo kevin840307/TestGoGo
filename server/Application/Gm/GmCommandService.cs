@@ -266,8 +266,11 @@ public sealed class GmCommandService
         long accountId,
         long dbid)
     {
-        // Never affect a regular character's progression automatically:
-        // this GM command exists only in an explicitly enabled test server.
+        // The live server may use its existing database. Never allow this
+        // destructive stat reset on any ordinary player's account/character.
+        if (!_store.IsLoadTestBot(accountId, dbid))
+            return [Chat("testbot 僅允許多人測試工具建立的角色使用")];
+
         var ch = _store.SetLevel(accountId, dbid, 1);
         if (ch is null)
             return [Chat("TestBot profile: level update failed")];
