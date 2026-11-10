@@ -14,7 +14,8 @@ public sealed record OnlinePlayerPresence(
     int MapId,
     double X,
     double Y,
-    string CharacterName = "");
+    string CharacterName = "",
+    double ViewInterestRadius = PlayerSpatialAoi.EnterRadius);
 
 public sealed class ServerBroadcastHub
 {
@@ -24,7 +25,8 @@ public sealed class ServerBroadcastHub
         long CharacterId,
         double X,
         double Y,
-        string CharacterName);
+        string CharacterName,
+        double ViewInterestRadius);
 
     private sealed record CompanionSnapshot(
         long EntityId,
@@ -455,7 +457,8 @@ public sealed class ServerBroadcastHub
                 FullMode = BoundedChannelFullMode.DropWrite
             });
         _queues[id] = queue;
-        _presence[id] = new Presence(0, 0, 0, 0, 0, "");
+        _presence[id] = new Presence(
+            0, 0, 0, 0, 0, "", PlayerSpatialAoi.EnterRadius);
         return (id, queue);
     }
 
@@ -466,7 +469,8 @@ public sealed class ServerBroadcastHub
         long? accountId = null,
         double x = 0,
         double y = 0,
-        string characterName = "")
+        string characterName = "",
+        double viewInterestRadius = PlayerSpatialAoi.EnterRadius)
     {
         if (connectionId == Guid.Empty ||
             !_queues.ContainsKey(connectionId))
@@ -478,7 +482,8 @@ public sealed class ServerBroadcastHub
             Math.Max(0, characterId ?? 0),
             x,
             y,
-            characterName ?? "");
+            characterName ?? "",
+            PlayerSpatialAoi.NormalizeEnterRadius(viewInterestRadius));
     }
 
     public void UpdatePosition(
@@ -516,7 +521,8 @@ public sealed class ServerBroadcastHub
                 pair.Value.MapId,
                 pair.Value.X,
                 pair.Value.Y,
-                pair.Value.CharacterName);
+                pair.Value.CharacterName,
+                pair.Value.ViewInterestRadius);
         }
 
         return null;
@@ -546,7 +552,8 @@ public sealed class ServerBroadcastHub
                 x.Value.MapId,
                 x.Value.X,
                 x.Value.Y,
-                x.Value.CharacterName))
+                x.Value.CharacterName,
+                x.Value.ViewInterestRadius))
             .ToArray();
 
     public IReadOnlyList<OnlinePlayerPresence> OnlinePlayers(
@@ -594,7 +601,8 @@ public sealed class ServerBroadcastHub
 
         return _playerAoi.Upsert(new OnlinePlayerPresence(
             connectionId, presence.AccountId, presence.CharacterId,
-            presence.MapId, presence.X, presence.Y, presence.CharacterName));
+            presence.MapId, presence.X, presence.Y, presence.CharacterName,
+            presence.ViewInterestRadius));
     }
 
     public IReadOnlyList<PlayerSpatialAoi.Change> RemovePlayerAoi(
@@ -628,7 +636,8 @@ public sealed class ServerBroadcastHub
                 presence.MapId,
                 presence.X,
                 presence.Y,
-                presence.CharacterName));
+                presence.CharacterName,
+                presence.ViewInterestRadius));
     }
 
     public void RemoveWorldAoiObserver(
