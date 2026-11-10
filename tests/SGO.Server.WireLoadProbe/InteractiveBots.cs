@@ -118,7 +118,9 @@ internal static class InteractiveBots
         try
         {
             using var slots = new SemaphoreSlim(concurrency);
-            await Task.WhenAll(Enumerable.Range(0, count).Select(async n =>
+            // A live Server persists bot accounts. Validate GM permission
+            // using only ONE bot before creating the rest of the cohort.
+            async Task PrepareBotAsync(int n)
             {
                 try
                 {
@@ -180,7 +182,23 @@ internal static class InteractiveBots
                 {
                     slots.Release();
                 }
-            }));
+            }
+
+            Console.WriteLine(
+                "[BOTS] Preflight: validating one test bot before creating the remaining accounts.");
+            await PrepareBotAsync(0);
+            if (clients[0] is null)
+            {
+                Console.Error.WriteLine(
+                    "[BOTS] PRECHECK FAILED: stopped after the first bot; no further " +
+                    "test accounts were created. Check that the running Server was " +
+                    "rebuilt/restarted with Game__TestBotCommandsEnabled=true.");
+                return 1;
+            }
+
+            if (count > 1 && !stop.IsCancellationRequested)
+                await Task.WhenAll(
+                    Enumerable.Range(1, count - 1).Select(PrepareBotAsync));
 
             var live = clients.OfType<WireLoadClient>().ToArray();
             if (live.Length == 0)
