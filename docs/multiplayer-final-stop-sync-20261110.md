@@ -38,3 +38,11 @@ Observer: MoveEntity 先更新最後位置，再停 Dead Reckoning 與步行動�
 - 目前玩家/怪物視覺移動已用 Server `SpeedTime`，但仍可能因 Server session 鎖、DB、AOI 排隊或 Client 解包時間預算出現尖峰；不能靠提高封包頻率掩蓋。
 - 怪物 250ms 共用 AI Tick 仍可能造成「同時起步」的視覺感；需以 `MAP_AI_PROFILE`、Client 每角色收包間隔和影像記錄識別是否真有同步阻塞，再做下一步修改。
 - 這份修補只解決**最後位置被節流吞掉**及 idle 動畫倒退；不代表已全面解決 20 人實機卡頓。PR 不自動合併。
+
+## GitHub PR #3 CI 實測（2026-11-10）
+
+- [Godot movement #42834433668](https://github.com/kevin840307/TestGoGo/actions/runs/42834433668)：**SUCCESS**。純演算法 4.7.2 headless regression 通過；真實動畫圖片不在 checkout 內，完整場景未測。
+- [.NET 8 + persistence + 20 players #42834433702](https://github.com/kevin840307/TestGoGo/actions/runs/42834433702)：**SUCCESS**，包含 .NET Server/Probe build、`[POSITION_PERSIST_TEST] ALL PASS`、`[WIRE_FINAL_STOP_PASS] entity=3 x=10007 y=10000 speed_time=0`。
+- 同一輪 Movement 1140/1140，P50 9.0ms / **P95 905.2ms** / P99 905.2ms；附近聊天 1200/1200，P95 6.9ms；AI Tick P95 約 21.69ms。單輪尖峰不能忽略；不代表畫面 20 人實機流暢度。
+- 慢路徑記錄：`SLOW_PACKET_DETAIL ChatMessage HandlerMs` 超過 10s、`SLOW_WORLD_TICK LockWaitMs` 超過 9s，`MAP_AI_PROFILE PlayerSessionLockWaitMs` 超過 8s。同時 `SLOW_CHAT_PHASE=0`、`POSITION_BATCH_FAILED=0`；部分緩慢 ChatMessage 可能是 GM 測試指令，不能直接視為一般聊天延遲。需與 GM setup/其他任務分離確認。
+- [一般 Server build #42834433901](https://github.com/kevin840307/TestGoGo/actions/runs/42834433901)：在 Quest host strict audit 發現既有 `UNBOUND` 指令而失敗，後續一般 build 步驟未執行。隔離式 .NET server/probe build 在上面 20 人 workflow **已通過**。
