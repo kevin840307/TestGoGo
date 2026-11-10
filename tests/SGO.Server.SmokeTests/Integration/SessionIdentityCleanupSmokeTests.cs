@@ -217,6 +217,24 @@ internal static class SessionIdentityCleanupSmokeTests
             session.LastPresenceAoiY == originalY,
             "repeated idle socket tick preserves reconciled player AOI position");
 
+        using (var unchangedPosition = Json(
+            JsonSerializer.Serialize(new
+            {
+                Type = "SyncPosition",
+                X = (int)originalX,
+                Y = (int)originalY
+            })))
+        {
+            var responses = router.Handle(
+                unchangedPosition.RootElement, session);
+            Check(
+                responses.Count == 0 &&
+                !session.PositionDirty &&
+                session.LastX == originalX &&
+                session.LastY == originalY,
+                "duplicate SyncPosition is a no-op: no SQLite dirty write or move response");
+        }
+
         session.LastX = originalX + 40;
         session.LastY = originalY + 20;
         router.SyncPresence(session);
