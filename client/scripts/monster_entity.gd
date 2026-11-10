@@ -1236,6 +1236,18 @@ func sync_animation() -> void :
 		if sprite.animation != anim_to_play or not sprite.is_playing():
 			MonsterLoader.begin_audio_sequence(sprite)
 			sprite.play(anim_to_play)
+			# The authoritative map ticker sends many movement updates in
+			# the same 250ms window. Do not make all idle/walk sprite loops
+			# restart on the same animation frame; give each monster its own
+			# stable visual phase. Attack/hit/death animations stay exact.
+			if requested_state in ["idle", "walk"]:
+				var loop_frames: int = sprite.sprite_frames.get_frame_count(anim_to_play)
+				if loop_frames > 1:
+					var offset: int = posmod(
+						entity_id * 31 + (7 if requested_state == "walk" else 0),
+						loop_frames
+					)
+					sprite.set_frame_and_progress(offset, 0.0)
 		_update_sprite_offset()
 
 		# Some recovered monster sprites do not contain ATTACK/HIT animations.
