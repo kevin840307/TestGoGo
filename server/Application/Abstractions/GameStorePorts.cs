@@ -65,6 +65,11 @@ public sealed record CharacterCosmeticMutationResult(
     string Message,
     IReadOnlyList<CharacterCosmeticOverride> Overrides);
 
+// Approved server positions awaiting durable write. MapId fences old
+// periodic snapshots from overwriting the destination after a map transfer.
+public readonly record struct CharacterPositionWrite(
+    long AccountId, long CharacterId, int MapId, int X, int Y);
+
 public interface ICharacterStore
 {
     List<Dictionary<string, object>> Characters(long accountId);
@@ -116,6 +121,16 @@ public interface ICharacterStore
         long dbid,
         string newPassword);
     bool UpdatePosition(long accountId, long dbid, int x, int y);
+
+    // Periodic movement persistence can share one short transaction instead
+    // of opening one SQLite writer per active character at the same instant.
+    // Test/alternate stores inherit the legacy per-position fallback.
+    void UpdatePositionsBatch(IReadOnlyList<CharacterPositionWrite> positions)
+    {
+        foreach (var position in positions)
+            UpdatePosition(position.AccountId, position.CharacterId,
+                position.X, position.Y);
+    }
     bool UpdateLocation(
         long accountId,
         long dbid,
