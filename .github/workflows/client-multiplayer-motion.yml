@@ -11,10 +11,12 @@ on:
       - 'client/scripts/network_manager.gd'
       - 'client/scripts/monster_entity.gd'
       - 'client/scripts/monster_waypoint_speed.gd'
+      - 'client/scripts/view_interest_radius.gd'
       - 'client/tests/monster_chase_regression.gd'
       - 'client/tests/remote_multiplayer_motion_regression.gd'
       - 'client/tests/multiplayer_motion_audit_regression.gd'
       - 'client/tests/monster_waypoint_math_regression.gd'
+      - 'client/tests/view_interest_radius_regression.gd'
       - 'client/tests/multiplayer_20_actors_motion_regression.gd'
       - '.github/workflows/client-multiplayer-motion.yml'
   pull_request:
@@ -23,7 +25,10 @@ on:
       - 'client/network_player.gd'
       - 'client/scripts/remote_player_motion.gd'
       - 'client/scripts/network_entity_manager.gd'
+      - 'client/scripts/network_manager.gd'
+      - 'client/scripts/view_interest_radius.gd'
       - 'client/tests/remote_multiplayer_motion_regression.gd'
+      - 'client/tests/view_interest_radius_regression.gd'
       - '.github/workflows/client-multiplayer-motion.yml'
   workflow_dispatch:
 
@@ -60,15 +65,18 @@ jobs:
           cp client/scripts/remote_player_motion.gd "$project/scripts/"
           cp client/scripts/multiplayer_motion_audit.gd "$project/scripts/"
           cp client/scripts/monster_waypoint_speed.gd "$project/scripts/"
+          cp client/scripts/view_interest_radius.gd "$project/scripts/"
           cp client/tests/remote_multiplayer_motion_regression.gd "$project/tests/"
           cp client/tests/multiplayer_motion_audit_regression.gd "$project/tests/"
           cp client/tests/monster_waypoint_math_regression.gd "$project/tests/"
+          cp client/tests/view_interest_radius_regression.gd "$project/tests/"
           cp client/tests/multiplayer_20_actors_motion_regression.gd "$project/tests/"
           timeout 60s /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless \
             --path "$project" --editor --import --quit 2>&1 | tee godot-isolated-import.log
           for script in \
             remote_multiplayer_motion_regression.gd \
             monster_waypoint_math_regression.gd \
+            view_interest_radius_regression.gd \
             multiplayer_motion_audit_regression.gd \
             multiplayer_20_actors_motion_regression.gd; do
             echo "==== $script ===="
@@ -77,6 +85,7 @@ jobs:
           done
           grep -Fq '[REMOTE_MOTION_TEST] ALL PASS' godot-motion.log
           grep -Fq '[MONSTER_WAYPOINT_TEST] ALL PASS' godot-motion.log
+          grep -Fq '[VIEW_INTEREST_TEST] ALL PASS' godot-motion.log
           grep -Fq '[MOTION_AUDIT] ALL PASS' godot-motion.log
           grep -Fq '[MULTI20_MOTION_TEST] ALL PASS' godot-motion.log
       - name: Scene/packet integration regressions (requires original art)
