@@ -73,6 +73,70 @@ var ordinarySeen = 0;
 while (fast.Queue.TryDequeue(out _))
     ordinarySeen++;
 Check(ordinarySeen == 2000, "every ordinary item survives the priority burst");
+// Simulate twenty independent observers receiving mixed player and world
+// updates concurrently. This verifies there is no shared global head-of-line
+// queue between clients, and no loss of ground/monster events.
+var peers = Enumerable.Range(0, 20)
+    .Select(_ => hub.Register(prioritizePlayerEvents: true))
+    .ToArray();
+for (var i = 0; i < peers.Length; i++)
+{
+    var peer = peers[i];
+    for (var step = 0; step < 150; step++)
+    {
+        hub.PublishToConnection(peer.ConnectionId, new
+        {
+            Type = "MoveEntity",
+            EntityID = 8_000_000L + step,
+            X = step,
+            Y = i
+        });
+        hub.PublishToConnection(peer.ConnectionId, new
+        {
+            Type = "SpawnEntity",
+            EntityType = 3,
+            EntityID = 5_000_000L + step
+        });
+        if (step % 15 == 0)
+        {
+            hub.PublishToConnection(peer.ConnectionId, new
+            {
+                Type = "MoveEntity",
+                EntityID = 100L + i,
+                X = step,
+                Y = i
+            });
+        }
+    }
+}
+var everyPeerHasAllEvents = true;
+foreach (var peer in peers)
+{
+    var valid = peer.Queue.Count == 300
+        && hub.PlayerPriorityBacklogCount(peer.ConnectionId) == 10;
+    long lastPlayerX = -1;
+    for (var expectedX = 0; expectedX < 150; expectedX += 15)
+    {
+        if (!hub.TryDequeuePlayerPriority(peer.ConnectionId, out var playerPacket))
+        {
+            valid = false;
+            break;
+        }
+        var x = (int)(playerPacket.GetType().GetProperty("X")?.GetValue(playerPacket) ?? -1);
+        if (x != expectedX || x < lastPlayerX)
+            valid = false;
+        lastPlayerX = x;
+    }
+    var groundAndMonsterCount = 0;
+    while (peer.Queue.TryDequeue(out _))
+        groundAndMonsterCount++;
+    valid &= groundAndMonsterCount == 300;
+    everyPeerHasAllEvents &= valid;
+    hub.Unregister(peer.ConnectionId);
+}
+Check(everyPeerHasAllEvents,
+    "twenty observers retain independent player FIFO and all 6000 world packets");
+
 hub.Unregister(fast.ConnectionId);
 hub.Unregister(normal.ConnectionId);
 Check(!hub.HasPendingPlayerPriority(fast.ConnectionId), "unregister cleans priority queue");
