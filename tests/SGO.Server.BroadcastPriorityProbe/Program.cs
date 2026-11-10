@@ -1,4 +1,7 @@
 using SGO.Server.Application.Messaging;
+using SGO.Server.Protocol;
+using System.Text;
+using System.Collections.Concurrent;
 
 static void Check(bool condition, string description)
 {
@@ -136,6 +139,61 @@ foreach (var peer in peers)
 }
 Check(everyPeerHasAllEvents,
     "twenty observers retain independent player FIFO and all 6000 world packets");
+
+// Repeated per-observer AES+JSON work is amortized for immutable scalar
+// broadcasts only. Confirm simultaneous observers get the same frame while
+// mutable packet data is never mistakenly cached after a state change.
+var immutableMove = new
+{
+    Type = "MoveEntity",
+    EntityID = 555L,
+    X = 120,
+    Y = 180,
+    Dir = "2",
+    SpeedTime = 0.1
+};
+var encodedFrames = new ConcurrentBag<byte[]>();
+Parallel.For(0, 20, _ =>
+{
+    encodedFrames.Add(hub.EncodeBroadcastPacket(immutableMove));
+});
+Check(encodedFrames.Count == 20 &&
+      encodedFrames.All(bytes => ReferenceEquals(bytes, encodedFrames.First())),
+    "20 concurrent recipients share one immutable encrypted frame");
+var firstFrame = encodedFrames.First();
+using (var decoded = ClientProtocol.Decode(Encoding.UTF8.GetString(firstFrame)))
+{
+    Check(decoded.RootElement.GetProperty("Type").GetString() == "MoveEntity" &&
+          decoded.RootElement.GetProperty("X").GetInt32() == 120,
+        "cached frames remain exactly compatible with original client crypto");
+}
+var mutablePacket = new Dictionary<string, object>
+{
+    ["Type"] = "MoveEntity",
+    ["EntityID"] = 19L,
+    ["X"] = 42
+};
+var mutableBefore = hub.EncodeBroadcastPacket(mutablePacket);
+mutablePacket["X"] = 43;
+var mutableAfter = hub.EncodeBroadcastPacket(mutablePacket);
+using (var oldPacket = ClientProtocol.Decode(Encoding.UTF8.GetString(mutableBefore)))
+using (var newPacket = ClientProtocol.Decode(Encoding.UTF8.GetString(mutableAfter)))
+{
+    Check(oldPacket.RootElement.GetProperty("X").GetInt32() == 42 &&
+          newPacket.RootElement.GetProperty("X").GetInt32() == 43,
+        "mutable dictionary payload bypasses cache and always reflects new state");
+}
+var nestedPacket = new { Type = "SpawnEntity", EntityID = 11L,
+    ExtraData = new Dictionary<string, object> { ["HP"] = 50 } };
+var nestedFirst = hub.EncodeBroadcastPacket(nestedPacket);
+nestedPacket.ExtraData["HP"] = 49;
+var nestedSecond = hub.EncodeBroadcastPacket(nestedPacket);
+using (var next = ClientProtocol.Decode(Encoding.UTF8.GetString(nestedSecond)))
+{
+    Check(next.RootElement.GetProperty("ExtraData").GetProperty("HP").GetInt32() == 49 &&
+          !ReferenceEquals(nestedFirst, nestedSecond),
+        "anonymous packets containing nested mutable state bypass cache");
+}
 
 hub.Unregister(fast.ConnectionId);
 hub.Unregister(normal.ConnectionId);
