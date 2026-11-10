@@ -621,6 +621,7 @@ public static class WebSocketEndpoint
                             packetType is not (
                                 "Pong" or
                                 "SyncPosition" or
+                                "ViewportAoi" or
                                 "SyncState"))
                         {
                             log.LogWarning(
