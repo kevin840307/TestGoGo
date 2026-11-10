@@ -26,6 +26,7 @@ on:
       - 'client/tests/atlas_scene_loader_regression.gd'
       - 'tools/Prepare-SGO-MapVisuals.ps1'
       - 'tests/test_client_memory_lifecycle_contract.py'
+      - 'tests/test_ground_drop_hotpath_contract.py'
       - '.github/workflows/client-memory-lifecycle.yml'
   workflow_dispatch:
 
@@ -42,7 +43,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Map streaming, atlas sharing and viewport lifecycle
-        run: python -m unittest discover -s tests -p 'test_client_memory_lifecycle_contract.py' -v
+        run: |
+          python -m unittest discover -s tests -p 'test_client_memory_lifecycle_contract.py' -v
+          python -m unittest discover -s tests -p 'test_ground_drop_hotpath_contract.py' -v
       - name: Godot 4.7.2 headless static visual AOI regression
         shell: bash
         run: |
