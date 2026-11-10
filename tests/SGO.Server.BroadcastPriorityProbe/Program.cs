@@ -401,6 +401,48 @@ using (var next = ClientProtocol.Decode(Encoding.UTF8.GetString(nestedSecond)))
 hub.Unregister(fast.ConnectionId);
 hub.Unregister(normal.ConnectionId);
 Check(!hub.HasPendingPlayerPriority(fast.ConnectionId), "unregister cleans priority queue");
+
+// Large viewports must receive actors that are already visible at the screen
+// edge without globally widening every observer's AOI.
+var viewportPlayers = new PlayerSpatialAoi();
+var compactViewer = new OnlinePlayerPresence(
+    Guid.NewGuid(), 7001, 7001, 13, 0, 0, "", 1800);
+var ultrawideViewer = new OnlinePlayerPresence(
+    Guid.NewGuid(), 7002, 7002, 13, 2400, 0, "", 2600);
+Check(viewportPlayers.Upsert(compactViewer).Count == 0,
+    "default viewport keeps existing player AOI");
+var viewportAppeared = viewportPlayers.Upsert(ultrawideViewer);
+Check(viewportAppeared.Count == 2 &&
+      viewportAppeared.All(change => change.Appeared) &&
+      viewportPlayers.IsVisible(compactViewer.ConnectionId, ultrawideViewer.ConnectionId),
+    "ultrawide player interest discovers a peer beyond the legacy 1800 radius");
+ultrawideViewer = ultrawideViewer with { ViewInterestRadius = 1800 };
+var viewportVanished = viewportPlayers.Upsert(ultrawideViewer);
+Check(viewportVanished.Count == 2 &&
+      viewportVanished.All(change => !change.Appeared),
+    "shrinking viewport restores legacy hysteresis without ghost player edges");
+Check(PlayerSpatialAoi.NormalizeEnterRadius(99999) ==
+      PlayerSpatialAoi.MaxEnterRadius,
+    "player viewport interest is server-clamped");
+
+var viewportWorld = new WorldEntitySpatialAoi();
+var worldViewer = new OnlinePlayerPresence(
+    Guid.NewGuid(), 7101, 7101, 13, 0, 0, "", 3400);
+viewportWorld.UpsertObserver(worldViewer);
+var edgeMonster = new WorldAoiEntity(
+    9_880_001, 1, 13, 3200, 0,
+    () => new { Type = "SpawnEntity", EntityID = 9_880_001L, EntityType = 1 });
+var worldAppeared = viewportWorld.UpsertEntity(edgeMonster);
+Check(worldAppeared.Count == 1 && worldAppeared[0].Appeared,
+    "large viewport receives world actor beyond legacy 2600 radius");
+worldViewer = worldViewer with { ViewInterestRadius = 1800 };
+var worldVanished = viewportWorld.UpsertObserver(worldViewer);
+Check(worldVanished.Count == 1 && !worldVanished[0].Appeared,
+    "world actor leaves delivery AOI when observer returns to normal viewport");
+Check(WorldEntitySpatialAoi.NormalizeObserverEnterRadius(99999) ==
+      WorldEntitySpatialAoi.MaxEnterRadius,
+    "world viewport interest is server-clamped");
+
 // A normal character read must never acquire SQLite's writer lock, even
 // while another connection is mid-transaction. The historical unconditional
 // UPDATE in GetCharacter blocked here for busy_timeout=5000 ms.
