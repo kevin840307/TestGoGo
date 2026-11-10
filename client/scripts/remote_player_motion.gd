@@ -41,12 +41,24 @@ func receive(position: Vector2, received_msec: int,
 
 	var fallback: float = clampf(nominal_seconds, MIN_SAMPLE_SECONDS, MAX_SAMPLE_SECONDS)
 	var observed: float = fallback
+	# SpeedTime describes the SERVER interval between authoritative position
+	# snapshots. Network receive gaps are not simulation time: when several
+	# packets stall in transit, dividing movement by their arrival gap makes
+	# remote players move too slowly, then jump when the queue catches up.
+	var has_server_interval: bool = (
+		nominal_seconds >= MIN_SAMPLE_SECONDS
+		and nominal_seconds <= MAX_SAMPLE_SECONDS
+	)
 	if _has_sample and _last_received_msec >= 0:
 		var wall_seconds: float = float(received_msec - _last_received_msec) / 1000.0
-		# Bursts of packets delayed by WS scheduling are not a sudden
-		# teleport-speed movement. Prefer the Server's SpeedTime in that case.
 		if wall_seconds >= 0.04 and wall_seconds <= 1.0:
-			observed = clampf(wall_seconds, MIN_SAMPLE_SECONDS, MAX_SAMPLE_SECONDS)
+			if not has_server_interval:
+				# Compatibility with packets without a meaningful SpeedTime.
+				observed = clampf(wall_seconds, MIN_SAMPLE_SECONDS, MAX_SAMPLE_SECONDS)
+			elif absf(wall_seconds - fallback) <= maxf(0.08, fallback * 0.5):
+				# A little arrival-time adaptation is fine if it agrees with
+				# server time; never treat a stalled WebSocket as slower walking.
+				observed = lerpf(fallback, wall_seconds, 0.15)
 
 	var displacement: Vector2 = position - authoritative_position
 	if displacement.length_squared() <= 0.25:
