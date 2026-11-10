@@ -20,6 +20,22 @@ func _initialize() -> void:
 
 func _run() -> void:
 	await process_frame
+	# A valid 90px / 250ms waypoint needs ~346px/s visual catch-up.
+	# The former unconditional 205px/s clamp could cover only 51px per
+	# server tick, accumulating more and more positional lag over time.
+	var catchup_speed: float = MonsterEntity.calculate_network_move_speed(90.0, 0.25)
+	_check(catchup_speed > 300.0 and catchup_speed < 900.0,
+		"250ms monster waypoint speed follows distance, not old 205px/s cap")
+	_check(MonsterEntity.calculate_network_move_speed(90.0, 0.0) == 0.0,
+		"zero-duration correction bypasses visual movement")
+	var crowded_monster: MonsterEntity = MonsterEntity.new()
+	crowded_monster.network_move_to(Vector2(90.0, 0.0), 0.25)
+	crowded_monster.advance_network_runtime(0.25)
+	_check(crowded_monster.global_position.x > 80.0
+		and crowded_monster.global_position.x < 90.0,
+		"multiplayer movement can nearly finish 90px waypoint in 250ms")
+	crowded_monster.free()
+
 	var monster: MonsterEntity = MonsterEntity.new()
 	monster.global_position = Vector2.ZERO
 
