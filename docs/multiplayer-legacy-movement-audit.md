@@ -126,3 +126,55 @@ GitHub Actions：[20 人 wire latency 測試 #42813635362](https://github.com/ke
 - 不靠把 60fps 改成 20fps、不把網路/遊戲物理降頻、不為視覺犧牲遊戲邏輯。
 - 不在缺實測時宣稱舊版送包「一定每 20ms」、或所有多人 lag「確定只是 Client」。
 - 不影響已實作的 AFK 外觀 UI、不破壞角色與怪物原本的 AOI、戰鬥/互動契約。
+
+
+## 8. 2026-11-10 實作與實測結果（本版更新）
+
+### 8.1 `Old/` 新發現的資料
+
+Git `Old/` 內已存在 `Old/ClientData/Paradise.exe.lst`、`Old/服務端/Core.dll.lst`、
+`Old/服務端/CDGameShell.exe.lst`、`Old/服務端/plugins/SGOMapService.dll.lst`、
+`Old/服務端/plugins/SGOPlayer.dll.lst`，以及 `CDRDPortSys.dll.lst`、
+`SGOCareerSys.dll.lst` 等。無需再次上傳已存在的反編譯檔。
+本次已用已附上的完整 `SGOMapService.dll.lst` 和 `Paradise.exe.lst` 直接確認：
+
+- `CDMapService2D::SendSyncDestPac`：`0x1005EAEB` 將 `0xA106` 作為命令。
+- `CDMapService2D::Update`：`0x1002D9A6` 透過 `CDServer::GetCurrentFPS` 計數。
+- `CSGOChar::MoveStep`：角色固定點步進，並非每封包直接瞬移。
+- 以上只能證明 **frame update 和目的地/位置同步的分工**，不能反推原版實際每秒送多少包。
+- `Core.dll.lst` 可進一步追核心計時器，但 GitHub 大型檔的 Contents API 無法回傳完整正文；本階段不因這點卡住實作。
+
+### 8.2 修改範圍
+
+| 類型 | 更新 | 保護 |
+|---|---|---|
+| Client | `remote_player_motion.gd` 以 Server `SpeedTime` 推估速度，不因 WS 收包抖動誤減速 | 仍限制預測距離/時間，權威位置獨立 |
+| Client | `monster_entity.gd` 拔除不合理 205px/s 追點上限，`monster_waypoint_speed.gd` 分離算式 | 0 時間立即校正、attack/hit/death 優先 |
+| Client | `network_entity_manager.gd` 怪物位置移動改由固定 Physics Tick 驅動 | FPS/AFK/失焦只改視覺，不改封包與戰鬥 |
+| Client | `network_manager.gd` 及 `multiplayer_motion_audit.gd` Debug 每 10 秒聚合封包量、排隊與追點差距 | 不逐包大量 print、不篡改封包 |
+| Server | `PositionPersistenceService` 100ms 背景檢查、每角色合併最新待存座標；`SqliteGameStore.UpdatePositionsBatch` 單交易 | 3 秒儲存節奏不變，登出同步儲存，換圖/復活/傳送 fence，舊地圖 SQL map_id guard |
+| Server | ChatMessage 正常聊天改用 EnterWorld 已驗證的角色名稱/種族，不再每則重新載入角色；密語改查線上 Presence | GM/社團特殊指令、權限與其它頻道沿用原處理 |
+
+### 8.3 20 人加密 WebSocket 實測（不可誤讀為畫面 FPS）
+
+| 測試／版本 | Movement Round P95 | Nearby Chat Round P95 | Map AI Tick P95 | 其他 |
+|---|---:|---:|---:|---|
+| [#42816108025](https://github.com/kevin840307/TestGoGo/actions/runs/42816108025)，同步 SQLite 時 | **3006.8ms** | 8.0ms | 3.6ms | `PersistMs` 慢速事件 P95 6151.4ms，MAX 7151.4ms |
+| [#42817804141](https://github.com/kevin840307/TestGoGo/actions/runs/42817804141)，位置批次化 | **10.1ms** | 13.4ms | 1022.8ms | 同輪 AI 仍被聊天/其它 Session 持鎖阻塞 |
+| [#42818788968](https://github.com/kevin840307/TestGoGo/actions/runs/42818788968)，Chat 快速路徑 | **15.6ms** | **8.3ms** | **16.6ms** | Movement 1140/1140、Chat 1200/1200，全送達 |
+
+**解釋**：測試列出的是 WireLoadProbe 的 `RoundLatencyMs` 和 `AiTickElapsedMs`，不是 Godot 看到的每幀動作延遲。最後一輪仍有少量 `ChatMessage` Handler 1–5 秒與 Session lock 例外峰值，**不可以因 P95 已改善就宣稱所有卡頓消失**；要再用 Debug log 確認最慢路徑並補視覺測試。
+
+### 8.4 已執行的測試
+
+- [Godot 4.7.2 #42815431514](https://github.com/kevin840307/TestGoGo/actions/runs/42815431514)：`REMOTE_MOTION_TEST`、`MONSTER_WAYPOINT_TEST`、`MOTION_AUDIT` **ALL PASS**。
+- [Position persistence + 20-player wire #42818788968](https://github.com/kevin840307/TestGoGo/actions/runs/42818788968)：`POSITION_PERSIST_TEST ALL PASS`（批次、舊 map 防護、最新座標合併、最終 logout、換圖 fence），20 人 `Success=True`。
+- **未驗證**：完整 Godot Scene/動畫/AOI/headless 測試，因 Checkout 不含原始 UI PNG（`BG_ENEMY_HP.png` 等）；CI 明確 `SKIP`。完整素材和 20 人實機畫面體驗仍須驗證。
+- 原本 `Server build` 包含 Quest host strict audit，仍可能因 57 個舊腳本未綁定函式而失敗；此問題不等於多人移動修改失敗。
+
+### 8.5 下一個可驗收的實機步驟
+
+1. 用 20 bot + 真實 Client 進 Map13，Debug LOG 搜尋 `MULTIPLAYER_PACKET_AUDIT`、`MULTIPLAYER_MOTION_AUDIT`、`NETWORK_RUNTIME_BACKLOG`、`SLOW_PACKET_DETAIL`、`MAP_AI_PROFILE`。
+2. 比對玩家和怪物的封包接收間隔、累積 backlog、移動 waypoint 距離以及實際視覺卡頓，錄 15–30 秒影片。
+3. 只在觀察後判定要不要加入 100–150ms snapshot interpolation buffer / adaptive interpolation；不要憑空加固定延遲。
+4. 特別檢驗：AFK/失焦/縮小、不降低 Physics/封包處理；攻擊距離與生命值同步、怪物追擊與返回 Map13、物品 AOI、不影響既有正常功能。
