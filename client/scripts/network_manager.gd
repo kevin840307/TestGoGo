@@ -10,6 +10,8 @@ var _is_waiting_logout_confirm = false
 var _logout_timeout_timer = 0.0
 const LOGOUT_TIMEOUT_MAX = 2.0
 const RUNTIME_PREDICTION_INTERVAL: = 0.1
+const VIEW_INTEREST_RADIUS = preload("res://scripts/view_interest_radius.gd")
+const VIEW_INTEREST_REPORT_INTERVAL: float = 0.5
 # Allow cheap player MoveEntity/SyncState packets to use spare network time.
 # The existing 4ms wall-clock budget still caps network work per physics
 # tick, so this does not steal extra time from rendering or change gameplay
@@ -19,6 +21,8 @@ const IN_WORLD_PACKET_TIME_BUDGET_USEC: = 4000
 const PRE_WORLD_PACKET_LIMIT_PER_FRAME: = 128
 const PRE_WORLD_PACKET_TIME_BUDGET_USEC: = 8000
 var _runtime_prediction_elapsed: float = 0.0
+var _view_interest_elapsed: float = 0.0
+var _last_sent_view_interest_radius: int = 0
 var _map_backlog_tracking: bool = false
 var _map_backlog_transition_id: int = 0
 var _map_backlog_target_map: int = 0
@@ -233,6 +237,13 @@ func _physics_process(delta: float) -> void :
 
 	if state == WebSocketPeer.STATE_OPEN:
 		is_connected_to_server = true
+		# View interest is cheap control metadata, not a gameplay tick. Polling
+		# twice a second also catches runtime zoom changes without tying AOI
+		# correctness to render FPS or a resize notification.
+		_view_interest_elapsed += delta
+		if _view_interest_elapsed >= VIEW_INTEREST_REPORT_INTERVAL:
+			_view_interest_elapsed = 0.0
+			_send_view_interest_if_changed()
 		var available_packet_count: = socket.get_available_packet_count()
 		if available_packet_count > 0:
 			var drain_started_usec: = Time.get_ticks_usec()
@@ -446,12 +457,52 @@ func send_secure_packet(data_dict: Dictionary) -> void :
 func send_announcement_list_request() -> void :
 	send_secure_packet({"Type": "AnnouncementListRequest"})
 
+func _current_view_interest_radius() -> int:
+	var viewport: Viewport = get_viewport()
+	if not is_instance_valid(viewport):
+		return int(VIEW_INTEREST_RADIUS.MIN_RADIUS)
+	var view_size: Vector2 = viewport.get_visible_rect().size
+	var camera: Camera2D = viewport.get_camera_2d()
+	var zoom: float = 1.0
+	var camera_player_offset: float = 0.0
+	if is_instance_valid(camera):
+		zoom = minf(absf(camera.zoom.x), absf(camera.zoom.y))
+		if GameManager and is_instance_valid(GameManager.current_player):
+			camera_player_offset = camera.global_position.distance_to(
+				GameManager.current_player.global_position
+			)
+	return roundi(VIEW_INTEREST_RADIUS.calculate(
+		view_size, zoom, camera_player_offset
+	))
+
+
+func _send_view_interest_if_changed() -> void:
+	if socket.get_ready_state() != WebSocketPeer.STATE_OPEN:
+		return
+	if not GameManager or not is_instance_valid(GameManager.current_player):
+		return
+	var radius: int = _current_view_interest_radius()
+	if (
+		_last_sent_view_interest_radius > 0
+		and absi(radius - _last_sent_view_interest_radius) < 64
+	):
+		return
+	_last_sent_view_interest_radius = radius
+	send_secure_packet({
+		"Type": "ViewInterest",
+		"ViewRadius": radius,
+	})
+
+
 func send_world_ready(map_id: int) -> void :
 	if map_id <= 0:
 		return
+	var radius: int = _current_view_interest_radius()
+	_last_sent_view_interest_radius = radius
 	send_secure_packet({
 		"Type": "WorldReady",
 		"MapID": map_id,
+		"ViewRadius": radius,
 	})
 
 func send_login_request(user: String, pass_str: String) -> void :
