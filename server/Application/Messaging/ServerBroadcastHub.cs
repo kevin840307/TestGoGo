@@ -83,6 +83,25 @@ public sealed class ServerBroadcastHub
     private readonly ConcurrentDictionary<Guid, ConcurrentQueue<object>>
         _playerPriorityQueues = new();
 
+    // For active WebSockets only. A MoveEntity is a visual snapshot, not a
+    // gameplay action. While the socket is backpressured, keep only the
+    // newest unsent position per player, without coalescing across a
+    // Spawn/Despawn/SyncState/attack/death boundary for that same player.
+    private sealed class PendingPlayerMove(long entityId, object packet)
+    {
+        public long EntityId { get; } = entityId;
+        public object LatestPacket { get; set; } = packet;
+    }
+
+    private sealed class PlayerPriorityMovementState
+    {
+        public readonly object Gate = new();
+        public readonly Dictionary<long, PendingPlayerMove> Pending = new();
+    }
+
+    private readonly ConcurrentDictionary<Guid, PlayerPriorityMovementState>
+        _playerPriorityMovementStates = new();
+
     // Wake only active senders. A single bounded notification coalesces
     // bursts; there is no 25ms polling timer per connected WebSocket.
     private readonly ConcurrentDictionary<Guid, Channel<byte>>
@@ -101,7 +120,55 @@ public sealed class ServerBroadcastHub
         if (_playerPriorityQueues.TryGetValue(connectionId, out var playerQueue) &&
             IsPlayerPriorityPacket(packet))
         {
-            playerQueue.Enqueue(packet);
+            if (_playerPriorityMovementStates.TryGetValue(
+                    connectionId, out var movement))
+            {
+                lock (movement.Gate)
+                {
+                    var type = ReadPacketString(packet, "Type");
+                    var entityId = ReadPacketLong(packet, "EntityID");
+                    if (type == "MoveEntity" &&
+                        entityId is > 0 and < 1_000_000)
+                    {
+                        if (movement.Pending.TryGetValue(entityId, out var slot))
+                        {
+                            // The old MoveEntity has not left this queue yet.
+                            // No need to transmit a historical intermediate
+                            // point before the latest authoritative position.
+                            slot.LatestPacket = packet;
+                        }
+                        else
+                        {
+                            slot = new PendingPlayerMove(entityId, packet);
+                            movement.Pending.Add(entityId, slot);
+                            playerQueue.Enqueue(slot);
+                        }
+                    }
+                    else
+                    {
+                        // Never merge movement across gameplay or identity
+                        // boundaries: the next position needs a new slot after
+                        // the original packet, in the original FIFO order.
+                        if (entityId is > 0 and < 1_000_000)
+                            movement.Pending.Remove(entityId);
+                        if (type == "SkillCast")
+                            movement.Pending.Remove(ReadPacketLong(packet, "CasterID"));
+                        if (type == "EntityDamage")
+                        {
+                            movement.Pending.Remove(ReadPacketLong(packet, "AttackerID"));
+                            if (ReadPacketLong(packet, "TargetType") == 0)
+                                movement.Pending.Remove(ReadPacketLong(packet, "TargetID"));
+                        }
+                        if (type == "EntityHeal")
+                            movement.Pending.Remove(ReadPacketLong(packet, "TargetID"));
+                        playerQueue.Enqueue(packet);
+                    }
+                }
+            }
+            else
+            {
+                playerQueue.Enqueue(packet);
+            }
         }
         else
         {
@@ -136,8 +203,31 @@ public sealed class ServerBroadcastHub
     public bool TryDequeuePlayerPriority(Guid connectionId, out object packet)
     {
         packet = null!;
-        return _playerPriorityQueues.TryGetValue(connectionId, out var queue) &&
-               queue.TryDequeue(out packet!);
+        if (!_playerPriorityQueues.TryGetValue(connectionId, out var queue))
+            return false;
+
+        if (!_playerPriorityMovementStates.TryGetValue(
+                connectionId, out var movement))
+            return queue.TryDequeue(out packet!);
+
+        lock (movement.Gate)
+        {
+            if (!queue.TryDequeue(out var queued))
+                return false;
+
+            if (queued is PendingPlayerMove slot)
+            {
+                if (movement.Pending.TryGetValue(slot.EntityId, out var current) &&
+                    ReferenceEquals(current, slot))
+                    movement.Pending.Remove(slot.EntityId);
+                packet = slot.LatestPacket;
+            }
+            else
+            {
+                packet = queued;
+            }
+            return true;
+        }
     }
 
     public bool HasPendingPlayerPriority(Guid connectionId)
@@ -173,7 +263,10 @@ public sealed class ServerBroadcastHub
         var id = Guid.NewGuid();
         var queue = new ConcurrentQueue<object>();
         if (prioritizePlayerEvents)
+        {
+            _playerPriorityMovementStates[id] = new PlayerPriorityMovementState();
             _playerPriorityQueues[id] = new ConcurrentQueue<object>();
+        }
         _queueSignals[id] = Channel.CreateBounded<byte>(
             new BoundedChannelOptions(1)
             {
@@ -302,6 +395,7 @@ public sealed class ServerBroadcastHub
         ClearPlayerCompanions(connectionId);
         _queues.TryRemove(connectionId, out _);
         _playerPriorityQueues.TryRemove(connectionId, out _);
+        _playerPriorityMovementStates.TryRemove(connectionId, out _);
         if (_queueSignals.TryRemove(connectionId, out var signal))
             signal.Writer.TryComplete();
         _presence.TryRemove(connectionId, out _);
