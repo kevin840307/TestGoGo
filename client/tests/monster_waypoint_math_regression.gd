@@ -45,6 +45,12 @@ func _run() -> void:
 		280.0, 0.0, 140.0, 2.0
 	) == 0.0,
 		"authoritative zero-time correction remains a correction boundary")
+	_check(
+		MonsterWaypointSpeed.should_linger_outside_aoi(2240.0, 2200.0, 400)
+		and not MonsterWaypointSpeed.should_linger_outside_aoi(2240.0, 2200.0, 1000)
+		and not MonsterWaypointSpeed.should_linger_outside_aoi(3000.0, 2200.0, 0),
+		"only viewport-fringe monsters may linger briefly"
+	)
 	var correction_seconds := MonsterWaypointSpeed.correction_visual_seconds(350.0)
 	_check(correction_seconds > 0.5 and correction_seconds < 0.6,
 		"350px attack correction is visually eased by distance instead of one-frame snapping")
