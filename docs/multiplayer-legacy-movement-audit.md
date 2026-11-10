@@ -178,3 +178,54 @@ Git `Old/` 內已存在 `Old/ClientData/Paradise.exe.lst`、`Old/服務端/Core.
 2. 比對玩家和怪物的封包接收間隔、累積 backlog、移動 waypoint 距離以及實際視覺卡頓，錄 15–30 秒影片。
 3. 只在觀察後判定要不要加入 100–150ms snapshot interpolation buffer / adaptive interpolation；不要憑空加固定延遲。
 4. 特別檢驗：AFK/失焦/縮小、不降低 Physics/封包處理；攻擊距離與生命值同步、怪物追擊與返回 Map13、物品 AOI、不影響既有正常功能。
+
+
+## 9. 第二輪修正與驗證（2026-11-10）
+
+### 9.1 Server：保護同地圖傳送與辨認初始化卡頓
+
+- `GmCommandService.Teleport` 在傳送前 `PositionPersistenceService.FenceAndDiscard`，即使 map_id 沒變，舊的待寫入座標也不會在新座標後寫回。
+- 同時將 GM 傳送的角色完整資料載入改為 `GetCharacterLocation` 的窄查詢；保留角色不存在與無座標參數時的行為。
+- `PacketRouter` 添加 `SLOW_GM_COMMAND`（只有指令類型、耗時、角色 ID，沒有輸入參數），與一般聊天 `SLOW_CHAT_PHASE` 分開。
+- `PositionPersistenceProbe` 新增「**同地圖 GM warp 後，舊的 staged position 不得覆蓋座標**」案例。
+- [20 人 wire #42820899336](https://github.com/kevin840307/TestGoGo/actions/runs/42820899336)：1140/1140 movement，移動 RoundLatency P95 **18.4ms**、聊天 **8.3ms**、AI Tick **4.7ms**、`SLOW_MOVEMENT_HANDLER=0`、`POSITION_BATCH_FAILED=0`、`SLOW_CHAT_PHASE=0`。
+- 同一輪還發現慢速測試 GM 指令：`level` 19 筆，最大 9155.5ms；`map` 27 筆，最大 8153.1ms（此為超過門檻的節流診斷樣本，不代表全部 GM 請求）。它們是初始化/測試管理工作，**不應誤記成一般玩家 ChatMessage 很慢**。
+- 這些數字是單次 CI 測試；各輪曾見 P95 15.6、464.6、950.9、18.4ms 等波動，仍須把 Server 尖峰與真實 Client 視覺卡頓關聯起來；不可只引用最好的一次。
+- [Windows smoke #42820851730](https://github.com/kevin840307/TestGoGo/actions/runs/42820851730)：成功；含跨地圖密語 `T09772` 的回歸修復。原 `/name` 使用資料庫名稱查找的行為已恢復，僅一般聊天使用登入快取身分。
+
+### 9.2 Client：避免缺包時倒退、避免過大單幀補幀
+
+`remote_player_motion.gd` 新增兩個有界視覺策略：
+
+1. 0.28 秒／40px 的預測上限到達後，**停在有限的視覺預測位置**，不會因收包延遲 1～2 秒就自行往舊座標退回。
+2. 限制收到大位移快照後每次 physics 更新的視覺追趕：`MAX_VISUAL_CATCHUP_SPEED=900px/s`（60Hz 時最多 15px/tick）。這只限制**視覺**，不改 Server 座標、網路、碰撞、攻擊或傳送；大於傳送門檻的真正傳送仍立即重設位置。
+
+`client/tests/remote_multiplayer_motion_regression.gd` 已新增 2 秒缺包、idle 停止、真正傳送及突發補包的測試。
+
+`client/tests/multiplayer_20_actors_motion_regression.gd` 新增無資源的 20 名遠端玩家 + 60 隻怪物模擬：
+
+- 玩家一半每 100ms 收點、一半每 350ms 收點，怪物 250ms waypoint，統一每 1/60 秒視覺步進，總模擬 12 秒。
+- 驗收不倒退、單幀位移有界、連續 waypoint 中間怪物不停止，且不影響任何 authoritative position。
+- [Godot 4.7.2 #42821642172](https://github.com/kevin840307/TestGoGo/actions/runs/42821642172)：`REMOTE_MOTION_TEST`、`MONSTER_WAYPOINT_TEST`、`MOTION_AUDIT`、`MULTI20_MOTION_TEST` 均 **ALL PASS**；模擬最大每 physics tick 位移 **13.74px**。這是演算法模擬，**不是 20 個完整 Godot 視窗的 FPS/畫面驗收**。
+
+### 9.3 仍未完成或需要在完整 Client 上驗證
+
+- Git checkout 缺 `client/ui/BG_ENEMY_HP.png`、`client/ui/cursor/C_NORMAL.spr.0000.png` 等遊戲圖片；CI 不能完成真實 SpriteFrames 的 20 玩家 + 60 怪物 GPU/繪製延遲測試，已明確 `SKIP`，而非假稱通過。
+- 若實機仍感受到怪物「一起走停」，要確認是 `MAP_AI_TICK_GAP`、AOI spawn queue、`MULTIPLAYER_PACKET_AUDIT` 中 packet burst，還是動畫 frame 反覆重設，並比對 `MULTIPLAYER_MOTION_AUDIT`。
+- 攻擊距離/死亡/拾取、返回 Map13 的 AOI 恢復與失焦/AFK 20Hz 渲染（但邏輯/收包維持正常）仍是實機驗收必檢項目。
+- `Server build` 的舊 Quest strict host audit 尚有數十個 `UNBOUND`，不是本次移動分支的編譯錯誤；位置持久化/20 人 wire/Godot 純演算法/Windows Smoke 分別以專用 workflow 驗證成功。
+
+### 9.4 可重跑指令
+
+```powershell
+# 完整本機 Client（需原始圖片材質）
+godot --headless --path client --script res://tests/remote_multiplayer_motion_regression.gd
+godot --headless --path client --script res://tests/monster_chase_regression.gd
+godot --headless --path client --script res://tests/multiplayer_20_actors_motion_regression.gd
+
+# 可獨立檢查座標持久化契約
+dotnet run -c Release --project tests/SGO.Server.PositionPersistenceProbe/SGO.Server.PositionPersistenceProbe.csproj
+
+# 20 人加密 WS 測試（本機執行中的 Server，測試帳號只用於測試）
+dotnet run -c Release --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -- --url ws://127.0.0.1:5678/ --sizes 20 --rounds 3 --move-pixels 4 --mixed-seconds 8 --output wire20-result.json
+```
