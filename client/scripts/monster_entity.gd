@@ -63,17 +63,17 @@ var action_state_started_ms: int = 0
 # Server monster movement is broadcast on a 250ms map tick. Keep WALK
 # active across one interval of packet jitter, unless an explicit server
 # SyncState overrides it.
-const MOVE_IDLE_GRACE_SECONDS: float = 0.35
+const MOVE_IDLE_GRACE_SECONDS: float = 0.60
 const FALLBACK_ACTION_RELEASE_SECONDS: float = 0.25
 const ACTION_STATE_MAX_MS: int = 900
 # Short pathfinding/engage steps must not be accelerated beyond their
 # authoritative 250ms duration; otherwise they arrive early and pause.
 const NETWORK_MOVE_MIN_SPEED: float = 1.0
-const NETWORK_MOVE_MAX_SPEED: float = 205.0
+const NETWORK_MOVE_MAX_SPEED: float = 900.0
 # Slightly overlap successive 250ms visual waypoints so normal packet jitter
 # does not produce a stop at every server tick. Combat and correction packets
 # continue to override movement immediately.
-const NETWORK_MOVE_VISUAL_SLACK_SECONDS: float = 0.04
+const NETWORK_MOVE_VISUAL_SLACK_SECONDS: float = 0.01
 const AUTHORITATIVE_VISUAL_CORRECTION_SECONDS: float = 0.24
 const AUTHORITATIVE_VISUAL_CORRECTION_MIN_DISTANCE: float = 8.0
 const AUTHORITATIVE_VISUAL_CORRECTION_MAX_DISTANCE: float = 160.0
@@ -1081,6 +1081,22 @@ func _apply_network_target_direction(target_pos: Vector2) -> void :
 	)
 
 
+# The original client advances an entity by small local steps between
+# destination updates. Keep that pacing for presentation, while all server
+# corrections, targeting and combat packets retain their normal handling.
+static func calculate_network_move_speed(distance: float, duration: float) -> float:
+	if distance <= NETWORK_MOVE_SNAP_EPSILON or duration <= 0.01:
+		return 0.0
+	var visual_duration: float = maxf(
+		duration + NETWORK_MOVE_VISUAL_SLACK_SECONDS, 0.01
+	)
+	return clampf(
+		distance / visual_duration,
+		NETWORK_MOVE_MIN_SPEED,
+		NETWORK_MOVE_MAX_SPEED
+	)
+
+
 func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	if current_hp <= 0:
 		return
@@ -1151,19 +1167,10 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 		network_move_active = false
 		return
 
-	# The server normally sends 250ms movement waypoints. A small visual
-	# slack overlaps the next waypoint to hide render/network scheduling
-	# jitter; authoritative attack/correction packets still take priority.
-	# Clamp extreme catch-up speed for delayed/lost packets.
-	var requested_time: float = maxf(
-		speed_time + NETWORK_MOVE_VISUAL_SLACK_SECONDS, 0.01
-	)
-	var requested_speed: float = remaining / requested_time
-	network_move_speed = clampf(
-		requested_speed,
-		NETWORK_MOVE_MIN_SPEED,
-		NETWORK_MOVE_MAX_SPEED
-	)
+	# Follow server waypoint duration, not a fixed 205px/s ceiling. The
+	# latter leaves a monster behind whenever one 250ms waypoint exceeds
+	# ~53px and causes ever-growing stutter under multiplayer bursts.
+	network_move_speed = calculate_network_move_speed(remaining, speed_time)
 
 	# Combat animation owns the body while it is playing, but keep the newest
 	# movement target buffered. When ATTACK/HIT finishes, movement resumes
