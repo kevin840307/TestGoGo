@@ -122,6 +122,15 @@ public sealed class ServerBroadcastHub
             ReadPacketDouble(packet, "SpeedTime") is > 0 and <= 0.75
                 ? ReadPacketDouble(packet, "SpeedTime")
                 : 0;
+        // Weighted path length lets the client preserve original-style
+        // entity movement speed even when several unsent waypoints collapse
+        // into one latest destination.
+        public double TotalPathDistance { get; set; } =
+            ReadPacketDouble(packet, "MoveSpeed") > 0 &&
+            ReadPacketDouble(packet, "SpeedTime") is > 0 and <= 0.75
+                ? ReadPacketDouble(packet, "MoveSpeed") *
+                  ReadPacketDouble(packet, "SpeedTime")
+                : 0;
         public int MoveCount { get; set; } = 1;
     }
 
@@ -249,6 +258,16 @@ public sealed class ServerBroadcastHub
                         slot.TotalServerSeconds > 0
                             ? Math.Min(8.0, slot.TotalServerSeconds + speedTime)
                             : 0;
+                    var nextMoveSpeed = ReadPacketDouble(packet, "MoveSpeed");
+                    if (slot.TotalPathDistance > 0 &&
+                        nextMoveSpeed > 0)
+                    {
+                        slot.TotalPathDistance += nextMoveSpeed * speedTime;
+                    }
+                    else
+                    {
+                        slot.TotalPathDistance = 0;
+                    }
                     slot.MoveCount++;
                     slot.LatestPacket = packet;
                 }
@@ -315,7 +334,11 @@ public sealed class ServerBroadcastHub
                         // latest authoritative point. The full span remains
                         // available for diagnostics/future presentation logic.
                         SpeedTime = Math.Clamp(slot.TotalServerSeconds, 0.05, 0.75),
-                        SnapshotSpanSeconds = Math.Clamp(slot.TotalServerSeconds, 0.05, 8.0)
+                        SnapshotSpanSeconds = Math.Clamp(slot.TotalServerSeconds, 0.05, 8.0),
+                        MoveSpeed = slot.TotalPathDistance > 0 &&
+                                    slot.TotalServerSeconds > 0
+                            ? slot.TotalPathDistance / slot.TotalServerSeconds
+                            : ReadPacketDouble(newest, "MoveSpeed")
                     };
                 }
                 else
