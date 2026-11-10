@@ -8186,23 +8186,40 @@ try
 
     while (peerRegistration.Queue.TryDequeue(out _)) { }
 
-    var sharedAttackPackets = combat.Attack(
-        session,
-        account.Value,
-        dynamicMonster.EntityId,
-        1);
+    // This case verifies cross-session damage propagation, NOT weapon range.
+    // The earlier fixture spawned the target beyond the tightened numeric
+    // ordinary attack reach, and incorrectly expected an out-of-range hit.
+    // Temporarily position only the synthetic attacker's session at the
+    // target. Restore it before all subsequent world/AI tests.
+    var originalAttackX = session.LastX;
+    var originalAttackY = session.LastY;
+    try
+    {
+        session.LastX = dynamicMonster.X;
+        session.LastY = dynamicMonster.Y;
+        var sharedAttackPackets = combat.Attack(
+            session,
+            account.Value,
+            dynamicMonster.EntityId,
+            1);
 
-    Check(
-        dynamicMonster.CurrentHp < dynamicHpBefore &&
-        peerDynamicMonster.CurrentHp ==
-            dynamicMonster.CurrentHp &&
-        sharedAttackPackets.Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                "\"Type\":\"EntityDamage\"")) &&
-        peerRegistration.Queue.ToArray().Any(x =>
-            JsonSerializer.Serialize(x).Contains(
-                "\"Type\":\"EntityDamage\"")),
-        "shared monster damage and HP are synchronized across map sessions");
+        Check(
+            dynamicMonster.CurrentHp < dynamicHpBefore &&
+            peerDynamicMonster.CurrentHp ==
+                dynamicMonster.CurrentHp &&
+            sharedAttackPackets.Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"EntityDamage\"")) &&
+            peerRegistration.Queue.ToArray().Any(x =>
+                JsonSerializer.Serialize(x).Contains(
+                    "\"Type\":\"EntityDamage\"")),
+            "shared monster damage and HP are synchronized across map sessions");
+    }
+    finally
+    {
+        session.LastX = originalAttackX;
+        session.LastY = originalAttackY;
+    }
 
     while (broadcastRegistration.Queue.TryDequeue(out _)) { }
     router.DisconnectPresence(peerSession);
