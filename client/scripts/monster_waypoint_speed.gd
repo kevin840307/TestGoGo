@@ -38,7 +38,7 @@ static func required_view_radius(viewport_rect: Rect2,
 	var origin: Vector2 = viewport_rect.position
 	var end: Vector2 = viewport_rect.end
 	var max_radius: float = 0.0
-	for screen_corner: Vector2 in [
+	for screen_corner in [
 		origin, Vector2(end.x, origin.y),
 		end, Vector2(origin.x, end.y)
 	]:
