@@ -68,7 +68,7 @@ jobs:
             echo "[WIRE20_DIAG] Probe exited with $probe_status"
             grep -E 'WARN|ERR|FAIL|SLOW|BACKLOG|AOI|MONSTER|SPAWN|MAP_AI|EXCEPTION' server-wire20.log | tail -n 120 || true
             echo "[WIRE20_DIAG] Shared map AI slow tick profiles:"
-            grep -E '\\[MAP_AI_(SLOW_TICK|PROFILE|TICK_GAP)\\]' server-wire20.log | tail -n 30 || true
+            grep -E '\[MAP_AI_(SLOW_TICK|PROFILE|TICK_GAP)\]' server-wire20.log | tail -n 30 || true
             echo "[WIRE20_DIAG] Server log tail:"
             tail -n 70 server-wire20.log || true
             exit "$probe_status"
@@ -92,7 +92,7 @@ jobs:
                      runtime.get("CpuPercentOfMachine"),runtime.get("MaxWorkingSetBytes")))
           PY
           echo "[WIRE20_DIAG] Slow movement/packet/world-tick phases (sample):"
-          grep -E '\\[SLOW_SEND_BATCH\\]|\\[SLOW_MOVEMENT_HANDLER\\]|\\[SLOW_PACKET_DETAIL\\]|\\[SLOW_WORLD_TICK\\]|\\[MAP_AI_PROFILE\\]' server-wire20.log | tail -n 35 || true
+          grep -E '\[SLOW_SEND_BATCH\]|\[SLOW_MOVEMENT_HANDLER\]|\[SLOW_PACKET_DETAIL\]|\[SLOW_WORLD_TICK\]|\[MAP_AI_PROFILE\]' server-wire20.log | tail -n 35 || true
       - name: Upload wire stats and server diagnostics
         if: always()
         uses: actions/upload-artifact@v4
