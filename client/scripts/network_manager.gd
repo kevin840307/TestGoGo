@@ -2,7 +2,10 @@
 extends Node
 
 const VIEWPORT_AOI = preload("res://scripts/viewport_aoi_radius.gd")
-const VIEWPORT_AOI_REFRESH_SECONDS: float = 1.0
+# Quantized radius changes are rare. Check every 250ms so camera pans and
+# zooms do not wait a whole second for edge actors to enter Server AOI.
+# Unchanged radii generate no packet and gameplay cadence is untouched.
+const VIEWPORT_AOI_REFRESH_SECONDS: float = 0.25
 var _viewport_aoi_elapsed: float = 0.0
 var _last_view_radius: int = 0
 var _world_view_ready_sent: bool = false
