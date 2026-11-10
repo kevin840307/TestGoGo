@@ -14,6 +14,8 @@
 * `RunPlayerLogic` 一帶，`.text:0050AB33..0050AB41`：
   取玩家 `+0x858` 的射程平方，減去 `0xC8 = 200`，
   再與玩家／目標已算好的兩點距離平方相比，選擇追擊或攻擊。
+  原指令是 `cmp` 後接 `jge`，所以**等於門檻時仍繼續追擊**，
+  普攻允許攻擊的比較必須是嚴格小於 `<`。
 * 騎乘支線 `.text:00517216..00517233` 把物品數值加上
   `0x2D = 45` 後再平方；機甲支線不同，**不可**把普通攻擊
   公式不加區分地套用到騎乘與機甲。
@@ -34,7 +36,7 @@
 ```text
 weapon_range = valid_weapon ? weapon.attack_range : 45
 distance_squared = (target_x - player_x)^2 + (target_y - player_y)^2
-can_enter_attack_logic = distance_squared <= max(0, weapon_range^2 - 200)
+can_enter_attack_logic = distance_squared < max(0, weapon_range^2 - 200)
 ```
 
 原版沒有目前新版使用的「`(角色基礎 80 + 武器 120) × 50%`」
@@ -68,6 +70,7 @@ normal_weapon_points = min(120, max(0, equipped_weapon_attack_range))
 extra_points = max(0, effective_attack_range - 80 - normal_weapon_points)
 radius = 45 + extra_points
 client_stop_distance = sqrt(max(0, radius^2 - 200))
+client_enters_attack_only_when = distance_squared < max(0, radius^2 - 200)
 ```
 
 Client：`scripts/normal_attack_range.gd`，
