@@ -54,11 +54,19 @@ jobs:
             tail -n 100 server-wire20.log
             exit 1
           fi
+          probe_status=0
           timeout --signal=TERM --kill-after=5s 360s dotnet run -c Release --no-build --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -- \
             --url ws://127.0.0.1:5678/ \
             --sizes 20 --rounds 3 --setup-concurrency 8 \
             --mixed-seconds 8 --move-pixels 4 --timeout-seconds 30 \
-            --output wire20-result.json | tee wire20-output.log
+            --output wire20-result.json | tee wire20-output.log || probe_status=$?
+          if [ "$probe_status" -ne 0 ]; then
+            echo "[WIRE20_DIAG] Probe exited with $probe_status"
+            grep -E 'WARN|ERR|FAIL|SLOW|BACKLOG|AOI|MONSTER|SPAWN|MAP_AI|EXCEPTION' server-wire20.log | tail -n 120 || true
+            echo "[WIRE20_DIAG] Server log tail:"
+            tail -n 70 server-wire20.log || true
+            exit "$probe_status"
+          fi
           python3 - <<'PY'
           import json
           d=json.load(open("wire20-result.json",encoding="utf-8"))
