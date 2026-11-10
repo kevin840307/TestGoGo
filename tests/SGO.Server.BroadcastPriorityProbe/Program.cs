@@ -171,6 +171,48 @@ Check(hub.TryDequeuePlayerPriority(boundary.ConnectionId, out var after) &&
     "new movement after attack preserved without merging across event");
 hub.Unregister(boundary.ConnectionId);
 
+// Three 100ms movement snapshots can be coalesced while a socket is busy.
+// The last coordinate must arrive with 300ms of accumulated server time;
+// otherwise the Client sees an impossible three-times-faster remote player.
+var timedPeer = hub.Register(prioritizePlayerEvents: true);
+for (var i = 1; i <= 3; i++)
+{
+    hub.PublishToConnection(timedPeer.ConnectionId, new
+    {
+        Type = "MoveEntity", EntityID = 321L,
+        X = i * 20, Y = 5, Dir = "6", SpeedTime = 0.10
+    });
+}
+Check(hub.PlayerPriorityBacklogCount(timedPeer.ConnectionId) == 1,
+    "three unsent player movements keep one urgent queue entry");
+Check(hub.TryDequeuePlayerPriority(timedPeer.ConnectionId, out var timedMove),
+    "coalesced player movement dequeues");
+using (var decoded = ClientProtocol.Decode(
+    Encoding.UTF8.GetString(hub.EncodeBroadcastPacket(timedMove))))
+{
+    var packet = decoded.RootElement;
+    Check(packet.GetProperty("X").GetDouble() == 60 &&
+          packet.GetProperty("Y").GetDouble() == 5 &&
+          packet.GetProperty("Dir").GetString() == "6" &&
+          Math.Abs(packet.GetProperty("SpeedTime").GetDouble() - 0.30) < 0.0001,
+        "coalesced movement retains newest position and aggregated server interval");
+}
+
+// Preserve the existing client nominal-interval bounds under a long backlog.
+for (var i = 0; i < 20; i++)
+{
+    hub.PublishToConnection(timedPeer.ConnectionId, new
+    {
+        Type = "MoveEntity", EntityID = 321L,
+        X = 100 + i * 20, Y = 5, Dir = "6", SpeedTime = 0.10
+    });
+}
+Check(hub.TryDequeuePlayerPriority(timedPeer.ConnectionId, out var boundedMove) &&
+      Math.Abs(Convert.ToDouble(
+          boundedMove.GetType().GetProperty("SpeedTime")?.GetValue(boundedMove)) - 0.75) < 0.0001,
+    "large queued visual movement caps interval to the supported client limit");
+hub.Unregister(timedPeer.ConnectionId);
+
 // Repeated per-observer AES+JSON work is amortized for immutable scalar
 // broadcasts only. Confirm simultaneous observers get the same frame while
 // mutable packet data is never mistakenly cached after a state change.
