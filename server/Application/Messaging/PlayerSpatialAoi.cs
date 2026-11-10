@@ -11,17 +11,20 @@ public sealed class PlayerSpatialAoi
     public const int CellSize = 1024;
     public const double EnterRadius = 1800;
     public const double ExitRadius = 2200;
-    private const double EnterRadiusSquared = EnterRadius * EnterRadius;
-    private const double ExitRadiusSquared = ExitRadius * ExitRadius;
+    // Symmetric peer visibility uses the larger of both camera envelopes.
+    // Legacy connections continue to use 1800/2200.
+    public const double MaxViewRadius = 5000;
+    public const double MaxViewExitRadius = MaxViewRadius + (ExitRadius - EnterRadius);
 
     public sealed record Change(
         Guid ObserverConnectionId,
         OnlinePlayerPresence Subject,
         bool Appeared);
 
-    private sealed class Entry(OnlinePlayerPresence player)
+    private sealed class Entry(OnlinePlayerPresence player, double viewRadius)
     {
         public OnlinePlayerPresence Player = player;
+        public double ViewRadius = viewRadius;
         public readonly HashSet<Guid> Visible = new();
         public (int MapId, int CellX, int CellY) Cell = CellOf(player);
     }
@@ -36,11 +39,15 @@ public sealed class PlayerSpatialAoi
         get { lock (_gate) return _players.Count; }
     }
 
-    public IReadOnlyList<Change> Upsert(OnlinePlayerPresence player)
+    public IReadOnlyList<Change> Upsert(
+        OnlinePlayerPresence player, double requestedViewRadius = EnterRadius)
     {
         lock (_gate)
         {
             var changes = new List<Change>();
+            var viewRadius = Math.Clamp(
+                double.IsFinite(requestedViewRadius) ? requestedViewRadius : EnterRadius,
+                EnterRadius, MaxViewRadius);
             if (player.ConnectionId == Guid.Empty ||
                 player.AccountId <= 0 || player.CharacterId <= 0 ||
                 player.MapId <= 0)
@@ -57,12 +64,13 @@ public sealed class PlayerSpatialAoi
 
             // SyncPresence runs every 250ms per socket even without
             // movement; unchanged records must be O(1), not scan cells.
-            if (entry is not null && entry.Player == player)
+            if (entry is not null && entry.Player == player &&
+                entry.ViewRadius == viewRadius)
                 return changes;
 
             if (entry is null)
             {
-                entry = new Entry(player);
+                entry = new Entry(player, viewRadius);
                 _players.Add(player.ConnectionId, entry);
                 AddCell(entry);
             }
@@ -76,13 +84,14 @@ public sealed class PlayerSpatialAoi
                     AddCell(entry);
                 }
                 entry.Player = player;
+                entry.ViewRadius = viewRadius;
             }
 
             // Include previous peers to process exits even after moving far
             // away in one tick (teleport, dismount or position correction).
             var candidates = new HashSet<Guid>(entry.Visible);
             var cellKey = entry.Cell;
-            var cellReach = (int)Math.Ceiling(ExitRadius / CellSize);
+            var cellReach = (int)Math.Ceiling(MaxViewExitRadius / CellSize);
             for (var cy = cellKey.CellY - cellReach;
                  cy <= cellKey.CellY + cellReach; cy++)
             {
@@ -105,8 +114,10 @@ public sealed class PlayerSpatialAoi
                 }
 
                 var wasVisible = entry.Visible.Contains(peerId);
-                var maxDistanceSquared = wasVisible
-                    ? ExitRadiusSquared : EnterRadiusSquared;
+                var pairEnterRadius = Math.Max(entry.ViewRadius, peer.ViewRadius);
+                var pairRadius = pairEnterRadius +
+                    (wasVisible ? ExitRadius - EnterRadius : 0);
+                var maxDistanceSquared = pairRadius * pairRadius;
                 var dx = player.X - peer.Player.X;
                 var dy = player.Y - peer.Player.Y;
                 var nowVisible = player.MapId == peer.Player.MapId &&
