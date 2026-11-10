@@ -992,7 +992,7 @@ func _update_monster_aoi(delta: float) -> void :
 		var cached = _deferred_monster_spawns.get(entity_id, null)
 		if cached is Dictionary and (
 			local_pos.distance_squared_to(_monster_packet_position(cached)) <= enter_radius_sq
-			or _is_combat_monster_revealed(entity_id)
+			or (not _monster_crowd_visual_only and _is_combat_monster_revealed(entity_id))
 		):
 			_queue_cached_monster_spawn(entity_id)
 
