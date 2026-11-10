@@ -6480,6 +6480,37 @@ public sealed class SqliteGameStore : IGameStore
         }
 
         using var db = Open();
+
+        // Companion drainage occurs once per second for EACH online player.
+        // The vast majority have no summoned horse or active pet. Avoid
+        // acquiring SQLite's single WAL writer for those no-op ticks, and
+        // skip loading every inventory/equipment asset afterwards.
+        // This is a live SELECT (not a cache); an active companion still
+        // executes the original transactional drain below.
+        using (var active = db.CreateCommand())
+        {
+            active.CommandText = """
+                SELECT c.summoned_horse_uid,
+                       EXISTS(SELECT 1 FROM pets p
+                               WHERE p.character_id=c.id AND p.state=1)
+                  FROM characters c
+                 WHERE c.id=$id AND c.account_id=$account
+                 LIMIT 1
+                """;
+            Arg(active, "$id", dbid);
+            Arg(active, "$account", accountId);
+            using var reader = active.ExecuteReader();
+            if (!reader.Read() ||
+                (reader.GetInt64(0) <= 0 && reader.GetInt32(1) == 0))
+            {
+                return new CompanionRuntimeDrainResult(
+                    null,
+                    false,
+                    Array.Empty<Dictionary<string, object>>(),
+                    Array.Empty<long>());
+            }
+        }
+
         using var tx = db.BeginTransaction();
 
         if (!OwnsCharacter(db, accountId, dbid, tx))
