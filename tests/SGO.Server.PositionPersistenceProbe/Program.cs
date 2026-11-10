@@ -49,7 +49,7 @@ try
         location.Value.X == 200 && location.Value.Y == 200,
         "old-map buffered write cannot overwrite teleport coordinates");
 
-    await using var service = new PositionPersistenceService(
+    using var service = new PositionPersistenceService(
         store, NullLogger<PositionPersistenceService>.Instance);
     await service.StartAsync(CancellationToken.None);
 
