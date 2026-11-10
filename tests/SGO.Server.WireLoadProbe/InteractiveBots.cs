@@ -280,8 +280,13 @@ internal static class InteractiveBots
                                     ? (X: nearest.X, Y: nearest.Y)
                                     : (X: (double)goals[bot.Index].X,
                                        Y: (double)goals[bot.Index].Y);
+                                // Move roughly 140px/s while continuing
+                                // to send only one position every ~350ms.
+                                // The old hardcoded 16px network step looked
+                                // like a tile-by-tile hop at 20 players.
+                                var stride = Math.Clamp(interval * 0.14, 16.0, 64.0);
                                 if (walks.TryStep(bot.X, bot.Y, goal.X, goal.Y,
-                                        out var nx, out var ny))
+                                        stride, out var nx, out var ny))
                                 {
                                     await bot.SendBotPositionAsync(nx, ny, timeout);
                                     Interlocked.Increment(ref moves);
