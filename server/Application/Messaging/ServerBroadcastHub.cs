@@ -570,7 +570,8 @@ public sealed class ServerBroadcastHub
                 x.Value.MapId,
                 x.Value.X,
                 x.Value.Y,
-                x.Value.CharacterName))
+                x.Value.CharacterName,
+                x.Value.ViewInterestRadius))
             .ToArray();
 
     public void Unregister(Guid connectionId)
