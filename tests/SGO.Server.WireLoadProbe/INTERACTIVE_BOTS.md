@@ -1,29 +1,33 @@
 # SGO 多人機器人測試 — 弱攻擊、高血量、隨機合法座標
 
-**僅供隔離的測試 Server／資料庫使用。** 此工具會建立多組新帳號，使用 Server 正式加密 WebSocket、AOI、Blocking.dat 與 A* 移動、怪物戰鬥，並讓正常 Godot 玩家同時登入觀察。
+**直接連線現有 SGO Server，沿用 Server 已經使用的資料庫，不另外建立 DB。** 這些機器人是透過正式加密 WebSocket 註冊、創角、登入的真實連線玩家，使用 AOI、Blocking.dat 與 A* 移動、怪物戰鬥。你可以用正常 Godot Client 同時登入觀察。
 
-## 1. PowerShell A：測試專用 Server
+**注意資料持久化：** 每次執行會在現有資料庫留下 `wire-load-...` 測試帳號及 `WL...` 測試角色，並可能留下戰鬥獲得的獎勵／掉落。工具不會自動刪除帳號，也不會替你清理或覆蓋正常玩家資料。建議事先備份原本的資料庫。
 
-在 TestGoGo 專案根目錄：
+## 1. 沿用現有 Server（不要更換 DB 設定）
+
+**如果現有 Server 已運行，且 `Game:TestBotCommandsEnabled=true`，就不用重啟或另開 Server，直接跳到第 2 步。**
+
+如果尚未啟用測試功能，請在原本啟動 Server 的 PowerShell 視窗中加上：
 
 ```powershell
-$env:Database__Sqlite__Path = (Join-Path (Get-Location) "server/Data/bot-test.db")
-$env:Game__GmCommandsEnabled = "true"
 $env:Game__TestBotCommandsEnabled = "true"
 dotnet run -c Release --project .\server\SGO.Server.csproj
 ```
 
-`Game__TestBotCommandsEnabled` 是**另外明確啟用的**測試旗標，預設為 false。它只允許測試 Server 使用 `/gm testbot`，不修改正常角色成長、攻擊或碰撞計算。兩個 GM 旗標都必須設為 true；請勿在正式 Server 啟用。
+上面只是**沿用原 Server 啟動命令**的示例。請在現有 Server 停止後，以原本的方式重新啟動一次；保留你現有的 `Database:Provider`、`Database:Sqlite:Path` 等配置，**不需要設定** `Database__Sqlite__Path`，更不要指向 `bot-test.db`。
+
+本分支原本 `server/appsettings.json` 已有 `Game:GmCommandsEnabled=true`；如果你有用其他環境設定關閉 GM，還須依現有配置啟用它。`Game:TestBotCommandsEnabled` 是額外的**明確啟用旗標**，不會自動對一般帳號開放測試能力值：Server 會查證該帳號確實是工具建立的 `wire-load-*` 帳號、`WL*` 角色、`@example.invalid` 測試電子郵件後才允許 `/gm testbot`。
 
 ## 2. PowerShell B：20 人測試（無需提供座標）
 
 ```powershell
-dotnet run -c Release --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.WireLoadProbe.csproj -- --bots --players 20 --map 13 --interval-ms 350 --seconds 0 --output bots-result.json
+dotnet run -c Release --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.WireLoadProbe.csproj -- --bots --players 20 --map 13 --monsters 0 --interval-ms 350 --seconds 0 --output bots-result.json
 ```
 
 啟動時，程式讀取 Map13 真實 `Enemy.dat` 與 `Blocking.dat`，**每個機器人獨立抽取地圖任一合法怪物出生區**，再在區域內隨機挑選可通行的起點。玩家不再全部集中於預設中心的 280px 內。怪物也會依機器人隨機分散召喚（使用該地圖的有效怪物種類）。不需要 `--x`、`--y`；若要強制集中於固定觀察區域，仍可手動輸入。機器人活動範圍涵蓋各練功區，尋怪不再有人為 600px 上限；**真正攻擊仍依正常 Server 攻擊距離及技能判定，絕不隔空打怪**。
 
-預設 `--radius 280`，可自行設定 `--radius 500`（最多 700）；預設召喚怪物數隨玩家人數增加、最多 100 隻，亦可手動指定 `--monsters 20`。
+預設 `--radius 280` 僅作為各角色隨機巡邏目的地的範圍（可改到 700），不限制全地圖練功區的出生位置。**預設 `--monsters 0`：直接攻擊現有 Server 地圖上的正常怪物，不額外召喚任何怪物。** 如需要增加怪物數才手動指定 `--monsters 20`，它會對現有 Server 產生真實 GM 怪物。
 
 ## 3. 長時間戰鬥行為
 
@@ -63,4 +67,4 @@ dotnet build -c Release .\tests\SGO.Server.WireLoadProbe\SGO.Server.WireLoadProb
 - `rejected`：Server 回傳距離太遠、目標不存在、技能尚未學會、冷卻等訊息累計次數。
 - `NO CONFIRMED HITS`：首次機器人座標、最近怪物距離、最近一條 Server Flash，方便直接判斷。
 
-啟動工具前須**重啟**測試 Server 讓兩個環境變數生效。僅看到 `[BOTS] run=...` 不代表玩家已成功登入，直到 `[BOTS] online=...` 才代表進入主循環。
+只有在**原本 Server 尚未啟用** `Game:TestBotCommandsEnabled` 時，才需要停止並重新啟動**同一個 Server**，使設定生效；既有 DB 路徑保持不變。僅看到 `[BOTS] run=...` 不代表玩家已成功登入，直到 `[BOTS] online=...` 才代表進入主循環。
