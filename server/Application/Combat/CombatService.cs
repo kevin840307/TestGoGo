@@ -31,17 +31,32 @@ public sealed class CombatService
     private const double AttackRange = 100.0;
     private const double EngageDistance = 90.0;
 
-    // Equipped weapons include up to 120 units of standard reach in their
-    // numeric AttackRange field. This is NOT extra reach versus bare hands.
-    // Only the numeric excess above that baseline (plus other bonuses) extends
-    // a normal attack. No Sword/Gun/Dagger category checks are used.
-    // Keep in sync with Godot NormalAttackRange.from_stat().
-    // Skill CastRange and monster/pet AI ranges are not affected.
+    // Legacy client (Paradise.exe 2004 / Client.exe 2009) compares squared
+    // player-to-target distance with weaponReach^2 - 200, and uses 45 when
+    // no valid weapon is equipped. Legacy weapon reach is the item number,
+    // NOT (character base + item value) and NOT an arbitrary 50% scale.
+    //
+    // SGO compatibility adjustment: the current stats packet adds a base 80
+    // plus the item AttackRange, while the game design requires unarmed and
+    // ordinary range-120 weapons to share the 45-unit melee baseline. Only
+    // numeric excess above 120 and other numerical range bonuses extend it.
+    // This normalization is NOT original-client logic; it is intentional.
+    // Keep aligned with Godot NormalAttackRange.from_stat().
     public static double NormalAttackWorldRange(
         int rawStatAttackRange, int equippedWeaponAttackRange = 0)
-        => Math.Max(
-            40.0,
-            (rawStatAttackRange - Math.Min(120, Math.Max(0, equippedWeaponAttackRange))) * 0.5);
+    {
+        const double originalBaseReach = 45.0;
+        const double originalSquaredMargin = 200.0;
+        const int characterStatBaseline = 80;
+        const int standardWeaponNumericRange = 120;
+
+        var ordinaryEquippedRange = Math.Min(
+            standardWeaponNumericRange, Math.Max(0, equippedWeaponAttackRange));
+        var extraRange = Math.Max(
+            0, rawStatAttackRange - characterStatBaseline - ordinaryEquippedRange);
+        var reach = originalBaseReach + extraRange;
+        return Math.Sqrt(Math.Max(0.0, reach * reach - originalSquaredMargin));
+    }
     // Distance is calculated from normalized double coordinates. Values that
     // should be exactly 90 can become 90.0000000000001, which previously
     // entered Chase with a sub-epsilon step and left the monster stuck.
@@ -3143,9 +3158,10 @@ public sealed class CombatService
 
             var dx = playerX - monster.X;
             var dy = playerY - monster.Y;
-            // 24 world units absorb network/interpolation latency only.
-            // Ordinary weapon's first 120 numeric points do not extend reach;
-            // all exceptional weapon and accessory AttackRange bonuses still do.
+            // Local-client approach follows the recovered legacy
+            // squared-distance threshold. Server's +24 latency allowance is
+            // intentionally retained from the new networking implementation;
+            // it is NOT derived from the original client binary.
             const double networkRangeTolerance = 24.0;
             var allowedRange = attackRange + networkRangeTolerance;
 
