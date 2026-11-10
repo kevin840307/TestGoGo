@@ -1277,26 +1277,47 @@ public sealed class PacketRouter
                     // position snapshots, not a hardcoded 100ms. Real players
                     // often publish every ~100ms; bots on 350ms cadence
                     // otherwise look like they stop after each short tween.
-                    var snapshotSeconds =
+                    var fullSnapshotSeconds =
                         state.LastPositionBroadcastAt == DateTimeOffset.MinValue
                             ? PositionBroadcastInterval.TotalSeconds
-                            : Math.Clamp(
-                                (now - state.LastPositionBroadcastAt).TotalSeconds,
-                                0.05, 0.75);
+                            : (now - state.LastPositionBroadcastAt).TotalSeconds;
+                    var snapshotSeconds = Math.Clamp(fullSnapshotSeconds, 0.05, 0.75);
                     state.LastPositionBroadcastAt = now;
                     state.LastBroadcastPositionX = x;
                     state.LastBroadcastPositionY = y;
-                    _broadcasts.PublishToPlayerObservers(
-                        state.ConnectionId,
-                        new
-                        {
-                            Type = "MoveEntity",
-                            EntityID = state.CharacterId.Value,
-                            X = x,
-                            Y = y,
-                            Dir = req.Str("Dir", "1"),
-                            SpeedTime = snapshotSeconds
-                        });
+                    // A server stall can exceed 750ms before this packet
+                    // even enters the outbound queue. Preserve its full
+                    // span so the remote client does not infer a fast dash.
+                    // Ordinary 100ms snapshots keep their original size.
+                    if (fullSnapshotSeconds > 0.75)
+                    {
+                        _broadcasts.PublishToPlayerObservers(
+                            state.ConnectionId,
+                            new
+                            {
+                                Type = "MoveEntity",
+                                EntityID = state.CharacterId.Value,
+                                X = x,
+                                Y = y,
+                                Dir = req.Str("Dir", "1"),
+                                SpeedTime = snapshotSeconds,
+                                SnapshotSpanSeconds = Math.Min(fullSnapshotSeconds, 8.0)
+                            });
+                    }
+                    else
+                    {
+                        _broadcasts.PublishToPlayerObservers(
+                            state.ConnectionId,
+                            new
+                            {
+                                Type = "MoveEntity",
+                                EntityID = state.CharacterId.Value,
+                                X = x,
+                                Y = y,
+                                Dir = req.Str("Dir", "1"),
+                                SpeedTime = snapshotSeconds
+                            });
+                    }
                 }
                 broadcastMs = Stopwatch.GetElapsedTime(broadcastStarted).TotalMilliseconds;
                 var movementMs = Stopwatch.GetElapsedTime(movementStarted).TotalMilliseconds;
