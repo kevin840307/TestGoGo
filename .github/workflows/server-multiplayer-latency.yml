@@ -5,6 +5,7 @@ on:
     paths:
       - 'server/Application/Messaging/ServerBroadcastHub.cs'
       - 'server/Transport/WebSockets/WebSocketEndpoint.cs'
+      - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
       - 'tests/SGO.Server.WireLoadProbe/**'
       - '.github/workflows/server-multiplayer-latency.yml'
   workflow_dispatch:
@@ -63,6 +64,8 @@ jobs:
           if [ "$probe_status" -ne 0 ]; then
             echo "[WIRE20_DIAG] Probe exited with $probe_status"
             grep -E 'WARN|ERR|FAIL|SLOW|BACKLOG|AOI|MONSTER|SPAWN|MAP_AI|EXCEPTION' server-wire20.log | tail -n 120 || true
+            echo "[WIRE20_DIAG] Shared map AI slow tick profiles:"
+            grep -E '\\[MAP_AI_(SLOW_TICK|PROFILE|TICK_GAP)\\]' server-wire20.log | tail -n 30 || true
             echo "[WIRE20_DIAG] Server log tail:"
             tail -n 70 server-wire20.log || true
             exit "$probe_status"
