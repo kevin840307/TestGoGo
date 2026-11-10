@@ -53,6 +53,9 @@ public sealed class PlayerSpatialAoi
     private readonly Dictionary<Guid, Entry> _players = new();
     private readonly Dictionary<(int MapId, int CellX, int CellY),
         HashSet<Guid>> _cells = new();
+    // Keep the common 1080p movement path at the legacy search radius.
+    // This expands only while at least one connected viewer truly needs it.
+    private double _maxActiveExitRadius = ExitRadius;
 
     public int ReadyPlayerCount
     {
@@ -88,9 +91,12 @@ public sealed class PlayerSpatialAoi
                 entry = new Entry(player);
                 _players.Add(player.ConnectionId, entry);
                 AddCell(entry);
+                if (entry.ExitRadius > _maxActiveExitRadius)
+                    _maxActiveExitRadius = entry.ExitRadius;
             }
             else
             {
+                var previousExitRadius = entry.ExitRadius;
                 var cell = CellOf(player);
                 if (cell != entry.Cell)
                 {
@@ -102,6 +108,9 @@ public sealed class PlayerSpatialAoi
                 entry.EnterRadius = NormalizeEnterRadius(
                     player.ViewInterestRadius);
                 entry.ExitRadius = ExitRadiusFor(entry.EnterRadius);
+                RefreshMaxActiveExitRadius(
+                    previousExitRadius,
+                    entry.ExitRadius);
             }
 
             // Include previous peers to process exits even after moving far
@@ -111,7 +120,8 @@ public sealed class PlayerSpatialAoi
             // A peer may have a larger viewport than the moving player, so
             // search only the bounded maximum nearby cells, then apply the
             // exact pair radius below. This remains spatial, never full-map.
-            var cellReach = (int)Math.Ceiling(MaxExitRadius / CellSize);
+            var cellReach = (int)Math.Ceiling(
+                _maxActiveExitRadius / CellSize);
             for (var cy = cellKey.CellY - cellReach;
                  cy <= cellKey.CellY + cellReach; cy++)
             {
@@ -231,6 +241,8 @@ public sealed class PlayerSpatialAoi
         if (!_players.Remove(connectionId, out var entry))
             return;
         RemoveCell(entry);
+        if (entry.ExitRadius >= _maxActiveExitRadius)
+            RecalculateMaxActiveExitRadius();
         foreach (var peerId in entry.Visible)
         {
             if (!_players.TryGetValue(peerId, out var peer))
@@ -242,6 +254,31 @@ public sealed class PlayerSpatialAoi
             // Never enqueue stale-map despawns to its new scene.
         }
         entry.Visible.Clear();
+    }
+
+    private void RefreshMaxActiveExitRadius(
+        double previousExitRadius,
+        double nextExitRadius)
+    {
+        if (nextExitRadius > _maxActiveExitRadius)
+        {
+            _maxActiveExitRadius = nextExitRadius;
+            return;
+        }
+
+        if (previousExitRadius >= _maxActiveExitRadius &&
+            nextExitRadius < previousExitRadius)
+        {
+            RecalculateMaxActiveExitRadius();
+        }
+    }
+
+    private void RecalculateMaxActiveExitRadius()
+    {
+        var maxRadius = ExitRadius;
+        foreach (var player in _players.Values)
+            maxRadius = Math.Max(maxRadius, player.ExitRadius);
+        _maxActiveExitRadius = maxRadius;
     }
 
     private static (int MapId, int CellX, int CellY) CellOf(
