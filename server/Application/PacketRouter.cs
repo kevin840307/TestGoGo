@@ -1076,15 +1076,11 @@ public sealed class PacketRouter
                         MapID = state.CurrentMapId
                     }
                 };
-                // Late authoritative snapshot: async client map teardown can
-                // discard early NPC/monster spawns. Reconcile all world entities
-                // only when the new Godot scene is confirmed ready.
-                worldReadyPackets.AddRange(
-                    _combat.BuildCurrentMapSnapshot(state));
-                worldReadyPackets.AddRange(
-                    BuildGroundItemSnapshotPackets(state));
-                worldReadyPackets.AddRange(
-                    BuildWorldAoiSnapshotPackets(state));
+                // Players are interactive and more latency sensitive than
+                // bulk map objects. Send their initial SpawnEntity data just
+                // after WorldReadyResponse, before the potentially large
+                // NPC/monster/ground snapshot. Keep all world-object ordering
+                // and AOI rules otherwise exactly as before.
                 worldReadyPackets.AddRange(
                     BuildOtherPlayerSnapshotPackets(state));
                 worldReadyPackets.AddRange(
@@ -1094,6 +1090,15 @@ public sealed class PacketRouter
                         state.CharacterId.Value,
                         state.LastX,
                         state.LastY));
+                // Late authoritative snapshot: async client map teardown can
+                // discard early NPC/monster spawns. Reconcile world entities
+                // only when the new Godot scene is confirmed ready.
+                worldReadyPackets.AddRange(
+                    _combat.BuildCurrentMapSnapshot(state));
+                worldReadyPackets.AddRange(
+                    BuildGroundItemSnapshotPackets(state));
+                worldReadyPackets.AddRange(
+                    BuildWorldAoiSnapshotPackets(state));
 
                 // Replaces up to eight redundant periodic full-map snapshots.
                 state.WorldSnapshotRetriesRemaining = 0;
