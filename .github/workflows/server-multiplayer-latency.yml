@@ -6,6 +6,8 @@ on:
       - 'server/Application/Messaging/ServerBroadcastHub.cs'
       - 'server/Transport/WebSockets/WebSocketEndpoint.cs'
       - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
+      - 'server/Application/Abstractions/GameStorePorts.cs'
+      - 'server/Application/World/SharedMapAiTicker.cs'
       - 'tests/SGO.Server.WireLoadProbe/**'
       - '.github/workflows/server-multiplayer-latency.yml'
   workflow_dispatch:
