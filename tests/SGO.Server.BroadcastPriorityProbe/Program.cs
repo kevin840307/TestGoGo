@@ -1,3 +1,7 @@
+using Microsoft.Data.Sqlite;
+using System.Diagnostics;
+using System.Text.Json;
+using SGO.Server.Infrastructure.Persistence.Sqlite;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Protocol;
 using System.Text;
@@ -211,4 +215,85 @@ using (var next = ClientProtocol.Decode(Encoding.UTF8.GetString(nestedSecond)))
 hub.Unregister(fast.ConnectionId);
 hub.Unregister(normal.ConnectionId);
 Check(!hub.HasPendingPlayerPriority(fast.ConnectionId), "unregister cleans priority queue");
+// A normal character read must never acquire SQLite's writer lock, even
+// while another connection is mid-transaction. The historical unconditional
+// UPDATE in GetCharacter blocked here for busy_timeout=5000 ms.
+var databasePath = Path.Combine(Path.GetTempPath(),
+    "sgo-multiplayer-sqlite-read-" + Guid.NewGuid().ToString("N") + ".db");
+try
+{
+    var store = new SqliteGameStore(databasePath);
+    var userName = "readprobe" + Guid.NewGuid().ToString("N")[..10];
+    Check(store.Register(userName, "read-probe-pass", "read@example.invalid").Success,
+        "isolated SQLite test account registered");
+    var accountId = store.Login(userName, "read-probe-pass");
+    Check(accountId.HasValue, "isolated SQLite test account logged in");
+    using var create = JsonDocument.Parse("""
+        {"Name":"ReadProbe","Password":"0000","Race":0,"Hair":1,
+         "Str":5,"Dex":5,"Con":5,"Wis":5}
+        """);
+    Check(store.Create(accountId!.Value, create.RootElement).Success,
+        "isolated SQLite test character created");
+    long characterId;
+    using (var lookup = new SqliteConnection(
+               new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString()))
+    {
+        lookup.Open();
+        using var cmd = lookup.CreateCommand();
+        cmd.CommandText = "SELECT id FROM characters WHERE account_id=$a LIMIT 1";
+        cmd.Parameters.AddWithValue("$a", accountId.Value);
+        characterId = (long)(cmd.ExecuteScalar() ?? 0L);
+    }
+    Check(characterId > 0, "test character persisted");
+    using (var writer = new SqliteConnection(
+               new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString()))
+    {
+        writer.Open();
+        using (var begin = writer.CreateCommand())
+        {
+            begin.CommandText = "BEGIN IMMEDIATE";
+            begin.ExecuteNonQuery();
+        }
+        var started = Stopwatch.GetTimestamp();
+        var character = store.GetCharacter(accountId!.Value, characterId);
+        var elapsedMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        Check(character is not null && elapsedMs < 1000,
+            $"character read remains nonblocking under another WAL writer ({elapsedMs:F1}ms)");
+        using var rollback = writer.CreateCommand();
+        rollback.CommandText = "ROLLBACK";
+        rollback.ExecuteNonQuery();
+    }
+    using (var corrupt = new SqliteConnection(
+               new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString()))
+    {
+        corrupt.Open();
+        using var cmd = corrupt.CreateCommand();
+        cmd.CommandText = "UPDATE characters SET exp_acc=-1 WHERE id=$id";
+        cmd.Parameters.AddWithValue("$id", characterId);
+        cmd.ExecuteNonQuery();
+    }
+    Check(store.GetCharacter(accountId!.Value, characterId) is not null,
+        "invalid legacy experience row remains readable");
+    using (var verify = new SqliteConnection(
+               new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString()))
+    {
+        verify.Open();
+        using var cmd = verify.CreateCommand();
+        cmd.CommandText = "SELECT exp_acc FROM characters WHERE id=$id";
+        cmd.Parameters.AddWithValue("$id", characterId);
+        Check(Convert.ToInt64(cmd.ExecuteScalar()) == 0,
+            "invalid experience still repaired by original conditional UPDATE");
+    }
+}
+finally
+{
+    SqliteConnection.ClearAllPools();
+    foreach (var suffix in new[] { "", "-wal", "-shm" })
+    {
+        var file = databasePath + suffix;
+        if (File.Exists(file))
+            File.Delete(file);
+    }
+}
+
 Console.WriteLine("[AOI_PRIORITY_REGRESSION] ALL PASS");
