@@ -120,7 +120,12 @@ public sealed class ServerBroadcastHub
                 ReadPacketLong(packet, "EntityType") == 0,
             "MoveEntity" or "SyncState" or "DespawnEntity" =>
                 ReadPacketLong(packet, "EntityID") is > 0 and < 1_000_000,
-            "EntityDamage" or "EntityHeal" =>
+            // Player attack results must not wait behind monster/loot AOI
+            // traffic even when the victim is a monster (TargetType=1).
+            "EntityDamage" =>
+                ReadPacketLong(packet, "TargetType") == 0 ||
+                ReadPacketLong(packet, "AttackerID") is > 0 and < 1_000_000,
+            "EntityHeal" =>
                 ReadPacketLong(packet, "TargetType") == 0,
             "SkillCast" =>
                 ReadPacketLong(packet, "CasterType") == 0,
