@@ -1,0 +1,27 @@
+# One-time post-merge cleanup for this user's explicitly requested work branch.
+# Triggered only by landing the AOI design document on the target branch.
+name: Remove merged viewport AOI temporary branch
+on:
+  push:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'docs/viewport-aware-aoi-20261110.md'
+
+permissions:
+  contents: write
+
+jobs:
+  delete-temporary-work-branch:
+    if: github.repository == 'kevin840307/TestGoGo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Delete only the temporary AOI work branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --method DELETE \
+            "repos/${GITHUB_REPOSITORY}/git/refs/heads/fix/viewport-aware-aoi-motion-20261110"
+          echo "[WORK_BRANCH_CLEANUP] deleted fix/viewport-aware-aoi-motion-20261110"
