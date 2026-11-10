@@ -102,7 +102,8 @@ using (var decoded = ClientProtocol.Decode(
           packet.GetProperty("X").GetDouble() == 100 &&
           packet.GetProperty("Y").GetDouble() == 12 &&
           Math.Abs(packet.GetProperty("SpeedTime").GetDouble() - 0.75) < 0.0001 &&
-          Math.Abs(packet.GetProperty("SnapshotSpanSeconds").GetDouble() - 1.0) < 0.0001,
+          Math.Abs(packet.GetProperty("SnapshotSpanSeconds").GetDouble() - 1.0) < 0.0001 &&
+          packet.GetProperty("CoalescedMoves").GetInt32() == 4,
         "world movement keeps newest destination with bounded catch-up and true snapshot span");
 }
 hub.Unregister(worldMovePeer.ConnectionId);
@@ -321,7 +322,8 @@ using (var decoded = ClientProtocol.Decode(
     Check(packet.GetProperty("X").GetDouble() == 60 &&
           packet.GetProperty("Y").GetDouble() == 5 &&
           packet.GetProperty("Dir").GetString() == "6" &&
-          Math.Abs(packet.GetProperty("SpeedTime").GetDouble() - 0.30) < 0.0001,
+          Math.Abs(packet.GetProperty("SpeedTime").GetDouble() - 0.30) < 0.0001 &&
+          packet.GetProperty("CoalescedMoves").GetInt32() == 3,
         "coalesced movement retains newest position and aggregated server interval");
 }
 
@@ -339,7 +341,8 @@ Check(hub.TryDequeuePlayerPriority(timedPeer.ConnectionId, out var boundedMove) 
           boundedMove.GetType().GetProperty("SpeedTime")?.GetValue(boundedMove)) - 0.75) < 0.0001,
     "large queued visual movement caps interval to the supported client limit");
 Check(Math.Abs(Convert.ToDouble(
-          boundedMove.GetType().GetProperty("SnapshotSpanSeconds")?.GetValue(boundedMove)) - 2.0) < 0.0001,
+          boundedMove.GetType().GetProperty("SnapshotSpanSeconds")?.GetValue(boundedMove)) - 2.0) < 0.0001 &&
+      Convert.ToInt32(boundedMove.GetType().GetProperty("CoalescedMoves")?.GetValue(boundedMove)) == 20,
     "coalesced movement separately retains true 2-second server elapsed time");
 hub.Unregister(timedPeer.ConnectionId);
 
