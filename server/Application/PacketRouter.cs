@@ -19,6 +19,7 @@ using SGO.Server.Application.Rank;
 using SGO.Server.Application.Quest;
 using SGO.Server.Application.Shops;
 using SGO.Server.Application.Trade;
+using SGO.Server.Application.World;
 using SGO.Server.Domain.Assets;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
@@ -47,6 +48,7 @@ public sealed class PacketRouter
         string DestinationVideo);
 
     private readonly IGameStore _store;
+    private readonly PositionPersistenceService? _positionWrites;
     private readonly WorldDataService _world;
     private readonly BlockingMapService _blocking;
     private readonly GroundDropPlacementService _dropPlacement;
@@ -112,9 +114,11 @@ public sealed class PacketRouter
         TradeService trade,
         ServerDiagnostics diagnostics,
         ILogger<PacketRouter> log,
-        IConfiguration? configuration = null)
+        IConfiguration? configuration = null,
+        PositionPersistenceService? positionWrites = null)
     {
         _store = store;
+        _positionWrites = positionWrites;
         _world = world;
         _blocking = blocking;
         _dropPlacement = new GroundDropPlacementService(blocking);
@@ -153,13 +157,30 @@ public sealed class PacketRouter
 
     private void PersistPendingPosition(ClientSession state)
     {
-        if (!state.PositionDirty ||
-            !state.AccountId.HasValue ||
+        if (!state.AccountId.HasValue ||
             !state.CharacterId.HasValue)
+            return;
+
+        // Logout/disconnect must remain durable. Waiting for the shared
+        // position writer here fences earlier periodic snapshots so none
+        // can overwrite this final authoritative session position.
+        if (_positionWrites is not null)
         {
+            _positionWrites.FlushFinal(
+                state.AccountId.Value,
+                state.CharacterId.Value,
+                (int)Math.Round(state.LastX),
+                (int)Math.Round(state.LastY),
+                state.PositionDirty);
+            state.PositionDirty = false;
+            state.LastPositionPersistAt = DateTimeOffset.UtcNow;
             return;
         }
 
+        // Keep the existing synchronous path for standalone SmokeTests
+        // that construct a PacketRouter without hosted runtime services.
+        if (!state.PositionDirty)
+            return;
         _store.UpdatePosition(
             state.AccountId.Value,
             state.CharacterId.Value,
@@ -1201,7 +1222,23 @@ public sealed class PacketRouter
                     PositionPersistInterval)
                 {
                     var persistStarted = Stopwatch.GetTimestamp();
-                    PersistPendingPosition(state);
+                    if (_positionWrites is not null)
+                    {
+                        // No SQLite writer / busy_timeout while processing
+                        // live SyncPosition or holding the session lock.
+                        // This only stages the newest validated coordinates.
+                        _positionWrites.Stage(
+                            state.AccountId!.Value,
+                            state.CharacterId.Value,
+                            state.CurrentMapId,
+                            x, y);
+                        state.LastPositionPersistAt = now;
+                        // Keep PositionDirty until the final logout fence.
+                    }
+                    else
+                    {
+                        PersistPendingPosition(state);
+                    }
                     persistMs = Stopwatch.GetElapsedTime(persistStarted).TotalMilliseconds;
                 }
 
