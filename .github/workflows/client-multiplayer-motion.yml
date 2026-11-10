@@ -17,6 +17,14 @@ on:
       - 'client/tests/monster_waypoint_math_regression.gd'
       - 'client/tests/multiplayer_20_actors_motion_regression.gd'
       - '.github/workflows/client-multiplayer-motion.yml'
+  pull_request:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'client/network_player.gd'
+      - 'client/scripts/remote_player_motion.gd'
+      - 'client/scripts/network_entity_manager.gd'
+      - 'client/tests/remote_multiplayer_motion_regression.gd'
+      - '.github/workflows/client-multiplayer-motion.yml'
   workflow_dispatch:
 
 permissions:
