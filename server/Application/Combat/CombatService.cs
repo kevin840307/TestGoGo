@@ -30,6 +30,13 @@ public sealed class CombatService
     private const double LoseTargetRadius = 700.0;
     private const double AttackRange = 100.0;
     private const double EngageDistance = 90.0;
+
+    // Numerical normal-attack reach only: the raw AttackRange already
+    // includes character and item bonuses. Weapon type is irrelevant.
+    // Keep in sync with Godot NormalAttackRange.from_stat().
+    // Skill CastRange and monster/pet AI ranges are not affected.
+    public static double NormalAttackWorldRange(int rawStatAttackRange)
+        => Math.Max(40.0, rawStatAttackRange * 0.5);
     // Distance is calculated from normalized double coordinates. Values that
     // should be exactly 90 can become 90.0000000000001, which previously
     // entered Chase with a sub-epsilon step and left the monster stuck.
@@ -3118,8 +3125,7 @@ public sealed class CombatService
             session,
             DateTimeOffset.UtcNow);
 
-        var attackRange = Math.Max(
-            80,
+        var attackRange = NormalAttackWorldRange(
             effective.AttackRange);
 
         var packets = new List<object>();
@@ -3131,9 +3137,9 @@ public sealed class CombatService
 
             var dx = playerX - monster.X;
             var dy = playerY - monster.Y;
-            // A 120px blanket tolerance effectively gave melee weapons
-            // ranged attacks. Keep only a small latency allowance; genuine
-            // ranged weapons still use their own calculated AttackRange.
+            // 24 world units absorb network/interpolation latency only.
+            // Real reach is computed from the numeric character/equipment
+            // AttackRange, so exceptional sword-range bonuses also work.
             const double networkRangeTolerance = 24.0;
             var allowedRange = attackRange + networkRangeTolerance;
 
