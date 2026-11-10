@@ -93,6 +93,36 @@ jobs:
           PY
           echo "[WIRE20_DIAG] Slow movement/packet/world-tick phases (sample):"
           grep -E '\[SLOW_SEND_BATCH\]|\[SLOW_MOVEMENT_HANDLER\]|\[SLOW_PACKET_DETAIL\]|\[SLOW_WORLD_TICK\]|\[MAP_AI_PROFILE\]' server-wire20.log | tail -n 35 || true
+          python3 - <<'PY'
+          import re
+          from collections import defaultdict
+          from pathlib import Path
+          lines=Path('server-wire20.log').read_text(encoding='utf-8', errors='replace').splitlines()
+          total=defaultdict(list)
+          fields=("TotalMs","CollisionMs","AoiMs","PersistMs","BroadcastMs")
+          for line in lines:
+              if "[SLOW_MOVEMENT_HANDLER]" not in line:
+                  continue
+              for key in fields:
+                  match=re.search(rf"{key}=([0-9.]+)",line)
+                  if match:
+                      total[key].append(float(match.group(1)))
+          print("[WIRE20_PHASE] slow_movement_events=%d" % len(total.get("TotalMs",[])))
+          for key in fields:
+              samples=sorted(total.get(key,[]))
+              if samples:
+                  n=len(samples)
+                  print("[WIRE20_PHASE] %s n=%d p50=%.1fms p95=%.1fms max=%.1fms" %
+                        (key,n,samples[(n-1)//2],samples[int((n-1)*0.95)],samples[-1]))
+          for packet_type in ("SyncPosition","AttackEntity","UseSkill"):
+              slow=[]
+              for line in lines:
+                  if "[SLOW_PACKET_DETAIL]" in line and f"Type={packet_type} " in line:
+                      match=re.search(r"HandlerMs=([0-9.]+)",line)
+                      if match: slow.append(float(match.group(1)))
+              print("[WIRE20_PHASE] %s slow_handlers=%d max_ms=%.1f" %
+                    (packet_type,len(slow),max(slow,default=0.0)))
+          PY
       - name: Upload wire stats and server diagnostics
         if: always()
         uses: actions/upload-artifact@v4
