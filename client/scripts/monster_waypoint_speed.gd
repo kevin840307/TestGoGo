@@ -15,6 +15,61 @@ static func calculate(distance: float, duration: float,
 	return clampf(distance / visual_duration, min_speed, max_speed)
 
 
+# Original-client-style pacing: movement speed is an entity property, while
+# packets update the destination. Use Server-provided movement speed as the
+# primary rate, and only allow bounded catch-up when the client is visibly
+# behind a coalesced/new waypoint.
+static func calculate_server_driven(
+	distance: float,
+	duration: float,
+	server_speed: float,
+	snapshot_span: float = 0.0,
+	visual_slack: float = 0.01,
+	min_speed: float = 1.0,
+	max_speed: float = 900.0,
+	snap_epsilon: float = 1.0
+) -> float:
+	if not is_finite(distance) or not is_finite(duration):
+		return 0.0
+	if distance <= snap_epsilon or duration <= 0.01:
+		return 0.0
+	if not is_finite(server_speed) or server_speed <= 0.0:
+		return calculate(
+			distance, duration, visual_slack,
+			min_speed, max_speed, snap_epsilon
+		)
+
+	var nominal_speed: float = clampf(server_speed, min_speed, max_speed)
+	var required_speed: float = distance / maxf(duration + visual_slack, 0.01)
+	# A merged packet represents historical waypoints. Catch up faster than
+	# nominal, but never turn several seconds of backlog into a 900px/s dash.
+	var merged: bool = (
+		is_finite(snapshot_span)
+		and snapshot_span > duration + 0.05
+	)
+	var catchup_multiplier: float = 2.0 if merged else 1.5
+	var bounded_required: float = minf(
+		required_speed,
+		nominal_speed * catchup_multiplier
+	)
+	return clampf(maxf(nominal_speed, bounded_required), min_speed, max_speed)
+
+
+static func correction_visual_seconds(
+	distance: float,
+	min_seconds: float = 0.18,
+	max_seconds: float = 1.0,
+	target_pixels_per_second: float = 650.0
+) -> float:
+	if not is_finite(distance) or distance <= 0.0:
+		return min_seconds
+	return clampf(
+		distance / maxf(1.0, target_pixels_per_second),
+		min_seconds,
+		max_seconds
+	)
+
+
 # A screen notifier may update one frame after a large/zoomed camera makes
 # an actor visible. Resolve the camera-transformed position against the
 # actual viewport instead of assuming an 800x600 visible world.
