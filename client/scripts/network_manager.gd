@@ -26,6 +26,16 @@ var _map_backlog_max_packets: int = 0
 var _map_backlog_started_usec: int = 0
 # Debug-only, rate-limited in-world network queue pressure report.
 var _runtime_backlog_next_log_usec: int = 0
+# Every 10s, summarize live socket traffic and drain pressure in Debug.
+# Never change packet ordering, network budget, or the fixed game tick.
+var _live_audit_next_usec: int = 0
+var _live_audit_packet_total: int = 0
+var _live_audit_drain_ticks: int = 0
+var _live_audit_budget_hits: int = 0
+var _live_audit_peak_before: int = 0
+var _live_audit_peak_after: int = 0
+var _live_audit_max_drain_usec: int = 0
+var _live_audit_types: Dictionary = {}
 var _last_received_packet_type: String = ""
 var _last_received_entity_type: int = -1
 var _drain_packet_types: Dictionary = {}
@@ -259,6 +269,46 @@ func _physics_process(delta: float) -> void :
 				if _last_received_packet_type == "SpawnEntity":
 					var entity_key: = str(_last_received_entity_type)
 					_drain_spawn_entity_types[entity_key] = int(_drain_spawn_entity_types.get(entity_key, 0)) + 1
+			if OS.is_debug_build() and is_in_world:
+				var audit_remaining: int = socket.get_available_packet_count()
+				var audit_now_usec: int = Time.get_ticks_usec()
+				_live_audit_packet_total += drained_packets
+				_live_audit_drain_ticks += 1
+				_live_audit_budget_hits += int(drain_budget_hit)
+				_live_audit_peak_before = maxi(_live_audit_peak_before, available_packet_count)
+				_live_audit_peak_after = maxi(_live_audit_peak_after, audit_remaining)
+				_live_audit_max_drain_usec = maxi(
+					_live_audit_max_drain_usec, audit_now_usec - drain_started_usec
+				)
+				for packet_type in _drain_packet_types.keys():
+					if packet_type in [
+						"MoveEntity", "SyncState", "SpawnEntity",
+						"DespawnEntity", "EntityDamage", "SkillCast"
+					]:
+						_live_audit_types[packet_type] = (
+							int(_live_audit_types.get(packet_type, 0))
+							+ int(_drain_packet_types[packet_type])
+						)
+				if _live_audit_next_usec == 0:
+					_live_audit_next_usec = audit_now_usec + 10000000
+				elif audit_now_usec >= _live_audit_next_usec:
+					print("[MULTIPLAYER_PACKET_AUDIT] ", JSON.stringify({
+						"packets_10s": _live_audit_packet_total,
+						"drain_ticks": _live_audit_drain_ticks,
+						"budget_hits": _live_audit_budget_hits,
+						"peak_before": _live_audit_peak_before,
+						"peak_after": _live_audit_peak_after,
+						"max_drain_ms": float(_live_audit_max_drain_usec) / 1000.0,
+						"types": _live_audit_types
+					}))
+					_live_audit_next_usec = audit_now_usec + 10000000
+					_live_audit_packet_total = 0
+					_live_audit_drain_ticks = 0
+					_live_audit_budget_hits = 0
+					_live_audit_peak_before = 0
+					_live_audit_peak_after = 0
+					_live_audit_max_drain_usec = 0
+					_live_audit_types.clear()
 			if _map_backlog_tracking and drained_packets > 0:
 				var remaining_packets: = socket.get_available_packet_count()
 				if GameManager and GameManager.has_method("trace_map_diagnostic"):
