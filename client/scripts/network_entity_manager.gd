@@ -27,6 +27,12 @@ const AFK_GROUND_COMPACT_BATCH_SIZE: int = 64
 const AFK_MONSTER_COMPACT_BATCH_SIZE: int = 48
 # Keep server-confirmed combat monsters present even across AOI boundaries.
 const MONSTER_COMBAT_REVEAL_MSEC: int = 12000
+# In dense AOI snapshots, rendering thousands of pixels beyond the camera
+# instantiates costly monster scenes nobody can see. This is purely visual;
+# network packets, combat data and targeting are never skipped.
+const MONSTER_CROWD_ENTER_COUNT: int = 96
+const MONSTER_CROWD_EXIT_COUNT: int = 64
+const MONSTER_CROWD_DRAW_RADIUS: float = 1250.0
 
 var active_entities: Dictionary = {}
 var _last_skill_casts: Dictionary = {}
@@ -49,6 +55,7 @@ var _monster_spawn_templates: Dictionary = {}
 var _deferred_monster_spawns: Dictionary = {}
 var _monster_aoi_elapsed: float = 0.0
 var _monster_aoi_last_observer: Variant = null
+var _monster_crowd_visual_only: bool = false
 var _monster_aoi_stationary_elapsed: float = 0.0
 var _monster_aoi_full_scans: int = 0
 var _monster_aoi_reused_scans: int = 0
@@ -424,7 +431,28 @@ func _monster_aoi_radii() -> Vector2:
 		var player_pos: Variant = _get_local_player_position()
 		if player_pos != null:
 			required_radius += camera.global_position.distance_to(player_pos as Vector2)
-	return resolve_visual_aoi_radii(profile, true, required_radius)
+	var radii: Vector2 = resolve_visual_aoi_radii(profile, true, required_radius)
+	# Adaptive display distance is enabled only for the "auto" visual choice
+	# in balanced/low profiles. Manual normal/quality modes retain the exact
+	# user-selected AOI, regardless of monster density.
+	var auto_visual: bool = (
+		int(profile.get("simplify_monsters_mode", ClientPerformanceProfile.SIMPLIFY_AUTO)) == ClientPerformanceProfile.SIMPLIFY_AUTO
+		and int(profile.get("load_mode", ClientPerformanceProfile.LOAD_BALANCED)) >= ClientPerformanceProfile.LOAD_BALANCED
+	)
+	if not auto_visual:
+		_monster_crowd_visual_only = false
+	else:
+		var known_monsters: int = _monster_spawn_templates.size()
+		if known_monsters >= MONSTER_CROWD_ENTER_COUNT:
+			_monster_crowd_visual_only = true
+		elif known_monsters <= MONSTER_CROWD_EXIT_COUNT:
+			_monster_crowd_visual_only = false
+	if not _monster_crowd_visual_only:
+		return radii
+	var enter_radius: float = minf(
+		radii.x, maxf(required_radius, MONSTER_CROWD_DRAW_RADIUS)
+	)
+	return Vector2(enter_radius, minf(radii.y, enter_radius + 400.0))
 
 
 static func is_ground_inside_aoi(data: Dictionary, center: Vector2, radius: float) -> bool:
@@ -749,6 +777,10 @@ func _is_combat_monster_revealed(entity_id: int) -> bool:
 
 
 func _can_spawn_monster(data: Dictionary, radius: float) -> bool:
+	# Remote bots fighting outside the visible area must not force hundreds
+	# of costly monster scene nodes into the local player's viewport.
+	if _monster_crowd_visual_only:
+		return _is_monster_inside_aoi(data, radius)
 	return _is_combat_monster_revealed(int(data.get("EntityID", 0))) or _is_monster_inside_aoi(data, radius)
 
 
@@ -771,6 +803,12 @@ func _reveal_combat_monster(entity_id: int, reason: String) -> void:
 		)
 		return
 	if _is_afk_monster_data_only():
+		_deferred_monster_spawns[entity_id] = _monster_spawn_templates[entity_id]
+		_remove_queued_spawn(entity_id)
+		return
+	if _monster_crowd_visual_only and not _is_monster_inside_aoi(
+		_monster_spawn_templates[entity_id], _monster_aoi_radii().x
+	):
 		_deferred_monster_spawns[entity_id] = _monster_spawn_templates[entity_id]
 		_remove_queued_spawn(entity_id)
 		return
@@ -945,7 +983,9 @@ func _update_monster_aoi(delta: float) -> void :
 			continue
 		var monster := get_active_entity(entity_id)
 		if is_instance_valid(monster) and local_pos.distance_squared_to(monster.global_position) > exit_radius_sq:
-			if not _is_combat_monster_revealed(entity_id) and not _is_local_combat_target(monster):
+			# Active local targets always stay visible. Under crowd pressure,
+			# remote combat elsewhere must not pin hundreds of monster nodes.
+			if (_monster_crowd_visual_only or not _is_combat_monster_revealed(entity_id)) and not _is_local_combat_target(monster):
 				_unload_monster_for_aoi(entity_id, monster)
 	for raw_id in _deferred_monster_spawns.keys():
 		var entity_id: int = int(raw_id)
