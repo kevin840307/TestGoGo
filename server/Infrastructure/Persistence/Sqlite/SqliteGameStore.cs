@@ -173,6 +173,28 @@ public sealed class SqliteGameStore : IGameStore
 
     private static void RepairOversizedCharacterExperience(SqliteConnection db, long accountId)
     {
+        // Every AI/attack/status GetCharacter previously executed an UPDATE,
+        // even when there was nothing to repair. With 20+ players this made
+        // routine reads compete for SQLite's single WAL writer lock (and
+        // busy_timeout=5000), stalling game packets for seconds.
+        //
+        // A read-only existence query never acquires the writer lock. Keep
+        // the exact original conditional UPDATE when a bad row is present.
+        using (var check = db.CreateCommand())
+        {
+            check.CommandText = """
+                SELECT 1
+                  FROM characters
+                 WHERE account_id = $a
+                   AND (exp_acc > $maxInt OR exp_acc < 0)
+                 LIMIT 1
+                """;
+            Arg(check, "$a", accountId);
+            Arg(check, "$maxInt", int.MaxValue);
+            if (check.ExecuteScalar() is null)
+                return;
+        }
+
         using var cmd = db.CreateCommand();
         cmd.CommandText = """
             UPDATE characters
