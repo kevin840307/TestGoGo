@@ -9,12 +9,11 @@ var combat_target: Node2D = null
 # Visual-only prediction between authoritative position snapshots.
 # No change to the network, physics, combat or click/targeting path.
 const REMOTE_MOTION = preload("res://scripts/remote_player_motion.gd")
-# A MoveEntity inside the bounded 5000-world-unit viewport AOI is not a
-# teleport merely because packets were delayed. Real map transitions use
-# despawn/spawn/change-map paths; keep the same-map discontinuity threshold
-# beyond normal visible interest.
-const MIN_TELEPORT_DISTANCE: float = 5200.0
-const TELEPORT_SPEED_WINDOW: float = 6.0
+# Long coalesced walks are identified by SnapshotSpanSeconds in
+# RemotePlayerMotion. Keep the historical hard-warp guard for untagged or
+# physically implausible same-map discontinuities.
+const MIN_TELEPORT_DISTANCE: float = 1200.0
+const TELEPORT_SPEED_WINDOW: float = 1.0
 var _remote_motion = REMOTE_MOTION.new()
 var _pending_idle: bool = false
 var _last_remote_move_received_msec: int = -1
