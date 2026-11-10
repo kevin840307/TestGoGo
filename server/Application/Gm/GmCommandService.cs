@@ -2,6 +2,7 @@ using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Messaging;
+using SGO.Server.Application.World;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Infrastructure.GameData;
 
@@ -18,6 +19,7 @@ public sealed class GmCommandService
     private readonly CombatService _combat;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly IConfiguration _config;
+    private readonly PositionPersistenceService? _positionWrites;
 
     public GmCommandService(
         IGameStore store,
@@ -28,7 +30,8 @@ public sealed class GmCommandService
         LegacyPlayerGrowthCatalog growth,
         CombatService combat,
         ServerBroadcastHub broadcasts,
-        IConfiguration config)
+        IConfiguration config,
+        PositionPersistenceService? positionWrites = null)
     {
         _store = store;
         _skills = skills;
@@ -39,6 +42,7 @@ public sealed class GmCommandService
         _combat = combat;
         _broadcasts = broadcasts;
         _config = config;
+        _positionWrites = positionWrites;
     }
 
     public IReadOnlyList<object> Execute(
@@ -157,6 +161,10 @@ public sealed class GmCommandService
             ? py
             : Convert.ToInt32(Convert.ToDouble(ch["LocY"]));
 
+        // A same-map GM warp changes the position without changing map_id.
+        // Unlike cross-map transitions, the SQL map guard cannot reject
+        // an old queued snapshot from the same map. Fence it first.
+        _positionWrites?.FenceAndDiscard(accountId, dbid);
         if (!_store.UpdateLocation(accountId, dbid, mapId, x, y))
             return [Chat("傳送失敗")];
 
