@@ -39,6 +39,19 @@ func _run() -> void:
 	var monster: MonsterEntity = MonsterEntity.new()
 	monster.global_position = Vector2.ZERO
 
+	# A coalesced 2s monster waypoint is historical travel, not a new
+	# 750ms sprint. Its collision/global_position still follow the same
+	# newest server-approved target without changing AI or combat.
+	var backlog_monster := MonsterEntity.new()
+	var original_catchup: float = MonsterEntity.calculate_network_move_speed(480.0, 0.75)
+	var smoothed_catchup: float = MonsterEntity.calculate_network_move_speed(480.0, 0.75, 2.0)
+	_check(smoothed_catchup > 0.0 and smoothed_catchup < original_catchup,
+		"2s monster backlog smooths historical movement instead of sprinting")
+	backlog_monster.network_move_to(Vector2(480.0, 0.0), 0.75, 2.0)
+	_check(is_equal_approx(backlog_monster.network_move_speed, smoothed_catchup),
+		"monster runtime consumes server SnapshotSpanSeconds")
+	backlog_monster.free()
+
 	# Server sends a 35px waypoint (250ms), followed by an idle state before
 	# the visual interpolation has reached that approved coordinate.
 	monster.network_move_to(Vector2(35.0, 0.0), 0.25)

@@ -15,6 +15,18 @@ static func calculate(distance: float, duration: float,
 	return clampf(distance / visual_duration, min_speed, max_speed)
 
 
+# Server may collapse multiple unsent world waypoints and preserve their full
+# elapsed span separately from the legacy <=750ms SpeedTime. Consuming only
+# SpeedTime races a far-away monster across 2s of travel in 0.75s.
+# Catch up faster than replaying stale history, but never in one large lurch.
+static func presentation_duration(duration: float, snapshot_span: float) -> float:
+	if not is_finite(duration) or duration <= 0.01:
+		return duration
+	if not is_finite(snapshot_span) or snapshot_span <= 0.75 or snapshot_span > 8.0:
+		return duration
+	return maxf(duration, minf(1.5, sqrt(snapshot_span * maxf(duration, 0.05))))
+
+
 # A screen notifier may update one frame after a large/zoomed camera makes
 # an actor visible. Resolve the camera-transformed position against the
 # actual viewport instead of assuming an 800x600 visible world.

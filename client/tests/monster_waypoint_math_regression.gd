@@ -78,6 +78,18 @@ func _run() -> void:
 	)
 	_check(invalid_radius == 0.0, "invalid viewport safely uses fallback")
 
+	var coalesced_duration: float = MonsterWaypointSpeed.presentation_duration(0.75, 2.0)
+	_check(coalesced_duration > 1.1 and coalesced_duration < 1.5,
+		"2s coalesced monster movement does not replay in only 750ms")
+	_check(is_equal_approx(MonsterWaypointSpeed.presentation_duration(0.25, 0.0), 0.25),
+		"ordinary 250ms monster waypoint keeps original movement timing")
+	_check(is_equal_approx(MonsterWaypointSpeed.presentation_duration(0.0, 2.0), 0.0),
+		"zero-time combat correction never becomes interpolated movement")
+	_check(is_equal_approx(MonsterWaypointSpeed.presentation_duration(0.75, 500.0), 0.75),
+		"invalid/oversized snapshot span cannot create unbounded visual delay")
+	_check(MonsterWaypointSpeed.presentation_duration(0.75, 8.0) <= 1.5,
+		"long historical backlogs have a bounded catch-up duration")
+
 	var pos := 0.0
 	for _i in 15:
 		pos = move_toward(pos, 90.0, speed / 60.0)

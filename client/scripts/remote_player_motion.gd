@@ -41,19 +41,30 @@ func receive(position: Vector2, received_msec: int,
 	extended_server_seconds: float = 0.0) -> void:
 	if not position.is_finite():
 		return
-	if visual_position.distance_to(position) >= teleport_threshold:
-		reset(position)
-		_last_received_msec = received_msec
-		_has_sample = true
-		return
-
 	# Legacy SpeedTime stays <= 750ms. Only explicitly labeled
 	# coalesced snapshots may cover a longer interval; never mistake the
 	# old default SpeedTime=1.0 (missing on the wire) for such a span.
 	var extended_valid: bool = (
-		extended_server_seconds > MAX_SAMPLE_SECONDS
+		is_finite(extended_server_seconds)
+		and extended_server_seconds > MAX_SAMPLE_SECONDS
 		and extended_server_seconds <= MAX_EXTENDED_SAMPLE_SECONDS
 	)
+	# A multi-second *unsent* walk can travel farther than the ordinary
+	# 1200px teleport guard. Do not turn that valid walk into a one-frame
+	# visual teleport. Untagged jumps and movement exceeding the bounded
+	# historical speed still use the existing hard reset.
+	var historical_distance: float = authoritative_position.distance_to(position)
+	var plausible_coalesced_walk: bool = (
+		_has_sample and extended_valid
+		and historical_distance <=
+			maxf(teleport_threshold, MAX_ESTIMATED_SPEED * extended_server_seconds * 1.1)
+	)
+	if visual_position.distance_to(position) >= teleport_threshold \
+			and not plausible_coalesced_walk:
+		reset(position)
+		_last_received_msec = received_msec
+		_has_sample = true
+		return
 	var fallback: float = clampf(
 		extended_server_seconds if extended_valid else nominal_seconds,
 		MIN_SAMPLE_SECONDS, MAX_EXTENDED_SAMPLE_SECONDS if extended_valid else MAX_SAMPLE_SECONDS

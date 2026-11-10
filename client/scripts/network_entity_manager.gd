@@ -1686,6 +1686,14 @@ func _on_entity_moved(data: Dictionary) -> void :
 					target_pos, speed_time,
 					float(data.get("SnapshotSpanSeconds", 0.0))
 				)
+			elif is_monster:
+				# Ordinary server-lane world movements may have been
+				# coalesced while a socket was backpressured. Use the full
+				# historical span only for a bounded visual catch-up curve.
+				target_node.network_move_to(
+					target_pos, speed_time,
+					float(data.get("SnapshotSpanSeconds", 0.0))
+				)
 			else:
 				target_node.network_move_to(target_pos, speed_time)
 			if is_monster and speed_time > 0.01:

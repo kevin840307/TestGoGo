@@ -114,6 +114,33 @@ func _run() -> void:
 		and final_stop.visual_position.distance_to(Vector2(32.0, 0.0)) < 0.5,
 		"final stop position converges to last server-approved endpoint")
 
+	# A >1200px journey *can* be a legitimate merged 3s walk. The server
+	# explicitly tags its historical span; only the render path is smoothed.
+	var long_walk := RemotePlayerMotion.new()
+	long_walk.reset(Vector2.ZERO)
+	long_walk.receive(Vector2(10.0, 0.0), 1000, 0.1)
+	long_walk.advance(1.0 / 60.0)
+	var before_coalesced: Vector2 = long_walk.visual_position
+	long_walk.receive(Vector2(1300.0, 0.0), 4000, 0.75, 1200.0, 3.0)
+	_check(long_walk.visual_position.distance_to(before_coalesced) < 0.1
+		and long_walk.authoritative_position.x == 1300.0,
+		"plausible 3s coalesced walk over 1200px is not a visual teleport")
+	_check(long_walk.advance(1.0 / 60.0).distance_to(before_coalesced)
+			<= RemotePlayerMotion.MAX_VISUAL_CATCHUP_SPEED / 60.0 + 0.01,
+		"multi-second merged player step remains bounded per physics frame")
+	var hard_warp := RemotePlayerMotion.new()
+	hard_warp.reset(Vector2.ZERO)
+	hard_warp.receive(Vector2(10.0, 0.0), 1000, 0.1)
+	hard_warp.receive(Vector2(1300.0, 0.0), 4000, 0.75, 1200.0)
+	_check(hard_warp.visual_position.x == 1300.0,
+		"untagged large position discontinuity still teleports immediately")
+	var impossible_warp := RemotePlayerMotion.new()
+	impossible_warp.reset(Vector2.ZERO)
+	impossible_warp.receive(Vector2(10.0, 0.0), 1000, 0.1)
+	impossible_warp.receive(Vector2(3500.0, 0.0), 4000, 0.75, 1200.0, 2.0)
+	_check(impossible_warp.visual_position.x == 3500.0,
+		"implausible movement speed stays an authoritative teleport")
+
 	delayed.receive(Vector2(4000.0, 4000.0), 4000, 0.1, 500.0)
 	_check(delayed.visual_position.is_equal_approx(Vector2(4000.0, 4000.0)),
 		"map/teleport discontinuity snaps immediately to the new server position")
