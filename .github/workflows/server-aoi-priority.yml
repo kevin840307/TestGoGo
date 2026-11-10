@@ -5,6 +5,8 @@ on:
       - feature/local-server-net8
     paths:
       - 'server/Application/Messaging/ServerBroadcastHub.cs'
+      - 'server/Application/Messaging/PlayerSpatialAoi.cs'
+      - 'server/Application/Messaging/WorldEntitySpatialAoi.cs'
       - 'server/Transport/WebSockets/WebSocketEndpoint.cs'
       - 'server/Application/Combat/CombatService.cs'
       - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
@@ -18,6 +20,8 @@ on:
     branches: [feature/local-server-net8]
     paths:
       - 'server/Application/Messaging/ServerBroadcastHub.cs'
+      - 'server/Application/Messaging/PlayerSpatialAoi.cs'
+      - 'server/Application/Messaging/WorldEntitySpatialAoi.cs'
       - 'tests/SGO.Server.BroadcastPriorityProbe/**'
       - 'tests/SGO.Server.ViewportAoiProbe/**'
       - '.github/workflows/server-aoi-priority.yml'
