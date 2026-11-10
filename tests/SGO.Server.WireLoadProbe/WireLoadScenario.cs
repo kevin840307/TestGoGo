@@ -298,6 +298,15 @@ internal static class WireLoadScenario
             foreach (var client in active)
                 client.ClearInbox();
 
+            // The local Godot player sends its last SyncPosition immediately
+            // before SyncState(idle). A 100ms Server movement throttle must
+            // not swallow that last valid endpoint for observing clients.
+            await VerifyFinalStopPositionAsync(
+                active, timeout, movePixels, rounds);
+
+            foreach (var client in active)
+                client.ClearInbox();
+
             var chat =
                 await MeasureChatAsync(
                     active,
@@ -401,6 +410,66 @@ internal static class WireLoadScenario
             }
         }
         return count;
+    }
+
+    private static async Task VerifyFinalStopPositionAsync(
+        WireLoadClient[] clients,
+        TimeSpan timeout,
+        int movePixels,
+        int rounds)
+    {
+        WireLoadClient? mover = null;
+        WireLoadClient? observer = null;
+        foreach (var sender in clients)
+        {
+            foreach (var peer in clients)
+            {
+                if (sender == peer || sender.MapId != peer.MapId)
+                    continue;
+                var dx = (double)sender.X - peer.X;
+                var dy = (double)sender.Y - peer.Y;
+                if (dx * dx + dy * dy >
+                    PlayerSpatialAoi.EnterRadius * PlayerSpatialAoi.EnterRadius)
+                    continue;
+                mover = sender;
+                observer = peer;
+                break;
+            }
+            if (observer is not null)
+                break;
+        }
+        if (mover is null || observer is null)
+            return; // No authorized observer in this small-load map.
+
+        // The movement phase sends relative positions, but SendPositionAsync
+        // does not alter the probe's original X. Start from its final offset,
+        // then publish one fresh baseline move.
+        var lastOffset = (rounds - 1) % 2 == 0
+            ? movePixels : -movePixels;
+        var baselineX = mover.X + lastOffset + 2;
+        await mover.SendBotPositionAsync(
+            baselineX, mover.Y, timeout);
+        await observer.WaitForExactMoveAsync(
+            mover.CharacterId, baselineX, mover.Y, timeout);
+
+        // Same sender/socket ordering: final position is validated before
+        // idle. Normally the 100ms throttle suppresses this 1px intermediate
+        // movement; the new stop flush must still expose its exact endpoint.
+        var stoppedX = baselineX + 1;
+        await mover.SendBotPositionAsync(
+            stoppedX, mover.Y, timeout);
+        await mover.SendStateAsync("idle", timeout);
+        var finalPacket = await observer.WaitForExactMoveAsync(
+            mover.CharacterId, stoppedX, mover.Y, timeout);
+        if (!finalPacket.TryGetProperty("SpeedTime", out var speed) ||
+            speed.GetDouble() < 0)
+        {
+            throw new InvalidOperationException(
+                "final AOI MoveEntity is missing a valid SpeedTime");
+        }
+        Console.WriteLine(
+            "[WIRE_FINAL_STOP_PASS] entity={0} x={1} y={2} speed_time={3}",
+            mover.CharacterId, stoppedX, mover.Y, speed.GetDouble());
     }
 
     private static async Task<WirePhaseResult> MeasureMovementAsync(
