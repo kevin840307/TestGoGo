@@ -27,6 +27,9 @@ public static class GameFeatureServiceCollectionExtensions
         services.AddSingleton<ServerDiagnostics>();
         services.AddHostedService<ServerResourceMonitor>();
         services.AddSingleton<WorldRuntimeService>();
+        services.AddSingleton<PositionPersistenceService>();
+        services.AddHostedService(
+            sp => sp.GetRequiredService<PositionPersistenceService>());
         services.AddSingleton<SharedMapAiTicker>();
         services.AddHostedService(sp => sp.GetRequiredService<SharedMapAiTicker>());
         services.AddSingleton<PetEvolutionService>();
