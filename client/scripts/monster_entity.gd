@@ -1085,15 +1085,12 @@ func _apply_network_target_direction(target_pos: Vector2) -> void :
 # destination updates. Keep that pacing for presentation, while all server
 # corrections, targeting and combat packets retain their normal handling.
 static func calculate_network_move_speed(distance: float, duration: float) -> float:
-	if distance <= NETWORK_MOVE_SNAP_EPSILON or duration <= 0.01:
-		return 0.0
-	var visual_duration: float = maxf(
-		duration + NETWORK_MOVE_VISUAL_SLACK_SECONDS, 0.01
-	)
-	return clampf(
-		distance / visual_duration,
+	return MonsterWaypointSpeed.calculate(
+		distance, duration,
+		NETWORK_MOVE_VISUAL_SLACK_SECONDS,
 		NETWORK_MOVE_MIN_SPEED,
-		NETWORK_MOVE_MAX_SPEED
+		NETWORK_MOVE_MAX_SPEED,
+		NETWORK_MOVE_SNAP_EPSILON
 	)
 
 
