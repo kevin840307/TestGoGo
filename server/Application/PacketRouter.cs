@@ -5495,23 +5495,20 @@ public sealed class PacketRouter
             LocationReconcileInterval)
         {
             state.LastLocationReconcileAt = now;
-            var persistedCharacter = _store.GetCharacter(
+            var persistedLocation = _store.GetCharacterLocation(
                 accountId,
                 dbid);
 
-            if (persistedCharacter is not null)
+            if (persistedLocation is { } location)
             {
-                var persistedMapId = Convert.ToInt32(
-                    persistedCharacter["MapID"]);
+                var persistedMapId = location.MapId;
 
                 if (persistedMapId > 0 &&
                     persistedMapId != state.CurrentMapId)
                 {
                     state.CurrentMapId = persistedMapId;
-                    state.LastX = Convert.ToDouble(
-                        persistedCharacter["LocX"]);
-                    state.LastY = Convert.ToDouble(
-                        persistedCharacter["LocY"]);
+                    state.LastX = location.X;
+                    state.LastY = location.Y;
                     state.PositionDirty = false;
                     state.LastPositionPersistAt = now;
                     state.PendingMapSpawn = true;
@@ -7542,17 +7539,16 @@ public sealed class PacketRouter
         // 249.x ms timer tick can be skipped and make pet movement stutter.
         state.LastPetFollowTick = now;
 
-        var assets = _store.GetCharacterAssets(accountId, dbid);
-        var character = _store.GetCharacter(accountId, dbid);
-        var playerAlive = character is not null &&
-                          Convert.ToInt32(character["HP"]) > 0;
+        // Keep 250ms pet movement and attack semantics intact, but avoid
+        // loading inventory, all equipment, every stored pet and the full
+        // character on every online player's world tick.
+        var activePets = _store.GetActivePetFollowSnapshot(accountId, dbid);
+        if (activePets.Count == 0)
+            return [];
+
+        var hp = _store.GetCharacterHp(accountId, dbid);
+        var playerAlive = hp.HasValue && hp.Value > 0;
         var packets = new List<object>();
-        var activePets = assets.Pets
-            .Where(x =>
-                Convert.ToInt32(x["State"]) == 1)
-            .OrderBy(x =>
-                Convert.ToInt64(x["UID"]))
-            .ToArray();
 
         for (var petIndex = 0;
              petIndex < activePets.Length;
