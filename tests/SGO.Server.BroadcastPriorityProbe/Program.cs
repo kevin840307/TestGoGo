@@ -41,6 +41,19 @@ Check(hub.TryDequeuePlayerPriority(fast.ConnectionId, out var p2) && ReferenceEq
 Check(hub.TryDequeuePlayerPriority(fast.ConnectionId, out var p3) && ReferenceEquals(p3, playerDamage),
     "player damage keeps ordering inside its own lane");
 Check(!hub.HasPendingPlayerPriority(fast.ConnectionId), "fast lane drained");
+var playerHitsMonster = new
+{
+    Type = "EntityDamage",
+    TargetType = 1,
+    TargetID = 8_130_045L,
+    AttackerID = 19L,
+    Damage = 1
+};
+hub.PublishToConnection(fast.ConnectionId, playerHitsMonster);
+Check(hub.TryDequeuePlayerPriority(fast.ConnectionId, out var playerHit) &&
+      ReferenceEquals(playerHit, playerHitsMonster),
+    "player-origin damage to a monster takes urgent lane without delaying combat");
+
 
 Check(fast.Queue.TryDequeue(out var low1) && ReferenceEquals(low1, monsterMove),
     "monster movement is preserved");
