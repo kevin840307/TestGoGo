@@ -11,6 +11,15 @@ namespace SGO.Server.Application.Abstractions;
 public interface ICharacterAssetReader
 {
     CharacterAssets GetCharacterAssets(long accountId, long dbid);
+
+    // The 250ms pet-follow tick only needs active pets. Keep an exact
+    // noncached fallback for alternate stores and existing smoke fakes.
+    IReadOnlyList<Dictionary<string, object>> GetActivePetFollowSnapshot(
+        long accountId, long dbid)
+        => GetCharacterAssets(accountId, dbid).Pets
+            .Where(pet => Convert.ToInt32(pet["State"]) == 1)
+            .OrderBy(pet => Convert.ToInt64(pet["UID"]))
+            .ToArray();
 }
 
 public interface IAccountStore
@@ -60,6 +69,18 @@ public interface ICharacterStore
 {
     List<Dictionary<string, object>> Characters(long accountId);
     Dictionary<string, object>? GetCharacter(long accountId, long dbid);
+
+    // The 500ms external map transition poll only needs map and position.
+    // Preserve GetCharacter compatibility for non-SQLite stores.
+    (int MapId, double X, double Y)? GetCharacterLocation(
+        long accountId, long dbid)
+    {
+        var character = GetCharacter(accountId, dbid);
+        return character is null ? null :
+            (Convert.ToInt32(character["MapID"]),
+             Convert.ToDouble(character["LocX"]),
+             Convert.ToDouble(character["LocY"]));
+    }
 
     // Hot-path AI only needs liveness. Providers should override this with a
     // narrow query; the default preserves compatibility for lightweight test
