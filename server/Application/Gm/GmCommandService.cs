@@ -80,8 +80,10 @@ public sealed class GmCommandService
                     => MaxStats(accountId, dbid),
                 // Explicit opt-in to protect ordinary game servers from
                 // synthetic stats. Production never enables this by default.
-                "testbot" when _config.GetValue<bool>("Game:TestBotCommandsEnabled")
-                    => TestBotProfile(accountId, dbid),
+                "testbot" => _config.GetValue<bool>("Game:TestBotCommandsEnabled")
+                    ? TestBotProfile(accountId, dbid)
+                    : [Chat("testbot 未啟用。請在執行中的 Server 設定 " +
+                        "Game__TestBotCommandsEnabled=true，重新啟動 Server 後再試")],
                 "attackspeed" or "aspd"
                     => AttackSpeed(parts, accountId, dbid),
                 "money" => Money(parts, accountId, dbid),
