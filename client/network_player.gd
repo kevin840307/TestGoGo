@@ -299,6 +299,11 @@ func initialize_network_player(data: Dictionary) -> void :
 	var spawn_pos = Vector2(float(data.get("LocX", 0)), float(data.get("LocY", 0)))
 	global_position = spawn_pos
 	target_position = spawn_pos
+	# initialize_network_player runs after _ready on many scene paths.
+	# Align interpolation state to the actual SpawnEntity position, not
+	# the default (0,0) scene origin.
+	_remote_motion.reset(spawn_pos)
+	_last_remote_move_received_msec = -1
 	velocity = Vector2.ZERO
 
 	var extra = data.get("ExtraData", {})
