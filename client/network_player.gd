@@ -6,20 +6,12 @@ var interact_area: Area2D = null
 
 var target_position: Vector2 = Vector2.ZERO
 var combat_target: Node2D = null
-const DEFAULT_SNAPSHOT_INTERVAL: float = 0.1
-const MIN_SNAPSHOT_INTERVAL: float = 0.05
-const MAX_SNAPSHOT_INTERVAL: float = 0.25
-const MAX_CATCHUP_MULTIPLIER: float = 1.3
+# Visual-only prediction between authoritative position snapshots.
+# No change to the network, physics, combat or click/targeting path.
+const REMOTE_MOTION = preload("res://scripts/remote_player_motion.gd")
 const MIN_TELEPORT_DISTANCE: float = 1200.0
 const TELEPORT_SPEED_WINDOW: float = 1.0
-var _snapshot_start_position: Vector2 = Vector2.ZERO
-var _snapshot_interval: float = DEFAULT_SNAPSHOT_INTERVAL
-var _snapshot_duration: float = DEFAULT_SNAPSHOT_INTERVAL
-var _snapshot_elapsed: float = 0.0
-var _last_snapshot_received_msec: int = -1
-var _last_snapshot_target_position: Vector2 = Vector2.ZERO
-var _has_snapshot_target: bool = false
-var _observed_snapshot_speed: float = 0.0
+var _remote_motion = REMOTE_MOTION.new()
 var _pending_idle: bool = false
 var _performance_simplified_visual: bool = false
 var _performance_simplified_style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
@@ -48,7 +40,7 @@ func _ready() -> void :
 	super._ready()
 
 	target_position = global_position
-	_snapshot_start_position = global_position
+	_remote_motion.reset(global_position)
 	velocity = Vector2.ZERO
 	set_physics_process(false)
 
@@ -473,49 +465,25 @@ func update_appearance_from_server(data: Dictionary) -> void :
 
 
 
-func network_move_to(new_pos: Vector2, _speed_time: float = 1.0) -> void :
-	if is_dead: return
+func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
+	if is_dead:
+		return
 	_pending_idle = false
-	var received_msec: = Time.get_ticks_msec()
-	var observed_interval: = _snapshot_interval
-	if _last_snapshot_received_msec >= 0:
-		observed_interval = clampf(
-			float(received_msec - _last_snapshot_received_msec) / 1000.0, 
-			MIN_SNAPSHOT_INTERVAL, 
-			MAX_SNAPSHOT_INTERVAL
-		)
-		_snapshot_interval = lerpf(_snapshot_interval, observed_interval, 0.25)
-	_last_snapshot_received_msec = received_msec
-	if _has_snapshot_target and observed_interval > 0.0:
-		var target_delta: = _last_snapshot_target_position.distance_to(new_pos)
-		if target_delta <= MIN_TELEPORT_DISTANCE:
-			var sampled_speed: = target_delta / observed_interval
-			if _observed_snapshot_speed <= 0.0:
-				_observed_snapshot_speed = sampled_speed
-			else:
-				_observed_snapshot_speed = lerpf(_observed_snapshot_speed, sampled_speed, 0.5)
-	elif _snapshot_interval > 0.0:
-		var initial_target_delta: = global_position.distance_to(new_pos)
-		if initial_target_delta <= MIN_TELEPORT_DISTANCE:
-			_observed_snapshot_speed = initial_target_delta / _snapshot_interval
-	_last_snapshot_target_position = new_pos
-	_has_snapshot_target = true
+	var received_msec: int = Time.get_ticks_msec()
+	var movement_speed_basis: float = get_real_move_speed()
+	var teleport_distance: float = maxf(
+		MIN_TELEPORT_DISTANCE, movement_speed_basis * TELEPORT_SPEED_WINDOW
+	)
 
-	_snapshot_start_position = global_position
+	# Server already publishes a bounded set of authoritative snapshots.
+	# Advance visually at physics cadence between them, without requiring
+	# more packets or restarting a tween at every new position packet.
+	_remote_motion.receive(
+		new_pos, received_msec, speed_time, teleport_distance
+	)
 	target_position = new_pos
-	_snapshot_elapsed = 0.0
-	var snapshot_distance: = _snapshot_start_position.distance_to(target_position)
-	var movement_speed_basis: = maxf(get_real_move_speed(), _observed_snapshot_speed)
-	var max_catchup_speed: = movement_speed_basis * MAX_CATCHUP_MULTIPLIER
-	_snapshot_duration = _snapshot_interval
-	if max_catchup_speed > 0.0:
-		_snapshot_duration = maxf(_snapshot_duration, snapshot_distance / max_catchup_speed)
+	global_position = _remote_motion.visual_position
 	set_physics_process(true)
-	var teleport_distance: = maxf(MIN_TELEPORT_DISTANCE, movement_speed_basis * TELEPORT_SPEED_WINDOW)
-	if global_position.distance_to(target_position) > teleport_distance:
-		global_position = target_position
-		_snapshot_start_position = target_position
-		_snapshot_elapsed = _snapshot_duration
 
 	if is_emoting or current_state.begins_with("emote"):
 		is_emoting = false
@@ -528,9 +496,12 @@ func refresh_network_physics() -> void :
 func apply_network_state(new_state: String, new_dir: String) -> void :
 	if new_dir != "":
 		current_dir = new_dir
-	if new_state == "idle" and global_position.distance_squared_to(target_position) > 4.0:
-		_pending_idle = true
-		return
+	if new_state == "idle":
+		_remote_motion.stop_prediction()
+		if global_position.distance_squared_to(target_position) > 4.0:
+			_pending_idle = true
+			set_physics_process(true)
+			return
 	_pending_idle = false
 	current_state = new_state
 	if _performance_simplified_visual:
@@ -549,7 +520,7 @@ func _physics_process(delta: float) -> void :
 		return
 	_handle_movement(delta)
 	_sync_physics_animation_if_changed()
-	if global_position.distance_squared_to(target_position) <= 4.0 and current_state != "walk":
+	if not _remote_motion.is_moving() and current_state != "walk":
 		set_physics_process(false)
 
 func _sync_physics_animation_if_changed() -> void :
@@ -595,25 +566,23 @@ func get_real_move_speed() -> float:
 	return base_speed
 
 func _handle_movement(delta: float) -> void :
-	var distance = global_position.distance_to(target_position)
+	var before: Vector2 = global_position
+	global_position = _remote_motion.advance(delta)
+	var displacement: Vector2 = global_position - before
 
-	if distance > 2.0:
-		var dir_vector = (target_position - global_position).normalized()
-		_snapshot_elapsed = minf(_snapshot_elapsed + delta, _snapshot_duration)
-		var progress: = 1.0
-		if _snapshot_duration > 0.0:
-			progress = _snapshot_elapsed / _snapshot_duration
-		global_position = _snapshot_start_position.lerp(target_position, progress)
-
-		if not current_state.begins_with("attack"):
+	if displacement.length_squared() > 0.01 and _remote_motion.is_moving():
+		if not current_state.begins_with("attack") and current_state not in ["hit", "death", "die"]:
 			is_emoting = false
 			current_state = "walk"
-		update_direction_8way(dir_vector)
-	else:
-		global_position = target_position
-		if _pending_idle:
-			_pending_idle = false
-			current_state = "idle"
+		if not current_state.begins_with("attack"):
+			update_direction_8way(displacement)
+	elif _pending_idle and global_position.distance_squared_to(target_position) <= 4.0:
+		_pending_idle = false
+		current_state = "idle"
+	elif not _remote_motion.is_moving() and current_state == "walk":
+		# Allow one final authoritative position to settle even when no
+		# separate SyncState idle packet was sent (headless bots).
+		current_state = "idle"
 
 func update_direction_8way(move_velocity: Vector2) -> void :
 	if move_velocity == Vector2.ZERO: return
