@@ -726,6 +726,9 @@ internal sealed class WireLoadClient : IAsyncDisposable
                     message.Contains("GM 指令目前", StringComparison.Ordinal) ||
                     message.Contains("GM 指令需要", StringComparison.Ordinal) ||
                     message.Contains("GM 指令已關閉", StringComparison.Ordinal) ||
+                    message.Contains("testbot 未啟用", StringComparison.Ordinal) ||
+                    message.Contains("testbot 僅允許", StringComparison.Ordinal) ||
+                    message.Contains("TestBot profile:", StringComparison.Ordinal) ||
                     message.Contains("傳送失敗", StringComparison.Ordinal))
                     throw new InvalidOperationException(
                         "Server refused GM command: " + message +
