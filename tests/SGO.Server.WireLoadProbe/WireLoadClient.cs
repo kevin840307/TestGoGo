@@ -209,7 +209,6 @@ internal sealed class WireLoadClient : IAsyncDisposable
             change.GetProperty("Y")
                 .GetDouble());
 
-        progress?.Invoke(Index, "world-ready");
         var ready = await RequestAsync(
             new
             {
