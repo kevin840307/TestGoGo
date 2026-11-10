@@ -70,16 +70,20 @@ static func should_show_other_player(mode: int, same_party: bool, hostile: bool)
 static func should_show_ordinary_monster(mode: int, protected_monster: bool) -> bool:
 	return protected_monster or sanitize_monster_visibility(mode) == MONSTER_SHOW_ALL
 
-# Recalculate once per AOI change, not once per drop (N²).
-# Five nearest entities of each ItemIndex within the viewer's AOI survive.
-# Only IDs are selected; no authoritative packets or item rows are altered.
+# Display-only selection: keep at most K nearest candidates per ItemIndex.
+# The previous implementation sorted *all* nearby drops on every change to
+# the display cache (including each new SpawnEntity). With thousands of drops
+# this added O(N log N) work on the gameplay thread. We keep only K entries
+# per distinct item (O(N*K)); stable distance + EntityID tie-breaking is
+# preserved. Authoritative packets, ground lifetimes and pickup IDs are
+# never modified.
 static func select_visible_ground_drop_ids(
 	records: Dictionary, observer: Vector2, observer_radius: float, max_per_item: int = 5
 ) -> Dictionary:
 	var selected: Dictionary = {}
 	if max_per_item <= 0:
 		return selected
-	var candidates: Array[Dictionary] = []
+	var by_item: Dictionary = {}
 	var radius_sq: float = observer_radius * observer_radius
 	for raw_id in records:
 		var record: Dictionary = records[raw_id]
@@ -87,28 +91,31 @@ static func select_visible_ground_drop_ids(
 		var distance_sq: float = location.distance_squared_to(observer)
 		if distance_sq > radius_sq:
 			continue
+		var entity_id: int = int(raw_id)
 		var extra: Dictionary = record.get("ExtraData", {})
-		candidates.append({
-			"id": int(raw_id),
-			"item": int(extra.get("ItemIndex", 0)),
-			"distance_sq": distance_sq,
-		})
-	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		if a["distance_sq"] == b["distance_sq"]:
-			return int(a["id"]) < int(b["id"])
-		return float(a["distance_sq"]) < float(b["distance_sq"])
-	)
-	var counted: Dictionary = {}
-	for candidate in candidates:
-		var item_id: int = int(candidate["item"])
+		var item_id: int = int(extra.get("ItemIndex", 0))
 		if item_id <= 0:
+			selected[entity_id] = true
+			continue
+		var closest: Array = by_item.get(item_id, [])
+		var insert_at: int = closest.size()
+		for index in range(closest.size()):
+			var other: Dictionary = closest[index] as Dictionary
+			var other_distance_sq: float = float(other["distance_sq"])
+			if distance_sq < other_distance_sq or (
+				distance_sq == other_distance_sq and entity_id < int(other["id"])
+			):
+				insert_at = index
+				break
+		if insert_at >= max_per_item:
+			continue
+		closest.insert(insert_at, {"id": entity_id, "distance_sq": distance_sq})
+		if closest.size() > max_per_item:
+			closest.pop_back()
+		by_item[item_id] = closest
+	for candidates in by_item.values():
+		for candidate in candidates:
 			selected[int(candidate["id"])] = true
-			continue
-		var count: int = int(counted.get(item_id, 0))
-		if count >= max_per_item:
-			continue
-		counted[item_id] = count + 1
-		selected[int(candidate["id"])] = true
 	return selected
 
 static func should_show_duplicate_drop(
