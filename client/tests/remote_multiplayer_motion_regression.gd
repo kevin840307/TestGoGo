@@ -76,6 +76,23 @@ func _run() -> void:
 	var idle_visual: Vector2 = delayed.advance(0.1)
 	_check(idle_visual.x < before_long_gap + 0.1,
 		"authoritative idle signal releases bounded prediction")
+	# A large but non-teleport server correction after lost packets must not
+	# appear as a one-frame jump. Only display position is speed-limited.
+	var burst := RemotePlayerMotion.new()
+	burst.reset(Vector2.ZERO)
+	burst.receive(Vector2(20.0, 0.0), 1000, 0.10)
+	for i in 120:
+		burst.advance(1.0 / 60.0)
+	burst.receive(Vector2(420.0, 0.0), 3000, 0.10, 1200.0)
+	var before_burst: float = burst.visual_position.x
+	var after_burst: float = burst.advance(1.0 / 60.0).x
+	_check(after_burst >= before_burst
+		and after_burst - before_burst <=
+			RemotePlayerMotion.MAX_VISUAL_CATCHUP_SPEED / 60.0 + 0.01,
+		"2s delayed movement cannot create a 100px visual jump in one physics tick")
+	_check(burst.authoritative_position.x == 420.0,
+		"catch-up cap affects only visuals; new authoritative coordinate applies immediately")
+
 	delayed.receive(Vector2(4000.0, 4000.0), 4000, 0.1, 500.0)
 	_check(delayed.visual_position.is_equal_approx(Vector2(4000.0, 4000.0)),
 		"map/teleport discontinuity snaps immediately to the new server position")
