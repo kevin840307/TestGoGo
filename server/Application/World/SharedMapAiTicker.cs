@@ -110,6 +110,7 @@ public sealed class SharedMapAiTicker : BackgroundService
     /// </summary>
     private sealed record PlayerContext(
         ClientSession Session,
+        long AccountId,
         long CharacterId,
         bool IsAlive,
         double X,
@@ -194,10 +195,11 @@ public sealed class SharedMapAiTicker : BackgroundService
                 if (!_accounts.IsCurrent(accountId, session.ConnectionId))
                     continue;
 
-                var hp = _characters.GetCharacterHp(accountId, characterId);
+                // Snapshot only session primitives while holding its
+                // monitor. Fetch all HP values together AFTER the loop; no
+                // repeated DB opens while assembling the map's player list.
                 players.Add(new PlayerContext(
-                    session, characterId,
-                    hp.HasValue && hp.Value > 0,
+                    session, accountId, characterId, false,
                     playerX, playerY, petPositions));
             }
             playerSnapshotMs +=
@@ -206,6 +208,21 @@ public sealed class SharedMapAiTicker : BackgroundService
 
             if (players.Count == 0)
                 continue;
+
+            // Snapshot the HP of all map players with one narrow read. Death,
+            // revive and battle rules remain authoritative in CombatService;
+            // this is only the already-existing owner assignment liveness.
+            var mapHp = _characters.GetCharacterHpSnapshot(
+                players.Select(p => (p.AccountId, p.CharacterId)).ToArray());
+            for (var i = 0; i < players.Count; i++)
+            {
+                var p = players[i];
+                players[i] = p with
+                {
+                    IsAlive = mapHp.TryGetValue(p.CharacterId, out var hp) &&
+                              hp > 0
+                };
+            }
 
             if ((players.Count >= 50 || mapMonsterCount >= 500) &&
                 (!_lastMapPressureWarning.TryGetValue(group.Key, out var lastPressure) ||
