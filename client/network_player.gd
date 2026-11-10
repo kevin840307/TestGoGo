@@ -13,6 +13,8 @@ const MIN_TELEPORT_DISTANCE: float = 1200.0
 const TELEPORT_SPEED_WINDOW: float = 1.0
 var _remote_motion = REMOTE_MOTION.new()
 var _pending_idle: bool = false
+var _last_remote_move_received_msec: int = -1
+static var _debug_remote_gap_reports: int = 0
 var _performance_simplified_visual: bool = false
 var _performance_simplified_style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
 const SIMPLIFIED_PLAYER_CLICK_SIZE := Vector2(104.0, 136.0)
@@ -470,6 +472,14 @@ func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
 		return
 	_pending_idle = false
 	var received_msec: int = Time.get_ticks_msec()
+	if OS.is_debug_build() and _last_remote_move_received_msec > 0:
+		var gap_ms: int = received_msec - _last_remote_move_received_msec
+		if gap_ms >= 500 and current_state == "walk" and _debug_remote_gap_reports < 12:
+			_debug_remote_gap_reports += 1
+			print("[REMOTE_PLAYER_PACKET_GAP] id=%d gap_ms=%d target_delta=%.1f server_speed_time=%.3f" % [
+				entity_id, gap_ms, target_position.distance_to(new_pos), speed_time
+			])
+	_last_remote_move_received_msec = received_msec
 	var movement_speed_basis: float = get_real_move_speed()
 	var teleport_distance: float = maxf(
 		MIN_TELEPORT_DISTANCE, movement_speed_basis * TELEPORT_SPEED_WINDOW
@@ -569,6 +579,13 @@ func _handle_movement(delta: float) -> void :
 	var before: Vector2 = global_position
 	global_position = _remote_motion.advance(delta)
 	var displacement: Vector2 = global_position - before
+	# Smoothly finish an authoritative idle without animating backwards
+	# when visual prediction was slightly ahead of the server position.
+	if _pending_idle:
+		if global_position.distance_squared_to(target_position) <= 4.0:
+			_pending_idle = false
+			current_state = "idle"
+		return
 
 	if displacement.length_squared() > 0.01 and _remote_motion.is_moving():
 		if not current_state.begins_with("attack") and current_state not in ["hit", "death", "die"]:
