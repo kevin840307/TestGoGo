@@ -43,7 +43,8 @@ public sealed class PlayerSpatialAoi
         public OnlinePlayerPresence Player = player;
         public double EnterRadius = NormalizeEnterRadius(
             player.ViewInterestRadius);
-        public double ExitRadius = ExitRadiusFor(EnterRadius);
+        public double ExitRadius = ExitRadiusFor(
+            player.ViewInterestRadius);
         public readonly HashSet<Guid> Visible = new();
         public (int MapId, int CellX, int CellY) Cell = CellOf(player);
     }
