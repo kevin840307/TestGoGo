@@ -8,6 +8,7 @@ const GROUND_ITEM_SCENE = preload("res://ground_item_entity.tscn")
 const PET_SCENE = preload("res://pet_entity.tscn")
 const PENDING_AOI_MOVES = preload("res://scripts/network_entity_pending_moves.gd")
 const MOTION_AUDIT = preload("res://scripts/multiplayer_motion_audit.gd")
+const MONSTER_VIEW_RADIUS = preload("res://scripts/monster_waypoint_speed.gd")
 const GROUND_DROP_SPATIAL_INDEX = preload("res://scripts/ground_drop_spatial_index.gd")
 const DYNAMIC_ENTITY_VISIBILITY_LAYER: = 1 << 1
 const DEBUG_MONSTER_NETWORK_LOGS: bool = false
@@ -430,10 +431,21 @@ func _monster_aoi_radii() -> Vector2:
 	if is_instance_valid(camera):
 		var view_size: Vector2 = viewport.get_visible_rect().size
 		var zoom: float = maxf(0.05, minf(absf(camera.zoom.x), absf(camera.zoom.y)))
-		required_radius = view_size.length() * 0.5 / zoom + 360.0
+		# The Canvas2D transform includes actual viewport stretch/rotation,
+		# camera smoothing and non-uniform zoom. The legacy half-diagonal
+		# estimate alone can under-cover a wide or offset visible screen.
 		var player_pos: Variant = _get_local_player_position()
 		if player_pos != null:
-			required_radius += camera.global_position.distance_to(player_pos as Vector2)
+			required_radius = MONSTER_VIEW_RADIUS.required_view_radius(
+				viewport.get_visible_rect(), viewport.get_canvas_transform(),
+				player_pos as Vector2, 360.0
+			)
+			if required_radius <= 0.0:
+				required_radius = (
+					view_size.length() * 0.5 / zoom
+					+ camera.global_position.distance_to(player_pos as Vector2)
+					+ 360.0
+				)
 	var radii: Vector2 = resolve_visual_aoi_radii(profile, true, required_radius)
 	var was_crowded: bool = _monster_crowd_visual_only
 	# Adaptive display distance is enabled only for the "auto" visual choice
@@ -976,7 +988,23 @@ func _update_monster_aoi(delta: float) -> void :
 		return
 	var local_pos: Vector2 = player_pos as Vector2
 	var radii: Vector2 = _monster_aoi_radii()
-	var observer: Dictionary = {"position": local_pos, "enter": radii.x, "exit": radii.y}
+	# A camera may pan/zoom without the local actor moving. Recheck at
+	# most once per 128-world-pixel camera cell instead of leaving visible
+	# edge monsters deferred until the full stationary scan.
+	var camera_cell: Vector2 = Vector2.ZERO
+	var viewport: Viewport = get_viewport()
+	if is_instance_valid(viewport):
+		var canvas_transform: Transform2D = viewport.get_canvas_transform()
+		if absf(canvas_transform.determinant()) > 0.00001:
+			var camera_world_center: Vector2 = (
+				canvas_transform.affine_inverse()
+				* viewport.get_visible_rect().get_center()
+			)
+			camera_cell = (camera_world_center / 128.0).floor()
+	var observer: Dictionary = {
+		"position": local_pos, "enter": radii.x,
+		"exit": radii.y, "camera_cell": camera_cell
+	}
 	var observer_changed: bool = _monster_aoi_last_observer == null or _monster_aoi_last_observer != observer
 	if not observer_changed:
 		_monster_aoi_stationary_elapsed += check_elapsed
@@ -998,6 +1026,14 @@ func _update_monster_aoi(delta: float) -> void :
 			continue
 		var monster := get_active_entity(entity_id)
 		if is_instance_valid(monster) and local_pos.distance_squared_to(monster.global_position) > exit_radius_sq:
+			# One-frame camera/VisibleOnScreenNotifier latency must never
+			# unload a monster that still appears in the actual viewport.
+			# This guards against edge re-instantiation at its newest
+			# server snapshot (a perceived long-range teleport).
+			if monster.has_method("_is_near_current_viewport") and bool(
+				monster._is_near_current_viewport(monster.global_position)
+			):
+				continue
 			# Active local targets always stay visible. Under crowd pressure,
 			# remote combat elsewhere must not pin hundreds of monster nodes.
 			if (_monster_crowd_visual_only or not _is_combat_monster_revealed(entity_id)) and not _is_local_combat_target(monster):

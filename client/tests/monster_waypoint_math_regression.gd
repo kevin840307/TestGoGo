@@ -44,6 +44,40 @@ func _run() -> void:
 	_check(MonsterWaypointSpeed.is_near_viewport(
 		ultra_wide_viewport, Vector2(3300.0, 900.0)),
 		"ultrawide camera coverage is independent of legacy 800x600 assumptions")
+	# The view radius must follow the current Canvas2D transform, not
+	# hardcoded 800x600 dimensions nor an approximation around camera origin.
+	var full_hd_actual_radius: float = MonsterWaypointSpeed.required_view_radius(
+		full_hd_viewport, Transform2D.IDENTITY, Vector2(960.0, 540.0), 0.0
+	)
+	_check(absf(full_hd_actual_radius - Vector2(960.0, 540.0).length()) < 0.1,
+		"full HD visible corners match actual pixel dimensions")
+	var ultra_wide_actual_radius: float = MonsterWaypointSpeed.required_view_radius(
+		ultra_wide_viewport, Transform2D.IDENTITY, Vector2(1720.0, 720.0), 0.0
+	)
+	_check(ultra_wide_actual_radius > full_hd_actual_radius + 700.0,
+		"ultrawide viewport includes distant on-screen actors")
+	var zoomed_canvas := Transform2D(
+		Vector2(0.5, 0.0), Vector2(0.0, 0.5), Vector2.ZERO
+	)
+	var zoomed_radius: float = MonsterWaypointSpeed.required_view_radius(
+		full_hd_viewport, zoomed_canvas, Vector2(1920.0, 1080.0), 0.0
+	)
+	_check(absf(zoomed_radius - full_hd_actual_radius * 2.0) < 0.1,
+		"zooming out requires twice the visible world-space radius")
+	var offset_canvas := Transform2D(
+		Vector2.RIGHT, Vector2.DOWN, Vector2(-360.0, 0.0)
+	)
+	var offset_radius: float = MonsterWaypointSpeed.required_view_radius(
+		full_hd_viewport, offset_canvas, Vector2(960.0, 540.0), 0.0
+	)
+	_check(offset_radius > full_hd_actual_radius + 260.0,
+		"camera offset from local observer cannot clip visible edge monsters")
+	var invalid_radius: float = MonsterWaypointSpeed.required_view_radius(
+		Rect2(Vector2.ZERO, Vector2.ZERO), Transform2D.IDENTITY,
+		Vector2.ZERO, 360.0
+	)
+	_check(invalid_radius == 0.0, "invalid viewport safely uses fallback")
+
 	var pos := 0.0
 	for _i in 15:
 		pos = move_toward(pos, 90.0, speed / 60.0)
