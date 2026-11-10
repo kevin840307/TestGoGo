@@ -1762,13 +1762,19 @@ public sealed class CombatService
                 var playerY = session.LastY;
                 var castDx = centerX - playerX;
                 var castDy = centerY - playerY;
-                var castRange = Math.Max(0, levelData.CastRange) + 120;
-
+                // Fixed 120px slack previously let even short-range
+                // single-target skills hit at effectively long range.
+                const double skillRangeTolerance = 24.0;
+                var castRange = Math.Max(0, levelData.CastRange) +
+                    skillRangeTolerance;
                 if (castDx * castDx + castDy * castDy >
                     castRange * castRange)
-                {
                     return [Flash("技能目標距離太遠")];
-                }
+
+                if (!_navigation.IsDirectClear(
+                        session.CurrentMapId,
+                        playerX, playerY, centerX, centerY))
+                    return [Flash("技能目標被障礙物阻擋")];
             }
         }
         else if (isRevive)
