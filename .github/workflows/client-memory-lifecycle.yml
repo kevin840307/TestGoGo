@@ -7,6 +7,8 @@ on:
     paths:
       - 'client/scripts/game_manager.gd'
       - 'client/scripts/client_performance_profile.gd'
+      - 'client/scripts/ground_drop_spatial_index.gd'
+      - 'client/scripts/ground_item_entity.gd'
       - 'client/scripts/network_entity_manager.gd'
       - 'client/scripts/floating_text_manager.gd'
       - 'client/network_player.gd'
@@ -57,6 +59,7 @@ jobs:
           cp client/tests/display_settings_regression.gd "$RUNNER_TEMP/sgomap/tests/"
           cp client/game_hud.tscn "$RUNNER_TEMP/sgomap/"
           "$RUNNER_TEMP/Godot_v4.7.2-stable_linux.x86_64" --headless --path "$RUNNER_TEMP/sgomap" --script res://tests/display_settings_regression.gd
+          cp client/scripts/ground_drop_spatial_index.gd "$RUNNER_TEMP/sgomap/scripts/"
           cp client/tests/ground_drop_selection_regression.gd "$RUNNER_TEMP/sgomap/tests/"
           "$RUNNER_TEMP/Godot_v4.7.2-stable_linux.x86_64" --headless --path "$RUNNER_TEMP/sgomap" --script res://tests/ground_drop_selection_regression.gd
       - name: Compile atlas loaders in Godot 4.7.2 (minimal autoload stubs)
