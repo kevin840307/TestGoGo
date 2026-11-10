@@ -7,6 +7,7 @@ const NPC_SCENE = preload("res://npc_entity.tscn")
 const GROUND_ITEM_SCENE = preload("res://ground_item_entity.tscn")
 const PET_SCENE = preload("res://pet_entity.tscn")
 const PENDING_AOI_MOVES = preload("res://scripts/network_entity_pending_moves.gd")
+const MOTION_AUDIT = preload("res://scripts/multiplayer_motion_audit.gd")
 const GROUND_DROP_SPATIAL_INDEX = preload("res://scripts/ground_drop_spatial_index.gd")
 const DYNAMIC_ENTITY_VISIBILITY_LAYER: = 1 << 1
 const DEBUG_MONSTER_NETWORK_LOGS: bool = false
@@ -90,6 +91,7 @@ static func should_run_stationary_aoi_scan(
 	return context_changed or elapsed_stationary >= max_idle_interval
 var _combat_reveal_until_msec: Dictionary = {}
 var _pending_aoi_moves = PENDING_AOI_MOVES.new()
+var _motion_audit = MOTION_AUDIT.new()
 
 func get_active_entity(entity_id: int) -> Node2D:
 	var entity = active_entities.get(entity_id)
@@ -120,6 +122,7 @@ func clear_map_entities() -> Dictionary:
 	_deferred_monster_spawns.clear()
 	_combat_reveal_until_msec.clear()
 	_pending_aoi_moves.clear()
+	_motion_audit.reset()
 	_monster_aoi_elapsed = 0.0
 	_monster_aoi_last_observer = null
 	_monster_aoi_stationary_elapsed = 0.0
@@ -1235,6 +1238,9 @@ func _physics_process(delta: float) -> void:
 
 
 func _run_entity_runtime(delta: float) -> void :
+	# Debug only and aggregated once per 10s; never logs individual packets.
+	if OS.is_debug_build():
+		_motion_audit.report_if_due(Time.get_ticks_msec())
 	if not is_instance_valid(GameManager.current_map_node) or GameManager.current_map_node.is_queued_for_deletion():
 		_spawn_queue.clear()
 		_queued_spawn_ids.clear()
@@ -1543,6 +1549,8 @@ func _finalize_entity_death(entity: Node, clear_hover: bool) -> void :
 
 func _on_entity_despawned(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))
+	if OS.is_debug_build():
+		_motion_audit.forget_entity(entity_id)
 	# A delayed MoveEntity after an AOI exit must not revive an actor.
 	_pending_aoi_moves.mark_despawned(entity_id, Time.get_ticks_msec())
 	var target_node = get_active_entity(entity_id)
@@ -1604,6 +1612,12 @@ func _on_entity_moved(data: Dictionary) -> void :
 		var speed_time = float(data.get("SpeedTime", 1.0))
 
 		var target_pos := Vector2(target_x, target_y)
+		if OS.is_debug_build():
+			_motion_audit.record_move(
+				entity_id, int(_active_entity_types.get(entity_id, -1)),
+				Time.get_ticks_msec(), speed_time,
+				target_node.global_position.distance_to(target_pos)
+			)
 		var derives_direction_from_target: bool = target_node.has_method("_apply_network_target_direction")
 
 		if new_dir != "" and not derives_direction_from_target:
