@@ -694,16 +694,17 @@ func _handle_combat_tracking() -> void :
 	var dist = global_position.distance_to(combat_target.global_position)
 	# The first 120 numeric points on an equipped normal weapon represent
 	# ordinary close-combat reach, NOT additional range versus bare hands.
-	# Use only numeric attack_range data; unusual weapons and accessories
-	# still contribute their extra reach. Explicit skill ranges are untouched.
+	# Only numeric excess and other bonuses extend range. Original attack
+	# approach is a strict squared-distance comparison; skills remain separate.
 	var required_range: float = float(data_model.attack_range)
+	var normal_attack_range_squared: float = 0.0
 	if pending_skill_id <= 0:
 		var equipped_weapon_range: int = 0
 		if data_model.weapon_id > 0 and ItemLoader:
 			equipped_weapon_range = int(ItemLoader.get_item_property(
 				data_model.weapon_id, "attack_range", 0
 			))
-		required_range = NORMAL_ATTACK_RANGE.from_stat(
+		normal_attack_range_squared = NORMAL_ATTACK_RANGE.threshold_squared(
 			int(data_model.attack_range), equipped_weapon_range
 		)
 
@@ -721,11 +722,13 @@ func _handle_combat_tracking() -> void :
 			if s_lv and s_lv.cast_range > 0:
 				required_range = float(s_lv.cast_range)
 
-	# Original RunPlayerLogic branches back into approach on equality:
-	# cmp distance_squared, range_squared_minus_200; jge approach.
-	# Keep the strict < boundary for ordinary attacks only. Skills retain
-	# their independent existing CastRange boundary behavior.
-	var outside_range: bool = dist >= required_range if pending_skill_id <= 0 else dist > required_range
+	# Original RunPlayerLogic: cmp distanceSquared, rangeSquared - 200;
+	# jge approach. On an exact equality we still chase the target.
+	# Keep skills' CastRange boundary unchanged.
+	var outside_range: bool = (
+		global_position.distance_squared_to(combat_target.global_position)
+		>= normal_attack_range_squared
+	) if pending_skill_id <= 0 else dist > required_range
 	if outside_range:
 		var combat_destination: Vector2 = combat_target.global_position
 		if move_destination.distance_to(combat_destination) >= 16.0 or not is_moving:
