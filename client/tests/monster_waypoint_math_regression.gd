@@ -30,6 +30,20 @@ func _run() -> void:
 		"350ms jittered bot waypoint retains its own server duration")
 	_check(MonsterWaypointSpeed.calculate(1000.0, 0.25) <= 900.0,
 		"large temporary network backlog has a bounded catch-up speed")
+	var full_hd_viewport := Rect2(Vector2.ZERO, Vector2(1920.0, 1080.0))
+	_check(MonsterWaypointSpeed.is_near_viewport(
+		full_hd_viewport, Vector2(1900.0, 1000.0)),
+		"actual 1920x1080 viewport keeps edge monsters eligible for visual smoothing")
+	_check(MonsterWaypointSpeed.is_near_viewport(
+		full_hd_viewport, Vector2(1940.0, 1000.0)),
+		"one-frame visibility notifier delay at camera edge does not force teleport")
+	_check(not MonsterWaypointSpeed.is_near_viewport(
+		full_hd_viewport, Vector2(2300.0, 1000.0)),
+		"offscreen corrections beyond viewport margin are not visually delayed")
+	var ultra_wide_viewport := Rect2(Vector2.ZERO, Vector2(3440.0, 1440.0))
+	_check(MonsterWaypointSpeed.is_near_viewport(
+		ultra_wide_viewport, Vector2(3300.0, 900.0)),
+		"ultrawide camera coverage is independent of legacy 800x600 assumptions")
 	var pos := 0.0
 	for _i in 15:
 		pos = move_toward(pos, 90.0, speed / 60.0)
