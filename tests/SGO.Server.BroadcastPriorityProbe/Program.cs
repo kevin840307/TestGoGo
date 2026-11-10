@@ -343,8 +343,10 @@ Check(hub.TryDequeuePlayerPriority(timedPeer.ConnectionId, out var boundedMove) 
           boundedMove.GetType().GetProperty("SpeedTime")?.GetValue(boundedMove)) - 0.75) < 0.0001,
     "large queued visual movement caps interval to the supported client limit");
 Check(Math.Abs(Convert.ToDouble(
-          boundedMove.GetType().GetProperty("SnapshotSpanSeconds")?.GetValue(boundedMove)) - 2.0) < 0.0001,
-    "coalesced movement separately retains true 2-second server elapsed time");
+          boundedMove.GetType().GetProperty("SnapshotSpanSeconds")?.GetValue(boundedMove)) - 2.0) < 0.0001 &&
+      Convert.ToInt32(
+          boundedMove.GetType().GetProperty("CoalescedMoves")?.GetValue(boundedMove)) == 20,
+    "coalesced movement retains true 2-second span and 20-snapshot diagnostic count");
 hub.Unregister(timedPeer.ConnectionId);
 
 // Repeated per-observer AES+JSON work is amortized for immutable scalar
