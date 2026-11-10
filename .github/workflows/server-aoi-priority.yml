@@ -10,6 +10,7 @@ on:
       - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
       - 'server/Application/Abstractions/GameStorePorts.cs'
       - 'server/Application/World/SharedMapAiTicker.cs'
+      - 'server/Application/PacketRouter.cs'
       - 'tests/SGO.Server.BroadcastPriorityProbe/**'
       - '.github/workflows/server-aoi-priority.yml'
   workflow_dispatch:
