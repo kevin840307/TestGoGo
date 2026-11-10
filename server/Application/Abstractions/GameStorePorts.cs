@@ -71,6 +71,21 @@ public interface ICharacterStore
             ? null
             : Convert.ToInt32(character["HP"]);
     }
+    // One map AI tick takes one consistent-enough snapshot of online HP
+    // values. The default delegates to the existing method so custom test
+    // stores and alternate providers preserve their previous behavior.
+    IReadOnlyDictionary<long, int> GetCharacterHpSnapshot(
+        IReadOnlyList<(long AccountId, long CharacterId)> identities)
+    {
+        var result = new Dictionary<long, int>();
+        foreach (var (accountId, characterId) in identities)
+        {
+            var hp = GetCharacterHp(accountId, characterId);
+            if (hp.HasValue)
+                result[characterId] = hp.Value;
+        }
+        return result;
+    }
     (bool Success, string Message) Create(
         long accountId,
         JsonElement data);
