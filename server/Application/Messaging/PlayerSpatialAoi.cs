@@ -11,8 +11,27 @@ public sealed class PlayerSpatialAoi
     public const int CellSize = 1024;
     public const double EnterRadius = 1800;
     public const double ExitRadius = 2200;
-    private const double EnterRadiusSquared = EnterRadius * EnterRadius;
-    private const double ExitRadiusSquared = ExitRadius * ExitRadius;
+    // A client may request enough delivery headroom for a larger viewport,
+    // but never an unbounded AOI. 4200 covers 4K/ultrawide plus zoom margin
+    // without turning one client into a full-map observer.
+    public const double MaxEnterRadius = 4200;
+    public const double MaxExitRadius = 4600;
+
+    public static double NormalizeEnterRadius(double requested)
+    {
+        if (double.IsNaN(requested) || double.IsInfinity(requested))
+            return EnterRadius;
+        return Math.Clamp(
+            Math.Max(EnterRadius, requested),
+            EnterRadius,
+            MaxEnterRadius);
+    }
+
+    public static double ExitRadiusFor(double enterRadius)
+        => Math.Clamp(
+            NormalizeEnterRadius(enterRadius) + (ExitRadius - EnterRadius),
+            ExitRadius,
+            MaxExitRadius);
 
     public sealed record Change(
         Guid ObserverConnectionId,
@@ -22,6 +41,9 @@ public sealed class PlayerSpatialAoi
     private sealed class Entry(OnlinePlayerPresence player)
     {
         public OnlinePlayerPresence Player = player;
+        public double EnterRadius = NormalizeEnterRadius(
+            player.ViewInterestRadius);
+        public double ExitRadius = ExitRadiusFor(EnterRadius);
         public readonly HashSet<Guid> Visible = new();
         public (int MapId, int CellX, int CellY) Cell = CellOf(player);
     }
@@ -76,13 +98,19 @@ public sealed class PlayerSpatialAoi
                     AddCell(entry);
                 }
                 entry.Player = player;
+                entry.EnterRadius = NormalizeEnterRadius(
+                    player.ViewInterestRadius);
+                entry.ExitRadius = ExitRadiusFor(entry.EnterRadius);
             }
 
             // Include previous peers to process exits even after moving far
             // away in one tick (teleport, dismount or position correction).
             var candidates = new HashSet<Guid>(entry.Visible);
             var cellKey = entry.Cell;
-            var cellReach = (int)Math.Ceiling(ExitRadius / CellSize);
+            // A peer may have a larger viewport than the moving player, so
+            // search only the bounded maximum nearby cells, then apply the
+            // exact pair radius below. This remains spatial, never full-map.
+            var cellReach = (int)Math.Ceiling(MaxExitRadius / CellSize);
             for (var cy = cellKey.CellY - cellReach;
                  cy <= cellKey.CellY + cellReach; cy++)
             {
@@ -105,12 +133,17 @@ public sealed class PlayerSpatialAoi
                 }
 
                 var wasVisible = entry.Visible.Contains(peerId);
-                var maxDistanceSquared = wasVisible
-                    ? ExitRadiusSquared : EnterRadiusSquared;
+                // Keep the established symmetric player edge contract: if
+                // either viewport can see the pair, both sides retain the
+                // relation. This avoids a second reverse-observer index while
+                // still expanding traffic only for nearby large-view clients.
+                var pairRadius = wasVisible
+                    ? Math.Max(entry.ExitRadius, peer.ExitRadius)
+                    : Math.Max(entry.EnterRadius, peer.EnterRadius);
                 var dx = player.X - peer.Player.X;
                 var dy = player.Y - peer.Player.Y;
                 var nowVisible = player.MapId == peer.Player.MapId &&
-                    dx * dx + dy * dy <= maxDistanceSquared;
+                    dx * dx + dy * dy <= pairRadius * pairRadius;
 
                 if (wasVisible == nowVisible)
                     continue;
