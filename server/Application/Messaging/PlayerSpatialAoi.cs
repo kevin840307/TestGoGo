@@ -33,6 +33,11 @@ public sealed class PlayerSpatialAoi
     private readonly Dictionary<Guid, Entry> _players = new();
     private readonly Dictionary<(int MapId, int CellX, int CellY),
         HashSet<Guid>> _cells = new();
+    // Movement is a hot path. Do not scan the 5000px camera envelope on
+    // every map just because the feature exists: track the largest active
+    // viewport exit radius separately for each map.
+    private readonly Dictionary<int, double>
+        _maxViewExitRadiusByMap = new();
 
     public int ReadyPlayerCount
     {
@@ -73,9 +78,13 @@ public sealed class PlayerSpatialAoi
                 entry = new Entry(player, viewRadius);
                 _players.Add(player.ConnectionId, entry);
                 AddCell(entry);
+                TrackViewRadiusAdded(
+                    player.MapId,
+                    viewRadius);
             }
             else
             {
+                var previousViewRadius = entry.ViewRadius;
                 var cell = CellOf(player);
                 if (cell != entry.Cell)
                 {
@@ -85,13 +94,18 @@ public sealed class PlayerSpatialAoi
                 }
                 entry.Player = player;
                 entry.ViewRadius = viewRadius;
+                TrackViewRadiusChanged(
+                    player.MapId,
+                    previousViewRadius,
+                    viewRadius);
             }
 
             // Include previous peers to process exits even after moving far
             // away in one tick (teleport, dismount or position correction).
             var candidates = new HashSet<Guid>(entry.Visible);
             var cellKey = entry.Cell;
-            var cellReach = (int)Math.Ceiling(MaxViewExitRadius / CellSize);
+            var cellReach = (int)Math.Ceiling(
+                ActiveViewExitRadius(player.MapId) / CellSize);
             for (var cy = cellKey.CellY - cellReach;
                  cy <= cellKey.CellY + cellReach; cy++)
             {
@@ -208,6 +222,9 @@ public sealed class PlayerSpatialAoi
         if (!_players.Remove(connectionId, out var entry))
             return;
         RemoveCell(entry);
+        TrackViewRadiusRemoved(
+            entry.Player.MapId,
+            entry.ViewRadius);
         foreach (var peerId in entry.Visible)
         {
             if (!_players.TryGetValue(peerId, out var peer))
@@ -219,6 +236,92 @@ public sealed class PlayerSpatialAoi
             // Never enqueue stale-map despawns to its new scene.
         }
         entry.Visible.Clear();
+    }
+
+    private static double ExitRadiusFor(double viewRadius)
+        => viewRadius + (ExitRadius - EnterRadius);
+
+    private double ActiveViewExitRadius(int mapId)
+        => _maxViewExitRadiusByMap.TryGetValue(
+                mapId,
+                out var radius)
+            ? radius
+            : ExitRadius;
+
+    private void TrackViewRadiusAdded(
+        int mapId,
+        double viewRadius)
+    {
+        var exitRadius = ExitRadiusFor(viewRadius);
+        if (!_maxViewExitRadiusByMap.TryGetValue(
+                mapId,
+                out var current) ||
+            exitRadius > current)
+        {
+            _maxViewExitRadiusByMap[mapId] = exitRadius;
+        }
+    }
+
+    private void TrackViewRadiusChanged(
+        int mapId,
+        double previousViewRadius,
+        double nextViewRadius)
+    {
+        if (previousViewRadius == nextViewRadius)
+            return;
+
+        var previousExit =
+            ExitRadiusFor(previousViewRadius);
+        var nextExit =
+            ExitRadiusFor(nextViewRadius);
+
+        if (!_maxViewExitRadiusByMap.TryGetValue(
+                mapId,
+                out var current) ||
+            nextExit > current)
+        {
+            _maxViewExitRadiusByMap[mapId] = nextExit;
+            return;
+        }
+
+        if (previousExit >= current &&
+            nextExit < previousExit)
+        {
+            RecalculateMaxViewExitRadius(mapId);
+        }
+    }
+
+    private void TrackViewRadiusRemoved(
+        int mapId,
+        double viewRadius)
+    {
+        if (_maxViewExitRadiusByMap.TryGetValue(
+                mapId,
+                out var current) &&
+            ExitRadiusFor(viewRadius) >= current)
+        {
+            RecalculateMaxViewExitRadius(mapId);
+        }
+    }
+
+    private void RecalculateMaxViewExitRadius(
+        int mapId)
+    {
+        var maxRadius = ExitRadius;
+        foreach (var entry in _players.Values)
+        {
+            if (entry.Player.MapId != mapId)
+                continue;
+
+            maxRadius = Math.Max(
+                maxRadius,
+                ExitRadiusFor(entry.ViewRadius));
+        }
+
+        if (maxRadius <= ExitRadius)
+            _maxViewExitRadiusByMap.Remove(mapId);
+        else
+            _maxViewExitRadiusByMap[mapId] = maxRadius;
     }
 
     private static (int MapId, int CellX, int CellY) CellOf(
