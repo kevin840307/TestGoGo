@@ -5238,6 +5238,11 @@ public sealed class PacketRouter
                     return [];
 
                 var selfDbid = state.CharacterId.Value;
+                var chatStarted = Stopwatch.GetTimestamp();
+                var identityLoadMs = 0.0;
+                var clubCommandMs = 0.0;
+                var broadcastMs = 0.0;
+                var neededIdentityFallback = false;
                 var message = req.Str("Message").Trim();
                 if (message.Length == 0)
                 {
@@ -5263,12 +5268,16 @@ public sealed class PacketRouter
                 var senderRace = state.CharacterRace;
                 if (string.IsNullOrWhiteSpace(senderName))
                 {
+                    neededIdentityFallback = true;
+                    var identityStarted = Stopwatch.GetTimestamp();
                     var currentCharacter = _store.GetCharacter(
                         accountId, selfDbid);
                     if (currentCharacter is null)
                         return [];
                     senderName = currentCharacter["NAME"]?.ToString() ?? "";
                     senderRace = Convert.ToInt32(currentCharacter["Race"]);
+                    identityLoadMs = Stopwatch.GetElapsedTime(
+                        identityStarted).TotalMilliseconds;
                 }
 
                 if (message.StartsWith(
@@ -5355,11 +5364,14 @@ public sealed class PacketRouter
                     return [privatePacket];
                 }
 
+                var clubStarted = Stopwatch.GetTimestamp();
                 var clubCommand =
                     _club.TryHandleChatCommand(
                         accountId,
                         selfDbid,
                         message);
+                clubCommandMs = Stopwatch.GetElapsedTime(
+                    clubStarted).TotalMilliseconds;
 
                 if (clubCommand is not null)
                     return clubCommand;
@@ -5393,6 +5405,7 @@ public sealed class PacketRouter
                     BubbleType = bubbleType
                 };
 
+                var broadcastStarted = Stopwatch.GetTimestamp();
                 switch (channel)
                 {
                     // Nearby chat is a visual proximity event. The
@@ -5478,6 +5491,22 @@ public sealed class PacketRouter
 
                         break;
                     }
+                }
+
+                broadcastMs = Stopwatch.GetElapsedTime(
+                    broadcastStarted).TotalMilliseconds;
+                var chatElapsed = Stopwatch.GetElapsedTime(
+                    chatStarted).TotalMilliseconds;
+                var diagnosedAt = DateTimeOffset.UtcNow;
+                if (chatElapsed >= 250 &&
+                    diagnosedAt - state.LastSlowChatDiagAt >=
+                        TimeSpan.FromSeconds(5))
+                {
+                    state.LastSlowChatDiagAt = diagnosedAt;
+                    _log.LogWarning(
+                        "[SLOW_CHAT_PHASE] TotalMs={TotalMs:F1} IdentityFallback={IdentityFallback} IdentityMs={IdentityMs:F1} ClubCommandMs={ClubCommandMs:F1} PublishMs={PublishMs:F1} Channel={Channel} Character={Character}",
+                        chatElapsed, neededIdentityFallback, identityLoadMs,
+                        clubCommandMs, broadcastMs, channel, selfDbid);
                 }
 
                 return [chatPacket];
@@ -5608,9 +5637,20 @@ public sealed class PacketRouter
             LocationReconcileInterval)
         {
             state.LastLocationReconcileAt = now;
+            var locationReadStarted = Stopwatch.GetTimestamp();
             var persistedLocation = _store.GetCharacterLocation(
                 accountId,
                 dbid);
+            var locationReadMs = Stopwatch.GetElapsedTime(
+                locationReadStarted).TotalMilliseconds;
+            if (locationReadMs >= 250 &&
+                now - state.LastSlowLocationDiagAt >= TimeSpan.FromSeconds(5))
+            {
+                state.LastSlowLocationDiagAt = now;
+                _log.LogWarning(
+                    "[SLOW_LOCATION_RECONCILE] ReadMs={ReadMs:F1} Character={Character} Map={Map}",
+                    locationReadMs, dbid, state.CurrentMapId);
+            }
 
             if (persistedLocation is { } location)
             {
