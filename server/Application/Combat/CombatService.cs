@@ -5265,6 +5265,14 @@ public sealed class CombatService
             moveDy,
             monster.CurrentDir);
 
+        var distance = Math.Sqrt(
+            moveDx * moveDx +
+            moveDy * moveDy);
+        var moveSpeed =
+            speedTime > 0.01
+                ? distance / speedTime
+                : 0.0;
+
         return new
         {
             Type = "MoveEntity",
@@ -5272,7 +5280,10 @@ public sealed class CombatService
             X = x,
             Y = y,
             Dir = monster.CurrentDir,
-            SpeedTime = speedTime
+            SpeedTime = speedTime,
+            // Original client movement is destination + entity-speed based.
+            // Keep speed independent from packet arrival/coalescing cadence.
+            MoveSpeed = moveSpeed
         };
     }
 
