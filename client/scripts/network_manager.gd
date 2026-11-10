@@ -24,6 +24,8 @@ var _map_backlog_transition_id: int = 0
 var _map_backlog_target_map: int = 0
 var _map_backlog_max_packets: int = 0
 var _map_backlog_started_usec: int = 0
+# Debug-only, rate-limited in-world network queue pressure report.
+var _runtime_backlog_next_log_usec: int = 0
 var _last_received_packet_type: String = ""
 var _last_received_entity_type: int = -1
 var _drain_packet_types: Dictionary = {}
@@ -286,6 +288,24 @@ func _physics_process(delta: float) -> void :
 					_map_backlog_target_map = 0
 					_map_backlog_max_packets = 0
 					_map_backlog_started_usec = 0
+
+			# Map-transition diagnostics do not cover crowded live gameplay.
+			# A single line at most every 10s shows when the Client cannot
+			# consume Server packets quickly enough, without per-packet logs.
+			if OS.is_debug_build() and is_in_world and drain_budget_hit:
+				var pending_packets: int = socket.get_available_packet_count()
+				if pending_packets >= packet_limit:
+					var now_usec: int = Time.get_ticks_usec()
+					if now_usec >= _runtime_backlog_next_log_usec:
+						_runtime_backlog_next_log_usec = now_usec + 10000000
+						print("[NETWORK_RUNTIME_BACKLOG] queued_before=%d drained=%d remaining=%d drain_ms=%.2f limit=%d budget_us=%d" % [
+							available_packet_count,
+							drained_packets,
+							pending_packets,
+							float(now_usec - drain_started_usec) / 1000.0,
+							packet_limit,
+							time_budget_usec
+						])
 
 	elif state == WebSocketPeer.STATE_CLOSED:
 		if is_connected_to_server:
