@@ -48,6 +48,25 @@ func _run() -> void:
 	var camera_ground: Vector2 = ENTITY_MANAGER.resolve_visual_aoi_radii(low, false, 2800.0)
 	check(camera_ground.x >= 2800.0, "large camera still shows clickable drops")
 
+	var crowded_base: Vector2 = ENTITY_MANAGER.resolve_visual_aoi_radii(
+		ClientPerformanceProfile.resolve(
+			ClientPerformanceProfile.LOAD_BALANCED,
+			ClientPerformanceProfile.COMBAT_NORMAL
+		), true, 1200.0
+	)
+	var crowded: Vector2 = ENTITY_MANAGER.resolve_crowded_monster_visual_radii(
+		crowded_base, 1200.0
+	)
+	check(crowded.x >= 1200.0 and crowded.x <= crowded_base.x,
+		"crowded visual AOI retains full camera coverage without instantiating distant monsters")
+	check(crowded.y >= crowded.x + 400.0,
+		"crowded visual AOI maintains hysteresis against scene churn")
+	var zoomed: Vector2 = ENTITY_MANAGER.resolve_crowded_monster_visual_radii(
+		camera_monster, 3000.0
+	)
+	check(zoomed.x >= 3000.0,
+		"crowded mode never clips monsters inside a zoomed-out camera")
+
 	var manager: Node = ENTITY_MANAGER.new()
 	manager.call("_on_entity_spawned", {
 		"EntityID": 90111, "EntityType": 1, "LocX": 8000.0, "LocY": 0.0,
