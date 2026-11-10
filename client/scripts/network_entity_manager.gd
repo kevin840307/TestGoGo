@@ -449,10 +449,16 @@ func _monster_aoi_radii() -> Vector2:
 			_monster_crowd_visual_only = false
 	if not _monster_crowd_visual_only:
 		return radii
+	return resolve_crowded_monster_visual_radii(radii, required_radius)
+
+
+static func resolve_crowded_monster_visual_radii(base: Vector2, camera_required: float) -> Vector2:
+	# A view larger than the crowd draw radius always wins. Never cut off
+	# monsters actually on screen, including high-zoom or wide cameras.
 	var enter_radius: float = minf(
-		radii.x, maxf(required_radius, MONSTER_CROWD_DRAW_RADIUS)
+		base.x, maxf(camera_required, MONSTER_CROWD_DRAW_RADIUS)
 	)
-	return Vector2(enter_radius, minf(radii.y, enter_radius + 400.0))
+	return Vector2(enter_radius, minf(base.y, enter_radius + 400.0))
 
 
 static func is_ground_inside_aoi(data: Dictionary, center: Vector2, radius: float) -> bool:
