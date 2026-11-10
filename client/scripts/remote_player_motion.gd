@@ -9,6 +9,9 @@ const MAX_PREDICTION_SECONDS: float = 0.28
 const MAX_PREDICTION_PIXELS: float = 40.0
 const MAX_ESTIMATED_SPEED: float = 650.0
 const SMOOTHING_RATE: float = 14.0
+# Safety cap for a delayed 2s+ packet: spring smoothing must not turn one
+# badly delayed snapshot into a visible 100px jump in one physics frame.
+const MAX_VISUAL_CATCHUP_SPEED: float = 900.0
 
 var visual_position: Vector2 = Vector2.ZERO
 var authoritative_position: Vector2 = Vector2.ZERO
@@ -110,7 +113,10 @@ func advance(delta: float) -> Vector2:
 
 	var step_seconds: float = clampf(delta, 0.0, 0.10)
 	var alpha: float = 1.0 - exp(-SMOOTHING_RATE * step_seconds)
-	visual_position = visual_position.lerp(desired, alpha)
+	var eased_position: Vector2 = visual_position.lerp(desired, alpha)
+	visual_position = visual_position.move_toward(
+		eased_position, MAX_VISUAL_CATCHUP_SPEED * step_seconds
+	)
 	if visual_position.distance_squared_to(desired) < 0.001:
 		visual_position = desired
 	return visual_position
