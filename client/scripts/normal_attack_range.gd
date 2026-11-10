@@ -1,20 +1,32 @@
 extends RefCounted
 class_name NormalAttackRange
 
-# Ordinary weapon attack_range includes a standard 120-point weapon baseline.
-# Do not count that baseline as extra reach compared with bare hands. Only
-# weapon values above 120 and other numeric range bonuses extend reach.
-# No Sword/Gun/Dagger-style category logic. Keep in sync with server
-# CombatService.NormalAttackWorldRange().
-const MIN_WORLD_REACH: float = 40.0
-const STAT_TO_WORLD_SCALE: float = 0.5
+# Recovered from 2004 Paradise.exe CSGOPlayer::SyncAttackRange / RunPlayerLogic
+# and verified in the 2009 Client.exe disassembly:
+#    (world distance)^2 <= (weapon reach)^2 - 200
+#    bare-handed default weapon reach = 45
+#    valid equipped weapon reach = item range field (NOT added to actor base)
+#
+# Compatibility adjustment to satisfy SGO's design requirement that bare
+# hands and a regular numerical 120-range weapon stop at the same distance:
+# normalize raw PlayerStatusSync AttackRange (base 80 + equipment additive)
+# into the original 45-unit baseline; only weapon excess beyond 120 and
+# other numeric AttackRange bonuses extend it.
+#
+# That normalization is NOT an original client formula. It is required by
+# current SGO item stat semantics and has no weapon name/category branches.
+# Keep exactly aligned with CombatService.NormalAttackWorldRange().
+const ORIGINAL_BASE_REACH: float = 45.0
+const ORIGINAL_SQUARED_DISTANCE_MARGIN: float = 200.0
+const CHARACTER_STAT_BASELINE: int = 80
 const STANDARD_EQUIPPED_WEAPON_RANGE: int = 120
 
 static func from_stat(raw_attack_range: int, equipped_weapon_range: int = 0) -> float:
-	var normal_weapon_baseline: int = mini(
+	var ordinary_equipped_range: int = mini(
 		STANDARD_EQUIPPED_WEAPON_RANGE, maxi(0, equipped_weapon_range)
 	)
-	return maxf(
-		MIN_WORLD_REACH,
-		float(raw_attack_range - normal_weapon_baseline) * STAT_TO_WORLD_SCALE
+	var extra_range: int = maxi(
+		0, raw_attack_range - CHARACTER_STAT_BASELINE - ordinary_equipped_range
 	)
+	var reach: float = ORIGINAL_BASE_REACH + float(extra_range)
+	return sqrt(maxf(0.0, reach * reach - ORIGINAL_SQUARED_DISTANCE_MARGIN))
