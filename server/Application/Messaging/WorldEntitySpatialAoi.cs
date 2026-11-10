@@ -27,11 +27,10 @@ public sealed class WorldEntitySpatialAoi
     // eliminating full-map dynamic traffic on large maps.
     public const double EnterRadius = 2600;
     public const double ExitRadius = 3000;
-
-    private const double EnterRadiusSquared =
-        EnterRadius * EnterRadius;
-    private const double ExitRadiusSquared =
-        ExitRadius * ExitRadius;
+    // Camera-aware ranges are bounded; legacy connections keep 2600/3000.
+    public const double MaxViewRadius = 5000;
+    public const double MaxViewExitRadius =
+        MaxViewRadius + (ExitRadius - EnterRadius);
 
     public sealed record Change(
         Guid ObserverConnectionId,
@@ -39,9 +38,13 @@ public sealed class WorldEntitySpatialAoi
         bool Appeared);
 
     private sealed class ObserverEntry(
-        OnlinePlayerPresence player)
+        OnlinePlayerPresence player,
+        double enterRadius)
     {
         public OnlinePlayerPresence Player = player;
+        public double EnterRadius = enterRadius;
+        public double ExitRadius = enterRadius +
+            (WorldEntitySpatialAoi.ExitRadius - WorldEntitySpatialAoi.EnterRadius);
         public readonly HashSet<long> Visible = new();
         public (int MapId, int CellX, int CellY) Cell =
             CellOf(player.MapId, player.X, player.Y);
@@ -170,10 +173,14 @@ public sealed class WorldEntitySpatialAoi
     }
 
     public IReadOnlyList<Change> UpsertObserver(
-        OnlinePlayerPresence player)
+        OnlinePlayerPresence player,
+        double viewRadius = EnterRadius)
     {
         lock (_gate)
         {
+            var enterRadius = Math.Max(EnterRadius, Math.Clamp(
+                double.IsFinite(viewRadius) ? viewRadius : EnterRadius,
+                PlayerSpatialAoi.EnterRadius, MaxViewRadius));
             if (player.ConnectionId == Guid.Empty ||
                 player.AccountId <= 0 ||
                 player.CharacterId <= 0 ||
@@ -213,12 +220,13 @@ public sealed class WorldEntitySpatialAoi
             }
 
             if (entry is not null &&
-                SamePosition(entry.Player, player))
+                SamePosition(entry.Player, player) &&
+                entry.EnterRadius == enterRadius)
                 return transitionChanges;
 
             if (entry is null)
             {
-                entry = new ObserverEntry(player);
+                entry = new ObserverEntry(player, enterRadius);
                 _observers.Add(
                     player.ConnectionId,
                     entry);
@@ -237,6 +245,8 @@ public sealed class WorldEntitySpatialAoi
                     AddObserverCell(entry);
                 }
                 entry.Player = player;
+                entry.EnterRadius = enterRadius;
+                entry.ExitRadius = enterRadius + (ExitRadius - EnterRadius);
             }
 
             var candidates =
@@ -246,7 +256,7 @@ public sealed class WorldEntitySpatialAoi
             foreach (var entityId in
                      NearbyEntityIds(
                          entry.Cell,
-                         ExitRadius))
+                         entry.ExitRadius))
             {
                 candidates.Add(entityId);
             }
@@ -273,9 +283,7 @@ public sealed class WorldEntitySpatialAoi
                     entity.Entity.MapId,
                     entity.Entity.X,
                     entity.Entity.Y,
-                    wasVisible
-                        ? ExitRadiusSquared
-                        : EnterRadiusSquared);
+                    Math.Pow(wasVisible ? entry.ExitRadius : entry.EnterRadius, 2));
 
                 if (wasVisible == nowVisible)
                     continue;
@@ -506,7 +514,7 @@ public sealed class WorldEntitySpatialAoi
         foreach (var observerId in
                  NearbyObserverIds(
                      entry.Cell,
-                     ExitRadius))
+                     MaxViewExitRadius))
         {
             candidates.Add(observerId);
         }
@@ -533,9 +541,7 @@ public sealed class WorldEntitySpatialAoi
                 entry.Entity.MapId,
                 entry.Entity.X,
                 entry.Entity.Y,
-                wasVisible
-                    ? ExitRadiusSquared
-                    : EnterRadiusSquared);
+                Math.Pow(wasVisible ? observer.ExitRadius : observer.EnterRadius, 2));
 
             if (wasVisible == nowVisible)
                 continue;
