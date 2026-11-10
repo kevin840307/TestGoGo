@@ -31,12 +31,17 @@ public sealed class CombatService
     private const double AttackRange = 100.0;
     private const double EngageDistance = 90.0;
 
-    // Numerical normal-attack reach only: the raw AttackRange already
-    // includes character and item bonuses. Weapon type is irrelevant.
+    // Equipped weapons include up to 120 units of standard reach in their
+    // numeric AttackRange field. This is NOT extra reach versus bare hands.
+    // Only the numeric excess above that baseline (plus other bonuses) extends
+    // a normal attack. No Sword/Gun/Dagger category checks are used.
     // Keep in sync with Godot NormalAttackRange.from_stat().
     // Skill CastRange and monster/pet AI ranges are not affected.
-    public static double NormalAttackWorldRange(int rawStatAttackRange)
-        => Math.Max(40.0, rawStatAttackRange * 0.5);
+    public static double NormalAttackWorldRange(
+        int rawStatAttackRange, int equippedWeaponAttackRange = 0)
+        => Math.Max(
+            40.0,
+            (rawStatAttackRange - Math.Min(120, Math.Max(0, equippedWeaponAttackRange))) * 0.5);
     // Distance is calculated from normalized double coordinates. Values that
     // should be exactly 90 can become 90.0000000000001, which previously
     // entered Chase with a sub-epsilon step and left the monster stuck.
@@ -3126,7 +3131,8 @@ public sealed class CombatService
             DateTimeOffset.UtcNow);
 
         var attackRange = NormalAttackWorldRange(
-            effective.AttackRange);
+            effective.AttackRange,
+            CharacterStatCalculator.GetEquippedWeaponAttackRange(assets, _current));
 
         var packets = new List<object>();
 
@@ -3138,8 +3144,8 @@ public sealed class CombatService
             var dx = playerX - monster.X;
             var dy = playerY - monster.Y;
             // 24 world units absorb network/interpolation latency only.
-            // Real reach is computed from the numeric character/equipment
-            // AttackRange, so exceptional sword-range bonuses also work.
+            // Ordinary weapon's first 120 numeric points do not extend reach;
+            // all exceptional weapon and accessory AttackRange bonuses still do.
             const double networkRangeTolerance = 24.0;
             var allowedRange = attackRange + networkRangeTolerance;
 
