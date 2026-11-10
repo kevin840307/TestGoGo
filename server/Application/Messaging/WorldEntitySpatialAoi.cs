@@ -147,6 +147,11 @@ public sealed class WorldEntitySpatialAoi
     private readonly Dictionary<
         (int MapId, int CellX, int CellY),
         HashSet<Guid>> _observerCells = new();
+    // A moving entity checks observers frequently. Keep that lookup at the
+    // legacy 3000px range unless this particular map currently has a viewer
+    // whose camera envelope really needs more.
+    private readonly Dictionary<int, double>
+        _maxObserverExitRadiusByMap = new();
 
     private readonly Dictionary<
         (int MapId, int CellX, int CellY),
@@ -231,9 +236,14 @@ public sealed class WorldEntitySpatialAoi
                     player.ConnectionId,
                     entry);
                 AddObserverCell(entry);
+                TrackObserverRadiusAdded(
+                    player.MapId,
+                    entry.ExitRadius);
             }
             else
             {
+                var previousExitRadius =
+                    entry.ExitRadius;
                 var nextCell = CellOf(
                     player.MapId,
                     player.X,
@@ -246,7 +256,13 @@ public sealed class WorldEntitySpatialAoi
                 }
                 entry.Player = player;
                 entry.EnterRadius = enterRadius;
-                entry.ExitRadius = enterRadius + (ExitRadius - EnterRadius);
+                entry.ExitRadius =
+                    enterRadius +
+                    (ExitRadius - EnterRadius);
+                TrackObserverRadiusChanged(
+                    player.MapId,
+                    previousExitRadius,
+                    entry.ExitRadius);
             }
 
             var candidates =
@@ -515,7 +531,8 @@ public sealed class WorldEntitySpatialAoi
         foreach (var observerId in
                  NearbyObserverIds(
                      entry.Cell,
-                     MaxViewExitRadius))
+                     ActiveObserverExitRadius(
+                         entry.Entity.MapId)))
         {
             candidates.Add(observerId);
         }
@@ -633,6 +650,9 @@ public sealed class WorldEntitySpatialAoi
             return;
 
         RemoveObserverCell(entry);
+        TrackObserverRadiusRemoved(
+            entry.Player.MapId,
+            entry.ExitRadius);
 
         foreach (var entityId in
                  entry.Visible)
@@ -647,6 +667,87 @@ public sealed class WorldEntitySpatialAoi
         }
 
         entry.Visible.Clear();
+    }
+
+    private double ActiveObserverExitRadius(
+        int mapId)
+        => _maxObserverExitRadiusByMap.TryGetValue(
+                mapId,
+                out var radius)
+            ? radius
+            : ExitRadius;
+
+    private void TrackObserverRadiusAdded(
+        int mapId,
+        double exitRadius)
+    {
+        if (!_maxObserverExitRadiusByMap.TryGetValue(
+                mapId,
+                out var current) ||
+            exitRadius > current)
+        {
+            _maxObserverExitRadiusByMap[mapId] =
+                exitRadius;
+        }
+    }
+
+    private void TrackObserverRadiusChanged(
+        int mapId,
+        double previousExitRadius,
+        double nextExitRadius)
+    {
+        if (previousExitRadius == nextExitRadius)
+            return;
+
+        if (!_maxObserverExitRadiusByMap.TryGetValue(
+                mapId,
+                out var current) ||
+            nextExitRadius > current)
+        {
+            _maxObserverExitRadiusByMap[mapId] =
+                nextExitRadius;
+            return;
+        }
+
+        if (previousExitRadius >= current &&
+            nextExitRadius < previousExitRadius)
+        {
+            RecalculateMaxObserverExitRadius(mapId);
+        }
+    }
+
+    private void TrackObserverRadiusRemoved(
+        int mapId,
+        double exitRadius)
+    {
+        if (_maxObserverExitRadiusByMap.TryGetValue(
+                mapId,
+                out var current) &&
+            exitRadius >= current)
+        {
+            RecalculateMaxObserverExitRadius(mapId);
+        }
+    }
+
+    private void RecalculateMaxObserverExitRadius(
+        int mapId)
+    {
+        var maxRadius = ExitRadius;
+        foreach (var observer in _observers.Values)
+        {
+            if (observer.Player.MapId != mapId)
+                continue;
+
+            maxRadius = Math.Max(
+                maxRadius,
+                observer.ExitRadius);
+        }
+
+        if (maxRadius <= ExitRadius)
+            _maxObserverExitRadiusByMap.Remove(mapId);
+        else
+            _maxObserverExitRadiusByMap[mapId] =
+                maxRadius;
     }
 
     private IEnumerable<long> NearbyEntityIds(
