@@ -6,6 +6,8 @@ on:
     paths:
       - 'client/network_player.gd'
       - 'client/scripts/remote_player_motion.gd'
+      - 'client/scripts/viewport_aoi_radius.gd'
+      - 'client/tests/viewport_aoi_radius_regression.gd'
       - 'client/scripts/multiplayer_motion_audit.gd'
       - 'client/scripts/network_entity_manager.gd'
       - 'client/scripts/network_manager.gd'
@@ -22,6 +24,9 @@ on:
     paths:
       - 'client/network_player.gd'
       - 'client/scripts/remote_player_motion.gd'
+      - 'client/scripts/viewport_aoi_radius.gd'
+      - 'client/tests/viewport_aoi_radius_regression.gd'
+      - 'client/scripts/network_manager.gd'
       - 'client/scripts/network_entity_manager.gd'
       - 'client/tests/remote_multiplayer_motion_regression.gd'
       - '.github/workflows/client-multiplayer-motion.yml'
@@ -60,7 +65,9 @@ jobs:
           cp client/scripts/remote_player_motion.gd "$project/scripts/"
           cp client/scripts/multiplayer_motion_audit.gd "$project/scripts/"
           cp client/scripts/monster_waypoint_speed.gd "$project/scripts/"
+          cp client/scripts/viewport_aoi_radius.gd "$project/scripts/"
           cp client/tests/remote_multiplayer_motion_regression.gd "$project/tests/"
+          cp client/tests/viewport_aoi_radius_regression.gd "$project/tests/"
           cp client/tests/multiplayer_motion_audit_regression.gd "$project/tests/"
           cp client/tests/monster_waypoint_math_regression.gd "$project/tests/"
           cp client/tests/multiplayer_20_actors_motion_regression.gd "$project/tests/"
@@ -69,6 +76,7 @@ jobs:
           for script in \
             remote_multiplayer_motion_regression.gd \
             monster_waypoint_math_regression.gd \
+            viewport_aoi_radius_regression.gd \
             multiplayer_motion_audit_regression.gd \
             multiplayer_20_actors_motion_regression.gd; do
             echo "==== $script ===="
@@ -77,6 +85,7 @@ jobs:
           done
           grep -Fq '[REMOTE_MOTION_TEST] ALL PASS' godot-motion.log
           grep -Fq '[MONSTER_WAYPOINT_TEST] ALL PASS' godot-motion.log
+          grep -Fq '[VIEWPORT_AOI_TEST] ALL PASS' godot-motion.log
           grep -Fq '[MOTION_AUDIT] ALL PASS' godot-motion.log
           grep -Fq '[MULTI20_MOTION_TEST] ALL PASS' godot-motion.log
       - name: Scene/packet integration regressions (requires original art)
