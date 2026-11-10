@@ -259,6 +259,15 @@ try
         var elapsedMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
         Check(character is not null && elapsedMs < 1000,
             $"character read remains nonblocking under another WAL writer ({elapsedMs:F1}ms)");
+        var hpStarted = Stopwatch.GetTimestamp();
+        var hpSnapshot = store.GetCharacterHpSnapshot(
+            [(accountId!.Value, characterId)]);
+        var hpElapsedMs = Stopwatch.GetElapsedTime(hpStarted).TotalMilliseconds;
+        Check(hpSnapshot.TryGetValue(characterId, out var hp) &&
+              hp > 0 && hpElapsedMs < 1000,
+            $"batched HP snapshot is read-only under another WAL writer ({hpElapsedMs:F1}ms)");
+        Check(store.GetCharacterHpSnapshot([(accountId.Value + 1000, characterId)]).Count == 0,
+            "batch HP query never leaks another account's character");
         using var rollback = writer.CreateCommand();
         rollback.CommandText = "ROLLBACK";
         rollback.ExecuteNonQuery();
