@@ -848,6 +848,47 @@ public sealed class SqliteGameStore : IGameStore
         return cmd.ExecuteNonQuery() == 1;
     }
 
+    // One transaction for all approved positions in a map-AOI heartbeat.
+    // The map predicate is essential: if a queued old-map snapshot races a
+    // teleport, it cannot overwrite the character's new spawn coordinates.
+    public void UpdatePositionsBatch(
+        IReadOnlyList<CharacterPositionWrite> positions)
+    {
+        if (positions.Count == 0)
+            return;
+
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            UPDATE characters
+               SET x=$x, y=$y
+             WHERE id=$id
+               AND account_id=$a
+               AND map_id=$map
+            """;
+        var x = cmd.Parameters.Add("$x", SqliteType.Integer);
+        var y = cmd.Parameters.Add("$y", SqliteType.Integer);
+        var id = cmd.Parameters.Add("$id", SqliteType.Integer);
+        var account = cmd.Parameters.Add("$a", SqliteType.Integer);
+        var map = cmd.Parameters.Add("$map", SqliteType.Integer);
+
+        foreach (var position in positions)
+        {
+            if (position.AccountId <= 0 || position.CharacterId <= 0 ||
+                position.MapId <= 0)
+                continue;
+            x.Value = position.X;
+            y.Value = position.Y;
+            id.Value = position.CharacterId;
+            account.Value = position.AccountId;
+            map.Value = position.MapId;
+            cmd.ExecuteNonQuery();
+        }
+        tx.Commit();
+    }
+
     public bool UpdateLocation(long accountId, long dbid, int mapId, int x, int y)
     {
         using var db = Open();
