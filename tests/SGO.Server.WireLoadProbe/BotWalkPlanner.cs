@@ -191,6 +191,11 @@ internal sealed class BotWalkPlanner
         return _center;
     }
 
+    public bool HasClearPath(
+        double fromX, double fromY, double targetX, double targetY)
+        => _navigation.IsDirectClear(
+            _map, fromX, fromY, targetX, targetY);
+
     public bool TryStep(int fromX, int fromY, double goalX, double goalY,
         out int nextX, out int nextY)
     {
