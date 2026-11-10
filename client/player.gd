@@ -692,12 +692,20 @@ func _handle_combat_tracking() -> void :
 
 
 	var dist = global_position.distance_to(combat_target.global_position)
-	# For ordinary attacks, convert the numeric base + equipment range stat
-	# to actual world-space reach. Weapon names/styles are not consulted.
-	# Skill CastRange (including its existing fallback) remains unchanged.
-	var required_range: float = NORMAL_ATTACK_RANGE.from_stat(
-		int(data_model.attack_range)
-	) if pending_skill_id <= 0 else float(data_model.attack_range)
+	# The first 120 numeric points on an equipped normal weapon represent
+	# ordinary close-combat reach, NOT additional range versus bare hands.
+	# Use only numeric attack_range data; unusual weapons and accessories
+	# still contribute their extra reach. Explicit skill ranges are untouched.
+	var required_range: float = float(data_model.attack_range)
+	if pending_skill_id <= 0:
+		var equipped_weapon_range: int = 0
+		if data_model.weapon_id > 0 and ItemLoader:
+			equipped_weapon_range = int(ItemLoader.get_item_property(
+				data_model.weapon_id, "attack_range", 0
+			))
+		required_range = NORMAL_ATTACK_RANGE.from_stat(
+			int(data_model.attack_range), equipped_weapon_range
+		)
 
 	if pending_skill_id > 0 and SkillLoader:
 		var s_res = SkillLoader.get_skill_data(pending_skill_id)
