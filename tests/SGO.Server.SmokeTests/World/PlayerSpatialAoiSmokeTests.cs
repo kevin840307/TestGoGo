@@ -63,6 +63,24 @@ internal static class PlayerSpatialAoiSmokeTests
         Check(!aoi.IsVisible(a.ConnectionId, b.ConnectionId),
             "AOI map transition cannot leak same-map visibility");
 
+        // A wide viewport must discover remote players even when the
+        // local character is stationary; legacy connections stay at 1800.
+        var adaptive = new PlayerSpatialAoi();
+        var wideViewer = Player(9001, 13, 0, 0);
+        var outerPeer = Player(9002, 13, 2900, 0);
+        adaptive.Upsert(wideViewer);
+        Check(adaptive.Upsert(outerPeer).Count == 0,
+            "legacy viewport does not unnecessarily subscribe to outer peers");
+        var expanded = adaptive.Upsert(wideViewer, 3200);
+        Check(expanded.Count == 2 && expanded.All(x => x.Appeared) &&
+              adaptive.IsVisible(outerPeer.ConnectionId, wideViewer.ConnectionId),
+            "wide viewport creates reciprocal outer player AOI edges");
+        Check(adaptive.Upsert(wideViewer, 3200).Count == 0,
+            "identical view radius cannot create duplicate player spawns");
+        var contracted = adaptive.Upsert(wideViewer, 1800);
+        Check(contracted.Count == 2 && contracted.All(x => !x.Appeared),
+            "shrink viewport sends reciprocal remote player despawns");
+
         // Separate index: no O(N^2) scanning or accidental pairs in a
         // 1000-player, evenly spread out map.
         var dense = new PlayerSpatialAoi();
