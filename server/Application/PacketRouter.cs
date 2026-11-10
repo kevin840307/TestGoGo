@@ -964,6 +964,8 @@ public sealed class PacketRouter
                 state.PositionDirty = false;
                 state.LastPositionPersistAt = DateTimeOffset.UtcNow;
                 state.LastPositionBroadcastAt = DateTimeOffset.MinValue;
+                state.LastBroadcastPositionX = null;
+                state.LastBroadcastPositionY = null;
                 state.LastResourceRecoveryAt = DateTimeOffset.UtcNow;
                 state.LastCompanionRuntimeAt = DateTimeOffset.UtcNow;
                 state.LastCompanionClientSyncAt = DateTimeOffset.UtcNow;
