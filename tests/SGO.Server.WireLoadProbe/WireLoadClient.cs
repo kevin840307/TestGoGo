@@ -245,6 +245,13 @@ internal sealed class WireLoadClient : IAsyncDisposable
         {
             return false;
         }
+        catch (TimeoutException)
+        {
+            // Waiting for absence in a distant AOI is expected: do not
+            // abort the whole test when no SpawnEntity is received.
+            // Other request/GM timeouts still propagate normally.
+            return false;
+        }
     }
 
     public Task SendPositionAsync(
