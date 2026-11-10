@@ -111,26 +111,6 @@ public sealed class ServerBroadcastHub
     private readonly ConcurrentDictionary<Guid, PlayerPriorityMovementState>
         _playerPriorityMovementStates = new();
 
-    // Only opted-in WebSocket observers compact unsent monster waypoints.
-    // Legacy in-process queue readers keep the original raw FIFO contract.
-    private sealed class PendingMonsterMove(long entityId, object packet)
-    {
-        public long EntityId { get; } = entityId;
-        public object LatestPacket { get; set; } = packet;
-        public double TotalSeconds { get; set; } =
-            ReadPacketDouble(packet, "SpeedTime");
-        public int MoveCount { get; set; } = 1;
-    }
-
-    private sealed class OrdinaryMovementState
-    {
-        public readonly object Gate = new();
-        public readonly Dictionary<long, PendingMonsterMove> Pending = new();
-    }
-
-    private readonly ConcurrentDictionary<Guid, OrdinaryMovementState>
-        _ordinaryMovementStates = new();
-
     // Wake only active senders. A single bounded notification coalesces
     // bursts; there is no 25ms polling timer per connected WebSocket.
     private readonly ConcurrentDictionary<Guid, Channel<byte>>
@@ -208,118 +188,10 @@ public sealed class ServerBroadcastHub
         }
         else
         {
-            EnqueueOrdinary(connectionId, queue, packet);
+            queue.Enqueue(packet);
         }
         if (_queueSignals.TryGetValue(connectionId, out var signal))
             signal.Writer.TryWrite(1);
-    }
-
-    private void EnqueueOrdinary(
-        Guid connectionId,
-        ConcurrentQueue<object> queue,
-        object packet)
-    {
-        if (!_ordinaryMovementStates.TryGetValue(connectionId, out var state))
-        {
-            queue.Enqueue(packet);
-            return;
-        }
-
-        lock (state.Gate)
-        {
-            var type = ReadPacketString(packet, "Type");
-            var entityId = ReadPacketLong(packet, "EntityID");
-            var seconds = ReadPacketDouble(packet, "SpeedTime");
-            if (type == "MoveEntity" && entityId >= 1_000_000 &&
-                seconds is > 0.01 and <= 1.0)
-            {
-                if (state.Pending.TryGetValue(entityId, out var pending))
-                {
-                    // This waypoint has not yet been sent. Replaying stale
-                    // 250ms samples after backpressure makes monsters hop.
-                    pending.LatestPacket = packet;
-                    pending.TotalSeconds = Math.Min(
-                        8.0, pending.TotalSeconds + seconds);
-                    pending.MoveCount++;
-                }
-                else
-                {
-                    var slot = new PendingMonsterMove(entityId, packet);
-                    state.Pending.Add(entityId, slot);
-                    queue.Enqueue(slot);
-                }
-                return;
-            }
-
-            // Keep every combat/correction/identity packet untouched. A
-            // boundary prevents later moves for the mentioned actor from
-            // being folded into an earlier queue position.
-            var hasActorBoundary = false;
-            foreach (var field in new[] {
-                "EntityID", "TargetID", "CasterID", "AttackerID" })
-            {
-                var actorId = ReadPacketLong(packet, field);
-                if (actorId <= 0)
-                    continue;
-                state.Pending.Remove(actorId);
-                hasActorBoundary = true;
-            }
-            if (!hasActorBoundary)
-                state.Pending.Clear();
-            queue.Enqueue(packet);
-        }
-    }
-
-    /// <summary>
-    /// Dequeues one ordinary broadcast. The WebSocket send loop must use
-    /// this API instead of reading its raw queue when fast-lane mode is on.
-    /// Gameplay and AOI events retain their original object and FIFO order.
-    /// </summary>
-    public bool TryDequeueOrdinary(Guid connectionId, out object packet)
-    {
-        packet = null!;
-        if (!_queues.TryGetValue(connectionId, out var queue))
-            return false;
-        if (!_ordinaryMovementStates.TryGetValue(connectionId, out var state))
-            return queue.TryDequeue(out packet!);
-
-        lock (state.Gate)
-        {
-            if (!queue.TryDequeue(out var queued))
-                return false;
-            if (queued is PendingMonsterMove slot)
-            {
-                if (state.Pending.TryGetValue(slot.EntityId, out var current) &&
-                    ReferenceEquals(current, slot))
-                    state.Pending.Remove(slot.EntityId);
-
-                if (slot.MoveCount > 1)
-                {
-                    var latest = slot.LatestPacket;
-                    packet = new
-                    {
-                        Type = "MoveEntity",
-                        EntityID = slot.EntityId,
-                        X = ReadPacketDouble(latest, "X"),
-                        Y = ReadPacketDouble(latest, "Y"),
-                        Dir = ReadPacketString(latest, "Dir") ?? "1",
-                        // The monster client consumes this as the intended
-                        // waypoint duration. Do not replay the older points.
-                        // 750ms avoids hiding multi-second stalled sockets.
-                        SpeedTime = Math.Clamp(slot.TotalSeconds, 0.05, 0.75)
-                    };
-                }
-                else
-                {
-                    packet = slot.LatestPacket;
-                }
-            }
-            else
-            {
-                packet = queued;
-            }
-            return true;
-        }
     }
 
     private static bool IsPlayerPriorityPacket(object packet)
@@ -434,7 +306,6 @@ public sealed class ServerBroadcastHub
         if (prioritizePlayerEvents)
         {
             _playerPriorityMovementStates[id] = new PlayerPriorityMovementState();
-            _ordinaryMovementStates[id] = new OrdinaryMovementState();
             _playerPriorityQueues[id] = new ConcurrentQueue<object>();
         }
         _queueSignals[id] = Channel.CreateBounded<byte>(
@@ -566,7 +437,6 @@ public sealed class ServerBroadcastHub
         _queues.TryRemove(connectionId, out _);
         _playerPriorityQueues.TryRemove(connectionId, out _);
         _playerPriorityMovementStates.TryRemove(connectionId, out _);
-        _ordinaryMovementStates.TryRemove(connectionId, out _);
         if (_queueSignals.TryRemove(connectionId, out var signal))
             signal.Writer.TryComplete();
         _presence.TryRemove(connectionId, out _);
