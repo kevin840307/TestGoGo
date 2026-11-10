@@ -70,6 +70,7 @@ if (args.Length != 0)
             WorldEntityAoiSnapshotRaceSmokeTests.Run();
             WorldEntityAoiSnapshotLeaseSmokeTests.Run();
             MapAiOwnerSpatialIndexSmokeTests.Run();
+            NormalAttackRangeSmokeTests.Run();
             Console.WriteLine("World/AOI smoke passed.");
             return;
         case "concurrency":
@@ -117,6 +118,7 @@ WorldEntityAoiStationaryRefreshSmokeTests.Run();
 WorldEntityAoiSnapshotRaceSmokeTests.Run();
 WorldEntityAoiSnapshotLeaseSmokeTests.Run();
 MapAiOwnerSpatialIndexSmokeTests.Run();
+NormalAttackRangeSmokeTests.Run();
 ConcurrencySmokeTests.Run(repoRoot);
 EconomyConcurrencySmokeTests.Run();
 EconomyRequestGuardSmokeTests.Run();
@@ -132,6 +134,7 @@ var realCurrentCatalog = new CurrentClientDataCatalog(
     Path.Combine(repoRoot, "client"));
 
 CurrentClientCatalogSmokeTests.Run(realCurrentCatalog);
+NormalAttackRangeSmokeTests.CheckCatalog(realCurrentCatalog);
 
 CurrentItemDefinition CurrentItem(
     int id,
