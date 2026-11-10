@@ -725,10 +725,12 @@ func _handle_combat_tracking() -> void :
 	# Original RunPlayerLogic: cmp distanceSquared, rangeSquared - 200;
 	# jge approach. On an exact equality we still chase the target.
 	# Keep skills' CastRange boundary unchanged.
-	var outside_range: bool = (
-		global_position.distance_squared_to(combat_target.global_position)
-		>= normal_attack_range_squared
-	) if pending_skill_id <= 0 else dist > required_range
+	var outside_range: bool = dist > required_range
+	if pending_skill_id <= 0:
+		outside_range = (
+			global_position.distance_squared_to(combat_target.global_position)
+			>= normal_attack_range_squared
+		)
 	if outside_range:
 		var combat_destination: Vector2 = combat_target.global_position
 		if move_destination.distance_to(combat_destination) >= 16.0 or not is_moving:
