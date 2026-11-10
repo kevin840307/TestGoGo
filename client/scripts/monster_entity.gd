@@ -1035,13 +1035,34 @@ static func should_ease_authoritative_correction(distance: float, on_screen: boo
 	)
 
 
+# The screen notifier can lag behind Camera2D after zoom or viewport
+# resize. Its cached _is_on_screen flag must not turn an on-camera 0ms
+# attack correction into a one-frame position teleport at the screen edge.
+func _is_near_current_viewport(world_pos: Vector2) -> bool:
+	if not is_inside_tree():
+		return false
+	var viewport: Viewport = get_viewport()
+	if not is_instance_valid(viewport) or not is_instance_valid(viewport.get_camera_2d()):
+		return false
+	var screen_pos: Vector2 = viewport.get_canvas_transform() * world_pos
+	return MONSTER_WAYPOINT_SPEED.is_near_viewport(
+		viewport.get_visible_rect(), screen_pos, 64.0
+	)
+
+
 func _ease_authoritative_visual_correction(previous_world_pos: Vector2) -> void:
 	var distance: float = previous_world_pos.distance_to(global_position)
 	# The physics body must move to the server-approved coordinate immediately,
 	# but keep its sprite and UI visually continuous after a delayed attack snap.
 	# Real map teleports or respawns (>160 px) are never visually disguised.
+	var is_near_screen: bool = _is_on_screen
+	if not is_near_screen:
+		is_near_screen = (
+			_is_near_current_viewport(previous_world_pos)
+			or _is_near_current_viewport(global_position)
+		)
 	if not is_inside_tree() or not should_ease_authoritative_correction(
-		distance, _is_on_screen, current_state
+		distance, is_near_screen, current_state
 	):
 		_clear_authoritative_visual_correction()
 		return
