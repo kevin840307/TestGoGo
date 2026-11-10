@@ -7542,7 +7542,7 @@ public sealed class PacketRouter
         // Keep 250ms pet movement and attack semantics intact, but avoid
         // loading inventory, all equipment, every stored pet and the full
         // character on every online player's world tick.
-        var activePets = _store.GetActivePetFollowSnapshot(accountId, dbid);
+        var activePets = _store.GetActivePetFollowSnapshot(accountId, dbid).ToArray();
         if (activePets.Count == 0)
             return [];
 
