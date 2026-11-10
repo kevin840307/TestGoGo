@@ -66,6 +66,7 @@ public static class WebSocketEndpoint
                     ctx.RequestAborted);
             var worldTickToken = worldTickCts.Token;
 
+            long lastSlowSendLoggedUtcTicks = 0;
             async Task SendPacketsAsync(
                 IReadOnlyList<object> packets,
                 CancellationToken cancellationToken,
@@ -111,13 +112,21 @@ public static class WebSocketEndpoint
                     sendStarted).TotalMilliseconds;
                 if (sendMs >= 250)
                 {
-                    // Identify head-of-line blocking without exposing payloads.
-                    // This is passive timing only: no reordering, dropped
-                    // packets, async writes or modified send cadence.
-                    log.LogWarning(
-                        "[SLOW_SEND_BATCH] TotalMs={TotalMs:F1} GateWaitMs={GateWaitMs:F1} EncodeMs={EncodeMs:F1} SocketWriteMs={SocketWriteMs:F1} Count={Count} Broadcast={Broadcast} Connection={ConnectionID}",
-                        sendMs, sendGateWaitMs, encodeMs, socketWriteMs,
-                        packets.Count, broadcastPacket, state.ConnectionId);
+                    // Per-connection rate limit: don't make a busy sender
+                    // slower by flooding logs during a sustained backlog.
+                    var loggedAt = System.Threading.Interlocked.Read(
+                        ref lastSlowSendLoggedUtcTicks);
+                    var nowTicks = DateTimeOffset.UtcNow.UtcTicks;
+                    if ((loggedAt == 0 ||
+                         nowTicks - loggedAt >= TimeSpan.FromSeconds(5).Ticks) &&
+                        System.Threading.Interlocked.CompareExchange(
+                            ref lastSlowSendLoggedUtcTicks, nowTicks, loggedAt) == loggedAt)
+                    {
+                        log.LogWarning(
+                            "[SLOW_SEND_BATCH] TotalMs={TotalMs:F1} GateWaitMs={GateWaitMs:F1} EncodeMs={EncodeMs:F1} SocketWriteMs={SocketWriteMs:F1} Count={Count} Broadcast={Broadcast} Connection={ConnectionID}",
+                            sendMs, sendGateWaitMs, encodeMs, socketWriteMs,
+                            packets.Count, broadcastPacket, state.ConnectionId);
+                    }
                 }
             }
 
