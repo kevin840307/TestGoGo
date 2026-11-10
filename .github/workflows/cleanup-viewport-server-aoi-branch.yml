@@ -1,0 +1,37 @@
+name: Cleanup temporary viewport server AOI branch
+
+on:
+  push:
+    branches: [feature/local-server-net8]
+    paths:
+      - '.github/workflows/cleanup-viewport-server-aoi-branch.yml'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  delete-merged-temp-branch:
+    if: github.repository == 'kevin840307/TestGoGo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete only the merged PR #6 temporary branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          merged="$(gh api "repos/$GH_REPO/pulls/6" --jq '.merged')"
+          if [[ "$merged" != "true" ]]; then
+            echo "PR #6 is not merged; refusing to delete any branch"
+            exit 0
+          fi
+          branch_ref="heads/perf/viewport-motion-sync-gpt56"
+          if gh api "repos/$GH_REPO/git/ref/$branch_ref" --jq '.ref' >/dev/null 2>&1; then
+            gh api --method DELETE "repos/$GH_REPO/git/refs/$branch_ref"
+            echo "Deleted merged perf/viewport-motion-sync-gpt56"
+          else
+            echo "Temporary branch already absent"
+          fi
