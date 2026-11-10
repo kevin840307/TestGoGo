@@ -15,7 +15,8 @@ internal static class InteractiveBots
         var radius = 280;
         var interval = 350;
         var duration = 0;
-        var spawn = -1;
+        // Use existing map monsters by default; --monsters may add test spawns.
+        var spawn = 0;
         var concurrency = 5;
         var level = 1;
         var combat = true;
@@ -54,8 +55,6 @@ internal static class InteractiveBots
             }
         }
 
-        if (spawn == -1)
-            spawn = Math.Clamp(count, 5, 100);
         if (x.HasValue != y.HasValue)
             throw new ArgumentException("Supply both --x and --y or neither (automatic map placement).");
         if (count < 1 || count > 1000) throw new ArgumentOutOfRangeException(nameof(count), "1..1000");
@@ -64,7 +63,6 @@ internal static class InteractiveBots
             duration < 0 || spawn < 0 || spawn > 100 ||
             concurrency < 1 || concurrency > 50)
             throw new ArgumentException("Invalid radius/level/seconds/monsters/setup-concurrency");
-        if (combat && spawn == 0) throw new ArgumentException("Combat needs --monsters > 0");
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
             uri.Scheme is not ("ws" or "wss"))
             throw new ArgumentException("--url must be ws:// or wss://");
@@ -86,7 +84,7 @@ internal static class InteractiveBots
         var mapEnemy = enemyOptions.Length > 0
             ? enemyOptions[(enemyOptions.Length * 3) / 4]
             : null;
-        if (combat && mapEnemy is null)
+        if (combat && spawn > 0 && mapEnemy is null)
             throw new InvalidOperationException(
                 "The map contains no valid Enemy.dat entries; cannot spawn test monsters.");
         var locations = Enumerable.Range(0, count)
@@ -110,7 +108,9 @@ internal static class InteractiveBots
         Console.WriteLine($"[BOTS] run={run} count={count} map={map} " +
             (x.HasValue ? $"center=({walks.Center.X},{walks.Center.Y}) radius={radius}"
                 : "placement=all walkable enemy zones (no fixed patrol radius)"));
-        Console.WriteLine("[BOTS] Requires disposable DB + Game__GmCommandsEnabled=true + Game__TestBotCommandsEnabled=true.");
+        Console.WriteLine("[BOTS] Connecting to the existing SGO Server via WebSocket (no separate database).");
+        Console.WriteLine("[BOTS] New bot accounts persist in the existing Server database.");
+        Console.WriteLine("[BOTS] Requires Game__GmCommandsEnabled=true and Game__TestBotCommandsEnabled=true on Server.");
         Console.WriteLine("[BOTS] Lv1, ATK=1, DEF=1000, HP=20000; normal attacks + rare simple single-target skills.");
 
         try
@@ -187,8 +187,8 @@ internal static class InteractiveBots
 
             if (combat)
             {
-                // Spawn real server monsters in verified walkable coordinates.
-                // They also respawn through the normal shared world AI.
+                // By default use normal map monsters already on this Server.
+                // Explicit --monsters N uses the existing GM spawn path.
                 for (var i = 0; i < spawn; i++)
                 {
                     try
