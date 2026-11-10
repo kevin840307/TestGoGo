@@ -1,4 +1,5 @@
 using System.Net.WebSockets;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
@@ -467,8 +468,10 @@ internal sealed class WireLoadClient : IAsyncDisposable
             $"wire-load-{runId}-{Index:D3}";
         var characterName =
             $"WL{Index:D3}{runId[..5]}";
-        const string password =
-            "WireLoad-123";
+        // Bots are now permitted on the existing Server/database. Do
+        // not leave predictable login credentials in persistent accounts.
+        var password = Convert.ToHexString(
+            RandomNumberGenerator.GetBytes(24));
 
         progress?.Invoke(Index, "register-account");
         var register = await RequestAsync(
