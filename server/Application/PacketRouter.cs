@@ -257,13 +257,15 @@ public sealed class PacketRouter
             hasCurrent ? state.AccountId : null,
             hasCurrent ? state.LastX : 0,
             hasCurrent ? state.LastY : 0,
-            hasCurrent ? state.CharacterName : "");
+            hasCurrent ? state.CharacterName : "",
+            state.ViewInterestRadius);
 
         var needsSpatialReconcile =
             changed ||
             !state.PresenceAoiInitialized ||
             state.LastPresenceAoiX != state.LastX ||
-            state.LastPresenceAoiY != state.LastY;
+            state.LastPresenceAoiY != state.LastY ||
+            state.LastPresenceAoiInterestRadius != state.ViewInterestRadius;
         if (hasCurrent && state.WorldReady && needsSpatialReconcile)
         {
             PublishPlayerAoiChanges(
@@ -273,6 +275,7 @@ public sealed class PacketRouter
             state.PresenceAoiInitialized = true;
             state.LastPresenceAoiX = state.LastX;
             state.LastPresenceAoiY = state.LastY;
+            state.LastPresenceAoiInterestRadius = state.ViewInterestRadius;
         }
 
         state.PublishedMapId = nextMapId;
@@ -1056,6 +1059,32 @@ public sealed class PacketRouter
                 ];
             }
 
+            case "ViewInterest":
+            {
+                if (!state.CharacterId.HasValue || state.CurrentMapId <= 0)
+                    return [];
+
+                var requestedViewRadius = req.Int(
+                    "ViewRadius",
+                    (int)Math.Round(state.ViewInterestRadius));
+                var normalizedViewRadius =
+                    PlayerSpatialAoi.NormalizeEnterRadius(
+                        requestedViewRadius);
+                if (Math.Abs(
+                        normalizedViewRadius -
+                        state.ViewInterestRadius) < 64)
+                    return [];
+
+                state.ViewInterestRadius = normalizedViewRadius;
+                _broadcasts.UpdateViewInterest(
+                    state.ConnectionId,
+                    normalizedViewRadius);
+                // The normal post-packet SyncPresence call performs both
+                // spatial reconciliations once, outside this handler.
+                state.PresenceAoiInitialized = false;
+                return [];
+            }
+
             case "WorldReady":
             {
                 if (!state.CharacterId.HasValue || state.CurrentMapId <= 0)
@@ -1087,6 +1116,14 @@ public sealed class PacketRouter
                     ];
                 }
 
+                state.ViewInterestRadius =
+                    PlayerSpatialAoi.NormalizeEnterRadius(
+                        req.Int(
+                            "ViewRadius",
+                            (int)Math.Round(state.ViewInterestRadius)));
+                _broadcasts.UpdateViewInterest(
+                    state.ConnectionId,
+                    state.ViewInterestRadius);
                 state.WorldReady = true;
 
                 // Map loading is asynchronous on the Godot client. Ground-item
@@ -1220,6 +1257,8 @@ public sealed class PacketRouter
                     state.PresenceAoiInitialized = true;
                     state.LastPresenceAoiX = x;
                     state.LastPresenceAoiY = y;
+                    state.LastPresenceAoiInterestRadius =
+                        state.ViewInterestRadius;
                 }
                 aoiMs = Stopwatch.GetElapsedTime(aoiStarted).TotalMilliseconds;
 
