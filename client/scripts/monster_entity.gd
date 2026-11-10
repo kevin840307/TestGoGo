@@ -1107,9 +1107,13 @@ func _apply_network_target_direction(target_pos: Vector2) -> void :
 # The original client advances an entity by small local steps between
 # destination updates. Keep that pacing for presentation, while all server
 # corrections, targeting and combat packets retain their normal handling.
-static func calculate_network_move_speed(distance: float, duration: float) -> float:
+static func calculate_network_move_speed(distance: float, duration: float,
+		snapshot_span_seconds: float = 0.0) -> float:
+	var playback_seconds: float = MONSTER_WAYPOINT_SPEED.playback_duration(
+		duration, snapshot_span_seconds
+	)
 	return MONSTER_WAYPOINT_SPEED.calculate(
-		distance, duration,
+		distance, playback_seconds,
 		NETWORK_MOVE_VISUAL_SLACK_SECONDS,
 		NETWORK_MOVE_MIN_SPEED,
 		NETWORK_MOVE_MAX_SPEED,
@@ -1117,7 +1121,8 @@ static func calculate_network_move_speed(distance: float, duration: float) -> fl
 	)
 
 
-func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
+func network_move_to(target_pos: Vector2, speed_time: float = 1.0,
+		snapshot_span_seconds: float = 0.0) -> void :
 	if current_hp <= 0:
 		return
 	_idle_after_last_waypoint = false
@@ -1190,7 +1195,9 @@ func network_move_to(target_pos: Vector2, speed_time: float = 1.0) -> void :
 	# Follow server waypoint duration, not a fixed 205px/s ceiling. The
 	# latter leaves a monster behind whenever one 250ms waypoint exceeds
 	# ~53px and causes ever-growing stutter under multiplayer bursts.
-	network_move_speed = calculate_network_move_speed(remaining, speed_time)
+	network_move_speed = calculate_network_move_speed(
+		remaining, speed_time, snapshot_span_seconds
+	)
 
 	# Combat animation owns the body while it is playing, but keep the newest
 	# movement target buffered. When ATTACK/HIT finishes, movement resumes
