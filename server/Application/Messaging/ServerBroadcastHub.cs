@@ -91,6 +91,15 @@ public sealed class ServerBroadcastHub
     {
         public long EntityId { get; } = entityId;
         public object LatestPacket { get; set; } = packet;
+        // A queued visual move may replace several 100ms snapshots. Retain
+        // their combined server elapsed time so the client does not mistake
+        // hundreds of milliseconds of walking for a single short step.
+        // Zero means this packet did not provide a trustworthy interval.
+        public double TotalServerSeconds { get; set; } =
+            ReadPacketDouble(packet, "SpeedTime") is > 0 and <= 0.75
+                ? ReadPacketDouble(packet, "SpeedTime")
+                : 0;
+        public int MoveCount { get; set; } = 1;
     }
 
     private sealed class PlayerPriorityMovementState
@@ -135,6 +144,13 @@ public sealed class ServerBroadcastHub
                             // The old MoveEntity has not left this queue yet.
                             // No need to transmit a historical intermediate
                             // point before the latest authoritative position.
+                            var nextSeconds = ReadPacketDouble(packet, "SpeedTime");
+                            slot.TotalServerSeconds =
+                                slot.TotalServerSeconds > 0 &&
+                                nextSeconds is > 0 and <= 0.75
+                                    ? slot.TotalServerSeconds + nextSeconds
+                                    : 0;
+                            slot.MoveCount++;
                             slot.LatestPacket = packet;
                         }
                         else
@@ -220,7 +236,28 @@ public sealed class ServerBroadcastHub
                 if (movement.Pending.TryGetValue(slot.EntityId, out var current) &&
                     ReferenceEquals(current, slot))
                     movement.Pending.Remove(slot.EntityId);
-                packet = slot.LatestPacket;
+                // For coalesced movements preserve the newest destination
+                // AND elapsed server time. Otherwise the client computes an
+                // exaggerated velocity and an otherwise smooth remote actor
+                // looks as if it teleports forward after socket backpressure.
+                // Non-coalesced packets retain identity and encryption cache.
+                if (slot.MoveCount > 1 && slot.TotalServerSeconds > 0)
+                {
+                    var newest = slot.LatestPacket;
+                    packet = new
+                    {
+                        Type = "MoveEntity",
+                        EntityID = slot.EntityId,
+                        X = ReadPacketDouble(newest, "X"),
+                        Y = ReadPacketDouble(newest, "Y"),
+                        Dir = ReadPacketString(newest, "Dir") ?? "1",
+                        SpeedTime = Math.Clamp(slot.TotalServerSeconds, 0.05, 0.75)
+                    };
+                }
+                else
+                {
+                    packet = slot.LatestPacket;
+                }
             }
             else
             {
