@@ -251,7 +251,11 @@ public sealed class ServerBroadcastHub
                         X = ReadPacketDouble(newest, "X"),
                         Y = ReadPacketDouble(newest, "Y"),
                         Dir = ReadPacketString(newest, "Dir") ?? "1",
-                        SpeedTime = Math.Clamp(slot.TotalServerSeconds, 0.05, 0.75)
+                        // Existing clients retain the original <=750ms field.
+                        // New clients can use the full elapsed *server* span
+                        // to avoid false speed-up after queued snapshots.
+                        SpeedTime = Math.Clamp(slot.TotalServerSeconds, 0.05, 0.75),
+                        SnapshotSpanSeconds = Math.Clamp(slot.TotalServerSeconds, 0.05, 8.0)
                     };
                 }
                 else

@@ -13,6 +13,12 @@ on:
       - 'server/Application/PacketRouter.cs'
       - 'tests/SGO.Server.BroadcastPriorityProbe/**'
       - '.github/workflows/server-aoi-priority.yml'
+  pull_request:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'server/Application/Messaging/ServerBroadcastHub.cs'
+      - 'tests/SGO.Server.BroadcastPriorityProbe/**'
+      - '.github/workflows/server-aoi-priority.yml'
   workflow_dispatch:
 
 permissions:

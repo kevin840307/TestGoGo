@@ -472,7 +472,8 @@ func update_appearance_from_server(data: Dictionary) -> void :
 
 
 
-func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
+func network_move_to(new_pos: Vector2, speed_time: float = 1.0,
+	extended_server_seconds: float = 0.0) -> void :
 	if is_dead:
 		return
 	_pending_idle = false
@@ -494,7 +495,8 @@ func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
 	# Advance visually at physics cadence between them, without requiring
 	# more packets or restarting a tween at every new position packet.
 	_remote_motion.receive(
-		new_pos, received_msec, speed_time, teleport_distance
+		new_pos, received_msec, speed_time, teleport_distance,
+		extended_server_seconds
 	)
 	target_position = new_pos
 	global_position = _remote_motion.visual_position
