@@ -1,5 +1,9 @@
 using System.Collections.Concurrent;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Channels;
+using SGO.Server.Protocol;
 
 namespace SGO.Server.Application.Messaging;
 
@@ -30,6 +34,50 @@ public sealed class ServerBroadcastHub
 
     private readonly ConcurrentDictionary<Guid, ConcurrentQueue<object>>
         _queues = new();
+
+    // One immutable player/world event is normally delivered to many nearby
+    // sockets. Serialize/encrypt scalar-only anonymous packets once by object
+    // identity instead of repeating this CPU work for every observer. Mutable
+    // collections and structured payloads never enter the cache.
+    private static readonly ConcurrentDictionary<Type, bool>
+        CacheableBroadcastTypes = new();
+    private readonly ConditionalWeakTable<object, Lazy<byte[]>>
+        _encodedBroadcastPackets = new();
+
+    private static bool IsCacheableBroadcastType(Type type)
+        => CacheableBroadcastTypes.GetOrAdd(type, static t =>
+        {
+            if (!t.IsDefined(typeof(CompilerGeneratedAttribute), false) ||
+                !t.Name.Contains("AnonymousType", StringComparison.Ordinal))
+                return false;
+
+            foreach (var property in t.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                var propertyType = Nullable.GetUnderlyingType(property.PropertyType)
+                                   ?? property.PropertyType;
+                if (!propertyType.IsPrimitive && !propertyType.IsEnum &&
+                    propertyType != typeof(string) &&
+                    propertyType != typeof(decimal))
+                    return false;
+            }
+
+            return true;
+        });
+
+    public byte[] EncodeBroadcastPacket(object packet)
+    {
+        if (!IsCacheableBroadcastType(packet.GetType()))
+            return Encoding.UTF8.GetBytes(ClientProtocol.Encode(packet));
+
+        // Weak keys keep memory bounded by packet lifetime. Lazy guarantees
+        // that observers concurrently encoding the same packet share one
+        // complete, immutable encrypted frame.
+        return _encodedBroadcastPackets.GetValue(
+            packet,
+            static key => new Lazy<byte[]>(
+                () => Encoding.UTF8.GetBytes(ClientProtocol.Encode(key)),
+                LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+    }
     // Opt-in WebSocket fast lane. Legacy in-process registrations keep the
     // original single queue, preserving their ordering and test contracts.
     private readonly ConcurrentDictionary<Guid, ConcurrentQueue<object>>
