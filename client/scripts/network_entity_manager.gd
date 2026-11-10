@@ -7,6 +7,7 @@ const NPC_SCENE = preload("res://npc_entity.tscn")
 const GROUND_ITEM_SCENE = preload("res://ground_item_entity.tscn")
 const PET_SCENE = preload("res://pet_entity.tscn")
 const PENDING_AOI_MOVES = preload("res://scripts/network_entity_pending_moves.gd")
+const GROUND_DROP_SPATIAL_INDEX = preload("res://scripts/ground_drop_spatial_index.gd")
 const DYNAMIC_ENTITY_VISIBILITY_LAYER: = 1 << 1
 const DEBUG_MONSTER_NETWORK_LOGS: bool = false
 const MONSTER_AOI_ENTER_RADIUS: float = 1800.0
@@ -52,8 +53,10 @@ var _monster_aoi_stationary_elapsed: float = 0.0
 var _monster_aoi_full_scans: int = 0
 var _monster_aoi_reused_scans: int = 0
 var _ground_spawn_templates: Dictionary = {}
+var _ground_visibility_index = GROUND_DROP_SPATIAL_INDEX.new()
 var _deferred_ground_spawns: Dictionary = {}
 var _ground_aoi_elapsed: float = 0.0
+var _ground_protection_tick_elapsed: float = 0.0
 var _ground_aoi_last_context: Variant = null
 var _ground_aoi_stationary_elapsed: float = 0.0
 var _ground_aoi_full_scans: int = 0
@@ -113,6 +116,8 @@ func clear_map_entities() -> Dictionary:
 	_monster_aoi_reused_scans = 0
 	_ground_spawn_templates.clear()
 	_deferred_ground_spawns.clear()
+	_ground_visibility_index.clear()
+	_ground_protection_tick_elapsed = 0.0
 	_ground_aoi_elapsed = 0.0
 	_ground_aoi_last_context = null
 	_ground_aoi_stationary_elapsed = 0.0
@@ -210,9 +215,7 @@ func _should_display_ground_drop(entity_id: int, _data: Dictionary, center: Vect
 	# No nested scan per ground-item node. Recompute winners once for the
 	# observer AOI or newly arrived/removed drop, then O(1) membership checks.
 	if _ground_display_cache_dirty or _ground_display_cache_radius != radius or _ground_display_cache_center.distance_squared_to(center) > 6400.0:
-		_ground_display_winners = ClientPerformanceProfile.select_visible_ground_drop_ids(
-			_ground_spawn_templates, center, radius, 5
-		)
+		_ground_display_winners = _ground_visibility_index.find_nearest(center, radius, 5)
 		_ground_display_cache_center = center
 		_ground_display_cache_radius = radius
 		_ground_display_cache_dirty = false
@@ -232,6 +235,7 @@ func _schedule_ground_visual_trim(entity_id: int, drop: Node2D) -> void:
 	_ground_trim_queue.append(entity_id)
 
 func _trim_ground_visuals_budgeted() -> void:
+	var aoi: Dictionary = _ground_aoi_context()
 	var checked: int = mini(GROUND_VISUAL_TRIM_PER_FRAME, _ground_trim_queue.size())
 	for i in range(checked):
 		var entity_id: int = _ground_trim_queue.pop_front()
@@ -241,7 +245,6 @@ func _trim_ground_visuals_budgeted() -> void:
 			continue
 		if bool(drop.get_meta("is_requesting", false)):
 			continue
-		var aoi: Dictionary = _ground_aoi_context()
 		var allowed: bool = aoi["center"] != null and _should_display_ground_drop(
 			entity_id, _ground_spawn_templates[entity_id], aoi["center"], float(aoi["enter"])
 		)
@@ -427,6 +430,10 @@ func get_ground_aoi_stats() -> Dictionary:
 		"display_mode": _ground_drop_mode(),
 		"selected": _ground_display_winners.size() if _ground_drop_mode() == ClientPerformanceProfile.GROUND_DROPS_LIMIT_DUPLICATES else -1,
 		"pending_trim": _ground_trim_queue.size(),
+		"ground_index_records": _ground_visibility_index.records.size(),
+		"ground_index_cells": _ground_visibility_index.cells.size(),
+		"ground_index_last_visited": _ground_visibility_index.last_visited_items,
+		"ground_index_rebuilds": _ground_visibility_index.rebuild_count,
 		"ground_full_scans": _ground_aoi_full_scans,
 		"ground_skipped_scans": _ground_aoi_reused_scans,
 		"monster_full_scans": _monster_aoi_full_scans,
@@ -1054,12 +1061,20 @@ func _on_entity_spawned(data: Dictionary) -> void :
 		var cached_ground: Dictionary = data.duplicate(true)
 		cached_ground["_aoi_cached_at"] = Time.get_ticks_msec()
 		_ground_spawn_templates[entity_id] = cached_ground
+		_ground_visibility_index.upsert(entity_id, cached_ground)
 		_ground_display_cache_dirty = true
 		_ground_aoi_last_context = null
 		if get_active_entity(entity_id):
 			_deferred_ground_spawns.erase(entity_id)
 			return
 		if _is_afk_ground_data_only():
+			_deferred_ground_spawns[entity_id] = cached_ground
+			_remove_queued_spawn(entity_id)
+			return
+		# During a burst (hundreds of drops) do not sort/rebuild the winner
+		# set after every SpawnEntity. Keep all data, then select once at the
+		# next 250ms display AOI pass, without holding up network processing.
+		if _ground_drop_mode() == ClientPerformanceProfile.GROUND_DROPS_LIMIT_DUPLICATES:
 			_deferred_ground_spawns[entity_id] = cached_ground
 			_remove_queued_spawn(entity_id)
 			return
@@ -1144,6 +1159,7 @@ func _run_entity_runtime(delta: float) -> void :
 		_pending_aoi_moves.clear()
 		_ground_spawn_templates.clear()
 		_deferred_ground_spawns.clear()
+		_ground_visibility_index.clear()
 		_ground_display_winners.clear()
 		_ground_display_cache_dirty = true
 		_ground_trim_queue.clear()
@@ -1156,6 +1172,14 @@ func _run_entity_runtime(delta: float) -> void :
 	_trim_ground_visuals_budgeted()
 	_update_monster_aoi(delta)
 	_update_ground_aoi(delta)
+	# One clock for every protected ground label. No Timer node per item.
+	# Visual only: 60Hz simulation, pickups and network packets are unchanged.
+	_ground_protection_tick_elapsed += delta
+	if _ground_protection_tick_elapsed >= 1.0:
+		_ground_protection_tick_elapsed = fmod(_ground_protection_tick_elapsed, 1.0)
+		for item in get_tree().get_nodes_in_group("sgo_protected_ground_item"):
+			if is_instance_valid(item) and item.has_method("refresh_protection_label"):
+				item.refresh_protection_label()
 	_player_visibility_elapsed += delta
 	if _player_visibility_elapsed >= PLAYER_VISIBILITY_REFRESH_INTERVAL:
 		_player_visibility_elapsed = 0.0
@@ -1442,6 +1466,7 @@ func _on_entity_despawned(data: Dictionary) -> void :
 	_combat_reveal_until_msec.erase(entity_id)
 	_ground_spawn_templates.erase(entity_id)
 	_deferred_ground_spawns.erase(entity_id)
+	_ground_visibility_index.erase(entity_id)
 	_ground_display_cache_dirty = true
 	_ground_trim_pending.erase(entity_id)
 	_remove_queued_spawn(entity_id)
