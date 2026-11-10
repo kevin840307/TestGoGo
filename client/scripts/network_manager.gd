@@ -461,18 +461,21 @@ func _current_view_interest_radius() -> int:
 	var viewport: Viewport = get_viewport()
 	if not is_instance_valid(viewport):
 		return int(VIEW_INTEREST_RADIUS.MIN_RADIUS)
-	var view_size: Vector2 = viewport.get_visible_rect().size
+	var viewport_rect: Rect2 = viewport.get_visible_rect()
+	if GameManager and is_instance_valid(GameManager.current_player):
+		return roundi(VIEW_INTEREST_RADIUS.calculate_from_canvas(
+			viewport_rect,
+			viewport.get_canvas_transform(),
+			GameManager.current_player.global_position
+		))
+	# WorldReady normally has a player. Keep a safe fallback for bootstrap
+	# callers without assuming the old 800x600 camera.
 	var camera: Camera2D = viewport.get_camera_2d()
 	var zoom: float = 1.0
-	var camera_player_offset: float = 0.0
 	if is_instance_valid(camera):
 		zoom = minf(absf(camera.zoom.x), absf(camera.zoom.y))
-		if GameManager and is_instance_valid(GameManager.current_player):
-			camera_player_offset = camera.global_position.distance_to(
-				GameManager.current_player.global_position
-			)
 	return roundi(VIEW_INTEREST_RADIUS.calculate(
-		view_size, zoom, camera_player_offset
+		viewport_rect.size, zoom, 0.0
 	))
 
 
