@@ -14,6 +14,8 @@ const SMOOTHING_RATE: float = 14.0
 # Safety cap for a delayed 2s+ packet: spring smoothing must not turn one
 # badly delayed snapshot into a visible 100px jump in one physics frame.
 const MAX_VISUAL_CATCHUP_SPEED: float = 900.0
+const MIN_EXPECTED_CATCHUP_SPEED: float = 280.0
+const EXPECTED_SPEED_CATCHUP_MULTIPLIER: float = 2.0
 
 var visual_position: Vector2 = Vector2.ZERO
 var authoritative_position: Vector2 = Vector2.ZERO
@@ -23,6 +25,7 @@ var _prediction_horizon_seconds: float = 0.14
 var _packet_age_seconds: float = 0.0
 var _last_received_msec: int = -1
 var _has_sample: bool = false
+var _visual_catchup_speed: float = MAX_VISUAL_CATCHUP_SPEED
 
 
 func reset(position: Vector2) -> void:
@@ -34,13 +37,23 @@ func reset(position: Vector2) -> void:
 	_packet_age_seconds = 0.0
 	_last_received_msec = -1
 	_has_sample = false
+	_visual_catchup_speed = MAX_VISUAL_CATCHUP_SPEED
 
 
 func receive(position: Vector2, received_msec: int,
-	nominal_seconds: float = 0.1, teleport_threshold: float = 1200.0,
-	extended_server_seconds: float = 0.0) -> void:
+	nominal_seconds: float = 0.1, teleport_threshold: float = 5000.0,
+	extended_server_seconds: float = 0.0,
+	expected_speed: float = 0.0) -> void:
 	if not position.is_finite():
 		return
+	if is_finite(expected_speed) and expected_speed > 1.0:
+		_visual_catchup_speed = clampf(
+			expected_speed * EXPECTED_SPEED_CATCHUP_MULTIPLIER,
+			MIN_EXPECTED_CATCHUP_SPEED,
+			MAX_VISUAL_CATCHUP_SPEED
+		)
+	else:
+		_visual_catchup_speed = MAX_VISUAL_CATCHUP_SPEED
 	if visual_position.distance_to(position) >= teleport_threshold:
 		reset(position)
 		_last_received_msec = received_msec
@@ -134,7 +147,7 @@ func advance(delta: float) -> Vector2:
 	var alpha: float = 1.0 - exp(-SMOOTHING_RATE * step_seconds)
 	var eased_position: Vector2 = visual_position.lerp(desired, alpha)
 	visual_position = visual_position.move_toward(
-		eased_position, MAX_VISUAL_CATCHUP_SPEED * step_seconds
+		eased_position, _visual_catchup_speed * step_seconds
 	)
 	if visual_position.distance_squared_to(desired) < 0.001:
 		visual_position = desired
