@@ -266,6 +266,27 @@ public sealed class SqliteGameStore : IGameStore
         return character;
     }
 
+    // Narrow 500ms external-travel consistency check: no inventory,
+    // transforms, titles, cleanup writes or per-call asset scans.
+    public (int MapId, double X, double Y)? GetCharacterLocation(
+        long accountId, long dbid)
+    {
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT map_id,x,y
+              FROM characters
+             WHERE account_id=$a AND id=$id
+             LIMIT 1
+            """;
+        Arg(cmd, "$a", accountId);
+        Arg(cmd, "$id", dbid);
+        using var reader = cmd.ExecuteReader();
+        return reader.Read()
+            ? (reader.GetInt32(0), reader.GetDouble(1), reader.GetDouble(2))
+            : null;
+    }
+
     public int? GetCharacterHp(long accountId, long dbid)
     {
         using var db = Open();
@@ -869,6 +890,45 @@ public sealed class SqliteGameStore : IGameStore
         Arg(cmd, "$id", dbid);
         Arg(cmd, "$a", accountId);
         return cmd.ExecuteNonQuery() == 1;
+    }
+
+    // One indexed pet-only SELECT per owner replaces opening every asset
+    // table four times per second. Current rows, ordering, stats and
+    // account ownership are authoritative on every follow/attack tick.
+    public IReadOnlyList<Dictionary<string, object>> GetActivePetFollowSnapshot(
+        long accountId, long dbid)
+    {
+        var pets = new List<Dictionary<string, object>>();
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT p.uid,p.pet_id,p.name,p.hp,p.max_hp,p.level,
+                   p.attack,p.evol_id
+              FROM pets p
+              JOIN characters c ON c.id=p.character_id
+             WHERE p.character_id=$id
+               AND c.account_id=$a
+               AND p.state=1
+             ORDER BY p.uid
+            """;
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            pets.Add(new Dictionary<string, object>
+            {
+                ["UID"] = reader.GetInt64(0),
+                ["PETID"] = reader.GetInt32(1),
+                ["Name"] = reader.GetString(2),
+                ["HP"] = reader.GetInt32(3),
+                ["MaxHP"] = reader.GetInt32(4),
+                ["Level"] = reader.GetInt32(5),
+                ["Attack"] = reader.GetInt32(6),
+                ["EvolID"] = reader.GetInt32(7)
+            });
+        }
+        return pets;
     }
 
     public CharacterAssets GetCharacterAssets(long accountId, long dbid)
