@@ -60,7 +60,7 @@ func _run() -> void:
 					confirmed,
 					arrival_msec,
 					float(cadence) / PHYSICS_HZ,
-					5200.0,
+					1200.0,
 					0.0,
 					200.0
 				)
