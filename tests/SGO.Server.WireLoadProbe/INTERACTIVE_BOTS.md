@@ -8,14 +8,16 @@
 
 **如果現有 Server 已運行，且 `Game:TestBotCommandsEnabled=true`，就不用重啟或另開 Server，直接跳到第 2 步。**
 
-如果尚未啟用測試功能，請在原本啟動 Server 的 PowerShell 視窗中加上：
+如果尚未啟用測試功能，請停止**現有的 Server** 後，依你原本使用的 VS2022 Debug / Release / cmd 啟動方式設定 `Game:TestBotCommandsEnabled=true` 並重新啟動**同一個 Server**。例如原本就在 PowerShell 中啟動，先設定：
 
 ```powershell
 $env:Game__TestBotCommandsEnabled = "true"
-dotnet run -c Release --project .\server\SGO.Server.csproj
+# 接著執行你原本啟動 Server 的命令，維持原本 Debug/Release 和 DB 設定
 ```
 
-上面只是**沿用原 Server 啟動命令**的示例。請在現有 Server 停止後，以原本的方式重新啟動一次；保留你現有的 `Database:Provider`、`Database:Sqlite:Path` 等配置，**不需要設定** `Database__Sqlite__Path`，更不要指向 `bot-test.db`。
+**不要因為測試工具而把現有 Server 改成另一種 Build Configuration。** 如果 `Database:Sqlite:Path` 為空，Server 的預設 DB 位於其執行目錄 `Data/game.db`，因此 `bin/Debug/net8.0` 和 `bin/Release/net8.0` 可能各自是不同資料庫。保留你目前的 `Database:Provider`、`Database:Sqlite:Path` 與啟動方式。
+
+**不需要新設** `Database__Sqlite__Path`，更不要指向 `bot-test.db`。如果你先前曾在同個 PowerShell 設過 `Database__Sqlite__Path=...bot-test.db`，先確認它是不是仍在生效；只移除該舊測試覆寫，不要移除你真正使用的 DB 配置。
 
 本分支原本 `server/appsettings.json` 已有 `Game:GmCommandsEnabled=true`；如果你有用其他環境設定關閉 GM，還須依現有配置啟用它。`Game:TestBotCommandsEnabled` 是額外的**明確啟用旗標**，不會自動對一般帳號開放測試能力值：Server 會查證該帳號確實是工具建立的 `wire-load-*` 帳號、`WL*` 角色、`@example.invalid` 測試電子郵件後才允許 `/gm testbot`。
 
