@@ -1,0 +1,40 @@
+name: Cleanup temporary viewport motion branch
+
+# This is intentionally limited to the exact temporary branch and PR #5.
+# It runs from the merged target branch, never before review/merge.
+on:
+  push:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'docs/multiplayer-viewport-edge-20261110.md'
+      - '.github/workflows/cleanup-viewport-motion-branch.yml'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  delete-merged-temp-branch:
+    if: github.repository == 'kevin840307/TestGoGo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete only the merged PR #5 temporary branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          merged="$(gh api "repos/$GH_REPO/pulls/5" --jq '.merged')"
+          if [[ "$merged" != "true" ]]; then
+            echo "PR #5 is not merged; refusing to delete any branch"
+            exit 0
+          fi
+          branch_ref="heads/fix/multiplayer-monster-backlog-20261110"
+          if gh api "repos/$GH_REPO/git/ref/$branch_ref" --jq '.ref' >/dev/null 2>&1; then
+            gh api --method DELETE "repos/$GH_REPO/git/refs/$branch_ref"
+            echo "Deleted merged PR #5 temporary branch"
+          else
+            echo "Temporary branch already absent"
+          fi
