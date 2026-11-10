@@ -1100,6 +1100,13 @@ public sealed class PacketRouter
                 var x = req.Int("X");
                 var y = req.Int("Y");
 
+                // An unchanged position is not a movement event. Avoid
+                // redundant Blocking.dat validation, spatial-AOI work,
+                // SQLite position dirties and broadcast packets. Ping and
+                // gameplay messages are handled independently.
+                if (state.LastX == x && state.LastY == y)
+                    return [];
+
                 var moveValidation = _blocking.ValidateMove(
                     state.CurrentMapId,
                     state.LastX,
@@ -1162,6 +1169,16 @@ public sealed class PacketRouter
                 if (now - state.LastPositionBroadcastAt >=
                     PositionBroadcastInterval)
                 {
+                    // Describe the actual interval between the authorized
+                    // position snapshots, not a hardcoded 100ms. Real players
+                    // often publish every ~100ms; bots on 350ms cadence
+                    // otherwise look like they stop after each short tween.
+                    var snapshotSeconds =
+                        state.LastPositionBroadcastAt == DateTimeOffset.MinValue
+                            ? PositionBroadcastInterval.TotalSeconds
+                            : Math.Clamp(
+                                (now - state.LastPositionBroadcastAt).TotalSeconds,
+                                0.05, 0.75);
                     state.LastPositionBroadcastAt = now;
                     _broadcasts.PublishToPlayerObservers(
                         state.ConnectionId,
@@ -1172,7 +1189,7 @@ public sealed class PacketRouter
                             X = x,
                             Y = y,
                             Dir = req.Str("Dir", "1"),
-                            SpeedTime = 0.10
+                            SpeedTime = snapshotSeconds
                         });
                 }
 
