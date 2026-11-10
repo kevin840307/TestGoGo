@@ -5316,15 +5316,26 @@ public sealed class PacketRouter
                     var privateText = parts[2];
                     OnlinePlayerPresence? target = null;
 
-                    // Authenticated online presence already includes the
-                    // target name. Do not open one SQLite connection per
-                    // online player for a private-chat name lookup.
+                    // Private /name is a rare explicit lookup. Preserve
+                    // the original authoritative DB-name matching contract;
+                    // only ordinary nearby/world chat uses the cache fast path.
                     foreach (var presence in
                              _broadcasts.OnlinePlayers(
                                  state.ConnectionId))
                     {
+                        var targetCharacter =
+                            _store.GetCharacter(
+                                presence.AccountId,
+                                presence.CharacterId);
+
+                        if (targetCharacter is null ||
+                            !targetCharacter.TryGetValue(
+                                "NAME",
+                                out var rawTargetName))
+                            continue;
+
                         if (!string.Equals(
-                                presence.CharacterName,
+                                rawTargetName?.ToString(),
                                 targetName,
                                 StringComparison.OrdinalIgnoreCase))
                             continue;
