@@ -13,6 +13,8 @@ var is_action_locked: bool = false
 var entity_scale: float = 1.0
 const GENERIC_MONSTER_CLICK_SIZE := Vector2(112.0, 136.0)
 const SIMPLIFIED_ORB_CACHE = preload("res://scripts/simplified_orb_cache.gd")
+# Explicit load avoids reliance on the global class_name registry during scene parsing.
+const MONSTER_WAYPOINT_SPEED = preload("res://scripts/monster_waypoint_speed.gd")
 var _original_sprite_name: String = ""
 var _original_color_index: int = 0
 var _performance_simplified_visual: bool = false
@@ -1085,7 +1087,7 @@ func _apply_network_target_direction(target_pos: Vector2) -> void :
 # destination updates. Keep that pacing for presentation, while all server
 # corrections, targeting and combat packets retain their normal handling.
 static func calculate_network_move_speed(distance: float, duration: float) -> float:
-	return MonsterWaypointSpeed.calculate(
+	return MONSTER_WAYPOINT_SPEED.calculate(
 		distance, duration,
 		NETWORK_MOVE_VISUAL_SLACK_SECONDS,
 		NETWORK_MOVE_MIN_SPEED,
