@@ -1124,6 +1124,12 @@ public sealed class PacketRouter
                 if (state.LastX == x && state.LastY == y)
                     return [];
 
+                var movementStarted = Stopwatch.GetTimestamp();
+                var validationStarted = movementStarted;
+                var aoiMs = 0.0;
+                var persistMs = 0.0;
+                var broadcastMs = 0.0;
+
                 var moveValidation = _blocking.ValidateMove(
                     state.CurrentMapId,
                     state.LastX,
@@ -1131,6 +1137,7 @@ public sealed class PacketRouter
                     x,
                     y,
                     state.CanCrossSpecialTerrain);
+                var validationMs = Stopwatch.GetElapsedTime(validationStarted).TotalMilliseconds;
 
                 if (!moveValidation.Allowed)
                 {
@@ -1160,6 +1167,7 @@ public sealed class PacketRouter
                     ];
                 }
 
+                var aoiStarted = Stopwatch.GetTimestamp();
                 state.LastX = x;
                 state.LastY = y;
                 state.PositionDirty = true;
@@ -1181,14 +1189,18 @@ public sealed class PacketRouter
                     state.LastPresenceAoiX = x;
                     state.LastPresenceAoiY = y;
                 }
+                aoiMs = Stopwatch.GetElapsedTime(aoiStarted).TotalMilliseconds;
 
                 var now = DateTimeOffset.UtcNow;
                 if (now - state.LastPositionPersistAt >=
                     PositionPersistInterval)
                 {
+                    var persistStarted = Stopwatch.GetTimestamp();
                     PersistPendingPosition(state);
+                    persistMs = Stopwatch.GetElapsedTime(persistStarted).TotalMilliseconds;
                 }
 
+                var broadcastStarted = Stopwatch.GetTimestamp();
                 if (now - state.LastPositionBroadcastAt >=
                     PositionBroadcastInterval)
                 {
@@ -1214,6 +1226,17 @@ public sealed class PacketRouter
                             Dir = req.Str("Dir", "1"),
                             SpeedTime = snapshotSeconds
                         });
+                }
+                broadcastMs = Stopwatch.GetElapsedTime(broadcastStarted).TotalMilliseconds;
+                var movementMs = Stopwatch.GetElapsedTime(movementStarted).TotalMilliseconds;
+                if (movementMs >= 200 &&
+                    now - state.LastSlowMovementDiagAt >= TimeSpan.FromSeconds(5))
+                {
+                    state.LastSlowMovementDiagAt = now;
+                    _log.LogWarning(
+                        "[SLOW_MOVEMENT_HANDLER] TotalMs={TotalMs:F1} CollisionMs={CollisionMs:F1} AoiMs={AoiMs:F1} PersistMs={PersistMs:F1} BroadcastMs={BroadcastMs:F1} Character={CharacterID} Map={MapID}",
+                        movementMs, validationMs, aoiMs, persistMs, broadcastMs,
+                        state.CharacterId, state.CurrentMapId);
                 }
 
                 return [];
