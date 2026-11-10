@@ -20,6 +20,10 @@ public interface IAccountStore
         string password,
         string email);
     long? Login(string username, string password);
+
+    // Default deny for non-SQLite / test stores. This guard protects normal
+    // accounts when load-test stat commands are enabled on the live local DB.
+    bool IsLoadTestBot(long accountId, long characterId) => false;
 }
 
 public sealed record CharacterTransformState(
