@@ -136,6 +136,49 @@ internal static class PlayerSpatialAoiSmokeTests
         hub.Unregister(bConn.ConnectionId);
         hub.Unregister(farConn.ConnectionId);
 
+        // Live-WebSocket-only fast lane: intermediate unsent coordinates
+        // for the same player are replaceable. Lifecycle, combat and state
+        // packets must NEVER be coalesced or reordered behind those moves.
+        var motionHub = new ServerBroadcastHub();
+        var observer = motionHub.Register(prioritizePlayerEvents: true);
+        const long actor = 123;
+        motionHub.PublishToConnection(observer.ConnectionId,
+            new { Type = "MoveEntity", EntityID = actor, X = 10, Y = 20 });
+        motionHub.PublishToConnection(observer.ConnectionId,
+            new { Type = "MoveEntity", EntityID = actor, X = 30, Y = 40 });
+        Check(
+            motionHub.PlayerPriorityBacklogCount(observer.ConnectionId) == 1 &&
+            motionHub.TryDequeuePlayerPriority(observer.ConnectionId, out var newest) &&
+            Convert.ToInt32(newest.GetType().GetProperty("X")?.GetValue(newest)) == 30,
+            "queued player positions collapse to newest authoritative snapshot");
+
+        motionHub.PublishToConnection(observer.ConnectionId,
+            new { Type = "MoveEntity", EntityID = actor, X = 40 });
+        motionHub.PublishToConnection(observer.ConnectionId,
+            new { Type = "SyncState", EntityID = actor, State = "attack_aa" });
+        motionHub.PublishToConnection(observer.ConnectionId,
+            new { Type = "MoveEntity", EntityID = actor, X = 50 });
+        Check(motionHub.PlayerPriorityBacklogCount(observer.ConnectionId) == 3,
+            "player attack animation separates two motion windows");
+        Check(
+            motionHub.TryDequeuePlayerPriority(observer.ConnectionId, out var preAttack) &&
+            Convert.ToInt32(preAttack.GetType().GetProperty("X")?.GetValue(preAttack)) == 40 &&
+            motionHub.TryDequeuePlayerPriority(observer.ConnectionId, out var attackState) &&
+            Convert.ToString(attackState.GetType().GetProperty("Type")?.GetValue(attackState)) == "SyncState" &&
+            motionHub.TryDequeuePlayerPriority(observer.ConnectionId, out var postAttack) &&
+            Convert.ToInt32(postAttack.GetType().GetProperty("X")?.GetValue(postAttack)) == 50,
+            "motion / combat state / next motion retain original FIFO order");
+
+        motionHub.PublishToConnection(observer.ConnectionId,
+            new { Type = "MoveEntity", EntityID = actor, X = 60 });
+        motionHub.PublishToConnection(observer.ConnectionId,
+            new { Type = "DespawnEntity", EntityID = actor });
+        motionHub.PublishToConnection(observer.ConnectionId,
+            new { Type = "MoveEntity", EntityID = actor, X = 70 });
+        Check(motionHub.PlayerPriorityBacklogCount(observer.ConnectionId) == 3,
+            "despawn lifecycle boundary cannot merge stale and future positions");
+        motionHub.Unregister(observer.ConnectionId);
+
         Console.WriteLine("Player spatial AOI smoke passed.");
     }
 }
