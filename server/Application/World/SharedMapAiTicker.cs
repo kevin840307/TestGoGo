@@ -165,26 +165,40 @@ public sealed class SharedMapAiTicker : BackgroundService
             var players = new List<PlayerContext>();
             foreach (var session in group)
             {
+                // Copy mutable session state under the short session lock.
+                // NEVER issue SQLite queries (or account-registry lookups)
+                // while holding this lock: with 20+ attacking players a slow
+                // DB read here blocks inbound SyncPosition/AttackEntity and
+                // can make the whole map's AI tick wait for seconds.
+                long accountId;
+                long characterId;
+                double playerX;
+                double playerY;
+                (double X, double Y)[] petPositions;
                 lock (session)
                 {
                     if (!session.SharedAiManaged ||
                         !session.WorldReady ||
                         session.CurrentMapId != group.Key ||
                         !session.AccountId.HasValue ||
-                        !session.CharacterId.HasValue ||
-                        !_accounts.IsCurrent(
-                            session.AccountId.Value, session.ConnectionId))
+                        !session.CharacterId.HasValue)
                         continue;
 
-                    var hp = _characters.GetCharacterHp(
-                        session.AccountId.Value,
-                        session.CharacterId.Value);
-                    var isAlive = hp.HasValue && hp.Value > 0;
-                    players.Add(new PlayerContext(
-                        session, session.CharacterId.Value,
-                        isAlive, session.LastX, session.LastY,
-                        session.PetPositions.Values.ToArray()));
+                    accountId = session.AccountId.Value;
+                    characterId = session.CharacterId.Value;
+                    playerX = session.LastX;
+                    playerY = session.LastY;
+                    petPositions = session.PetPositions.Values.ToArray();
                 }
+
+                if (!_accounts.IsCurrent(accountId, session.ConnectionId))
+                    continue;
+
+                var hp = _characters.GetCharacterHp(accountId, characterId);
+                players.Add(new PlayerContext(
+                    session, characterId,
+                    hp.HasValue && hp.Value > 0,
+                    playerX, playerY, petPositions));
             }
             playerSnapshotMs +=
                 Stopwatch.GetElapsedTime(playerSnapshotStarted)
