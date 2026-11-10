@@ -151,15 +151,19 @@ public sealed class GmCommandService
             !int.TryParse(parts[2], out var mapId))
             return [Chat("用法：/gm map <MapID> [X] [Y]")];
 
-        var ch = _store.GetCharacter(accountId, dbid);
-        if (ch is null) return [Chat("找不到角色")];
+        // Map travel needs only the authenticated character's current
+        // map/position, not an entire character+assets+title DB bootstrap.
+        // This narrow query is especially important while many load-test
+        // players warp simultaneously during 20-player setup.
+        var location = _store.GetCharacterLocation(accountId, dbid);
+        if (location is null) return [Chat("找不到角色")];
 
         var x = parts.Length > 3 && int.TryParse(parts[3], out var px)
             ? px
-            : Convert.ToInt32(Convert.ToDouble(ch["LocX"]));
+            : Convert.ToInt32(location.Value.X);
         var y = parts.Length > 4 && int.TryParse(parts[4], out var py)
             ? py
-            : Convert.ToInt32(Convert.ToDouble(ch["LocY"]));
+            : Convert.ToInt32(location.Value.Y);
 
         // A same-map GM warp changes the position without changing map_id.
         // Unlike cross-map transitions, the SQL map guard cannot reject
