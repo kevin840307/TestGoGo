@@ -437,16 +437,32 @@ public sealed class SqliteGameStore : IGameStore
         var nowUtcMs =
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        using (var cleanup = db.CreateCommand())
+        // Runtime character reads must be read-only unless an expired
+        // transformation row genuinely needs cleanup. Even a zero-row
+        // DELETE acquires SQLite's single WAL writer lock and previously
+        // blocked 20-player movement/attack behind unrelated transactions.
+        using (var stale = db.CreateCommand())
         {
-            cleanup.CommandText = """
-                DELETE FROM character_transform_state
+            stale.CommandText = """
+                SELECT 1 FROM character_transform_state
                  WHERE character_id=$id
                    AND expires_utc_ms <= $now
+                 LIMIT 1
                 """;
-            Arg(cleanup, "$id", dbid);
-            Arg(cleanup, "$now", nowUtcMs);
-            cleanup.ExecuteNonQuery();
+            Arg(stale, "$id", dbid);
+            Arg(stale, "$now", nowUtcMs);
+            if (stale.ExecuteScalar() is not null)
+            {
+                using var cleanup = db.CreateCommand();
+                cleanup.CommandText = """
+                    DELETE FROM character_transform_state
+                     WHERE character_id=$id
+                       AND expires_utc_ms <= $now
+                    """;
+                Arg(cleanup, "$id", dbid);
+                Arg(cleanup, "$now", nowUtcMs);
+                cleanup.ExecuteNonQuery();
+            }
         }
 
         using var cmd = db.CreateCommand();
@@ -517,16 +533,32 @@ public sealed class SqliteGameStore : IGameStore
         var nowUtcMs =
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        using (var cleanup = db.CreateCommand())
+        // Runtime character reads must be read-only unless an expired
+        // timed-stat row genuinely needs cleanup. Even a zero-row
+        // DELETE acquires SQLite's single WAL writer lock and previously
+        // blocked 20-player movement/attack behind unrelated transactions.
+        using (var stale = db.CreateCommand())
         {
-            cleanup.CommandText = """
-                DELETE FROM character_timed_effects
+            stale.CommandText = """
+                SELECT 1 FROM character_timed_effects
                  WHERE character_id=$id
                    AND expires_utc_ms <= $now
+                 LIMIT 1
                 """;
-            Arg(cleanup, "$id", dbid);
-            Arg(cleanup, "$now", nowUtcMs);
-            cleanup.ExecuteNonQuery();
+            Arg(stale, "$id", dbid);
+            Arg(stale, "$now", nowUtcMs);
+            if (stale.ExecuteScalar() is not null)
+            {
+                using var cleanup = db.CreateCommand();
+                cleanup.CommandText = """
+                    DELETE FROM character_timed_effects
+                     WHERE character_id=$id
+                       AND expires_utc_ms <= $now
+                    """;
+                Arg(cleanup, "$id", dbid);
+                Arg(cleanup, "$now", nowUtcMs);
+                cleanup.ExecuteNonQuery();
+            }
         }
 
         using var cmd = db.CreateCommand();
