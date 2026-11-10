@@ -98,47 +98,8 @@ public static class WebSocketEndpoint
             // Send AOI broadcasts as soon as the hub signals new traffic,
             // independent of the 250 ms world simulation. This avoids idle
             // per-client timers and still prioritizes player updates.
-            // The underlying ConcurrentQueue remains FIFO; only unrelated
-            // player events are promoted within a bounded send batch.
-            static int BroadcastPriority(object packet)
-            {
-                var type = packet.GetType();
-                var kind = type.GetProperty("Type")?.GetValue(packet) as string;
-                if (kind is not (
-                    "MoveEntity" or "SpawnEntity" or "DespawnEntity"
-                    or "SyncState" or "EntityDamage" or "EntityHeal"
-                    or "EntityDeath" or "SkillCast"))
-                    return 1;
-
-                if (kind == "SkillCast")
-                {
-                    var casterType = type.GetProperty("CasterType")?.GetValue(packet);
-                    return Convert.ToInt32(casterType ?? -1) == 0 ? 0 : 1;
-                }
-
-                if (kind == "EntityDeath")
-                {
-                    var entityType = type.GetProperty("EntityType")?.GetValue(packet);
-                    return Convert.ToInt32(entityType ?? -1) == 0 ? 0 : 1;
-                }
-
-                if (kind == "SpawnEntity")
-                {
-                    var entityType = type.GetProperty("EntityType")?.GetValue(packet);
-                    return Convert.ToInt32(entityType ?? -1) == 0 ? 0 : 1;
-                }
-
-                if (kind is "MoveEntity" or "DespawnEntity" or "SyncState")
-                {
-                    var entity = type.GetProperty("EntityID")?.GetValue(packet);
-                    var entityId = Convert.ToInt64(entity ?? -1L);
-                    return entityId > 0 && entityId < 1_000_000 ? 0 : 1;
-                }
-
-                var targetType = type.GetProperty("TargetType")?.GetValue(packet);
-                return Convert.ToInt32(targetType ?? -1) == 0 ? 0 : 1;
-            }
-
+            // A dedicated player queue preserves intra-lane FIFO ordering;
+            // non-player traffic stays reliable in its own FIFO queue.
             var broadcastSendTask = Task.Run(async () =>
             {
                 try
