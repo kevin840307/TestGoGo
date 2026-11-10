@@ -1,6 +1,12 @@
 
 extends Node
 
+const VIEWPORT_AOI = preload("res://scripts/viewport_aoi_radius.gd")
+const VIEWPORT_AOI_REFRESH_SECONDS: float = 1.0
+var _viewport_aoi_elapsed: float = 0.0
+var _last_view_radius: int = 0
+var _world_view_ready_sent: bool = false
+
 var USE_DDNS: bool = false
 var SERVER_URL = "ws://127.0.0.1:5678"
 var socket = WebSocketPeer.new()
@@ -231,6 +237,22 @@ func _physics_process(delta: float) -> void :
 	socket.poll()
 	var state = socket.get_ready_state()
 
+	# Compare the camera envelope once per second; do not slow network
+	# delivery, simulation ticks, AFK requests or remote actor motion.
+	if state == WebSocketPeer.STATE_OPEN and _world_view_ready_sent and GameManager and is_instance_valid(GameManager.current_player) and is_instance_valid(GameManager.current_map_node):
+		_viewport_aoi_elapsed += delta
+		if _viewport_aoi_elapsed >= VIEWPORT_AOI_REFRESH_SECONDS:
+			_viewport_aoi_elapsed = 0.0
+			var current_radius: int = _current_view_radius()
+			if current_radius != _last_view_radius:
+				_last_view_radius = current_radius
+				send_secure_packet({"Type": "ViewportAoi", "Radius": current_radius})
+	else:
+		_viewport_aoi_elapsed = 0.0
+		if state != WebSocketPeer.STATE_OPEN:
+			_world_view_ready_sent = false
+			_last_view_radius = 0
+
 	if state == WebSocketPeer.STATE_OPEN:
 		is_connected_to_server = true
 		var available_packet_count: = socket.get_available_packet_count()
@@ -446,12 +468,29 @@ func send_secure_packet(data_dict: Dictionary) -> void :
 func send_announcement_list_request() -> void :
 	send_secure_packet({"Type": "AnnouncementListRequest"})
 
+func _current_view_radius() -> int:
+	var player: Node2D = GameManager.current_player if GameManager else null
+	var viewport: Viewport = get_viewport()
+	if not is_instance_valid(player) or not player.is_inside_tree():
+		return VIEWPORT_AOI.MIN_RADIUS
+	if not is_instance_valid(viewport) or not is_instance_valid(viewport.get_camera_2d()):
+		return VIEWPORT_AOI.MIN_RADIUS
+	return VIEWPORT_AOI.estimate(
+		viewport.get_visible_rect(),
+		viewport.get_canvas_transform(),
+		player.global_position
+	)
+
 func send_world_ready(map_id: int) -> void :
 	if map_id <= 0:
 		return
+	_last_view_radius = _current_view_radius()
+	_viewport_aoi_elapsed = 0.0
+	_world_view_ready_sent = true
 	send_secure_packet({
 		"Type": "WorldReady",
 		"MapID": map_id,
+		"ViewRadius": _last_view_radius,
 	})
 
 func send_login_request(user: String, pass_str: String) -> void :

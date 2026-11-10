@@ -50,6 +50,7 @@ internal static class WorldEntitySpatialAoiSmokeTests
     public static void Run()
     {
         ObserverAndEntityMovementUseHysteresis();
+        ViewportResizeReconcilesStationaryAndMovingMonsters();
         EntityRemovalNeverLeavesGhostKnownSets();
         AuthoritativeMapReconciliationPurgesStaleGround();
         LatestSpawnFactoryWinsForLateObserver();
@@ -213,6 +214,37 @@ internal static class WorldEntitySpatialAoiSmokeTests
                 .Count(x =>
                     x == viewer.ConnectionId) == 1,
             "world AOI identity change despawns old knowledge then respawns nearby entity for new identity");
+    }
+
+    private static void ViewportResizeReconcilesStationaryAndMovingMonsters()
+    {
+        var aoi = new WorldEntitySpatialAoi();
+        var viewer = Observer(800, 13, 0, 0);
+        var edge = Entity(9_999_800, 1, 13, 3400, 0);
+        aoi.UpsertObserver(viewer);
+        Check(aoi.UpsertEntity(edge).Count == 0,
+            "legacy world AOI excludes offscreen monsters");
+        var entered = aoi.UpsertObserver(viewer, 3800);
+        Check(entered.Count == 1 && entered[0].Appeared &&
+              aoi.IsVisible(viewer.ConnectionId, edge.EntityId),
+            "stationary viewport expansion spawns edge monster");
+        Check(aoi.UpsertObserver(viewer, 3800).Count == 0,
+            "unchanged viewport demand avoids duplicate spawns");
+        edge = Entity(edge.EntityId, 1, 13, 4100, 0, 2);
+        Check(aoi.UpsertEntity(edge).Count == 0 &&
+              aoi.IsVisible(viewer.ConnectionId, edge.EntityId),
+            "moving monster keeps per-viewer exit hysteresis");
+        edge = Entity(edge.EntityId, 1, 13, 4300, 0, 3);
+        Check(aoi.UpsertEntity(edge).Count == 1 &&
+              !aoi.IsVisible(viewer.ConnectionId, edge.EntityId),
+            "moving monster leaves camera-expanded AOI at 4200");
+        edge = Entity(edge.EntityId, 1, 13, 3400, 0, 4);
+        Check(aoi.UpsertEntity(edge).Count == 1,
+            "moving monster reenters camera-expanded AOI");
+        var left = aoi.UpsertObserver(viewer, 1800);
+        Check(left.Count == 1 && !left[0].Appeared &&
+              !aoi.IsVisible(viewer.ConnectionId, edge.EntityId),
+            "shrunken camera drops unnecessary outer monster traffic");
     }
 
     private static void EntityRemovalNeverLeavesGhostKnownSets()

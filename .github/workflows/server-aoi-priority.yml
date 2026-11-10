@@ -12,12 +12,14 @@ on:
       - 'server/Application/World/SharedMapAiTicker.cs'
       - 'server/Application/PacketRouter.cs'
       - 'tests/SGO.Server.BroadcastPriorityProbe/**'
+      - 'tests/SGO.Server.ViewportAoiProbe/**'
       - '.github/workflows/server-aoi-priority.yml'
   pull_request:
     branches: [feature/local-server-net8]
     paths:
       - 'server/Application/Messaging/ServerBroadcastHub.cs'
       - 'tests/SGO.Server.BroadcastPriorityProbe/**'
+      - 'tests/SGO.Server.ViewportAoiProbe/**'
       - '.github/workflows/server-aoi-priority.yml'
   workflow_dispatch:
 
@@ -37,3 +39,5 @@ jobs:
         run: dotnet build server/SGO.Server.csproj --configuration Release --nologo
       - name: Check player AOI priority without dropping monsters or ground items
         run: dotnet run --configuration Release --project tests/SGO.Server.BroadcastPriorityProbe/SGO.Server.BroadcastPriorityProbe.csproj --nologo
+      - name: Verify stationary camera resize, symmetric peers and moving edge monsters
+        run: dotnet run --configuration Release --project tests/SGO.Server.ViewportAoiProbe/SGO.Server.ViewportAoiProbe.csproj --nologo
