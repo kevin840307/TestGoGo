@@ -57,6 +57,10 @@ var _ground_visibility_index = GROUND_DROP_SPATIAL_INDEX.new()
 var _deferred_ground_spawns: Dictionary = {}
 var _ground_aoi_elapsed: float = 0.0
 var _ground_protection_tick_elapsed: float = 0.0
+# The drop bounce is decorative; keep only short-lived recent fatal positions.
+# Avoid scanning every active monster for every dropped item in a kill burst.
+const DROP_BOUNCE_DEATH_WINDOW_MS: int = 2500
+var _recent_fatal_monsters: Dictionary = {}
 var _ground_aoi_last_context: Variant = null
 var _ground_aoi_stationary_elapsed: float = 0.0
 var _ground_aoi_full_scans: int = 0
@@ -118,6 +122,7 @@ func clear_map_entities() -> Dictionary:
 	_deferred_ground_spawns.clear()
 	_ground_visibility_index.clear()
 	_ground_protection_tick_elapsed = 0.0
+	_recent_fatal_monsters.clear()
 	_ground_aoi_elapsed = 0.0
 	_ground_aoi_last_context = null
 	_ground_aoi_stationary_elapsed = 0.0
@@ -196,6 +201,26 @@ func _should_show_monster(entity: Node2D, profile: Dictionary) -> bool:
 		int(profile.get("ordinary_monsters_visibility", ClientPerformanceProfile.MONSTER_SHOW_ALL)),
 		protected
 	)
+
+func _remember_fatal_monster(entity_id: int, entity: Node2D, delay: float) -> void:
+	if entity_id <= 0 or not is_instance_valid(entity):
+		return
+	_recent_fatal_monsters[entity_id] = {
+		"pos": entity.global_position,
+		"delay": maxf(0.0, delay),
+		"expires": Time.get_ticks_msec() + DROP_BOUNCE_DEATH_WINDOW_MS,
+	}
+
+func _recent_drop_bounce_delay(spawn_pos: Vector2) -> float:
+	var now_ms: int = Time.get_ticks_msec()
+	for raw_id in _recent_fatal_monsters.keys():
+		var death: Dictionary = _recent_fatal_monsters[raw_id]
+		if int(death["expires"]) <= now_ms:
+			_recent_fatal_monsters.erase(raw_id)
+			continue
+		if (death["pos"] as Vector2).distance_squared_to(spawn_pos) < 10000.0:
+			return float(death["delay"])
+	return -1.0
 
 func _ground_drop_mode() -> int:
 	if not GameManager:
@@ -1160,6 +1185,7 @@ func _run_entity_runtime(delta: float) -> void :
 		_ground_spawn_templates.clear()
 		_deferred_ground_spawns.clear()
 		_ground_visibility_index.clear()
+		_recent_fatal_monsters.clear()
 		_ground_display_winners.clear()
 		_ground_display_cache_dirty = true
 		_ground_trim_queue.clear()
@@ -1177,6 +1203,10 @@ func _run_entity_runtime(delta: float) -> void :
 	_ground_protection_tick_elapsed += delta
 	if _ground_protection_tick_elapsed >= 1.0:
 		_ground_protection_tick_elapsed = fmod(_ground_protection_tick_elapsed, 1.0)
+		var now_ms: int = Time.get_ticks_msec()
+		for raw_id in _recent_fatal_monsters.keys():
+			if int(_recent_fatal_monsters[raw_id]["expires"]) <= now_ms:
+				_recent_fatal_monsters.erase(raw_id)
 		for item in get_tree().get_nodes_in_group("sgo_protected_ground_item"):
 			if is_instance_valid(item) and item.has_method("refresh_protection_label"):
 				item.refresh_protection_label()
@@ -1375,18 +1405,13 @@ func _spawn_entity_now(data: Dictionary) -> void :
 			var is_monster_drop = false
 
 			if _should_check_ground_drop_bounce(data):
-				for active_entity_id in _active_entity_types:
-					if int(_active_entity_types[active_entity_id]) != 1:
-						continue
-					var monster = get_active_entity(int(active_entity_id))
-					if not monster:
-						continue
-					if monster.current_hp <= 0 or monster.has_meta("fatal_hit_delay"):
-						if monster.global_position.distance_to(spawn_pos) < 100.0:
-							var fatal_delay = float(monster.get_meta("fatal_hit_delay")) if monster.has_meta("fatal_hit_delay") else 0.0
-							drop_delay = fatal_delay
-							is_monster_drop = true
-							break
+				# Original per-drop scan walked all rendered monsters; that is
+				# O(drops * monsters) in a large battle. Recent fatal locations
+				# are captured from the same authoritative damage/death events.
+				var fatal_delay: float = _recent_drop_bounce_delay(spawn_pos)
+				if fatal_delay >= 0.0:
+					drop_delay = fatal_delay
+					is_monster_drop = true
 
 			if is_monster_drop:
 				new_entity.visible = false
@@ -1775,6 +1800,9 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 
 			if target_node.has_method("show_damage_number"):
 				target_node.show_damage_number(damage, is_crit, hit_delay, simultaneous_split, skill_id, is_primary)
+		if target_type == 1 and current_hp <= 0:
+			var fatal_delay: float = float(target_node.get_meta("fatal_hit_delay", hit_delay))
+			_remember_fatal_monster(target_id, target_node, fatal_delay)
 
 
 
@@ -1817,6 +1845,8 @@ func _on_entity_death_received(data: Dictionary) -> void :
 		var death_delay = 0.0
 		if entity.has_meta("fatal_hit_delay"):
 			death_delay = float(entity.get_meta("fatal_hit_delay"))
+		if entity_type == 1:
+			_remember_fatal_monster(entity_id, entity, death_delay)
 		if death_delay > 0:
 			get_tree().create_timer(death_delay).timeout.connect( func():
 				_finalize_entity_death(entity, clear_hover_on_death)
