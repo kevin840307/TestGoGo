@@ -867,6 +867,7 @@ public sealed class PacketRouter
             case "DeleteCharacterRequest":
             {
                 var dbid = req.Long("DBID");
+                _positionWrites?.FenceAndDiscard(accountId, dbid);
                 var ok = _store.Delete(accountId, dbid, req.Str("Password"));
                 if (ok &&
                     state.CharacterId == dbid)
@@ -907,6 +908,7 @@ public sealed class PacketRouter
             case "SelectCharacterRequest":
             {
                 var dbid = req.Long("DBID");
+                _positionWrites?.FlushQueued(accountId, dbid);
                 var character = _store.GetCharacter(accountId, dbid);
                 if (character is null)
                     return [new { Type = "SystemMessageFlash", Message = "角色不存在" }];
@@ -1962,6 +1964,8 @@ public sealed class PacketRouter
                     const int capitalX = 9408;
                     const int capitalY = 10336;
 
+                    _positionWrites?.FenceAndDiscard(
+                        accountId, state.CharacterId.Value);
                     var teleported =
                         _store.UseTeleportItem(
                             accountId,
@@ -5481,6 +5485,8 @@ public sealed class PacketRouter
             case "ReviveRequest":
             {
                 if (!state.CharacterId.HasValue) return [];
+                _positionWrites?.FenceAndDiscard(
+                    accountId, state.CharacterId.Value);
                 var character = _store.Revive(accountId, state.CharacterId.Value);
                 if (character is null) return [];
 
@@ -5611,6 +5617,7 @@ public sealed class PacketRouter
                 if (persistedMapId > 0 &&
                     persistedMapId != state.CurrentMapId)
                 {
+                    _positionWrites?.FenceAndDiscard(accountId, dbid);
                     state.CurrentMapId = persistedMapId;
                     state.LastX = location.X;
                     state.LastY = location.Y;
@@ -6730,6 +6737,8 @@ public sealed class PacketRouter
                 result.NewY.HasValue &&
                 state.CharacterId.HasValue)
             {
+                _positionWrites?.FenceAndDiscard(
+                    accountId, state.CharacterId.Value);
                 _store.UpdateLocation(
                     accountId,
                     state.CharacterId.Value,
