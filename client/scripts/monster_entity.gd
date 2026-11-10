@@ -1057,7 +1057,8 @@ func _ease_authoritative_visual_correction(previous_world_pos: Vector2) -> void:
 	var distance: float = previous_world_pos.distance_to(global_position)
 	# The physics body must move to the server-approved coordinate immediately,
 	# but keep its sprite and UI visually continuous after a delayed attack snap.
-	# Real map teleports or respawns (>160 px) are never visually disguised.
+	# Real map teleports/respawns beyond the bounded correction range are
+	# never visually disguised.
 	var is_near_screen: bool = _is_on_screen
 	if not is_near_screen:
 		is_near_screen = (
