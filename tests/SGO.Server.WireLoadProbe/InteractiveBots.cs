@@ -50,6 +50,7 @@ internal static class InteractiveBots
                     Console.WriteLine("dotnet run -c Release --project tests/SGO.Server.WireLoadProbe -- --bots --players 20 --map 13");
                     Console.WriteLine("Random walkable monster-area positions; Lv1 low-attack, high-HP/DEF bots, normal attacks and rare single-target skills.");
                     Console.WriteLine("--seconds 0 keeps players online until Ctrl+C. --no-combat disables attacking and monster spawning.");
+                    Console.WriteLine("Connects existing Server/DB only. Default --monsters 0 (use existing monsters); new test accounts persist.");
                     return 0;
                 default: throw new ArgumentException("Unknown bot option: " + args[i]);
             }
@@ -108,7 +109,8 @@ internal static class InteractiveBots
         Console.WriteLine($"[BOTS] run={run} count={count} map={map} " +
             (x.HasValue ? $"center=({walks.Center.X},{walks.Center.Y}) radius={radius}"
                 : "placement=all walkable enemy zones (no fixed patrol radius)"));
-        Console.WriteLine("[BOTS] Connecting to the existing SGO Server via WebSocket (no separate database).");
+        Console.WriteLine($"[BOTS] Connecting to existing Server at {url} (no separate database or second Server).");
+        Console.WriteLine($"[BOTS] Extra test monster spawns: {spawn} (0 = use existing map monsters).");
         Console.WriteLine("[BOTS] New bot accounts persist in the existing Server database.");
         Console.WriteLine("[BOTS] Requires Game__GmCommandsEnabled=true and Game__TestBotCommandsEnabled=true on Server.");
         Console.WriteLine("[BOTS] Lv1, ATK=1, DEF=1000, HP=20000; normal attacks + rare simple single-target skills.");
@@ -340,6 +342,8 @@ internal static class InteractiveBots
                 Connected = live.Length,
                 ElapsedSeconds = start.Elapsed.TotalSeconds,
                 MapId = map,
+                ServerUrl = url,
+                ExtraMonsterSpawnsRequested = spawn,
                 PatrolRadius = radius,
                 Placement = x.HasValue ? "near-user-point" : "map-wide-enemy-spawn-zones",
                 Level = 1,
