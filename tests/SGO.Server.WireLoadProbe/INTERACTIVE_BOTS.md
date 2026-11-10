@@ -6,7 +6,11 @@
 
 ## 1. 沿用現有 Server（不要更換 DB 設定）
 
-**如果現有 Server 已運行，且 `Game:TestBotCommandsEnabled=true`，就不用重啟或另開 Server，直接跳到第 2 步。**
+**如果現有 Server 已運行，且程式已包含 `/gm testbot` 並啟用 `Game:TestBotCommandsEnabled=true`，就不用重啟或另開 Server，直接跳到第 2 步。**
+
+如果看到 `未知 GM 指令：testbot`，請先更新**執行中的 Server** 來源並重新編譯，確認程序已停止再以原本的 Server 執行設定重新啟動。這個回覆可能是**舊版 Server 執行檔**，也可能是未啟用 `Game:TestBotCommandsEnabled`。新版本在設定未啟用時會更明確回覆 `testbot 未啟用`。
+
+**已修正防護：** 工具現在先建立與驗證 **1 位**測試 Bot（包含 `/gm testbot`、傳送與技能初始化），確認成功後才開始其餘帳號。若 Server 不支援指令或關閉測試旗標，會印 `PRECHECK FAILED` 並停止，避免一次再建立 20 個帳號。第一個測試帳號仍可能留在原本資料庫，這是現有持久化流程的結果。
 
 如果尚未啟用測試功能，請停止**現有的 Server** 後，依你原本使用的 VS2022 Debug / Release / cmd 啟動方式設定 `Game:TestBotCommandsEnabled=true` 並重新啟動**同一個 Server**。例如原本就在 PowerShell 中啟動，先設定：
 
