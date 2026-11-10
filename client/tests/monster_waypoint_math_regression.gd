@@ -30,6 +30,24 @@ func _run() -> void:
 		"350ms jittered bot waypoint retains its own server duration")
 	_check(MonsterWaypointSpeed.calculate(1000.0, 0.25) <= 900.0,
 		"large temporary network backlog has a bounded catch-up speed")
+	_check(absf(
+		MonsterWaypointSpeed.calculate_server_driven(
+			35.0, 0.25, 140.0, 0.25
+		) - 140.0
+	) < 0.1,
+		"normal chase waypoint follows server entity speed instead of packet arrival timing")
+	var merged_speed := MonsterWaypointSpeed.calculate_server_driven(
+		280.0, 0.75, 140.0, 2.0
+	)
+	_check(merged_speed >= 279.0 and merged_speed <= 281.0,
+		"2s coalesced chase catches up at at most 2x nominal speed, not a compressed dash")
+	_check(MonsterWaypointSpeed.calculate_server_driven(
+		280.0, 0.0, 140.0, 2.0
+	) == 0.0,
+		"authoritative zero-time correction remains a correction boundary")
+	var correction_seconds := MonsterWaypointSpeed.correction_visual_seconds(350.0)
+	_check(correction_seconds > 0.5 and correction_seconds < 0.6,
+		"350px attack correction is visually eased by distance instead of one-frame snapping")
 	var full_hd_viewport := Rect2(Vector2.ZERO, Vector2(1920.0, 1080.0))
 	_check(MonsterWaypointSpeed.is_near_viewport(
 		full_hd_viewport, Vector2(1900.0, 1000.0)),
