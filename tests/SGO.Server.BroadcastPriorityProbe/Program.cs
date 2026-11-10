@@ -285,6 +285,14 @@ try
         var cleanupElapsedMs = Stopwatch.GetElapsedTime(cleanupStarted).TotalMilliseconds;
         Check(expired.Count == 0 && cleanupElapsedMs < 1000,
             $"empty-map 1Hz ground cleanup does not wait for WAL writer ({cleanupElapsedMs:F1}ms)");
+        var drainStarted = Stopwatch.GetTimestamp();
+        var noCompanions = store.DrainCompanionRuntime(accountId.Value, characterId, 1);
+        var drainElapsedMs = Stopwatch.GetElapsedTime(drainStarted).TotalMilliseconds;
+        Check(noCompanions.Pets.Count == 0 &&
+              noCompanions.Horse is null &&
+              noCompanions.RecalledPetUids.Count == 0 &&
+              drainElapsedMs < 1000,
+            $"idle companion tick bypasses WAL writer and full assets ({drainElapsedMs:F1}ms)");
         using var rollback = writer.CreateCommand();
         rollback.CommandText = "ROLLBACK";
         rollback.ExecuteNonQuery();
@@ -297,8 +305,8 @@ try
         seed.Open();
         using var cmd = seed.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO pets (character_id,pet_id,name,hp,max_hp,level,attack,evol_id,state)
-            VALUES ($id,245,'ActiveTester',67,120,4,31,2,1);
+            INSERT INTO pets (character_id,pet_id,name,hp,max_hp,level,attack,evol_id,feed_value,state)
+            VALUES ($id,245,'ActiveTester',67,120,4,31,2,2,1);
             INSERT INTO pets (character_id,pet_id,name,state)
             VALUES ($id,246,'StoredTester',0);
             """;
@@ -315,17 +323,16 @@ try
         "narrow pet query returns exact live spawn, skill and attack fields");
     Check(store.GetActivePetFollowSnapshot(accountId.Value + 1000, characterId).Count == 0,
         "active pets cannot leak across accounts");
-    using (var unsummon = new SqliteConnection(
-               new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString()))
-    {
-        unsummon.Open();
-        using var cmd = unsummon.CreateCommand();
-        cmd.CommandText = "UPDATE pets SET state=0 WHERE character_id=$id";
-        cmd.Parameters.AddWithValue("$id", characterId);
-        cmd.ExecuteNonQuery();
-    }
-    Check(store.GetActivePetFollowSnapshot(accountId.Value, characterId).Count == 0,
-        "unsummon takes effect without cached/stale pet state");
+    var firstDrain = store.DrainCompanionRuntime(accountId.Value, characterId, 1);
+    var afterOne = store.GetActivePetFollowSnapshot(accountId.Value, characterId);
+    Check(firstDrain.Pets.Count == 1 &&
+          firstDrain.RecalledPetUids.Count == 0 &&
+          afterOne.Count == 1,
+        "active companion still drains food on the original one-second cadence");
+    var secondDrain = store.DrainCompanionRuntime(accountId.Value, characterId, 1);
+    Check(secondDrain.RecalledPetUids.Count == 1 &&
+          store.GetActivePetFollowSnapshot(accountId.Value, characterId).Count == 0,
+        "food exhaustion still recalls the pet and updates live server state");
     using (var corrupt = new SqliteConnection(
                new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString()))
     {
