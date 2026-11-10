@@ -285,6 +285,57 @@ public sealed class SqliteGameStore : IGameStore
             : Convert.ToInt32(raw);
     }
 
+    // Replace N independent SQLite connections/SELECTs each 250ms AI pass
+    // with one narrow read per map (20 peers => one query, not twenty).
+    // Validate account+character identity before returning each HP value.
+    // No writer locks, cache staleness or durability changes.
+    public IReadOnlyDictionary<long, int> GetCharacterHpSnapshot(
+        IReadOnlyList<(long AccountId, long CharacterId)> identities)
+    {
+        var result = new Dictionary<long, int>();
+        if (identities.Count == 0)
+            return result;
+
+        var expected = new Dictionary<long, long>();
+        foreach (var (accountId, characterId) in identities)
+        {
+            if (accountId > 0 && characterId > 0)
+                expected[characterId] = accountId;
+        }
+        if (expected.Count == 0)
+            return result;
+
+        using var db = Open();
+        const int batchSize = 400; // safely below any SQLite bind limit
+        var keys = expected.Keys.ToArray();
+        for (var offset = 0; offset < keys.Length; offset += batchSize)
+        {
+            using var cmd = db.CreateCommand();
+            var parameterNames = new List<string>();
+            for (var i = offset; i < Math.Min(keys.Length, offset + batchSize); i++)
+            {
+                var key = "$id" + (i - offset);
+                parameterNames.Add(key);
+                Arg(cmd, key, keys[i]);
+            }
+
+            cmd.CommandText =
+                $"SELECT id,account_id,hp FROM characters WHERE id IN ({string.Join(",", parameterNames)})";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var id = reader.GetInt64(0);
+                if (expected.TryGetValue(id, out var accountId) &&
+                    accountId == reader.GetInt64(1))
+                {
+                    result[id] = reader.GetInt32(2);
+                }
+            }
+        }
+
+        return result;
+    }
+
     private static SqliteCommand CharacterQuery(SqliteConnection db)
     {
         var cmd = db.CreateCommand();
