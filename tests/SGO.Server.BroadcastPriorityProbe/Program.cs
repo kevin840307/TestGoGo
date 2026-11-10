@@ -268,6 +268,11 @@ try
             $"batched HP snapshot is read-only under another WAL writer ({hpElapsedMs:F1}ms)");
         Check(store.GetCharacterHpSnapshot([(accountId.Value + 1000, characterId)]).Count == 0,
             "batch HP query never leaks another account's character");
+        var cleanupStarted = Stopwatch.GetTimestamp();
+        var expired = store.RemoveExpiredGroundItems(990, DateTimeOffset.UtcNow);
+        var cleanupElapsedMs = Stopwatch.GetElapsedTime(cleanupStarted).TotalMilliseconds;
+        Check(expired.Count == 0 && cleanupElapsedMs < 1000,
+            $"empty-map 1Hz ground cleanup does not wait for WAL writer ({cleanupElapsedMs:F1}ms)");
         using var rollback = writer.CreateCommand();
         rollback.CommandText = "ROLLBACK";
         rollback.ExecuteNonQuery();
