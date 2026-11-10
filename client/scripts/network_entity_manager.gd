@@ -18,7 +18,6 @@ const MONSTER_AOI_UPDATE_INTERVAL: float = 0.20
 # Server MoveEntity/SpawnEntity events update queues immediately. If the
 # local observer has not moved, full-map scans can be reduced safely.
 const MONSTER_AOI_STATIONARY_SCAN_INTERVAL: float = 1.0
-const MONSTER_AOI_EXIT_GRACE_MSEC: int = 1000
 # Defer distant ground-drop scenes but always retain server snapshots.
 const GROUND_AOI_ENTER_RADIUS: float = 2000.0
 const GROUND_AOI_EXIT_RADIUS: float = 2400.0
@@ -1302,7 +1301,7 @@ func _run_entity_runtime(delta: float) -> void :
 		_spawn_queue.clear()
 		_queued_spawn_ids.clear()
 		_runtime_monster_ids.clear()
-	_monster_exit_started_msec.clear()
+		_monster_exit_started_msec.clear()
 		_monster_spawn_templates.clear()
 		_deferred_monster_spawns.clear()
 		_combat_reveal_until_msec.clear()
