@@ -1174,6 +1174,12 @@ public sealed class PacketRouter
                         _broadcasts.ReconcilePlayerAoi(state.ConnectionId));
                     PublishWorldAoiChanges(
                         _broadcasts.ReconcileWorldAoi(state.ConnectionId));
+                    // WebSocketEndpoint calls SyncPresence immediately after
+                    // Handle(). The approved movement already reconciled both
+                    // indexes here: do not repeat the same expensive scan.
+                    state.PresenceAoiInitialized = true;
+                    state.LastPresenceAoiX = x;
+                    state.LastPresenceAoiY = y;
                 }
 
                 var now = DateTimeOffset.UtcNow;
