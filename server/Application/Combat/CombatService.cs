@@ -2393,6 +2393,14 @@ public sealed class CombatService
                     effective.Attack + effective.MagicAttack);
             }
 
+            // Load-test characters already have ATK=1, but a skill's fixed
+            // BaseDamage can still instantly kill a monster. Only clamp
+            // single-target skills of explicitly marked synthetic bots;
+            // real players and all existing damage formulas stay unchanged.
+            if (!isAreaAttack &&
+                _store.IsLoadTestBot(accountId, session.CharacterId.Value))
+                damage = Math.Min(damage, 1);
+
             var runtime = _runtime.GetMap(
                 session.CurrentMapId);
             var totalDamageDealt = 0;
@@ -3116,17 +3124,23 @@ public sealed class CombatService
 
             var dx = playerX - monster.X;
             var dy = playerY - monster.Y;
-            var allowedRange = attackRange + 120;
+            // A 120px blanket tolerance effectively gave melee weapons
+            // ranged attacks. Keep only a small latency allowance; genuine
+            // ranged weapons still use their own calculated AttackRange.
+            const double networkRangeTolerance = 24.0;
+            var allowedRange = attackRange + networkRangeTolerance;
 
             if ((dx * dx) + (dy * dy) >
                 allowedRange * allowedRange)
-            {
-                return [new
-                {
-                    Type = "SystemMessageFlash",
-                    Message = "目標距離太遠"
-                }];
-            }
+                return [Flash("目標距離太遠")];
+
+            // Distance alone is insufficient: never hit a monster through a
+            // blocked tile or the corner of a wall.
+            if (!_navigation.IsDirectClear(
+                    session.CurrentMapId,
+                    playerX, playerY,
+                    monster.X, monster.Y))
+                return [Flash("攻擊目標被障礙物阻擋")];
 
             var damage = Math.Max(
                 1,
