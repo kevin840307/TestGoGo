@@ -268,6 +268,18 @@ try
             $"batched HP snapshot is read-only under another WAL writer ({hpElapsedMs:F1}ms)");
         Check(store.GetCharacterHpSnapshot([(accountId.Value + 1000, characterId)]).Count == 0,
             "batch HP query never leaks another account's character");
+        var travelStarted = Stopwatch.GetTimestamp();
+        var location = store.GetCharacterLocation(accountId.Value, characterId);
+        var travelMs = Stopwatch.GetElapsedTime(travelStarted).TotalMilliseconds;
+        Check(location.HasValue && location.Value.MapId > 0 && travelMs < 1000,
+            $"narrow live map location remains nonblocking under WAL writer ({travelMs:F1}ms)");
+        Check(store.GetCharacterLocation(accountId.Value + 1000, characterId) is null,
+            "narrow location read checks account ownership");
+        var petsStarted = Stopwatch.GetTimestamp();
+        var noPets = store.GetActivePetFollowSnapshot(accountId.Value, characterId);
+        var petsMs = Stopwatch.GetElapsedTime(petsStarted).TotalMilliseconds;
+        Check(noPets.Count == 0 && petsMs < 1000,
+            $"no-active-pet follow snapshot remains nonblocking ({petsMs:F1}ms)");
         var cleanupStarted = Stopwatch.GetTimestamp();
         var expired = store.RemoveExpiredGroundItems(990, DateTimeOffset.UtcNow);
         var cleanupElapsedMs = Stopwatch.GetElapsedTime(cleanupStarted).TotalMilliseconds;
@@ -277,6 +289,43 @@ try
         rollback.CommandText = "ROLLBACK";
         rollback.ExecuteNonQuery();
     }
+    // A live pet state change must be reflected immediately by the next
+    // 250ms query: no stale cache and no leak to another account.
+    using (var seed = new SqliteConnection(
+               new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString()))
+    {
+        seed.Open();
+        using var cmd = seed.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO pets (character_id,pet_id,name,hp,max_hp,level,attack,evol_id,state)
+            VALUES ($id,245,'ActiveTester',67,120,4,31,2,1);
+            INSERT INTO pets (character_id,pet_id,name,state)
+            VALUES ($id,246,'StoredTester',0);
+            """;
+        cmd.Parameters.AddWithValue("$id", characterId);
+        cmd.ExecuteNonQuery();
+    }
+    var livePet = store.GetActivePetFollowSnapshot(accountId!.Value, characterId);
+    Check(livePet.Count == 1 &&
+          Convert.ToInt32(livePet[0]["HP"]) == 67 &&
+          Convert.ToInt32(livePet[0]["Attack"]) == 31 &&
+          Convert.ToInt32(livePet[0]["EvolID"]) == 2 &&
+          Convert.ToInt32(livePet[0]["Level"]) == 4 &&
+          Convert.ToString(livePet[0]["Name"]) == "ActiveTester",
+        "narrow pet query returns exact live spawn, skill and attack fields");
+    Check(store.GetActivePetFollowSnapshot(accountId.Value + 1000, characterId).Count == 0,
+        "active pets cannot leak across accounts");
+    using (var unsummon = new SqliteConnection(
+               new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString()))
+    {
+        unsummon.Open();
+        using var cmd = unsummon.CreateCommand();
+        cmd.CommandText = "UPDATE pets SET state=0 WHERE character_id=$id";
+        cmd.Parameters.AddWithValue("$id", characterId);
+        cmd.ExecuteNonQuery();
+    }
+    Check(store.GetActivePetFollowSnapshot(accountId.Value, characterId).Count == 0,
+        "unsummon takes effect without cached/stale pet state");
     using (var corrupt = new SqliteConnection(
                new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString()))
     {
