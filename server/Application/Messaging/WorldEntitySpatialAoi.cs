@@ -162,6 +162,9 @@ public sealed class WorldEntitySpatialAoi
     private readonly Dictionary<
         (int MapId, int CellX, int CellY),
         HashSet<Guid>> _observerCells = new();
+    // Normal observers stay on the legacy 3000 search radius. Only enlarge
+    // entity->observer cell scans while a real large-view client is present.
+    private double _maxActiveObserverExitRadius = ExitRadius;
 
     private readonly Dictionary<
         (int MapId, int CellX, int CellY),
@@ -241,9 +244,12 @@ public sealed class WorldEntitySpatialAoi
                     player.ConnectionId,
                     entry);
                 AddObserverCell(entry);
+                if (entry.ExitRadius > _maxActiveObserverExitRadius)
+                    _maxActiveObserverExitRadius = entry.ExitRadius;
             }
             else
             {
+                var previousExitRadius = entry.ExitRadius;
                 var nextCell = CellOf(
                     player.MapId,
                     player.X,
@@ -258,6 +264,9 @@ public sealed class WorldEntitySpatialAoi
                 entry.EnterRadius = NormalizeObserverEnterRadius(
                     player.ViewInterestRadius);
                 entry.ExitRadius = ObserverExitRadiusFor(entry.EnterRadius);
+                RefreshMaxActiveObserverExitRadius(
+                    previousExitRadius,
+                    entry.ExitRadius);
             }
 
             var candidates =
@@ -527,7 +536,7 @@ public sealed class WorldEntitySpatialAoi
         foreach (var observerId in
                  NearbyObserverIds(
                      entry.Cell,
-                     MaxExitRadius))
+                     _maxActiveObserverExitRadius))
         {
             candidates.Add(observerId);
         }
@@ -646,6 +655,8 @@ public sealed class WorldEntitySpatialAoi
             return;
 
         RemoveObserverCell(entry);
+        if (entry.ExitRadius >= _maxActiveObserverExitRadius)
+            RecalculateMaxActiveObserverExitRadius();
 
         foreach (var entityId in
                  entry.Visible)
@@ -660,6 +671,31 @@ public sealed class WorldEntitySpatialAoi
         }
 
         entry.Visible.Clear();
+    }
+
+    private void RefreshMaxActiveObserverExitRadius(
+        double previousExitRadius,
+        double nextExitRadius)
+    {
+        if (nextExitRadius > _maxActiveObserverExitRadius)
+        {
+            _maxActiveObserverExitRadius = nextExitRadius;
+            return;
+        }
+
+        if (previousExitRadius >= _maxActiveObserverExitRadius &&
+            nextExitRadius < previousExitRadius)
+        {
+            RecalculateMaxActiveObserverExitRadius();
+        }
+    }
+
+    private void RecalculateMaxActiveObserverExitRadius()
+    {
+        var maxRadius = ExitRadius;
+        foreach (var observer in _observers.Values)
+            maxRadius = Math.Max(maxRadius, observer.ExitRadius);
+        _maxActiveObserverExitRadius = maxRadius;
     }
 
     private IEnumerable<long> NearbyEntityIds(
