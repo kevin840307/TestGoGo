@@ -160,8 +160,12 @@ public static class WebSocketEndpoint
                         // monster and ground-item traffic. Bound the low batch
                         // so a fresh player MoveEntity never waits behind
                         // hundreds of unrelated item SpawnEntity messages.
-                        const int priorityBatch = 64;
-                        const int ordinaryBatch = 64;
+                        // Short ordinary bursts bound how long fresh player
+                        // events wait behind ground/monster sends. Every
+                        // packet remains queued, FIFO within each lane;
+                        // no FPS, gameplay or network tick is throttled.
+                        const int priorityBatch = 32;
+                        const int ordinaryBatch = 8;
                         var playerUpdates = new List<object>(priorityBatch);
                         var otherUpdates = new List<object>(ordinaryBatch);
                         for (var i = 0; i < priorityBatch &&
@@ -173,12 +177,11 @@ public static class WebSocketEndpoint
                         for (var i = 0; i < ordinaryBatch &&
                              broadcastQueue.TryDequeue(out var broadcastPacket); i++)
                         {
-                            // Defensive compatibility for packets that were
-                            // queued before the fast-lane registration.
-                            if (BroadcastPriority(broadcastPacket) == 0)
-                                playerUpdates.Add(broadcastPacket);
-                            else
-                                otherUpdates.Add(broadcastPacket);
+                            // This WebSocket registered its dedicated player
+                            // lane before the broadcast queue became visible.
+                            // Ordinary packets therefore require no expensive
+                            // reflection-based reclassification here.
+                            otherUpdates.Add(broadcastPacket);
                         }
 
                         // Send all queued updates, never discard gameplay or
