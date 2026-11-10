@@ -65,8 +65,8 @@ jobs:
               --script "res://tests/$script" 2>&1 | tee -a godot-motion.log
           done
           grep -Fq '[REMOTE_MOTION_TEST] ALL PASS' godot-motion.log
-          grep -Fq '[REMOTE_MOTION_TEST] ALL PASS' godot-motion.log
-          grep -q '\\[MOTION_AUDIT\\] ALL PASS' godot-motion.log
+          grep -Fq '[MONSTER_WAYPOINT_TEST] ALL PASS' godot-motion.log
+          grep -Fq '[MOTION_AUDIT] ALL PASS' godot-motion.log
       - name: Scene/packet integration regressions (requires original art)
         shell: bash
         run: |
