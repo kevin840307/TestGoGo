@@ -210,7 +210,15 @@ public sealed class PacketRouter
         // A selected character must not appear for every player across
         // the whole map. Only WorldReady clients join the spatial AOI.
         // Remove old visibility before a map/identity transition.
-        if (changed || !state.WorldReady)
+        // Session / map changes invalidate visibility immediately. The
+        // previous code re-ran both AOI spatial-index reconciliations on
+        // EVERY packet and every 250ms world tick, even at identical X/Y.
+        // Only identity, world readiness and approved position changes can
+        // affect observer visibility. Moving monsters/items update their
+        // own world AOI indexes through the existing entity-publish path.
+        var lostWorldReady = !state.WorldReady &&
+                             state.PresenceAoiInitialized;
+        if (changed || lostWorldReady)
         {
             PublishPlayerAoiChanges(
                 _broadcasts.RemovePlayerAoi(state.ConnectionId));
@@ -218,6 +226,7 @@ public sealed class PacketRouter
                 state.ConnectionId);
             _broadcasts.ClearPlayerCompanions(
                 state.ConnectionId);
+            state.PresenceAoiInitialized = false;
         }
 
         _broadcasts.UpdatePresence(
@@ -229,12 +238,20 @@ public sealed class PacketRouter
             hasCurrent ? state.LastY : 0,
             hasCurrent ? state.CharacterName : "");
 
-        if (hasCurrent && state.WorldReady)
+        var needsSpatialReconcile =
+            changed ||
+            !state.PresenceAoiInitialized ||
+            state.LastPresenceAoiX != state.LastX ||
+            state.LastPresenceAoiY != state.LastY;
+        if (hasCurrent && state.WorldReady && needsSpatialReconcile)
         {
             PublishPlayerAoiChanges(
                 _broadcasts.ReconcilePlayerAoi(state.ConnectionId));
             PublishWorldAoiChanges(
                 _broadcasts.ReconcileWorldAoi(state.ConnectionId));
+            state.PresenceAoiInitialized = true;
+            state.LastPresenceAoiX = state.LastX;
+            state.LastPresenceAoiY = state.LastY;
         }
 
         state.PublishedMapId = nextMapId;
