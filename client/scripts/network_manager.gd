@@ -10,7 +10,11 @@ var _is_waiting_logout_confirm = false
 var _logout_timeout_timer = 0.0
 const LOGOUT_TIMEOUT_MAX = 2.0
 const RUNTIME_PREDICTION_INTERVAL: = 0.1
-const IN_WORLD_PACKET_LIMIT_PER_FRAME: = 48
+# Allow cheap player MoveEntity/SyncState packets to use spare network time.
+# The existing 4ms wall-clock budget still caps network work per physics
+# tick, so this does not steal extra time from rendering or change gameplay
+# simulation cadence when packets are expensive.
+const IN_WORLD_PACKET_LIMIT_PER_FRAME: = 128
 const IN_WORLD_PACKET_TIME_BUDGET_USEC: = 4000
 const PRE_WORLD_PACKET_LIMIT_PER_FRAME: = 128
 const PRE_WORLD_PACKET_TIME_BUDGET_USEC: = 8000
