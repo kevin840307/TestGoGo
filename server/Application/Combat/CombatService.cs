@@ -1771,7 +1771,8 @@ public sealed class CombatService
                     castRange * castRange)
                     return [Flash("技能目標距離太遠")];
 
-                if (!_navigation.IsDirectClear(
+                if (_blocking.HasMap(session.CurrentMapId) &&
+                    !_navigation.IsDirectClear(
                         session.CurrentMapId,
                         playerX, playerY, centerX, centerY))
                     return [Flash("技能目標被障礙物阻擋")];
@@ -3142,7 +3143,8 @@ public sealed class CombatService
 
             // Distance alone is insufficient: never hit a monster through a
             // blocked tile or the corner of a wall.
-            if (!_navigation.IsDirectClear(
+            if (_blocking.HasMap(session.CurrentMapId) &&
+                !_navigation.IsDirectClear(
                     session.CurrentMapId,
                     playerX, playerY,
                     monster.X, monster.Y))
