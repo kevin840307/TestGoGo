@@ -721,7 +721,12 @@ func _handle_combat_tracking() -> void :
 			if s_lv and s_lv.cast_range > 0:
 				required_range = float(s_lv.cast_range)
 
-	if dist > required_range:
+	# Original RunPlayerLogic branches back into approach on equality:
+	# cmp distance_squared, range_squared_minus_200; jge approach.
+	# Keep the strict < boundary for ordinary attacks only. Skills retain
+	# their independent existing CastRange boundary behavior.
+	var outside_range: bool = dist >= required_range if pending_skill_id <= 0 else dist > required_range
+	if outside_range:
 		var combat_destination: Vector2 = combat_target.global_position
 		if move_destination.distance_to(combat_destination) >= 16.0 or not is_moving:
 			_set_navigation_target(combat_destination)
