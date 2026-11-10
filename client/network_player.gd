@@ -482,7 +482,7 @@ func network_move_to(new_pos: Vector2, speed_time: float = 1.0) -> void :
 		if gap_ms >= 500 and current_state == "walk" and _debug_remote_gap_reports < 12:
 			_debug_remote_gap_reports += 1
 			print("[REMOTE_PLAYER_PACKET_GAP] id=%d gap_ms=%d target_delta=%.1f server_speed_time=%.3f" % [
-				entity_id, gap_ms, target_position.distance_to(new_pos), speed_time
+				int(data_model.db_id), gap_ms, target_position.distance_to(new_pos), speed_time
 			])
 	_last_remote_move_received_msec = received_msec
 	var movement_speed_basis: float = get_real_move_speed()
