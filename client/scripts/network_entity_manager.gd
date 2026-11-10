@@ -1230,6 +1230,12 @@ func _run_entity_runtime(delta: float) -> void :
 		var spawned_count := 0
 		var batch_limit: int = INITIAL_SPAWN_BATCH_PER_FRAME if _initial_spawn_boost else SPAWN_BATCH_PER_FRAME
 		var frame_budget_usec: int = INITIAL_SPAWN_FRAME_BUDGET_USEC if _initial_spawn_boost else SPAWN_FRAME_BUDGET_USEC
+		# Other players are interactive and their visual latency matters more
+		# than ground items. Allow up to three player scenes per frame only
+		# when the existing microsecond budget permits. This never reduces
+		# the fixed network/physics packet update cadence or FPS target.
+		if not _initial_spawn_boost and int(_spawn_queue[0].get("EntityType", -1)) == 0:
+			batch_limit = maxi(batch_limit, 3)
 		while not _spawn_queue.is_empty() and spawned_count < batch_limit:
 			if spawned_count > 0 and Time.get_ticks_usec() - frame_started_usec >= frame_budget_usec:
 				break
