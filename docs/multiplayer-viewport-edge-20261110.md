@@ -58,3 +58,45 @@ Camera2D/CSS-style viewport stretch、camera offset、rotation 和非等比變�
   `MONSTER_AUTHORITATIVE_SNAP`、`BROADCAST_BACKLOG`、`MAP_AI_PROFILE`。
 - 比對 Server AOI 出入時的 Spawn/Despawn、SyncState 停止、攻擊事件，
   且切圖、失焦、掛機、掉落物與 30/60/自訂 FPS 不得退化。
+
+## Server viewport subscription 補齊（PR #6）
+
+PR #5 已修正 Client 自己的實際 Canvas2D 視野與 monster Scene 回收，但 Server 原先仍固定使用：
+
+- 玩家 PlayerSpatialAoi：Enter/Exit = 1800/2200。
+- monster / ground WorldEntitySpatialAoi：Enter/Exit = 2600/3000。
+
+因此 Client 在 ultrawide、4K 或 zoom-out 時，即使畫面真的看得到外圍 actor，
+Server 仍可能尚未建立該 observer 的 Spawn/Move subscription；等 actor 進入固定半徑後，
+Client 直接拿到較新的權威座標，就會呈現「畫面外圈突然出現／順移」。
+
+PR #6 改為：
+
+1. Client WorldReady 帶 ViewRadius，由 viewport 半對角、zoom、camera/player offset
+   加 480 world-unit margin 計算；遊戲中每 0.5 秒只檢查一次 resize/zoom，
+   半徑變化小於 64 不送 ViewInterest。
+2. 800×600 與一般 1080p 維持原 1800 player AOI 下限，不增加既有流量。
+   3440×1440 約 2344，4K 約 2683；Client/Server 皆 clamp 最大 4200。
+3. 玩家 AOI 保留既有 reciprocal visibility 與 400-unit hysteresis；
+   pair 半徑採兩端實際需求較大者，candidate 仍由 1024 spatial cells 篩選，
+   不退回全地圖 O(N²) 廣播。
+4. world entity AOI 使用每個 observer 自己的 enter/exit radius；
+   entity 移動時最多搜尋受限 4600 的 observer cells，再以個別半徑精確判定。
+5. 這只改封包 delivery interest；Blocking、戰鬥距離、命中、Server 權威位置、
+   Physics tick、AFK/失焦封包處理均不變。
+
+### 封包節奏結論
+
+原版反編譯只能證明 MoveStep / movelogic 在 Client 本地持續步進，
+且 destination movement 與 position correction 是不同命令；原版 50 FPS
+不能當成 wire packet Hz。沒有帶時間戳的原版封包擷取前，不宣稱精確原服 Hz。
+
+目前新版明確的節奏是：
+
+- 玩家權威位置 snapshot：Server 最快約每 100ms 廣播一次（約 10 Hz），
+  SpeedTime 帶實際 snapshot 間隔，Client 在固定 Physics tick 連續平滑。
+- 共享 monster AI waypoint：目前約每 250ms 一輪（約 4 Hz），Client 不中斷地
+  插值到 waypoint；PR #4 只合併 socket 尚未送出的同 actor 舊 waypoint，
+  combat/state/authoritative correction 保持 FIFO 邊界。
+- 這次不靠提高發包頻率暴力換順暢，而是避免 stale backlog、維持 Client 連續運動，
+  並讓 Server subscription 真正覆蓋新版可見 viewport。
