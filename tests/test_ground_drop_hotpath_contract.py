@@ -42,6 +42,20 @@ class GroundDropHotPathContract(unittest.TestCase):
         self.assertNotIn("for active_entity_id in _active_entity_types", body)
         self.assertIn("_remember_fatal_monster(target_id, target_node", MANAGER)
 
+    def test_remote_player_visuals_precede_bulk_aoi_work(self):
+        runtime = MANAGER.split("func _run_entity_runtime(delta: float)", 1)[1]
+        runtime = runtime.split("static func get_ground_drop_bounce_sprite", 1)[0]
+        self.assertLess(
+            runtime.index("if not _spawn_queue_paused and not _spawn_queue.is_empty():"),
+            runtime.index("_trim_ground_visuals_budgeted()"),
+        )
+        self.assertLess(
+            runtime.index("if not _spawn_queue_paused and not _spawn_queue.is_empty():"),
+            runtime.index("_update_ground_aoi(delta)"),
+        )
+        self.assertIn("SPAWN_FRAME_BUDGET_USEC", runtime)
+        self.assertIn('int(_spawn_queue[0].get("EntityType", -1)) == 0', runtime)
+
     def test_packet_and_fps_policy_unchanged(self):
         self.assertIn("func _on_entity_spawned(data: Dictionary)", MANAGER)
         self.assertIn("func _on_entity_despawned(data: Dictionary)", MANAGER)
