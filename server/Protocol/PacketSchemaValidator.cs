@@ -27,6 +27,7 @@ public static class PacketSchemaValidator
                 new("EMAIL", FieldType.Text)
             ],
             ["WorldReady"] = [new("MapID", FieldType.Integer)],
+            ["ViewportAoi"] = [new("Radius", FieldType.Integer)],
             ["SyncPosition"] = [new("X", FieldType.Integer), new("Y", FieldType.Integer)],
             ["UseItemRequest"] = [new("ItemUID", FieldType.LongInteger)],
             ["UseItemChoiceRequest"] =
