@@ -511,8 +511,11 @@ func refresh_network_physics() -> void :
 func apply_network_state(new_state: String, new_dir: String) -> void :
 	if new_dir != "":
 		current_dir = new_dir
-	if new_state == "idle":
+	if new_state == "idle" or new_state.begins_with("attack") or new_state.begins_with("hit") or new_state in ["death", "die"]:
+		# Authoritative combat/idle state stops visual dead reckoning. Keep
+		# damage and targeting on their original Server-driven path.
 		_remote_motion.stop_prediction()
+	if new_state == "idle":
 		if global_position.distance_squared_to(target_position) > 4.0:
 			_pending_idle = true
 			set_physics_process(true)
