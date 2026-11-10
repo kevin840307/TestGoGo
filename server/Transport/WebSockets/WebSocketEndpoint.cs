@@ -75,25 +75,49 @@ public static class WebSocketEndpoint
                     socket.State != WebSocketState.Open)
                     return;
 
+                var sendStarted = System.Diagnostics.Stopwatch.GetTimestamp();
                 await sendGate.WaitAsync(cancellationToken);
+                var sendGateWaitMs = System.Diagnostics.Stopwatch.GetElapsedTime(
+                    sendStarted).TotalMilliseconds;
+                var encodeMs = 0.0;
+                var socketWriteMs = 0.0;
                 try
                 {
                     foreach (var packet in packets)
                     {
+                        var encodingStarted = System.Diagnostics.Stopwatch.GetTimestamp();
                         var output = broadcastPacket
                             ? broadcasts.EncodeBroadcastPacket(packet)
                             : Encoding.UTF8.GetBytes(ClientProtocol.Encode(packet));
+                        encodeMs += System.Diagnostics.Stopwatch.GetElapsedTime(
+                            encodingStarted).TotalMilliseconds;
 
+                        var writeStarted = System.Diagnostics.Stopwatch.GetTimestamp();
                         await socket.SendAsync(
                             output.AsMemory(),
                             WebSocketMessageType.Text,
                             true,
                             cancellationToken);
+                        socketWriteMs += System.Diagnostics.Stopwatch.GetElapsedTime(
+                            writeStarted).TotalMilliseconds;
                     }
                 }
                 finally
                 {
                     sendGate.Release();
+                }
+
+                var sendMs = System.Diagnostics.Stopwatch.GetElapsedTime(
+                    sendStarted).TotalMilliseconds;
+                if (sendMs >= 250)
+                {
+                    // Identify head-of-line blocking without exposing payloads.
+                    // This is passive timing only: no reordering, dropped
+                    // packets, async writes or modified send cadence.
+                    log.LogWarning(
+                        "[SLOW_SEND_BATCH] TotalMs={TotalMs:F1} GateWaitMs={GateWaitMs:F1} EncodeMs={EncodeMs:F1} SocketWriteMs={SocketWriteMs:F1} Count={Count} Broadcast={Broadcast} Connection={ConnectionID}",
+                        sendMs, sendGateWaitMs, encodeMs, socketWriteMs,
+                        packets.Count, broadcastPacket, state.ConnectionId);
                 }
             }
 
