@@ -243,6 +243,35 @@ internal static class SharedMapAiConcurrencySmokeTests
                         x.LastAiAt == secondAt),
                     "second shared pass advances each monster once at the new scheduler timestamp");
             }
+
+            // Ordinary AttackEntity must not hit a monster beyond the
+            // weapon's actual range. The former unconditional +120px
+            // allowance let melee characters attack from far away.
+            var attacker = sessions[0];
+            var distantTarget = map.Monsters[9_900_000];
+            var oldX = distantTarget.X;
+            var oldY = distantTarget.Y;
+            var oldHp = distantTarget.CurrentHp;
+            try
+            {
+                distantTarget.X = attacker.Session.LastX + 400;
+                distantTarget.Y = attacker.Session.LastY;
+                var outOfRange = combat.Attack(
+                    attacker.Session,
+                    attacker.AccountId,
+                    distantTarget.EntityId,
+                    targetType: 1);
+                Check(
+                    outOfRange.Any(packet =>
+                        JsonSerializer.Serialize(packet).Contains("目標距離太遠")) &&
+                    distantTarget.CurrentHp == oldHp,
+                    "melee attack rejects distant target without dealing damage");
+            }
+            finally
+            {
+                distantTarget.X = oldX;
+                distantTarget.Y = oldY;
+            }
         }
         finally
         {
