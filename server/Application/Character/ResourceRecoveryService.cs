@@ -29,6 +29,37 @@ public sealed class ResourceRecoveryService
         _log = log;
     }
 
+    // Called ONLY with the live session monitor held. Reserve the existing
+    // recovery clock under that lock, then perform all potentially blocking
+    // SQLite work against a detached immutable-in-practice snapshot. A slow
+    // WAL writer must not stall inbound position packets or shared-map AI.
+    // One pending task per WebSocket prevents duplicate recovery writers.
+    public ClientSession? CaptureDueTick(
+        ClientSession live,
+        DateTimeOffset now)
+    {
+        if (!live.AccountId.HasValue || !live.CharacterId.HasValue || !Enabled())
+            return null;
+
+        var interval = TimeSpan.FromSeconds(Math.Clamp(
+            _config.GetValue<int?>(
+                "Gameplay:ResourceRecovery:IntervalSeconds") ?? 5, 1, 3600));
+        if (now - live.LastResourceRecoveryAt < interval)
+            return null;
+
+        var previousTick = live.LastResourceRecoveryAt;
+        live.LastResourceRecoveryAt = now;
+        return new ClientSession
+        {
+            ConnectionId = live.ConnectionId,
+            AccountId = live.AccountId,
+            CharacterId = live.CharacterId,
+            CurrentMapId = live.CurrentMapId,
+            IsResting = live.IsResting,
+            LastResourceRecoveryAt = previousTick
+        };
+    }
+
     public IReadOnlyList<object> Tick(
         ClientSession session,
         DateTimeOffset now)

@@ -5735,7 +5735,8 @@ public sealed class PacketRouter
 
     public IReadOnlyList<object> Tick(
         ClientSession state,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        bool includeResourceRecovery = true)
     {
         var periodicStarted = Stopwatch.GetTimestamp();
         var resourceRecoveryMs = 0.0;
@@ -5851,10 +5852,12 @@ public sealed class PacketRouter
                 dbid,
                 now));
         companionMs = Stopwatch.GetElapsedTime(companionStarted).TotalMilliseconds;
-        var recoveryStarted = Stopwatch.GetTimestamp();
-        packets.AddRange(
-            _resourceRecovery.Tick(state, now));
-        resourceRecoveryMs = Stopwatch.GetElapsedTime(recoveryStarted).TotalMilliseconds;
+        if (includeResourceRecovery)
+        {
+            var recoveryStarted = Stopwatch.GetTimestamp();
+            packets.AddRange(_resourceRecovery.Tick(state, now));
+            resourceRecoveryMs = Stopwatch.GetElapsedTime(recoveryStarted).TotalMilliseconds;
+        }
         packets.AddRange(
             _combat.TickBuffs(state, now));
         packets.AddRange(

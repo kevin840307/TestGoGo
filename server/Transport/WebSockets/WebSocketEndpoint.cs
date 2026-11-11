@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using SGO.Server.Application;
+using SGO.Server.Application.Character;
 using SGO.Server.Application.Diagnostics;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Application.World;
@@ -23,6 +24,7 @@ public static class WebSocketEndpoint
         app.Map("/", async (
             HttpContext ctx,
             PacketRouter router,
+            ResourceRecoveryService resourceRecovery,
             ServerBroadcastHub broadcasts,
             AccountSessionRegistry sessions,
             SharedMapAiTicker mapAi,
@@ -236,6 +238,7 @@ public static class WebSocketEndpoint
                 }
             });
 
+            Task? pendingRecoveryTask = null;
             var worldTickTask = Task.Run(async () =>
             {
                 try
@@ -263,6 +266,7 @@ public static class WebSocketEndpoint
                         var lockWaitMs = 0.0;
                         var presenceMs = 0.0;
                         var routerTickMs = 0.0;
+                        ClientSession? recoverySnapshot = null;
 
                         lock (state)
                         {
@@ -284,8 +288,18 @@ public static class WebSocketEndpoint
                                 var routerTickStarted =
                                     System.Diagnostics.Stopwatch.GetTimestamp();
                                 packets = router.Tick(
-                                    state,
-                                    now);
+                                    state, now, includeResourceRecovery: false);
+                                // Leave the 250ms logical tick, network poll,
+                                // and session state lock entirely independent
+                                // of potentially 1-5 second SQLite writer waits.
+                                // Reserve the normal regen cadence only when
+                                // there is no previous recovery task in flight.
+                                if (pendingRecoveryTask is null ||
+                                    pendingRecoveryTask.IsCompleted)
+                                {
+                                    recoverySnapshot = resourceRecovery.CaptureDueTick(
+                                        state, now);
+                                }
                                 routerTickMs = System.Diagnostics.Stopwatch.GetElapsedTime(
                                     routerTickStarted).TotalMilliseconds;
 
@@ -307,6 +321,62 @@ public static class WebSocketEndpoint
                                 state.CloseRequested = true;
                                 packets = Array.Empty<object>();
                             }
+                        }
+
+                        if (recoverySnapshot is not null)
+                        {
+                            var due = recoverySnapshot;
+                            pendingRecoveryTask = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    // No access to the mutable live ClientSession
+                                    // while reading/writing SQLite; damage and
+                                    // skill rules still use the authoritative DB.
+                                    bool stillCurrent;
+                                    lock (state)
+                                    {
+                                        stillCurrent = !state.CloseRequested &&
+                                            state.AccountId == due.AccountId &&
+                                            state.CharacterId == due.CharacterId &&
+                                            state.CurrentMapId == due.CurrentMapId &&
+                                            sessions.IsCurrent(
+                                                due.AccountId!.Value,
+                                                state.ConnectionId);
+                                    }
+                                    if (!stillCurrent || worldTickToken.IsCancellationRequested)
+                                        return;
+
+                                    var recovered = resourceRecovery.Tick(due, now);
+                                    if (recovered.Count == 0 ||
+                                        worldTickToken.IsCancellationRequested)
+                                        return;
+
+                                    lock (state)
+                                    {
+                                        stillCurrent = !state.CloseRequested &&
+                                            state.AccountId == due.AccountId &&
+                                            state.CharacterId == due.CharacterId &&
+                                            state.CurrentMapId == due.CurrentMapId &&
+                                            sessions.IsCurrent(
+                                                due.AccountId!.Value,
+                                                state.ConnectionId);
+                                    }
+                                    if (stillCurrent && socket.State == WebSocketState.Open)
+                                        await SendPacketsAsync(recovered, worldTickToken);
+                                }
+                                catch (OperationCanceledException) when (
+                                    worldTickToken.IsCancellationRequested)
+                                {
+                                }
+                                catch (Exception ex)
+                                {
+                                    diagnostics.WorldTickFailure();
+                                    log.LogError(ex,
+                                        "[RESOURCE_RECOVERY_FAILED] Connection={ConnectionID} Character={CharacterID}",
+                                        state.ConnectionId, due.CharacterId);
+                                }
+                            }, worldTickToken);
                         }
 
                         // One warning per connection per 5s at most.
@@ -732,6 +802,15 @@ public static class WebSocketEndpoint
                 catch
                 {
                     // Broadcast sender shares the connection lifetime.
+                }
+
+                // A pending DB writer may already be finishing a transaction.
+                // Drain it before the WebSocket send gate is disposed; no
+                // recovery packet is sent after worldTickToken cancellation.
+                if (pendingRecoveryTask is not null)
+                {
+                    try { await pendingRecoveryTask; }
+                    catch (OperationCanceledException) { }
                 }
 
                 if (socket.State == WebSocketState.Open)
