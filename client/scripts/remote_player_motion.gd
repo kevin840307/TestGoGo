@@ -25,9 +25,9 @@ var visual_position: Vector2 = Vector2.ZERO
 var authoritative_position: Vector2 = Vector2.ZERO
 var _velocity: Vector2 = Vector2.ZERO
 var _sample_seconds: float = 0.12
-var _prediction_horizon_seconds: float = 0.35
+var _prediction_horizon_seconds: float = 0.20
 # Kept as public diagnostic fields for the existing regression/audit contract.
-var _travel_horizon_seconds: float = 0.35
+var _travel_horizon_seconds: float = 0.20
 var _source_span_seconds: float = 0.12
 var _packet_age_seconds: float = 0.0
 var _last_received_msec: int = -1
@@ -41,8 +41,8 @@ func reset(position: Vector2) -> void:
 	authoritative_position = position
 	_velocity = Vector2.ZERO
 	_sample_seconds = 0.12
-	_prediction_horizon_seconds = 0.35
-	_travel_horizon_seconds = 0.35
+	_prediction_horizon_seconds = 0.20
+	_travel_horizon_seconds = 0.20
 	_source_span_seconds = 0.12
 	_packet_age_seconds = 0.0
 	_last_received_msec = -1
@@ -151,8 +151,8 @@ func receive(position: Vector2, received_msec: int,
 	# Explicit multi-second coalesced packets are old history and receive only
 	# a short extrapolation window.
 	_prediction_horizon_seconds = 0.12 if extended_valid else clampf(
-		maxf(0.35, observed * 1.40),
-		0.35,
+		maxf(0.20, observed * 1.40),
+		0.20,
 		MAX_PREDICTION_SECONDS
 	)
 	_travel_horizon_seconds = _prediction_horizon_seconds
@@ -212,16 +212,25 @@ func advance(delta: float) -> Vector2:
 		# Correct accumulated error gradually as a velocity term. A small
 		# bounded servo avoids the old sprint -> slow -> sprint pattern.
 		var error: Vector2 = predicted - visual_position
+		# Extrapolate at entity velocity only inside the prediction window.
+		# Once the grace window expires, hold the bounded predicted point
+		# instead of continuing forever with a stale velocity.
+		var base_velocity: Vector2 = (
+			_velocity
+			if _packet_age_seconds <= _prediction_horizon_seconds
+			else Vector2.ZERO
+		)
 		var desired_velocity: Vector2 = (
-			_velocity + error * ERROR_CORRECTION_RATE
+			base_velocity + error * ERROR_CORRECTION_RATE
 		)
 
-		# A late correction may slow forward progress, but must not make a
-		# walking avatar visibly run backwards before the next packet.
-		var forward: Vector2 = _velocity.normalized()
-		var forward_component: float = desired_velocity.dot(forward)
-		if forward_component < 0.0:
-			desired_velocity -= forward * forward_component
+		# While actively predicting, a late correction may slow forward
+		# progress but must not make the avatar visibly run backwards.
+		if base_velocity.length_squared() > 1.0:
+			var forward: Vector2 = _velocity.normalized()
+			var forward_component: float = desired_velocity.dot(forward)
+			if forward_component < 0.0:
+				desired_velocity -= forward * forward_component
 
 		if desired_velocity.length() > _visual_catchup_speed:
 			desired_velocity = desired_velocity.limit_length(
