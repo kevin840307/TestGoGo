@@ -550,8 +550,8 @@ try
         seed.Open();
         using var cmd = seed.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO pets (character_id,pet_id,name,hp,max_hp,level,attack,evol_id,feed_value,state)
-            VALUES ($id,245,'ActiveTester',67,120,4,31,2,2,1);
+            INSERT INTO pets (character_id,pet_id,name,hp,max_hp,level,attack,defense,evol_id,feed_value,state)
+            VALUES ($id,245,'ActiveTester',67,120,4,31,17,2,2,1);
             INSERT INTO pets (character_id,pet_id,name,state)
             VALUES ($id,246,'StoredTester',0);
             """;
@@ -564,6 +564,8 @@ try
           Convert.ToInt32(livePet[0]["Attack"]) == 31 &&
           Convert.ToInt32(livePet[0]["EvolID"]) == 2 &&
           Convert.ToInt32(livePet[0]["Level"]) == 4 &&
+          Convert.ToInt32(livePet[0]["State"]) == 1 &&
+          Convert.ToInt32(livePet[0]["Defense"]) == 17 &&
           Convert.ToString(livePet[0]["Name"]) == "ActiveTester",
         "narrow pet query returns exact live spawn, skill and attack fields");
     Check(store.GetActivePetFollowSnapshot(accountId.Value + 1000, characterId).Count == 0,

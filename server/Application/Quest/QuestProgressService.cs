@@ -87,6 +87,20 @@ public sealed class QuestProgressService
         if (dbid <= 0)
             return [];
 
+        // The 250ms transport world task calls this every two seconds
+        // for *every* online player. When there are no active item-collection
+        // quests, reading the entire inventory/equipment/pet/mecha graph is
+        // wasted SQLite work under the session lock. An active item quest
+        // still follows the original counting/advancement logic below.
+        var activeItemQuests = ActiveQuests(accountId, dbid)
+            .Where(q =>
+                _catalog.FindStep(
+                    Convert.ToInt32(q["QuestID"]),
+                    Convert.ToInt32(q["CurrentStep"]))?.TargetType == 2)
+            .ToArray();
+        if (activeItemQuests.Length == 0)
+            return [];
+
         var packets = new List<object>();
         var inventory = _assets.GetCharacterAssets(
                 accountId,
@@ -105,7 +119,7 @@ public sealed class QuestProgressService
                         0,
                         Convert.ToInt32(v["Count"]))));
 
-        foreach (var quest in ActiveQuests(accountId, dbid))
+        foreach (var quest in activeItemQuests)
         {
             var questId = Convert.ToInt32(quest["QuestID"]);
             var stepIndex = Convert.ToInt32(quest["CurrentStep"]);

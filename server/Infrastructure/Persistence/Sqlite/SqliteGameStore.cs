@@ -944,7 +944,7 @@ public sealed class SqliteGameStore : IGameStore
         using var cmd = db.CreateCommand();
         cmd.CommandText = """
             SELECT p.uid,p.pet_id,p.name,p.hp,p.max_hp,p.level,
-                   p.attack,p.evol_id
+                   p.attack,p.evol_id,p.defense,p.state
               FROM pets p
               JOIN characters c ON c.id=p.character_id
              WHERE p.character_id=$id
@@ -966,7 +966,12 @@ public sealed class SqliteGameStore : IGameStore
                 ["MaxHP"] = reader.GetInt32(4),
                 ["Level"] = reader.GetInt32(5),
                 ["Attack"] = reader.GetInt32(6),
-                ["EvolID"] = reader.GetInt32(7)
+                ["EvolID"] = reader.GetInt32(7),
+                // AI target selection and pet damage need these values.
+                // Do not return partial rows which would throw when a
+                // summoned pet actually becomes an aggro/combat target.
+                ["Defense"] = reader.GetInt32(8),
+                ["State"] = reader.GetInt32(9)
             });
         }
         return pets;

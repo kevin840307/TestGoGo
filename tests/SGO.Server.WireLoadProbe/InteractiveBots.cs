@@ -248,6 +248,14 @@ internal static class InteractiveBots
                 var attackCount = 0;
                 var nextAttackAt = DateTimeOffset.UtcNow.AddMilliseconds(
                     Random.Shared.Next(0, attackIntervalMs + 1));
+                // Every freshly connected bot already received the Lv1
+                // weak-profile setup. The old 20-second refresh forced all
+                // 20 connections through four SQLite writes while holding
+                // their session locks, creating artificial 1–6 second
+                // movement/AI stalls. Only combat bots can gain EXP, and
+                // stagger their later recovery by tens of seconds.
+                var nextProfileRefreshAt = DateTimeOffset.UtcNow.AddSeconds(
+                    55 + (bot.Index * 17 % 48));
                 try
                 {
                     // Spread initial actions across the full base interval.
@@ -328,12 +336,16 @@ internal static class InteractiveBots
                                     Random.Shared.Next(-jitter, jitter + 1));
                             }
 
-                            // Retain weak Lv1 bot stats even after kill rewards.
-                            if ((tick + bot.Index) %
-                                Math.Max(1, 20000 / interval) == 0)
+                            // Idle/movement-only bots do not gain EXP, and
+                            // must never cause periodic destructive GM DB
+                            // writes. Combat bots still restore the same
+                            // Lv1/weak damage profile, on a staggered 90s
+                            // interval instead of a synchronized 20s burst.
+                            if (combat && DateTimeOffset.UtcNow >= nextProfileRefreshAt)
                             {
                                 await bot.RefreshWeakBotProfileAsync(timeout);
                                 Interlocked.Increment(ref heals);
+                                nextProfileRefreshAt = DateTimeOffset.UtcNow.AddSeconds(90);
                             }
                         }
                         catch (Exception ex)
