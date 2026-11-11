@@ -32,6 +32,24 @@ internal sealed class BotWorldState
     public int MaxHP { get { lock (_sync) return _maxHp; } }
     public string LastFlash { get { lock (_sync) return _lastFlash; } }
 
+    // Snapshot visible, alive targets once per bot decision. Never expose the
+    // mutable packet-observation dictionary to the behavior loop.
+    public Monster[] VisibleTargets(double x, double y, double maxRange = 900)
+    {
+        var rangeSquared = maxRange * maxRange;
+        lock (_sync)
+            return _monsters.Values.Where(m => m.HP > 0 &&
+                (m.X - x) * (m.X - x) + (m.Y - y) * (m.Y - y) <= rangeSquared)
+                .ToArray();
+    }
+
+    public Monster? FindTarget(int entityId)
+    {
+        lock (_sync)
+            return _monsters.TryGetValue(entityId, out var target) && target.HP > 0
+                ? target : null;
+    }
+
     public Monster? Nearest(int x, int y, double maxRange = 450)
     {
         lock (_sync)
