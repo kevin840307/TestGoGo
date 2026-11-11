@@ -1765,10 +1765,9 @@ func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String
 				target_node.is_action_locked = false
 		if target_node.has_method("adjust_interact_area_for_death"):
 			target_node.adjust_interact_area_for_death(new_state == "death")
-		# MonsterEntity.apply_network_state() already syncs its animation.
-		# Calling it twice for every shared 250ms AI state broadcast causes
-		# extra SpriteFrames/lookups across crowded maps.
-		if int(_active_entity_types.get(entity_id, -1)) != 1 and target_node.has_method("sync_animation"):
+		# MonsterEntity already syncs itself. A remote hurt pose must also
+		# not be reset/flip midway by a delayed client walk/idle packet.
+		if int(_active_entity_types.get(entity_id, -1)) != 1 and target_node.has_method("sync_animation") and not preserve_hit:
 			target_node.sync_animation()
 		if target_node.has_method("refresh_network_physics"):
 			target_node.refresh_network_physics()

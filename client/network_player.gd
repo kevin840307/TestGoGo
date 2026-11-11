@@ -297,7 +297,9 @@ func _exit_tree() -> void :
 		CursorManager.unregister_hover(self)
 
 func is_entity_moving() -> bool:
-	return current_state == "walk"
+	# Re-enter walk after a complete hit pose if the actor's continuous
+	# remote path is still moving. Current animation state is not motion.
+	return _remote_motion.is_moving()
 
 func initialize_network_player(data: Dictionary) -> void :
 	var spawn_pos = Vector2(float(data.get("LocX", 0)), float(data.get("LocY", 0)))
@@ -521,8 +523,10 @@ func should_preserve_hit_state(new_state: String) -> bool:
 
 func apply_network_state(new_state: String, new_dir: String) -> void :
 	if should_preserve_hit_state(new_state):
-		# Server walk/idle arriving during the existing hit pose must not
-		# restart it. MoveEntity coordinates are still processed normally.
+		# An idle is still an authoritative stop, even if we defer the
+		# animation switch until the currently playing hurt pose ends.
+		if new_state == "idle":
+			_remote_motion.stop_prediction()
 		return
 	if new_dir != "":
 		current_dir = new_dir
@@ -561,7 +565,14 @@ func _physics_process(delta: float) -> void :
 
 func _sync_physics_animation_if_changed() -> void :
 	var position_parity: = -1
-	if current_state.begins_with("attack_") or current_state.begins_with("hit_") or current_state == "guard" or current_state.begins_with("idle_weapon_"):
+	var one_shot_action: bool = current_state.begins_with("attack_") or current_state.begins_with("hit_")
+	if one_shot_action and _physics_animation_cache_initialized \
+			and current_state == _last_physics_animation_state \
+			and current_dir == _last_physics_animation_dir:
+		# Do not flip sprites every time an animated, moving avatar crosses
+		# an integer pixel during a one-shot attack/hurt animation.
+		position_parity = _last_physics_animation_position_parity
+	elif one_shot_action or current_state == "guard" or current_state.begins_with("idle_weapon_"):
 		if current_dir == "4":
 			position_parity = int(global_position.x) & 1
 		elif current_dir == "8":
