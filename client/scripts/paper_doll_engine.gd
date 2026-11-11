@@ -858,7 +858,7 @@ func _on_sprite_frame_changed(part_key: String) -> void :
 				_on_sprite_frame_changed(head_part)
 
 
-func update_animation(anim_state: String, anim_dir: String, flip: bool, _move_speed: float, atk_speed: float) -> void :
+func update_animation(anim_state: String, anim_dir: String, flip: bool, move_speed: float, atk_speed: float) -> void :
 	if doll_sprites.is_empty(): return
 
 	var force_stop_frame_0 = false
@@ -1009,7 +1009,12 @@ func update_animation(anim_state: String, anim_dir: String, flip: bool, _move_sp
 			if anim_state.begins_with("attack_"):
 				sprite_node.speed_scale = max(atk_speed, 10.0) / 100.0
 			elif anim_state == "walk":
-				sprite_node.speed_scale = 1.0
+				# World movement uses the same percentage multiplier. Keeping
+				# animation fixed at 1x makes fast actors skate and slow actors
+				# shuffle even when their position interpolation is correct.
+				sprite_node.speed_scale = clampf(
+					maxf(move_speed, 10.0) / 100.0, 0.10, 3.0
+				)
 			else:
 				sprite_node.speed_scale = 1.0
 

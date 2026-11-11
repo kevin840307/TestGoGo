@@ -1695,10 +1695,14 @@ func _on_entity_moved(data: Dictionary) -> void :
 			)
 		var derives_direction_from_target: bool = target_node.has_method("_apply_network_target_direction")
 
-		if new_dir != "" and not derives_direction_from_target:
-			if target_node.has_method("apply_network_move_direction"):
-				target_node.apply_network_move_direction(new_dir)
-			elif "current_dir" in target_node:
+		if not derives_direction_from_target and target_node.has_method(
+			"apply_network_move_direction"
+		):
+			# Empty Dir explicitly clears the packet-heading latch so legacy
+			# packets can fall back to motion-derived facing.
+			target_node.apply_network_move_direction(new_dir)
+		elif new_dir != "" and not derives_direction_from_target:
+			if "current_dir" in target_node:
 				target_node.current_dir = new_dir
 
 		if target_node.has_method("network_move_to"):

@@ -17,6 +17,9 @@ const MIN_TELEPORT_DISTANCE: float = 1200.0
 const TELEPORT_SPEED_WINDOW: float = 1.0
 var _remote_motion = REMOTE_MOTION.new()
 var _pending_idle: bool = false
+# MoveEntity.Dir is the remote actor's authoritative visual heading. Do not
+# overwrite it every physics frame with tiny interpolation/correction vectors.
+var _has_network_move_direction: bool = false
 var _last_remote_move_received_msec: int = -1
 static var _debug_remote_gap_reports: int = 0
 var _performance_simplified_visual: bool = false
@@ -30,7 +33,6 @@ const SAFE_MAP_IDS: Array = [4, 9, 15, 17, 22, 39, 40, 53, 75, 93]
 var _physics_animation_cache_initialized: = false
 var _last_physics_animation_state: = ""
 var _last_physics_animation_dir: = ""
-var _last_physics_animation_position_parity: = -1
 var _last_physics_animation_dead: = false
 var _last_physics_animation_move_speed: = 0
 var _last_physics_animation_attack_speed: = 0
@@ -309,6 +311,7 @@ func initialize_network_player(data: Dictionary) -> void :
 	# Align interpolation state to the actual SpawnEntity position, not
 	# the default (0,0) scene origin.
 	_remote_motion.reset(spawn_pos)
+	_has_network_move_direction = false
 	_last_remote_move_received_msec = -1
 	velocity = Vector2.ZERO
 
@@ -478,6 +481,12 @@ func update_appearance_from_server(data: Dictionary) -> void :
 
 
 
+func apply_network_move_direction(new_dir: String) -> void:
+	_has_network_move_direction = new_dir in GameConstants.DIR_STRINGS
+	if _has_network_move_direction:
+		current_dir = new_dir
+
+
 func network_move_to(new_pos: Vector2, speed_time: float = 1.0,
 	extended_server_seconds: float = 0.0) -> void :
 	if is_dead:
@@ -536,10 +545,14 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		_remote_motion.stop_prediction()
 	if new_state == "idle":
 		if global_position.distance_squared_to(target_position) > 4.0:
-			# Stop walking immediately, but keep bounded visual correction
-			# running until the last authoritative endpoint is reached.
+			# The original client keeps stepping the character until the final
+			# position correction is consumed. Switching the animation to idle
+			# before that correction finishes makes the avatar visibly slide.
 			_pending_idle = true
-			current_state = "idle"
+			if REMOTE_STATE_POLICY.movement_may_replace_animation(
+				current_state, is_action_locked
+			):
+				current_state = "walk"
 			set_physics_process(true)
 			return
 	_pending_idle = false
@@ -564,24 +577,9 @@ func _physics_process(delta: float) -> void :
 		set_physics_process(false)
 
 func _sync_physics_animation_if_changed() -> void :
-	var position_parity: = -1
-	var one_shot_action: bool = current_state.begins_with("attack_") or current_state.begins_with("hit_")
-	if one_shot_action and _physics_animation_cache_initialized \
-			and current_state == _last_physics_animation_state \
-			and current_dir == _last_physics_animation_dir:
-		# Do not flip sprites every time an animated, moving avatar crosses
-		# an integer pixel during a one-shot attack/hurt animation.
-		position_parity = _last_physics_animation_position_parity
-	elif one_shot_action or current_state == "guard" or current_state.begins_with("idle_weapon_"):
-		if current_dir == "4":
-			position_parity = int(global_position.x) & 1
-		elif current_dir == "8":
-			position_parity = int(global_position.y) & 1
-
 	if _physics_animation_cache_initialized\
 	and current_state == _last_physics_animation_state\
 	and current_dir == _last_physics_animation_dir\
-	and position_parity == _last_physics_animation_position_parity\
 	and is_dead == _last_physics_animation_dead\
 	and data_model.move_speed == _last_physics_animation_move_speed\
 	and data_model.attack_speed == _last_physics_animation_attack_speed\
@@ -595,7 +593,6 @@ func _sync_physics_animation_if_changed() -> void :
 	_physics_animation_cache_initialized = true
 	_last_physics_animation_state = current_state
 	_last_physics_animation_dir = current_dir
-	_last_physics_animation_position_parity = position_parity
 	_last_physics_animation_dead = is_dead
 	_last_physics_animation_move_speed = data_model.move_speed
 	_last_physics_animation_attack_speed = data_model.attack_speed
@@ -619,6 +616,15 @@ func _handle_movement(delta: float) -> void :
 	# Smoothly finish an authoritative idle without animating backwards
 	# when visual prediction was slightly ahead of the server position.
 	if _pending_idle:
+		if displacement.length_squared() > 0.01:
+			if REMOTE_STATE_POLICY.movement_may_replace_animation(
+				current_state, is_action_locked
+			):
+				is_emoting = false
+				current_state = "walk"
+				# A final correction can legitimately move slightly opposite
+				# to the previous heading; face the actual settling motion.
+				update_direction_8way(displacement)
 		if global_position.distance_squared_to(target_position) <= 4.0:
 			_pending_idle = false
 			current_state = "idle"
@@ -628,7 +634,10 @@ func _handle_movement(delta: float) -> void :
 		if REMOTE_STATE_POLICY.movement_may_replace_animation(current_state, is_action_locked):
 			is_emoting = false
 			current_state = "walk"
-			update_direction_8way(displacement)
+			# Keep packet heading stable. Re-deriving direction from tiny
+			# correction vectors restarts walk animations around sector edges.
+			if not _has_network_move_direction:
+				update_direction_8way(displacement)
 	elif _pending_idle and global_position.distance_squared_to(target_position) <= 4.0:
 		_pending_idle = false
 		current_state = "idle"
