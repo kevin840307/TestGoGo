@@ -802,16 +802,15 @@ func sync_animation() -> void :
 
 
 	if current_state.begins_with("attack_") or current_state.begins_with("hit_") or current_state == "guard" or current_state.begins_with("idle_weapon_"):
+		# Some legacy one-shot sheets lack exact vertical 4/8 frames.
+		# Use the same adjacent fallback every time. World-coordinate parity
+		# made a stationary character flip left/right between hits.
 		if anim_dir == "4":
 			anim_dir = "3"
-
-			if int(global_position.x) % 2 == 0:
-				flip = true
+			flip = false
 		elif anim_dir == "8":
 			anim_dir = "1"
-
-			if int(global_position.y) % 2 == 0:
-				flip = true
+			flip = false
 
 	if current_state == "death":
 		anim_dir = "1"
