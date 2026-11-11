@@ -263,6 +263,13 @@ func _run() -> void:
 		not RemotePlayerStatePolicy.movement_may_replace_animation(
 			"hit_weapon_gun", true),
 		"60Hz remote movement does not replace an active hit animation")
+	_check(not RemotePlayerStatePolicy.movement_direction_may_replace_animation(
+		"hit_weapon_melee", true) and
+		not RemotePlayerStatePolicy.movement_direction_may_replace_animation(
+			"attack_aa", true) and
+		RemotePlayerStatePolicy.movement_direction_may_replace_animation(
+			"walk", false),
+		"move snapshot heading cannot flip a locked hit/attack one-shot")
 	_check(not RemotePlayerStatePolicy.preserve_hit_animation(
 		"hit_weapon_melee", true, "death") and
 		RemotePlayerStatePolicy.movement_may_replace_animation("idle", false),

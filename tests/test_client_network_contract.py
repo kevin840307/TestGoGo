@@ -11,6 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 NETWORK_MANAGER = ROOT / "client" / "scripts" / "network_manager.gd"
+PLAYER = ROOT / "client" / "player.gd"
+PACKET_ROUTER = ROOT / "server" / "Application" / "PacketRouter.cs"
 MALL_WINDOW = ROOT / "client" / "scripts" / "mall_window.gd"
 BANK_WINDOW = ROOT / "client" / "scripts" / "bank_window.gd"
 PLAYER_SHOP_WINDOW = ROOT / "client" / "scripts" / "shop_window.gd"
@@ -32,6 +34,41 @@ class ClientNetworkContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.source = NETWORK_MANAGER.read_text(encoding="utf-8-sig")
+
+    def test_sync_position_preserves_real_player_direction(self):
+        manager = self.source
+        player = PLAYER.read_text(encoding="utf-8-sig")
+        router = PACKET_ROUTER.read_text(encoding="utf-8-sig")
+
+        start = manager.index("func send_sync_position(")
+        end = manager.find("\nfunc ", start + 5)
+        sync_helper = manager[start:end if end >= 0 else None]
+        self.assertIn('packet["Dir"] = dir', sync_helper)
+        self.assertIn("dir in GameConstants.DIR_STRINGS", sync_helper)
+
+        # Both periodic walking snapshots and the final stop endpoint carry
+        # the player's current 8-way facing.
+        self.assertGreaterEqual(
+            player.count(
+                "NetworkManager.send_sync_position("
+            ),
+            2,
+        )
+        self.assertGreaterEqual(
+            player.count("current_dir\n\t\t)"),
+            1,
+        )
+        self.assertIn(
+            "current_dir\n\t\t\t)",
+            player,
+        )
+
+        sync_start = router.index('case "SyncPosition":')
+        sync_end = router.index('case "UpdateShortcut":', sync_start)
+        sync_case = router[sync_start:sync_end]
+        self.assertIn('var moveDir = req.Str("Dir", "")', sync_case)
+        self.assertIn("Dir = moveDir", sync_case)
+        self.assertNotIn('req.Str("Dir", "1")', sync_case)
 
     def test_world_ready_ack_is_observable(self):
         block = packet_block(self.source, "WorldReadyResponse")

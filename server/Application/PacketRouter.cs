@@ -1269,6 +1269,17 @@ public sealed class PacketRouter
                     persistMs = Stopwatch.GetElapsedTime(persistStarted).TotalMilliseconds;
                 }
 
+                var moveDir = req.Str("Dir", "");
+                if (moveDir is not (
+                    "1" or "2" or "3" or "4" or
+                    "5" or "6" or "7" or "8"))
+                {
+                    // Legacy/test clients may omit Dir. Never fabricate "1":
+                    // the new Client can derive facing from displacement when
+                    // the movement snapshot carries no trustworthy heading.
+                    moveDir = "";
+                }
+
                 var broadcastStarted = Stopwatch.GetTimestamp();
                 if (now - state.LastPositionBroadcastAt >=
                     PositionBroadcastInterval)
@@ -1299,7 +1310,7 @@ public sealed class PacketRouter
                                 EntityID = state.CharacterId.Value,
                                 X = x,
                                 Y = y,
-                                Dir = req.Str("Dir", "1"),
+                                Dir = moveDir,
                                 SpeedTime = snapshotSeconds,
                                 SnapshotSpanSeconds = Math.Min(fullSnapshotSeconds, 8.0)
                             });
@@ -1314,7 +1325,7 @@ public sealed class PacketRouter
                                 EntityID = state.CharacterId.Value,
                                 X = x,
                                 Y = y,
-                                Dir = req.Str("Dir", "1"),
+                                Dir = moveDir,
                                 SpeedTime = snapshotSeconds
                             });
                     }

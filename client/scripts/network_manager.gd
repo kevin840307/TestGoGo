@@ -616,9 +616,15 @@ func send_logout_request(action: String = "quit") -> void :
 		if action == "login" and GameManager.has_method("cleanup_and_return_to_login"):
 			GameManager.cleanup_and_return_to_login()
 
-func send_sync_position(x: int, y: int) -> void :
+func send_sync_position(x: int, y: int, dir: String = "") -> void :
 	if socket and socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
-		send_secure_packet({"Type": "SyncPosition", "X": x, "Y": y})
+		var packet := {"Type": "SyncPosition", "X": x, "Y": y}
+		# Direction belongs to the movement snapshot. Without it the Server
+		# historically defaulted every remote player update to "1", causing
+		# visible facing/animation churn even while position interpolation was smooth.
+		if dir in GameConstants.DIR_STRINGS:
+			packet["Dir"] = dir
+		send_secure_packet(packet)
 
 func send_train_travel_ready(travel_id: String) -> void :
 	if socket and socket.get_ready_state() == WebSocketPeer.STATE_OPEN and not travel_id.is_empty():

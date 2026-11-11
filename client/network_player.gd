@@ -482,9 +482,19 @@ func update_appearance_from_server(data: Dictionary) -> void :
 
 
 func apply_network_move_direction(new_dir: String) -> void:
-	_has_network_move_direction = new_dir in GameConstants.DIR_STRINGS
-	if _has_network_move_direction:
-		current_dir = new_dir
+	var valid_direction: bool = new_dir in GameConstants.DIR_STRINGS
+	if not valid_direction:
+		_has_network_move_direction = false
+		return
+	# MoveEntity can be queued before an attack/hit event and arrive while
+	# that one-shot is already playing. Do not let an old movement heading
+	# flip/restart the action animation through the physics animation cache.
+	if not REMOTE_STATE_POLICY.movement_direction_may_replace_animation(
+		current_state, is_action_locked
+	):
+		return
+	_has_network_move_direction = true
+	current_dir = new_dir
 
 
 func network_move_to(new_pos: Vector2, speed_time: float = 1.0,
