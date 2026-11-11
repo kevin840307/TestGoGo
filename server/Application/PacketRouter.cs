@@ -6043,6 +6043,16 @@ public sealed class PacketRouter
 
         state.LastCompanionClientSyncAt = now;
 
+        // A transport tick can reach the ten-second reconciliation marker
+        // for every one of 20+ online characters at once. With no active
+        // pet/horse, recall or dismount, there is nothing to send; fetching
+        // their entire inventory/equipment/pet/mecha asset graph under the
+        // session lock only blocks movement and the shared AI scheduler.
+        // Keep the original one-second drain, ten-second correction clock,
+        // and every actual companion transition unchanged.
+        if (!transition && drained.Horse is null && drained.Pets.Count == 0)
+            return [];
+
         var packets = new List<object>();
         var assets = _store.GetCharacterAssets(
             accountId,
