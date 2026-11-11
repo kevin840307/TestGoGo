@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Character;
@@ -67,6 +68,8 @@ public sealed class CombatService
     // The client now interpolates continuously toward the latest authoritative
     // waypoint, so this value represents movement speed rather than tween timing.
     private const double MoveTweenSeconds = 0.25;
+    // Sample only abnormal AI stalls. No per-monster or per-tick logging.
+    private long _lastSlowTickAiProfileUtcTicks;
 #if DEBUG
     // Small debug-only sample for diagnosing start-of-chase path stalls.
     // Release builds do not emit path diagnostics or pay for formatting.
@@ -258,6 +261,7 @@ public sealed class CombatService
         IReadOnlyList<int>? monsterEntityIds = null,
         bool? playerAliveSnapshot = null)
     {
+        var tickProfileStarted = Stopwatch.GetTimestamp();
         session.LastMonsterAiTick = now;
 
         if (!session.CharacterId.HasValue ||
@@ -291,9 +295,12 @@ public sealed class CombatService
 
         var runtime = SyncSessionMonsters(session);
         var packets = new List<object>();
+        var mapLockStarted = Stopwatch.GetTimestamp();
+        var mapLockWaitMs = 0.0;
 
         lock (runtime.SyncRoot)
         {
+            mapLockWaitMs = Stopwatch.GetElapsedTime(mapLockStarted).TotalMilliseconds;
             // A shared-map tick assigns each monster to one eligible player
             // (its current target's owner, or the closest player when idle).
             // Standalone tests can omit the filter to retain legacy behavior.
@@ -871,10 +878,14 @@ public sealed class CombatService
                                 character = updated;
                                 var currentHp =
                                     Convert.ToInt32(updated["HP"]);
-                                var updatedAssets =
-                                    _store.GetCharacterAssets(
-                                        accountId,
-                                        currentCharacterId);
+                                // No inventory/equipment changes can occur on
+                                // this connection while its session AI lock is
+                                // held. Damage changes vitals, not assets:
+                                // reuse this owner's already loaded snapshot
+                                // for every monster hit within this AI pass.
+                                // Previously each hit issued an extra full
+                                // inventory/pet/mecha SQLite read.
+                                var updatedAssets = combatAssets!;
                                 var updatedEffective =
                                     ApplyActiveSkillBuffs(
                                         CharacterStatCalculator.Calculate(
@@ -1069,7 +1080,30 @@ public sealed class CombatService
             }
         }
 
+        var simulationMs = Stopwatch.GetElapsedTime(mapLockStarted).TotalMilliseconds;
+        var broadcastStarted = Stopwatch.GetTimestamp();
         BroadcastWorldPackets(session, packets);
+        var broadcastMs = Stopwatch.GetElapsedTime(broadcastStarted).TotalMilliseconds;
+        var totalMs = Stopwatch.GetElapsedTime(tickProfileStarted).TotalMilliseconds;
+        if (totalMs >= 200.0)
+        {
+            var lastTicks = Interlocked.Read(ref _lastSlowTickAiProfileUtcTicks);
+            var ticks = DateTimeOffset.UtcNow.UtcTicks;
+            if ((lastTicks == 0 || ticks - lastTicks >= TimeSpan.FromSeconds(5).Ticks) &&
+                Interlocked.CompareExchange(ref _lastSlowTickAiProfileUtcTicks, ticks, lastTicks) == lastTicks)
+            {
+                _log.LogWarning(
+                    "[SLOW_TICK_AI_PHASE] TotalMs={TotalMs:F1} SetupMs={SetupMs:F1} MapLockWaitMs={MapLockWaitMs:F1} SimulationMs={SimulationMs:F1} BroadcastMs={BroadcastMs:F1} Map={MapID} Character={CharacterID} Assigned={Assigned}",
+                    totalMs,
+                    Math.Max(0.0, totalMs - simulationMs - broadcastMs),
+                    mapLockWaitMs,
+                    Math.Max(0.0, simulationMs - mapLockWaitMs),
+                    broadcastMs,
+                    session.CurrentMapId,
+                    currentCharacterId,
+                    monsterEntityIds?.Count ?? runtime.Monsters.Count);
+            }
+        }
         return packets;
     }
 
