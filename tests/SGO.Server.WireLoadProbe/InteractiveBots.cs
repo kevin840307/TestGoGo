@@ -8,6 +8,8 @@ internal static class InteractiveBots
     internal static async Task<int> RunAsync(string[] args)
     {
         var count = 20;
+        // -1 selects roughly one quarter of the connected bots as frequent roamers.
+        var requestedRoamers = -1;
         var url = "ws://127.0.0.1:5678/";
         var map = 13;
         int? x = null;
@@ -34,6 +36,7 @@ internal static class InteractiveBots
             switch (args[i])
             {
                 case "--players": count = int.Parse(Next()); break;
+                case "--roamers": requestedRoamers = int.Parse(Next()); break;
                 case "--url": url = Next(); break;
                 case "--map": map = int.Parse(Next()); break;
                 case "--x": x = int.Parse(Next()); break;
@@ -54,6 +57,7 @@ internal static class InteractiveBots
                     Console.WriteLine("dotnet run -c Release --project tests/SGO.Server.WireLoadProbe -- --bots --players 20 --map 13");
                     Console.WriteLine("Random walkable monster-area positions; Lv1 low-attack, high-HP/DEF bots, normal attacks and rare single-target skills.");
                     Console.WriteLine("--seconds 0 keeps players online until Ctrl+C. --no-combat disables attacking and monster spawning.");
+                    Console.WriteLine("--roamers N: choose N frequent walkers (default about 25%, e.g. 5 out of 20; 0 disables).");
                     Console.WriteLine("Connects existing Server/DB only. Default --monsters 0 (use existing monsters); new test accounts persist.");
                     return 0;
                 default: throw new ArgumentException("Unknown bot option: " + args[i]);
@@ -63,6 +67,9 @@ internal static class InteractiveBots
         if (x.HasValue != y.HasValue)
             throw new ArgumentException("Supply both --x and --y or neither (automatic map placement).");
         if (count < 1 || count > 1000) throw new ArgumentOutOfRangeException(nameof(count), "1..1000");
+        if (requestedRoamers < -1 || requestedRoamers > count)
+            throw new ArgumentOutOfRangeException(nameof(requestedRoamers),
+                "--roamers must be 0..--players");
         if (interval < 150 || interval > 60000) throw new ArgumentOutOfRangeException(nameof(interval), "150..60000");
         if (attackIntervalMs < 300 || attackIntervalMs > 30000)
             throw new ArgumentOutOfRangeException(nameof(attackIntervalMs), "300..30000");
@@ -234,13 +241,28 @@ internal static class InteractiveBots
 
             foreach (var bot in live) bot.EnableInteractiveBots();
             Console.WriteLine($"[BOTS] online={live.Length}; open Godot on the same map/server. Ctrl+C to stop.");
+            // Assign roles after successful login, so even a partial cohort
+            // receives the requested mix. Roles remain fixed for the run.
+            var roamerCount = requestedRoamers >= 0
+                ? Math.Min(requestedRoamers, live.Length)
+                : (int)Math.Clamp(Math.Round(live.Length * 0.25,
+                    MidpointRounding.AwayFromZero), 1, live.Length);
+            var roamerIds = live.OrderBy(_ => Random.Shared.Next())
+                .Take(roamerCount).Select(b => b.Index).ToHashSet();
+            Console.WriteLine($"[BOTS] frequent roamers={roamerIds.Count}/{live.Length}; " +
+                "80% of their decisions are distant ground clicks, remaining bots=25%.");
+            Console.WriteLine("[BOTS] roamer bot indices: " +
+                string.Join(", ", roamerIds.OrderBy(i => i).Take(24)) +
+                (roamerIds.Count > 24 ? ", ..." : ""));
             long moves = 0, attacks = 0, singleSkills = 0, heals = 0;
             long monsterClicks = 0, groundClicks = 0, targetSwitches = 0;
+            long roamerMoves = 0, roamerGroundClicks = 0, roamerAttacks = 0;
             // Simulate independent real players, not a synchronized spike
             // of 20 Attack/SyncState/Move packets every 350ms. Each bot owns
             // its own monotonic action counter and a jittered wall-clock loop.
             async Task RunBotAsync(WireLoadClient bot)
             {
+                var isRoamer = roamerIds.Contains(bot.Index);
                 var tick = 0;
                 var attackCount = 0;
                 // Decisions model mouse clicks, not a new nearest-target
@@ -289,11 +311,12 @@ internal static class InteractiveBots
                                             Math.Pow(m.Y - bot.Y, 2))
                                         .Take(10).ToArray()
                                     : Array.Empty<BotWorldState.Monster>();
-                                // Roughly one in four decisions clicks ground,
-                                // even when there are monsters nearby. When no
-                                // monsters are visible, always explore.
+                                // Frequent roamers click distant ground ~80%
+                                // of the time; normal fighters do so ~25%.
+                                // With no targets, everyone keeps exploring.
                                 walkingToGround = candidates.Length == 0 ||
-                                    Random.Shared.Next(4) == 0;
+                                    (isRoamer ? Random.Shared.Next(5) != 0
+                                              : Random.Shared.Next(4) == 0);
                                 selectedMonsterId = null;
                                 hasAttackedSelectedMonster = false;
                                 if (walkingToGround)
@@ -302,11 +325,13 @@ internal static class InteractiveBots
                                     // short random hops). The path planner
                                     // performs safe incremental server moves.
                                     Interlocked.Increment(ref groundClicks);
+                                    if (isRoamer) Interlocked.Increment(ref roamerGroundClicks);
                                     groundGoal = walks.RandomDistantPointNear(
                                         bot.X, bot.Y, minimumDistance: 220,
                                         maxDistance: Random.Shared.Next(520, 701));
                                     nextDecisionAt = now.AddMilliseconds(
-                                        Random.Shared.Next(6500, 12001));
+                                        isRoamer ? Random.Shared.Next(4000, 7501)
+                                                 : Random.Shared.Next(6500, 12001));
                                 }
                                 else
                                 {
@@ -357,6 +382,7 @@ internal static class InteractiveBots
                                 {
                                     await bot.SendBotPositionAsync(nx, ny, timeout);
                                     Interlocked.Increment(ref moves);
+                                    if (isRoamer) Interlocked.Increment(ref roamerMoves);
                                 }
                                 else
                                 {
@@ -391,6 +417,7 @@ internal static class InteractiveBots
                                         target.EntityId, target.X, target.Y,
                                         timeout);
                                     Interlocked.Increment(ref attacks);
+                                    if (isRoamer) Interlocked.Increment(ref roamerAttacks);
                                 }
                                 var jitter = Math.Max(1, attackIntervalMs / 5);
                                 nextAttackAt = DateTimeOffset.UtcNow.AddMilliseconds(
@@ -400,7 +427,8 @@ internal static class InteractiveBots
                                 {
                                     hasAttackedSelectedMonster = true;
                                     nextDecisionAt = DateTimeOffset.UtcNow.AddMilliseconds(
-                                        Random.Shared.Next(3500, 8501));
+                                        isRoamer ? Random.Shared.Next(2000, 4201)
+                                                 : Random.Shared.Next(3500, 8501));
                                 }
                             }
 
@@ -463,6 +491,8 @@ internal static class InteractiveBots
                     $"monsterClicks={Interlocked.Read(ref monsterClicks)} " +
                     $"groundClicks={Interlocked.Read(ref groundClicks)} " +
                     $"switches={Interlocked.Read(ref targetSwitches)} " +
+                    $"roamerMoves={Interlocked.Read(ref roamerMoves)} " +
+                    $"roamerGroundClicks={Interlocked.Read(ref roamerGroundClicks)} " +
                     $"attack={Interlocked.Read(ref attacks)} " +
                     $"single={Interlocked.Read(ref singleSkills)} " +
                     $"confirmedHits={damage} confirmedCasts={casts} " +
@@ -503,6 +533,11 @@ internal static class InteractiveBots
                 Placement = x.HasValue ? "near-user-point" : "map-wide-enemy-spawn-zones",
                 Level = 1,
                 MovementPackets = moves,
+                FrequentRoamerCount = roamerIds.Count,
+                FrequentRoamerBotIndices = roamerIds.OrderBy(i => i).ToArray(),
+                FrequentRoamerMovementPackets = roamerMoves,
+                FrequentRoamerGroundClicks = roamerGroundClicks,
+                FrequentRoamerAttackPackets = roamerAttacks,
                 MonsterClickDecisions = monsterClicks,
                 GroundClickDecisions = groundClicks,
                 TargetSwitchDecisions = targetSwitches,

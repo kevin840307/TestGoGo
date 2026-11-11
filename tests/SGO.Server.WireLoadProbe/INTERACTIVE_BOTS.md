@@ -35,6 +35,8 @@ dotnet run -c Release --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.Wire
 
 預設 `--radius 280` 用於明確指定中心時的初始散布範圍（可改到 700），不限制全地圖練功區的出生位置。走路目的地另採用真人較遠距離的地板點擊（優先 220px 以上、最遠約 700px），沿途依 Blocking.dat／A* 合法逐步送出 SyncPosition；狹窄地形則退回合法的短目的地。**預設 `--monsters 0`：直接攻擊現有 Server 地圖上的正常怪物，不額外召喚任何怪物。** 如需要增加怪物數才手動指定 `--monsters 20`，它會對現有 Server 產生真實 GM 怪物。
 
+**新增常走路角色**：預設約 25% Bot 是「經常走動型」（20 人約 5 位），角色在這次執行期間固定，不會每個 tick 隨機換角色。這些 Bot 約 80% 決策會點較遠地板，通常每 4～7.5 秒決定下一個目的地；約 20% 決策仍會追怪，實際出手後僅打約 2～4.2 秒就再做選擇。其餘 Bot 保持約 25% 點地板、3.5～8.5 秒打怪的習慣。所有 Bot 仍依 Blocking.dat／A* 合法逐步移動，不會瞬移。用 `--roamers 8` 可指定走動型人數；`--roamers 0` 關閉走動型分組（一般 Bot 原本的走路仍保留）。終端機可看 `frequent roamers`、`roamerMoves` 和 `roamerGroundClicks`，輸出 JSON 可查角色索引與各項計數。
+
 ## 3. 長時間戰鬥行為
 
 - 每個測試角色 **Lv1、ATK=1、MATK=1、DEF=1000、HP=20000**（透過獨立測試 GM 指令建立），另有足夠 MP/SP。定期補血，方便觀察長時間多人攻擊。
@@ -51,7 +53,7 @@ dotnet run -c Release --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.Wire
 開啟 Godot Client，連到**同一個測試 Server**。機器人終端機會列出該次隨機中心座標，可使用測試 GM 傳送到該位置觀察。注意 Client 只接收自己 AOI 內的角色，並不是所有模擬玩家都一定在畫面內。
 
 `bots-result.json` 包含：
-`MovementPackets`、`MonsterClickDecisions`、`GroundClickDecisions`、`TargetSwitchDecisions`、`AttackPackets`、`SingleTargetSkillPackets`、`TestRecoveryPackets`、`ConfirmedDamageHits`、`ConfirmedSkillCasts`、`ObservedMonsterDeaths`、`PositionCorrections` 與 `Errors`。發送封包數不等於成功傷害，必須看後兩個確認數字。
+`MovementPackets`、`FrequentRoamerCount`、`FrequentRoamerBotIndices`、`FrequentRoamerMovementPackets`、`FrequentRoamerGroundClicks`、`FrequentRoamerAttackPackets`、`MonsterClickDecisions`、`GroundClickDecisions`、`TargetSwitchDecisions`、`AttackPackets`、`SingleTargetSkillPackets`、`TestRecoveryPackets`、`ConfirmedDamageHits`、`ConfirmedSkillCasts`、`ObservedMonsterDeaths`、`PositionCorrections` 與 `Errors`。發送封包數不等於成功傷害，必須看後兩個確認數字。
 
 Ctrl+C 正常停止並列印統計。建議 10 → 20 → 50 → 100 人循序觀察。
 
