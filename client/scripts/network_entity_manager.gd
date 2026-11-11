@@ -1756,11 +1756,15 @@ func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String
 				target_node.current_state = new_state
 			if "current_dir" in target_node:
 				target_node.current_dir = new_dir
+		# Available to the state and animation paths below, even for
+		# non-player entities that do not expose an action lock.
+		var preserve_hit: bool = (
+			target_node.has_method("should_preserve_hit_state")
+			and target_node.should_preserve_hit_state(new_state)
+		)
 		if "is_action_locked" in target_node:
 			# The one-shot remote hit reaction owns its action lock until
 			# its final animation frame. Do not release it on a delayed walk.
-			var preserve_hit: bool = target_node.has_method("should_preserve_hit_state") \
-				and target_node.should_preserve_hit_state(new_state)
 			if not preserve_hit:
 				target_node.is_action_locked = false
 		if target_node.has_method("adjust_interact_area_for_death"):
