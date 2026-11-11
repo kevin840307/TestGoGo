@@ -1,0 +1,125 @@
+name: Map13 20-bot real AI tick profile
+
+on:
+  pull_request:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'server/Application/Combat/CombatService.cs'
+      - 'server/Application/World/SharedMapAiTicker.cs'
+      - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
+      - '.github/workflows/server-map13-ai-bots.yml'
+  push:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'server/Application/Combat/CombatService.cs'
+      - 'server/Application/World/SharedMapAiTicker.cs'
+      - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
+      - '.github/workflows/server-map13-ai-bots.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build real server and encrypted client bot harness
+        run: |
+          dotnet build server/SGO.Server.csproj -c Release --nologo
+          dotnet build tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -c Release --nologo
+      - name: Run Map13 with 20 independent websocket bots and sample shared-map AI
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Disposable CI DB only, never touch a user's live local database.
+          export Database__Provider=Sqlite
+          export Database__Sqlite__Path="$RUNNER_TEMP/map13-real-bot-probe.db"
+          export Game__ListenUrl="http://127.0.0.1:5678"
+          export Game__GmCommandsEnabled=true
+          export Game__TestBotCommandsEnabled=true
+          export SGO_CLIENT_ROOT="$GITHUB_WORKSPACE/client"
+          dotnet run -c Release --no-build --project server/SGO.Server.csproj > server-map13.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 90); do
+            if curl -fsS --max-time 2 http://127.0.0.1:5678/health > server-health.json 2>/dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              tail -n 150 server-map13.log
+              exit 1
+            fi
+            sleep 1
+          done
+          if [[ "$ready" -ne 1 ]]; then
+            tail -n 150 server-map13.log
+            exit 1
+          fi
+          python3 -u - <<'PY' > ai-sampler.log 2>&1 &
+          import json,time,urllib.request,math,os
+          samples=[]
+          for _ in range(290):
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:5678/health',timeout=2) as r:
+                      root=json.load(r)
+                  ai=root.get('sharedMapAi') or root.get('SharedMapAi') or {}
+                  samples.append({'ms':float(ai.get('elapsedMs',ai.get('ElapsedMs',0))),
+                      'sessions':int(ai.get('activeSessions',ai.get('ActiveSessions',0))),
+                      'monsters':int(ai.get('monsterCount',ai.get('MonsterCount',0)))})
+              except Exception as e:
+                  print('[MAP13_SAMPLE_ERROR]',str(e),flush=True)
+              if os.path.exists('bots.done'):
+                  break
+              time.sleep(0.5)
+          eligible=[s['ms'] for s in samples if s['sessions']>=18 and s['monsters']>=150]
+          ordered=sorted(eligible)
+          pct=lambda p: ordered[min(len(ordered)-1,math.ceil(len(ordered)*p)-1)] if ordered else -1
+          summary={'samples':len(samples),'eligibleSamples':len(eligible),
+              'maxSessions':max([s['sessions'] for s in samples],default=0),
+              'maxMonsters':max([s['monsters'] for s in samples],default=0),
+              'aiP50Ms':pct(.5),'aiP95Ms':pct(.95),'aiMaxMs':max(ordered,default=-1),
+              'aiOver250Count':sum(x>250 for x in eligible)}
+          with open('ai-map13-summary.json','w') as o: json.dump(summary,o,indent=2)
+          print('[MAP13_AI_PROFILE]',json.dumps(summary),flush=True)
+          PY
+          sampler_pid=$!
+          bots_status=0
+          timeout --signal=TERM --kill-after=8s 160s             dotnet run -c Release --no-build               --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj --               --bots --url ws://127.0.0.1:5678/ --players 20               --map 13 --monsters 0 --no-combat               --interval-ms 350 --seconds 110 --setup-concurrency 8               --timeout-seconds 30 --output bots-map13-result.json             2>&1 | tee bots-map13.log || bots_status=$?
+          touch bots.done
+          wait "$sampler_pid" || true
+          cat ai-sampler.log
+          grep -E 'MAP_AI_(PROFILE|SLOW_TICK)|SLOW_PACKET|MAP_AI_TICK_FAILED' server-map13.log | tail -n 35 || true
+          if [[ "$bots_status" -ne 0 ]]; then
+            echo "[MAP13_BOTS] failed exit code=$bots_status"
+            exit "$bots_status"
+          fi
+          python3 - <<'PY'
+          import json
+          bots=json.load(open('bots-map13-result.json'))
+          profile=json.load(open('ai-map13-summary.json'))
+          print('[MAP13_BOTS] connected=%s requested=%s errors=%s moves=%s' %
+            (bots['Connected'],bots['Requested'],bots['Errors'],bots['MovementPackets']))
+          print('[MAP13_AI_PROFILE]',json.dumps(profile))
+          assert bots['Connected']==20 and not bots['Errors']
+          assert profile['eligibleSamples']>=8, 'Not a valid 20-player + >=150 monsters map-AI profile'
+          PY
+      - name: Upload bot and AI timing evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: map13-20-bot-ai-profile
+          retention-days: 7
+          path: |
+            bots-map13-result.json
+            bots-map13.log
+            ai-map13-summary.json
+            ai-sampler.log
+            server-map13.log
