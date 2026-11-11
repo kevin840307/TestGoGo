@@ -49,6 +49,15 @@ public sealed class MonsterRuntimeState
     public DateTimeOffset LastAttackAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset NextWanderAt { get; set; } = DateTimeOffset.MinValue;
     public int WanderSequence { get; set; }
+    // Legacy CDNPCMove advances server-authoritative movement over time.
+    // One destination packet starts the path; these values track its actual
+    // runtime progress without sending a redundant MoveEntity per AI tick.
+    public DateTimeOffset WanderMoveStartedAt { get; set; } = DateTimeOffset.MinValue;
+    public double WanderMoveSeconds { get; set; }
+    public double WanderMoveStartX { get; set; }
+    public double WanderMoveStartY { get; set; }
+    public double WanderMoveTargetX { get; set; }
+    public double WanderMoveTargetY { get; set; }
     public int KillSequence { get; set; }
     public DateTimeOffset? RespawnAt { get; set; }
 

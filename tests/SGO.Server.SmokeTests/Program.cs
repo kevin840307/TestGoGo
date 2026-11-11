@@ -8259,6 +8259,7 @@ try
         aiFixtureMonster.NextPathRetryAt = DateTimeOffset.MinValue;
         aiFixtureMonster.LastStallLogAt = DateTimeOffset.MinValue;
         aiFixtureMonster.WanderSequence = 0;
+        aiFixtureMonster.WanderMoveStartedAt = DateTimeOffset.MinValue;
         aiFixtureMonster.LastAiAt = DateTimeOffset.MinValue;
         aiFixtureMonster.LastActionAt = DateTimeOffset.MinValue;
         aiFixtureMonster.LastAttackAt = DateTimeOffset.MinValue;
@@ -8300,31 +8301,42 @@ try
         monster.Y + 2000,
         wanderScheduleAt.AddSeconds(4));
 
-    var wanderDistanceFromCenter = Math.Sqrt(
-        Math.Pow(monster.X - monster.WanderCenterX, 2) +
-        Math.Pow(monster.Y - monster.WanderCenterY, 2));
-
-    const double expectedWanderRadius = 260.0;
+    var scheduledX = monster.WanderMoveTargetX;
+    var scheduledY = monster.WanderMoveTargetY;
+    var scheduledDistance = Math.Sqrt(
+        Math.Pow(scheduledX - monster.WanderCenterX, 2) +
+        Math.Pow(scheduledY - monster.WanderCenterY, 2));
     var wanderHasMovePacket = wanderPackets.Any(x =>
-        JsonSerializer.Serialize(x).Contains(
-            "\"Type\":\"MoveEntity\""));
-    var wanderMoved =
-        Math.Abs(monster.X - wanderStartX) > 0.001 ||
-        Math.Abs(monster.Y - wanderStartY) > 0.001;
+        JsonSerializer.Serialize(x).Contains("\\\"Type\\\":\\\"MoveEntity\\\""));
+    Check(wanderHasMovePacket &&
+          Math.Abs(monster.X - wanderStartX) < 0.01 &&
+          Math.Abs(monster.Y - wanderStartY) < 0.01 &&
+          scheduledDistance > 60 && scheduledDistance <= 260.001 &&
+          monster.AiState == MonsterAiState.Wander &&
+          monster.WanderMoveStartedAt == wanderScheduleAt.AddSeconds(4),
+        "legacy-style idle wander sends an approved destination without teleporting the server body");
 
-    Check(
-        wanderHasMovePacket &&
-        wanderMoved &&
-        wanderDistanceFromCenter <= expectedWanderRadius + 0.001,
-        "idle monster wanders near its own center without client input" +
-        (wanderHasMovePacket &&
-         wanderMoved &&
-         wanderDistanceFromCenter <= expectedWanderRadius + 0.001
-            ? ""
-            : $" (movePacket={wanderHasMovePacket}, moved={wanderMoved}, " +
-              $"distanceFromCenter={wanderDistanceFromCenter:F3}, " +
-              $"expectedRadius={expectedWanderRadius:F1}, " +
-              $"nextWanderAt={monster.NextWanderAt:O})"));
+    var sampleWanderAt = wanderScheduleAt.AddSeconds(4.50);
+    var halfwayWanderPackets = combat.TickAi(session, account.Value,
+        monster.WanderCenterX + 2000, monster.WanderCenterY + 2000,
+        sampleWanderAt, [monster.EntityId]);
+    var movedHalfDistance = Math.Sqrt(
+        Math.Pow(monster.X - wanderStartX, 2) +
+        Math.Pow(monster.Y - wanderStartY, 2));
+    var fullDistance = Math.Sqrt(
+        Math.Pow(scheduledX - wanderStartX, 2) +
+        Math.Pow(scheduledY - wanderStartY, 2));
+    Check(movedHalfDistance > 0.01 && movedHalfDistance < fullDistance &&
+          !halfwayWanderPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains("\\\"Type\\\":\\\"MoveEntity\\\"")),
+        "server advances wandering positions between destination packets without 250ms network spam");
+    combat.TickAi(session, account.Value,
+        monster.WanderCenterX + 2000, monster.WanderCenterY + 2000,
+        wanderScheduleAt.AddSeconds(5.60), [monster.EntityId]);
+    Check(Math.Abs(monster.X - scheduledX) < 0.01 &&
+          Math.Abs(monster.Y - scheduledY) < 0.01 &&
+          monster.WanderMoveStartedAt == DateTimeOffset.MinValue,
+        "authoritative roaming body reaches exactly the original collision-verified destination");
 
     // Use the dedicated eligible Lv1 multi-pet fixture here. The older
     // petUid progression fixture is intentionally above the Lv1 owner's
@@ -9412,18 +9424,18 @@ try
         deadPlayerTickAt.AddSeconds(4));
 
     var deadWanderDistance = Math.Sqrt(
-        Math.Pow(monster.X - deathPositionX, 2) +
-        Math.Pow(monster.Y - deathPositionY, 2));
+        Math.Pow(monster.WanderMoveTargetX - deathPositionX, 2) +
+        Math.Pow(monster.WanderMoveTargetY - deathPositionY, 2));
 
     Check(deadPlayerWanderPackets.Any(x =>
+              JsonSerializer.Serialize(x).Contains("\\\"Type\\\":\\\"MoveEntity\\\"") &&
               JsonSerializer.Serialize(x).Contains(
-                  "\"Type\":\"MoveEntity\"") &&
-              JsonSerializer.Serialize(x).Contains(
-                  $"\"EntityID\":{monster.EntityId}")) &&
+                  $"\\\"EntityID\\\":{monster.EntityId}")) &&
           deadWanderDistance > 60.0 &&
           deadWanderDistance <= 180.001 &&
+          Math.Abs(monster.X - deathPositionX) < 0.01 &&
           monster.AiState == MonsterAiState.Wander,
-        "monster resumes longer local random wandering after player death without returning to spawn");
+        "after player death, wandering plans a continuous local route instead of instantly jumping");
 
     using (var revive = Json(
         """{"Type":"ReviveRequest"}"""))

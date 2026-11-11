@@ -305,6 +305,7 @@ public sealed class CombatService
 
         var runtime = SyncSessionMonsters(session);
         var packets = new List<object>();
+        var advancedWanderPositions = new List<MonsterRuntimeState>();
         var mapLockStarted = Stopwatch.GetTimestamp();
         var mapLockWaitMs = 0.0;
 
@@ -328,6 +329,8 @@ public sealed class CombatService
                     SetAiState(monster, MonsterAiState.Dead);
                     continue;
                 }
+                if (AdvanceWanderMovement(monster, now))
+                    advancedWanderPositions.Add(monster);
 
                 Dictionary<string, object>? activePet = null;
                 var activePetUid = 0L;
@@ -1103,6 +1106,11 @@ public sealed class CombatService
 
         var simulationMs = Stopwatch.GetElapsedTime(mapLockStarted).TotalMilliseconds;
         var broadcastStarted = Stopwatch.GetTimestamp();
+        // World spatial AOI follows the true runtime body during a long
+        // wander, not the future destination. New observers receive the
+        // already-approved remaining waypoint after their SpawnEntity.
+        foreach (var advanced in advancedWanderPositions)
+            RegisterMonsterAoi(advanced, sendRemainingWanderOnSpawn: true);
         BroadcastWorldPackets(session, packets);
         var broadcastMs = Stopwatch.GetElapsedTime(broadcastStarted).TotalMilliseconds;
         var totalMs = Stopwatch.GetElapsedTime(tickProfileStarted).TotalMilliseconds;
@@ -1302,7 +1310,8 @@ public sealed class CombatService
 
     private void RegisterMonsterAoi(
         MonsterRuntimeState monster,
-        Guid skipObserver = default)
+        Guid skipObserver = default,
+        bool sendRemainingWanderOnSpawn = false)
     {
         if (!monster.IsAlive)
             return;
@@ -1339,6 +1348,31 @@ public sealed class CombatService
                         Type = "DespawnEntity",
                         EntityID = change.Entity.EntityId
                     });
+            // Only a newly entering observer needs the remaining destination.
+            // Existing observers already received the one original move.
+            if (change.Appeared && sendRemainingWanderOnSpawn &&
+                monster.WanderMoveStartedAt != DateTimeOffset.MinValue)
+            {
+                var remaining = monster.WanderMoveSeconds -
+                    (DateTimeOffset.UtcNow - monster.WanderMoveStartedAt).TotalSeconds;
+                if (remaining > 0.02)
+                {
+                    var travelDx = monster.WanderMoveTargetX - monster.WanderMoveStartX;
+                    var travelDy = monster.WanderMoveTargetY - monster.WanderMoveStartY;
+                    var speed = Math.Sqrt(travelDx * travelDx + travelDy * travelDy) /
+                        Math.Max(0.01, monster.WanderMoveSeconds);
+                    _broadcasts.PublishToConnection(change.ObserverConnectionId, new
+                    {
+                        Type = "MoveEntity",
+                        EntityID = monster.EntityId,
+                        X = monster.WanderMoveTargetX,
+                        Y = monster.WanderMoveTargetY,
+                        Dir = monster.CurrentDir,
+                        SpeedTime = Math.Clamp(remaining, 0.05, 1.5),
+                        MoveSpeed = speed
+                    });
+                }
+            }
         }
     }
 
@@ -1464,10 +1498,41 @@ public sealed class CombatService
         MonsterAiState state)
     {
         monster.AiState = state;
+        if (state != MonsterAiState.Wander)
+            monster.WanderMoveStartedAt = DateTimeOffset.MinValue;
         monster.IsMoving =
             state is MonsterAiState.Wander or MonsterAiState.Chase;
         monster.HoldingAttackRange =
             state == MonsterAiState.Attack;
+    }
+
+    // Server progression of the same destination+speed path the recovered
+    // client executes locally. This advances only the authoritative runtime
+    // anchor (used by aggro/combat/AOI), never replays old snapshots.
+    private static bool AdvanceWanderMovement(
+        MonsterRuntimeState monster, DateTimeOffset now)
+    {
+        if (monster.WanderMoveStartedAt == DateTimeOffset.MinValue)
+            return false;
+        if (monster.HasTarget || monster.AiState != MonsterAiState.Wander ||
+            !monster.IsAlive || monster.WanderMoveSeconds <= 0.01)
+        {
+            monster.WanderMoveStartedAt = DateTimeOffset.MinValue;
+            return false;
+        }
+        var ratio = Math.Clamp(
+            (now - monster.WanderMoveStartedAt).TotalSeconds /
+            monster.WanderMoveSeconds, 0.0, 1.0);
+        var beforeX = monster.X;
+        var beforeY = monster.Y;
+        monster.X = monster.WanderMoveStartX +
+            (monster.WanderMoveTargetX - monster.WanderMoveStartX) * ratio;
+        monster.Y = monster.WanderMoveStartY +
+            (monster.WanderMoveTargetY - monster.WanderMoveStartY) * ratio;
+        if (ratio >= 1.0)
+            SetAiState(monster, MonsterAiState.Idle);
+        return Math.Abs(monster.X - beforeX) > 0.01 ||
+               Math.Abs(monster.Y - beforeY) > 0.01;
     }
 
     private static void DropMonsterTarget(
@@ -5277,9 +5342,19 @@ public sealed class CombatService
 
         var oldX = monster.X;
         var oldY = monster.Y;
-        monster.X = desiredX;
-        monster.Y = desiredY;
+        var travelSeconds = WanderVisualSeconds(Math.Sqrt(
+            moveDx * moveDx + moveDy * moveDy));
+        // Keep the server's collision-verified route authoritative. The
+        // historical implementation teleported X/Y to the endpoint here,
+        // while the client still needed up to 1.25s to visually walk there.
+        // Legacy CDNPCMove keeps moving on each server update instead.
         SetAiState(monster, MonsterAiState.Wander);
+        monster.WanderMoveStartedAt = now;
+        monster.WanderMoveSeconds = travelSeconds;
+        monster.WanderMoveStartX = oldX;
+        monster.WanderMoveStartY = oldY;
+        monster.WanderMoveTargetX = desiredX;
+        monster.WanderMoveTargetY = desiredY;
         monster.NextWanderAt = now + NextWanderDelay(
             monster.EntityId,
             monster.WanderSequence);
@@ -5292,7 +5367,7 @@ public sealed class CombatService
             oldY,
             desiredX,
             desiredY,
-            WanderVisualSeconds(Math.Sqrt(moveDx * moveDx + moveDy * moveDy)),
+            travelSeconds,
             moveDx,
             moveDy);
     }
