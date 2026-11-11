@@ -36,6 +36,11 @@ func _run() -> void:
 		) - 140.0
 	) < 0.1,
 		"normal chase waypoint follows server entity speed instead of packet arrival timing")
+	var wander_speed := MonsterWaypointSpeed.calculate_server_driven(
+		175.0, 1.25, 140.0, 1.25
+	)
+	_check(absf(wander_speed - 140.0) < 0.1,
+		"175px monster roaming uses nominal 140px/s, not a 700px/s dash")
 	var merged_speed := MonsterWaypointSpeed.calculate_server_driven(
 		280.0, 0.75, 140.0, 2.0
 	)

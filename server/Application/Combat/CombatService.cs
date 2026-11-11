@@ -68,6 +68,11 @@ public sealed class CombatService
     // The client now interpolates continuously toward the latest authoritative
     // waypoint, so this value represents movement speed rather than tween timing.
     private const double MoveTweenSeconds = 0.25;
+    // One long roam segment must not be visually completed in the time of a
+    // 35-unit chase step: use the same nominal 140 units/second actor speed.
+    public static double WanderVisualSeconds(double distance)
+        => Math.Clamp(Math.Max(0.0, distance) / (MoveStep / MoveTweenSeconds),
+            MoveTweenSeconds, 1.5);
     // Sample only abnormal AI stalls. No per-monster or per-tick logging.
     private long _lastSlowTickAiProfileUtcTicks;
 #if DEBUG
@@ -5230,7 +5235,7 @@ public sealed class CombatService
             oldY,
             desiredX,
             desiredY,
-            MoveTweenSeconds,
+            WanderVisualSeconds(Math.Sqrt(moveDx * moveDx + moveDy * moveDy)),
             moveDx,
             moveDy);
     }

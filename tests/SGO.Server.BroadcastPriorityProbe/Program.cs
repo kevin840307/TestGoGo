@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using SGO.Server.Infrastructure.Persistence.Sqlite;
 using SGO.Server.Application.Messaging;
+using SGO.Server.Application.Combat;
 using SGO.Server.Protocol;
 using System.Text;
 using System.Collections.Concurrent;
@@ -135,6 +136,39 @@ using (var decoded = ClientProtocol.Decode(
         "world queue retains full time before and during outbound backlog");
 }
 hub.Unregister(worldLatePeer.ConnectionId);
+
+// An original-client-style 175px wander must span 1.25s at 140px/s rather
+// than squeeze a long hop into the 250ms chase cadence.
+Check(Math.Abs(CombatService.WanderVisualSeconds(35.0) - 0.25) < 0.0001 &&
+      Math.Abs(CombatService.WanderVisualSeconds(140.0) - 1.0) < 0.0001 &&
+      Math.Abs(CombatService.WanderVisualSeconds(175.0) - 1.25) < 0.0001,
+    "long monster wandering uses normal entity speed, not quarter-second sprint");
+var longWanderPeer = hub.Register(prioritizePlayerEvents: true);
+hub.PublishToConnection(longWanderPeer.ConnectionId, new
+{
+    Type = "MoveEntity", EntityID = 8_130_099L,
+    X = 175.0, Y = 0.0, Dir = "6",
+    SpeedTime = 1.25, MoveSpeed = 140.0
+});
+hub.PublishToConnection(longWanderPeer.ConnectionId, new
+{
+    Type = "MoveEntity", EntityID = 8_130_099L,
+    X = 210.0, Y = 0.0, Dir = "6",
+    SpeedTime = 0.25, MoveSpeed = 140.0
+});
+Check(longWanderPeer.Queue.Count == 1 &&
+      hub.TryDequeueOrdinary(longWanderPeer.ConnectionId, out var longWander),
+    "long wander and following step coalesce without dropping history");
+using (var decoded = ClientProtocol.Decode(
+    Encoding.UTF8.GetString(hub.EncodeBroadcastPacket(longWander))))
+{
+    var root = decoded.RootElement;
+    Check(Math.Abs(root.GetProperty("SnapshotSpanSeconds").GetDouble() - 1.5) < 0.0001 &&
+          Math.Abs(root.GetProperty("MoveSpeed").GetDouble() - 140.0) < 0.0001 &&
+          root.GetProperty("CoalescedMoves").GetInt32() == 2,
+        "long monster waypoint retains full server duration and actual speed");
+}
+hub.Unregister(longWanderPeer.ConnectionId);
 
 // Combat/state is a hard causal boundary: never combine a later waypoint
 // across attack/hit/death or other actor events.

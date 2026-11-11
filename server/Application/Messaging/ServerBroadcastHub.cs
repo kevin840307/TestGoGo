@@ -106,7 +106,8 @@ public sealed class ServerBroadcastHub
     private static double ReadMovementServerSpan(object packet)
     {
         var speedTime = ReadPacketDouble(packet, "SpeedTime");
-        if (speedTime is <= 0.01 or > 1.0)
+        // Long monster wander packets may validly represent 1.25 seconds.
+        if (speedTime is <= 0.01 or > 1.5)
             return 0;
         var extended = ReadPacketDouble(packet, "SnapshotSpanSeconds");
         return extended is > 0.75 and <= 8.0
@@ -261,7 +262,7 @@ public sealed class ServerBroadcastHub
             // combat and must remain an exact FIFO boundary, never a visual
             // waypoint that can be replaced by a later movement.
             if (type == "MoveEntity" && entityId >= 1_000_000 &&
-                speedTime is > 0.01 and <= 1.0)
+                speedTime is > 0.01 and <= 1.5)
             {
                 if (movement.Pending.TryGetValue(entityId, out var slot))
                 {
