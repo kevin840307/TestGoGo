@@ -4,6 +4,8 @@ using System.Text.Json;
 using SGO.Server.Infrastructure.Persistence.Sqlite;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Combat;
+using SGO.Server.Application.Character;
+using SGO.Server.Domain.Sessions;
 using SGO.Server.Protocol;
 using System.Text;
 using System.Collections.Concurrent;
@@ -14,6 +16,36 @@ static void Check(bool condition, string description)
         throw new InvalidOperationException("[AOI_PRIORITY_FAIL] " + description);
     Console.WriteLine("[AOI_PRIORITY_PASS] " + description);
 }
+
+// Snapshot/clock reservation is purely in-memory. It must never call the
+// SQLite resource writer or mutate a live session during the async phase.
+var recoveryClockNow = DateTimeOffset.UtcNow;
+var recoveryService = new ResourceRecoveryService(
+    null!, null!, null!,
+    new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
+var recoveryLive = new ClientSession
+{
+    ConnectionId = Guid.NewGuid(), AccountId = 7, CharacterId = 14,
+    CurrentMapId = 13, IsResting = true,
+    LastResourceRecoveryAt = recoveryClockNow.AddSeconds(-6)
+};
+var detachedRecovery = recoveryService.CaptureDueTick(
+    recoveryLive, recoveryClockNow);
+Check(detachedRecovery is not null &&
+      !ReferenceEquals(detachedRecovery, recoveryLive) &&
+      detachedRecovery.AccountId == recoveryLive.AccountId &&
+      detachedRecovery.CharacterId == recoveryLive.CharacterId &&
+      detachedRecovery.CurrentMapId == recoveryLive.CurrentMapId &&
+      detachedRecovery.IsResting &&
+      detachedRecovery.LastResourceRecoveryAt == recoveryClockNow.AddSeconds(-6) &&
+      recoveryLive.LastResourceRecoveryAt == recoveryClockNow,
+    "resource recovery reserves original cadence without SQLite under the live session lock");
+Check(recoveryService.CaptureDueTick(recoveryLive,
+    recoveryClockNow.AddMilliseconds(250)) is null,
+    "a second 250ms world tick cannot schedule duplicate healing");
+Check(recoveryService.CaptureDueTick(recoveryLive,
+    recoveryClockNow.AddSeconds(5)) is not null,
+    "regular 5-second recovery cadence is not slowed by decoupling");
 
 var hub = new ServerBroadcastHub();
 var fast = hub.Register(prioritizePlayerEvents: true);
