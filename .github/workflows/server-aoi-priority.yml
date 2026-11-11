@@ -13,6 +13,8 @@ on:
       - 'server/Application/Abstractions/GameStorePorts.cs'
       - 'server/Application/World/SharedMapAiTicker.cs'
       - 'server/Application/PacketRouter.cs'
+      - 'server/Application/World/PositionPersistenceService.cs'
+      - 'tests/SGO.Server.PositionPersistenceProbe/**'
       - 'tests/SGO.Server.BroadcastPriorityProbe/**'
       - 'tests/SGO.Server.ViewportAoiProbe/**'
       - '.github/workflows/server-aoi-priority.yml'
@@ -43,5 +45,7 @@ jobs:
         run: dotnet build server/SGO.Server.csproj --configuration Release --nologo
       - name: Check player AOI priority without dropping monsters or ground items
         run: dotnet run --configuration Release --project tests/SGO.Server.BroadcastPriorityProbe/SGO.Server.BroadcastPriorityProbe.csproj --nologo
+      - name: Verify staged movement and SyncState persistence flush without packet locks
+        run: dotnet run --configuration Release --project tests/SGO.Server.PositionPersistenceProbe/SGO.Server.PositionPersistenceProbe.csproj --nologo
       - name: Verify stationary camera resize, symmetric peers and moving edge monsters
         run: dotnet run --configuration Release --project tests/SGO.Server.ViewportAoiProbe/SGO.Server.ViewportAoiProbe.csproj --nologo
