@@ -8307,7 +8307,7 @@ try
         Math.Pow(scheduledX - monster.WanderCenterX, 2) +
         Math.Pow(scheduledY - monster.WanderCenterY, 2));
     var wanderHasMovePacket = wanderPackets.Any(x =>
-        JsonSerializer.Serialize(x).Contains("\\\"Type\\\":\\\"MoveEntity\\\""));
+        JsonSerializer.Serialize(x).Contains("\"Type\":\"MoveEntity\""));
     Check(wanderHasMovePacket &&
           Math.Abs(monster.X - wanderStartX) < 0.01 &&
           Math.Abs(monster.Y - wanderStartY) < 0.01 &&
@@ -8328,7 +8328,7 @@ try
         Math.Pow(scheduledY - wanderStartY, 2));
     Check(movedHalfDistance > 0.01 && movedHalfDistance < fullDistance &&
           !halfwayWanderPackets.Any(x =>
-              JsonSerializer.Serialize(x).Contains("\\\"Type\\\":\\\"MoveEntity\\\"")),
+              JsonSerializer.Serialize(x).Contains("\"Type\":\"MoveEntity\"")),
         "server advances wandering positions between destination packets without 250ms network spam");
     combat.TickAi(session, account.Value,
         monster.WanderCenterX + 2000, monster.WanderCenterY + 2000,
@@ -9428,9 +9428,9 @@ try
         Math.Pow(monster.WanderMoveTargetY - deathPositionY, 2));
 
     Check(deadPlayerWanderPackets.Any(x =>
-              JsonSerializer.Serialize(x).Contains("\\\"Type\\\":\\\"MoveEntity\\\"") &&
+              JsonSerializer.Serialize(x).Contains("\"Type\":\"MoveEntity\"") &&
               JsonSerializer.Serialize(x).Contains(
-                  $"\\\"EntityID\\\":{monster.EntityId}")) &&
+                  $"\"EntityID\":{monster.EntityId}")) &&
           deadWanderDistance > 60.0 &&
           deadWanderDistance <= 180.001 &&
           Math.Abs(monster.X - deathPositionX) < 0.01 &&
