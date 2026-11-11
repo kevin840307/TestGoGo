@@ -93,6 +93,25 @@ func _run() -> void:
 	_check(burst.authoritative_position.x == 420.0,
 		"catch-up cap affects only visuals; new authoritative coordinate applies immediately")
 
+
+	# Stop/position correction must not invent a new movement velocity while
+	# the following SyncState(idle) is still queued on the WebSocket.
+	var standalone_correction := RemotePlayerMotion.new()
+	standalone_correction.reset(Vector2.ZERO)
+	standalone_correction.receive(Vector2(20.0, 0.0), 1000, 0.10)
+	standalone_correction.advance(1.0 / 60.0)
+	var before_correction: Vector2 = standalone_correction.visual_position
+	standalone_correction.receive(Vector2(23.0, 0.0), 1100, 0.0)
+	_check(standalone_correction._velocity == Vector2.ZERO and
+		standalone_correction.authoritative_position == Vector2(23.0, 0.0),
+		"zero-time position correction updates authority without inventing a sprint")
+	_check(standalone_correction.visual_position == before_correction,
+		"zero-time correction never teleports its presentation position")
+	var corrected_frame: Vector2 = standalone_correction.advance(1.0 / 60.0)
+	_check(corrected_frame.distance_to(Vector2(23.0, 0.0)) <=
+		before_correction.distance_to(Vector2(23.0, 0.0)),
+		"interpolation converges to stop endpoint even before idle arrives")
+
 	# Stop after a position that fell inside Server's 100ms broadcast
 	# throttle. The final MoveEntity (SpeedTime=0) and SyncState(idle)
 	# must converge to the actual approved endpoint without a hard jump.

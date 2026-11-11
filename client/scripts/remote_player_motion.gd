@@ -80,6 +80,20 @@ func receive(position: Vector2, received_msec: int,
 		_last_received_msec = received_msec
 		_has_sample = true
 		return
+	# Legacy A10D-like authoritative endpoint is NOT a velocity sample.
+	# The server can send SpeedTime=0 followed by idle/death in a later
+	# encrypted frame. Deriving speed from 0ms would create a false sprint
+	# (up to MAX_ESTIMATED_SPEED) before the stop packet is processed.
+	# Keep the current rendered position for a bounded visual correction.
+	if nominal_seconds <= 0.01 and not extended_valid:
+		authoritative_position = position
+		_velocity = Vector2.ZERO
+		_prediction_horizon_seconds = 0.0
+		_sample_seconds = MIN_SAMPLE_SECONDS
+		_last_received_msec = received_msec
+		_packet_age_seconds = 0.0
+		_has_sample = true
+		return
 	var fallback: float = clampf(
 		extended_server_seconds if extended_valid else nominal_seconds,
 		MIN_SAMPLE_SECONDS, MAX_EXTENDED_SAMPLE_SECONDS if extended_valid else MAX_SAMPLE_SECONDS
