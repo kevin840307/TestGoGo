@@ -979,7 +979,8 @@ func _handle_network_sync(delta: float) -> void :
 		_last_walkable_sync_map_id = map_id
 		NetworkManager.send_sync_position(
 			int(global_position.x),
-			int(global_position.y)
+			int(global_position.y),
+			current_dir
 		)
 
 func _set_navigation_target(destination: Vector2) -> void :
@@ -1128,7 +1129,8 @@ func _stop_movement(send_final_position: bool = true) -> void :
 		if send_position and send_final_position:
 			NetworkManager.send_sync_position(
 				int(sync_position.x),
-				int(sync_position.y)
+				int(sync_position.y),
+				current_dir
 			)
 		elif OS.is_debug_build() and send_final_position:
 			print("[PLAYER_SYNC_SKIPPED] map=%d position=%s anchor_map=%d" % [
