@@ -1757,7 +1757,12 @@ func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String
 			if "current_dir" in target_node:
 				target_node.current_dir = new_dir
 		if "is_action_locked" in target_node:
-			target_node.is_action_locked = false
+			# The one-shot remote hit reaction owns its action lock until
+			# its final animation frame. Do not release it on a delayed walk.
+			var preserve_hit: bool = target_node.has_method("should_preserve_hit_state") \
+				and target_node.should_preserve_hit_state(new_state)
+			if not preserve_hit:
+				target_node.is_action_locked = false
 		if target_node.has_method("adjust_interact_area_for_death"):
 			target_node.adjust_interact_area_for_death(new_state == "death")
 		# MonsterEntity.apply_network_state() already syncs its animation.

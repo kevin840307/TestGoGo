@@ -137,6 +137,36 @@ func _run() -> void:
 	_check(delayed.visual_position.is_equal_approx(Vector2(4000.0, 4000.0)),
 		"map/teleport discontinuity snaps immediately to the new server position")
 
+	# Real Map13 clients observe 48-49px snapshots every 630-750ms.
+	# Those must advance at near-uniform 60Hz speed rather than sprint
+	# toward each snapshot then stand still halfway through the interval.
+	var sparse750 := RemotePlayerMotion.new()
+	sparse750.reset(Vector2.ZERO)
+	sparse750.receive(Vector2(49.0, 0.0), 1000, 0.75, 1200.0, 0.0, 70.0)
+	var first250: float = 0.0
+	var last250: float = 0.0
+	var min_step: float = INF
+	var max_step: float = 0.0
+	for frame in 45:
+		var old_x: float = sparse750.visual_position.x
+		var next_x: float = sparse750.advance(1.0 / 60.0).x
+		var step: float = next_x - old_x
+		min_step = minf(min_step, step)
+		max_step = maxf(max_step, step)
+		if frame < 15:
+			first250 += step
+		if frame >= 30:
+			last250 += step
+	_check(last250 > 11.0 and first250 > 11.0,
+		"750ms remote movement remains active at the end of the packet interval")
+	_check(max_step < min_step * 1.7,
+		"750ms remote movement stays near steady speed instead of sprint-stop")
+	var at750: float = sparse750.visual_position.x
+	sparse750.receive(Vector2(98.0, 0.0), 1750, 0.75, 1200.0, 0.0, 70.0)
+	var next_step750: float = sparse750.advance(1.0 / 60.0).x - at750
+	_check(next_step750 > 0.5 and next_step750 < 2.5,
+		"next delayed player packet continues smoothly without a speed spike")
+
 	# 350ms bot snapshots must not run only 120ms then stand still.
 	var sparse := RemotePlayerMotion.new()
 	sparse.reset(Vector2.ZERO)
@@ -179,6 +209,22 @@ func _run() -> void:
 	untagged_warp.receive(Vector2(1800.0, 0.0), 1000, 0.10)
 	_check(untagged_warp.visual_position.x == 1800.0,
 		"untagged 1800px discontinuity remains an immediate authoritative warp")
+
+	# A hit is a one-shot animation even while new walk/idle packets arrive.
+	_check(RemotePlayerStatePolicy.preserve_hit_animation(
+		"hit_weapon_melee", true, "walk") and
+		RemotePlayerStatePolicy.preserve_hit_animation(
+			"hit_weapon_gun", true, "idle"),
+		"server walk/idle cannot interrupt an active remote hit")
+	_check(not RemotePlayerStatePolicy.movement_may_replace_animation(
+		"hit_weapon_melee", true) and
+		not RemotePlayerStatePolicy.movement_may_replace_animation(
+			"hit_weapon_gun", true),
+		"60Hz remote movement does not replace an active hit animation")
+	_check(not RemotePlayerStatePolicy.preserve_hit_animation(
+		"hit_weapon_melee", true, "death") and
+		RemotePlayerStatePolicy.movement_may_replace_animation("idle", false),
+		"death wins over hit and unlocked avatars can resume walk")
 
 	# Runtime NetworkPlayer supplies the entity's expected movement speed.
 	# Backlog recovery is allowed, but capped to 2x normal movement speed.

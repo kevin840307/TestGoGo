@@ -9,6 +9,7 @@ var combat_target: Node2D = null
 # Visual-only prediction between authoritative position snapshots.
 # No change to the network, physics, combat or click/targeting path.
 const REMOTE_MOTION = preload("res://scripts/remote_player_motion.gd")
+const REMOTE_STATE_POLICY = preload("res://scripts/remote_player_state_policy.gd")
 # Long coalesced walks are identified by SnapshotSpanSeconds in
 # RemotePlayerMotion. Keep the historical hard-warp guard for untagged or
 # physically implausible same-map discontinuities.
@@ -513,7 +514,16 @@ func refresh_network_physics() -> void :
 
 	set_physics_process(true)
 
+func should_preserve_hit_state(new_state: String) -> bool:
+	return REMOTE_STATE_POLICY.preserve_hit_animation(
+		current_state, is_action_locked, new_state
+	)
+
 func apply_network_state(new_state: String, new_dir: String) -> void :
+	if should_preserve_hit_state(new_state):
+		# Server walk/idle arriving during the existing hit pose must not
+		# restart it. MoveEntity coordinates are still processed normally.
+		return
 	if new_dir != "":
 		current_dir = new_dir
 	if new_state == "idle" or new_state.begins_with("attack") or new_state.begins_with("hit") or new_state in ["death", "die"]:
@@ -604,10 +614,9 @@ func _handle_movement(delta: float) -> void :
 		return
 
 	if displacement.length_squared() > 0.01 and _remote_motion.is_moving():
-		if not current_state.begins_with("attack") and current_state not in ["hit", "death", "die"]:
+		if REMOTE_STATE_POLICY.movement_may_replace_animation(current_state, is_action_locked):
 			is_emoting = false
 			current_state = "walk"
-		if not current_state.begins_with("attack"):
 			update_direction_8way(displacement)
 	elif _pending_idle and global_position.distance_squared_to(target_position) <= 4.0:
 		_pending_idle = false
