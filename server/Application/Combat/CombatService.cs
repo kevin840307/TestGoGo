@@ -267,6 +267,10 @@ public sealed class CombatService
         bool? playerAliveSnapshot = null)
     {
         var tickProfileStarted = Stopwatch.GetTimestamp();
+        var damageWriteMs = 0.0;
+        var petDamageWriteMs = 0.0;
+        var chaseNavigationMs = 0.0;
+        var wanderMs = 0.0;
         session.LastMonsterAiTick = now;
 
         if (!session.CharacterId.HasValue ||
@@ -618,7 +622,9 @@ public sealed class CombatService
                         TimeSpan.FromMilliseconds(200))
                     {
                         monster.LastAiAt = now;
+                        var wanderStarted = Stopwatch.GetTimestamp();
                         TryWander(monster, now, packets);
+                        wanderMs += Stopwatch.GetElapsedTime(wanderStarted).TotalMilliseconds;
                     }
 
                     continue;
@@ -691,8 +697,10 @@ public sealed class CombatService
 
                 // Being geometrically close is not sufficient if a wall
                 // separates the target from the monster.
+                var directPathStarted = Stopwatch.GetTimestamp();
                 var hasClearAttackPath = _navigation.IsDirectClear(
                     monster.MapId, monster.X, monster.Y, targetX, targetY);
+                chaseNavigationMs += Stopwatch.GetElapsedTime(directPathStarted).TotalMilliseconds;
 
                 if (distance <= EngageDistance + EngageDistanceTolerance &&
                     hasClearAttackPath)
@@ -744,12 +752,14 @@ public sealed class CombatService
                             var damage = Math.Max(
                                 1,
                                 rawDamage - defense / 5);
+                            var petDamageStarted = Stopwatch.GetTimestamp();
                             var updatedPet =
                                 _store.ApplyPetDamage(
                                     accountId,
                                     currentCharacterId,
                                     targetPetUid,
                                     damage);
+                            petDamageWriteMs += Stopwatch.GetElapsedTime(petDamageStarted).TotalMilliseconds;
 
                             if (updatedPet is not null)
                             {
@@ -871,10 +881,12 @@ public sealed class CombatService
                             var damage = Math.Max(
                                 1,
                                 rawDamage - defense / 5);
+                            var damageStarted = Stopwatch.GetTimestamp();
                             var updated = _store.ApplyDamage(
                                 accountId,
                                 currentCharacterId,
                                 damage);
+                            damageWriteMs += Stopwatch.GetElapsedTime(damageStarted).TotalMilliseconds;
 
                             if (updated is not null)
                             {
@@ -1020,15 +1032,18 @@ public sealed class CombatService
                     continue;
                 }
 
-                if (!_navigation.TryNextStep(
-                        monster.MapId,
-                        monster.X,
-                        monster.Y,
-                        targetX,
-                        targetY,
-                        step,
-                        out var nx,
-                        out var ny))
+                var nextStepStarted = Stopwatch.GetTimestamp();
+                var hasNextStep = _navigation.TryNextStep(
+                    monster.MapId,
+                    monster.X,
+                    monster.Y,
+                    targetX,
+                    targetY,
+                    step,
+                    out var nx,
+                    out var ny);
+                chaseNavigationMs += Stopwatch.GetElapsedTime(nextStepStarted).TotalMilliseconds;
+                if (!hasNextStep)
                 {
                     // No collision-free next step. Do not animate running
                     // in place, spam idle packets, or repeatedly pathfind.
@@ -1098,11 +1113,15 @@ public sealed class CombatService
                 Interlocked.CompareExchange(ref _lastSlowTickAiProfileUtcTicks, ticks, lastTicks) == lastTicks)
             {
                 _log.LogWarning(
-                    "[SLOW_TICK_AI_PHASE] TotalMs={TotalMs:F1} SetupMs={SetupMs:F1} MapLockWaitMs={MapLockWaitMs:F1} SimulationMs={SimulationMs:F1} BroadcastMs={BroadcastMs:F1} Map={MapID} Character={CharacterID} Assigned={Assigned}",
+                    "[SLOW_TICK_AI_PHASE] TotalMs={TotalMs:F1} SetupMs={SetupMs:F1} MapLockWaitMs={MapLockWaitMs:F1} SimulationMs={SimulationMs:F1} DamageWriteMs={DamageWriteMs:F1} PetDamageWriteMs={PetDamageWriteMs:F1} ChaseNavMs={ChaseNavMs:F1} WanderMs={WanderMs:F1} BroadcastMs={BroadcastMs:F1} Map={MapID} Character={CharacterID} Assigned={Assigned}",
                     totalMs,
                     Math.Max(0.0, totalMs - simulationMs - broadcastMs),
                     mapLockWaitMs,
                     Math.Max(0.0, simulationMs - mapLockWaitMs),
+                    damageWriteMs,
+                    petDamageWriteMs,
+                    chaseNavigationMs,
+                    wanderMs,
                     broadcastMs,
                     session.CurrentMapId,
                     currentCharacterId,
