@@ -46,6 +46,7 @@ var _render_notifier: VisibleOnScreenNotifier2D = null
 const RENDER_VISIBILITY_RECT: Rect2 = Rect2(-220.0, -280.0, 440.0, 500.0)
 var current_dir: String = "1"
 var hp_update_seq: int = 0
+var _hit_visual_pending: bool = false
 var normal_attack_visual_started_msec: int = -1
 var _name_color_state: int = 0
 var _name_color_flash_generation: int = 0
@@ -208,33 +209,54 @@ func is_entity_moving() -> bool:
 
 
 func update_hp(new_hp: int, hit_delay: float = 0.3, is_miss: bool = false) -> void :
+	# The server is authoritative. A damaged player surrounded by monsters
+	# can receive another hit every 100-250ms, faster than the old 300ms
+	# visual delay. The old hp_update_seq cancellation starved both the
+	# HP update and the hit animation indefinitely under this load.
+	var previous_hp: int = data_model.hp
 	hp_update_seq += 1
-	var current_seq = hp_update_seq
-
-	if hit_delay > 0:
-		if not is_instance_valid(self) or not is_inside_tree():
-			return
-		var tree := get_tree()
-		if tree == null:
-			return
-		var timer := tree.create_timer(hit_delay)
-		await timer.timeout
-	if not is_instance_valid(self) or not is_inside_tree(): return
-	if current_seq != hp_update_seq: return
-
+	var current_seq: int = hp_update_seq
 	data_model.hp = new_hp
 
 	if new_hp <= 0:
-		_die()
+		# Keep fatal presentation timing and prevent a delayed old death
+		# from replacing a newer revive/heal.
+		if hit_delay > 0.0:
+			if not is_inside_tree():
+				return
+			await get_tree().create_timer(hit_delay).timeout
+		if not is_instance_valid(self) or not is_inside_tree():
+			return
+		if current_seq == hp_update_seq and data_model.hp <= 0:
+			_die()
 		return
 
-	if is_dead: revive()
+	if is_dead:
+		revive()
 
-	if current_state != "death" and not is_action_locked and not is_miss:
+	# Heals, redundant status packets and misses must never trigger a
+	# damage pose. Schedule ONE visual hit for sustained damage bursts;
+	# subsequent damage still updates HP immediately and cannot cancel
+	# that already queued animation.
+	if is_miss or new_hp >= previous_hp or _hit_visual_pending:
+		return
+	_hit_visual_pending = true
+	if hit_delay > 0.0:
+		if not is_inside_tree():
+			_hit_visual_pending = false
+			return
+		await get_tree().create_timer(hit_delay).timeout
+	_hit_visual_pending = false
+	if not is_instance_valid(self) or not is_inside_tree():
+		return
+	if data_model.hp <= 0 or is_dead or current_state == "death":
+		return
+	if not is_action_locked:
 		current_state = get_combat_hit_state()
 		is_action_locked = true
 		if is_instance_valid(doll_engine):
-			for sprite_node in doll_engine.doll_sprites.values(): sprite_node.frame = 0
+			for sprite_node in doll_engine.doll_sprites.values():
+				sprite_node.frame = 0
 		sync_animation()
 
 func _die() -> void :
