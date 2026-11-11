@@ -75,6 +75,7 @@ public sealed class CombatService
             MoveTweenSeconds, 1.5);
     // Sample only abnormal AI stalls. No per-monster or per-tick logging.
     private long _lastSlowTickAiProfileUtcTicks;
+    private long _lastSlowAreaSkillProfileUtcTicks;
 #if DEBUG
     // Small debug-only sample for diagnosing start-of-chase path stalls.
     // Release builds do not emit path diagnostics or pay for formatting.
@@ -1686,6 +1687,13 @@ public sealed class CombatService
         int targetY,
         DateTimeOffset now)
     {
+        var areaSkillProfileStarted = Stopwatch.GetTimestamp();
+        var areaSelectMs = 0.0;
+        var areaDamageMs = 0.0;
+        var areaRewardMs = 0.0;
+        var areaExtrasMs = 0.0;
+        var areaTargetCount = 0;
+        var areaKillCount = 0;
         if (!session.CharacterId.HasValue)
             return [];
 
@@ -2535,6 +2543,7 @@ public sealed class CombatService
                     0,
                     levelData.AoeRadius);
 
+                var areaSelectStarted = Stopwatch.GetTimestamp();
                 var targetQuery = runtime.Monsters.Values
                     .Where(x =>
                         x.IsAlive &&
@@ -2550,6 +2559,8 @@ public sealed class CombatService
                 // as other area skills: every alive monster inside the radius
                 // is included in the shared batch settlement pipeline.
                 var targets = targetQuery.ToArray();
+                areaSelectMs = Stopwatch.GetElapsedTime(areaSelectStarted).TotalMilliseconds;
+                areaTargetCount = targets.Length;
 
                 packets[0] = new
                 {
@@ -2575,6 +2586,7 @@ public sealed class CombatService
                     (long)effective.Attack * 50_000L +
                     (long)effective.MagicAttack * 50_000L;
 
+                var areaDamageStarted = Stopwatch.GetTimestamp();
                 foreach (var monster in targets)
                 {
                     var appliedDamage = damage;
@@ -2689,22 +2701,21 @@ public sealed class CombatService
                             packets);
                     }
                 }
+                areaDamageMs = Stopwatch.GetElapsedTime(areaDamageStarted).TotalMilliseconds;
             }
 
-            if (isAreaAttack &&
-                areaKills.Count > 0)
+            if (isAreaAttack && areaKills.Count > 0)
             {
+                areaKillCount = areaKills.Count;
+                var areaRewardStarted = Stopwatch.GetTimestamp();
                 AddAreaKillRewards(
-                    session,
-                    accountId,
-                    areaKills,
-                    packets);
+                    session, accountId, areaKills, packets);
+                areaRewardMs = Stopwatch.GetElapsedTime(areaRewardStarted).TotalMilliseconds;
 
+                var areaExtrasStarted = Stopwatch.GetTimestamp();
                 AddAreaBatchExtras(
-                    session,
-                    accountId,
-                    areaKills,
-                    packets);
+                    session, accountId, areaKills, packets);
+                areaExtrasMs = Stopwatch.GetElapsedTime(areaExtrasStarted).TotalMilliseconds;
             }
 
             if (skillId == 25104 &&
@@ -3099,6 +3110,27 @@ public sealed class CombatService
                 Math.Max(0, levelData.CooldownSeconds));
 
         BroadcastWorldPackets(session, packets);
+        // The original 10Hz server update must not be blocked by a broad
+        // 99001 damage/drop/quest settlement under the caster Session lock.
+        // Log only slow area casts and throttle to avoid per-hit log storms.
+        if (isAreaAttack)
+        {
+            var totalMs = Stopwatch.GetElapsedTime(areaSkillProfileStarted).TotalMilliseconds;
+            if (totalMs >= 100.0)
+            {
+                var lastTicks = Interlocked.Read(ref _lastSlowAreaSkillProfileUtcTicks);
+                var ticks = DateTimeOffset.UtcNow.UtcTicks;
+                if ((lastTicks == 0 || ticks - lastTicks >= TimeSpan.FromSeconds(5).Ticks) &&
+                    Interlocked.CompareExchange(ref _lastSlowAreaSkillProfileUtcTicks, ticks, lastTicks) == lastTicks)
+                {
+                    _log.LogWarning(
+                        "[SLOW_AREA_SKILL_PHASE] SkillID={SkillID} TotalMs={TotalMs:F1} SelectMs={SelectMs:F1} DamageMs={DamageMs:F1} RewardsMs={RewardsMs:F1} ExtrasMs={ExtrasMs:F1} OtherMs={OtherMs:F1} Targets={Targets} Kills={Kills} Map={Map} Character={Character}",
+                        skillId, totalMs, areaSelectMs, areaDamageMs, areaRewardMs, areaExtrasMs,
+                        Math.Max(0.0, totalMs - areaSelectMs - areaDamageMs - areaRewardMs - areaExtrasMs),
+                        areaTargetCount, areaKillCount, session.CurrentMapId, session.CharacterId.Value);
+                }
+            }
+        }
         return packets;
     }
 
@@ -3752,8 +3784,8 @@ public sealed class CombatService
         // Lucky during this synchronous cast.
         var characterSnapshot = _store.GetCharacter(accountId, dbid);
         var assetsSnapshot = _store.GetCharacterAssets(accountId, dbid);
-        var luckySnapshot = characterSnapshot is null
-            ? 0
+        int? luckySnapshot = characterSnapshot is null
+            ? null
             : CharacterStatCalculator.Calculate(
                 characterSnapshot, assetsSnapshot, _current).Lucky;
 
