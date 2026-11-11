@@ -71,15 +71,22 @@ jobs:
                   with urllib.request.urlopen('http://127.0.0.1:5678/health',timeout=2) as r:
                       root=json.load(r)
                   ai=root.get('sharedMapAi') or root.get('SharedMapAi') or {}
+                  online=False
+                  if os.path.exists('bots-map13.log'):
+                      with open('bots-map13.log',encoding='utf-8',errors='replace') as log:
+                          online='[BOTS] online=20;' in log.read()
                   samples.append({'ms':float(ai.get('elapsedMs',ai.get('ElapsedMs',0))),
                       'sessions':int(ai.get('activeSessions',ai.get('ActiveSessions',0))),
-                      'monsters':int(ai.get('monsterCount',ai.get('MonsterCount',0)))})
+                      'monsters':int(ai.get('monsterCount',ai.get('MonsterCount',0))),
+                      'online':online})
               except Exception as e:
                   print('[MAP13_SAMPLE_ERROR]',str(e),flush=True)
               if os.path.exists('bots.done'):
                   break
               time.sleep(0.5)
-          eligible=[s['ms'] for s in samples if s['sessions']>=18 and s['monsters']>=150]
+          # Exclude login / one-time GM preflight. Those are recorded but
+          # should not be mistaken for steady-state walking/chase latency.
+          eligible=[s['ms'] for s in samples if s['online'] and s['sessions']>=18 and s['monsters']>=150]
           ordered=sorted(eligible)
           pct=lambda p: ordered[min(len(ordered)-1,math.ceil(len(ordered)*p)-1)] if ordered else -1
           summary={'samples':len(samples),'eligibleSamples':len(eligible),

@@ -20,6 +20,12 @@
 3. `GetCharacter`、`GetCharacterAssets` 只在怪物真的準備傷害**玩家**時載入，並再確認實際 HP，防止 Map HP 快照與當下死亡競態。攻擊、技能、命中、防禦與其他 Server 權威規則不更動。
 4. 不改 250ms AI、100ms 玩家快照、封包順序、AOI、Client FPS/physics、AFK/失焦、攻擊與掉落規則。
 
+## 第二輪實際壓測發現（20 Bot + 312 Monster）
+- Map13 Bot 20 人已確實登入並移動 4,591 次；原版 `InteractiveBots` 每位每約 20 秒同步執行多筆 `/gm testbot` 寫入，CI 看到 `SLOW_GM_COMMAND` 與 1～6 秒的 Session 鎖等待，混入 AI 250ms profile。
+- 已調整 Bot harness：`--no-combat` 的 20 Bot 只在登入時建立 Lv1/弱攻擊設定，不再無意義地重複 reset；戰鬥 Bot 照常維持弱攻擊，但從 55～102 秒後起錯峰 90 秒刷新。這是**測試工具減少干擾**，不會降低 Server 正式遊戲邏輯頻率。
+- 量測改區分 20 Bot **全部 ready 後**的 steady-state AI Tick，不把帳號建立、GM 前置設定排隊時間當成遊玩時的常態 P95。
+- 第一輪未隔離 GM 測試壓力時：Tick AI profile 常態中位數 51.51ms，但 P95 約 3,048ms；未達到穩定更新目標，不可以宣稱全部順移已解決。分離負載後需重新跑測試比較。
+
 ## 驗證
 - .NET 8 專用 Server AOI/Build probe、20-client encrypted WS probe、Windows smoke；`BroadcastPriorityProbe` 補測 SQLite 窄版 pet 的 State/Defense（防止資料結構缺欄導致寵物攻擊崩潰）。
 - 真實 20 bot/312 monsters 的 Before/After `MAP_AI_PROFILE` 必須再測，目標是 TickAi p95 **穩定低於 250ms**；這是待測目標，不是假稱已達成。Client 外圍順移也可能仍受 Server AOI / Godot scene backlog 影響。

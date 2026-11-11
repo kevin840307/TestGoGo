@@ -40,6 +40,7 @@ dotnet run -c Release --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.Wire
 - 每個測試角色 **Lv1、ATK=1、MATK=1、DEF=1000、HP=20000**（透過獨立測試 GM 指令建立），另有足夠 MP/SP。定期補血，方便觀察長時間多人攻擊。
 - 主要使用正常 `AttackEntity` 普通攻擊；並用同樣的 `SyncState` 讓觀察者看到機器人的攻擊動畫。偶爾使用單體技能 `20101` 赤色光彈、`23102` 烈火爆劍（Lv1）。
 - **完全不施放範圍技能**，不使用 `23103` 赤星爆炸，也不使用 `99001` 星界震盪。
+- **避免測試自己製造卡頓**：每隻 Bot 登入時一定初始化 Lv1、ATK=1、DEF=1000、HP=20000。單純走路（`--no-combat`）不再每 20 秒重設一次已經沒變的數值。戰鬥 Bot 在首次登入後約 55～102 秒才視需要重設，之後每 90 秒更新；20 人刷新時間錯開，避免密集 GM SQLite 寫入與 Session 鎖同時阻塞正常移動。
 - 怪物存活狀態由 AOI `SpawnEntity`／`EntityDamage`／`EntityDeath`／`DespawnEntity` 更新；如果距離太遠會沿 Server 現有 A* 尋路靠近，沒怪時隨機走動。
 - 怪物死亡後由 Server 原有重生流程管理；**不會透過工具重建假的怪物**。
 - 普攻 Server 目前會造成至少 1 點傷害，沒有另外強制製造 Miss 的模擬；這個設定用低傷害換取更多次真實打擊。
