@@ -11544,10 +11544,9 @@ public sealed class SqliteGameStore : IGameStore
         int damage)
     {
         using var db = Open();
-        using var tx = db.BeginTransaction();
-
+        // This one UPDATE is atomic on its own; avoid opening a separate
+        // immediate transaction before joining SQLite's contended WAL writer.
         using var cmd = db.CreateCommand();
-        cmd.Transaction = tx;
         cmd.CommandText = """
             UPDATE characters
                SET hp = MAX(0, hp - $damage),
@@ -11564,7 +11563,6 @@ public sealed class SqliteGameStore : IGameStore
         if (cmd.ExecuteNonQuery() != 1)
             return null;
 
-        tx.Commit();
         return GetCharacter(accountId, dbid);
     }
 
