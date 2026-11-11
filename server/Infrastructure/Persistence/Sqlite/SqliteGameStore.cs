@@ -12,6 +12,12 @@ namespace SGO.Server.Infrastructure.Persistence.Sqlite;
 public sealed class SqliteGameStore : IGameStore
 {
     private readonly string _connectionString;
+    // SQLite WAL permits concurrent readers but only one writer. Serialize
+    // the hot periodic/AI write paths inside this singleton instead of making
+    // parallel 20-player ticks all sleep for SQLite busy_timeout while they
+    // hold gameplay session/map monitors. Every SQL statement and transaction
+    // remains exactly the same; this changes only the writer acquisition order.
+    private readonly object _hotWriteGate = new();
 
     public SqliteGameStore(string dbPath)
     {
@@ -857,6 +863,8 @@ public sealed class SqliteGameStore : IGameStore
         if (positions.Count == 0)
             return;
 
+        lock (_hotWriteGate)
+        {
         using var db = Open();
         using var tx = db.BeginTransaction();
         using var cmd = db.CreateCommand();
@@ -887,6 +895,7 @@ public sealed class SqliteGameStore : IGameStore
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
+        }
     }
 
     public bool UpdateLocation(long accountId, long dbid, int mapId, int x, int y)
@@ -7156,6 +7165,8 @@ public sealed class SqliteGameStore : IGameStore
     {
         damage = Math.Max(0, damage);
 
+        lock (_hotWriteGate)
+        {
         using var db = Open();
         using var tx = db.BeginTransaction();
 
@@ -7188,6 +7199,7 @@ public sealed class SqliteGameStore : IGameStore
         return GetCharacterAssets(accountId, dbid).Pets
             .FirstOrDefault(x =>
                 Convert.ToInt64(x["UID"]) == petUid);
+        }
     }
 
     public Dictionary<string, object>? AddPetExperience(
@@ -11543,6 +11555,8 @@ public sealed class SqliteGameStore : IGameStore
         long dbid,
         int damage)
     {
+        lock (_hotWriteGate)
+        {
         using var db = Open();
         // This one UPDATE is atomic on its own; avoid opening a separate
         // immediate transaction before joining SQLite's contended WAL writer.
@@ -11564,6 +11578,7 @@ public sealed class SqliteGameStore : IGameStore
             return null;
 
         return GetCharacter(accountId, dbid);
+        }
     }
 
     public Dictionary<string, object>? ApplyHeal(
@@ -11613,6 +11628,8 @@ public sealed class SqliteGameStore : IGameStore
         hpAmount = Math.Max(0, hpAmount);
         mpAmount = Math.Max(0, mpAmount);
 
+        lock (_hotWriteGate)
+        {
         using var db = Open();
         using var cmd = db.CreateCommand();
         cmd.CommandText = """
@@ -11634,6 +11651,7 @@ public sealed class SqliteGameStore : IGameStore
             return null;
 
         return GetCharacter(accountId, dbid);
+        }
     }
 
     public Dictionary<string, object>? RecoverResources(
@@ -11666,6 +11684,8 @@ public sealed class SqliteGameStore : IGameStore
         mpAmount = Math.Max(0, mpAmount);
         spAmount = Math.Max(0, spAmount);
 
+        lock (_hotWriteGate)
+        {
         using var db = Open();
         using var cmd = db.CreateCommand();
         cmd.CommandText = """
@@ -11690,6 +11710,7 @@ public sealed class SqliteGameStore : IGameStore
             return null;
 
         return GetCharacter(accountId, dbid);
+        }
     }
 
     public Dictionary<string, object>? AddRewards(
