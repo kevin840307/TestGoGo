@@ -7,6 +7,9 @@ on:
       - 'server/Application/Combat/CombatService.cs'
       - 'server/Application/Character/ResourceRecoveryService.cs'
       - 'server/Application/World/SharedMapAiTicker.cs'
+      - 'server/Application/Messaging/ServerBroadcastHub.cs'
+      - 'server/Application/Messaging/PlayerSpatialAoi.cs'
+      - 'server/Application/Messaging/WorldEntitySpatialAoi.cs'
       - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
       - '.github/workflows/server-map13-ai-bots.yml'
   push:
@@ -15,6 +18,9 @@ on:
       - 'server/Application/Combat/CombatService.cs'
       - 'server/Application/Character/ResourceRecoveryService.cs'
       - 'server/Application/World/SharedMapAiTicker.cs'
+      - 'server/Application/Messaging/ServerBroadcastHub.cs'
+      - 'server/Application/Messaging/PlayerSpatialAoi.cs'
+      - 'server/Application/Messaging/WorldEntitySpatialAoi.cs'
       - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
       - '.github/workflows/server-map13-ai-bots.yml'
   workflow_dispatch:
