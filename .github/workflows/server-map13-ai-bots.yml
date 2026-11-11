@@ -5,6 +5,7 @@ on:
     branches: [feature/local-server-net8]
     paths:
       - 'server/Application/Combat/CombatService.cs'
+      - 'server/Application/Character/ResourceRecoveryService.cs'
       - 'server/Application/World/SharedMapAiTicker.cs'
       - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
       - '.github/workflows/server-map13-ai-bots.yml'
@@ -12,6 +13,7 @@ on:
     branches: [feature/local-server-net8]
     paths:
       - 'server/Application/Combat/CombatService.cs'
+      - 'server/Application/Character/ResourceRecoveryService.cs'
       - 'server/Application/World/SharedMapAiTicker.cs'
       - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
       - '.github/workflows/server-map13-ai-bots.yml'
@@ -103,7 +105,7 @@ jobs:
           touch bots.done
           wait "$sampler_pid" || true
           cat ai-sampler.log
-          grep -E 'MAP_AI_(PROFILE|SLOW_TICK)|SLOW_PACKET|MAP_AI_TICK_FAILED|SLOW_TICK_AI_PHASE|SLOW_PERIODIC_TICK_PHASE' server-map13.log | tail -n 50 || true
+          grep -E 'MAP_AI_(PROFILE|SLOW_TICK)|SLOW_PACKET|MAP_AI_TICK_FAILED|SLOW_TICK_AI_PHASE|SLOW_PERIODIC_TICK_PHASE|SLOW_RESOURCE_RECOVERY_PHASE' server-map13.log | tail -n 50 || true
           if [[ "$bots_status" -ne 0 ]]; then
             echo "[MAP13_BOTS] failed exit code=$bots_status"
             exit "$bots_status"

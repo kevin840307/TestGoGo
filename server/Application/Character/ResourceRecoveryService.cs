@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using SGO.Server.Application.Assets;
 using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Application.Abstractions;
@@ -11,17 +12,21 @@ public sealed class ResourceRecoveryService
     private readonly ICharacterAssetReader _assets;
     private readonly CurrentClientDataCatalog _current;
     private readonly IConfiguration _config;
+    private readonly ILogger<ResourceRecoveryService>? _log;
+    private long _lastSlowProfileUtcTicks;
 
     public ResourceRecoveryService(
         ICharacterStore characters,
         ICharacterAssetReader assets,
         CurrentClientDataCatalog current,
-        IConfiguration config)
+        IConfiguration config,
+        ILogger<ResourceRecoveryService>? log = null)
     {
         _characters = characters;
         _assets = assets;
         _current = current;
         _config = config;
+        _log = log;
     }
 
     public IReadOnlyList<object> Tick(
@@ -47,17 +52,27 @@ public sealed class ResourceRecoveryService
 
         session.LastResourceRecoveryAt = now;
 
+        var totalStarted = Stopwatch.GetTimestamp();
+        var characterReadMs = 0.0;
+        var assetsReadMs = 0.0;
+        var writeMs = 0.0;
+        try
+        {
+        var characterStarted = Stopwatch.GetTimestamp();
         var character = _characters.GetCharacter(
             session.AccountId.Value,
             session.CharacterId.Value);
+        characterReadMs = Stopwatch.GetElapsedTime(characterStarted).TotalMilliseconds;
 
         if (character is null ||
             Convert.ToInt32(character["HP"]) <= 0)
             return [];
 
+        var assetsStarted = Stopwatch.GetTimestamp();
         var effectiveAssets = _assets.GetCharacterAssets(
             session.AccountId.Value,
             session.CharacterId.Value);
+        assetsReadMs = Stopwatch.GetElapsedTime(assetsStarted).TotalMilliseconds;
         var effectiveStats = CharacterStatCalculator.Calculate(
             character,
             effectiveAssets,
@@ -114,6 +129,7 @@ public sealed class ResourceRecoveryService
         if (hpAmount <= 0 && mpAmount <= 0)
             return [];
 
+        var writeStarted = Stopwatch.GetTimestamp();
         var updated = _characters.RecoverResources(
             session.AccountId.Value,
             session.CharacterId.Value,
@@ -121,6 +137,7 @@ public sealed class ResourceRecoveryService
             mpAmount,
             maxHp,
             maxMp);
+        writeMs = Stopwatch.GetElapsedTime(writeStarted).TotalMilliseconds;
 
         if (updated is null)
             return [];
@@ -136,6 +153,25 @@ public sealed class ResourceRecoveryService
                 effectiveAssets,
                 _current)
         ];
+        }
+        finally
+        {
+            var totalMs = Stopwatch.GetElapsedTime(totalStarted).TotalMilliseconds;
+            if (_log is not null && totalMs >= 200.0)
+            {
+                var previous = Interlocked.Read(ref _lastSlowProfileUtcTicks);
+                var nowTicks = DateTimeOffset.UtcNow.UtcTicks;
+                if ((previous == 0 || nowTicks - previous >= TimeSpan.FromSeconds(5).Ticks) &&
+                    Interlocked.CompareExchange(ref _lastSlowProfileUtcTicks, nowTicks, previous) == previous)
+                {
+                    _log.LogWarning(
+                        "[SLOW_RESOURCE_RECOVERY_PHASE] TotalMs={TotalMs:F1} CharacterReadMs={CharacterReadMs:F1} AssetsReadMs={AssetsReadMs:F1} WriteMs={WriteMs:F1} OtherMs={OtherMs:F1} Character={Character}",
+                        totalMs, characterReadMs, assetsReadMs, writeMs,
+                        Math.Max(0.0, totalMs - characterReadMs - assetsReadMs - writeMs),
+                        session.CharacterId);
+                }
+            }
+        }
     }
 
     private bool Enabled()
