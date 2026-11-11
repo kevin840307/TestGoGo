@@ -251,6 +251,9 @@ internal static class InteractiveBots
                 var groundGoal = (X: bot.X, Y: bot.Y);
                 var nextDecisionAt = DateTimeOffset.MinValue;
                 var lastMonsterId = -1;
+                // The attack window starts at the first REAL swing, not when a
+                // distant monster is clicked and the bot still has to walk.
+                var hasAttackedSelectedMonster = false;
                 var nextAttackAt = DateTimeOffset.UtcNow.AddMilliseconds(
                     Random.Shared.Next(0, attackIntervalMs + 1));
                 // Every freshly connected bot already received the Lv1
@@ -292,14 +295,16 @@ internal static class InteractiveBots
                                 walkingToGround = candidates.Length == 0 ||
                                     Random.Shared.Next(4) == 0;
                                 selectedMonsterId = null;
+                                hasAttackedSelectedMonster = false;
                                 if (walkingToGround)
                                 {
                                     // These are long destination clicks (not
                                     // short random hops). The path planner
                                     // performs safe incremental server moves.
                                     Interlocked.Increment(ref groundClicks);
-                                    groundGoal = walks.RandomPointNear(
-                                        bot.X, bot.Y, Random.Shared.Next(260, 601));
+                                    groundGoal = walks.RandomDistantPointNear(
+                                        bot.X, bot.Y, minimumDistance: 220,
+                                        maxDistance: Random.Shared.Next(520, 701));
                                     nextDecisionAt = now.AddMilliseconds(
                                         Random.Shared.Next(6500, 12001));
                                 }
@@ -323,8 +328,10 @@ internal static class InteractiveBots
                                     Interlocked.Increment(ref monsterClicks);
                                     selectedMonsterId = target.EntityId;
                                     lastMonsterId = target.EntityId;
-                                    nextDecisionAt = now.AddMilliseconds(
-                                        Random.Shared.Next(3500, 8501));
+                                    // Allow enough travel time for a genuine
+                                    // long monster click. Once in range and
+                                    // attacking, count 3.5-8.5s of combat.
+                                    nextDecisionAt = now.AddSeconds(16);
                                 }
                             }
 
@@ -389,6 +396,12 @@ internal static class InteractiveBots
                                 nextAttackAt = DateTimeOffset.UtcNow.AddMilliseconds(
                                     attackIntervalMs +
                                     Random.Shared.Next(-jitter, jitter + 1));
+                                if (!hasAttackedSelectedMonster)
+                                {
+                                    hasAttackedSelectedMonster = true;
+                                    nextDecisionAt = DateTimeOffset.UtcNow.AddMilliseconds(
+                                        Random.Shared.Next(3500, 8501));
+                                }
                             }
 
                             // Idle/movement-only bots do not gain EXP, and
@@ -447,6 +460,9 @@ internal static class InteractiveBots
                 Console.WriteLine(
                     $"[BOTS] {start.Elapsed.TotalSeconds:F0}s online={live.Length} " +
                     $"visibleTargets={visible} move={Interlocked.Read(ref moves)} " +
+                    $"monsterClicks={Interlocked.Read(ref monsterClicks)} " +
+                    $"groundClicks={Interlocked.Read(ref groundClicks)} " +
+                    $"switches={Interlocked.Read(ref targetSwitches)} " +
                     $"attack={Interlocked.Read(ref attacks)} " +
                     $"single={Interlocked.Read(ref singleSkills)} " +
                     $"confirmedHits={damage} confirmedCasts={casts} " +

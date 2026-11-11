@@ -33,7 +33,7 @@ dotnet run -c Release --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.Wire
 
 啟動時，程式讀取 Map13 真實 `Enemy.dat` 與 `Blocking.dat`，**每個機器人獨立抽取地圖任一合法怪物出生區**，再在區域內隨機挑選可通行的起點。玩家不再全部集中於預設中心的 280px 內。怪物也會依機器人隨機分散召喚（使用該地圖的有效怪物種類）。不需要 `--x`、`--y`；若要強制集中於固定觀察區域，仍可手動輸入。機器人活動範圍涵蓋各練功區，尋怪不再有人為 600px 上限；**真正攻擊仍依正常 Server 攻擊距離及技能判定，絕不隔空打怪**。
 
-預設 `--radius 280` 僅作為各角色隨機巡邏目的地的範圍（可改到 700），不限制全地圖練功區的出生位置。**預設 `--monsters 0`：直接攻擊現有 Server 地圖上的正常怪物，不額外召喚任何怪物。** 如需要增加怪物數才手動指定 `--monsters 20`，它會對現有 Server 產生真實 GM 怪物。
+預設 `--radius 280` 用於明確指定中心時的初始散布範圍（可改到 700），不限制全地圖練功區的出生位置。走路目的地另採用真人較遠距離的地板點擊（優先 220px 以上、最遠約 700px），沿途依 Blocking.dat／A* 合法逐步送出 SyncPosition；狹窄地形則退回合法的短目的地。**預設 `--monsters 0`：直接攻擊現有 Server 地圖上的正常怪物，不額外召喚任何怪物。** 如需要增加怪物數才手動指定 `--monsters 20`，它會對現有 Server 產生真實 GM 怪物。
 
 ## 3. 長時間戰鬥行為
 
@@ -42,6 +42,7 @@ dotnet run -c Release --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.Wire
 - **完全不施放範圍技能**，不使用 `23103` 赤星爆炸，也不使用 `99001` 星界震盪。
 - **避免測試自己製造卡頓**：每隻 Bot 登入時一定初始化 Lv1、ATK=1、DEF=1000、HP=20000。單純走路（`--no-combat`）不再每 20 秒重設一次已經沒變的數值。戰鬥 Bot 在首次登入後約 55～102 秒才視需要重設，之後每 90 秒更新；20 人刷新時間錯開，避免密集 GM SQLite 寫入與 Session 鎖同時阻塞正常移動。
 - 怪物存活狀態由 AOI `SpawnEntity`／`EntityDamage`／`EntityDeath`／`DespawnEntity` 更新；如果距離太遠會沿 Server 現有 A* 尋路靠近，沒怪時隨機走動。
+- 模擬真人點擊：從 AOI 內選擇怪物（不固定最近，也避免一直選同隻）；點怪後追擊最多約 16 秒，**實際開始出手後再計算 3.5～8.5 秒連續攻擊**，之後換怪或偶爾改點較遠地板移動。每隻 Bot 有自己的動作與攻擊節奏，並在終端機輸出 `monsterClicks`／`groundClicks`／`switches`。
 - 怪物死亡後由 Server 原有重生流程管理；**不會透過工具重建假的怪物**。
 - 普攻 Server 目前會造成至少 1 點傷害，沒有另外強制製造 Miss 的模擬；這個設定用低傷害換取更多次真實打擊。
 
@@ -50,7 +51,7 @@ dotnet run -c Release --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.Wire
 開啟 Godot Client，連到**同一個測試 Server**。機器人終端機會列出該次隨機中心座標，可使用測試 GM 傳送到該位置觀察。注意 Client 只接收自己 AOI 內的角色，並不是所有模擬玩家都一定在畫面內。
 
 `bots-result.json` 包含：
-`MovementPackets`、`AttackPackets`、`SingleTargetSkillPackets`、`TestRecoveryPackets`、`ConfirmedDamageHits`、`ConfirmedSkillCasts`、`ObservedMonsterDeaths`、`PositionCorrections` 與 `Errors`。發送封包數不等於成功傷害，必須看後兩個確認數字。
+`MovementPackets`、`MonsterClickDecisions`、`GroundClickDecisions`、`TargetSwitchDecisions`、`AttackPackets`、`SingleTargetSkillPackets`、`TestRecoveryPackets`、`ConfirmedDamageHits`、`ConfirmedSkillCasts`、`ObservedMonsterDeaths`、`PositionCorrections` 與 `Errors`。發送封包數不等於成功傷害，必須看後兩個確認數字。
 
 Ctrl+C 正常停止並列印統計。建議 10 → 20 → 50 → 100 人循序觀察。
 

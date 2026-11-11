@@ -134,6 +134,41 @@ internal sealed class BotWalkPlanner
         return safe;
     }
 
+    // A click picks one distant destination. Safe SyncPosition steps toward
+    // that destination still follow Blocking.dat + A*; never teleport to it.
+    public (int X, int Y) RandomDistantPointNear(
+        int x, int y, int minimumDistance, int maxDistance)
+    {
+        if (minimumDistance < 1 || maxDistance <= minimumDistance)
+            throw new ArgumentOutOfRangeException(nameof(maxDistance));
+
+        var origin = FindNear(x, y, 64) ??
+            throw new InvalidOperationException("Origin has no walkable tile");
+        var size = BlockingMapService.CellSize;
+        var minSquared = (double)minimumDistance * minimumDistance;
+        for (var attempt = 0; attempt < 160; attempt++)
+        {
+            var angle = Random.Shared.NextDouble() * 2.0 * Math.PI;
+            var radius = minimumDistance +
+                Math.Sqrt(Random.Shared.NextDouble()) * (maxDistance - minimumDistance);
+            var px = (int)Math.Floor(
+                (origin.X + Math.Cos(angle) * radius) / size) * size + size / 2;
+            var py = (int)Math.Floor(
+                (origin.Y + Math.Sin(angle) * radius) / size) * size + size / 2;
+            var dx = (double)px - x;
+            var dy = (double)py - y;
+            if (dx * dx + dy * dy < minSquared ||
+                !Walkable(px, py) ||
+                !_navigation.IsDirectClear(_map, origin.X, origin.Y, px, py))
+                continue;
+            return (px, py);
+        }
+
+        // Cramped maps may not have a reachable 220px straight path.
+        // Fall back to the existing validated selection, never a blind jump.
+        return RandomPointNear(x, y, maxDistance);
+    }
+
     public (int X, int Y) Center => _center;
 
     private bool Walkable(int x, int y)
