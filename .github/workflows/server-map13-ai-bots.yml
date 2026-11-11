@@ -103,7 +103,7 @@ jobs:
           touch bots.done
           wait "$sampler_pid" || true
           cat ai-sampler.log
-          grep -E 'MAP_AI_(PROFILE|SLOW_TICK)|SLOW_PACKET|MAP_AI_TICK_FAILED' server-map13.log | tail -n 35 || true
+          grep -E 'MAP_AI_(PROFILE|SLOW_TICK)|SLOW_PACKET|MAP_AI_TICK_FAILED|SLOW_TICK_AI_PHASE|SLOW_PERIODIC_TICK_PHASE' server-map13.log | tail -n 50 || true
           if [[ "$bots_status" -ne 0 ]]; then
             echo "[MAP13_BOTS] failed exit code=$bots_status"
             exit "$bots_status"

@@ -5737,6 +5737,12 @@ public sealed class PacketRouter
         ClientSession state,
         DateTimeOffset now)
     {
+        var periodicStarted = Stopwatch.GetTimestamp();
+        var resourceRecoveryMs = 0.0;
+        var companionMs = 0.0;
+        var questRefreshMs = 0.0;
+        var groundCleanupMs = 0.0;
+        var petFollowMs = 0.0;
         if (!state.AccountId.HasValue ||
             !state.CharacterId.HasValue ||
             state.CurrentMapId <= 0)
@@ -5837,14 +5843,18 @@ public sealed class PacketRouter
             }
         }
 
+        var companionStarted = Stopwatch.GetTimestamp();
         packets.AddRange(
             TickCompanionRuntime(
                 state,
                 accountId,
                 dbid,
                 now));
+        companionMs = Stopwatch.GetElapsedTime(companionStarted).TotalMilliseconds;
+        var recoveryStarted = Stopwatch.GetTimestamp();
         packets.AddRange(
             _resourceRecovery.Tick(state, now));
+        resourceRecoveryMs = Stopwatch.GetElapsedTime(recoveryStarted).TotalMilliseconds;
         packets.AddRange(
             _combat.TickBuffs(state, now));
         packets.AddRange(
@@ -5869,15 +5879,18 @@ public sealed class PacketRouter
             TimeSpan.FromSeconds(2))
         {
             state.LastQuestProgressAt = now;
+            var questStarted = Stopwatch.GetTimestamp();
             packets.AddRange(
                 _questProgress.RefreshCollectedItems(
                     accountId,
                     dbid));
+            questRefreshMs = Stopwatch.GetElapsedTime(questStarted).TotalMilliseconds;
         }
 
         if (now - state.LastGroundItemCleanupAt >=
             TimeSpan.FromSeconds(1))
         {
+            var cleanupStarted = Stopwatch.GetTimestamp();
             state.LastGroundItemCleanupAt = now;
 
             var expiredEntityIds = state.GroundItems.Values
@@ -5915,6 +5928,7 @@ public sealed class PacketRouter
                 if (visibleToSelf)
                     packets.Add(despawnPacket);
             }
+            groundCleanupMs = Stopwatch.GetElapsedTime(cleanupStarted).TotalMilliseconds;
         }
 
         if (state.PendingMapSpawn)
@@ -5973,6 +5987,7 @@ public sealed class PacketRouter
             // Pet AI runs before monster AI so an active pet can
             // acquire/attack nearby enemies even when the monster is already
             // close enough to attack the player on the same server tick.
+            var petStarted = Stopwatch.GetTimestamp();
             packets.AddRange(
                 BuildPetFollowPackets(
                     state,
@@ -5981,6 +5996,7 @@ public sealed class PacketRouter
                     state.LastX,
                     state.LastY,
                     now));
+            petFollowMs = Stopwatch.GetElapsedTime(petStarted).TotalMilliseconds;
             // Standalone smoke sessions retain their legacy local tick.
             // Live WebSockets use SharedMapAiTicker once per active map.
             if (!state.SharedAiManaged)
@@ -5992,6 +6008,18 @@ public sealed class PacketRouter
                     now));
         }
 
+        var periodicMs = Stopwatch.GetElapsedTime(periodicStarted).TotalMilliseconds;
+        if (periodicMs >= 200.0 &&
+            now - state.LastSlowPeriodicTickDiagAt >= TimeSpan.FromSeconds(5))
+        {
+            state.LastSlowPeriodicTickDiagAt = now;
+            _log.LogWarning(
+                "[SLOW_PERIODIC_TICK_PHASE] TotalMs={TotalMs:F1} CompanionMs={CompanionMs:F1} RecoveryMs={RecoveryMs:F1} QuestMs={QuestMs:F1} GroundMs={GroundMs:F1} PetFollowMs={PetFollowMs:F1} OtherMs={OtherMs:F1} Map={Map} Character={Character}",
+                periodicMs, companionMs, resourceRecoveryMs, questRefreshMs,
+                groundCleanupMs, petFollowMs,
+                Math.Max(0.0, periodicMs - companionMs - resourceRecoveryMs - questRefreshMs - groundCleanupMs - petFollowMs),
+                state.CurrentMapId, dbid);
+        }
         return packets;
     }
 

@@ -55,6 +55,8 @@ public sealed class ClientSession
     public DateTimeOffset LastSlowMovementDiagAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastSlowChatDiagAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastSlowLocationDiagAt { get; set; } = DateTimeOffset.MinValue;
+    // Pure diagnostics: no change to timing of resource recovery, quest or AI.
+    public DateTimeOffset LastSlowPeriodicTickDiagAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastLocationReconcileAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastPingAt { get; set; } = DateTimeOffset.MinValue;
     public DateTimeOffset LastPongAt { get; set; } = DateTimeOffset.UtcNow;
