@@ -3357,25 +3357,28 @@ public sealed class CombatService
         ClientSession session,
         long accountId,
         MonsterRuntimeState monster,
-        List<object> packets)
+        List<object> packets,
+        Dictionary<string, object>? characterSnapshot = null,
+        int? luckySnapshot = null)
     {
         if (!session.CharacterId.HasValue)
             return;
 
         var dbid = session.CharacterId.Value;
-        var character = _store.GetCharacter(
+        var character = characterSnapshot ?? _store.GetCharacter(
             accountId,
             dbid);
 
         if (character is null)
             return;
 
-        var assets = _store.GetCharacterAssets(
-            accountId,
-            dbid);
-        var lucky = CharacterStatCalculator.Calculate(
+        // One area skill can kill hundreds of monsters. Equipment, buffs and
+        // Lucky do not change within one synchronous area drop settlement;
+        // use a read-only cast snapshot instead of repeated inventory queries.
+        // Ordinary one-monster kills still calculate their own live stats.
+        var lucky = luckySnapshot ?? CharacterStatCalculator.Calculate(
                 character,
-                assets,
+                _store.GetCharacterAssets(accountId, dbid),
                 _current)
             .Lucky;
 
@@ -3602,18 +3605,19 @@ public sealed class CombatService
         long totalExp = 0;
         long totalMoney = 0;
 
+        // Timed experience multiplier is fixed for this single synchronous
+        // skill settlement. Read it once rather than querying SQLite per kill.
+        var expMultiplierPercent = _store.GetTimedEffectValue(
+            accountId,
+            dbid,
+            "exp_multiplier_percent",
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
         foreach (var monster in monsters)
         {
             var gainedExp = _battle.ExperienceForKill(
                 oldLevel,
                 monster.Level);
-
-            var expMultiplierPercent =
-                _store.GetTimedEffectValue(
-                    accountId,
-                    dbid,
-                    "exp_multiplier_percent",
-                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
             if (expMultiplierPercent > 0)
             {
@@ -3742,16 +3746,23 @@ public sealed class CombatService
 
         var dbid = session.CharacterId.Value;
 
-        // Drops keep their original per-monster probability/kill-sequence
-        // semantics, but all resulting spawn packets are returned together
-        // with this one skill request instead of causing repeated status syncs.
+        // Snapshot the already-settled level/character and equipment once.
+        // Drop RNG and KillSequence remain strictly per-monster; direct
+        // inventory recovery items never auto-equip, so they cannot change
+        // Lucky during this synchronous cast.
+        var characterSnapshot = _store.GetCharacter(accountId, dbid);
+        var assetsSnapshot = _store.GetCharacterAssets(accountId, dbid);
+        var luckySnapshot = characterSnapshot is null
+            ? 0
+            : CharacterStatCalculator.Calculate(
+                characterSnapshot, assetsSnapshot, _current).Lucky;
+
+        // Drops keep original per-monster probability/kill-sequence semantics.
         foreach (var monster in monsters)
         {
             AddMonsterDrops(
-                session,
-                accountId,
-                monster,
-                packets);
+                session, accountId, monster, packets,
+                characterSnapshot, luckySnapshot);
         }
 
         // Quest progression still receives every kill so count-based quests do
@@ -3766,9 +3777,7 @@ public sealed class CombatService
         }
 
         // Aggregate all monster EXP into one mecha mutation/sync.
-        var character = _store.GetCharacter(
-            accountId,
-            dbid);
+        var character = characterSnapshot;
 
         if (character is not null)
         {
@@ -3824,10 +3833,7 @@ public sealed class CombatService
 
         // Aggregate pet EXP across the whole AOE. Each active pet mutates once
         // and the final asset state is synchronized once.
-        var activePets = _store.GetCharacterAssets(
-                accountId,
-                dbid)
-            .Pets
+        var activePets = assetsSnapshot.Pets
             .Where(x => Convert.ToInt32(x["State"]) == 1)
             .ToArray();
 
