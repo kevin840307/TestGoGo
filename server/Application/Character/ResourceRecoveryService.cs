@@ -14,6 +14,12 @@ public sealed class ResourceRecoveryService
     private readonly IConfiguration _config;
     private readonly ILogger<ResourceRecoveryService>? _log;
     private long _lastSlowProfileUtcTicks;
+    // One writer for this dedicated periodic recovery path. SQLite allows
+    // many WAL readers but only one writer; 20 simultaneous recovery UPDATEs
+    // previously made every 5-second window contend for up to 3 seconds.
+    // Async waits avoid occupying thread-pool workers or live session locks.
+    private readonly SemaphoreSlim _recoveryWriterGate = new(1, 1);
+    private long _lastSlowQueueProfileUtcTicks;
 
     public ResourceRecoveryService(
         ICharacterStore characters,
@@ -27,6 +33,37 @@ public sealed class ResourceRecoveryService
         _current = current;
         _config = config;
         _log = log;
+    }
+
+    public async Task<IReadOnlyList<object>> TickSerializedAsync(
+        ClientSession detachedSnapshot,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var queueStarted = Stopwatch.GetTimestamp();
+        await _recoveryWriterGate.WaitAsync(cancellationToken);
+        var queueMs = Stopwatch.GetElapsedTime(queueStarted).TotalMilliseconds;
+        try
+        {
+            if (queueMs >= 250 && _log is not null)
+            {
+                var previous = Interlocked.Read(ref _lastSlowQueueProfileUtcTicks);
+                var ticks = DateTimeOffset.UtcNow.UtcTicks;
+                if ((previous == 0 || ticks - previous >= TimeSpan.FromSeconds(5).Ticks) &&
+                    Interlocked.CompareExchange(ref _lastSlowQueueProfileUtcTicks, ticks, previous) == previous)
+                {
+                    _log.LogWarning(
+                        "[SLOW_RESOURCE_RECOVERY_QUEUE] QueueWaitMs={QueueWaitMs:F1} Character={Character}",
+                        queueMs, detachedSnapshot.CharacterId);
+                }
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            return Tick(detachedSnapshot, now);
+        }
+        finally
+        {
+            _recoveryWriterGate.Release();
+        }
     }
 
     // Called ONLY with the live session monitor held. Reserve the existing

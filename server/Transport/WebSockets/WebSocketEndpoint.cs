@@ -347,7 +347,8 @@ public static class WebSocketEndpoint
                                     if (!stillCurrent || worldTickToken.IsCancellationRequested)
                                         return;
 
-                                    var recovered = resourceRecovery.Tick(due, now);
+                                    var recovered = await resourceRecovery.TickSerializedAsync(
+                                        due, now, worldTickToken);
                                     if (recovered.Count == 0 ||
                                         worldTickToken.IsCancellationRequested)
                                         return;
