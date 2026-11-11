@@ -229,3 +229,19 @@ dotnet run -c Release --project tests/SGO.Server.PositionPersistenceProbe/SGO.Se
 # 20 人加密 WS 測試（本機執行中的 Server，測試帳號只用於測試）
 dotnet run -c Release --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -- --url ws://127.0.0.1:5678/ --sizes 20 --rounds 3 --move-pixels 4 --mixed-seconds 8 --output wire20-result.json
 ```
+
+## 10. 直接從 Core.dll.lst 還原原版 Server FPS 預設值（2026-11-11）
+
+由 GitHub 原版 **`Old/服務端/Core.dll.lst`** 的實際組語，而非僅根據函式名稱推論：
+
+- `CDServer::InitThread` 位址 **0x0101630C～0x01016324**：`GetPrivateProfileIntA("Core", "FPS_BASE", 0x19, ini)` → 預設 **25 FPS**。
+- 位址 **0x01016335～0x0101634D**：`GetPrivateProfileIntA("Core", "FPS_CURRENT", 0x0A, ini)` → 預設 **10 FPS**，寫入 `[ecx+112h]`。
+- 位址 **0x0101635E～0x01016376**：`GetPrivateProfileIntA("Core", "FPS_CLIENT", 0x32, ini)` → 預設 **50 FPS**。
+- 位址 **0x01016383～0x0101639C**：明確對 `1000 / FPS_CURRENT` 做整數除法，結果存入 `[edx+116h]`（預設 **100ms**）。
+- `CDServer::run` 位址 **0x01024B43～0x01024B80**：`GetTickCount` 超過下一個到期時，執行虛擬 Update `call [edx+84h]`，再將 deadline 加上 `[+116h]`。空閒時 **0x01024EDE～0x01024EE0** 執行 `Sleep(1)`。所以**預設邏輯更新 Tick ≈100ms/次**，會受到實際負載／排程延誤影響。
+- `CDMapService2D::Update` 位址 **0x1002D982～0x1002D9C9**：每次累計 Update 計數器，依 `counter % (GetCurrentFPS()*60) == 0` 每約60秒更新 `SyncDelayPlayerCount`／玩家人數分級相關設定，**不是移動封包每60秒一包**。
+- `CDMapService2D::PlayerUpdate` 與 `NPCUpdate` 分別依移動狀態（例如 switch state=0/2/3）呼叫不同虛擬方法；`SendSyncDestPac`、`SendSyncPosition` 為獨立輸出類型。仍需確認更深層節流與座標校正條件才能算出**每類事件實際產包週期**。
+
+**結論**：從反編譯**已經可以確認原版預設 Server 的遊戲更新時鐘是10Hz（100ms）**，原 Client 偏向50Hz（20ms）顯示／步進；原版實際配置的 INI 可覆蓋預設數值。不能把每次 Update 當作一定送一個封包，也不能因 `FPS_CLIENT=50` 宣稱 Server 每20ms廣播玩家與怪物位置。
+
+與新版的對照：玩家位置廣播基準100ms與原版預設 Server Tick 同階；新版怪物 250ms AI 和原版 100ms 預設 Tick 不同，但**原版 NPC 產包是否每 Tick 發送尚未確認**，因此不能在不保護負載/導航/戰鬥的情況下直接盲目把312怪物移動廣播調成100ms。解析度 800×600 只影響視野/訂閱範圍，不決定 Tick 或封包頻率。
