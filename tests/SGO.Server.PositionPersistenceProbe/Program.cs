@@ -68,6 +68,20 @@ try
         location.Value.Y == 1234,
         "queued snapshots coalesce to newest coordinate and flush");
 
+    var stateClock = Stopwatch.StartNew();
+    for (var i = 0; i < 1000; i++)
+        service.StageState(accountId.Value, charId,
+            i % 2 == 0 ? "walk" : "idle");
+    service.StageState(accountId.Value, charId, "crouch");
+    stateClock.Stop();
+    Check(stateClock.ElapsedMilliseconds < 1000,
+        "1000 transient SyncState requests coalesce without synchronous SQL");
+    service.FlushQueued(accountId.Value, charId);
+    Check(Convert.ToString(store.GetCharacter(accountId.Value, charId)!["State"]) == "crouch",
+        "latest coalesced state is durable before character selection");
+
+    service.StageState(accountId.Value, charId, "walk");
+    service.StageState(accountId.Value, charId, "idle");
     service.Stage(accountId.Value, charId, 15, 1250, 1250);
     service.FlushFinal(accountId.Value, charId, 1300, 1300, dirty: true);
     await Task.Delay(250);
@@ -75,6 +89,8 @@ try
     Check(location.HasValue && location.Value.X == 1300 &&
         location.Value.Y == 1300,
         "final logout write wins over pending older periodic snapshot");
+    Check(Convert.ToString(store.GetCharacter(accountId.Value, charId)!["State"]) == "idle",
+        "logout flush preserves final visual idle state without packet lock");
 
     service.Stage(accountId.Value, charId, 15, 1400, 1400);
     service.FenceAndDiscard(accountId.Value, charId);

@@ -5255,10 +5255,18 @@ public sealed class PacketRouter
                         "crouch",
                         StringComparison.OrdinalIgnoreCase);
 
-                    _store.UpdateState(
-                        accountId,
-                        state.CharacterId.Value,
-                        playerState);
+                    // Persist cosmetic movement/idle state through the
+                    // existing position writer. A 250-450ms SQLite busy
+                    // wait must not hold the packet's Session lock while
+                    // the shared monster AI needs to inspect this player.
+                    // Standalone smoke tests without the worker retain
+                    // the synchronous legacy persistence contract.
+                    if (_positionWrites is not null)
+                        _positionWrites.StageState(
+                            accountId, state.CharacterId.Value, playerState);
+                    else
+                        _store.UpdateState(
+                            accountId, state.CharacterId.Value, playerState);
 
                     // The local Client sends its final SyncPosition BEFORE
                     // SyncState(idle). A valid final position can fall inside
