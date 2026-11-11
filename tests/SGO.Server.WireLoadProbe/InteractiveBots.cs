@@ -235,6 +235,7 @@ internal static class InteractiveBots
             foreach (var bot in live) bot.EnableInteractiveBots();
             Console.WriteLine($"[BOTS] online={live.Length}; open Godot on the same map/server. Ctrl+C to stop.");
             long moves = 0, attacks = 0, singleSkills = 0, heals = 0;
+            long monsterClicks = 0, groundClicks = 0, targetSwitches = 0;
             // Simulate independent real players, not a synchronized spike
             // of 20 Attack/SyncState/Move packets every 350ms. Each bot owns
             // its own monotonic action counter and a jittered wall-clock loop.
@@ -296,6 +297,7 @@ internal static class InteractiveBots
                                     // These are long destination clicks (not
                                     // short random hops). The path planner
                                     // performs safe incremental server moves.
+                                    Interlocked.Increment(ref groundClicks);
                                     groundGoal = walks.RandomPointNear(
                                         bot.X, bot.Y, Random.Shared.Next(260, 601));
                                     nextDecisionAt = now.AddMilliseconds(
@@ -316,6 +318,9 @@ internal static class InteractiveBots
                                         ? Random.Shared.Next(nearCount)
                                         : Random.Shared.Next(pool.Length);
                                     target = pool[pick];
+                                    if (lastMonsterId >= 0 && lastMonsterId != target.EntityId)
+                                        Interlocked.Increment(ref targetSwitches);
+                                    Interlocked.Increment(ref monsterClicks);
                                     selectedMonsterId = target.EntityId;
                                     lastMonsterId = target.EntityId;
                                     nextDecisionAt = now.AddMilliseconds(
@@ -482,6 +487,9 @@ internal static class InteractiveBots
                 Placement = x.HasValue ? "near-user-point" : "map-wide-enemy-spawn-zones",
                 Level = 1,
                 MovementPackets = moves,
+                MonsterClickDecisions = monsterClicks,
+                GroundClickDecisions = groundClicks,
+                TargetSwitchDecisions = targetSwitches,
                 AttackPackets = attacks,
                 SingleTargetSkillPackets = singleSkills,
                  TestRecoveryPackets = heals,
