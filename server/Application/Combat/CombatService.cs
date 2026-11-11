@@ -7,6 +7,7 @@ using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Party;
 using SGO.Server.Application.Quest;
 using SGO.Server.Application.World;
+using SGO.Server.Domain.Assets;
 using SGO.Server.Domain.Sessions;
 using SGO.Server.Domain.World;
 using SGO.Server.Infrastructure.WorldData;
