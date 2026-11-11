@@ -167,6 +167,43 @@ func _run() -> void:
 	_check(next_step750 > 0.5 and next_step750 < 2.5,
 		"next delayed player packet continues smoothly without a speed spike")
 
+	# Real receive cadence can vary even when the Server span is stable.
+	# Replaying each historical segment from its beginning made these
+	# 500-817ms gaps visibly alternate fast/slow.
+	var jittered := RemotePlayerMotion.new()
+	jittered.reset(Vector2.ZERO)
+	var jitter_packets := [
+		{"arrival": 1000, "x": 49.0},
+		{"arrival": 1500, "x": 98.0},
+		{"arrival": 2317, "x": 147.0},
+		{"arrival": 2917, "x": 196.0},
+	]
+	var jitter_min_step: float = INF
+	var jitter_max_step: float = 0.0
+	var previous_arrival: int = 1000
+	jittered.receive(Vector2(49.0, 0.0), 1000, 0.75, 1200.0, 0.0, 70.0)
+	for packet_index in range(1, jitter_packets.size()):
+		var packet: Dictionary = jitter_packets[packet_index]
+		var arrival: int = int(packet["arrival"])
+		var gap_seconds: float = float(arrival - previous_arrival) / 1000.0
+		var frame_count: int = maxi(1, roundi(gap_seconds * 60.0))
+		for frame in frame_count:
+			var before_x: float = jittered.visual_position.x
+			var after_x: float = jittered.advance(1.0 / 60.0).x
+			var step_x: float = after_x - before_x
+			if step_x > 0.001:
+				jitter_min_step = minf(jitter_min_step, step_x)
+				jitter_max_step = maxf(jitter_max_step, step_x)
+		jittered.receive(
+			Vector2(float(packet["x"]), 0.0),
+			arrival, 0.75, 1200.0, 0.0, 70.0
+		)
+		previous_arrival = arrival
+	_check(jitter_min_step > 0.5,
+		"500-817ms receive jitter never creates a visible standstill")
+	_check(jitter_max_step < jitter_min_step * 1.30,
+		"receive jitter changes correction gradually instead of fast-slow pulses")
+
 	# 350ms bot snapshots must not run only 120ms then stand still.
 	var sparse := RemotePlayerMotion.new()
 	sparse.reset(Vector2.ZERO)
@@ -216,6 +253,11 @@ func _run() -> void:
 		RemotePlayerStatePolicy.preserve_hit_animation(
 			"hit_weapon_gun", true, "idle"),
 		"server walk/idle cannot interrupt an active remote hit")
+	_check(RemotePlayerStatePolicy.preserve_hit_animation(
+		"attack_aa", true, "walk") and
+		RemotePlayerStatePolicy.preserve_hit_animation(
+			"attack_ga", true, "idle"),
+		"late walk/idle cannot cut a remote attack animation in half")
 	_check(not RemotePlayerStatePolicy.movement_may_replace_animation(
 		"hit_weapon_melee", true) and
 		not RemotePlayerStatePolicy.movement_may_replace_animation(
