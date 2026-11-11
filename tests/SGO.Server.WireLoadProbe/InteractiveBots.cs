@@ -235,10 +235,6 @@ internal static class InteractiveBots
             foreach (var bot in live) bot.EnableInteractiveBots();
             Console.WriteLine($"[BOTS] online={live.Length}; open Godot on the same map/server. Ctrl+C to stop.");
             long moves = 0, attacks = 0, singleSkills = 0, heals = 0;
-            var goals = new (int X, int Y)[count];
-            for (var i = 0; i < count; i++)
-                goals[i] = walks.RandomPointNear(locations[i].X, locations[i].Y, radius);
-
             // Simulate independent real players, not a synchronized spike
             // of 20 Attack/SyncState/Move packets every 350ms. Each bot owns
             // its own monotonic action counter and a jittered wall-clock loop.
@@ -246,6 +242,14 @@ internal static class InteractiveBots
             {
                 var tick = 0;
                 var attackCount = 0;
+                // Decisions model mouse clicks, not a new nearest-target
+                // search every network tick. Each bot independently commits
+                // to a target or a distant ground click for several seconds.
+                int? selectedMonsterId = null;
+                var walkingToGround = false;
+                var groundGoal = (X: bot.X, Y: bot.Y);
+                var nextDecisionAt = DateTimeOffset.MinValue;
+                var lastMonsterId = -1;
                 var nextAttackAt = DateTimeOffset.UtcNow.AddMilliseconds(
                     Random.Shared.Next(0, attackIntervalMs + 1));
                 // Every freshly connected bot already received the Lv1
@@ -265,35 +269,78 @@ internal static class InteractiveBots
                     {
                         try
                         {
-                            var nearest = combat
-                                ? bot.BotWorld.Nearest(
-                                    bot.X, bot.Y, double.PositiveInfinity)
+                            var now = DateTimeOffset.UtcNow;
+                            var target = selectedMonsterId.HasValue
+                                ? bot.BotWorld.FindTarget(selectedMonsterId.Value)
                                 : null;
-                            var distanceSq = nearest is null
-                                ? double.PositiveInfinity
-                                : Math.Pow(nearest.X - bot.X, 2) +
-                                  Math.Pow(nearest.Y - bot.Y, 2);
-
-                            // Movement and attack are separate cadences.
-                            // A melee bot must actually approach a target, and
-                            // wall-separated targets require pathfinding.
-                            var hasClearPath = nearest is not null &&
-                                walks.HasClearPath(
-                                    bot.X, bot.Y, nearest.X, nearest.Y);
-                            if (nearest is null ||
-                                distanceSq > 92 * 92 ||
-                                !hasClearPath)
+                            // Reconsider after a human-scale action window,
+                            // or if the clicked monster disappears from AOI.
+                            if (now >= nextDecisionAt ||
+                                (!walkingToGround && target is null))
                             {
-                                var goal = nearest is not null
-                                    ? (X: nearest.X, Y: nearest.Y)
-                                    : (X: (double)goals[bot.Index].X,
-                                       Y: (double)goals[bot.Index].Y);
-                                // Move roughly 140px/s while continuing
-                                // to send only one position every ~350ms.
-                                // The old hardcoded 16px network step looked
-                                // like a tile-by-tile hop at 20 players.
+                                var candidates = combat
+                                    ? bot.BotWorld.VisibleTargets(bot.X, bot.Y)
+                                        .OrderBy(m =>
+                                            Math.Pow(m.X - bot.X, 2) +
+                                            Math.Pow(m.Y - bot.Y, 2))
+                                        .Take(10).ToArray()
+                                    : Array.Empty<BotWorldState.Monster>();
+                                // Roughly one in four decisions clicks ground,
+                                // even when there are monsters nearby. When no
+                                // monsters are visible, always explore.
+                                walkingToGround = candidates.Length == 0 ||
+                                    Random.Shared.Next(4) == 0;
+                                selectedMonsterId = null;
+                                if (walkingToGround)
+                                {
+                                    // These are long destination clicks (not
+                                    // short random hops). The path planner
+                                    // performs safe incremental server moves.
+                                    groundGoal = walks.RandomPointNear(
+                                        bot.X, bot.Y, Random.Shared.Next(260, 601));
+                                    nextDecisionAt = now.AddMilliseconds(
+                                        Random.Shared.Next(6500, 12001));
+                                }
+                                else
+                                {
+                                    // Most players click a nearby monster,
+                                    // but quite often choose a farther one.
+                                    // Avoid repeatedly clicking the exact
+                                    // previous target when alternatives exist.
+                                    var pool = candidates.Length > 1
+                                        ? candidates.Where(m =>
+                                            m.EntityId != lastMonsterId).ToArray()
+                                        : candidates;
+                                    var nearCount = Math.Min(3, pool.Length);
+                                    var pick = Random.Shared.NextDouble() < 0.55
+                                        ? Random.Shared.Next(nearCount)
+                                        : Random.Shared.Next(pool.Length);
+                                    target = pool[pick];
+                                    selectedMonsterId = target.EntityId;
+                                    lastMonsterId = target.EntityId;
+                                    nextDecisionAt = now.AddMilliseconds(
+                                        Random.Shared.Next(3500, 8501));
+                                }
+                            }
+
+                            var goalX = walkingToGround ? groundGoal.X : target?.X ?? bot.X;
+                            var goalY = walkingToGround ? groundGoal.Y : target?.Y ?? bot.Y;
+                            var dx = goalX - bot.X;
+                            var dy = goalY - bot.Y;
+                            var distanceSq = dx * dx + dy * dy;
+                            var hasClearPath = !walkingToGround && target is not null &&
+                                walks.HasClearPath(bot.X, bot.Y, target.X, target.Y);
+                            var shouldMove = walkingToGround
+                                ? distanceSq > 32 * 32
+                                : target is not null &&
+                                  (distanceSq > 92 * 92 || !hasClearPath);
+                            if (shouldMove)
+                            {
+                                // Network position deltas stay bounded by the
+                                // validated server movement rules; a long
+                                // click does not teleport the character.
                                 var stride = Math.Clamp(interval * 0.14, 16.0, 64.0);
-                                if (walks.TryStep(bot.X, bot.Y, goal.X, goal.Y,
+                                if (walks.TryStep(bot.X, bot.Y, goalX, goalY,
                                         stride, out var nx, out var ny))
                                 {
                                     await bot.SendBotPositionAsync(nx, ny, timeout);
@@ -301,32 +348,35 @@ internal static class InteractiveBots
                                 }
                                 else
                                 {
-                                    goals[bot.Index] = walks.RandomPointNear(
-                                        bot.X, bot.Y, radius);
+                                    // A blocked ground click triggers another
+                                    // click elsewhere, not a tight jitter loop.
+                                    nextDecisionAt = DateTimeOffset.MinValue;
                                 }
                             }
+                            else if (walkingToGround)
+                            {
+                                // Reached the clicked ground coordinate.
+                                nextDecisionAt = DateTimeOffset.MinValue;
+                            }
 
-                            // Server still validates real combat range. Never
-                            // alter authoritative damage or simulate a fake hit.
-                            if (nearest is not null &&
-                                distanceSq <= 92 * 92 &&
-                                hasClearPath &&
+                            // Only attack the selected monster after reaching
+                            // real melee range and clear line of movement.
+                            if (!walkingToGround && target is not null &&
+                                distanceSq <= 92 * 92 && hasClearPath &&
                                 DateTimeOffset.UtcNow >= nextAttackAt)
                             {
                                 attackCount++;
-                                // One low-damage single-target skill per 20
-                                // attacks; no AOEs or simulated distance hits.
                                 if (attackCount % 20 == 0)
                                 {
                                     var skill = attackCount % 60 == 0 ? 23102 : 20101;
                                     await bot.SendBotSkillAsync(
-                                        skill, nearest.EntityId, timeout);
+                                        skill, target.EntityId, timeout);
                                     Interlocked.Increment(ref singleSkills);
                                 }
                                 else
                                 {
                                     await bot.SendBotAttackWithAnimationAsync(
-                                        nearest.EntityId, nearest.X, nearest.Y,
+                                        target.EntityId, target.X, target.Y,
                                         timeout);
                                     Interlocked.Increment(ref attacks);
                                 }
