@@ -1,0 +1,34 @@
+name: Cleanup merged Map13 AI PR12 work branch
+
+on:
+  push:
+    branches: [feature/local-server-net8]
+    paths:
+      - '.github/workflows/cleanup-map13-ai-pr12.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.repository == 'kevin840307/TestGoGo'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify merged PR and delete only its temporary branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          merged="$(gh api repos/kevin840307/TestGoGo/pulls/12 --jq '.merged')"
+          if [[ "$merged" != "true" ]]; then
+            echo 'PR12 has not merged. Branch deletion refused.'
+            exit 1
+          fi
+          branch_sha="$(gh api repos/kevin840307/TestGoGo/git/ref/heads/perf/map13-ai-narrow-snapshots-20261111 --jq '.object.sha')"
+          if [[ "$branch_sha" != "a334bf7916c65b738631e31c18709216b1328f60" ]]; then
+            echo "Temporary branch moved unexpectedly: $branch_sha"
+            exit 1
+          fi
+          gh api -X DELETE repos/kevin840307/TestGoGo/git/refs/heads/perf/map13-ai-narrow-snapshots-20261111
+          echo 'PR12 work branch removed after verified merge.'
