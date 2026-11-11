@@ -21,3 +21,17 @@ static func movement_may_replace_animation(current_state: String, action_locked:
 	return not action_locked and not current_state.begins_with("attack") \
 		and not current_state.begins_with("hit") \
 		and current_state not in ["death", "die"]
+
+# Position snapshots may continue to arrive while a hit/attack one-shot owns
+# the paper-doll direction. Applying their heading immediately restarts or
+# flips the action animation through NetworkPlayer's animation cache.
+static func movement_direction_may_replace_animation(
+	current_state: String, action_locked: bool
+) -> bool:
+	return not (
+		action_locked
+		and (
+			current_state.begins_with("hit_")
+			or current_state.begins_with("attack_")
+		)
+	)
