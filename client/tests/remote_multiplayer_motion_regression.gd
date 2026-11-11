@@ -191,5 +191,36 @@ func _run() -> void:
 	_check(expected_step <= 400.0 / 60.0 + 0.05,
 		"200px/s remote player backlog catch-up is capped near 400px/s")
 
+	# The recovered Core.dll defaults to 10Hz Server Update and the old
+	# Client to 50Hz. Display interpolation must remain comparable at 50
+	# and 60 fixed updates; neither may turn a 100ms waypoint into a snap.
+	var cadence_endpoints: Array[float] = []
+	for hz in [50, 60]:
+		var cadence := RemotePlayerMotion.new()
+		cadence.reset(Vector2.ZERO)
+		var frames_per_server_tick: int = hz / 10
+		var most_pixels_one_step: float = 0.0
+		var backward_cadence_frames: int = 0
+		for frame in hz * 3:
+			if frame % frames_per_server_tick == 0:
+				var seconds: float = float(frame) / float(hz)
+				cadence.receive(
+					Vector2(seconds * 200.0, 0.0),
+					1000 + roundi(seconds * 1000.0),
+					0.10, 1200.0, 0.0, 200.0
+				)
+			var x_before: float = cadence.visual_position.x
+			var x_after: float = cadence.advance(1.0 / float(hz)).x
+			most_pixels_one_step = maxf(most_pixels_one_step, absf(x_after - x_before))
+			if x_after + 0.01 < x_before:
+				backward_cadence_frames += 1
+		_check(backward_cadence_frames == 0,
+			"10Hz server movement never runs backwards at %dHz visual pacing" % hz)
+		_check(most_pixels_one_step <= 400.0 / float(hz) + 0.05,
+			"10Hz snapshots stay bounded at %dHz local physics pacing" % hz)
+		cadence_endpoints.append(cadence.visual_position.x)
+	_check(absf(cadence_endpoints[0] - cadence_endpoints[1]) < 8.0,
+		"legacy 50Hz and new 60Hz continuous motion agree for 10Hz server waypoints")
+
 	print("[REMOTE_MOTION_TEST] ", "ALL PASS" if failures == 0 else "%d FAILURES" % failures)
 	quit(0 if failures == 0 else 1)
