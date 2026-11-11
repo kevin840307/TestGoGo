@@ -81,6 +81,24 @@ internal static class PlayerSpatialAoiSmokeTests
         Check(contracted.Count == 2 && contracted.All(x => !x.Appeared),
             "shrink viewport sends reciprocal remote player despawns");
 
+        // Actual 4K zoomed-out views can cover >5000 world units.
+        var ultra = new PlayerSpatialAoi();
+        var uv = Player(9201, 13, 0, 0);
+        var up = Player(9202, 13, 6200, 0);
+        ultra.Upsert(uv);
+        Check(ultra.Upsert(up).Count == 0,
+            "normal viewport keeps ultrawide outer players hidden");
+        var ultraSpawn = ultra.Upsert(uv, 6500);
+        Check(ultraSpawn.Count == 2 && ultraSpawn.All(x => x.Appeared) &&
+              ultra.IsVisible(uv.ConnectionId, up.ConnectionId) &&
+              ultra.IsVisible(up.ConnectionId, uv.ConnectionId),
+            "extended Canvas radius delivers reciprocal player spawn beyond 5000");
+        Check(ultra.Upsert(uv, 6500).Count == 0,
+            "unchanged ultrawide radius has no duplicate spawn");
+        var ultraStop = ultra.Upsert(uv, 1800);
+        Check(ultraStop.Count == 2 && ultraStop.All(x => !x.Appeared),
+            "shrinking camera removes extra outer peers in both directions");
+
         // Separate index: no O(N^2) scanning or accidental pairs in a
         // 1000-player, evenly spread out map.
         var dense = new PlayerSpatialAoi();

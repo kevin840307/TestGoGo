@@ -4,7 +4,7 @@ class_name ViewportAoiRadius
 # World-space canvas corners drive the network interest envelope, not the
 # historical 800x600 design resolution or current physical monitor DPI.
 const MIN_RADIUS: int = 1800
-const MAX_RADIUS: int = 5000
+const MAX_RADIUS: int = 10000
 const RADIUS_STEP: int = 128
 const HEADROOM: float = 420.0
 

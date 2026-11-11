@@ -245,6 +245,18 @@ internal static class WorldEntitySpatialAoiSmokeTests
         Check(left.Count == 1 && !left[0].Appeared &&
               !aoi.IsVisible(viewer.ConnectionId, edge.EntityId),
             "shrunken camera drops unnecessary outer monster traffic");
+        // Viewport >5000 world pixels must still see edge monsters.
+        var ultraMonster = Entity(9_999_801, 1, 13, 6200, 0);
+        Check(aoi.UpsertEntity(ultraMonster).Count == 0,
+            "standard viewport does not stream distant 6200px monster");
+        var newOuter = aoi.UpsertObserver(viewer, 6500);
+        Check(newOuter.Any(x => x.Appeared && x.Entity.EntityId == ultraMonster.EntityId) &&
+              aoi.IsVisible(viewer.ConnectionId, ultraMonster.EntityId),
+            "actual large Canvas streams monsters beyond old 5000 cap");
+        var removedOuter = aoi.UpsertObserver(viewer, 2600);
+        Check(removedOuter.Any(x => !x.Appeared && x.Entity.EntityId == ultraMonster.EntityId) &&
+              !aoi.IsVisible(viewer.ConnectionId, ultraMonster.EntityId),
+            "shrinking large Canvas despawns distant monster");
     }
 
     private static void EntityRemovalNeverLeavesGhostKnownSets()

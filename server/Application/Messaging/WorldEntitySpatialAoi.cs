@@ -28,7 +28,8 @@ public sealed class WorldEntitySpatialAoi
     public const double EnterRadius = 2600;
     public const double ExitRadius = 3000;
     // Camera-aware ranges are bounded; legacy connections keep 2600/3000.
-    public const double MaxViewRadius = 5000;
+    // Must match PlayerSpatialAoi and client viewport maximum.
+    public const double MaxViewRadius = PlayerSpatialAoi.MaxViewRadius;
     public const double MaxViewExitRadius =
         MaxViewRadius + (ExitRadius - EnterRadius);
 

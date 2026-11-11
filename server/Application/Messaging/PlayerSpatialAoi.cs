@@ -13,7 +13,8 @@ public sealed class PlayerSpatialAoi
     public const double ExitRadius = 2200;
     // Symmetric peer visibility uses the larger of both camera envelopes.
     // Legacy connections continue to use 1800/2200.
-    public const double MaxViewRadius = 5000;
+    // Standard AOI remains 1800; only real Canvas2D views can request more.
+    public const double MaxViewRadius = 10000;
     public const double MaxViewExitRadius = MaxViewRadius + (ExitRadius - EnterRadius);
 
     public sealed record Change(

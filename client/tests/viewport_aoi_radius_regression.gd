@@ -23,6 +23,11 @@ func _run() -> void:
 		"small world view preserves legacy 1800-radius player AOI")
 	check(wide > 2600,
 		"4K camera view requests beyond legacy 2600-radius monster AOI")
+	var large_zoom: Transform2D = Transform2D.IDENTITY.scaled(Vector2(0.4, 0.4))
+	var large_radius: int = ViewportAoiRadius.estimate(
+		Rect2(0, 0, 3840, 2160), large_zoom, Vector2(4800, 2700))
+	check(large_radius > 5000 and large_radius <= ViewportAoiRadius.MAX_RADIUS,
+		"4K 0.4x zoom includes Canvas corners beyond 5000 world units")
 
 	var zoom_out: Transform2D = Transform2D.IDENTITY.scaled(Vector2(0.5, 0.5))
 	var zoom_radius: int = ViewportAoiRadius.estimate(
