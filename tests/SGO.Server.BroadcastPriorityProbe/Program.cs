@@ -169,6 +169,33 @@ using (var decoded = ClientProtocol.Decode(
 }
 hub.Unregister(worldLatePeer.ConnectionId);
 
+// A stop/position correction is NOT a stale replaceable player waypoint.
+// Legacy A106/A107 destination changes and A10D coordinate corrections
+// must keep their causal FIFO order around disconnects or packet backlog.
+var stopPeer = hub.Register(prioritizePlayerEvents: true);
+var beforeStop = new { Type = "MoveEntity", EntityID = 81L,
+    X = 10, Y = 0, Dir = "6", SpeedTime = 0.1 };
+var atStop = new { Type = "MoveEntity", EntityID = 81L,
+    X = 13, Y = 0, Dir = "6", SpeedTime = 0.0 };
+var afterStop = new { Type = "MoveEntity", EntityID = 81L,
+    X = 20, Y = 0, Dir = "6", SpeedTime = 0.1 };
+hub.PublishToConnection(stopPeer.ConnectionId, beforeStop);
+hub.PublishToConnection(stopPeer.ConnectionId, atStop);
+hub.PublishToConnection(stopPeer.ConnectionId, afterStop);
+Check(hub.PlayerPriorityBacklogCount(stopPeer.ConnectionId) == 3,
+    "player stop correction divides pre- and post-stop movement windows");
+Check(hub.TryDequeuePlayerPriority(stopPeer.ConnectionId, out var firstStop) &&
+      ReferenceEquals(firstStop, beforeStop),
+    "pre-stop movement preserves FIFO original packet");
+Check(hub.TryDequeuePlayerPriority(stopPeer.ConnectionId, out var correctionStop) &&
+      ReferenceEquals(correctionStop, atStop),
+    "zero-time player correction survives exactly");
+Check(hub.TryDequeuePlayerPriority(stopPeer.ConnectionId, out var laterStop) &&
+      ReferenceEquals(laterStop, afterStop),
+    "post-stop move is never merged across correction");
+hub.Unregister(stopPeer.ConnectionId);
+
+
 // An original-client-style 175px wander must span 1.25s at 140px/s rather
 // than squeeze a long hop into the 250ms chase cadence.
 Check(Math.Abs(CombatService.WanderVisualSeconds(35.0) - 0.25) < 0.0001 &&

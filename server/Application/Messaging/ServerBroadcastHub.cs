@@ -179,8 +179,18 @@ public sealed class ServerBroadcastHub
                 {
                     var type = ReadPacketString(packet, "Type");
                     var entityId = ReadPacketLong(packet, "EntityID");
+                    // Unlike replaceable destination updates, a
+                    // SpeedTime=0 packet is an authoritative stop/position
+                    // correction (legacy A10D-like event). It separates
+                    // walking windows even when the socket is backpressured.
+                    // Old packets without SpeedTime stay coalescible.
+                    var speedRaw = ReadPacketValue(packet, "SpeedTime");
+                    var speedSeconds = ReadPacketDouble(packet, "SpeedTime");
+                    var correction = speedRaw is not null &&
+                        (!double.IsFinite(speedSeconds) || speedSeconds <= 0.01);
                     if (type == "MoveEntity" &&
-                        entityId is > 0 and < 1_000_000)
+                        entityId is > 0 and < 1_000_000 &&
+                        !correction)
                     {
                         if (movement.Pending.TryGetValue(entityId, out var slot))
                         {
