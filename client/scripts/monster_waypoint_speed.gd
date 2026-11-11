@@ -70,6 +70,24 @@ static func correction_visual_seconds(
 	)
 
 
+# An AOI cull is safe only after BOTH the moving visual body and the latest
+# server-approved coordinate have left the exit envelope. During a stalled
+# 250ms world tick or a coalesced waypoint the visual body may lag hundreds
+# of pixels behind the canonical cached position. Discarding it at that point
+# recreates the scene at the new coordinate and looks like a teleport.
+static func is_fully_outside_aoi(observer: Vector2, visual_position: Vector2,
+	authoritative_position: Vector2, exit_radius: float) -> bool:
+	if not observer.is_finite() or not visual_position.is_finite() or not authoritative_position.is_finite():
+		return false
+	if not is_finite(exit_radius) or exit_radius <= 0.0:
+		return false
+	var radius_sq: float = exit_radius * exit_radius
+	return (
+		observer.distance_squared_to(visual_position) > radius_sq
+		and observer.distance_squared_to(authoritative_position) > radius_sq
+	)
+
+
 # Avoid re-instantiating a monster at a newer authoritative coordinate during
 # brief camera/monster oscillation at the visual AOI fringe. This is purely a
 # Client scene-lifetime guard; Server Despawn still removes the actor.

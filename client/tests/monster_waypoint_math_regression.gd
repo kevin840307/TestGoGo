@@ -51,6 +51,21 @@ func _run() -> void:
 		and not MonsterWaypointSpeed.should_linger_outside_aoi(3000.0, 2200.0, 0),
 		"only viewport-fringe monsters may linger briefly"
 	)
+	# A moving monster at the outer edge can have a visual position that
+	# trails its newest server waypoint. Never unload/recreate that scene
+	# until both positions are outside the visual exit radius.
+	_check(not MonsterWaypointSpeed.is_fully_outside_aoi(
+		Vector2.ZERO, Vector2(2450, 0), Vector2(1750, 0), 2200.0
+	), "authoritative monster inside AOI prevents outer-edge despawn respawn snap")
+	_check(not MonsterWaypointSpeed.is_fully_outside_aoi(
+		Vector2.ZERO, Vector2(1750, 0), Vector2(2450, 0), 2200.0
+	), "rendering monster on screen survives a server waypoint outside AOI")
+	_check(MonsterWaypointSpeed.is_fully_outside_aoi(
+		Vector2.ZERO, Vector2(2450, 0), Vector2(2600, 0), 2200.0
+	), "both positions outside AOI remain unloadable to reclaim client resources")
+	_check(not MonsterWaypointSpeed.is_fully_outside_aoi(
+		Vector2.ZERO, Vector2(2450, 0), Vector2(2450, 0), 0.0
+	), "invalid AOI radius must not release live monster scenes")
 	var correction_seconds := MonsterWaypointSpeed.correction_visual_seconds(350.0)
 	_check(correction_seconds > 0.5 and correction_seconds < 0.6,
 		"350px attack correction is visually eased by distance instead of one-frame snapping")

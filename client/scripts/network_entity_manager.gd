@@ -1033,7 +1033,17 @@ func _update_monster_aoi(delta: float) -> void :
 			_monster_exit_started_msec.erase(entity_id)
 			continue
 		var distance_sq: float = local_pos.distance_squared_to(monster.global_position)
-		if distance_sq <= exit_radius_sq:
+		# A coalesced waypoint may already have crossed the visible AOI while
+		# its continuous render body is still catching up (or vice versa).
+		# Keep the Scene in either case: unloading it recreates the monster
+		# from the newest cached Server position and looks like a teleport.
+		var authoritative_pos: Vector2 = monster.global_position
+		var latest_server_data = _monster_spawn_templates.get(entity_id, null)
+		if latest_server_data is Dictionary:
+			authoritative_pos = _monster_packet_position(latest_server_data)
+		if not MONSTER_VIEW_RADIUS.is_fully_outside_aoi(
+			local_pos, monster.global_position, authoritative_pos, radii.y
+		):
 			_monster_exit_started_msec.erase(entity_id)
 			continue
 		# Never unload a monster still inside the actual Canvas2D viewport.
