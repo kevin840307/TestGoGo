@@ -390,7 +390,8 @@ public sealed class SharedMapAiTicker : BackgroundService
                             session.LastX,
                             session.LastY,
                             now,
-                            assigned);
+                            assigned,
+                            player.IsAlive);
                         tickAiMs +=
                             Stopwatch.GetElapsedTime(tickAiStarted)
                                 .TotalMilliseconds;

@@ -254,7 +254,8 @@ public sealed class CombatService
         double playerX,
         double playerY,
         DateTimeOffset now,
-        IReadOnlyList<int>? monsterEntityIds = null)
+        IReadOnlyList<int>? monsterEntityIds = null,
+        bool? playerAliveSnapshot = null)
     {
         session.LastMonsterAiTick = now;
 
@@ -264,16 +265,28 @@ public sealed class CombatService
             return [];
 
         var currentCharacterId = session.CharacterId.Value;
-        var character = _store.GetCharacter(
-            accountId,
-            currentCharacterId);
-        var playerAlive =
-            character is not null &&
-            Convert.ToInt32(character["HP"]) > 0;
+        // The map ticker already fetched all 20+ players' HP with one
+        // narrow SQLite query. Do not run GetCharacter (club/title/buff/
+        // experience repair) for every owner on every 250ms AI pass.
+        // Legacy direct TickAi callers still get live HP from the store.
+        var playerAlive = playerAliveSnapshot ??
+            (_store.GetCharacterHp(accountId, currentCharacterId) is > 0);
 
-        var assets = _store.GetCharacterAssets(
-            accountId,
-            currentCharacterId);
+        // No summoned position means that no pet can be selected/attacked
+        // by the existing AI contract. Avoid scanning the entire inventory,
+        // equipment, horses and bank for all 20 sessions every tick.
+        IReadOnlyList<Dictionary<string, object>> activePets =
+            session.PetPositions.Count == 0
+                ? []
+                : _store.GetActivePetFollowSnapshot(
+                    accountId, currentCharacterId);
+
+        // Full equipment, skill-buff and timed-stat data are still loaded
+        // when a monster actually attacks a player. Retain one snapshot
+        // per owner/tick for multiple attacks, as the old method did.
+        Dictionary<string, object>? character = null;
+        CharacterAssets? combatAssets = null;
+        var characterLoaded = false;
 
         var runtime = SyncSessionMonsters(session);
         var packets = new List<object>();
@@ -306,7 +319,7 @@ public sealed class CombatService
                     double.MaxValue;
 
                 foreach (var candidatePet in
-                         assets.Pets.Where(x =>
+                         activePets.Where(x =>
                              Convert.ToInt32(
                                  x["State"]) == 1 &&
                              Convert.ToInt32(
@@ -453,7 +466,7 @@ public sealed class CombatService
                     monster.TargetPetUid > 0)
                 {
                     targetPetUid = monster.TargetPetUid;
-                    targetPet = assets.Pets.FirstOrDefault(x =>
+                    targetPet = activePets.FirstOrDefault(x =>
                         Convert.ToInt64(x["UID"]) == targetPetUid &&
                         Convert.ToInt32(x["State"]) == 1 &&
                         Convert.ToInt32(x["HP"]) > 0);
@@ -617,7 +630,7 @@ public sealed class CombatService
                 if (monster.TargetPetUid > 0)
                 {
                     targetPetUid = monster.TargetPetUid;
-                    targetPet ??= assets.Pets.FirstOrDefault(x =>
+                    targetPet ??= activePets.FirstOrDefault(x =>
                         Convert.ToInt64(x["UID"]) == targetPetUid &&
                         Convert.ToInt32(x["State"]) == 1 &&
                         Convert.ToInt32(x["HP"]) > 0);
@@ -811,15 +824,32 @@ public sealed class CombatService
                                 }
                             }
                         }
-                        else if (character is not null &&
-                                 Convert.ToInt32(
-                                     character["HP"]) > 0)
+                        else if (playerAlive)
                         {
+                            if (!characterLoaded)
+                            {
+                                character = _store.GetCharacter(
+                                    accountId, currentCharacterId);
+                                characterLoaded = true;
+                            }
+
+                            // A player may have died after the map's batched
+                            // HP snapshot. Recheck live HP before applying
+                            // damage, exactly as the old AI path did.
+                            if (character is null ||
+                                Convert.ToInt32(character["HP"]) <= 0)
+                            {
+                                playerAlive = false;
+                                continue;
+                            }
+
+                            combatAssets ??= _store.GetCharacterAssets(
+                                accountId, currentCharacterId);
                             var effective =
                                 ApplyActiveSkillBuffs(
                                     CharacterStatCalculator.Calculate(
                                         character,
-                                        assets,
+                                        combatAssets,
                                         _current),
                                     session,
                                     now);
