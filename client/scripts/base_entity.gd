@@ -45,7 +45,7 @@ var _afk_visual_suspended: bool = false
 var _render_notifier: VisibleOnScreenNotifier2D = null
 const RENDER_VISIBILITY_RECT: Rect2 = Rect2(-220.0, -280.0, 440.0, 500.0)
 var current_dir: String = "1"
-var hp_update_seq: int = 0
+var _fatal_visual_pending: bool = false
 var _hit_visual_pending: bool = false
 var normal_attack_visual_started_msec: int = -1
 var _name_color_state: int = 0
@@ -214,20 +214,24 @@ func update_hp(new_hp: int, hit_delay: float = 0.3, is_miss: bool = false) -> vo
 	# visual delay. The old hp_update_seq cancellation starved both the
 	# HP update and the hit animation indefinitely under this load.
 	var previous_hp: int = data_model.hp
-	hp_update_seq += 1
-	var current_seq: int = hp_update_seq
 	data_model.hp = new_hp
 
 	if new_hp <= 0:
-		# Keep fatal presentation timing and prevent a delayed old death
-		# from replacing a newer revive/heal.
+		# Multiple fatal packets may arrive before one 300ms animation
+		# delay completes; they must not continually cancel the pending
+		# death. Healing/revive still wins by checking the latest HP.
+		if is_dead or _fatal_visual_pending:
+			return
+		_fatal_visual_pending = true
 		if hit_delay > 0.0:
 			if not is_inside_tree():
+				_fatal_visual_pending = false
 				return
 			await get_tree().create_timer(hit_delay).timeout
+		_fatal_visual_pending = false
 		if not is_instance_valid(self) or not is_inside_tree():
 			return
-		if current_seq == hp_update_seq and data_model.hp <= 0:
+		if data_model.hp <= 0:
 			_die()
 		return
 
