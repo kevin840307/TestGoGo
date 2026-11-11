@@ -33,7 +33,6 @@ const SAFE_MAP_IDS: Array = [4, 9, 15, 17, 22, 39, 40, 53, 75, 93]
 var _physics_animation_cache_initialized: = false
 var _last_physics_animation_state: = ""
 var _last_physics_animation_dir: = ""
-var _last_physics_animation_position_parity: = -1
 var _last_physics_animation_dead: = false
 var _last_physics_animation_move_speed: = 0
 var _last_physics_animation_attack_speed: = 0
@@ -578,24 +577,9 @@ func _physics_process(delta: float) -> void :
 		set_physics_process(false)
 
 func _sync_physics_animation_if_changed() -> void :
-	var position_parity: = -1
-	var one_shot_action: bool = current_state.begins_with("attack_") or current_state.begins_with("hit_")
-	if one_shot_action and _physics_animation_cache_initialized \
-			and current_state == _last_physics_animation_state \
-			and current_dir == _last_physics_animation_dir:
-		# Do not flip sprites every time an animated, moving avatar crosses
-		# an integer pixel during a one-shot attack/hurt animation.
-		position_parity = _last_physics_animation_position_parity
-	elif one_shot_action or current_state == "guard" or current_state.begins_with("idle_weapon_"):
-		if current_dir == "4":
-			position_parity = int(global_position.x) & 1
-		elif current_dir == "8":
-			position_parity = int(global_position.y) & 1
-
 	if _physics_animation_cache_initialized\
 	and current_state == _last_physics_animation_state\
 	and current_dir == _last_physics_animation_dir\
-	and position_parity == _last_physics_animation_position_parity\
 	and is_dead == _last_physics_animation_dead\
 	and data_model.move_speed == _last_physics_animation_move_speed\
 	and data_model.attack_speed == _last_physics_animation_attack_speed\
@@ -609,7 +593,6 @@ func _sync_physics_animation_if_changed() -> void :
 	_physics_animation_cache_initialized = true
 	_last_physics_animation_state = current_state
 	_last_physics_animation_dir = current_dir
-	_last_physics_animation_position_parity = position_parity
 	_last_physics_animation_dead = is_dead
 	_last_physics_animation_move_speed = data_model.move_speed
 	_last_physics_animation_attack_speed = data_model.attack_speed
