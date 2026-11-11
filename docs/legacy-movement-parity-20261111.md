@@ -52,3 +52,39 @@
 GitHub Actions `Godot multiplayer movement regressions` 驗證 10Hz/50Hz/60Hz、遠端移動與校正、viewport AOI、多人模擬；`Server AOI priority and build` 驗證.NET8編譯、player stop FIFO、world/player AOI；`Server smoke Windows` 確認 Server 功能；`Map13 20-bot real AI tick profile` 檢查實際20人＋312怪的更新尾延遲。
 
 實機需要同時比對 `[MULTIPLAYER_PACKET_AUDIT]`、`[MONSTER_AUTHORITATIVE_SNAP]`、`[REMOTE_PLAYER_PACKET_GAP]`、Server `[MAP_AI_PROFILE]`、`[SLOW_PACKET_DETAIL]`，特別是鏡頭邊緣、Zoom/resize、停止再移動。網路資料、AI、Fixed Tick 及AFK完整功能不可為了降FPS而降頻。
+
+
+## 五、2026-11-11 21:41 使用者現場 99001／21 Session log 與本輪處理
+
+### 現場異常（真實負載、並非 CI 合成）
+
+Map13 21 Session／312 Monsters：
+
+- `MAP_AI_PROFILE` 第一、第二次 `TickAiMs=248.9/270.4ms`；另一筆 `PlayerSessionLockWaitMs=249.2ms, TickAiMs=43.8ms, TotalMs=293.6ms`；另一次 `PlayerSessionLockWaitMs=110.1ms, TickAiMs=216.7ms`。
+- `[USE_SKILL_PROFILE] SkillID=99001 CombatMs=252.0ms` 與另一次 `CombatMs=200.5ms`，其中 `EnsureMapMs=0.0`；同一技能的 `SLOW_PACKET_DETAIL HandlerMs=252.3ms, SessionLockWaitMs=0`。
+- 這些數據**證明技能 99001 結算占用玩家的 Session lock**，而共享 Map AI 等待同一把鎖時會短暫停更；並非只有 Client 插值、解析度或 WebSocket 解密問題。
+
+### 本輪小範圍修正與保護
+
+1. `CombatService.AddAreaKillRewards` 將同次 AOE 結算的 `GetTimedEffectValue(exp_multiplier_percent)` 從「每一隻擊殺查一次」改成「每次技能結算查一次」，仍以各怪物原始等級、原始倍率及 EXP 算式各自計算。排除技能結算期間個別查詢造成的 N 倍重複開銷。
+2. `AddAreaBatchExtras` 只載入一次結算後的角色、完整資產與 Lucky，供各隻怪物獨立掉落 `RollDrops` 使用；每隻怪物仍分別遞增 `KillSequence`、抽獎、Blocking 落點判定、存檔、Quest/Mecha/Pet Exp，**不合併掉落機率，也不減少傷害或死亡事件數量**。普通單怪擊殺維持舊查詢契約。
+3. `[SLOW_AREA_SKILL_PHASE]`（單次超過 100ms、全服務5秒節流）記錄 `TotalMs, SelectMs, DamageMs, RewardsMs, ExtrasMs, OtherMs, Targets, Kills, SkillID, Map, Character`。後續可直接判斷 99001 是否仍卡在獎勵、掉落與任務，避免僅憑總時間胡亂修改 Server Tick。
+4. `characterSnapshot` 缺失時的 Lucky 使用 nullable fallback 以保留普通重新載入行為。新的快照只活於同一次同步 AOE，不緩存跨角色／跨 Tick 資料，也不改技能冷卻、權威怪物座標、戰鬥結果與網路送包次數。
+
+本輪 Commit：[`9addd7f`](https://github.com/kevin840307/TestGoGo/commit/9addd7f75eb8f4e57ffbd8a16bd85c464782fd34)（查詢快照）、[`ba459a2`](https://github.com/kevin840307/TestGoGo/commit/ba459a2faae723459eb2935cb4060d8bd1cacb44)（分段診斷）。
+
+### GitHub 自動化驗證
+
+- [`43033102695` Server AOI priority and build](https://github.com/kevin840307/TestGoGo/actions/runs/43033102695)：PASS；驗證 .NET 8 編譯與位置校正／AOI 送包契約。
+- [`43033102690` Server smoke Windows](https://github.com/kevin840307/TestGoGo/actions/runs/43033102690)：PASS；含既有 AOE、物品與怪物整合冒煙測試。
+- [`43033102697` Map13 20 Bot/312 怪](https://github.com/kevin840307/TestGoGo/actions/runs/43033102697)：PASS；216 筆總樣本、196 筆有效，`AI Tick P50=29.4ms, P95=54.0ms, Max=224.8ms, over250=0`。另曾在**非有效區間／暖機**見到 `SLOW_TICK_AI_PHASE` 約 1520ms，其中 `DamageWriteMs` 約 1515ms；不能宣稱極端延遲已根除。
+- 普通 [Server build](https://github.com/kevin840307/TestGoGo/actions/runs/43033102705) workflow 的 **Packet contract audit FAIL** 仍由舊版 Quest Lua host 的未綁定函式引起，不是這次 .NET 編譯失敗。這個 workflow 的結果不能標記成 PASS。
+- 既有 [Godot movement regressions](https://github.com/kevin840307/TestGoGo/actions) 覆蓋 10Hz Server／50Hz 原版 Client／60Hz 新版 physics 步進、位置校正與動態視野；本輪只改 Server，不需改 Client FPS。缺少原圖資的實際場景畫面測試仍為 SKIP。
+
+### 原版相似性：已確認與仍未一致之處
+
+**確定的行為相似性**：原版目的地訊息和位置校正分離（A106/A107/A108/A10D）；新版透過 `SpeedTime>0` 與 `SpeedTime=0` 的 FIFO barrier 分離處理。原版步進採本地連續更新；新版 Godot remote/monster 使用不依賴渲染 FPS 的固定 physics 更新。原版預設 Server Update 10Hz、Client 50Hz，新版保留玩家位置100ms廣播基準，並已用50/60Hz回歸比對。新版 Dynamic Canvas AOI 以實際視窗與攝影機視野計算，**完全不恢復800×600限制**。
+
+**尚不能宣稱與原版完全相同**：原版每種封包的真正發送間隔仍缺含 timestamp 的封包擷取；新版怪物共用 AI 250ms 與原版預設 Server 100ms Update Tick 仍不同。且新版怪物巡邏會先更新權威座標到遠端目的地、由 Client 自行走完 95～175px 路段；尚未完整恢復舊版 Server `CDNPCMove` 持續移動的權威時間線。調整此處需額外測試 Blocking/AOI/掉落/攻擊距離/兩人同步與死亡只結算一次；不能只把 Tick 改成100ms或用插值掩蓋根因。
+
+**實機驗收尚缺**：同一台機器在 Map13 20 Bot＋真 Client 重測星界震盪 99001，收集 `[SLOW_AREA_SKILL_PHASE]`、`[MAP_AI_PROFILE]`、`[MULTIPLAYER_PACKET_AUDIT]`、`[MONSTER_AUTHORITATIVE_SNAP]`，並觀察 zoom／超寬視窗邊緣、玩家移動→停止→繼續、怪物追擊轉攻擊。只有自動化 PASS 不等於已親眼確認整個畫面沒有順移。
