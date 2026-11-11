@@ -156,8 +156,9 @@ hub.PublishToConnection(longWanderPeer.ConnectionId, new
     X = 210.0, Y = 0.0, Dir = "6",
     SpeedTime = 0.25, MoveSpeed = 140.0
 });
-Check(longWanderPeer.Queue.Count == 1 &&
-      hub.TryDequeueOrdinary(longWanderPeer.ConnectionId, out var longWander),
+Check(longWanderPeer.Queue.Count == 1,
+    "long wander and following step retain one queued snapshot");
+Check(hub.TryDequeueOrdinary(longWanderPeer.ConnectionId, out var longWander),
     "long wander and following step coalesce without dropping history");
 using (var decoded = ClientProtocol.Decode(
     Encoding.UTF8.GetString(hub.EncodeBroadcastPacket(longWander))))
