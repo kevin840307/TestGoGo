@@ -44,7 +44,7 @@
 - [Map13 20 Bot +312怪物基準](https://github.com/kevin840307/TestGoGo/actions/runs/43020820425)：AI Tick P50=43.34ms，P95=145.05ms，Max=224.32ms；188筆有效樣本，250ms以上0筆。這是本輪改動前的 CI 量測，作為不降低性能的比較基準。
 - [20人 WebSocket 加密壓測](https://github.com/kevin840307/TestGoGo/actions/runs/43020820228)：Movement 1140/1140，P95=409.8ms，NearbyChat 1200/1200，P95=7.2ms。測試場景中仍有GM配置/SQLite尖峰，不能宣稱每個玩家移動更新都會在100ms內到達。
 - 原版 Server預設10Hz與新版怪物AI每250ms仍有差距。新版靠「有意義的目的地／速度＋Client持續Physics Tick」而非調高312怪的整輪昂貴AI頻率；如果改變 Server tick，必須先測戰鬥、Blocking、死亡只一次、AOI以及 SQLite負載，不能單純改常數。
-- `CombatService.TryWander` 的 Server權威位置會在巡邏起點一次變成目的地，Client依 `WanderVisualSeconds` 走完全段；真正的 Server runtime 路徑逐步更新仍與原版概念有差距，可能在巡邏中進入戰鬥時產生位置校正。這一點不能謊稱已完全還原。
+- **2026-11-11 後續修正**：`CombatService.TryWander` 現只設定碰撞驗證後的目的地與路段時間；`AdvanceWanderMovement` 讓 Server 權威座標在每個 AI Tick 按時間連續更新，AOI 隨實際位置追蹤。原版的確切 100ms AI 路徑／插值係數仍未完全重製，詳見下方第六節。
 - Godot headless 無需全圖資源的測試只能證明數學、封包語義及 AOI 對稱正確；使用者實際 Map13 的不同解析度、移動中的外圍怪物與 20個真 Godot client 畫面仍需要實機確認。
 
 ## 四、驗收方式
@@ -85,6 +85,33 @@ Map13 21 Session／312 Monsters：
 
 **確定的行為相似性**：原版目的地訊息和位置校正分離（A106/A107/A108/A10D）；新版透過 `SpeedTime>0` 與 `SpeedTime=0` 的 FIFO barrier 分離處理。原版步進採本地連續更新；新版 Godot remote/monster 使用不依賴渲染 FPS 的固定 physics 更新。原版預設 Server Update 10Hz、Client 50Hz，新版保留玩家位置100ms廣播基準，並已用50/60Hz回歸比對。新版 Dynamic Canvas AOI 以實際視窗與攝影機視野計算，**完全不恢復800×600限制**。
 
-**尚不能宣稱與原版完全相同**：原版每種封包的真正發送間隔仍缺含 timestamp 的封包擷取；新版怪物共用 AI 250ms 與原版預設 Server 100ms Update Tick 仍不同。且新版怪物巡邏會先更新權威座標到遠端目的地、由 Client 自行走完 95～175px 路段；尚未完整恢復舊版 Server `CDNPCMove` 持續移動的權威時間線。調整此處需額外測試 Blocking/AOI/掉落/攻擊距離/兩人同步與死亡只結算一次；不能只把 Tick 改成100ms或用插值掩蓋根因。
+**尚不能宣稱與原版完全相同**：原版每種封包的真正發送間隔仍缺含 timestamp 的封包擷取；新版怪物共用 AI 250ms 與原版預設 Server 100ms Update Tick 仍不同。怪物巡邏已改用 Server 按路段時間持續推進權威位置（而非瞬移到終點），但 AI 250ms 更新頻率、路徑模型與原版實際封包頻率不一定相同。調整此處需額外測試 Blocking/AOI/掉落/攻擊距離/兩人同步與死亡只結算一次；不能只把 Tick 改成100ms或用插值掩蓋根因。
 
 **實機驗收尚缺**：同一台機器在 Map13 20 Bot＋真 Client 重測星界震盪 99001，收集 `[SLOW_AREA_SKILL_PHASE]`、`[MAP_AI_PROFILE]`、`[MULTIPLAYER_PACKET_AUDIT]`、`[MONSTER_AUTHORITATIVE_SNAP]`，並觀察 zoom／超寬視窗邊緣、玩家移動→停止→繼續、怪物追擊轉攻擊。只有自動化 PASS 不等於已親眼確認整個畫面沒有順移。
+
+
+## 六、2026-11-11 22:00 後：權威巡邏由瞬移改為持續步進
+
+### 原版對應與修改
+
+原版 `CDNPCMove::OnMove`、`CSGOEnem::movelogic` 採移動狀態與時間步進，而不是 Server 立刻設定完整巡邏終點、讓 Client 花1.25秒再追到該點。本輪檢查發現新版 `TryWander` 正是後者，可能使 AOI 與怪物進戰鬥的校正落點領先畫面。
+
+- `MonsterRuntimeState` 增加僅在巡邏中的 `WanderMoveStartedAt/Seconds/StartX/StartY/TargetX/TargetY`，保留由 Blocking.dat 核准的起終點和原本 140 單位/秒路段時間；死亡、進入追擊或攻擊會取消巡邏進度。
+- `CombatService.TryWander` 現在**只設定目標、不再瞬間覆寫 Server X/Y**；每個 AI Tick 的 `AdvanceWanderMovement` 按已經過的秒數線性推進 Server 的權威位置。若 Tick 延遲，按經過時間追到正確位置，不會因 250ms 週期過長把一段原本1.25秒的路程變成一格。
+- 舊觀察者只在路段起點接收一次 `MoveEntity`（目的地 + SpeedTime + MoveSpeed），不因每個 AI Tick 額外發移動封包；AOI 索引每次依**當前 Server 位置**更新。新進入 AOI 的玩家先收到 `SpawnEntity`，若怪物還在移動，再收到剩餘時間的 `MoveEntity`。
+- 不變：高解析度視野（Canvas 及 10000世界單位上限）、Blocking/尋路核准、AI更新週期、戰鬥與死亡權威、AFK/背景收包和物理更新、玩家自身移動與怪物外觀。
+
+相關 Commit：[`fff8ab2`](https://github.com/kevin840307/TestGoGo/commit/fff8ab2483eaa8883d6f99e57b173185286c9cb7)；[`d7e4605`](https://github.com/kevin840307/TestGoGo/commit/d7e4605a607c89d9fe30e45714b1c1bb95bacc85) 修正測試用 JSON 字串比對。
+
+### 驗證與數據
+
+- [Windows Smoke 第二輪](https://github.com/kevin840307/TestGoGo/actions/runs/43035101965)：**PASS**，包含原始巡邏回歸更新；驗證未先跳到終點、路段中點按時間前進、不每250ms多傳 MoveEntity、最終到達 Blocking核准目的地、玩家死亡後改以新中心巡邏。
+- [Server AOI Priority + .NET8 compile](https://github.com/kevin840307/TestGoGo/actions/runs/43034973572)：**PASS**，含多人 AOI 及佇列契約。
+- [Map13 20 Bot＋312怪](https://github.com/kevin840307/TestGoGo/actions/runs/43034973241)：**PASS**，206 有效樣本，`AI P50=25.4ms, P95=50.5ms, Max=1571.9ms`，其中3筆超過250ms；慢速樣本 `DamageWriteMs` 為主要來源（如337.3ms）。**不要把 P95 良好誤寫成沒有偶發停頓**。
+- [第一次 Windows Smoke](https://github.com/kevin840307/TestGoGo/actions/runs/43034973126) 曾因新測試 C# JSON quote escape 錯誤而 FAIL，修正後上列第二輪已 PASS。保留失敗紀錄，不隱藏測試歷史。
+
+### 原版相似性與剩餘限制
+
+已透過反編譯地址／數學回歸／真實 .NET Smoke 確認**目的地與位置校正、移動中的 Server／Client 持續步進、遠端視野 AOI、FIFO 校正因果順序**。這是行為級相容，而不是原版二進位協定逐位元完全相同；新版 WebSocket JSON、怪物 AI 250ms（原版 Server 預設 Update 100ms）和原版正式服封包的實際 timestamp 仍有差異或未知。完整原版用戶端畫面對照與真實 20 Godot Client 肉眼無順移驗收仍需實機資料，CI 無原始角色美術檔不能宣稱已測過全部場景。
+
+若仍在外圍看到順移，應同時提供 `[SLOW_AREA_SKILL_PHASE]`、`[MAP_AI_PROFILE]`、`[MONSTER_AUTHORITATIVE_SNAP]`、`[MULTIPLAYER_PACKET_AUDIT]`，以區分剩餘的 SQL傷害寫入尖峰、真實 AOI邊緣 Spawn 與 Client 視覺校正。禁止為掩蓋順移而降低收包、AFK/失焦物理 Tick、玩家戰鬥與拾取反應速度。
