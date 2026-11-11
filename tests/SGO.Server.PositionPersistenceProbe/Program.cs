@@ -112,6 +112,17 @@ try
         location.Value.X == 800 && location.Value.Y == 800,
         "same-map teleport fence rejects stale same-map queued position");
 
+    // A background state UPDATE must never resurrect the visual DB
+    // state after a concurrent authoritative monster kill.
+    store.ApplyDamage(accountId.Value, charId, int.MaxValue);
+    Check(Convert.ToString(store.GetCharacter(accountId.Value, charId)!["State"]) == "death",
+        "monster damage death state is persisted authoritatively");
+    service.StageState(accountId.Value, charId, "walk");
+    service.StageState(accountId.Value, charId, "idle");
+    service.FlushQueued(accountId.Value, charId);
+    Check(Convert.ToString(store.GetCharacter(accountId.Value, charId)!["State"]) == "death",
+        "delayed cosmetic walk/idle cannot overwrite authoritative death");
+
     await service.StopAsync(CancellationToken.None);
     Console.WriteLine("[POSITION_PERSIST_TEST] ALL PASS");
 }

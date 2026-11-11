@@ -935,7 +935,7 @@ public sealed class SqliteGameStore : IGameStore
         using var db = Open();
         using var cmd = db.CreateCommand();
         cmd.CommandText =
-            "UPDATE characters SET state=$s WHERE id=$id AND account_id=$a";
+            "UPDATE characters SET state=$s WHERE id=$id AND account_id=$a AND (hp > 0 OR $s IN ('death','die'))";
         Arg(cmd, "$s", state);
         Arg(cmd, "$id", dbid);
         Arg(cmd, "$a", accountId);
