@@ -765,6 +765,25 @@ try
           Convert.ToInt32(unauthorizedBefore!["HP"]),
         "multi-hit transaction cannot affect another account's character");
 
+    // The legacy one-hit operation clamps negative damage to zero. Empty
+    // and zero-damage batches must not create a phantom death or alter HP.
+    var beforeZeroHp = Convert.ToInt32(store.GetCharacter(
+        accountId.Value, characterId)!["HP"]);
+    var emptyBatch = store.ApplyDamageBatch(
+        accountId.Value, characterId, Array.Empty<int>());
+    var zeroBatch = store.ApplyDamageBatch(
+        accountId.Value, characterId, [0, -15, 0]);
+    Check(emptyBatch is not null &&
+          emptyBatch.HpAfterEachHit.Count == 0 &&
+          emptyBatch.FirstDeathHitIndex == -1 &&
+          zeroBatch is not null &&
+          zeroBatch.HpAfterEachHit.SequenceEqual([
+              beforeZeroHp, beforeZeroHp, beforeZeroHp]) &&
+          zeroBatch.FirstDeathHitIndex == -1 &&
+          Convert.ToInt32(store.GetCharacter(
+              accountId.Value, characterId)!["HP"]) == beforeZeroHp,
+        "empty and nonpositive batch damage preserve the direct-hit zero-damage contract");
+
     var remaining = Convert.ToInt32(batch!.Character["HP"]);
     var finishing = store.ApplyDamageBatch(accountId.Value, characterId,
         [remaining - 1, 8, int.MaxValue]);
