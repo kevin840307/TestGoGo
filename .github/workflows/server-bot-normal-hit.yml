@@ -1,0 +1,86 @@
+name: Bot normal-hit accuracy (real encrypted WebSockets)
+
+on:
+  push:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'tests/SGO.Server.WireLoadProbe/**'
+      - 'server/Application/Combat/CombatService.cs'
+      - '.github/workflows/server-bot-normal-hit.yml'
+  pull_request:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'tests/SGO.Server.WireLoadProbe/**'
+      - 'server/Application/Combat/CombatService.cs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-bot-normal-hit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Verify no rejected 92px melee approach remains
+        run: python3 -m unittest discover -s tests -p 'test_mass_entity_visual_contract.py' -v
+      - name: Build real server and bot websocket harness
+        run: |
+          dotnet build server/SGO.Server.csproj -c Release --nologo
+          dotnet build tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -c Release --nologo
+      - name: Verify bots can deal real normal-attack damage
+        shell: bash
+        run: |
+          set -euo pipefail
+          export Database__Provider=Sqlite
+          export Database__Sqlite__Path="$RUNNER_TEMP/bot-normal-hit-isolated.db"
+          export Game__ListenUrl="http://127.0.0.1:5678"
+          export Game__GmCommandsEnabled=true
+          export Game__TestBotCommandsEnabled=true
+          export SGO_CLIENT_ROOT="$GITHUB_WORKSPACE/client"
+          dotnet run -c Release --no-build --project server/SGO.Server.csproj > server-bot-normal.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 90); do
+            if curl -fsS --max-time 2 http://127.0.0.1:5678/health >/dev/null 2>&1; then break; fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              cat server-bot-normal.log
+              exit 1
+            fi
+            sleep 1
+          done
+          timeout --signal=TERM --kill-after=8s 240s \
+            dotnet run -c Release --no-build \
+              --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -- \
+              --bots --url ws://127.0.0.1:5678/ --players 8 \
+              --map 13 --monsters 0 --roamers 1 \
+              --interval-ms 350 --attack-ms 850 --seconds 75 \
+              --setup-concurrency 4 --timeout-seconds 30 \
+              --output bots-normal-hit-result.json 2>&1 | tee bots-normal-hit.log
+          python3 - <<'PY'
+          import json
+          data=json.load(open('bots-normal-hit-result.json'))
+          for field in ['Connected','AttackPackets','ConfirmedNormalAttackHits',
+                        'ConfirmedSkillHits','ConfirmedMisses',
+                        'OutOfRangeRejects','ConfirmedMonsterKills']:
+              print('[NORMAL_HIT_PROBE] %s=%s' % (field,data.get(field)))
+          assert data['Connected']==8 and not data['Errors'], 'Bot setup or gameplay failed'
+          assert data['AttackPackets'] > 0, 'No normal attack packets were sent'
+          assert data['ConfirmedNormalAttackHits'] > 0, 'All normal attacks were rejected or invisible'
+          assert data['OutOfRangeRejects'] < data['AttackPackets'], 'All swings rejected by range'
+          PY
+      - name: Upload encrypted bot and combat logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: normal-bot-hit-logs
+          retention-days: 7
+          path: |
+            bots-normal-hit-result.json
+            bots-normal-hit.log
+            server-bot-normal.log
+          if-no-files-found: ignore
