@@ -17,6 +17,9 @@ internal static class InteractiveBots
         var count = 20;
         // -1 selects roughly one quarter of the connected bots as frequent roamers.
         var requestedRoamers = -1;
+        // CI can keep N pairs of otherwise independent players within
+        // PlayerSpatialAoi while measuring REAL peer movement propagation.
+        var nearbyMovePairs = 0;
         var url = "ws://127.0.0.1:5678/";
         var map = 13;
         int? x = null;
@@ -44,6 +47,7 @@ internal static class InteractiveBots
             {
                 case "--players": count = int.Parse(Next()); break;
                 case "--roamers": requestedRoamers = int.Parse(Next()); break;
+                case "--nearby-move-pairs": nearbyMovePairs = int.Parse(Next()); break;
                 case "--url": url = Next(); break;
                 case "--map": map = int.Parse(Next()); break;
                 case "--x": x = int.Parse(Next()); break;
@@ -65,6 +69,7 @@ internal static class InteractiveBots
                     Console.WriteLine("Random walkable monster-area positions; Lv1 moderate-attack, high-HP/DEF bots, normal attacks and rare single-target skills.");
                     Console.WriteLine("--seconds 0 keeps players online until Ctrl+C. --no-combat disables attacking and monster spawning.");
                     Console.WriteLine("--roamers N: choose N frequent walkers (default about 25%, e.g. 5 out of 20; 0 disables).");
+                    Console.WriteLine("--nearby-move-pairs N: group N independent pairs of bots close enough to observe each other's actual MoveEntity; 0 leaves default map-wide placement.");
                     Console.WriteLine("Connects existing Server/DB only. Default --monsters 0 (use existing monsters); new test accounts persist.");
                     return 0;
                 default: throw new ArgumentException("Unknown bot option: " + args[i]);
@@ -77,6 +82,9 @@ internal static class InteractiveBots
         if (requestedRoamers < -1 || requestedRoamers > count)
             throw new ArgumentOutOfRangeException(nameof(requestedRoamers),
                 "--roamers must be 0..--players");
+        if (nearbyMovePairs < 0 || nearbyMovePairs > count / 2)
+            throw new ArgumentOutOfRangeException(nameof(nearbyMovePairs),
+                "--nearby-move-pairs must be 0..floor(players/2)");
         if (interval < 150 || interval > 60000) throw new ArgumentOutOfRangeException(nameof(interval), "150..60000");
         if (attackIntervalMs < 300 || attackIntervalMs > 30000)
             throw new ArgumentOutOfRangeException(nameof(attackIntervalMs), "300..30000");
@@ -111,6 +119,14 @@ internal static class InteractiveBots
         var locations = Enumerable.Range(0, count)
             .Select(_ => x.HasValue ? walks.RandomPoint() : walks.RandomMapPoint())
             .ToArray();
+        // Only opt-in CI/test runs group pairs. These are REAL bots with
+        // normal combat and autonomous walking, not artificial movement acks.
+        for (var pair = 0; pair < nearbyMovePairs; pair++)
+        {
+            var origin = locations[pair * 2];
+            locations[pair * 2 + 1] =
+                walks.RandomPointNear(origin.X, origin.Y, 48);
+        }
 
         using var stop = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) =>
@@ -131,6 +147,7 @@ internal static class InteractiveBots
                 : "placement=all walkable enemy zones (no fixed patrol radius)"));
         Console.WriteLine($"[BOTS] Connecting to existing Server at {url} (no separate database or second Server).");
         Console.WriteLine($"[BOTS] Extra test monster spawns: {spawn} (0 = use existing map monsters).");
+        Console.WriteLine($"[BOTS] Nearby peer movement observer pairs: {nearbyMovePairs} (0 = map-wide original placement).");
         Console.WriteLine("[BOTS] New bot accounts persist in the existing Server database.");
         Console.WriteLine("[BOTS] Requires Game__GmCommandsEnabled=true and Game__TestBotCommandsEnabled=true on Server.");
         Console.WriteLine($"[BOTS] Lv1, ATK=60, MATK=45, DEF=1000, HP=20000; single-target skill cap=90; attack cadence={attackIntervalMs}ms; melee engage <= {NormalBotMeleeEngageRadius:F0}px (server accepts ~67px).");
@@ -246,7 +263,9 @@ internal static class InteractiveBots
                 }
             }
 
-            foreach (var bot in live) bot.EnableInteractiveBots();
+            var peerMoveTracker = new BotPeerMoveLatencyTracker();
+            foreach (var bot in live)
+                bot.EnableInteractiveBots(peerMoveTracker);
             Console.WriteLine($"[BOTS] online={live.Length}; open Godot on the same map/server. Ctrl+C to stop.");
             // Assign roles after successful login, so even a partial cohort
             // receives the requested mix. Roles remain fixed for the run.
@@ -585,6 +604,8 @@ internal static class InteractiveBots
                 Level = 1,
                 MovementPackets = moves,
                 FrequentRoamerCount = roamerIds.Count,
+                NearbyMovePairs = nearbyMovePairs,
+                PeerMoveLatency = peerMoveTracker.Snapshot(),
                 FrequentRoamerBotIndices = roamerIds.OrderBy(i => i).ToArray(),
                 FrequentRoamerMovementPackets = roamerMoves,
                 FrequentRoamerGroundClicks = roamerGroundClicks,

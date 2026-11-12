@@ -1,5 +1,11 @@
 using System.Text.Json;
 
+if (args.Length == 1 && args[0] == "--peer-move-selftest")
+{
+    BotPeerMoveLatencyTracker.SelfTest();
+    return;
+}
+
 if (args.Length > 0 && args[0] == "--bots")
 {
     Environment.ExitCode = await InteractiveBots.RunAsync(args[1..]);

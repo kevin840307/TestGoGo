@@ -34,6 +34,12 @@ internal sealed class BroadcastQueueAgeRecorder
     public BroadcastQueueAgeReport Drain()
         => new(_player.Drain(), _world.Drain());
 
+    // Cumulative read-only snapshot for /health. Separate from the
+    // WebSocket sender's 10s Drain(), so repeated health polls neither
+    // double-count nor erase per-connection diagnostic intervals.
+    public BroadcastQueueAgeReport Snapshot()
+        => new(_player.Snapshot(), _world.Snapshot());
+
     private sealed class Lane
     {
         private readonly long[] _counts = new long[BucketBoundsMs.Length + 1];
@@ -62,6 +68,27 @@ internal sealed class BroadcastQueueAgeRecorder
                     break;
                 observed = previous;
             }
+        }
+
+        public BroadcastQueueAgeLane Snapshot()
+        {
+            var samples = 0L;
+            var histogram = new long[_counts.Length];
+            for (var i = 0; i < histogram.Length; i++)
+            {
+                histogram[i] = Interlocked.Read(ref _counts[i]);
+                samples += histogram[i];
+            }
+            var maxAgeMs = Interlocked.Read(ref _maxAgeUs) / 1000.0;
+            if (samples == 0)
+                return new BroadcastQueueAgeLane(0, 0, 0, 0, 0);
+
+            return new BroadcastQueueAgeLane(
+                samples,
+                Percentile(histogram, samples, 0.50, maxAgeMs),
+                Percentile(histogram, samples, 0.95, maxAgeMs),
+                Percentile(histogram, samples, 0.99, maxAgeMs),
+                Math.Round(maxAgeMs, 2));
         }
 
         public BroadcastQueueAgeLane Drain()

@@ -162,6 +162,11 @@ public sealed class ServerBroadcastHub
     private sealed record StampedBroadcast(object Packet, long EnqueuedAt);
     private readonly ConcurrentDictionary<Guid, BroadcastQueueAgeRecorder>
         _queueAgeRecorders = new();
+    // Across actual WebSocket connections, not test/legacy in-process
+    // queues. Non-destructive cumulative quantiles used by 20-bot combat CI.
+    private readonly BroadcastQueueAgeRecorder _cumulativeQueueAges = new();
+    public BroadcastQueueAgeReport CumulativeQueueAgeReport
+        => _cumulativeQueueAges.Snapshot();
 
     // Wake only active senders. A single bounded notification coalesces
     // bursts; there is no 25ms polling timer per connected WebSocket.
@@ -354,6 +359,7 @@ public sealed class ServerBroadcastHub
             {
                 if (_queueAgeRecorders.TryGetValue(connectionId, out var recorder))
                     recorder.RecordWorld(slot.EnqueuedAt);
+                _cumulativeQueueAges.RecordWorld(slot.EnqueuedAt);
                 if (movement.Pending.TryGetValue(slot.EntityId, out var current) &&
                     ReferenceEquals(current, slot))
                     movement.Pending.Remove(slot.EntityId);
@@ -390,6 +396,7 @@ public sealed class ServerBroadcastHub
             {
                 if (_queueAgeRecorders.TryGetValue(connectionId, out var recorder))
                     recorder.RecordWorld(stamped.EnqueuedAt);
+                _cumulativeQueueAges.RecordWorld(stamped.EnqueuedAt);
                 packet = stamped.Packet;
             }
             else
@@ -442,6 +449,7 @@ public sealed class ServerBroadcastHub
             {
                 if (_queueAgeRecorders.TryGetValue(connectionId, out var recorder))
                     recorder.RecordPlayer(slot.EnqueuedAt);
+                _cumulativeQueueAges.RecordPlayer(slot.EnqueuedAt);
                 if (movement.Pending.TryGetValue(slot.EntityId, out var current) &&
                     ReferenceEquals(current, slot))
                     movement.Pending.Remove(slot.EntityId);
@@ -477,6 +485,7 @@ public sealed class ServerBroadcastHub
             {
                 if (_queueAgeRecorders.TryGetValue(connectionId, out var recorder))
                     recorder.RecordPlayer(stamped.EnqueuedAt);
+                _cumulativeQueueAges.RecordPlayer(stamped.EnqueuedAt);
                 packet = stamped.Packet;
             }
             else

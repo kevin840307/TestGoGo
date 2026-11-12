@@ -45,6 +45,7 @@ jobs:
         run: |
           dotnet build server/SGO.Server.csproj -c Release --nologo
           dotnet build tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -c Release --nologo
+          dotnet run -c Release --no-build --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -- --peer-move-selftest
       - name: Map13 twenty-player moving and sustained real combat
         shell: bash
         run: |
@@ -131,6 +132,7 @@ jobs:
             --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -- \
             --bots --url ws://127.0.0.1:5678/ --players 20 \
             --map 13 --monsters 0 --attack-ms 1300 --roamers 5 \
+            --nearby-move-pairs 4 \
             --interval-ms 350 --seconds 150 --setup-concurrency 8 \
             --timeout-seconds 30 --output bots-combat-result.json \
             2>&1 | tee bots-combat.log || bot_status=$?
@@ -160,6 +162,18 @@ jobs:
           batch=health.get('monsterAiDamageBatches')
           assert batch is not None and batch['enabled'], 'real combat run must enable owner-local atomic damage batching'
           p['monsterAiDamageBatches']=batch
+          peer=bots.get('PeerMoveLatency')
+          assert peer is not None, 'real bot wire clients must provide peer receive/decode latency'
+          queue=health.get('broadcastQueueAge')
+          assert queue is not None, 'real server must expose cumulative queue-age percentiles'
+          p['sameRunNetwork']={
+              'peerMoveSendToReceive':peer,
+              'broadcastQueueAge':queue,
+              'nearbyMovePairs':bots.get('NearbyMovePairs',0),
+              'queueAgeScope':'Server enqueue-to-dequeue, excludes encoding/socket and client decode',
+              'peerMoveScope':'matched real encrypted player SyncPosition -> different receiver MoveEntity, in-process monotonic clock',
+          }
+          print('[MAP13_COMBAT_NETWORK]',json.dumps(p['sameRunNetwork']),flush=True)
           print('[MONSTER_AI_DAMAGE_BATCH]',json.dumps(batch),flush=True)
           print('[SQLITE_HOT_WRITE_PROFILE]',json.dumps(hot),flush=True)
           print('[SQLITE_BACKGROUND_POSITION]',json.dumps(background),flush=True)
@@ -176,6 +190,10 @@ jobs:
           assert bots['Connected']==20 and not bots['Errors'], '20 encrypted clients must be online without errors'
           assert bots['MovementPackets']>0 and bots['AttackPackets']>0, 'this must be mixed movement+combat, never --no-combat'
           assert bots['ConfirmedDamageHits']>0 and bots['ConfirmedSkillCasts']>0, 'real combat events must be confirmed'
+          assert peer['PeerObservations']>0 and peer['MatchedPositions']>0, 'same sustained COMBAT run must include confirmed peer MoveEntity latency samples, not a separate no-combat run'
+          assert 0<peer['P95Ms']<=peer['MaxMs'] and peer['P50Ms']<=peer['P95Ms']<=peer['P99Ms'], 'peer move latency percentiles must be ordered'
+          assert queue['player']['samples']>0 and queue['world']['samples']>0, 'both real socket lanes must have cumulative queue-age samples'
+          assert queue['player']['p95Ms']>=queue['player']['p50Ms'] and queue['world']['p99Ms']>=queue['world']['p95Ms'], 'real socket queue-age percentiles must be ordered'
           assert hot['damage']['heldMs']['samples']>0 and hot['damageUpdateMs']['samples']>0, 'real monster damage must contribute to SQLITE hot-write histogram'
           assert hot['damageReadMs']['samples']>0 and hot['damageOpenMs']['samples']>0, 'all damage SQL phases must be captured'
           assert batch['batchTransactions']>0 and batch['hitsInBatches']>=2*batch['batchTransactions'], 'real combat must execute atomic multi-hit batches, not just expose an unused API'
