@@ -33,7 +33,9 @@ T01 [x] P0：補齊延遲定位和壅塞可觀測性（先作、不變更戰鬥�
 T02 [~] P0：20 Bot + 312 怪持續戰鬥 / 移動混合負載基準。
     範圍：tests/SGO.Server.WireLoadProbe、tests/SGO.Server.Map13AiTickProbe（依現有實際專案）、現有 Actions。
     驗收：輸出 AI tick P50/P95/P99、超過250ms比例、SessionLockWait、DamageWriteMs、玩家 Move 端到端 P95、SocketQueueAge 和戰鬥事件數；移動/戰鬥測試不能只用 --no-combat。儲存參數與結果摘要。
-T03 [ ] P0：減少怪物戰鬥熱路徑的 Session/Map lock 與 SQLite writer 爭用。
+    子工作 T02.a [x]：真實戰鬥基準/Server 16 個實際 Tick 歷史/去重取樣；已合併 PR #18。
+    子工作 T02.b [ ]：同一戰鬥 run 的玩家 Move 端到端 P95 與 SocketQueueAge 聚合指標，單獨實作，勿用 no-combat wire 測試冒充。完成後才將 T02 [~] 改成 [x]。
+T03 [~] P0：減少怪物戰鬥熱路徑的 Session/Map lock 與 SQLite writer 爭用。
     範圍：SharedMapAiTicker、CombatService、SqliteGameStore；先用 T01/T02 證據找實際熱點。
     驗收：保持順序、死亡只結算一次、HP/MP/Buff/吸血/寵物/掉落/戰鬥事件不回歸；移出長時間 I/O 或經證明等價的批次原子更新；不可無驗證就把 HP 寫入延後。
 T04 [ ] P1：拆分怪物 AI 決策（現有250ms）與 Server 權威移動步進（評估50ms），保留 AOI/Blocking/戰鬥。
@@ -63,3 +65,5 @@ T09 [ ] P0/P1：CI + 實機綜合驗收。
 2026-11-12：首次建立跨 Session TODO；T00 完成；T01~T09 初始待執行；本檔建立不代表任何程式修正/壓測已通過。
 2026-11-12：T01 完成佇列延遲可觀測性：PR #17 已合併，merge commit 115ede9116053f093adc6de265c6e47435718956。player/world enqueue→dequeue P50/P95/P99/Max（10s 區間），[BROADCAST_QUEUE_AGE] 異常警告；與既有 [SLOW_SEND_BATCH] gate/encode/socket 分開。Probe 保持 legacy identity/FIFO/coalesce。CI：Server AOI Priority https://github.com/kevin840307/TestGoGo/actions/runs/43218735321 PASS；20人 wire https://github.com/kevin840307/TestGoGo/actions/runs/43218735151 PASS；Map13 no-combat https://github.com/kevin840307/TestGoGo/actions/runs/43218735259 PASS；Windows Smoke https://github.com/kevin840307/TestGoGo/actions/runs/43218735251 PASS。大型 Server build workflow https://github.com/kevin840307/TestGoGo/actions/runs/43218735197 FAIL 在既有 Quest Host unbound audit，沒有跑到 dotnet build；請勿誤判成 T01 編譯失敗。
 2026-11-12：T02 進行中：PR #18 https://github.com/kevin840307/TestGoGo/pull/18；新增獨立 Map13 20-Bot sustained combat/roaming CI，記錄 AI P50/P95/P99、Session Lock wait、DamageWriteMs、事件數及原始日誌，保留原 no-combat baseline。health 新增 read-only sharedMapAiProfile。CI 未全部結束；其他 Session 請勿同時修改 server/Program.cs 或 .github/workflows/server-map13-ai-combat.yml。
+2026-11-12：T02.a 已合併：PR #18 https://github.com/kevin840307/TestGoGo/pull/18 / merge b4d433fbfe48ae310147a814d8e360cccfa83dee；CI https://github.com/kevin840307/TestGoGo/actions/runs/43220481550 PASS。20 Bots、312 怪、移動3263、攻擊1135、確認命中244、施法48；去重後實際完成 Tick 229 筆，P50=21.76ms、P95=1074.01ms、P99=10792.13ms、max=14267.97ms、>250ms=18；DamageWriteMs slow sample max=1997.2ms。P99 極不穩定，必須優先處理 T03。Windows Smoke / 20人 wire / Map13 no-combat 同 PR CI PASS；Server build workflow 在 Quest Host audit（unbound）失敗，與本任務 .NET 編譯無直接關係。
+2026-11-12：T03 進行中：PR #19 https://github.com/kevin840307/TestGoGo/pull/19 第一項行為等價的低風險優化，ApplyDamage 同一 SQLite connection 執行 UPDATE 和完整 character read，移除多餘 Open/PRAGMA；未宣稱解決 SQLite writer/Session lock 秒級爭用；待 CI 後測量。其他 Session 不要同時修改 SqliteGameStore.cs 的 ApplyDamage / GetCharacter 區段。
