@@ -277,6 +277,15 @@ func play_mecha_transform() -> void:
 	super.play_mecha_transform()
 
 
+func _on_ctrl_state_changed(is_pressed: bool) -> void:
+	super._on_ctrl_state_changed(is_pressed)
+	if (
+		CursorManager
+		and CursorManager.current_hovered_entity == self
+	):
+		_on_mouse_entered()
+
+
 func _on_party_sync_received(p_id: String, leader_id: int, members: Array) -> void:
 	super._on_party_sync_received(p_id, leader_id, members)
 	if _performance_simplified_visual:
