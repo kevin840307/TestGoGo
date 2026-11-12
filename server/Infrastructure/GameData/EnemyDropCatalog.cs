@@ -25,6 +25,14 @@ public sealed class EnemyDropCatalog
     private const int FirstDropColumn = 74;
     private const int CheckLuckItemCount = 30;
     private const int NoCheckLuckItemCount = 30;
+    // Normal monster drops were too frequent with the recovered CSV rates.
+    // Scale probabilities, not drop counts, to retain individual item rarity,
+    // luck-roll semantics and stable deterministic kill-sequence outcomes.
+    public const double DefaultBaseChanceMultiplier = 0.5;
+
+    private readonly double _baseChanceMultiplier;
+
+    public double BaseChanceMultiplier => _baseChanceMultiplier;
 
     private readonly Dictionary<int, List<EnemyDropDefinition>> _drops = new();
     private readonly Dictionary<int, List<LegacyItemReference>> _legacyItems = new();
@@ -37,9 +45,13 @@ public sealed class EnemyDropCatalog
 
     public EnemyDropCatalog(
         string dataRoot,
-        CurrentClientDataCatalog current)
+        CurrentClientDataCatalog current,
+        double baseChanceMultiplier = DefaultBaseChanceMultiplier)
     {
         _current = current;
+        _baseChanceMultiplier = double.IsFinite(baseChanceMultiplier)
+            ? Math.Clamp(baseChanceMultiplier, 0.0, 1.0)
+            : DefaultBaseChanceMultiplier;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
         LoadLegacyGeneral(Path.Combine(dataRoot, "Item", "General.itd"));
@@ -106,7 +118,7 @@ public sealed class EnemyDropCatalog
             {
                 var effectiveChance =
                     GlobalRateMath.ApplyDropChance(
-                        drop.Chance,
+                        drop.Chance * _baseChanceMultiplier,
                         dropMultiplier);
 
                 if (Roll01(
