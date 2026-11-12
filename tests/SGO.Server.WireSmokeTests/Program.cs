@@ -537,8 +537,7 @@ var firstY =
                 "LocY")
             .GetDouble());
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "SyncPosition",
@@ -570,8 +569,7 @@ await AwaitType(
 
 var nearbyText =
     "wire-nearby-" + suffix;
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "ChatMessage",
@@ -627,8 +625,7 @@ var bankItemUid =
         .Select(item => item.GetProperty("ItemUID").GetInt64())
         .Max();
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "BankTransfer",
@@ -685,8 +682,7 @@ var senderMoneyBeforeTransfer =
 var peerMoneyBeforeTransfer =
     peerMoneySeed.GetProperty("Money").GetInt64();
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "DirectTransfer",
@@ -740,8 +736,7 @@ var playerShopItemUid =
         .Select(item => item.GetProperty("ItemUID").GetInt64())
         .Max();
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "ShopAction",
@@ -767,8 +762,7 @@ await AwaitType(
             price.GetInt64() == 7),
     "ShopAction AddItem reserves seller item over real wire");
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "ShopAction",
@@ -798,8 +792,7 @@ await AwaitType(
     "nearby peer receives player-shop board broadcast",
     skipNonMatchingSameType: true);
 
-await SendPacket(
-    peerSocket,
+await SendPacketOn(peerSocket,
     new
     {
         Type = "ShopAction",
@@ -820,8 +813,7 @@ await AwaitType(
             uid.GetInt64() == playerShopItemUid),
     "peer views seller player shop over real wire");
 
-await SendPacket(
-    peerSocket,
+await SendPacketOn(peerSocket,
     new
     {
         Type = "ShopAction",
@@ -871,8 +863,7 @@ await AwaitType(
 
 // NPC shop and deterministic crafting/dismantling also exercise the exact
 // client packet names instead of only calling application services in-process.
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "ShopAction",
@@ -934,8 +925,7 @@ await SendGm(
             inBank.GetInt32() == 0),
     "GM seeds 20 iron ore for deterministic Recipe 1291");
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "CraftItemRequest",
@@ -991,8 +981,7 @@ var ironBlockUid =
             item.GetProperty("ItemUID").GetInt64())
         .Max();
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "DismantleItemRequest",
@@ -1105,8 +1094,7 @@ await SendGm(
             skillId.GetInt32() == 23108),
     "GM seed learns real buff skill 23108");
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "UseSkill",
@@ -1192,8 +1180,7 @@ var wireItemUid =
             "ItemUID")
         .GetInt64();
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "DropItemRequest",
@@ -1243,8 +1230,7 @@ await AwaitType(
     "peer receives dropped ground item",
     skipNonMatchingSameType: true);
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "PickUpItemRequest",
@@ -1280,8 +1266,7 @@ await AwaitType(
 // A second pickup request may arrive after another socket or a map scene
 // already removed the entity. SQLite must remain authoritative, and the
 // requester needs a local Despawn even if its GroundItems cache was empty.
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "PickUpItemRequest",
@@ -1326,8 +1311,7 @@ var choiceItemUid = choiceSeed.GetProperty("Items")
     .GetProperty("ItemUID")
     .GetInt64();
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new { Type = "UseItemRequest", ItemUID = choiceItemUid });
 
 await AwaitType(
@@ -1345,8 +1329,7 @@ await AwaitType(
             .SequenceEqual(new[] { 15112, 15113, 15114 }),
     "UseItemRequest returns three authoritative choices without consuming");
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "UseItemChoiceRequest",
@@ -1362,8 +1345,7 @@ await AwaitType(
         (message.GetString() ?? "").Contains("獎勵選項已失效"),
     "forged choice is rejected without reward");
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "UseItemChoiceRequest",
@@ -1432,8 +1414,7 @@ var repairMoneySeed = await SendGm(
 var repairMoneyBefore =
     repairMoneySeed.GetProperty("Money").GetInt64();
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "RepairItemRequest",
@@ -1468,8 +1449,7 @@ await AwaitType(
             equip.GetProperty("Damage").GetInt32() == 50),
     "repair persists max durability and returns updated EquipSync");
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "UseItemChoiceRequest",
@@ -1515,8 +1495,7 @@ var wirePetUid =
             "UID")
         .GetInt64();
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "PetAction",
@@ -1575,8 +1554,7 @@ var petTargetId =
             "EntityID")
         .GetInt32();
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "PetAction",
@@ -1632,8 +1610,7 @@ var wireHorseUid =
             "HorseUID")
         .GetInt64();
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "DriveMechaRequest",
@@ -1658,8 +1635,7 @@ await AwaitType(
 
 // Dismount must acknowledge the authoritative position. The client reuses
 // these fields to invalidate any stale mecha-era movement path/anchor.
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "DriveMechaRequest",
@@ -1689,8 +1665,7 @@ await AwaitType(
     "dismount ACK includes map and authoritative position for client rebase");
 
 // Remount so subsequent combat assertions keep their previous setup.
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "DriveMechaRequest",
@@ -1732,8 +1707,7 @@ for (var attempt = 0;
      attempt < 20 && !combatKilled;
      attempt++)
 {
-    await SendPacket(
-        socket,
+    await SendPacketOn(socket,
         new
         {
             Type = "AttackEntity",
@@ -1823,8 +1797,7 @@ await AwaitType(
     skipNonMatchingSameType: true);
 
 // Party invite/accept over two live sockets.
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "PartyAction",
@@ -1843,8 +1816,7 @@ await AwaitType(
             dbid,
     "peer receives party invite from first player");
 
-await SendPacket(
-    peerSocket,
+await SendPacketOn(peerSocket,
     new
     {
         Type = "PartyAction",
@@ -1878,8 +1850,7 @@ await AwaitType(
 
 // Empty trade still exercises invite, shared session, locks and atomic final
 // confirmation without requiring test-only item seeding.
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "TradeRequest",
@@ -1897,8 +1868,7 @@ await AwaitType(
             dbid,
     "peer receives trade invite from first player");
 
-await SendPacket(
-    peerSocket,
+await SendPacketOn(peerSocket,
     new
     {
         Type = "TradeReply",
@@ -1928,14 +1898,12 @@ await AwaitType(
             sessionId.GetString()),
     "peer enters shared trade session");
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "TradeLock"
     });
-await SendPacket(
-    peerSocket,
+await SendPacketOn(peerSocket,
     new
     {
         Type = "TradeLock"
@@ -1952,14 +1920,12 @@ await AwaitType(
     _ => true,
     "peer receives final trade confirmation request");
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "TradeFinalConfirm"
     });
-await SendPacket(
-    peerSocket,
+await SendPacketOn(peerSocket,
     new
     {
         Type = "TradeFinalConfirm"
@@ -2014,8 +1980,7 @@ var lifecycleGroundUid = lifecycleGroundSeed
     .Select(item => item.GetProperty("ItemUID").GetInt64())
     .Max();
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "DropItemRequest",
@@ -2160,8 +2125,7 @@ await AwaitType(
     "return-map WorldReady rebuilds persisted ground item snapshot",
     skipNonMatchingSameType: true);
 
-await SendPacket(
-    socket,
+await SendPacketOn(socket,
     new
     {
         Type = "PickUpItemRequest",
@@ -2272,8 +2236,7 @@ async Task<JsonElement> ProbeOn(
     string description,
     bool allowInterleaved = false)
 {
-    await SendPacket(
-        targetSocket,
+    await SendPacketOn(targetSocket,
         request);
 
     for (var attempts = 0;
@@ -2285,8 +2248,7 @@ async Task<JsonElement> ProbeOn(
                 TimeSpan.FromSeconds(10));
 
         var response =
-            await ReceivePacket(
-                targetSocket,
+            await ReceivePacketOn(targetSocket,
                 timeout.Token);
 
         var type =
@@ -2296,8 +2258,7 @@ async Task<JsonElement> ProbeOn(
 
         if (type == "Ping")
         {
-            await SendPacket(
-                targetSocket,
+            await SendPacketOn(targetSocket,
                 new
                 {
                     Type = "Pong"
@@ -2354,8 +2315,7 @@ async Task<JsonElement> SendGmOn(
     string description,
     bool skipNonMatchingSameType = false)
 {
-    await SendPacket(
-        targetSocket,
+    await SendPacketOn(targetSocket,
         new
         {
             Type = "ChatMessage",
@@ -2388,8 +2348,7 @@ async Task<JsonElement> AwaitType(
                 TimeSpan.FromSeconds(10));
 
         var response =
-            await ReceivePacket(
-                targetSocket,
+            await ReceivePacketOn(targetSocket,
                 timeout.Token);
 
         var type =
@@ -2399,8 +2358,7 @@ async Task<JsonElement> AwaitType(
 
         if (type == "Ping")
         {
-            await SendPacket(
-                targetSocket,
+            await SendPacketOn(targetSocket,
                 new
                 {
                     Type = "Pong"
@@ -2459,8 +2417,7 @@ async Task CollectTypesOn(
                 TimeSpan.FromSeconds(10));
 
         var response =
-            await ReceivePacket(
-                targetSocket,
+            await ReceivePacketOn(targetSocket,
                 timeout.Token);
 
         var type =
@@ -2471,8 +2428,7 @@ async Task CollectTypesOn(
 
         if (type == "Ping")
         {
-            await SendPacket(
-                targetSocket,
+            await SendPacketOn(targetSocket,
                 new
                 {
                     Type = "Pong"
@@ -2501,11 +2457,10 @@ async Task CollectTypesOn(
 
 async Task SendPacket(
     object request)
-    => await SendPacket(
-        socket,
+    => await SendPacketOn(socket,
         request);
 
-async Task SendPacket(
+async Task SendPacketOn(
     ClientWebSocket targetSocket,
     object request)
 {
@@ -2527,11 +2482,10 @@ async Task SendPacket(
 
 async Task<JsonElement> ReceivePacket(
     CancellationToken token)
-    => await ReceivePacket(
-        socket,
+    => await ReceivePacketOn(socket,
         token);
 
-async Task<JsonElement> ReceivePacket(
+async Task<JsonElement> ReceivePacketOn(
     ClientWebSocket targetSocket,
     CancellationToken token)
 {
