@@ -1702,7 +1702,7 @@ func _on_entity_moved(data: Dictionary) -> void :
 			# packets can fall back to motion-derived facing.
 			target_node.apply_network_move_direction(new_dir)
 		elif new_dir != "" and not derives_direction_from_target:
-			if "current_dir" in target_node and not new_dir.is_empty():
+			if "current_dir" in target_node:
 				target_node.current_dir = new_dir
 
 		if target_node.has_method("network_move_to"):
@@ -1758,7 +1758,7 @@ func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String
 		else:
 			if "current_state" in target_node:
 				target_node.current_state = new_state
-			if "current_dir" in target_node:
+			if "current_dir" in target_node and not new_dir.is_empty():
 				target_node.current_dir = new_dir
 		# Available to the state and animation paths below, even for
 		# non-player entities that do not expose an action lock.
