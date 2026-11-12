@@ -70,6 +70,16 @@ public sealed record CharacterCosmeticMutationResult(
 public readonly record struct CharacterPositionWrite(
     long AccountId, long CharacterId, int MapId, int X, int Y);
 
+// Optional capability ONLY for replaceable periodic position snapshots.
+// A false return means nothing was committed and the caller must restore the
+// staged snapshots. The authoritative teleport/logout fences still call the
+// normal durable ICharacterStore APIs and must NEVER use this fast-fail port.
+public interface IOpportunisticPositionBatchStore
+{
+    bool TryUpdatePositionsBatch(
+        IReadOnlyList<CharacterPositionWrite> positions);
+}
+
 public interface ICharacterStore
 {
     List<Dictionary<string, object>> Characters(long accountId);
