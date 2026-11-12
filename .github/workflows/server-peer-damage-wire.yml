@@ -1,0 +1,72 @@
+name: Peer normal-attack damage wire E2E
+
+on:
+  push:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'server/Application/Combat/CombatService.cs'
+      - 'server/Application/Messaging/ServerBroadcastHub.cs'
+      - 'server/Application/Messaging/WorldEntitySpatialAoi.cs'
+      - 'server/Application/PacketRouter.cs'
+      - 'tests/SGO.Server.WireSmokeTests/**'
+      - '.github/workflows/server-peer-damage-wire.yml'
+  pull_request:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'server/Application/Combat/CombatService.cs'
+      - 'server/Application/Messaging/ServerBroadcastHub.cs'
+      - 'server/Application/Messaging/WorldEntitySpatialAoi.cs'
+      - 'tests/SGO.Server.WireSmokeTests/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  two-client-combat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build real server and encrypted two-client wire tests
+        run: |
+          dotnet build server/SGO.Server.csproj -c Release --nologo
+          dotnet build tests/SGO.Server.WireSmokeTests/SGO.Server.WireSmokeTests.csproj -c Release --nologo
+      - name: Verify peer sees real monster damage, not only death
+        shell: bash
+        run: |
+          set -euo pipefail
+          export Database__Provider=Sqlite
+          export Database__Sqlite__Path="$RUNNER_TEMP/peer-damage-isolated.db"
+          export Game__ListenUrl="http://127.0.0.1:5678"
+          export Game__GmCommandsEnabled=true
+          export SGO_CLIENT_ROOT="$GITHUB_WORKSPACE/client"
+          dotnet run -c Release --no-build --project server/SGO.Server.csproj > server-peer-damage.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 90); do
+            if curl -fsS --max-time 2 http://127.0.0.1:5678/health >/dev/null 2>&1; then break; fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              cat server-peer-damage.log
+              exit 1
+            fi
+            sleep 1
+          done
+          timeout --signal=TERM --kill-after=5s 660s dotnet run -c Release --no-build \
+            --project tests/SGO.Server.WireSmokeTests/SGO.Server.WireSmokeTests.csproj -- \
+            ws://127.0.0.1:5678/ 2>&1 | tee peer-damage-wire.log
+          grep -Fq 'peer receives normal-attack monster damage' peer-damage-wire.log
+          grep -Fq 'peer receives same monster death broadcast' peer-damage-wire.log
+      - name: Upload peer damage diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: peer-damage-wire-logs
+          retention-days: 7
+          path: |
+            peer-damage-wire.log
+            server-peer-damage.log
+          if-no-files-found: ignore
