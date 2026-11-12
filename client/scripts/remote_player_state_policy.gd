@@ -35,3 +35,20 @@ static func movement_direction_may_replace_animation(
 			or current_state.begins_with("attack_")
 		)
 	)
+
+# EntityDamage is the fallback visual trigger for ordinary remote-player
+# normal attacks. SkillCast already owns skill animations, while an explicit
+# network attack state (used by load bots/legacy peers) has already started
+# the one-shot without taking BaseEntity's local action lock.
+static func damage_should_start_attack_visual(
+	skill_id: int,
+	current_state: String,
+	action_locked: bool
+) -> bool:
+	if skill_id > 0:
+		return false
+	var explicit_network_attack: bool = (
+		current_state.begins_with("attack_")
+		and not action_locked
+	)
+	return not explicit_network_attack
