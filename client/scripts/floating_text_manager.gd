@@ -43,10 +43,28 @@ func _create_pooled_effect() -> AnimatedSprite2D:
 
 
 func _get_free_label() -> Label:
+	var now_msec: int = Time.get_ticks_msec()
+	var oldest: Label = null
+	var oldest_msec: int = 9223372036854775807
 	for lbl in _text_pool:
-		if not lbl.visible: return lbl
+		if not lbl.visible:
+			lbl.set_meta("damage_allocated_msec", now_msec)
+			return lbl
+		var allocated_msec: int = int(lbl.get_meta("damage_allocated_msec", 0))
+		if allocated_msec < oldest_msec:
+			oldest_msec = allocated_msec
+			oldest = lbl
 	if _text_pool.size() < POOL_SIZE:
-		return _create_pooled_label()
+		var created: Label = _create_pooled_label()
+		created.set_meta("damage_allocated_msec", now_msec)
+		return created
+	# With many players hitting at once, leaving the latest number absent
+	# is worse than ending the oldest onscreen bounce a little early.
+	# Recycle only the oldest visual label; never drop combat data or spawn
+	# unbounded UI nodes. Callers reset its tweens before displaying it.
+	if is_instance_valid(oldest):
+		oldest.set_meta("damage_allocated_msec", now_msec)
+		return oldest
 	return null
 
 
