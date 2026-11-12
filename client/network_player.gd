@@ -37,7 +37,7 @@ const SIMPLIFIED_PLAYER_CLICK_SIZE := Vector2(104.0, 136.0)
 const SIMPLIFIED_ORB_CACHE = preload("res://scripts/simplified_orb_cache.gd")
 const NORMAL_PLAYER_CLICK_SIZE := Vector2(80.0, 120.0)
 
-const SAFE_MAP_IDS: Array = [4, 9, 15, 17, 22, 39, 40, 53, 75, 93]
+const SAFE_MAP_IDS: Array = [4, 7, 9, 15, 17, 22, 25, 38, 39, 40, 53, 75, 93]
 
 var _physics_animation_cache_initialized: = false
 var _last_physics_animation_state: = ""
@@ -288,14 +288,16 @@ func _on_entity_name_color_updated(
 	color_state: int,
 	pk_status: int = -1,
 	red_man_kill_left: int = -1,
-	party_id: String = ""
+	party_id: String = "",
+	pink_remaining_seconds: float = 0.0
 ) -> void:
 	super._on_entity_name_color_updated(
 		p_entity_id,
 		color_state,
 		pk_status,
 		red_man_kill_left,
-		party_id
+		party_id,
+		pink_remaining_seconds
 	)
 	# Even when this packet belongs to the local player, its PK/party state
 	# can change how every simplified remote player should be outlined.
@@ -350,7 +352,8 @@ func initialize_network_player(data: Dictionary) -> void :
 	data_model.title = int(extra.get("Title", 0))
 	data_model.red_man = int(extra.get("RedMan", 0))
 	data_model.red_man_kill_left = int(extra.get("RedManKillLeft", 0))
-	data_model.pk_status = int(extra.get("PKStatus", 0))
+	data_model.pk_status = int(extra.get("PKStatus", 1))
+	data_model.pk_pink_until_utc_ms = int(extra.get("PKPinkUntilUtcMs", 0))
 	data_model.hp = int(extra.get("HP", 100))
 	data_model.max_hp = int(extra.get("MaxHP", 100))
 	data_model.summoned_horse_uid = int(extra.get("SummonedHorseUID", -1))
@@ -372,7 +375,7 @@ func initialize_network_player(data: Dictionary) -> void :
 		var race_map = {"Boy": "[騎]", "Girl": "[騎]", "Migu": "[魔]", "Robot": "[機]", "Yas": "[遺]"}
 		if not name_label.text or name_label.text == "":
 			name_label.text = race_map.get(current_race, "[?]") + data_model.character_name
-		_apply_name_color(1 if data_model.red_man > 0 else 0)
+		_apply_initial_name_color_state()
 		name_label.visible = not (data_model.is_shop_open or data_model.transform_type == 2)
 
 	data_model.upper_armor_id = int(extra.get("Upper_armor", 0))
@@ -414,7 +417,9 @@ func update_appearance_from_server(data: Dictionary) -> void :
 	data_model.race_id = int(data.get("Race", data_model.race_id))
 	data_model.title = int(data.get("Title", data_model.title))
 	data_model.red_man = int(data.get("RedMan", data_model.red_man))
+	data_model.red_man_kill_left = int(data.get("RedManKillLeft", data_model.red_man_kill_left))
 	data_model.pk_status = int(data.get("PKStatus", data_model.pk_status))
+	data_model.pk_pink_until_utc_ms = int(data.get("PKPinkUntilUtcMs", data_model.pk_pink_until_utc_ms))
 
 	if data.has("SummonedHorseUID"):
 		data_model.summoned_horse_uid = int(data.get("SummonedHorseUID", -1))
@@ -443,8 +448,7 @@ func update_appearance_from_server(data: Dictionary) -> void :
 			data_model.horse_equip_list.append({"horse_uid": data_model.summoned_horse_uid, "in_bank": 0, "part": 2, "equip_idx": int(data.get("MechaEngine", 0))})
 
 	if name_label:
-		var visible_color_state = 2 if _name_color_state == 3 else _name_color_state
-		_apply_name_color_style(visible_color_state)
+		_apply_initial_name_color_state()
 
 	current_race = GameConstants.RACE_ID_MAP.get(data_model.race_id, "Boy")
 
@@ -744,20 +748,61 @@ func update_direction_8way(move_velocity: Vector2) -> void :
 	current_dir = GameConstants.DIR_STRINGS[index_raw % 8]
 
 
+func _prepared_skill_is_offensive(local_player: Node) -> bool:
+	if not is_instance_valid(local_player) or not SkillLoader:
+		return false
+	if not "ready_to_cast_skill_id" in local_player:
+		return false
+	var skill_id: int = int(local_player.ready_to_cast_skill_id)
+	if skill_id <= 0:
+		return false
+	var skill = SkillLoader.get_skill_data(skill_id)
+	if not skill:
+		return false
+	var skill_type := int(skill.skill_type)
+	if skill_type in [0, 1]:
+		return true
+	if skill_type != 7:
+		return false
+	var level_data = skill.get_level_data(1)
+	if not level_data:
+		return false
+	return (
+		int(level_data.base_damage) != 0
+		or int(level_data.damage_multiplier) != 0
+	)
+
+func _can_local_initiate_player_attack(
+	local_player: Node,
+	require_attack_modifier: bool = true
+) -> bool:
+	if not is_instance_valid(local_player) or not "data_model" in local_player:
+		return false
+	if is_local_party_member():
+		return false
+	if int(local_player.data_model.map_id) in SAFE_MAP_IDS:
+		return false
+	if int(local_player.data_model.pk_status) != 1:
+		return false
+	if int(data_model.pk_status) != 1 or int(data_model.hp) <= 0:
+		return false
+	if local_player.has_method("can_attack") and not local_player.can_attack():
+		return false
+	if require_attack_modifier:
+		if local_player.has_method("is_player_attack_input_allowed"):
+			return bool(local_player.is_player_attack_input_allowed())
+		return Input.is_key_pressed(KEY_CTRL)
+	return true
+
 func _on_mouse_entered() -> void :
 	if CursorManager:
 		var local_player = GameManager.current_player if GameManager else null
 
 
 		var state = "player"
-		var in_safe_zone = data_model.map_id in SAFE_MAP_IDS
 
-
-		if local_player and is_instance_valid(local_player) and local_player.data_model.pk_status == 1 and data_model.pk_status == 1 and data_model.hp > 0 and not in_safe_zone:
-			if local_player.has_method("can_attack") and not local_player.can_attack():
-				state = "player"
-			else:
-				state = "attack"
+		if _can_local_initiate_player_attack(local_player, true):
+			state = "attack"
 
 
 		CursorManager.register_hover(self, state)
@@ -806,9 +851,12 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 			# stays visible through the built-in outline.
 			var local_player = GameManager.current_player if GameManager else null
 			if local_player and is_instance_valid(local_player):
-				var in_safe_zone = data_model.map_id in SAFE_MAP_IDS
-
 				if "ready_to_cast_skill_id" in local_player and local_player.ready_to_cast_skill_id > 0:
+					if (
+						_prepared_skill_is_offensive(local_player)
+						and not _can_local_initiate_player_attack(local_player, true)
+					):
+						return
 					if local_player.has_method("cancel_autorun_tracking"):
 						local_player.cancel_autorun_tracking(true)
 					local_player.pending_skill_id = local_player.ready_to_cast_skill_id
@@ -819,17 +867,12 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 						CursorManager.cancel_skill_state()
 					return
 
-
-				if local_player.data_model.pk_status == 1 and data_model.pk_status == 1 and not in_safe_zone:
-					if data_model.hp > 0:
-						if local_player.has_method("can_attack") and not local_player.can_attack():
-							return
-
-						if local_player.has_method("cancel_autorun_tracking"):
-							local_player.cancel_autorun_tracking(true)
-						local_player.pending_skill_id = -1
-						local_player.combat_target = self
-						get_viewport().set_input_as_handled()
+				if _can_local_initiate_player_attack(local_player, true):
+					if local_player.has_method("cancel_autorun_tracking"):
+						local_player.cancel_autorun_tracking(true)
+					local_player.pending_skill_id = -1
+					local_player.combat_target = self
+					get_viewport().set_input_as_handled()
 
 func _setup_interact_area() -> void :
 	interact_area = Area2D.new()
