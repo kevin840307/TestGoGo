@@ -738,6 +738,77 @@ try
           secondSnapshot.DamageReadMs.Samples == timings.DamageReadMs.Samples,
         "reading /health timing counters does not reset other observers' samples");
 
+    // Atomic multi-hit foundation: exact intermediate HP/death order without
+    // losing the full post-hit character fields or changing normal ApplyDamage.
+    var healedForBatch = store.Revive(accountId.Value, characterId);
+    Check(healedForBatch is not null &&
+          Convert.ToInt32(healedForBatch["HP"]) > 6,
+        "multi-hit test starts with a healthy authoritative character");
+    var initialBatchHp = Convert.ToInt32(healedForBatch!["HP"]);
+    var batch = store.ApplyDamageBatch(
+        accountId.Value, characterId, [1, 2, 3]);
+    var freshBatch = store.GetCharacter(accountId.Value, characterId);
+    Check(batch is not null && freshBatch is not null &&
+          batch.HpAfterEachHit.SequenceEqual([
+              initialBatchHp - 1,
+              initialBatchHp - 3,
+              initialBatchHp - 6]) &&
+          batch.FirstDeathHitIndex == -1 &&
+          Convert.ToInt32(batch.Character["HP"]) == initialBatchHp - 6 &&
+          Convert.ToInt32(freshBatch["HP"]) == initialBatchHp - 6 &&
+          batch.Character.Keys.OrderBy(x => x).SequenceEqual(
+              freshBatch.Keys.OrderBy(x => x)),
+        "one atomic transaction yields the same cumulative per-hit HP and full character payload");
+    var unauthorizedBefore = store.GetCharacter(accountId.Value, characterId);
+    Check(store.ApplyDamageBatch(accountId.Value + 999, characterId, [123]) is null &&
+          Convert.ToInt32(store.GetCharacter(accountId.Value, characterId)!["HP"]) ==
+          Convert.ToInt32(unauthorizedBefore!["HP"]),
+        "multi-hit transaction cannot affect another account's character");
+
+    var remaining = Convert.ToInt32(batch!.Character["HP"]);
+    var finishing = store.ApplyDamageBatch(accountId.Value, characterId,
+        [remaining - 1, 8, int.MaxValue]);
+    Check(finishing is not null &&
+          finishing.HpAfterEachHit.SequenceEqual([1, 0, 0]) &&
+          finishing.FirstDeathHitIndex == 1 &&
+          Convert.ToInt32(finishing.Character["HP"]) == 0 &&
+          Convert.ToString(finishing.Character["State"]) == "death",
+        "second ordered hit is the unique lethal blow and overkill cannot revive");
+    var afterDeath = store.ApplyDamageBatch(accountId.Value, characterId, [2, 5]);
+    Check(afterDeath is not null &&
+          afterDeath.FirstDeathHitIndex == -1 &&
+          afterDeath.HpAfterEachHit.SequenceEqual([0, 0]),
+        "already-dead character cannot emit a second first-lethal event");
+
+    Check(store.Revive(accountId.Value, characterId) is not null,
+        "batch test can restore authoritative character for concurrent hits");
+    var overlapping = await Task.WhenAll(
+        Enumerable.Range(0, 8).Select(_ => Task.Run(() =>
+            store.ApplyDamageBatch(
+                accountId.Value, characterId, [int.MaxValue]))));
+    Check(overlapping.All(x => x is not null) &&
+          overlapping.Count(x => x!.FirstDeathHitIndex == 0) == 1 &&
+          overlapping.Count(x => x!.FirstDeathHitIndex == -1) == 7 &&
+          Convert.ToInt32(store.GetCharacter(accountId.Value, characterId)!["HP"]) == 0,
+        "concurrent lethal batches serialize at SQLite writer and nominate only one first death");
+
+    // Direct single-hit semantics must still match the opt-in atomic path.
+    var singleStart = store.Revive(accountId.Value, characterId);
+    Check(singleStart is not null, "character revives for single-hit comparison");
+    var singleBatch = store.ApplyDamageBatch(accountId.Value, characterId, [3]);
+    var afterBatchHp = Convert.ToInt32(singleBatch!.Character["HP"]);
+    var afterBatchState = Convert.ToString(singleBatch.Character["State"]);
+    store.Revive(accountId.Value, characterId);
+    var singleDirect = store.ApplyDamage(accountId.Value, characterId, 3);
+    Check(singleDirect is not null &&
+          singleBatch.HpAfterEachHit.Count == 1 &&
+          singleBatch.HpAfterEachHit[0] == afterBatchHp &&
+          Convert.ToInt32(singleDirect["HP"]) == afterBatchHp &&
+          Convert.ToString(singleDirect["State"]) == afterBatchState &&
+          singleDirect.Keys.OrderBy(x => x).SequenceEqual(
+              singleBatch.Character.Keys.OrderBy(x => x)),
+        "atomic single-hit result preserves direct ApplyDamage HP/state/fields");
+
     var firstDrain = store.DrainCompanionRuntime(accountId.Value, characterId, 1);
     var afterOne = store.GetActivePetFollowSnapshot(accountId.Value, characterId);
     Check(firstDrain.Pets.Count == 1 &&
