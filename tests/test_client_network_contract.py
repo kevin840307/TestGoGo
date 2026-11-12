@@ -185,6 +185,23 @@ class ClientNetworkContractTests(unittest.TestCase):
             block,
         )
 
+    def test_pending_idle_settle_cannot_cut_locked_remote_action(self):
+        player = NETWORK_PLAYER.read_text(encoding="utf-8-sig")
+        start = player.index("func _handle_movement(delta: float)")
+        end = player.index("\nfunc update_direction_8way", start)
+        block = player[start:end]
+
+        settle = block.index(
+            "if global_position.distance_squared_to(target_position) <= 4.0:"
+        )
+        guard = block.index(
+            "REMOTE_STATE_POLICY.movement_may_replace_animation(",
+            settle,
+        )
+        idle_write = block.index('current_state = "idle"', guard)
+        self.assertLess(settle, guard)
+        self.assertLess(guard, idle_write)
+
     def test_world_ready_ack_is_observable(self):
         block = packet_block(self.source, "WorldReadyResponse")
         fields = set(FIELD_READ.findall(block))
