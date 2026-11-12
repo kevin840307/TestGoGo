@@ -1,3 +1,6 @@
+using System.Collections.Concurrent;
+using System.Threading;
+
 namespace SGO.Server.Infrastructure.GameData;
 
 public sealed record LegacyPlayerGrowthStats(
@@ -15,7 +18,11 @@ public sealed record LegacyPlayerGrowthStats(
 public sealed class LegacyPlayerGrowthCatalog
 {
     private readonly string _root;
-    private readonly Dictionary<string, int[][]> _tables =
+    // Multiple websocket sessions can issue /gm level or compute growth
+    // concurrently. A normal Dictionary corrupted itself when the first
+    // concurrent requests lazily loaded CSVs on the same catalog instance.
+    // Lazy<> also ensures each file's parsing is performed only once.
+    private readonly ConcurrentDictionary<string, Lazy<int[][]>> _tables =
         new(StringComparer.OrdinalIgnoreCase);
 
     public LegacyPlayerGrowthCatalog(string gameDataRoot)
@@ -145,28 +152,35 @@ public sealed class LegacyPlayerGrowthCatalog
         if (oneBasedIndex <= 0)
             return [];
 
-        if (!_tables.TryGetValue(file, out var rows))
+        if (!_tables.TryGetValue(file, out var cached))
         {
-            var path = Path.Combine(_root, file);
-            if (!File.Exists(path))
+            // Preserve the old behavior for absent files: do not cache an
+            // empty lookup; content may be installed after server startup.
+            if (!File.Exists(Path.Combine(_root, file)))
                 return [];
 
-            rows = File.ReadLines(path)
-                .Select(x => x.Trim())
-                .TakeWhile(x => !x.Equals("[end]", StringComparison.OrdinalIgnoreCase))
-                .Where(x => x.Length > 0)
-                .Select(x => x.Split(',')
-                    .Select(v => int.TryParse(v.Trim(), out var n) ? n : 0)
-                    .ToArray())
-                .ToArray();
-
-            _tables[file] = rows;
+            cached = _tables.GetOrAdd(file, key =>
+                new Lazy<int[][]>(
+                    () => LoadRows(key),
+                    LazyThreadSafetyMode.ExecutionAndPublication));
         }
 
+        var rows = cached.Value;
         if (rows.Length == 0)
             return [];
 
         return rows[Math.Clamp(oneBasedIndex - 1, 0, rows.Length - 1)];
+    }
+
+    private int[][] LoadRows(string file)
+        => File.ReadLines(Path.Combine(_root, file))
+            .Select(x => x.Trim())
+            .TakeWhile(x => !x.Equals("[end]", StringComparison.OrdinalIgnoreCase))
+            .Where(x => x.Length > 0)
+            .Select(x => x.Split(',')
+                .Select(v => int.TryParse(v.Trim(), out var n) ? n : 0)
+                .ToArray())
+            .ToArray();
     }
 
     private static int FallbackExperienceThreshold(int level)
