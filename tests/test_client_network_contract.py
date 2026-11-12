@@ -124,6 +124,41 @@ class ClientNetworkContractTests(unittest.TestCase):
             "should_start_damage_attack_visual",
             entity_manager,
         )
+        self.assertIn(
+            "NETWORK_ATTACK_DAMAGE_OWNER_WINDOW_MSEC",
+            player,
+        )
+        self.assertIn(
+            "is_action_locked = true",
+            player,
+        )
+        self.assertIn(
+            "_sync_physics_animation_if_changed()",
+            player,
+        )
+        self.assertIn(
+            "network_state_is_one_shot",
+            policy,
+        )
+
+    def test_stationary_remote_network_state_renders_immediately(self):
+        player = NETWORK_PLAYER.read_text(encoding="utf-8-sig")
+        start = player.index(
+            "func apply_network_state(new_state: String, new_dir: String)"
+        )
+        end = player.index("\nfunc _physics_process", start)
+        block = player[start:end]
+
+        self.assertIn(
+            "REMOTE_STATE_POLICY.network_state_is_one_shot",
+            block,
+        )
+        self.assertIn("is_action_locked = true", block)
+        self.assertIn("_sync_physics_animation_if_changed()", block)
+        self.assertIn(
+            "_network_attack_damage_owner_until_msec",
+            block,
+        )
 
     def test_world_ready_ack_is_observable(self):
         block = packet_block(self.source, "WorldReadyResponse")
