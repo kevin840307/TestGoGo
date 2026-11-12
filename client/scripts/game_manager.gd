@@ -1,6 +1,8 @@
 
 extends Node
 
+const UNFOCUS_PRESENTATION_POLICY = preload("res://scripts/unfocus_presentation_policy.gd")
+
 const MAP_LOADING_FADE_IN_SECONDS: = 0.3
 const MAP_LOADING_COVER_DELAY_SECONDS: = 0.35
 const MAP_LOADING_MIN_VISIBLE_SECONDS: = 0.55
@@ -1026,9 +1028,7 @@ func is_unfocus_power_save_enabled() -> bool:
 
 
 static func should_apply_unfocus_policy(os_focused: bool, minimized: bool, unfocus_enabled: bool) -> bool:
-	# Independent from AFK. Minimize is a hard background presentation
-	# condition even when the optional Alt+Tab/Unfocus toggle is OFF.
-	return minimized or (not os_focused and unfocus_enabled)
+	return UNFOCUS_PRESENTATION_POLICY.should_background(os_focused, minimized, unfocus_enabled)
 
 
 func _background_policy_required() -> bool:
