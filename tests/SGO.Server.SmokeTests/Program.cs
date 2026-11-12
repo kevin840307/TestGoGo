@@ -1730,6 +1730,8 @@ try
         store,
         broadcastHub,
         accountSessions);
+    AtomicMonsterHitSmokeTests.Run(
+        combat, worldRuntime, world, blocking, store);
     var shops = new ShopService(
         store,
         store,
