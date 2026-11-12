@@ -124,6 +124,83 @@ class ClientNetworkContractTests(unittest.TestCase):
             "should_start_damage_attack_visual",
             entity_manager,
         )
+        self.assertIn(
+            "if should_start_damage_attack_visual and is_instance_valid(target_node):",
+            entity_manager,
+        )
+        direction_gate = entity_manager.index(
+            "if should_start_damage_attack_visual and is_instance_valid(target_node):"
+        )
+        direction_update = entity_manager.index(
+            "attacker_node.update_direction_8way(",
+            direction_gate,
+        )
+        attack_trigger = entity_manager.index(
+            "attacker_node.trigger_combat_action(",
+            direction_gate,
+        )
+        self.assertLess(direction_gate, direction_update)
+        self.assertLess(direction_update, attack_trigger)
+        self.assertIn(
+            "NETWORK_ATTACK_DAMAGE_OWNER_WINDOW_MSEC",
+            player,
+        )
+        self.assertIn(
+            "skill_id == 0\n\t\tand _network_attack_damage_owner_until_msec >= now_msec",
+            player,
+        )
+        self.assertIn(
+            "skill_id == 0 and explicit_network_attack_pending",
+            player,
+        )
+        self.assertIn(
+            "is_action_locked = true",
+            player,
+        )
+        self.assertIn(
+            "_sync_physics_animation_if_changed()",
+            player,
+        )
+        self.assertIn(
+            "network_state_is_one_shot",
+            policy,
+        )
+
+    def test_stationary_remote_network_state_renders_immediately(self):
+        player = NETWORK_PLAYER.read_text(encoding="utf-8-sig")
+        start = player.index(
+            "func apply_network_state(new_state: String, new_dir: String)"
+        )
+        end = player.index("\nfunc _physics_process", start)
+        block = player[start:end]
+
+        self.assertIn(
+            "REMOTE_STATE_POLICY.network_state_is_one_shot",
+            block,
+        )
+        self.assertIn("is_action_locked = true", block)
+        self.assertIn("_sync_physics_animation_if_changed()", block)
+        self.assertIn(
+            "_network_attack_damage_owner_until_msec",
+            block,
+        )
+
+    def test_pending_idle_settle_cannot_cut_locked_remote_action(self):
+        player = NETWORK_PLAYER.read_text(encoding="utf-8-sig")
+        start = player.index("func _handle_movement(delta: float)")
+        end = player.index("\nfunc update_direction_8way", start)
+        block = player[start:end]
+
+        settle = block.index(
+            "if global_position.distance_squared_to(target_position) <= 4.0:"
+        )
+        guard = block.index(
+            "REMOTE_STATE_POLICY.movement_may_replace_animation(",
+            settle,
+        )
+        idle_write = block.index('current_state = "idle"', guard)
+        self.assertLess(settle, guard)
+        self.assertLess(guard, idle_write)
 
     def test_world_ready_ack_is_observable(self):
         block = packet_block(self.source, "WorldReadyResponse")

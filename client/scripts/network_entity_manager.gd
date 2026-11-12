@@ -2005,7 +2005,17 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 		if attacker_node == local_player:
 			pass
 		else:
-			if is_instance_valid(target_node):
+			var should_start_damage_attack_visual := true
+			if attacker_node.has_method("should_trigger_attack_visual_from_damage"):
+				should_start_damage_attack_visual = bool(
+					attacker_node.should_trigger_attack_visual_from_damage(skill_id)
+				)
+
+			# Direction belongs to the same visual owner as the attack pose.
+			# SkillCast and explicit SyncState attack packets already supplied
+			# the authoritative facing; their later EntityDamage must not flip
+			# or restart that locked one-shot.
+			if should_start_damage_attack_visual and is_instance_valid(target_node):
 				if attacker_node is MonsterEntity and attacker_node.has_method("apply_attack_visual_direction"):
 					# The first attack keeps the known-good chase facing. For
 					# repeated stationary attacks, update toward the target's
@@ -2021,11 +2031,6 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 						var DIR_STRINGS = ["6", "7", "8", "1", "2", "3", "4", "5"]
 						attacker_node.current_dir = DIR_STRINGS[index_raw % 8]
 
-			var should_start_damage_attack_visual := true
-			if attacker_node.has_method("should_trigger_attack_visual_from_damage"):
-				should_start_damage_attack_visual = bool(
-					attacker_node.should_trigger_attack_visual_from_damage(skill_id)
-				)
 			if (
 				should_start_damage_attack_visual
 				and attacker_node.has_method("trigger_combat_action")

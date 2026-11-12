@@ -21,6 +21,11 @@ var _pending_idle: bool = false
 # overwrite it every physics frame with tiny interpolation/correction vectors.
 var _has_network_move_direction: bool = false
 var _last_remote_move_received_msec: int = -1
+# An explicit SyncState(attack_*) owns exactly the next matching normal
+# EntityDamage visual. Keep a bounded token so the damage packet cannot
+# replay the same swing, while a later ordinary attack can still start.
+var _network_attack_damage_owner_until_msec: int = -1
+const NETWORK_ATTACK_DAMAGE_OWNER_WINDOW_MSEC: int = 1500
 static var _debug_remote_gap_reports: int = 0
 var _performance_simplified_visual: bool = false
 var _performance_simplified_style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
@@ -541,8 +546,24 @@ func should_preserve_hit_state(new_state: String) -> bool:
 	)
 
 func should_trigger_attack_visual_from_damage(skill_id: int) -> bool:
+	var now_msec: int = Time.get_ticks_msec()
+	var explicit_network_attack_pending: bool = (
+		skill_id == 0
+		and _network_attack_damage_owner_until_msec >= now_msec
+	)
+	if skill_id == 0 and explicit_network_attack_pending:
+		# Consume one ownership token only for normal damage. Skill damage
+		# owns its own SkillCast visual and must not steal a pending normal
+		# attack token when packets interleave.
+		_network_attack_damage_owner_until_msec = -1
+	elif (
+		skill_id == 0
+		and _network_attack_damage_owner_until_msec >= 0
+		and _network_attack_damage_owner_until_msec < now_msec
+	):
+		_network_attack_damage_owner_until_msec = -1
 	return REMOTE_STATE_POLICY.damage_should_start_attack_visual(
-		skill_id, current_state, is_action_locked
+		skill_id, explicit_network_attack_pending
 	)
 
 func apply_network_state(new_state: String, new_dir: String) -> void :
@@ -572,13 +593,24 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 			return
 	_pending_idle = false
 	current_state = new_state
-	# An explicit remote attack state already owns this one-shot (legacy
-	# peers/load bots). Restart it from frame zero here; the following
-	# EntityDamage must not restart the same swing a second time.
-	if new_state.begins_with("attack_") and is_instance_valid(doll_engine):
-		for sprite_node in doll_engine.doll_sprites.values():
-			if is_instance_valid(sprite_node):
-				sprite_node.frame = 0
+	var is_network_one_shot: bool = REMOTE_STATE_POLICY.network_state_is_one_shot(
+		new_state
+	)
+	if is_network_one_shot:
+		# Explicit remote attack/hit states are real one-shots too. Lock them
+		# exactly like BaseEntity.trigger_combat_action() so a following
+		# walk/idle packet cannot cut the animation in half.
+		is_action_locked = true
+		if new_state.begins_with("attack_"):
+			_network_attack_damage_owner_until_msec = (
+				Time.get_ticks_msec() + NETWORK_ATTACK_DAMAGE_OWNER_WINDOW_MSEC
+			)
+		if is_instance_valid(doll_engine):
+			for sprite_node in doll_engine.doll_sprites.values():
+				if is_instance_valid(sprite_node):
+					sprite_node.frame = 0
+	elif not new_state.begins_with("emote_"):
+		_network_attack_damage_owner_until_msec = -1
 	if _performance_simplified_visual:
 		queue_redraw()
 	if new_state.begins_with("emote_"):
@@ -587,6 +619,11 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 			for sprite_node in doll_engine.doll_sprites.values():
 				if is_instance_valid(sprite_node):
 					sprite_node.frame = 0
+
+	# Network states must render immediately even when this stationary remote
+	# player disabled its physics processing. Waiting for the next MoveEntity
+	# made attacks/emotes appear late or never appear at all.
+	_sync_physics_animation_if_changed()
 
 func _physics_process(delta: float) -> void :
 	if is_dead:
@@ -649,7 +686,13 @@ func _handle_movement(delta: float) -> void :
 				update_direction_8way(displacement)
 		if global_position.distance_squared_to(target_position) <= 4.0:
 			_pending_idle = false
-			current_state = "idle"
+			# The final visual settle belongs to an older idle packet. If a
+			# hit/attack one-shot started meanwhile, finishing that settle must
+			# not overwrite the newer combat animation.
+			if REMOTE_STATE_POLICY.movement_may_replace_animation(
+				current_state, is_action_locked
+			):
+				current_state = "idle"
 		return
 
 	if displacement.length_squared() > 0.01 and _remote_motion.is_moving():
