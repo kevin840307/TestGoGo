@@ -13,6 +13,7 @@ on:
       - 'client/scripts/network_entity_manager.gd'
       - 'client/scripts/network_manager.gd'
       - 'client/scripts/monster_entity.gd'
+      - 'client/scripts/peer_damage_visual_policy.gd'
       - 'client/scripts/floating_text_manager.gd'
       - 'client/scripts/ground_drop_spatial_index.gd'
       - 'client/scripts/monster_waypoint_speed.gd'
@@ -21,6 +22,7 @@ on:
       - 'client/tests/multiplayer_motion_audit_regression.gd'
       - 'client/tests/monster_waypoint_math_regression.gd'
       - 'client/tests/multiplayer_20_actors_motion_regression.gd'
+      - 'client/tests/peer_normal_damage_visual_regression.gd'
       - 'client/tests/ground_drop_index_stress_regression.gd'
       - 'tests/test_mass_entity_visual_contract.py'
       - '.github/workflows/client-multiplayer-motion.yml'
@@ -83,7 +85,9 @@ jobs:
           cp client/scripts/monster_waypoint_speed.gd "$project/scripts/"
           cp client/scripts/viewport_aoi_radius.gd "$project/scripts/"
           cp client/scripts/ground_drop_spatial_index.gd "$project/scripts/"
+          cp client/scripts/peer_damage_visual_policy.gd "$project/scripts/"
           cp client/tests/ground_drop_index_stress_regression.gd "$project/tests/"
+          cp client/tests/peer_normal_damage_visual_regression.gd "$project/tests/"
           cp client/tests/remote_multiplayer_motion_regression.gd "$project/tests/"
           cp client/tests/viewport_aoi_radius_regression.gd "$project/tests/"
           cp client/tests/multiplayer_motion_audit_regression.gd "$project/tests/"
@@ -97,7 +101,8 @@ jobs:
             viewport_aoi_radius_regression.gd \
             multiplayer_motion_audit_regression.gd \
             multiplayer_20_actors_motion_regression.gd \
-            ground_drop_index_stress_regression.gd; do
+            ground_drop_index_stress_regression.gd \
+            peer_normal_damage_visual_regression.gd; do
             echo "==== $script ===="
             timeout 40s /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path "$project" \
               --script "res://tests/$script" 2>&1 | tee -a godot-motion.log
@@ -108,6 +113,7 @@ jobs:
           grep -Fq '[MOTION_AUDIT] ALL PASS' godot-motion.log
           grep -Fq '[MULTI20_MOTION_TEST] ALL PASS' godot-motion.log
           grep -Fq '[MASS_DROPS_TEST] ALL PASS' godot-motion.log
+          grep -Fq '[PEER_DAMAGE_VISUAL_TEST] ALL PASS' godot-motion.log
       - name: Scene/packet integration regressions (requires original art)
         shell: bash
         run: |
