@@ -39,12 +39,12 @@ using SGO.Server.SmokeTests.Integration;
 
 // Fast, independent suites can be run without loading legacy GameData or SQLite:
 // dotnet run --project tests/SGO.Server.SmokeTests -- --suite protocol
-// Accepted suites: protocol, announcements, world, concurrency, all (default).
+// Accepted suites: protocol, announcements, world, concurrency, drops, all (default).
 if (args.Length != 0)
 {
     if (args.Length != 2 || args[0] != "--suite")
         throw new ArgumentException(
-            "Usage: --suite protocol|announcements|world|concurrency|all");
+            "Usage: --suite protocol|announcements|world|concurrency|drops|all");
 
     switch (args[1].ToLowerInvariant())
     {
@@ -59,6 +59,9 @@ if (args.Length != 0)
         case "announcements":
             AnnouncementSmokeTests.Run();
             Console.WriteLine("Announcement smoke passed.");
+            return;
+        case "drops":
+            MonsterDropRateSmokeTests.Run(Directory.GetCurrentDirectory());
             return;
         case "world":
             BlockingMapSmokeTests.Run();
