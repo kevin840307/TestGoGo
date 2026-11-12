@@ -32,3 +32,19 @@
 4. 大量怪物／掉落物或鏡頭外圍，檢查 `[MULTIPLAYER_PACKET_AUDIT]` 的 `EntityDamage`，並與視覺數字相對照；CI 的世界/載入測試不是完整實機保證。
 
 **不要**把數字問題推回 Server AI Tick：已證明正常同圖普通傷害封包可到旁觀者；極端 Server 延遲是另一項效能議題，需分別驗證。
+
+
+## 2026-11-12 13:50 後續實機回報：真正造成 Bot 普攻沒傷害的主因
+
+再次檢查發現 **`WireLoadProbe.InteractiveBots` 曾在距怪 92 單位時就停止接近、播放 `attack_aa` 並送出 `AttackEntity`**，但 Server `CombatService.NormalAttackWorldRange(80, 0)` 的普通近戰有效距離只有 `sqrt(45²-200)≈42.72`，另加 24 單位網路延遲容忍，總共約 **66.7**。距離 92 的 Bot 會被 Server 拒絕並只收到 SystemMessageFlash。由於 Bot 預先送了 `SyncState attack_aa`，觀眾看到「普通攻擊動作」卻不見傷害數字，怪物 HP 也不會減少。技能使用自己的射程，故技能仍能造成傷害／擊殺。這與「Server 有廣播成功的普攻」並不衝突：**成功與被拒的攻擊是不同路徑**。
+
+**修正**：專用 Bot 接近距離從 92 → **44**；Server 距離／障礙／HP／掉落判定完全保留。新增 `ConfirmedNormalAttackHits`、`ConfirmedSkillHits`、`ConfirmedMisses`、`OutOfRangeRejects`，不再以送包次數或技能傷害冒充普通攻擊命中。
+
+GitHub Actions `Bot normal-hit accuracy (real encrypted WebSockets)` RUN `43232849601`：8 個 Bot、Map13、約 75 秒、**215 個普攻請求、196 個確實造成正傷害的普攻事件、0 個距離太遠拒絕、202 個帶自身 KillerID 的死亡事件**。專用 .NET 8 Server／Bot 已建置並以獨立測試資料庫確認。這組數據證明 **Bot 普攻現在會真正扣血與擊殺**；但仍需 Godot 客戶端實機確認浮動數字的畫面結果。
+
+### MISS 的真實語義
+
+- 原本 `FloatingTextManager.show_damage()` 把 `MISS` 文字放在 `elif`：當 MISS 的 SpriteFrames 素材存在時只播放動畫，**不會出現 MISS 文字**。現在已修改為兩者可以同時顯示。
+- 其他玩家普通攻擊若 Server 傳來 `EntityDamage.Damage=0`，`PeerDamageVisualPolicy` 也會讓旁觀者看到 MISS，包括怪物場景尚未生成時使用權威座標／AOI 快取座標。
+- **目前 Server 的 `CombatService.Attack()` 普通攻擊命中後使用 `Math.Max(1, effective.Attack)`，因此尚未實作普通攻擊閃避造成 `Damage=0` 的隨機規則；有命中就是至少 1 傷害。距離太遠／障礙物拒絕不代表 MISS，Client 不得虛構假 MISS 封包。** 本輪修的是有真實 MISS 封包時一定會顯示文字，以及 Bot 不再製造大量無效揮刀。
+- 使用者已表明不需再新增以出生點為中心的 Leash／返回出生點；保留原有 `AggroRadius=420`／`LoseTargetRadius=700`，不在這次功能修正中改動怪物追蹤半徑。
