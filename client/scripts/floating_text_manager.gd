@@ -200,37 +200,11 @@ func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: 
 				miss_effect.modulate.a = 1.0
 
 				miss_effect.play(anim_name)
-		elif not GameManager or GameManager.should_show_damage_numbers():
-
-			var dmg_lbl = _get_free_label()
-			if dmg_lbl:
-				_reset_label_tweens(dmg_lbl)
-				dmg_lbl.text = "MISS"
-				dmg_lbl.add_theme_constant_override("outline_size", 6)
-
-
-				if is_player:
-					dmg_lbl.add_theme_color_override("font_color", GameConstants.COLOR_DMG_MISS)
-					dmg_lbl.add_theme_color_override("font_outline_color", GameConstants.COLOR_DMG_MISS_OUTLINE)
-				elif is_pet:
-					dmg_lbl.add_theme_color_override("font_color", GameConstants.COLOR_DMG_PET_MISS)
-					dmg_lbl.add_theme_color_override("font_outline_color", GameConstants.COLOR_DMG_PET_MISS_OUTLINE)
-				else:
-					dmg_lbl.add_theme_color_override("font_color", GameConstants.COLOR_DMG_MONSTER_MISS)
-					dmg_lbl.add_theme_color_override("font_outline_color", GameConstants.COLOR_DMG_MONSTER_MISS_OUTLINE)
-
-				dmg_lbl.add_theme_font_size_override("font_size", 22)
-				dmg_lbl.global_position = target.global_position + Vector2(-25, -40)
-				dmg_lbl.visible = true
-				dmg_lbl.modulate.a = 1.0
-
-				var floor_y = dmg_lbl.global_position.y
-				var tween = create_tween().set_parallel(true)
-				dmg_lbl.set_meta("tween", tween)
-
-				tween.tween_property(dmg_lbl, "global_position:y", floor_y - 50.0, 0.8).set_trans(Tween.TRANS_LINEAR)
-				tween.tween_property(dmg_lbl, "modulate:a", 0.0, 0.6).set_delay(0.2)
-				tween.chain().tween_callback( func(): dmg_lbl.visible = false)
+		# A valid server MISS must have text even when the original blue
+		# Miss sprite exists. Previously the 'elif' made MISS text disappear
+		# exactly when the effect asset was available.
+		if not GameManager or GameManager.should_show_damage_numbers():
+			show_miss_at(target.global_position, is_player, is_pet)
 		return
 
 
@@ -272,6 +246,43 @@ func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: 
 		_damage_queue.append({"target": weakref(target), "position": hit_position, "player": hit_is_player, "pet": hit_is_pet, "val": damage, "crit": is_crit, "dir": 0.0, "split": false})
 	set_process(true)
 
+func show_miss_at(world_position: Vector2, is_player: bool = false, is_pet: bool = false, force_visible_peer: bool = false) -> void:
+	# Only call for a real authoritative EntityDamage with Damage=0.
+	# Out-of-range/blocked AttackEntity commands are NOT genuine misses.
+	if GameManager and not GameManager.should_show_damage_numbers():
+		return
+	var viewport: Viewport = get_viewport()
+	if is_instance_valid(viewport) and not force_visible_peer:
+		var screen_pos: Vector2 = viewport.get_canvas_transform() * world_position
+		if not viewport.get_visible_rect().grow(200.0).has_point(screen_pos):
+			return
+	var dmg_lbl: Label = _get_free_label()
+	if not is_instance_valid(dmg_lbl):
+		return
+	_reset_label_tweens(dmg_lbl)
+	dmg_lbl.text = "MISS"
+	dmg_lbl.add_theme_constant_override("outline_size", 6)
+	if is_player:
+		dmg_lbl.add_theme_color_override("font_color", GameConstants.COLOR_DMG_MISS)
+		dmg_lbl.add_theme_color_override("font_outline_color", GameConstants.COLOR_DMG_MISS_OUTLINE)
+	elif is_pet:
+		dmg_lbl.add_theme_color_override("font_color", GameConstants.COLOR_DMG_PET_MISS)
+		dmg_lbl.add_theme_color_override("font_outline_color", GameConstants.COLOR_DMG_PET_MISS_OUTLINE)
+	else:
+		dmg_lbl.add_theme_color_override("font_color", GameConstants.COLOR_DMG_MONSTER_MISS)
+		dmg_lbl.add_theme_color_override("font_outline_color", GameConstants.COLOR_DMG_MONSTER_MISS_OUTLINE)
+	dmg_lbl.add_theme_font_size_override("font_size", 22)
+	dmg_lbl.global_position = world_position + Vector2(-25.0, -40.0)
+	dmg_lbl.visible = true
+	dmg_lbl.modulate.a = 1.0
+	var floor_y: float = dmg_lbl.global_position.y
+	var tween: Tween = create_tween().set_parallel(true)
+	dmg_lbl.set_meta("tween", tween)
+	tween.tween_property(dmg_lbl, "global_position:y", floor_y - 50.0, 0.8).set_trans(Tween.TRANS_LINEAR)
+	tween.tween_property(dmg_lbl, "modulate:a", 0.0, 0.6).set_delay(0.2)
+	tween.chain().tween_callback(func(): dmg_lbl.visible = false)
+
+
 func show_remote_normal_damage(target: Node2D, damage: int, is_crit: bool, hit_delay: float) -> void:
 	# The peer's EntityDamage is ALREADY the authoritative hit result.
 	# Waiting for the remote actor's animation, delayed FX and an additional
@@ -280,6 +291,11 @@ func show_remote_normal_damage(target: Node2D, damage: int, is_crit: bool, hit_d
 	if not is_instance_valid(target) or not target.is_inside_tree():
 		return
 	if GameManager and GameManager.is_afk_mode_active():
+		return
+	if damage <= 0:
+		# A server-confirmed dodge is a visible MISS, not an invisible
+		# no-op. Keep its FX independent of the numerical damage path.
+		show_damage(target, 0, is_crit, 0.0)
 		return
 	if damage > 0 and (not GameManager or GameManager.should_show_damage_numbers()):
 		# An existing visible monster knows its real world coordinate. Never
@@ -297,13 +313,16 @@ func show_remote_normal_damage(target: Node2D, damage: int, is_crit: bool, hit_d
 func show_damage_at(world_position: Vector2, damage: int, is_crit: bool = false, hit_delay: float = 0.0) -> void:
 	# A monster may have an authoritative SpawnEntity but still be waiting
 	# for its visual scene. Do not lose ordinary peer damage in that gap.
-	if damage <= 0 or (GameManager and not GameManager.should_show_damage_numbers()):
+	if GameManager and not GameManager.should_show_damage_numbers():
 		return
 	if hit_delay > 0.0:
 		await get_tree().create_timer(hit_delay).timeout
 	if GameManager and not GameManager.should_show_damage_numbers():
 		return
-	_spawn_bouncing_number_at(world_position, false, false, damage, is_crit, 0.0, false)
+	if damage <= 0:
+		show_miss_at(world_position)
+	else:
+		_spawn_bouncing_number_at(world_position, false, false, damage, is_crit, 0.0, false)
 
 func _process(delta: float) -> void :
 	var pending_count: = _damage_queue.size() - _damage_queue_head
