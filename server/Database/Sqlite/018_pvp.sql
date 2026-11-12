@@ -1,0 +1,6 @@
+-- Player PvP/name-color state.
+-- Existing databases default to normal white-name PvP eligibility.
+-- @ensure-column characters pk_status INTEGER NOT NULL DEFAULT 1
+-- @ensure-column characters red_man INTEGER NOT NULL DEFAULT 0
+-- @ensure-column characters red_man_kill_left INTEGER NOT NULL DEFAULT 0
+-- @ensure-column characters pk_pink_until_utc_ms INTEGER NOT NULL DEFAULT 0
