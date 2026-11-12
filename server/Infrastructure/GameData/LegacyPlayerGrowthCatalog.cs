@@ -181,7 +181,6 @@ public sealed class LegacyPlayerGrowthCatalog
                 .Select(v => int.TryParse(v.Trim(), out var n) ? n : 0)
                 .ToArray())
             .ToArray();
-    }
 
     private static int FallbackExperienceThreshold(int level)
     {
