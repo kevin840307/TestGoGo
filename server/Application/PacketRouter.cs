@@ -5442,7 +5442,7 @@ public sealed class PacketRouter
                 if (message.Equals("/pk", StringComparison.OrdinalIgnoreCase) ||
                     message.StartsWith("/pk ", StringComparison.OrdinalIgnoreCase))
                 {
-                    var mode = message.Split(' ',
+                    var mode = message.ToLowerInvariant().Split(' ',
                         StringSplitOptions.RemoveEmptyEntries |
                         StringSplitOptions.TrimEntries);
                     if (mode.Length != 2 ||

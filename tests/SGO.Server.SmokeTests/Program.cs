@@ -74,6 +74,7 @@ if (args.Length != 0)
             WorldEntityAoiSnapshotLeaseSmokeTests.Run();
             MapAiOwnerSpatialIndexSmokeTests.Run();
             NormalAttackRangeSmokeTests.Run();
+            PvpNameColorSmokeTests.Run();
             Console.WriteLine("World/AOI smoke passed.");
             return;
         case "concurrency":
@@ -122,6 +123,7 @@ WorldEntityAoiSnapshotRaceSmokeTests.Run();
 WorldEntityAoiSnapshotLeaseSmokeTests.Run();
 MapAiOwnerSpatialIndexSmokeTests.Run();
 NormalAttackRangeSmokeTests.Run();
+PvpNameColorSmokeTests.Run();
 ConcurrencySmokeTests.Run(repoRoot);
 EconomyConcurrencySmokeTests.Run();
 EconomyRequestGuardSmokeTests.Run();

@@ -754,7 +754,7 @@ func _on_mouse_entered() -> void :
 
 
 		var state = "player"
-		var in_safe_zone = data_model.map_id in SAFE_MAP_IDS
+		var in_safe_zone = local_player.data_model.map_id in SAFE_MAP_IDS
 
 
 		if local_player and is_instance_valid(local_player) and local_player.data_model.pk_status == 1 and data_model.pk_status == 1 and data_model.hp > 0 and not in_safe_zone:
