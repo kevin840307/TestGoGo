@@ -1867,6 +1867,18 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 				is_primary = false
 
 	var local_player = GameManager.current_player if GameManager else null
+	# A normal EntityDamage packet from another player is authoritative
+	# combat feedback, not a prediction based on their sprite frames.
+	# Keep this separate from the attacker's local animation/FX timeline.
+	var is_remote_normal_hit: bool = (
+		target_type == 1 and skill_id == 0 and damage > 0
+		and attacker_id > 0 and attacker_id < 1000000
+		and (
+			not is_instance_valid(local_player)
+			or not "data_model" in local_player
+			or int(local_player.data_model.db_id) != attacker_id
+		)
+	)
 	var target_node = null
 	var attacker_node = null
 	var hit_delay: float = 0.3
@@ -1962,8 +1974,19 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 	if is_instance_valid(target_node):
 		var is_miss = (damage <= 0)
 
-
-		if is_twingun and damage > 1 and not is_miss and skill_id == 0:
+		if is_remote_normal_hit:
+			# Peer numbers cannot depend on remote attack animation progress,
+			# delayed FX or a monster that might die during the wait.
+			# One packet = one real total; no additional fabricated damage.
+			if current_hp <= 0:
+				target_node.set_meta("fatal_hit_delay", minf(hit_delay, 0.45))
+			if target_node.has_method("update_hp"):
+				target_node.update_hp(current_hp, hit_delay, false)
+			if FloatingTextManager:
+				FloatingTextManager.show_remote_normal_damage(
+					target_node, damage, is_crit, hit_delay
+				)
+		elif is_twingun and damage > 1 and not is_miss and skill_id == 0:
 			var split_percent = randf_range(0.4, 0.6)
 			var dmg1 = int(round(damage * split_percent))
 			var dmg2 = damage - dmg1
@@ -2020,7 +2043,10 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 		var cached_pos := Vector2(float(cached_monster.get("LocX", 0)), float(cached_monster.get("LocY", 0)))
 		var view_pos: Vector2 = get_viewport().get_canvas_transform() * cached_pos
 		if get_viewport().get_visible_rect().grow(80.0).has_point(view_pos) and FloatingTextManager:
-			FloatingTextManager.show_damage_at(cached_pos, damage, is_crit, hit_delay)
+			FloatingTextManager.show_damage_at(
+				cached_pos, damage, is_crit,
+				0.0 if is_remote_normal_hit else hit_delay
+			)
 
 
 
