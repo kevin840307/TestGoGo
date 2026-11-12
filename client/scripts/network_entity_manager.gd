@@ -1753,7 +1753,8 @@ func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String
 			print("[MONSTER_NET_STATE] id=", entity_id,
 				" state=", new_state,
 				" dir=", new_dir)
-		if target_node.has_method("apply_network_state"):
+		var owns_network_action: bool = target_node.has_method("apply_network_state")
+		if owns_network_action:
 			target_node.apply_network_state(new_state, new_dir)
 		else:
 			if "current_state" in target_node:
@@ -1766,16 +1767,19 @@ func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String
 			target_node.has_method("should_preserve_hit_state")
 			and target_node.should_preserve_hit_state(new_state)
 		)
-		if "is_action_locked" in target_node:
-			# The one-shot remote hit reaction owns its action lock until
-			# its final animation frame. Do not release it on a delayed walk.
+		if "is_action_locked" in target_node and not owns_network_action:
+			# NetworkPlayer / MonsterEntity manage their own one-shot lifecycle.
+			# Clearing the lock here right after apply_network_state() makes
+			# the next MoveEntity cut off hit/attack frames.
 			if not preserve_hit:
 				target_node.is_action_locked = false
 		if target_node.has_method("adjust_interact_area_for_death"):
 			target_node.adjust_interact_area_for_death(new_state == "death")
 		# MonsterEntity already syncs itself. A remote hurt pose must also
 		# not be reset/flip midway by a delayed client walk/idle packet.
-		if int(_active_entity_types.get(entity_id, -1)) != 1 and target_node.has_method("sync_animation") and not preserve_hit:
+		if int(_active_entity_types.get(entity_id, -1)) != 1 and not owns_network_action and target_node.has_method("sync_animation") and not preserve_hit:
+			# NetworkPlayer synchronizes inside apply_network_state already;
+			# replaying it here duplicates layered paper-doll work.
 			target_node.sync_animation()
 		if target_node.has_method("refresh_network_physics"):
 			target_node.refresh_network_physics()
