@@ -250,6 +250,16 @@ public sealed class SqliteGameStore : IGameStore
     public Dictionary<string, object>? GetCharacter(long accountId, long dbid)
     {
         using var db = Open();
+        return ReadCharacterForAccount(db, accountId, dbid);
+    }
+
+    // A damage UPDATE has already opened an SQLite connection. Reuse it for
+    // the exact original character/club/title/transform/timed-stat read, rather
+    // than opening a second pooled connection and reapplying its PRAGMAs
+    // while holding the hot AI writer lock. No caching or changed combat data.
+    private Dictionary<string, object>? ReadCharacterForAccount(
+        SqliteConnection db, long accountId, long dbid)
+    {
         RepairOversizedCharacterExperience(db, accountId);
         using var cmd = CharacterQuery(db);
         cmd.CommandText += " WHERE account_id=$a AND id=$id LIMIT 1";
@@ -11577,7 +11587,9 @@ public sealed class SqliteGameStore : IGameStore
         if (cmd.ExecuteNonQuery() != 1)
             return null;
 
-        return GetCharacter(accountId, dbid);
+        // Keep the full original payload and all live, post-damage fields;
+        // only avoid the redundant Open() on this hot path.
+        return ReadCharacterForAccount(db, accountId, dbid);
         }
     }
 
