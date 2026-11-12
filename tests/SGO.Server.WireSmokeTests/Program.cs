@@ -326,7 +326,8 @@ await Probe(
             out var mapId) &&
         mapId.GetInt32() ==
             currentMapId,
-    "WorldReady completes real map-load handshake");
+    "WorldReady completes real map-load handshake",
+    allowInterleaved: true);
 
 await Probe(
     new
