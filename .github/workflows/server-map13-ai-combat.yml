@@ -8,6 +8,7 @@ on:
       - 'server/Program.cs'
       - 'server/Application/World/SharedMapAiTicker.cs'
       - 'server/Application/Combat/CombatService.cs'
+      - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
       - 'tests/SGO.Server.WireLoadProbe/**'
   push:
     branches: [feature/local-server-net8]
@@ -16,6 +17,7 @@ on:
       - 'server/Program.cs'
       - 'server/Application/World/SharedMapAiTicker.cs'
       - 'server/Application/Combat/CombatService.cs'
+      - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
       - 'tests/SGO.Server.WireLoadProbe/**'
   workflow_dispatch:
 
