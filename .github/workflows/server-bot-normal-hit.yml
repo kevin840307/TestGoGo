@@ -5,12 +5,14 @@ on:
     branches: [feature/local-server-net8]
     paths:
       - 'tests/SGO.Server.WireLoadProbe/**'
+      - 'tests/test_mass_entity_visual_contract.py'
       - 'server/Application/Combat/CombatService.cs'
       - '.github/workflows/server-bot-normal-hit.yml'
   pull_request:
     branches: [feature/local-server-net8]
     paths:
       - 'tests/SGO.Server.WireLoadProbe/**'
+      - 'tests/test_mass_entity_visual_contract.py'
       - 'server/Application/Combat/CombatService.cs'
   workflow_dispatch:
 
