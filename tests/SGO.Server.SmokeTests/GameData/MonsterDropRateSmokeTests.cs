@@ -31,14 +31,17 @@ internal static class MonsterDropRateSmokeTests
         long reducedDrops = 0;
         long comparedKills = 0;
         long enemiesWithDrops = 0;
+        long mappingMismatches = 0;
+        long zeroChanceViolations = 0;
+        long subsetViolations = 0;
 
         for (var enemyId = 1; enemyId <= 300; enemyId++)
         {
             if (original.GetDrops(enemyId).Count == 0)
                 continue;
             enemiesWithDrops++;
-            Check(original.GetDrops(enemyId).Count == normal.GetDrops(enemyId).Count,
-                "original enemy item and rarity mappings remain intact");
+            if (original.GetDrops(enemyId).Count != normal.GetDrops(enemyId).Count)
+                mappingMismatches++;
             for (var sequence = 1; sequence <= 180; sequence++)
             {
                 var entityId = 900000 + enemyId;
@@ -47,16 +50,21 @@ internal static class MonsterDropRateSmokeTests
                 var baseline = original.RollDrops(enemyId, entityId, sequence, 0, 1.0);
                 var balanced = normal.RollDrops(enemyId, entityId, sequence, 0, 1.0);
                 var none = zero.RollDrops(enemyId, entityId, sequence, 200, 10.0);
-                Check(none.Count == 0, "zero chance prevents item drops at any luck/GM rate");
+                if (none.Count != 0)
+                    zeroChanceViolations++;
                 var baseSet = baseline.Select(d => d.ItemId).ToHashSet();
-                Check(balanced.All(d => baseSet.Contains(d.ItemId)),
-                    "lowered drop chance does not fabricate any item for same kill");
+                if (!balanced.All(d => baseSet.Contains(d.ItemId)))
+                    subsetViolations++;
                 originalDrops += baseline.Count;
                 reducedDrops += balanced.Count;
                 comparedKills++;
             }
         }
 
+        Check(mappingMismatches == 0,
+            "all original enemy item mappings and slot counts remain intact");
+        Check(zeroChanceViolations == 0 && subsetViolations == 0,
+            "no zero-chance items and no fabricated drops across the real kill sample");
         Check(enemiesWithDrops > 0 && originalDrops > 0,
             "recovered enemy table provides measurable item drop outcomes");
         Check(reducedDrops > 0 && reducedDrops < originalDrops,
