@@ -1913,6 +1913,9 @@ public sealed class CombatService
         }
 
         MonsterRuntimeState? primaryMonster = null;
+        OnlinePlayerPresence? attackTargetPresence = null;
+        Dictionary<string, object>? attackTargetCharacter = null;
+        var attackTargetWasNormalWhite = false;
         OnlinePlayerPresence? reviveTargetPresence = null;
         Dictionary<string, object>? reviveTargetCharacter = null;
         OnlinePlayerPresence? healTargetPresence = null;
@@ -1924,7 +1927,7 @@ public sealed class CombatService
         double centerX = targetX;
         double centerY = targetY;
 
-        if (isAttack)
+        if (isAttack && targetType == 1)
             SyncSessionMonsters(session);
 
         if (isAttack)
@@ -1940,18 +1943,53 @@ public sealed class CombatService
             }
             else
             {
-                if (targetType != 1 ||
-                    !session.Monsters.TryGetValue(
-                        targetEntityId,
-                        out primaryMonster) ||
-                    !primaryMonster.IsAlive ||
-                    primaryMonster.MapId != session.CurrentMapId)
+                if (targetType == 1)
                 {
-                    return [Flash("技能目標無效")];
-                }
+                    if (!session.Monsters.TryGetValue(
+                            targetEntityId,
+                            out primaryMonster) ||
+                        !primaryMonster.IsAlive ||
+                        primaryMonster.MapId != session.CurrentMapId)
+                    {
+                        return [Flash("技能目標無效")];
+                    }
 
-                centerX = primaryMonster.X;
-                centerY = primaryMonster.Y;
+                    centerX = primaryMonster.X;
+                    centerY = primaryMonster.Y;
+                }
+                else if (targetType == 0)
+                {
+                    attackTargetPresence =
+                        _broadcasts.FindCharacter(targetEntityId);
+                    if (attackTargetPresence is null)
+                        return [Flash("技能目標不存在或已離線")];
+
+                    attackTargetCharacter = _store.GetCharacter(
+                        attackTargetPresence.AccountId,
+                        attackTargetPresence.CharacterId);
+                    if (attackTargetCharacter is null)
+                        return [Flash("技能目標無效")];
+
+                    if (!_pvp.CanAttack(
+                            session,
+                            character,
+                            attackTargetPresence,
+                            attackTargetCharacter,
+                            now,
+                            out var rejectReason))
+                        return [Flash(rejectReason)];
+
+                    attackTargetWasNormalWhite =
+                        PvpService.IsNormalWhite(
+                            attackTargetCharacter,
+                            now);
+                    centerX = attackTargetPresence.X;
+                    centerY = attackTargetPresence.Y;
+                }
+                else
+                {
+                    return [Flash("技能目標類型無效")];
+                }
 
                 var playerX = session.LastX;
                 var playerY = session.LastY;
@@ -2571,6 +2609,109 @@ public sealed class CombatService
                     HPPct = hpPercent,
                     MPPct = mpPercent
                 });
+        }
+
+        if (isAttack &&
+            attackTargetPresence is not null &&
+            attackTargetCharacter is not null)
+        {
+            updated = _pvp.MarkHostileAttack(
+                accountId,
+                session.CharacterId.Value,
+                updated,
+                attackTargetWasNormalWhite,
+                now) ?? updated;
+
+            var targetAssets = _store.GetCharacterAssets(
+                attackTargetPresence.AccountId,
+                attackTargetPresence.CharacterId);
+            var targetStats = ApplyActiveSkillBuffs(
+                CharacterStatCalculator.Calculate(
+                    attackTargetCharacter,
+                    targetAssets,
+                    _current),
+                attackTargetPresence.CharacterId,
+                now);
+
+            var damage = Math.Max(
+                1,
+                levelData.BaseDamage +
+                (levelData.DamageType == 1
+                    ? effective.MagicAttack
+                    : effective.Attack) *
+                Math.Max(0, levelData.DamageMultiplier) / 100);
+
+            if (levelData.SkillType == 7 &&
+                levelData.BaseDamage == 0 &&
+                levelData.DamageMultiplier == 0)
+            {
+                damage = Math.Max(
+                    1,
+                    effective.Attack +
+                    effective.MagicAttack);
+            }
+
+            // PvP keeps the existing skill formula, then applies the target's
+            // corresponding defense. This avoids turning monster-only raw
+            // damage into an unavoidable player one-shot path.
+            var defense = levelData.DamageType == 1
+                ? Math.Max(0, targetStats.MagicDefense)
+                : Math.Max(0, targetStats.Defense);
+            damage = Math.Max(
+                1,
+                damage - defense / 5);
+
+            var hpBefore =
+                Convert.ToInt32(
+                    attackTargetCharacter["HP"]);
+            var damaged = _store.ApplyDamage(
+                attackTargetPresence.AccountId,
+                attackTargetPresence.CharacterId,
+                damage);
+
+            if (damaged is null)
+                return [Flash("玩家技能傷害結算失敗")];
+
+            var currentHp =
+                Convert.ToInt32(damaged["HP"]);
+
+            packets.Add(new
+            {
+                Type = "EntityDamage",
+                TargetID = attackTargetPresence.CharacterId,
+                TargetType = 0,
+                Damage = damage,
+                CurrentHP = currentHp,
+                MaxHP = targetStats.MaxHP,
+                IsCrit = false,
+                SkillID = skillId,
+                SkillLevel = skillLevel,
+                AttackerID = session.CharacterId.Value
+            });
+
+            if (hpBefore > 0 && currentHp <= 0)
+            {
+                packets.Add(new
+                {
+                    Type = "EntityDeath",
+                    EntityID = attackTargetPresence.CharacterId,
+                    EntityType = 0,
+                    KillerID = session.CharacterId.Value
+                });
+
+                updated = _pvp.MarkWhitePlayerKill(
+                    accountId,
+                    session.CharacterId.Value,
+                    updated,
+                    attackTargetWasNormalWhite,
+                    now) ?? updated;
+            }
+
+            BroadcastPublicStatus(
+                session,
+                attackTargetPresence.CharacterId,
+                damaged,
+                targetStats);
         }
 
         if (isAttack &&
