@@ -80,6 +80,7 @@ var _emotion_tween: Tween
 @onready var option_fps_limit: Control = $WindowsContainer / SettingsWindow / Tabs / Performance / OptionFpsLimit
 @onready var option_performance_load: Control = $WindowsContainer / SettingsWindow / Tabs / Performance / OptionPerformanceLoad
 @onready var option_combat_render: Control = $WindowsContainer / SettingsWindow / Tabs / Performance / OptionCombatRender
+@onready var option_unfocus: OptionButton = $WindowsContainer / SettingsWindow / Tabs / Performance / OptionUnfocus
 @onready var option_simplify_players: Control = $WindowsContainer / SettingsWindow / Tabs / Visibility / OptionSimplifyPlayers
 @onready var option_simplify_monsters: Control = $WindowsContainer / SettingsWindow / Tabs / Visibility / OptionSimplifyMonsters
 var mall_window: Control = null
@@ -261,6 +262,7 @@ var current_pet_combat_mode: int = 1
 var current_fps_limit: int = GameConstants.SETTING_DEFAULT_FOREGROUND_FPS_LIMIT
 var current_performance_load_mode: int = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
 var current_combat_render_mode: int = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
+var current_unfocus_power_save_enabled: bool = GameConstants.SETTING_DEFAULT_UNFOCUS_POWER_SAVE_ENABLED
 var current_simplify_players_mode: int = GameConstants.SETTING_DEFAULT_OTHER_PLAYERS_VISIBILITY
 var current_simplify_effects: bool = GameConstants.SETTING_DEFAULT_SIMPLIFY_EFFECTS
 var current_simplify_drops: int = GameConstants.SETTING_DEFAULT_SIMPLIFY_GROUND_DROPS
@@ -829,6 +831,14 @@ func _setup_window_manager() -> void :
 			if not option_combat_render.gui_input.is_connected(_on_option_gui_input):
 				option_combat_render.gui_input.connect(_on_option_gui_input.bind(option_combat_render))
 
+		if option_unfocus is OptionButton:
+			option_unfocus.select(1 if current_unfocus_power_save_enabled else 0)
+			if not option_unfocus.item_selected.is_connected(_on_opt_unfocus_item_selected):
+				option_unfocus.item_selected.connect(_on_opt_unfocus_item_selected)
+			option_unfocus.focus_mode = Control.FOCUS_NONE
+			if not option_unfocus.gui_input.is_connected(_on_option_gui_input):
+				option_unfocus.gui_input.connect(_on_option_gui_input.bind(option_unfocus))
+
 		if option_simplify_players is OptionButton:
 			option_simplify_players.select(current_simplify_players_mode)
 			if not option_simplify_players.item_selected.is_connected(_on_opt_simplify_players_item_selected):
@@ -867,6 +877,7 @@ func _setup_window_manager() -> void :
 			option_fps_limit,
 			option_performance_load,
 			option_combat_render,
+			option_unfocus,
 			option_simplify_players,
 			option_simplify_monsters,
 			option_simplify_effects,
@@ -3212,6 +3223,15 @@ func _load_game_settings() -> void :
 				GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
 			)
 		)))
+		current_unfocus_power_save_enabled = bool(config.get_value(
+			section,
+			GameConstants.SETTING_KEY_UNFOCUS_POWER_SAVE_ENABLED,
+			config.get_value(
+				fallback_section,
+				GameConstants.SETTING_KEY_UNFOCUS_POWER_SAVE_ENABLED,
+				GameConstants.SETTING_DEFAULT_UNFOCUS_POWER_SAVE_ENABLED
+			)
+		))
 		current_combat_render_mode = ClientPerformanceProfile.sanitize_combat_mode(int(config.get_value(
 			section,
 			GameConstants.SETTING_KEY_COMBAT_RENDER_MODE,
@@ -3250,6 +3270,7 @@ func _load_game_settings() -> void :
 		current_fps_limit = GameConstants.SETTING_DEFAULT_FOREGROUND_FPS_LIMIT
 		current_performance_load_mode = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
 		current_combat_render_mode = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
+		current_unfocus_power_save_enabled = GameConstants.SETTING_DEFAULT_UNFOCUS_POWER_SAVE_ENABLED
 		current_simplify_players_mode = GameConstants.SETTING_DEFAULT_OTHER_PLAYERS_VISIBILITY
 		current_simplify_monsters_mode = GameConstants.SETTING_DEFAULT_ORDINARY_MONSTERS_VISIBILITY
 		current_simplify_effects = GameConstants.SETTING_DEFAULT_SIMPLIFY_EFFECTS
@@ -3257,6 +3278,7 @@ func _load_game_settings() -> void :
 		current_show_damage_numbers = GameConstants.SETTING_DEFAULT_SHOW_DAMAGE_NUMBERS
 
 	if GameManager:
+		GameManager.set_unfocus_power_save_enabled(current_unfocus_power_save_enabled)
 		GameManager.set_foreground_fps_limit(current_fps_limit)
 		GameManager.set_performance_modes(
 			current_performance_load_mode,
@@ -3280,6 +3302,11 @@ func _save_game_settings() -> void :
 		current_pet_combat_mode
 	)
 	config.set_value(section, GameConstants.SETTING_KEY_FOREGROUND_FPS_LIMIT, current_fps_limit)
+	config.set_value(
+		section,
+		GameConstants.SETTING_KEY_UNFOCUS_POWER_SAVE_ENABLED,
+		current_unfocus_power_save_enabled
+	)
 	config.set_value(
 		section,
 		GameConstants.SETTING_KEY_PERFORMANCE_LOAD_MODE,
@@ -3341,6 +3368,13 @@ func _on_opt_performance_load_item_selected(index: int) -> void:
 			current_performance_load_mode,
 			current_combat_render_mode
 		)
+
+func _on_opt_unfocus_item_selected(index: int) -> void:
+	current_unfocus_power_save_enabled = index == 1
+	_save_game_settings()
+	if GameManager:
+		GameManager.set_unfocus_power_save_enabled(current_unfocus_power_save_enabled)
+
 
 func _on_opt_combat_render_item_selected(index: int) -> void:
 	current_combat_render_mode = ClientPerformanceProfile.sanitize_combat_mode(index)
