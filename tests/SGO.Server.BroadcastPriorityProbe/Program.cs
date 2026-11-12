@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using System.Diagnostics;
 using System.Text.Json;
 using SGO.Server.Infrastructure.Persistence.Sqlite;
+using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Application.Messaging;
 using SGO.Server.Application.Combat;
 using SGO.Server.Application.Character;
@@ -589,6 +590,69 @@ using (var next = ClientProtocol.Decode(Encoding.UTF8.GetString(nestedSecond)))
 hub.Unregister(fast.ConnectionId);
 hub.Unregister(normal.ConnectionId);
 Check(!hub.HasPendingPlayerPriority(fast.ConnectionId), "unregister cleans priority queue");
+// Twenty simultaneous GM level commands must not mutate a shared plain
+// Dictionary when the growth CSVs are first loaded. New catalog per test
+// makes this a cold-load contention test, not a warm-cache read-only test.
+var growthRoot = Path.Combine(Path.GetTempPath(),
+    "sgo-growth-race-" + Guid.NewGuid().ToString("N"));
+var growthPlayerRoot = Path.Combine(growthRoot, "Player");
+Directory.CreateDirectory(growthPlayerRoot);
+try
+{
+    foreach (var table in new[]
+    {
+        "AttBase_Newbie.csv", "CON_Boy.csv", "STR_Boy.csv",
+        "DEX_Boy.csv", "WIS_Boy.csv", "Player_Up_Lv.csv",
+        "ExpUse.csv"
+    })
+        File.WriteAllText(Path.Combine(growthPlayerRoot, table),
+            "10,20,30,40,50,60,70,80,90\n[end]\n");
+
+    var characterForGrowth = new Dictionary<string, object>
+    {
+        ["Level"] = 1, ["Race"] = 0, ["Career"] = 0,
+        ["Str"] = 5, ["Dex"] = 5, ["Con"] = 5, ["Wis"] = 5
+    };
+    var expectedGrowth = new LegacyPlayerGrowthCatalog(growthRoot)
+        .Calculate(characterForGrowth);
+    var coldCatalog = new LegacyPlayerGrowthCatalog(growthRoot);
+    var failures = new ConcurrentQueue<Exception>();
+    using var ready = new CountdownEvent(20);
+    using var start = new ManualResetEventSlim(false);
+    var workers = Enumerable.Range(0, 20).Select(_ => new Thread(() =>
+    {
+        try
+        {
+            ready.Signal();
+            start.Wait();
+            for (var n = 0; n < 200; n++)
+            {
+                var growth = coldCatalog.Calculate(characterForGrowth);
+                if (growth != expectedGrowth ||
+                    coldCatalog.ExperienceThresholdForLevel(1) != 10 ||
+                    coldCatalog.AbilityPointsPerLevel(1) != 10)
+                    throw new InvalidOperationException("growth cache returned inconsistent stats");
+            }
+        }
+        catch (Exception ex) { failures.Enqueue(ex); }
+    }) { IsBackground = true }).ToArray();
+    foreach (var worker in workers)
+        worker.Start();
+    Check(ready.Wait(TimeSpan.FromSeconds(10)),
+        "twenty growth callers reach cold-cache synchronization point");
+    start.Set();
+    foreach (var worker in workers)
+        Check(worker.Join(TimeSpan.FromSeconds(15)),
+            "growth cold-cache worker completes without deadlock");
+    Check(failures.IsEmpty,
+        "shared growth data cache is safe and deterministic across twenty concurrent GM level callers");
+}
+finally
+{
+    try { Directory.Delete(growthRoot, recursive: true); }
+    catch (IOException) { }
+}
+
 // A normal character read must never acquire SQLite's writer lock, even
 // while another connection is mid-transaction. The historical unconditional
 // UPDATE in GetCharacter blocked here for busy_timeout=5000 ms.
