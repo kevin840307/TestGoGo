@@ -5,6 +5,13 @@ using SGO.Server.Infrastructure.WorldData;
 
 internal static class InteractiveBots
 {
+    // These test accounts are unarmed Lv1 melee characters. Server uses
+    // sqrt(45^2 - 200) + 24px latency tolerance (~66.7px), NOT 92px.
+    // Stop nearer than the authoritative range so server movement/monster
+    // interpolation cannot turn a visual swing into an out-of-range reject.
+    // This affects only synthetic WireLoadProbe bots, not normal players.
+    internal const double NormalBotMeleeEngageRadius = 44.0;
+
     internal static async Task<int> RunAsync(string[] args)
     {
         var count = 20;
@@ -126,7 +133,7 @@ internal static class InteractiveBots
         Console.WriteLine($"[BOTS] Extra test monster spawns: {spawn} (0 = use existing map monsters).");
         Console.WriteLine("[BOTS] New bot accounts persist in the existing Server database.");
         Console.WriteLine("[BOTS] Requires Game__GmCommandsEnabled=true and Game__TestBotCommandsEnabled=true on Server.");
-        Console.WriteLine($"[BOTS] Lv1, ATK=60, MATK=45, DEF=1000, HP=20000; single-target skill cap=90; attack cadence={attackIntervalMs}ms.");
+        Console.WriteLine($"[BOTS] Lv1, ATK=60, MATK=45, DEF=1000, HP=20000; single-target skill cap=90; attack cadence={attackIntervalMs}ms; melee engage <= {NormalBotMeleeEngageRadius:F0}px (server accepts ~67px).");
 
         try
         {
@@ -404,7 +411,7 @@ internal static class InteractiveBots
                             var shouldMove = walkingToGround
                                 ? distanceSq > 32 * 32
                                 : target is not null &&
-                                  (distanceSq > 92 * 92 || !hasClearPath);
+                                  (distanceSq > NormalBotMeleeEngageRadius * NormalBotMeleeEngageRadius || !hasClearPath);
                             if (shouldMove)
                             {
                                 // Network position deltas stay bounded by the
@@ -434,7 +441,7 @@ internal static class InteractiveBots
                             // Only attack the selected monster after reaching
                             // real melee range and clear line of movement.
                             if (!walkingToGround && target is not null &&
-                                distanceSq <= 92 * 92 && hasClearPath &&
+                                distanceSq <= NormalBotMeleeEngageRadius * NormalBotMeleeEngageRadius && hasClearPath &&
                                 DateTimeOffset.UtcNow >= nextAttackAt)
                             {
                                 attackCount++;
@@ -536,9 +543,11 @@ internal static class InteractiveBots
                     $"roamerGroundClicks={Interlocked.Read(ref roamerGroundClicks)} " +
                     $"attack={Interlocked.Read(ref attacks)} " +
                     $"single={Interlocked.Read(ref singleSkills)} " +
-                    $"confirmedHits={damage} confirmedCasts={casts} " +
+                    $"confirmedHits={damage} confirmedNormals={live.Sum(b => b.BotWorld.ConfirmedNormalAttackHits)} " +
+                    $"confirmedSkillHits={live.Sum(b => b.BotWorld.ConfirmedSkillHits)} " +
+                    $"confirmedMisses={live.Sum(b => b.BotWorld.ConfirmedMisses)} confirmedCasts={casts} " +
                     $"confirmedKills={live.Sum(b => b.BotWorld.ConfirmedMonsterKills)} " +
-                    $"rejected={rejected} " +
+                    $"rejected={rejected} outOfRange={live.Sum(b => b.BotWorld.OutOfRangeRejects)} " +
                     $"corrections={live.Sum(b => b.PositionCorrections)} " +
                     $"errors={errors.Count}");
 
@@ -587,7 +596,12 @@ internal static class InteractiveBots
                 SingleTargetSkillPackets = singleSkills,
                  TestRecoveryPackets = heals,
                 AttackIntervalMs = attackIntervalMs,
+                NormalBotMeleeEngageRadius,
                 ConfirmedDamageHits = live.Sum(b => b.BotWorld.DamageHits),
+                ConfirmedNormalAttackHits = live.Sum(b => b.BotWorld.ConfirmedNormalAttackHits),
+                ConfirmedSkillHits = live.Sum(b => b.BotWorld.ConfirmedSkillHits),
+                ConfirmedMisses = live.Sum(b => b.BotWorld.ConfirmedMisses),
+                OutOfRangeRejects = live.Sum(b => b.BotWorld.OutOfRangeRejects),
                 ConfirmedSkillCasts = live.Sum(b => b.BotWorld.SkillCasts),
                 ObservedMonsterDeaths = live.Sum(b => b.BotWorld.MonsterDeaths),
                 ConfirmedMonsterKills = live.Sum(b => b.BotWorld.ConfirmedMonsterKills),
