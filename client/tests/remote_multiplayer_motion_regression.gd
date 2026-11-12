@@ -335,5 +335,31 @@ func _run() -> void:
 	_check(absf(cadence_endpoints[0] - cadence_endpoints[1]) < 8.0,
 		"legacy 50Hz and new 60Hz continuous motion agree for 10Hz server waypoints")
 
+	# A newly spawned peer starts exactly at SpawnEntity's authoritative
+	# location; the first subsequent move must take several physics frames.
+	var entering_peer := RemotePlayerMotion.new()
+	entering_peer.reset(Vector2(6000.0, 4800.0))
+	entering_peer.receive(Vector2(6020.0, 4800.0), 1000, 0.10)
+	var initial_visible := entering_peer.advance(1.0 / 60.0)
+	_check(initial_visible.x > 6000.0 and initial_visible.x < 6020.0,
+		"fresh peer first movement never visually teleports across its first waypoint")
+
+	# Remote attack/hurt poses must survive delayed walk/idle and direction
+	# packets; only a complete one-shot or bounded fallback may release them.
+	_check(RemotePlayerStatePolicy.network_state_is_one_shot("attack_aa") and
+		RemotePlayerStatePolicy.network_state_is_one_shot("hit_weapon_melee"),
+		"remote normal attacks and hit reactions are one-shot actions")
+	_check(RemotePlayerStatePolicy.preserve_hit_animation("hit_weapon_melee", true, "walk") and
+		RemotePlayerStatePolicy.preserve_hit_animation("attack_aa", true, "idle"),
+		"late motion states cannot interrupt an in-flight remote attack or hurt pose")
+	_check(not RemotePlayerStatePolicy.movement_direction_may_replace_animation(
+		"hit_weapon_melee", true) and not RemotePlayerStatePolicy.movement_may_replace_animation(
+		"attack_aa", true),
+		"late movement direction cannot flip an active combat action")
+	_check(RemotePlayerStatePolicy.damage_should_start_attack_visual(0, false) and
+		not RemotePlayerStatePolicy.damage_should_start_attack_visual(0, true) and
+		not RemotePlayerStatePolicy.damage_should_start_attack_visual(20101, false),
+		"damage starts only an unowned normal swing, never duplicates explicit or skill attack")
+
 	print("[REMOTE_MOTION_TEST] ", "ALL PASS" if failures == 0 else "%d FAILURES" % failures)
 	quit(0 if failures == 0 else 1)
