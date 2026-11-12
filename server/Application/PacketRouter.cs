@@ -5262,6 +5262,15 @@ public sealed class PacketRouter
                 {
                     var playerState =
                         req.Str("State", "idle");
+                    var stateDir = req.Str("Dir", "");
+                    if (stateDir is not (
+                        "1" or "2" or "3" or "4" or
+                        "5" or "6" or "7" or "8"))
+                    {
+                        // SyncState is presentation state, not a license to
+                        // invent a facing. Legacy/test clients may omit Dir.
+                        stateDir = "";
+                    }
                     state.IsResting = playerState.Equals(
                         "crouch",
                         StringComparison.OrdinalIgnoreCase);
@@ -5306,7 +5315,7 @@ public sealed class PacketRouter
                                 EntityID = state.CharacterId.Value,
                                 X = state.LastX,
                                 Y = state.LastY,
-                                Dir = req.Str("Dir", "1"),
+                                Dir = stateDir,
                                 SpeedTime = 0.0
                             });
                     }
@@ -5318,7 +5327,7 @@ public sealed class PacketRouter
                             Type = "SyncState",
                             EntityID = state.CharacterId.Value,
                             State = playerState,
-                            Dir = req.Str("Dir", "1")
+                            Dir = stateDir
                         });
                 }
                 return [];

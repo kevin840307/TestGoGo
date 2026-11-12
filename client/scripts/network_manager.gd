@@ -781,7 +781,7 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 		"SpawnEntity": entity_spawned.emit(data)
 		"DespawnEntity": entity_despawned.emit(data)
 		"MoveEntity": entity_moved.emit(data)
-		"SyncState": entity_state_changed.emit(int(data.get("EntityID", 0)), data.get("State", "idle"), data.get("Dir", "1"))
+		"SyncState": entity_state_changed.emit(int(data.get("EntityID", 0)), data.get("State", "idle"), data.get("Dir", ""))
 		"MonsterTarget": monster_target_changed.emit(int(data.get("EntityID", 0)), bool(data.get("HasTarget", false)))
 		"EquipResponse": equip_response.emit(data.get("Success", false), data.get("Message", ""), data)
 		"UpdateAppearance": entity_appearance_updated.emit(data)

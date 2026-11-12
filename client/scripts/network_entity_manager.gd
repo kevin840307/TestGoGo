@@ -1758,7 +1758,7 @@ func _on_entity_state_changed(entity_id: int, new_state: String, new_dir: String
 		else:
 			if "current_state" in target_node:
 				target_node.current_state = new_state
-			if "current_dir" in target_node:
+			if "current_dir" in target_node and not new_dir.is_empty():
 				target_node.current_dir = new_dir
 		# Available to the state and animation paths below, even for
 		# non-player entities that do not expose an action lock.
@@ -2021,8 +2021,19 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 						var DIR_STRINGS = ["6", "7", "8", "1", "2", "3", "4", "5"]
 						attacker_node.current_dir = DIR_STRINGS[index_raw % 8]
 
-			if attacker_node.has_method("trigger_combat_action") and attacker_node.has_method("get_combat_attack_state"):
-				attacker_node.trigger_combat_action(attacker_node.get_combat_attack_state())
+			var should_start_damage_attack_visual := true
+			if attacker_node.has_method("should_trigger_attack_visual_from_damage"):
+				should_start_damage_attack_visual = bool(
+					attacker_node.should_trigger_attack_visual_from_damage(skill_id)
+				)
+			if (
+				should_start_damage_attack_visual
+				and attacker_node.has_method("trigger_combat_action")
+				and attacker_node.has_method("get_combat_attack_state")
+			):
+				attacker_node.trigger_combat_action(
+					attacker_node.get_combat_attack_state()
+				)
 
 func _on_entity_death_received(data: Dictionary) -> void :
 	var entity_id = int(data.get("EntityID", 0))

@@ -55,6 +55,23 @@ internal sealed class WireLoadClient : IAsyncDisposable
     public int MapId { get; private set; }
     public int X { get; private set; }
     public int Y { get; private set; }
+    public string Direction { get; private set; } = "1";
+
+    private static string DirectionForDelta(
+        double dx,
+        double dy,
+        string fallback)
+    {
+        if (Math.Abs(dx) < 0.001 && Math.Abs(dy) < 0.001)
+            return fallback;
+
+        var angle = Math.Atan2(dy, dx);
+        var octant =
+            ((int)Math.Round(angle / (Math.PI / 4)) + 8) % 8;
+        string[] directions =
+            ["6", "7", "8", "1", "2", "3", "4", "5"];
+        return directions[octant];
+    }
 
     public long MoveBroadcasts =>
         Interlocked.Read(ref _moveBroadcasts);
@@ -257,19 +274,24 @@ internal sealed class WireLoadClient : IAsyncDisposable
     public Task SendPositionAsync(
         TimeSpan timeout,
         int offsetX = 0)
-        => SendPacketAsync(
+    {
+        var direction = DirectionForDelta(offsetX, 0, Direction);
+        if (offsetX != 0)
+            Direction = direction;
+        return SendPacketAsync(
             new
             {
                 Type = "SyncPosition",
                 X = X + offsetX,
                 Y,
-                Dir = "1"
+                Dir = direction
             },
             timeout);
+    }
 
     public Task SendStateAsync(string state, TimeSpan timeout)
         => SendPacketAsync(
-            new { Type = "SyncState", State = state, Dir = "1" },
+            new { Type = "SyncState", State = state, Dir = Direction },
             timeout);
 
     public Task<JsonElement> WaitForExactMoveAsync(
@@ -324,12 +346,10 @@ internal sealed class WireLoadClient : IAsyncDisposable
         // its action using the existing SyncState contract as well.
         var dx = targetX - X;
         var dy = targetY - Y;
-        var angle = Math.Atan2(dy, dx);
-        var octant = ((int)Math.Round(angle / (Math.PI / 4)) + 8) % 8;
-        // Match the actual BaseEntity direction ordering and unarmed
-        // attack animation (attack_aa), not the non-existent "attack_1".
-        var directions = new[] { "6", "7", "8", "1", "2", "3", "4", "5" };
-        var direction = directions[octant];
+        // Match the actual BaseEntity 8-way ordering for both movement and
+        // attacks so turning between them does not create synthetic snaps.
+        var direction = DirectionForDelta(dx, dy, Direction);
+        Direction = direction;
         await SendPacketAsync(
             new { Type = "SyncState", State = "attack_aa", Dir = direction },
             timeout);
@@ -408,21 +428,28 @@ internal sealed class WireLoadClient : IAsyncDisposable
     public async Task SendBotPositionAsync(int x, int y, TimeSpan timeout)
     {
         // Record optimistic position; the server's PositionCorrection wins
-        // when a blocked step is rejected.
+        // when a blocked step is rejected. Match the real Godot client's
+        // 8-way direction from the actual movement delta instead of forcing
+        // every bot waypoint to face direction "1".
         var beforeX = X;
         var beforeY = Y;
+        var beforeDirection = Direction;
+        var direction = DirectionForDelta(
+            x - beforeX, y - beforeY, beforeDirection);
         X = x;
         Y = y;
+        Direction = direction;
         try
         {
             await SendPacketAsync(
-                new { Type = "SyncPosition", X = x, Y = y, Dir = "1" },
+                new { Type = "SyncPosition", X = x, Y = y, Dir = direction },
                 timeout);
         }
         catch
         {
             X = beforeX;
             Y = beforeY;
+            Direction = beforeDirection;
             throw;
         }
     }

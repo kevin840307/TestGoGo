@@ -28,6 +28,17 @@ class WireLoadProbeStructureTests(unittest.TestCase):
         self.assertIn("CombatDeaths", client)
         self.assertIn("CombatEvents", client)
         self.assertIn("dropCombatNoise", client)
+        self.assertIn("DirectionForDelta", client)
+        self.assertIn("Dir = direction", client)
+        self.assertIn("Dir = Direction", client)
+        self.assertNotIn(
+            'new { Type = "SyncPosition", X = x, Y = y, Dir = "1" }',
+            client,
+        )
+        self.assertNotIn(
+            'new { Type = "SyncState", State = state, Dir = "1" }',
+            client,
+        )
 
         self.assertIn("CountDirectedAoiPeers(clients)", scenario)
         self.assertIn("PlayerSpatialAoi.EnterRadius", scenario)
