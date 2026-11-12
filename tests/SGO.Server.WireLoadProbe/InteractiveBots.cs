@@ -313,6 +313,13 @@ internal static class InteractiveBots
                                 nextDecisionAt = now.AddMilliseconds(
                                     Random.Shared.Next(2500, 5501));
                             }
+                            // A short reaction gap before attacking again after
+                            // a monster leaves AOI or dies (the new target may
+                            // already be within melee range).
+                            if (!walkingToGround && selectedMonsterId.HasValue &&
+                                target is null)
+                                nextAttackAt = now.AddMilliseconds(
+                                    Random.Shared.Next(450, 1101));
                             // Reconsider after a human-scale action window,
                             // or if the clicked monster disappears from AOI.
                             if (now >= nextDecisionAt ||
@@ -453,9 +460,16 @@ internal static class InteractiveBots
                                 if (!hasAttackedSelectedMonster)
                                 {
                                     hasAttackedSelectedMonster = true;
+                                    // Most fighters switch after a few seconds,
+                                    // while some commit for a longer hunt. This
+                                    // gives tougher monsters time to be defeated.
+                                    var fightWindowMs = isRoamer
+                                        ? Random.Shared.Next(2000, 4201)
+                                        : Random.Shared.Next(4) == 0
+                                            ? Random.Shared.Next(11000, 19001)
+                                            : Random.Shared.Next(3500, 8501);
                                     nextDecisionAt = DateTimeOffset.UtcNow.AddMilliseconds(
-                                        isRoamer ? Random.Shared.Next(2000, 4201)
-                                                 : Random.Shared.Next(3500, 8501));
+                                        fightWindowMs);
                                 }
                             }
 
