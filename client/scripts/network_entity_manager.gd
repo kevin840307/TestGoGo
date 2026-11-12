@@ -1875,7 +1875,7 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 		and attacker_id > 0 and attacker_id < 1000000
 		and (
 			not is_instance_valid(local_player)
-			or not "data_model" in local_player
+			or not ("data_model" in local_player)
 			or int(local_player.data_model.db_id) != attacker_id
 		)
 	)
