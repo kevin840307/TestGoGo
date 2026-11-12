@@ -99,7 +99,8 @@ internal sealed class WireLoadClient : IAsyncDisposable
         string runId,
         int index,
         TimeSpan timeout,
-        Action<int, string>? progress = null)
+        Action<int, string>? progress = null,
+        bool sendWorldReady = true)
     {
         var client = new WireLoadClient(index);
 
@@ -120,7 +121,8 @@ internal sealed class WireLoadClient : IAsyncDisposable
             await client.SetupAsync(
                 runId,
                 timeout,
-                progress);
+                progress,
+                sendWorldReady);
 
             return client;
         }
@@ -516,7 +518,8 @@ internal sealed class WireLoadClient : IAsyncDisposable
     private async Task SetupAsync(
         string runId,
         TimeSpan timeout,
-        Action<int, string>? progress = null)
+        Action<int, string>? progress = null,
+        bool sendWorldReady = true)
     {
         var loginName =
             $"wire-load-{runId}-{Index:D3}";
@@ -655,19 +658,29 @@ internal sealed class WireLoadClient : IAsyncDisposable
         progress?.Invoke(Index, "bootstrap");
         await CollectBootstrapAsync(timeout);
 
-        var ready = await RequestAsync(
-            new
-            {
-                Type = "WorldReady",
-                MapID = MapId
-            },
-            "WorldReadyResponse",
-            timeout);
+        if (sendWorldReady)
+        {
+            var ready = await RequestAsync(
+                new
+                {
+                    Type = "WorldReady",
+                    MapID = MapId
+                },
+                "WorldReadyResponse",
+                timeout);
 
-        RequireSuccess(
-            ready,
-            "WorldReady");
-        progress?.Invoke(Index, "entered-world");
+            RequireSuccess(
+                ready,
+                "WorldReady");
+            progress?.Invoke(Index, "entered-world");
+        }
+        else
+        {
+            // Interactive bots are placed by a GM warp immediately after
+            // setup. Staying WorldReady=false prevents observers from seeing
+            // the persisted previous-run location and then a large login warp.
+            progress?.Invoke(Index, "awaiting-placement");
+        }
     }
 
     private async Task CollectBootstrapAsync(
