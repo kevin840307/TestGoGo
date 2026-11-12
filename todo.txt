@@ -39,8 +39,9 @@ T03 [~] P0：減少怪物戰鬥熱路徑的 Session/Map lock 與 SQLite writer �
     範圍：SharedMapAiTicker、CombatService、SqliteGameStore；先用 T01/T02 證據找實際熱點。
     驗收：保持順序、死亡只結算一次、HP/MP/Buff/吸血/寵物/掉落/戰鬥事件不回歸；移出長時間 I/O 或經證明等價的批次原子更新；不可無驗證就把 HP 寫入延後。
     子工作 T03.a [x]：ApplyDamage UPDATE 後重用相同 SQLite connection 做完整角色查詢，移除額外 Open/PRAGMA；PR #19 已合併（僅微優化，不代表瓶頸已解決）。
-    子工作 T03.b [~]：精確量測 _hotWriteGate wait / SQLite WAL UPDATE/完整 GetCharacter read 各自延遲；PR #20 實作中，CI 驗證後才改 [x]。
+    子工作 T03.b [x]：精確量測 _hotWriteGate wait / SQLite WAL UPDATE/完整 GetCharacter read 各自延遲；PR #20 已合併，CI PASS。
     子工作 T03.c [ ]：設計並驗證同一玩家多怪傷害批次原子更新，或把真正權威戰鬥狀態與持久化分離；先驗證死亡只一次、同時攻擊、Buff/吸血、寵物、地圖切換、斷線重登等完整契約，不能直接把 SQL fire-and-forget。
+    子工作 T03.d [~]：背景位置寫入低優先/遇 SQLite WAL writer busy 可恢復重試；PR #21 進行中，不能影響 FlushQueued/FlushFinal/換圖 fence，CI 未驗證。
 T04 [ ] P1：拆分怪物 AI 決策（現有250ms）與 Server 權威移動步進（評估50ms），保留 AOI/Blocking/戰鬥。
     驗收：移動不依賴昂貴 AI 運算才能更新；不改變追擊速度/攻擊距離/冷卻；同圖 312 怪不形成同步群體瞬移。先通過導航/追擊/死亡/AOI Smoke 再調整廣播率。
 T05 [ ] P1：Client Remote Player/Monster 可選用 Server Tick/Sequence 驅動的小型 snapshot buffer 插值。
@@ -74,3 +75,5 @@ T09 [ ] P0/P1：CI + 實機綜合驗收。
 【給接手 Session 的最新結論】最新主分支已有 T01、T02.a、T03.a；尚未完成 T02.b、T03.b、T03.c、T04~T09。優先從 T03.b 分離 hotWriteGate 等待 / SQLite busy / SessionLockWait 量測，再處理 T03.c 正確性與 T04 固定移動步進；不可宣稱多人順移已修完。
 
 2026-11-12：T03.b 正進行：PR #20 https://github.com/kevin840307/TestGoGo/pull/20，工作分支 perf/t03b-sqlite-hot-write-timing-20261112。透過 bounded cumulative histogram 區分 ApplyDamage/Open/UPDATE/Read 與 _hotWriteGate wait/held；UpdatePositionsBatch/ApplyPetDamage/Recovery gate 分類統計；Map13 真實戰鬥 CI 將輸出 sqliteHotWrites JSON。編碼/回歸已提交，正在執行 CI。**任何 Session 不要同時修改 SqliteGameStore.cs 的 hot-write 區塊或 server/Program.cs，其他工作可先進行 T02.b**。
+2026-11-12：T03.b 已合併 PR #20 https://github.com/kevin840307/TestGoGo/pull/20 / merge de50b7d9b38f5fe2154aef612892ed8de392442b。CI https://github.com/kevin840307/TestGoGo/actions/runs/43227960840 Map13 20 Bots+312 怪持續戰鬥 PASS；AOI Priority 43227960453 PASS、20 WS 43227960863 PASS、Windows Smoke 43227960420 PASS、Map13 no-combat 43227960444 PASS。有效 AI Tick 284 次，P95=1927.78ms、P99=6004.35ms。SQLite Damage 9822 次，Gate Wait P99=0.5ms(max=996.98)，Gate Held P99=5ms(max=1001.15)，UPDATE P99=5ms(max=1000.77)，Full Read P99=0.5ms(max=8.775)，Open P99=0.05ms。PositionBatch 267 次 Gate Held P99=2000ms(max=5150.96)；Recovery 390 次 Held P99=2000ms(max=2001.23)。結論：一般傷害讀取不是主要 P99；中途位置批次/恢復寫入與 SQLite WAL 單 writer 等待是急需處理的尖峰。完整 Server build workflow 仍在既有 QuestHost unbound audit 失敗，但單獨 .NET build/Probe/Smoke 通過。
+2026-11-12：T03.d 進行中 PR #21 https://github.com/kevin840307/TestGoGo/pull/21 / branch perf/t03-prioritize-combat-over-position-writes-20261112。只在 100ms 背景位置 flush 使用 opportunistic short-timeout + Monitor.TryEnter + RestoreIfNotNewer；換圖/登出/角色切換 fence 保留舊版完整持久化。PositionPersistenceProbe 新增持有 BEGIN IMMEDIATE 時的 fast-fail、非部分提交、背景重試回最新位置測試，Map13 CI 更新 SQLite position defer 指標；CI 未完成。其他 Session 不要重疊修改 GameStorePorts.cs、PositionPersistenceService.cs、SqliteGameStore.cs、server/Program.cs；可獨立做 T02.b 或 T05。
