@@ -699,6 +699,24 @@ try
         "narrow pet query returns exact live spawn, skill and attack fields");
     Check(store.GetActivePetFollowSnapshot(accountId.Value + 1000, characterId).Count == 0,
         "active pets cannot leak across accounts");
+    // Reused UPDATE connection must return the same rich character payload
+    // (HP, identity, club/title/transform/timed stats) as a fresh GetCharacter.
+    // Do not substitute a narrow HP-only read for combat's existing contract.
+    var beforeDamage = store.GetCharacter(accountId.Value, characterId);
+    Check(beforeDamage is not null && Convert.ToInt32(beforeDamage["HP"]) > 3,
+        "damage parity fixture has a living character");
+    var updatedDamage = store.ApplyDamage(accountId.Value, characterId, 3);
+    var freshAfterDamage = store.GetCharacter(accountId.Value, characterId);
+    Check(updatedDamage is not null && freshAfterDamage is not null &&
+          updatedDamage.Count == freshAfterDamage.Count &&
+          updatedDamage.Keys.OrderBy(x => x).SequenceEqual(
+              freshAfterDamage.Keys.OrderBy(x => x)) &&
+          Convert.ToInt32(updatedDamage["HP"]) ==
+              Convert.ToInt32(beforeDamage!["HP"]) - 3 &&
+          Convert.ToInt32(updatedDamage["HP"]) ==
+              Convert.ToInt32(freshAfterDamage["HP"]) &&
+          Convert.ToInt64(updatedDamage["DBID"]) == characterId,
+        "damage reuses SQLite connection but preserves post-hit full character fields");
     var firstDrain = store.DrainCompanionRuntime(accountId.Value, characterId, 1);
     var afterOne = store.GetActivePetFollowSnapshot(accountId.Value, characterId);
     Check(firstDrain.Pets.Count == 1 &&
