@@ -43,3 +43,32 @@ jobs:
               for n,line in examples[w]:
                   print('[OLD_HIT_AUDIT_SAMPLE] %s line=%s %s' % (w,n,line))
           PY
+
+      - name: Print short original combat hit routines for comparison
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('Old/ClientData/Paradise.exe.lst')
+          fragments=(
+            '?CheckSetHurt@CBattleSys@@QAE_NXZ proc near',
+            '?HurtNow@CSGOChar@@QAEXXZ proc near',
+            '?SetHurtNow@CSGOCharDrawLogic@@QAEXXZ proc near',
+            '?StopBattleHurt@CSGOChar@@QAEXXZ proc near',
+            '?SetHurtEffEvent@CSGOChar@@QAEXXZ proc near',
+            '?OnSkillHitExp@CSGOUim@@IAEXGPAX@Z proc near',
+          )
+          capture=None
+          with p.open(encoding='utf-8',errors='replace') as f:
+              for n,line in enumerate(f,1):
+                  if capture is not None:
+                      name,remaining=capture
+                      print('[LEGACY_HURT_ROUTINE] %s L%d %s' % (name,n,line.strip()[:210]))
+                      capture=(name,remaining-1) if remaining>1 else None
+                  if capture is None:
+                      for frag in fragments:
+                          if frag in line:
+                              print('[LEGACY_HURT_BEGIN] %s line=%d' % (frag,n))
+                              capture=(frag,65)
+                              break
+          PY
