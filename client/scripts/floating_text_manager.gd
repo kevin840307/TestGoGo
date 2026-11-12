@@ -254,6 +254,17 @@ func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: 
 		_damage_queue.append({"target": weakref(target), "position": hit_position, "player": hit_is_player, "pet": hit_is_pet, "val": damage, "crit": is_crit, "dir": 0.0, "split": false})
 	set_process(true)
 
+func show_damage_at(world_position: Vector2, damage: int, is_crit: bool = false, hit_delay: float = 0.0) -> void:
+	# A monster may have an authoritative SpawnEntity but still be waiting
+	# for its visual scene. Do not lose ordinary peer damage in that gap.
+	if damage <= 0 or (GameManager and not GameManager.should_show_damage_numbers()):
+		return
+	if hit_delay > 0.0:
+		await get_tree().create_timer(hit_delay).timeout
+	if GameManager and not GameManager.should_show_damage_numbers():
+		return
+	_spawn_bouncing_number_at(world_position, false, false, damage, is_crit, 0.0, false)
+
 func _process(delta: float) -> void :
 	var pending_count: = _damage_queue.size() - _damage_queue_head
 	if pending_count > 0:
