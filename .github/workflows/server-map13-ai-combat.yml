@@ -157,6 +157,10 @@ jobs:
           background=health.get('sqliteBackgroundPosition')
           assert background is not None, 'SQLite /health must expose low-priority position attempts and deferrals'
           p['sqliteBackgroundPosition']=background
+          batch=health.get('monsterAiDamageBatches')
+          assert batch is not None and batch['enabled'], 'real combat run must enable owner-local atomic damage batching'
+          p['monsterAiDamageBatches']=batch
+          print('[MONSTER_AI_DAMAGE_BATCH]',json.dumps(batch),flush=True)
           print('[SQLITE_HOT_WRITE_PROFILE]',json.dumps(hot),flush=True)
           print('[SQLITE_BACKGROUND_POSITION]',json.dumps(background),flush=True)
           log=open('server-combat.log',encoding='utf-8',errors='replace').read()
@@ -174,6 +178,7 @@ jobs:
           assert bots['ConfirmedDamageHits']>0 and bots['ConfirmedSkillCasts']>0, 'real combat events must be confirmed'
           assert hot['damage']['heldMs']['samples']>0 and hot['damageUpdateMs']['samples']>0, 'real monster damage must contribute to SQLITE hot-write histogram'
           assert hot['damageReadMs']['samples']>0 and hot['damageOpenMs']['samples']>0, 'all damage SQL phases must be captured'
+          assert batch['batchTransactions']>0 and batch['hitsInBatches']>=2*batch['batchTransactions'], 'real combat must execute atomic multi-hit batches, not just expose an unused API'
           assert background['attempts']>0, 'real moving bots must stage actual periodic background position writes'
           assert 0 <= background['deferred'] <= background['attempts'], 'deferred snapshots must be tracked separately from successful writes'
           assert p['eligibleSamples']>=8, 'insufficient steady-state map AI samples'

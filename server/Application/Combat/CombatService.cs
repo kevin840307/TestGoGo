@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using Microsoft.Extensions.Configuration;
 using SGO.Server.Application.Abstractions;
 using SGO.Server.Application.Assets;
 using SGO.Server.Application.Character;
@@ -15,6 +16,14 @@ using SGO.Server.Infrastructure.WorldData;
 using SGO.Server.Infrastructure.GameData;
 
 namespace SGO.Server.Application.Combat;
+
+// Snapshot-only counters. No per-hit disk/log writes on the combat path.
+public sealed record MonsterAiDamageBatchDiagnostics(
+    bool Enabled,
+    long BatchTransactions,
+    long HitsInBatches,
+    long SingleHitFallbacks,
+    long AuthoritativeHpReconciliations);
 
 public sealed class CombatService
 {
@@ -76,6 +85,39 @@ public sealed class CombatService
     // Sample only abnormal AI stalls. No per-monster or per-tick logging.
     private long _lastSlowTickAiProfileUtcTicks;
     private long _lastSlowAreaSkillProfileUtcTicks;
+    private readonly bool _atomicMonsterDamageBatchEnabled;
+    private long _atomicMonsterDamageBatchCount;
+    private long _atomicMonsterDamageBatchedHits;
+    private long _atomicMonsterDamageSingleFallbacks;
+    private long _atomicMonsterDamageReconciliations;
+
+    public MonsterAiDamageBatchDiagnostics MonsterAiDamageBatches => new(
+        _atomicMonsterDamageBatchEnabled,
+        Interlocked.Read(ref _atomicMonsterDamageBatchCount),
+        Interlocked.Read(ref _atomicMonsterDamageBatchedHits),
+        Interlocked.Read(ref _atomicMonsterDamageSingleFallbacks),
+        Interlocked.Read(ref _atomicMonsterDamageReconciliations));
+
+    // Keep the authoritative per-owner SQL batch bounded. The 512 HP safety
+    // reserve forces near-death hits down the original immediate SQL path.
+    private const int MaximumAtomicMonsterHits = 24;
+    private const int AtomicMonsterHitHpReserve = 512;
+
+    private sealed record PendingMonsterHit(
+        MonsterRuntimeState Monster,
+        int Damage,
+        bool EnteredAttackRange,
+        int AttackerId,
+        double X,
+        double Y,
+        string Direction,
+        EffectiveCharacterStats Stats,
+        DateTimeOffset PreviousLastAttackAt,
+        DateTimeOffset PreviousLastActionAt)
+    {
+        public List<object> CommittedPackets { get; } = new();
+    }
+
 #if DEBUG
     // Small debug-only sample for diagnosing start-of-chase path stalls.
     // Release builds do not emit path diagnostics or pay for formatting.
@@ -140,7 +182,8 @@ public sealed class CombatService
         PetEvolutionService petEvolution,
         QuestProgressService questProgress,
         ILogger<CombatService> log,
-        GlobalRateService? globalRates = null)
+        GlobalRateService? globalRates = null,
+        IConfiguration? configuration = null)
     {
         _store = store;
         _world = world;
@@ -157,6 +200,11 @@ public sealed class CombatService
         _petEvolution = petEvolution;
         _questProgress = questProgress;
         _globalRates = globalRates ?? new GlobalRateService();
+        // Can be disabled instantly with Game__AtomicMonsterDamageBatchEnabled=false
+        // for A/B and emergency rollback without changing the network protocol.
+        _atomicMonsterDamageBatchEnabled =
+            configuration?.GetValue<bool?>(
+                "Game:AtomicMonsterDamageBatchEnabled") ?? true;
         _log = log;
     }
 
@@ -306,6 +354,175 @@ public sealed class CombatService
         var runtime = SyncSessionMonsters(session);
         var packets = new List<object>();
         var advancedWanderPositions = new List<MonsterRuntimeState>();
+        var atomicDamageStore = _atomicMonsterDamageBatchEnabled
+            ? _store as IAtomicCharacterDamageStore
+            : null;
+        var pendingPlayerHits = new List<PendingMonsterHit>();
+
+        // The only point where staged hits become durable is this synchronous
+        // commit. It executes while the owning session/map remain locked and
+        // before any AOI/client broadcast. No fire-and-forget HP writes exist.
+        void CommitPendingPlayerHits()
+        {
+            if (pendingPlayerHits.Count == 0)
+                return;
+
+            var commitStarted = Stopwatch.GetTimestamp();
+            Dictionary<string, object>? authoritativeCharacter;
+            IReadOnlyList<int> hpAfterHits;
+            int firstDeathHitIndex;
+            try
+            {
+                if (pendingPlayerHits.Count == 1)
+                {
+                    // A singleton does not benefit from BEGIN/SELECT+batch;
+                    // preserve the original fast atomic per-hit SQL path.
+                    var hit = pendingPlayerHits[0];
+                    authoritativeCharacter = _store.ApplyDamage(
+                        accountId, currentCharacterId, hit.Damage);
+                    hpAfterHits = authoritativeCharacter is null
+                        ? [] : [Convert.ToInt32(authoritativeCharacter["HP"])];
+                    // Staging only happens well above the lethal threshold.
+                    // For a concurrent unrelated death, do not emit a second
+                    // kill; this direct method cannot identify first death.
+                    firstDeathHitIndex = -1;
+                    Interlocked.Increment(
+                        ref _atomicMonsterDamageSingleFallbacks);
+                }
+                else
+                {
+                    // >=2 ordered owner-local hits settle in ONE WAL writer
+                    // transaction; the store returns the actual intermediate
+                    // HP values instead of trusting the virtual preview.
+                    var committed = atomicDamageStore!.ApplyDamageBatch(
+                        accountId,
+                        currentCharacterId,
+                        pendingPlayerHits.Select(hit => hit.Damage).ToArray());
+                    authoritativeCharacter = committed?.Character;
+                    hpAfterHits = committed?.HpAfterEachHit ?? [];
+                    firstDeathHitIndex = committed?.FirstDeathHitIndex ?? -1;
+                    Interlocked.Increment(ref _atomicMonsterDamageBatchCount);
+                    Interlocked.Add(
+                        ref _atomicMonsterDamageBatchedHits,
+                        pendingPlayerHits.Count);
+                }
+            }
+            finally
+            {
+                damageWriteMs += Stopwatch.GetElapsedTime(commitStarted)
+                    .TotalMilliseconds;
+            }
+
+            if (authoritativeCharacter is not null)
+            {
+                if (hpAfterHits.Count != pendingPlayerHits.Count)
+                    throw new InvalidOperationException(
+                        "Atomic monster damage result has mismatched hit count");
+
+                if (character is not null &&
+                    Convert.ToInt32(character["HP"]) !=
+                    Convert.ToInt32(authoritativeCharacter["HP"]))
+                {
+                    Interlocked.Increment(
+                        ref _atomicMonsterDamageReconciliations);
+                }
+
+                // Rebuild packets in their original per-monster sequence. A
+                // marker includes Move/Attack/Damage/Status as one indivisible
+                // event group, so a concurrent death cannot leak stale
+                // attacker packets or scramble other monsters' movement.
+                var statusCharacter =
+                    new Dictionary<string, object>(authoritativeCharacter);
+                for (var i = 0; i < pendingPlayerHits.Count; i++)
+                {
+                    var hit = pendingPlayerHits[i];
+                    var hp = hpAfterHits[i];
+                    var firstDeath = firstDeathHitIndex == i;
+                    if (hp <= 0 && !firstDeath)
+                    {
+                        hit.Monster.LastAttackAt = hit.PreviousLastAttackAt;
+                        hit.Monster.LastActionAt = hit.PreviousLastActionAt;
+                        continue;
+                    }
+
+                    statusCharacter["HP"] = hp;
+                    if (hit.EnteredAttackRange)
+                    {
+                        hit.CommittedPackets.Add(new
+                        {
+                            Type = "MoveEntity",
+                            EntityID = hit.AttackerId,
+                            X = hit.X,
+                            Y = hit.Y,
+                            Dir = hit.Direction,
+                            SpeedTime = 0.0
+                        });
+                    }
+                    hit.CommittedPackets.Add(new
+                    {
+                        Type = "SyncState",
+                        EntityID = hit.AttackerId,
+                        State = "attack",
+                        Dir = hit.Direction
+                    });
+                    hit.CommittedPackets.Add(new
+                    {
+                        Type = "EntityDamage",
+                        TargetID = currentCharacterId,
+                        TargetType = 0,
+                        Damage = hit.Damage,
+                        CurrentHP = hp,
+                        MaxHP = hit.Stats.MaxHP,
+                        IsCrit = false,
+                        SkillID = 0,
+                        SkillLevel = 1,
+                        AttackerID = hit.AttackerId
+                    });
+                    hit.CommittedPackets.Add(
+                        BuildPlayerStatusPacket(statusCharacter, hit.Stats));
+
+                    if (firstDeath)
+                    {
+                        hit.CommittedPackets.Add(new
+                        {
+                            Type = "EntityDeath",
+                            EntityID = currentCharacterId,
+                            EntityType = 0,
+                            KillerID = hit.AttackerId
+                        });
+                        DropMonsterTarget(
+                            hit.Monster, now, scheduleWander: false);
+                    }
+                }
+            }
+            else
+            {
+                // A disconnected/deleted identity never emits speculative
+                // EntityDamage. As with the old null-return path, no monster
+                // cooldown is charged for an uncommitted hit.
+                foreach (var hit in pendingPlayerHits)
+                {
+                    hit.Monster.LastAttackAt = hit.PreviousLastAttackAt;
+                    hit.Monster.LastActionAt = hit.PreviousLastActionAt;
+                }
+            }
+
+            character = authoritativeCharacter;
+            characterLoaded = true;
+            var ordered = new List<object>(
+                packets.Count + pendingPlayerHits.Count * 4);
+            foreach (var packet in packets)
+            {
+                if (packet is PendingMonsterHit hit)
+                    ordered.AddRange(hit.CommittedPackets);
+                else
+                    ordered.Add(packet);
+            }
+            packets.Clear();
+            packets.AddRange(ordered);
+            pendingPlayerHits.Clear();
+        }
+
         var mapLockStarted = Stopwatch.GetTimestamp();
         var mapLockWaitMs = 0.0;
 
@@ -391,6 +608,9 @@ public sealed class CombatService
                     monster.TargetCharacterId > 0 &&
                     monster.TargetCharacterId != currentCharacterId)
                 {
+                    // Preserve DB read ordering when leaving the owner's
+                    // staged HP context for a foreign target.
+                    CommitPendingPlayerHits();
                     var targetPresence =
                         _broadcasts.FindCharacter(
                             monster.TargetCharacterId);
@@ -749,6 +969,10 @@ public sealed class CombatService
                         if (targetIsPet &&
                             targetPet is not null)
                         {
+                            // Pet HP and PetSync use their original immediate
+                            // durable path. Never reorder it across staged
+                            // player hits or mix pet damage into a player batch.
+                            CommitPendingPlayerHits();
                             var defense = Math.Max(
                                 0,
                                 Convert.ToInt32(
@@ -860,14 +1084,28 @@ public sealed class CombatService
                                 characterLoaded = true;
                             }
 
-                            // A player may have died after the map's batched
-                            // HP snapshot. Recheck live HP before applying
-                            // damage, exactly as the old AI path did.
+                            // The world tick's HP snapshot can be stale. The
+                            // per-owner virtual HP is updated after each
+                            // staged hit so later monsters see earlier hits.
                             if (character is null ||
                                 Convert.ToInt32(character["HP"]) <= 0)
                             {
                                 playerAlive = false;
                                 continue;
+                            }
+
+                            // Never keep more than 24 uncommitted normal
+                            // melee hits in one owner+map+tick.
+                            if (pendingPlayerHits.Count >=
+                                MaximumAtomicMonsterHits)
+                            {
+                                CommitPendingPlayerHits();
+                                if (character is null ||
+                                    Convert.ToInt32(character["HP"]) <= 0)
+                                {
+                                    playerAlive = false;
+                                    continue;
+                                }
                             }
 
                             combatAssets ??= _store.GetCharacterAssets(
@@ -880,102 +1118,161 @@ public sealed class CombatService
                                         _current),
                                     session,
                                     now);
-                            var defense =
-                                Math.Max(0, effective.Defense);
+                            var defense = Math.Max(0, effective.Defense);
                             var damage = Math.Max(
                                 1,
                                 rawDamage - defense / 5);
-                            var damageStarted = Stopwatch.GetTimestamp();
-                            var updated = _store.ApplyDamage(
-                                accountId,
-                                currentCharacterId,
-                                damage);
-                            damageWriteMs += Stopwatch.GetElapsedTime(damageStarted).TotalMilliseconds;
+                            var hpBeforeHit = Convert.ToInt32(character["HP"]);
+
+                            // Do NOT stage lethal/near-lethal hits, pet-owner
+                            // battles or stores without the atomic contract.
+                            // Immediate legacy damage remains the fallback
+                            // whenever a speculative HP timeline is unsafe.
+                            var stage = atomicDamageStore is not null &&
+                                session.PetPositions.Count == 0 &&
+                                hpBeforeHit - damage >
+                                AtomicMonsterHitHpReserve;
+                            if (!stage && pendingPlayerHits.Count > 0)
+                            {
+                                CommitPendingPlayerHits();
+                                if (character is null ||
+                                    Convert.ToInt32(character["HP"]) <= 0)
+                                {
+                                    playerAlive = false;
+                                    continue;
+                                }
+
+                                // Recompute defense if another transaction
+                                // changed the authoritative character before
+                                // the synchronous batch was committed.
+                                effective =
+                                    ApplyActiveSkillBuffs(
+                                        CharacterStatCalculator.Calculate(
+                                            character, combatAssets!, _current),
+                                        session, now);
+                                damage = Math.Max(
+                                    1,
+                                    rawDamage -
+                                    Math.Max(0, effective.Defense) / 5);
+                            }
+
+                            Dictionary<string, object>? updated;
+                            if (stage)
+                            {
+                                updated =
+                                    new Dictionary<string, object>(character);
+                                updated["HP"] =
+                                    Math.Max(0, hpBeforeHit - damage);
+                            }
+                            else
+                            {
+                                var damageStarted = Stopwatch.GetTimestamp();
+                                updated = _store.ApplyDamage(
+                                    accountId, currentCharacterId, damage);
+                                damageWriteMs += Stopwatch.GetElapsedTime(
+                                    damageStarted).TotalMilliseconds;
+                            }
 
                             if (updated is not null)
                             {
+                                var previousLastAttackAt =
+                                    monster.LastAttackAt;
+                                var previousLastActionAt =
+                                    monster.LastActionAt;
                                 monster.LastAttackAt = now;
                                 monster.LastActionAt = now;
                                 character = updated;
                                 var currentHp =
                                     Convert.ToInt32(updated["HP"]);
-                                // No inventory/equipment changes can occur on
-                                // this connection while its session AI lock is
-                                // held. Damage changes vitals, not assets:
-                                // reuse this owner's already loaded snapshot
-                                // for every monster hit within this AI pass.
-                                // Previously each hit issued an extra full
-                                // inventory/pet/mecha SQLite read.
-                                var updatedAssets = combatAssets!;
+                                // Equipment is immutable under the owning
+                                // session's AI lock; reuse this Tick snapshot.
                                 var updatedEffective =
                                     ApplyActiveSkillBuffs(
                                         CharacterStatCalculator.Calculate(
                                             updated,
-                                            updatedAssets,
+                                            combatAssets!,
                                             _current),
                                         session,
                                         now);
-                                var maxHp =
-                                    updatedEffective.MaxHP;
 
-                                if (enteredAttackRange)
+                                if (stage)
                                 {
-                                    packets.Add(new
-                                    {
-                                        Type = "MoveEntity",
-                                        EntityID = monster.EntityId,
-                                        X = monster.X,
-                                        Y = monster.Y,
-                                        Dir = monster.CurrentDir,
-                                        SpeedTime = 0.0
-                                    });
-                                }
-
-                                packets.Add(new
-                                {
-                                    Type = "SyncState",
-                                    EntityID = monster.EntityId,
-                                    State = "attack",
-                                    Dir = monster.CurrentDir
-                                });
-
-                                packets.Add(new
-                                {
-                                    Type = "EntityDamage",
-                                    TargetID =
-                                        currentCharacterId,
-                                    TargetType = 0,
-                                    Damage = damage,
-                                    CurrentHP = currentHp,
-                                    MaxHP = maxHp,
-                                    IsCrit = false,
-                                    SkillID = 0,
-                                    SkillLevel = 1,
-                                    AttackerID =
-                                        monster.EntityId
-                                });
-
-                                packets.Add(
-                                    BuildPlayerStatusPacket(
-                                        updated,
-                                        updatedEffective));
-
-                                if (currentHp <= 0)
-                                {
-                                    packets.Add(new
-                                    {
-                                        Type = "EntityDeath",
-                                        EntityID =
-                                            currentCharacterId,
-                                        EntityType = 0,
-                                        KillerID =
-                                            monster.EntityId
-                                    });
-
-                                    DropMonsterTarget(
+                                    // Marker is NOT a network packet: only
+                                    // CommitPendingPlayerHits() can turn it
+                                    // into EntityDamage/PlayerStatusSync after
+                                    // the SQL transaction succeeds.
+                                    var marker = new PendingMonsterHit(
                                         monster,
-                                        now,
-                                        scheduleWander: false);
+                                        damage,
+                                        enteredAttackRange,
+                                        monster.EntityId,
+                                        monster.X,
+                                        monster.Y,
+                                        monster.CurrentDir,
+                                        updatedEffective,
+                                        previousLastAttackAt,
+                                        previousLastActionAt);
+                                    pendingPlayerHits.Add(marker);
+                                    packets.Add(marker);
+                                }
+                                else
+                                {
+                                    var maxHp = updatedEffective.MaxHP;
+                                    if (enteredAttackRange)
+                                    {
+                                        packets.Add(new
+                                        {
+                                            Type = "MoveEntity",
+                                            EntityID = monster.EntityId,
+                                            X = monster.X,
+                                            Y = monster.Y,
+                                            Dir = monster.CurrentDir,
+                                            SpeedTime = 0.0
+                                        });
+                                    }
+
+                                    packets.Add(new
+                                    {
+                                        Type = "SyncState",
+                                        EntityID = monster.EntityId,
+                                        State = "attack",
+                                        Dir = monster.CurrentDir
+                                    });
+
+                                    packets.Add(new
+                                    {
+                                        Type = "EntityDamage",
+                                        TargetID = currentCharacterId,
+                                        TargetType = 0,
+                                        Damage = damage,
+                                        CurrentHP = currentHp,
+                                        MaxHP = maxHp,
+                                        IsCrit = false,
+                                        SkillID = 0,
+                                        SkillLevel = 1,
+                                        AttackerID = monster.EntityId
+                                    });
+
+                                    packets.Add(
+                                        BuildPlayerStatusPacket(
+                                            updated,
+                                            updatedEffective));
+
+                                    if (currentHp <= 0)
+                                    {
+                                        packets.Add(new
+                                        {
+                                            Type = "EntityDeath",
+                                            EntityID = currentCharacterId,
+                                            EntityType = 0,
+                                            KillerID = monster.EntityId
+                                        });
+
+                                        DropMonsterTarget(
+                                            monster,
+                                            now,
+                                            scheduleWander: false);
+                                    }
                                 }
                             }
                         }
@@ -1102,6 +1399,9 @@ public sealed class CombatService
                     targetY,
                     distance);
             }
+            // Commit ALL staged hits while this owner and map are still
+            // locked. No marker or uncommitted HP escapes into broadcasting.
+            CommitPendingPlayerHits();
         }
 
         var simulationMs = Stopwatch.GetElapsedTime(mapLockStarted).TotalMilliseconds;

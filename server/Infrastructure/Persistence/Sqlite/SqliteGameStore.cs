@@ -11706,7 +11706,10 @@ public sealed class SqliteGameStore : IGameStore, IOpportunisticPositionBatchSto
 
         using (EnterHotWriteGate(SqliteHotWriteOperation.Damage))
         {
+            var openStarted = Stopwatch.GetTimestamp();
             using var db = Open();
+            _hotWriteTelemetry.RecordDamageOpen(
+                Stopwatch.GetElapsedTime(openStarted).TotalMilliseconds);
             // BEGIN IMMEDIATE obtains the single WAL writer before reading
             // initial HP. This makes the multi-hit timeline deterministic
             // even when a heal/other player update competes for SQLite.
@@ -11761,13 +11764,35 @@ public sealed class SqliteGameStore : IGameStore, IOpportunisticPositionBatchSto
                 Arg(update, "$damage", totalDamage);
                 Arg(update, "$id", dbid);
                 Arg(update, "$a", accountId);
-                if (update.ExecuteNonQuery() != 1)
+                var updateStarted = Stopwatch.GetTimestamp();
+                int updated;
+                try
+                {
+                    updated = update.ExecuteNonQuery();
+                }
+                finally
+                {
+                    _hotWriteTelemetry.RecordDamageUpdate(
+                        Stopwatch.GetElapsedTime(updateStarted)
+                            .TotalMilliseconds);
+                }
+                if (updated != 1)
                     return null;
             }
 
             // Query the SAME full character contract as normal ApplyDamage;
             // the transaction guarantees fields correspond to our update.
-            var result = ReadCharacterForAccount(db, accountId, dbid);
+            var readStarted = Stopwatch.GetTimestamp();
+            Dictionary<string, object>? result;
+            try
+            {
+                result = ReadCharacterForAccount(db, accountId, dbid);
+            }
+            finally
+            {
+                _hotWriteTelemetry.RecordDamageRead(
+                    Stopwatch.GetElapsedTime(readStarted).TotalMilliseconds);
+            }
             if (result is null ||
                 Convert.ToInt32(result["HP"]) != currentHp)
                 throw new InvalidOperationException(
