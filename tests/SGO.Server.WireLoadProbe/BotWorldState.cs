@@ -4,7 +4,7 @@ using System.Text.Json;
 // the same encrypted packets that a normal Godot client receives.
 internal sealed class BotWorldState
 {
-    internal sealed record Monster(int EntityId, double X, double Y, int HP);
+    internal sealed record Monster(int EntityId, double X, double Y, int HP, int MaxHP);
 
     private readonly object _sync = new();
     private readonly Dictionary<int, Monster> _monsters = new();
@@ -12,6 +12,7 @@ internal sealed class BotWorldState
     private long _damageHits;
     private long _skillCasts;
     private long _monsterDeaths;
+    private long _confirmedMonsterKills;
     private int _hp = -1;
     private int _maxHp = -1;
     private string _lastFlash = "";
@@ -28,6 +29,7 @@ internal sealed class BotWorldState
     public long DamageHits => Interlocked.Read(ref _damageHits);
     public long SkillCasts => Interlocked.Read(ref _skillCasts);
     public long MonsterDeaths => Interlocked.Read(ref _monsterDeaths);
+    public long ConfirmedMonsterKills => Interlocked.Read(ref _confirmedMonsterKills);
     public int HP { get { lock (_sync) return _hp; } }
     public int MaxHP { get { lock (_sync) return _maxHp; } }
     public string LastFlash { get { lock (_sync) return _lastFlash; } }
@@ -89,12 +91,13 @@ internal sealed class BotWorldState
                         extra.ValueKind != JsonValueKind.Object) break;
                     var hp = (int)Number(extra, "CurrentHP",
                         Number(extra, "MaxHP", 1));
+                    var maxHp = (int)Number(extra, "MaxHP", hp);
                     if (_monsters.Count >= MaxTrackedMonsters &&
                         !_monsters.ContainsKey((int)entityId))
                         break;
                     _monsters[(int)entityId] = new Monster(
                         (int)entityId, Number(packet, "LocX"),
-                        Number(packet, "LocY"), hp);
+                        Number(packet, "LocY"), hp, Math.Max(hp, maxHp));
                     break;
                 }
                 case "MoveEntity":
@@ -116,7 +119,8 @@ internal sealed class BotWorldState
                             _monsters.TryGetValue((int)targetId, out var hit))
                             _monsters[(int)targetId] = hit with
                             {
-                                HP = (int)Number(packet, "CurrentHP", hit.HP)
+                                HP = (int)Number(packet, "CurrentHP", hit.HP),
+                                MaxHP = (int)Number(packet, "MaxHP", hit.MaxHP)
                             };
                         if (Number(packet, "AttackerID") == characterId)
                             Interlocked.Increment(ref _damageHits);
@@ -138,6 +142,8 @@ internal sealed class BotWorldState
                     {
                         _monsters.Remove((int)entityId);
                         Interlocked.Increment(ref _monsterDeaths);
+                        if (Number(packet, "KillerID") == characterId)
+                            Interlocked.Increment(ref _confirmedMonsterKills);
                     }
                     else if (entityId == characterId)
                         _hp = 0;
