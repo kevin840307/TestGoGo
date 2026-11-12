@@ -540,6 +540,11 @@ func should_preserve_hit_state(new_state: String) -> bool:
 		current_state, is_action_locked, new_state
 	)
 
+func should_trigger_attack_visual_from_damage(skill_id: int) -> bool:
+	return REMOTE_STATE_POLICY.damage_should_start_attack_visual(
+		skill_id, current_state, is_action_locked
+	)
+
 func apply_network_state(new_state: String, new_dir: String) -> void :
 	if should_preserve_hit_state(new_state):
 		# An idle is still an authoritative stop, even if we defer the
@@ -567,6 +572,13 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 			return
 	_pending_idle = false
 	current_state = new_state
+	# An explicit remote attack state already owns this one-shot (legacy
+	# peers/load bots). Restart it from frame zero here; the following
+	# EntityDamage must not restart the same swing a second time.
+	if new_state.begins_with("attack_") and is_instance_valid(doll_engine):
+		for sprite_node in doll_engine.doll_sprites.values():
+			if is_instance_valid(sprite_node):
+				sprite_node.frame = 0
 	if _performance_simplified_visual:
 		queue_redraw()
 	if new_state.begins_with("emote_"):
