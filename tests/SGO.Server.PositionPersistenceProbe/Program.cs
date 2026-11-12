@@ -68,6 +68,56 @@ try
         location.Value.Y == 1234,
         "queued snapshots coalesce to newest coordinate and flush");
 
+    // SQLite has exactly one WAL writer. A background movement heartbeat
+    // must back off when another writer holds the DB, WITHOUT delaying
+    // monster damage under the gameplay hot monitor for 5 seconds.
+    using (var competingWriter = new Microsoft.Data.Sqlite.SqliteConnection(
+               new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+               { DataSource = dbPath }.ToString()))
+    {
+        competingWriter.Open();
+        using var begin = competingWriter.CreateCommand();
+        begin.CommandText = "BEGIN IMMEDIATE";
+        begin.ExecuteNonQuery();
+
+        var deferredStarted = Stopwatch.StartNew();
+        var accepted = store.TryUpdatePositionsBatch([
+            new CharacterPositionWrite(accountId.Value, charId, 15, 4444, 4444)
+        ]);
+        deferredStarted.Stop();
+        Check(!accepted && deferredStarted.ElapsedMilliseconds < 1500,
+            $"busy WAL writer defers background position in bounded time ({deferredStarted.ElapsedMilliseconds}ms)");
+        location = store.GetCharacterLocation(accountId.Value, charId);
+        Check(location.HasValue && location.Value.X == 1234 &&
+            location.Value.Y == 1234,
+            "deferred position batch never partially updates the database");
+
+        // The periodic 100ms worker must restore and retry the newest staged
+        // coordinates rather than treating BUSY as a completed write.
+        var attemptsBeforeStage = store.BackgroundPositionMetrics.Attempts;
+        service.Stage(accountId.Value, charId, 15, 1555, 1555);
+        await Task.Delay(1400);
+        var deferredMetrics = store.BackgroundPositionMetrics;
+        Check(deferredMetrics.Attempts > attemptsBeforeStage &&
+              deferredMetrics.Deferred >= 2,
+            "background worker attempts and defers without losing staged position");
+        using var rollback = competingWriter.CreateCommand();
+        rollback.CommandText = "ROLLBACK";
+        rollback.ExecuteNonQuery();
+    }
+    var retryClock = Stopwatch.StartNew();
+    while (retryClock.Elapsed < TimeSpan.FromSeconds(4))
+    {
+        location = store.GetCharacterLocation(accountId.Value, charId);
+        if (location.HasValue && location.Value.X == 1555 &&
+            location.Value.Y == 1555)
+            break;
+        await Task.Delay(80);
+    }
+    Check(location.HasValue && location.Value.X == 1555 &&
+          location.Value.Y == 1555,
+        "newest background position commits after writer is released");
+
     var stateClock = Stopwatch.StartNew();
     for (var i = 0; i < 1000; i++)
         service.StageState(accountId.Value, charId,

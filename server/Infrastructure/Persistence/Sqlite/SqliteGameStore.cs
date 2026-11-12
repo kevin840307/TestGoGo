@@ -11,7 +11,9 @@ using SGO.Server.Domain.World;
 
 namespace SGO.Server.Infrastructure.Persistence.Sqlite;
 
-public sealed class SqliteGameStore : IGameStore
+public sealed record SqliteBackgroundPositionMetrics(long Attempts, long Deferred);
+
+public sealed class SqliteGameStore : IGameStore, IOpportunisticPositionBatchStore
 {
     private readonly string _connectionString;
     // SQLite WAL permits concurrent readers but only one writer. Serialize
@@ -22,6 +24,12 @@ public sealed class SqliteGameStore : IGameStore
     private readonly object _hotWriteGate = new();
 
     private readonly SqliteHotWriteTelemetry _hotWriteTelemetry = new();
+    private long _backgroundPositionAttempts;
+    private long _backgroundPositionDeferred;
+    public SqliteBackgroundPositionMetrics BackgroundPositionMetrics
+        => new(
+            Interlocked.Read(ref _backgroundPositionAttempts),
+            Interlocked.Read(ref _backgroundPositionDeferred));
 
     // Cumulative, read-only metrics; no logging / SQLite access in hot paths.
     public SqliteHotWriteDiagnostics HotWriteDiagnostics
@@ -923,37 +931,110 @@ public sealed class SqliteGameStore : IGameStore
 
         using (EnterHotWriteGate(SqliteHotWriteOperation.PositionBatch))
         {
-        using var db = Open();
-        using var tx = db.BeginTransaction();
-        using var cmd = db.CreateCommand();
-        cmd.Transaction = tx;
-        cmd.CommandText = """
-            UPDATE characters
-               SET x=$x, y=$y
-             WHERE id=$id
-               AND account_id=$a
-               AND map_id=$map
-            """;
-        var x = cmd.Parameters.Add("$x", SqliteType.Integer);
-        var y = cmd.Parameters.Add("$y", SqliteType.Integer);
-        var id = cmd.Parameters.Add("$id", SqliteType.Integer);
-        var account = cmd.Parameters.Add("$a", SqliteType.Integer);
-        var map = cmd.Parameters.Add("$map", SqliteType.Integer);
+            using var db = Open();
+            CommitPositionsBatch(db, positions);
+        }
+    }
 
-        foreach (var position in positions)
+    // Background heartbeat snapshots are replaceable; map/identity/final
+    // durability calls use UpdatePositionsBatch or UpdatePosition instead.
+    // Never wait for another gameplay hot-write monitor holder. When SQLite
+    // is blocked by a separate writer, defer and let PositionPersistenceService
+    // restore only snapshots that have not been superseded.
+    public bool TryUpdatePositionsBatch(
+        IReadOnlyList<CharacterPositionWrite> positions)
+    {
+        if (positions.Count == 0)
+            return true;
+        Interlocked.Increment(ref _backgroundPositionAttempts);
+        if (!Monitor.TryEnter(_hotWriteGate))
         {
-            if (position.AccountId <= 0 || position.CharacterId <= 0 ||
-                position.MapId <= 0)
-                continue;
-            x.Value = position.X;
-            y.Value = position.Y;
-            id.Value = position.CharacterId;
-            account.Value = position.AccountId;
-            map.Value = position.MapId;
-            cmd.ExecuteNonQuery();
+            Interlocked.Increment(ref _backgroundPositionDeferred);
+            return false;
         }
-        tx.Commit();
+
+        var acquiredAt = Stopwatch.GetTimestamp();
+        try
+        {
+            using var db = OpenLowPriorityPositionWriter();
+            CommitPositionsBatch(db, positions);
+            return true;
         }
+        catch (SqliteException ex) when (ex.SqliteErrorCode is 5 or 6)
+        {
+            // SQLite BUSY / LOCKED: transaction did not commit. No data is
+            // discarded; the worker's newest-value restore will retry later.
+            Interlocked.Increment(ref _backgroundPositionDeferred);
+            return false;
+        }
+        finally
+        {
+            var heldMs = Stopwatch.GetElapsedTime(acquiredAt).TotalMilliseconds;
+            Monitor.Exit(_hotWriteGate);
+            _hotWriteTelemetry.RecordGate(
+                SqliteHotWriteOperation.PositionBatch, 0, heldMs);
+        }
+    }
+
+    private SqliteConnection OpenLowPriorityPositionWriter()
+    {
+        var db = new SqliteConnection(_connectionString)
+        {
+            // Microsoft.Data.Sqlite uses this for implicit BeginTransaction
+            // commands as well as commands created from this connection.
+            DefaultTimeout = 1
+        };
+        try
+        {
+            db.Open();
+            using var pragma = db.CreateCommand();
+            pragma.CommandText = """
+                PRAGMA foreign_keys=ON;
+                PRAGMA busy_timeout=50;
+                """;
+            pragma.ExecuteNonQuery();
+            return db;
+        }
+        catch
+        {
+            db.Dispose();
+            throw;
+        }
+    }
+
+    private static void CommitPositionsBatch(
+        SqliteConnection db,
+        IReadOnlyList<CharacterPositionWrite> positions)
+    {
+            using var tx = db.BeginTransaction();
+            using var cmd = db.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = """
+                UPDATE characters
+                   SET x=$x, y=$y
+                 WHERE id=$id
+                   AND account_id=$a
+                   AND map_id=$map
+                """;
+            var x = cmd.Parameters.Add("$x", SqliteType.Integer);
+            var y = cmd.Parameters.Add("$y", SqliteType.Integer);
+            var id = cmd.Parameters.Add("$id", SqliteType.Integer);
+            var account = cmd.Parameters.Add("$a", SqliteType.Integer);
+            var map = cmd.Parameters.Add("$map", SqliteType.Integer);
+    
+            foreach (var position in positions)
+            {
+                if (position.AccountId <= 0 || position.CharacterId <= 0 ||
+                    position.MapId <= 0)
+                    continue;
+                x.Value = position.X;
+                y.Value = position.Y;
+                id.Value = position.CharacterId;
+                account.Value = position.AccountId;
+                map.Value = position.MapId;
+                cmd.ExecuteNonQuery();
+            }
+            tx.Commit();
     }
 
     public bool UpdateLocation(long accountId, long dbid, int mapId, int x, int y)
