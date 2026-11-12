@@ -1754,6 +1754,32 @@ for (var attempt = 0;
         $"AttackEntity damages seeded monster (attempt {attempt + 1})",
         skipNonMatchingSameType: true);
 
+    // A spectator must see EVERY normal hit, not only the final
+    // EntityDeath. Previously this end-to-end test checked only death,
+    // allowing missing peer damage numbers to go completely unnoticed.
+    var peerDamage = await AwaitType(
+        peerSocket,
+        "EntityDamage",
+        root =>
+            root.TryGetProperty("TargetID", out var peerTarget) &&
+            peerTarget.GetInt32() == combatTargetId &&
+            root.TryGetProperty("TargetType", out var targetType) &&
+            targetType.GetInt32() == 1 &&
+            root.TryGetProperty("AttackerID", out var peerAttacker) &&
+            peerAttacker.GetInt64() == dbid &&
+            root.TryGetProperty("Damage", out var peerAmount) &&
+            peerAmount.GetInt32() > 0,
+        $"peer receives normal-attack monster damage (attempt {attempt + 1})",
+        skipNonMatchingSameType: true);
+    if (peerDamage.GetProperty("Damage").GetInt32() !=
+        damage.GetProperty("Damage").GetInt32() ||
+        peerDamage.GetProperty("CurrentHP").GetInt32() !=
+        damage.GetProperty("CurrentHP").GetInt32())
+    {
+        throw new Exception(
+            "Peer damage packet differs from the attacker's authoritative result");
+    }
+
     combatKilled =
         damage.TryGetProperty(
             "CurrentHP",
