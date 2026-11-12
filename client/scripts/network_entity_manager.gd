@@ -1702,7 +1702,7 @@ func _on_entity_moved(data: Dictionary) -> void :
 			# packets can fall back to motion-derived facing.
 			target_node.apply_network_move_direction(new_dir)
 		elif new_dir != "" and not derives_direction_from_target:
-			if "current_dir" in target_node:
+			if "current_dir" in target_node and not new_dir.is_empty():
 				target_node.current_dir = new_dir
 
 		if target_node.has_method("network_move_to"):
