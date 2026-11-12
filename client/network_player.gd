@@ -26,6 +26,10 @@ var _last_remote_move_received_msec: int = -1
 # replay the same swing, while a later ordinary attack can still start.
 var _network_attack_damage_owner_until_msec: int = -1
 const NETWORK_ATTACK_DAMAGE_OWNER_WINDOW_MSEC: int = 1500
+# Simplified sprites have no body animation_finished signal. Always release
+# remote combat locks after a bounded presentation-only fallback.
+const REMOTE_ACTION_FALLBACK_MSEC: int = 1200
+var _remote_action_started_msec: int = -1
 static var _debug_remote_gap_reports: int = 0
 var _performance_simplified_visual: bool = false
 var _performance_simplified_style: int = ClientPerformanceProfile.SIMPLIFY_PIXEL_A
@@ -318,6 +322,7 @@ func initialize_network_player(data: Dictionary) -> void :
 	_remote_motion.reset(spawn_pos)
 	_has_network_move_direction = false
 	_last_remote_move_received_msec = -1
+	_remote_action_started_msec = -1
 	velocity = Vector2.ZERO
 
 	var extra = data.get("ExtraData", {})
@@ -566,6 +571,12 @@ func should_trigger_attack_visual_from_damage(skill_id: int) -> bool:
 		skill_id, explicit_network_attack_pending
 	)
 
+func trigger_combat_action(new_action_state: String) -> void:
+	super.trigger_combat_action(new_action_state)
+	if new_action_state.begins_with("attack_") or new_action_state.begins_with("hit_"):
+		_remote_action_started_msec = Time.get_ticks_msec()
+		set_physics_process(true)
+
 func apply_network_state(new_state: String, new_dir: String) -> void :
 	if should_preserve_hit_state(new_state):
 		# An idle is still an authoritative stop, even if we defer the
@@ -597,6 +608,8 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		new_state
 	)
 	if is_network_one_shot:
+		_remote_action_started_msec = Time.get_ticks_msec()
+		set_physics_process(true)
 		# Explicit remote attack/hit states are real one-shots too. Lock them
 		# exactly like BaseEntity.trigger_combat_action() so a following
 		# walk/idle packet cannot cut the animation in half.
@@ -626,13 +639,18 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 	_sync_physics_animation_if_changed()
 
 func _physics_process(delta: float) -> void :
+	# No paper doll (simplified mode), or a missing animation asset, must
+	# never leave a remote player permanently stuck in attack/hit state.
+	if is_action_locked and _remote_action_started_msec >= 0 and Time.get_ticks_msec() - _remote_action_started_msec >= REMOTE_ACTION_FALLBACK_MSEC:
+		_remote_action_started_msec = -1
+		_unlock_combat_state()
 	if is_dead:
 		_sync_physics_animation_if_changed()
 		set_physics_process(false)
 		return
 	_handle_movement(delta)
 	_sync_physics_animation_if_changed()
-	if not _remote_motion.is_moving() and current_state != "walk":
+	if not _remote_motion.is_moving() and current_state != "walk" and not is_action_locked:
 		set_physics_process(false)
 
 func _sync_physics_animation_if_changed() -> void :
