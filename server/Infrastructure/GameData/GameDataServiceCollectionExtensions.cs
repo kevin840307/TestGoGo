@@ -73,7 +73,10 @@ public static class GameDataServiceCollectionExtensions
         services.AddSingleton(sp =>
             new EnemyDropCatalog(
                 gameDataRoot,
-                sp.GetRequiredService<CurrentClientDataCatalog>()));
+                sp.GetRequiredService<CurrentClientDataCatalog>(),
+                configuration.GetValue<double?>(
+                    "Gameplay:MonsterDrops:BaseChanceMultiplier")
+                    ?? EnemyDropCatalog.DefaultBaseChanceMultiplier));
 
         services.AddSingleton(sp =>
             new HorseBatteryCatalog(
