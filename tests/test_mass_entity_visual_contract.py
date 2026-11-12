@@ -96,11 +96,42 @@ class MassEntityVisualContracts(unittest.TestCase):
         self.assertIn("if is_remote_normal_hit:", manager)
         self.assertIn("target_type == 1", policy)
         self.assertIn("skill_id == 0", policy)
-        self.assertIn("damage > 0", policy)
+        self.assertIn("damage >= 0", policy)
         self.assertIn("attacker_id != local_character_id", policy)
         self.assertIn("_spawn_bouncing_number_at(target.global_position", floating)
         self.assertIn("force_visible_peer: bool = false", floating)
+        self.assertIn('func show_miss_at(world_position: Vector2,', floating)
+        self.assertIn('show_miss_at(target.global_position, is_player, is_pet)', floating)
+        self.assertIn('show_miss_at(world_position)', floating)
         self.assertIn("if is_riding_mecha():", base)
+
+    def test_bot_melee_range_matches_server_and_reports_real_hits(self):
+        import math
+        bot = script("tests/SGO.Server.WireLoadProbe/InteractiveBots.cs")
+        world = script("tests/SGO.Server.WireLoadProbe/BotWorldState.cs")
+        server = script("server/Application/Combat/CombatService.cs")
+        self.assertIn("NormalBotMeleeEngageRadius = 44.0", bot)
+        self.assertIn(
+            "distanceSq <= NormalBotMeleeEngageRadius * NormalBotMeleeEngageRadius",
+            bot)
+        self.assertIn(
+            "distanceSq > NormalBotMeleeEngageRadius * NormalBotMeleeEngageRadius",
+            bot)
+        self.assertNotIn("distanceSq <= 92 * 92", bot)
+        self.assertLess(44.0, math.sqrt(45*45-200) + 24)
+        self.assertIn("const double networkRangeTolerance = 24.0;", server)
+        self.assertIn("ConfirmedNormalAttackHits", bot)
+        self.assertIn("OutOfRangeRejects", bot)
+        self.assertIn('if (Number(packet, "SkillID") == 0)', world)
+
+    def test_miss_text_is_not_suppressed_by_available_fx(self):
+        floating = script("client/scripts/floating_text_manager.gd")
+        show = gd_function(floating, "func show_damage(target: Node2D,")
+        self.assertIn("if frames:", show)
+        self.assertIn("show_miss_at(target.global_position, is_player, is_pet)", show)
+        self.assertNotIn("elif not GameManager or GameManager.should_show_damage_numbers():", show)
+        self.assertIn('dmg_lbl.text = "MISS"', floating)
+        self.assertIn('if damage <= 0:', floating)
 
     def test_original_hit_action_mode_is_honored(self):
         base = script("client/scripts/base_entity.gd")
