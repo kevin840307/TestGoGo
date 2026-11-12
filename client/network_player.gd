@@ -608,7 +608,7 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		if is_instance_valid(doll_engine):
 			for sprite_node in doll_engine.doll_sprites.values():
 				if is_instance_valid(sprite_node):
-					sprite_node.frame = 0
+					sprite_node.set_frame_and_progress(0, 0.0)
 	elif not new_state.begins_with("emote_"):
 		_network_attack_damage_owner_until_msec = -1
 	if _performance_simplified_visual:
@@ -618,7 +618,7 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 		if is_instance_valid(doll_engine):
 			for sprite_node in doll_engine.doll_sprites.values():
 				if is_instance_valid(sprite_node):
-					sprite_node.frame = 0
+					sprite_node.set_frame_and_progress(0, 0.0)
 
 	# Network states must render immediately even when this stationary remote
 	# player disabled its physics processing. Waiting for the next MoveEntity
