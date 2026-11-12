@@ -107,6 +107,41 @@ foreach (var packet in packets)
 }
 Check(!hub.HasPendingPlayerPriority(normal.ConnectionId), "legacy mode has no hidden second queue");
 
+// Queue-age sampling is per dequeued slot. Envelopes must never change the
+// actual broadcast object, legacy FIFO, coalescing or wire encryption.
+var queueAge = hub.TakeQueueAgeReport(fast.ConnectionId);
+Check(queueAge is not null &&
+      queueAge.Player.Samples == 4 &&
+      queueAge.World.Samples == 3 &&
+      queueAge.Player.P50Ms <= queueAge.Player.P95Ms &&
+      queueAge.Player.P95Ms <= queueAge.Player.P99Ms &&
+      queueAge.World.P50Ms <= queueAge.World.P95Ms,
+    "age probe counts actual player/world dequeues and ordered percentile buckets");
+var drainedAge = hub.TakeQueueAgeReport(fast.ConnectionId);
+Check(drainedAge is not null &&
+      drainedAge.Player.Samples == 0 && drainedAge.World.Samples == 0 &&
+      hub.TakeQueueAgeReport(normal.ConnectionId) is null,
+    "queue-age counters reset by interval, and legacy queues are not instrumented");
+
+var agePeer = hub.Register(prioritizePlayerEvents: true);
+var ageUrgent = new { Type = "SyncState", EntityID = 42L, State = "walk" };
+var ageOrdinary = new { Type = "SpawnEntity", EntityType = 3, EntityID = 5_000_130L };
+hub.PublishToConnection(agePeer.ConnectionId, ageUrgent);
+hub.PublishToConnection(agePeer.ConnectionId, ageOrdinary);
+Thread.Sleep(20);
+Check(hub.TryDequeuePlayerPriority(agePeer.ConnectionId, out var ageP) &&
+      ReferenceEquals(ageP, ageUrgent) &&
+      hub.TryDequeueOrdinary(agePeer.ConnectionId, out var ageW) &&
+      ReferenceEquals(ageW, ageOrdinary),
+    "timestamp envelopes are unwrapped without packet mutation");
+var aged = hub.TakeQueueAgeReport(agePeer.ConnectionId);
+Check(aged is not null && aged.Player.Samples == 1 && aged.World.Samples == 1 &&
+      aged.Player.MaxMs >= 5 && aged.World.MaxMs >= 5,
+    "queue-age probe detects delayed delivery in both lanes");
+hub.Unregister(agePeer.ConnectionId);
+Check(hub.TakeQueueAgeReport(agePeer.ConnectionId) is null,
+    "disconnect releases queue-age history");
+
 // A busy WebSocket must not replay stale monster waypoints one by one.
 // Four 250ms snapshots for one actor become one newest destination while
 // retaining the historical span for diagnostics and bounded visual catch-up.

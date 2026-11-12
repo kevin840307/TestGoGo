@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -89,6 +90,7 @@ public sealed class ServerBroadcastHub
     // Spawn/Despawn/SyncState/attack/death boundary for that same player.
     private sealed class PendingPlayerMove(long entityId, object packet)
     {
+        public long EnqueuedAt { get; } = Stopwatch.GetTimestamp();
         public long EntityId { get; } = entityId;
         public object LatestPacket { get; set; } = packet;
         // A queued visual move may replace several 100ms snapshots. Retain
@@ -129,6 +131,7 @@ public sealed class ServerBroadcastHub
     // actions. Spawn/Despawn/state/combat packets remain FIFO boundaries.
     private sealed class PendingWorldMove(long entityId, object packet)
     {
+        public long EnqueuedAt { get; } = Stopwatch.GetTimestamp();
         public long EntityId { get; } = entityId;
         public object LatestPacket { get; set; } = packet;
         public double TotalServerSeconds { get; set; } =
@@ -153,6 +156,12 @@ public sealed class ServerBroadcastHub
 
     private readonly ConcurrentDictionary<Guid, WorldMovementState>
         _worldMovementStates = new();
+
+    // Only actual WebSocket queues use these envelopes. In-process legacy
+    // queues still expose the original packet object and FIFO contract.
+    private sealed record StampedBroadcast(object Packet, long EnqueuedAt);
+    private readonly ConcurrentDictionary<Guid, BroadcastQueueAgeRecorder>
+        _queueAgeRecorders = new();
 
     // Wake only active senders. A single bounded notification coalesces
     // bursts; there is no 25ms polling timer per connected WebSocket.
@@ -231,13 +240,13 @@ public sealed class ServerBroadcastHub
                         }
                         if (type == "EntityHeal")
                             movement.Pending.Remove(ReadPacketLong(packet, "TargetID"));
-                        playerQueue.Enqueue(packet);
+                        playerQueue.Enqueue(new StampedBroadcast(packet, Stopwatch.GetTimestamp()));
                     }
                 }
             }
             else
             {
-                playerQueue.Enqueue(packet);
+                playerQueue.Enqueue(new StampedBroadcast(packet, Stopwatch.GetTimestamp()));
             }
         }
         else
@@ -315,7 +324,7 @@ public sealed class ServerBroadcastHub
             RemovePendingWorldActor(movement, ReadPacketLong(packet, "TargetID"));
             RemovePendingWorldActor(movement, ReadPacketLong(packet, "AttackerID"));
             RemovePendingWorldActor(movement, ReadPacketLong(packet, "CasterID"));
-            queue.Enqueue(packet);
+            queue.Enqueue(new StampedBroadcast(packet, Stopwatch.GetTimestamp()));
         }
     }
 
@@ -343,6 +352,8 @@ public sealed class ServerBroadcastHub
 
             if (queued is PendingWorldMove slot)
             {
+                if (_queueAgeRecorders.TryGetValue(connectionId, out var recorder))
+                    recorder.RecordWorld(slot.EnqueuedAt);
                 if (movement.Pending.TryGetValue(slot.EntityId, out var current) &&
                     ReferenceEquals(current, slot))
                     movement.Pending.Remove(slot.EntityId);
@@ -374,6 +385,12 @@ public sealed class ServerBroadcastHub
                 {
                     packet = slot.LatestPacket;
                 }
+            }
+            else if (queued is StampedBroadcast stamped)
+            {
+                if (_queueAgeRecorders.TryGetValue(connectionId, out var recorder))
+                    recorder.RecordWorld(stamped.EnqueuedAt);
+                packet = stamped.Packet;
             }
             else
             {
@@ -423,6 +440,8 @@ public sealed class ServerBroadcastHub
 
             if (queued is PendingPlayerMove slot)
             {
+                if (_queueAgeRecorders.TryGetValue(connectionId, out var recorder))
+                    recorder.RecordPlayer(slot.EnqueuedAt);
                 if (movement.Pending.TryGetValue(slot.EntityId, out var current) &&
                     ReferenceEquals(current, slot))
                     movement.Pending.Remove(slot.EntityId);
@@ -454,6 +473,12 @@ public sealed class ServerBroadcastHub
                     packet = slot.LatestPacket;
                 }
             }
+            else if (queued is StampedBroadcast stamped)
+            {
+                if (_queueAgeRecorders.TryGetValue(connectionId, out var recorder))
+                    recorder.RecordPlayer(stamped.EnqueuedAt);
+                packet = stamped.Packet;
+            }
             else
             {
                 packet = queued;
@@ -469,6 +494,13 @@ public sealed class ServerBroadcastHub
     public int PlayerPriorityBacklogCount(Guid connectionId)
         => _playerPriorityQueues.TryGetValue(connectionId, out var queue)
             ? queue.Count : 0;
+
+    // Drain per-connection interval metrics at a slow diagnostic cadence.
+    // This measures enqueue-to-dequeue, not the transport's SendAsync time.
+    public BroadcastQueueAgeReport? TakeQueueAgeReport(Guid connectionId)
+        => _queueAgeRecorders.TryGetValue(connectionId, out var recorder)
+            ? recorder.Drain()
+            : null;
 
     private readonly ConcurrentDictionary<Guid, Presence>
         _presence = new();
@@ -521,6 +553,7 @@ public sealed class ServerBroadcastHub
             _playerPriorityMovementStates[id] = new PlayerPriorityMovementState();
             _playerPriorityQueues[id] = new ConcurrentQueue<object>();
             _worldMovementStates[id] = new WorldMovementState();
+            _queueAgeRecorders[id] = new BroadcastQueueAgeRecorder();
         }
         _queueSignals[id] = Channel.CreateBounded<byte>(
             new BoundedChannelOptions(1)
@@ -652,6 +685,7 @@ public sealed class ServerBroadcastHub
         _playerPriorityQueues.TryRemove(connectionId, out _);
         _playerPriorityMovementStates.TryRemove(connectionId, out _);
         _worldMovementStates.TryRemove(connectionId, out _);
+        _queueAgeRecorders.TryRemove(connectionId, out _);
         if (_queueSignals.TryRemove(connectionId, out var signal))
             signal.Writer.TryComplete();
         _presence.TryRemove(connectionId, out _);

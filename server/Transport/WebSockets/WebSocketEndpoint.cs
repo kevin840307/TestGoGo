@@ -51,6 +51,7 @@ public static class WebSocketEndpoint
                 broadcastConnectionId);
             var lastBroadcastBacklogWarning = DateTimeOffset.MinValue;
             var lastBroadcastBacklogCheck = DateTimeOffset.MinValue;
+            var lastBroadcastQueueAgeReport = DateTimeOffset.MinValue;
             state.ConnectionId = broadcastConnectionId;
             diagnostics.WebSocketConnected();
             diagnostics.Record(
@@ -191,6 +192,35 @@ public static class WebSocketEndpoint
                             await SendPacketsAsync(otherUpdates, worldTickToken, broadcastPacket: true);
 
                         var now = DateTimeOffset.UtcNow;
+                        // Histograms are sampled when a queued broadcast slot
+                        // leaves the hub. Send-gate/encode/socket timing is
+                        // measured separately in [SLOW_SEND_BATCH]. Never
+                        // log per packet or add I/O to the broadcast hot path.
+                        if (now - lastBroadcastQueueAgeReport >= TimeSpan.FromSeconds(10))
+                        {
+                            lastBroadcastQueueAgeReport = now;
+                            var ages = broadcasts.TakeQueueAgeReport(broadcastConnectionId);
+                            if (ages is not null && ages.Player.Samples + ages.World.Samples > 0)
+                            {
+                                if (ages.Player.P95Ms >= 100 || ages.World.P95Ms >= 250 ||
+                                    ages.Player.MaxMs >= 500 || ages.World.MaxMs >= 1000)
+                                {
+                                    log.LogWarning(
+                                        "[BROADCAST_QUEUE_AGE] PlayerN={PlayerN} PlayerP50Ms={PlayerP50Ms:F2} PlayerP95Ms={PlayerP95Ms:F2} PlayerP99Ms={PlayerP99Ms:F2} PlayerMaxMs={PlayerMaxMs:F2} WorldN={WorldN} WorldP50Ms={WorldP50Ms:F2} WorldP95Ms={WorldP95Ms:F2} WorldP99Ms={WorldP99Ms:F2} WorldMaxMs={WorldMaxMs:F2} Connection={ConnectionID}",
+                                        ages.Player.Samples, ages.Player.P50Ms, ages.Player.P95Ms,
+                                        ages.Player.P99Ms, ages.Player.MaxMs, ages.World.Samples,
+                                        ages.World.P50Ms, ages.World.P95Ms, ages.World.P99Ms,
+                                        ages.World.MaxMs, state.ConnectionId);
+                                }
+                                else
+                                {
+                                    log.LogDebug(
+                                        "[BROADCAST_QUEUE_AGE] PlayerN={PlayerN} PlayerP95Ms={PlayerP95Ms:F2} WorldN={WorldN} WorldP95Ms={WorldP95Ms:F2} Connection={ConnectionID}",
+                                        ages.Player.Samples, ages.Player.P95Ms,
+                                        ages.World.Samples, ages.World.P95Ms, state.ConnectionId);
+                                }
+                            }
+                        }
                         if ((!broadcastQueue.IsEmpty ||
                              broadcasts.HasPendingPlayerPriority(broadcastConnectionId)) &&
                             now - lastBroadcastBacklogCheck >= TimeSpan.FromSeconds(2))
