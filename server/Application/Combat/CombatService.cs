@@ -2589,13 +2589,12 @@ public sealed class CombatService
                     effective.Attack + effective.MagicAttack);
             }
 
-            // Load-test characters already have ATK=1, but a skill's fixed
-            // BaseDamage can still instantly kill a monster. Only clamp
-            // single-target skills of explicitly marked synthetic bots;
-            // real players and all existing damage formulas stay unchanged.
+            // Keep synthetic bot single-target skills strong enough to
+            // finish normal monsters without allowing large BaseDamage skills
+            // to one-shot everything. Real players use the original formula.
             if (!isAreaAttack &&
                 _store.IsLoadTestBot(accountId, session.CharacterId.Value))
-                damage = Math.Min(damage, 1);
+                damage = Math.Min(damage, 90);
 
             var runtime = _runtime.GetMap(
                 session.CurrentMapId);
