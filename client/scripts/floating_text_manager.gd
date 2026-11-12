@@ -297,6 +297,15 @@ func _spawn_bouncing_number(target: Node2D, val: int, is_crit: bool, dir_ratio: 
 	_spawn_bouncing_number_at(target.global_position, target is BaseEntity, target is PetEntity, val, is_crit, dir_ratio, is_split)
 
 func _spawn_bouncing_number_at(base_pos: Vector2, is_player: bool, is_pet: bool, val: int, is_crit: bool, dir_ratio: float, is_split: bool) -> void:
+	# Offscreen damage labels are not visible, but still used to occupy
+	# the shared pool for ~1.5s. With hundreds of monsters this starves
+	# visible peer damage. Keep packets/HP/FX unchanged: only skip a label
+	# entirely outside the viewport (with generous edge padding).
+	var viewport: Viewport = get_viewport()
+	if is_instance_valid(viewport):
+		var screen_pos: Vector2 = viewport.get_canvas_transform() * base_pos
+		if not viewport.get_visible_rect().grow(200.0).has_point(screen_pos):
+			return
 	var dmg_lbl = _get_free_label()
 	if not dmg_lbl: return
 
