@@ -438,7 +438,8 @@ public sealed class SqliteGameStore : IGameStore, IOpportunisticPositionBatchSto
                    exp_use,exp_acc,exp_death,max_exp,career,job,attack,defense,
                    magic_attack,magic_defense,hit,dodge,lucky,move_speed,
                    attack_speed,attack_range,crit_rate,crit_damage,state,
-                   reborn_map_id,reborn_x,reborn_y,summoned_horse_uid
+                   reborn_map_id,reborn_x,reborn_y,summoned_horse_uid,
+                   pk_status,red_man,red_man_kill_left,pk_pink_until_utc_ms
             FROM characters
             """;
         return cmd;
@@ -514,13 +515,14 @@ public sealed class SqliteGameStore : IGameStore, IOpportunisticPositionBatchSto
             ["RebornX"] = r.GetDouble(42),
             ["RebornY"] = r.GetDouble(43),
             ["SummonedHorseUID"] = r.GetInt64(44),
+            ["PKStatus"] = GetInt32Safe(r, 45, "PKStatus"),
+            ["RedMan"] = GetInt32Safe(r, 46, "RedMan"),
+            ["RedManKillLeft"] = GetInt32Safe(r, 47, "RedManKillLeft"),
+            ["PKPinkUntilUtcMs"] = r.GetInt64(48),
 
             // Safe defaults expected by PlayerData.load_from_json().
             ["Title"] = 0,
             ["UnlockedTitles"] = Array.Empty<int>(),
-            ["RedMan"] = 0,
-            ["RedManKillLeft"] = 0,
-            ["PKStatus"] = 0,
             ["ClubID"] = 0,
             ["ClubPosition"] = 0,
             ["ClubDonation"] = 0,
@@ -905,6 +907,40 @@ public sealed class SqliteGameStore : IGameStore, IOpportunisticPositionBatchSto
         Arg(cmd, "$a", accountId);
         Arg(cmd, "$p", newPassword);
         return cmd.ExecuteNonQuery() == 1;
+    }
+
+    public Dictionary<string, object>? SetPvpState(
+        long accountId,
+        long dbid,
+        int pkStatus,
+        int redMan,
+        int redManKillLeft,
+        long pinkUntilUtcMs)
+    {
+        using (EnterHotWriteGate(SqliteHotWriteOperation.Damage))
+        {
+            using var db = Open();
+            using var cmd = db.CreateCommand();
+            cmd.CommandText = """
+                UPDATE characters
+                   SET pk_status=$pk,
+                       red_man=$red,
+                       red_man_kill_left=$left,
+                       pk_pink_until_utc_ms=$pink
+                 WHERE id=$id AND account_id=$a
+                """;
+            Arg(cmd, "$pk", Math.Clamp(pkStatus, 0, 1));
+            Arg(cmd, "$red", redMan > 0 ? 1 : 0);
+            Arg(cmd, "$left", Math.Max(0, redManKillLeft));
+            Arg(cmd, "$pink", Math.Max(0L, pinkUntilUtcMs));
+            Arg(cmd, "$id", dbid);
+            Arg(cmd, "$a", accountId);
+
+            if (cmd.ExecuteNonQuery() != 1)
+                return null;
+
+            return ReadCharacterForAccount(db, accountId, dbid);
+        }
     }
 
     public bool UpdatePosition(long accountId, long dbid, int x, int y)
