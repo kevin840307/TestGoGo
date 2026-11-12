@@ -545,7 +545,7 @@ func _focus_perf_context() -> String:
 		focus_age_ms = int((Time.get_ticks_usec() - _focus_last_change_usec) / 1000)
 	return "focus=%s focus_actual=%s minimized=%s power_save=%s fps_cap=%d render_loop=%s audio_muted=%s vsync=%d focus_age_ms=%d startup_overlay=%s" % [
 		focus_name, str(DisplayServer.window_is_focused()), str(_is_main_window_minimized()),
-		str(not _window_has_focus), Engine.max_fps, str(render_enabled), str(audio_muted),
+		str(_background_mode_active), Engine.max_fps, str(render_enabled), str(audio_muted),
 		DisplayServer.window_get_vsync_mode() if DisplayServer.get_name() != "headless" else -1,
 		focus_age_ms, str(_startup_loading_overlay_active),
 	]
@@ -576,7 +576,7 @@ func _process(delta: float) -> void :
 	if _frame_gap_last_usec > 0:
 		var gap_usec := now_usec - _frame_gap_last_usec
 		if gap_usec >= FRAME_GAP_WARN_USEC:
-			var gap_kind: String = classify_frame_gap(gap_usec, _window_has_focus, Engine.max_fps)
+			var gap_kind: String = classify_frame_gap(gap_usec, not _background_mode_active, Engine.max_fps)
 			# A normal background frame interval is intentional, not a stall.
 			# Preserve unusually long background gaps as real diagnostics.
 			if gap_kind != "background_throttle":
@@ -822,7 +822,7 @@ func _print_render_stats() -> void :
 		paper_doll_layers,
 		minimap_world_redraws,
 		minimap_world_skips,
-		str(_window_has_focus and RenderingServer.render_loop_enabled),
+		str(not _background_mode_active and RenderingServer.render_loop_enabled),
 		_focus_perf_context(),
 		_multiclient_gpu_context(),
 	])
