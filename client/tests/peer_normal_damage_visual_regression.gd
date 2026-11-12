@@ -20,8 +20,10 @@ func _run() -> void:
 		"own normal attack retains its existing impact timing")
 	_check(not PEER_POLICY.is_remote_normal_hit(1, 12101, 75, 105, 100),
 		"other-player skills preserve their skill hit timeline")
-	_check(not PEER_POLICY.is_remote_normal_hit(1, 0, 0, 105, 100),
-		"miss never invents damage")
+	_check(PEER_POLICY.is_remote_normal_hit(1, 0, 0, 105, 100),
+		"real zero-damage EntityDamage displays MISS on a peer")
+	_check(not PEER_POLICY.is_remote_normal_hit(1, 0, -1, 105, 100),
+		"invalid negative damage never turns into MISS")
 	_check(not PEER_POLICY.is_remote_normal_hit(0, 0, 75, 105, 100),
 		"damage to a player uses the hurt animation path")
 	_check(not PEER_POLICY.is_remote_normal_hit(1, 0, 75, 1000050, 100),
