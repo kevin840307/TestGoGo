@@ -274,6 +274,18 @@ func _run() -> void:
 		"hit_weapon_melee", true, "death") and
 		RemotePlayerStatePolicy.movement_may_replace_animation("idle", false),
 		"death wins over hit and unlocked avatars can resume walk")
+	_check(RemotePlayerStatePolicy.damage_should_start_attack_visual(
+		0, "walk", false),
+		"ordinary remote normal damage starts the fallback attack visual")
+	_check(not RemotePlayerStatePolicy.damage_should_start_attack_visual(
+		0, "attack_aa", false),
+		"explicit network attack state owns the following normal damage visual")
+	_check(not RemotePlayerStatePolicy.damage_should_start_attack_visual(
+		12101, "attack_aa", true),
+		"SkillCast-owned animation is not replayed as a normal attack on damage")
+	_check(RemotePlayerStatePolicy.damage_should_start_attack_visual(
+		0, "attack_aa", true),
+		"a later real normal hit may restart a prior locally-owned attack swing")
 
 	# Runtime NetworkPlayer supplies the entity's expected movement speed.
 	# Backlog recovery is allowed, but capped to 2x normal movement speed.
