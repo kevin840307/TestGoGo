@@ -3857,6 +3857,38 @@ popup/item_1/text = "反應優先"
 popup/item_1/id = 1
 tooltip_text = "只影響渲染負載與視覺排程，不降低戰鬥反應速度。"
 
+[node name="LabelUnfocus" type="Label" parent="WindowsContainer/SettingsWindow/Tabs/Performance"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 191.0
+offset_right = 231.0
+offset_bottom = 222.0
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.83, 0.89, 0.95, 1)
+text = "視窗失焦省資源"
+vertical_alignment = 1
+tooltip_text = "僅控制 Alt+Tab／切換到其他視窗時的低資源呈現，最小化時始終啟用。"
+
+[node name="OptionUnfocus" type="OptionButton" parent="WindowsContainer/SettingsWindow/Tabs/Performance"]
+layout_mode = 0
+offset_left = 236.0
+offset_top = 193.0
+offset_right = 478.0
+offset_bottom = 223.0
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 15
+alignment = 1
+theme_override_styles/normal = SubResource("StyleBoxFlat_chat_input")
+theme_override_styles/hover = SubResource("StyleBoxFlat_chat_input_focus")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_chat_input_focus")
+selected = 1
+item_count = 2
+popup/item_0/text = "關閉"
+popup/item_0/id = 0
+popup/item_1/text = "開啟"
+popup/item_1/id = 1
+tooltip_text = "開啟：失焦時降低畫面負擔、暫停非必要視覺與靜音。關閉：失焦仍照常渲染、播放與更新。視窗最小化永遠啟用省資源模式；網路封包及遊戲邏輯不會停。"
+
 [node name="Visibility" type="Control" parent="WindowsContainer/SettingsWindow/Tabs"]
 layout_mode = 2
 
