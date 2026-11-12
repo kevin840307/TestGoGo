@@ -37,7 +37,7 @@ const SIMPLIFIED_PLAYER_CLICK_SIZE := Vector2(104.0, 136.0)
 const SIMPLIFIED_ORB_CACHE = preload("res://scripts/simplified_orb_cache.gd")
 const NORMAL_PLAYER_CLICK_SIZE := Vector2(80.0, 120.0)
 
-const SAFE_MAP_IDS: Array = [4, 9, 15, 17, 22, 39, 40, 53, 75, 93]
+const SAFE_MAP_IDS: Array = [7, 9, 15, 17, 22, 25, 38, 40]
 
 var _physics_animation_cache_initialized: = false
 var _last_physics_animation_state: = ""
@@ -288,14 +288,16 @@ func _on_entity_name_color_updated(
 	color_state: int,
 	pk_status: int = -1,
 	red_man_kill_left: int = -1,
-	party_id: String = ""
+	party_id: String = "",
+	pink_remaining_ms: int = 0
 ) -> void:
 	super._on_entity_name_color_updated(
 		p_entity_id,
 		color_state,
 		pk_status,
 		red_man_kill_left,
-		party_id
+		party_id,
+		pink_remaining_ms
 	)
 	# Even when this packet belongs to the local player, its PK/party state
 	# can change how every simplified remote player should be outlined.
@@ -372,7 +374,9 @@ func initialize_network_player(data: Dictionary) -> void :
 		var race_map = {"Boy": "[騎]", "Girl": "[騎]", "Migu": "[魔]", "Robot": "[機]", "Yas": "[遺]"}
 		if not name_label.text or name_label.text == "":
 			name_label.text = race_map.get(current_race, "[?]") + data_model.character_name
-		_apply_name_color(1 if data_model.red_man > 0 else 0)
+		_apply_name_color(
+			int(extra.get("NameColorState", 1 if data_model.red_man > 0 else 0)),
+			int(extra.get("PinkRemainingMs", 0)))
 		name_label.visible = not (data_model.is_shop_open or data_model.transform_type == 2)
 
 	data_model.upper_armor_id = int(extra.get("Upper_armor", 0))

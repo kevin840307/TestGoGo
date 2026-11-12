@@ -283,6 +283,9 @@ func _on_change_map_received(_map_id: int, _target_x: float, _target_y: float) -
 
 func _on_enter_world_success(data: Dictionary) -> void :
 	if data.get("DBID", 0) == data_model.db_id:
+		_apply_name_color(
+			int(data.get("NameColorState", 1 if data_model.red_man > 0 else 0)),
+			int(data.get("PinkRemainingMs", 0)))
 		if data.has("DeathTimer") and data_model.hp <= 0:
 			death_timer = float(data.get("DeathTimer", 120.0))
 			if is_instance_valid(death_label):

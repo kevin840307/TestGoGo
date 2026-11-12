@@ -438,7 +438,8 @@ public sealed class SqliteGameStore : IGameStore, IOpportunisticPositionBatchSto
                    exp_use,exp_acc,exp_death,max_exp,career,job,attack,defense,
                    magic_attack,magic_defense,hit,dodge,lucky,move_speed,
                    attack_speed,attack_range,crit_rate,crit_damage,state,
-                   reborn_map_id,reborn_x,reborn_y,summoned_horse_uid
+                   reborn_map_id,reborn_x,reborn_y,summoned_horse_uid,
+                   pk_status,red_man,pink_until_utc_ms
             FROM characters
             """;
         return cmd;
@@ -518,9 +519,10 @@ public sealed class SqliteGameStore : IGameStore, IOpportunisticPositionBatchSto
             // Safe defaults expected by PlayerData.load_from_json().
             ["Title"] = 0,
             ["UnlockedTitles"] = Array.Empty<int>(),
-            ["RedMan"] = 0,
+            ["RedMan"] = GetInt32Safe(r, 46, "RedMan"),
             ["RedManKillLeft"] = 0,
-            ["PKStatus"] = 0,
+            ["PKStatus"] = GetInt32Safe(r, 45, "PKStatus"),
+            ["PinkUntilUtcMs"] = r.GetInt64(47),
             ["ClubID"] = 0,
             ["ClubPosition"] = 0,
             ["ClubDonation"] = 0,
@@ -11777,6 +11779,165 @@ public sealed class SqliteGameStore : IGameStore, IOpportunisticPositionBatchSto
             return new CharacterDamageBatchResult(
                 result, hpAfterHits, firstDeathIndex);
         }
+    }
+
+
+    private static (int Hp, int MaxHp, int PkStatus, int RedMan, long PinkUntilUtcMs)?
+        ReadPvpCombatant(
+            SqliteConnection db, SqliteTransaction tx,
+            long accountId, long characterId, int mapId)
+    {
+        using var cmd = db.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            SELECT hp,max_hp,pk_status,red_man,pink_until_utc_ms
+              FROM characters
+             WHERE id=$id AND account_id=$a AND map_id=$map
+             LIMIT 1
+            """;
+        Arg(cmd, "$id", characterId);
+        Arg(cmd, "$a", accountId);
+        Arg(cmd, "$map", mapId);
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read())
+            return null;
+        return (
+            reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2),
+            reader.GetInt32(3), reader.GetInt64(4));
+    }
+
+    public PvpHitResult? ApplyPvpHit(
+        long attackerAccountId, long attackerDbid,
+        long targetAccountId, long targetDbid,
+        int mapId, int damage, long nowUtcMs, long pinkDurationMs)
+    {
+        if (attackerDbid <= 0 || targetDbid <= 0 ||
+            attackerDbid == targetDbid || mapId <= 0 || damage <= 0)
+            return null;
+
+        // Both HP and killer's name-state are serialized with the death hit.
+        // A single SQLite writer transaction prevents double PK settlement.
+        using var gate = EnterHotWriteGate(SqliteHotWriteOperation.Damage);
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+        var attacker = ReadPvpCombatant(
+            db, tx, attackerAccountId, attackerDbid, mapId);
+        var target = ReadPvpCombatant(
+            db, tx, targetAccountId, targetDbid, mapId);
+        if (!attacker.HasValue || !target.HasValue ||
+            attacker.Value.Hp <= 0 || target.Value.Hp <= 0 ||
+            attacker.Value.PkStatus != 1 || target.Value.PkStatus != 1)
+            return null;
+
+        var targetWasWhite =
+            target.Value.RedMan == 0 && target.Value.PinkUntilUtcMs <= nowUtcMs;
+        var killed = damage >= target.Value.Hp;
+        var nextHp = Math.Max(0, target.Value.Hp - damage);
+        using (var hit = db.CreateCommand())
+        {
+            hit.Transaction = tx;
+            hit.CommandText = """
+                UPDATE characters
+                   SET hp=MAX(0,hp-$damage),
+                       state=CASE WHEN hp-$damage<=0 THEN 'death' ELSE state END
+                 WHERE id=$id AND account_id=$a AND map_id=$map
+                   AND hp>0 AND pk_status=1
+                """;
+            Arg(hit, "$damage", damage);
+            Arg(hit, "$id", targetDbid);
+            Arg(hit, "$a", targetAccountId);
+            Arg(hit, "$map", mapId);
+            if (hit.ExecuteNonQuery() != 1)
+                return null;
+        }
+
+        var attackerState = new PvpNameState(
+            attacker.Value.PkStatus, attacker.Value.RedMan,
+            attacker.Value.PinkUntilUtcMs);
+        if (targetWasWhite)
+        {
+            using var penalty = db.CreateCommand();
+            penalty.Transaction = tx;
+            penalty.CommandText = """
+                UPDATE characters
+                   SET red_man=CASE WHEN $killed=1 THEN 1 ELSE red_man END,
+                       pink_until_utc_ms=CASE
+                           WHEN $killed=1 OR red_man>0 THEN 0
+                           ELSE MAX(pink_until_utc_ms,$expiry)
+                       END
+                 WHERE id=$id AND account_id=$a AND map_id=$map
+                   AND pk_status=1
+                RETURNING pk_status,red_man,pink_until_utc_ms
+                """;
+            Arg(penalty, "$killed", killed ? 1 : 0);
+            Arg(penalty, "$expiry",
+                nowUtcMs + Math.Max(1, pinkDurationMs));
+            Arg(penalty, "$id", attackerDbid);
+            Arg(penalty, "$a", attackerAccountId);
+            Arg(penalty, "$map", mapId);
+            using var result = penalty.ExecuteReader();
+            if (!result.Read())
+                return null;
+            attackerState = new PvpNameState(
+                result.GetInt32(0), result.GetInt32(1),
+                result.GetInt64(2));
+        }
+
+        tx.Commit();
+        return new PvpHitResult(
+            nextHp, target.Value.MaxHp, targetWasWhite, killed,
+            attackerState);
+    }
+
+    public PvpNameState? SetPvpState(
+        long accountId, long dbid, int pkStatus, int redMan,
+        long pinkUntilUtcMs)
+    {
+        if (pkStatus is not (0 or 1) || redMan is not (0 or 1))
+            return null;
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters
+               SET pk_status=$pk, red_man=$red,
+                   pink_until_utc_ms=$pink
+             WHERE id=$id AND account_id=$a
+            RETURNING pk_status,red_man,pink_until_utc_ms
+            """;
+        Arg(cmd, "$pk", pkStatus);
+        Arg(cmd, "$red", redMan);
+        Arg(cmd, "$pink", Math.Max(0, pinkUntilUtcMs));
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+        using var row = cmd.ExecuteReader();
+        return row.Read()
+            ? new PvpNameState(row.GetInt32(0), row.GetInt32(1),
+                row.GetInt64(2))
+            : null;
+    }
+
+    public PvpNameState? TrySetPvpMode(
+        long accountId, long dbid, int pkStatus, long nowUtcMs)
+    {
+        if (pkStatus is not (0 or 1))
+            return null;
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            UPDATE characters SET pk_status=$pk
+             WHERE id=$id AND account_id=$a AND hp>0
+               AND red_man=0 AND pink_until_utc_ms<=$now
+            RETURNING pk_status,red_man,pink_until_utc_ms
+            """;
+        Arg(cmd, "$pk", pkStatus);
+        Arg(cmd, "$id", dbid);
+        Arg(cmd, "$a", accountId);
+        Arg(cmd, "$now", nowUtcMs);
+        using var row = cmd.ExecuteReader();
+        return row.Read()
+            ? new PvpNameState(row.GetInt32(0), row.GetInt32(1),
+                row.GetInt64(2))
+            : null;
     }
 
     public Dictionary<string, object>? ApplyDamage(

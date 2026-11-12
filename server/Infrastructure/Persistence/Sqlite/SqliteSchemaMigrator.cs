@@ -74,6 +74,10 @@ internal static class SqliteSchemaMigrator
         ExecuteSqlFile(
             db,
             ResolveSqlPath("017_external_mall_credits.sql"));
+
+        ApplyEnsureColumnDirectives(
+            db,
+            ResolveSqlPath("018_pvp_state.sql"));
     }
 
     private static void ExecuteSqlFile(

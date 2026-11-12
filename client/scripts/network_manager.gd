@@ -64,7 +64,7 @@ signal character_password_modify_finished(success: bool, msg: String, char_slot:
 signal enter_world_success(server_full_data: Dictionary)
 signal create_character_response_received(success: bool, message: String)
 signal delete_character_response_received(success: bool, message: String, char_slot: int, deleted_dbid: int)
-signal entity_name_color_updated(entity_id: int, color_state: int, pk_status: int, red_man_kill_left: int, party_id: String)
+signal entity_name_color_updated(entity_id: int, color_state: int, pk_status: int, red_man_kill_left: int, party_id: String, pink_remaining_ms: int)
 
 signal inventory_synced(items: Array, max_size: int)
 signal equip_synced(equips: Array, max_size: int)
@@ -785,7 +785,7 @@ func _handle_encrypted_server_message(base64_cipher_text: String) -> void :
 		"MonsterTarget": monster_target_changed.emit(int(data.get("EntityID", 0)), bool(data.get("HasTarget", false)))
 		"EquipResponse": equip_response.emit(data.get("Success", false), data.get("Message", ""), data)
 		"UpdateAppearance": entity_appearance_updated.emit(data)
-		"UpdateNameColor": entity_name_color_updated.emit(int(data.get("EntityID", 0)), int(data.get("ColorState", 0)), int(data.get("PKStatus", -1)), int(data.get("RedManKillLeft", -1)), str(data.get("PartyID", "")))
+		"UpdateNameColor": entity_name_color_updated.emit(int(data.get("EntityID", 0)), int(data.get("ColorState", 0)), int(data.get("PKStatus", -1)), int(data.get("RedManKillLeft", -1)), str(data.get("PartyID", "")), int(data.get("PinkRemainingMs", 0)))
 		"ChatBroadcast": chat_broadcast_received.emit(int(data.get("EntityID", 0)), data.get("SenderName", ""), int(data.get("Race", 0)), int(data.get("Channel", 0)), data.get("Message", ""), int(data.get("BubbleType", 0)))
 		"PetIdleSpeech": pet_idle_speech_received.emit(int(data.get("EntityID", 0)), str(data.get("Message", "")))
 		"ChangeMap": change_map_received.emit(int(data.get("MapID", 1)), float(data.get("X", 0)), float(data.get("Y", 0)))

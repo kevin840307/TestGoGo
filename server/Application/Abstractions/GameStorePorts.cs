@@ -99,6 +99,13 @@ public interface IAtomicCharacterDamageStore
         IReadOnlyList<int> damages);
 }
 
+// A single PvP exchange updates both characters under one database transaction.
+// The first lethal hit owns the PK outcome; later hits must fail atomically.
+public sealed record PvpNameState(int PkStatus, int RedMan, long PinkUntilUtcMs);
+public sealed record PvpHitResult(
+    int CurrentHp, int MaxHp, bool TargetWasWhite, bool Killed,
+    PvpNameState AttackerState);
+
 public interface ICharacterStore
 {
     List<Dictionary<string, object>> Characters(long accountId);
@@ -197,6 +204,20 @@ public interface ICharacterStore
         long accountId,
         long dbid,
         int damage);
+
+    // Safe default-deny for fake/alternative stores without PvP transaction support.
+    PvpHitResult? ApplyPvpHit(
+        long attackerAccountId, long attackerDbid,
+        long targetAccountId, long targetDbid,
+        int mapId, int damage, long nowUtcMs, long pinkDurationMs)
+        => null;
+
+    PvpNameState? SetPvpState(
+        long accountId, long dbid, int pkStatus, int redMan,
+        long pinkUntilUtcMs) => null;
+
+    PvpNameState? TrySetPvpMode(
+        long accountId, long dbid, int pkStatus, long nowUtcMs) => null;
     Dictionary<string, object>? ApplyHeal(
         long accountId,
         long dbid,
