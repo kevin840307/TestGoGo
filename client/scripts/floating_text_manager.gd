@@ -272,6 +272,28 @@ func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: 
 		_damage_queue.append({"target": weakref(target), "position": hit_position, "player": hit_is_player, "pet": hit_is_pet, "val": damage, "crit": is_crit, "dir": 0.0, "split": false})
 	set_process(true)
 
+func show_remote_normal_damage(target: Node2D, damage: int, is_crit: bool, hit_delay: float) -> void:
+	# The peer's EntityDamage is ALREADY the authoritative hit result.
+	# Waiting for the remote actor's animation, delayed FX and an additional
+	# FX fraction sometimes removed the target before the number could show.
+	# Display the real value now; schedule the cosmetic impact separately.
+	if not is_instance_valid(target) or not target.is_inside_tree():
+		return
+	if GameManager and GameManager.is_afk_mode_active():
+		return
+	if damage > 0 and (not GameManager or GameManager.should_show_damage_numbers()):
+		# An existing visible monster knows its real world coordinate. Never
+		# let an imperfect camera-based cull suppress peer combat feedback.
+		_spawn_bouncing_number_at(target.global_position, false, false, damage, is_crit, 0.0, false, true)
+	if hit_delay > 0.0:
+		var scene_tree: SceneTree = get_tree()
+		if scene_tree == null:
+			return
+		await scene_tree.create_timer(minf(hit_delay, 0.45)).timeout
+	if is_instance_valid(target) and target.is_inside_tree():
+		_play_hit_effect(target, 0, true)
+
+
 func show_damage_at(world_position: Vector2, damage: int, is_crit: bool = false, hit_delay: float = 0.0) -> void:
 	# A monster may have an authoritative SpawnEntity but still be waiting
 	# for its visual scene. Do not lose ordinary peer damage in that gap.
@@ -314,13 +336,13 @@ func _spawn_bouncing_number(target: Node2D, val: int, is_crit: bool, dir_ratio: 
 		return
 	_spawn_bouncing_number_at(target.global_position, target is BaseEntity, target is PetEntity, val, is_crit, dir_ratio, is_split)
 
-func _spawn_bouncing_number_at(base_pos: Vector2, is_player: bool, is_pet: bool, val: int, is_crit: bool, dir_ratio: float, is_split: bool) -> void:
+func _spawn_bouncing_number_at(base_pos: Vector2, is_player: bool, is_pet: bool, val: int, is_crit: bool, dir_ratio: float, is_split: bool, force_visible_peer: bool = false) -> void:
 	# Offscreen damage labels are not visible, but still used to occupy
 	# the shared pool for ~1.5s. With hundreds of monsters this starves
 	# visible peer damage. Keep packets/HP/FX unchanged: only skip a label
 	# entirely outside the viewport (with generous edge padding).
 	var viewport: Viewport = get_viewport()
-	if is_instance_valid(viewport):
+	if is_instance_valid(viewport) and not force_visible_peer:
 		var screen_pos: Vector2 = viewport.get_canvas_transform() * base_pos
 		if not viewport.get_visible_rect().grow(200.0).has_point(screen_pos):
 			return
