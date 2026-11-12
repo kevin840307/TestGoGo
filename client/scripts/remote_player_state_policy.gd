@@ -4,16 +4,16 @@ class_name RemotePlayerStatePolicy
 # Attack/hurt poses are one-shot actions, not walk/idle updates.
 # BaseEntity._on_body_animation_finished() releases the lock. Late movement
 # state packets may change motion, but must not restart/erase the action pose.
+static func network_state_is_one_shot(state: String) -> bool:
+	return state.begins_with("hit_") or state.begins_with("attack_")
+
+
 static func preserve_hit_animation(
 	current_state: String, action_locked: bool, incoming_state: String
 ) -> bool:
-	var one_shot_action: bool = (
-		current_state.begins_with("hit_")
-		or current_state.begins_with("attack_")
-	)
 	return (
 		action_locked
-		and one_shot_action
+		and network_state_is_one_shot(current_state)
 		and incoming_state in ["walk", "idle"]
 	)
 
@@ -42,13 +42,8 @@ static func movement_direction_may_replace_animation(
 # the one-shot without taking BaseEntity's local action lock.
 static func damage_should_start_attack_visual(
 	skill_id: int,
-	current_state: String,
-	action_locked: bool
+	explicit_network_attack_pending: bool
 ) -> bool:
 	if skill_id > 0:
 		return false
-	var explicit_network_attack: bool = (
-		current_state.begins_with("attack_")
-		and not action_locked
-	)
-	return not explicit_network_attack
+	return not explicit_network_attack_pending
