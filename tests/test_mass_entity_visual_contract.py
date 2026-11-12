@@ -85,6 +85,30 @@ class MassEntityVisualContracts(unittest.TestCase):
         self.assertIn("return oldest", body)
         self.assertNotIn("POOL_SIZE = 1000", floating)
 
+    def test_other_players_normal_damage_uses_immediate_authoritative_feedback(self):
+        manager = script("client/scripts/network_entity_manager.gd")
+        floating = script("client/scripts/floating_text_manager.gd")
+        base = script("client/scripts/base_entity.gd")
+        policy = script("client/scripts/peer_damage_visual_policy.gd")
+        self.assertIn("PEER_DAMAGE_VISUAL_POLICY.is_remote_normal_hit(", manager)
+        self.assertIn("FloatingTextManager.show_remote_normal_damage(", manager)
+        self.assertIn("target_node.update_hp(current_hp, hit_delay, false)", manager)
+        self.assertIn("if is_remote_normal_hit:", manager)
+        self.assertIn("target_type == 1", policy)
+        self.assertIn("skill_id == 0", policy)
+        self.assertIn("damage > 0", policy)
+        self.assertIn("attacker_id != local_character_id", policy)
+        self.assertIn("_spawn_bouncing_number_at(target.global_position", floating)
+        self.assertIn("force_visible_peer: bool = false", floating)
+        self.assertIn("if is_riding_mecha():", base)
+
+    def test_original_hit_action_mode_is_honored(self):
+        base = script("client/scripts/base_entity.gd")
+        hit = gd_function(base, "func get_combat_hit_state() -> String:")
+        self.assertIn('"attack_ga", "attack_gb"', hit)
+        self.assertIn('"attack_aa", "attack_ab"', hit)
+        self.assertIn('get_combat_idle_state()', hit)
+
     def test_physics_and_network_cadence_still_unthrottled(self):
         network = script("client/scripts/network_manager.gd")
         manager = script("client/scripts/network_entity_manager.gd")
