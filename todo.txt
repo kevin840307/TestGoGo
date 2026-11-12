@@ -27,7 +27,7 @@ SGO MMORPG 多人同步 / 低延遲優化 TODO
 【工作清單，依序處理；每項可拆成獨立提交】
 T00 [x] 建立本 todo.txt 在目標分支，定義交接契約與優先級。
     驗證：檔案在 feature/local-server-net8，其他 Session 直接從 GitHub 讀取。
-T01 [ ] P0：補齊延遲定位和壅塞可觀測性（先作、不變更戰鬥語意）。
+T01 [~] P0：補齊延遲定位和壅塞可觀測性（先作、不變更戰鬥語意）。
     範圍：server/Application/Messaging/ServerBroadcastHub.cs、server/Transport/WebSockets/WebSocketEndpoint.cs、現有 probes。
     驗收：可區分 Player/World queue oldest age 或每批排隊時間、sendGateWait、Encode、SocketWrite，P50/P95/P99 及尖峰；避免逐包 log、避免額外 DB；測試合併移動不改原 FIFO 邊界。完成須記真實測試證據。
 T02 [ ] P0：20 Bot + 312 怪持續戰鬥 / 移動混合負載基準。
@@ -60,4 +60,5 @@ T09 [ ] P0/P1：CI + 實機綜合驗收。
 3. 目標分支可能同時有人寫入；務必 fetch HEAD + diff，先 merge/rebase 再交付；不要刪改其他人的實驗分支。
 
 【工作日誌（追加新紀錄，不覆蓋舊紀錄）】
-2026-11-12：首次建立跨 Session TODO；T00 完成；T01~T09 待執行；本檔建立不代表任何程式修正/壓測已通過。
+2026-11-12：首次建立跨 Session TODO；T00 完成；T01~T09 初始待執行；本檔建立不代表任何程式修正/壓測已通過。
+2026-11-12：T01 進行中；由 perf/multiplayer-queue-age-20261112 / PR #17 處理 Hub 到 dequeue 的 Player/World Queue Age histogram（P50/P95/P99/max）、WebSocket 限頻彙整告警及 BroadcastPriorityProbe。PR：https://github.com/kevin840307/TestGoGo/pull/17；尚未驗證 CI，不要把 T01 標成完成。其他 Session 請勿同時修改 PR #17 的三個 .cs 檔；可先執行 T02 基準。
