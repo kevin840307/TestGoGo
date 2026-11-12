@@ -8412,6 +8412,7 @@ public sealed class PacketRouter
             "RedMan",
             "RedManKillLeft",
             "PKStatus",
+            "PKPinkUntilUtcMs",
             "Level",
             "HP",
             "MaxHP",
