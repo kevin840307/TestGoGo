@@ -1663,6 +1663,9 @@ func _run_name_color_flash(flash_generation: int) -> void :
 		await get_tree().create_timer(interval).timeout
 
 	if flash_generation == _name_color_flash_generation and _name_color_state == 3:
+		_name_color_state = 0
+		if data_model:
+			data_model.pk_pink_until_utc_ms = 0
 		_apply_name_color_style(0)
 
 func _apply_name_color_style(color_state: int) -> void :
