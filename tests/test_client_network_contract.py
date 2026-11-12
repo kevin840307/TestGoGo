@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 NETWORK_MANAGER = ROOT / "client" / "scripts" / "network_manager.gd"
 PLAYER = ROOT / "client" / "player.gd"
+NETWORK_PLAYER = ROOT / "client" / "network_player.gd"
 PACKET_ROUTER = ROOT / "server" / "Application" / "PacketRouter.cs"
 MALL_WINDOW = ROOT / "client" / "scripts" / "mall_window.gd"
 BANK_WINDOW = ROOT / "client" / "scripts" / "bank_window.gd"
@@ -99,7 +100,7 @@ class ClientNetworkContractTests(unittest.TestCase):
         )
 
     def test_entity_damage_does_not_replay_owned_remote_attack(self):
-        player = PLAYER.read_text(encoding="utf-8-sig")
+        player = NETWORK_PLAYER.read_text(encoding="utf-8-sig")
         entity_manager = (
             ROOT / "client" / "scripts" / "network_entity_manager.gd"
         ).read_text(encoding="utf-8-sig")
