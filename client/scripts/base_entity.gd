@@ -260,7 +260,8 @@ func update_hp(new_hp: int, hit_delay: float = 0.3, is_miss: bool = false) -> vo
 		is_action_locked = true
 		if is_instance_valid(doll_engine):
 			for sprite_node in doll_engine.doll_sprites.values():
-				sprite_node.frame = 0
+				if is_instance_valid(sprite_node):
+					sprite_node.set_frame_and_progress(0, 0.0)
 		sync_animation()
 
 func _die() -> void :
@@ -408,7 +409,12 @@ func trigger_combat_action(new_action_state: String) -> void :
 	is_action_locked = true
 
 	if is_instance_valid(doll_engine):
-		for sprite_node in doll_engine.doll_sprites.values(): sprite_node.frame = 0
+		for sprite_node in doll_engine.doll_sprites.values():
+			if is_instance_valid(sprite_node):
+				# Recovered action changes start at action frame zero. Reset
+				# fractional progress too; keeping 0.8 progress from a previous
+				# attack can make a one-tick hurt pose disappear immediately.
+				sprite_node.set_frame_and_progress(0, 0.0)
 
 
 	if is_instance_valid(mecha_bullet_effect_l):
