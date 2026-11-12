@@ -34,6 +34,7 @@ on:
       - 'tools/Prepare-SGO-MapVisuals.ps1'
       - 'tests/test_client_memory_lifecycle_contract.py'
       - 'tests/test_ground_drop_hotpath_contract.py'
+      - 'tests/test_afk_mode_contract.py'
       - '.github/workflows/client-memory-lifecycle.yml'
   workflow_dispatch:
 
