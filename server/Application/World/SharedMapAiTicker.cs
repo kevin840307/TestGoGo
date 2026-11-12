@@ -17,6 +17,17 @@ public sealed record SharedMapAiTickDiagnostics(
     int MonsterCount,
     int AssignedMonsterCount);
 
+// Completed ticks (not repeatedly sampled "last" values) for exact
+// rolling timing distributions during real multiplayer combat testing.
+public sealed record SharedMapAiTickSample(
+    DateTimeOffset TickAt,
+    double ElapsedMs,
+    int ActiveSessions,
+    int MonsterCount,
+    double TickAiMs,
+    double SessionLockWaitMs,
+    double PlayerSessionLockWaitMs);
+
 public sealed record SharedMapAiTickProfile(
     double TotalMs,
     double SessionSnapshotMs,
@@ -38,6 +49,9 @@ public sealed record SharedMapAiTickProfile(
 public sealed class SharedMapAiTicker : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromMilliseconds(250);
+    private const int RecentTickCapacity = 16;
+    private readonly object _recentTickGate = new();
+    private readonly Queue<SharedMapAiTickSample> _recentTickSamples = new();
     private readonly ConcurrentDictionary<Guid, ClientSession> _sessions = new();
     private readonly CombatService _combat;
     private readonly WorldRuntimeService _world;
@@ -65,6 +79,15 @@ public sealed class SharedMapAiTicker : BackgroundService
 
     public SharedMapAiTickProfile LastProfile
         => _lastProfile;
+
+    // Small read-only ring snapshot: an observer polling /health every 500ms
+    // can deduplicate by TickAt instead of counting an 8s stall sixteen times.
+    // Never hold map/session locks while answering this HTTP diagnostic.
+    public SharedMapAiTickSample[] RecentTickSamples()
+    {
+        lock (_recentTickGate)
+            return _recentTickSamples.ToArray();
+    }
 
     public SharedMapAiTicker(
         CombatService combat,
@@ -468,6 +491,14 @@ public sealed class SharedMapAiTicker : BackgroundService
             tickedMaps,
             monsterCount,
             assignedMonsterCount);
+        lock (_recentTickGate)
+        {
+            if (_recentTickSamples.Count >= RecentTickCapacity)
+                _recentTickSamples.Dequeue();
+            _recentTickSamples.Enqueue(new SharedMapAiTickSample(
+                now, totalMs, activeSessionCount, monsterCount, tickAiMs,
+                sessionLockWaitMs, playerSessionLockWaitMs));
+        }
 
         return tickedMaps;
     }
