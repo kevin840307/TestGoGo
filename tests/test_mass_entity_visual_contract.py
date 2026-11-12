@@ -92,7 +92,7 @@ class MassEntityVisualContracts(unittest.TestCase):
         policy = script("client/scripts/peer_damage_visual_policy.gd")
         self.assertIn("PEER_DAMAGE_VISUAL_POLICY.is_remote_normal_hit(", manager)
         self.assertIn("FloatingTextManager.show_remote_normal_damage(", manager)
-        self.assertIn("target_node.update_hp(current_hp, hit_delay, false)", manager)
+        self.assertIn("target_node.update_hp(current_hp, hit_delay, is_miss)", manager)
         self.assertIn("if is_remote_normal_hit:", manager)
         self.assertIn("target_type == 1", policy)
         self.assertIn("skill_id == 0", policy)
