@@ -113,6 +113,7 @@ app.MapGet("/health", (IConfiguration config) => Results.Ok(new
     sharedMapAiProfile = sharedMapAiTicker.LastProfile,
     sharedMapAiRecentTicks = sharedMapAiTicker.RecentTickSamples(),
     sqliteHotWrites = sqliteStore?.HotWriteDiagnostics,
+    sqliteBackgroundPosition = sqliteStore?.BackgroundPositionMetrics,
     aoi = new
     {
         playerReady = broadcastHub.AoiReadyPlayers,
