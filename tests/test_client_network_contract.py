@@ -146,6 +146,14 @@ class ClientNetworkContractTests(unittest.TestCase):
             player,
         )
         self.assertIn(
+            "skill_id == 0\n\t\tand _network_attack_damage_owner_until_msec >= now_msec",
+            player,
+        )
+        self.assertIn(
+            "skill_id == 0 and explicit_network_attack_pending",
+            player,
+        )
+        self.assertIn(
             "is_action_locked = true",
             player,
         )
