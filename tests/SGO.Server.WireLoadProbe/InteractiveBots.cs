@@ -55,7 +55,7 @@ internal static class InteractiveBots
                 case "--no-combat": combat = false; break;
                 case "--help":
                     Console.WriteLine("dotnet run -c Release --project tests/SGO.Server.WireLoadProbe -- --bots --players 20 --map 13");
-                    Console.WriteLine("Random walkable monster-area positions; Lv1 low-attack, high-HP/DEF bots, normal attacks and rare single-target skills.");
+                    Console.WriteLine("Random walkable monster-area positions; Lv1 moderate-attack, high-HP/DEF bots, normal attacks and rare single-target skills.");
                     Console.WriteLine("--seconds 0 keeps players online until Ctrl+C. --no-combat disables attacking and monster spawning.");
                     Console.WriteLine("--roamers N: choose N frequent walkers (default about 25%, e.g. 5 out of 20; 0 disables).");
                     Console.WriteLine("Connects existing Server/DB only. Default --monsters 0 (use existing monsters); new test accounts persist.");
@@ -126,7 +126,7 @@ internal static class InteractiveBots
         Console.WriteLine($"[BOTS] Extra test monster spawns: {spawn} (0 = use existing map monsters).");
         Console.WriteLine("[BOTS] New bot accounts persist in the existing Server database.");
         Console.WriteLine("[BOTS] Requires Game__GmCommandsEnabled=true and Game__TestBotCommandsEnabled=true on Server.");
-        Console.WriteLine($"[BOTS] Lv1, ATK=1, DEF=1000, HP=20000; single-target damage capped at 1; attack cadence={attackIntervalMs}ms.");
+        Console.WriteLine($"[BOTS] Lv1, ATK=60, MATK=45, DEF=1000, HP=20000; single-target skill cap=90; attack cadence={attackIntervalMs}ms.");
 
         try
         {
@@ -276,6 +276,7 @@ internal static class InteractiveBots
                 // The attack window starts at the first REAL swing, not when a
                 // distant monster is clicked and the bot still has to walk.
                 var hasAttackedSelectedMonster = false;
+                var triedFinishingTarget = false;
                 var nextAttackAt = DateTimeOffset.UtcNow.AddMilliseconds(
                     Random.Shared.Next(0, attackIntervalMs + 1));
                 // Every freshly connected bot already received the Lv1
@@ -299,6 +300,19 @@ internal static class InteractiveBots
                             var target = selectedMonsterId.HasValue
                                 ? bot.BotWorld.FindTarget(selectedMonsterId.Value)
                                 : null;
+                            // Sometimes finish a wounded monster instead of
+                            // switching exactly when the normal attack window ends.
+                            // Only one short extension per target avoids tunnel vision.
+                            if (now >= nextDecisionAt && !walkingToGround &&
+                                target is not null && hasAttackedSelectedMonster &&
+                                !triedFinishingTarget && target.MaxHP > 0 &&
+                                (long)target.HP * 100 <= (long)target.MaxHP * 45 &&
+                                Random.Shared.NextDouble() < 0.70)
+                            {
+                                triedFinishingTarget = true;
+                                nextDecisionAt = now.AddMilliseconds(
+                                    Random.Shared.Next(2500, 5501));
+                            }
                             // Reconsider after a human-scale action window,
                             // or if the clicked monster disappears from AOI.
                             if (now >= nextDecisionAt ||
@@ -319,6 +333,7 @@ internal static class InteractiveBots
                                               : Random.Shared.Next(4) == 0);
                                 selectedMonsterId = null;
                                 hasAttackedSelectedMonster = false;
+                                triedFinishingTarget = false;
                                 if (walkingToGround)
                                 {
                                     // These are long destination clicks (not
@@ -339,15 +354,27 @@ internal static class InteractiveBots
                                     // but quite often choose a farther one.
                                     // Avoid repeatedly clicking the exact
                                     // previous target when alternatives exist.
-                                    var pool = candidates.Length > 1
-                                        ? candidates.Where(m =>
-                                            m.EntityId != lastMonsterId).ToArray()
-                                        : candidates;
-                                    var nearCount = Math.Min(3, pool.Length);
-                                    var pick = Random.Shared.NextDouble() < 0.55
-                                        ? Random.Shared.Next(nearCount)
-                                        : Random.Shared.Next(pool.Length);
-                                    target = pool[pick];
+                                    // Wounded monsters attract attention, but
+                                    // most clicks still use a mixed near/far pool.
+                                    var wounded = candidates.Where(m => m.MaxHP > 0 &&
+                                        (long)m.HP * 100 <= (long)m.MaxHP * 50).ToArray();
+                                    if (wounded.Length > 0 &&
+                                        Random.Shared.NextDouble() < 0.55)
+                                    {
+                                        target = wounded[Random.Shared.Next(wounded.Length)];
+                                    }
+                                    else
+                                    {
+                                        var pool = candidates.Length > 1
+                                            ? candidates.Where(m =>
+                                                m.EntityId != lastMonsterId).ToArray()
+                                            : candidates;
+                                        var nearCount = Math.Min(3, pool.Length);
+                                        var pick = Random.Shared.NextDouble() < 0.55
+                                            ? Random.Shared.Next(nearCount)
+                                            : Random.Shared.Next(pool.Length);
+                                        target = pool[pick];
+                                    }
                                     if (lastMonsterId >= 0 && lastMonsterId != target.EntityId)
                                         Interlocked.Increment(ref targetSwitches);
                                     Interlocked.Increment(ref monsterClicks);
@@ -496,6 +523,7 @@ internal static class InteractiveBots
                     $"attack={Interlocked.Read(ref attacks)} " +
                     $"single={Interlocked.Read(ref singleSkills)} " +
                     $"confirmedHits={damage} confirmedCasts={casts} " +
+                    $"confirmedKills={live.Sum(b => b.BotWorld.ConfirmedMonsterKills)} " +
                     $"rejected={rejected} " +
                     $"corrections={live.Sum(b => b.PositionCorrections)} " +
                     $"errors={errors.Count}");
@@ -548,6 +576,7 @@ internal static class InteractiveBots
                 ConfirmedDamageHits = live.Sum(b => b.BotWorld.DamageHits),
                 ConfirmedSkillCasts = live.Sum(b => b.BotWorld.SkillCasts),
                 ObservedMonsterDeaths = live.Sum(b => b.BotWorld.MonsterDeaths),
+                ConfirmedMonsterKills = live.Sum(b => b.BotWorld.ConfirmedMonsterKills),
                 VisibleTargets = live.Sum(b => b.BotWorld.VisibleMonsters),
                 RejectedAttackMessages = live.Sum(b => b.BotWorld.RejectedAttackMessages),
                 PositionCorrections = live.Sum(b => b.PositionCorrections),
