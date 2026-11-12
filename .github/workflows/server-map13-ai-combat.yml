@@ -1,0 +1,158 @@
+name: Map13 20-bot sustained combat AI baseline
+
+on:
+  pull_request:
+    branches: [feature/local-server-net8]
+    paths:
+      - '.github/workflows/server-map13-ai-combat.yml'
+      - 'server/Program.cs'
+      - 'server/Application/World/SharedMapAiTicker.cs'
+      - 'server/Application/Combat/CombatService.cs'
+      - 'tests/SGO.Server.WireLoadProbe/**'
+  push:
+    branches: [feature/local-server-net8]
+    paths:
+      - '.github/workflows/server-map13-ai-combat.yml'
+      - 'server/Program.cs'
+      - 'server/Application/World/SharedMapAiTicker.cs'
+      - 'server/Application/Combat/CombatService.cs'
+      - 'tests/SGO.Server.WireLoadProbe/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sustained-combat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build real server and wire bot harness
+        run: |
+          dotnet build server/SGO.Server.csproj -c Release --nologo
+          dotnet build tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -c Release --nologo
+      - name: Map13 twenty-player moving and sustained real combat
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Disposable CI DB. No developer database is touched.
+          export Database__Provider=Sqlite
+          export Database__Sqlite__Path="$RUNNER_TEMP/map13-combat-profile.db"
+          export Game__ListenUrl="http://127.0.0.1:5678"
+          export Game__GmCommandsEnabled=true
+          export Game__TestBotCommandsEnabled=true
+          export SGO_CLIENT_ROOT="$GITHUB_WORKSPACE/client"
+          dotnet run -c Release --no-build --project server/SGO.Server.csproj > server-combat.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 90); do
+            if curl -fsS --max-time 2 http://127.0.0.1:5678/health > server-health.json; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              tail -n 120 server-combat.log
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "[MAP13_COMBAT] Server /health timeout"
+            exit 1
+          fi
+          python3 -u - <<'PY' > ai-combat-sampler.log 2>&1 &
+          import json,math,os,time,urllib.request
+          samples=[]
+          for attempt in range(470):
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:5678/health',timeout=2) as r:
+                      h=json.load(r)
+                  ai=h.get('sharedMapAi') or {}
+                  profile=h.get('sharedMapAiProfile') or {}
+                  with open('bots-combat.log',encoding='utf-8',errors='replace') as f:
+                      online='[BOTS] online=20;' in f.read()
+                  samples.append({
+                      'online':online,
+                      'sessions':int(ai.get('activeSessions',0)),
+                      'monsters':int(ai.get('monsterCount',0)),
+                      'elapsedMs':float(ai.get('elapsedMs',0)),
+                      'totalMs':float(profile.get('totalMs',0)),
+                      'tickAiMs':float(profile.get('tickAiMs',0)),
+                      'sessionLockWaitMs':float(profile.get('sessionLockWaitMs',0)),
+                      'playerSessionLockWaitMs':float(profile.get('playerSessionLockWaitMs',0)),
+                  })
+              except (OSError,ValueError,KeyError) as e:
+                  print('[MAP13_COMBAT_SAMPLE_ERROR]',str(e),flush=True)
+              if os.path.exists('bots-combat.done'):
+                  break
+              time.sleep(0.5)
+          eligible=[s for s in samples if s['online'] and s['sessions']>=18 and s['monsters']>=150]
+          def metric(key):
+              values=sorted(s[key] for s in eligible)
+              pct=lambda p: round(values[min(len(values)-1,math.ceil(len(values)*p)-1)],2) if values else -1
+              return {'p50Ms':pct(.5),'p95Ms':pct(.95),'p99Ms':pct(.99),'maxMs':round(max(values),2) if values else -1}
+          summary={'allSamples':len(samples),'eligibleSamples':len(eligible),
+              'maxSessions':max([s['sessions'] for s in samples],default=0),
+              'maxMonsters':max([s['monsters'] for s in samples],default=0),
+              'aiTick':metric('elapsedMs'),
+              'aiInternal':metric('tickAiMs'),
+              'sessionLockWait':metric('sessionLockWaitMs'),
+              'playerSessionLockWait':metric('playerSessionLockWaitMs'),
+              'aiOver250Count':sum(s['elapsedMs']>250 for s in eligible)}
+          with open('ai-map13-combat-summary.json','w') as f:json.dump(summary,f,indent=2)
+          print('[MAP13_COMBAT_PROFILE]',json.dumps(summary),flush=True)
+          PY
+          sampler_pid=$!
+          bot_status=0
+          timeout --signal=TERM --kill-after=8s 220s dotnet run -c Release --no-build \
+            --project tests/SGO.Server.WireLoadProbe/SGO.Server.WireLoadProbe.csproj -- \
+            --bots --url ws://127.0.0.1:5678/ --players 20 \
+            --map 13 --monsters 0 --attack-ms 1300 --roamers 5 \
+            --interval-ms 350 --seconds 150 --setup-concurrency 8 \
+            --timeout-seconds 30 --output bots-combat-result.json \
+            2>&1 | tee bots-combat.log || bot_status=$?
+          touch bots-combat.done
+          wait "$sampler_pid" || true
+          cat ai-combat-sampler.log
+          echo "[MAP13_COMBAT_DIAG] Slow combat / database / transport samples:"
+          grep -E 'MAP_AI_(PROFILE|SLOW_TICK)|SLOW_TICK_AI_PHASE|DamageWriteMs|SLOW_PACKET|BROADCAST_QUEUE_AGE' server-combat.log | tail -n 80 || true
+          if [ "$bot_status" -ne 0 ]; then
+            echo "[MAP13_COMBAT_FAIL] Bot process exit=$bot_status"
+            exit "$bot_status"
+          fi
+          python3 - <<'PY'
+          import json,re
+          bots=json.load(open('bots-combat-result.json'))
+          p=json.load(open('ai-map13-combat-summary.json'))
+          log=open('server-combat.log',encoding='utf-8',errors='replace').read()
+          writes=[float(v) for v in re.findall(r'DamageWriteMs=([0-9.]+)',log)]
+          p['slowDamageWriteMaxMs']=max(writes,default=0)
+          p['slowDamageWriteSamples']=len(writes)
+          p['confirmedDamageHits']=bots['ConfirmedDamageHits']
+          p['confirmedSkillCasts']=bots['ConfirmedSkillCasts']
+          p['movementPackets']=bots['MovementPackets']
+          p['attackPackets']=bots['AttackPackets']
+          print('[MAP13_COMBAT_RESULT]',json.dumps(p))
+          with open('ai-map13-combat-summary.json','w') as f:json.dump(p,f,indent=2)
+          assert bots['Connected']==20 and not bots['Errors'], '20 encrypted clients must be online without errors'
+          assert bots['MovementPackets']>0 and bots['AttackPackets']>0, 'this must be mixed movement+combat, never --no-combat'
+          assert bots['ConfirmedDamageHits']>0 and bots['ConfirmedSkillCasts']>0, 'real combat events must be confirmed'
+          assert p['eligibleSamples']>=8, 'insufficient steady-state map AI samples'
+          PY
+      - name: Upload sustained combat timing evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: map13-20-bot-sustained-combat
+          retention-days: 7
+          path: |
+            bots-combat-result.json
+            bots-combat.log
+            ai-map13-combat-summary.json
+            ai-combat-sampler.log
+            server-combat.log
