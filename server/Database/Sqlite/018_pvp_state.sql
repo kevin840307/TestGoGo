@@ -1,0 +1,5 @@
+-- PvP character state; idempotent on existing SQLite databases.
+-- Defaults preserve blue/protected names until /pk on or GM override.
+-- @ensure-column characters pk_status INTEGER NOT NULL DEFAULT 0
+-- @ensure-column characters red_man INTEGER NOT NULL DEFAULT 0
+-- @ensure-column characters pink_until_utc_ms INTEGER NOT NULL DEFAULT 0

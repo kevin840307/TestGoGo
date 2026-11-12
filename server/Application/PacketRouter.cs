@@ -971,6 +971,12 @@ public sealed class PacketRouter
                 state.LastCompanionClientSyncAt = DateTimeOffset.UtcNow;
                 state.PendingMapSpawn = true;
                 state.WorldReady = false;
+                var pvpInitial = PvpRules.FromCharacter(character);
+                var pvpInitialNow = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                character["NameColorState"] =
+                    PvpRules.NameColorState(pvpInitial, pvpInitialNow);
+                character["PinkRemainingMs"] =
+                    PvpRules.PinkRemainingMs(pvpInitial, pvpInitialNow);
                 character["Type"] = "EnterWorldSuccess";
 
                 // A process restart loses the in-memory player-shop registry
@@ -1110,6 +1116,12 @@ public sealed class PacketRouter
                     state.ConnectionId, req.Int("ViewRadius", 1800));
                 state.WorldReady = true;
 
+                // Rebuild the owner's PK visual after asynchronous map load.
+                // The player scene may not exist during EnterWorldSuccess.
+                // This is one DB read per map entry, never per movement tick.
+                var pvpBootstrap = _store.GetCharacter(
+                    accountId, state.CharacterId.Value);
+
                 // Map loading is asynchronous on the Godot client. Ground-item
                 // spawn packets sent during the scene swap can be discarded
                 // when the old map entity queue is cleared. WorldReady is the
@@ -1129,6 +1141,13 @@ public sealed class PacketRouter
                 // after WorldReadyResponse, before the potentially large
                 // NPC/monster/ground snapshot. Keep all world-object ordering
                 // and AOI rules otherwise exactly as before.
+                if (pvpBootstrap is not null)
+                {
+                    worldReadyPackets.Add(PvpRules.NameColorPacket(
+                        state.CharacterId.Value,
+                        PvpRules.FromCharacter(pvpBootstrap),
+                        DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+                }
                 worldReadyPackets.AddRange(
                     BuildOtherPlayerSnapshotPackets(state));
                 worldReadyPackets.AddRange(
@@ -5420,6 +5439,50 @@ public sealed class PacketRouter
                     return gmPackets;
                 }
 
+                if (message.Equals("/pk", StringComparison.OrdinalIgnoreCase) ||
+                    message.StartsWith("/pk ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var mode = message.ToLowerInvariant().Split(' ',
+                        StringSplitOptions.RemoveEmptyEntries |
+                        StringSplitOptions.TrimEntries);
+                    if (mode.Length != 2 ||
+                        (mode[1] is not ("on" or "off")))
+                    {
+                        return [new
+                        {
+                            Type = "SystemMessageChat",
+                            Message = "用法：/pk on (白名) 或 /pk off (藍名)"
+                        }];
+                    }
+
+                    var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                    var modeStatus = mode[1] == "on" ? 1 : 0;
+                    var changed = _store.TrySetPvpMode(
+                        accountId, selfDbid, modeStatus, nowMs);
+                    if (changed is null)
+                    {
+                        return [new
+                        {
+                            Type = "SystemMessageFlash",
+                            Message = "無法切換 PK：角色死亡、粉紅名或紅名期間禁止切換"
+                        }];
+                    }
+
+                    var update = PvpRules.NameColorPacket(selfDbid, changed, nowMs);
+                    _broadcasts.PublishToPlayerObservers(state.ConnectionId, update);
+                    return
+                    [
+                        update,
+                        new
+                        {
+                            Type = "SystemMessageChat",
+                            Message = modeStatus == 1
+                                ? "已開啟 PvP（白名）"
+                                : "已關閉 PvP（藍名）"
+                        }
+                    ];
+                }
+
                 if (message.StartsWith(
                         "/name ",
                         StringComparison.OrdinalIgnoreCase))
@@ -6266,6 +6329,10 @@ public sealed class PacketRouter
             _playerShop.GetPublicState(dbid);
 
         var extra = BuildPublicPlayerData(character);
+        var pvpState = PvpRules.FromCharacter(character);
+        var pvpNowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        extra["NameColorState"] = PvpRules.NameColorState(pvpState, pvpNowMs);
+        extra["PinkRemainingMs"] = PvpRules.PinkRemainingMs(pvpState, pvpNowMs);
         extra["State"] =
             character.GetValueOrDefault(
                 "State",

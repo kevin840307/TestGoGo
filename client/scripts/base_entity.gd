@@ -1583,41 +1583,50 @@ func _on_sync_shop_board(p_entity_id: int, is_open: bool, shop_name: String) -> 
 		shop_board_node.visible = false
 		if name_label: name_label.visible = (data_model.transform_type != 2)
 
-func _apply_name_color(color_state: int) -> void :
+func _apply_name_color(color_state: int, pink_remaining_ms: int = 0) -> void :
 	_name_color_state = color_state
 	_name_color_flash_generation += 1
-	var flash_generation = _name_color_flash_generation
-
+	var generation: int = _name_color_flash_generation
 	if color_state == 3:
-		_run_name_color_flash(flash_generation)
+		_run_name_color_flash(generation,
+			minf(PURPLE_NAME_FLASH_DURATION_SECONDS,
+			maxf(0.0, float(pink_remaining_ms) / 1000.0)))
 		return
-
+	if color_state == 2 and pink_remaining_ms > 0:
+		_run_name_color_pink_lifecycle(generation, pink_remaining_ms)
+		return
 	_apply_name_color_style(color_state)
 
-func _run_name_color_flash(flash_generation: int) -> void :
-	var started_msec = Time.get_ticks_msec()
-	var show_purple = true
+func _run_name_color_pink_lifecycle(generation: int, remaining_ms: int) -> void :
+	_apply_name_color_style(2)
+	var until_flash: float = maxf(0.0,
+		float(remaining_ms) / 1000.0 - PURPLE_NAME_FLASH_DURATION_SECONDS)
+	if until_flash > 0.0:
+		await get_tree().create_timer(until_flash).timeout
+	if not is_inside_tree() or generation != _name_color_flash_generation:
+		return
+	_name_color_state = 3
+	_run_name_color_flash(generation, minf(
+		PURPLE_NAME_FLASH_DURATION_SECONDS, float(remaining_ms) / 1000.0))
 
-	while flash_generation == _name_color_flash_generation and _name_color_state == 3:
+func _run_name_color_flash(generation: int, duration: float = PURPLE_NAME_FLASH_DURATION_SECONDS) -> void :
+	var started_msec: int = Time.get_ticks_msec()
+	var show_purple: bool = true
+	while generation == _name_color_flash_generation and _name_color_state == 3:
 		if not is_inside_tree() or not is_instance_valid(name_label):
 			return
-
-		var elapsed = float(Time.get_ticks_msec() - started_msec) / 1000.0
-		if elapsed >= PURPLE_NAME_FLASH_DURATION_SECONDS:
+		var elapsed: float = float(Time.get_ticks_msec() - started_msec) / 1000.0
+		if elapsed >= duration:
 			break
-
 		_apply_name_color_style(2 if show_purple else 0)
 		show_purple = not show_purple
-
-		var progress = clampf(elapsed / PURPLE_NAME_FLASH_DURATION_SECONDS, 0.0, 1.0)
-		var interval = lerpf(
-			PURPLE_NAME_FLASH_START_INTERVAL_SECONDS, 
-			PURPLE_NAME_FLASH_END_INTERVAL_SECONDS, 
-			progress
-		)
+		var progress: float = clampf(elapsed / maxf(duration, 0.01), 0.0, 1.0)
+		var interval: float = lerpf(
+			PURPLE_NAME_FLASH_START_INTERVAL_SECONDS,
+			PURPLE_NAME_FLASH_END_INTERVAL_SECONDS, progress)
 		await get_tree().create_timer(interval).timeout
-
-	if flash_generation == _name_color_flash_generation and _name_color_state == 3:
+	if generation == _name_color_flash_generation and _name_color_state == 3:
+		_name_color_state = 0
 		_apply_name_color_style(0)
 
 func _apply_name_color_style(color_state: int) -> void :
@@ -1635,12 +1644,12 @@ func _apply_name_color_style(color_state: int) -> void :
 	if color_state == 1 or data_model.red_man > 0:
 		name_label.add_theme_color_override("font_color", GameConstants.COLOR_NAME_RED_MAN)
 		name_label.add_theme_color_override("font_outline_color", GameConstants.COLOR_NAME_WHITE)
-	elif is_party_member:
-		name_label.add_theme_color_override("font_color", GameConstants.COLOR_NAME_PARTY)
-		name_label.add_theme_color_override("font_outline_color", GameConstants.COLOR_NAME_PK)
 	elif color_state == 2:
 		name_label.add_theme_color_override("font_color", GameConstants.COLOR_NAME_PURPLE)
 		name_label.add_theme_color_override("font_outline_color", GameConstants.COLOR_NAME_WHITE)
+	elif is_party_member:
+		name_label.add_theme_color_override("font_color", GameConstants.COLOR_NAME_PARTY)
+		name_label.add_theme_color_override("font_outline_color", GameConstants.COLOR_NAME_PK)
 	else:
 		if data_model.pk_status == 1:
 			name_label.add_theme_color_override("font_color", GameConstants.COLOR_NAME_WHITE)
@@ -1649,17 +1658,16 @@ func _apply_name_color_style(color_state: int) -> void :
 			name_label.add_theme_color_override("font_color", GameConstants.COLOR_NAME_NORMAL)
 			name_label.add_theme_color_override("font_outline_color", GameConstants.COLOR_NAME_WHITE)
 
-func _on_entity_name_color_updated(p_entity_id: int, color_state: int, pk_status: int = -1, red_man_kill_left: int = -1, party_id: String = "") -> void :
+func _on_entity_name_color_updated(p_entity_id: int, color_state: int, pk_status: int = -1, red_man_kill_left: int = -1, party_id: String = "", pink_remaining_ms: int = 0) -> void :
 	if p_entity_id != data_model.db_id: return
 
-	if color_state == 1: data_model.red_man = 1
-	elif color_state == 0: data_model.red_man = 0
+	data_model.red_man = 1 if color_state == 1 else 0
 
 	if pk_status != -1: data_model.pk_status = pk_status
 	if red_man_kill_left != -1: data_model.red_man_kill_left = red_man_kill_left
 	if party_id != "": data_model.party_id = party_id
 
-	_apply_name_color(color_state)
+	_apply_name_color(color_state, pink_remaining_ms)
 
 	var hud = GameManager.current_hud if GameManager else null
 	if hud and hud.has_method("get_node_or_null"):

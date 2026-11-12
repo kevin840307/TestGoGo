@@ -74,6 +74,8 @@ public sealed class GmCommandService
             return command switch
             {
                 "help" => [Chat(HelpText())],
+                "namecolor" or "pkcolor"
+                    => NameColor(parts, accountId, dbid, session),
                 "pos" => Position(accountId, dbid),
                 "map" or "warp" or "teleport"
                     => Teleport(parts, accountId, dbid, session),
@@ -127,6 +129,60 @@ public sealed class GmCommandService
         // fallback denied so deployments can still disable GM commands by
         // omitting/overriding Game:GmCommandsEnabled.
         => _config.GetValue<bool?>("Game:GmCommandsEnabled") ?? false;
+
+    // /gm namecolor blue|white|pink|flash|red [online CharacterDBID]
+    private IReadOnlyList<object> NameColor(
+        string[] parts, long accountId, long dbid, ClientSession session)
+    {
+        if (parts.Length < 3)
+            return [Chat("用法：/gm namecolor blue|white|pink|flash|red [DBID]")];
+
+        var targetId = dbid;
+        if (parts.Length >= 4 &&
+            (!long.TryParse(parts[3], out targetId) || targetId <= 0))
+            return [Chat("指定角色 DBID 無效")];
+
+        var presence = _broadcasts.FindCharacter(targetId);
+        if (targetId != dbid && presence is null)
+            return [Chat("只能修改自己或目前在線的指定角色")];
+        var targetAccountId = presence?.AccountId ?? accountId;
+        var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var requested = parts[2].ToLowerInvariant();
+        var next = requested switch
+        {
+            "blue" or "藍" or "藍名"
+                => new PvpNameState(0, 0, 0),
+            "white" or "白" or "白名"
+                => new PvpNameState(1, 0, 0),
+            "pink" or "粉" or "粉紅"
+                => new PvpNameState(
+                    1, 0, nowMs + PvpRules.PinkDurationMilliseconds),
+            "flash" or "閃爍" or "閃粉"
+                => new PvpNameState(
+                    1, 0, nowMs + PvpRules.PinkFlashMilliseconds),
+            "red" or "紅" or "紅名"
+                => new PvpNameState(1, 1, 0),
+            _ => null
+        };
+        if (next is null)
+            return [Chat("用法：/gm namecolor blue|white|pink|flash|red [DBID]")];
+
+        var result = _store.SetPvpState(
+            targetAccountId, targetId,
+            next.PkStatus, next.RedMan, next.PinkUntilUtcMs);
+        if (result is null)
+            return [Chat("找不到指定角色，或 PvP 狀態儲存失敗")];
+
+        var packet = PvpRules.NameColorPacket(targetId, result, nowMs);
+        var targetConnection = presence?.ConnectionId ?? session.ConnectionId;
+        _broadcasts.PublishToPlayerObservers(targetConnection, packet);
+        if (targetId != dbid)
+        {
+            _broadcasts.PublishToCharacter(targetId, packet);
+            return [Chat($"已設定角色 {targetId} 的名稱狀態為 {requested}")];
+        }
+        return [packet, Chat($"已設定名稱狀態為 {requested}")];
+    }
 
     private IReadOnlyList<object> Position(long accountId, long dbid)
     {
@@ -1080,5 +1136,6 @@ public sealed class GmCommandService
            "maxstats | attackspeed <1-1000> | money <n> | mallpoints <delta> | donation <delta> | item <id> [count] | equip <id> | " +
            "mecha <cardId> | mechacard <cardId> | mechaequip <id> [horseUid] | mechalevel <horseUid> <level> | pet <petId> [name] | " +
            "skill <id|all> [lv] | skills | clearskills | " +
-           "spawn <enemyId> [x] [y] | killall | cleardrops";
+           "spawn <enemyId> [x] [y] | killall | cleardrops | " +
+           "namecolor blue|white|pink|flash|red [onlineDBID]";
 }

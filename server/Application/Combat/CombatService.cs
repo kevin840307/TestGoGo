@@ -3290,12 +3290,136 @@ public sealed class CombatService
         return packets;
     }
 
+    // Ordinary player-versus-player attacks only. Hostile skill PvP is not
+    // routed here until per-skill target, AOE and friendly-fire rules are audited.
+    private IReadOnlyList<object> AttackPlayer(
+        ClientSession session, long accountId, int targetCharacterId)
+    {
+        if (!session.CharacterId.HasValue || !session.WorldReady ||
+            !PvpRules.IsPvpMap(session.CurrentMapId))
+            return [Flash("此地圖不允許玩家對戰")];
+        var attackerId = session.CharacterId.Value;
+        if (targetCharacterId <= 0 || targetCharacterId == attackerId)
+            return [Flash("玩家攻擊目標無效")];
+
+        var target = _broadcasts.FindCharacter(targetCharacterId);
+        if (target is null || target.MapId != session.CurrentMapId ||
+            !_broadcasts.IsPlayerAoiVisibleAs(
+                session.ConnectionId, target.ConnectionId, target.CharacterId))
+            return [Flash("玩家不在目前視野或已離開地圖")];
+
+        var attacker = _store.GetCharacter(accountId, attackerId);
+        var victim = _store.GetCharacter(target.AccountId, target.CharacterId);
+        if (attacker is null || victim is null ||
+            Convert.ToInt32(attacker["HP"]) <= 0 ||
+            Convert.ToInt32(victim["HP"]) <= 0)
+            return [Flash("角色或目標已死亡")];
+        if (Convert.ToInt32(attacker["PKStatus"]) != 1 ||
+            Convert.ToInt32(victim["PKStatus"]) != 1)
+            return [Flash("藍名保護狀態不可進行玩家對戰")];
+
+        var now = DateTimeOffset.UtcNow;
+        var attackerAssets = _store.GetCharacterAssets(accountId, attackerId);
+        var attackerStats = ApplyActiveSkillBuffs(
+            CharacterStatCalculator.Calculate(attacker, attackerAssets, _current),
+            session, now);
+        var targetAssets = _store.GetCharacterAssets(
+            target.AccountId, target.CharacterId);
+        var targetStats = ApplyActiveSkillBuffs(
+            CharacterStatCalculator.Calculate(victim, targetAssets, _current),
+            target.CharacterId, now);
+        var allowedRange = NormalAttackWorldRange(
+            attackerStats.AttackRange,
+            CharacterStatCalculator.GetEquippedWeaponAttackRange(
+                attackerAssets, _current)) + 24.0;
+        var dx = session.LastX - target.X;
+        var dy = session.LastY - target.Y;
+        if (dx * dx + dy * dy > allowedRange * allowedRange)
+            return [Flash("玩家距離太遠")];
+        if (_blocking.HasMap(session.CurrentMapId) &&
+            !_navigation.IsDirectClear(
+                session.CurrentMapId,
+                session.LastX, session.LastY, target.X, target.Y))
+            return [Flash("玩家攻擊被障礙物阻擋")];
+
+        // PvP damage uses the same calculated character stats, but not monster
+        // kill rewards/drops. The hit/death/PK penalty is committed atomically.
+        var damage = Math.Max(1, attackerStats.Attack - targetStats.Defense);
+        var hit = _store.ApplyPvpHit(
+            accountId, attackerId, target.AccountId, target.CharacterId,
+            session.CurrentMapId, damage, now.ToUnixTimeMilliseconds(),
+            PvpRules.PinkDurationMilliseconds);
+        if (hit is null)
+            return [Flash("玩家狀態已變更，攻擊未成立")];
+
+        var damagePacket = new
+        {
+            Type = "EntityDamage",
+            TargetID = target.CharacterId,
+            TargetType = 0,
+            TargetX = target.X,
+            TargetY = target.Y,
+            Damage = Math.Min(damage, Math.Max(0, Convert.ToInt32(victim["HP"]))),
+            CurrentHP = hit.CurrentHp,
+            MaxHP = Math.Max(1, targetStats.MaxHP),
+            IsCrit = false,
+            SkillID = 0,
+            SkillLevel = 1,
+            AttackerID = attackerId
+        };
+        var packets = new List<object> { damagePacket };
+        // Victim gets a direct copy even during AOI-edge reconciliation;
+        // observers see one copy and never receive unrelated map-wide PvP.
+        _broadcasts.PublishToCharacter(target.CharacterId, damagePacket);
+        _broadcasts.PublishToPlayerObservers(
+            session.ConnectionId, damagePacket, target.ConnectionId);
+
+        var updatedVictim = _store.GetCharacter(
+            target.AccountId, target.CharacterId);
+        if (updatedVictim is not null)
+        {
+            _broadcasts.PublishToCharacter(
+                target.CharacterId,
+                BuildPlayerStatusPacket(updatedVictim, targetStats));
+            BroadcastPublicStatus(
+                session, target.CharacterId, updatedVictim, targetStats);
+        }
+
+        if (hit.Killed)
+        {
+            var deathPacket = new
+            {
+                Type = "EntityDeath",
+                EntityID = target.CharacterId,
+                EntityType = 0,
+                KillerID = attackerId
+            };
+            packets.Add(deathPacket);
+            _broadcasts.PublishToCharacter(target.CharacterId, deathPacket);
+            _broadcasts.PublishToPlayerObservers(
+                session.ConnectionId, deathPacket, target.ConnectionId);
+        }
+
+        if (hit.TargetWasWhite)
+        {
+            var colorPacket = PvpRules.NameColorPacket(
+                attackerId, hit.AttackerState, now.ToUnixTimeMilliseconds());
+            packets.Add(colorPacket);
+            _broadcasts.PublishToPlayerObservers(
+                session.ConnectionId, colorPacket);
+        }
+        return packets;
+    }
+
     public IReadOnlyList<object> Attack(
         ClientSession session,
         long accountId,
         int targetEntityId,
         int targetType)
     {
+        if (targetType == 0)
+            return AttackPlayer(session, accountId, targetEntityId);
+
         if (targetType != 1)
             return [Flash("攻擊目標類型無效")];
 
