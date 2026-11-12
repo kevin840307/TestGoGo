@@ -1,0 +1,41 @@
+name: Monster drop-rate balance (recovered data)
+on:
+  push:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'server/Infrastructure/GameData/EnemyDropCatalog.cs'
+      - 'server/Infrastructure/GameData/GameDataServiceCollectionExtensions.cs'
+      - 'server/appsettings.json'
+      - 'tests/SGO.Server.SmokeTests/Program.cs'
+      - 'tests/SGO.Server.SmokeTests/GameData/MonsterDropRateSmokeTests.cs'
+      - '.github/workflows/server-monster-drop-rate.yml'
+  pull_request:
+    branches: [feature/local-server-net8]
+    paths:
+      - 'server/Infrastructure/GameData/EnemyDropCatalog.cs'
+      - 'server/Infrastructure/GameData/GameDataServiceCollectionExtensions.cs'
+      - 'server/appsettings.json'
+      - 'tests/SGO.Server.SmokeTests/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  drop-rate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run isolated 50-percent monster drop balance regression
+        run: |
+          dotnet run -c Release --project tests/SGO.Server.SmokeTests/SGO.Server.SmokeTests.csproj -- --suite drops 2>&1 | tee monster-drop-rate.log
+          grep -Fq '[MONSTER_DROP_BALANCE] ALL PASS' monster-drop-rate.log
+      - name: Archive drop distribution samples
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monster-drop-rate-distribution
+          retention-days: 7
+          path: monster-drop-rate.log
