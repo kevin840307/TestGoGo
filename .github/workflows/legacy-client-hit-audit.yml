@@ -1,0 +1,45 @@
+name: Decompiled legacy client hit and attack audit
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/local-server-net8]
+    paths:
+      - '.github/workflows/legacy-client-hit-audit.yml'
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect decompiled client animation strings and symbols
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('Old/ClientData/Paradise.exe.lst')
+          print('[OLD_HIT_AUDIT] exists=%s bytes=%s' % (p.exists(),p.stat().st_size if p.exists() else 0))
+          if not p.exists(): raise SystemExit(1)
+          words=('hit','hurt','damage','attack','onattacked','takehit','animation','motion','state')
+          examples={w:[] for w in words}
+          counts={w:0 for w in words}
+          # IDA listing is ~40 MB; read line by line to avoid memory spikes.
+          with p.open(encoding='utf-8',errors='replace') as f:
+              for n,line in enumerate(f,1):
+                  # Prefer readable strings / symbol names; every instruction
+                  # mentioning a register is not a useful combat reference.
+                  if not re.search(r'\b(?:a[A-Z]|sub_|public|proc|dq |db |dd |call|lea).*',line):
+                      continue
+                  l=line.lower()
+                  for w in words:
+                      if w in l:
+                          counts[w]+=1
+                          if len(examples[w])<12:
+                              examples[w].append((n,line.strip()[:220]))
+          for w in words:
+              print('[OLD_HIT_AUDIT] %s matches=%s' % (w,counts[w]))
+              for n,line in examples[w]:
+                  print('[OLD_HIT_AUDIT_SAMPLE] %s line=%s %s' % (w,n,line))
+          PY
