@@ -36,6 +36,29 @@ class ClientNetworkContractTests(unittest.TestCase):
     def setUpClass(cls):
         cls.source = NETWORK_MANAGER.read_text(encoding="utf-8-sig")
 
+    def test_login_reconstructs_authoritative_pvp_name_color(self):
+        player = PLAYER.read_text(encoding="utf-8-sig")
+        start = player.index("func parse_login_server_data(json_packet: Dictionary) -> void :")
+        end = player.find("\nfunc ", start + 5)
+        block = player[start:end if end >= 0 else None]
+
+        # Reconnect must honor persisted RedMan / PKPinkUntilUtcMs instead of
+        # collapsing every non-red player to the base white/blue state.
+        self.assertIn("_apply_initial_name_color_state()", block)
+        self.assertNotIn(
+            "_apply_name_color(1 if data_model.red_man > 0 else 0)",
+            block,
+        )
+
+        base_entity = (
+            ROOT / "client" / "scripts" / "base_entity.gd"
+        ).read_text(encoding="utf-8-sig")
+        self.assertIn("data_model.pk_pink_until_utc_ms", base_entity)
+        self.assertIn(
+            "_apply_server_name_color_state(color_state, remaining)",
+            base_entity,
+        )
+
     def test_sync_position_preserves_real_player_direction(self):
         manager = self.source
         player = PLAYER.read_text(encoding="utf-8-sig")
