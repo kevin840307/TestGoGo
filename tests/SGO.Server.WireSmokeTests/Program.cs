@@ -10,6 +10,11 @@ var url = args.Length > 0
     ? args[0]
     : "ws://127.0.0.1:5678/";
 
+// Separate short E2E for the user's missing spectator damage numbers.
+// It verifies two real encrypted clients without relying on unrelated
+// shop, crafting, buff or mall test contracts.
+var peerDamageOnly = args.Any(x => x == "--peer-damage-only");
+
 var websocketUri =
     new Uri(url);
 var webhookUri =
@@ -599,6 +604,75 @@ await AwaitType(
         message.GetString() ==
             nearbyText,
     "peer receives nearby chat from first player over map broadcast");
+
+if (peerDamageOnly)
+{
+    // Establish the same monster as visible to BOTH real WebSocket peers.
+    // Do not estimate damage on the observer: compare the actual Server
+    // result with the observer's encrypted EntityDamage packet.
+    var witnessSpawn = await SendGm(
+        $"spawn 245 {firstX + 20} {firstY}",
+        "SpawnEntity",
+        root =>
+            root.TryGetProperty("EntityType", out var kind) &&
+            kind.GetInt32() == 1,
+        "seed nearby monster for spectator normal-hit wire test",
+        skipNonMatchingSameType: true);
+    var witnessMonsterId = witnessSpawn.GetProperty("EntityID").GetInt32();
+    await AwaitType(
+        peerSocket,
+        "SpawnEntity",
+        root =>
+            root.TryGetProperty("EntityID", out var id) &&
+            id.GetInt32() == witnessMonsterId &&
+            root.TryGetProperty("EntityType", out var kind) &&
+            kind.GetInt32() == 1,
+        "peer receives monster spawn before damage",
+        skipNonMatchingSameType: true);
+
+    await SendPacketOn(socket, new {
+        Type = "AttackEntity",
+        TargetEntityID = witnessMonsterId,
+        TargetType = 1
+    });
+    var ownerHit = await AwaitType(
+        socket,
+        "EntityDamage",
+        root =>
+            root.TryGetProperty("TargetID", out var target) &&
+            target.GetInt32() == witnessMonsterId &&
+            root.TryGetProperty("TargetType", out var kind) &&
+            kind.GetInt32() == 1 &&
+            root.TryGetProperty("Damage", out var value) &&
+            value.GetInt32() > 0,
+        "attacker receives real monster normal attack damage",
+        skipNonMatchingSameType: true);
+    var observerHit = await AwaitType(
+        peerSocket,
+        "EntityDamage",
+        root =>
+            root.TryGetProperty("TargetID", out var target) &&
+            target.GetInt32() == witnessMonsterId &&
+            root.TryGetProperty("TargetType", out var kind) &&
+            kind.GetInt32() == 1 &&
+            root.TryGetProperty("AttackerID", out var source) &&
+            source.GetInt64() == dbid &&
+            root.TryGetProperty("Damage", out var value) &&
+            value.GetInt32() > 0,
+        "peer receives normal-attack monster damage",
+        skipNonMatchingSameType: true);
+    foreach (var name in new[] {"Damage", "CurrentHP", "MaxHP", "TargetID", "AttackerID"})
+    {
+        if (ownerHit.GetProperty(name).GetInt64() !=
+            observerHit.GetProperty(name).GetInt64())
+        {
+            throw new Exception(
+                $"Peer EntityDamage differs from attacker for {name}");
+        }
+    }
+    Console.WriteLine("[PEER_DAMAGE_WIRE] ALL PASS");
+    return;
+}
 
 // Economy packets also run over the real encrypted two-client path. Use
 // isolated item IDs so these checks cannot pollute the later drop/pickup test.
