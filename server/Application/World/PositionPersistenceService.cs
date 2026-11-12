@@ -235,7 +235,26 @@ public sealed class PositionPersistenceService : BackgroundService
 
             if (positions.Length > 0)
             {
-                try { _store.UpdatePositionsBatch(positions); }
+                try
+                {
+                    if (_store is IOpportunisticPositionBatchStore lowPriority)
+                    {
+                        if (!lowPriority.TryUpdatePositionsBatch(positions))
+                        {
+                            // The SQLite hot monitor or its only WAL writer is
+                            // busy. Keep the newest staged position and retry
+                            // at a later heartbeat; never block gameplay just
+                            // to persist a replaceable intermediate waypoint.
+                            RestoreIfNotNewer(positions);
+                        }
+                    }
+                    else
+                    {
+                        // Existing fake/non-SQLite stores retain their original
+                        // complete flush behavior and contract.
+                        _store.UpdatePositionsBatch(positions);
+                    }
+                }
                 catch (Exception ex)
                 {
                     RestoreIfNotNewer(positions);
