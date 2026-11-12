@@ -52,6 +52,7 @@ const HIT_VISUAL_MIN_INTERVAL_MSEC: int = 500
 var normal_attack_visual_started_msec: int = -1
 var _name_color_state: int = 0
 var _name_color_flash_generation: int = 0
+var _name_color_lifecycle_generation: int = 0
 
 var is_action_locked: bool = false
 var is_emoting: bool = false
@@ -106,6 +107,7 @@ func _ready() -> void :
 	if CursorManager and not CursorManager.ctrl_state_changed.is_connected(_on_ctrl_state_changed):
 		CursorManager.ctrl_state_changed.connect(_on_ctrl_state_changed)
 	_refresh_identity_labels()
+	call_deferred("_apply_initial_name_color_state")
 
 	if is_instance_valid(doll_engine) and doll_engine.has_signal("body_animation_finished"):
 		if not doll_engine.body_animation_finished.is_connected(_on_body_animation_finished):
@@ -1583,6 +1585,49 @@ func _on_sync_shop_board(p_entity_id: int, is_open: bool, shop_name: String) -> 
 		shop_board_node.visible = false
 		if name_label: name_label.visible = (data_model.transform_type != 2)
 
+func _apply_initial_name_color_state() -> void:
+	if not data_model:
+		return
+	var color_state := 0
+	if int(data_model.red_man) > 0:
+		color_state = 1
+	else:
+		var remaining := maxf(
+			0.0,
+			float(data_model.pk_pink_until_utc_ms) / 1000.0 -
+			Time.get_unix_time_from_system()
+		)
+		if remaining > 0.0:
+			color_state = 3 if remaining <= PURPLE_NAME_FLASH_DURATION_SECONDS else 2
+		_apply_server_name_color_state(color_state, remaining)
+		return
+	_apply_server_name_color_state(color_state, 0.0)
+
+func _apply_server_name_color_state(
+	color_state: int,
+	pink_remaining_seconds: float = 0.0
+) -> void:
+	_name_color_lifecycle_generation += 1
+	var lifecycle_generation := _name_color_lifecycle_generation
+
+	if color_state != 2 or pink_remaining_seconds <= 0.0:
+		_apply_name_color(color_state)
+		return
+
+	_apply_name_color(2)
+	var solid_seconds := maxf(
+		0.0,
+		pink_remaining_seconds - PURPLE_NAME_FLASH_DURATION_SECONDS
+	)
+	if solid_seconds > 0.0:
+		await get_tree().create_timer(solid_seconds).timeout
+
+	if (
+		lifecycle_generation == _name_color_lifecycle_generation
+		and is_inside_tree()
+	):
+		_apply_name_color(3)
+
 func _apply_name_color(color_state: int) -> void :
 	_name_color_state = color_state
 	_name_color_flash_generation += 1
@@ -1618,6 +1663,9 @@ func _run_name_color_flash(flash_generation: int) -> void :
 		await get_tree().create_timer(interval).timeout
 
 	if flash_generation == _name_color_flash_generation and _name_color_state == 3:
+		_name_color_state = 0
+		if data_model:
+			data_model.pk_pink_until_utc_ms = 0
 		_apply_name_color_style(0)
 
 func _apply_name_color_style(color_state: int) -> void :
@@ -1649,17 +1697,31 @@ func _apply_name_color_style(color_state: int) -> void :
 			name_label.add_theme_color_override("font_color", GameConstants.COLOR_NAME_NORMAL)
 			name_label.add_theme_color_override("font_outline_color", GameConstants.COLOR_NAME_WHITE)
 
-func _on_entity_name_color_updated(p_entity_id: int, color_state: int, pk_status: int = -1, red_man_kill_left: int = -1, party_id: String = "") -> void :
+func _on_entity_name_color_updated(
+	p_entity_id: int,
+	color_state: int,
+	pk_status: int = -1,
+	red_man_kill_left: int = -1,
+	party_id: String = "",
+	pink_remaining_seconds: float = 0.0
+) -> void :
 	if p_entity_id != data_model.db_id: return
 
-	if color_state == 1: data_model.red_man = 1
-	elif color_state == 0: data_model.red_man = 0
-
+	data_model.red_man = 1 if color_state == 1 else 0
 	if pk_status != -1: data_model.pk_status = pk_status
 	if red_man_kill_left != -1: data_model.red_man_kill_left = red_man_kill_left
 	if party_id != "": data_model.party_id = party_id
+	if color_state in [2, 3]:
+		data_model.pk_pink_until_utc_ms = int(
+			(Time.get_unix_time_from_system() + maxf(0.0, pink_remaining_seconds)) * 1000.0
+		)
+	else:
+		data_model.pk_pink_until_utc_ms = 0
 
-	_apply_name_color(color_state)
+	_apply_server_name_color_state(
+		color_state,
+		pink_remaining_seconds
+	)
 
 	var hud = GameManager.current_hud if GameManager else null
 	if hud and hud.has_method("get_node_or_null"):

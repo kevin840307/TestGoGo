@@ -50,7 +50,8 @@ var career: int = 0
 var job: int = 0
 var red_man: int = 0
 var red_man_kill_left: int = 0
-var pk_status: int = 0
+var pk_status: int = 1
+var pk_pink_until_utc_ms: int = 0
 
 var summoned_horse_uid: int = -1
 var mecha_type: String = "MS"
@@ -187,7 +188,8 @@ func load_from_json(json_dict: Dictionary) -> void :
 	job = int(json_dict.get("Job", 0))
 	red_man = int(json_dict.get("RedMan", 0))
 	red_man_kill_left = int(json_dict.get("RedManKillLeft", 0))
-	pk_status = int(json_dict.get("PKStatus", 0))
+	pk_status = int(json_dict.get("PKStatus", 1))
+	pk_pink_until_utc_ms = int(json_dict.get("PKPinkUntilUtcMs", 0))
 
 	is_shop_open = bool(json_dict.get("IsShopOpen", json_dict.get("is_shop_open", false)))
 	shop_name = str(json_dict.get("ShopName", json_dict.get("shop_name", "")))

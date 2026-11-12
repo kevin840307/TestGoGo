@@ -1323,8 +1323,17 @@ func _can_reuse_combat_target_for_attack_skill(skill, skill_id: int) -> bool:
 	if not is_offensive:
 		return false
 
-	# Current authoritative attack-skill path targets monsters. Do not reuse
-	# a player/pet target until those server target types explicitly support it.
+	# Player targets are reusable now that the server authoritatively supports
+	# TargetType=0 PvP. In general mode Ctrl must still be held when an
+	# offensive skill is initiated; combat mode removes only that input guard.
+	if "data_model" in combat_target:
+		return (
+			int(combat_target.data_model.hp) > 0
+			and combat_target.has_method("is_local_hostile_player")
+			and bool(combat_target.is_local_hostile_player())
+			and is_player_attack_input_allowed()
+		)
+
 	return (
 		"current_hp" in combat_target
 		and "entity_id" in combat_target

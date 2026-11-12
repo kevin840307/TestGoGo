@@ -409,6 +409,7 @@ var current_festival_theme: String = FestivalThemeManager.NORMAL
 var current_festival_activity: String = ""
 var current_performance_load_mode: int = ClientPerformanceProfile.LOAD_BALANCED
 var current_combat_render_mode: int = ClientPerformanceProfile.COMBAT_NORMAL
+var current_player_attack_mode: int = GameConstants.SETTING_DEFAULT_PLAYER_ATTACK_MODE
 var current_foreground_fps_limit: int = 60
 var current_simplify_players_mode: int = ClientPerformanceProfile.PLAYER_SHOW_ALL
 var current_simplify_monsters_mode: int = ClientPerformanceProfile.MONSTER_SHOW_ALL
@@ -1611,6 +1612,19 @@ func _stop_nonessential_combat_effects() -> void:
 	if FloatingTextManager and FloatingTextManager.has_method("stop_combat_visual_effects"):
 		FloatingTextManager.stop_combat_visual_effects()
 
+
+func set_player_attack_mode(mode: int) -> void:
+	current_player_attack_mode = clampi(
+		mode,
+		GameConstants.SETTING_PLAYER_ATTACK_GENERAL,
+		GameConstants.SETTING_PLAYER_ATTACK_COMBAT
+	)
+
+func is_player_attack_input_allowed() -> bool:
+	return (
+		current_player_attack_mode == GameConstants.SETTING_PLAYER_ATTACK_COMBAT
+		or Input.is_key_pressed(KEY_CTRL)
+	)
 
 func set_foreground_fps_limit(value: int) -> void:
 	current_foreground_fps_limit = ClientPerformanceProfile.sanitize_fps_limit(value)
