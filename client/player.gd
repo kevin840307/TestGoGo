@@ -385,7 +385,11 @@ func parse_login_server_data(json_packet: Dictionary) -> void :
 	if name_label and data_model.character_name.length() > 0:
 		var race_map = {"Boy": "[騎]", "Girl": "[騎]", "Migu": "[魔]", "Robot": "[機]", "Yas": "[遺]"}
 		name_label.text = race_map.get(current_race, "[?]") + data_model.character_name
-		_apply_name_color(1 if data_model.red_man > 0 else 0)
+		# Reconstruct red / pink / flashing-pink / white-or-blue from the
+		# authoritative persisted PK fields. Using only RedMan here made a
+		# reconnecting pink player briefly render as white until another
+		# UpdateNameColor packet arrived.
+		_apply_initial_name_color_state()
 		name_label.visible = not (data_model.is_shop_open or data_model.transform_type == 2)
 
 	current_state = str(clean_packet.get("State", "idle"))
