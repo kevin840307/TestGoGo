@@ -4,6 +4,7 @@ These tests do not replace a real Godot/WebSocket E2E run. They protect the
 recovered client's packet responsibilities so server ACK packets do not slowly
 grow duplicate state ownership.
 """
+import json
 import re
 import unittest
 from pathlib import Path
@@ -14,6 +15,9 @@ NETWORK_MANAGER = ROOT / "client" / "scripts" / "network_manager.gd"
 PLAYER = ROOT / "client" / "player.gd"
 NETWORK_PLAYER = ROOT / "client" / "network_player.gd"
 PACKET_ROUTER = ROOT / "server" / "Application" / "PacketRouter.cs"
+ANIMATION_TIMING_MANAGER = ROOT / "client" / "scripts" / "animation_timing_manager.gd"
+PAPER_DOLL_ENGINE = ROOT / "client" / "scripts" / "paper_doll_engine.gd"
+ANIMATION_TIMING_MANIFEST = ROOT / "client" / "Assets" / "AnimationTimingManifest.json"
 MALL_WINDOW = ROOT / "client" / "scripts" / "mall_window.gd"
 BANK_WINDOW = ROOT / "client" / "scripts" / "bank_window.gd"
 PLAYER_SHOP_WINDOW = ROOT / "client" / "scripts" / "shop_window.gd"
@@ -201,6 +205,48 @@ class ClientNetworkContractTests(unittest.TestCase):
         idle_write = block.index('current_state = "idle"', guard)
         self.assertLess(settle, guard)
         self.assertLess(guard, idle_write)
+
+    def test_one_tick_hit_actions_keep_original_50hz_visibility(self):
+        timing_manager = ANIMATION_TIMING_MANAGER.read_text(encoding="utf-8-sig")
+        paper_doll = PAPER_DOLL_ENGINE.read_text(encoding="utf-8-sig")
+        manifest = json.loads(
+            ANIMATION_TIMING_MANIFEST.read_text(encoding="utf-8-sig")
+        )
+
+        tick_rate = int(manifest["tick_rate_hz"])
+        self.assertEqual(50, tick_rate)
+        controllers = {
+            entry["controller"]: entry["actions"]
+            for entry in manifest["controller_entries"]
+            if entry["controller"] in {
+                "player:A", "player:B", "player:G", "player:R"
+            }
+        }
+        self.assertEqual(4, len(controllers))
+        for actions in controllers.values():
+            for raw_action in ("AH", "GH"):
+                self.assertEqual(
+                    [{"frame": 0, "ticks": 1}],
+                    actions[raw_action],
+                )
+
+        # Original 50Hz one-tick hit is 20ms, enough to cross one 60Hz
+        # display interval. The global 1.5x ACT scale would reduce it to
+        # 13.3ms and can finish before the next visible frame.
+        self.assertGreaterEqual(1.0 / tick_rate, 1.0 / 60.0)
+        self.assertLess(1.0 / (tick_rate * 1.5), 1.0 / 60.0)
+
+        self.assertIn('"AH": true', timing_manager)
+        self.assertIn('"GH": true', timing_manager)
+        self.assertIn("func get_action_tick_rate_hz(", timing_manager)
+        self.assertIn(
+            "AnimationTimingManager.get_action_tick_rate_hz(",
+            paper_doll,
+        )
+        self.assertIn(
+            "set_animation_speed(animation_name, action_tick_rate)",
+            paper_doll,
+        )
 
     def test_world_ready_ack_is_observable(self):
         block = packet_block(self.source, "WorldReadyResponse")
