@@ -3,6 +3,15 @@ extends Node
 const MANIFEST_PATH: = "res://Assets/AnimationTimingManifest.json"
 const ACT_PLAYBACK_SCALE: = 1.5
 
+# Recovered player AH/GH are one-frame, one-tick hit reactions at the
+# original 50Hz controller cadence. Applying the global 1.5x scale reduces
+# them to ~13.3ms, shorter than one 60Hz frame, so the hit can finish before
+# it is visibly presented. Keep only these source actions at recovered rate.
+const SOURCE_RATE_ACTIONS := {
+	"AH": true,
+	"GH": true,
+}
+
 var _tick_rate_hz: int = 0
 var _resource_index: Dictionary = {}
 var _controller_index: Dictionary = {}
@@ -26,6 +35,14 @@ func get_playback_scale() -> float:
 
 func get_effective_tick_rate_hz() -> float:
 	return float(_tick_rate_hz) * ACT_PLAYBACK_SCALE
+
+
+func get_action_tick_rate_hz(action: String, scaled: bool = true) -> float:
+	if _tick_rate_hz <= 0:
+		return 0.0
+	if not scaled or SOURCE_RATE_ACTIONS.has(action):
+		return float(_tick_rate_hz)
+	return get_effective_tick_rate_hz()
 
 
 func get_resource_timeline(resource_path: String, action: String) -> Array:
