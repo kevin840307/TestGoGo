@@ -874,6 +874,11 @@ func _defer_monster_spawn(data: Dictionary) -> void :
 		_remove_queued_spawn(entity_id)
 
 func _remove_queued_spawn(entity_id: int) -> void :
+	# Every distant drop is cached but most never enter the visual queue.
+	# A despawn must be O(1) for those entries rather than walking every
+	# queued monster/drop for every authoritative item expiration.
+	if not _queued_spawn_ids.has(entity_id):
+		return
 	_queued_spawn_ids.erase(entity_id)
 	for index: int in range(_spawn_queue.size() - 1, -1, -1):
 		if int(_spawn_queue[index].get("EntityID", 0)) == entity_id:
@@ -912,6 +917,12 @@ func _enqueue_spawn_by_priority(data: Dictionary) -> void :
 	# Binary insertion preserves stable ordering for equal priorities.
 	var player_pos: Variant = _get_local_player_position()
 	var priority: float = _spawn_priority(data, player_pos)
+	# During a loot explosion most packets are the same lowest-priority
+	# drop category. Appending in O(1) preserves stable ordering without
+	# repeated binary searches or array insert/shifts at the tail.
+	if _spawn_queue.is_empty() or priority >= _spawn_priority(_spawn_queue.back(), player_pos):
+		_spawn_queue.append(data)
+		return
 	var low: int = 0
 	var high: int = _spawn_queue.size()
 	while low < high:
