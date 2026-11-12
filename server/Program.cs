@@ -71,6 +71,8 @@ var broadcastHub =
 // This diagnostic is read-only and only exists for the SQLite provider.
 // Other game-store implementations must not implement instrumentation to boot.
 var sqliteStore = app.Services.GetService<SqliteGameStore>();
+var combatService = app.Services.GetRequiredService<
+    SGO.Server.Application.Combat.CombatService>();
 
 if (!currentClientData.IsAvailable)
 {
@@ -113,6 +115,7 @@ app.MapGet("/health", (IConfiguration config) => Results.Ok(new
     sharedMapAiProfile = sharedMapAiTicker.LastProfile,
     sharedMapAiRecentTicks = sharedMapAiTicker.RecentTickSamples(),
     sqliteHotWrites = sqliteStore?.HotWriteDiagnostics,
+    monsterAiDamageBatches = combatService.MonsterAiDamageBatches,
     sqliteBackgroundPosition = sqliteStore?.BackgroundPositionMetrics,
     aoi = new
     {
