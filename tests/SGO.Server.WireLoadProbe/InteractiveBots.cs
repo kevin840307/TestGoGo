@@ -153,7 +153,8 @@ internal static class InteractiveBots
                         {
                             if (idx < 3 || idx % 10 == 0)
                                 Console.WriteLine($"[BOTS] #{idx:D3} stage={next}");
-                        });
+                        },
+                        sendWorldReady: false);
                     try
                     {
                         var location = locations[n];
