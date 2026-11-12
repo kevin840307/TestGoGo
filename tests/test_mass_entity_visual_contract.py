@@ -75,6 +75,16 @@ class MassEntityVisualContracts(unittest.TestCase):
             "client/scripts/floating_text_manager.gd"
         ))
 
+    def test_latest_visible_damage_reuses_oldest_bounded_pool_label(self):
+        floating = script("client/scripts/floating_text_manager.gd")
+        body = gd_function(floating, "func _get_free_label() -> Label:")
+        self.assertIn("const POOL_SIZE = 100", floating)
+        self.assertIn('lbl.get_meta("damage_allocated_msec", 0)', body)
+        self.assertIn("oldest = lbl", body)
+        self.assertIn("oldest.set_meta", body)
+        self.assertIn("return oldest", body)
+        self.assertNotIn("POOL_SIZE = 1000", floating)
+
     def test_physics_and_network_cadence_still_unthrottled(self):
         network = script("client/scripts/network_manager.gd")
         manager = script("client/scripts/network_entity_manager.gd")
