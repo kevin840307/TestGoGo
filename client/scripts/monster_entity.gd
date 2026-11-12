@@ -62,6 +62,11 @@ var last_visual_move_dir: String = ""
 var last_visual_move_dir_ms: int = 0
 var fallback_action_generation: int = 0
 var action_state_started_ms: int = 0
+# HP is always committed on receipt. Hit poses are optional visuals and
+# must not overlap or cancel an attack in heavy multiplayer combat.
+var _hit_visual_pending: bool = false
+var _last_hit_visual_ms: int = -10000
+const HIT_VISUAL_MIN_INTERVAL_MS: int = 450
 # Server monster movement is broadcast on a 250ms map tick. Keep WALK
 # active across one interval of packet jitter, unless an explicit server
 # SyncState overrides it.
@@ -322,6 +327,11 @@ func advance_network_runtime(delta: float) -> bool:
 				current_state = "idle"
 				sync_animation()
 				return false
+		elif current_state not in ["attack", "hit", "death", "die"]:
+			# No active waypoint or one-shot: release from the 60Hz runtime
+			# set immediately. A later MoveEntity / SyncState reactivates it.
+			# Previously idle monsters could remain here for the entire map.
+			return false
 
 	if current_state in ["attack", "hit", "death", "die"]:
 		network_move_active = false
@@ -543,26 +553,38 @@ func show_damage_number(damage: int, is_crit: bool = false, hit_delay: float = 0
 		FloatingTextManager.show_damage(self, damage, is_crit, hit_delay, split_count, skill_id, is_primary)
 
 func update_hp(new_hp: int, hit_delay: float = 0.3, is_miss: bool = false) -> void :
-	if hit_delay > 0:
-		if not is_inside_tree():
-			return
+	# Never defer the authoritative HP state. Multiple players may land
+	# damage faster than a single hit animation; old deferred writes could
+	# apply stale HP after a newer hit and make the bar jump backwards.
+	var took_damage: bool = new_hp < current_hp
+	current_hp = new_hp
+	if hp_bar:
+		hp_bar.value = current_hp
+	if current_hp <= 0 or not took_damage or is_miss or _hit_visual_pending:
+		return
+	var now_ms: int = Time.get_ticks_msec()
+	if now_ms - _last_hit_visual_ms < HIT_VISUAL_MIN_INTERVAL_MS:
+		return
+	if not is_inside_tree():
+		return
+	_hit_visual_pending = true
+	if hit_delay > 0.0:
 		var tree: SceneTree = get_tree()
 		if tree == null:
+			_hit_visual_pending = false
 			return
 		await tree.create_timer(hit_delay).timeout
-
-	if not is_instance_valid(self) or not is_inside_tree():
+	_hit_visual_pending = false
+	if not is_instance_valid(self) or not is_inside_tree() or current_hp <= 0:
 		return
-
-	var took_damage = new_hp < current_hp
-	current_hp = new_hp
-	if hp_bar: hp_bar.value = current_hp
-
-
-	if current_hp > 0 and sprite and took_damage and not is_miss:
-		current_state = "hit"
-		action_state_started_ms = Time.get_ticks_msec()
-		sync_animation()
+	# A hurt reaction must not restart or reverse an attack / previous hit.
+	# Its separate hit FX and floating damage are handled independently.
+	if current_state in ["attack", "hit", "death", "die"]:
+		return
+	_last_hit_visual_ms = Time.get_ticks_msec()
+	current_state = "hit"
+	action_state_started_ms = _last_hit_visual_ms
+	sync_animation()
 
 func _die(hit_delay: float = 0.0) -> void :
 	if current_state == "death": return
