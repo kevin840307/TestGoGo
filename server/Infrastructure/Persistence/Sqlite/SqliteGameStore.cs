@@ -13,7 +13,7 @@ namespace SGO.Server.Infrastructure.Persistence.Sqlite;
 
 public sealed record SqliteBackgroundPositionMetrics(long Attempts, long Deferred);
 
-public sealed class SqliteGameStore : IGameStore, IOpportunisticPositionBatchStore
+public sealed class SqliteGameStore : IGameStore, IOpportunisticPositionBatchStore, IAtomicCharacterDamageStore
 {
     private readonly string _connectionString;
     // SQLite WAL permits concurrent readers but only one writer. Serialize
@@ -11687,6 +11687,96 @@ public sealed class SqliteGameStore : IGameStore, IOpportunisticPositionBatchSto
         Arg(cleanup, "$uid", itemUid);
         Arg(cleanup, "$id", dbid);
         cleanup.ExecuteNonQuery();
+    }
+
+    // Atomic foundation for a future owner-scoped multi-monster hit pass.
+    // This opt-in API is not yet used by AI: the original per-hit ApplyDamage
+    // remains unchanged until packet/death ordering can be replayed safely.
+    // All hit HP values are derived from the SAME SQLite write transaction;
+    // no death, heal or identity change may interleave between its hits.
+    public CharacterDamageBatchResult? ApplyDamageBatch(
+        long accountId,
+        long dbid,
+        IReadOnlyList<int> damages)
+    {
+        ArgumentNullException.ThrowIfNull(damages);
+        if (damages.Count > 512)
+            throw new ArgumentOutOfRangeException(
+                nameof(damages), "Maximum 512 hits per transaction");
+
+        using (EnterHotWriteGate(SqliteHotWriteOperation.Damage))
+        {
+            using var db = Open();
+            // BEGIN IMMEDIATE obtains the single WAL writer before reading
+            // initial HP. This makes the multi-hit timeline deterministic
+            // even when a heal/other player update competes for SQLite.
+            using var tx = db.BeginTransaction();
+            using var readHp = db.CreateCommand();
+            readHp.Transaction = tx;
+            readHp.CommandText = """
+                SELECT hp
+                  FROM characters
+                 WHERE id=$id AND account_id=$a
+                 LIMIT 1
+                """;
+            Arg(readHp, "$id", dbid);
+            Arg(readHp, "$a", accountId);
+            var startingHp = readHp.ExecuteScalar();
+            if (startingHp is null || startingHp is DBNull)
+                return null;
+
+            var currentHp = Convert.ToInt32(startingHp);
+            var firstDeathIndex = -1;
+            var hpAfterHits = new int[damages.Count];
+            long totalDamage = 0;
+            for (var i = 0; i < damages.Count; i++)
+            {
+                var damage = Math.Max(0, damages[i]);
+                totalDamage += damage;
+                currentHp = Math.Max(0, currentHp - damage);
+                hpAfterHits[i] = currentHp;
+                if (firstDeathIndex < 0 &&
+                    currentHp == 0 &&
+                    Convert.ToInt32(startingHp) > 0)
+                    firstDeathIndex = i;
+            }
+
+            if (damages.Count > 0)
+            {
+                // Equivalent to sequential ApplyDamage UPDATEs because HP
+                // uses MAX(0, hp-damage), death is sticky and no other
+                // component can change this character mid-transaction.
+                // Sum is a long to avoid int overflow for simultaneous hits.
+                using var update = db.CreateCommand();
+                update.Transaction = tx;
+                update.CommandText = """
+                    UPDATE characters
+                       SET hp = MAX(0, hp - $damage),
+                           state = CASE
+                               WHEN hp - $damage <= 0 THEN 'death'
+                               ELSE state
+                           END
+                     WHERE id=$id AND account_id=$a
+                    """;
+                Arg(update, "$damage", totalDamage);
+                Arg(update, "$id", dbid);
+                Arg(update, "$a", accountId);
+                if (update.ExecuteNonQuery() != 1)
+                    return null;
+            }
+
+            // Query the SAME full character contract as normal ApplyDamage;
+            // the transaction guarantees fields correspond to our update.
+            var result = ReadCharacterForAccount(db, accountId, dbid);
+            if (result is null ||
+                Convert.ToInt32(result["HP"]) != currentHp)
+                throw new InvalidOperationException(
+                    "Atomic damage batch readback does not match committed HP");
+
+            tx.Commit();
+            return new CharacterDamageBatchResult(
+                result, hpAfterHits, firstDeathIndex);
+        }
     }
 
     public Dictionary<string, object>? ApplyDamage(
