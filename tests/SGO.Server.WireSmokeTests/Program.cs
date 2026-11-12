@@ -526,6 +526,7 @@ await ProbeOn(
 
 // Same-map movement and chat must traverse the real encrypted socket and the
 // map broadcast hub rather than only direct service calls.
+// An unchanged SyncPosition is not a move; use a small real delta.
 var firstX =
     (int)Math.Round(
         enterWorld.GetProperty(
@@ -537,11 +538,12 @@ var firstY =
                 "LocY")
             .GetDouble());
 
+var firstMovementX = firstX + 4;
 await SendPacketOn(socket,
     new
     {
         Type = "SyncPosition",
-        X = firstX,
+        X = firstMovementX,
         Y = firstY,
         Dir = "1"
     });
@@ -559,7 +561,7 @@ await AwaitType(
             "X",
             out var x) &&
         x.GetInt32() ==
-            firstX &&
+            firstMovementX &&
         root.TryGetProperty(
             "Y",
             out var y) &&
@@ -2339,8 +2341,13 @@ async Task<JsonElement> AwaitType(
     string description,
     bool skipNonMatchingSameType = false)
 {
+    var startedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+    var skippedByType = new Dictionary<string, int>(StringComparer.Ordinal);
+    // Large WorldReady snapshots can contain hundreds of unrelated entities.
+    // Time-limit this wait instead of falsely stopping after 160 packets.
     for (var attempts = 0;
-         attempts < 160;
+         attempts < 8192 &&
+         System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalSeconds < 20.0;
          attempts++)
     {
         using var timeout =
@@ -2367,7 +2374,14 @@ async Task<JsonElement> AwaitType(
         }
 
         if (type != responseType)
+        {
+            if (type is not null)
+            {
+                skippedByType.TryGetValue(type, out var previous);
+                skippedByType[type] = previous + 1;
+            }
             continue;
+        }
 
         if (!assert(response))
         {
@@ -2386,7 +2400,9 @@ async Task<JsonElement> AwaitType(
     }
 
     throw new Exception(
-        $"{description}: no expected packet received");
+        $"{description}: no expected packet received; skipped=" +
+        string.Join(", ", skippedByType.OrderByDescending(x => x.Value).Take(8)
+            .Select(x => $"{x.Key}={x.Value}")));
 }
 
 async Task CollectTypes(
