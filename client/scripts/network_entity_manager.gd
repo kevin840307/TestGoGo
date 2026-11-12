@@ -2001,6 +2001,15 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 		if target_type == 1 and current_hp <= 0:
 			var fatal_delay: float = float(target_node.get_meta("fatal_hit_delay", hit_delay))
 			_remember_fatal_monster(target_id, target_node, fatal_delay)
+	elif target_type == 1 and damage > 0 and _monster_spawn_templates.has(target_id):
+		# Player-origin EntityDamage is intentionally high-priority; it can
+		# arrive before a crowded map instantiates the target monster scene.
+		# Retain essential combat feedback without spawning offscreen sprites.
+		var cached_monster: Dictionary = _monster_spawn_templates[target_id]
+		var cached_pos := Vector2(float(cached_monster.get("LocX", 0)), float(cached_monster.get("LocY", 0)))
+		var view_pos: Vector2 = get_viewport().get_canvas_transform() * cached_pos
+		if get_viewport().get_visible_rect().grow(80.0).has_point(view_pos) and FloatingTextManager:
+			FloatingTextManager.show_damage_at(cached_pos, damage, is_crit, hit_delay)
 
 
 
