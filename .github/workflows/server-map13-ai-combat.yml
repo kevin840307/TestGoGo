@@ -9,6 +9,7 @@ on:
       - 'server/Application/World/SharedMapAiTicker.cs'
       - 'server/Application/Combat/CombatService.cs'
       - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
+      - 'server/Infrastructure/Persistence/Sqlite/SqliteHotWriteTelemetry.cs'
       - 'tests/SGO.Server.WireLoadProbe/**'
   push:
     branches: [feature/local-server-net8]
@@ -18,6 +19,7 @@ on:
       - 'server/Application/World/SharedMapAiTicker.cs'
       - 'server/Application/Combat/CombatService.cs'
       - 'server/Infrastructure/Persistence/Sqlite/SqliteGameStore.cs'
+      - 'server/Infrastructure/Persistence/Sqlite/SqliteHotWriteTelemetry.cs'
       - 'tests/SGO.Server.WireLoadProbe/**'
   workflow_dispatch:
 
@@ -129,6 +131,9 @@ jobs:
           touch bots-combat.done
           wait "$sampler_pid" || true
           cat ai-combat-sampler.log
+          # Capture a single cumulative histogram after the WHOLE combat run;
+          # /health polling never resets or reweights individual SQL samples.
+          curl -fsS --max-time 5 http://127.0.0.1:5678/health > sqlite-hot-write-health.json
           echo "[MAP13_COMBAT_DIAG] Slow combat / database / transport samples:"
           grep -E 'MAP_AI_(PROFILE|SLOW_TICK)|SLOW_TICK_AI_PHASE|DamageWriteMs|SLOW_PACKET|BROADCAST_QUEUE_AGE' server-combat.log | tail -n 80 || true
           if [ "$bot_status" -ne 0 ]; then
@@ -139,6 +144,11 @@ jobs:
           import json,re
           bots=json.load(open('bots-combat-result.json'))
           p=json.load(open('ai-map13-combat-summary.json'))
+          health=json.load(open('sqlite-hot-write-health.json'))
+          hot=health.get('sqliteHotWrites')
+          assert hot is not None, 'SQLite /health must expose cumulative hot-write timing'
+          p['sqliteHotWrites']=hot
+          print('[SQLITE_HOT_WRITE_PROFILE]',json.dumps(hot),flush=True)
           log=open('server-combat.log',encoding='utf-8',errors='replace').read()
           writes=[float(v) for v in re.findall(r'DamageWriteMs=([0-9.]+)',log)]
           p['slowDamageWriteMaxMs']=max(writes,default=0)
@@ -152,6 +162,8 @@ jobs:
           assert bots['Connected']==20 and not bots['Errors'], '20 encrypted clients must be online without errors'
           assert bots['MovementPackets']>0 and bots['AttackPackets']>0, 'this must be mixed movement+combat, never --no-combat'
           assert bots['ConfirmedDamageHits']>0 and bots['ConfirmedSkillCasts']>0, 'real combat events must be confirmed'
+          assert hot['damage']['heldMs']['samples']>0 and hot['damageUpdateMs']['samples']>0, 'real monster damage must contribute to SQLITE hot-write histogram'
+          assert hot['damageReadMs']['samples']>0 and hot['damageOpenMs']['samples']>0, 'all damage SQL phases must be captured'
           assert p['eligibleSamples']>=8, 'insufficient steady-state map AI samples'
           PY
       - name: Upload sustained combat timing evidence
@@ -166,3 +178,4 @@ jobs:
             ai-map13-combat-summary.json
             ai-combat-sampler.log
             server-combat.log
+            sqlite-hot-write-health.json

@@ -1,4 +1,6 @@
 using Microsoft.Data.Sqlite;
+using System.Diagnostics;
+using System.Threading;
 using System.Security.Cryptography;
 using System.Text.Json;
 using SGO.Server.Application.Abstractions;
@@ -18,6 +20,52 @@ public sealed class SqliteGameStore : IGameStore
     // hold gameplay session/map monitors. Every SQL statement and transaction
     // remains exactly the same; this changes only the writer acquisition order.
     private readonly object _hotWriteGate = new();
+
+    private readonly SqliteHotWriteTelemetry _hotWriteTelemetry = new();
+
+    // Cumulative, read-only metrics; no logging / SQLite access in hot paths.
+    public SqliteHotWriteDiagnostics HotWriteDiagnostics
+        => _hotWriteTelemetry.Snapshot();
+
+    // Monitor.Enter/Exit preserve the original reentrant lock semantics.
+    // Histogram sampling runs only AFTER Monitor.Exit to avoid stretching
+    // the critical section on a contended 20-player map.
+    private HotWriteLease EnterHotWriteGate(SqliteHotWriteOperation operation)
+    {
+        var started = Stopwatch.GetTimestamp();
+        Monitor.Enter(_hotWriteGate);
+        var acquired = Stopwatch.GetTimestamp();
+        return new HotWriteLease(
+            this, operation, acquired,
+            Stopwatch.GetElapsedTime(started, acquired).TotalMilliseconds);
+    }
+
+    private readonly struct HotWriteLease : IDisposable
+    {
+        private readonly SqliteGameStore _store;
+        private readonly SqliteHotWriteOperation _operation;
+        private readonly long _acquiredAt;
+        private readonly double _waitMs;
+
+        public HotWriteLease(
+            SqliteGameStore store,
+            SqliteHotWriteOperation operation,
+            long acquiredAt,
+            double waitMs)
+        {
+            _store = store;
+            _operation = operation;
+            _acquiredAt = acquiredAt;
+            _waitMs = waitMs;
+        }
+
+        public void Dispose()
+        {
+            var heldMs = Stopwatch.GetElapsedTime(_acquiredAt).TotalMilliseconds;
+            Monitor.Exit(_store._hotWriteGate);
+            _store._hotWriteTelemetry.RecordGate(_operation, _waitMs, heldMs);
+        }
+    }
 
     public SqliteGameStore(string dbPath)
     {
@@ -873,7 +921,7 @@ public sealed class SqliteGameStore : IGameStore
         if (positions.Count == 0)
             return;
 
-        lock (_hotWriteGate)
+        using (EnterHotWriteGate(SqliteHotWriteOperation.PositionBatch))
         {
         using var db = Open();
         using var tx = db.BeginTransaction();
@@ -7175,7 +7223,7 @@ public sealed class SqliteGameStore : IGameStore
     {
         damage = Math.Max(0, damage);
 
-        lock (_hotWriteGate)
+        using (EnterHotWriteGate(SqliteHotWriteOperation.PetDamage))
         {
         using var db = Open();
         using var tx = db.BeginTransaction();
@@ -11565,9 +11613,12 @@ public sealed class SqliteGameStore : IGameStore
         long dbid,
         int damage)
     {
-        lock (_hotWriteGate)
+        using (EnterHotWriteGate(SqliteHotWriteOperation.Damage))
         {
+        var openStarted = Stopwatch.GetTimestamp();
         using var db = Open();
+        _hotWriteTelemetry.RecordDamageOpen(
+            Stopwatch.GetElapsedTime(openStarted).TotalMilliseconds);
         // This one UPDATE is atomic on its own; avoid opening a separate
         // immediate transaction before joining SQLite's contended WAL writer.
         using var cmd = db.CreateCommand();
@@ -11584,12 +11635,32 @@ public sealed class SqliteGameStore : IGameStore
         Arg(cmd, "$id", dbid);
         Arg(cmd, "$a", accountId);
 
-        if (cmd.ExecuteNonQuery() != 1)
+        var updateStarted = Stopwatch.GetTimestamp();
+        int updatedRows;
+        try
+        {
+            updatedRows = cmd.ExecuteNonQuery();
+        }
+        finally
+        {
+            _hotWriteTelemetry.RecordDamageUpdate(
+                Stopwatch.GetElapsedTime(updateStarted).TotalMilliseconds);
+        }
+        if (updatedRows != 1)
             return null;
 
-        // Keep the full original payload and all live, post-damage fields;
-        // only avoid the redundant Open() on this hot path.
-        return ReadCharacterForAccount(db, accountId, dbid);
+        // Keep all fields and DB-authoritative death/HP semantics unchanged;
+        // timing never delays the actual SQL UPDATE or the full data read.
+        var readStarted = Stopwatch.GetTimestamp();
+        try
+        {
+            return ReadCharacterForAccount(db, accountId, dbid);
+        }
+        finally
+        {
+            _hotWriteTelemetry.RecordDamageRead(
+                Stopwatch.GetElapsedTime(readStarted).TotalMilliseconds);
+        }
         }
     }
 
@@ -11640,7 +11711,7 @@ public sealed class SqliteGameStore : IGameStore
         hpAmount = Math.Max(0, hpAmount);
         mpAmount = Math.Max(0, mpAmount);
 
-        lock (_hotWriteGate)
+        using (EnterHotWriteGate(SqliteHotWriteOperation.Recovery))
         {
         using var db = Open();
         using var cmd = db.CreateCommand();
@@ -11696,7 +11767,7 @@ public sealed class SqliteGameStore : IGameStore
         mpAmount = Math.Max(0, mpAmount);
         spAmount = Math.Max(0, spAmount);
 
-        lock (_hotWriteGate)
+        using (EnterHotWriteGate(SqliteHotWriteOperation.Recovery))
         {
         using var db = Open();
         using var cmd = db.CreateCommand();

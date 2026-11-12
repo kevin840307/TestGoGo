@@ -4,6 +4,7 @@ using SGO.Server.Infrastructure.GameData;
 using SGO.Server.Infrastructure.Quest;
 using SGO.Server.Infrastructure.WorldData;
 using SGO.Server.Infrastructure.Persistence;
+using SGO.Server.Infrastructure.Persistence.Sqlite;
 using SGO.Server.Transport.WebSockets;
 using SGO.Server.Transport.Http;
 
@@ -67,6 +68,9 @@ var sharedMapAiTicker =
 var broadcastHub =
     app.Services.GetRequiredService<
         SGO.Server.Application.Messaging.ServerBroadcastHub>();
+// This diagnostic is read-only and only exists for the SQLite provider.
+// Other game-store implementations must not implement instrumentation to boot.
+var sqliteStore = app.Services.GetService<SqliteGameStore>();
 
 if (!currentClientData.IsAvailable)
 {
@@ -108,6 +112,7 @@ app.MapGet("/health", (IConfiguration config) => Results.Ok(new
     // Read-only sub-phase timings for reproducible 20-player combat profiling.
     sharedMapAiProfile = sharedMapAiTicker.LastProfile,
     sharedMapAiRecentTicks = sharedMapAiTicker.RecentTickSamples(),
+    sqliteHotWrites = sqliteStore?.HotWriteDiagnostics,
     aoi = new
     {
         playerReady = broadcastHub.AoiReadyPlayers,
