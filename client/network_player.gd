@@ -28,7 +28,7 @@ var _network_attack_damage_owner_until_msec: int = -1
 const NETWORK_ATTACK_DAMAGE_OWNER_WINDOW_MSEC: int = 1500
 # Simplified sprites have no body animation_finished signal. Always release
 # remote combat locks after a bounded presentation-only fallback.
-const REMOTE_ACTION_FALLBACK_MSEC: int = 1200
+const REMOTE_ACTION_FALLBACK_MSEC: int = 1600
 var _remote_action_started_msec: int = -1
 static var _debug_remote_gap_reports: int = 0
 var _performance_simplified_visual: bool = false
@@ -639,15 +639,23 @@ func apply_network_state(new_state: String, new_dir: String) -> void :
 	_sync_physics_animation_if_changed()
 
 func _physics_process(delta: float) -> void :
-	# No paper doll (simplified mode), or a missing animation asset, must
-	# never leave a remote player permanently stuck in attack/hit state.
-	if is_action_locked and _remote_action_started_msec >= 0 and Time.get_ticks_msec() - _remote_action_started_msec >= REMOTE_ACTION_FALLBACK_MSEC:
-		_remote_action_started_msec = -1
-		_unlock_combat_state()
 	if is_dead:
+		# A late action timeout must never replace a death pose with idle.
 		_sync_physics_animation_if_changed()
 		set_physics_process(false)
 		return
+	# Simplified mode has no body animation_finished signal. Full paper dolls
+	# normally unlock naturally; allow a generous, attack-speed-aware safety
+	# fallback only if an animation resource fails to signal completion.
+	var action_timeout_msec: int = REMOTE_ACTION_FALLBACK_MSEC
+	if current_state.begins_with("attack_") and not _performance_simplified_visual:
+		action_timeout_msec = clampi(roundi(
+			float(REMOTE_ACTION_FALLBACK_MSEC) * 100.0
+			/ maxf(float(data_model.attack_speed), 25.0)
+		), REMOTE_ACTION_FALLBACK_MSEC, 6000)
+	if is_action_locked and _remote_action_started_msec >= 0 and Time.get_ticks_msec() - _remote_action_started_msec >= action_timeout_msec:
+		_remote_action_started_msec = -1
+		_unlock_combat_state()
 	_handle_movement(delta)
 	_sync_physics_animation_if_changed()
 	if not _remote_motion.is_moving() and current_state != "walk" and not is_action_locked:
