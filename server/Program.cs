@@ -105,6 +105,9 @@ app.MapGet("/health", (IConfiguration config) => Results.Ok(new
     currentSkillCount = currentClientData.Skills.Count,
     currentPetCount = currentClientData.Pets.Count,
     sharedMapAi = sharedMapAiTicker.LastDiagnostics,
+    // Read-only sub-phase timings for reproducible 20-player combat profiling.
+    sharedMapAiProfile = sharedMapAiTicker.LastProfile,
+    sharedMapAiRecentTicks = sharedMapAiTicker.RecentTickSamples(),
     aoi = new
     {
         playerReady = broadcastHub.AoiReadyPlayers,
