@@ -9,6 +9,7 @@ const PET_SCENE = preload("res://pet_entity.tscn")
 const PENDING_AOI_MOVES = preload("res://scripts/network_entity_pending_moves.gd")
 const MOTION_AUDIT = preload("res://scripts/multiplayer_motion_audit.gd")
 const MONSTER_VIEW_RADIUS = preload("res://scripts/monster_waypoint_speed.gd")
+const PEER_DAMAGE_VISUAL_POLICY = preload("res://scripts/peer_damage_visual_policy.gd")
 const GROUND_DROP_SPATIAL_INDEX = preload("res://scripts/ground_drop_spatial_index.gd")
 const DYNAMIC_ENTITY_VISIBILITY_LAYER: = 1 << 1
 const DEBUG_MONSTER_NETWORK_LOGS: bool = false
@@ -1870,14 +1871,11 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 	# A normal EntityDamage packet from another player is authoritative
 	# combat feedback, not a prediction based on their sprite frames.
 	# Keep this separate from the attacker's local animation/FX timeline.
-	var is_remote_normal_hit: bool = (
-		target_type == 1 and skill_id == 0 and damage > 0
-		and attacker_id > 0 and attacker_id < 1000000
-		and (
-			not is_instance_valid(local_player)
-			or not ("data_model" in local_player)
-			or int(local_player.data_model.db_id) != attacker_id
-		)
+	var local_character_id: int = 0
+	if is_instance_valid(local_player) and "data_model" in local_player:
+		local_character_id = int(local_player.data_model.db_id)
+	var is_remote_normal_hit: bool = PEER_DAMAGE_VISUAL_POLICY.is_remote_normal_hit(
+		target_type, skill_id, damage, attacker_id, local_character_id
 	)
 	var target_node = null
 	var attacker_node = null
