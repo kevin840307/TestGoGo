@@ -10,6 +10,10 @@ internal sealed class BotWorldState
     private readonly Dictionary<int, Monster> _monsters = new();
     private const int MaxTrackedMonsters = 2048;
     private long _damageHits;
+    private long _normalAttackHits;
+    private long _skillHits;
+    private long _misses;
+    private long _outOfRangeRejects;
     private long _skillCasts;
     private long _monsterDeaths;
     private long _confirmedMonsterKills;
@@ -27,6 +31,10 @@ internal sealed class BotWorldState
     private long _rejectedAttackMessages;
 
     public long DamageHits => Interlocked.Read(ref _damageHits);
+    public long ConfirmedNormalAttackHits => Interlocked.Read(ref _normalAttackHits);
+    public long ConfirmedSkillHits => Interlocked.Read(ref _skillHits);
+    public long ConfirmedMisses => Interlocked.Read(ref _misses);
+    public long OutOfRangeRejects => Interlocked.Read(ref _outOfRangeRejects);
     public long SkillCasts => Interlocked.Read(ref _skillCasts);
     public long MonsterDeaths => Interlocked.Read(ref _monsterDeaths);
     public long ConfirmedMonsterKills => Interlocked.Read(ref _confirmedMonsterKills);
@@ -123,7 +131,25 @@ internal sealed class BotWorldState
                                 MaxHP = (int)Number(packet, "MaxHP", hit.MaxHP)
                             };
                         if (Number(packet, "AttackerID") == characterId)
-                            Interlocked.Increment(ref _damageHits);
+                        {
+                            // Seeing a packet is not the same as doing damage.
+                            // Count successful normal hits separately from
+                            // skills, and retain authoritative zero-damage
+                            // results for genuine dodge/MISS diagnostics.
+                            var amount = Number(packet, "Damage");
+                            if (amount > 0)
+                            {
+                                Interlocked.Increment(ref _damageHits);
+                                if (Number(packet, "SkillID") == 0)
+                                    Interlocked.Increment(ref _normalAttackHits);
+                                else
+                                    Interlocked.Increment(ref _skillHits);
+                            }
+                            else
+                            {
+                                Interlocked.Increment(ref _misses);
+                            }
+                        }
                     }
                     else if (targetType == 0 && targetId == characterId)
                     {
@@ -165,6 +191,8 @@ internal sealed class BotWorldState
                         msg.ValueKind == JsonValueKind.String)
                     {
                         _lastFlash = msg.GetString() ?? "";
+                        if (_lastFlash.Contains("太遠", StringComparison.Ordinal))
+                            Interlocked.Increment(ref _outOfRangeRejects);
                         if (_lastFlash.Contains("太遠", StringComparison.Ordinal) ||
                             _lastFlash.Contains("無法攻擊", StringComparison.Ordinal) ||
                             _lastFlash.Contains("目標不存在", StringComparison.Ordinal) ||
