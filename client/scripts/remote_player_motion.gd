@@ -32,6 +32,11 @@ var _source_span_seconds: float = 0.12
 var _packet_age_seconds: float = 0.0
 var _last_received_msec: int = -1
 var _has_sample: bool = false
+# A SpawnEntity position plus one MoveEntity endpoint is not enough evidence
+# to extrapolate beyond that endpoint. The recovered client separates current
+# position correction from movement destination; only the second sample gives
+# us a real velocity history.
+var _prediction_ready: bool = false
 var _visual_catchup_speed: float = MAX_VISUAL_CATCHUP_SPEED
 var _settle_speed: float = 250.0
 
@@ -47,6 +52,7 @@ func reset(position: Vector2) -> void:
 	_packet_age_seconds = 0.0
 	_last_received_msec = -1
 	_has_sample = false
+	_prediction_ready = false
 	_visual_catchup_speed = MAX_VISUAL_CATCHUP_SPEED
 	_settle_speed = 250.0
 
@@ -104,8 +110,10 @@ func receive(position: Vector2, received_msec: int,
 		_last_received_msec = received_msec
 		_packet_age_seconds = 0.0
 		_has_sample = true
+		_prediction_ready = false
 		return
 
+	var had_sample: bool = _has_sample
 	var fallback: float = clampf(
 		extended_server_seconds if extended_valid else nominal_seconds,
 		MIN_SAMPLE_SECONDS,
@@ -176,6 +184,7 @@ func receive(position: Vector2, received_msec: int,
 	authoritative_position = position
 	_last_received_msec = received_msec
 	_packet_age_seconds = 0.0
+	_prediction_ready = had_sample
 	_has_sample = true
 
 
@@ -192,6 +201,20 @@ func advance(delta: float) -> Vector2:
 	_packet_age_seconds += step_seconds
 
 	if _velocity.length_squared() > 1.0:
+		if not _prediction_ready:
+			# First post-spawn movement: approach the first authoritative
+			# endpoint at the measured speed, but never lead past it. This
+			# prevents the appear-then-jump/overshoot seen when a new peer's
+			# first MoveEntity is treated as established velocity history.
+			var first_sample_speed: float = minf(
+				_velocity.length(), _visual_catchup_speed
+			)
+			visual_position = visual_position.move_toward(
+				authoritative_position,
+				first_sample_speed * step_seconds
+			)
+			return visual_position
+
 		# Dead-reckon from the newest authoritative point forward. This target
 		# remains nearly continuous across early/late packet arrival; unlike
 		# replaying segment_start -> endpoint, jitter does not reset the visual
