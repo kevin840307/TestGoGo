@@ -138,11 +138,11 @@ public sealed class CombatService
         WorldRuntimeService runtime,
         ServerBroadcastHub broadcasts,
         PartyService party,
-        PvpService pvp,
         PetEvolutionService petEvolution,
         QuestProgressService questProgress,
         ILogger<CombatService> log,
-        GlobalRateService? globalRates = null)
+        GlobalRateService? globalRates = null,
+        PvpService? pvp = null)
     {
         _store = store;
         _world = world;
@@ -156,7 +156,10 @@ public sealed class CombatService
         _runtime = runtime;
         _broadcasts = broadcasts;
         _party = party;
-        _pvp = pvp;
+        _pvp = pvp ?? new PvpService(
+            store,
+            broadcasts,
+            party);
         _petEvolution = petEvolution;
         _questProgress = questProgress;
         _globalRates = globalRates ?? new GlobalRateService();
