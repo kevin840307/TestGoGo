@@ -46,6 +46,9 @@ public sealed class PvpService
     }
 
     public bool IsPvpMap(int mapId)
+        => IsPvpMapId(mapId);
+
+    public static bool IsPvpMapId(int mapId)
         => mapId > 0 && !NonPvpMapIds.Contains(mapId);
 
     public static bool IsPink(
