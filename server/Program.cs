@@ -107,6 +107,7 @@ app.MapGet("/health", (IConfiguration config) => Results.Ok(new
     sharedMapAi = sharedMapAiTicker.LastDiagnostics,
     // Read-only sub-phase timings for reproducible 20-player combat profiling.
     sharedMapAiProfile = sharedMapAiTicker.LastProfile,
+    sharedMapAiRecentTicks = sharedMapAiTicker.RecentTickSamples(),
     aoi = new
     {
         playerReady = broadcastHub.AoiReadyPlayers,
