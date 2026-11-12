@@ -36,6 +36,8 @@ func _run() -> void:
 	check(previous > 15.0 and previous < 42.0,
 		"350ms movement interval creates continuous bounded visual progress")
 	check(max_step < 8.0, "no 16px one-frame jump")
+	check(motion.visual_position.x <= 16.01,
+		"first post-spawn move never extrapolates beyond its first endpoint")
 
 	# A new position packet must NOT restart / snap an on-screen tween.
 	var at_packet: float = motion.visual_position.x
