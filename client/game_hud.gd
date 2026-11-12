@@ -77,6 +77,7 @@ var _emotion_tween: Tween
 @onready var option_volume_bg: Control = $WindowsContainer / SettingsWindow / Tabs / General / OptionVolumeBg
 @onready var option_volume_effect: Control = $WindowsContainer / SettingsWindow / Tabs / General / OptionVolumeEffect
 @onready var option_auto_saint: Control = $WindowsContainer / SettingsWindow / Tabs / General / OptionAutoSaint
+@onready var option_player_attack_mode: OptionButton = $WindowsContainer / SettingsWindow / Tabs / General / OptionPlayerAttackMode
 @onready var option_fps_limit: Control = $WindowsContainer / SettingsWindow / Tabs / Performance / OptionFpsLimit
 @onready var option_performance_load: Control = $WindowsContainer / SettingsWindow / Tabs / Performance / OptionPerformanceLoad
 @onready var option_combat_render: Control = $WindowsContainer / SettingsWindow / Tabs / Performance / OptionCombatRender
@@ -259,6 +260,7 @@ var _is_hud_hidden: bool = false
 var _hud_tween: Tween
 var _sys_msg_tween: Tween
 var current_pet_combat_mode: int = 1
+var current_player_attack_mode: int = GameConstants.SETTING_DEFAULT_PLAYER_ATTACK_MODE
 var current_fps_limit: int = GameConstants.SETTING_DEFAULT_FOREGROUND_FPS_LIMIT
 var current_performance_load_mode: int = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
 var current_combat_render_mode: int = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
@@ -799,6 +801,14 @@ func _setup_window_manager() -> void :
 			if not option_auto_saint.gui_input.is_connected(_on_option_gui_input):
 				option_auto_saint.gui_input.connect(_on_option_gui_input.bind(option_auto_saint))
 
+		if option_player_attack_mode is OptionButton:
+			option_player_attack_mode.select(current_player_attack_mode)
+			if not option_player_attack_mode.item_selected.is_connected(_on_opt_player_attack_mode_item_selected):
+				option_player_attack_mode.item_selected.connect(_on_opt_player_attack_mode_item_selected)
+			option_player_attack_mode.focus_mode = Control.FOCUS_NONE
+			if not option_player_attack_mode.gui_input.is_connected(_on_option_gui_input):
+				option_player_attack_mode.gui_input.connect(_on_option_gui_input.bind(option_player_attack_mode))
+
 		if option_fps_limit is SpinBox:
 			# Editable value + built-in up/down buttons, independent of quality.
 			# 0 = unlimited, 30..120 in steps of 5, or 144.
@@ -874,6 +884,7 @@ func _setup_window_manager() -> void :
 			option_volume_bg,
 			option_volume_effect,
 			option_auto_saint,
+			option_player_attack_mode,
 			option_fps_limit,
 			option_performance_load,
 			option_combat_render,
@@ -3205,6 +3216,19 @@ func _load_game_settings() -> void :
 				GameConstants.SETTING_DEFAULT_PET_COMBAT_MODE
 			)
 		))
+		current_player_attack_mode = clampi(
+			int(config.get_value(
+				section,
+				GameConstants.SETTING_KEY_PLAYER_ATTACK_MODE,
+				config.get_value(
+					fallback_section,
+					GameConstants.SETTING_KEY_PLAYER_ATTACK_MODE,
+					GameConstants.SETTING_DEFAULT_PLAYER_ATTACK_MODE
+				)
+			)),
+			GameConstants.SETTING_PLAYER_ATTACK_GENERAL,
+			GameConstants.SETTING_PLAYER_ATTACK_COMBAT
+		)
 		current_fps_limit = ClientPerformanceProfile.sanitize_fps_limit(int(config.get_value(
 			section,
 			GameConstants.SETTING_KEY_FOREGROUND_FPS_LIMIT,
@@ -3267,6 +3291,7 @@ func _load_game_settings() -> void :
 			config.get_value(fallback_section, GameConstants.SETTING_KEY_SHOW_DAMAGE_NUMBERS, GameConstants.SETTING_DEFAULT_SHOW_DAMAGE_NUMBERS)))
 	else:
 		current_pet_combat_mode = GameConstants.SETTING_DEFAULT_PET_COMBAT_MODE
+		current_player_attack_mode = GameConstants.SETTING_DEFAULT_PLAYER_ATTACK_MODE
 		current_fps_limit = GameConstants.SETTING_DEFAULT_FOREGROUND_FPS_LIMIT
 		current_performance_load_mode = GameConstants.SETTING_DEFAULT_PERFORMANCE_LOAD_MODE
 		current_combat_render_mode = GameConstants.SETTING_DEFAULT_COMBAT_RENDER_MODE
@@ -3278,6 +3303,7 @@ func _load_game_settings() -> void :
 		current_show_damage_numbers = GameConstants.SETTING_DEFAULT_SHOW_DAMAGE_NUMBERS
 
 	if GameManager:
+		GameManager.set_player_attack_mode(current_player_attack_mode)
 		GameManager.set_unfocus_power_save_enabled(current_unfocus_power_save_enabled)
 		GameManager.set_foreground_fps_limit(current_fps_limit)
 		GameManager.set_performance_modes(
@@ -3300,6 +3326,11 @@ func _save_game_settings() -> void :
 		section,
 		GameConstants.SETTING_KEY_PET_COMBAT_MODE,
 		current_pet_combat_mode
+	)
+	config.set_value(
+		section,
+		GameConstants.SETTING_KEY_PLAYER_ATTACK_MODE,
+		current_player_attack_mode
 	)
 	config.set_value(section, GameConstants.SETTING_KEY_FOREGROUND_FPS_LIMIT, current_fps_limit)
 	config.set_value(
@@ -3340,6 +3371,17 @@ func _on_opt_pet_mode_item_selected(index: int) -> void :
 
 	if NetworkManager and NetworkManager.has_method("send_set_global_pet_mode"):
 		NetworkManager.send_set_global_pet_mode(current_pet_combat_mode)
+
+func _on_opt_player_attack_mode_item_selected(index: int) -> void:
+	current_player_attack_mode = clampi(
+		index,
+		GameConstants.SETTING_PLAYER_ATTACK_GENERAL,
+		GameConstants.SETTING_PLAYER_ATTACK_COMBAT
+	)
+	_save_game_settings()
+	if GameManager:
+		GameManager.set_player_attack_mode(current_player_attack_mode)
+
 
 func _on_opt_fps_limit_value_changed(raw_value: float) -> void:
 	if not option_fps_limit is SpinBox:
