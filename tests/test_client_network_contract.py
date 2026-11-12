@@ -125,6 +125,23 @@ class ClientNetworkContractTests(unittest.TestCase):
             entity_manager,
         )
         self.assertIn(
+            "if should_start_damage_attack_visual and is_instance_valid(target_node):",
+            entity_manager,
+        )
+        direction_gate = entity_manager.index(
+            "if should_start_damage_attack_visual and is_instance_valid(target_node):"
+        )
+        direction_update = entity_manager.index(
+            "attacker_node.update_direction_8way(",
+            direction_gate,
+        )
+        attack_trigger = entity_manager.index(
+            "attacker_node.trigger_combat_action(",
+            direction_gate,
+        )
+        self.assertLess(direction_gate, direction_update)
+        self.assertLess(direction_update, attack_trigger)
+        self.assertIn(
             "NETWORK_ATTACK_DAMAGE_OWNER_WINDOW_MSEC",
             player,
         )
