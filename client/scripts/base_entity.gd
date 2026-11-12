@@ -530,27 +530,20 @@ func get_combat_attack_state() -> String:
 	return "attack_aa"
 
 func get_combat_hit_state() -> String:
-	if is_riding_mecha(): return "idle"
+	if is_riding_mecha():
+		# The recovered MA/MS set has no ordinary AH/GH hurt sheet; do
+		# not interrupt movement/attack with a locked idle animation.
+		return "idle"
 
-	if data_model.weapon_id == 0 or not is_instance_valid(doll_engine):
+	# Original CSGOCharDrawLogic::SetHurtNow checks the CURRENT action mode
+	# (IsRaceActionType / IsGunActionType) before selecting its hit pose.
+	# Do not infer gun vs melee from whichever accessory SpriteFrames
+	# happens to contain a GA frame: mixed/fallback sprites can contain both.
+	if current_state in ["attack_ga", "attack_gb", "idle_weapon_gun", "hit_weapon_gun"]:
+		return "hit_weapon_gun"
+	if current_state in ["attack_aa", "attack_ab", "idle_weapon_melee", "hit_weapon_melee"]:
 		return "hit_weapon_melee"
-
-	var sword_sprite = doll_engine.doll_sprites.get("Sword")
-	if not sword_sprite: sword_sprite = doll_engine.doll_sprites.get("R-Gun")
-	if not sword_sprite: sword_sprite = doll_engine.doll_sprites.get("L-Gun")
-
-	if not sword_sprite:
-		return "hit_weapon_melee"
-
-	var sf = sword_sprite.get_meta("original_sf") if sword_sprite.has_meta("original_sf") else sword_sprite.sprite_frames
-
-	if sf:
-		var has_ga = sf.has_animation("attack_ga_1")
-		var has_gb = sf.has_animation("attack_gb_1")
-		if has_ga or has_gb:
-			return "hit_weapon_gun"
-
-	return "hit_weapon_melee"
+	return "hit_weapon_gun" if get_combat_idle_state() == "idle_weapon_gun" else "hit_weapon_melee"
 
 
 func is_riding_mecha() -> bool:
