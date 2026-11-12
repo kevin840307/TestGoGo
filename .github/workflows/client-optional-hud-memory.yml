@@ -12,6 +12,7 @@ on:
       - 'tests/test_client_optional_hud_memory_contract.py'
       - 'client/scripts/floating_text_manager.gd'
       - 'tests/test_floating_pool_logout_contract.py'
+      - 'tests/test_afk_mode_contract.py'
       - '.github/workflows/client-optional-hud-memory.yml'
   workflow_dispatch:
 
