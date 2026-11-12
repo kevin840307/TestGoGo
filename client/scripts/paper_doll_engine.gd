@@ -1118,8 +1118,10 @@ func _play_controller_timeline_audio(controller: String, sprite_node: AnimatedSp
 func _get_controller_timed_frames(source_frames: SpriteFrames, controller: String, action_prefixes: Dictionary, use_effective_tick_rate: bool = false, skip_movement_timing: bool = false) -> SpriteFrames:
 	if not AnimationTimingManager or not AnimationTimingManager.is_loaded():
 		return source_frames
-	var tick_rate = AnimationTimingManager.get_effective_tick_rate_hz() if use_effective_tick_rate else float(AnimationTimingManager.get_tick_rate_hz())
-	if tick_rate <= 0.0:
+	var default_tick_rate := AnimationTimingManager.get_action_tick_rate_hz(
+		"", use_effective_tick_rate
+	)
+	if default_tick_rate <= 0.0:
 		return source_frames
 	var cache_key = "%s:%d:%s" % [controller, source_frames.get_instance_id(), skip_movement_timing]
 	if _shared_controller_timed_frames_cache.has(cache_key):
@@ -1131,6 +1133,11 @@ func _get_controller_timed_frames(source_frames: SpriteFrames, controller: Strin
 	var applied_timelines: Dictionary = {}
 	for raw_action in action_prefixes:
 		if skip_movement_timing and raw_action == "NR":
+			continue
+		var action_tick_rate := AnimationTimingManager.get_action_tick_rate_hz(
+			str(raw_action), use_effective_tick_rate
+		)
+		if action_tick_rate <= 0.0:
 			continue
 		var timeline = AnimationTimingManager.get_controller_timeline(controller, raw_action)
 		if timeline.is_empty():
@@ -1153,7 +1160,7 @@ func _get_controller_timed_frames(source_frames: SpriteFrames, controller: Strin
 				textures.append(source_frames.get_frame_texture(animation_name, int(entry["frame"])))
 			var looped = source_frames.get_animation_loop(animation_name)
 			timed_frames.clear(animation_name)
-			timed_frames.set_animation_speed(animation_name, tick_rate)
+			timed_frames.set_animation_speed(animation_name, action_tick_rate)
 			timed_frames.set_animation_loop(animation_name, looped)
 			for index in timeline.size():
 				timed_frames.add_frame(animation_name, textures[index], float(timeline[index]["ticks"]))
