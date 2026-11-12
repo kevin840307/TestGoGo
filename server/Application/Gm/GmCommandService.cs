@@ -18,6 +18,7 @@ public sealed class GmCommandService
     private readonly LegacyPlayerGrowthCatalog _growth;
     private readonly CombatService _combat;
     private readonly ServerBroadcastHub _broadcasts;
+    private readonly PvpService? _pvp;
     private readonly IConfiguration _config;
     private readonly PositionPersistenceService? _positionWrites;
 
@@ -31,7 +32,8 @@ public sealed class GmCommandService
         CombatService combat,
         ServerBroadcastHub broadcasts,
         IConfiguration config,
-        PositionPersistenceService? positionWrites = null)
+        PositionPersistenceService? positionWrites = null,
+        PvpService? pvp = null)
     {
         _store = store;
         _skills = skills;
@@ -43,6 +45,7 @@ public sealed class GmCommandService
         _broadcasts = broadcasts;
         _config = config;
         _positionWrites = positionWrites;
+        _pvp = pvp;
     }
 
     public IReadOnlyList<object> Execute(
@@ -90,6 +93,8 @@ public sealed class GmCommandService
                         "Game__TestBotCommandsEnabled=true，重新啟動 Server 後再試")],
                 "attackspeed" or "aspd"
                     => AttackSpeed(parts, accountId, dbid),
+                "namecolor" or "color" or "pkcolor"
+                    => NameColor(parts, accountId, dbid),
                 "money" => Money(parts, accountId, dbid),
                 "mallpoints" or "mallpoint" or "points"
                     => MallPoints(parts, accountId),
@@ -1061,6 +1066,60 @@ public sealed class GmCommandService
         return packets;
     }
 
+    private IReadOnlyList<object> NameColor(
+        string[] parts,
+        long accountId,
+        long dbid)
+    {
+        if (_pvp is null)
+            return [Chat("PvP 顏色服務目前不可用")];
+
+        if (parts.Length < 3)
+        {
+            return [Chat(
+                "用法：/gm namecolor <blue|white|pink|flash|red> [DBID]")];
+        }
+
+        var targetAccountId = accountId;
+        var targetDbid = dbid;
+
+        if (parts.Length >= 4)
+        {
+            if (!long.TryParse(parts[3], out targetDbid) ||
+                targetDbid <= 0)
+                return [Chat("DBID 格式錯誤")];
+
+            if (targetDbid != dbid)
+            {
+                var target =
+                    _broadcasts.FindCharacter(targetDbid);
+                if (target is null)
+                    return [Chat("指定角色目前不在線上")];
+
+                targetAccountId = target.AccountId;
+            }
+        }
+
+        var updated = _pvp.SetNameColor(
+            targetAccountId,
+            targetDbid,
+            parts[2],
+            DateTimeOffset.UtcNow);
+
+        if (updated is null)
+        {
+            return [Chat(
+                "顏色無效；可用 blue/white/pink/flash/red（亦支援中文藍/白/粉紅/閃粉/紅）")];
+        }
+
+        return
+        [
+            Chat(
+                $"已將 DBID={targetDbid} 名稱狀態設為 {parts[2]} " +
+                $"(PKStatus={updated["PKStatus"]}, RedMan={updated["RedMan"]})")
+        ];
+    }
+
     private object BuildSkillSync(long accountId, long dbid)
         => new
         {
@@ -1077,7 +1136,7 @@ public sealed class GmCommandService
 
     private static string HelpText()
         => "GM: help | pos | map <id> [x] [y] | heal/restore/fullheal | level <n> | " +
-           "maxstats | attackspeed <1-1000> | money <n> | mallpoints <delta> | donation <delta> | item <id> [count] | equip <id> | " +
+           "maxstats | attackspeed <1-1000> | namecolor <blue|white|pink|flash|red> [DBID] | money <n> | mallpoints <delta> | donation <delta> | item <id> [count] | equip <id> | " +
            "mecha <cardId> | mechacard <cardId> | mechaequip <id> [horseUid] | mechalevel <horseUid> <level> | pet <petId> [name] | " +
            "skill <id|all> [lv] | skills | clearskills | " +
            "spawn <enemyId> [x] [y] | killall | cleardrops";
