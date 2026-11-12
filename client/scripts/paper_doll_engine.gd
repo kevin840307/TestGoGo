@@ -1009,12 +1009,9 @@ func update_animation(anim_state: String, anim_dir: String, flip: bool, move_spe
 			if anim_state.begins_with("attack_"):
 				sprite_node.speed_scale = max(atk_speed, 10.0) / 100.0
 			elif anim_state == "walk":
-				# World movement uses the same percentage multiplier. Keeping
-				# animation fixed at 1x makes fast actors skate and slow actors
-				# shuffle even when their position interpolation is correct.
-				sprite_node.speed_scale = clampf(
-					maxf(move_speed, 10.0) / 100.0, 0.10, 3.0
-				)
+				# Footsteps and mecha gait use their original sprite timeline.
+				# MoveSpeed changes world displacement only, not animation FPS.
+				sprite_node.speed_scale = 1.0
 			else:
 				sprite_node.speed_scale = 1.0
 
