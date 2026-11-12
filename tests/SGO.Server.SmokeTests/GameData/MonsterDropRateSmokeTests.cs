@@ -1,3 +1,4 @@
+using SGO.Server.Application.Gm;
 using SGO.Server.Infrastructure.GameData;
 using static SGO.Server.SmokeTests.SmokeAssert;
 
@@ -11,6 +12,13 @@ internal static class MonsterDropRateSmokeTests
 {
     public static void Run(string repoRoot)
     {
+        // Item drop balancing must NOT silently change default EXP/money
+        // rewards or override a deliberately scheduled admin event.
+        var normalRates = new GlobalRateService().Snapshot();
+        Check(normalRates.EffectiveExperience(DateTimeOffset.UtcNow) == 1.0 &&
+              normalRates.EffectiveMoney(DateTimeOffset.UtcNow) == 1.0 &&
+              normalRates.EffectiveDrop(DateTimeOffset.UtcNow) == 1.0,
+            "default experience, money and GM drop multiplier remain normal 1x");
         var data = Path.Combine(repoRoot, "Old", "服務端", "Dat");
         var current = new CurrentClientDataCatalog(Path.Combine(repoRoot, "client"));
         var normal = new EnemyDropCatalog(data, current);
