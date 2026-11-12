@@ -346,12 +346,9 @@ internal sealed class WireLoadClient : IAsyncDisposable
         // its action using the existing SyncState contract as well.
         var dx = targetX - X;
         var dy = targetY - Y;
-        var angle = Math.Atan2(dy, dx);
-        var octant = ((int)Math.Round(angle / (Math.PI / 4)) + 8) % 8;
-        // Match the actual BaseEntity direction ordering and unarmed
-        // attack animation (attack_aa), not the non-existent "attack_1".
-        var directions = new[] { "6", "7", "8", "1", "2", "3", "4", "5" };
-        var direction = directions[octant];
+        // Match the actual BaseEntity 8-way ordering for both movement and
+        // attacks so turning between them does not create synthetic snaps.
+        var direction = DirectionForDelta(dx, dy, Direction);
         Direction = direction;
         await SendPacketAsync(
             new { Type = "SyncState", State = "attack_aa", Dir = direction },
