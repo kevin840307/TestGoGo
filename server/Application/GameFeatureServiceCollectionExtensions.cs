@@ -33,6 +33,7 @@ public static class GameFeatureServiceCollectionExtensions
         services.AddSingleton<SharedMapAiTicker>();
         services.AddHostedService(sp => sp.GetRequiredService<SharedMapAiTicker>());
         services.AddSingleton<PetEvolutionService>();
+        services.AddSingleton<PvpService>();
         services.AddSingleton<CombatService>();
         services.AddSingleton<CraftingService>();
         services.AddSingleton<ClubService>();
