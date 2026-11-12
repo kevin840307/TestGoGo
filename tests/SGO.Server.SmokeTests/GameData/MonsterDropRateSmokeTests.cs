@@ -18,11 +18,11 @@ internal static class MonsterDropRateSmokeTests
         var zero = new EnemyDropCatalog(data, current, 0.0);
         var invalid = new EnemyDropCatalog(data, current, double.NaN);
 
-        Check(normal.BaseChanceMultiplier == 0.5,
-            "default monster drops reduce recovered item probability to 50%");
+        Check(normal.BaseChanceMultiplier == 0.25,
+            "default monster drops reduce recovered item probability to 25%");
         Check(original.BaseChanceMultiplier == 1.0 &&
               zero.BaseChanceMultiplier == 0.0 &&
-              invalid.BaseChanceMultiplier == 0.5,
+              invalid.BaseChanceMultiplier == 0.25,
             "drop chance factor is configurable, clamped and NaN-safe");
         Check(normal.LuckRollCount(50) == original.LuckRollCount(50),
             "rare-item luck rerolls stay unchanged");
@@ -68,7 +68,10 @@ internal static class MonsterDropRateSmokeTests
         Check(enemiesWithDrops > 0 && originalDrops > 0,
             "recovered enemy table provides measurable item drop outcomes");
         Check(reducedDrops > 0 && reducedDrops < originalDrops,
-            "halving item chance produces fewer actual loot items over real kills");
+            "quarter-rate item chance produces fewer actual loot items over real kills");
+        Check((double)reducedDrops / originalDrops < 0.32 &&
+              (double)reducedDrops / originalDrops > 0.18,
+            "real recovered drop distribution is near 25 percent of original");
         Console.WriteLine(
             "[MONSTER_DROP_BALANCE] enemies={0} kills={1} legacyDrops={2} reducedDrops={3} ratio={4:F3}",
             enemiesWithDrops, comparedKills, originalDrops, reducedDrops,
