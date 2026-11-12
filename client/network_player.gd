@@ -686,7 +686,13 @@ func _handle_movement(delta: float) -> void :
 				update_direction_8way(displacement)
 		if global_position.distance_squared_to(target_position) <= 4.0:
 			_pending_idle = false
-			current_state = "idle"
+			# The final visual settle belongs to an older idle packet. If a
+			# hit/attack one-shot started meanwhile, finishing that settle must
+			# not overwrite the newer combat animation.
+			if REMOTE_STATE_POLICY.movement_may_replace_animation(
+				current_state, is_action_locked
+			):
+				current_state = "idle"
 		return
 
 	if displacement.length_squared() > 0.01 and _remote_motion.is_moving():
