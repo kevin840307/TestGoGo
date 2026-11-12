@@ -125,7 +125,7 @@ internal static class AtomicMonsterHitSmokeTests
                 position.TargetX, position.TargetY,
                 now, [firstEntityId, secondEntityId]);
             var serialized = packets
-                .Select(JsonSerializer.SerializeToElement).ToArray();
+                .Select(packet => JsonSerializer.SerializeToElement(packet)).ToArray();
             var damage = serialized.Where(x =>
                 x.TryGetProperty("Type", out var type) &&
                 type.GetString() == "EntityDamage" &&
@@ -185,7 +185,7 @@ internal static class AtomicMonsterHitSmokeTests
                 session, accountId.Value,
                 position.TargetX, position.TargetY,
                 now.AddSeconds(2), [firstEntityId, secondEntityId])
-                .Select(JsonSerializer.SerializeToElement).ToArray();
+                .Select(packet => JsonSerializer.SerializeToElement(packet)).ToArray();
             var deaths = lethal.Where(x =>
                 x.TryGetProperty("Type", out var type) &&
                 type.GetString() == "EntityDeath" &&
