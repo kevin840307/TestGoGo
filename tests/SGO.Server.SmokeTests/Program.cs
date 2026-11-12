@@ -1569,21 +1569,26 @@ try
     Check(enemyDrops.OwnerProtectionSeconds == 15,
         "enemy.cfg OwnedDropItemTimeout drives server loot protection");
 
+    // Use the real item catalog here, not the sparse synthetic
+    // currentCatalog fixture. Its small mapping can contain only guaranteed
+    // slots, so no multiplier can increase the observed unique item set.
+    // The actual per-monster probability + GM multiplier is exercised by
+    // questItemMappings, which was built with realCurrentCatalog.
     var dropMultiplierObservedIncrease = false;
     foreach (var enemyId in Enumerable.Range(1, 300))
     {
-        if (enemyDrops.GetDrops(enemyId).Count == 0)
+        if (questItemMappings.GetDrops(enemyId).Count == 0)
             continue;
 
         for (var sequence = 1; sequence <= 200; sequence++)
         {
-            var baseline = enemyDrops.RollDrops(
+            var baseline = questItemMappings.RollDrops(
                 enemyId,
                 entityId: 900000 + enemyId,
                 killSequence: sequence,
                 lucky: 0,
                 dropMultiplier: 1.0);
-            var boosted = enemyDrops.RollDrops(
+            var boosted = questItemMappings.RollDrops(
                 enemyId,
                 entityId: 900000 + enemyId,
                 killSequence: sequence,
