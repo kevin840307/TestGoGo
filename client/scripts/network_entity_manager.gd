@@ -1979,7 +1979,7 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 			if current_hp <= 0:
 				target_node.set_meta("fatal_hit_delay", minf(hit_delay, 0.45))
 			if target_node.has_method("update_hp"):
-				target_node.update_hp(current_hp, hit_delay, false)
+				target_node.update_hp(current_hp, hit_delay, is_miss)
 			if FloatingTextManager:
 				FloatingTextManager.show_remote_normal_damage(
 					target_node, damage, is_crit, hit_delay
@@ -2033,7 +2033,9 @@ func _on_entity_damage_received(data: Dictionary) -> void :
 		if target_type == 1 and current_hp <= 0:
 			var fatal_delay: float = float(target_node.get_meta("fatal_hit_delay", hit_delay))
 			_remember_fatal_monster(target_id, target_node, fatal_delay)
-	elif target_type == 1 and damage > 0:
+	elif target_type == 1 and damage >= 0:
+		# Includes genuine zero-damage MISS packets; rejected/out-of-range
+		# attack requests do not reach here and are not fake misses.
 		# The urgent EntityDamage can arrive BEFORE the ordinary SpawnEntity.
 		# Prefer the hit location supplied by the authoritative Server (new
 		# normal-attack packets); older packets still use the cached AOI
