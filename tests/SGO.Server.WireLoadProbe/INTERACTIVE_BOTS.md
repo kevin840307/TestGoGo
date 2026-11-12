@@ -41,8 +41,10 @@ dotnet run -c Release --project .\tests\SGO.Server.WireLoadProbe\SGO.Server.Wire
 
 - 每個測試角色 **Lv1、ATK=60、MATK=45、DEF=1000、HP=20000**（透過獨立測試 GM 指令建立），另有足夠 MP/SP。定期補血，方便觀察長時間多人攻擊。
 - 主要使用正常 `AttackEntity` 普通攻擊（約 60 傷害）；單體技能對測試 Bot 的傷害上限為 90，避免固定高技能傷害秒殺怪物。並用同樣的 `SyncState` 讓觀察者看到機器人的攻擊動畫。偶爾使用單體技能 `20101` 赤色光彈、`23102` 烈火爆劍（Lv1）。
+- **普通攻擊距離已修正**：過去 Bot 在距怪 92 單位時就停止移動並送 AttackEntity，但無額外射程的 Server 近戰距離約為 42.7 + 24（網路容差）= 66.7，導致看得到揮刀，卻沒有扣血或旁觀者傷害數字。現在只有接近到 **44 單位內**、且有合法路徑才出手；技能仍走自己的射程，不會隔空假命中。
+- **攻擊成功與否採 Server 封包判斷**：`ConfirmedNormalAttackHits` 是 Bot 自己成功造成的正傷害普通攻擊；`ConfirmedSkillHits` 是技能傷害；`ConfirmedMisses` 僅計算 Server 真正回覆 `EntityDamage.Damage=0` 的命中結果；`OutOfRangeRejects` 是 Server 回覆「太遠」次數。**範圍外的無效攻擊不是 MISS**，不會虛構 0 傷害封包。
 - **完全不施放範圍技能**，不使用 `23103` 赤星爆炸，也不使用 `99001` 星界震盪。
-- **避免測試自己製造卡頓**：每隻 Bot 登入時一定初始化 Lv1、ATK=1、DEF=1000、HP=20000。單純走路（`--no-combat`）不再每 20 秒重設一次已經沒變的數值。戰鬥 Bot 在首次登入後約 55～102 秒才視需要重設，之後每 90 秒更新；20 人刷新時間錯開，避免密集 GM SQLite 寫入與 Session 鎖同時阻塞正常移動。
+- **避免測試自己製造卡頓**：每隻 Bot 登入時一定初始化 Lv1、ATK=60、MATK=45、DEF=1000、HP=20000。單純走路（`--no-combat`）不再每 20 秒重設一次已經沒變的數值。戰鬥 Bot 在首次登入後約 55～102 秒才視需要重設，之後每 90 秒更新；20 人刷新時間錯開，避免密集 GM SQLite 寫入與 Session 鎖同時阻塞正常移動。
 - 怪物存活狀態由 AOI `SpawnEntity`／`EntityDamage`／`EntityDeath`／`DespawnEntity` 更新；如果距離太遠會沿 Server 現有 A* 尋路靠近，沒怪時隨機走動。
 - 模擬真人點擊：從 AOI 內選擇怪物（不固定最近，也避免一直選同隻）；點怪後追擊最多約 16 秒，**實際開始出手後多數連續攻擊 3.5～8.5 秒，約四分之一非走動型攻擊回合持續 11～19 秒**；遇到剩餘血量低於約 45% 的怪物，部分 Bot 會再多打 2.5～5.5 秒嘗試收尾。選怪時也會偶爾優先攻擊受傷怪物，之後換怪或改點較遠地板移動。每隻 Bot 有自己的動作與攻擊節奏，並在終端機輸出 `monsterClicks`／`groundClicks`／`switches`。
 - 怪物死亡後由 Server 原有重生流程管理；**不會透過工具重建假的怪物**。目標死亡／離開視野後，Bot 下次出手前會有約 0.45～1.1 秒的人類反應延遲。
@@ -73,7 +75,8 @@ dotnet build -c Release .\tests\SGO.Server.WireLoadProbe\SGO.Server.WireLoadProb
 
 - `visibleTargets`：所有機器人收到的 AOI 活怪數總和。若是 0，先查 WorldReady/SpawnEntity 和怪物位置。
 - `attack`：已送出的實際 AttackEntity 封包數；若為 0，查尋路與目標距離。
-- `confirmedHits`：收到含機器人 AttackerID 的真正 EntityDamage 事件數；如果 `attack > 0` 但仍是 0，查 Server 攻擊判定。
+- `confirmedHits`：真正 `Damage>0` 且 AttackerID 為自己角色的事件數（包含技能）。
+- `confirmedNormals`：真正成功的普通攻擊數，不含技能、MISS 與被拒封包；`confirmedSkillHits` 為技能傷害，`confirmedMisses` 只計算 Server 確認的 MISS，`outOfRange` 為「距離太遠」拒絕數。
 - `confirmedKills`：收到 `EntityDeath.KillerID` 等於 Bot 角色 ID 的擊殺通知數，避免把旁觀其他玩家擊殺當成自己擊殺。
 - `rejected`：Server 回傳距離太遠、目標不存在、技能尚未學會、冷卻等訊息累計次數。
 - `NO CONFIRMED HITS`：首次機器人座標、最近怪物距離、最近一條 Server Flash，方便直接判斷。
