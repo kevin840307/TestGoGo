@@ -211,7 +211,7 @@ func _run_pending_afk_trim_after_focus_out() -> void:
 	if tree == null:
 		return
 	await tree.create_timer(1.0).timeout
-	if not _pending_afk_working_set_trim or not _afk_active or _window_has_focus:
+	if not _pending_afk_working_set_trim or not _afk_active or not _background_mode_active:
 		return
 	_pending_afk_working_set_trim = false
 	_request_windows_memory_trim("afk_unfocused")
@@ -238,7 +238,7 @@ func _settle_released_memory(reason: String) -> void:
 		])
 
 	if reason == "afk_settled_3s":
-		if _window_has_focus:
+		if not _background_mode_active:
 			_pending_afk_working_set_trim = true
 			if OS.is_debug_build():
 				print("[OS_MEMORY_TRIM] reason=afk_settled_3s deferred_until_unfocused=true")
@@ -988,6 +988,9 @@ func _trace_map_change(stage: String, source_map_id: int, target_map_id: int, de
 
 
 var _window_has_focus: bool = true
+# Focus-loss optimization is optional; minimizing the window is NEVER optional.
+var _unfocus_power_save_enabled: bool = true
+var _background_mode_active: bool = false
 var _focused_max_fps: int = 0
 var _saved_vsync_mode: int = -1
 var _master_bus_was_muted_before_focus_loss: bool = false
@@ -1013,7 +1016,38 @@ func is_afk_mode_active() -> bool:
 
 
 func is_game_window_focused() -> bool:
-	return _window_has_focus
+	# HUD visual scheduling needs presentation policy, not raw Win32 focus:
+	# an Alt+Tabbed window remains fully active if Unfocus is disabled.
+	return not _background_mode_active
+
+
+func is_unfocus_power_save_enabled() -> bool:
+	return _unfocus_power_save_enabled
+
+
+static func should_apply_unfocus_policy(os_focused: bool, minimized: bool, unfocus_enabled: bool) -> bool:
+	# Independent from AFK. Minimize is a hard background presentation
+	# condition even when the optional Alt+Tab/Unfocus toggle is OFF.
+	return minimized or (not os_focused and unfocus_enabled)
+
+
+func _background_policy_required() -> bool:
+	return should_apply_unfocus_policy(
+		_window_has_focus, _is_main_window_minimized(), _unfocus_power_save_enabled
+	)
+
+
+func set_unfocus_power_save_enabled(enabled: bool) -> void:
+	if _unfocus_power_save_enabled == enabled:
+		return
+	_unfocus_power_save_enabled = enabled
+	_sync_background_presentation_state()
+	_refresh_focus_render_policy()
+	if OS.is_debug_build():
+		print("[UNFOCUS_SETTING] enabled=%s minimized=%s background=%s render=%s" % [
+			str(enabled), str(_is_main_window_minimized()),
+			str(_background_mode_active), str(RenderingServer.render_loop_enabled)
+		])
 
 
 func is_afk_mode_restoring() -> bool:
@@ -1042,7 +1076,7 @@ func _enter_afk_audio_silence() -> void:
 	var bus: int = AudioServer.get_bus_index("Master")
 	if bus >= 0:
 		_afk_master_was_muted_before = (
-			AudioServer.is_bus_mute(bus) if _window_has_focus
+			AudioServer.is_bus_mute(bus) if not _background_mode_active
 			else _master_bus_was_muted_before_focus_loss
 		)
 		AudioServer.set_bus_mute(bus, true)
@@ -1055,7 +1089,7 @@ func _leave_afk_audio_silence(restart_map_music: bool) -> void:
 		AudioManager.set_afk_silent(false)
 	var bus: int = AudioServer.get_bus_index("Master")
 	if bus >= 0:
-		if _window_has_focus:
+		if not _background_mode_active:
 			AudioServer.set_bus_mute(bus, _afk_master_was_muted_before)
 		else:
 			# Focus-out must stay silent; the next focus-in restores the
@@ -1662,7 +1696,7 @@ static func should_draw_afk_dashboard(has_focus: bool) -> bool:
 func request_afk_dashboard_frame() -> bool:
 	# Compatibility hook for HUD/tests. AFK focused mode uses a normal 20 FPS
 	# render loop; unfocused mode renders nothing.
-	return _afk_active and _window_has_focus
+	return _afk_active and not _background_mode_active
 
 
 static func fps_cap_for_focus(profile: Dictionary, has_focus: bool, world_active: bool) -> int:
@@ -1722,13 +1756,15 @@ func _reconcile_world_render_policy(delta: float) -> void:
 		_set_window_focus_power_save(observed_focus)
 		if OS.is_debug_build():
 			_log_focus_power_save("focus_poll_reconciled")
+	# Minimized status may change while OS focus remains false. Always
+	# reconcile the independent minimize/Unfocus presentation policy.
+	_sync_background_presentation_state()
 	# AFK dashboard renders at 20 FPS only while focused. Losing focus stops
 	# the render loop completely; simulation/network/fixed physics keep running.
-	var should_pause: bool = should_throttle_background_visuals(
-		_window_has_focus, _has_active_world_visuals())
-	var desired_rendering: bool = should_draw_afk_dashboard(_window_has_focus) if _afk_active else not should_pause
+	var should_pause: bool = _background_mode_active
+	var desired_rendering: bool = should_draw_afk_dashboard(not should_pause) if _afk_active else not should_pause
 	var desired_fps: int = AFK_MONITOR_FPS if _afk_active else fps_cap_for_focus(
-		current_performance_profile, _window_has_focus, _has_active_world_visuals())
+		current_performance_profile, not should_pause, _has_active_world_visuals())
 	if RenderingServer.render_loop_enabled != desired_rendering or Engine.max_fps != desired_fps:
 		_refresh_focus_render_policy()
 		if OS.is_debug_build():
@@ -1740,21 +1776,17 @@ func _reconcile_world_render_policy(delta: float) -> void:
 
 
 func _refresh_focus_render_policy() -> void:
+	_sync_background_presentation_state()
 	if _afk_active:
-		# AFK always caps the main loop at 20 FPS. Focused mode renders the
-		# low-cost dashboard; unfocused mode stops GPU rendering completely.
-		# Gameplay/network/fixed 60 Hz physics remain independent.
+		# AFK is an explicit user mode; the separate Unfocus toggle only
+		# decides whether Alt+Tab disables its dashboard. Minimize always does.
 		Engine.max_fps = AFK_MONITOR_FPS
-		if _window_has_focus:
-			RenderingServer.render_loop_enabled = true
-		else:
-			RenderingServer.render_loop_enabled = false
-		_set_background_visual_processing(not _window_has_focus)
+		RenderingServer.render_loop_enabled = not _background_mode_active
+		_set_background_visual_processing(_background_mode_active)
 		return
-	var world_background: bool = should_throttle_background_visuals(
-		_window_has_focus, _has_active_world_visuals())
+	var world_background: bool = _background_mode_active
 	Engine.max_fps = fps_cap_for_focus(
-		current_performance_profile, _window_has_focus, _has_active_world_visuals())
+		current_performance_profile, not world_background, _has_active_world_visuals())
 	_refresh_fps_vsync_policy()
 	RenderingServer.render_loop_enabled = not world_background
 	_set_background_visual_processing(world_background)
@@ -1930,7 +1962,7 @@ func _log_background_memory(event_name: String, removed: int = 0) -> void:
 
 
 func _log_background_memory_checkpoint() -> void:
-	if not OS.is_debug_build() or _window_has_focus or _background_focus_lost_msec <= 0:
+	if not OS.is_debug_build() or not _background_mode_active or _background_focus_lost_msec <= 0:
 		return
 	var elapsed: int = Time.get_ticks_msec() - _background_focus_lost_msec
 	var thresholds: Array[int] = [15000, 60000, 180000]
@@ -1943,11 +1975,11 @@ func _log_background_memory_checkpoint() -> void:
 
 
 func _try_trim_idle_background_caches() -> void:
-	if _background_focus_lost_msec <= 0 or _window_has_focus:
+	if _background_focus_lost_msec <= 0 or not _background_mode_active:
 		return
 	var now_msec: int = Time.get_ticks_msec()
 	if not should_run_background_cache_sweep(
-			_window_has_focus, _has_active_world_visuals(),
+			not _background_mode_active, _has_active_world_visuals(),
 			now_msec - _background_focus_lost_msec,
 			_last_background_cache_trim_msec, now_msec):
 		return
@@ -1965,44 +1997,49 @@ func _try_trim_idle_background_caches() -> void:
 		])
 
 
-func _set_window_focus_power_save(has_focus: bool) -> void :
-	if _window_has_focus == has_focus:
+func _sync_background_presentation_state() -> void:
+	var desired_background: bool = _background_policy_required()
+	if desired_background == _background_mode_active:
 		return
-	_window_has_focus = has_focus
-	_focus_last_change_usec = Time.get_ticks_usec()
-	_focus_change_count += 1
-	# The frame spanning focus-in/out includes the intentional background FPS cap.
-	# It cannot be assigned to foreground lag: restart the gap window.
-	_frame_gap_last_usec = _focus_last_change_usec
-
-	var master_bus_index := AudioServer.get_bus_index("Master")
-	if not has_focus:
+	_background_mode_active = desired_background
+	var master_bus_index: int = AudioServer.get_bus_index("Master")
+	if desired_background:
 		_background_focus_lost_msec = Time.get_ticks_msec()
 		_background_memory_checkpoint_stage = 0
 		_focused_max_fps = configured_foreground_fps(current_performance_profile)
-		_refresh_focus_render_policy()
-		# Leave all animation, HUD, map, BGM and recently used assets warm.
-		# No synchronous unloading is permitted in an Alt+Tab handler.
-		_log_background_memory("focus_out")
-		if _afk_active and _pending_afk_working_set_trim:
-			call_deferred("_run_pending_afk_trim_after_focus_out")
+		# Keep sound preferences; temporarily mute ONLY when minimization
+		# or enabled Unfocus policy requests background presentation.
 		if master_bus_index >= 0:
 			if not _afk_active:
 				_master_bus_was_muted_before_focus_loss = AudioServer.is_bus_mute(master_bus_index)
 			AudioServer.set_bus_mute(master_bus_index, true)
+		_log_background_memory("background_enter")
+		if _afk_active and _pending_afk_working_set_trim:
+			call_deferred("_run_pending_afk_trim_after_focus_out")
 	else:
-		_log_background_memory("focus_in_before")
+		_log_background_memory("background_leave_before")
 		_background_focus_lost_msec = 0
-		_refresh_focus_render_policy()
-		_log_background_memory("focus_in_after")
-
 		if master_bus_index >= 0:
 			AudioServer.set_bus_mute(
 				master_bus_index,
 				_afk_active or _master_bus_was_muted_before_focus_loss
 			)
+		_log_background_memory("background_leave_after")
 
+
+func _set_window_focus_power_save(has_focus: bool) -> void :
+	if _window_has_focus == has_focus:
+		# Minimize may have changed while Windows still reports no focus.
+		_sync_background_presentation_state()
+		return
+	_window_has_focus = has_focus
+	_focus_last_change_usec = Time.get_ticks_usec()
+	_focus_change_count += 1
+	_frame_gap_last_usec = _focus_last_change_usec
+	_sync_background_presentation_state()
+	_refresh_focus_render_policy()
 	_log_focus_power_save("focus_in" if has_focus else "focus_out")
+
 
 func _set_background_visual_processing(paused: bool) -> void :
 	if CursorManager:
@@ -2018,7 +2055,7 @@ func _set_background_visual_processing(paused: bool) -> void :
 		if current_hud.has_method("set_background_visuals_paused"):
 			current_hud.set_background_visuals_paused(paused or _afk_active)
 		if current_hud.has_method("set_afk_dashboard_updates_enabled"):
-			current_hud.set_afk_dashboard_updates_enabled(_afk_active and _window_has_focus)
+			current_hud.set_afk_dashboard_updates_enabled(_afk_active and not _background_mode_active)
 
 func _release_background_optional_ui() -> int:
 	# Unfocused is intentionally lighter than AFK. Keep the active map,
