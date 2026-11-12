@@ -388,13 +388,13 @@ internal sealed class WireLoadClient : IAsyncDisposable
                 BubbleType = 0
             }, timeout);
         // Unrelated periodic status packets may race the GM response.
-        // Only accept the confirmed weak test profile, never an older status.
+        // Only accept the confirmed moderate-damage test profile, never an older status.
         await WaitForPacketAsync(
             "PlayerStatusSync",
             packet =>
                 packet.TryGetProperty("Attack", out var attack) &&
                 attack.ValueKind == JsonValueKind.Number &&
-                attack.GetInt32() is >= 0 and <= 5 &&
+                attack.GetInt32() is >= 40 and <= 90 &&
                 packet.TryGetProperty("MaxHP", out var maxHp) &&
                 maxHp.ValueKind == JsonValueKind.Number &&
                 maxHp.GetInt32() >= 10000,
