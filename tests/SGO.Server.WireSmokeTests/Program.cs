@@ -671,13 +671,22 @@ if (peerDamageOnly)
         throw new Exception(
             "Observer EntityDamage lacks authoritative impact coordinates");
     }
-    foreach (var name in new[] {"Damage", "CurrentHP", "MaxHP", "TargetID", "AttackerID", "TargetX", "TargetY"})
+    foreach (var name in new[] {"Damage", "CurrentHP", "MaxHP", "TargetID", "AttackerID"})
     {
         if (ownerHit.GetProperty(name).GetInt64() !=
             observerHit.GetProperty(name).GetInt64())
         {
             throw new Exception(
                 $"Peer EntityDamage differs from attacker for {name}");
+        }
+    }
+    foreach (var name in new[] {"TargetX", "TargetY"})
+    {
+        if (Math.Abs(ownerHit.GetProperty(name).GetDouble() -
+                     observerHit.GetProperty(name).GetDouble()) > 0.001)
+        {
+            throw new Exception(
+                $"Peer impact coordinate differs from attacker for {name}");
         }
     }
     Console.WriteLine("[PEER_DAMAGE_WIRE] ALL PASS");
