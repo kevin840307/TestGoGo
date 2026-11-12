@@ -3376,6 +3376,11 @@ public sealed class CombatService
                 Type = "EntityDamage",
                 TargetID = monster.EntityId,
                 TargetType = 1,
+                // Player-origin damage can overtake an ordinary queued AOI
+                // SpawnEntity. Give observers the authoritative impact
+                // location even before their monster scene is ready.
+                TargetX = monster.X,
+                TargetY = monster.Y,
                 Damage = damage,
                 CurrentHP = monster.CurrentHp,
                 MaxHP = monster.MaxHp,
