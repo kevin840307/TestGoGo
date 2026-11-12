@@ -1,0 +1,63 @@
+SGO MMORPG 多人同步 / 低延遲優化 TODO
+建立日期：2026-11-12（Asia/Taipei）
+主要倉庫：https://github.com/kevin840307/TestGoGo （舊 SGO URL 會導向此倉庫）
+目標分支：feature/local-server-net8
+本清單的目的：不同 ChatGPT/Codex Session 可在任何時刻接手；一律先讀本檔、最新 HEAD 與近期提交，禁止憑舊對話假設程式未修改。
+
+【交接規則】
+1. 接手先執行 git fetch、看 feature/local-server-net8 最新 HEAD；讀 todo.txt、docs/multiplayer-legacy-movement-audit.md、docs/legacy-movement-parity-20261111.md。
+2. 每次只領一個尚未完成的 TASK ID；若另一 Session 正在修改相同檔案，改用獨立工作分支，絕不可 force push 主目標分支或覆蓋別人的新提交。
+3. 變更前記錄原行為/指標，先補 regression，再改程式；完成 TASK 後在本檔改 [x]、填 commit SHA/驗證結果/剩餘風險，未跑測試寫「未驗證」，不得直接宣稱 PASS。
+4. 原始協定由 Old/* .lst 核對。新版協定 WebSocket + JSON/AES；原版 Server 更新 Tick 不等於實際發包週期。
+5. 必須保持 Server 權威：攻擊、移動、Blocking、死亡、撿物、金錢、寵物、地圖 AOI 不使用 Client 預測座標。
+6. 任何 FPS/AFK/失焦/低資源設定「只能影響渲染」，不能停收包、降低網路 poll/固定邏輯 Tick、戰鬥、自動打怪、移動或撿物速度。
+7. 玩家停止/傳送/受擊/死亡/Spawn/Despawn 必須保持因果順序；不得任意合併/丟棄可靠戰鬥事件。多人效果必須優於或至少不差於原版；不可用單純提高封包量解決。
+8. 提交前至少跑相關 dotnet Smoke/Probe + Godot headless regression；若工具缺少，標註限制並留下可直接執行的指令。
+9. 除非任務要求，不修改舊有 AFK UI、戰鬥倍率、傷害公式、物品機制、原始美術素材。
+
+【狀態定義】 [ ] 未開始； [~] 已開始 / 部分完成； [x] 已完成且附驗證證據； [!] 受阻/待實機。
+【重要現況】已存在 PlayerSpatialAoi/WorldEntitySpatialAoi、100ms 玩家廣播、250ms AI、player/world MoveEntity coalesce、player 高優先發送、RemotePlayerMotion 外推、Monster 按 waypoint 移動、ViewportAoiRadius、PositionPersistenceService。不要重造既有功能。
+【基準問題】
+- SharedMapAiTicker.TickOnce 每 250ms 做 AI，仍 lock(session) 執行 CombatService.TickAi；後者可能在 SyncRoot 與 Session 鎖路徑執行 SqliteGameStore.ApplyDamage。
+- RemotePlayerMotion 使用最新權威位置 + 有界 dead reckoning/servo，不是依 Server Tick/Sequence 的多快照時間軸插值。
+- WebSocketEndpoint/ServerBroadcastHub 使用兩條 queue 和 32:8 發送配額，已合併未送移動快照；尚需用 Queue Age 量測真正延遲。
+- Client NetworkManager 每 physics tick 收包，遊戲內預設最多 128 包 / 4ms；Scene 動態實體建立由視覺預算限制。
+- 非戰鬥 AI CI 曾見 P95=66.6ms，但不代表 20 Bot 持續戰鬥負載達標。
+
+【工作清單，依序處理；每項可拆成獨立提交】
+T00 [x] 建立本 todo.txt 在目標分支，定義交接契約與優先級。
+    驗證：檔案在 feature/local-server-net8，其他 Session 直接從 GitHub 讀取。
+T01 [ ] P0：補齊延遲定位和壅塞可觀測性（先作、不變更戰鬥語意）。
+    範圍：server/Application/Messaging/ServerBroadcastHub.cs、server/Transport/WebSockets/WebSocketEndpoint.cs、現有 probes。
+    驗收：可區分 Player/World queue oldest age 或每批排隊時間、sendGateWait、Encode、SocketWrite，P50/P95/P99 及尖峰；避免逐包 log、避免額外 DB；測試合併移動不改原 FIFO 邊界。完成須記真實測試證據。
+T02 [ ] P0：20 Bot + 312 怪持續戰鬥 / 移動混合負載基準。
+    範圍：tests/SGO.Server.WireLoadProbe、tests/SGO.Server.Map13AiTickProbe（依現有實際專案）、現有 Actions。
+    驗收：輸出 AI tick P50/P95/P99、超過250ms比例、SessionLockWait、DamageWriteMs、玩家 Move 端到端 P95、SocketQueueAge 和戰鬥事件數；移動/戰鬥測試不能只用 --no-combat。儲存參數與結果摘要。
+T03 [ ] P0：減少怪物戰鬥熱路徑的 Session/Map lock 與 SQLite writer 爭用。
+    範圍：SharedMapAiTicker、CombatService、SqliteGameStore；先用 T01/T02 證據找實際熱點。
+    驗收：保持順序、死亡只結算一次、HP/MP/Buff/吸血/寵物/掉落/戰鬥事件不回歸；移出長時間 I/O 或經證明等價的批次原子更新；不可無驗證就把 HP 寫入延後。
+T04 [ ] P1：拆分怪物 AI 決策（現有250ms）與 Server 權威移動步進（評估50ms），保留 AOI/Blocking/戰鬥。
+    驗收：移動不依賴昂貴 AI 運算才能更新；不改變追擊速度/攻擊距離/冷卻；同圖 312 怪不形成同步群體瞬移。先通過導航/追擊/死亡/AOI Smoke 再調整廣播率。
+T05 [ ] P1：Client Remote Player/Monster 可選用 Server Tick/Sequence 驅動的小型 snapshot buffer 插值。
+    範圍：client/scripts/remote_player_motion.gd、client/network_player.gd、client/scripts/monster_entity.gd 和相關 regressions。
+    驗收：停/轉彎/加速/350-750ms稀疏快照/連續 hit/重連/切圖不回跳；重大傳送立即服從權威；Client 只改視覺不改 gameplay；與現有 dead reckoning 基準 A/B 比較。
+T06 [ ] P1：AOI / Sprite 建立 / 網路排隊與玩家進圖順移。
+    範圍：PlayerSpatialAoi、WorldEntitySpatialAoi、network_entity_manager、network_manager；實際超寬與 zoom 場景。
+    驗收：AOI 進出不重生舊角色；玩家場景建立比掉落物優先；高負載 128包/4ms backlog 不累積；不降低原有封包處理速度；保留視野外緩衝。
+T07 [ ] P2：按距離與動作重要性細分同步優先級 / 頻率並驗證。
+    驗收：附近玩家、技能/傷害最優先；遠處怪/NPC 低成本；低頻不等於停止世界 Tick；不丟失可靠事件、不越過因果邊界。
+T08 [ ] P2：擴容時評估 Delta/compact packet；可先實測 JSON/AES/Base64 CPU、頻寬和量測回歸。
+    驗收：明確相容性 / 版本協商；不可直接破壞既有 client 協定。
+T09 [ ] P0/P1：CI + 實機綜合驗收。
+    使用 Map13、20 Bots、312 怪物、持續攻擊/移動/轉向/停止、1920x1080 以上 viewport 和 zoom。
+    守門：.NET8 build、Server smoke、server AOI priority、Map13 AI bots、20 encrypted WS wire、Godot multiplayer motion / headless。
+    比較：遠端角色/怪物順移、移動抖動、受擊動畫、傷害數字、同時上線 Spawn、掉落拾取、AFK/失焦/30/60 FPS。
+    完整 Godot 美術場景若 CI 缺資源，只能寫 SKIP，需真實 Windows Godot 觀測。
+
+【下一個 Session 入口】
+1. 先看這裡第一個 [ ]；若有另一人在做 T01，先做 T02 並自行避免改同檔案。
+2. 每完成一項附「TASK ID | Commit/PR URL | 測試結果 | 未完成風險」，並更新最下方工作日誌。
+3. 目標分支可能同時有人寫入；務必 fetch HEAD + diff，先 merge/rebase 再交付；不要刪改其他人的實驗分支。
+
+【工作日誌（追加新紀錄，不覆蓋舊紀錄）】
+2026-11-12：首次建立跨 Session TODO；T00 完成；T01~T09 待執行；本檔建立不代表任何程式修正/壓測已通過。
