@@ -98,6 +98,32 @@ class ClientNetworkContractTests(unittest.TestCase):
             entity_manager,
         )
 
+    def test_entity_damage_does_not_replay_owned_remote_attack(self):
+        player = PLAYER.read_text(encoding="utf-8-sig")
+        entity_manager = (
+            ROOT / "client" / "scripts" / "network_entity_manager.gd"
+        ).read_text(encoding="utf-8-sig")
+        policy = (
+            ROOT / "client" / "scripts" / "remote_player_state_policy.gd"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn(
+            "func should_trigger_attack_visual_from_damage(skill_id: int)",
+            player,
+        )
+        self.assertIn(
+            "damage_should_start_attack_visual",
+            policy,
+        )
+        self.assertIn(
+            'attacker_node.has_method("should_trigger_attack_visual_from_damage")',
+            entity_manager,
+        )
+        self.assertIn(
+            "should_start_damage_attack_visual",
+            entity_manager,
+        )
+
     def test_world_ready_ack_is_observable(self):
         block = packet_block(self.source, "WorldReadyResponse")
         fields = set(FIELD_READ.findall(block))
