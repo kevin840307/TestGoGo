@@ -661,7 +661,17 @@ if (peerDamageOnly)
             value.GetInt32() > 0,
         "peer receives normal-attack monster damage",
         skipNonMatchingSameType: true);
-    foreach (var name in new[] {"Damage", "CurrentHP", "MaxHP", "TargetID", "AttackerID"})
+    // The source coordinates must be valid even before the observer's
+    // ordinary SpawnEntity reaches the Client scene construction queue.
+    if (!observerHit.TryGetProperty("TargetX", out var impactX) ||
+        !observerHit.TryGetProperty("TargetY", out var impactY) ||
+        impactX.ValueKind != JsonValueKind.Number ||
+        impactY.ValueKind != JsonValueKind.Number)
+    {
+        throw new Exception(
+            "Observer EntityDamage lacks authoritative impact coordinates");
+    }
+    foreach (var name in new[] {"Damage", "CurrentHP", "MaxHP", "TargetID", "AttackerID", "TargetX", "TargetY"})
     {
         if (ownerHit.GetProperty(name).GetInt64() !=
             observerHit.GetProperty(name).GetInt64())
