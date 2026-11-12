@@ -151,3 +151,11 @@ GM commands are server-side chat commands and require no client changes:
 ```
 
 Asset/skill/pet GM commands validate against the current recovered client GameData rather than accepting legacy IDs blindly.
+
+### 一般怪物掉寶率
+
+`appsettings.json` 的 `Gameplay:MonsterDrops:BaseChanceMultiplier` 預設為 `0.5`，表示把 `Enemy_Data.csv` 中每項一般怪物物品掉落的**基礎機率**乘上 0.5，而非每殺一隻固定少掉一半物品。設定 `1.0` 可恢復原本機率；允許 0.0～1.0，Server 重啟後生效。
+
+幸運值獨立抽取、GM 掉寶活動倍率、金錢、經驗、任務獎勵及拾取規則保留原樣。
+
+驗證：`dotnet run -c Release --project tests/SGO.Server.SmokeTests -- --suite drops`（實際原版怪物表、獨立於玩家 DB）。
