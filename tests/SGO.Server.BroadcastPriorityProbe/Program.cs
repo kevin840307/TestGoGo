@@ -717,6 +717,27 @@ try
               Convert.ToInt32(freshAfterDamage["HP"]) &&
           Convert.ToInt64(updatedDamage["DBID"]) == characterId,
         "damage reuses SQLite connection but preserves post-hit full character fields");
+
+    var timings = store.HotWriteDiagnostics;
+    Check(timings.Damage.WaitMs.Samples == 1 &&
+          timings.Damage.HeldMs.Samples == 1 &&
+          timings.DamageOpenMs.Samples == 1 &&
+          timings.DamageUpdateMs.Samples == 1 &&
+          timings.DamageReadMs.Samples == 1,
+        "one committed hit produces exactly one sample for each SQLite hot-write phase");
+    Check(timings.Damage.WaitMs.MaxMs >= 0 &&
+          timings.Damage.HeldMs.MaxMs >= 0 &&
+          timings.DamageOpenMs.MaxMs >= 0 &&
+          timings.DamageUpdateMs.MaxMs >= 0 &&
+          timings.DamageReadMs.MaxMs >= 0 &&
+          timings.Damage.WaitMs.P50Ms <= timings.Damage.WaitMs.P95Ms &&
+          timings.Damage.WaitMs.P95Ms <= timings.Damage.WaitMs.P99Ms,
+        "read-only hot-write latency distributions are valid and monotonic");
+    var secondSnapshot = store.HotWriteDiagnostics;
+    Check(secondSnapshot.DamageUpdateMs.Samples == timings.DamageUpdateMs.Samples &&
+          secondSnapshot.DamageReadMs.Samples == timings.DamageReadMs.Samples,
+        "reading /health timing counters does not reset other observers' samples");
+
     var firstDrain = store.DrainCompanionRuntime(accountId.Value, characterId, 1);
     var afterOne = store.GetActivePetFollowSnapshot(accountId.Value, characterId);
     Check(firstDrain.Pets.Count == 1 &&
