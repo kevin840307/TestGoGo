@@ -858,7 +858,7 @@ func _on_sprite_frame_changed(part_key: String) -> void :
 				_on_sprite_frame_changed(head_part)
 
 
-func update_animation(anim_state: String, anim_dir: String, flip: bool, move_speed: float, atk_speed: float) -> void :
+func update_animation(anim_state: String, anim_dir: String, flip: bool, _move_speed: float, atk_speed: float) -> void :
 	if doll_sprites.is_empty(): return
 
 	var force_stop_frame_0 = false
@@ -946,7 +946,17 @@ func update_animation(anim_state: String, anim_dir: String, flip: bool, move_spe
 
 		part_finals[part_key] = final_anim
 
-		if sprite_node.is_playing() and sprite_node.animation == final_anim:
+		var is_requested_anim: bool = final_anim == target_anim
+		var is_one_shot_action: bool = (
+			anim_state.begins_with("attack_")
+			or anim_state.begins_with("hit_")
+		)
+		if (
+			not is_one_shot_action
+			and is_requested_anim
+			and sprite_node.is_playing()
+			and sprite_node.animation == final_anim
+		):
 			if ref_frame == -1 or part_key in ["Body", "MSBody"] or (current_race == "Robot" and part_key == "Bonnet"):
 				ref_frame = sprite_node.frame
 				ref_progress = sprite_node.frame_progress
@@ -1008,14 +1018,10 @@ func update_animation(anim_state: String, anim_dir: String, flip: bool, move_spe
 					sprite_node.set_frame_and_progress(ref_frame, ref_progress)
 			if anim_state.begins_with("attack_"):
 				sprite_node.speed_scale = max(atk_speed, 10.0) / 100.0
-			elif anim_state == "walk":
-				# World movement uses the same percentage multiplier. Keeping
-				# animation fixed at 1x makes fast actors skate and slow actors
-				# shuffle even when their position interpolation is correct.
-				sprite_node.speed_scale = clampf(
-					maxf(move_speed, 10.0) / 100.0, 0.10, 3.0
-				)
 			else:
+				# MoveSpeed controls displacement only. The recovered client
+				# advances movement and character action frames separately;
+				# fast feet/mecha playback makes high-speed actors look frantic.
 				sprite_node.speed_scale = 1.0
 
 		_on_sprite_frame_changed(part_key)
@@ -1118,8 +1124,10 @@ func _play_controller_timeline_audio(controller: String, sprite_node: AnimatedSp
 func _get_controller_timed_frames(source_frames: SpriteFrames, controller: String, action_prefixes: Dictionary, use_effective_tick_rate: bool = false, skip_movement_timing: bool = false) -> SpriteFrames:
 	if not AnimationTimingManager or not AnimationTimingManager.is_loaded():
 		return source_frames
-	var tick_rate = AnimationTimingManager.get_effective_tick_rate_hz() if use_effective_tick_rate else float(AnimationTimingManager.get_tick_rate_hz())
-	if tick_rate <= 0.0:
+	var default_tick_rate := AnimationTimingManager.get_action_tick_rate_hz(
+		"", use_effective_tick_rate
+	)
+	if default_tick_rate <= 0.0:
 		return source_frames
 	var cache_key = "%s:%d:%s" % [controller, source_frames.get_instance_id(), skip_movement_timing]
 	if _shared_controller_timed_frames_cache.has(cache_key):
@@ -1131,6 +1139,11 @@ func _get_controller_timed_frames(source_frames: SpriteFrames, controller: Strin
 	var applied_timelines: Dictionary = {}
 	for raw_action in action_prefixes:
 		if skip_movement_timing and raw_action == "NR":
+			continue
+		var action_tick_rate := AnimationTimingManager.get_action_tick_rate_hz(
+			str(raw_action), use_effective_tick_rate
+		)
+		if action_tick_rate <= 0.0:
 			continue
 		var timeline = AnimationTimingManager.get_controller_timeline(controller, raw_action)
 		if timeline.is_empty():
@@ -1153,7 +1166,7 @@ func _get_controller_timed_frames(source_frames: SpriteFrames, controller: Strin
 				textures.append(source_frames.get_frame_texture(animation_name, int(entry["frame"])))
 			var looped = source_frames.get_animation_loop(animation_name)
 			timed_frames.clear(animation_name)
-			timed_frames.set_animation_speed(animation_name, tick_rate)
+			timed_frames.set_animation_speed(animation_name, action_tick_rate)
 			timed_frames.set_animation_loop(animation_name, looped)
 			for index in timeline.size():
 				timed_frames.add_frame(animation_name, textures[index], float(timeline[index]["ticks"]))
