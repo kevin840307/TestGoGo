@@ -70,6 +70,34 @@ class ClientNetworkContractTests(unittest.TestCase):
         self.assertIn("Dir = moveDir", sync_case)
         self.assertNotIn('req.Str("Dir", "1")', sync_case)
 
+    def test_sync_state_never_invents_missing_direction(self):
+        manager = self.source
+        router = PACKET_ROUTER.read_text(encoding="utf-8-sig")
+        entity_manager = (
+            ROOT / "client" / "scripts" / "network_entity_manager.gd"
+        ).read_text(encoding="utf-8-sig")
+
+        self.assertIn(
+            'data.get("Dir", ""))',
+            manager,
+        )
+        self.assertNotIn(
+            '"SyncState": entity_state_changed.emit(int(data.get("EntityID", 0)), data.get("State", "idle"), data.get("Dir", "1"))',
+            manager,
+        )
+
+        sync_start = router.index('case "SyncState":')
+        sync_end = router.index('case "InteractRequest":', sync_start)
+        sync_case = router[sync_start:sync_end]
+        self.assertIn('var stateDir = req.Str("Dir", "")', sync_case)
+        self.assertIn("Dir = stateDir", sync_case)
+        self.assertNotIn('req.Str("Dir", "1")', sync_case)
+
+        self.assertIn(
+            'if "current_dir" in target_node and not new_dir.is_empty():',
+            entity_manager,
+        )
+
     def test_world_ready_ack_is_observable(self):
         block = packet_block(self.source, "WorldReadyResponse")
         fields = set(FIELD_READ.findall(block))
