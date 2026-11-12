@@ -34,6 +34,7 @@ internal sealed class WireLoadClient : IAsyncDisposable
     private Exception? _receiveFailure;
     private volatile bool _measure;
     private volatile bool _interactiveBots;
+    private BotPeerMoveLatencyTracker? _botMoveLatencyTracker;
     private long _moveBroadcasts;
     private long _positionCorrections;
     private long _chatBroadcasts;
@@ -171,8 +172,12 @@ internal sealed class WireLoadClient : IAsyncDisposable
         _measure = true;
     }
 
-    public void EnableInteractiveBots()
+    public void EnableInteractiveBots(
+        BotPeerMoveLatencyTracker? latencyTracker = null)
     {
+        // All clients in one bots run share the same monotonic clock tracker.
+        // Normal wire tests and sessions before bot setup remain unchanged.
+        _botMoveLatencyTracker = latencyTracker;
         _interactiveBots = true;
         while (_inbox.Reader.TryRead(out var packet))
             BotWorld.Observe(packet, CharacterId);
@@ -439,6 +444,10 @@ internal sealed class WireLoadClient : IAsyncDisposable
         X = x;
         Y = y;
         Direction = direction;
+        // Mark before the send so a fast server/peer cannot receive the
+        // MoveEntity before its corresponding local timestamp is registered.
+        var tracker = _botMoveLatencyTracker;
+        var tracked = tracker?.RecordSent(CharacterId, x, y) == true;
         try
         {
             await SendPacketAsync(
@@ -447,6 +456,8 @@ internal sealed class WireLoadClient : IAsyncDisposable
         }
         catch
         {
+            if (tracked)
+                tracker!.CancelSent(CharacterId, x, y);
             X = beforeX;
             Y = beforeY;
             Direction = beforeDirection;
@@ -929,6 +940,11 @@ internal sealed class WireLoadClient : IAsyncDisposable
                 if (_interactiveBots)
                 {
                     BotWorld.Observe(packet, CharacterId);
+                    if (type == "MoveEntity")
+                    {
+                        _botMoveLatencyTracker?.ObservePeerMove(
+                            CharacterId, packet);
+                    }
                     if (type == "PositionCorrection")
                     {
                         if (packet.TryGetProperty("X", out var correctedX) &&
