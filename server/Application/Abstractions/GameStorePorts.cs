@@ -80,6 +80,25 @@ public interface IOpportunisticPositionBatchStore
         IReadOnlyList<CharacterPositionWrite> positions);
 }
 
+// One durable character HP update for a sequence of monster hits. The
+// intermediate HP values allow per-attacker EntityDamage packets to retain
+// their original order, including the exact first lethal hit. The returned
+// Character is the complete, authoritative FINAL post-hit character payload.
+// Only implementations that prove atomic parity should implement this port;
+// AI integration still requires owner/session/map ordering validation.
+public sealed record CharacterDamageBatchResult(
+    Dictionary<string, object> Character,
+    IReadOnlyList<int> HpAfterEachHit,
+    int FirstDeathHitIndex);
+
+public interface IAtomicCharacterDamageStore
+{
+    CharacterDamageBatchResult? ApplyDamageBatch(
+        long accountId,
+        long characterId,
+        IReadOnlyList<int> damages);
+}
+
 public interface ICharacterStore
 {
     List<Dictionary<string, object>> Characters(long accountId);
