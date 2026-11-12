@@ -296,8 +296,8 @@ public sealed class GmCommandService
         ch = _store.ApplyGrowthStats(
             accountId, dbid,
             20000, 5000, 5000,
-            1, 1000,
-            1, 1000,
+            60, 1000,
+            45, 1000,
             1, 25,
             Math.Max(1, Convert.ToInt32(ch["MoveSpeed"])));
 
@@ -312,7 +312,7 @@ public sealed class GmCommandService
         return
         [
             CharacterStatCalculator.ToPlayerStatusPacket(ch, assets, _current),
-            Chat("TestBot profile applied: Lv1 ATK=1 MATK=1, HP=20000, DEF=1000")
+            Chat("TestBot profile applied: Lv1 ATK=60 MATK=45, HP=20000, DEF=1000")
         ];
     }
 
