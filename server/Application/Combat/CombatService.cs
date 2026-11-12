@@ -98,6 +98,7 @@ public sealed class CombatService
     private readonly GroundDropPlacementService _dropPlacement;
     private readonly ServerBroadcastHub _broadcasts;
     private readonly PartyService _party;
+    private readonly PvpService _pvp;
     private readonly PetEvolutionService _petEvolution;
     private readonly QuestProgressService _questProgress;
     private readonly GlobalRateService _globalRates;
@@ -137,6 +138,7 @@ public sealed class CombatService
         WorldRuntimeService runtime,
         ServerBroadcastHub broadcasts,
         PartyService party,
+        PvpService pvp,
         PetEvolutionService petEvolution,
         QuestProgressService questProgress,
         ILogger<CombatService> log,
@@ -154,6 +156,7 @@ public sealed class CombatService
         _runtime = runtime;
         _broadcasts = broadcasts;
         _party = party;
+        _pvp = pvp;
         _petEvolution = petEvolution;
         _questProgress = questProgress;
         _globalRates = globalRates ?? new GlobalRateService();
@@ -3296,12 +3299,19 @@ public sealed class CombatService
         int targetEntityId,
         int targetType)
     {
-        if (targetType != 1)
-            return [Flash("攻擊目標類型無效")];
-
         if (!session.CharacterId.HasValue ||
             session.CurrentMapId <= 0)
             return [Flash("目前無法攻擊")];
+
+        if (targetType == 0)
+            return AttackPlayer(
+                session,
+                accountId,
+                targetEntityId,
+                DateTimeOffset.UtcNow);
+
+        if (targetType != 1)
+            return [Flash("攻擊目標類型無效")];
 
         var runtime = SyncSessionMonsters(session);
         if (!session.Monsters.TryGetValue(
@@ -3451,6 +3461,161 @@ public sealed class CombatService
         }
 
         BroadcastWorldPackets(session, packets);
+        return packets;
+    }
+
+    private IReadOnlyList<object> AttackPlayer(
+        ClientSession session,
+        long accountId,
+        int targetEntityId,
+        DateTimeOffset now)
+    {
+        if (!session.CharacterId.HasValue ||
+            targetEntityId <= 0)
+            return [Flash("攻擊目標類型無效")];
+
+        var attacker = _store.GetCharacter(
+            accountId,
+            session.CharacterId.Value);
+        var targetPresence = _broadcasts.FindCharacter(
+            targetEntityId);
+
+        if (attacker is null)
+            return [Flash("角色資料不存在")];
+
+        if (targetPresence is null)
+            return [Flash("攻擊目標不存在或已離線")];
+
+        var target = _store.GetCharacter(
+            targetPresence.AccountId,
+            targetPresence.CharacterId);
+        if (target is null)
+            return [Flash("攻擊目標不存在")];
+
+        if (!_pvp.CanAttack(
+                session,
+                attacker,
+                targetPresence,
+                target,
+                now,
+                out var rejectReason))
+            return [Flash(rejectReason)];
+
+        var attackerAssets = _store.GetCharacterAssets(
+            accountId,
+            session.CharacterId.Value);
+        var attackerStats = ApplyActiveSkillBuffs(
+            CharacterStatCalculator.Calculate(
+                attacker,
+                attackerAssets,
+                _current),
+            session,
+            now);
+        var targetAssets = _store.GetCharacterAssets(
+            targetPresence.AccountId,
+            targetPresence.CharacterId);
+        var targetStats = ApplyActiveSkillBuffs(
+            CharacterStatCalculator.Calculate(
+                target,
+                targetAssets,
+                _current),
+            targetPresence.CharacterId,
+            now);
+
+        var attackRange = NormalAttackWorldRange(
+            attackerStats.AttackRange,
+            CharacterStatCalculator.GetEquippedWeaponAttackRange(
+                attackerAssets,
+                _current));
+        const double networkRangeTolerance = 24.0;
+        var allowedRange = attackRange + networkRangeTolerance;
+        var dx = session.LastX - targetPresence.X;
+        var dy = session.LastY - targetPresence.Y;
+
+        if (dx * dx + dy * dy >
+            allowedRange * allowedRange)
+            return [Flash("目標距離太遠")];
+
+        if (_blocking.HasMap(session.CurrentMapId) &&
+            !_navigation.IsDirectClear(
+                session.CurrentMapId,
+                session.LastX,
+                session.LastY,
+                targetPresence.X,
+                targetPresence.Y))
+            return [Flash("攻擊目標被障礙物阻擋")];
+
+        var targetWasNormalWhite =
+            PvpService.IsNormalWhite(
+                target,
+                now);
+
+        attacker = _pvp.MarkHostileAttack(
+            accountId,
+            session.CharacterId.Value,
+            attacker,
+            targetWasNormalWhite,
+            now) ?? attacker;
+
+        var damage = Math.Max(
+            1,
+            attackerStats.Attack -
+            Math.Max(0, targetStats.Defense) / 5);
+        var hpBefore =
+            Convert.ToInt32(target["HP"]);
+        var damaged = _store.ApplyDamage(
+            targetPresence.AccountId,
+            targetPresence.CharacterId,
+            damage);
+
+        if (damaged is null)
+            return [Flash("玩家傷害結算失敗")];
+
+        var currentHp =
+            Convert.ToInt32(damaged["HP"]);
+        var packets = new List<object>
+        {
+            new
+            {
+                Type = "EntityDamage",
+                TargetID = targetPresence.CharacterId,
+                TargetType = 0,
+                Damage = damage,
+                CurrentHP = currentHp,
+                MaxHP = targetStats.MaxHP,
+                IsCrit = false,
+                SkillID = 0,
+                SkillLevel = 1,
+                AttackerID = session.CharacterId.Value
+            }
+        };
+
+        if (hpBefore > 0 && currentHp <= 0)
+        {
+            packets.Add(new
+            {
+                Type = "EntityDeath",
+                EntityID = targetPresence.CharacterId,
+                EntityType = 0,
+                KillerID = session.CharacterId.Value
+            });
+
+            attacker = _pvp.MarkWhitePlayerKill(
+                accountId,
+                session.CharacterId.Value,
+                attacker,
+                targetWasNormalWhite,
+                now) ?? attacker;
+        }
+
+        BroadcastPublicStatus(
+            session,
+            targetPresence.CharacterId,
+            damaged,
+            targetStats);
+        BroadcastWorldPackets(
+            session,
+            packets);
         return packets;
     }
 
