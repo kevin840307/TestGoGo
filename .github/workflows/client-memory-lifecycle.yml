@@ -6,6 +6,10 @@ on:
       - feature/local-server-net8
     paths:
       - 'client/scripts/game_manager.gd'
+      - 'client/scripts/unfocus_presentation_policy.gd'
+      - 'client/scripts/game_constants.gd'
+      - 'client/tests/unfocus_toggle_regression.gd'
+      - 'tests/test_unfocus_toggle_contract.py'
       - 'client/scripts/client_performance_profile.gd'
       - 'client/player.gd'
       - 'client/scripts/normal_attack_range.gd'
@@ -49,6 +53,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p 'test_client_memory_lifecycle_contract.py' -v
           python -m unittest discover -s tests -p 'test_ground_drop_hotpath_contract.py' -v
+          python -m unittest discover -s tests -p 'test_unfocus_toggle_contract.py' -v
       - name: Godot 4.7.2 headless static visual AOI regression
         shell: bash
         run: |
@@ -58,9 +63,12 @@ jobs:
           chmod +x "$RUNNER_TEMP/Godot_v4.7.2-stable_linux.x86_64"
           mkdir -p "$RUNNER_TEMP/sgomap/scripts" "$RUNNER_TEMP/sgomap/tests"
           cp client/scripts/map_visual_aoi_streamer.gd "$RUNNER_TEMP/sgomap/scripts/"
+          cp client/scripts/unfocus_presentation_policy.gd "$RUNNER_TEMP/sgomap/scripts/"
+          cp client/tests/unfocus_toggle_regression.gd "$RUNNER_TEMP/sgomap/tests/"
           cp client/tests/map_early_detach_regression.gd "$RUNNER_TEMP/sgomap/tests/"
           printf '[application]\\nconfig/name="SGO Synthetic AOI Test"\\n' > "$RUNNER_TEMP/sgomap/project.godot"
           "$RUNNER_TEMP/Godot_v4.7.2-stable_linux.x86_64" --headless --path "$RUNNER_TEMP/sgomap" --script res://tests/map_early_detach_regression.gd
+          "$RUNNER_TEMP/Godot_v4.7.2-stable_linux.x86_64" --headless --path "$RUNNER_TEMP/sgomap" --script res://tests/unfocus_toggle_regression.gd
           cp client/scripts/client_performance_profile.gd "$RUNNER_TEMP/sgomap/scripts/"
           cp client/tests/display_settings_regression.gd "$RUNNER_TEMP/sgomap/tests/"
           cp client/game_hud.tscn "$RUNNER_TEMP/sgomap/"
