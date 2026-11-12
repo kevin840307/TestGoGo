@@ -28,7 +28,7 @@ public sealed class EnemyDropCatalog
     // Normal monster drops were too frequent with the recovered CSV rates.
     // Scale probabilities, not drop counts, to retain individual item rarity,
     // luck-roll semantics and stable deterministic kill-sequence outcomes.
-    public const double DefaultBaseChanceMultiplier = 0.5;
+    public const double DefaultBaseChanceMultiplier = 0.25;
 
     private readonly double _baseChanceMultiplier;
 
