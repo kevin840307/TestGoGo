@@ -116,9 +116,14 @@ public sealed class EnemyDropCatalog
 
             for (var attempt = 0; attempt < rollCount; attempt++)
             {
+                // Keep the permanent base-rate reduction separate from the
+                // temporary/global multiplier, while routing the final
+                // probability through the single centralized clamp formula.
+                var baseChance = drop.Chance;
+                baseChance *= _baseChanceMultiplier;
                 var effectiveChance =
                     GlobalRateMath.ApplyDropChance(
-                        drop.Chance * _baseChanceMultiplier,
+                        baseChance,
                         dropMultiplier);
 
                 if (Roll01(
