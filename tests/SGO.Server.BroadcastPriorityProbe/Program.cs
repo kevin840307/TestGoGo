@@ -143,6 +143,20 @@ hub.Unregister(agePeer.ConnectionId);
 Check(hub.TakeQueueAgeReport(agePeer.ConnectionId) is null,
     "disconnect releases queue-age history");
 
+// Same-combat-run /health aggregates across ALL WebSocket sockets and must
+// not be reset by their independent interval drains or disconnects.
+var cumulativeAge = hub.CumulativeQueueAgeReport;
+var repeatAge = hub.CumulativeQueueAgeReport;
+Check(cumulativeAge.Player.Samples >= 5 &&
+      cumulativeAge.World.Samples >= 4 &&
+      cumulativeAge.Player.Samples == repeatAge.Player.Samples &&
+      cumulativeAge.World.Samples == repeatAge.World.Samples &&
+      cumulativeAge.Player.P50Ms <= cumulativeAge.Player.P95Ms &&
+      cumulativeAge.Player.P95Ms <= cumulativeAge.Player.P99Ms &&
+      cumulativeAge.World.P50Ms <= cumulativeAge.World.P95Ms &&
+      cumulativeAge.World.P95Ms <= cumulativeAge.World.P99Ms,
+    "cumulative player/world queue-age percentiles survive interval drains and multiple health reads");
+
 // A busy WebSocket must not replay stale monster waypoints one by one.
 // Four 250ms snapshots for one actor become one newest destination while
 // retaining the historical span for diagnostics and bounded visual catch-up.
