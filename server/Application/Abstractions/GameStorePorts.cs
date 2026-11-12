@@ -173,6 +173,14 @@ public interface ICharacterStore
         int x,
         int y);
     bool UpdateState(long accountId, long dbid, string state);
+    Dictionary<string, object>? SetPvpState(
+        long accountId,
+        long dbid,
+        int pkStatus,
+        int redMan,
+        int redManKillLeft,
+        long pinkUntilUtcMs)
+        => null;
     Dictionary<string, object>? SetLevel(
         long accountId,
         long dbid,
