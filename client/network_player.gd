@@ -548,13 +548,19 @@ func should_preserve_hit_state(new_state: String) -> bool:
 func should_trigger_attack_visual_from_damage(skill_id: int) -> bool:
 	var now_msec: int = Time.get_ticks_msec()
 	var explicit_network_attack_pending: bool = (
-		_network_attack_damage_owner_until_msec >= now_msec
+		skill_id == 0
+		and _network_attack_damage_owner_until_msec >= now_msec
 	)
-	if explicit_network_attack_pending:
-		# Consume one ownership token. The next real normal attack is allowed
-		# to start even if a previous locally-owned animation is still ending.
+	if skill_id == 0 and explicit_network_attack_pending:
+		# Consume one ownership token only for normal damage. Skill damage
+		# owns its own SkillCast visual and must not steal a pending normal
+		# attack token when packets interleave.
 		_network_attack_damage_owner_until_msec = -1
-	elif _network_attack_damage_owner_until_msec >= 0:
+	elif (
+		skill_id == 0
+		and _network_attack_damage_owner_until_msec >= 0
+		and _network_attack_damage_owner_until_msec < now_msec
+	):
 		_network_attack_damage_owner_until_msec = -1
 	return REMOTE_STATE_POLICY.damage_should_start_attack_visual(
 		skill_id, explicit_network_attack_pending
