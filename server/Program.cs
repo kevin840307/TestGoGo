@@ -116,6 +116,7 @@ app.MapGet("/health", (IConfiguration config) => Results.Ok(new
     sharedMapAiRecentTicks = sharedMapAiTicker.RecentTickSamples(),
     sqliteHotWrites = sqliteStore?.HotWriteDiagnostics,
     monsterAiDamageBatches = combatService.MonsterAiDamageBatches,
+    broadcastQueueAge = broadcastHub.CumulativeQueueAgeReport,
     sqliteBackgroundPosition = sqliteStore?.BackgroundPositionMetrics,
     aoi = new
     {
