@@ -122,6 +122,13 @@ func _get_free_effect() -> AnimatedSprite2D:
 
 
 func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: float = 0.3, split_count: int = 1, skill_id: int = 0, is_primary: bool = true) -> void :
+	if not is_instance_valid(target) or not target.is_inside_tree():
+		return
+	# A fatal EntityDeath may despawn the target before the delayed hit FX.
+	# Remember the world coordinate so other players still see real damage.
+	var hit_position: Vector2 = target.global_position
+	var hit_is_player: bool = target is BaseEntity
+	var hit_is_pet: bool = target is PetEntity
 	if hit_delay > 0:
 		var tree := get_tree()
 		if tree == null:
@@ -130,11 +137,13 @@ func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: 
 		await timer.timeout
 
 	if not is_instance_valid(target) or not target.is_inside_tree():
+		if damage > 0 and (not GameManager or GameManager.should_show_damage_numbers()):
+			_spawn_bouncing_number_at(hit_position, hit_is_player, hit_is_pet, damage, is_crit, 0.0, false)
 		return
 
 
-	var is_player = target is BaseEntity
-	var is_pet = target is PetEntity
+	var is_player = hit_is_player
+	var is_pet = hit_is_pet
 	var fx_duration = 0.0
 
 	if damage > 0 or skill_id > 0:
@@ -210,8 +219,10 @@ func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: 
 	if fx_duration > 0.0:
 		await get_tree().create_timer(fx_duration * 0.3).timeout
 
-	if not is_instance_valid(target) or not target.is_inside_tree(): return
 	if GameManager and not GameManager.should_show_damage_numbers():
+		return
+	if not is_instance_valid(target) or not target.is_inside_tree():
+		_spawn_bouncing_number_at(hit_position, hit_is_player, hit_is_pet, damage, is_crit, 0.0, false)
 		return
 
 	# Skill 99001 can kill dozens of monsters in the same packet batch.
@@ -238,9 +249,9 @@ func show_damage(target: Node2D, damage: int, is_crit: bool = false, hit_delay: 
 
 		for i in range(split_count):
 			var dir_ratio = float(i) / float(split_count - 1) * 2.0 - 1.0
-			_damage_queue.append({"target": target, "val": parts[i], "crit": is_crit, "dir": dir_ratio, "split": true})
+			_damage_queue.append({"target": weakref(target), "position": hit_position, "player": hit_is_player, "pet": hit_is_pet, "val": parts[i], "crit": is_crit, "dir": dir_ratio, "split": true})
 	else:
-		_damage_queue.append({"target": target, "val": damage, "crit": is_crit, "dir": 0.0, "split": false})
+		_damage_queue.append({"target": weakref(target), "position": hit_position, "player": hit_is_player, "pet": hit_is_pet, "val": damage, "crit": is_crit, "dir": 0.0, "split": false})
 	set_process(true)
 
 func _process(delta: float) -> void :
@@ -251,8 +262,11 @@ func _process(delta: float) -> void :
 		for i in range(process_count):
 			var data = _damage_queue[_damage_queue_head]
 			_damage_queue_head += 1
-			if is_instance_valid(data.target) and data.target.is_inside_tree():
-				_spawn_bouncing_number(data.target, data.val, data.crit, data.dir, data.split)
+			var node: Node2D = (data["target"] as WeakRef).get_ref()
+			var pos: Vector2 = data["position"]
+			if is_instance_valid(node) and node.is_inside_tree():
+				pos = node.global_position
+			_spawn_bouncing_number_at(pos, bool(data["player"]), bool(data["pet"]), int(data["val"]), bool(data["crit"]), float(data["dir"]), bool(data["split"]))
 
 		if _damage_queue_head == _damage_queue.size():
 			_damage_queue.clear()
@@ -267,11 +281,13 @@ func _process(delta: float) -> void :
 
 
 func _spawn_bouncing_number(target: Node2D, val: int, is_crit: bool, dir_ratio: float, is_split: bool) -> void :
+	if not is_instance_valid(target):
+		return
+	_spawn_bouncing_number_at(target.global_position, target is BaseEntity, target is PetEntity, val, is_crit, dir_ratio, is_split)
+
+func _spawn_bouncing_number_at(base_pos: Vector2, is_player: bool, is_pet: bool, val: int, is_crit: bool, dir_ratio: float, is_split: bool) -> void:
 	var dmg_lbl = _get_free_label()
 	if not dmg_lbl: return
-
-	var is_player = target is BaseEntity
-	var is_pet = target is PetEntity
 
 	_reset_label_tweens(dmg_lbl)
 
@@ -279,9 +295,6 @@ func _spawn_bouncing_number(target: Node2D, val: int, is_crit: bool, dir_ratio: 
 	dmg_lbl.add_theme_constant_override("outline_size", 6)
 	dmg_lbl.visible = true
 	dmg_lbl.modulate.a = 1.0
-
-	var base_pos = target.global_position
-
 
 	if is_crit:
 		if is_player:
