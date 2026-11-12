@@ -57,9 +57,9 @@ jobs:
           done
           timeout --signal=TERM --kill-after=5s 660s dotnet run -c Release --no-build \
             --project tests/SGO.Server.WireSmokeTests/SGO.Server.WireSmokeTests.csproj -- \
-            ws://127.0.0.1:5678/ 2>&1 | tee peer-damage-wire.log
+            ws://127.0.0.1:5678/ --peer-damage-only 2>&1 | tee peer-damage-wire.log
           grep -Fq 'peer receives normal-attack monster damage' peer-damage-wire.log
-          grep -Fq 'peer receives same monster death broadcast' peer-damage-wire.log
+          grep -Fq '[PEER_DAMAGE_WIRE] ALL PASS' peer-damage-wire.log
       - name: Upload peer damage diagnostics
         if: always()
         uses: actions/upload-artifact@v4
