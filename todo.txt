@@ -44,6 +44,7 @@ T03 [~] P0：減少怪物戰鬥熱路徑的 Session/Map lock 與 SQLite writer �
     子工作 T03.c.1 [~]：PR #22 單交易的原子多擊 HP 結算 port + 每擊 HP/首次死亡索引與並行致死 regression；CI 進行中，尚未接入 CombatService。
     子工作 T03.c.2 [ ]：依 #22 的 contract，安全接入 CombatService 逐擊事件/狀態/Buff/寵物與 map/session lock 規則；驗證與原逐擊封包完全等價，才能跑 20 Bot 比較延遲。
     子工作 T03.d [x]：背景位置寫入低優先/遇 SQLite WAL writer busy 可恢復重試；PR #21 已合併。FlushQueued/FlushFinal/換圖 fence 不變；CI 及 WAL 競爭 regression PASS。
+    子工作 T03.e [x]：多人 /gm level 同時初始化時，LegacyPlayerGrowthCatalog 的普通 Dictionary 冷載入競爭損壞；PR #23 改 ConcurrentDictionary+Lazy 並添加 20 執行緒測試，已合併。
 T04 [ ] P1：拆分怪物 AI 決策（現有250ms）與 Server 權威移動步進（評估50ms），保留 AOI/Blocking/戰鬥。
     驗收：移動不依賴昂貴 AI 運算才能更新；不改變追擊速度/攻擊距離/冷卻；同圖 312 怪不形成同步群體瞬移。先通過導航/追擊/死亡/AOI Smoke 再調整廣播率。
 T05 [ ] P1：Client Remote Player/Monster 可選用 Server Tick/Sequence 驅動的小型 snapshot buffer 插值。
@@ -83,3 +84,5 @@ T09 [ ] P0/P1：CI + 實機綜合驗收。
 【交接摘要更新】T00/T01/T03.b/T03.d 完成；T02.a、T03.a 已完成，T02.b、T03.c、T04~T09 尚未完成。另一個 Session 應先讀 PR #20/#21、上述真實負載結果和最新 HEAD，優先解決多怪傷害與 Session/Map Lock 耦合；不得將背景位置重試擴用到必須即時生效的戰鬥/HP/MP。
 
 2026-11-12：T03.c.1 進行中，PR #22 https://github.com/kevin840307/TestGoGo/pull/22 工作分支 perf/t03c-atomic-monster-damage-contract-20261112；新增 IAtomicCharacterDamageStore 與 CharacterDamageBatchResult(完整 final Character、每擊 HP、唯一 first-lethal hit index)，SqliteGameStore 於單一寫入交易內原子扣血。Smoke/priority regression 追加多擊、過量傷害、角色權限、8並行致死與舊 ApplyDamage 一致性。尚未切換正式 AI；不可宣稱已降低多人戰鬥卡頓。CI 待驗證。其他 Session 可執行 T02.b；請勿覆蓋此 PR 修改的 SqliteGameStore.cs / GameStorePorts.cs / BroadcastPriorityProbe。
+
+2026-11-12：T03.e 共享成長 CSV 快取並行 Bug 完成：PR #23 https://github.com/kevin840307/TestGoGo/pull/23 / merge commit 934dd913d75e38eaf8072bf604097a537ed3c0af。PR #22 的 20-WS CI 原在 GmCommandService.Level 的 20 玩家同時初始化時回報「Operations that change non-concurrent collections must have exclusive access」。定位 LegacyPlayerGrowthCatalog._tables 普通 Dictionary 首次 Lazy Load CSV 並行寫入；已改 ConcurrentDictionary<string,Lazy<int[][]>> + ExecutionAndPublication + 缺檔舊語意。AOI Priority https://github.com/kevin840307/TestGoGo/actions/runs/43236434576 PASS（包含 20 Threads *200 次冷載入），20 WS https://github.com/kevin840307/TestGoGo/actions/runs/43236434403 PASS。Windows Smoke https://github.com/kevin840307/TestGoGo/actions/runs/43236434528 FAIL 於無關 deterministic [T09767]「global drop multiplier increases at least one real recovered drop outcome」；Server Build workflow 仍在 Quest Host audit 失敗。不得標記 Windows Full Smoke PASS。T03.c.1 PR #22 正於合入修復的分支後重跑 CI；尚未接到 CombatService，T03.c 整項仍 [~]。
